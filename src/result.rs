@@ -3,8 +3,8 @@ pub enum CellDataType {
 }
 
 pub struct CellType {
-    name: String,
-    cell_type: CellDataType,
+    pub name: String,
+    pub cell_type: CellDataType,
 }
 
 pub enum Cell {
@@ -13,24 +13,5 @@ pub enum Cell {
 }
 
 pub struct Row {
-    cells: Vec<Cell>,
-}
-
-pub struct Result {
-    cell_types: Vec<CellType>,
-//    rows: crate::stream::Stream,
-}
-
-impl Result {
-    pub fn new() -> Result {
-        Result {
-            cell_types: Vec::new(),
-//            rows: Stream::new(),
-        }
-    }
-
-    pub fn to_string(&self) -> String {
-        return String::from("weeee");
-        //self.rows.iter().map()
-    }
+    pub cells: Vec<Cell>,
 }

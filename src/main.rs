@@ -13,10 +13,7 @@ fn repl() {
             .expect("Failed to read command");
         let mut job = job::Job::new(&cmd);
         job.compile(&state);
-        println!("Job: {}", job.to_string());
-        let mut result = result::Result::new();
-        job.run(&mut state, &mut result);
-        println!("Result: {}", result.to_string());
+        job.run(&mut state);
     }
 }
 
