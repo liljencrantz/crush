@@ -1,5 +1,3 @@
-use crate::stream::Stream;
-
 pub enum CellDataType {
     STRING, INTEGER
 }
@@ -20,14 +18,14 @@ pub struct Row {
 
 pub struct Result {
     cell_types: Vec<CellType>,
-    rows: crate::stream::Stream,
+//    rows: crate::stream::Stream,
 }
 
 impl Result {
     pub fn new() -> Result {
         Result {
             cell_types: Vec::new(),
-            rows: crate::stream::Stream {},
+//            rows: Stream::new(),
         }
     }
 

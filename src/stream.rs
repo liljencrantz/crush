@@ -1,18 +1,28 @@
 use std::collections::VecDeque;
+use crate::result::Row;
+use crate::result::CellType;
 
 pub struct Stream {
-    row_type: Vec<crate::result::CellType>,
-    closed: bool,
-    data: VecDeque<create::result::Row>
+    pub row_type: Vec<CellType>,
+    pub closed: bool,
+    pub data: VecDeque<Row>
 }
 
 impl Stream {
-    fn next(&mut self) -> Option<crate::result::Row> {
-
+    pub fn new(row_type: Vec<CellType>) -> Stream {
+        return Stream {
+            row_type,
+            closed: false,
+            data: VecDeque::new(),
+        }
     }
 
-    fn add(&mut self, row: &crate::result::Row) {
-        self.data.append(crate::result::Row::from(row))
+    pub fn next(&mut self) -> Option<Row> {
+        return None;
+    }
+
+    pub fn add(&mut self, row: Row) {
+        self.data.push_back(row)
     }
 
     fn close(&mut self) {

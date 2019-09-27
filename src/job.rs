@@ -1,20 +1,10 @@
-
-pub struct Command {
-    pub name: String,
-}
-
-impl Command {
-    fn get_output(arguments: Vec<String>, input: Vec<crate::result::CellType>) -> Vec<crate::result::CellType> {
-        return Vec::new();
-    }
-
-    fn run(arguments: Vec<String>, input: PoshStream) -> PoshStream {
-        return Vec::new();
-    }
-}
+use crate::state::State;
+use crate::result::Result;
+use crate::commands::Command;
+use std::rc::Rc;
 
 pub struct Call {
-    pub name: String,
+    pub command: Rc<dyn Command>,
     pub arguments: Vec<String>,
 }
 
@@ -32,19 +22,19 @@ impl Job {
     }
 
     pub fn to_string(&self) -> String {
-        let el: Vec<String> = self.commands.iter().map(|c| String::from(&c.name)).collect();
+        let el: Vec<String> = self.commands.iter().map(|c| String::from(&c.command.get_name())).collect();
         return el.join(" | ");
     }
 
-    pub fn compile(&mut self) {
+    pub fn compile(&mut self, state: &State) {
         let el: Vec<&str> = self.src.split('|').collect();
         for c in el {
             self.commands.push(Call {
-                name: String::from(c),
+                command: state.commands.get(&String::from("ls")),
                 arguments: Vec::new(),
             })
         }
     }
 
-    pub fn run(&mut self, result: &mut crate::result::Result) {}
+    pub fn run(&mut self, state: &mut State, result: &mut Result) {}
 }
