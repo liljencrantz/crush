@@ -2,6 +2,7 @@ use crate::state::State;
 use crate::commands::{Call};
 use crate::stream::SerialStream;
 use std::mem;
+use crate::result::Cell;
 
 pub struct Job {
     src: String,
@@ -28,8 +29,8 @@ impl Job {
             let pieces: Vec<&str> = trimmed.split(|c: char| c.is_ascii_whitespace()).collect();
             let wee = pieces.split_first().expect("Oh noes!!!");
             let cmd = wee.0;
-            let arguments: Vec<String> = wee.1.iter().map(|s:&&str| String::from(*s)).collect();
-            println!("cmd: {} args: {:?}", cmd, arguments);
+            let arguments: Vec<Cell> = wee.1.iter().map(|s:&&str| Cell::STRING(String::from(*s))).collect();
+            //println!("cmd: {} args: {:?}", cmd, arguments);
             self.commands.push(state.commands.call(&String::from(*cmd), arguments));
         }
     }
@@ -42,6 +43,9 @@ impl Job {
             c.run(&mut input, &mut output);
             input.reset();
             mem::swap(&mut input, &mut output)
+        }
+        for mut c in &mut self.commands {
+            c.mutate(state);
         }
         input.print();
     }

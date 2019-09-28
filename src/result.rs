@@ -7,6 +7,7 @@ pub struct CellType {
     pub cell_type: CellDataType,
 }
 
+#[derive(Clone)]
 pub enum Cell {
     STRING(String),
     INTEGER(i128),
