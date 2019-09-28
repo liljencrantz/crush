@@ -1,20 +1,21 @@
 use std::collections::HashMap;
 use crate::stream::{InputStream, OutputStream};
 use crate::result::{CellType, Row, Cell, CellDataType};
-use std::rc::Rc;
+use crate::state::State;
 
 pub trait Call {
     fn get_name(&self) -> &String;
     fn get_arguments(&self) -> &Vec<String>;
     fn get_output(&self) -> &Vec<CellType>;
     fn run(&mut self, input: &mut dyn InputStream, output: &mut dyn OutputStream);
+    fn mutate(&mut self, state: &mut State);
 }
 
 struct InternalCall {
     name: String,
     arguments: Vec<String>,
     output: Vec<CellType>,
-    call: &'static dyn Fn(&mut dyn InputStream, &mut dyn OutputStream),
+    command: Box<dyn InternalCommand>,
 }
 
 impl Call for InternalCall {
@@ -32,8 +33,11 @@ impl Call for InternalCall {
     }
 
     fn run(&mut self, input: &mut dyn InputStream, output: &mut dyn OutputStream) {
-        let c = &self.call;
-        c(input, output);
+        self.command.run(&self.arguments, input, output);
+    }
+
+    fn mutate(&mut self, state: &mut State) {
+        self.command.mutate(&self.arguments, state);
     }
 }
 
@@ -41,15 +45,13 @@ pub trait Command {
     fn call(&self, arguments: Vec<String>) -> Box<dyn Call>;
 }
 
-struct Ls {}
-
-impl Ls {
-    fn ls(input: &mut dyn InputStream, output: &mut dyn OutputStream) {
-        output.add(Row {
-            cells: vec![Cell::STRING(String::from("foo")), Cell::INTEGER(123)]
-        })
-    }
+pub trait InternalCommand {
+    fn run(&mut self, arguments: &Vec<String>, input: &mut dyn InputStream, output: &mut dyn OutputStream);
+    fn mutate(&mut self, arguments: &Vec<String>, state: &mut State);
 }
+
+#[derive(Clone)]
+struct Ls {}
 
 impl Command for Ls {
 
@@ -61,23 +63,36 @@ impl Command for Ls {
                 name: String::from("file"),
                 cell_type: CellDataType::STRING,
             }],
-            call: &Ls::ls,
+            command: Box::new(self.clone()),
         })
     }
 }
 
+impl InternalCommand for Ls {
+    fn run(&mut self, arguments: &Vec<String>, input: &mut dyn InputStream, output: &mut dyn OutputStream) {
+        output.add(Row {
+            cells: vec![Cell::STRING(String::from("foo")), Cell::INTEGER(123)]
+        })
+    }
+
+    fn mutate(&mut self, arguments: &Vec<String>, state: &mut State) {}
+}
+
+#[derive(Clone)]
 struct Pwd {}
 
-impl Pwd {
-    fn pwd(input: &mut dyn InputStream, output: &mut dyn OutputStream) {
+impl InternalCommand for Pwd {
+    fn run(&mut self, arguments: &Vec<String>, input: &mut dyn InputStream, output: &mut dyn OutputStream) {
         output.add(Row {
             cells: vec![Cell::STRING(String::from(std::env::current_dir().expect("Oh no!").to_str().expect("Oh no")))]
         })
     }
+
+    fn mutate(&mut self, arguments: &Vec<String>, state: &mut State) {
+    }
 }
 
 impl Command for Pwd {
-
     fn call(&self, arguments: Vec<String>) -> Box<dyn Call> {
         return Box::new(InternalCall {
             name: String::from("pwd"),
@@ -86,27 +101,51 @@ impl Command for Pwd {
                 name: String::from("directory"),
                 cell_type: CellDataType::STRING,
             }],
-            call: &Pwd::pwd,
+            command: Box::new(self.clone()),
         })
     }
 }
+/*
+struct Cd {}
 
-pub struct CommandMap {
-    commands: HashMap<String, Rc<dyn Command>>,
+impl InternalCommand for Cd {
+    fn run(&mut self, call: &InternalCall, input: &mut dyn InputStream, output: &mut dyn OutputStream) {
+    }
+
+    fn mutate(&mut self, call: &InternalCall, state: &mut State) {
+        std::env::set_current_dir(call.arguments.get(0));
+    }
 }
 
-impl CommandMap {
-    pub fn new() -> CommandMap {
-        let mut commands: HashMap<String, Rc<dyn Command> > = HashMap::new();
-        commands.insert(String::from("ls"), Rc::new(Ls {}));
-        commands.insert(String::from("pwd"), Rc::new(Pwd {}));
-        let res = CommandMap {
+impl Command for Cd {
+    fn call(&self, command: Rc<dyn Command>, arguments: Vec<String>) -> Box<dyn Call> {
+        return Box::new(InternalCall {
+            name: String::from("cd"),
+            arguments,
+            output: vec![],
+            command,
+        })
+    }
+}
+*/
+
+pub struct Namespace {
+    commands: HashMap<String, Box<dyn Command>>,
+}
+
+impl Namespace {
+    pub fn new() -> Namespace {
+        let mut commands: HashMap<String, Box<dyn Command> > = HashMap::new();
+        commands.insert(String::from("ls"), Box::new(Ls {}));
+        commands.insert(String::from("pwd"), Box::new(Pwd {}));
+        let res = Namespace {
             commands,
         };
         return res;
     }
 
     pub fn call(&self, name: &String, arguments: Vec<String>) -> Box<dyn Call>{
-        return self.commands.get(name).expect("Unknown command!").call(arguments);
+        let cmd = self.commands.get(name).expect("Unknown command!");
+        return cmd.call(arguments);
     }
 }

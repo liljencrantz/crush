@@ -1,13 +1,13 @@
-use crate::commands::CommandMap;
+use crate::commands::Namespace;
 
 pub struct State {
-    pub commands: crate::commands::CommandMap,
+    pub commands: crate::commands::Namespace,
 }
 
 impl State {
   pub fn new() -> State {
       return State {
-          commands: CommandMap::new(),
+          commands: Namespace::new(),
       }
   }
 }

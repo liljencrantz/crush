@@ -22,10 +22,15 @@ impl Job {
     }
 
     pub fn compile(&mut self, state: &State) {
-        let el: Vec<&str> = self.src.split('|').collect();
-        for c in el {
-            let cmd = c.trim();
-            self.commands.push(state.commands.call(&String::from(cmd), Vec::new()));
+        let calls: Vec<&str> = self.src.split('|').collect();
+        for c in calls {
+            let trimmed = c.trim();
+            let pieces: Vec<&str> = trimmed.split(|c: char| c.is_ascii_whitespace()).collect();
+            let wee = pieces.split_first().expect("Oh noes!!!");
+            let cmd = wee.0;
+            let arguments: Vec<String> = wee.1.iter().map(|s:&&str| String::from(*s)).collect();
+            println!("cmd: {} args: {:?}", cmd, arguments);
+            self.commands.push(state.commands.call(&String::from(*cmd), arguments));
         }
     }
 
