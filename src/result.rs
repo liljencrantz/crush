@@ -1,6 +1,8 @@
+use std::cmp::Ordering;
+
 #[derive(Clone)]
 pub enum CellDataType {
-    String,
+    Text,
     Integer,
 }
 
@@ -10,13 +12,43 @@ pub struct CellType {
     pub cell_type: CellDataType,
 }
 
+#[derive(Eq)]
 #[derive(Clone)]
 pub enum Cell {
-    String(String),
+    Text(String),
     Integer(i128),
 //    Float(f64),
 //    Row(Box<Row>),
 //    Rows(Vec<Row>),
+}
+
+impl Cell {
+    pub fn cell_data_type(&self) -> CellDataType {
+        return match self {
+            Cell::Text(_) => CellDataType::Text,
+            Cell::Integer(_) => CellDataType::Integer,
+        };
+    }
+}
+
+impl std::cmp::PartialOrd for Cell {
+    fn partial_cmp(&self, other: &Cell) -> Option<Ordering> {
+        return match (self, other) {
+            (Cell::Text(val1),Cell::Text(val2)) => Some(val1.cmp(val2)),
+            (Cell::Integer(val1),Cell::Integer(val2)) => Some(val1.cmp(val2)),
+            _ => Option::None,
+        }
+    }
+}
+
+impl std::cmp::PartialEq for Cell {
+    fn eq(&self, other: &Cell) -> bool {
+        return match (self, other) {
+            (Cell::Text(val1),Cell::Text(val2)) => val1==val2,
+            (Cell::Integer(val1),Cell::Integer(val2)) => val1==val2,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -31,9 +63,15 @@ trait IntoArgument {
 
 impl From<&String> for Argument {
     fn from(item: &String) -> Argument {
+        let name_and_value = match item.find('=') {
+            Some(idx) => {
+                (String::from(&item[0..idx]), String::from(&item[idx+1..]))
+            }
+            None => (String::from(""), String::from(item))
+        };
         return Argument {
-            name:String::from(""),
-            cell: Cell::String(item.clone()),
+            name:name_and_value.0,
+            cell: Cell::Text(name_and_value.1),
         }
     }
 }

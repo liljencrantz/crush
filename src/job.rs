@@ -52,15 +52,16 @@ impl Job {
     pub fn run(&mut self, state: &mut State) {
         let mut input = SerialStream::new(Vec::new());
         let mut output = SerialStream::new(Vec::new());
-
-        for c in &mut self.commands {
-            c.run(&mut input, &mut output);
-            input.reset();
-            mem::swap(&mut input, &mut output)
+        if !self.commands.is_empty() {
+            for c in &mut self.commands {
+                c.run(&mut input, &mut output);
+                input.reset();
+                mem::swap(&mut input, &mut output)
+            }
+            for c in &mut self.commands {
+                c.mutate(state);
+            }
+            input.print(self.commands.last().expect("Impossible").get_output_type());
         }
-        for c in &mut self.commands {
-            c.mutate(state);
-        }
-        input.print();
     }
 }

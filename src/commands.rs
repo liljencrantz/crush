@@ -3,6 +3,8 @@ use crate::stream::{InputStream, OutputStream};
 use crate::result::{CellType, Row, Cell, CellDataType, Argument};
 use crate::state::State;
 use crate::errors::CompileError;
+use std::{fs, io};
+
 extern crate map_in_place;
 
 pub trait Call {
@@ -60,6 +62,27 @@ pub trait InternalCommand {
 #[derive(Clone)]
 struct Ls {}
 
+impl Ls {
+    fn run_internal(
+        &mut self,
+        _input_type: &Vec<CellType>,
+        _arguments: &Vec<Argument>,
+        _input: &mut dyn InputStream, output: &mut dyn OutputStream) -> Result<bool, io::Error> {
+        let dirs = fs::read_dir(".");
+        for maybe_entry in dirs? {
+            let entry = maybe_entry?;
+            match entry.file_name().into_string() {
+                Ok(name) =>
+                    output.add(Row {
+                        cells: vec![Cell::Text(name)]
+                    }),
+                _ => {}
+            }
+        }
+        Ok(true)
+    }
+}
+
 impl Command for Ls {
     fn call(&self, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Box<dyn Call> {
         return Box::new(InternalCall {
@@ -68,7 +91,7 @@ impl Command for Ls {
             arguments: arguments.clone(),
             output_type: vec![CellType {
                 name: String::from("file"),
-                cell_type: CellDataType::String,
+                cell_type: CellDataType::Text,
             }],
             command: Box::new(self.clone()),
         });
@@ -77,9 +100,7 @@ impl Command for Ls {
 
 impl InternalCommand for Ls {
     fn run(&mut self, _input_type: &Vec<CellType>, _arguments: &Vec<Argument>, _input: &mut dyn InputStream, output: &mut dyn OutputStream) {
-        output.add(Row {
-            cells: vec![Cell::String(String::from("foo")), Cell::Integer(123)]
-        })
+        self.run_internal(_input_type, _arguments, _input, output);
     }
 }
 
@@ -89,7 +110,7 @@ struct Pwd {}
 impl InternalCommand for Pwd {
     fn run(&mut self, _input_type: &Vec<CellType>, _arguments: &Vec<Argument>, _input: &mut dyn InputStream, output: &mut dyn OutputStream) {
         output.add(Row {
-            cells: vec![Cell::String(String::from(std::env::current_dir().expect("Oh no!").to_str().expect("Oh no")))]
+            cells: vec![Cell::Text(String::from(std::env::current_dir().expect("Oh no!").to_str().expect("Oh no")))]
         })
     }
 }
@@ -102,8 +123,40 @@ impl Command for Pwd {
             arguments: arguments.clone(),
             output_type: vec![CellType {
                 name: String::from("directory"),
-                cell_type: CellDataType::String,
+                cell_type: CellDataType::Text,
             }],
+            command: Box::new(self.clone()),
+        });
+    }
+}
+
+#[derive(Clone)]
+struct Filter {}
+
+impl InternalCommand for Filter {
+    fn run(&mut self, _input_type: &Vec<CellType>, _arguments: &Vec<Argument>, input: &mut dyn InputStream, output: &mut dyn OutputStream) {
+        loop {
+            match input.next() {
+                Some(row) => {
+                    if row.cells[0] == _arguments[0].cell {
+                        output.add(row);
+                    }
+                },
+                None => {
+                    break;
+                },
+            }
+        }
+    }
+}
+
+impl Command for Filter {
+    fn call(&self, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Box<dyn Call> {
+        return Box::new(InternalCall {
+            name: String::from("filter"),
+            input_type: input_type.clone(),
+            arguments: arguments.clone(),
+            output_type: input_type.clone(),
             command: Box::new(self.clone()),
         });
     }
@@ -123,11 +176,15 @@ impl InternalCommand for Echo {
 
 impl Command for Echo {
     fn call(&self, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Box<dyn Call> {
+        let output_type = arguments
+            .iter()
+            .map(|a| CellType { name: a.name.clone(), cell_type: a.cell.cell_data_type() })
+            .collect();
         return Box::new(InternalCall {
             name: String::from("echo"),
             input_type: input_type.clone(),
             arguments: arguments.clone(),
-            output_type: vec![],
+            output_type,
             command: Box::new(self.clone()),
         });
     }
@@ -140,7 +197,7 @@ impl InternalCommand for Cd {
     fn mutate(&mut self, _input_type: &Vec<CellType>, arguments: &Vec<Argument>, _state: &mut State) {
         let dir = arguments.get(0).expect("AAA");
         match &dir.cell {
-            Cell::String(val) => { std::env::set_current_dir(val); }
+            Cell::Text(val) => { std::env::set_current_dir(val); }
             _ => { println!("OH NOES!"); }
         }
     }
@@ -169,6 +226,7 @@ impl Namespace {
         commands.insert(String::from("pwd"), Box::new(Pwd {}));
         commands.insert(String::from("cd"), Box::new(Cd {}));
         commands.insert(String::from("echo"), Box::new(Echo {}));
+        commands.insert(String::from("filter"), Box::new(Filter {}));
         let res = Namespace {
             commands,
         };
@@ -178,7 +236,7 @@ impl Namespace {
     pub fn call(&self, name: &String, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Box<dyn Call>, CompileError> {
         return match self.commands.get(name) {
             Some(cmd) => Result::Ok(cmd.call(input_type, arguments)),
-            None => Result::Err(CompileError { message: String::from("Unknown command!")}),
+            None => Result::Err(CompileError { message: String::from("Unknown command!") }),
         };
     }
 }

@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 use crate::result::{Row, Cell};
 use crate::result::CellType;
+use std::cmp::max;
 
 pub trait InputStream {
     fn next(&mut self) -> Option<Row>;
@@ -30,15 +31,36 @@ impl SerialStream {
         self.data.clear();
     }
 
-    pub fn print(&self) {
+    pub fn print(&self, types: &Vec<CellType>) {
+        let mut w = vec![0; types.len()];
+
+        for (idx, val) in types.iter().enumerate() {
+            w[idx] = max(w[idx], val.name.len());
+        }
+
         for r in &self.data {
-            for c in &r.cells {
-                print!("{}",
-                       match c {
-                           Cell::String(val) => String::from(val),
-                           Cell::Integer(val) => val.to_string(),
-                       }
-                );
+            assert!(types.len() == r.cells.len());
+            for (idx, c) in r.cells.iter().enumerate() {
+                let l = match c {
+                    Cell::Text(val) => val.len(),
+                    Cell::Integer(val) => val.to_string().len(),
+                };
+                w[idx] = max(w[idx], l);
+            }
+        }
+
+        for (idx, val) in types.iter().enumerate() {
+            print!("{}{}", val.name, " ".repeat(w[idx] - val.name.len() + 1))
+        }
+        println!();
+
+        for r in &self.data {
+            for (idx, c) in r.cells.iter().enumerate() {
+                let cell = match c {
+                    Cell::Text(val) => String::from(val),
+                    Cell::Integer(val) => val.to_string(),
+                };
+                print!("{}{}", cell, " ".repeat(w[idx] - cell.len() + 1))
             }
             println!();
         }
