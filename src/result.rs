@@ -1,9 +1,20 @@
 use std::cmp::Ordering;
 
 #[derive(Clone)]
+#[derive(Eq)]
 pub enum CellDataType {
     Text,
     Integer,
+}
+
+impl std::cmp::PartialEq for CellDataType {
+    fn eq(&self, other: &CellDataType) -> bool {
+        return match (self, other) {
+            (CellDataType::Text,CellDataType::Text) => true,
+            (CellDataType::Integer,CellDataType::Integer) => true,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone)]

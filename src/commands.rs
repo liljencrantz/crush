@@ -51,7 +51,7 @@ impl Call for InternalCall {
 }
 
 pub trait Command {
-    fn call(&self, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Box<dyn Call>;
+    fn call(&self, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Box<dyn Call>, CompileError>;
 }
 
 pub trait InternalCommand {
@@ -84,8 +84,8 @@ impl Ls {
 }
 
 impl Command for Ls {
-    fn call(&self, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Box<dyn Call> {
-        return Box::new(InternalCall {
+    fn call(&self, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Box<dyn Call>, CompileError> {
+        return Ok(Box::new(InternalCall {
             name: String::from("ls"),
             input_type: input_type.clone(),
             arguments: arguments.clone(),
@@ -94,7 +94,7 @@ impl Command for Ls {
                 cell_type: CellDataType::Text,
             }],
             command: Box::new(self.clone()),
-        });
+        }));
     }
 }
 
@@ -109,15 +109,23 @@ struct Pwd {}
 
 impl InternalCommand for Pwd {
     fn run(&mut self, _input_type: &Vec<CellType>, _arguments: &Vec<Argument>, _input: &mut dyn InputStream, output: &mut dyn OutputStream) {
-        output.add(Row {
-            cells: vec![Cell::Text(String::from(std::env::current_dir().expect("Oh no!").to_str().expect("Oh no")))]
-        })
+        match std::env::current_dir() {
+            Ok(os_dir) => {
+                match os_dir.to_str() {
+                    Some(dir) => output.add(Row {
+                        cells: vec![Cell::Text(String::from(dir))]
+                    }),
+                    None => {}
+                }
+            }
+            Err(_) => ()
+        }
     }
 }
 
 impl Command for Pwd {
-    fn call(&self, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Box<dyn Call> {
-        return Box::new(InternalCall {
+    fn call(&self, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Box<dyn Call>, CompileError> {
+        return Ok(Box::new(InternalCall {
             name: String::from("pwd"),
             input_type: input_type.clone(),
             arguments: arguments.clone(),
@@ -126,7 +134,7 @@ impl Command for Pwd {
                 cell_type: CellDataType::Text,
             }],
             command: Box::new(self.clone()),
-        });
+        }));
     }
 }
 
@@ -141,24 +149,24 @@ impl InternalCommand for Filter {
                     if row.cells[0] == _arguments[0].cell {
                         output.add(row);
                     }
-                },
+                }
                 None => {
                     break;
-                },
+                }
             }
         }
     }
 }
 
 impl Command for Filter {
-    fn call(&self, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Box<dyn Call> {
-        return Box::new(InternalCall {
+    fn call(&self, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Box<dyn Call>, CompileError> {
+        return Ok(Box::new(InternalCall {
             name: String::from("filter"),
             input_type: input_type.clone(),
             arguments: arguments.clone(),
             output_type: input_type.clone(),
             command: Box::new(self.clone()),
-        });
+        }));
     }
 }
 
@@ -175,18 +183,18 @@ impl InternalCommand for Echo {
 }
 
 impl Command for Echo {
-    fn call(&self, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Box<dyn Call> {
+    fn call(&self, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Box<dyn Call>, CompileError> {
         let output_type = arguments
             .iter()
             .map(|a| CellType { name: a.name.clone(), cell_type: a.cell.cell_data_type() })
             .collect();
-        return Box::new(InternalCall {
+        return Ok(Box::new(InternalCall {
             name: String::from("echo"),
             input_type: input_type.clone(),
             arguments: arguments.clone(),
             output_type,
             command: Box::new(self.clone()),
-        });
+        }));
     }
 }
 
@@ -195,23 +203,43 @@ struct Cd {}
 
 impl InternalCommand for Cd {
     fn mutate(&mut self, _input_type: &Vec<CellType>, arguments: &Vec<Argument>, _state: &mut State) {
-        let dir = arguments.get(0).expect("AAA");
-        match &dir.cell {
-            Cell::Text(val) => { std::env::set_current_dir(val); }
-            _ => { println!("OH NOES!"); }
+        match arguments.len() {
+            0 => {
+                // This should move to home, not /...
+                std::env::set_current_dir("/");
+            }
+            1 => {
+                let dir = &arguments[0];
+                match &dir.cell {
+                    Cell::Text(val) => { std::env::set_current_dir(val); }
+                    _ => { println!("OH NOES!"); }
+                }
+            }
+            _ => {}
         }
     }
 }
 
 impl Command for Cd {
-    fn call(&self, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Box<dyn Call> {
-        return Box::new(InternalCall {
+    fn call(&self, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Box<dyn Call>, CompileError> {
+        if arguments.len() > 1 {
+            return Err(CompileError {
+                message: String::from("Too many arguments")
+            });
+        }
+        if arguments.len() == 1 && arguments[0].cell.cell_data_type() != CellDataType::Text {
+            return Err(CompileError {
+                message: String::from("Wrong argument type, expected text")
+            });
+        }
+
+        return Ok(Box::new(InternalCall {
             name: String::from("cd"),
             input_type: input_type.clone(),
             arguments: arguments.clone(),
             output_type: vec![],
             command: Box::new(self.clone()),
-        });
+        }));
     }
 }
 
@@ -235,7 +263,7 @@ impl Namespace {
 
     pub fn call(&self, name: &String, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Box<dyn Call>, CompileError> {
         return match self.commands.get(name) {
-            Some(cmd) => Result::Ok(cmd.call(input_type, arguments)),
+            Some(cmd) => cmd.call(input_type, arguments),
             None => Result::Err(CompileError { message: String::from("Unknown command!") }),
         };
     }

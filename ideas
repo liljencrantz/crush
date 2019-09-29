@@ -1,0 +1,49 @@
+Sigils for a bunch of things:
+
+# Variable substitution
+echo ${foo}
+
+# Regular expressions
+ls r{^[0-9]{3,7}.txt$}
+
+# Lambdas
+echo {pwd} # Passes in the output of the pwd command
+echo `{pwd} # Passes in the lambda itself
+
+Because we want to be able to match wildcards and regular expressions against other things
+than files, they are passed in as their respective type to the commands, and the command
+will decide how to resolve different argument types.
+
+Error handling:
+
+Print errors on stderr.
+
+Should maybe jobs hang around, and we can see their errors?
+
+Environment variables:
+
+set variables using
+set foo bar
+
+Variables can contain any type of data, e.g.
+
+set lst {find /}
+
+will a listing of every file on the system into a variable
+
+Namespaces:
+
+Should commands live in the same namespace as environment variables?
+
+functions would simply be one more cell type.
+
+Creating a function would look something like
+set some_function=`{ls|sort key=modified}
+
+Could be nice as we can pass in lambdas as arguments to e.g. the sort command. Pretty cool.
+
+Unclear how we do argument handling to functions in this scenario.
+
+Output of commands:
+
+Is it in any way meaningful for commands/jobs to have an exit status?
