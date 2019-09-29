@@ -1,4 +1,5 @@
 use std::io;
+mod errors;
 mod stream;
 mod result;
 mod commands;

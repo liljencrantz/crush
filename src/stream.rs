@@ -35,8 +35,8 @@ impl SerialStream {
             for c in &r.cells {
                 print!("{}",
                        match c {
-                           Cell::STRING(val) => String::from(val),
-                           Cell::INTEGER(val) => val.to_string(),
+                           Cell::String(val) => String::from(val),
+                           Cell::Integer(val) => val.to_string(),
                        }
                 );
             }
