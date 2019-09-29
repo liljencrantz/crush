@@ -1,7 +1,7 @@
 use crate::commands::Namespace;
 
 pub struct State {
-    pub commands: crate::commands::Namespace,
+    pub commands: Namespace,
 }
 
 impl State {

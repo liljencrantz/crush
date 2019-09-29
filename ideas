@@ -6,13 +6,13 @@ echo ${foo}
 # Regular expressions
 ls r{^[0-9]{3,7}.txt$}
 
-# Lambdas
-echo {pwd} # Passes in the output of the pwd command
-echo `{pwd} # Passes in the lambda itself
-
 Because we want to be able to match wildcards and regular expressions against other things
 than files, they are passed in as their respective type to the commands, and the command
 will decide how to resolve different argument types.
+
+# Lambdas
+echo {pwd} # Passes in the output of the pwd command
+echo `{pwd} # Passes in the lambda itself
 
 Error handling:
 
@@ -22,14 +22,14 @@ Should maybe jobs hang around, and we can see their errors?
 
 Environment variables:
 
-set variables using
-set foo bar
+#set variable foo to hold value bar
+set foo=bar
 
-Variables can contain any type of data, e.g.
+# Set the variable list to contain a listing of all files on this system
+set lst={find /}
 
-set lst {find /}
-
-will a listing of every file on the system into a variable
+# Set the variable re to point to a regular expression
+set re=r{...}
 
 Namespaces:
 
@@ -37,10 +37,10 @@ Should commands live in the same namespace as environment variables?
 
 functions would simply be one more cell type.
 
-Creating a function would look something like
+# Create a function named some_function that's a wrapper around ls
 set some_function=`{ls|sort key=modified}
 
-Could be nice as we can pass in lambdas as arguments to e.g. the sort command. Pretty cool.
+Could be nice as we can pass in lambdas as arguments to e.g. the sort command. Pretty cool idea...
 
 Unclear how we do argument handling to functions in this scenario.
 

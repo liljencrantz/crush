@@ -68,10 +68,6 @@ pub struct Argument {
     pub cell: Cell,
 }
 
-trait IntoArgument {
-    fn into_argument(self) -> Argument;
-}
-
 impl From<&String> for Argument {
     fn from(item: &String) -> Argument {
         let name_and_value = match item.find('=') {
