@@ -1,15 +1,18 @@
 Todo:
 Propagate runtime errors
 one command per file
-make filter useful
+make filter actually useful
 implement sort command
 implement Vec<Row> cell type
 implement group command
 implement variables
 implement set command
+wildcards
+regexps
 proper lexer and parser
 implement command substitution and lambdas
-Figure out if there is a more elegant way than the small number of remaining expects
+one command per thread
+keyboard handling
 
 Done:
 Fix all expects calls that aren't impossible, and propagate the errors
