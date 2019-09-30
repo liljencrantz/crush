@@ -64,7 +64,7 @@ impl Job {
         let mut output = SerialStream::new(Vec::new());
         if !self.commands.is_empty() && self.compile_errors.is_empty() {
             for c in &mut self.commands {
-                match c.run(&mut input, &mut output) {
+                match c.run(state, &mut input, &mut output) {
                     Ok(_) => {
                         input.reset();
                         mem::swap(&mut input, &mut output)
@@ -75,7 +75,9 @@ impl Job {
                     }
                 }
             }
-            input.print(self.commands.last().expect("Impossible").get_output_type());
+            if self.runtime_errors.is_empty() {
+                input.print(self.commands.last().expect("Impossible").get_output_type());
+            };
         }
         return if self.runtime_errors.is_empty() { Ok(()) } else { Err(()) };
     }

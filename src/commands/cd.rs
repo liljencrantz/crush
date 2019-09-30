@@ -1,6 +1,4 @@
-use std::{io, fs};
-use crate::stream::{OutputStream, InputStream};
-use crate::result::{Argument, CellType, Cell, Row, CellDataType};
+use crate::result::{Argument, CellType, Cell, CellDataType};
 use crate::commands::{InternalCall, Command, Call, InternalCommand, to_runtime_error};
 use crate::errors::JobError;
 use crate::state::State;
@@ -11,9 +9,9 @@ pub struct Cd {}
 impl InternalCommand for Cd {
     fn mutate(
         &mut self,
+        _state: &mut State,
         _input_type: &Vec<CellType>,
-        arguments: &Vec<Argument>,
-        _state: &mut State) -> Result<(), JobError> {
+        arguments: &Vec<Argument>) -> Result<(), JobError> {
         return match arguments.len() {
             0 =>
             // This should move to home, not /...

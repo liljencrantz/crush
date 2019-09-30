@@ -1,8 +1,8 @@
-use std::{io, fs};
 use crate::stream::{OutputStream, InputStream};
 use crate::result::{Argument, CellType, Cell, Row, CellDataType};
-use crate::commands::{InternalCall, Command, Call, InternalCommand, to_runtime_error};
+use crate::commands::{InternalCall, Command, Call, InternalCommand};
 use crate::errors::JobError;
+use crate::state::State;
 
 #[derive(Clone)]
 pub struct Pwd {}
@@ -10,6 +10,7 @@ pub struct Pwd {}
 impl InternalCommand for Pwd {
     fn run(
         &mut self,
+        _state: &State,
         _input_type: &Vec<CellType>,
         _arguments: &Vec<Argument>,
         _input: &mut dyn InputStream,
@@ -22,10 +23,10 @@ impl InternalCommand for Pwd {
                     }),
                     None => {}
                 }
-                return Ok(())
+                Ok(())
             },
             Err(io_err) =>
-                return Err(JobError{ message: io_err.to_string() }),
+                Err(JobError{ message: io_err.to_string() }),
         };
     }
 }

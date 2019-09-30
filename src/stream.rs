@@ -44,6 +44,7 @@ impl SerialStream {
                 let l = match c {
                     Cell::Text(val) => val.len(),
                     Cell::Integer(val) => val.to_string().len(),
+                    Cell::Time(val) => val.format("%Y %b %d %H:%M:%S %z").to_string().len(),
                 };
                 w[idx] = max(w[idx], l);
             }
@@ -59,6 +60,7 @@ impl SerialStream {
                 let cell = match c {
                     Cell::Text(val) => String::from(val),
                     Cell::Integer(val) => val.to_string(),
+                    Cell::Time(val) => val.format("%Y-%m-%d %H:%M:%S %z").to_string(),
                 };
                 print!("{}{}", cell, " ".repeat(w[idx] - cell.len() + 1))
             }

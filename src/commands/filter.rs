@@ -1,8 +1,8 @@
-use std::{io, fs};
 use crate::stream::{OutputStream, InputStream};
-use crate::result::{Argument, CellType, Cell, Row, CellDataType};
-use crate::commands::{InternalCall, Command, Call, InternalCommand, to_runtime_error};
+use crate::result::{Argument, CellType, Cell};
+use crate::commands::{InternalCall, Command, Call, InternalCommand};
 use crate::errors::JobError;
+use crate::state::State;
 
 #[derive(Clone)]
 pub struct Filter {}
@@ -37,6 +37,7 @@ fn find_checks<'a>(input_type: &Vec<CellType>,
 impl InternalCommand for Filter {
     fn run(
         &mut self,
+        _state: &State,
         input_type: &Vec<CellType>,
         arguments: &Vec<Argument>,
         input: &mut dyn InputStream,
@@ -47,10 +48,10 @@ impl InternalCommand for Filter {
         loop {
             match input.next() {
                 Some(row) => {
-                    let mut ok = true;
+                    let mut ok = false;
                     for check in &checks {
-                        if !row.cells[check.idx].eq(check.value) {
-                            ok = false;
+                        if row.cells[check.idx].eq(check.value) {
+                            ok = true;
                             break;
                         }
                     }

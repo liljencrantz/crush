@@ -6,10 +6,10 @@ mod filter;
 
 use std::collections::HashMap;
 use crate::stream::{InputStream, OutputStream};
-use crate::result::{CellType, Row, Cell, CellDataType, Argument};
+use crate::result::{CellType, Argument};
 use crate::state::State;
 use crate::errors::JobError;
-use std::{fs, io};
+use std::{io};
 use ls::Ls;
 use echo::Echo;
 use pwd::Pwd;
@@ -23,7 +23,7 @@ pub trait Call {
     fn get_arguments(&self) -> &Vec<Argument>;
     fn get_input_type(&self) -> &Vec<CellType>;
     fn get_output_type(&self) -> &Vec<CellType>;
-    fn run(&mut self, input: &mut dyn InputStream, output: &mut dyn OutputStream) -> Result<(), JobError>;
+    fn run(&mut self, state: &State, input: &mut dyn InputStream, output: &mut dyn OutputStream) -> Result<(), JobError>;
     fn mutate(&mut self, state: &mut State) -> Result<(), JobError>;
 }
 
@@ -52,12 +52,12 @@ impl Call for InternalCall {
         return &self.output_type;
     }
 
-    fn run(&mut self, input: &mut dyn InputStream, output: &mut dyn OutputStream) -> Result<(), JobError> {
-        return self.command.run(&self.input_type, &self.arguments, input, output);
+    fn run(&mut self, state: &State, input: &mut dyn InputStream, output: &mut dyn OutputStream) -> Result<(), JobError> {
+        return self.command.run(state, &self.input_type, &self.arguments, input, output);
     }
 
     fn mutate(&mut self, state: &mut State) -> Result<(), JobError> {
-        return self.command.mutate(&self.input_type, &self.arguments, state);
+        return self.command.mutate(state, &self.input_type, &self.arguments);
     }
 }
 
@@ -68,6 +68,7 @@ pub trait Command {
 pub trait InternalCommand {
     fn run(
         &mut self,
+        _state: &State,
         _input_type: &Vec<CellType>,
         _arguments: &Vec<Argument>,
         _input: &mut dyn InputStream,
@@ -77,9 +78,10 @@ pub trait InternalCommand {
 
     fn mutate(
         &mut self,
+        _state: &mut State,
         _input_type: &Vec<CellType>,
         _arguments: &Vec<Argument>,
-        _state: &mut State) -> Result<(), JobError> {
+        ) -> Result<(), JobError> {
         Ok(())
     }
 }
@@ -91,10 +93,10 @@ pub struct Namespace {
 fn to_runtime_error(io_result: io::Result<()>) -> Result<(), JobError> {
     return match io_result {
         Ok(_) => {
-            return Ok(())
+            Ok(())
         }
         Err(io_err) => {
-            return Err(JobError{ message: io_err.to_string() })
+            Err(JobError{ message: io_err.to_string() })
         }
     }
 }

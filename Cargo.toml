@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 map_in_place = "0.1.0"
+chrono = "0.4"
