@@ -7,27 +7,55 @@ use crate::errors::JobError;
 #[derive(Clone)]
 pub struct Filter {}
 
-struct Check{
-    field: u32,
-    value: Cell,
+struct Check<'a>{
+    idx: usize,
+    value: &'a Cell,
 }
 
-fn find_field(field: &String, fields: &Vec<CellType>) -> Option
+fn find_field(needle: &String, haystack: &Vec<CellType>) -> Result<usize, JobError> {
+    for (idx, field) in haystack.iter().enumerate() {
+        if field.name.eq(needle) {
+            return Ok(idx);
+        }
+    }
+    return Err(JobError {message: String::from(format!("Unknown column \"{}\"", needle))});
+}
+
+fn find_checks<'a>(input_type: &Vec<CellType>,
+               arguments: &'a Vec<Argument>) -> Result<Vec<Check<'a>>, JobError> {
+    let mut res: Vec<Check> = Vec::new();
+    for arg in arguments {
+        let idx = find_field(&arg.name, input_type)?;
+        if arg.cell.cell_data_type() != input_type[idx].cell_type {
+            return Err(JobError {message: String::from("Mismatching cell types")});
+        }
+        res.push(Check {idx, value: &arg.cell});
+    }
+    return Ok(res);
+}
 
 impl InternalCommand for Filter {
     fn run(
         &mut self,
-        _input_type: &Vec<CellType>,
-        _arguments: &Vec<Argument>,
+        input_type: &Vec<CellType>,
+        arguments: &Vec<Argument>,
         input: &mut dyn InputStream,
         output: &mut dyn OutputStream) -> Result<(), JobError> {
 
-
+        let checks = find_checks(input_type, arguments)?;
 
         loop {
             match input.next() {
                 Some(row) => {
-                    if row.cells[0] == _arguments[0].cell {
+                    let mut ok = true;
+                    for check in &checks {
+                        if !row.cells[check.idx].eq(check.value) {
+                            ok = false;
+                            break;
+                        }
+                    }
+
+                    if ok {
                         output.add(row);
                     }
                 }
