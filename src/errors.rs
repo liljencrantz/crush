@@ -1,9 +1,5 @@
 
 
-pub struct CompileError {
-    pub message: String,
-}
-
-pub struct RuntimeError {
+pub struct JobError {
     pub message: String,
 }

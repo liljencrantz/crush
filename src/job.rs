@@ -3,13 +3,13 @@ use crate::commands::Call;
 use crate::stream::SerialStream;
 use std::mem;
 use crate::result::{CellType, Argument};
-use crate::errors::{CompileError, RuntimeError};
+use crate::errors::JobError;
 
 pub struct Job {
     pub src: String,
     pub commands: Vec<Box<dyn Call>>,
-    pub compile_errors: Vec<CompileError>,
-    pub runtime_errors: Vec<RuntimeError>,
+    pub compile_errors: Vec<JobError>,
+    pub runtime_errors: Vec<JobError>,
 }
 
 impl Job {
@@ -27,7 +27,7 @@ impl Job {
         return el.join(" | ");
     }
 
-    pub fn compile(&mut self, state: &State) -> Result<bool, bool>{
+    pub fn compile(&mut self, state: &State) -> Result<(), ()> {
         let calls: Vec<&str> = self.src.split('|').collect();
         let first_input: Vec<CellType> = Vec::new();
         let mut input = &first_input;
@@ -51,32 +51,47 @@ impl Job {
                     }
                 }
                 None => {
-                    self.compile_errors.push(CompileError{message: format!("Bad command {}", trimmed)});
+                    self.compile_errors.push(JobError { message: format!("Bad command {}", trimmed) });
                     continue 'parse;
                 }
             }
         }
-        return if self.compile_errors.is_empty() {Ok(true)} else {Err(true)};
+        return if self.compile_errors.is_empty() { Ok(()) } else { Err(()) };
     }
 
-    pub fn run(&mut self, state: &State) {
+    pub fn run(&mut self, state: &State) -> Result<(), ()> {
         let mut input = SerialStream::new(Vec::new());
         let mut output = SerialStream::new(Vec::new());
-        if !self.commands.is_empty() {
+        if !self.commands.is_empty() && self.compile_errors.is_empty() {
             for c in &mut self.commands {
-                c.run(&mut input, &mut output);
-                input.reset();
-                mem::swap(&mut input, &mut output)
+                match c.run(&mut input, &mut output) {
+                    Ok(_) => {
+                        input.reset();
+                        mem::swap(&mut input, &mut output)
+                    }
+                    Err(err) => {
+                        self.runtime_errors.push(err);
+                        break;
+                    }
+                }
             }
             input.print(self.commands.last().expect("Impossible").get_output_type());
         }
+        return if self.runtime_errors.is_empty() { Ok(()) } else { Err(()) };
     }
 
-    pub fn mutate(&mut self, state: &mut State) {
-        if !self.commands.is_empty() {
+    pub fn mutate(&mut self, state: &mut State) -> Result<(), ()> {
+        if !self.commands.is_empty() && self.compile_errors.is_empty() && self.runtime_errors.is_empty() {
             for c in &mut self.commands {
-                c.mutate(state);
+                match c.mutate(state) {
+                    Ok(_) => {}
+                    Err(err) => {
+                        self.runtime_errors.push(err);
+                        break;
+                    }
+                }
             }
         }
+        return if self.runtime_errors.is_empty() { Ok(()) } else { Err(()) };
     }
 }

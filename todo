@@ -1,6 +1,4 @@
 Todo:
-Propagate runtime errors
-one command per file
 make filter actually useful
 implement sort command
 implement Vec<Row> cell type
@@ -17,3 +15,5 @@ keyboard handling
 Done:
 Fix all expects calls that aren't impossible, and propagate the errors
 Display errors
+Propagate runtime errors
+one command per file

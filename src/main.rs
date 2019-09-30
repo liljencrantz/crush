@@ -1,5 +1,3 @@
-use std::io;
-
 mod errors;
 mod stream;
 mod result;
@@ -7,7 +5,11 @@ mod commands;
 mod state;
 mod job;
 
+use std::io;
 use std::io::Write;
+
+use job::Job;
+use state::State;
 
 fn prompt() -> Option<String> {
     let mut cmd = String::new();
@@ -16,7 +18,14 @@ fn prompt() -> Option<String> {
     return match io::stdin().read_line(&mut cmd) {
         Ok(_) => Some(cmd),
         Err(_) => None,
-    }
+    };
+}
+
+fn perform(job: &mut Job, state: &mut State) -> Result<(), ()> {
+    job.compile(state)?;
+    job.run(state)?;
+    job.mutate(state)?;
+    return Ok(());
 }
 
 fn repl() {
@@ -25,18 +34,19 @@ fn repl() {
         match prompt() {
             Some(cmd) => {
                 let mut job = job::Job::new(&cmd);
-                match job.compile(&state) {
+                match perform(&mut job, &mut state) {
                     Ok(_) => {
-                        job.run(&state);
-                        job.mutate(&mut state);
                     }
                     Err(_) => {
                         for err in job.compile_errors {
                             println!("Compiler error: {}", err.message);
                         }
+                        for err in job.runtime_errors {
+                            println!("Runtime error: {}", err.message);
+                        }
                     }
                 }
-            },
+            }
             None => break,
         }
     }
