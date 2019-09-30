@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use crate::stream::{InputStream, OutputStream};
 use crate::result::{CellType, Row, Cell, CellDataType, Argument};
 use crate::state::State;
-use crate::errors::CompileError;
+use crate::errors::{CompileError, RuntimeError};
 use std::{fs, io};
 
 extern crate map_in_place;
@@ -12,8 +12,8 @@ pub trait Call {
     fn get_arguments(&self) -> &Vec<Argument>;
     fn get_input_type(&self) -> &Vec<CellType>;
     fn get_output_type(&self) -> &Vec<CellType>;
-    fn run(&mut self, input: &mut dyn InputStream, output: &mut dyn OutputStream);
-    fn mutate(&mut self, state: &mut State);
+    fn run(&mut self, input: &mut dyn InputStream, output: &mut dyn OutputStream) -> Result<(), RuntimeError>;
+    fn mutate(&mut self, state: &mut State) -> Result<(), RuntimeError>;
 }
 
 struct InternalCall {
@@ -41,12 +41,12 @@ impl Call for InternalCall {
         return &self.output_type;
     }
 
-    fn run(&mut self, input: &mut dyn InputStream, output: &mut dyn OutputStream) {
-        self.command.run(&self.input_type, &self.arguments, input, output);
+    fn run(&mut self, input: &mut dyn InputStream, output: &mut dyn OutputStream) -> Result<(), RuntimeError> {
+        return self.command.run(&self.input_type, &self.arguments, input, output);
     }
 
-    fn mutate(&mut self, state: &mut State) {
-        self.command.mutate(&self.input_type, &self.arguments, state);
+    fn mutate(&mut self, state: &mut State) -> Result<(), RuntimeError> {
+        return self.command.mutate(&self.input_type, &self.arguments, state);
     }
 }
 
@@ -55,8 +55,22 @@ pub trait Command {
 }
 
 pub trait InternalCommand {
-    fn run(&mut self, _input_type: &Vec<CellType>, _arguments: &Vec<Argument>, _input: &mut dyn InputStream, _output: &mut dyn OutputStream) {}
-    fn mutate(&mut self, _input_type: &Vec<CellType>, _arguments: &Vec<Argument>, _state: &mut State) {}
+    fn run(
+        &mut self,
+        _input_type: &Vec<CellType>,
+        _arguments: &Vec<Argument>,
+        _input: &mut dyn InputStream,
+        _output: &mut dyn OutputStream) -> Result<(), RuntimeError> {
+        Ok(())
+    }
+
+    fn mutate(
+        &mut self,
+        _input_type: &Vec<CellType>,
+        _arguments: &Vec<Argument>,
+        _state: &mut State) -> Result<(), RuntimeError> {
+        Ok(())
+    }
 }
 
 #[derive(Clone)]
@@ -67,7 +81,7 @@ impl Ls {
         &mut self,
         _input_type: &Vec<CellType>,
         _arguments: &Vec<Argument>,
-        _input: &mut dyn InputStream, output: &mut dyn OutputStream) -> Result<bool, io::Error> {
+        _input: &mut dyn InputStream, output: &mut dyn OutputStream) -> Result<(), io::Error> {
         let dirs = fs::read_dir(".");
         for maybe_entry in dirs? {
             let entry = maybe_entry?;
@@ -79,7 +93,7 @@ impl Ls {
                 _ => {}
             }
         }
-        Ok(true)
+        Ok(())
     }
 }
 
@@ -99,8 +113,13 @@ impl Command for Ls {
 }
 
 impl InternalCommand for Ls {
-    fn run(&mut self, _input_type: &Vec<CellType>, _arguments: &Vec<Argument>, _input: &mut dyn InputStream, output: &mut dyn OutputStream) {
-        self.run_internal(_input_type, _arguments, _input, output);
+    fn run(
+        &mut self,
+        _input_type: &Vec<CellType>,
+        _arguments: &Vec<Argument>,
+        _input: &mut dyn InputStream,
+        output: &mut dyn OutputStream) -> Result<(), RuntimeError> {
+        return to_runtime_error(self.run_internal(_input_type, _arguments, _input, output))
     }
 }
 
@@ -108,8 +127,13 @@ impl InternalCommand for Ls {
 struct Pwd {}
 
 impl InternalCommand for Pwd {
-    fn run(&mut self, _input_type: &Vec<CellType>, _arguments: &Vec<Argument>, _input: &mut dyn InputStream, output: &mut dyn OutputStream) {
-        match std::env::current_dir() {
+    fn run(
+        &mut self,
+        _input_type: &Vec<CellType>,
+        _arguments: &Vec<Argument>,
+        _input: &mut dyn InputStream,
+        output: &mut dyn OutputStream) -> Result<(), RuntimeError> {
+        return match std::env::current_dir() {
             Ok(os_dir) => {
                 match os_dir.to_str() {
                     Some(dir) => output.add(Row {
@@ -117,8 +141,10 @@ impl InternalCommand for Pwd {
                     }),
                     None => {}
                 }
-            }
-            Err(_) => ()
+                return Ok(())
+            },
+            Err(io_err) =>
+                return Err(RuntimeError{ message: io_err.to_string() }),
         }
     }
 }
@@ -142,7 +168,12 @@ impl Command for Pwd {
 struct Filter {}
 
 impl InternalCommand for Filter {
-    fn run(&mut self, _input_type: &Vec<CellType>, _arguments: &Vec<Argument>, input: &mut dyn InputStream, output: &mut dyn OutputStream) {
+    fn run(
+        &mut self,
+        _input_type: &Vec<CellType>,
+        _arguments: &Vec<Argument>,
+        input: &mut dyn InputStream,
+        output: &mut dyn OutputStream) -> Result<(), RuntimeError> {
         loop {
             match input.next() {
                 Some(row) => {
@@ -155,6 +186,7 @@ impl InternalCommand for Filter {
                 }
             }
         }
+        return Ok(());
     }
 }
 
@@ -174,11 +206,17 @@ impl Command for Filter {
 struct Echo {}
 
 impl InternalCommand for Echo {
-    fn run(&mut self, _input_type: &Vec<CellType>, arguments: &Vec<Argument>, _input: &mut dyn InputStream, output: &mut dyn OutputStream) {
+    fn run(
+        &mut self,
+        _input_type: &Vec<CellType>,
+        arguments: &Vec<Argument>,
+        _input: &mut dyn InputStream,
+        output: &mut dyn OutputStream) -> Result<(), RuntimeError> {
         let g = arguments.iter().map(|c| c.cell.clone());
         output.add(Row {
             cells: g.collect()
-        })
+        });
+        return Ok(());
     }
 }
 
@@ -201,21 +239,35 @@ impl Command for Echo {
 #[derive(Clone)]
 struct Cd {}
 
+fn to_runtime_error(io_result: io::Result<()>) -> Result<(), RuntimeError> {
+    return match io_result {
+        Ok(_) => {
+            return Ok(())
+        }
+        Err(io_err) => {
+            return Err(RuntimeError{ message: io_err.to_string() })
+        }
+    }
+}
+
 impl InternalCommand for Cd {
-    fn mutate(&mut self, _input_type: &Vec<CellType>, arguments: &Vec<Argument>, _state: &mut State) {
-        match arguments.len() {
-            0 => {
+    fn mutate(
+        &mut self,
+        _input_type: &Vec<CellType>,
+        arguments: &Vec<Argument>,
+        _state: &mut State) -> Result<(), RuntimeError> {
+        return match arguments.len() {
+            0 =>
                 // This should move to home, not /...
-                std::env::set_current_dir("/");
-            }
+                to_runtime_error(std::env::set_current_dir("/")),
             1 => {
                 let dir = &arguments[0];
-                match &dir.cell {
-                    Cell::Text(val) => { std::env::set_current_dir(val); }
-                    _ => { println!("OH NOES!"); }
+                return match &dir.cell {
+                    Cell::Text(val) => to_runtime_error(std::env::set_current_dir(val)),
+                    _ => Err(RuntimeError { message: String::from("Wrong parameter type, expected text")})
                 }
             }
-            _ => {}
+            _ => Err(RuntimeError{ message: String::from("Wrong number of arguments") })
         }
     }
 }

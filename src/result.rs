@@ -10,10 +10,10 @@ pub enum CellDataType {
 impl std::cmp::PartialEq for CellDataType {
     fn eq(&self, other: &CellDataType) -> bool {
         return match (self, other) {
-            (CellDataType::Text,CellDataType::Text) => true,
-            (CellDataType::Integer,CellDataType::Integer) => true,
+            (CellDataType::Text, CellDataType::Text) => true,
+            (CellDataType::Integer, CellDataType::Integer) => true,
             _ => false,
-        }
+        };
     }
 }
 
@@ -45,20 +45,20 @@ impl Cell {
 impl std::cmp::PartialOrd for Cell {
     fn partial_cmp(&self, other: &Cell) -> Option<Ordering> {
         return match (self, other) {
-            (Cell::Text(val1),Cell::Text(val2)) => Some(val1.cmp(val2)),
-            (Cell::Integer(val1),Cell::Integer(val2)) => Some(val1.cmp(val2)),
+            (Cell::Text(val1), Cell::Text(val2)) => Some(val1.cmp(val2)),
+            (Cell::Integer(val1), Cell::Integer(val2)) => Some(val1.cmp(val2)),
             _ => Option::None,
-        }
+        };
     }
 }
 
 impl std::cmp::PartialEq for Cell {
     fn eq(&self, other: &Cell) -> bool {
         return match (self, other) {
-            (Cell::Text(val1),Cell::Text(val2)) => val1==val2,
-            (Cell::Integer(val1),Cell::Integer(val2)) => val1==val2,
+            (Cell::Text(val1), Cell::Text(val2)) => val1 == val2,
+            (Cell::Integer(val1), Cell::Integer(val2)) => val1 == val2,
             _ => false,
-        }
+        };
     }
 }
 
@@ -72,14 +72,14 @@ impl From<&String> for Argument {
     fn from(item: &String) -> Argument {
         let name_and_value = match item.find('=') {
             Some(idx) => {
-                (String::from(&item[0..idx]), String::from(&item[idx+1..]))
+                (String::from(&item[0..idx]), String::from(&item[idx + 1..]))
             }
             None => (String::from(""), String::from(item))
         };
         return Argument {
-            name:name_and_value.0,
+            name: name_and_value.0,
             cell: Cell::Text(name_and_value.1),
-        }
+        };
     }
 }
 
