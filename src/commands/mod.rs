@@ -16,8 +16,6 @@ use pwd::Pwd;
 use cd::Cd;
 use filter::Filter;
 
-extern crate map_in_place;
-
 pub trait Call {
     fn get_name(&self) -> &String;
     fn get_arguments(&self) -> &Vec<Argument>;

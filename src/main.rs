@@ -4,6 +4,7 @@ mod result;
 mod commands;
 mod state;
 mod job;
+mod lexer;
 
 use std::io;
 use std::io::Write;

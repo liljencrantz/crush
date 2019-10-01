@@ -5,9 +5,9 @@ implement Vec<Row> cell type
 implement group command
 implement variables
 implement set command
+proper lexer and parser
 wildcards
 regexps
-proper lexer and parser
 implement command substitution and lambdas
 one command per thread
 keyboard handling
