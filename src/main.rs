@@ -5,6 +5,7 @@ mod commands;
 mod state;
 mod job;
 mod lexer;
+mod parser;
 
 use std::io;
 use std::io::Write;

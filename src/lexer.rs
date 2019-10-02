@@ -1,12 +1,12 @@
 use regex::Regex;
 use std::clone::Clone;
 use lazy_static::lazy_static;
-use crate::lexer::TokenType::{Whitespace, Comment};
+use crate::lexer::TokenType::{Whitespace, Comment, EOF};
 
 #[derive(Clone)]
 #[derive(Debug)]
 #[derive(PartialEq)]
-enum TokenType {
+pub enum TokenType {
     Pipe,
     Number,
     StringOrWildcard,
@@ -26,21 +26,17 @@ enum TokenType {
     LessThanOrEqual,
     Separator,
     Error,
+    EOF,
 }
 
-struct Token {
-    token_type: TokenType,
-    value: String,
-}
-
-struct Lexer {
+pub struct Lexer {
     input: String,
     idx: usize,
     peeked: Option<(TokenType, usize, usize)>,
 }
 
 lazy_static! {
-    static ref lex_data: [(TokenType, Regex); 13] = [
+    static ref lex_data: [(TokenType, Regex); 14] = [
         (TokenType::Separator, Regex::new("^;").unwrap()),
         (TokenType::Pipe, Regex::new(r"^\|").unwrap()),
         (TokenType::Assign, Regex::new(r"^=").unwrap()),
@@ -49,7 +45,8 @@ lazy_static! {
         (TokenType::Number, Regex::new(r"^-?[0-9]*").unwrap()),
         (TokenType::BlockStart, Regex::new(r"^[`r$*]?\{").unwrap()),
         (TokenType::BlockEnd, Regex::new(r"^\}").unwrap()),
-        (TokenType::StringOrWildcard, Regex::new(r"^[a-zA-Z*.?][-+_a-z-A-Z0-9*.?]*").unwrap()),
+        (TokenType::String, Regex::new(r"^[a-zA-Z][-+_a-z-A-Z0-9]*").unwrap()),
+        (TokenType::Wildcard, Regex::new(r"^[a-zA-Z*.?][-+_a-z-A-Z0-9*.?]*").unwrap()),
         (TokenType::Comment, Regex::new("(?m)^#.*$").unwrap()),
         (TokenType::Whitespace, Regex::new(r"^\s*").unwrap()),
         (TokenType::QuotedString, Regex::new(r#"^"([^\\"]|\\.)*""#).unwrap()),
@@ -94,6 +91,15 @@ impl Lexer {
         return match &self.peeked {
             Some((tt, from, to)) => Some((tt.clone(), &self.input[*from..*to])),
             None => None,
+        };
+    }
+
+    pub fn peek_type(&mut self) -> TokenType {
+        let tmp = self.next_span();
+        self.peeked = tmp;
+        return match &self.peeked {
+            Some((tt, from, to)) => tt.clone(),
+            None => EOF,
         };
     }
 
