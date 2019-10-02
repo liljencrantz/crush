@@ -74,24 +74,19 @@ pub struct Argument {
     pub cell: Cell,
 }
 
-impl From<&String> for Argument {
-    fn from(item: &String) -> Argument {
-        let name_and_value = match item.find('=') {
-            Some(idx) => {
-                (String::from(&item[0..idx]), String::from(&item[idx + 1..]))
-            }
-            None => (String::from(""), String::from(item))
-        };
+impl Argument {
+    pub fn named(name: &String, cell: &Cell) -> Argument{
         return Argument {
-            name: name_and_value.0,
-            cell: Cell::Text(name_and_value.1),
+            name: name.clone(),
+            cell: cell.clone(),
         };
     }
-}
 
-impl From<&str> for Argument {
-    fn from(item: &str) -> Argument {
-        return Argument::from(&String::from(item));
+    pub fn unnamed(cell: &Cell) -> Argument{
+        return Argument {
+            name: String::from(""),
+            cell: cell.clone(),
+        };
     }
 }
 

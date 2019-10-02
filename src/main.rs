@@ -12,6 +12,7 @@ use std::io::Write;
 
 use job::Job;
 use state::State;
+use crate::lexer::Lexer;
 
 fn prompt() -> Option<String> {
     let mut cmd = String::new();
@@ -24,7 +25,6 @@ fn prompt() -> Option<String> {
 }
 
 fn perform(job: &mut Job, state: &mut State) -> Result<(), ()> {
-    job.compile(state)?;
     job.run(state)?;
     job.mutate(state)?;
     return Ok(());
@@ -35,17 +35,24 @@ fn repl() {
     loop {
         match prompt() {
             Some(cmd) => {
-                let mut job = job::Job::new(&cmd);
-                match perform(&mut job, &mut state) {
-                    Ok(_) => {
+                match parser::parse(&mut Lexer::new(&cmd), &state) {
+                    Ok(jobs) => {
+                        for mut job in jobs {
+                            match perform(&mut job, &mut state) {
+                                Ok(_) => {}
+                                Err(_) => {
+                                    for err in job.compile_errors {
+                                        println!("Compiler error: {}", err.message);
+                                    }
+                                    for err in job.runtime_errors {
+                                        println!("Runtime error: {}", err.message);
+                                    }
+                                }
+                            }
+                        }
                     }
-                    Err(_) => {
-                        for err in job.compile_errors {
-                            println!("Compiler error: {}", err.message);
-                        }
-                        for err in job.runtime_errors {
-                            println!("Runtime error: {}", err.message);
-                        }
+                    Err(error) => {
+                        println!("Compiler error: {}", error.message);
                     }
                 }
             }

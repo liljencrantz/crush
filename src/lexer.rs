@@ -4,12 +4,14 @@ use lazy_static::lazy_static;
 use crate::lexer::TokenType::{Whitespace, Comment, EOF};
 
 #[derive(Clone)]
+#[derive(Copy)]
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub enum TokenType {
     Pipe,
     Number,
-    StringOrWildcard,
+    String,
+    Wildcard,
     BlockStart,
     BlockEnd,
     Comment,
@@ -55,7 +57,7 @@ lazy_static! {
 }
 
 impl Lexer {
-    fn new(input: &String) -> Lexer {
+    pub fn new(input: &String) -> Lexer {
         return Lexer {
             input: input.clone(),
             idx: 0,
@@ -63,9 +65,12 @@ impl Lexer {
         };
     }
 
-    fn next_of_any(&mut self) -> Option<(TokenType, usize, usize)> {
+    fn next_of_any(&mut self) -> (TokenType, usize, usize) {
         let mut max_len = 0;
         let mut token_type = Whitespace;
+        if self.idx >= self.input.len()-1 {
+            return (EOF, 0, 0);
+        }
         for (token, re) in lex_data.into_iter() {
             //let re = Regex::new(r".");
             match re.find(&self.input[self.idx..]) {
@@ -80,73 +85,39 @@ impl Lexer {
         }
         if max_len > 0 {
             self.idx += max_len;
-            return Some((token_type, self.idx - max_len, self.idx));
+            return (token_type, self.idx - max_len, self.idx);
         }
-        return None;
+        return (TokenType::Error, 0, 0);
     }
 
-    pub fn peek(&mut self) -> Option<(TokenType, &str)> {
-        let tmp = self.next_span();
-        self.peeked = tmp;
-        return match &self.peeked {
-            Some((tt, from, to)) => Some((tt.clone(), &self.input[*from..*to])),
-            None => None,
-        };
+    pub fn peek(&mut self) -> (TokenType, &str) {
+        let (tt, from, to) = self.next_span();
+        self.peeked = Some((tt, from, to));
+        return (tt, &self.input[from..to]);
     }
 
-    pub fn peek_type(&mut self) -> TokenType {
-        let tmp = self.next_span();
-        self.peeked = tmp;
-        return match &self.peeked {
-            Some((tt, from, to)) => tt.clone(),
-            None => EOF,
-        };
-    }
-
-    fn next_span(&mut self) -> Option<(TokenType, usize, usize)> {
-        let s = self.peeked.clone();
+    fn next_span(&mut self) -> (TokenType, usize, usize) {
+        let s = self.peeked;
         match s {
             None => {
                 loop {
-                    match self.next_of_any() {
-                        Some((token_type, from, to)) => {
-                            match token_type {
-                                Whitespace | Comment => continue,
-                                _ => return Some((token_type, from, to)),
-                            }
-                        }
-                        None => return None,
+                    let (token_type, from, to) = self.next_of_any();
+                    match token_type {
+                        Whitespace | Comment => continue,
+                        _ => return (token_type, from, to),
                     }
                 }
             }
 
             Some(val) => {
                 self.peeked = None;
-                return Some(val.clone());
+                return val;
             }
         }
     }
 
-    pub fn pop(& mut self) -> Option<(TokenType, &str)> {
-        return match &self.next_span() {
-            Some((tt, from ,to)) => Some((tt.clone(), &self.input[*from..*to])),
-            None => None,
-        };
+    pub fn pop(&mut self) -> (TokenType, &str) {
+        let (tt, from, to) = self.next_span();
+        return (tt, &self.input[from..to]);
     }
 }
-/*
-pub fn lex_test() {
-    let ex = r#"pwd;ls# *{*.txt} ff??.fnurp foo=bar baz = qux snurg
-    baz | qux ${mjupp} `{ls} "a" "a|bc ${ggg} `{c} \"d" {pwd}; pwd # tralala "#;
-    println!("{}", ex);
-    let mut l = Lexer::new(&String::from(ex));
-    loop {
-        match l.pop() {
-            None => {break;},
-            Some((t, s)) => {
-                println!("WEEE {:?} '{}'", t, s);
-            },
-        }
-    }
-}
-*/

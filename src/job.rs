@@ -6,16 +6,14 @@ use crate::result::{CellType, Argument};
 use crate::errors::JobError;
 
 pub struct Job {
-    pub src: String,
     pub commands: Vec<Box<dyn Call>>,
     pub compile_errors: Vec<JobError>,
     pub runtime_errors: Vec<JobError>,
 }
 
 impl Job {
-    pub fn new(src: &String) -> Job {
+    pub fn new() -> Job {
         Job {
-            src: String::from(src),
             commands: Vec::new(),
             compile_errors: Vec::new(),
             runtime_errors: Vec::new(),
@@ -26,7 +24,7 @@ impl Job {
         let el: Vec<String> = self.commands.iter().map(|c| String::from(c.get_name())).collect();
         return el.join(" | ");
     }
-
+/*
     pub fn compile(&mut self, state: &State) -> Result<(), ()> {
         let calls: Vec<&str> = self.src.split('|').collect();
         let first_input: Vec<CellType> = Vec::new();
@@ -58,7 +56,7 @@ impl Job {
         }
         return if self.compile_errors.is_empty() { Ok(()) } else { Err(()) };
     }
-
+*/
     pub fn run(&mut self, state: &State) -> Result<(), ()> {
         let mut input = SerialStream::new(Vec::new());
         let mut output = SerialStream::new(Vec::new());
