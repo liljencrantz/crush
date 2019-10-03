@@ -45,6 +45,9 @@ impl SerialStream {
                     Cell::Text(val) => val.len(),
                     Cell::Integer(val) => val.to_string().len(),
                     Cell::Time(val) => val.format("%Y %b %d %H:%M:%S %z").to_string().len(),
+                    Cell::Field(val) => { val.len() + 3 }
+                    Cell::Wildcard(val) => { val.len() + 3 }
+                    Cell::Regex(val) => { val.len() + 3 }
                 };
                 w[idx] = max(w[idx], l);
             }
@@ -61,6 +64,9 @@ impl SerialStream {
                     Cell::Text(val) => String::from(val),
                     Cell::Integer(val) => val.to_string(),
                     Cell::Time(val) => val.format("%Y-%m-%d %H:%M:%S %z").to_string(),
+                    Cell::Field(val) => format!(r"%{{{}}}", val),
+                    Cell::Wildcard(val) => format!("*{{{}}}", val),
+                    Cell::Regex(val) => format!("r{{{}}}", val),
                 };
                 print!("{}{}", cell, " ".repeat(w[idx] - cell.len() + 1))
             }

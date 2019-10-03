@@ -53,9 +53,33 @@ fn parse_unnamed_argument(lexer: &mut Lexer, state: &State) -> Result<Cell, JobE
             return match String::from(lexer.pop().1).parse::<i128>() {
                 Ok(ival) => Ok(Cell::Integer(ival)),
                 Err(_) => Err(JobError::parse_error("Invalid number", lexer)),
+            };
+        }
+        TokenType::BlockStart => {
+            let sigil_type = lexer.pop().1.chars().next().unwrap();
+            match sigil_type {
+                '%' => {
+                    match lexer.peek().0 {
+                        TokenType::String => {
+                            let result = Ok(Cell::Field(String::from(lexer.pop().1)));
+                            if lexer.peek().0 != TokenType::BlockEnd {
+                                return Err(JobError::parse_error("Expected '}'", lexer));
+                            }
+                            lexer.pop();
+                            return result;
+                        }
+                        _ => {
+                            return Err(JobError::parse_error("Expected string token", lexer));
+                        }
+                    }
+                }
+                _ => {
+                    return Err(JobError::parse_error("Cannot handle sigil type", lexer));
+                }
             }
         }
         _ => {
+            lexer.pop();
             return Err(JobError::parse_error("Unknown token", lexer));
         }
     }
@@ -63,6 +87,7 @@ fn parse_unnamed_argument(lexer: &mut Lexer, state: &State) -> Result<Cell, JobE
 
 fn parse_arguments(lexer: &mut Lexer, arguments: &mut Vec<Argument>, state: &State) -> Result<(), JobError> {
     loop {
+        println!("parse_arguments");
         match lexer.peek().0 {
             TokenType::Error => {
                 return Err(JobError::parse_error(&String::from("Unknown token"), lexer));
@@ -75,15 +100,10 @@ fn parse_arguments(lexer: &mut Lexer, arguments: &mut Vec<Argument>, state: &Sta
                 if lexer.peek().0 == TokenType::Assign {
                     lexer.pop();
                     arguments.push(Argument::named(&ss, &parse_unnamed_argument(lexer, state)?));
-
                 } else {
                     arguments.push(Argument::unnamed(&Cell::Text(ss)));
                 }
             }
-            TokenType::BlockStart => {
-                
-            }
-
             _ => {
                 arguments.push(Argument::unnamed(&parse_unnamed_argument(lexer, state)?));
             }

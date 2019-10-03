@@ -63,4 +63,5 @@ fn repl() {
 
 fn main() {
     repl();
+//    lexer::do_lex_test();
 }

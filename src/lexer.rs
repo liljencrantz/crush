@@ -50,7 +50,7 @@ lazy_static! {
         (TokenType::String, Regex::new(r"^[a-zA-Z][-+_a-z-A-Z0-9]*").unwrap()),
         (TokenType::Wildcard, Regex::new(r"^[a-zA-Z*.?][-+_a-z-A-Z0-9*.?]*").unwrap()),
         (TokenType::Comment, Regex::new("(?m)^#.*$").unwrap()),
-        (TokenType::Whitespace, Regex::new(r"^\s*").unwrap()),
+        (TokenType::Whitespace, Regex::new(r"^\s+").unwrap()),
         (TokenType::QuotedString, Regex::new(r#"^"([^\\"]|\\.)*""#).unwrap()),
         (TokenType::Error, Regex::new("^.").unwrap()),
     ];
@@ -68,7 +68,7 @@ impl Lexer {
     fn next_of_any(&mut self) -> (TokenType, usize, usize) {
         let mut max_len = 0;
         let mut token_type = Whitespace;
-        if self.idx >= self.input.len()-1 {
+        if self.idx >= self.input.len() {
             return (EOF, 0, 0);
         }
         for (token, re) in lex_data.into_iter() {
@@ -119,5 +119,25 @@ impl Lexer {
     pub fn pop(&mut self) -> (TokenType, &str) {
         let (tt, from, to) = self.next_span();
         return (tt, &self.input[from..to]);
+    }
+}
+
+pub fn do_lex_test() {
+    let mut l = Lexer::new(&String::from("a %{b}"));
+    loop {
+        match l.peek().0 {
+            TokenType::Error => {
+                println!("Error");
+                break;
+            }
+            TokenType::EOF => {
+                println!("Eof");
+                break;
+            }
+            _ => {
+                println!("{:?} {}", l.peek().0, l.peek().1);
+            }
+        }
+        l.pop();
     }
 }

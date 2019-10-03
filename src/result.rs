@@ -2,21 +2,14 @@ use std::cmp::Ordering;
 use chrono::{Local, DateTime};
 
 #[derive(Clone)]
-#[derive(Eq)]
+#[derive(PartialEq)]
 pub enum CellDataType {
     Text,
     Integer,
     Time,
-}
-
-impl std::cmp::PartialEq for CellDataType {
-    fn eq(&self, other: &CellDataType) -> bool {
-        return match (self, other) {
-            (CellDataType::Text, CellDataType::Text) => true,
-            (CellDataType::Integer, CellDataType::Integer) => true,
-            _ => false,
-        };
-    }
+    Field,
+    Wildcard,
+    Regex,
 }
 
 #[derive(Clone)]
@@ -31,6 +24,9 @@ pub enum Cell {
     Text(String),
     Integer(i128),
     Time(DateTime<Local>),
+    Field(String),
+    Wildcard(String),
+    Regex(String),
 //    Float(f64),
 //    Row(Box<Row>),
 //    Rows(Vec<Row>),
@@ -42,6 +38,9 @@ impl Cell {
             Cell::Text(_) => CellDataType::Text,
             Cell::Integer(_) => CellDataType::Integer,
             Cell::Time(_) => CellDataType::Time,
+            Cell::Field(_) => CellDataType::Field,
+            Cell::Wildcard(_) => CellDataType::Wildcard,
+            Cell::Regex(_) => CellDataType::Regex,
         };
     }
 }
@@ -50,6 +49,9 @@ impl std::cmp::PartialOrd for Cell {
     fn partial_cmp(&self, other: &Cell) -> Option<Ordering> {
         return match (self, other) {
             (Cell::Text(val1), Cell::Text(val2)) => Some(val1.cmp(val2)),
+            (Cell::Field(val1), Cell::Field(val2)) => Some(val1.cmp(val2)),
+            (Cell::Wildcard(val1), Cell::Wildcard(val2)) => Some(val1.cmp(val2)),
+            (Cell::Regex(val1), Cell::Regex(val2)) => Some(val1.cmp(val2)),
             (Cell::Integer(val1), Cell::Integer(val2)) => Some(val1.cmp(val2)),
             (Cell::Time(val1), Cell::Time(val2)) => Some(val1.cmp(val2)),
             _ => Option::None,
@@ -63,6 +65,9 @@ impl std::cmp::PartialEq for Cell {
             (Cell::Text(val1), Cell::Text(val2)) => val1 == val2,
             (Cell::Integer(val1), Cell::Integer(val2)) => val1 == val2,
             (Cell::Time(val1), Cell::Time(val2)) => val1 == val2,
+            (Cell::Field(val1), Cell::Field(val2)) => val1 == val2,
+            (Cell::Wildcard(val1), Cell::Wildcard(val2)) => val1 == val2,
+            (Cell::Regex(val1), Cell::Regex(val2)) => val1 == val2,
             _ => false,
         };
     }
@@ -75,14 +80,14 @@ pub struct Argument {
 }
 
 impl Argument {
-    pub fn named(name: &String, cell: &Cell) -> Argument{
+    pub fn named(name: &String, cell: &Cell) -> Argument {
         return Argument {
             name: name.clone(),
             cell: cell.clone(),
         };
     }
 
-    pub fn unnamed(cell: &Cell) -> Argument{
+    pub fn unnamed(cell: &Cell) -> Argument {
         return Argument {
             name: String::from(""),
             cell: cell.clone(),
