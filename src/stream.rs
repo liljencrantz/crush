@@ -48,6 +48,7 @@ impl SerialStream {
                     Cell::Field(val) => { val.len() + 3 }
                     Cell::Wildcard(val) => { val.len() + 3 }
                     Cell::Regex(val) => { val.len() + 3 }
+                    Cell::Op(val) => { val.len() }
                 };
                 w[idx] = max(w[idx], l);
             }
@@ -67,6 +68,7 @@ impl SerialStream {
                     Cell::Field(val) => format!(r"%{{{}}}", val),
                     Cell::Wildcard(val) => format!("*{{{}}}", val),
                     Cell::Regex(val) => format!("r{{{}}}", val),
+                    Cell::Op(val) => String::from(val),
                 };
                 print!("{}{}", cell, " ".repeat(w[idx] - cell.len() + 1))
             }

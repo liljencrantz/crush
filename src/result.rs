@@ -10,6 +10,7 @@ pub enum CellDataType {
     Field,
     Wildcard,
     Regex,
+    Op,
 }
 
 #[derive(Clone)]
@@ -27,6 +28,7 @@ pub enum Cell {
     Field(String),
     Wildcard(String),
     Regex(String),
+    Op(String),
 //    Float(f64),
 //    Row(Box<Row>),
 //    Rows(Vec<Row>),
@@ -41,6 +43,7 @@ impl Cell {
             Cell::Field(_) => CellDataType::Field,
             Cell::Wildcard(_) => CellDataType::Wildcard,
             Cell::Regex(_) => CellDataType::Regex,
+            Cell::Op(_) => CellDataType::Op,
         };
     }
 }
@@ -54,6 +57,7 @@ impl std::cmp::PartialOrd for Cell {
             (Cell::Regex(val1), Cell::Regex(val2)) => Some(val1.cmp(val2)),
             (Cell::Integer(val1), Cell::Integer(val2)) => Some(val1.cmp(val2)),
             (Cell::Time(val1), Cell::Time(val2)) => Some(val1.cmp(val2)),
+            (Cell::Op(val1), Cell::Op(val2)) => Some(val1.cmp(val2)),
             _ => Option::None,
         };
     }
@@ -68,6 +72,7 @@ impl std::cmp::PartialEq for Cell {
             (Cell::Field(val1), Cell::Field(val2)) => val1 == val2,
             (Cell::Wildcard(val1), Cell::Wildcard(val2)) => val1 == val2,
             (Cell::Regex(val1), Cell::Regex(val2)) => val1 == val2,
+            (Cell::Op(val1), Cell::Op(val2)) => val1 == val2,
             _ => false,
         };
     }

@@ -55,6 +55,9 @@ fn parse_unnamed_argument(lexer: &mut Lexer, state: &State) -> Result<Cell, JobE
                 Err(_) => Err(JobError::parse_error("Invalid number", lexer)),
             };
         }
+        TokenType::Equal | TokenType::NotEqual | TokenType::GreaterThan | TokenType::GreaterThanOrEqual | TokenType::LessThan | TokenType::LessThanOrEqual => {
+            return Ok(Cell::Op(String::from(lexer.pop().1)));
+        }
         TokenType::BlockStart => {
             let sigil_type = lexer.pop().1.chars().next().unwrap();
             match sigil_type {
@@ -62,6 +65,36 @@ fn parse_unnamed_argument(lexer: &mut Lexer, state: &State) -> Result<Cell, JobE
                     match lexer.peek().0 {
                         TokenType::String => {
                             let result = Ok(Cell::Field(String::from(lexer.pop().1)));
+                            if lexer.peek().0 != TokenType::BlockEnd {
+                                return Err(JobError::parse_error("Expected '}'", lexer));
+                            }
+                            lexer.pop();
+                            return result;
+                        }
+                        _ => {
+                            return Err(JobError::parse_error("Expected string token", lexer));
+                        }
+                    }
+                }
+                '*' => {
+                    match lexer.peek().0 {
+                        TokenType::Wildcard => {
+                            let result = Ok(Cell::Wildcard(String::from(lexer.pop().1)));
+                            if lexer.peek().0 != TokenType::BlockEnd {
+                                return Err(JobError::parse_error("Expected '}'", lexer));
+                            }
+                            lexer.pop();
+                            return result;
+                        }
+                        _ => {
+                            return Err(JobError::parse_error("Expected string token", lexer));
+                        }
+                    }
+                }
+                'r' => {
+                    match lexer.peek().0 {
+                        TokenType::String => {
+                            let result = Ok(Cell::Regex(String::from(lexer.pop().1)));
                             if lexer.peek().0 != TokenType::BlockEnd {
                                 return Err(JobError::parse_error("Expected '}'", lexer));
                             }
@@ -87,7 +120,6 @@ fn parse_unnamed_argument(lexer: &mut Lexer, state: &State) -> Result<Cell, JobE
 
 fn parse_arguments(lexer: &mut Lexer, arguments: &mut Vec<Argument>, state: &State) -> Result<(), JobError> {
     loop {
-        println!("parse_arguments");
         match lexer.peek().0 {
             TokenType::Error => {
                 return Err(JobError::parse_error(&String::from("Unknown token"), lexer));

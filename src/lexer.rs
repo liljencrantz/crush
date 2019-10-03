@@ -38,13 +38,17 @@ pub struct Lexer {
 }
 
 lazy_static! {
-    static ref lex_data: [(TokenType, Regex); 14] = [
+    static ref lex_data: [(TokenType, Regex); 16] = [
         (TokenType::Separator, Regex::new("^;").unwrap()),
         (TokenType::Pipe, Regex::new(r"^\|").unwrap()),
+
         (TokenType::Assign, Regex::new(r"^=").unwrap()),
         (TokenType::Equal, Regex::new(r"^==").unwrap()),
-        (TokenType::NotEqual, Regex::new(r"^!=").unwrap()),
-        (TokenType::Integer, Regex::new(r"^-?[0-9]*").unwrap()),
+        (TokenType::LessThan, Regex::new(r"^<").unwrap()),
+        (TokenType::LessThanOrEqual, Regex::new(r"^<=").unwrap()),
+        (TokenType::GreaterThan, Regex::new(r"^>").unwrap()),
+        (TokenType::GreaterThanOrEqual, Regex::new(r"^>=").unwrap()),
+
         (TokenType::BlockStart, Regex::new(r"^[`r$*%]?\{").unwrap()),
         (TokenType::BlockEnd, Regex::new(r"^\}").unwrap()),
         (TokenType::String, Regex::new(r"^[a-zA-Z][-+_a-z-A-Z0-9]*").unwrap()),
