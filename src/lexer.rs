@@ -9,7 +9,7 @@ use crate::lexer::TokenType::{Whitespace, Comment, EOF};
 #[derive(PartialEq)]
 pub enum TokenType {
     Pipe,
-    Number,
+    Integer,
     String,
     Wildcard,
     BlockStart,
@@ -44,8 +44,8 @@ lazy_static! {
         (TokenType::Assign, Regex::new(r"^=").unwrap()),
         (TokenType::Equal, Regex::new(r"^==").unwrap()),
         (TokenType::NotEqual, Regex::new(r"^!=").unwrap()),
-        (TokenType::Number, Regex::new(r"^-?[0-9]*").unwrap()),
-        (TokenType::BlockStart, Regex::new(r"^[`r$*]?\{").unwrap()),
+        (TokenType::Integer, Regex::new(r"^-?[0-9]*").unwrap()),
+        (TokenType::BlockStart, Regex::new(r"^[`r$*%]?\{").unwrap()),
         (TokenType::BlockEnd, Regex::new(r"^\}").unwrap()),
         (TokenType::String, Regex::new(r"^[a-zA-Z][-+_a-z-A-Z0-9]*").unwrap()),
         (TokenType::Wildcard, Regex::new(r"^[a-zA-Z*.?][-+_a-z-A-Z0-9*.?]*").unwrap()),

@@ -11,8 +11,8 @@ than files, they are passed in as their respective type to the commands, and the
 will decide how to resolve different argument types.
 
 # Lambdas
-echo {pwd} # Passes in the output of the pwd command
-echo `{pwd} # Passes in the lambda itself
+echo {pwd}   # Passes in the output of the pwd command
+echo `{pwd}  # Passes in the lambda itself
 
 Error handling:
 

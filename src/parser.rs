@@ -44,6 +44,23 @@ fn parse_job(lexer: &mut Lexer, state: &State, job: &mut Job) -> Result<(), JobE
     return Ok(());
 }
 
+fn parse_unnamed_argument(lexer: &mut Lexer, state: &State) -> Result<Cell, JobError> {
+    match lexer.peek().0 {
+        TokenType::String => {
+            return Ok(Cell::Text(String::from(lexer.pop().1)));
+        }
+        TokenType::Integer => {
+            return match String::from(lexer.pop().1).parse::<i128>() {
+                Ok(ival) => Ok(Cell::Integer(ival)),
+                Err(_) => Err(JobError::parse_error("Invalid number", lexer)),
+            }
+        }
+        _ => {
+            return Err(JobError::parse_error("Unknown token", lexer));
+        }
+    }
+}
+
 fn parse_arguments(lexer: &mut Lexer, arguments: &mut Vec<Argument>, state: &State) -> Result<(), JobError> {
     loop {
         match lexer.peek().0 {
@@ -57,20 +74,18 @@ fn parse_arguments(lexer: &mut Lexer, arguments: &mut Vec<Argument>, state: &Sta
                 let ss = String::from(lexer.pop().1);
                 if lexer.peek().0 == TokenType::Assign {
                     lexer.pop();
-                    match lexer.peek().0 {
-                        TokenType::String => {
-                            arguments.push(Argument::named(&ss, &Cell::Text(String::from(lexer.pop().1))));
-                        }
-                        _ => {
-                            return Err(JobError::parse_error(&String::from("Unknown token"), lexer));
-                        }
-                    }
+                    arguments.push(Argument::named(&ss, &parse_unnamed_argument(lexer, state)?));
+
                 } else {
                     arguments.push(Argument::unnamed(&Cell::Text(ss)));
                 }
             }
+            TokenType::BlockStart => {
+                
+            }
+
             _ => {
-                lexer.pop();
+                arguments.push(Argument::unnamed(&parse_unnamed_argument(lexer, state)?));
             }
         }
     }
@@ -88,7 +103,7 @@ fn parse_command(lexer: &mut Lexer, job: &mut Job, state: &State) -> Result<(), 
             let name = String::from(lexer.pop().1);
             let mut arguments: Vec<Argument> = Vec::new();
             parse_arguments(lexer, &mut arguments, state)?;
-            let call = state.commands.call(&name, input, &arguments)?;
+            let call = state.namespace.call(&name, input, &arguments)?;
             job.commands.push(call);
             return Ok(());
         }

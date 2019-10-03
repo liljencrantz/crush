@@ -5,9 +5,9 @@ pub struct JobError {
 }
 
 impl JobError {
-    pub fn parse_error(message: &String, lexer: &Lexer) -> JobError {
+    pub fn parse_error(message: &str, lexer: &Lexer) -> JobError {
         return JobError {
-            message: message.clone(),
+            message: String::from(message),
         }
     }
 }
