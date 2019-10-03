@@ -19,15 +19,15 @@ impl Ls {
         for maybe_entry in dirs? {
             let entry = maybe_entry?;
             let meta = entry.metadata()?;
-            let created_system = meta.created()?;
-            let created_datetime:DateTime<Local> = DateTime::from(created_system);
+            let modified_system = meta.modified()?;
+            let modified_datetime:DateTime<Local> = DateTime::from(modified_system);
             match entry.file_name().into_string() {
                 Ok(name) =>
                     output.add(Row {
                         cells: vec![
                             Cell::Text(name),
                             Cell::Integer(i128::from(meta.len())),
-                            Cell::Time(created_datetime),
+                            Cell::Time(modified_datetime),
                         ]
                     }),
                 _ => {}
@@ -53,7 +53,7 @@ impl Command for Ls {
                     cell_type: CellDataType::Integer,
                 },
                 CellType {
-                    name: String::from("created"),
+                    name: String::from("modified"),
                     cell_type: CellDataType::Time,
                 },
             ],
