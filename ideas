@@ -53,6 +53,16 @@ Language:
 In order to support passing in "conditions" to code that reference cells in the output, use the %{}
 sigil:
 
-ls | filter (%{size} > 123 and %{owner} == axel) or created > {date now - 5 days}
+> ls | filter (%{size} > 123 and %{owner} == axel) or created > {date now - 5 days}
 
 No operator precedence.
+
+Parameter parsing:
+
+Use argument names to set values, e.g.
+
+> ls directory=true ~/*/
+> ls | sort key=size
+
+Use field sigil to refer to row cell values
+> find . | filter %{name} == *.txt

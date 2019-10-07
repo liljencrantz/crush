@@ -1,16 +1,17 @@
 Todo:
-implement wildcards and regexps
-make ls support wildcards and regexps
-make filter support wildcards and regexps
+implement file globs
+implement regexps
+implement file regexps
+make ls support wildcards
+make ls support regexps
+make filter support regexps
 implement sort command
 implement Vec<Row> cell type
 implement group command
 implement nice way to combine two results into one
 implement variables
 implement set command
-proper lexer and parser
-wildcards
-regexps
+implement find command
 implement command substitution and lambdas
 one command per thread
 keyboard handling
@@ -21,3 +22,6 @@ Display errors
 Propagate runtime errors
 one command per file
 make filter actually useful
+implement wildcards
+make filter support wildcards
+proper lexer and parser
