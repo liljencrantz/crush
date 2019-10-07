@@ -10,4 +10,8 @@ impl State {
           namespace: Namespace::new(),
       }
   }
+
+    pub fn get_cwd(&self) -> String {
+        return std::env::current_dir().expect("AAAA").to_str().expect("fdsa").to_string();
+    }
 }

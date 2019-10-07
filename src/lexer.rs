@@ -54,8 +54,8 @@ lazy_static! {
 
         (TokenType::BlockStart, Regex::new(r"^[`r$*%]?\{").unwrap()),
         (TokenType::BlockEnd, Regex::new(r"^\}").unwrap()),
-        (TokenType::String, Regex::new(r"^[-.+_a-zA-Z][-.+_a-z-A-Z0-9]*").unwrap()),
-        (TokenType::Glob, Regex::new(r"^[-.+_a-zA-Z*.?][-+_a-z-A-Z0-9*.?]*").unwrap()),
+        (TokenType::String, Regex::new(r"^[-/.+_a-zA-Z][-/.+_a-z-A-Z0-9]*").unwrap()),
+        (TokenType::Glob, Regex::new(r"^[-/.+_a-zA-Z*.?][-/+_a-z-A-Z0-9*.?]*").unwrap()),
         (TokenType::Comment, Regex::new("(?m)^#.*$").unwrap()),
         (TokenType::Whitespace, Regex::new(r"^\s+").unwrap()),
         (TokenType::QuotedString, Regex::new(r#"^"([^\\"]|\\.)*""#).unwrap()),

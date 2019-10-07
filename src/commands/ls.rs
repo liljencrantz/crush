@@ -5,17 +5,20 @@ use crate::commands::{InternalCall, Command, Call, InternalCommand, to_runtime_e
 use crate::errors::JobError;
 use chrono::{Local, DateTime};
 use crate::state::State;
+use crate::glob::glob_files;
+use std::path::Path;
 
 #[derive(Clone)]
 pub struct Ls {}
 
 impl Ls {
-    fn run_internal(
+    fn run_for_single_directory(
         &mut self,
+        directory: &str,
         _input_type: &Vec<CellType>,
         _arguments: &Vec<Argument>,
         _input: &mut dyn InputStream, output: &mut dyn OutputStream) -> Result<(), io::Error> {
-        let dirs = fs::read_dir(".");
+        let dirs = fs::read_dir(directory);
         for maybe_entry in dirs? {
             let entry = maybe_entry?;
             let meta = entry.metadata()?;
@@ -34,6 +37,36 @@ impl Ls {
             }
         }
         Ok(())
+    }
+
+    fn run_internal(
+        &mut self,
+        state: &State,
+        input_type: &Vec<CellType>,
+        arguments: &Vec<Argument>,
+        input: &mut dyn InputStream,
+        output: &mut dyn OutputStream) -> Result<(), io::Error> {
+        let mut dirs: Vec<String> = Vec::new();
+        if (arguments.is_empty()) {
+            dirs.push(String::from("."));
+        } else {
+            for arg in arguments {
+                match &arg.cell {
+                    Cell::Text(dir) => {
+                        dirs.push(dir.clone());
+                    }
+                    Cell::Glob(dir) => {
+                        glob_files(dir, Path::new(&state.get_cwd()), &mut dirs);
+                    }
+                    _ => {panic!("aj aj")}
+                }
+            }
+        }
+
+        for dir in dirs {
+            self.run_for_single_directory(dir.as_str(), input_type, arguments, input, output);
+        }
+        return Ok(())
     }
 }
 
@@ -65,11 +98,11 @@ impl Command for Ls {
 impl InternalCommand for Ls {
     fn run(
         &mut self,
-        _state: &State,
-        _input_type: &Vec<CellType>,
-        _arguments: &Vec<Argument>,
-        _input: &mut dyn InputStream,
+        state: &State,
+        input_type: &Vec<CellType>,
+        arguments: &Vec<Argument>,
+        input: &mut dyn InputStream,
         output: &mut dyn OutputStream) -> Result<(), JobError> {
-        return to_runtime_error(self.run_internal(_input_type, _arguments, _input, output));
+        return to_runtime_error(self.run_internal(state, input_type, arguments, input, output));
     }
 }
