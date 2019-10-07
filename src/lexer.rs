@@ -127,7 +127,7 @@ impl Lexer {
 }
 
 pub fn do_lex_test() {
-    let mut l = Lexer::new(&String::from("a %{b}"));
+    let mut l = Lexer::new(&String::from("a %{b} == b"));
     loop {
         match l.peek().0 {
             TokenType::Error => {

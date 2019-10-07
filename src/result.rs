@@ -3,6 +3,7 @@ use chrono::{Local, DateTime};
 
 #[derive(Clone)]
 #[derive(PartialEq)]
+#[derive(Debug)]
 pub enum CellDataType {
     Text,
     Integer,
@@ -14,6 +15,7 @@ pub enum CellDataType {
 }
 
 #[derive(Clone)]
+#[derive(Debug)]
 pub struct CellType {
     pub name: String,
     pub cell_type: CellDataType,
@@ -21,6 +23,7 @@ pub struct CellType {
 
 #[derive(Eq)]
 #[derive(Clone)]
+#[derive(Debug)]
 pub enum Cell {
     Text(String),
     Integer(i128),

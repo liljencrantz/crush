@@ -45,7 +45,8 @@ fn parse_job(lexer: &mut Lexer, state: &State, job: &mut Job) -> Result<(), JobE
 }
 
 fn parse_unnamed_argument(lexer: &mut Lexer, state: &State) -> Result<Cell, JobError> {
-    match lexer.peek().0 {
+    let token_type = lexer.peek().0;
+    match token_type {
         TokenType::String => {
             return Ok(Cell::Text(String::from(lexer.pop().1)));
         }
@@ -113,7 +114,7 @@ fn parse_unnamed_argument(lexer: &mut Lexer, state: &State) -> Result<Cell, JobE
         }
         _ => {
             lexer.pop();
-            return Err(parse_error("Unknown token", lexer));
+            return Err(parse_error(format!("Unknown token {:?}", token_type).as_str(), lexer));
         }
     }
 }
@@ -122,7 +123,7 @@ fn parse_arguments(lexer: &mut Lexer, arguments: &mut Vec<Argument>, state: &Sta
     loop {
         match lexer.peek().0 {
             TokenType::Error => {
-                return Err(parse_error("Unknown token", lexer));
+                return Err(parse_error("Bad token ", lexer));
             }
             TokenType::Separator | TokenType::EOF | TokenType::Pipe => {
                 return Ok(());

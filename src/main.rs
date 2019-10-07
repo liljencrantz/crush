@@ -19,7 +19,7 @@ fn prompt() -> Option<String> {
     print!("> ");
     io::stdout().flush();
     return match io::stdin().read_line(&mut cmd) {
-        Ok(_) => Some(cmd),
+        Ok(n) => if n > 0 {Some(cmd)} else {None},
         Err(_) => None,
     };
 }
@@ -63,5 +63,5 @@ fn repl() {
 
 fn main() {
     repl();
-//    lexer::do_lex_test();
+//      lexer::do_lex_test();
 }
