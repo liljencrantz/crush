@@ -52,7 +52,6 @@ fn parse_value(input_type: &Vec<CellType>,
     }
 }
 
-
 fn parse_condition(input_type: &Vec<CellType>,
                    arguments: &mut std::slice::Iter<(usize, &Argument)>,
                    field_lookup: &Vec<Option<usize>>) -> Result<Condition, JobError> {

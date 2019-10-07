@@ -46,7 +46,7 @@ impl SerialStream {
                     Cell::Integer(val) => val.to_string().len(),
                     Cell::Time(val) => val.format("%Y %b %d %H:%M:%S %z").to_string().len(),
                     Cell::Field(val) => { val.len() + 3 }
-                    Cell::Wildcard(val) => { val.len() + 3 }
+                    Cell::Glob(val) => { val.len() + 3 }
                     Cell::Regex(val) => { val.len() + 3 }
                     Cell::Op(val) => { val.len() }
                 };
@@ -66,7 +66,7 @@ impl SerialStream {
                     Cell::Integer(val) => val.to_string(),
                     Cell::Time(val) => val.format("%Y-%m-%d %H:%M:%S %z").to_string(),
                     Cell::Field(val) => format!(r"%{{{}}}", val),
-                    Cell::Wildcard(val) => format!("*{{{}}}", val),
+                    Cell::Glob(val) => format!("*{{{}}}", val),
                     Cell::Regex(val) => format!("r{{{}}}", val),
                     Cell::Op(val) => String::from(val),
                 };

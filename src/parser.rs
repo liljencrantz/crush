@@ -55,6 +55,9 @@ fn parse_unnamed_argument(lexer: &mut Lexer, state: &State) -> Result<Cell, JobE
         TokenType::String => {
             return Ok(Cell::Text(String::from(lexer.pop().1)));
         }
+        TokenType::Glob => {
+            return Ok(Cell::Glob(String::from(lexer.pop().1)));
+        }
         TokenType::Integer => {
             return match String::from(lexer.pop().1).parse::<i128>() {
                 Ok(ival) => Ok(Cell::Integer(ival)),
@@ -85,8 +88,8 @@ fn parse_unnamed_argument(lexer: &mut Lexer, state: &State) -> Result<Cell, JobE
                 }
                 '*' => {
                     match lexer.peek().0 {
-                        TokenType::Wildcard => {
-                            let result = Ok(Cell::Wildcard(String::from(lexer.pop().1)));
+                        TokenType::Glob => {
+                            let result = Ok(Cell::Glob(String::from(lexer.pop().1)));
                             if lexer.peek().0 != TokenType::BlockEnd {
                                 return Err(parse_error("Expected '}'", lexer));
                             }

@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use chrono::{Local, DateTime};
+use crate::glob::glob;
 
 #[derive(Clone)]
 #[derive(PartialEq)]
@@ -9,7 +10,7 @@ pub enum CellDataType {
     Integer,
     Time,
     Field,
-    Wildcard,
+    Glob,
     Regex,
     Op,
 }
@@ -29,7 +30,7 @@ pub enum Cell {
     Integer(i128),
     Time(DateTime<Local>),
     Field(String),
-    Wildcard(String),
+    Glob(String),
     Regex(String),
     Op(String),
 //    Float(f64),
@@ -44,7 +45,7 @@ impl Cell {
             Cell::Integer(_) => CellDataType::Integer,
             Cell::Time(_) => CellDataType::Time,
             Cell::Field(_) => CellDataType::Field,
-            Cell::Wildcard(_) => CellDataType::Wildcard,
+            Cell::Glob(_) => CellDataType::Glob,
             Cell::Regex(_) => CellDataType::Regex,
             Cell::Op(_) => CellDataType::Op,
         };
@@ -56,7 +57,7 @@ impl std::cmp::PartialOrd for Cell {
         return match (self, other) {
             (Cell::Text(val1), Cell::Text(val2)) => Some(val1.cmp(val2)),
             (Cell::Field(val1), Cell::Field(val2)) => Some(val1.cmp(val2)),
-            (Cell::Wildcard(val1), Cell::Wildcard(val2)) => Some(val1.cmp(val2)),
+            (Cell::Glob(val1), Cell::Glob(val2)) => Some(val1.cmp(val2)),
             (Cell::Regex(val1), Cell::Regex(val2)) => Some(val1.cmp(val2)),
             (Cell::Integer(val1), Cell::Integer(val2)) => Some(val1.cmp(val2)),
             (Cell::Time(val1), Cell::Time(val2)) => Some(val1.cmp(val2)),
@@ -70,10 +71,12 @@ impl std::cmp::PartialEq for Cell {
     fn eq(&self, other: &Cell) -> bool {
         return match (self, other) {
             (Cell::Text(val1), Cell::Text(val2)) => val1 == val2,
+            (Cell::Glob(glb), Cell::Text(val)) => glob(glb.as_str(), val.as_str()),
+            (Cell::Text(val), Cell::Glob(glb)) => glob(glb.as_str(), val.as_str()),
             (Cell::Integer(val1), Cell::Integer(val2)) => val1 == val2,
             (Cell::Time(val1), Cell::Time(val2)) => val1 == val2,
             (Cell::Field(val1), Cell::Field(val2)) => val1 == val2,
-            (Cell::Wildcard(val1), Cell::Wildcard(val2)) => val1 == val2,
+            (Cell::Glob(val1), Cell::Glob(val2)) => val1 == val2,
             (Cell::Regex(val1), Cell::Regex(val2)) => val1 == val2,
             (Cell::Op(val1), Cell::Op(val2)) => val1 == val2,
             _ => false,

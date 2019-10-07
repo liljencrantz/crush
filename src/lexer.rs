@@ -11,7 +11,7 @@ pub enum TokenType {
     Pipe,
     Integer,
     String,
-    Wildcard,
+    Glob,
     BlockStart,
     BlockEnd,
     Comment,
@@ -55,7 +55,7 @@ lazy_static! {
         (TokenType::BlockStart, Regex::new(r"^[`r$*%]?\{").unwrap()),
         (TokenType::BlockEnd, Regex::new(r"^\}").unwrap()),
         (TokenType::String, Regex::new(r"^[-.+_a-zA-Z][-.+_a-z-A-Z0-9]*").unwrap()),
-        (TokenType::Wildcard, Regex::new(r"^[-.+_a-zA-Z*.?][-+_a-z-A-Z0-9*.?]*").unwrap()),
+        (TokenType::Glob, Regex::new(r"^[-.+_a-zA-Z*.?][-+_a-z-A-Z0-9*.?]*").unwrap()),
         (TokenType::Comment, Regex::new("(?m)^#.*$").unwrap()),
         (TokenType::Whitespace, Regex::new(r"^\s+").unwrap()),
         (TokenType::QuotedString, Regex::new(r#"^"([^\\"]|\\.)*""#).unwrap()),
@@ -159,7 +159,7 @@ mod tests {
         let mut l = Lexer::new(&String::from("echo foo.* abc??def"));
         let tt = tokens(&mut l);
         assert_eq!(tt, vec![
-            TokenType::String, TokenType::Wildcard, TokenType::Wildcard, TokenType::EOF]);
+            TokenType::String, TokenType::Glob, TokenType::Glob, TokenType::EOF]);
     }
 
     #[test]
