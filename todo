@@ -1,12 +1,9 @@
 Todo:
-implement file globs
 implement regexps
-implement file regexps
-make ls support wildcards
-make ls support regexps
 make filter support regexps
-implement sort command
-implement Vec<Row> cell type
+implement file regexps
+make ls support regexps
+implement Stream<Row> cell type
 implement group command
 implement nice way to combine two results into one
 implement variables
@@ -14,7 +11,6 @@ implement set command
 implement find command
 implement command substitution and lambdas
 one command per thread
-keyboard handling
 
 Done:
 Fix all expects calls that aren't impossible, and propagate the errors
@@ -25,3 +21,7 @@ make filter actually useful
 implement wildcards
 make filter support wildcards
 proper lexer and parser
+implement file globs
+make ls support wildcards
+implement sort command
+keyboard handling
