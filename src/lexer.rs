@@ -131,8 +131,7 @@ impl Lexer {
 
 #[cfg(test)]
 mod tests {
-    use crate::lexer::Lexer;
-    use crate::lexer::TokenType;
+    use super::*;
 
     fn tokens(lexer: &mut Lexer) -> Vec<TokenType> {
         let mut res: Vec<TokenType> = Vec::new();
