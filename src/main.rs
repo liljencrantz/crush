@@ -15,15 +15,10 @@ use job::Job;
 use state::State;
 use crate::lexer::Lexer;
 
-fn prompt() -> Option<String> {
-    let mut cmd = String::new();
-    print!("> ");
-    io::stdout().flush();
-    return match io::stdin().read_line(&mut cmd) {
-        Ok(n) => if n > 0 {Some(cmd)} else {None},
-        Err(_) => None,
-    };
-}
+extern crate rustyline;
+
+use rustyline::error::ReadlineError;
+use rustyline::Editor;
 
 fn perform(job: &mut Job, state: &mut State) -> Result<(), ()> {
     job.run(state)?;
@@ -33,9 +28,14 @@ fn perform(job: &mut Job, state: &mut State) -> Result<(), ()> {
 
 fn repl() {
     let mut state = state::State::new();
+    let mut rl = Editor::<()>::new();
+    rl.load_history(".posh_history");
     loop {
-        match prompt() {
-            Some(cmd) => {
+        let readline = rl.readline("posh> ");
+
+        match readline {
+            Ok(cmd) => {
+                rl.add_history_entry(cmd.as_str());
                 match parser::parse(&mut Lexer::new(&cmd), &state) {
                     Ok(jobs) => {
                         for mut job in jobs {
@@ -57,7 +57,23 @@ fn repl() {
                     }
                 }
             }
-            None => break,
+            Err(ReadlineError::Interrupted) => {
+                println!("^C");
+            }
+            Err(ReadlineError::Eof) => {
+                println!("exit");
+                break;
+            }
+            Err(err) => {
+                println!("Error: {:?}", err);
+                break;
+            }
+        }
+        match rl.save_history(".posh_history") {
+            Ok(_) => {}
+            Err(e) => {
+                println!("Error: Failed to save history.");
+            }
         }
     }
 }
