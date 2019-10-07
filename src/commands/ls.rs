@@ -14,26 +14,45 @@ pub struct Ls {}
 impl Ls {
     fn run_for_single_directory(
         &mut self,
-        directory: &str,
+        file: &str,
         _input_type: &Vec<CellType>,
         _arguments: &Vec<Argument>,
         _input: &mut dyn InputStream, output: &mut dyn OutputStream) -> Result<(), io::Error> {
-        let dirs = fs::read_dir(directory);
-        for maybe_entry in dirs? {
-            let entry = maybe_entry?;
-            let meta = entry.metadata()?;
+        let path = Path::new(file);
+        if path.is_dir() {
+            let dirs = fs::read_dir(path);
+            for maybe_entry in dirs? {
+                let entry = maybe_entry?;
+                let meta = entry.metadata()?;
+                let modified_system = meta.modified()?;
+                let modified_datetime: DateTime<Local> = DateTime::from(modified_system);
+                match entry.file_name().into_string() {
+                    Ok(name) =>
+                        output.add(Row {
+                            cells: vec![
+                                Cell::Text(name),
+                                Cell::Integer(i128::from(meta.len())),
+                                Cell::Time(modified_datetime),
+                            ]
+                        }),
+                    _ => {}
+                }
+            }
+        } else {
+            let meta = path.metadata()?;
             let modified_system = meta.modified()?;
-            let modified_datetime:DateTime<Local> = DateTime::from(modified_system);
-            match entry.file_name().into_string() {
-                Ok(name) =>
+            let modified_datetime: DateTime<Local> = DateTime::from(modified_system);
+            match path.file_name().expect("AAAA").to_str() {
+                Some(name) => {
                     output.add(Row {
                         cells: vec![
-                            Cell::Text(name),
+                            Cell::Text(String::from(name)),
                             Cell::Integer(i128::from(meta.len())),
                             Cell::Time(modified_datetime),
                         ]
-                    }),
-                _ => {}
+                    });
+                },
+                None => {}
             }
         }
         Ok(())
@@ -58,7 +77,7 @@ impl Ls {
                     Cell::Glob(dir) => {
                         glob_files(dir, Path::new(&state.get_cwd()), &mut dirs);
                     }
-                    _ => {panic!("aj aj")}
+                    _ => { panic!("aj aj") }
                 }
             }
         }
@@ -66,7 +85,7 @@ impl Ls {
         for dir in dirs {
             self.run_for_single_directory(dir.as_str(), input_type, arguments, input, output);
         }
-        return Ok(())
+        return Ok(());
     }
 }
 
