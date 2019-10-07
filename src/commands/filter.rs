@@ -8,7 +8,7 @@ use std::iter::Iterator;
 #[derive(Clone)]
 pub struct Filter {}
 
-fn find_field(needle: &String, haystack: &Vec<CellType>) -> Result<usize, JobError> {
+pub fn find_field(needle: &String, haystack: &Vec<CellType>) -> Result<usize, JobError> {
     for (idx, field) in haystack.iter().enumerate() {
         if field.name.eq(needle) {
             return Ok(idx);

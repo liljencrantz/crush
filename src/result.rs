@@ -106,6 +106,7 @@ impl Argument {
     }
 }
 
+#[derive(Clone)]
 pub struct Row {
     pub cells: Vec<Cell>,
 }

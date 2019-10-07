@@ -3,6 +3,7 @@ mod echo;
 mod pwd;
 mod cd;
 mod filter;
+mod sort;
 
 use std::collections::HashMap;
 use crate::stream::{InputStream, OutputStream};
@@ -15,6 +16,7 @@ use echo::Echo;
 use pwd::Pwd;
 use cd::Cd;
 use filter::Filter;
+use sort::Sort;
 
 pub trait Call {
     fn get_name(&self) -> &String;
@@ -108,6 +110,7 @@ impl Namespace {
         commands.insert(String::from("cd"), Box::new(Cd {}));
         commands.insert(String::from("echo"), Box::new(Echo {}));
         commands.insert(String::from("filter"), Box::new(Filter {}));
+        commands.insert(String::from("sort"), Box::new(Sort {}));
         let res = Namespace {
             commands,
         };
