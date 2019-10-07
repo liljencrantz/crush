@@ -66,3 +66,13 @@ Use argument names to set values, e.g.
 
 Use field sigil to refer to row cell values
 > find . | filter %{name} == *.txt
+
+Combining results:
+
+The bun command combines separate result streams:
+
+bun foo={find .} bar={csv name:text age:integer}
+
+The for-loop:
+
+for i={seq 10} `{print $i}

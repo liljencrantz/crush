@@ -138,7 +138,7 @@ mod tests {
         loop {
             let t = lexer.pop().0;
             res.push(t);
-            if (t == TokenType::EOF || t == TokenType::Error) {
+            if t == TokenType::EOF || t == TokenType::Error {
                 break;
             }
         }
