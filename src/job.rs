@@ -2,7 +2,6 @@ use crate::state::State;
 use crate::commands::Call;
 use crate::stream::SerialStream;
 use std::mem;
-use crate::result::{CellType, Argument};
 use crate::errors::JobError;
 
 pub struct Job {

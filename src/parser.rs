@@ -13,10 +13,10 @@ pub fn parse(lexer: &mut Lexer, state: &State) -> Result<Vec<Job>, JobError> {
 fn parse_internal(lexer: &mut Lexer, state: &State, jobs: &mut Vec<Job>) -> Result<(), JobError> {
     loop {
         match lexer.peek() {
-            (TokenType::String, s) => {
+            (TokenType::String, _) => {
                 jobs.push(Job::new());
                 let idx = jobs.len() - 1;
-                return parse_job(lexer, state, &mut jobs[idx]);
+                parse_job(lexer, state, &mut jobs[idx])?;
             }
             _ => {
                 return Err(parse_error("Wrong token type, expected command name", lexer));
@@ -28,9 +28,14 @@ fn parse_internal(lexer: &mut Lexer, state: &State, jobs: &mut Vec<Job>) -> Resu
                 return Ok(());
             }
             TokenType::Error => {
+                return Err(parse_error("Bad token", lexer));
+            }
+            TokenType::Separator => {
+                lexer.pop();
+            }
+            _ => {
                 return Err(parse_error("Wrong token type", lexer));
             }
-            _ => {}
         }
     }
 }
@@ -56,7 +61,8 @@ fn parse_unnamed_argument(lexer: &mut Lexer, state: &State) -> Result<Cell, JobE
                 Err(_) => Err(parse_error("Invalid number", lexer)),
             };
         }
-        TokenType::Equal | TokenType::NotEqual | TokenType::GreaterThan | TokenType::GreaterThanOrEqual | TokenType::LessThan | TokenType::LessThanOrEqual => {
+        TokenType::Equal | TokenType::NotEqual | TokenType::GreaterThan
+        | TokenType::GreaterThanOrEqual | TokenType::LessThan | TokenType::LessThanOrEqual => {
             return Ok(Cell::Op(String::from(lexer.pop().1)));
         }
         TokenType::BlockStart => {
@@ -123,7 +129,7 @@ fn parse_arguments(lexer: &mut Lexer, arguments: &mut Vec<Argument>, state: &Sta
     loop {
         match lexer.peek().0 {
             TokenType::Error => {
-                return Err(parse_error("Bad token ", lexer));
+                return Err(parse_error("Bad token", lexer));
             }
             TokenType::Separator | TokenType::EOF | TokenType::Pipe => {
                 return Ok(());

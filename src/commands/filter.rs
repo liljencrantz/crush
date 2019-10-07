@@ -1,10 +1,10 @@
 use crate::stream::{OutputStream, InputStream};
 use crate::result::{Argument, CellType, Cell, Row};
 use crate::commands::{InternalCall, Command, Call, InternalCommand};
-use crate::errors::{JobError, parse_error, argument_error};
+use crate::errors::{JobError, argument_error};
 use crate::state::State;
 use std::iter::Iterator;
-use std::iter::Enumerate;
+
 #[derive(Clone)]
 pub struct Filter {}
 
@@ -28,6 +28,11 @@ enum Condition {
     //    And(Box<Condition>, Box<Condition>),
 //    Or(Box<Condition>, Box<Condition>),
     Equal(Value, Value),
+    GreaterThan(Value, Value),
+    GreaterThanOrEqual(Value, Value),
+    LessThan(Value, Value),
+    LessThanOrEqual(Value, Value),
+    NotEqual(Value, Value),
 }
 
 fn parse_value(input_type: &Vec<CellType>,
@@ -36,7 +41,7 @@ fn parse_value(input_type: &Vec<CellType>,
     match arguments.next() {
         Some((arg_idx, arg)) => {
             return match &arg.cell {
-                Cell::Field(name) => Ok(Value::Field(field_lookup[*arg_idx].expect("Impossible"))),
+                Cell::Field(_) => Ok(Value::Field(field_lookup[*arg_idx].expect("Impossible"))),
                 Cell::Op(_) => Err(argument_error("Expected value")),
                 _ => return Ok(Value::Cell(arg.cell.clone())),
             };
@@ -55,7 +60,15 @@ fn parse_condition(input_type: &Vec<CellType>,
     match &arguments.next().ok_or(argument_error("Expected condition"))?.1.cell {
         Cell::Op(op) => {
             let val2 = parse_value(input_type, arguments, field_lookup)?;
-            return Ok(Condition::Equal(val1, val2));
+            return match op.as_str() {
+                "==" => Ok(Condition::Equal(val1, val2)),
+                ">" => Ok(Condition::GreaterThan(val1, val2)),
+                ">=" => Ok(Condition::GreaterThanOrEqual(val1, val2)),
+                "<" => Ok(Condition::LessThan(val1, val2)),
+                "<=" => Ok(Condition::LessThanOrEqual(val1, val2)),
+                "!=" => Ok(Condition::NotEqual(val1, val2)),
+                other => Err(argument_error(format!("Unknown comparison operation {}", other).as_str())),
+            };
         }
         _ => return Err(argument_error("Expected comparison"))
     }
@@ -81,15 +94,24 @@ fn to_cell(value: &Value, row: &Row) -> Cell {
     return match value {
         Value::Cell(c) => c.clone(),
         Value::Field(idx) => row.cells[*idx].clone(),
-    }
+    };
 }
 
 fn evaluate(condition: &Condition, row: &Row) -> bool {
-    match condition {
-        Condition::Equal(l, r) => {
-            return to_cell(&l, row) == to_cell(&r, row);
-        }
-    }
+    return match condition {
+        Condition::Equal(l, r) =>
+            to_cell(&l, row) == to_cell(&r, row),
+        Condition::GreaterThan(l, r) =>
+            to_cell(&l, row) > to_cell(&r, row),
+        Condition::GreaterThanOrEqual(l, r) =>
+            to_cell(&l, row) >= to_cell(&r, row),
+        Condition::LessThan(l, r) =>
+            to_cell(&l, row) < to_cell(&r, row),
+        Condition::LessThanOrEqual(l, r) =>
+            to_cell(&l, row) <= to_cell(&r, row),
+        Condition::NotEqual(l, r) =>
+            to_cell(&l, row) != to_cell(&r, row),
+    };
 }
 
 impl InternalCommand for Filter {
@@ -104,12 +126,10 @@ impl InternalCommand for Filter {
 
         let numbered_arguments: Vec<(usize, &Argument)> = arguments.iter().enumerate().collect();
         let condition = parse_condition(input_type, &mut numbered_arguments.iter(), &lookup)?;
-//        println!("WEE {:?}", eval);
         loop {
             match input.next() {
                 Some(row) => {
-                    let mut ok = evaluate(&condition, &row);
-                    if ok {
+                    if evaluate(&condition, &row) {
                         output.add(row);
                     }
                 }

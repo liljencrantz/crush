@@ -5,7 +5,7 @@ pub struct JobError {
     pub message: String,
 }
 
-pub fn parse_error(message: &str, lexer: &Lexer) -> JobError {
+pub fn parse_error(message: &str, _lexer: &Lexer) -> JobError {
     return JobError {
         message: String::from(message),
     };

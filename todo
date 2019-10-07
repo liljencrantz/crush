@@ -1,8 +1,11 @@
 Todo:
-make filter actually useful
+implement wildcards and regexps
+make ls support wildcards and regexps
+make filter support wildcards and regexps
 implement sort command
 implement Vec<Row> cell type
 implement group command
+implement nice way to combine two results into one
 implement variables
 implement set command
 proper lexer and parser
@@ -17,3 +20,4 @@ Fix all expects calls that aren't impossible, and propagate the errors
 Display errors
 Propagate runtime errors
 one command per file
+make filter actually useful

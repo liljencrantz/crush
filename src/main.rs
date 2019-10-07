@@ -1,4 +1,5 @@
 mod errors;
+mod glob;
 mod stream;
 mod result;
 mod commands;
