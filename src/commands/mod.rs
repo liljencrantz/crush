@@ -1,4 +1,4 @@
-mod ls;
+mod ls_and_find;
 mod echo;
 mod pwd;
 mod cd;
@@ -76,11 +76,11 @@ fn to_runtime_error(io_result: io::Result<()>) -> Result<(), JobError> {
     };
 }
 
-
 impl Namespace {
     pub fn new() -> Namespace {
         let mut commands: HashMap<String, fn(&Vec<CellType>, &Vec<Argument>) -> Result<Call, JobError>> = HashMap::new();
-        commands.insert(String::from("ls"), ls::ls);
+        commands.insert(String::from("ls"), ls_and_find::ls);
+        commands.insert(String::from("find"), ls_and_find::find);
         commands.insert(String::from("echo"), echo::echo);
         commands.insert(String::from("pwd"), pwd::pwd);
         commands.insert(String::from("cd"), cd::cd);

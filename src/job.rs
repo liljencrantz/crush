@@ -1,6 +1,6 @@
 use crate::state::State;
 use crate::commands::Call;
-use crate::stream::{print, streams};
+use crate::stream::{print, streams, InputStream};
 use std::mem;
 use crate::errors::{JobError, error};
 use std::thread;
@@ -22,7 +22,8 @@ pub struct Job {
     pub commands: Vec<Call>,
     pub compile_errors: Vec<JobError>,
     pub runtime_errors: Vec<JobError>,
-    pub handlers: Vec<Option<JoinHandle<Result<(), JobError>>>>,
+    handlers: Vec<Option<JoinHandle<Result<(), JobError>>>>,
+    job_output: Option<InputStream>,
 }
 
 impl Job {
@@ -33,6 +34,7 @@ impl Job {
             compile_errors: Vec::new(),
             runtime_errors: Vec::new(),
             handlers: Vec::new(),
+            job_output: None,
         }
     }
 
@@ -45,7 +47,6 @@ impl Job {
 
     pub fn spawn(&mut self, state: &State) {
         assert_eq!(self.state, JobState::Parsed);
-        self.state = JobState::Spawned;
         if !self.commands.is_empty() && self.compile_errors.is_empty() {
             let (prev_output, mut prev_input) = streams();
             drop(prev_output);
@@ -58,15 +59,17 @@ impl Job {
                 })));
                 prev_input = input;
             }
-            match self.commands.last() {
-                Some(command) => print(&mut prev_input, command.get_output_type()),
-                None => {}
-            }
+            self.job_output = Some(prev_input);
         }
+        self.state = JobState::Spawned;
     }
 
     pub fn wait(&mut self) {
         assert_eq!(self.state, JobState::Spawned);
+        match (self.commands.last(), self.job_output.take()) {
+            (Some(command), Some(mut stream)) => print(&mut stream, command.get_output_type()),
+            _ => {}
+        }
         for h in &mut self.handlers {
             match h.take().unwrap().join() {
                 Ok(res) => {

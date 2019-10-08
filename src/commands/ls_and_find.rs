@@ -31,6 +31,7 @@ fn insert_entity(meta: &Metadata, file_name: &OsStr, output: &mut OutputStream) 
 
 fn run_for_single_directory_or_file(
     file: &str,
+    recursive: bool,
     output: &mut OutputStream) -> Result<(), io::Error> {
     let path = Path::new(file);
     if path.is_dir() {
@@ -41,6 +42,14 @@ fn run_for_single_directory_or_file(
                 &entry.metadata()?,
                 entry.file_name().as_os_str(),
                 output)?;
+            if recursive && entry.path().is_dir() {
+                if !(entry.file_name().eq(".") || entry.file_name().eq("..")) {
+                    run_for_single_directory_or_file(
+                        format!("{}/{}", file, entry.file_name().to_str().unwrap()).as_str(),
+                        true,
+                        output);
+                }
+            }
         }
     } else {
         match path.file_name() {
@@ -60,6 +69,7 @@ fn run_for_single_directory_or_file(
 
 fn run_internal(
     arguments: &Vec<Argument>,
+    recursive: bool,
     output: &mut OutputStream) -> Result<(), io::Error> {
     let mut dirs: Vec<String> = Vec::new();
     if arguments.is_empty() {
@@ -82,17 +92,25 @@ fn run_internal(
 
     for dir in dirs {
         run_for_single_directory_or_file(
-            dir.as_str(), output)?;
+            dir.as_str(), recursive, output)?;
     }
     return Ok(());
 }
 
-fn run(
+fn run_ls(
     _input_type: &Vec<CellType>,
     arguments: &Vec<Argument>,
     _input: &mut InputStream,
     output: &mut OutputStream) -> Result<(), JobError> {
-    return to_runtime_error(run_internal(arguments, output));
+    return to_runtime_error(run_internal(arguments, false, output));
+}
+
+fn run_find(
+    _input_type: &Vec<CellType>,
+    arguments: &Vec<Argument>,
+    _input: &mut InputStream,
+    output: &mut OutputStream) -> Result<(), JobError> {
+    return to_runtime_error(run_internal(arguments, true, output));
 }
 
 pub fn ls(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Call, JobError> {
@@ -114,7 +132,31 @@ pub fn ls(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Call,
                 cell_type: CellDataType::Time,
             },
         ],
-        run: Some(run),
+        run: Some(run_ls),
+        mutate: None,
+    });
+}
+
+pub fn find(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Call, JobError> {
+    return Ok(Call {
+        name: String::from("ls"),
+        input_type: input_type.clone(),
+        arguments: arguments.clone(),
+        output_type: vec![
+            CellType {
+                name: String::from("file"),
+                cell_type: CellDataType::Text,
+            },
+            CellType {
+                name: String::from("size"),
+                cell_type: CellDataType::Integer,
+            },
+            CellType {
+                name: String::from("modified"),
+                cell_type: CellDataType::Time,
+            },
+        ],
+        run: Some(run_find),
         mutate: None,
     });
 }
