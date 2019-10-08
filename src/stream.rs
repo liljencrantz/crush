@@ -1,4 +1,3 @@
-use std::collections::VecDeque;
 use crate::cell::{Row, Cell};
 use crate::cell::CellType;
 use std::cmp::max;

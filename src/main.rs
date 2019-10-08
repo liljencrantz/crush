@@ -18,7 +18,8 @@ use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
 fn perform(job: &mut Job, state: &mut State) -> Result<(), ()> {
-    job.run(state)?;
+    job.spawn(state);
+    job.wait();
     job.mutate(state)?;
     return Ok(());
 }

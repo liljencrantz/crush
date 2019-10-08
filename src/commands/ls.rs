@@ -4,7 +4,6 @@ use crate::cell::{Argument, CellType, Cell, Row, CellDataType};
 use crate::commands::{Call, to_runtime_error};
 use crate::errors::JobError;
 use chrono::{Local, DateTime};
-use crate::state::State;
 use crate::glob::glob_files;
 use std::path::Path;
 use std::fs::Metadata;

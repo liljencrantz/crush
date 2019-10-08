@@ -16,3 +16,9 @@ pub fn argument_error(message: &str) -> JobError {
         message: String::from(message),
     };
 }
+
+pub fn error(message: &str) -> JobError {
+    return JobError {
+        message: String::from(message),
+    };
+}

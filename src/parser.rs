@@ -1,5 +1,5 @@
 use crate::errors::{JobError, parse_error};
-use crate::job::Job;
+use crate::job::{Job, JobState};
 use crate::lexer::{Lexer, TokenType};
 use crate::state::State;
 use crate::cell::{Argument, Cell};
@@ -17,6 +17,7 @@ fn parse_internal(lexer: &mut Lexer, state: &State, jobs: &mut Vec<Job>) -> Resu
                 jobs.push(Job::new());
                 let idx = jobs.len() - 1;
                 parse_job(lexer, state, &mut jobs[idx])?;
+                jobs[idx].state = JobState::Parsed;
             }
             _ => {
                 return Err(parse_error("Wrong token type, expected command name", lexer));
