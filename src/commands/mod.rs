@@ -1,36 +1,32 @@
 mod ls;
 mod echo;
-/*mod pwd;
+mod pwd;
 mod cd;
 mod filter;
 mod sort;
-*/
+
 use std::collections::HashMap;
 use crate::stream::{InputStream, OutputStream};
 use crate::cell::{CellType, Argument};
 use crate::state::State;
 use crate::errors::JobError;
 use std::io;
-/*use pwd::Pwd;
-use cd::Cd;
-use filter::Filter;
-use sort::Sort;
-*/
+
 #[derive(Clone)]
 pub struct Call {
     name: String,
     input_type: Vec<CellType>,
     arguments: Vec<Argument>,
     output_type: Vec<CellType>,
-    run_internal: fn(
+    run: Option<fn(
         &Vec<CellType>,
         &Vec<Argument>,
         &mut InputStream,
-        &mut OutputStream) -> Result<(), JobError>,
-    mutate_internal: fn(
+        &mut OutputStream) -> Result<(), JobError>>,
+    mutate: Option<fn(
         &mut State,
         &Vec<CellType>,
-        &Vec<Argument>) -> Result<(), JobError>,
+        &Vec<Argument>) -> Result<(), JobError>>,
 }
 
 impl Call {
@@ -51,18 +47,22 @@ impl Call {
     }
 
     pub fn run(&mut self, input: &mut InputStream, output: &mut OutputStream) -> Result<(), JobError> {
-        let r = self.run_internal;
-        return r(&self.input_type, &self.arguments, input, output);
+        match self.run {
+            Some(r) => r(&self.input_type, &self.arguments, input, output),
+            None => Ok(()),
+        }
     }
 
     pub fn mutate(&mut self, state: &mut State) -> Result<(), JobError> {
-        let m = self.mutate_internal;
-        return m(state, &self.input_type, &self.arguments);
+        match self.mutate {
+            Some(m) => m(state, &self.input_type, &self.arguments),
+            None => Ok(()),
+        }
     }
 }
 
 pub struct Namespace {
-    commands: HashMap<String, fn (&Vec<CellType>, &Vec<Argument>) -> Result<Call, JobError>>,
+    commands: HashMap<String, fn(&Vec<CellType>, &Vec<Argument>) -> Result<Call, JobError>>,
 }
 
 fn to_runtime_error(io_result: io::Result<()>) -> Result<(), JobError> {
@@ -79,13 +79,13 @@ fn to_runtime_error(io_result: io::Result<()>) -> Result<(), JobError> {
 
 impl Namespace {
     pub fn new() -> Namespace {
-        let mut commands: HashMap<String, fn (&Vec<CellType>, &Vec<Argument>) -> Result<Call, JobError>> = HashMap::new();
+        let mut commands: HashMap<String, fn(&Vec<CellType>, &Vec<Argument>) -> Result<Call, JobError>> = HashMap::new();
         commands.insert(String::from("ls"), ls::ls);
         commands.insert(String::from("echo"), echo::echo);
-  /*      commands.insert(String::from("pwd"), Box::new(Pwd {}));
-        commands.insert(String::from("cd"), Box::new(Cd {}));
-        commands.insert(String::from("filter"), Box::new(Filter {}));
-        commands.insert(String::from("sort"), Box::new(Sort {}));*/
+        commands.insert(String::from("pwd"), pwd::pwd);
+        commands.insert(String::from("cd"), cd::cd);
+        commands.insert(String::from("filter"), filter::filter);
+        commands.insert(String::from("sort"), sort::sort);
         let res = Namespace {
             commands,
         };

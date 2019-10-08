@@ -1,12 +1,9 @@
 use crate::stream::{OutputStream, InputStream};
 use crate::cell::{Argument, CellType, Cell, Row};
-use crate::commands::{InternalCall, Command};
+use crate::commands::Call;
 use crate::errors::{JobError, argument_error};
 use crate::state::State;
 use std::iter::Iterator;
-
-#[derive(Clone)]
-pub struct Filter {}
 
 pub fn find_field(needle: &String, haystack: &Vec<CellType>) -> Result<usize, JobError> {
     for (idx, field) in haystack.iter().enumerate() {
@@ -113,14 +110,11 @@ fn evaluate(condition: &Condition, row: &Row) -> bool {
     };
 }
 
-impl Command for Filter {
     fn run(
-        &mut self,
-        _state: &State,
         input_type: &Vec<CellType>,
         arguments: &Vec<Argument>,
-        input: &mut dyn InputStream,
-        output: &mut dyn OutputStream) -> Result<(), JobError> {
+        input: &mut InputStream,
+        output: &mut OutputStream) -> Result<(), JobError> {
         let lookup = find_checks(input_type, arguments)?;
 
         let numbered_arguments: Vec<(usize, &Argument)> = arguments.iter().enumerate().collect();
@@ -140,13 +134,13 @@ impl Command for Filter {
         return Ok(());
     }
 
-    fn get_call(&self, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<InternalCall, JobError> {
-        return Ok(InternalCall {
+    pub fn filter(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Call, JobError> {
+        return Ok(Call {
             name: String::from("filter"),
             input_type: input_type.clone(),
             arguments: arguments.clone(),
             output_type: input_type.clone(),
-            command: Box::new(self.clone()),
+            run: Some(run),
+            mutate: None,
         });
     }
-}

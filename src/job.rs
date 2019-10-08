@@ -26,34 +26,11 @@ impl Job {
             .collect();
         return el.join(" | ");
     }
-    /*
-        pub fn run(&mut self, state: &State) -> Result<(), ()> {
-            let mut input = SerialStream::new(Vec::new());
-            let mut output = SerialStream::new(Vec::new());
-            if !self.commands.is_empty() && self.compile_errors.is_empty() {
-                for c in &mut self.commands {
-                    match c.run(state, &mut input, &mut output) {
-                        Ok(_) => {
-                            input.reset();
-                            mem::swap(&mut input, &mut output)
-                        }
-                        Err(err) => {
-                            self.runtime_errors.push(err);
-                            break;
-                        }
-                    }
-                }
-                match self.commands.last() {
-                    Some(command) => print(&mut input),
-                    None => {}
-                }
-            }
-            return if self.runtime_errors.is_empty() { Ok(()) } else { Err(()) };
-        }
-    */
+
     pub fn run(&mut self, state: &State) -> Result<(), ()> {
         if !self.commands.is_empty() && self.compile_errors.is_empty() {
             let (mut prev_output, mut prev_input) = streams(&Vec::new());
+            drop(prev_output);
             for c in &mut self.commands {
                 let (mut output, mut input) = streams(c.get_output_type());
 

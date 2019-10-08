@@ -26,7 +26,7 @@ pub fn echo(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Cal
         input_type: input_type.clone(),
         arguments: arguments.clone(),
         output_type,
-        run_internal: run,
-        mutate_internal: |_1, _2, _3| { Ok(()) },
+        run: Some(run),
+        mutate: None,
     });
 }

@@ -114,7 +114,7 @@ pub fn ls(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Call,
                 cell_type: CellDataType::Time,
             },
         ],
-        run_internal: run,
-        mutate_internal: |_1, _2, _3| { Ok(()) },
+        run: Some(run),
+        mutate: None,
     });
 }

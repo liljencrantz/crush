@@ -25,9 +25,6 @@ impl OutputStream {
     pub fn add(&mut self, row: Row) {
         self.sender.send(row);
     }
-
-    pub fn close(&mut self) {
-    }
 }
 
 pub struct InputStream {
@@ -47,48 +44,6 @@ impl InputStream {
         return &self.row_type;
     }
 }
-/*
-pub struct SerialStream {
-    pub row_type: Vec<CellType>,
-    pub closed: bool,
-    pub data: VecDeque<Row>,
-}
-
-impl SerialStream {
-    pub fn new(row_type: Vec<CellType>) -> SerialStream {
-        return SerialStream {
-            row_type,
-            closed: false,
-            data: VecDeque::new(),
-        };
-    }
-
-    pub fn reset(&mut self) {
-        self.data.clear();
-    }
-
-}
-
-impl OutputStream for SerialStream {
-    fn add(&mut self, row: Row) {
-        self.data.push_back(row)
-    }
-
-    fn close(&mut self) {
-        self.closed = true;
-    }
-}
-
-impl InputStream for SerialStream {
-    fn next(&mut self) -> Option<Row> {
-        return self.data.pop_front();
-    }
-
-    fn get_row_type(&self) -> &Vec<CellType> {
-        return &self.row_type;
-    }
-}
-*/
 
 pub fn print(stream: &mut InputStream) {
 
