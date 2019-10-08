@@ -9,6 +9,8 @@ implement nice way to combine two results into one
 implement variables
 implement set command
 implement find command
+implement date command
+implement csv command
 implement command substitution and lambdas
 one command per thread
 
@@ -18,10 +20,10 @@ Display errors
 Propagate runtime errors
 one command per file
 make filter actually useful
-implement wildcards
-make filter support wildcards
+implement globs
+make filter support globs
 proper lexer and parser
 implement file globs
-make ls support wildcards
+make ls support globs
 implement sort command
-keyboard handling
+basic keyboard handling

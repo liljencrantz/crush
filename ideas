@@ -20,9 +20,12 @@ Print errors on stderr.
 
 Should maybe jobs hang around, and we can see their errors?
 
-Environment variables:
+Variables:
 
-#set variable foo to hold value bar
+#declare new variable foo in current scope to hold value bar
+let foo=bar
+
+#set already existing variable foo to hold value bar, in whatever scope it was declared
 set foo=bar
 
 # Set the variable list to contain a listing of all files on this system
@@ -76,3 +79,19 @@ bun foo={find .} bar={csv name:text age:integer}
 The for-loop:
 
 for i={seq 10} `{print $i}
+
+Date command:
+
+date now
+date now + 5 days
+date 2012-03-30 16:32
+date 3/30/2012 4:32 PM
+
+Integrating external commands:
+
+cmd git grep fnurp
+
+Declare new functions:
+
+fn lss=`{ls ${argv} | sort key=size}
+lss foo bar
