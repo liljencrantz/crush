@@ -1,6 +1,6 @@
 use crate::stream::{OutputStream, InputStream};
 use crate::cell::{Argument, CellType, Cell, Row, CellDataType};
-use crate::commands::{Call};
+use crate::commands::Call;
 use crate::errors::JobError;
 use crate::state::State;
 
@@ -12,9 +12,11 @@ fn run(
     return match std::env::current_dir() {
         Ok(os_dir) => {
             match os_dir.to_str() {
-                Some(dir) => output.add(Row {
-                    cells: vec![Cell::Text(String::from(dir))]
-                }),
+                Some(dir) => {
+                    output.send(Row {
+                        cells: vec![Cell::Text(String::from(dir))]
+                    });
+                }
                 None => {}
             }
             Ok(())

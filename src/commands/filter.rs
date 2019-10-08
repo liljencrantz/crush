@@ -120,13 +120,13 @@ fn evaluate(condition: &Condition, row: &Row) -> bool {
         let numbered_arguments: Vec<(usize, &Argument)> = arguments.iter().enumerate().collect();
         let condition = parse_condition(input_type, &mut numbered_arguments.iter(), &lookup)?;
         loop {
-            match input.next() {
-                Some(row) => {
+            match input.recv() {
+                Ok(row) => {
                     if evaluate(&condition, &row) {
-                        output.add(row);
+                        output.send(row);
                     }
                 }
-                None => {
+                Err(_) => {
                     break;
                 }
             }

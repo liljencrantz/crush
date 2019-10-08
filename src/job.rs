@@ -29,10 +29,10 @@ impl Job {
 
     pub fn run(&mut self, state: &State) -> Result<(), ()> {
         if !self.commands.is_empty() && self.compile_errors.is_empty() {
-            let (mut prev_output, mut prev_input) = streams(&Vec::new());
+            let (mut prev_output, mut prev_input) = streams();
             drop(prev_output);
             for c in &mut self.commands {
-                let (mut output, mut input) = streams(c.get_output_type());
+                let (mut output, mut input) = streams();
 
                 let mut cc = c.clone();
                 thread::spawn(move || {
@@ -48,7 +48,7 @@ impl Job {
                 prev_input = input;
             }
             match self.commands.last() {
-                Some(command) => print(&mut prev_input),
+                Some(command) => print(&mut prev_input, command.get_output_type()),
                 None => {}
             }
         }

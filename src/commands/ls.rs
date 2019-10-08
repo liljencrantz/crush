@@ -14,14 +14,15 @@ fn insert_entity(meta: &Metadata, file_name: &OsStr, output: &mut OutputStream) 
     let modified_system = meta.modified()?;
     let modified_datetime: DateTime<Local> = DateTime::from(modified_system);
     match file_name.to_str() {
-        Some(name) =>
-            output.add(Row {
+        Some(name) => {
+            output.send(Row {
                 cells: vec![
                     Cell::Text(String::from(name)),
                     Cell::Integer(i128::from(meta.len())),
                     Cell::Time(modified_datetime),
                 ]
-            }),
+            });
+        },
         None => {
             return Err(io::Error::new(io::ErrorKind::Other, "Invalid file name"));
         }

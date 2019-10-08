@@ -4,57 +4,23 @@ use crate::cell::CellType;
 use std::cmp::max;
 use std::sync::mpsc::{Receiver, sync_channel, SyncSender};
 
-pub fn streams(row_type: &Vec<CellType>) -> (OutputStream, InputStream) {
-    let (tx, rx): (SyncSender<Row>, Receiver<Row>) = sync_channel(200);
-    return (
-        OutputStream {
-            sender: tx,
-        },
-        InputStream {
-            receiver: rx,
-            row_type: row_type.clone(),
-        }
-    );
+pub type OutputStream = SyncSender<Row>;
+pub type InputStream = Receiver<Row>;
+
+pub fn streams() -> (OutputStream, InputStream) {
+    let res: (SyncSender<Row>, Receiver<Row>) = sync_channel(200);
+    return res;
 }
 
-pub struct OutputStream {
-    sender: SyncSender<Row>,
-}
-
-impl OutputStream {
-    pub fn add(&mut self, row: Row) {
-        self.sender.send(row);
-    }
-}
-
-pub struct InputStream {
-    receiver: Receiver<Row>,
-    row_type: Vec<CellType>,
-}
-
-impl InputStream {
-    pub fn next(&mut self) -> Option<Row> {
-        return match self.receiver.recv() {
-            Ok(res) => Some(res),
-            Err(_) => None,
-        };
-    }
-
-    pub fn get_row_type(&self) -> &Vec<CellType> {
-        return &self.row_type;
-    }
-}
-
-pub fn print(stream: &mut InputStream) {
+pub fn print(stream: &mut InputStream, types: &Vec<CellType>) {
 
     let mut data: Vec<Row> = Vec::new();
     loop {
-        match stream.next() {
-            Some(r) => data.push(r),
-            None => break,
+        match stream.recv() {
+            Ok(r) => data.push(r),
+            Err(_) => break,
         }
     }
-    let types = stream.get_row_type();
     let mut w = vec![0; types.len()];
 
     for (idx, val) in types.iter().enumerate() {

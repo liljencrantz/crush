@@ -10,7 +10,7 @@ fn run(
     _input: &mut InputStream,
     output: &mut OutputStream) -> Result<(), JobError> {
     let g = arguments.iter().map(|c| c.cell.clone());
-    output.add(Row {
+    output.send(Row {
         cells: g.collect()
     });
     return Ok(());

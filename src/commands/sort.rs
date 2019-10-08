@@ -15,18 +15,18 @@ fn run(
             let idx = find_field(cell_name, input_type)?;
             let mut res: Vec<Row> = Vec::new();
             loop {
-                match input.next() {
-                    Some(row) => {
+                match input.recv() {
+                    Ok(row) => {
                         res.push(row);
                     }
-                    None => {
+                    Err(_) => {
                         break;
                     }
                 }
             }
             res.sort_by(|a, b| a.cells[idx].partial_cmp(&b.cells[idx]).expect("OH NO!"));
             for row in &res {
-                output.add(row.clone());
+                output.send(row.clone());
             }
 
             return Ok(());
