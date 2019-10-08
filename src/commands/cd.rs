@@ -1,12 +1,12 @@
-use crate::result::{Argument, CellType, Cell, CellDataType};
-use crate::commands::{InternalCall, Command, Call, InternalCommand, to_runtime_error};
+use crate::cell::{Argument, CellType, Cell, CellDataType};
+use crate::commands::{InternalCall, Command, to_runtime_error};
 use crate::errors::JobError;
 use crate::state::State;
 
 #[derive(Clone)]
 pub struct Cd {}
 
-impl InternalCommand for Cd {
+impl Command for Cd {
     fn mutate(
         &mut self,
         _state: &mut State,
@@ -26,10 +26,8 @@ impl InternalCommand for Cd {
             _ => Err(JobError{ message: String::from("Wrong number of arguments") })
         }
     }
-}
 
-impl Command for Cd {
-    fn call(&self, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Box<dyn Call>, JobError> {
+    fn get_call(&self, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<InternalCall, JobError> {
         if arguments.len() > 1 {
             return Err(JobError {
                 message: String::from("Too many arguments")
@@ -41,12 +39,12 @@ impl Command for Cd {
             });
         }
 
-        return Ok(Box::new(InternalCall {
+        return Ok(InternalCall {
             name: String::from("cd"),
             input_type: input_type.clone(),
             arguments: arguments.clone(),
             output_type: vec![],
             command: Box::new(self.clone()),
-        }));
+        });
     }
 }

@@ -1,6 +1,6 @@
 use crate::stream::{OutputStream, InputStream};
-use crate::result::{Argument, CellType, Cell, Row};
-use crate::commands::{InternalCall, Command, Call, InternalCommand};
+use crate::cell::{Argument, CellType, Cell, Row};
+use crate::commands::{InternalCall, Command};
 use crate::errors::{JobError, argument_error};
 use crate::state::State;
 use std::iter::Iterator;
@@ -113,7 +113,7 @@ fn evaluate(condition: &Condition, row: &Row) -> bool {
     };
 }
 
-impl InternalCommand for Filter {
+impl Command for Filter {
     fn run(
         &mut self,
         _state: &State,
@@ -139,16 +139,14 @@ impl InternalCommand for Filter {
         }
         return Ok(());
     }
-}
 
-impl Command for Filter {
-    fn call(&self, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Box<dyn Call>, JobError> {
-        return Ok(Box::new(InternalCall {
+    fn get_call(&self, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<InternalCall, JobError> {
+        return Ok(InternalCall {
             name: String::from("filter"),
             input_type: input_type.clone(),
             arguments: arguments.clone(),
             output_type: input_type.clone(),
             command: Box::new(self.clone()),
-        }));
+        });
     }
 }

@@ -66,6 +66,7 @@ Use argument names to set values, e.g.
 
 > ls directory=true ~/*/
 > ls | sort key=size
+> find . follow_symlinks=true max_depth=7 mount=false
 
 Use field sigil to refer to row cell values
 > find . | filter %{name} == *.txt
@@ -83,7 +84,7 @@ for i={seq 10} `{print $i}
 Date command:
 
 date now
-date now + 5 days
+date now+5 days
 date 2012-03-30 16:32
 date 3/30/2012 4:32 PM
 
@@ -93,5 +94,15 @@ cmd git grep fnurp
 
 Declare new functions:
 
-fn lss=`{ls ${argv} | sort key=size}
+fn lss=`{|foo:text bar baz| ls ${argv...} | sort key=size}
 lss foo bar
+
+File parsing:
+
+The csv command interprets a file as columnar data, e.g. csv files
+There should also be commands that view files as a single binary blob, one row of text per line, etc.
+Also, posh itself needs to be able to store output to disk in some robust manner.
+
+Type conversion:
+
+There should be a type conversion operator of some kind.

@@ -36,6 +36,8 @@ pub enum Cell {
 //    Float(f64),
 //    Row(Box<Row>),
 //    Rows(Vec<Row>),
+//    Stream(OutputStream),
+//    File(File),
 }
 
 impl Cell {

@@ -1,15 +1,12 @@
 mod errors;
 mod glob;
 mod stream;
-mod result;
+mod cell;
 mod commands;
 mod state;
 mod job;
 mod lexer;
 mod parser;
-
-use std::io;
-use std::io::Write;
 
 use job::Job;
 use state::State;
@@ -29,7 +26,7 @@ fn perform(job: &mut Job, state: &mut State) -> Result<(), ()> {
 fn repl() {
     let mut state = state::State::new();
     let mut rl = Editor::<()>::new();
-    rl.load_history(".posh_history");
+    rl.load_history(".posh_history").unwrap();
     loop {
         let readline = rl.readline("posh> ");
 
@@ -71,7 +68,7 @@ fn repl() {
         }
         match rl.save_history(".posh_history") {
             Ok(_) => {}
-            Err(e) => {
+            Err(_) => {
                 println!("Error: Failed to save history.");
             }
         }

@@ -1,4 +1,6 @@
 Todo:
+implement cell type File
+make ls output File cells instead of strings
 implement regexps
 make filter support regexps
 implement file regexps
@@ -12,7 +14,10 @@ implement find command
 implement date command
 implement csv command
 implement command substitution and lambdas
+implement fn command
+implement bun command
 one command per thread
+make file globing testable via fakes
 
 Done:
 Fix all expects calls that aren't impossible, and propagate the errors

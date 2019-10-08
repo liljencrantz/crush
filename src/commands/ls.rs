@@ -1,127 +1,120 @@
 use std::{io, fs};
 use crate::stream::{OutputStream, InputStream};
-use crate::result::{Argument, CellType, Cell, Row, CellDataType};
-use crate::commands::{InternalCall, Command, Call, InternalCommand, to_runtime_error};
+use crate::cell::{Argument, CellType, Cell, Row, CellDataType};
+use crate::commands::{Call, to_runtime_error};
 use crate::errors::JobError;
 use chrono::{Local, DateTime};
 use crate::state::State;
 use crate::glob::glob_files;
 use std::path::Path;
+use std::fs::Metadata;
+use std::ffi::OsStr;
 
-#[derive(Clone)]
-pub struct Ls {}
+fn insert_entity(meta: &Metadata, file_name: &OsStr, output: &mut OutputStream) -> io::Result<()> {
+    let modified_system = meta.modified()?;
+    let modified_datetime: DateTime<Local> = DateTime::from(modified_system);
+    match file_name.to_str() {
+        Some(name) =>
+            output.add(Row {
+                cells: vec![
+                    Cell::Text(String::from(name)),
+                    Cell::Integer(i128::from(meta.len())),
+                    Cell::Time(modified_datetime),
+                ]
+            }),
+        None => {
+            return Err(io::Error::new(io::ErrorKind::Other, "Invalid file name"));
+        }
+    }
+    return Ok(());
+}
 
-impl Ls {
-    fn run_for_single_directory(
-        &mut self,
-        file: &str,
-        _input_type: &Vec<CellType>,
-        _arguments: &Vec<Argument>,
-        _input: &mut dyn InputStream, output: &mut dyn OutputStream) -> Result<(), io::Error> {
-        let path = Path::new(file);
-        if path.is_dir() {
-            let dirs = fs::read_dir(path);
-            for maybe_entry in dirs? {
-                let entry = maybe_entry?;
-                let meta = entry.metadata()?;
-                let modified_system = meta.modified()?;
-                let modified_datetime: DateTime<Local> = DateTime::from(modified_system);
-                match entry.file_name().into_string() {
-                    Ok(name) =>
-                        output.add(Row {
-                            cells: vec![
-                                Cell::Text(name),
-                                Cell::Integer(i128::from(meta.len())),
-                                Cell::Time(modified_datetime),
-                            ]
-                        }),
-                    _ => {}
-                }
+fn run_for_single_directory_or_file(
+    file: &str,
+    output: &mut OutputStream) -> Result<(), io::Error> {
+    let path = Path::new(file);
+    if path.is_dir() {
+        let dirs = fs::read_dir(path);
+        for maybe_entry in dirs? {
+            let entry = maybe_entry?;
+            insert_entity(
+                &entry.metadata()?,
+                entry.file_name().as_os_str(),
+                output)?;
+        }
+    } else {
+        match path.file_name() {
+            Some(name) => {
+                insert_entity(
+                    &path.metadata()?,
+                    name,
+                    output)?;
             }
-        } else {
-            let meta = path.metadata()?;
-            let modified_system = meta.modified()?;
-            let modified_datetime: DateTime<Local> = DateTime::from(modified_system);
-            match path.file_name().expect("AAAA").to_str() {
-                Some(name) => {
-                    output.add(Row {
-                        cells: vec![
-                            Cell::Text(String::from(name)),
-                            Cell::Integer(i128::from(meta.len())),
-                            Cell::Time(modified_datetime),
-                        ]
-                    });
-                },
-                None => {}
+            None => {
+                return Err(io::Error::new(io::ErrorKind::Other, "Invalid file name"));
             }
         }
-        Ok(())
     }
+    Ok(())
+}
 
-    fn run_internal(
-        &mut self,
-        state: &State,
-        input_type: &Vec<CellType>,
-        arguments: &Vec<Argument>,
-        input: &mut dyn InputStream,
-        output: &mut dyn OutputStream) -> Result<(), io::Error> {
-        let mut dirs: Vec<String> = Vec::new();
-        if (arguments.is_empty()) {
-            dirs.push(String::from("."));
-        } else {
-            for arg in arguments {
-                match &arg.cell {
-                    Cell::Text(dir) => {
-                        dirs.push(dir.clone());
-                    }
-                    Cell::Glob(dir) => {
-                        glob_files(dir, Path::new(&state.get_cwd()), &mut dirs);
-                    }
-                    _ => { panic!("aj aj") }
+fn run_internal(
+    arguments: &Vec<Argument>,
+    output: &mut OutputStream) -> Result<(), io::Error> {
+    let mut dirs: Vec<String> = Vec::new();
+    if arguments.is_empty() {
+        dirs.push(String::from("."));
+    } else {
+        for arg in arguments {
+            match &arg.cell {
+                Cell::Text(dir) => {
+                    dirs.push(dir.clone());
+                }
+                Cell::Glob(dir) => {
+                    glob_files(dir, Path::new(std::env::current_dir()?.to_str().expect("Invalid directory name")), &mut dirs)?;
+                }
+                _ => {
+                    return Err(io::Error::new(io::ErrorKind::Other, "Invalid argument type to ls, expected string or glob"));
                 }
             }
         }
-
-        for dir in dirs {
-            self.run_for_single_directory(dir.as_str(), input_type, arguments, input, output);
-        }
-        return Ok(());
     }
+
+    for dir in dirs {
+        run_for_single_directory_or_file(
+            dir.as_str(), output)?;
+    }
+    return Ok(());
 }
 
-impl Command for Ls {
-    fn call(&self, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Box<dyn Call>, JobError> {
-        return Ok(Box::new(InternalCall {
-            name: String::from("ls"),
-            input_type: input_type.clone(),
-            arguments: arguments.clone(),
-            output_type: vec![
-                CellType {
-                    name: String::from("file"),
-                    cell_type: CellDataType::Text,
-                },
-                CellType {
-                    name: String::from("size"),
-                    cell_type: CellDataType::Integer,
-                },
-                CellType {
-                    name: String::from("modified"),
-                    cell_type: CellDataType::Time,
-                },
-            ],
-            command: Box::new(self.clone()),
-        }));
-    }
+fn run(
+    _input_type: &Vec<CellType>,
+    arguments: &Vec<Argument>,
+    _input: &mut InputStream,
+    output: &mut OutputStream) -> Result<(), JobError> {
+    return to_runtime_error(run_internal(arguments, output));
 }
 
-impl InternalCommand for Ls {
-    fn run(
-        &mut self,
-        state: &State,
-        input_type: &Vec<CellType>,
-        arguments: &Vec<Argument>,
-        input: &mut dyn InputStream,
-        output: &mut dyn OutputStream) -> Result<(), JobError> {
-        return to_runtime_error(self.run_internal(state, input_type, arguments, input, output));
-    }
+pub fn ls(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Call, JobError> {
+    return Ok(Call {
+        name: String::from("ls"),
+        input_type: input_type.clone(),
+        arguments: arguments.clone(),
+        output_type: vec![
+            CellType {
+                name: String::from("file"),
+                cell_type: CellDataType::Text,
+            },
+            CellType {
+                name: String::from("size"),
+                cell_type: CellDataType::Integer,
+            },
+            CellType {
+                name: String::from("modified"),
+                cell_type: CellDataType::Time,
+            },
+        ],
+        run_internal: run,
+        mutate_internal: |_1, _2, _3| { Ok(()) },
+    });
 }

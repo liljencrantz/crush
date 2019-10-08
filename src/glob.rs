@@ -10,23 +10,21 @@ pub fn glob(g: &str, v: &str) -> bool {
 
 pub fn glob_files(original_glob: &str, cwd: &Path, out: &mut Vec<String>) -> io::Result<()> {
     let only_directories = original_glob.ends_with('/');
-    let mut without_trailing_slashes = &original_glob[..];
-    while without_trailing_slashes.ends_with('/') {
-        without_trailing_slashes = &without_trailing_slashes[0..without_trailing_slashes.len() - 1];
-    }
-
+    let without_trailing_slashes = original_glob.trim_end_matches('/');
     if without_trailing_slashes.starts_with('/') {
-        let mut without_leading_slashes = &without_trailing_slashes[..];
-        while without_leading_slashes.starts_with('/') {
-            without_leading_slashes = &without_leading_slashes[1..];
-        }
+        let without_leading_slashes = without_trailing_slashes.trim_start_matches('/');
         return glob_files_internal(without_leading_slashes, Path::new("/"), only_directories, "/", out);
     } else {
         return glob_files_internal(without_trailing_slashes, cwd, only_directories, "", out);
     }
 }
 
-pub fn glob_files_internal(relative_glob: &str, dir: &Path, only_directories: bool, prefix: &str, out: &mut Vec<String>) -> io::Result<()> {
+pub fn glob_files_internal(
+    relative_glob: &str,
+    dir: &Path,
+    only_directories: bool,
+    prefix: &str,
+    out: &mut Vec<String>) -> io::Result<()> {
     let is_last_section = !relative_glob.contains('/');
     if is_last_section {
         let suffix = if only_directories { "/" } else { "" };
@@ -38,7 +36,7 @@ pub fn glob_files_internal(relative_glob: &str, dir: &Path, only_directories: bo
                         out.push(format!("{}{}{}", prefix, name, suffix));
                     }
                 }
-                None => panic!("OOOOO")
+                None => return Err(io::Error::new(io::ErrorKind::Other, "Invalid file name")),
             }
         }
     } else {
@@ -53,7 +51,7 @@ pub fn glob_files_internal(relative_glob: &str, dir: &Path, only_directories: bo
                         glob_files_internal(next_glob, ee.path().as_path(), only_directories, format!("{}{}/", prefix, name).as_str(), out)?;
                     }
                 }
-                None => panic!("OOOOO")
+                None => return Err(io::Error::new(io::ErrorKind::Other, "Invalid file name")),
             }
         }
     }
@@ -83,7 +81,7 @@ fn glob_match(glob: &mut Chars, value: &mut Peekable<Chars>) -> bool {
                 }
             }
         }
-        (Some('?'), Some(v)) => {
+        (Some('?'), Some(_)) => {
             value.next();
             return glob_match(glob, value);
         }
@@ -144,30 +142,34 @@ mod tests {
     }
 
     #[test]
-    fn test_file_glob() {
+    fn test_file_glob() -> io::Result<()> {
         let mut out: Vec<String> = Vec::new();
-        glob_files("C*", Path::new("."), &mut out);
+        glob_files("C*", Path::new("."), &mut out)?;
         assert_eq!(out, vec!["Cargo.lock", "Cargo.toml"]);
+        return Ok(());
     }
 
     #[test]
-    fn test_subdirectory_glob() {
+    fn test_subdirectory_glob() -> io::Result<()> {
         let mut out: Vec<String> = Vec::new();
-        glob_files("s*/m*.rs", Path::new("."), &mut out);
+        glob_files("s*/m*.rs", Path::new("."), &mut out)?;
         assert_eq!(out, vec!["src/main.rs"]);
+        return Ok(());
     }
 
     #[test]
-    fn test_absolute_subdirectory_with_trailing_slash_glob() {
+    fn test_absolute_subdirectory_with_trailing_slash_glob() -> io::Result<()> {
         let mut out: Vec<String> = Vec::new();
-        glob_files("/home/*/", Path::new("."), &mut out);
+        glob_files("/home/*/", Path::new("."), &mut out)?;
         assert_eq!(out, vec!["/home/liljencrantz/"]);
+        return Ok(());
     }
 
     #[test]
-    fn test_absolute_subdirectory_glob() {
+    fn test_absolute_subdirectory_glob() -> io::Result<()> {
         let mut out: Vec<String> = Vec::new();
-        glob_files("/home/*", Path::new("."), &mut out);
+        glob_files("/home/*", Path::new("."), &mut out)?;
         assert_eq!(out, vec!["/home/liljencrantz"]);
+        return Ok(());
     }
 }
