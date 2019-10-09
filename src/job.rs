@@ -22,7 +22,7 @@ pub struct Job {
     pub commands: Vec<Call>,
     pub compile_errors: Vec<JobError>,
     pub runtime_errors: Vec<JobError>,
-    handlers: Vec<Option<JoinHandle<Result<(), JobError>>>>,
+    handlers: Vec<JoinHandle<Result<(), JobError>>>,
     job_output: Option<InputStream>,
 }
 
@@ -54,9 +54,9 @@ impl Job {
                 let (mut output, input) = streams();
 
                 let mut cc = c.clone();
-                self.handlers.push(Some(thread::spawn(move || {
+                self.handlers.push(thread::spawn(move || {
                     return cc.run(&mut prev_input, &mut output);
-                })));
+                }));
                 prev_input = input;
             }
             self.job_output = Some(prev_input);
@@ -70,8 +70,8 @@ impl Job {
             (Some(command), Some(mut stream)) => print(&mut stream, command.get_output_type()),
             _ => {}
         }
-        for h in &mut self.handlers {
-            match h.take().unwrap().join() {
+        for h in self.handlers.drain(..) {
+            match h.join() {
                 Ok(res) => {
                     match res {
                         Ok(_) => {},

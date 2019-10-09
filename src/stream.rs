@@ -7,8 +7,7 @@ pub type OutputStream = SyncSender<Row>;
 pub type InputStream = Receiver<Row>;
 
 pub fn streams() -> (OutputStream, InputStream) {
-    let res: (SyncSender<Row>, Receiver<Row>) = sync_channel(200);
-    return res;
+    return sync_channel(200);
 }
 
 pub fn print(stream: &mut InputStream, types: &Vec<CellType>) {
@@ -19,14 +18,24 @@ pub fn print(stream: &mut InputStream, types: &Vec<CellType>) {
             Ok(r) => data.push(r),
             Err(_) => break,
         }
+        if data.len() > 50 {
+            print_partial(&mut data, types);
+        }
     }
+    if !data.is_empty() {
+        print_partial(&mut data, types);
+    }
+}
+
+pub fn print_partial(data: &mut Vec<Row>, types: &Vec<CellType>) {
+
     let mut w = vec![0; types.len()];
 
     for (idx, val) in types.iter().enumerate() {
         w[idx] = max(w[idx], val.name.len());
     }
 
-    for r in &data {
+    for r in data.into_iter() {
         assert_eq!(types.len(), r.cells.len());
         for (idx, c) in r.cells.iter().enumerate() {
             let l = match c {
@@ -47,7 +56,7 @@ pub fn print(stream: &mut InputStream, types: &Vec<CellType>) {
     }
     println!();
 
-    for r in &data {
+    for r in data.into_iter() {
         for (idx, c) in r.cells.iter().enumerate() {
             let cell = match c {
                 Cell::Text(val) => String::from(val),
@@ -62,4 +71,5 @@ pub fn print(stream: &mut InputStream, types: &Vec<CellType>) {
         }
         println!();
     }
+    data.drain(..);
 }

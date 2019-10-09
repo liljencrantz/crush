@@ -1,16 +1,16 @@
 Todo:
-implement group command
 implement variables
 implement set command
 implement cell type File
-make ls output File cells instead of strings
+make ls/find output File cells instead of strings
+make nice presentation of File cells
 implement regexps
 make filter support regexps
 implement file regexps
 make ls support regexps
 implement Stream<Row> cell type
+implement group command
 implement bun command
-implement find command
 implement date command
 implement csv command
 implement command substitution and lambdas
@@ -31,3 +31,4 @@ implement file globs
 make ls support globs
 implement sort command
 basic keyboard handling
+implement find command
