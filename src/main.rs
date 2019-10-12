@@ -3,6 +3,7 @@ mod glob;
 mod stream;
 mod cell;
 mod commands;
+mod namespace;
 mod state;
 mod job;
 mod lexer;
@@ -16,6 +17,7 @@ extern crate rustyline;
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
+use commands::add_builtins;
 
 fn perform(job: &mut Job, state: &mut State) -> Result<(), ()> {
     job.spawn(state);
@@ -26,6 +28,7 @@ fn perform(job: &mut Job, state: &mut State) -> Result<(), ()> {
 
 fn repl() {
     let mut state = state::State::new();
+    add_builtins(&mut state.namespace);
     let mut rl = Editor::<()>::new();
     rl.load_history(".posh_history").unwrap();
     loop {

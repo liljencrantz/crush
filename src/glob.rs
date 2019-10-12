@@ -2,20 +2,24 @@ use std::str::Chars;
 use std::iter::Peekable;
 use std::path::Path;
 use std::io;
-use std::fs::read_dir;
+use std::fs::{read_dir, ReadDir};
 
 pub fn glob(g: &str, v: &str) -> bool {
     return glob_match(&mut g.chars(), &mut v.chars().peekable());
 }
 
 pub fn glob_files(original_glob: &str, cwd: &Path, out: &mut Vec<String>) -> io::Result<()> {
+    return glob_files_testable(original_glob, cwd, out, |p| read_dir(p));
+}
+
+pub fn glob_files_testable(original_glob: &str, cwd: &Path, out: &mut Vec<String>, lister: fn(&Path) -> io::Result<ReadDir>) -> io::Result<()> {
     let only_directories = original_glob.ends_with('/');
     let without_trailing_slashes = original_glob.trim_end_matches('/');
     if without_trailing_slashes.starts_with('/') {
         let without_leading_slashes = without_trailing_slashes.trim_start_matches('/');
-        return glob_files_internal(without_leading_slashes, Path::new("/"), only_directories, "/", out);
+        return glob_files_internal(without_leading_slashes, Path::new("/"), only_directories, "/", out, lister);
     } else {
-        return glob_files_internal(without_trailing_slashes, cwd, only_directories, "", out);
+        return glob_files_internal(without_trailing_slashes, cwd, only_directories, "", out, lister);
     }
 }
 
@@ -24,11 +28,12 @@ pub fn glob_files_internal(
     dir: &Path,
     only_directories: bool,
     prefix: &str,
-    out: &mut Vec<String>) -> io::Result<()> {
+    out: &mut Vec<String>,
+    lister: fn(&Path) -> io::Result<ReadDir>) -> io::Result<()> {
     let is_last_section = !relative_glob.contains('/');
     if is_last_section {
         let suffix = if only_directories { "/" } else { "" };
-        for entry in read_dir(dir)? {
+        for entry in lister(dir)? {
             let ee = entry?;
             match ee.file_name().to_str() {
                 Some(name) => {
@@ -48,7 +53,7 @@ pub fn glob_files_internal(
             match ee.file_name().to_str() {
                 Some(name) => {
                     if glob(current_glob, name) && (ee.path().is_dir()) {
-                        glob_files_internal(next_glob, ee.path().as_path(), only_directories, format!("{}{}/", prefix, name).as_str(), out)?;
+                        glob_files_internal(next_glob, ee.path().as_path(), only_directories, format!("{}{}/", prefix, name).as_str(), out, lister)?;
                     }
                 }
                 None => return Err(io::Error::new(io::ErrorKind::Other, "Invalid file name")),

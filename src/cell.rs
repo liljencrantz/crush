@@ -1,6 +1,9 @@
 use std::cmp::Ordering;
 use chrono::{Local, DateTime};
 use crate::glob::glob;
+use crate::commands::Call;
+use crate::errors::JobError;
+use std::fmt::{Formatter, Error};
 
 #[derive(Clone)]
 #[derive(PartialEq)]
@@ -13,6 +16,34 @@ pub enum CellDataType {
     Glob,
     Regex,
     Op,
+    Command,
+}
+
+#[derive(Clone)]
+pub struct Command {
+    pub call: fn(&Vec<CellType>, &Vec<Argument>) -> Result<Call, JobError>,
+}
+
+impl Command {
+
+    pub fn new(call: fn(&Vec<CellType>, &Vec<Argument>) -> Result<Call, JobError>) -> Command {
+        return Command {call};
+    }
+}
+
+impl std::cmp::PartialEq for Command {
+    fn eq(&self, other: &Command) -> bool {
+        return false;
+    }
+}
+
+impl std::cmp::Eq for Command {
+}
+
+impl std::fmt::Debug for Command {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Command")
+    }
 }
 
 #[derive(Clone)]
@@ -33,6 +64,7 @@ pub enum Cell {
     Glob(String),
     Regex(String),
     Op(String),
+    Command(Command),
 //    Float(f64),
 //    Row(Box<Row>),
 //    Rows(Vec<Row>),
@@ -50,6 +82,7 @@ impl Cell {
             Cell::Glob(_) => CellDataType::Glob,
             Cell::Regex(_) => CellDataType::Regex,
             Cell::Op(_) => CellDataType::Op,
+            Cell::Command(_) => CellDataType::Command,
         };
     }
 }
@@ -81,6 +114,7 @@ impl std::cmp::PartialEq for Cell {
             (Cell::Glob(val1), Cell::Glob(val2)) => val1 == val2,
             (Cell::Regex(val1), Cell::Regex(val2)) => val1 == val2,
             (Cell::Op(val1), Cell::Op(val2)) => val1 == val2,
+            (Cell::Command(val1), Cell::Command(val2)) => val1 == val2,
             _ => false,
         };
     }

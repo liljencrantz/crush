@@ -1,6 +1,4 @@
 Todo:
-implement variables
-implement set command
 implement cell type File
 make ls/find output File cells instead of strings
 make nice presentation of File cells
@@ -14,7 +12,10 @@ implement bun command
 implement date command
 implement csv command
 implement command substitution and lambdas
-implement fn command
+implement lambdas with named arguments
+implement head command
+implement tail command
+implement for command
 one command per thread
 make file globing testable via fakes
 
@@ -32,3 +33,5 @@ make ls support globs
 implement sort command
 basic keyboard handling
 implement find command
+implement variables
+implement set command

@@ -73,9 +73,9 @@ Use field sigil to refer to row cell values
 
 Combining results:
 
-The bun command combines separate result streams:
+The echo command can be used to combine separate result streams into one:
 
-bun foo={find .} bar={csv name:text age:integer}
+echo hair={csv name:text hair_color:text} age={csv name:text age:integer} | join %{name.name}==%{age.age}
 
 The for-loop:
 
@@ -94,15 +94,27 @@ cmd git grep fnurp
 
 Declare new functions:
 
-fn lss=`{|foo:text bar baz| ls ${argv...} | sort key=size}
+Just set a variable, and make the variable a lambda. That easy. Yay.
+
+# If no signature is given, all parameters are inserted into the argv array variable
+let lss=`{ls ${argv...} | sort key=size}
+
+# This signature means first argument is named foo and must be a text, bar must be integer and has default value of seven,
+# baz can have any type and has default value of ggg, and remaining inputs are inserted into qux, and must be wildcards.
+let lss=`{|foo:text bar=7 baz:any=ggg qux:wildcard...| echo ${foo} ${bar} ${baz}}
 lss foo bar
 
 File parsing:
 
-The csv command interprets a file as columnar data, e.g. csv files
-There should also be commands that view files as a single binary blob, one row of text per line, etc.
-Also, posh itself needs to be able to store output to disk in some robust manner.
+The csv command interprets a file as columnar data, e.g. csv files.
+The bin command interprets a file as a single binary blob.
+The rows command interprets a file as a series of text rows.
+The cat and dog commands deserialize and serialize an arbitrary stream of rows.
 
 Type conversion:
 
 There should be a type conversion operator of some kind.
+
+IO redirection:
+
+???

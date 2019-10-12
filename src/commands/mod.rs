@@ -4,13 +4,16 @@ mod pwd;
 mod cd;
 mod filter;
 mod sort;
+mod set;
+mod let_command;
 
 use std::collections::HashMap;
 use crate::stream::{InputStream, OutputStream};
-use crate::cell::{CellType, Argument};
+use crate::cell::{CellType, Argument, Command, Cell};
 use crate::state::State;
 use crate::errors::JobError;
 use std::io;
+use crate::namespace::Namespace;
 
 #[derive(Clone)]
 pub struct Call {
@@ -61,9 +64,6 @@ impl Call {
     }
 }
 
-pub struct Namespace {
-    commands: HashMap<String, fn(&Vec<CellType>, &Vec<Argument>) -> Result<Call, JobError>>,
-}
 
 fn to_runtime_error(io_result: io::Result<()>) -> Result<(), JobError> {
     return match io_result {
@@ -76,26 +76,14 @@ fn to_runtime_error(io_result: io::Result<()>) -> Result<(), JobError> {
     };
 }
 
-impl Namespace {
-    pub fn new() -> Namespace {
-        let mut commands: HashMap<String, fn(&Vec<CellType>, &Vec<Argument>) -> Result<Call, JobError>> = HashMap::new();
-        commands.insert(String::from("ls"), ls_and_find::ls);
-        commands.insert(String::from("find"), ls_and_find::find);
-        commands.insert(String::from("echo"), echo::echo);
-        commands.insert(String::from("pwd"), pwd::pwd);
-        commands.insert(String::from("cd"), cd::cd);
-        commands.insert(String::from("filter"), filter::filter);
-        commands.insert(String::from("sort"), sort::sort);
-        let res = Namespace {
-            commands,
-        };
-        return res;
-    }
-
-    pub fn call(&self, name: &String, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Call, JobError> {
-        return match self.commands.get(name) {
-            Some(cmd) => cmd(input_type, arguments),
-            None => Result::Err(JobError { message: String::from(format!("Unknown command {}.", name)) }),
-        };
-    }
+pub fn add_builtins(namespace: &mut Namespace) {
+    namespace.declare("ls", Cell::Command(Command::new(ls_and_find::ls)));
+    namespace.declare("find", Cell::Command(Command::new(ls_and_find::find)));
+    namespace.declare("echo", Cell::Command(Command::new(echo::echo)));
+    namespace.declare("pwd", Cell::Command(Command::new(pwd::pwd)));
+    namespace.declare("cd", Cell::Command(Command::new(cd::cd)));
+    namespace.declare("filter", Cell::Command(Command::new(filter::filter)));
+    namespace.declare("sort", Cell::Command(Command::new(sort::sort)));
+    namespace.declare("set", Cell::Command(Command::new(set::set)));
+    namespace.declare("let", Cell::Command(Command::new(let_command::let_command)));
 }

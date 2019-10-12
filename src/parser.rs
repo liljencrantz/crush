@@ -87,6 +87,25 @@ fn parse_unnamed_argument(lexer: &mut Lexer, state: &State) -> Result<Cell, JobE
                         }
                     }
                 }
+                '$' => {
+                    match lexer.peek().0 {
+                        TokenType::String => {
+                            return match state.namespace.get(lexer.pop().1) {
+                                Some(cell) => {
+                                    if lexer.peek().0 != TokenType::BlockEnd {
+                                        return Err(parse_error("Expected '}'", lexer));
+                                    }
+                                    lexer.pop();
+                                    return Ok(cell.clone());
+                                },
+                                None => Err(parse_error("Unknown variable", lexer))
+                            }
+                        }
+                        _ => {
+                            return Err(parse_error("Expected string token", lexer));
+                        }
+                    }
+                }
                 '*' => {
                     match lexer.peek().0 {
                         TokenType::Glob => {

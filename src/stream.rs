@@ -46,6 +46,7 @@ pub fn print_partial(data: &mut Vec<Row>, types: &Vec<CellType>) {
                 Cell::Glob(val) => { val.len() + 3 }
                 Cell::Regex(val) => { val.len() + 3 }
                 Cell::Op(val) => { val.len() }
+                Cell::Command(_) => {7}
             };
             w[idx] = max(w[idx], l);
         }
@@ -66,6 +67,7 @@ pub fn print_partial(data: &mut Vec<Row>, types: &Vec<CellType>) {
                 Cell::Glob(val) => format!("*{{{}}}", val),
                 Cell::Regex(val) => format!("r{{{}}}", val),
                 Cell::Op(val) => String::from(val),
+                Cell::Command(_) => {"Command".to_string()}
             };
             print!("{}{}", cell, " ".repeat(w[idx] - cell.len() + 1))
         }
