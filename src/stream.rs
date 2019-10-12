@@ -1,4 +1,4 @@
-use crate::cell::{Row, Cell};
+use crate::cell::{Row, Cell, Alignment};
 use crate::cell::CellType;
 use std::cmp::max;
 use std::sync::mpsc::{Receiver, sync_channel, SyncSender};
@@ -18,7 +18,7 @@ pub fn print(stream: &mut InputStream, types: &Vec<CellType>) {
             Ok(r) => data.push(r),
             Err(_) => break,
         }
-        if data.len() > 50 {
+        if data.len() == 49 {
             print_partial(&mut data, types);
         }
     }
@@ -38,16 +38,7 @@ pub fn print_partial(data: &mut Vec<Row>, types: &Vec<CellType>) {
     for r in data.into_iter() {
         assert_eq!(types.len(), r.cells.len());
         for (idx, c) in r.cells.iter().enumerate() {
-            let l = match c {
-                Cell::Text(val) => val.len(),
-                Cell::Integer(val) => val.to_string().len(),
-                Cell::Time(val) => val.format("%Y %b %d %H:%M:%S %z").to_string().len(),
-                Cell::Field(val) => { val.len() + 3 }
-                Cell::Glob(val) => { val.len() + 3 }
-                Cell::Regex(val) => { val.len() + 3 }
-                Cell::Op(val) => { val.len() }
-                Cell::Command(_) => {7}
-            };
+            let l = c.to_string().len();
             w[idx] = max(w[idx], l);
         }
     }
@@ -59,17 +50,12 @@ pub fn print_partial(data: &mut Vec<Row>, types: &Vec<CellType>) {
 
     for r in data.into_iter() {
         for (idx, c) in r.cells.iter().enumerate() {
-            let cell = match c {
-                Cell::Text(val) => String::from(val),
-                Cell::Integer(val) => val.to_string(),
-                Cell::Time(val) => val.format("%Y-%m-%d %H:%M:%S %z").to_string(),
-                Cell::Field(val) => format!(r"%{{{}}}", val),
-                Cell::Glob(val) => format!("*{{{}}}", val),
-                Cell::Regex(val) => format!("r{{{}}}", val),
-                Cell::Op(val) => String::from(val),
-                Cell::Command(_) => {"Command".to_string()}
-            };
-            print!("{}{}", cell, " ".repeat(w[idx] - cell.len() + 1))
+            let cell = c.to_string();
+            let spaces = if idx == r.cells.len()-1 {"".to_owned()} else {" ".repeat(w[idx] - cell.len())};
+            match c.alignment() {
+                Alignment::Right => print!("{}{} ", spaces, cell),
+                _ => print!("{}{} ", cell, spaces),
+            }
         }
         println!();
     }

@@ -2,50 +2,43 @@ use std::{io, fs};
 use crate::stream::{OutputStream, InputStream};
 use crate::cell::{Argument, CellType, Cell, Row, CellDataType};
 use crate::commands::{Call, to_runtime_error};
-use crate::errors::JobError;
+use crate::errors::{JobError, error};
 use chrono::{Local, DateTime};
 use crate::glob::glob_files;
 use std::path::Path;
 use std::fs::Metadata;
 use std::ffi::OsStr;
 
-fn insert_entity(meta: &Metadata, file_name: &OsStr, output: &mut OutputStream) -> io::Result<()> {
+fn insert_entity(meta: &Metadata, file: Box<Path>, output: &mut OutputStream) -> io::Result<()> {
     let modified_system = meta.modified()?;
     let modified_datetime: DateTime<Local> = DateTime::from(modified_system);
-    match file_name.to_str() {
-        Some(name) => {
             output.send(Row {
                 cells: vec![
-                    Cell::Text(String::from(name)),
+                    Cell::File(file),
                     Cell::Integer(i128::from(meta.len())),
                     Cell::Time(modified_datetime),
                 ]
             });
-        },
-        None => {
-            return Err(io::Error::new(io::ErrorKind::Other, "Invalid file name"));
-        }
-    }
     return Ok(());
 }
 
 fn run_for_single_directory_or_file(
-    file: &str,
+    file: Box<Path>,
     recursive: bool,
     output: &mut OutputStream) -> Result<(), io::Error> {
-    let path = Path::new(file);
+    let path = file;
     if path.is_dir() {
         let dirs = fs::read_dir(path);
         for maybe_entry in dirs? {
             let entry = maybe_entry?;
             insert_entity(
                 &entry.metadata()?,
-                entry.file_name().as_os_str(),
+                entry.path().into_boxed_path(),
                 output)?;
             if recursive && entry.path().is_dir() {
                 if !(entry.file_name().eq(".") || entry.file_name().eq("..")) {
                     run_for_single_directory_or_file(
-                        format!("{}/{}", file, entry.file_name().to_str().unwrap()).as_str(),
+                        entry.path().into_boxed_path(),
                         true,
                         output);
                 }
@@ -56,7 +49,7 @@ fn run_for_single_directory_or_file(
             Some(name) => {
                 insert_entity(
                     &path.metadata()?,
-                    name,
+                    path,
                     output)?;
             }
             None => {
@@ -71,14 +64,18 @@ fn run_internal(
     arguments: &Vec<Argument>,
     recursive: bool,
     output: &mut OutputStream) -> Result<(), io::Error> {
-    let mut dirs: Vec<String> = Vec::new();
+    let mut dirs: Vec<Cell> = Vec::new();
     if arguments.is_empty() {
-        dirs.push(String::from("."));
+        dirs.push(Cell::File(
+            Box::from(Path::new("."))));
     } else {
         for arg in arguments {
             match &arg.cell {
                 Cell::Text(dir) => {
-                    dirs.push(dir.clone());
+                    dirs.push(Cell::File(Box::from(Path::new(dir))));
+                }
+                Cell::File(dir) => {
+                    dirs.push(arg.cell.clone());
                 }
                 Cell::Glob(dir) => {
                     glob_files(dir, Path::new(std::env::current_dir()?.to_str().expect("Invalid directory name")), &mut dirs)?;
@@ -90,9 +87,12 @@ fn run_internal(
         }
     }
 
-    for dir in dirs {
-        run_for_single_directory_or_file(
-            dir.as_str(), recursive, output)?;
+    for cell in dirs {
+        match cell {
+           Cell::File(dir) => run_for_single_directory_or_file(
+                dir, recursive, output) ?,
+            _ => return Err(std::io::Error::new(std::io::ErrorKind::Other, "Expected a file"))
+        }
     }
     return Ok(());
 }

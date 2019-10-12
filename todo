@@ -16,8 +16,10 @@ implement lambdas with named arguments
 implement head command
 implement tail command
 implement for command
+implement env command
 one command per thread
 make file globing testable via fakes
+generic (macro-based?) argument parsing
 
 Done:
 Fix all expects calls that aren't impossible, and propagate the errors

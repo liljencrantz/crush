@@ -4,6 +4,7 @@ use crate::glob::glob;
 use crate::commands::Call;
 use crate::errors::JobError;
 use std::fmt::{Formatter, Error};
+use std::path::Path;
 
 #[derive(Clone)]
 #[derive(PartialEq)]
@@ -17,6 +18,7 @@ pub enum CellDataType {
     Regex,
     Op,
     Command,
+    File,
 }
 
 #[derive(Clone)]
@@ -69,7 +71,7 @@ pub enum Cell {
 //    Row(Box<Row>),
 //    Rows(Vec<Row>),
 //    Stream(OutputStream),
-//    File(File),
+    File(Box<Path>),
 }
 
 impl Cell {
@@ -83,8 +85,35 @@ impl Cell {
             Cell::Regex(_) => CellDataType::Regex,
             Cell::Op(_) => CellDataType::Op,
             Cell::Command(_) => CellDataType::Command,
+            Cell::File(_) => CellDataType::File,
         };
     }
+
+    pub fn to_string(&self) -> String {
+        return match self {
+            Cell::Text(val) => String::from(val),
+            Cell::Integer(val) => val.to_string(),
+            Cell::Time(val) => val.format("%Y-%m-%d %H:%M:%S %z").to_string(),
+            Cell::Field(val) => format!(r"%{{{}}}", val),
+            Cell::Glob(val) => format!("*{{{}}}", val),
+            Cell::Regex(val) => format!("r{{{}}}", val),
+            Cell::Op(val) => String::from(val),
+            Cell::Command(_) => "Command".to_string(),
+            Cell::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
+        };
+    }
+
+    pub fn alignment(&self) -> Alignment {
+        return match self {
+            Cell::Integer(_) => Alignment::Right,
+            _ => Alignment::Left,
+        }
+    }
+}
+
+pub enum Alignment {
+    Left,
+    Right,
 }
 
 impl std::cmp::PartialOrd for Cell {
@@ -97,6 +126,7 @@ impl std::cmp::PartialOrd for Cell {
             (Cell::Integer(val1), Cell::Integer(val2)) => Some(val1.cmp(val2)),
             (Cell::Time(val1), Cell::Time(val2)) => Some(val1.cmp(val2)),
             (Cell::Op(val1), Cell::Op(val2)) => Some(val1.cmp(val2)),
+            (Cell::File(val1), Cell::File(val2)) => Some(val1.cmp(val2)),
             _ => Option::None,
         };
     }
@@ -115,6 +145,7 @@ impl std::cmp::PartialEq for Cell {
             (Cell::Regex(val1), Cell::Regex(val2)) => val1 == val2,
             (Cell::Op(val1), Cell::Op(val2)) => val1 == val2,
             (Cell::Command(val1), Cell::Command(val2)) => val1 == val2,
+            (Cell::File(val1), Cell::File(val2)) => val1 == val2,
             _ => false,
         };
     }
