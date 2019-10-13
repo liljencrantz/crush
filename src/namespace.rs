@@ -41,7 +41,7 @@ impl Namespace {
         return self.data.get(&name.to_string());
     }
 
-    pub fn call(&self, name: &str, input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Call, JobError> {
+    pub fn call(&self, name: &str, input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
         return match self.data.get(name) {
             Some(Cell::Command(cmd)) => {
                 let c = cmd.call;

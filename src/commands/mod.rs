@@ -12,24 +12,32 @@ use crate::stream::{InputStream, OutputStream};
 use crate::cell::{CellType, Argument, Command, Cell};
 use crate::state::State;
 use crate::errors::JobError;
-use std::io;
+use std::{io, thread};
 use crate::namespace::Namespace;
+use std::thread::JoinHandle;
 
-#[derive(Clone)]
+type Run = fn(
+    Vec<CellType>,
+    Vec<Argument>,
+    InputStream,
+    OutputStream) -> Result<(), JobError>;
+
+type Mutate = fn(
+    &mut State,
+    Vec<CellType>,
+    Vec<Argument>) -> Result<(), JobError>;
+
+pub enum Exec {
+    Run(Run),
+    Mutate(Mutate),
+}
+
 pub struct Call {
     name: String,
     input_type: Vec<CellType>,
     arguments: Vec<Argument>,
     output_type: Vec<CellType>,
-    run: Option<fn(
-        &Vec<CellType>,
-        &Vec<Argument>,
-        &mut InputStream,
-        &mut OutputStream) -> Result<(), JobError>>,
-    mutate: Option<fn(
-        &mut State,
-        &Vec<CellType>,
-        &Vec<Argument>) -> Result<(), JobError>>,
+    exec: Exec,
 }
 
 impl Call {
@@ -49,18 +57,22 @@ impl Call {
         return &self.output_type;
     }
 
-    pub fn run(&mut self, input: &mut InputStream, output: &mut OutputStream) -> Result<(), JobError> {
-        match self.run {
-            Some(r) => r(&self.input_type, &self.arguments, input, output),
-            None => Ok(()),
-        }
-    }
-
-    pub fn mutate(&mut self, state: &mut State) -> Result<(), JobError> {
-        match self.mutate {
-            Some(m) => m(state, &self.input_type, &self.arguments),
-            None => Ok(()),
-        }
+    pub fn execute(
+        self,
+        state: &mut State,
+        mut input: InputStream,
+        mut output: OutputStream) -> Option<JoinHandle<Result<(), JobError>>> {
+        return match self.exec {
+            Exec::Run(run) => {
+                Some(thread::spawn(move || {
+                    return run(self.input_type, self.arguments, input, output);
+                }))
+            }
+            Exec::Mutate(mutate) => {
+                mutate(state, self.input_type, self.arguments);
+                None
+            }
+        };
     }
 }
 

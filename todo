@@ -1,7 +1,6 @@
 Todo:
-implement cell type File
-make ls/find output File cells instead of strings
-make nice presentation of File cells
+Implement matching operators, =~and !~
+make filter support globs
 implement regexps
 make filter support regexps
 implement file regexps
@@ -20,6 +19,7 @@ implement env command
 one command per thread
 make file globing testable via fakes
 generic (macro-based?) argument parsing
+Error propagation
 
 Done:
 Fix all expects calls that aren't impossible, and propagate the errors
@@ -37,3 +37,6 @@ basic keyboard handling
 implement find command
 implement variables
 implement set command
+implement cell type File
+make ls/find output File cells instead of strings
+make nice presentation of File cells

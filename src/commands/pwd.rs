@@ -1,14 +1,14 @@
 use crate::stream::{OutputStream, InputStream};
 use crate::cell::{Argument, CellType, Cell, Row, CellDataType};
-use crate::commands::Call;
+use crate::commands::{Call, Exec};
 use crate::errors::JobError;
 use crate::state::State;
 
 fn run(
-    _input_type: &Vec<CellType>,
-    _arguments: &Vec<Argument>,
-    _input: &mut InputStream,
-    output: &mut OutputStream) -> Result<(), JobError> {
+    _input_type: Vec<CellType>,
+    _arguments: Vec<Argument>,
+    _input: InputStream,
+    output: OutputStream) -> Result<(), JobError> {
     return match std::env::current_dir() {
         Ok(os_dir) => {
             match os_dir.to_str() {
@@ -26,16 +26,15 @@ fn run(
     };
 }
 
-pub(crate) fn pwd(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Call, JobError> {
+pub(crate) fn pwd(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
     return Ok(Call {
         name: String::from("pwd"),
-        input_type: input_type.clone(),
-        arguments: arguments.clone(),
+        input_type: input_type,
+        arguments: arguments,
         output_type: vec![CellType {
             name: String::from("directory"),
             cell_type: CellDataType::Text,
         }],
-        run: Some(run),
-        mutate: None,
+        exec: Exec::Run(run),
     });
 }

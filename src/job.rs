@@ -1,11 +1,12 @@
 use crate::state::State;
-use crate::commands::Call;
+use crate::commands::{Call, Exec};
 use crate::stream::{print, streams, InputStream};
 use std::mem;
 use crate::errors::{JobError, error};
 use std::thread;
 use std::thread::JoinHandle;
 use crate::job::JobState::Empty;
+use crate::cell::CellType;
 
 #[derive(PartialEq)]
 #[derive(Debug)]
@@ -24,6 +25,7 @@ pub struct Job {
     pub runtime_errors: Vec<JobError>,
     handlers: Vec<JoinHandle<Result<(), JobError>>>,
     job_output: Option<InputStream>,
+    job_output_type: Option<Vec<CellType>>,
 }
 
 impl Job {
@@ -35,6 +37,7 @@ impl Job {
             runtime_errors: Vec::new(),
             handlers: Vec::new(),
             job_output: None,
+            job_output_type: None,
         }
     }
 
@@ -45,29 +48,30 @@ impl Job {
         return el.join(" | ");
     }
 
-    pub fn spawn(&mut self, state: &State) {
+    pub fn exec(&mut self, state: &mut State) {
         assert_eq!(self.state, JobState::Parsed);
         if !self.commands.is_empty() && self.compile_errors.is_empty() {
-            let (prev_output, mut prev_input) = streams();
+            let (prev_output, mut input) = streams();
+            self.job_output_type = Some(self.commands.last().unwrap().get_output_type().clone());
             drop(prev_output);
-            for c in &mut self.commands {
-                let (mut output, input) = streams();
-
-                let mut cc = c.clone();
-                self.handlers.push(thread::spawn(move || {
-                    return cc.run(&mut prev_input, &mut output);
-                }));
-                prev_input = input;
+            for mut c in self.commands.drain(..) {
+                let (output, next_input) = streams();
+                if let Some(h) = c.execute(state, input, output) {
+                    self.handlers.push(h);
+                }
+                input = next_input;
             }
-            self.job_output = Some(prev_input);
+            self.job_output = Some(input);
         }
         self.state = JobState::Spawned;
     }
 
     pub fn wait(&mut self) {
         assert_eq!(self.state, JobState::Spawned);
-        match (self.commands.last(), self.job_output.take()) {
-            (Some(command), Some(mut stream)) => print(&mut stream, command.get_output_type()),
+        match (self.job_output_type.take(), self.job_output.take()) {
+            (Some(types), Some(mut stream)) => {
+                print(&mut stream, &types);
+            }
             _ => {}
         }
         for h in self.handlers.drain(..) {
@@ -86,22 +90,5 @@ impl Job {
             }
         }
         self.state = JobState::Waited;
-    }
-
-    pub fn mutate(&mut self, state: &mut State) -> Result<(), ()> {
-        assert_eq!(self.state, JobState::Waited);
-        if !self.commands.is_empty() && self.compile_errors.is_empty() && self.runtime_errors.is_empty() {
-            for c in &mut self.commands {
-                match c.mutate(state) {
-                    Ok(_) => {}
-                    Err(err) => {
-                        self.runtime_errors.push(err);
-                        break;
-                    }
-                }
-            }
-        }
-        self.state = JobState::Finished;
-        return if self.runtime_errors.is_empty() { Ok(()) } else { Err(()) };
     }
 }

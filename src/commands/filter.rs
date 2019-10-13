@@ -1,6 +1,6 @@
 use crate::stream::{OutputStream, InputStream};
 use crate::cell::{Argument, CellType, Cell, Row};
-use crate::commands::Call;
+use crate::commands::{Call, Exec};
 use crate::errors::{JobError, argument_error};
 use crate::state::State;
 use std::iter::Iterator;
@@ -40,7 +40,8 @@ fn parse_value(input_type: &Vec<CellType>,
             return match &arg.cell {
                 Cell::Field(_) => Ok(Value::Field(field_lookup[*arg_idx].expect("Impossible"))),
                 Cell::Op(_) => Err(argument_error("Expected value")),
-                _ => return Ok(Value::Cell(arg.cell.clone())),
+                Cell::Stream(_, _) => Err(argument_error("Invalid argument type Stream")),
+                _ => arg.cell.partial_clone().and_then({|a| Ok(Value::Cell(a)) }),
             };
         }
         None => {
@@ -86,10 +87,10 @@ fn find_checks(input_type: &Vec<CellType>,
     return Ok(res);
 }
 
-fn to_cell(value: &Value, row: &Row) -> Cell {
+fn to_cell<'a>(value: &'a Value, row: &'a Row) -> &'a Cell {
     return match value {
-        Value::Cell(c) => c.clone(),
-        Value::Field(idx) => row.cells[*idx].clone(),
+        Value::Cell(c) => &c,
+        Value::Field(idx) => &row.cells[*idx],
     };
 }
 
@@ -111,14 +112,14 @@ fn evaluate(condition: &Condition, row: &Row) -> bool {
 }
 
     fn run(
-        input_type: &Vec<CellType>,
-        arguments: &Vec<Argument>,
-        input: &mut InputStream,
-        output: &mut OutputStream) -> Result<(), JobError> {
-        let lookup = find_checks(input_type, arguments)?;
+        input_type: Vec<CellType>,
+        arguments: Vec<Argument>,
+        input: InputStream,
+        output: OutputStream) -> Result<(), JobError> {
+        let lookup = find_checks(&input_type, &arguments)?;
 
         let numbered_arguments: Vec<(usize, &Argument)> = arguments.iter().enumerate().collect();
-        let condition = parse_condition(input_type, &mut numbered_arguments.iter(), &lookup)?;
+        let condition = parse_condition(&input_type, &mut numbered_arguments.iter(), &lookup)?;
         loop {
             match input.recv() {
                 Ok(row) => {
@@ -134,13 +135,12 @@ fn evaluate(condition: &Condition, row: &Row) -> bool {
         return Ok(());
     }
 
-    pub fn filter(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Call, JobError> {
+    pub fn filter(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
         return Ok(Call {
             name: String::from("filter"),
             input_type: input_type.clone(),
-            arguments: arguments.clone(),
-            output_type: input_type.clone(),
-            run: Some(run),
-            mutate: None,
+            arguments: arguments,
+            output_type: input_type,
+            exec: Exec::Run(run),
         });
     }

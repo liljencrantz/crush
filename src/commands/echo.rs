@@ -1,32 +1,31 @@
 use crate::stream::{OutputStream, InputStream};
 use crate::cell::{Argument, CellType, Row};
-use crate::commands::{Call};
+use crate::commands::{Call, Exec};
 use crate::errors::JobError;
 use crate::state::State;
 
 fn run(
-    _input_type: &Vec<CellType>,
-    arguments: &Vec<Argument>,
-    _input: &mut InputStream,
-    output: &mut OutputStream) -> Result<(), JobError> {
-    let g = arguments.iter().map(|c| c.cell.clone());
+    _input_type: Vec<CellType>,
+    mut arguments: Vec<Argument>,
+    _input: InputStream,
+    output: OutputStream) -> Result<(), JobError> {
+    let g = arguments.drain(..).map(|c| c.cell);
     output.send(Row {
         cells: g.collect()
     });
     return Ok(());
 }
 
-pub fn echo(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Call, JobError> {
+pub fn echo(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
     let output_type = arguments
         .iter()
         .map(|a| CellType { name: a.name.clone(), cell_type: a.cell.cell_data_type() })
         .collect();
     return Ok(Call {
         name: String::from("echo"),
-        input_type: input_type.clone(),
-        arguments: arguments.clone(),
+        input_type: input_type,
+        arguments: arguments,
         output_type,
-        run: Some(run),
-        mutate: None,
+        exec: Exec::Run(run),
     });
 }

@@ -20,9 +20,8 @@ use rustyline::Editor;
 use commands::add_builtins;
 
 fn perform(job: &mut Job, state: &mut State) -> Result<(), ()> {
-    job.spawn(state);
+    job.exec(state);
     job.wait();
-    job.mutate(state)?;
     return Ok(());
 }
 

@@ -1,12 +1,12 @@
 use crate::cell::{Argument, CellType, Cell, CellDataType};
-use crate::commands::{Call, to_runtime_error};
+use crate::commands::{Call, to_runtime_error, Exec};
 use crate::errors::JobError;
 use crate::state::State;
 
 fn mutate(
     _state: &mut State,
-    _input_type: &Vec<CellType>,
-    arguments: &Vec<Argument>) -> Result<(), JobError> {
+    _input_type: Vec<CellType>,
+    arguments: Vec<Argument>) -> Result<(), JobError> {
     return match arguments.len() {
         0 =>
         // This should move to home, not /...
@@ -22,7 +22,7 @@ fn mutate(
     };
 }
 
-pub(crate) fn cd(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Call, JobError> {
+pub(crate) fn cd(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
     if arguments.len() > 1 {
         return Err(JobError {
             message: String::from("Too many arguments")
@@ -36,10 +36,9 @@ pub(crate) fn cd(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Resul
 
     return Ok(Call {
         name: String::from("cd"),
-        input_type: input_type.clone(),
-        arguments: arguments.clone(),
+        input_type: input_type,
+        arguments: arguments,
         output_type: vec![],
-        run: None,
-        mutate: Some(mutate),
+        exec: Exec::Mutate(mutate),
     });
 }

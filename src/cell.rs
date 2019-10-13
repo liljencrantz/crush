@@ -2,9 +2,10 @@ use std::cmp::Ordering;
 use chrono::{Local, DateTime};
 use crate::glob::glob;
 use crate::commands::Call;
-use crate::errors::JobError;
+use crate::errors::{JobError, error};
 use std::fmt::{Formatter, Error};
 use std::path::Path;
+use crate::stream::InputStream;
 
 #[derive(Clone)]
 #[derive(PartialEq)]
@@ -19,16 +20,17 @@ pub enum CellDataType {
     Op,
     Command,
     File,
+    Stream,
 }
 
 #[derive(Clone)]
 pub struct Command {
-    pub call: fn(&Vec<CellType>, &Vec<Argument>) -> Result<Call, JobError>,
+    pub call: fn(Vec<CellType>, Vec<Argument>) -> Result<Call, JobError>,
 }
 
 impl Command {
 
-    pub fn new(call: fn(&Vec<CellType>, &Vec<Argument>) -> Result<Call, JobError>) -> Command {
+    pub fn new(call: fn(Vec<CellType>, Vec<Argument>) -> Result<Call, JobError>) -> Command {
         return Command {call};
     }
 }
@@ -55,8 +57,7 @@ pub struct CellType {
     pub cell_type: CellDataType,
 }
 
-#[derive(Eq)]
-#[derive(Clone)]
+//#[derive(Eq)]
 #[derive(Debug)]
 pub enum Cell {
     Text(String),
@@ -70,7 +71,7 @@ pub enum Cell {
 //    Float(f64),
 //    Row(Box<Row>),
 //    Rows(Vec<Row>),
-//    Stream(OutputStream),
+    Stream(Vec<CellType>, InputStream),
     File(Box<Path>),
 }
 
@@ -86,6 +87,37 @@ impl Cell {
             Cell::Op(_) => CellDataType::Op,
             Cell::Command(_) => CellDataType::Command,
             Cell::File(_) => CellDataType::File,
+            Cell::Stream(_, _) => CellDataType::Stream,
+        };
+    }
+
+    pub fn partial_clone(&self) -> Result<Cell, JobError> {
+        return match self {
+            Cell::Text(v) => Ok(Cell::Text(v.clone())),
+            Cell::Integer(v) => Ok(Cell::Integer(v.clone())),
+            Cell::Time(v) => Ok(Cell::Time(v.clone())),
+            Cell::Field(v) => Ok(Cell::Field(v.clone())),
+            Cell::Glob(v) => Ok(Cell::Glob(v.clone())),
+            Cell::Regex(v) => Ok(Cell::Regex(v.clone())),
+            Cell::Op(v) => Ok(Cell::Op(v.clone())),
+            Cell::Command(v) => Ok(Cell::Command(v.clone())),
+            Cell::File(v) => Ok(Cell::File(v.clone())),
+            Cell::Stream(_, _) => Err(error("Invalid use of stream")),
+        };
+    }
+
+    pub fn concrete(&self) -> Cell {
+        return match self {
+            Cell::Text(v) => Cell::Text(v.clone()),
+            Cell::Integer(v) => Cell::Integer(v.clone()),
+            Cell::Time(v) => Cell::Time(v.clone()),
+            Cell::Field(v) => Cell::Field(v.clone()),
+            Cell::Glob(v) => Cell::Glob(v.clone()),
+            Cell::Regex(v) => Cell::Regex(v.clone()),
+            Cell::Op(v) => Cell::Op(v.clone()),
+            Cell::Command(v) => Cell::Command(v.clone()),
+            Cell::File(v) => Cell::File(v.clone()),
+            Cell::Stream(_, _) => panic!("UNIMPLEMENTED!!!!"),
         };
     }
 
@@ -100,6 +132,7 @@ impl Cell {
             Cell::Op(val) => String::from(val),
             Cell::Command(_) => "Command".to_string(),
             Cell::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
+            Cell::Stream(_, _) => "Stream".to_string(),
         };
     }
 
@@ -151,29 +184,29 @@ impl std::cmp::PartialEq for Cell {
     }
 }
 
-#[derive(Clone)]
+impl std::cmp::Eq for Cell {}
+
 pub struct Argument {
     pub name: String,
     pub cell: Cell,
 }
 
 impl Argument {
-    pub fn named(name: &String, cell: &Cell) -> Argument {
+    pub fn named(name: &String, cell: Cell) -> Argument {
         return Argument {
             name: name.clone(),
-            cell: cell.clone(),
+            cell: cell,
         };
     }
 
-    pub fn unnamed(cell: &Cell) -> Argument {
+    pub fn unnamed(cell: Cell) -> Argument {
         return Argument {
             name: String::from(""),
-            cell: cell.clone(),
+            cell: cell,
         };
     }
 }
 
-#[derive(Clone)]
 pub struct Row {
     pub cells: Vec<Cell>,
 }

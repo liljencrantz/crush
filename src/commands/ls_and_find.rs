@@ -1,7 +1,7 @@
 use std::{io, fs};
 use crate::stream::{OutputStream, InputStream};
 use crate::cell::{Argument, CellType, Cell, Row, CellDataType};
-use crate::commands::{Call, to_runtime_error};
+use crate::commands::{Call, to_runtime_error, Exec};
 use crate::errors::{JobError, error};
 use chrono::{Local, DateTime};
 use crate::glob::glob_files;
@@ -12,13 +12,13 @@ use std::ffi::OsStr;
 fn insert_entity(meta: &Metadata, file: Box<Path>, output: &mut OutputStream) -> io::Result<()> {
     let modified_system = meta.modified()?;
     let modified_datetime: DateTime<Local> = DateTime::from(modified_system);
-            output.send(Row {
-                cells: vec![
-                    Cell::File(file),
-                    Cell::Integer(i128::from(meta.len())),
-                    Cell::Time(modified_datetime),
-                ]
-            });
+    output.send(Row {
+        cells: vec![
+            Cell::File(file),
+            Cell::Integer(i128::from(meta.len())),
+            Cell::Time(modified_datetime),
+        ]
+    });
     return Ok(());
 }
 
@@ -61,9 +61,9 @@ fn run_for_single_directory_or_file(
 }
 
 fn run_internal(
-    arguments: &Vec<Argument>,
+    arguments: Vec<Argument>,
     recursive: bool,
-    output: &mut OutputStream) -> Result<(), io::Error> {
+    mut output: OutputStream) -> Result<(), io::Error> {
     let mut dirs: Vec<Cell> = Vec::new();
     if arguments.is_empty() {
         dirs.push(Cell::File(
@@ -75,7 +75,7 @@ fn run_internal(
                     dirs.push(Cell::File(Box::from(Path::new(dir))));
                 }
                 Cell::File(dir) => {
-                    dirs.push(arg.cell.clone());
+                    dirs.push(Cell::File(dir.clone()));
                 }
                 Cell::Glob(dir) => {
                     glob_files(dir, Path::new(std::env::current_dir()?.to_str().expect("Invalid directory name")), &mut dirs)?;
@@ -89,8 +89,8 @@ fn run_internal(
 
     for cell in dirs {
         match cell {
-           Cell::File(dir) => run_for_single_directory_or_file(
-                dir, recursive, output) ?,
+            Cell::File(dir) => run_for_single_directory_or_file(
+                dir, recursive, &mut output)?,
             _ => return Err(std::io::Error::new(std::io::ErrorKind::Other, "Expected a file"))
         }
     }
@@ -98,26 +98,26 @@ fn run_internal(
 }
 
 fn run_ls(
-    _input_type: &Vec<CellType>,
-    arguments: &Vec<Argument>,
-    _input: &mut InputStream,
-    output: &mut OutputStream) -> Result<(), JobError> {
+    _input_type: Vec<CellType>,
+    arguments: Vec<Argument>,
+    _input: InputStream,
+    output: OutputStream) -> Result<(), JobError> {
     return to_runtime_error(run_internal(arguments, false, output));
 }
 
 fn run_find(
-    _input_type: &Vec<CellType>,
-    arguments: &Vec<Argument>,
-    _input: &mut InputStream,
-    output: &mut OutputStream) -> Result<(), JobError> {
+    _input_type: Vec<CellType>,
+    arguments: Vec<Argument>,
+    _input: InputStream,
+    output: OutputStream) -> Result<(), JobError> {
     return to_runtime_error(run_internal(arguments, true, output));
 }
 
-pub fn ls(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Call, JobError> {
+pub fn ls(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
     return Ok(Call {
         name: String::from("ls"),
         input_type: input_type.clone(),
-        arguments: arguments.clone(),
+        arguments: arguments,
         output_type: vec![
             CellType {
                 name: String::from("file"),
@@ -132,16 +132,15 @@ pub fn ls(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Call,
                 cell_type: CellDataType::Time,
             },
         ],
-        run: Some(run_ls),
-        mutate: None,
+        exec: Exec::Run(run_ls),
     });
 }
 
-pub fn find(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Call, JobError> {
+pub fn find(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
     return Ok(Call {
         name: String::from("ls"),
-        input_type: input_type.clone(),
-        arguments: arguments.clone(),
+        input_type: input_type,
+        arguments: arguments,
         output_type: vec![
             CellType {
                 name: String::from("file"),
@@ -156,7 +155,6 @@ pub fn find(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Cal
                 cell_type: CellDataType::Time,
             },
         ],
-        run: Some(run_find),
-        mutate: None,
+        exec: Exec::Run(run_find),
     });
 }

@@ -96,7 +96,7 @@ fn parse_unnamed_argument(lexer: &mut Lexer, state: &State) -> Result<Cell, JobE
                                         return Err(parse_error("Expected '}'", lexer));
                                     }
                                     lexer.pop();
-                                    return Ok(cell.clone());
+                                    return Ok(cell.partial_clone().unwrap());
                                 },
                                 None => Err(parse_error("Unknown variable", lexer))
                             }
@@ -161,13 +161,13 @@ fn parse_arguments(lexer: &mut Lexer, arguments: &mut Vec<Argument>, state: &Sta
                 let ss = String::from(lexer.pop().1);
                 if lexer.peek().0 == TokenType::Assign {
                     lexer.pop();
-                    arguments.push(Argument::named(&ss, &parse_unnamed_argument(lexer, state)?));
+                    arguments.push(Argument::named(&ss, parse_unnamed_argument(lexer, state)?));
                 } else {
-                    arguments.push(Argument::unnamed(&Cell::Text(ss)));
+                    arguments.push(Argument::unnamed(Cell::Text(ss)));
                 }
             }
             _ => {
-                arguments.push(Argument::unnamed(&parse_unnamed_argument(lexer, state)?));
+                arguments.push(Argument::unnamed(parse_unnamed_argument(lexer, state)?));
             }
         }
     }
@@ -185,7 +185,7 @@ fn parse_command(lexer: &mut Lexer, job: &mut Job, state: &State) -> Result<(), 
             let name = String::from(lexer.pop().1);
             let mut arguments: Vec<Argument> = Vec::new();
             parse_arguments(lexer, &mut arguments, state)?;
-            let call = state.namespace.call(&name, input, &arguments)?;
+            let call = state.namespace.call(&name, input.clone(), arguments)?;
             job.commands.push(call);
             return Ok(());
         }
