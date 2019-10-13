@@ -40,7 +40,7 @@ fn parse_value(input_type: &Vec<CellType>,
             return match &arg.cell {
                 Cell::Field(_) => Ok(Value::Field(field_lookup[*arg_idx].expect("Impossible"))),
                 Cell::Op(_) => Err(argument_error("Expected value")),
-                Cell::Stream(_, _) => Err(argument_error("Invalid argument type Stream")),
+                Cell::Output(_) => Err(argument_error("Invalid argument type Stream")),
                 _ => arg.cell.partial_clone().and_then({|a| Ok(Value::Cell(a)) }),
             };
         }

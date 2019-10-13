@@ -29,9 +29,8 @@ pub struct Command {
 }
 
 impl Command {
-
     pub fn new(call: fn(Vec<CellType>, Vec<Argument>) -> Result<Call, JobError>) -> Command {
-        return Command {call};
+        return Command { call };
     }
 }
 
@@ -41,8 +40,7 @@ impl std::cmp::PartialEq for Command {
     }
 }
 
-impl std::cmp::Eq for Command {
-}
+impl std::cmp::Eq for Command {}
 
 impl std::fmt::Debug for Command {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -57,6 +55,12 @@ pub struct CellType {
     pub cell_type: CellDataType,
 }
 
+#[derive(Debug)]
+pub struct Output {
+    pub types: Vec<CellType>,
+    pub stream: InputStream,
+}
+
 //#[derive(Eq)]
 #[derive(Debug)]
 pub enum Cell {
@@ -68,10 +72,10 @@ pub enum Cell {
     Regex(String),
     Op(String),
     Command(Command),
-//    Float(f64),
+    //    Float(f64),
 //    Row(Box<Row>),
 //    Rows(Vec<Row>),
-    Stream(Vec<CellType>, InputStream),
+    Output(Output),
     File(Box<Path>),
 }
 
@@ -87,7 +91,7 @@ impl Cell {
             Cell::Op(_) => CellDataType::Op,
             Cell::Command(_) => CellDataType::Command,
             Cell::File(_) => CellDataType::File,
-            Cell::Stream(_, _) => CellDataType::Stream,
+            Cell::Output(_) => CellDataType::Stream,
         };
     }
 
@@ -102,7 +106,7 @@ impl Cell {
             Cell::Op(v) => Ok(Cell::Op(v.clone())),
             Cell::Command(v) => Ok(Cell::Command(v.clone())),
             Cell::File(v) => Ok(Cell::File(v.clone())),
-            Cell::Stream(_, _) => Err(error("Invalid use of stream")),
+            Cell::Output(_) => Err(error("Invalid use of stream")),
         };
     }
 
@@ -117,7 +121,7 @@ impl Cell {
             Cell::Op(v) => Cell::Op(v.clone()),
             Cell::Command(v) => Cell::Command(v.clone()),
             Cell::File(v) => Cell::File(v.clone()),
-            Cell::Stream(_, _) => panic!("UNIMPLEMENTED!!!!"),
+            Cell::Output(_) => panic!("UNIMPLEMENTED!!!!"),
         };
     }
 
@@ -132,7 +136,7 @@ impl Cell {
             Cell::Op(val) => String::from(val),
             Cell::Command(_) => "Command".to_string(),
             Cell::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
-            Cell::Stream(_, _) => "Stream".to_string(),
+            Cell::Output(_) => "<Stream>".to_string(),
         };
     }
 
@@ -140,7 +144,7 @@ impl Cell {
         return match self {
             Cell::Integer(_) => Alignment::Right,
             _ => Alignment::Left,
-        }
+        };
     }
 }
 

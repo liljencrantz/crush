@@ -1,55 +1,74 @@
 use crate::state::State;
 use crate::commands::{Call, Exec, JobResult};
-use crate::stream::{print, streams, InputStream};
+use crate::stream::{print, streams, InputStream, OutputStream};
 use std::mem;
 use crate::errors::{JobError, error};
 use std::thread;
 use std::thread::JoinHandle;
-use crate::job::JobState::Empty;
-use crate::cell::CellType;
+use crate::cell::{CellType, Output};
 
 #[derive(PartialEq)]
 #[derive(Debug)]
 pub enum JobState {
-    Empty,
     Parsed,
     Spawned,
     Finished,
 }
 
 pub struct Job {
-    pub state: JobState,
-    pub commands: Vec<Call>,
-    pub compile_errors: Vec<JobError>,
-    pub runtime_errors: Vec<JobError>,
+    state: JobState,
+    commands: Vec<Call>,
+    dependencies: Vec<Job>,
     handlers: Vec<JobResult>,
+    output: Option<Output>,
+    last_output_stream: Option<OutputStream>,
 }
 
 impl Job {
-    pub fn new() -> Job {
+    pub fn new(commands: Vec<Call>, dependencies: Vec<Job>) -> Job {
+        let (last_output_stream, last_input_stream) = streams();
+        let last = commands.last().unwrap();
+        let output = Some(Output { types: last.get_output_type().clone(), stream: last_input_stream });
         Job {
-            state: JobState::Empty,
-            commands: Vec::new(),
-            compile_errors: Vec::new(),
-            runtime_errors: Vec::new(),
+            state: JobState::Parsed,
+            commands,
+            dependencies,
             handlers: Vec::new(),
+            output,
+            last_output_stream: Some(last_output_stream),
         }
+    }
+
+    pub fn take_output(&mut self) -> Option<Output> {
+        self.output.take()
     }
 
     pub fn exec(&mut self, state: &mut State) {
         assert_eq!(self.state, JobState::Parsed);
-        if !self.commands.is_empty() && self.compile_errors.is_empty() {
+
+        for dep in self.dependencies.iter_mut() {
+            dep.exec(state);
+        }
+        if !self.commands.is_empty() {
             let (prev_output, mut input) = streams();
-            let output_type = self.commands.last().unwrap().get_output_type().clone();
+            let types = self.commands.last().unwrap().get_output_type().clone();
             drop(prev_output);
-            for mut c in self.commands.drain(..) {
+            let last_job_idx = self.commands.len() - 1;
+            for (idx, mut c) in self.commands.drain(..last_job_idx).enumerate() {
                 let (output, next_input) = streams();
                 self.handlers.push(c.execute(state, input, output));
                 input = next_input;
             }
-            thread::spawn(move || print(input, output_type));
+            let last_command = self.commands.drain(..).next().unwrap();
+            self.handlers.push(last_command.execute(state, input, self.last_output_stream.take().unwrap()));
         }
         self.state = JobState::Spawned;
+    }
+
+    pub fn print(&mut self) {
+        if let Some(output) = self.take_output() {
+            thread::spawn(move || print(output.stream, output.types));
+        }
     }
 
     pub fn wait(&mut self) {

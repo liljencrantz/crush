@@ -19,12 +19,6 @@ use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use commands::add_builtins;
 
-fn perform(job: &mut Job, state: &mut State) -> Result<(), ()> {
-    job.exec(state);
-    job.wait();
-    return Ok(());
-}
-
 fn repl() {
     let mut state = state::State::new();
     add_builtins(&mut state.namespace);
@@ -39,17 +33,9 @@ fn repl() {
                 match parser::parse(&mut Lexer::new(&cmd), &state) {
                     Ok(jobs) => {
                         for mut job in jobs {
-                            match perform(&mut job, &mut state) {
-                                Ok(_) => {}
-                                Err(_) => {
-                                    for err in job.compile_errors {
-                                        println!("Compiler error: {}", err.message);
-                                    }
-                                    for err in job.runtime_errors {
-                                        println!("Runtime error: {}", err.message);
-                                    }
-                                }
-                            }
+                            job.exec(&mut state);
+                            job.print();
+                            job.wait();
                         }
                     }
                     Err(error) => {
