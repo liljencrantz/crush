@@ -10,7 +10,7 @@ pub fn streams() -> (OutputStream, InputStream) {
     return sync_channel(200);
 }
 
-pub fn print(stream: &mut InputStream, types: &Vec<CellType>) {
+pub fn print(stream: InputStream, types: Vec<CellType>) {
 
     let mut data: Vec<Row> = Vec::new();
     loop {
@@ -19,11 +19,11 @@ pub fn print(stream: &mut InputStream, types: &Vec<CellType>) {
             Err(_) => break,
         }
         if data.len() == 49 {
-            print_partial(&mut data, types);
+            print_partial(&mut data, &types);
         }
     }
     if !data.is_empty() {
-        print_partial(&mut data, types);
+        print_partial(&mut data, &types);
     }
 }
 

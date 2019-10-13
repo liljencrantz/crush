@@ -5,7 +5,7 @@ implement regexps
 make filter support regexps
 implement file regexps
 make ls support regexps
-implement Stream<Row> cell type
+implement command substitution
 implement group command
 implement bun command
 implement date command
@@ -40,3 +40,4 @@ implement set command
 implement cell type File
 make ls/find output File cells instead of strings
 make nice presentation of File cells
+implement Stream<Row> cell type

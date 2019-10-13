@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use crate::stream::{InputStream, OutputStream};
 use crate::cell::{CellType, Argument, Command, Cell};
 use crate::state::State;
-use crate::errors::JobError;
+use crate::errors::{JobError, error};
 use std::{io, thread};
 use crate::namespace::Namespace;
 use std::thread::JoinHandle;
@@ -30,6 +30,23 @@ type Mutate = fn(
 pub enum Exec {
     Run(Run),
     Mutate(Mutate),
+}
+
+pub enum JobResult {
+     Async(JoinHandle<Result<(), JobError>>),
+    Sync(Result<(), JobError>),
+}
+
+impl JobResult {
+    pub fn join(self) -> Result<(), JobError> {
+        return match self {
+            JobResult::Async(a) => match a.join() {
+                Ok(r) => r,
+                Err(_) => Err(error("Error while wating for command to finish")),
+            },
+            JobResult::Sync(s) => s,
+        }
+    }
 }
 
 pub struct Call {
@@ -61,17 +78,14 @@ impl Call {
         self,
         state: &mut State,
         mut input: InputStream,
-        mut output: OutputStream) -> Option<JoinHandle<Result<(), JobError>>> {
+        mut output: OutputStream) -> JobResult {
         return match self.exec {
-            Exec::Run(run) => {
-                Some(thread::spawn(move || {
+            Exec::Run(run) =>
+                JobResult::Async(thread::spawn(move || {
                     return run(self.input_type, self.arguments, input, output);
-                }))
-            }
-            Exec::Mutate(mutate) => {
-                mutate(state, self.input_type, self.arguments);
-                None
-            }
+                })),
+            Exec::Mutate(mutate) =>
+                JobResult::Sync(mutate(state, self.input_type, self.arguments)),
         };
     }
 }

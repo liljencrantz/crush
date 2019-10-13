@@ -106,10 +106,10 @@ lss foo bar
 
 File parsing:
 
-The csv command interprets a file as columnar data, e.g. csv files.
-The bin command interprets a file as a single binary blob.
-The rows command interprets a file as a series of text rows.
-The cat and dog commands deserialize and serialize an arbitrary stream of rows.
+The csv command interprets files as columnar data, e.g. csv files.
+The bin command interprets files as a single binary blob.
+The rows command interprets files as a series of text rows.
+The readline command reads interactive input from the user via the terminal
 
 Type conversion:
 
