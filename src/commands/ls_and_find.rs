@@ -1,4 +1,4 @@
-use std::{io, fs};
+use std::{fs};
 use crate::stream::{OutputStream, InputStream};
 use crate::cell::{Argument, CellType, Cell, Row, CellDataType};
 use crate::commands::{Call, to_runtime_error, Exec};
@@ -7,10 +7,9 @@ use chrono::{Local, DateTime};
 use crate::glob::glob_files;
 use std::path::Path;
 use std::fs::Metadata;
-use std::ffi::OsStr;
 
-fn insert_entity(meta: &Metadata, file: Box<Path>, output: &mut OutputStream) -> io::Result<()> {
-    let modified_system = meta.modified()?;
+fn insert_entity(meta: &Metadata, file: Box<Path>, output: &mut OutputStream) -> Result<(), JobError> {
+    let modified_system = to_runtime_error(meta.modified())?;
     let modified_datetime: DateTime<Local> = DateTime::from(modified_system);
     output.send(Row {
         cells: vec![
@@ -18,21 +17,20 @@ fn insert_entity(meta: &Metadata, file: Box<Path>, output: &mut OutputStream) ->
             Cell::Integer(i128::from(meta.len())),
             Cell::Time(modified_datetime),
         ]
-    });
+    })?;
     return Ok(());
 }
 
 fn run_for_single_directory_or_file(
-    file: Box<Path>,
+    path: Box<Path>,
     recursive: bool,
-    output: &mut OutputStream) -> Result<(), io::Error> {
-    let path = file;
+    output: &mut OutputStream) -> Result<(), JobError> {
     if path.is_dir() {
         let dirs = fs::read_dir(path);
-        for maybe_entry in dirs? {
-            let entry = maybe_entry?;
+        for maybe_entry in to_runtime_error(dirs)? {
+            let entry = to_runtime_error(maybe_entry)?;
             insert_entity(
-                &entry.metadata()?,
+                &to_runtime_error(entry.metadata())?,
                 entry.path().into_boxed_path(),
                 output)?;
             if recursive && entry.path().is_dir() {
@@ -40,20 +38,20 @@ fn run_for_single_directory_or_file(
                     run_for_single_directory_or_file(
                         entry.path().into_boxed_path(),
                         true,
-                        output);
+                        output)?;
                 }
             }
         }
     } else {
         match path.file_name() {
-            Some(name) => {
+            Some(_) => {
                 insert_entity(
-                    &path.metadata()?,
+                    &to_runtime_error(path.metadata())?,
                     path,
                     output)?;
             }
             None => {
-                return Err(io::Error::new(io::ErrorKind::Other, "Invalid file name"));
+                return Err(error("Invalid file name"));
             }
         }
     }
@@ -63,7 +61,7 @@ fn run_for_single_directory_or_file(
 fn run_internal(
     arguments: Vec<Argument>,
     recursive: bool,
-    mut output: OutputStream) -> Result<(), io::Error> {
+    mut output: OutputStream) -> Result<(), JobError> {
     let mut dirs: Vec<Cell> = Vec::new();
     if arguments.is_empty() {
         dirs.push(Cell::File(
@@ -78,10 +76,14 @@ fn run_internal(
                     dirs.push(Cell::File(dir.clone()));
                 }
                 Cell::Glob(dir) => {
-                    glob_files(dir, Path::new(std::env::current_dir()?.to_str().expect("Invalid directory name")), &mut dirs)?;
+                    to_runtime_error(
+                        glob_files(
+                            dir,
+                            Path::new(to_runtime_error(std::env::current_dir())?.to_str().expect("Invalid directory name")),
+                            &mut dirs))?;
                 }
                 _ => {
-                    return Err(io::Error::new(io::ErrorKind::Other, "Invalid argument type to ls, expected string or glob"));
+                    return Err(error( "Invalid argument type to ls, expected string or glob"));
                 }
             }
         }
@@ -91,7 +93,7 @@ fn run_internal(
         match cell {
             Cell::File(dir) => run_for_single_directory_or_file(
                 dir, recursive, &mut output)?,
-            _ => return Err(std::io::Error::new(std::io::ErrorKind::Other, "Expected a file"))
+            _ => return Err(error("Expected a file"))
         }
     }
     return Ok(());
@@ -102,7 +104,7 @@ fn run_ls(
     arguments: Vec<Argument>,
     _input: InputStream,
     output: OutputStream) -> Result<(), JobError> {
-    return to_runtime_error(run_internal(arguments, false, output));
+    return run_internal(arguments, false, output);
 }
 
 fn run_find(
@@ -110,14 +112,14 @@ fn run_find(
     arguments: Vec<Argument>,
     _input: InputStream,
     output: OutputStream) -> Result<(), JobError> {
-    return to_runtime_error(run_internal(arguments, true, output));
+    return run_internal(arguments, true, output);
 }
 
 pub fn ls(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
     return Ok(Call {
         name: String::from("ls"),
-        input_type: input_type.clone(),
-        arguments: arguments,
+        input_type,
+        arguments,
         output_type: vec![
             CellType {
                 name: String::from("file"),
@@ -139,8 +141,8 @@ pub fn ls(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, J
 pub fn find(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
     return Ok(Call {
         name: String::from("ls"),
-        input_type: input_type,
-        arguments: arguments,
+        input_type,
+        arguments,
         output_type: vec![
             CellType {
                 name: String::from("file"),

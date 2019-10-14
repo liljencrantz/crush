@@ -1,5 +1,5 @@
-use crate::cell::{Argument, CellType, Cell, CellDataType};
-use crate::commands::{Call, to_runtime_error, Exec};
+use crate::cell::{Argument, CellType};
+use crate::commands::{Call, Exec};
 use crate::errors::{JobError, argument_error};
 use crate::state::State;
 
@@ -24,10 +24,9 @@ pub(crate) fn set(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result
 
     return Ok(Call {
         name: String::from("set"),
-        input_type: input_type,
-        arguments: arguments,
+        input_type,
+        arguments,
         output_type: vec![],
         exec: Exec::Mutate(mutate),
     });
 }
-

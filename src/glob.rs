@@ -33,7 +33,6 @@ pub fn glob_files_internal(
     lister: fn(&Path) -> io::Result<ReadDir>) -> io::Result<()> {
     let is_last_section = !relative_glob.contains('/');
     if is_last_section {
-        let suffix = if only_directories { "/" } else { "" };
         for entry in lister(dir)? {
             let ee = entry?;
             match ee.file_name().to_str() {

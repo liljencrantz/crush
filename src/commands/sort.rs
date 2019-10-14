@@ -2,7 +2,6 @@ use crate::stream::{OutputStream, InputStream};
 use crate::cell::{Argument, CellType, Cell, Row};
 use crate::commands::{Call, Exec};
 use crate::errors::{JobError, argument_error};
-use crate::state::State;
 use crate::commands::filter::find_field;
 
 fn run(
@@ -26,7 +25,7 @@ fn run(
             }
             res.sort_by(|a, b| a.cells[idx].partial_cmp(&b.cells[idx]).expect("OH NO!"));
             for row in res {
-                output.send(row);
+                output.send(row)?;
             }
 
             return Ok(());
@@ -40,9 +39,9 @@ fn run(
 pub fn sort(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
     return Ok(Call {
         name: String::from("Sort"),
-        input_type: input_type.clone(),
-        arguments: arguments,
-        output_type: input_type,
+        output_type: input_type.clone(),
+        input_type,
+        arguments,
         exec: Exec::Run(run),
     });
 }

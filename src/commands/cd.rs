@@ -36,8 +36,8 @@ pub(crate) fn cd(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<
 
     return Ok(Call {
         name: String::from("cd"),
-        input_type: input_type,
-        arguments: arguments,
+        input_type,
+        arguments,
         output_type: vec![],
         exec: Exec::Mutate(mutate),
     });

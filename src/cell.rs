@@ -3,9 +3,10 @@ use chrono::{Local, DateTime};
 use crate::glob::glob;
 use crate::commands::Call;
 use crate::errors::{JobError, error};
-use std::fmt::{Formatter, Error};
+use std::fmt::{Formatter};
 use std::path::Path;
 use crate::stream::InputStream;
+use std::hash::Hasher;
 
 #[derive(Clone)]
 #[derive(PartialEq)]
@@ -20,7 +21,7 @@ pub enum CellDataType {
     Op,
     Command,
     File,
-    Stream,
+    Output,
 }
 
 #[derive(Clone)]
@@ -35,7 +36,7 @@ impl Command {
 }
 
 impl std::cmp::PartialEq for Command {
-    fn eq(&self, other: &Command) -> bool {
+    fn eq(&self, _other: &Command) -> bool {
         return false;
     }
 }
@@ -61,7 +62,6 @@ pub struct Output {
     pub stream: InputStream,
 }
 
-//#[derive(Eq)]
 #[derive(Debug)]
 pub enum Cell {
     Text(String),
@@ -91,7 +91,7 @@ impl Cell {
             Cell::Op(_) => CellDataType::Op,
             Cell::Command(_) => CellDataType::Command,
             Cell::File(_) => CellDataType::File,
-            Cell::Output(_) => CellDataType::Stream,
+            Cell::Output(_) => CellDataType::Output,
         };
     }
 
@@ -145,6 +145,24 @@ impl Cell {
             Cell::Integer(_) => Alignment::Right,
             _ => Alignment::Left,
         };
+    }
+}
+
+
+impl std::hash::Hash for Cell {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            Cell::Text(v) => v.hash(state),
+            Cell::Integer(v) => v.hash(state),
+            Cell::Time(v) => v.hash(state),
+            Cell::Field(v) => v.hash(state),
+            Cell::Glob(v) => v.hash(state),
+            Cell::Regex(v) => v.hash(state),
+            Cell::Op(v) => v.hash(state),
+            Cell::Command(_) => {panic!("Impossible!")},
+            Cell::Output(_) => {panic!("Impossible!")},
+            Cell::File(v) => v.hash(state),
+        }
     }
 }
 

@@ -1,11 +1,8 @@
 use crate::state::State;
-use crate::commands::{Call, Exec, JobResult};
-use crate::stream::{print, streams, InputStream, OutputStream};
-use std::mem;
-use crate::errors::{JobError, error};
+use crate::commands::{Call, JobResult};
+use crate::stream::{print, streams, OutputStream};
 use std::thread;
-use std::thread::JoinHandle;
-use crate::cell::{CellType, Output};
+use crate::cell::{Output};
 
 #[derive(PartialEq)]
 #[derive(Debug)]
@@ -51,10 +48,9 @@ impl Job {
         }
         if !self.commands.is_empty() {
             let (prev_output, mut input) = streams();
-            let types = self.commands.last().unwrap().get_output_type().clone();
             drop(prev_output);
             let last_job_idx = self.commands.len() - 1;
-            for (idx, mut c) in self.commands.drain(..last_job_idx).enumerate() {
+            for c in self.commands.drain(..last_job_idx) {
                 let (output, next_input) = streams();
                 self.handlers.push(c.execute(state, input, output));
                 input = next_input;
@@ -75,7 +71,7 @@ impl Job {
         assert_eq!(self.state, JobState::Spawned);
         for h in self.handlers.drain(..) {
             match h.join() {
-                Ok(res) => {}
+                Ok(_) => {}
                 Err(e) => {
                     println!("Runtime error: {}", e.message);
                 }

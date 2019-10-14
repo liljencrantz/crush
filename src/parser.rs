@@ -1,5 +1,5 @@
 use crate::errors::{JobError, parse_error};
-use crate::job::{Job, JobState};
+use crate::job::{Job};
 use crate::lexer::{Lexer, TokenType};
 use crate::state::State;
 use crate::cell::{Argument, Cell};

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::cell::{CellType, Argument, Cell, Command, CellDataType};
+use crate::cell::{CellType, Argument, Cell};
 use crate::commands::Call;
 use crate::errors::{JobError, error};
 

@@ -6,8 +6,8 @@ mod filter;
 mod sort;
 mod set;
 mod let_command;
+mod group;
 
-use std::collections::HashMap;
 use crate::stream::{InputStream, OutputStream};
 use crate::cell::{CellType, Argument, Command, Cell};
 use crate::state::State;
@@ -15,6 +15,7 @@ use crate::errors::{JobError, error};
 use std::{io, thread};
 use crate::namespace::Namespace;
 use std::thread::JoinHandle;
+use std::error::Error;
 
 type Run = fn(
     Vec<CellType>,
@@ -77,8 +78,8 @@ impl Call {
     pub fn execute(
         self,
         state: &mut State,
-        mut input: InputStream,
-        mut output: OutputStream) -> JobResult {
+        input: InputStream,
+        output: OutputStream) -> JobResult {
         return match self.exec {
             Exec::Run(run) =>
                 JobResult::Async(thread::spawn(move || {
@@ -91,25 +92,23 @@ impl Call {
 }
 
 
-fn to_runtime_error(io_result: io::Result<()>) -> Result<(), JobError> {
-    return match io_result {
-        Ok(_) => {
-            Ok(())
-        }
-        Err(io_err) => {
-            Err(JobError { message: io_err.to_string() })
-        }
-    };
+fn to_runtime_error<T>(io_result: io::Result<T>) -> Result<T, JobError> {
+    match io_result {
+        Ok(v) => Ok(v),
+        Err(e) => Err(error(e.description())),
+    }
 }
 
-pub fn add_builtins(namespace: &mut Namespace) {
-    namespace.declare("ls", Cell::Command(Command::new(ls_and_find::ls)));
-    namespace.declare("find", Cell::Command(Command::new(ls_and_find::find)));
-    namespace.declare("echo", Cell::Command(Command::new(echo::echo)));
-    namespace.declare("pwd", Cell::Command(Command::new(pwd::pwd)));
-    namespace.declare("cd", Cell::Command(Command::new(cd::cd)));
-    namespace.declare("filter", Cell::Command(Command::new(filter::filter)));
-    namespace.declare("sort", Cell::Command(Command::new(sort::sort)));
-    namespace.declare("set", Cell::Command(Command::new(set::set)));
-    namespace.declare("let", Cell::Command(Command::new(let_command::let_command)));
+pub fn add_builtins(namespace: &mut Namespace) -> Result<(), JobError> {
+    namespace.declare("ls", Cell::Command(Command::new(ls_and_find::ls)))?;
+    namespace.declare("find", Cell::Command(Command::new(ls_and_find::find)))?;
+    namespace.declare("echo", Cell::Command(Command::new(echo::echo)))?;
+    namespace.declare("pwd", Cell::Command(Command::new(pwd::pwd)))?;
+    namespace.declare("cd", Cell::Command(Command::new(cd::cd)))?;
+    namespace.declare("filter", Cell::Command(Command::new(filter::filter)))?;
+    namespace.declare("sort", Cell::Command(Command::new(sort::sort)))?;
+    namespace.declare("set", Cell::Command(Command::new(set::set)))?;
+    namespace.declare("let", Cell::Command(Command::new(let_command::let_command)))?;
+    namespace.declare("group", Cell::Command(Command::new(group::group)))?;
+    return Ok(());
 }

@@ -9,8 +9,6 @@ mod job;
 mod lexer;
 mod parser;
 
-use job::Job;
-use state::State;
 use crate::lexer::Lexer;
 
 extern crate rustyline;
@@ -18,10 +16,11 @@ extern crate rustyline;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use commands::add_builtins;
+use crate::errors::JobError;
 
-fn repl() {
+fn repl() -> Result<(), JobError>{
     let mut state = state::State::new();
-    add_builtins(&mut state.namespace);
+    add_builtins(&mut state.namespace)?;
     let mut rl = Editor::<()>::new();
     rl.load_history(".posh_history").unwrap();
     loop {
@@ -62,9 +61,12 @@ fn repl() {
             }
         }
     }
+    return Ok(());
 }
 
 fn main() {
-    repl();
-//      lexer::do_lex_test();
+    match repl() {
+        Ok(_) => (),
+        Err(e) => println!("Error during initialization: {}", e.message),
+    }
 }
