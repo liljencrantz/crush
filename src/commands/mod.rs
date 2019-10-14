@@ -7,6 +7,7 @@ mod sort;
 mod set;
 mod let_command;
 mod group;
+mod count;
 
 use crate::stream::{InputStream, OutputStream};
 use crate::cell::{CellType, Argument, Command, Cell};
@@ -110,5 +111,6 @@ pub fn add_builtins(namespace: &mut Namespace) -> Result<(), JobError> {
     namespace.declare("set", Cell::Command(Command::new(set::set)))?;
     namespace.declare("let", Cell::Command(Command::new(let_command::let_command)))?;
     namespace.declare("group", Cell::Command(Command::new(group::group)))?;
+    namespace.declare("count", Cell::Command(Command::new(count::count)))?;
     return Ok(());
 }

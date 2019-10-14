@@ -5,17 +5,15 @@ implement regexps
 make filter support regexps
 implement file regexps
 make ls support regexps
-implement group command
-implement bun command
 implement date command
 implement csv command
-implement command substitution and lambdas
 implement lambdas with named arguments
 implement head command
 implement tail command
 implement for command
 implement env command
-one command per thread
+implement unset command
+implement count command
 make file globing testable via fakes
 generic (macro-based?) argument parsing
 Error propagation
@@ -41,3 +39,5 @@ make ls/find output File cells instead of strings
 make nice presentation of File cells
 implement Stream<Row> cell type
 implement command substitution
+implement group command
+one command per thread
