@@ -1,4 +1,4 @@
-use std::{fs};
+use std::fs;
 use crate::stream::{OutputStream, InputStream};
 use crate::cell::{Argument, CellType, Cell, Row, CellDataType};
 use crate::commands::{Call, to_runtime_error, Exec};
@@ -7,13 +7,21 @@ use chrono::{Local, DateTime};
 use crate::glob::glob_files;
 use std::path::Path;
 use std::fs::Metadata;
+use std::os::unix::ffi::OsStrExt;
+use std::ffi::OsStr;
 
 fn insert_entity(meta: &Metadata, file: Box<Path>, output: &mut OutputStream) -> Result<(), JobError> {
     let modified_system = to_runtime_error(meta.modified())?;
     let modified_datetime: DateTime<Local> = DateTime::from(modified_system);
+    let f = if file.starts_with("./") {
+        let b = file.to_str().map(|s| Box::from(Path::new(&s[2..])));
+        b.unwrap_or(file)
+    } else {
+        file
+    };
     output.send(Row {
         cells: vec![
-            Cell::File(file),
+            Cell::File(f),
             Cell::Integer(i128::from(meta.len())),
             Cell::Time(modified_datetime),
         ]
@@ -83,7 +91,7 @@ fn run_internal(
                             &mut dirs))?;
                 }
                 _ => {
-                    return Err(error( "Invalid argument type to ls, expected string or glob"));
+                    return Err(error("Invalid argument type to ls, expected string or glob"));
                 }
             }
         }
