@@ -1,5 +1,5 @@
 use crate::errors::{JobError, parse_error};
-use crate::job::{Job};
+use crate::job::Job;
 use crate::lexer::{Lexer, TokenType};
 use crate::state::State;
 use crate::cell::{Argument, Cell};
@@ -81,40 +81,6 @@ fn parse_unnamed_argument(lexer: &mut Lexer, dependencies: &mut Vec<Job>, state:
                     dependencies.push(dep);
                     return res;
                 }
-                '%' => {
-                    match lexer.peek().0 {
-                        TokenType::String => {
-                            let result = Ok(Cell::Field(String::from(lexer.pop().1)));
-                            if lexer.peek().0 != TokenType::BlockEnd {
-                                return Err(parse_error("Expected '}'", lexer));
-                            }
-                            lexer.pop();
-                            return result;
-                        }
-                        _ => {
-                            return Err(parse_error("Expected string token", lexer));
-                        }
-                    }
-                }
-                '$' => {
-                    match lexer.peek().0 {
-                        TokenType::String => {
-                            return match state.namespace.get(lexer.pop().1) {
-                                Some(cell) => {
-                                    if lexer.peek().0 != TokenType::BlockEnd {
-                                        return Err(parse_error("Expected '}'", lexer));
-                                    }
-                                    lexer.pop();
-                                    return Ok(cell.partial_clone().unwrap());
-                                }
-                                None => Err(parse_error("Unknown variable", lexer))
-                            };
-                        }
-                        _ => {
-                            return Err(parse_error("Expected string token", lexer));
-                        }
-                    }
-                }
                 '*' => {
                     match lexer.peek().0 {
                         TokenType::Glob => {
@@ -149,7 +115,14 @@ fn parse_unnamed_argument(lexer: &mut Lexer, dependencies: &mut Vec<Job>, state:
                     return Err(parse_error("Cannot handle sigil type", lexer));
                 }
             }
+        },
+
+        TokenType::Field => Ok(Cell::Field(String::from(&lexer.pop().1[1..]))),
+        TokenType::Variable => match state.namespace.get(&lexer.pop().1[1..]) {
+            Some(cell) => Ok(cell.partial_clone().unwrap()),
+            None => Err(parse_error("Unknown variable", lexer)),
         }
+
         _ => {
             lexer.pop();
             return Err(parse_error(format!("Unknown token {:?}", token_type).as_str(), lexer));

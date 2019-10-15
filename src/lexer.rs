@@ -28,6 +28,8 @@ pub enum TokenType {
     Error,
     Match,
     NotMatch,
+    Variable,
+    Field,
     EOF,
 }
 
@@ -38,7 +40,7 @@ pub struct Lexer {
 }
 
 lazy_static! {
-    static ref LEX_DATA: [(TokenType, Regex); 20] = [
+    static ref LEX_DATA: [(TokenType, Regex); 22] = [
         (TokenType::Separator, Regex::new("^;").unwrap()),
         (TokenType::Pipe, Regex::new(r"^\|").unwrap()),
 
@@ -55,8 +57,12 @@ lazy_static! {
 
         (TokenType::Integer, Regex::new(r"^[0-9]+").unwrap()),
 
-        (TokenType::BlockStart, Regex::new(r"^[`r$*%]?\{").unwrap()),
+        (TokenType::Variable, Regex::new(r"^\$[a-zA-Z_][a-zA-Z_0-9]*").unwrap()),
+        (TokenType::Field, Regex::new("^%[a-zA-Z_][a-zA-Z_0-9]*").unwrap()),
+
+        (TokenType::BlockStart, Regex::new(r"^[`r*]?\{").unwrap()),
         (TokenType::BlockEnd, Regex::new(r"^\}").unwrap()),
+
         (TokenType::String, Regex::new(r"^[/._a-zA-Z][/._a-z-A-Z0-9]*").unwrap()),
         (TokenType::Glob, Regex::new(r"^[/._a-zA-Z*.?][/_a-z-A-Z0-9*.?]*").unwrap()),
         (TokenType::Comment, Regex::new("(?m)^#.*$").unwrap()),
@@ -150,7 +156,7 @@ mod tests {
 
     #[test]
     fn blocks() {
-        let mut l = Lexer::new(&String::from("echo %{foo}"));
+        let mut l = Lexer::new(&String::from("echo r{foo}"));
         let tt = tokens(&mut l);
         assert_eq!(tt, vec![
             TokenType::String, TokenType::BlockStart, TokenType::String, TokenType::BlockEnd,
@@ -217,4 +223,13 @@ mod tests {
             TokenType::Equal, TokenType::GreaterThanOrEqual, TokenType::GreaterThan,
             TokenType::LessThan, TokenType::LessThanOrEqual, TokenType::NotEqual, TokenType::EOF]);
     }
+
+    #[test]
+    fn variables_and_fields() {
+        let mut l = Lexer::new(&String::from("$foo %bar"));
+        let tt = tokens(&mut l);
+        assert_eq!(tt, vec![
+            TokenType::Variable, TokenType::Field, TokenType::EOF]);
+    }
+
 }
