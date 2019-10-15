@@ -12,6 +12,7 @@ mod group;
 mod count;
 mod head;
 mod tail;
+mod lines;
 
 use crate::stream::{InputStream, OutputStream};
 use crate::cell::{CellType, Argument, Command, Cell};
@@ -118,5 +119,6 @@ pub fn add_builtins(namespace: &mut Namespace) -> Result<(), JobError> {
     namespace.declare("count", Cell::Command(Command::new(count::count)))?;
     namespace.declare("head", Cell::Command(Command::new(head::head)))?;
     namespace.declare("tail", Cell::Command(Command::new(tail::tail)))?;
+    namespace.declare("lines", Cell::Command(Command::new(lines::lines)))?;
     return Ok(());
 }
