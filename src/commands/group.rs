@@ -60,7 +60,7 @@ pub fn group(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call
     let (column_name, column) = get_key(&input_type, &arguments)?;
     return Ok(Call {
         name: String::from("group"),
-        output_type: vec![input_type[column].clone(), CellType { name: column_name, cell_type: CellDataType::Output }],
+        output_type: vec![input_type[column].clone(), CellType { name: column_name, cell_type: CellDataType::Output(input_type.clone()) }],
         input_type,
         arguments,
         exec: Exec::Run(run),

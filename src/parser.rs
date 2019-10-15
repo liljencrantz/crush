@@ -76,7 +76,6 @@ fn parse_unnamed_argument(lexer: &mut Lexer, dependencies: &mut Vec<Job>, state:
             let sigil_type = lexer.pop().1.chars().next().unwrap();
             match sigil_type {
                 '{' => {
-                    println!("DEPENDANT JOB FOUND!!!");
                     let mut dep = parse_internal(lexer, state)?;
                     lexer.pop();
                     let res = Ok(Cell::Output(dep.take_output().unwrap()));

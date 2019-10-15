@@ -3,14 +3,13 @@ use chrono::{Local, DateTime};
 use crate::glob::glob;
 use crate::commands::Call;
 use crate::errors::{JobError, error};
-use std::fmt::{Formatter};
+use std::fmt::Formatter;
 use std::path::Path;
 use crate::stream::InputStream;
 use std::hash::Hasher;
 use regex::Regex;
 
 #[derive(Clone)]
-#[derive(Copy)]
 #[derive(PartialEq)]
 #[derive(Debug)]
 pub enum CellDataType {
@@ -23,7 +22,8 @@ pub enum CellDataType {
     Op,
     Command,
     File,
-    Output,
+    Output(Vec<CellType>),
+    Rows(Vec<CellType>),
 }
 
 #[derive(Clone)]
@@ -53,6 +53,7 @@ impl std::fmt::Debug for Command {
 
 #[derive(Clone)]
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub struct CellType {
     pub name: String,
     pub cell_type: CellDataType,
@@ -65,6 +66,30 @@ pub struct Output {
 }
 
 #[derive(Debug)]
+pub struct Rows {
+    pub types: Vec<CellType>,
+    pub rows: Vec<Row>,
+}
+
+impl std::hash::Hash for Rows {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        for r in &self.rows {
+            r.hash(state);
+        }
+    }
+}
+
+
+impl Clone for Rows {
+    fn clone(&self) -> Self {
+        Rows {
+            types: self.types.clone(),
+            rows: self.rows.iter().map(|r| r.concrete()).collect(),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum Cell {
     Text(String),
     Integer(i128),
@@ -74,11 +99,9 @@ pub enum Cell {
     Regex(String, Regex),
     Op(String),
     Command(Command),
-    //    Float(f64),
-//    Row(Box<Row>),
-//    Rows(Vec<Row>),
     Output(Output),
     File(Box<Path>),
+    Rows(Rows),
 }
 
 impl Cell {
@@ -93,7 +116,8 @@ impl Cell {
             Cell::Op(_) => CellDataType::Op,
             Cell::Command(_) => CellDataType::Command,
             Cell::File(_) => CellDataType::File,
-            Cell::Output(_) => CellDataType::Output,
+            Cell::Output(o) => CellDataType::Output(o.types.clone()),
+            Cell::Rows(r) => CellDataType::Rows(r.types.clone()),
         };
     }
 
@@ -108,8 +132,22 @@ impl Cell {
             Cell::Op(v) => Ok(Cell::Op(v.clone())),
             Cell::Command(v) => Ok(Cell::Command(v.clone())),
             Cell::File(v) => Ok(Cell::File(v.clone())),
+            Cell::Rows(r) => Ok(Cell::Rows(r.clone())),
             Cell::Output(_) => Err(error("Invalid use of stream")),
         };
+    }
+
+    fn to_rows(s: &Output) -> Cell {
+        let mut rows: Vec<Row> = Vec::new();
+        loop {
+            match s.stream.recv() {
+                Ok(row) => {
+                    rows.push(row);
+                }
+                Err(_) => break,
+            }
+        }
+        return Cell::Rows(Rows { types: s.types.clone(), rows });
     }
 
     pub fn concrete(&self) -> Cell {
@@ -123,7 +161,8 @@ impl Cell {
             Cell::Op(v) => Cell::Op(v.clone()),
             Cell::Command(v) => Cell::Command(v.clone()),
             Cell::File(v) => Cell::File(v.clone()),
-            Cell::Output(_) => panic!("UNIMPLEMENTED!!!!"),
+            Cell::Rows(r) => Cell::Rows(r.clone()),
+            Cell::Output(s) => Cell::to_rows(s),
         };
     }
 
@@ -138,7 +177,8 @@ impl Cell {
             Cell::Op(val) => String::from(val),
             Cell::Command(_) => "Command".to_string(),
             Cell::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
-            Cell::Output(_) => "<Stream>".to_string(),
+            Cell::Rows(_) => "<Table>".to_string(),
+            Cell::Output(_) => "<Table>".to_string(),
         };
     }
 
@@ -161,9 +201,10 @@ impl std::hash::Hash for Cell {
             Cell::Glob(v) => v.hash(state),
             Cell::Regex(v, _) => v.hash(state),
             Cell::Op(v) => v.hash(state),
-            Cell::Command(_) => {panic!("Impossible!")},
-            Cell::Output(_) => {panic!("Impossible!")},
+            Cell::Command(_) => { panic!("Impossible!") }
+            Cell::Output(_) => { panic!("Impossible!") }
             Cell::File(v) => v.hash(state),
+            Cell::Rows(v) => v.hash(state),
         }
     }
 }
@@ -231,6 +272,21 @@ impl Argument {
     }
 }
 
+#[derive(Debug)]
 pub struct Row {
     pub cells: Vec<Cell>,
+}
+
+impl Row {
+    pub fn concrete(&self) -> Self {
+        Row {cells: self.cells.iter().map(|c| c.concrete()).collect()}
+    }
+}
+
+impl std::hash::Hash for Row {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        for c in &self.cells {
+            c.hash(state);
+        }
+    }
 }

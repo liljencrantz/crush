@@ -6,7 +6,7 @@ use crate::errors::{JobError, argument_error};
 pub fn has_streams(input_type: &Vec<CellType>) -> bool {
     for t in input_type.iter() {
         match t.cell_type {
-            CellDataType::Output => return true,
+            CellDataType::Output(_) => return true,
             _ => (),
         }
     }
@@ -16,7 +16,7 @@ pub fn has_streams(input_type: &Vec<CellType>) -> bool {
 fn get_output_type(input_type: &Vec<CellType>) -> Vec<CellType> {
     let res: Vec<CellType> =  input_type.iter().map(|t|
         match t.cell_type {
-            CellDataType::Output => CellType{ name: t.name.clone(), cell_type: CellDataType::Integer},
+            CellDataType::Output(_) => CellType{ name: t.name.clone(), cell_type: CellDataType::Integer},
             _ => t.clone(),
         }).collect();
     return res;
