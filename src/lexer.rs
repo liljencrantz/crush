@@ -30,6 +30,7 @@ pub enum TokenType {
     NotMatch,
     Variable,
     Field,
+    Regex,
     EOF,
 }
 
@@ -40,7 +41,7 @@ pub struct Lexer {
 }
 
 lazy_static! {
-    static ref LEX_DATA: [(TokenType, Regex); 22] = [
+    static ref LEX_DATA: [(TokenType, Regex); 23] = [
         (TokenType::Separator, Regex::new("^;").unwrap()),
         (TokenType::Pipe, Regex::new(r"^\|").unwrap()),
 
@@ -60,8 +61,10 @@ lazy_static! {
         (TokenType::Variable, Regex::new(r"^\$[a-zA-Z_][a-zA-Z_0-9]*").unwrap()),
         (TokenType::Field, Regex::new("^%[a-zA-Z_][a-zA-Z_0-9]*").unwrap()),
 
-        (TokenType::BlockStart, Regex::new(r"^[`r*]?\{").unwrap()),
+        (TokenType::BlockStart, Regex::new(r"^[`*]?\{").unwrap()),
         (TokenType::BlockEnd, Regex::new(r"^\}").unwrap()),
+
+        (TokenType::Regex, Regex::new(r"^r\{([^}\\]|\\.)+\}").unwrap()),
 
         (TokenType::String, Regex::new(r"^[/._a-zA-Z][/._a-z-A-Z0-9]*").unwrap()),
         (TokenType::Glob, Regex::new(r"^[/._a-zA-Z*.?][/_a-z-A-Z0-9*.?]*").unwrap()),
@@ -156,7 +159,7 @@ mod tests {
 
     #[test]
     fn blocks() {
-        let mut l = Lexer::new(&String::from("echo r{foo}"));
+        let mut l = Lexer::new(&String::from("echo `{foo}"));
         let tt = tokens(&mut l);
         assert_eq!(tt, vec![
             TokenType::String, TokenType::BlockStart, TokenType::String, TokenType::BlockEnd,
@@ -232,4 +235,11 @@ mod tests {
             TokenType::Variable, TokenType::Field, TokenType::EOF]);
     }
 
+    #[test]
+    fn regex() {
+        let mut l = Lexer::new(&String::from(r"   r{^.$}   r{{foo\}}  "));
+        let tt = tokens(&mut l);
+        assert_eq!(tt, vec![
+            TokenType::Regex, TokenType::Regex, TokenType::EOF]);
+    }
 }

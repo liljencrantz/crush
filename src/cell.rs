@@ -7,6 +7,7 @@ use std::fmt::{Formatter};
 use std::path::Path;
 use crate::stream::InputStream;
 use std::hash::Hasher;
+use regex::Regex;
 
 #[derive(Clone)]
 #[derive(Copy)]
@@ -70,7 +71,7 @@ pub enum Cell {
     Time(DateTime<Local>),
     Field(String),
     Glob(String),
-    Regex(String),
+    Regex(String, Regex),
     Op(String),
     Command(Command),
     //    Float(f64),
@@ -88,7 +89,7 @@ impl Cell {
             Cell::Time(_) => CellDataType::Time,
             Cell::Field(_) => CellDataType::Field,
             Cell::Glob(_) => CellDataType::Glob,
-            Cell::Regex(_) => CellDataType::Regex,
+            Cell::Regex(_, _) => CellDataType::Regex,
             Cell::Op(_) => CellDataType::Op,
             Cell::Command(_) => CellDataType::Command,
             Cell::File(_) => CellDataType::File,
@@ -103,7 +104,7 @@ impl Cell {
             Cell::Time(v) => Ok(Cell::Time(v.clone())),
             Cell::Field(v) => Ok(Cell::Field(v.clone())),
             Cell::Glob(v) => Ok(Cell::Glob(v.clone())),
-            Cell::Regex(v) => Ok(Cell::Regex(v.clone())),
+            Cell::Regex(v, r) => Ok(Cell::Regex(v.clone(), r.clone())),
             Cell::Op(v) => Ok(Cell::Op(v.clone())),
             Cell::Command(v) => Ok(Cell::Command(v.clone())),
             Cell::File(v) => Ok(Cell::File(v.clone())),
@@ -118,7 +119,7 @@ impl Cell {
             Cell::Time(v) => Cell::Time(v.clone()),
             Cell::Field(v) => Cell::Field(v.clone()),
             Cell::Glob(v) => Cell::Glob(v.clone()),
-            Cell::Regex(v) => Cell::Regex(v.clone()),
+            Cell::Regex(v, r) => Cell::Regex(v.clone(), r.clone()),
             Cell::Op(v) => Cell::Op(v.clone()),
             Cell::Command(v) => Cell::Command(v.clone()),
             Cell::File(v) => Cell::File(v.clone()),
@@ -133,7 +134,7 @@ impl Cell {
             Cell::Time(val) => val.format("%Y-%m-%d %H:%M:%S %z").to_string(),
             Cell::Field(val) => format!(r"%{{{}}}", val),
             Cell::Glob(val) => format!("*{{{}}}", val),
-            Cell::Regex(val) => format!("r{{{}}}", val),
+            Cell::Regex(val, _) => format!("r{{{}}}", val),
             Cell::Op(val) => String::from(val),
             Cell::Command(_) => "Command".to_string(),
             Cell::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
@@ -158,7 +159,7 @@ impl std::hash::Hash for Cell {
             Cell::Time(v) => v.hash(state),
             Cell::Field(v) => v.hash(state),
             Cell::Glob(v) => v.hash(state),
-            Cell::Regex(v) => v.hash(state),
+            Cell::Regex(v, _) => v.hash(state),
             Cell::Op(v) => v.hash(state),
             Cell::Command(_) => {panic!("Impossible!")},
             Cell::Output(_) => {panic!("Impossible!")},
@@ -178,7 +179,7 @@ impl std::cmp::PartialOrd for Cell {
             (Cell::Text(val1), Cell::Text(val2)) => Some(val1.cmp(val2)),
             (Cell::Field(val1), Cell::Field(val2)) => Some(val1.cmp(val2)),
             (Cell::Glob(val1), Cell::Glob(val2)) => Some(val1.cmp(val2)),
-            (Cell::Regex(val1), Cell::Regex(val2)) => Some(val1.cmp(val2)),
+            (Cell::Regex(val1, _), Cell::Regex(val2, _)) => Some(val1.cmp(val2)),
             (Cell::Integer(val1), Cell::Integer(val2)) => Some(val1.cmp(val2)),
             (Cell::Time(val1), Cell::Time(val2)) => Some(val1.cmp(val2)),
             (Cell::Op(val1), Cell::Op(val2)) => Some(val1.cmp(val2)),
@@ -198,7 +199,7 @@ impl std::cmp::PartialEq for Cell {
             (Cell::Time(val1), Cell::Time(val2)) => val1 == val2,
             (Cell::Field(val1), Cell::Field(val2)) => val1 == val2,
             (Cell::Glob(val1), Cell::Glob(val2)) => val1 == val2,
-            (Cell::Regex(val1), Cell::Regex(val2)) => val1 == val2,
+            (Cell::Regex(val1, _), Cell::Regex(val2, _)) => val1 == val2,
             (Cell::Op(val1), Cell::Op(val2)) => val1 == val2,
             (Cell::Command(val1), Cell::Command(val2)) => val1 == val2,
             (Cell::File(val1), Cell::File(val2)) => val1 == val2,

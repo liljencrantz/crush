@@ -13,6 +13,8 @@ fn do_match(needle: &Cell, haystack: &Cell) -> bool {
     match (needle, haystack) {
         (Cell::Text(s), Cell::Glob(pattern)) => glob( pattern, s),
         (Cell::File(f), Cell::Glob(pattern)) => f.to_str().map(|s| glob( pattern, s)).unwrap(),
+        (Cell::Text(s), Cell::Regex(_, pattern)) => pattern.is_match(s),
+        (Cell::File(f), Cell::Regex(_, pattern)) => f.to_str().map(|s| pattern.is_match(s)).unwrap(),
         _ => panic!("Impossible")
     }
 }

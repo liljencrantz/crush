@@ -1,9 +1,11 @@
-use crate::errors::{JobError, parse_error};
+use crate::errors::{JobError, parse_error, argument_error};
 use crate::job::Job;
 use crate::lexer::{Lexer, TokenType};
 use crate::state::State;
 use crate::cell::{Argument, Cell};
 use crate::commands::Call;
+use regex::Regex;
+use std::error::Error;
 
 pub fn parse(lexer: &mut Lexer, state: &State) -> Result<Vec<Job>, JobError> {
     let mut jobs: Vec<Job> = Vec::new();
@@ -96,21 +98,6 @@ fn parse_unnamed_argument(lexer: &mut Lexer, dependencies: &mut Vec<Job>, state:
                         }
                     }
                 }
-                'r' => {
-                    match lexer.peek().0 {
-                        TokenType::String => {
-                            let result = Ok(Cell::Regex(String::from(lexer.pop().1)));
-                            if lexer.peek().0 != TokenType::BlockEnd {
-                                return Err(parse_error("Expected '}'", lexer));
-                            }
-                            lexer.pop();
-                            return result;
-                        }
-                        _ => {
-                            return Err(parse_error("Expected string token", lexer));
-                        }
-                    }
-                }
                 _ => {
                     return Err(parse_error("Cannot handle sigil type", lexer));
                 }
@@ -122,6 +109,14 @@ fn parse_unnamed_argument(lexer: &mut Lexer, dependencies: &mut Vec<Job>, state:
             Some(cell) => Ok(cell.partial_clone().unwrap()),
             None => Err(parse_error("Unknown variable", lexer)),
         }
+        TokenType::Regex => {
+            let f = lexer.pop().1;
+            let s = &f[2..f.len() - 1];
+            match Regex::new(s) {
+               Ok(r) => Ok(Cell::Regex(String::from(s), r)),
+                Err(e) => Err(argument_error(e.description())),
+            }
+        },
 
         _ => {
             lexer.pop();
