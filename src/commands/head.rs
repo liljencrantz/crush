@@ -16,12 +16,12 @@ pub fn get_line_count(arguments: &Vec<Argument>) -> Result<i128, JobError> {
 }
 
 fn run(
-    input_type: Vec<CellType>,
+    _input_type: Vec<CellType>,
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream) -> Result<(), JobError> {
     let mut count = 0;
-    let mut tot = get_line_count(&arguments)?;
+    let tot = get_line_count(&arguments)?;
     loop {
         match input.recv() {
             Ok(row) => {

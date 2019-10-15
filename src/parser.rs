@@ -66,7 +66,8 @@ fn parse_unnamed_argument(lexer: &mut Lexer, dependencies: &mut Vec<Job>, state:
             };
         }
         TokenType::Equal | TokenType::NotEqual | TokenType::GreaterThan
-        | TokenType::GreaterThanOrEqual | TokenType::LessThan | TokenType::LessThanOrEqual => {
+        | TokenType::GreaterThanOrEqual | TokenType::LessThan | TokenType::LessThanOrEqual
+        | TokenType::Match | TokenType::NotMatch => {
             return Ok(Cell::Op(String::from(lexer.pop().1)));
         }
         TokenType::BlockStart => {

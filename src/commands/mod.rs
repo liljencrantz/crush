@@ -1,3 +1,5 @@
+mod command_util;
+
 mod ls_and_find;
 mod echo;
 mod pwd;

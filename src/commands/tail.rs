@@ -7,11 +7,11 @@ use crate::commands::head::get_line_count;
 use std::collections::VecDeque;
 
 fn run(
-    input_type: Vec<CellType>,
+    _input_type: Vec<CellType>,
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream) -> Result<(), JobError> {
-    let mut tot = get_line_count(&arguments)?;
+    let tot = get_line_count(&arguments)?;
     let mut q: VecDeque<Row> = VecDeque::new();
     loop {
         match input.recv() {
@@ -23,7 +23,7 @@ fn run(
             }
             Err(_) => {
                 for row in q.drain(..) {
-                    output.send(row);
+                    output.send(row)?;
                 }
                 break;
             },

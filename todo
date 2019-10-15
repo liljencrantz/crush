@@ -1,12 +1,11 @@
 Todo:
-Implement matching operators, =~ and !~
-make filter support globs
 implement regexps
 make filter support regexps
 implement file regexps
 make ls support regexps
 implement date command
 implement csv command
+implemend lambdas with $argv
 implement lambdas with named arguments
 implement for command
 implement env command
@@ -16,6 +15,9 @@ implement reverse command
 make file globing testable via fakes
 generic (macro-based?) argument parsing
 Error propagation
+help
+implement the cmd command
+cell type conversion
 
 Done:
 Fix all expects calls that aren't impossible, and propagate the errors
@@ -43,3 +45,5 @@ one command per thread
 implement count command
 implement head command
 implement tail command
+Implement matching operators, =~ and !~
+make filter support globs

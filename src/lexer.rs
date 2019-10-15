@@ -26,6 +26,8 @@ pub enum TokenType {
     LessThanOrEqual,
     Separator,
     Error,
+    Match,
+    NotMatch,
     EOF,
 }
 
@@ -36,7 +38,7 @@ pub struct Lexer {
 }
 
 lazy_static! {
-    static ref LEX_DATA: [(TokenType, Regex); 18] = [
+    static ref LEX_DATA: [(TokenType, Regex); 20] = [
         (TokenType::Separator, Regex::new("^;").unwrap()),
         (TokenType::Pipe, Regex::new(r"^\|").unwrap()),
 
@@ -47,6 +49,9 @@ lazy_static! {
         (TokenType::GreaterThan, Regex::new(r"^>").unwrap()),
         (TokenType::GreaterThanOrEqual, Regex::new(r"^>=").unwrap()),
         (TokenType::NotEqual, Regex::new(r"^!=").unwrap()),
+
+        (TokenType::Match, Regex::new(r"^=~").unwrap()),
+        (TokenType::NotMatch, Regex::new(r"^!~").unwrap()),
 
         (TokenType::Integer, Regex::new(r"^[0-9]+").unwrap()),
 

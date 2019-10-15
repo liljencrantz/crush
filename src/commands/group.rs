@@ -3,7 +3,7 @@ use crate::cell::{Argument, CellType, Cell, Row, Output, CellDataType};
 use crate::commands::{Call, Exec};
 use crate::errors::{JobError, argument_error};
 use std::collections::HashMap;
-use crate::commands::filter::find_field;
+use crate::commands::command_util::find_field;
 
 pub fn get_key(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<(String, usize), JobError> {
     if arguments.len() != 1 {

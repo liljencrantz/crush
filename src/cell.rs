@@ -9,6 +9,7 @@ use crate::stream::InputStream;
 use std::hash::Hasher;
 
 #[derive(Clone)]
+#[derive(Copy)]
 #[derive(PartialEq)]
 #[derive(Debug)]
 pub enum CellDataType {
