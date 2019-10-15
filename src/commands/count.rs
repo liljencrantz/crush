@@ -1,5 +1,5 @@
-use crate::stream::{OutputStream, InputStream, unlimited_streams};
-use crate::cell::{Argument, CellType, Cell, Row, Output, CellDataType};
+use crate::stream::{OutputStream, InputStream};
+use crate::cell::{Argument, CellType, Cell, Row, CellDataType};
 use crate::commands::{Call, Exec};
 use crate::errors::{JobError, argument_error};
 
@@ -26,7 +26,7 @@ fn count_rows(s: &InputStream) -> Cell {
     let mut res: i128 = 0;
     loop {
         match s.recv() {
-            Ok(row) => res+= 1,
+            Ok(_) => res+= 1,
             Err(_) => break,
         }
     }
@@ -35,7 +35,7 @@ fn count_rows(s: &InputStream) -> Cell {
 
 fn run(
     input_type: Vec<CellType>,
-    arguments: Vec<Argument>,
+    _arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream) -> Result<(), JobError> {
     if has_streams(&input_type) {
@@ -51,15 +51,13 @@ fn run(
                             }
                         }
                     }
-                    output.send(Row { cells });
+                    output.send(Row { cells })?;
                 }
-                Err(_) => {
-                    break;
-                }
+                Err(_) => break,
             }
         }
     } else {
-        output.send(Row { cells: vec![count_rows(&input)]});
+        output.send(Row { cells: vec![count_rows(&input)]})?;
     }
     return Ok(());
 }

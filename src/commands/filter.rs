@@ -126,9 +126,7 @@ fn run(
                     output.send(row)?;
                 }
             }
-            Err(_) => {
-                break;
-            }
+            Err(_) => break,
         }
     }
     return Ok(());

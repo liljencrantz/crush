@@ -38,7 +38,6 @@ fn parse_internal(lexer: &mut Lexer, state: &State) -> Result<Job, JobError> {
     let mut commands: Vec<Call> = Vec::new();
     let mut dependencies: Vec<Job> = Vec::new();
     parse_job(lexer, state, &mut commands, &mut dependencies)?;
-    println!("Parsed job with {} deps", dependencies.len());
     return Ok(Job::new(commands, dependencies));
 }
 

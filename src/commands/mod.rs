@@ -8,6 +8,8 @@ mod set;
 mod let_command;
 mod group;
 mod count;
+mod head;
+mod tail;
 
 use crate::stream::{InputStream, OutputStream};
 use crate::cell::{CellType, Argument, Command, Cell};
@@ -112,5 +114,7 @@ pub fn add_builtins(namespace: &mut Namespace) -> Result<(), JobError> {
     namespace.declare("let", Cell::Command(Command::new(let_command::let_command)))?;
     namespace.declare("group", Cell::Command(Command::new(group::group)))?;
     namespace.declare("count", Cell::Command(Command::new(count::count)))?;
+    namespace.declare("head", Cell::Command(Command::new(head::head)))?;
+    namespace.declare("tail", Cell::Command(Command::new(tail::tail)))?;
     return Ok(());
 }

@@ -1,5 +1,5 @@
 Todo:
-Implement matching operators, =~and !~
+Implement matching operators, =~ and !~
 make filter support globs
 implement regexps
 make filter support regexps
@@ -8,12 +8,11 @@ make ls support regexps
 implement date command
 implement csv command
 implement lambdas with named arguments
-implement head command
-implement tail command
 implement for command
 implement env command
 implement unset command
-implement count command
+implement enumerate command
+implement reverse command
 make file globing testable via fakes
 generic (macro-based?) argument parsing
 Error propagation
@@ -41,3 +40,6 @@ implement Stream<Row> cell type
 implement command substitution
 implement group command
 one command per thread
+implement count command
+implement head command
+implement tail command
