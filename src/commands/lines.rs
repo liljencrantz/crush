@@ -1,4 +1,4 @@
-use crate::stream::{OutputStream, InputStream, streams};
+use crate::stream::{OutputStream, InputStream, unlimited_streams};
 use crate::cell::{Argument, CellType, Row, CellDataType, Output, Cell};
 use crate::commands::{Call, Exec, to_runtime_error};
 use crate::errors::{JobError, argument_error};
@@ -9,17 +9,24 @@ use std::fs::File;
 use std::thread;
 use std::path::Path;
 use crate::commands::command_util::find_field;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref sub_type: Vec<CellType> = {
+        vec![CellType {
+            name: "line".to_string(),
+            cell_type: CellDataType::Text,
+        }]
+    };
+}
 
 fn handle(file: Cell, output: &mut OutputStream) -> Result<(), JobError> {
-    let (output_stream, input_stream) = streams();
+    let (output_stream, input_stream) = unlimited_streams();
     let out_row = Row {
         cells: vec![
             file.concrete(),
             Cell::Output(Output {
-                types: vec![CellType {
-                    name: "line".to_string(),
-                    cell_type: CellDataType::Text,
-                }],
+                types: sub_type.clone(),
                 stream: input_stream,
             }),
         ],
@@ -70,7 +77,7 @@ fn run(
             handle(file, &mut output)?;
         }
     } else {
-        if(arguments.len() != 1) {
+        if (arguments.len() != 1) {
             return Err(argument_error("Expected one argument: column spec"));
         }
         match &arguments[0].cell {
@@ -84,7 +91,6 @@ fn run(
                         Err(_) => break,
                     }
                 }
-
             }
             _ => return Err(argument_error("Expected column of type Field")),
         }
@@ -96,7 +102,7 @@ pub fn lines(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call
     let output_type: Vec<CellType> =
         vec![
             CellType { name: "file".to_string(), cell_type: CellDataType::File },
-            CellType { name: "lines".to_string(), cell_type: CellDataType::Output(vec![CellType { name: "line".to_string(), cell_type: CellDataType::Text }]) },
+            CellType { name: "lines".to_string(), cell_type: CellDataType::Output(sub_type.clone()) },
         ];
 
     return Ok(Call {
