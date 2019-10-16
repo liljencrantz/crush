@@ -1,10 +1,16 @@
-use crate::stream::{OutputStream, InputStream};
-use crate::data::{Argument, CellType, Row};
-use crate::commands::{Call, Exec};
-use crate::errors::{JobError, argument_error};
 use std::iter::Iterator;
-use crate::commands::command_util::find_field;
-use crate::data::cell::Cell;
+use crate::{
+    commands::command_util::find_field,
+    errors::{JobError, argument_error},
+    commands::{Call, Exec},
+    data::{
+        Argument,
+        Row,
+        CellType,
+        Cell
+    },
+    stream::{OutputStream, InputStream},
+};
 
 fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Vec<usize>, JobError> {
     arguments.iter().enumerate().map(|(idx, a)| {

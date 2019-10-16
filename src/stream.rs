@@ -1,5 +1,5 @@
-use crate::data::{Row, Output, CellDataType, Rows, CellType};
-use crate::data::cell::{Cell, Alignment};
+use crate::data::{Output, CellDataType, CellType};
+use crate::data::{Cell, Alignment, Row, Rows};
 use std::cmp::max;
 use std::sync::mpsc::{Receiver, sync_channel, SyncSender, channel, Sender};
 use crate::errors::{JobError, error};

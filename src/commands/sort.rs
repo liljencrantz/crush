@@ -1,9 +1,15 @@
-use crate::stream::{OutputStream, InputStream};
-use crate::data::{Argument, CellType, Row};
-use crate::commands::{Call, Exec};
-use crate::errors::{JobError, argument_error};
-use crate::commands::command_util::find_field;
-use crate::data::cell::Cell;
+use crate::{
+    commands::command_util::find_field,
+    errors::{JobError, argument_error},
+    commands::{Call, Exec},
+    data::{
+        Argument,
+        Row,
+        CellType,
+        Cell
+    },
+    stream::{OutputStream, InputStream},
+};
 
 pub fn get_key(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<usize, JobError> {
     if arguments.len() != 1 {

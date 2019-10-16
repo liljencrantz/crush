@@ -1,10 +1,18 @@
-use crate::stream::{OutputStream, InputStream, unlimited_streams};
-use crate::data::{Argument, CellType, Row, Output, CellDataType};
-use crate::commands::{Call, Exec};
-use crate::errors::{JobError, argument_error};
 use std::collections::HashMap;
-use crate::commands::command_util::find_field;
-use crate::data::cell::Cell;
+use crate::{
+    commands::command_util::find_field,
+    errors::{JobError, argument_error},
+    commands::{Call, Exec},
+    data::{
+        Argument,
+        Row,
+        CellType,
+        Output,
+        CellDataType,
+        Cell
+    },
+    stream::{OutputStream, InputStream, unlimited_streams},
+};
 
 pub fn get_key(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<(String, usize), JobError> {
     if arguments.len() != 1 {

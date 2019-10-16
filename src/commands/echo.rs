@@ -1,7 +1,11 @@
-use crate::stream::{OutputStream, InputStream};
-use crate::data::{Argument, CellType, Row};
-use crate::commands::{Call, Exec};
-use crate::errors::JobError;
+use crate::{
+    data::CellType,
+    stream::{OutputStream, InputStream},
+    data::Row,
+    data::Argument,
+    commands::{Call, Exec},
+    errors::JobError
+};
 
 fn run(
     _input_type: Vec<CellType>,

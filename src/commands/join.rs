@@ -1,9 +1,17 @@
-use crate::stream::{OutputStream, InputStream};
-use crate::data::{Argument, CellType, Row, CellDataType, Output};
-use crate::commands::{Call, Exec};
-use crate::errors::JobError;
+use crate::{
+    errors::JobError,
+    commands::{Call, Exec},
+    data::{
+        Argument,
+        Row,
+        CellType,
+        CellDataType,
+        Output,
+        Cell
+    },
+    stream::{OutputStream, InputStream},
+};
 use std::collections::HashMap;
-use crate::data::cell::Cell;
 
 struct Config {
     left_idx: usize,

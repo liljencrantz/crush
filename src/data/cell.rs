@@ -1,11 +1,14 @@
 use crate::glob::glob;
 use std::cmp::Ordering;
 use std::hash::Hasher;
-use crate::data::{Rows, Output, Row, CellDataType, Command};
+use crate::data::{Output, CellDataType, Command};
+use crate::data::row::{Row, RowWithTypes};
+use crate::data::rows::Rows;
 use crate::errors::{error, JobError};
 use std::path::Path;
 use regex::Regex;
 use chrono::{DateTime, Local};
+use std::fmt::Arguments;
 
 #[derive(Debug)]
 pub enum Cell {
@@ -20,6 +23,7 @@ pub enum Cell {
     Output(Output),
     File(Box<Path>),
     Rows(Rows),
+    Row(RowWithTypes),
 }
 
 impl Cell {
@@ -36,6 +40,7 @@ impl Cell {
             Cell::File(_) => CellDataType::File,
             Cell::Output(o) => CellDataType::Output(o.types.clone()),
             Cell::Rows(r) => CellDataType::Rows(r.types.clone()),
+            Cell::Row(r) => CellDataType::Row(r.types.clone()),
         };
     }
 
@@ -51,6 +56,7 @@ impl Cell {
             Cell::Command(v) => Ok(Cell::Command(v.clone())),
             Cell::File(v) => Ok(Cell::File(v.clone())),
             Cell::Rows(r) => Ok(Cell::Rows(r.clone())),
+            Cell::Row(r) => Ok(Cell::Row(r.clone())),
             Cell::Output(_) => Err(error("Invalid use of stream")),
         };
     }
@@ -80,6 +86,7 @@ impl Cell {
             Cell::Command(v) => Cell::Command(v.clone()),
             Cell::File(v) => Cell::File(v.clone()),
             Cell::Rows(r) => Cell::Rows(r.clone()),
+            Cell::Row(r) => Cell::Row(r.clone()),
             Cell::Output(s) => Cell::to_rows(s),
         };
     }
@@ -96,6 +103,7 @@ impl Cell {
             Cell::Command(_) => "Command".to_string(),
             Cell::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
             Cell::Rows(_) => "<Table>".to_string(),
+            Cell::Row(_) => "<Row>".to_string(),
             Cell::Output(_) => "<Table>".to_string(),
         };
     }
@@ -123,6 +131,7 @@ impl std::hash::Hash for Cell {
             Cell::Output(_) => { panic!("Impossible!") }
             Cell::File(v) => v.hash(state),
             Cell::Rows(v) => v.hash(state),
+            Cell::Row(v) => v.hash(state),
         }
     }
 }
@@ -143,6 +152,7 @@ impl std::cmp::PartialOrd for Cell {
             (Cell::Time(val1), Cell::Time(val2)) => Some(val1.cmp(val2)),
             (Cell::Op(val1), Cell::Op(val2)) => Some(val1.cmp(val2)),
             (Cell::File(val1), Cell::File(val2)) => Some(val1.cmp(val2)),
+            (Cell::Row(val1), Cell::Row(val2)) => val1.partial_cmp(val2),
             _ => Option::None,
         };
     }
@@ -162,6 +172,7 @@ impl std::cmp::PartialEq for Cell {
             (Cell::Op(val1), Cell::Op(val2)) => val1 == val2,
             (Cell::Command(val1), Cell::Command(val2)) => val1 == val2,
             (Cell::File(val1), Cell::File(val2)) => val1 == val2,
+            (Cell::Row(val1), Cell::Row(val2)) => val1 == val2,
             _ => false,
         };
     }

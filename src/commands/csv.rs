@@ -1,8 +1,16 @@
-use crate::stream::{OutputStream, InputStream, unlimited_streams};
-use crate::data::{Argument, CellType, Row, CellDataType, Output};
-use crate::data::cell::Cell;
-use crate::commands::{Call, Exec};
-use crate::errors::{JobError, argument_error, error};
+use crate::{
+    data::{
+        Argument,
+        Row,
+        CellType,
+        CellDataType,
+        Output,
+        Cell
+    },
+    stream::{OutputStream, InputStream, unlimited_streams},
+    commands::{Call, Exec},
+    errors::{JobError, argument_error, error}
+};
 use std::io::BufReader;
 use std::io::prelude::*;
 use std::fs::File;

@@ -6,7 +6,7 @@ use crate::data::{Argument};
 use crate::commands::Call;
 use regex::Regex;
 use std::error::Error;
-use crate::data::cell::Cell;
+use crate::data::Cell;
 
 pub fn parse(lexer: &mut Lexer, state: &State) -> Result<Vec<Job>, JobError> {
     let mut jobs: Vec<Job> = Vec::new();

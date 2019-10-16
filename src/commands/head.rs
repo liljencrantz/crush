@@ -1,8 +1,10 @@
-use crate::stream::{OutputStream, InputStream};
-use crate::data::{Argument, CellType};
-use crate::data::cell::Cell;
-use crate::commands::{Call, Exec};
-use crate::errors::{JobError, argument_error};
+use crate::{
+    data::{Argument, CellType},
+    stream::{OutputStream, InputStream},
+    data::Cell,
+    commands::{Call, Exec},
+    errors::{JobError, argument_error}
+};
 
 pub fn get_line_count(arguments: &Vec<Argument>) -> Result<i128, JobError> {
     return match arguments.len() {

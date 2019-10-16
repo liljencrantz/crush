@@ -1,8 +1,15 @@
-use crate::stream::{OutputStream, InputStream};
-use crate::data::{Argument, CellType, Row, CellDataType};
-use crate::commands::{Call, Exec};
-use crate::errors::{JobError, argument_error};
-use crate::data::cell::Cell;
+use crate::{
+    errors::{JobError, argument_error},
+    commands::{Call, Exec},
+    data::{
+        Argument,
+        Row,
+        CellType,
+        CellDataType,
+        Cell
+    },
+    stream::{OutputStream, InputStream},
+};
 
 pub fn has_streams(input_type: &Vec<CellType>) -> bool {
     for t in input_type.iter() {

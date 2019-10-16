@@ -1,7 +1,13 @@
-use crate::data::{CellType, Argument, CellDataType};
-use crate::data::cell::Cell;
-use crate::errors::{JobError, argument_error};
-use crate::commands::command_util::find_field;
+use crate::{
+    data::{
+        CellType,
+        Argument,
+        CellDataType,
+        Cell
+    },
+    errors::{JobError, argument_error},
+    commands::command_util::find_field
+};
 
 #[derive(Debug)]
 pub enum Value {

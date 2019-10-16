@@ -1,8 +1,12 @@
-use crate::stream::{OutputStream, InputStream};
-use crate::data::{Argument, CellType, Row};
-use crate::commands::{Call, Exec};
-use crate::errors::{JobError, argument_error};
-use crate::commands::head::get_line_count;
+use crate::{
+    data::Row,
+    data::{CellType},
+    stream::{OutputStream, InputStream},
+    data::Argument,
+    commands::{Call, Exec},
+    errors::{JobError, argument_error},
+    commands::head::get_line_count
+};
 use std::collections::VecDeque;
 
 fn run(

@@ -1,9 +1,16 @@
-use crate::stream::{OutputStream, InputStream};
-use crate::data::{Argument, CellType, Row, CellDataType};
-use crate::commands::{Call, Exec};
-use crate::errors::{JobError, argument_error};
+use crate::{
+    data::{
+        CellType,
+        CellDataType,
+        Row,
+        Argument,
+        Cell
+    },
+    stream::{OutputStream, InputStream},
+    commands::{Call, Exec},
+    errors::{JobError, argument_error},
+};
 use std::iter::Iterator;
-use crate::data::cell::Cell;
 
 fn run(
     input_type: Vec<CellType>,

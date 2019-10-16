@@ -1,12 +1,22 @@
-pub mod cell;
+mod cell;
+mod row;
+mod rows;
+mod argument;
 
 use crate::commands::Call;
-use crate::errors::{JobError};
+use crate::errors::{JobError, error};
 use std::fmt::Formatter;
 use crate::stream::InputStream;
 use std::hash::Hasher;
 use regex::Regex;
-use crate::data::cell::Cell;
+use std::error::Error;
+
+pub use cell::Cell;
+pub use cell::Alignment;
+pub use argument::Argument;
+pub use row::Row;
+pub use row::RowWithTypes;
+pub use rows::Rows;
 
 #[derive(Clone)]
 #[derive(PartialEq)]
@@ -23,6 +33,7 @@ pub enum CellDataType {
     File,
     Output(Vec<CellType>),
     Rows(Vec<CellType>),
+    Row(Vec<CellType>),
 }
 
 impl CellDataType {
@@ -32,6 +43,11 @@ impl CellDataType {
             "integer" => CellDataType::Integer,
             "time" => CellDataType::Time,
             "field" => CellDataType::Field,
+            "glob" => CellDataType::Glob,
+            "regex" => CellDataType::Regex,
+            "op" => CellDataType::Op,
+            "command" => CellDataType::Command,
+            "file" => CellDataType::Command,
             _ => panic!(format!("Missing conversion for {} in CellDataType", s)),
         }
     }
@@ -42,8 +58,15 @@ impl CellDataType {
             CellDataType::Integer => Ok(Cell::Integer(s.parse::<i128>().unwrap())),
             CellDataType::Field => Ok(Cell::Field(s.to_string())),
             CellDataType::Glob => Ok(Cell::Glob(s.to_string())),
-            CellDataType::Regex => Ok(Cell::Regex(s.to_string(), Regex::new(s).unwrap())),
+            CellDataType::Regex => match Regex::new(s) {
+                Ok(r) => Ok(Cell::Regex(s.to_string(), r)),
+                Err(e) => Err(error(e.description())),
+            }
             CellDataType::File => Ok(Cell::Text(s.to_string())),
+            CellDataType::Op => match s {
+                "==" | "!=" | ">" | ">=" | "<" | "<=" | "=~" | "!~"=> Ok(Cell::Op(s.to_string())),
+                _ => Err(error("Invalid operator")),
+            }
             _ => panic!("AAAA"),
         }
     }
@@ -89,67 +112,3 @@ pub struct Output {
     pub stream: InputStream,
 }
 
-#[derive(Debug)]
-pub struct Rows {
-    pub types: Vec<CellType>,
-    pub rows: Vec<Row>,
-}
-
-impl std::hash::Hash for Rows {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        for r in &self.rows {
-            r.hash(state);
-        }
-    }
-}
-
-
-impl Clone for Rows {
-    fn clone(&self) -> Self {
-        Rows {
-            types: self.types.clone(),
-            rows: self.rows.iter().map(|r| r.concrete()).collect(),
-        }
-    }
-}
-
-
-pub struct Argument {
-    pub name: String,
-    pub cell: Cell,
-}
-
-impl Argument {
-    pub fn named(name: &String, cell: Cell) -> Argument {
-        return Argument {
-            name: name.clone(),
-            cell: cell,
-        };
-    }
-
-    pub fn unnamed(cell: Cell) -> Argument {
-        return Argument {
-            name: String::from(""),
-            cell: cell,
-        };
-    }
-}
-
-#[derive(Debug)]
-pub struct Row {
-    pub cells: Vec<Cell>,
-}
-
-impl Row {
-    pub fn concrete(&self) -> Self {
-        Row {cells: self.cells.iter().map(|c| c.concrete()).collect()}
-    }
-}
-
-impl std::hash::Hash for Row {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        for c in &self.cells {
-            c.hash(state);
-        }
-    }
-}

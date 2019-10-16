@@ -1,14 +1,19 @@
 mod parser;
 
-use crate::stream::{OutputStream, InputStream};
-use crate::data::{Argument, CellType, Row};
-use crate::data::cell::Cell;
-use crate::commands::{Call, Exec};
-use crate::errors::{JobError, argument_error};
+use crate::{
+    data::{
+        Cell,
+        CellType,
+        Row,
+        Argument
+    },
+    stream::{OutputStream, InputStream},
+    commands::{Call, Exec},
+    errors::{JobError, argument_error},
+    glob::glob,
+    commands::filter::parser::{Condition, Value, parse}
+};
 use std::iter::Iterator;
-use crate::glob::glob;
-
-use crate::commands::filter::parser::{Condition, Value, parse};
 
 fn do_match(needle: &Cell, haystack: &Cell) -> bool {
     match (needle, haystack) {
