@@ -131,10 +131,10 @@ pub fn print_partial(mut data: Vec<Row>, types: &Vec<CellType>, has_name: bool, 
         let mut outputs: Vec<Output> = Vec::new();
         let mut rows: Vec<Rows> = Vec::new();
         let cell_len = r.cells.len();
+        print!("{}", " ".repeat(indent * 4));
         for (idx, c) in r.cells.drain(..).enumerate() {
             let cell = c.to_string();
             let spaces = if idx == cell_len - 1 { "".to_owned() } else { " ".repeat(w[idx] - cell.len()) };
-            print!("{}", " ".repeat(indent * 4));
             match c.alignment() {
                 Alignment::Right => print!("{}{} ", spaces, cell),
                 _ => print!("{}{} ", cell, spaces),
