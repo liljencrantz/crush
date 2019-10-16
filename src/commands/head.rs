@@ -43,7 +43,7 @@ pub fn head(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call,
         name: String::from("head"),
         output_type: input_type.clone(),
         input_type,
-        arguments: arguments,
+        arguments,
         exec: Exec::Run(run),
     });
 }

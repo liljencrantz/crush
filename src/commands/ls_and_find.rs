@@ -9,6 +9,7 @@ use std::path::Path;
 use std::fs::Metadata;
 use std::os::unix::ffi::OsStrExt;
 use std::ffi::OsStr;
+use crate::state::get_cwd;
 
 fn insert_entity(meta: &Metadata, file: Box<Path>, output: &mut OutputStream) -> Result<(), JobError> {
     let modified_system = to_runtime_error(meta.modified())?;
@@ -87,7 +88,7 @@ fn run_internal(
                     to_runtime_error(
                         glob_files(
                             dir,
-                            Path::new(to_runtime_error(std::env::current_dir())?.to_str().expect("Invalid directory name")),
+                            Path::new(&get_cwd()?),
                             &mut dirs))?;
                 }
                 _ => {

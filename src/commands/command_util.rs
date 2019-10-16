@@ -1,4 +1,4 @@
-use crate::cell::CellType;
+use crate::cell::{CellType, CellDataType};
 use crate::errors::JobError;
 
 pub fn find_field(needle: &String, haystack: &Vec<CellType>) -> Result<usize, JobError> {
@@ -7,5 +7,14 @@ pub fn find_field(needle: &String, haystack: &Vec<CellType>) -> Result<usize, Jo
             return Ok(idx);
         }
     }
-    return Err(JobError { message: String::from(format!("Unknown column \"{}\"", needle)) });
+
+    return Err(
+        JobError {
+            message: format!(
+                "Unknown column {}, available columns are {}",
+                needle,
+                haystack.iter().map(|t| t.name.clone()).collect::<Vec<String>>().join(", "),
+            )
+        }
+    );
 }

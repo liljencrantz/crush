@@ -10,6 +10,7 @@ use std::thread;
 use std::path::Path;
 use crate::commands::command_util::find_field;
 use lazy_static::lazy_static;
+use crate::state::get_cwd;
 
 lazy_static! {
     static ref sub_type: Vec<CellType> = {
@@ -63,13 +64,11 @@ fn run(
         for arg in &arguments {
             match &arg.cell {
                 Cell::Text(_) | Cell::File(_) => files.push(arg.cell.concrete()),
-                Cell::Glob(pattern) => {
-                    glob_files(
-                        &pattern,
-                        Path::new(to_runtime_error(std::env::current_dir())?.to_str().expect("Invalid directory name")),
-                        &mut files,
-                    );
-                }
+                Cell::Glob(pattern) => to_runtime_error(glob_files(
+                    &pattern,
+                    Path::new(&get_cwd()?),
+                    &mut files,
+                ))?,
                 _ => return Err(argument_error("Expected a file name")),
             }
         }
@@ -85,9 +84,7 @@ fn run(
                 let idx = find_field(&s, &input_type)?;
                 loop {
                     match input.recv() {
-                        Ok(row) => {
-                            handle(row.cells[idx].concrete(), &mut output);
-                        }
+                        Ok(row) => handle(row.cells[idx].concrete(), &mut output)?,
                         Err(_) => break,
                     }
                 }

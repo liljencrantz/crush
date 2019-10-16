@@ -119,3 +119,17 @@ IO redirection:
 
 ???
 
+Stream editing:
+
+# Convert file column in-place
+ls | upper file=%file
+
+# Append new upper-column
+ls | lower upper=%file
+
+#Pass through file and size columns, drop the rest
+ls | pick %file %size
+
+# Replace file column in-place using regex
+ls | sed file=r{a(b*)c(d*)e}{\1\2}g
+

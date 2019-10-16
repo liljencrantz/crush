@@ -13,6 +13,8 @@ mod count;
 mod head;
 mod tail;
 mod lines;
+mod select;
+mod enumerate;
 
 use crate::stream::{InputStream, OutputStream};
 use crate::cell::{CellType, Argument, Command, Cell};
@@ -97,7 +99,6 @@ impl Call {
     }
 }
 
-
 fn to_runtime_error<T>(io_result: io::Result<T>) -> Result<T, JobError> {
     match io_result {
         Ok(v) => Ok(v),
@@ -120,5 +121,7 @@ pub fn add_builtins(namespace: &mut Namespace) -> Result<(), JobError> {
     namespace.declare("head", Cell::Command(Command::new(head::head)))?;
     namespace.declare("tail", Cell::Command(Command::new(tail::tail)))?;
     namespace.declare("lines", Cell::Command(Command::new(lines::lines)))?;
+    namespace.declare("select", Cell::Command(Command::new(select::select)))?;
+    namespace.declare("enumerate", Cell::Command(Command::new(enumerate::enumerate)))?;
     return Ok(());
 }
