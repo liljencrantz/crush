@@ -22,9 +22,9 @@ fn repl() -> Result<(), JobError>{
     let mut state = state::State::new();
     add_builtins(&mut state.namespace)?;
     let mut rl = Editor::<()>::new();
-    rl.load_history(".posh_history").unwrap();
+    rl.load_history(".crush_history").unwrap();
     loop {
-        let readline = rl.readline("posh> ");
+        let readline = rl.readline("crush> ");
 
         match readline {
             Ok(cmd) => {
@@ -54,7 +54,7 @@ fn repl() -> Result<(), JobError>{
                 break;
             }
         }
-        match rl.save_history(".posh_history") {
+        match rl.save_history(".crush_history") {
             Ok(_) => {}
             Err(_) => {
                 println!("Error: Failed to save history.");

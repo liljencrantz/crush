@@ -5,12 +5,11 @@ implement file regexps
 make ls support regexps
 implement date command
 implement csv command
-implemend lambdas with $argv
+implement lambdas with $argv
 implement lambdas with named arguments
 implement for command
 implement env command
 implement unset command
-implement enumerate command
 implement reverse command
 make file globing testable via fakes
 generic (macro-based?) argument parsing
@@ -48,3 +47,4 @@ implement tail command
 Implement matching operators, =~ and !~
 make filter support globs
 implement select command
+implement enumerate command

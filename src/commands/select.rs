@@ -45,7 +45,7 @@ fn run(
 pub fn select(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
     let mut indices = parse(&input_type, &arguments)?;
     return Ok(Call {
-        name: String::from("pick"),
+        name: String::from("select"),
         output_type: indices.drain(..).map(|idx| input_type[idx].clone()).collect(),
         input_type,
         arguments,
