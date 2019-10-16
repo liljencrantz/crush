@@ -1,5 +1,5 @@
 use crate::stream::{OutputStream, InputStream, unlimited_streams};
-use crate::cell::{Argument, CellType, Row, CellDataType, Output, Cell};
+use crate::data::{Argument, CellType, Row, CellDataType, Output};
 use crate::commands::{Call, Exec, to_runtime_error};
 use crate::errors::{JobError, argument_error};
 use crate::glob::glob_files;
@@ -11,6 +11,7 @@ use std::path::Path;
 use crate::commands::command_util::find_field;
 use lazy_static::lazy_static;
 use crate::state::get_cwd;
+use crate::data::cell::Cell;
 
 lazy_static! {
     static ref sub_type: Vec<CellType> = {
@@ -60,7 +61,7 @@ fn run(
     input: InputStream,
     mut output: OutputStream) -> Result<(), JobError> {
     let mut files: Vec<Cell> = Vec::new();
-    if (input_type.len() == 0) {
+    if input_type.len() == 0 {
         for arg in &arguments {
             match &arg.cell {
                 Cell::Text(_) | Cell::File(_) => files.push(arg.cell.concrete()),
@@ -76,7 +77,7 @@ fn run(
             handle(file, &mut output)?;
         }
     } else {
-        if (arguments.len() != 1) {
+        if arguments.len() != 1 {
             return Err(argument_error("Expected one argument: column spec"));
         }
         match &arguments[0].cell {

@@ -1,9 +1,9 @@
 use crate::stream::{OutputStream, InputStream};
-use crate::cell::{Argument, CellType, Row, CellDataType, Output};
+use crate::data::{Argument, CellType, Row, CellDataType, Output};
 use crate::commands::{Call, Exec};
 use crate::errors::JobError;
 use std::collections::HashMap;
-use crate::cell::Cell;
+use crate::data::cell::Cell;
 
 struct Config {
     left_idx: usize,

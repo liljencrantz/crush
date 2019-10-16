@@ -25,13 +25,14 @@ mod join;
 mod count;
 
 use crate::stream::{InputStream, OutputStream};
-use crate::cell::{CellType, Argument, Command, Cell};
+use crate::data::{CellType, Argument, Command};
 use crate::state::State;
 use crate::errors::{JobError, error};
 use std::{io, thread};
 use crate::namespace::Namespace;
 use std::thread::JoinHandle;
 use std::error::Error;
+use crate::data::cell::Cell;
 
 type Run = fn(
     Vec<CellType>,

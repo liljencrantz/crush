@@ -1,18 +1,14 @@
 use crate::stream::{OutputStream, InputStream, unlimited_streams};
-use crate::cell::{Argument, CellType, Row, CellDataType, Output, Cell};
-use crate::commands::{Call, Exec, to_runtime_error};
+use crate::data::{Argument, CellType, Row, CellDataType, Output};
+use crate::data::cell::Cell;
+use crate::commands::{Call, Exec};
 use crate::errors::{JobError, argument_error, error};
-use crate::glob::glob_files;
 use std::io::BufReader;
 use std::io::prelude::*;
 use std::fs::File;
 use std::thread;
 use std::path::Path;
-use crate::commands::command_util::find_field;
-use crate::state::get_cwd;
 use either::Either;
-use std::thread::JoinHandle;
-use regex::Regex;
 
 #[derive(Clone)]
 struct Config {
@@ -93,7 +89,7 @@ fn handle(file: Box<Path>, cfg: &Config, output: &mut OutputStream) -> Result<()
                     .map(|c| s.trim_matches(c))
                     .unwrap_or(s))
                 .collect();
-            if (split.len() != cfg_clone.columns.len()) {
+            if split.len() != cfg_clone.columns.len() {
                 panic!("Wrong number of columns in CSV file");
 //                return Err(error("Wrong number of columns in CSV file"))
             }

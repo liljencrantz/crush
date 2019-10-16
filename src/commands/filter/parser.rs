@@ -1,4 +1,5 @@
-use crate::cell::{CellType, Argument, Cell, CellDataType, Row};
+use crate::data::{CellType, Argument, CellDataType};
+use crate::data::cell::Cell;
 use crate::errors::{JobError, argument_error};
 use crate::commands::command_util::find_field;
 

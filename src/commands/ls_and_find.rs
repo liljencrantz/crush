@@ -1,14 +1,13 @@
 use std::fs;
 use crate::stream::{OutputStream, InputStream};
-use crate::cell::{Argument, CellType, Cell, Row, CellDataType};
+use crate::data::{Argument, CellType, Row, CellDataType};
+use crate::data::cell::Cell;
 use crate::commands::{Call, to_runtime_error, Exec};
 use crate::errors::{JobError, error};
 use chrono::{Local, DateTime};
 use crate::glob::glob_files;
 use std::path::Path;
 use std::fs::Metadata;
-use std::os::unix::ffi::OsStrExt;
-use std::ffi::OsStr;
 use crate::state::get_cwd;
 
 fn insert_entity(meta: &Metadata, file: Box<Path>, output: &mut OutputStream) -> Result<(), JobError> {

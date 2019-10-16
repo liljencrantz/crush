@@ -1,7 +1,8 @@
 mod parser;
 
 use crate::stream::{OutputStream, InputStream};
-use crate::cell::{Argument, CellType, Cell, Row, CellDataType};
+use crate::data::{Argument, CellType, Row};
+use crate::data::cell::Cell;
 use crate::commands::{Call, Exec};
 use crate::errors::{JobError, argument_error};
 use std::iter::Iterator;

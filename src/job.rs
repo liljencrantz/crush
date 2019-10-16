@@ -2,7 +2,7 @@ use crate::state::State;
 use crate::commands::{Call, JobResult};
 use crate::stream::{print, streams, OutputStream};
 use std::thread;
-use crate::cell::{Output};
+use crate::data::{Output};
 use std::thread::JoinHandle;
 
 #[derive(PartialEq)]

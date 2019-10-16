@@ -1,7 +1,7 @@
 mod errors;
 mod glob;
 mod stream;
-mod cell;
+mod data;
 mod commands;
 mod namespace;
 mod state;

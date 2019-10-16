@@ -2,10 +2,11 @@ use crate::errors::{JobError, parse_error, argument_error};
 use crate::job::Job;
 use crate::lexer::{Lexer, TokenType};
 use crate::state::State;
-use crate::cell::{Argument, Cell};
+use crate::data::{Argument};
 use crate::commands::Call;
 use regex::Regex;
 use std::error::Error;
+use crate::data::cell::Cell;
 
 pub fn parse(lexer: &mut Lexer, state: &State) -> Result<Vec<Job>, JobError> {
     let mut jobs: Vec<Job> = Vec::new();

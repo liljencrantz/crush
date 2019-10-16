@@ -1,4 +1,4 @@
-use crate::cell::{Argument, CellType};
+use crate::data::{Argument, CellType};
 use crate::commands::{Call, Exec};
 use crate::errors::{JobError, argument_error};
 use crate::state::State;

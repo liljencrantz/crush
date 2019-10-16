@@ -1,5 +1,5 @@
 use crate::stream::{OutputStream, InputStream};
-use crate::cell::{Argument, CellType, Row};
+use crate::data::{Argument, CellType, Row};
 use crate::commands::{Call, Exec};
 use crate::errors::JobError;
 

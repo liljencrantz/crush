@@ -1,7 +1,8 @@
 use std::collections::HashMap;
-use crate::cell::{CellType, Argument, Cell};
+use crate::data::{CellType, Argument};
 use crate::commands::Call;
 use crate::errors::{JobError, error};
+use crate::data::cell::Cell;
 
 pub struct Namespace {
     data: HashMap<String, Cell>,

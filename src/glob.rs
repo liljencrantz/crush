@@ -3,7 +3,7 @@ use std::iter::Peekable;
 use std::path::Path;
 use std::io;
 use std::fs::{read_dir, ReadDir};
-use crate::cell::Cell;
+use crate::data::cell::Cell;
 
 pub fn glob(g: &str, v: &str) -> bool {
     return glob_match(&mut g.chars(), &mut v.chars().peekable());

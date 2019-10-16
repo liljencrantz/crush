@@ -1,8 +1,8 @@
 use crate::stream::{OutputStream, InputStream};
-use crate::cell::{Argument, CellType, Cell, Row};
+use crate::data::{Argument, CellType};
+use crate::data::cell::Cell;
 use crate::commands::{Call, Exec};
 use crate::errors::{JobError, argument_error};
-use std::iter::Iterator;
 
 pub fn get_line_count(arguments: &Vec<Argument>) -> Result<i128, JobError> {
     return match arguments.len() {

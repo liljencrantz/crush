@@ -1,8 +1,7 @@
 use crate::stream::{OutputStream, InputStream};
-use crate::cell::{Argument, CellType, Cell, Row};
+use crate::data::{Argument, CellType, Row};
 use crate::commands::{Call, Exec};
 use crate::errors::{JobError, argument_error};
-use std::iter::Iterator;
 use crate::commands::head::get_line_count;
 use std::collections::VecDeque;
 

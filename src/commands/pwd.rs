@@ -1,5 +1,6 @@
 use crate::stream::{OutputStream, InputStream};
-use crate::cell::{Argument, CellType, Cell, Row, CellDataType};
+use crate::data::{Argument, CellType, Row, CellDataType};
+use crate::data::cell::Cell;
 use crate::commands::{Call, Exec};
 use crate::errors::JobError;
 use crate::state::get_cwd;
