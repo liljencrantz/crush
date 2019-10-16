@@ -1,4 +1,7 @@
 Todo:
+implement single row cell type
+Implement row subscripting via []
+Implement cell subscripting via []
 implement regexps
 make filter support regexps
 implement file regexps
@@ -11,6 +14,7 @@ implement for command
 implement env command
 implement unset command
 implement reverse command
+implement sum command
 make file globing testable via fakes
 generic (macro-based?) argument parsing
 Error propagation

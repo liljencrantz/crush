@@ -1,20 +1,27 @@
 mod command_util;
 
 mod ls_and_find;
+
 mod echo;
+
 mod pwd;
 mod cd;
-mod filter;
-mod sort;
+
 mod set;
 mod let_command;
-mod group;
-mod count;
+
 mod head;
 mod tail;
+
 mod lines;
+mod csv;
+
+mod filter;
+mod sort;
 mod select;
 mod enumerate;
+mod group;
+mod count;
 
 use crate::stream::{InputStream, OutputStream};
 use crate::cell::{CellType, Argument, Command, Cell};
@@ -121,6 +128,7 @@ pub fn add_builtins(namespace: &mut Namespace) -> Result<(), JobError> {
     namespace.declare("head", Cell::Command(Command::new(head::head)))?;
     namespace.declare("tail", Cell::Command(Command::new(tail::tail)))?;
     namespace.declare("lines", Cell::Command(Command::new(lines::lines)))?;
+    namespace.declare("csv", Cell::Command(Command::new(csv::csv)))?;
     namespace.declare("select", Cell::Command(Command::new(select::select)))?;
     namespace.declare("enumerate", Cell::Command(Command::new(enumerate::enumerate)))?;
     return Ok(());
