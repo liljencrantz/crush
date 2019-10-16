@@ -66,7 +66,7 @@ lazy_static! {
 
         (TokenType::Regex, Regex::new(r"^r\{([^}\\]|\\.)+\}").unwrap()),
 
-        (TokenType::String, Regex::new(r"^[/._a-zA-Z][/._a-z-A-Z0-9]*").unwrap()),
+        (TokenType::String, Regex::new(r"^[/._a-zA-Z][/.:_a-z-A-Z0-9]*").unwrap()),
         (TokenType::Glob, Regex::new(r"^[/._a-zA-Z*.?][/_a-z-A-Z0-9*.?]*").unwrap()),
         (TokenType::Comment, Regex::new("(?m)^#.*$").unwrap()),
         (TokenType::Whitespace, Regex::new(r"^\s+").unwrap()),

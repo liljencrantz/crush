@@ -30,11 +30,26 @@ fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Config
     let mut trim = None;
     let mut files = Vec::new();
 
-    files.push(Box::from(Path::new("example_data/age.csv")));
-    columns.push(CellType { name: "name".to_string(), cell_type: CellDataType::Text });
-    columns.push(CellType { name: "age".to_string(), cell_type: CellDataType::Integer });
-
-    for arg in arguments {}
+    for arg in arguments {
+        if arg.name.is_empty() {
+            match &arg.cell {
+                Cell::File(s) => files.push(s.clone()),
+                Cell::Text(s) => files.push(Box::from(Path::new(&s))),
+                _ => panic!("Noooo"),
+            }
+        } else if arg.name.as_str() == "col" {
+            match &arg.cell {
+                Cell::Text(s) => {
+                    let split: Vec<&str> = s.split(':').collect();
+                    match split.len() {
+                        2 => columns.push(CellType { name: split[0].to_string(), cell_type: CellDataType::from(split[1]) }),
+                        _ => panic!("No no no")
+                    }
+                }
+                _ => panic!("Noooo"),
+            }
+        }
+    }
 
     Ok(Config {
         separator,
@@ -44,19 +59,6 @@ fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Config
         files: Either::Left(files),
     })
 }
-
-fn convert(s: &str, t: CellDataType) -> Result<Cell, JobError> {
-    match t {
-        CellDataType::Text => Ok(Cell::Text(s.to_string())),
-        CellDataType::Integer => Ok(Cell::Integer(s.parse::<i128>().unwrap())),
-        CellDataType::Field => Ok(Cell::Field(s.to_string())),
-        CellDataType::Glob => Ok(Cell::Glob(s.to_string())),
-        CellDataType::Regex => Ok(Cell::Regex(s.to_string(), Regex::new(s).unwrap())),
-        CellDataType::File => Ok(Cell::Text(s.to_string())),
-        _ => panic!("AAAA"),
-    }
-}
-
 
 fn handle(file: Box<Path>, cfg: &Config, output: &mut OutputStream) -> Result<(), JobError> {
     let (output_stream, input_stream) = unlimited_streams();
@@ -97,7 +99,7 @@ fn handle(file: Box<Path>, cfg: &Config, output: &mut OutputStream) -> Result<()
             }
             let cells: Result<Vec<Cell>, JobError> = split.iter()
                 .zip(cfg_clone.columns.iter())
-                .map({ |(s, t)| convert(*s, t.cell_type.clone()) }).collect();
+                .map({ |(s, t)| t.cell_type.parse(*s) }).collect();
 
             output_stream.send(Row { cells: cells.unwrap() });
             line.clear();
@@ -128,11 +130,17 @@ fn run(
 pub fn csv(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
     let cfg = parse(&input_type, &arguments)?;
 
+    let output_type: Vec<CellType> =
+        vec![
+            CellType { name: "file".to_string(), cell_type: CellDataType::File },
+            CellType { name: "data".to_string(), cell_type: CellDataType::Output(cfg.columns.clone()) },
+        ];
+
     return Ok(Call {
-        name: String::from("lines"),
+        name: String::from("csv"),
         input_type,
         arguments,
-        output_type: cfg.columns.clone(),
+        output_type,
         exec: Exec::Run(run),
     });
 }

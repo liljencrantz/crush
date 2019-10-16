@@ -26,6 +26,31 @@ pub enum CellDataType {
     Rows(Vec<CellType>),
 }
 
+impl CellDataType {
+    pub fn from(s: &str) -> CellDataType {
+        match s {
+            "text" => CellDataType::Text,
+            "integer" => CellDataType::Integer,
+            "time" => CellDataType::Time,
+            "field" => CellDataType::Field,
+            _ => panic!(format!("Missing conversion for {} in CellDataType", s)),
+        }
+    }
+
+    pub fn parse(&self, s: &str) -> Result<Cell, JobError> {
+        match self {
+            CellDataType::Text => Ok(Cell::Text(s.to_string())),
+            CellDataType::Integer => Ok(Cell::Integer(s.parse::<i128>().unwrap())),
+            CellDataType::Field => Ok(Cell::Field(s.to_string())),
+            CellDataType::Glob => Ok(Cell::Glob(s.to_string())),
+            CellDataType::Regex => Ok(Cell::Regex(s.to_string(), Regex::new(s).unwrap())),
+            CellDataType::File => Ok(Cell::Text(s.to_string())),
+            _ => panic!("AAAA"),
+        }
+    }
+
+}
+
 #[derive(Clone)]
 pub struct Command {
     pub call: fn(Vec<CellType>, Vec<Argument>) -> Result<Call, JobError>,
