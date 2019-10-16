@@ -1,7 +1,7 @@
 Todo:
 implement single row cell type
-Implement row subscripting via []
-Implement cell subscripting via []
+Implement row subscripting via [IDX([, IDX...]|..IDX)]
+Implement cell subscripting via [NAME[, NAME...]]
 implement regexps
 make filter support regexps
 implement file regexps

@@ -3,6 +3,7 @@ use crate::commands::{Call, JobResult};
 use crate::stream::{print, streams, OutputStream};
 use std::thread;
 use crate::cell::{Output};
+use std::thread::JoinHandle;
 
 #[derive(PartialEq)]
 #[derive(Debug)]
@@ -19,6 +20,7 @@ pub struct Job {
     handlers: Vec<JobResult>,
     output: Option<Output>,
     last_output_stream: Option<OutputStream>,
+    print_thread: Option<JoinHandle<()>>,
 }
 
 impl Job {
@@ -33,6 +35,7 @@ impl Job {
             handlers: Vec::new(),
             output,
             last_output_stream: Some(last_output_stream),
+            print_thread: None,
         }
     }
 
@@ -63,7 +66,7 @@ impl Job {
 
     pub fn print(&mut self) {
         if let Some(output) = self.take_output() {
-            thread::spawn(move || print(output.stream, output.types));
+            self.print_thread = Some(thread::spawn(move || print(output.stream, output.types)));
         }
     }
 
@@ -77,6 +80,7 @@ impl Job {
                 }
             }
         }
+        self.print_thread.take().map(|h| h.join());
         self.state = JobState::Finished;
     }
 }

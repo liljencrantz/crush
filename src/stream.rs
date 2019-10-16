@@ -102,23 +102,25 @@ fn print_internal<T: Printable>(stream: &mut T, types: &Vec<CellType>, indent: u
     }
 }
 
-pub fn print_partial(mut data: Vec<Row>, types: &Vec<CellType>, has_name: bool, indent: usize) {
-    let mut w = vec![0; types.len()];
-
+fn calculate_header_width(w: &mut Vec<usize>,  types: &Vec<CellType>, has_name: bool) {
     if has_name {
         for (idx, val) in types.iter().enumerate() {
             w[idx] = max(w[idx], val.name.len());
         }
     }
+}
 
-    for r in &data {
-        assert_eq!(types.len(), r.cells.len());
+fn calculate_body_width(w: &mut Vec<usize>,  data: &Vec<Row>, col_count: usize) {
+    for r in data {
+        assert_eq!(col_count, r.cells.len());
         for (idx, c) in r.cells.iter().enumerate() {
             let l = c.to_string().len();
             w[idx] = max(w[idx], l);
         }
     }
+}
 
+fn print_header(w: &Vec<usize>,  types: &Vec<CellType>, has_name: bool, indent: usize) {
     if has_name {
         print!("{}", " ".repeat(indent * 4));
         for (idx, val) in types.iter().enumerate() {
@@ -126,34 +128,52 @@ pub fn print_partial(mut data: Vec<Row>, types: &Vec<CellType>, has_name: bool, 
         }
         println!();
     }
+}
 
+fn print_row(w: &Vec<usize>, mut r: Row, indent: usize, outputs: &mut Vec<Output>, rows: &mut Vec<Rows>) {
+    let cell_len = r.cells.len();
+    print!("{}", " ".repeat(indent * 4));
+    for (idx, c) in r.cells.drain(..).enumerate() {
+        let cell = c.to_string();
+        let spaces = if idx == cell_len - 1 { "".to_owned() } else { " ".repeat(w[idx] - cell.len()) };
+        match c.alignment() {
+            Alignment::Right => print!("{}{} ", spaces, cell),
+            _ => print!("{}{} ", cell, spaces),
+        }
+
+        match c {
+            Cell::Output(o) => outputs.push(o),
+            Cell::Rows(r) => rows.push(r),
+            _ => {}
+        }
+    }
+    println!();
+}
+
+fn print_body(w: &Vec<usize>,  data: Vec<Row>, indent: usize) {
     for mut r in data.into_iter() {
         let mut outputs: Vec<Output> = Vec::new();
         let mut rows: Vec<Rows> = Vec::new();
-        let cell_len = r.cells.len();
-        print!("{}", " ".repeat(indent * 4));
-        for (idx, c) in r.cells.drain(..).enumerate() {
-            let cell = c.to_string();
-            let spaces = if idx == cell_len - 1 { "".to_owned() } else { " ".repeat(w[idx] - cell.len()) };
-            match c.alignment() {
-                Alignment::Right => print!("{}{} ", spaces, cell),
-                _ => print!("{}{} ", cell, spaces),
-            }
 
-            match c {
-                Cell::Output(o) => outputs.push(o),
-                Cell::Rows(r) => rows.push(r),
-                _ => {}
-            }
-        }
-        println!();
+        print_row(w, r, indent, &mut outputs, &mut rows);
 
         for mut o in outputs {
             print_internal(&mut o.stream, &o.types, indent + 1);
         }
+
         for mut r in rows {
             let t = r.types.clone();
             print_internal::<RowReader>(&mut RowReader { idx: 0, rows: r }, &t, indent + 1);
         }
     }
+}
+
+fn print_partial(mut data: Vec<Row>, types: &Vec<CellType>, has_name: bool, indent: usize) {
+    let mut w = vec![0; types.len()];
+
+    calculate_header_width(&mut w, types, has_name);
+    calculate_body_width(&mut w, &data, types.len());
+
+    print_header(&w, types, has_name, indent);
+    print_body(&w, data, indent)
 }
