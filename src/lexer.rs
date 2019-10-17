@@ -58,8 +58,8 @@ lazy_static! {
 
         (TokenType::Integer, Regex::new(r"^[0-9]+").unwrap()),
 
-        (TokenType::Variable, Regex::new(r"^\$[a-zA-Z_][a-zA-Z_0-9]*").unwrap()),
-        (TokenType::Field, Regex::new("^%[a-zA-Z_][a-zA-Z_0-9]*").unwrap()),
+        (TokenType::Variable, Regex::new(r"^\$[a-zA-Z_][\.a-zA-Z_0-9]*").unwrap()),
+        (TokenType::Field, Regex::new(r"^%[a-zA-Z_][\.a-zA-Z_0-9]*").unwrap()),
 
         (TokenType::BlockStart, Regex::new(r"^[`*]?\{").unwrap()),
         (TokenType::BlockEnd, Regex::new(r"^\}").unwrap()),
@@ -229,10 +229,10 @@ mod tests {
 
     #[test]
     fn variables_and_fields() {
-        let mut l = Lexer::new(&String::from("$foo %bar"));
+        let mut l = Lexer::new(&String::from("$foo %bar $foo.bar %baz.qux"));
         let tt = tokens(&mut l);
         assert_eq!(tt, vec![
-            TokenType::Variable, TokenType::Field, TokenType::EOF]);
+            TokenType::Variable, TokenType::Field, TokenType::Variable, TokenType::Field, TokenType::EOF]);
     }
 
     #[test]

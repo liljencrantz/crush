@@ -20,6 +20,8 @@ use std::{
     path::Path
 };
 use either::Either;
+extern crate map_in_place;
+use map_in_place::MapVecInPlace;
 
 #[derive(Clone)]
 struct Config {
@@ -43,17 +45,47 @@ fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Config
                 arg.cell.file_expand(&mut files);
             },
             Some(name) => {
-                if name.as_str() == "col" {
+                match name.as_str() {
+                "col" =>
                     match &arg.cell {
                         Cell::Text(s) => {
                             let split: Vec<&str> = s.split(':').collect();
                             match split.len() {
-                                2 => columns.push(CellType::named(split[0], CellDataType::from(split[1]))),
-                                _ => panic!("No no no")
+                                2 => columns.push(CellType::named(split[0], CellDataType::from(split[1])?)),
+                                _ => return Err(argument_error(format!("Expected a column description on the form name:type, got {}", s).as_str())),
                             }
                         }
-                        _ => panic!("Noooo"),
+                        _ => return Err(argument_error("Expected a text value")),
                     }
+
+                    "sep" =>
+                        match &arg.cell {
+                            Cell::Text(s) => {
+                                if s.len() == 1 {
+                                    separator = s.chars().next().unwrap();
+                                } else {
+                                    return Err(argument_error("Separator must be exactly one character long"))
+                                }
+                            }
+                            _ => return Err(argument_error("Expected a text value")),
+                        }
+
+                    "trim" =>
+                        match &arg.cell {
+                            Cell::Text(s) => {
+                                if s.len() == 1 {
+                                    trim = Some(s.chars().next().unwrap());
+                                } else {
+                                    return Err(argument_error("Separator must be exactly one character long"))
+                                }
+                            }
+                            _ => return Err(argument_error("Expected a text value")),
+                        }
+
+                    _ => return Err(argument_error(format!("Unknown parameter {}", name).as_str())),
+
+
+
                 }
             }
         }
@@ -95,7 +127,7 @@ fn handle(file: Box<Path>, cfg: &Config, output: &mut OutputStream) -> Result<()
                 break;
             }
             let line_without_newline = &line[0..line.len() - 1];
-            let split: Vec<&str> = line_without_newline
+            let mut split: Vec<&str> = line_without_newline
                 .split(cfg_clone.separator)
                 .map(|s| cfg_clone.trim
                     .map(|c| s.trim_matches(c))
@@ -104,6 +136,9 @@ fn handle(file: Box<Path>, cfg: &Config, output: &mut OutputStream) -> Result<()
             if split.len() != cfg_clone.columns.len() {
                 panic!("Wrong number of columns in CSV file");
 //                return Err(error("Wrong number of columns in CSV file"))
+            }
+            if let Some(trim) = cfg_clone.trim {
+                split = split.map(|s| s.trim_matches(trim));
             }
             let cells: Result<Vec<Cell>, JobError> = split.iter()
                 .zip(cfg_clone.columns.iter())

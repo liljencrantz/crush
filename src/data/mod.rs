@@ -37,18 +37,18 @@ pub enum CellDataType {
 }
 
 impl CellDataType {
-    pub fn from(s: &str) -> CellDataType {
+    pub fn from(s: &str) -> Result<CellDataType, JobError> {
         match s {
-            "text" => CellDataType::Text,
-            "integer" => CellDataType::Integer,
-            "time" => CellDataType::Time,
-            "field" => CellDataType::Field,
-            "glob" => CellDataType::Glob,
-            "regex" => CellDataType::Regex,
-            "op" => CellDataType::Op,
-            "command" => CellDataType::Command,
-            "file" => CellDataType::Command,
-            _ => panic!(format!("Missing conversion for {} in CellDataType", s)),
+            "text" => Ok(CellDataType::Text),
+            "integer" => Ok(CellDataType::Integer),
+            "time" => Ok(CellDataType::Time),
+            "field" => Ok(CellDataType::Field),
+            "glob" => Ok(CellDataType::Glob),
+            "regex" => Ok(CellDataType::Regex),
+            "op" => Ok(CellDataType::Op),
+            "command" => Ok(CellDataType::Command),
+            "file" => Ok(CellDataType::File),
+            _ => Err(error(format!("Unknown cell type {}", s).as_str())),
         }
     }
 

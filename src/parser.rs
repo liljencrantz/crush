@@ -53,6 +53,10 @@ fn parse_job(lexer: &mut Lexer, state: &State, commands: &mut Vec<Call>, depende
     return Ok(());
 }
 
+fn unescape(s: &str) -> String {
+    s[1..s.len()-1].to_string()
+}
+
 fn parse_unnamed_argument(lexer: &mut Lexer, dependencies: &mut Vec<Job>, state: &State) -> Result<Cell, JobError> {
     let token_type = lexer.peek().0;
     match token_type {
@@ -117,6 +121,7 @@ fn parse_unnamed_argument(lexer: &mut Lexer, dependencies: &mut Vec<Job>, state:
                 Err(e) => Err(argument_error(e.description())),
             }
         },
+        TokenType::QuotedString => Ok(Cell::Text(unescape(lexer.pop().1))),
 
         _ => {
             lexer.pop();
