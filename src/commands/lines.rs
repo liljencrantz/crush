@@ -23,10 +23,7 @@ use crate::{
 
 lazy_static! {
     static ref sub_type: Vec<CellType> = {
-        vec![CellType {
-            name: "line".to_string(),
-            cell_type: CellDataType::Text,
-        }]
+        vec![CellType::named("line", CellDataType::Text)]
     };
 }
 
@@ -107,8 +104,8 @@ fn run(
 pub fn lines(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
     let output_type: Vec<CellType> =
         vec![
-            CellType { name: "file".to_string(), cell_type: CellDataType::File },
-            CellType { name: "lines".to_string(), cell_type: CellDataType::Output(sub_type.clone()) },
+            CellType { name: Some("file".to_string()), cell_type: CellDataType::File },
+            CellType { name: Some("lines".to_string()), cell_type: CellDataType::Output(sub_type.clone()) },
         ];
 
     return Ok(Call {

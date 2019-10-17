@@ -29,6 +29,12 @@ pub struct RowWithTypes {
     pub cells: Vec<Cell>,
 }
 
+impl RowWithTypes {
+    pub fn to_row(self) -> Row {
+        Row {cells: self.cells}
+    }
+}
+
 impl std::hash::Hash for RowWithTypes {
     fn hash<H: Hasher>(&self, state: &mut H) {
         for c in &self.cells {

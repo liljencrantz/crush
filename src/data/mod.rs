@@ -70,7 +70,6 @@ impl CellDataType {
             _ => panic!("AAAA"),
         }
     }
-
 }
 
 #[derive(Clone)]
@@ -102,8 +101,25 @@ impl std::fmt::Debug for Command {
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub struct CellType {
-    pub name: String,
+    pub name: Option<String>,
     pub cell_type: CellDataType,
+}
+
+impl CellType {
+    pub fn named(name: &str, cell_type: CellDataType) -> CellType {
+        CellType {
+            name: Some(name.to_string()),
+            cell_type,
+        }
+    }
+
+    pub fn len_or_0(&self) -> usize {
+        self.name.as_ref().map(|v| v.len()).unwrap_or(0)
+    }
+
+    pub fn val_or_empty(&self) -> &str {
+        self.name.as_ref().map(|v| v.as_str()).unwrap_or("")
+    }
 }
 
 #[derive(Debug)]
@@ -111,4 +127,3 @@ pub struct Output {
     pub types: Vec<CellType>,
     pub stream: InputStream,
 }
-

@@ -11,25 +11,15 @@ use crate::{
     },
     stream::{OutputStream, InputStream},
 };
+use crate::replace::Replace;
 
 fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Vec<usize>, JobError> {
     arguments.iter().enumerate().map(|(idx, a)| {
         match &a.cell {
-            Cell::Text(s) | Cell::Field(s) => find_field(s, input_type),
+            Cell::Text(s) | Cell::Field(s) => ( find_field(s, input_type)),
             _ => Err(argument_error(format!("Expected Field, not {:?}", a.cell.cell_data_type()).as_str())),
         }
     }).collect()
-}
-
-trait Replace<T> {
-    fn replace(&mut self, idx: usize, el: T) -> T;
-}
-
-impl<T> Replace<T> for Vec<T> {
-    fn replace(&mut self, idx: usize, el: T) -> T {
-        self.push(el);
-        self.swap_remove(idx)
-    }
 }
 
 fn run(

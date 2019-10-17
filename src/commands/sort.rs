@@ -15,8 +15,8 @@ pub fn get_key(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<
     if arguments.len() != 1 {
         return Err(argument_error("No comparison key specified"));
     }
-    match (arguments[0].name.as_str(), &arguments[0].cell) {
-        ("key", Cell::Text(cell_name)) | ("key", Cell::Field(cell_name))=> {
+    match (arguments[0].name.as_ref().map(|s| s.as_str()), &arguments[0].cell) {
+        (Some("key"), Cell::Text(cell_name)) | (Some("key"), Cell::Field(cell_name))=> {
             return find_field(cell_name, &input_type);
         }
         _ => {

@@ -73,7 +73,11 @@ fn run(
 pub fn count(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
     return Ok(Call {
         name: String::from("group"),
-        output_type: if has_streams(&input_type) {get_output_type(&input_type)} else {vec![CellType{name: String::from("count"), cell_type: CellDataType::Integer}]},
+        output_type: if has_streams(&input_type) {
+            get_output_type(&input_type)
+        } else {
+            vec![CellType::named("count", CellDataType::Integer)]
+        },
         input_type,
         arguments,
         exec: Exec::Run(run),

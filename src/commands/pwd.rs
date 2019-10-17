@@ -30,7 +30,7 @@ pub(crate) fn pwd(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result
         input_type,
         arguments,
         output_type: vec![CellType {
-            name: String::from("directory"),
+            name: Some(String::from("directory")),
             cell_type: CellDataType::File,
         }],
         exec: Exec::Run(run),

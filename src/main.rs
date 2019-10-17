@@ -1,3 +1,4 @@
+mod replace;
 mod errors;
 mod glob;
 mod stream;

@@ -33,7 +33,7 @@ fn run(
 }
 
 pub fn enumerate(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
-    let mut output_type = vec![CellType { name: "idx".to_string(), cell_type: CellDataType::Integer }];
+    let mut output_type = vec![CellType { name: Some("idx".to_string()), cell_type: CellDataType::Integer }];
     output_type.extend(input_type.iter().cloned());
     return Ok(Call {
         name: String::from("enumerate"),

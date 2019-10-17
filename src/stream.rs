@@ -35,11 +35,11 @@ pub fn unlimited_streams() -> (OutputStream, InputStream) {
     return (OutputStream::Async(temp.0), temp.1);
 }
 
-trait Printable {
+pub trait Readable {
     fn read(&mut self) -> Result<Row, JobError>;
 }
 
-impl Printable for InputStream {
+impl Readable for InputStream {
     fn read(&mut self) -> Result<Row, JobError> {
         match self.recv() {
             Ok(v) => Ok(v),
@@ -52,13 +52,12 @@ pub fn print(mut stream: InputStream, types: Vec<CellType>) {
     print_internal::<InputStream>(&mut stream, &types, 0);
 }
 
-
-struct RowReader {
+pub struct RowsReader {
     idx: usize,
     rows: Rows,
 }
 
-impl Printable for RowReader {
+impl Readable for RowsReader {
     fn read(&mut self) -> Result<Row, JobError> {
         if self.idx >= self.rows.rows.len() {
             return Err(error("EOF"));
@@ -69,7 +68,7 @@ impl Printable for RowReader {
 }
 
 
-fn print_internal<T: Printable>(stream: &mut T, types: &Vec<CellType>, indent: usize) {
+fn print_internal<T: Readable>(stream: &mut T, types: &Vec<CellType>, indent: usize) {
     let mut data: Vec<Row> = Vec::new();
     let mut has_name = false;
     let mut has_table = false;
@@ -80,7 +79,7 @@ fn print_internal<T: Printable>(stream: &mut T, types: &Vec<CellType>, indent: u
             CellDataType::Rows(_) => has_table = true,
             _ => (),
         }
-        if val.name.len() > 0 {
+        if val.name.is_some() {
             has_name = true;
         }
     }
@@ -105,7 +104,7 @@ fn print_internal<T: Printable>(stream: &mut T, types: &Vec<CellType>, indent: u
 fn calculate_header_width(w: &mut Vec<usize>,  types: &Vec<CellType>, has_name: bool) {
     if has_name {
         for (idx, val) in types.iter().enumerate() {
-            w[idx] = max(w[idx], val.name.len());
+            w[idx] = max(w[idx], val.len_or_0());
         }
     }
 }
@@ -124,7 +123,7 @@ fn print_header(w: &Vec<usize>,  types: &Vec<CellType>, has_name: bool, indent: 
     if has_name {
         print!("{}", " ".repeat(indent * 4));
         for (idx, val) in types.iter().enumerate() {
-            print!("{}{}", val.name, " ".repeat(w[idx] - val.name.len() + 1))
+            print!("{}{}", val.val_or_empty(), " ".repeat(w[idx] - val.len_or_0() + 1))
         }
         println!();
     }
@@ -163,7 +162,7 @@ fn print_body(w: &Vec<usize>,  data: Vec<Row>, indent: usize) {
 
         for mut r in rows {
             let t = r.types.clone();
-            print_internal::<RowReader>(&mut RowReader { idx: 0, rows: r }, &t, indent + 1);
+            print_internal::<RowsReader>(&mut RowsReader { idx: 0, rows: r }, &t, indent + 1);
         }
     }
 }

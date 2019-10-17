@@ -129,15 +129,15 @@ pub fn ls(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, J
         arguments,
         output_type: vec![
             CellType {
-                name: String::from("file"),
+                name: Some(String::from("file")),
                 cell_type: CellDataType::Text,
             },
             CellType {
-                name: String::from("size"),
+                name: Some(String::from("size")),
                 cell_type: CellDataType::Integer,
             },
             CellType {
-                name: String::from("modified"),
+                name: Some(String::from("modified")),
                 cell_type: CellDataType::Time,
             },
         ],
@@ -152,15 +152,15 @@ pub fn find(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call,
         arguments,
         output_type: vec![
             CellType {
-                name: String::from("file"),
+                name: Some(String::from("file")),
                 cell_type: CellDataType::Text,
             },
             CellType {
-                name: String::from("size"),
+                name: Some(String::from("size")),
                 cell_type: CellDataType::Integer,
             },
             CellType {
-                name: String::from("modified"),
+                name: Some(String::from("modified")),
                 cell_type: CellDataType::Time,
             },
         ],

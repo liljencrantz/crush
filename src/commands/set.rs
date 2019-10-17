@@ -11,14 +11,14 @@ fn mutate(
     _input_type: Vec<CellType>,
     arguments: Vec<Argument>) -> Result<(), JobError> {
     for arg in arguments {
-        state.namespace.set(arg.name.as_str(), arg.cell.concrete())?;
+        state.namespace.set(arg.name.unwrap().as_str(), arg.cell.concrete())?;
     }
     return Ok(());
 }
 
-pub(crate) fn set(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
+pub fn set(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
     for arg in arguments.iter() {
-        if arg.name.as_str() == "" {
+        if arg.val_or_empty().is_empty() {
             return Err(
                 argument_error("Missing variable name")
             );

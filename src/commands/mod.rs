@@ -23,6 +23,7 @@ mod enumerate;
 mod group;
 mod join;
 mod count;
+mod cat;
 
 use std::{io, thread};
 use crate::{
@@ -134,11 +135,15 @@ pub fn add_builtins(namespace: &mut Namespace) -> Result<(), JobError> {
     namespace.declare("group", Cell::Command(Command::new(group::group)))?;
     namespace.declare("join", Cell::Command(Command::new(join::join)))?;
     namespace.declare("count", Cell::Command(Command::new(count::count)))?;
-    namespace.declare("head", Cell::Command(Command::new(head::head)))?;
-    namespace.declare("tail", Cell::Command(Command::new(tail::tail)))?;
-    namespace.declare("lines", Cell::Command(Command::new(lines::lines)))?;
-    namespace.declare("csv", Cell::Command(Command::new(csv::csv)))?;
+    namespace.declare("cat", Cell::Command(Command::new(cat::cat)))?;
     namespace.declare("select", Cell::Command(Command::new(select::select)))?;
     namespace.declare("enumerate", Cell::Command(Command::new(enumerate::enumerate)))?;
+
+    namespace.declare("head", Cell::Command(Command::new(head::head)))?;
+    namespace.declare("tail", Cell::Command(Command::new(tail::tail)))?;
+
+    namespace.declare("lines", Cell::Command(Command::new(lines::lines)))?;
+    namespace.declare("csv", Cell::Command(Command::new(csv::csv)))?;
+
     return Ok(());
 }

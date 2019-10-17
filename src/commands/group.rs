@@ -14,15 +14,15 @@ use crate::{
     stream::{OutputStream, InputStream, unlimited_streams},
 };
 
-pub fn get_key(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<(String, usize), JobError> {
+pub fn get_key(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<(Option<String>, usize), JobError> {
     if arguments.len() != 1 {
         return Err(argument_error("No comparison key specified"));
     }
     let arg = &arguments[0];
-    let name = if arg.name.is_empty() {"group".to_string()} else {arg.name.clone()};
+    let name = arg.name.as_ref().unwrap_or(&"group".to_string()).clone();
     match &arg.cell {
         Cell::Field(cell_name) | Cell::Text(cell_name) => {
-            return Ok((name, find_field(cell_name, &input_type)?));
+            return Ok((Some(name), find_field(cell_name, &input_type)?));
         }
         _ => {
             return Err(argument_error("Bad comparison key"));

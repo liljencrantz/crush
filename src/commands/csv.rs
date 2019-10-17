@@ -35,22 +35,25 @@ fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Config
     let mut files = Vec::new();
 
     for arg in arguments {
-        if arg.name.is_empty() {
-            match &arg.cell {
+        match &arg.name {
+            None => match &arg.cell {
                 Cell::File(s) => files.push(s.clone()),
                 Cell::Text(s) => files.push(Box::from(Path::new(&s))),
                 _ => panic!("Noooo"),
             }
-        } else if arg.name.as_str() == "col" {
-            match &arg.cell {
-                Cell::Text(s) => {
-                    let split: Vec<&str> = s.split(':').collect();
-                    match split.len() {
-                        2 => columns.push(CellType { name: split[0].to_string(), cell_type: CellDataType::from(split[1]) }),
-                        _ => panic!("No no no")
+            Some(name) => {
+                if name.as_str() == "col" {
+                    match &arg.cell {
+                        Cell::Text(s) => {
+                            let split: Vec<&str> = s.split(':').collect();
+                            match split.len() {
+                                2 => columns.push(CellType { name: Some(split[0].to_string()), cell_type: CellDataType::from(split[1]) }),
+                                _ => panic!("No no no")
+                            }
+                        }
+                        _ => panic!("Noooo"),
                     }
                 }
-                _ => panic!("Noooo"),
             }
         }
     }
@@ -136,8 +139,8 @@ pub fn csv(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, 
 
     let output_type: Vec<CellType> =
         vec![
-            CellType { name: "file".to_string(), cell_type: CellDataType::File },
-            CellType { name: "data".to_string(), cell_type: CellDataType::Output(cfg.columns.clone()) },
+            CellType { name: Some("file".to_string()), cell_type: CellDataType::File },
+            CellType { name: Some("data".to_string()), cell_type: CellDataType::Output(cfg.columns.clone()) },
         ];
 
     return Ok(Call {
