@@ -1,12 +1,7 @@
 Todo:
-Implement row subscripting via [IDX([, IDX...]|..IDX)]
-Implement cell subscripting via [NAME[, NAME...]]
-implement regexps
-make filter support regexps
 implement file regexps
 make ls support regexps
 implement date command
-implement csv command
 implement lambdas with $argv
 implement lambdas with named arguments
 implement for command
@@ -19,7 +14,7 @@ make file globing testable via fakes
 generic (macro-based?) argument parsing
 Error source propagation
 help
-implement the cmd command
+implement cmd command
 cell type conversion
 
 Done:
@@ -53,3 +48,6 @@ make filter support globs
 implement select command
 implement enumerate command
 implement single row cell type
+implement regexps
+make filter support regexps
+implement csv command

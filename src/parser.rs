@@ -2,7 +2,7 @@ use crate::errors::{JobError, parse_error, argument_error};
 use crate::job::Job;
 use crate::lexer::{Lexer, TokenType};
 use crate::state::State;
-use crate::data::{Argument};
+use crate::data::Argument;
 use crate::commands::Call;
 use regex::Regex;
 use std::error::Error;
@@ -54,7 +54,7 @@ fn parse_job(lexer: &mut Lexer, state: &State, commands: &mut Vec<Call>, depende
 }
 
 fn unescape(s: &str) -> String {
-    s[1..s.len()-1].to_string()
+    s[1..s.len() - 1].to_string()
 }
 
 fn parse_unnamed_argument(lexer: &mut Lexer, dependencies: &mut Vec<Job>, state: &State) -> Result<Cell, JobError> {
@@ -106,7 +106,7 @@ fn parse_unnamed_argument(lexer: &mut Lexer, dependencies: &mut Vec<Job>, state:
                     return Err(parse_error("Cannot handle sigil type", lexer));
                 }
             }
-        },
+        }
 
         TokenType::Field => Ok(Cell::Field(String::from(&lexer.pop().1[1..]))),
         TokenType::Variable => match state.namespace.get(&lexer.pop().1[1..]) {
@@ -117,15 +117,32 @@ fn parse_unnamed_argument(lexer: &mut Lexer, dependencies: &mut Vec<Job>, state:
             let f = lexer.pop().1;
             let s = &f[2..f.len() - 1];
             match Regex::new(s) {
-               Ok(r) => Ok(Cell::Regex(String::from(s), r)),
+                Ok(r) => Ok(Cell::Regex(String::from(s), r)),
                 Err(e) => Err(argument_error(e.description())),
             }
-        },
+        }
         TokenType::QuotedString => Ok(Cell::Text(unescape(lexer.pop().1))),
 
         _ => {
             lexer.pop();
             return Err(parse_error(format!("Unknown token {:?}", token_type).as_str(), lexer));
+        }
+    }
+}
+
+fn parse_argument(lexer: &mut Lexer, dependencies: &mut Vec<Job>, state: &State) -> Result<Argument, JobError> {
+    match lexer.peek().0 {
+        TokenType::String => {
+            let ss = String::from(lexer.pop().1);
+            if lexer.peek().0 == TokenType::Assign {
+                lexer.pop();
+                return Ok(Argument::named(&ss, parse_unnamed_argument(lexer, dependencies, state)?));
+            } else {
+                return Ok(Argument::unnamed(Cell::Text(ss)));
+            }
+        }
+        _ => {
+            return Ok(Argument::unnamed(parse_unnamed_argument(lexer, dependencies, state)?));
         }
     }
 }
@@ -139,18 +156,7 @@ fn parse_arguments(lexer: &mut Lexer, arguments: &mut Vec<Argument>, dependencie
             TokenType::Separator | TokenType::EOF | TokenType::Pipe | TokenType::BlockEnd => {
                 return Ok(());
             }
-            TokenType::String => {
-                let ss = String::from(lexer.pop().1);
-                if lexer.peek().0 == TokenType::Assign {
-                    lexer.pop();
-                    arguments.push(Argument::named(&ss, parse_unnamed_argument(lexer, dependencies, state)?));
-                } else {
-                    arguments.push(Argument::unnamed(Cell::Text(ss)));
-                }
-            }
-            _ => {
-                arguments.push(Argument::unnamed(parse_unnamed_argument(lexer, dependencies, state)?));
-            }
+            _ => arguments.push(parse_argument(lexer, dependencies, state)?),
         }
     }
 }

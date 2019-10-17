@@ -83,9 +83,6 @@ fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Config
                         }
 
                     _ => return Err(argument_error(format!("Unknown parameter {}", name).as_str())),
-
-
-
                 }
             }
         }
