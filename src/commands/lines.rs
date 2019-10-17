@@ -5,18 +5,16 @@ use std::thread;
 use std::path::Path;
 use lazy_static::lazy_static;
 use crate::{
-    state::get_cwd,
     commands::command_util::find_field,
-    glob::glob_files,
     errors::{JobError, argument_error},
-    commands::{Call, Exec, to_runtime_error},
+    commands::{Call, Exec},
     data::{
         Argument,
         Row,
         CellType,
         CellDataType,
         Output,
-        Cell
+        Cell,
     },
     stream::{OutputStream, InputStream, unlimited_streams},
 };
@@ -27,11 +25,11 @@ lazy_static! {
     };
 }
 
-fn handle(file: Cell, output: &mut OutputStream) -> Result<(), JobError> {
+fn handle(file: Box<Path>, output: &mut OutputStream) -> Result<(), JobError> {
     let (output_stream, input_stream) = unlimited_streams();
     let out_row = Row {
         cells: vec![
-            file.concrete(),
+            Cell::File(file.clone()),
             Cell::Output(Output {
                 types: sub_type.clone(),
                 stream: input_stream,
@@ -39,12 +37,9 @@ fn handle(file: Cell, output: &mut OutputStream) -> Result<(), JobError> {
         ],
     };
     output.send(out_row)?;
+    let file_copy = file.clone();
     thread::spawn(move || {
-        let fff = match file {
-            Cell::Text(t) => File::open(t),
-            Cell::File(b) => File::open(b),
-            _ => panic!("Impossible"),
-        }.unwrap();
+        let fff = File::open(file).unwrap();
         let mut reader = BufReader::new(&fff);
         let mut line = String::new();
         loop {
@@ -65,18 +60,10 @@ fn run(
     mut arguments: Vec<Argument>,
     input: InputStream,
     mut output: OutputStream) -> Result<(), JobError> {
-    let mut files: Vec<Cell> = Vec::new();
+    let mut files: Vec<Box<Path>> = Vec::new();
     if input_type.len() == 0 {
         for arg in &arguments {
-            match &arg.cell {
-                Cell::Text(_) | Cell::File(_) => files.push(arg.cell.concrete()),
-                Cell::Glob(pattern) => to_runtime_error(glob_files(
-                    &pattern,
-                    Path::new(&get_cwd()?),
-                    &mut files,
-                ))?,
-                _ => return Err(argument_error("Expected a file name")),
-            }
+            arg.cell.file_expand(&mut files)?;
         }
         for file in files {
             handle(file, &mut output)?;
@@ -90,7 +77,13 @@ fn run(
                 let idx = find_field(&s, &input_type)?;
                 loop {
                     match input.recv() {
-                        Ok(row) => handle(row.cells[idx].concrete(), &mut output)?,
+                        Ok(row) => {
+                            let mut files: Vec<Box<Path>> = Vec::new();
+                            row.cells[idx].file_expand(&mut files)?;
+                            for file in files {
+                                handle(file, &mut output)?;
+                            }
+                        },
                         Err(_) => break,
                     }
                 }
@@ -104,8 +97,8 @@ fn run(
 pub fn lines(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
     let output_type: Vec<CellType> =
         vec![
-            CellType { name: Some("file".to_string()), cell_type: CellDataType::File },
-            CellType { name: Some("lines".to_string()), cell_type: CellDataType::Output(sub_type.clone()) },
+            CellType::named("file", CellDataType::File),
+            CellType::named("lines", CellDataType::Output(sub_type.clone())),
         ];
 
     return Ok(Call {

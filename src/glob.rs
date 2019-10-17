@@ -3,17 +3,16 @@ use std::iter::Peekable;
 use std::path::Path;
 use std::io;
 use std::fs::{read_dir, ReadDir};
-use crate::data::Cell;
 
 pub fn glob(g: &str, v: &str) -> bool {
     return glob_match(&mut g.chars(), &mut v.chars().peekable());
 }
 
-pub fn glob_files(original_glob: &str, cwd: &Path, out: &mut Vec<Cell>) -> io::Result<()> {
+pub fn glob_files(original_glob: &str, cwd: &Path, out: &mut Vec<Box<Path>>) -> io::Result<()> {
     return glob_files_testable(original_glob, cwd, out, |p| read_dir(p));
 }
 
-pub fn glob_files_testable(original_glob: &str, cwd: &Path, out: &mut Vec<Cell>, lister: fn(&Path) -> io::Result<ReadDir>) -> io::Result<()> {
+pub fn glob_files_testable(original_glob: &str, cwd: &Path, out: &mut Vec<Box<Path>>, lister: fn(&Path) -> io::Result<ReadDir>) -> io::Result<()> {
     let only_directories = original_glob.ends_with('/');
     let without_trailing_slashes = original_glob.trim_end_matches('/');
     if without_trailing_slashes.starts_with('/') {
@@ -29,7 +28,7 @@ pub fn glob_files_internal(
     dir: &Path,
     only_directories: bool,
     prefix: &str,
-    out: &mut Vec<Cell>,
+    out: &mut Vec<Box<Path>>,
     lister: fn(&Path) -> io::Result<ReadDir>) -> io::Result<()> {
     let is_last_section = !relative_glob.contains('/');
     if is_last_section {
@@ -38,7 +37,7 @@ pub fn glob_files_internal(
             match ee.file_name().to_str() {
                 Some(name) => {
                     if glob(relative_glob, name) && (!only_directories || ee.path().is_dir()) {
-                        out.push(Cell::File(ee.path().into_boxed_path()));
+                        out.push(ee.path().into_boxed_path());
                     }
                 }
                 None => return Err(io::Error::new(io::ErrorKind::Other, "Invalid file name")),

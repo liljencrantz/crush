@@ -34,7 +34,11 @@ fn run(
     loop {
         match input.recv() {
             Ok(mut row) => {
-                output.send(Row { cells: indices.iter().map(|(idx, name)| row.cells.replace(*idx, Cell::Integer(0))).collect() })?;
+                output.send(
+                    Row { cells: indices
+                        .iter()
+                        .map(|(idx, name)| row.cells.replace(*idx, Cell::Integer(0)))
+                        .collect() })?;
             }
             Err(_) => break,
         }

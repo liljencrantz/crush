@@ -9,13 +9,16 @@ use crate::{
     },
     stream::{OutputStream, InputStream, unlimited_streams},
     commands::{Call, Exec},
-    errors::{JobError, argument_error, error}
+    errors::{JobError, argument_error, error},
+    errors::to_runtime_error
 };
-use std::io::BufReader;
-use std::io::prelude::*;
-use std::fs::File;
-use std::thread;
-use std::path::Path;
+use std::{
+    io::BufReader,
+    io::prelude::*,
+    fs::File,
+    thread,
+    path::Path
+};
 use either::Either;
 
 #[derive(Clone)]
@@ -36,18 +39,16 @@ fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Config
 
     for arg in arguments {
         match &arg.name {
-            None => match &arg.cell {
-                Cell::File(s) => files.push(s.clone()),
-                Cell::Text(s) => files.push(Box::from(Path::new(&s))),
-                _ => panic!("Noooo"),
-            }
+            None => {
+                arg.cell.file_expand(&mut files);
+            },
             Some(name) => {
                 if name.as_str() == "col" {
                     match &arg.cell {
                         Cell::Text(s) => {
                             let split: Vec<&str> = s.split(':').collect();
                             match split.len() {
-                                2 => columns.push(CellType { name: Some(split[0].to_string()), cell_type: CellDataType::from(split[1]) }),
+                                2 => columns.push(CellType::named(split[0], CellDataType::from(split[1]))),
                                 _ => panic!("No no no")
                             }
                         }
@@ -139,8 +140,8 @@ pub fn csv(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, 
 
     let output_type: Vec<CellType> =
         vec![
-            CellType { name: Some("file".to_string()), cell_type: CellDataType::File },
-            CellType { name: Some("data".to_string()), cell_type: CellDataType::Output(cfg.columns.clone()) },
+            CellType::named("file", CellDataType::File ),
+            CellType::named("data", CellDataType::Output(cfg.columns.clone())),
         ];
 
     return Ok(Call {

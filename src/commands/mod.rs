@@ -115,13 +115,6 @@ impl Call {
     }
 }
 
-fn to_runtime_error<T>(io_result: io::Result<T>) -> Result<T, JobError> {
-    match io_result {
-        Ok(v) => Ok(v),
-        Err(e) => Err(error(e.description())),
-    }
-}
-
 pub fn add_builtins(namespace: &mut Namespace) -> Result<(), JobError> {
     namespace.declare("ls", Cell::Command(Command::new(ls_and_find::ls)))?;
     namespace.declare("find", Cell::Command(Command::new(ls_and_find::find)))?;

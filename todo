@@ -1,5 +1,4 @@
 Todo:
-implement single row cell type
 Implement row subscripting via [IDX([, IDX...]|..IDX)]
 Implement cell subscripting via [NAME[, NAME...]]
 implement regexps
@@ -15,9 +14,10 @@ implement env command
 implement unset command
 implement reverse command
 implement sum command
+Add support for %<INTEGER> for offset based field identifiers
 make file globing testable via fakes
 generic (macro-based?) argument parsing
-Error propagation
+Error source propagation
 help
 implement the cmd command
 cell type conversion
@@ -52,3 +52,4 @@ Implement matching operators, =~ and !~
 make filter support globs
 implement select command
 implement enumerate command
+implement single row cell type

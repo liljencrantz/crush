@@ -2,10 +2,11 @@ use crate::{
     data::Argument,
     data::{CellType, CellDataType},
     data::Cell,
-    commands::{Call, to_runtime_error, Exec},
+    commands::{Call, Exec},
     errors::JobError,
     state::State
 };
+use crate::errors::to_runtime_error;
 
 fn mutate(
     _state: &mut State,

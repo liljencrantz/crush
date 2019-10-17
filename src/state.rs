@@ -1,6 +1,7 @@
 use crate::namespace::Namespace;
 use crate::errors::{error, JobError};
 use std::error::Error;
+use std::path::Path;
 
 pub struct State {
     pub namespace: Namespace,
@@ -14,12 +15,9 @@ impl State {
   }
 }
 
-pub fn get_cwd() -> Result<String, JobError> {
+pub fn get_cwd() -> Result<Box<Path>, JobError> {
     match std::env::current_dir() {
-        Ok(d) => match d.to_str() {
-            Some(s) => Ok(s.to_string()),
-            None => Err(error("Current working directory is invalid")),
-        },
+        Ok(d) => Ok(d.into_boxed_path()),
         Err(e) => Err(error(e.description())),
     }
 }

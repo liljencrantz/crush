@@ -1,8 +1,8 @@
 use std::fs;
 use crate::stream::{OutputStream, InputStream};
-use crate::data::{Cell, CellType, CellDataType, Rows, Row, Argument};
-use crate::commands::{Call, to_runtime_error, Exec};
-use crate::errors::{JobError, error};
+use crate::data::{Cell, CellType, CellDataType, Row, Argument};
+use crate::commands::{Call, Exec};
+use crate::errors::{JobError, error, to_runtime_error};
 use chrono::{Local, DateTime};
 use crate::glob::glob_files;
 use std::path::Path;
@@ -69,24 +69,23 @@ fn run_internal(
     arguments: Vec<Argument>,
     recursive: bool,
     mut output: OutputStream) -> Result<(), JobError> {
-    let mut dirs: Vec<Cell> = Vec::new();
+    let mut dirs: Vec<Box<Path>> = Vec::new();
     if arguments.is_empty() {
-        dirs.push(Cell::File(
-            Box::from(Path::new("."))));
+        dirs.push(Box::from(Path::new(".")));
     } else {
         for arg in arguments {
             match &arg.cell {
                 Cell::Text(dir) => {
-                    dirs.push(Cell::File(Box::from(Path::new(dir))));
+                    dirs.push(Box::from(Path::new(dir)));
                 }
                 Cell::File(dir) => {
-                    dirs.push(Cell::File(dir.clone()));
+                    dirs.push(dir.clone());
                 }
                 Cell::Glob(dir) => {
                     to_runtime_error(
                         glob_files(
                             dir,
-                            Path::new(&get_cwd()?),
+                            &get_cwd()?,
                             &mut dirs))?;
                 }
                 _ => {
@@ -96,12 +95,8 @@ fn run_internal(
         }
     }
 
-    for cell in dirs {
-        match cell {
-            Cell::File(dir) => run_for_single_directory_or_file(
-                dir, recursive, &mut output)?,
-            _ => return Err(error("Expected a file"))
-        }
+    for dir in dirs {
+        run_for_single_directory_or_file(dir, recursive, &mut output)?
     }
     return Ok(());
 }
@@ -128,18 +123,9 @@ pub fn ls(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, J
         input_type,
         arguments,
         output_type: vec![
-            CellType {
-                name: Some(String::from("file")),
-                cell_type: CellDataType::Text,
-            },
-            CellType {
-                name: Some(String::from("size")),
-                cell_type: CellDataType::Integer,
-            },
-            CellType {
-                name: Some(String::from("modified")),
-                cell_type: CellDataType::Time,
-            },
+            CellType::named("file", CellDataType::Text),
+            CellType::named("size", CellDataType::Integer),
+            CellType::named("modified", CellDataType::Time),
         ],
         exec: Exec::Run(run_ls),
     });
@@ -151,18 +137,9 @@ pub fn find(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call,
         input_type,
         arguments,
         output_type: vec![
-            CellType {
-                name: Some(String::from("file")),
-                cell_type: CellDataType::Text,
-            },
-            CellType {
-                name: Some(String::from("size")),
-                cell_type: CellDataType::Integer,
-            },
-            CellType {
-                name: Some(String::from("modified")),
-                cell_type: CellDataType::Time,
-            },
+            CellType::named("file", CellDataType::Text),
+            CellType::named("size", CellDataType::Integer),
+            CellType::named("modified", CellDataType::Time),
         ],
         exec: Exec::Run(run_find),
     });

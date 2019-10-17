@@ -8,7 +8,6 @@ use crate::{
     errors::JobError,
     state::get_cwd
 };
-use std::path::Path;
 
 fn run(
     _input_type: Vec<CellType>,
@@ -16,11 +15,7 @@ fn run(
     _input: InputStream,
     output: OutputStream) -> Result<(), JobError> {
 
-    output.send(Row {
-                        cells: vec![
-                            Cell::File(Box::from(Path::new(&get_cwd()?)))
-                        ]
-                    })?;
+    output.send(Row { cells: vec![Cell::File(get_cwd()?)] })?;
     Ok(())
 }
 
@@ -29,10 +24,7 @@ pub(crate) fn pwd(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result
         name: String::from("pwd"),
         input_type,
         arguments,
-        output_type: vec![CellType {
-            name: Some(String::from("directory")),
-            cell_type: CellDataType::File,
-        }],
+        output_type: vec![CellType::named("directory", CellDataType::File)],
         exec: Exec::Run(run),
     });
 }

@@ -1,14 +1,14 @@
-use crate::glob::glob;
+use crate::glob::{glob, glob_files};
 use std::cmp::Ordering;
 use std::hash::Hasher;
 use crate::data::{Output, CellDataType, Command};
 use crate::data::row::{Row, RowWithTypes};
 use crate::data::rows::Rows;
-use crate::errors::{error, JobError};
+use crate::errors::{error, JobError, to_runtime_error};
 use std::path::Path;
 use regex::Regex;
 use chrono::{DateTime, Local};
-use std::fmt::Arguments;
+use crate::state::get_cwd;
 
 #[derive(Debug)]
 pub enum Cell {
@@ -114,6 +114,18 @@ impl Cell {
             _ => Alignment::Left,
         };
     }
+
+    pub fn file_expand(&self, v: &mut Vec<Box<Path>>) -> Result<(), JobError>{
+        match self {
+            Cell::Text(s)=> v.push(Box::from(Path::new(s))),
+            Cell::File(p) => v.push(p.clone()),
+            Cell::Glob(pattern) => to_runtime_error(glob_files(
+                &pattern, &get_cwd()?, v))?,
+            _ => return Err(error("Expected a file name")),
+        }
+        Ok(())
+    }
+
 }
 
 

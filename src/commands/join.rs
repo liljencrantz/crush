@@ -6,7 +6,6 @@ use crate::{
         Row,
         CellType,
         CellDataType,
-        Output,
         Cell,
     },
     stream::{OutputStream, InputStream},
@@ -31,7 +30,7 @@ fn parse(_input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Confi
     })
 }
 
-fn do_join<T: Readable>(l: &mut Readable, r: &mut Readable, output: &OutputStream) {
+fn do_join(l: &mut impl Readable, r: &mut impl Readable, output: &OutputStream) {
     let mut l_data: HashMap<Cell, Row> = HashMap::new();
     loop {
         match l.read() {
@@ -73,7 +72,7 @@ fn run(
             Ok(mut row) => {
                 match (row.cells.replace(cfg.left_table_idx, Cell::Integer(0)), row.cells.replace(cfg.right_table_idx, Cell::Integer(0))) {
                     (Cell::Output(mut l), Cell::Output(mut r)) => {
-                        do_join::<InputStream>(&mut l.stream, &mut r.stream, &output);
+                        do_join(&mut l.stream, &mut r.stream, &output);
                     }
                     _ => panic!("Wrong row format"),
                 }
