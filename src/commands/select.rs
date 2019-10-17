@@ -13,10 +13,13 @@ use crate::{
 };
 use crate::replace::Replace;
 
-fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Vec<usize>, JobError> {
+fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Vec<(usize, Option<String>)>, JobError> {
     arguments.iter().enumerate().map(|(idx, a)| {
         match &a.cell {
-            Cell::Text(s) | Cell::Field(s) => ( find_field(s, input_type)),
+            Cell::Text(s) | Cell::Field(s) => match find_field(s, input_type) {
+                Ok(idx) => Ok((idx, a.name.clone().or(input_type[idx].name.clone()))),
+                Err(e) => Err(e),
+            }
             _ => Err(argument_error(format!("Expected Field, not {:?}", a.cell.cell_data_type()).as_str())),
         }
     }).collect()
@@ -31,7 +34,7 @@ fn run(
     loop {
         match input.recv() {
             Ok(mut row) => {
-                output.send(Row { cells: indices.iter().map(|idx| row.cells.replace(*idx, Cell::Integer(0))).collect() })?;
+                output.send(Row { cells: indices.iter().map(|(idx, name)| row.cells.replace(*idx, Cell::Integer(0))).collect() })?;
             }
             Err(_) => break,
         }
@@ -43,7 +46,7 @@ pub fn select(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Cal
     let mut indices = parse(&input_type, &arguments)?;
     return Ok(Call {
         name: String::from("select"),
-        output_type: indices.drain(..).map(|idx| input_type[idx].clone()).collect(),
+        output_type: indices.drain(..).map(|(idx, name)| CellType {cell_type: input_type[idx].cell_type.clone(), name }).collect(),
         input_type,
         arguments,
         exec: Exec::Run(run),
