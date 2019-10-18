@@ -9,6 +9,7 @@ mod state;
 mod job;
 mod lexer;
 mod parser;
+mod printer;
 
 use crate::lexer::Lexer;
 
@@ -18,6 +19,7 @@ use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use commands::add_builtins;
 use crate::errors::JobError;
+use std::error::Error;
 
 fn repl() -> Result<(), JobError>{
     let mut state = state::State::new();
@@ -34,34 +36,35 @@ fn repl() -> Result<(), JobError>{
                     Ok(jobs) => {
                         for mut job in jobs {
                             job.exec(&mut state);
-                            job.print();
-                            job.wait();
+                            job.print(&state.printer);
+                            job.wait(&state.printer);
                         }
                     }
                     Err(error) => {
-                        println!("Compiler error: {}", error.message);
+                        state.printer.job_error(error);
                     }
                 }
             }
             Err(ReadlineError::Interrupted) => {
-                println!("^C");
+                state.printer.line("^C");
             }
             Err(ReadlineError::Eof) => {
-                println!("exit");
+                state.printer.line("exit");
                 break;
             }
             Err(err) => {
-                println!("Error: {:?}", err);
+                state.printer.line(err.description());
                 break;
             }
         }
         match rl.save_history(".crush_history") {
             Ok(_) => {}
             Err(_) => {
-                println!("Error: Failed to save history.");
+                state.printer.line("Error: Failed to save history.");
             }
         }
     }
+    state.printer.shutdown();
     return Ok(());
 }
 

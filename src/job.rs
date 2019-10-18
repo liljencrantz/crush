@@ -4,6 +4,7 @@ use crate::stream::{print, streams, OutputStream};
 use std::thread;
 use crate::data::{Output};
 use std::thread::JoinHandle;
+use crate::printer::Printer;
 
 #[derive(PartialEq)]
 #[derive(Debug)]
@@ -64,19 +65,25 @@ impl Job {
         self.state = JobState::Spawned;
     }
 
-    pub fn print(&mut self) {
+    pub fn print(&mut self, printer: &Printer) {
+        let p = printer.clone();
         if let Some(output) = self.take_output() {
-            self.print_thread = Some(thread::spawn(move || print(output.stream, output.types)));
+            self.print_thread = Some(
+                thread::Builder::new()
+                    .name("output_formater".to_string())
+                    .spawn(move || print(&p, output.stream, output.types)
+                    ).unwrap()
+            );
         }
     }
 
-    pub fn wait(&mut self) {
+    pub fn wait(&mut self, printer: &Printer) {
         assert_eq!(self.state, JobState::Spawned);
         for h in self.handlers.drain(..) {
             match h.join() {
                 Ok(_) => {}
                 Err(e) => {
-                    println!("Runtime error: {}", e.message);
+                    printer.job_error(e);
                 }
             }
         }

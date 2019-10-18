@@ -2,15 +2,18 @@ use crate::namespace::Namespace;
 use crate::errors::{error, JobError};
 use std::error::Error;
 use std::path::Path;
+use crate::printer::Printer;
 
 pub struct State {
     pub namespace: Namespace,
+    pub printer: Printer,
 }
 
 impl State {
   pub fn new() -> State {
       return State {
           namespace: Namespace::new(),
+          printer: Printer::new(),
       };
   }
 }
