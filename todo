@@ -13,9 +13,11 @@ Add support for %<INTEGER> for offset based field identifiers
 make file globing testable via fakes
 generic (macro-based?) argument parsing
 Error source propagation
+Error gathering thread that collects runtime errors
 help
 implement cmd command
-cell type conversion
+implement cast command for cell type conversion
+implement format command for text formating
 
 Done:
 Fix all expects calls that aren't impossible, and propagate the errors

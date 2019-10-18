@@ -26,6 +26,8 @@ mod join;
 mod count;
 mod cat;
 
+mod cast;
+
 use std::{io, thread};
 use crate::{
     namespace::Namespace,
@@ -133,6 +135,8 @@ pub fn add_builtins(namespace: &mut Namespace) -> Result<(), JobError> {
     namespace.declare("cat", Cell::Command(Command::new(cat::cat)))?;
     namespace.declare("select", Cell::Command(Command::new(select::select)))?;
     namespace.declare("enumerate", Cell::Command(Command::new(enumerate::enumerate)))?;
+
+    namespace.declare("cast", Cell::Command(Command::new(cast::cast)))?;
 
     namespace.declare("head", Cell::Command(Command::new(head::head)))?;
     namespace.declare("tail", Cell::Command(Command::new(tail::tail)))?;

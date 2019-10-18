@@ -1,4 +1,4 @@
-use crate::glob::{Glob};
+use crate::glob::Glob;
 use std::cmp::Ordering;
 use std::hash::Hasher;
 use crate::data::{Output, CellDataType, Command};
@@ -115,17 +115,32 @@ impl Cell {
         };
     }
 
-    pub fn file_expand(&self, v: &mut Vec<Box<Path>>) -> Result<(), JobError>{
+    pub fn file_expand(&self, v: &mut Vec<Box<Path>>) -> Result<(), JobError> {
         match self {
-            Cell::Text(s)=> v.push(Box::from(Path::new(s))),
+            Cell::Text(s) => v.push(Box::from(Path::new(s))),
             Cell::File(p) => v.push(p.clone()),
             Cell::Glob(pattern) => to_runtime_error(pattern.glob_files(
-                 &get_cwd()?, v))?,
+                &get_cwd()?, v))?,
             _ => return Err(error("Expected a file name")),
         }
         Ok(())
     }
 
+    pub fn cast(self, new_type: CellDataType) -> Result<Cell, JobError> {
+        if self.cell_data_type() == new_type {
+            return Ok(self);
+        }
+        match (self, new_type) {
+            (Cell::Text(s), CellDataType::File) => Ok(Cell::File(Box::from(Path::new(s.as_str())))),
+            (Cell::File(s), CellDataType::Text) => match s.to_str() {
+                Some(s) => Ok(Cell::Text(s.to_string())),
+                None => Err(error("File name is not valid unicode"))
+            },
+            (Cell::Text(s), CellDataType::Glob) => Ok(Cell::Glob(Glob::new(s.as_str()))),
+            (Cell::Glob(s), CellDataType::Text) => Ok(Cell::Text(s.to_string().clone())),
+            _ => Err(error("Unimplemented conversion"))
+        }
+    }
 }
 
 
