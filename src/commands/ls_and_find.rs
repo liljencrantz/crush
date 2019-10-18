@@ -4,7 +4,6 @@ use crate::data::{Cell, CellType, CellDataType, Row, Argument};
 use crate::commands::{Call, Exec};
 use crate::errors::{JobError, error, to_runtime_error};
 use chrono::{Local, DateTime};
-use crate::glob::glob_files;
 use std::path::Path;
 use std::fs::Metadata;
 use crate::state::get_cwd;
@@ -83,8 +82,7 @@ fn run_internal(
                 }
                 Cell::Glob(dir) => {
                     to_runtime_error(
-                        glob_files(
-                            dir,
+                        dir.glob_files(
                             &get_cwd()?,
                             &mut dirs))?;
                 }

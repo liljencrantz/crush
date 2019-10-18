@@ -1,4 +1,4 @@
-use crate::glob::{glob, glob_files};
+use crate::glob::{Glob};
 use std::cmp::Ordering;
 use std::hash::Hasher;
 use crate::data::{Output, CellDataType, Command};
@@ -16,7 +16,7 @@ pub enum Cell {
     Integer(i128),
     Time(DateTime<Local>),
     Field(String),
-    Glob(String),
+    Glob(Glob),
     Regex(String, Regex),
     Op(String),
     Command(Command),
@@ -97,7 +97,7 @@ impl Cell {
             Cell::Integer(val) => val.to_string(),
             Cell::Time(val) => val.format("%Y-%m-%d %H:%M:%S %z").to_string(),
             Cell::Field(val) => format!(r"%{{{}}}", val),
-            Cell::Glob(val) => format!("*{{{}}}", val),
+            Cell::Glob(val) => format!("*{{{}}}", val.to_string()),
             Cell::Regex(val, _) => format!("r{{{}}}", val),
             Cell::Op(val) => String::from(val),
             Cell::Command(_) => "Command".to_string(),
@@ -119,8 +119,8 @@ impl Cell {
         match self {
             Cell::Text(s)=> v.push(Box::from(Path::new(s))),
             Cell::File(p) => v.push(p.clone()),
-            Cell::Glob(pattern) => to_runtime_error(glob_files(
-                &pattern, &get_cwd()?, v))?,
+            Cell::Glob(pattern) => to_runtime_error(pattern.glob_files(
+                 &get_cwd()?, v))?,
             _ => return Err(error("Expected a file name")),
         }
         Ok(())
@@ -174,8 +174,8 @@ impl std::cmp::PartialEq for Cell {
     fn eq(&self, other: &Cell) -> bool {
         return match (self, other) {
             (Cell::Text(val1), Cell::Text(val2)) => val1 == val2,
-            (Cell::Glob(glb), Cell::Text(val)) => glob(glb.as_str(), val.as_str()),
-            (Cell::Text(val), Cell::Glob(glb)) => glob(glb.as_str(), val.as_str()),
+            (Cell::Glob(glb), Cell::Text(val)) => glb.matches(val.as_str()),
+            (Cell::Text(val), Cell::Glob(glb)) => glb.matches(val.as_str()),
             (Cell::Integer(val1), Cell::Integer(val2)) => val1 == val2,
             (Cell::Time(val1), Cell::Time(val2)) => val1 == val2,
             (Cell::Field(val1), Cell::Field(val2)) => val1 == val2,

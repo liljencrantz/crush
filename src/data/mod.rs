@@ -17,6 +17,7 @@ pub use argument::Argument;
 pub use row::Row;
 pub use row::RowWithTypes;
 pub use rows::Rows;
+use crate::glob::Glob;
 
 #[derive(Clone)]
 #[derive(PartialEq)]
@@ -57,7 +58,7 @@ impl CellDataType {
             CellDataType::Text => Ok(Cell::Text(s.to_string())),
             CellDataType::Integer => Ok(Cell::Integer(s.parse::<i128>().unwrap())),
             CellDataType::Field => Ok(Cell::Field(s.to_string())),
-            CellDataType::Glob => Ok(Cell::Glob(s.to_string())),
+            CellDataType::Glob => Ok(Cell::Glob(Glob::new(s))),
             CellDataType::Regex => match Regex::new(s) {
                 Ok(r) => Ok(Cell::Regex(s.to_string(), r)),
                 Err(e) => Err(error(e.description())),

@@ -7,6 +7,7 @@ use crate::commands::Call;
 use regex::Regex;
 use std::error::Error;
 use crate::data::Cell;
+use crate::glob::Glob;
 
 pub fn parse(lexer: &mut Lexer, state: &State) -> Result<Vec<Job>, JobError> {
     let mut jobs: Vec<Job> = Vec::new();
@@ -64,7 +65,7 @@ fn parse_unnamed_argument(lexer: &mut Lexer, dependencies: &mut Vec<Job>, state:
             return Ok(Cell::Text(String::from(lexer.pop().1)));
         }
         TokenType::Glob => {
-            return Ok(Cell::Glob(String::from(lexer.pop().1)));
+            return Ok(Cell::Glob(Glob::new(lexer.pop().1)));
         }
         TokenType::Integer => {
             return match String::from(lexer.pop().1).parse::<i128>() {
@@ -90,7 +91,7 @@ fn parse_unnamed_argument(lexer: &mut Lexer, dependencies: &mut Vec<Job>, state:
                 '*' => {
                     match lexer.peek().0 {
                         TokenType::Glob => {
-                            let result = Ok(Cell::Glob(String::from(lexer.pop().1)));
+                            let result = Ok(Cell::Glob(Glob::new(lexer.pop().1)));
                             if lexer.peek().0 != TokenType::BlockEnd {
                                 return Err(parse_error("Expected '}'", lexer));
                             }

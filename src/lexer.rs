@@ -31,8 +31,6 @@ pub enum TokenType {
     Variable,
     Field,
     Regex,
-    LeftBracket,
-    RightBracket,
     EOF,
 }
 
@@ -43,7 +41,7 @@ pub struct Lexer {
 }
 
 lazy_static! {
-    static ref LEX_DATA: [(TokenType, Regex); 25] = [
+    static ref LEX_DATA: [(TokenType, Regex); 23] = [
         (TokenType::Separator, Regex::new("^;").unwrap()),
         (TokenType::Pipe, Regex::new(r"^\|").unwrap()),
 
@@ -59,9 +57,6 @@ lazy_static! {
         (TokenType::NotMatch, Regex::new(r"^!~").unwrap()),
 
         (TokenType::Integer, Regex::new(r"^[0-9]+").unwrap()),
-
-        (TokenType::RightBracket, Regex::new(r"^\]").unwrap()),
-        (TokenType::LeftBracket, Regex::new(r"^\[").unwrap()),
 
         (TokenType::Variable, Regex::new(r"^\$[a-zA-Z_][\.a-zA-Z_0-9]*").unwrap()),
         (TokenType::Field, Regex::new(r"^%[a-zA-Z_][\.a-zA-Z_0-9]*").unwrap()),
@@ -168,7 +163,6 @@ mod tests {
         let tt = tokens(&mut l);
         assert_eq!(tt, vec![
             TokenType::String, TokenType::BlockStart, TokenType::String, TokenType::BlockEnd,
-            TokenType::LeftBracket, TokenType::Integer, TokenType::RightBracket,
             TokenType::EOF]);
     }
 
