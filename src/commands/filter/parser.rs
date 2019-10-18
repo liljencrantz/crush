@@ -97,7 +97,7 @@ fn parse_condition(input_type: &Vec<CellType>,
     match &arguments.next().ok_or(argument_error("Expected condition"))?.1.cell {
         Cell::Op(op) => {
             let val2 = parse_value(input_type, arguments, field_lookup)?;
-            return match op.as_str() {
+            return match op.as_ref() {
                 "==" => if let Some(e) = check_comparison(input_type, &val1, &val2) { Err(e) } else { Ok(Condition::Equal(val1, val2)) },
                 ">" => if let Some(e) = check_comparison(input_type, &val1, &val2) { Err(e) } else { Ok(Condition::GreaterThan(val1, val2)) },
                 ">=" => if let Some(e) = check_comparison(input_type, &val1, &val2) { Err(e) } else { Ok(Condition::GreaterThanOrEqual(val1, val2)) },

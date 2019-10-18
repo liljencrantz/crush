@@ -45,7 +45,7 @@ fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Config
                 arg.cell.file_expand(&mut files);
             },
             Some(name) => {
-                match name.as_str() {
+                match name.as_ref() {
                 "col" =>
                     match &arg.cell {
                         Cell::Text(s) => {

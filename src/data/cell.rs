@@ -9,16 +9,17 @@ use std::path::Path;
 use regex::Regex;
 use chrono::{DateTime, Local};
 use crate::state::get_cwd;
+use std::ffi::OsStr;
 
 #[derive(Debug)]
 pub enum Cell {
-    Text(String),
+    Text(Box<str>),
     Integer(i128),
     Time(DateTime<Local>),
-    Field(String),
+    Field(Box<str>),
     Glob(Glob),
-    Regex(String, Regex),
-    Op(String),
+    Regex(Box<str>, Regex),
+    Op(Box<str>),
     Command(Command),
     Output(Output),
     File(Box<Path>),
@@ -27,6 +28,26 @@ pub enum Cell {
 }
 
 impl Cell {
+    pub fn file(s: &str) -> Cell{
+        Cell::File(Box::from(Path::new(s)))
+    }
+
+    pub fn text(s: &str) -> Cell{
+        Cell::Text(Box::from(s))
+    }
+
+    pub fn field(s: &str) -> Cell{
+        Cell::Field(Box::from(s))
+    }
+
+    pub fn op(s: &str) -> Cell{
+        Cell::Op(Box::from(s))
+    }
+
+    pub fn regex(s: &str, r: Regex) -> Cell{
+        Cell::Regex(Box::from(s), r)
+    }
+
     pub fn cell_data_type(&self) -> CellDataType {
         return match self {
             Cell::Text(_) => CellDataType::Text,
@@ -93,13 +114,13 @@ impl Cell {
 
     pub fn to_string(&self) -> String {
         return match self {
-            Cell::Text(val) => String::from(val),
+            Cell::Text(val) => val.to_string(),
             Cell::Integer(val) => val.to_string(),
             Cell::Time(val) => val.format("%Y-%m-%d %H:%M:%S %z").to_string(),
-            Cell::Field(val) => format!(r"%{{{}}}", val),
+            Cell::Field(val) => format!(r"%{}", val),
             Cell::Glob(val) => format!("*{{{}}}", val.to_string()),
             Cell::Regex(val, _) => format!("r{{{}}}", val),
-            Cell::Op(val) => String::from(val),
+            Cell::Op(val) => val.to_string(),
             Cell::Command(_) => "Command".to_string(),
             Cell::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
             Cell::Rows(_) => "<Table>".to_string(),
@@ -117,7 +138,7 @@ impl Cell {
 
     pub fn file_expand(&self, v: &mut Vec<Box<Path>>) -> Result<(), JobError> {
         match self {
-            Cell::Text(s) => v.push(Box::from(Path::new(s))),
+            Cell::Text(s) => v.push(Box::from(Path::new(s.as_ref()))),
             Cell::File(p) => v.push(p.clone()),
             Cell::Glob(pattern) => to_runtime_error(pattern.glob_files(
                 &get_cwd()?, v))?,
@@ -131,13 +152,13 @@ impl Cell {
             return Ok(self);
         }
         match (self, new_type) {
-            (Cell::Text(s), CellDataType::File) => Ok(Cell::File(Box::from(Path::new(s.as_str())))),
+            (Cell::Text(s), CellDataType::File) => Ok(Cell::File(Box::from(Path::new(s.as_ref())))),
             (Cell::File(s), CellDataType::Text) => match s.to_str() {
-                Some(s) => Ok(Cell::Text(s.to_string())),
+                Some(s) => Ok(Cell::Text(Box::from(s))),
                 None => Err(error("File name is not valid unicode"))
             },
-            (Cell::Text(s), CellDataType::Glob) => Ok(Cell::Glob(Glob::new(s.as_str()))),
-            (Cell::Glob(s), CellDataType::Text) => Ok(Cell::Text(s.to_string().clone())),
+            (Cell::Text(s), CellDataType::Glob) => Ok(Cell::Glob(Glob::new(&s))),
+            (Cell::Glob(s), CellDataType::Text) => Ok(Cell::Text(s.to_string().clone().into_boxed_str())),
             _ => Err(error("Unimplemented conversion"))
         }
     }
@@ -189,8 +210,8 @@ impl std::cmp::PartialEq for Cell {
     fn eq(&self, other: &Cell) -> bool {
         return match (self, other) {
             (Cell::Text(val1), Cell::Text(val2)) => val1 == val2,
-            (Cell::Glob(glb), Cell::Text(val)) => glb.matches(val.as_str()),
-            (Cell::Text(val), Cell::Glob(glb)) => glb.matches(val.as_str()),
+            (Cell::Glob(glb), Cell::Text(val)) => glb.matches(val),
+            (Cell::Text(val), Cell::Glob(glb)) => glb.matches(val),
             (Cell::Integer(val1), Cell::Integer(val2)) => val1 == val2,
             (Cell::Time(val1), Cell::Time(val2)) => val1 == val2,
             (Cell::Field(val1), Cell::Field(val2)) => val1 == val2,

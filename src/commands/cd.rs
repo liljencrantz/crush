@@ -19,7 +19,8 @@ fn mutate(
         1 => {
             let dir = &arguments[0];
             return match &dir.cell {
-                Cell::Text(val) => to_runtime_error(std::env::set_current_dir(val)),
+                Cell::Text(val) => to_runtime_error(std::env::set_current_dir(&val.to_string())),
+                Cell::File(val) => to_runtime_error(std::env::set_current_dir(val)),
                 _ => Err(JobError { message: String::from("Wrong parameter type, expected text") })
             };
         }

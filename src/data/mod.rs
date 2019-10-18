@@ -55,20 +55,20 @@ impl CellDataType {
 
     pub fn parse(&self, s: &str) -> Result<Cell, JobError> {
         match self {
-            CellDataType::Text => Ok(Cell::Text(s.to_string())),
+            CellDataType::Text => Ok(Cell::Text(Box::from(s))),
             CellDataType::Integer => Ok(Cell::Integer(s.parse::<i128>().unwrap())),
-            CellDataType::Field => Ok(Cell::Field(s.to_string())),
+            CellDataType::Field => Ok(Cell::Field(Box::from(s))),
             CellDataType::Glob => Ok(Cell::Glob(Glob::new(s))),
             CellDataType::Regex => match Regex::new(s) {
-                Ok(r) => Ok(Cell::Regex(s.to_string(), r)),
+                Ok(r) => Ok(Cell::Regex(Box::from(s), r)),
                 Err(e) => Err(error(e.description())),
             }
-            CellDataType::File => Ok(Cell::Text(s.to_string())),
+            CellDataType::File => Ok(Cell::Text(Box::from(s))),
             CellDataType::Op => match s {
-                "==" | "!=" | ">" | ">=" | "<" | "<=" | "=~" | "!~"=> Ok(Cell::Op(s.to_string())),
+                "==" | "!=" | ">" | ">=" | "<" | "<=" | "=~" | "!~"=> Ok(Cell::Op(Box::from(s))),
                 _ => Err(error("Invalid operator")),
             }
-            _ => panic!("AAAA"),
+            _ => Err(error("Failed to parse cell")),
         }
     }
 }
@@ -102,14 +102,14 @@ impl std::fmt::Debug for Command {
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub struct CellType {
-    pub name: Option<String>,
+    pub name: Option<Box<str>>,
     pub cell_type: CellDataType,
 }
 
 impl CellType {
     pub fn named(name: &str, cell_type: CellDataType) -> CellType {
         CellType {
-            name: Some(name.to_string()),
+            name: Some(Box::from(name)),
             cell_type,
         }
     }
@@ -119,7 +119,7 @@ impl CellType {
     }
 
     pub fn val_or_empty(&self) -> &str {
-        self.name.as_ref().map(|v| v.as_str()).unwrap_or("")
+        self.name.as_ref().map(|v| v.as_ref()).unwrap_or("")
     }
 }
 

@@ -1,14 +1,14 @@
 use crate::data::cell::Cell;
 
 pub struct Argument {
-    pub name: Option<String>,
+    pub name: Option<Box<str>>,
     pub cell: Cell,
 }
 
 impl Argument {
-    pub fn named(name: &String, cell: Cell) -> Argument {
+    pub fn named(name: &str, cell: Cell) -> Argument {
         return Argument {
-            name: Some(name.clone()),
+            name: Some(Box::from(name)),
             cell: cell,
         };
     }
@@ -25,7 +25,6 @@ impl Argument {
     }
 
     pub fn val_or_empty(&self) -> &str {
-        self.name.as_ref().map(|v| v.as_str()).unwrap_or("")
+        self.name.as_ref().map(|v| v.as_ref()).unwrap_or("")
     }
-
 }

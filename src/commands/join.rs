@@ -58,7 +58,7 @@ fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Config
     }
     return match (&arguments[0].cell, &arguments[1].cell, &arguments[2].cell) {
         (Cell::Field(l), Cell::Op(op), Cell::Field(r)) => {
-            if op.as_str() != "==" {
+            if op.as_ref() != "==" {
                 return Err(argument_error("Only == currently supported"));
             }
             match (l.matches('.').count(), r.matches('.').count()) {

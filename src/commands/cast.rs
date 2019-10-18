@@ -27,7 +27,7 @@ fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Config
             None => return Err(argument_error("Expected only named arguments")),
         };
         match &arg.cell {
-            Cell::Text(s) => output_type[arg_idx].cell_type = CellDataType::from(s.as_str())?,
+            Cell::Text(s) => output_type[arg_idx].cell_type = CellDataType::from(s)?,
             _ => return Err(argument_error("Expected argument type as text field")),
         }
     }

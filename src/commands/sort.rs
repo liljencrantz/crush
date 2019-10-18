@@ -15,13 +15,17 @@ pub fn get_key(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<
     if arguments.len() != 1 {
         return Err(argument_error("No comparison key specified"));
     }
-    match (arguments[0].name.as_ref().map(|s| s.as_str()), &arguments[0].cell) {
-        (Some("key"), Cell::Text(cell_name)) | (Some("key"), Cell::Field(cell_name))=> {
-            return find_field(cell_name, &input_type);
+    if let Some(name) = &arguments[0].name {
+        match (name.as_ref(), &arguments[0].cell) {
+            ("key", Cell::Text(cell_name)) | ("key", Cell::Field(cell_name)) => {
+                return find_field(cell_name, &input_type);
+            }
+            _ => {
+                return Err(argument_error("Bad comparison key"));
+            }
         }
-        _ => {
-            return Err(argument_error("Bad comparison key"));
-        }
+    } else {
+        return Err(argument_error("Expected comaprison key"));
     }
 }
 

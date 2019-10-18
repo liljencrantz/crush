@@ -13,7 +13,7 @@ use crate::{
 };
 use crate::replace::Replace;
 
-fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Vec<(usize, Option<String>)>, JobError> {
+fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Vec<(usize, Option<Box<str>>)>, JobError> {
     arguments.iter().enumerate().map(|(idx, a)| {
         match &a.cell {
             Cell::Text(s) | Cell::Field(s) => match find_field(s, input_type) {

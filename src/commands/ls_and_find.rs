@@ -75,7 +75,7 @@ fn run_internal(
         for arg in arguments {
             match &arg.cell {
                 Cell::Text(dir) => {
-                    dirs.push(Box::from(Path::new(dir)));
+                    dirs.push(Box::from(Path::new(dir.as_ref())));
                 }
                 Cell::File(dir) => {
                     dirs.push(dir.clone());

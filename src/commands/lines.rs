@@ -47,7 +47,7 @@ fn handle(file: Box<Path>, output: &mut OutputStream) -> Result<(), JobError> {
             if line.is_empty() {
                 break;
             }
-            output_stream.send(Row { cells: vec![Cell::Text(line[0..line.len() - 1].to_string())] });
+            output_stream.send(Row { cells: vec![Cell::Text(line[0..line.len() - 1].to_string().into_boxed_str())] });
             line.clear();
         }
     });

@@ -62,7 +62,7 @@ fn parse_unnamed_argument(lexer: &mut Lexer, dependencies: &mut Vec<Job>, state:
     let token_type = lexer.peek().0;
     match token_type {
         TokenType::String => {
-            return Ok(Cell::Text(String::from(lexer.pop().1)));
+            return Ok(Cell::text(lexer.pop().1));
         }
         TokenType::Glob => {
             return Ok(Cell::Glob(Glob::new(lexer.pop().1)));
@@ -76,7 +76,7 @@ fn parse_unnamed_argument(lexer: &mut Lexer, dependencies: &mut Vec<Job>, state:
         TokenType::Equal | TokenType::NotEqual | TokenType::GreaterThan
         | TokenType::GreaterThanOrEqual | TokenType::LessThan | TokenType::LessThanOrEqual
         | TokenType::Match | TokenType::NotMatch => {
-            return Ok(Cell::Op(String::from(lexer.pop().1)));
+            return Ok(Cell::op(lexer.pop().1));
         }
         TokenType::BlockStart => {
             let sigil_type = lexer.pop().1.chars().next().unwrap();
@@ -109,7 +109,7 @@ fn parse_unnamed_argument(lexer: &mut Lexer, dependencies: &mut Vec<Job>, state:
             }
         }
 
-        TokenType::Field => Ok(Cell::Field(String::from(&lexer.pop().1[1..]))),
+        TokenType::Field => Ok(Cell::field(&lexer.pop().1[1..])),
         TokenType::Variable => match state.namespace.get(&lexer.pop().1[1..]) {
             Some(cell) => Ok(cell.partial_clone().unwrap()),
             None => Err(parse_error("Unknown variable", lexer)),
@@ -118,11 +118,11 @@ fn parse_unnamed_argument(lexer: &mut Lexer, dependencies: &mut Vec<Job>, state:
             let f = lexer.pop().1;
             let s = &f[2..f.len() - 1];
             match Regex::new(s) {
-                Ok(r) => Ok(Cell::Regex(String::from(s), r)),
+                Ok(r) => Ok(Cell::regex(s, r)),
                 Err(e) => Err(argument_error(e.description())),
             }
         }
-        TokenType::QuotedString => Ok(Cell::Text(unescape(lexer.pop().1))),
+        TokenType::QuotedString => Ok(Cell::text(unescape(lexer.pop().1).as_str())),
 
         _ => {
             lexer.pop();
@@ -134,12 +134,12 @@ fn parse_unnamed_argument(lexer: &mut Lexer, dependencies: &mut Vec<Job>, state:
 fn parse_argument(lexer: &mut Lexer, dependencies: &mut Vec<Job>, state: &State) -> Result<Argument, JobError> {
     match lexer.peek().0 {
         TokenType::String => {
-            let ss = String::from(lexer.pop().1);
+            let ss = lexer.pop().1.to_string();
             if lexer.peek().0 == TokenType::Assign {
                 lexer.pop();
                 return Ok(Argument::named(&ss, parse_unnamed_argument(lexer, dependencies, state)?));
             } else {
-                return Ok(Argument::unnamed(Cell::Text(ss)));
+                return Ok(Argument::unnamed(Cell::text(ss.as_str())));
             }
         }
         _ => {
