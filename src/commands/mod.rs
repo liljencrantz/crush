@@ -9,6 +9,7 @@ mod cd;
 
 mod set;
 mod let_command;
+mod unset;
 
 mod head;
 mod tail;
@@ -106,9 +107,9 @@ impl Call {
         output: OutputStream) -> JobResult {
         return match self.exec {
             Exec::Run(run) =>
-                JobResult::Async(thread::spawn(move || {
+                JobResult::Async(thread::Builder::new().name(self.name.clone()).spawn(move || {
                     return run(self.input_type, self.arguments, input, output);
-                })),
+                }).unwrap()),
             Exec::Mutate(mutate) =>
                 JobResult::Sync(mutate(state, self.input_type, self.arguments)),
         };
@@ -125,6 +126,7 @@ pub fn add_builtins(namespace: &mut Namespace) -> Result<(), JobError> {
     namespace.declare("sort", Cell::Command(Command::new(sort::sort)))?;
     namespace.declare("set", Cell::Command(Command::new(set::set)))?;
     namespace.declare("let", Cell::Command(Command::new(let_command::let_command)))?;
+    namespace.declare("unset", Cell::Command(Command::new(unset::unset)))?;
     namespace.declare("group", Cell::Command(Command::new(group::group)))?;
     namespace.declare("join", Cell::Command(Command::new(join::join)))?;
     namespace.declare("count", Cell::Command(Command::new(count::count)))?;
