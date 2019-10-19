@@ -43,18 +43,21 @@ use crate::{
 };
 use std::thread::JoinHandle;
 use std::error::Error;
+use crate::printer::Printer;
 
 type Run = fn(
     Vec<CellType>,
     Vec<Argument>,
     InputStream,
-    OutputStream) -> Result<(), JobError>;
+    OutputStream,
+    Printer) -> Result<(), JobError>;
 
 type Mutate = fn(
     &mut State,
     Vec<CellType>,
     Vec<Argument>) -> Result<(), JobError>;
 
+#[derive(Clone)]
 pub enum Exec {
     Run(Run),
     Mutate(Mutate),
@@ -107,14 +110,31 @@ impl Call {
         state: &mut State,
         input: InputStream,
         output: OutputStream) -> JobResult {
+        let printer = state.printer.clone();
         return match self.exec {
             Exec::Run(run) =>
                 JobResult::Async(thread::Builder::new().name(self.name.clone()).spawn(move || {
-                    return run(self.input_type, self.arguments, input, output);
+                    return run(self.input_type, self.arguments, input, output, printer);
                 }).unwrap()),
             Exec::Mutate(mutate) =>
                 JobResult::Sync(mutate(state, self.input_type, self.arguments)),
         };
+    }
+}
+
+impl Clone for Call {
+    fn clone(&self) -> Self {
+        Call {
+            name: self.name.clone(),
+            input_type: self.input_type.clone(),
+            arguments: self.arguments.iter()
+                .map(|a| {Argument {
+            name: a.name.clone(),
+            cell: a.cell.partial_clone().unwrap(),
+            }}).collect::<Vec<Argument>>(),
+            output_type: self.output_type.clone(),
+            exec: self.exec.clone(),
+        }
     }
 }
 

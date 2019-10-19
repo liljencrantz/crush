@@ -7,6 +7,7 @@ use chrono::{Local, DateTime};
 use std::path::Path;
 use std::fs::Metadata;
 use crate::state::get_cwd;
+use crate::printer::Printer;
 
 fn insert_entity(meta: &Metadata, file: Box<Path>, output: &mut OutputStream) -> Result<(), JobError> {
     let modified_system = to_runtime_error(meta.modified())?;
@@ -103,7 +104,9 @@ fn run_ls(
     _input_type: Vec<CellType>,
     arguments: Vec<Argument>,
     _input: InputStream,
-    output: OutputStream) -> Result<(), JobError> {
+    output: OutputStream,
+    printer: Printer,
+) -> Result<(), JobError> {
     return run_internal(arguments, false, output);
 }
 
@@ -111,7 +114,9 @@ fn run_find(
     _input_type: Vec<CellType>,
     arguments: Vec<Argument>,
     _input: InputStream,
-    output: OutputStream) -> Result<(), JobError> {
+    output: OutputStream,
+    printer: Printer,
+) -> Result<(), JobError> {
     return run_internal(arguments, true, output);
 }
 

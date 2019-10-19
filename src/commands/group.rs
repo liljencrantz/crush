@@ -13,6 +13,7 @@ use crate::{
     },
     stream::{OutputStream, InputStream, unlimited_streams},
 };
+use crate::printer::Printer;
 
 pub fn get_key(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<(Option<Box<str>>, usize), JobError> {
     if arguments.len() != 1 {
@@ -34,7 +35,9 @@ fn run(
     input_type: Vec<CellType>,
     arguments: Vec<Argument>,
     input: InputStream,
-    output: OutputStream) -> Result<(), JobError> {
+    output: OutputStream,
+    printer: Printer,
+) -> Result<(), JobError> {
     let (name, column) = get_key(&input_type, &arguments)?;
 
     let mut groups: HashMap<Cell, OutputStream> = HashMap::new();

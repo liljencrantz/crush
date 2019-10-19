@@ -18,6 +18,7 @@ use crate::{
     },
     stream::{OutputStream, InputStream, unlimited_streams},
 };
+use crate::printer::Printer;
 
 lazy_static! {
     static ref sub_type: Vec<CellType> = {
@@ -59,7 +60,9 @@ fn run(
     input_type: Vec<CellType>,
     mut arguments: Vec<Argument>,
     input: InputStream,
-    mut output: OutputStream) -> Result<(), JobError> {
+    mut output: OutputStream,
+    printer: Printer,
+) -> Result<(), JobError> {
     let mut files: Vec<Box<Path>> = Vec::new();
     if input_type.len() == 0 {
         for arg in &arguments {

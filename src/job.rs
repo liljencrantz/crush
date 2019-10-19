@@ -2,7 +2,7 @@ use crate::state::State;
 use crate::commands::{Call, JobResult};
 use crate::stream::{print, streams, OutputStream};
 use std::thread;
-use crate::data::{Output};
+use crate::data::Output;
 use std::thread::JoinHandle;
 use crate::printer::Printer;
 
@@ -12,6 +12,23 @@ pub enum JobState {
     Parsed,
     Spawned,
     Finished,
+}
+
+pub struct JobDefinition {
+    commands: Vec<Call>,
+    dependencies: Vec<JobDefinition>,
+}
+
+impl JobDefinition {
+    pub fn new(commands: Vec<Call>, dependencies: Vec<JobDefinition>) -> JobDefinition {
+        JobDefinition { commands, dependencies }
+    }
+
+    pub fn job(&self) -> Job {
+        Job::new(
+            self.commands.clone(),
+            self.dependencies.iter().map(|j| j.job()).collect::<Vec<Job>>())
+    }
 }
 
 pub struct Job {

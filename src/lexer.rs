@@ -159,7 +159,7 @@ mod tests {
 
     #[test]
     fn blocks() {
-        let mut l = Lexer::new(&String::from("echo `{foo}[5]"));
+        let mut l = Lexer::new(&String::from("echo `{foo}"));
         let tt = tokens(&mut l);
         assert_eq!(tt, vec![
             TokenType::String, TokenType::BlockStart, TokenType::String, TokenType::BlockEnd,

@@ -25,8 +25,8 @@ pub fn error(message: &str) -> JobError {
     };
 }
 
-pub fn to_runtime_error<T>(io_result: io::Result<T>) -> Result<T, JobError> {
-    match io_result {
+pub fn to_runtime_error<T, E: Error>(result: Result<T, E>) -> Result<T, JobError> {
+    match result {
         Ok(v) => Ok(v),
         Err(e) => Err(error(e.description())),
     }

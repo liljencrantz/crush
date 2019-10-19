@@ -120,7 +120,7 @@ fn calculate_body_width(w: &mut Vec<usize>,  data: &Vec<Row>, col_count: usize) 
     }
 }
 
-fn format_header(printer: &Printer, w: &Vec<usize>,  types: &Vec<CellType>, has_name: bool, indent: usize) {
+fn print_header(printer: &Printer, w: &Vec<usize>,  types: &Vec<CellType>, has_name: bool, indent: usize) {
     if has_name {
         let mut header = " ".repeat(indent * 4);
         for (idx, val) in types.iter().enumerate() {
@@ -138,8 +138,8 @@ fn print_row(printer: &Printer, w: &Vec<usize>, mut r: Row, indent: usize, outpu
         let cell = c.to_string();
         let spaces = if idx == cell_len - 1 { "".to_string() } else { " ".repeat(w[idx] - cell.len()) };
         match c.alignment() {
-            Alignment::Right => {row += spaces.as_str(); row += cell.as_str()},
-            _ => {row += cell.as_str(); row += spaces.as_str()},
+            Alignment::Right => {row += spaces.as_str(); row += cell.as_str(); row += " "},
+            _ => {row += cell.as_str(); row += spaces.as_str(); row += " "},
         }
 
         match c {

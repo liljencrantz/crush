@@ -8,6 +8,7 @@ mod namespace;
 mod state;
 mod job;
 mod lexer;
+mod closure;
 mod parser;
 mod printer;
 

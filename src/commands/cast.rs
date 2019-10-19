@@ -13,6 +13,7 @@ use crate::{
     replace::Replace
 };
 use crate::data::CellDataType;
+use crate::printer::Printer;
 
 struct Config {
     output_type: Vec<CellType>,
@@ -40,17 +41,21 @@ fn run(
     input_type: Vec<CellType>,
     arguments: Vec<Argument>,
     input: InputStream,
-    output: OutputStream) -> Result<(), JobError> {
+    output: OutputStream,
+    printer: Printer,
+) -> Result<(), JobError> {
     let cfg = parse(&input_type, &arguments)?;
     'outer: loop {
         match input.recv() {
             Ok(mut row) => {
                 let mut cells = Vec::new();
                 'inner: for (idx, cell) in row.cells.drain(..).enumerate() {
-                    if let Ok(c) = cell.cast(cfg.output_type[idx].cell_type.clone()) {
-                        cells.push(c);
-                    } else {
-                        continue 'outer;
+                    match cell.cast(cfg.output_type[idx].cell_type.clone()) {
+                        Ok(c) => cells.push(c),
+                        Err(e) => {
+                            printer.job_error(e);
+                            continue 'outer;
+                        }
                     }
                 }
                 output.send(Row{cells});

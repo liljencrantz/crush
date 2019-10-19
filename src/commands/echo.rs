@@ -6,12 +6,15 @@ use crate::{
     commands::{Call, Exec},
     errors::JobError
 };
+use crate::printer::Printer;
 
 fn run(
     _input_type: Vec<CellType>,
     mut arguments: Vec<Argument>,
     _input: InputStream,
-    output: OutputStream) -> Result<(), JobError> {
+    output: OutputStream,
+    printer: Printer,
+) -> Result<(), JobError> {
     let g = arguments.drain(..).map(|c| c.cell);
     output.send(Row {
         cells: g.collect()

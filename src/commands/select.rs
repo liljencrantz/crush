@@ -12,6 +12,7 @@ use crate::{
     stream::{OutputStream, InputStream},
 };
 use crate::replace::Replace;
+use crate::printer::Printer;
 
 fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Vec<(usize, Option<Box<str>>)>, JobError> {
     arguments.iter().enumerate().map(|(idx, a)| {
@@ -29,7 +30,9 @@ fn run(
     input_type: Vec<CellType>,
     arguments: Vec<Argument>,
     input: InputStream,
-    output: OutputStream) -> Result<(), JobError> {
+    output: OutputStream,
+    printer: Printer,
+) -> Result<(), JobError> {
     let indices = parse(&input_type, &arguments)?;
     loop {
         match input.recv() {

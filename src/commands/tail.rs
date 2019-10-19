@@ -8,12 +8,15 @@ use crate::{
     commands::head::get_line_count
 };
 use std::collections::VecDeque;
+use crate::printer::Printer;
 
 fn run(
     _input_type: Vec<CellType>,
     arguments: Vec<Argument>,
     input: InputStream,
-    output: OutputStream) -> Result<(), JobError> {
+    output: OutputStream,
+    printer: Printer,
+) -> Result<(), JobError> {
     let tot = get_line_count(&arguments)?;
     let mut q: VecDeque<Row> = VecDeque::new();
     loop {

@@ -11,12 +11,15 @@ use crate::{
     errors::{JobError, argument_error},
 };
 use std::iter::Iterator;
+use crate::printer::Printer;
 
 fn run(
     input_type: Vec<CellType>,
     arguments: Vec<Argument>,
     input: InputStream,
-    output: OutputStream) -> Result<(), JobError> {
+    output: OutputStream,
+    printer: Printer,
+) -> Result<(), JobError> {
     let mut line: i128 = 1;
     loop {
         match input.recv() {

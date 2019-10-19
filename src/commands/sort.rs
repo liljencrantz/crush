@@ -10,6 +10,7 @@ use crate::{
     },
     stream::{OutputStream, InputStream},
 };
+use crate::printer::Printer;
 
 pub fn get_key(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<usize, JobError> {
     if arguments.len() != 1 {
@@ -33,7 +34,9 @@ fn run(
     input_type: Vec<CellType>,
     arguments: Vec<Argument>,
     input: InputStream,
-    output: OutputStream) -> Result<(), JobError> {
+    output: OutputStream,
+    printer: Printer,
+) -> Result<(), JobError> {
     let idx = get_key(&input_type, &arguments)?;
     let mut res: Vec<Row> = Vec::new();
     loop {

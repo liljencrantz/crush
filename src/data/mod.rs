@@ -18,6 +18,7 @@ pub use row::Row;
 pub use row::RowWithTypes;
 pub use rows::Rows;
 use crate::glob::Glob;
+use std::num::ParseIntError;
 
 #[derive(Clone)]
 #[derive(PartialEq)]
@@ -56,7 +57,10 @@ impl CellDataType {
     pub fn parse(&self, s: &str) -> Result<Cell, JobError> {
         match self {
             CellDataType::Text => Ok(Cell::Text(Box::from(s))),
-            CellDataType::Integer => Ok(Cell::Integer(s.parse::<i128>().unwrap())),
+            CellDataType::Integer => match s.parse::<i128>() {
+                Ok(n) => Ok(Cell::Integer(n)),
+                Err(e) => Err(error(e.description())),
+            }
             CellDataType::Field => Ok(Cell::Field(Box::from(s))),
             CellDataType::Glob => Ok(Cell::Glob(Glob::new(s))),
             CellDataType::Regex => match Regex::new(s) {

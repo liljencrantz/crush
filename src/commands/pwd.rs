@@ -8,12 +8,15 @@ use crate::{
     errors::JobError,
     state::get_cwd
 };
+use crate::printer::Printer;
 
 fn run(
     _input_type: Vec<CellType>,
     _arguments: Vec<Argument>,
     _input: InputStream,
-    output: OutputStream) -> Result<(), JobError> {
+    output: OutputStream,
+    printer: Printer,
+) -> Result<(), JobError> {
 
     output.send(Row { cells: vec![Cell::File(get_cwd()?)] })?;
     Ok(())

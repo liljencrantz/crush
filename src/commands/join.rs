@@ -15,6 +15,7 @@ use crate::{
     errors::argument_error,
     commands::command_util::find_field
 };
+use crate::printer::Printer;
 
 struct Config {
     left_table_idx: usize,
@@ -136,7 +137,9 @@ fn run(
     input_type: Vec<CellType>,
     arguments: Vec<Argument>,
     input: InputStream,
-    output: OutputStream) -> Result<(), JobError> {
+    output: OutputStream,
+    printer: Printer,
+) -> Result<(), JobError> {
     let cfg = parse(&input_type, &arguments)?;
 
     loop {

@@ -16,8 +16,10 @@ Error source propagation
 Error gathering thread that collects runtime errors
 help
 implement cmd command
-implement cast command for cell type conversion
 implement format command for text formating
+add and/or to filter command
+add parens to filter command
+add glob support to select command
 
 Done:
 Fix all expects calls that aren't impossible, and propagate the errors
@@ -53,3 +55,4 @@ implement single row cell type
 implement regexps
 make filter support regexps
 implement csv command
+implement cast command for cell type conversion
