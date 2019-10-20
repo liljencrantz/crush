@@ -25,7 +25,7 @@ fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Config
         .iter()
         .enumerate()
         .filter(|(i, t)| match t.cell_type.clone() {
-            CellDataType::Output(_) | CellDataType::Rows(_) | CellDataType::Row(_) => true,
+            CellDataType::Output(_) | CellDataType::Rows(_) => true,
             _ => false,
         })
         .map(|(i, t)| i)
@@ -84,7 +84,7 @@ fn run(
 
 pub fn get_sub_type(cell_type: &CellType) -> Result<Vec<CellType>, JobError> {
     match &cell_type.cell_type {
-        CellDataType::Output(o) | CellDataType::Row(o) | CellDataType::Rows(o) => Ok(o.clone()),
+        CellDataType::Output(o) | CellDataType::Rows(o) => Ok(o.clone()),
         _ => Err(argument_error("Invalid column")),
     }
 }

@@ -38,4 +38,8 @@ impl Rows {
     pub fn concrete(mut self) -> ConcreteRows {
         ConcreteRows { types: self.types, rows: self.rows.drain(..).map(|r| r.concrete()).collect()}
     }
+
+    pub fn concrete_copy(&self) -> ConcreteRows {
+        ConcreteRows { types: self.types.clone(), rows: self.rows.iter().map(|r| r.concrete_copy()).collect()}
+    }
 }

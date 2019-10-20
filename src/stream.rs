@@ -5,6 +5,7 @@ use std::sync::mpsc::{Receiver, sync_channel, SyncSender, channel, Sender};
 use crate::errors::{JobError, error};
 use std::error::Error;
 use crate::printer::Printer;
+use crate::replace::Replace;
 
 pub enum OutputStream {
     Sync(SyncSender<Row>),
@@ -37,13 +38,13 @@ pub fn unlimited_streams() -> (OutputStream, InputStream) {
 }
 
 pub trait Readable {
-    fn read(&mut self) -> Result<ConcreteRow, JobError>;
+    fn read(&mut self) -> Result<Row, JobError>;
 }
 
 impl Readable for InputStream {
-    fn read(&mut self) -> Result<ConcreteRow, JobError> {
+    fn read(&mut self) -> Result<Row, JobError> {
         match self.recv() {
-            Ok(v) => Ok(v.concrete()),
+            Ok(v) => Ok(v),
             Err(e) => Err(error(e.description())),
         }
     }
@@ -55,19 +56,18 @@ pub fn print(printer: &Printer, mut stream: InputStream, types: Vec<CellType>) {
 
 pub struct RowsReader {
     idx: usize,
-    rows: ConcreteRows,
+    rows: Rows,
 }
 
 impl Readable for RowsReader {
-    fn read(&mut self) -> Result<ConcreteRow, JobError> {
+    fn read(&mut self) -> Result<Row, JobError> {
         if self.idx >= self.rows.rows.len() {
             return Err(error("EOF"));
         }
         self.idx += 1;
-        return Ok(self.rows.rows[self.idx - 1].clone());
+        return Ok(self.rows.rows.replace(self.idx - 1, Row{cells:vec![Cell::Integer(0)],}));
     }
 }
-
 
 fn print_internal<T: Readable>(printer: &Printer, stream: &mut T, types: &Vec<CellType>, indent: usize) {
     let mut data: Vec<ConcreteRow> = Vec::new();
@@ -87,7 +87,7 @@ fn print_internal<T: Readable>(printer: &Printer, stream: &mut T, types: &Vec<Ce
     loop {
         match stream.read() {
             Ok(r) => {
-                data.push(r)
+                data.push(r.concrete())
             }
             Err(_) => break,
         }
@@ -156,7 +156,7 @@ fn print_body(printer: &Printer, w: &Vec<usize>,  data: Vec<ConcreteRow>, indent
         print_row(printer, w, r, indent, &mut rows);
         for mut r in rows {
             let t = r.types.clone();
-            print_internal::<RowsReader>(printer, &mut RowsReader { idx: 0, rows: r }, &t, indent + 1);
+            print_internal::<RowsReader>(printer, &mut RowsReader { idx: 0, rows: r.rows() }, &t, indent + 1);
         }
     }
 }

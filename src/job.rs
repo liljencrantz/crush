@@ -6,6 +6,7 @@ use crate::data::{Output, CellDefinition};
 use std::thread::JoinHandle;
 use crate::printer::Printer;
 use map_in_place::MapVecInPlace;
+use crate::errors::JobError;
 
 #[derive(PartialEq)]
 #[derive(Debug)]
@@ -25,17 +26,17 @@ impl JobDefinition {
         JobDefinition { commands }
     }
 
-    pub fn job(&self) -> Job {
+    pub fn job(&self) -> Result<Job, JobError> {
         let mut deps = Vec::new();
         let mut jobs = Vec::new();
         let mut input_type = Vec::new();
         for def in &self.commands {
-            let c = def.call(input_type, &mut deps);
-            input_type = c.get_input_type().clone();
+            let c = def.call(input_type, &mut deps)?;
+            input_type = c.get_output_type().clone();
             jobs.push(c);
         }
-        Job::new(
-            jobs, deps)
+        Ok(Job::new(
+            jobs, deps))
     }
 }
 

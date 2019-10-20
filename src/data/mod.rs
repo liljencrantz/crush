@@ -41,7 +41,6 @@ pub enum CellDataType {
     File,
     Output(Vec<CellType>),
     Rows(Vec<CellType>),
-    Row(Vec<CellType>),
 }
 
 impl CellDataType {

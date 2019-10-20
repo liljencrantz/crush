@@ -16,6 +16,7 @@ use crate::{
     commands::command_util::find_field
 };
 use crate::printer::Printer;
+use crate::data::ConcreteCell;
 
 struct Config {
     left_table_idx: usize,
@@ -26,8 +27,7 @@ struct Config {
 
 pub fn get_sub_type(cell_type: &CellDataType) -> Result<&Vec<CellType>, JobError>{
     match cell_type {
-        CellDataType::Output(sub_types) | CellDataType::Rows(sub_types)
-        | CellDataType::Row(sub_types) => Ok(sub_types),
+        CellDataType::Output(sub_types) | CellDataType::Rows(sub_types) => Ok(sub_types),
         _ => Err(argument_error("Expected a table column")),
     }
 }
@@ -35,8 +35,7 @@ pub fn get_sub_type(cell_type: &CellDataType) -> Result<&Vec<CellType>, JobError
 pub fn guess_tables(input_type: &Vec<CellType>) -> Result<(usize, usize, &Vec<CellType>, &Vec<CellType>), JobError> {
     let tables: Vec<(usize, &Vec<CellType>)> = input_type.iter().enumerate().flat_map(|(idx, t)| {
         match &t.cell_type {
-            CellDataType::Output(sub_types) | CellDataType::Rows(sub_types)
-            | CellDataType::Row(sub_types) => Some((idx, sub_types)),
+            CellDataType::Output(sub_types) | CellDataType::Rows(sub_types) => Some((idx, sub_types)),
             _ => None,
         }
     }).collect();
@@ -109,11 +108,11 @@ fn combine(mut l: Row, mut r: Row, cfg: &Config) -> Row {
 }
 
 fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &OutputStream) {
-    let mut l_data: HashMap<Cell, Row> = HashMap::new();
+    let mut l_data: HashMap<ConcreteCell, Row> = HashMap::new();
     loop {
         match l.read() {
             Ok(row) => {
-                l_data.insert(row.cells[cfg.left_column_idx].concrete(), row);
+                l_data.insert(row.cells[cfg.left_column_idx].concrete_copy(), row);
             }
             Err(_) => break,
         }
@@ -123,7 +122,7 @@ fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &
         match r.read() {
             Ok(r_row) => {
                 l_data
-                    .remove(&r_row.cells[cfg.right_column_idx])
+                    .remove(&r_row.cells[cfg.right_column_idx].concrete_copy())
                     .map(|l_row| {
                         output.send(combine(l_row, r_row, cfg));
                     });
@@ -161,8 +160,7 @@ fn run(
 fn get_output_type(input_type: &Vec<CellType>, cfg: &Config) -> Result<Vec<CellType>, JobError> {
     let tables: Vec<Option<&Vec<CellType>>> = input_type.iter().map(|t| {
         match &t.cell_type {
-            CellDataType::Output(sub_types) | CellDataType::Rows(sub_types)
-            | CellDataType::Row(sub_types) => Some(sub_types),
+            CellDataType::Output(sub_types) | CellDataType::Rows(sub_types) => Some(sub_types),
             _ => None,
         }
     }).collect();

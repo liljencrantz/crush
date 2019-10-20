@@ -17,12 +17,12 @@ mod tail;
 mod lines;
 mod csv;
 
-//mod filter;
+mod filter;
 mod sort;
 mod select;
 mod enumerate;
-//mod group;
-//mod join;
+mod group;
+mod join;
 mod count;
 mod cat;
 
@@ -100,9 +100,14 @@ pub struct CallDefinition {
 }
 
 impl CallDefinition {
-    pub fn call(&self, input_type: Vec<CellType>, dependencies: &mut Vec<Job>) -> Call {
+    pub fn call(&self, input_type: Vec<CellType>, dependencies: &mut Vec<Job>) -> Result<Call, JobError> {
         let c = self.command.call;
-        return c(input_type, self.arguments.iter().map(|a| a.argument(dependencies)).collect()).unwrap();
+        let mut args: Vec<Argument> = Vec::new();
+        for arg in self.arguments.iter() {
+          args.push(arg.argument(dependencies)?);
+        }
+
+        return c(input_type, args);
     }
 }
 
@@ -148,13 +153,13 @@ pub fn add_builtins(namespace: &mut Namespace) -> Result<(), JobError> {
     namespace.declare("echo", ConcreteCell::Command(Command::new(echo::echo)))?;
     namespace.declare("pwd", ConcreteCell::Command(Command::new(pwd::pwd)))?;
     namespace.declare("cd", ConcreteCell::Command(Command::new(cd::cd)))?;
-//    namespace.declare("filter", ConcreteCell::Command(Command::new(filter::filter)))?;
+    namespace.declare("filter", ConcreteCell::Command(Command::new(filter::filter)))?;
     namespace.declare("sort", ConcreteCell::Command(Command::new(sort::sort)))?;
     namespace.declare("set", ConcreteCell::Command(Command::new(set::set)))?;
     namespace.declare("let", ConcreteCell::Command(Command::new(let_command::let_command)))?;
     namespace.declare("unset", ConcreteCell::Command(Command::new(unset::unset)))?;
-//    namespace.declare("group", ConcreteCell::Command(Command::new(group::group)))?;
-//    namespace.declare("join", ConcreteCell::Command(Command::new(join::join)))?;
+    namespace.declare("group", ConcreteCell::Command(Command::new(group::group)))?;
+    namespace.declare("join", ConcreteCell::Command(Command::new(join::join)))?;
     namespace.declare("count", ConcreteCell::Command(Command::new(count::count)))?;
     namespace.declare("cat", ConcreteCell::Command(Command::new(cat::cat)))?;
     namespace.declare("select", ConcreteCell::Command(Command::new(select::select)))?;

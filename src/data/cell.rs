@@ -30,8 +30,8 @@ pub enum CellDefinition {
 }
 
 impl CellDefinition {
-    pub fn cell(self, dependencies: &mut Vec<Job>) -> Cell {
-        match self {
+    pub fn cell(self, dependencies: &mut Vec<Job>) -> Result<Cell, JobError> {
+        Ok(match self {
             CellDefinition::Text(v) => Cell::Text(v),
             CellDefinition::Integer(v) => Cell::Integer(v),
             CellDefinition::Time(v) => Cell::Time(v),
@@ -43,12 +43,12 @@ impl CellDefinition {
             CellDefinition::File(v) => Cell::File(v),
             CellDefinition::Rows(r) => Cell::Rows(r.rows()),
             CellDefinition::JobDefintion(def) => {
-                let mut j = def.job();
+                let mut j = def.job()?;
                 let res = Cell::Output(j.take_output().unwrap());
                 dependencies.push(j);
                 res
             }
-        }
+        })
     }
 
     pub fn file(s: &str) -> CellDefinition {
@@ -103,7 +103,7 @@ pub enum ConcreteCell {
 
 impl ConcreteCell {
 
-    fn to_rows(s: Output) -> ConcreteCell {
+    fn to_rows(s: &Output) -> ConcreteCell {
         let mut rows: Vec<ConcreteRow> = Vec::new();
         loop {
             match s.stream.recv() {
@@ -294,7 +294,23 @@ impl Cell {
             Cell::Command(v) => ConcreteCell::Command(v),
             Cell::File(v) => ConcreteCell::File(v),
             Cell::Rows(r) => ConcreteCell::Rows(r.concrete()),
-            Cell::Output(s) => ConcreteCell::to_rows(s),
+            Cell::Output(s) => ConcreteCell::to_rows(&s),
+        };
+    }
+
+    pub fn concrete_copy(&self) -> ConcreteCell {
+        return match self {
+            Cell::Text(v) => ConcreteCell::Text(v.clone()),
+            Cell::Integer(v) => ConcreteCell::Integer(v.clone()),
+            Cell::Time(v) => ConcreteCell::Time(v.clone()),
+            Cell::Field(v) => ConcreteCell::Field(v.clone()),
+            Cell::Glob(v) => ConcreteCell::Glob(v.clone()),
+            Cell::Regex(v, r) => ConcreteCell::Regex(v.clone(), r.clone()),
+            Cell::Op(v) => ConcreteCell::Op(v.clone()),
+            Cell::Command(v) => ConcreteCell::Command(v.clone()),
+            Cell::File(v) => ConcreteCell::File(v.clone()),
+            Cell::Rows(r) => ConcreteCell::Rows(r.concrete_copy()),
+            Cell::Output(o) => ConcreteCell::to_rows(o.clone()),
         };
     }
 

@@ -36,10 +36,14 @@ fn repl() -> Result<(), JobError>{
                 match parser::parse(&mut Lexer::new(&cmd), &state) {
                     Ok(jobs) => {
                         for job_definition in jobs {
-                            let mut job = job_definition.job();
-                            job.exec(&mut state);
-                            job.print(&state.printer);
-                            job.wait(&state.printer);
+                            match job_definition.job() {
+                                Ok(mut job) => {
+                                    job.exec(&mut state);
+                                    job.print(&state.printer);
+                                    job.wait(&state.printer);
+                                }
+                                Err(e) => state.printer.job_error(e),
+                            }
                         }
                     }
                     Err(error) => {

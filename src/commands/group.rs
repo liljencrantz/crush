@@ -15,6 +15,7 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::data::ConcreteCell;
+use crate::replace::Replace;
 
 pub fn get_key(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<(Option<Box<str>>, usize), JobError> {
     if arguments.len() != 1 {
@@ -46,13 +47,13 @@ fn run(
     loop {
         match input.recv() {
             Ok(row) => {
-                let key = row.cells[column].partial_clone()?;
+                let key = row.cells[column].concrete_copy();
                 let val = groups.get(&key);
                 match val {
                     None => {
                         let (output_stream, input_stream) = unlimited_streams();
                         let out_row = Row {
-                            cells: vec![key.partial_clone()?, Cell::Output(Output { types: input_type.clone(), stream: input_stream })],
+                            cells: vec![key.clone().cell(), Cell::Output(Output { types: input_type.clone(), stream: input_stream })],
                         };
                         output.send(out_row)?;
                         output_stream.send(row)?;

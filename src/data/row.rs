@@ -14,6 +14,10 @@ impl Row {
     pub fn concrete(mut self) -> ConcreteRow {
         ConcreteRow {cells: self.cells.drain(..).map(|c| c.concrete()).collect()}
     }
+
+    pub fn concrete_copy(&self) -> ConcreteRow {
+        ConcreteRow {cells: self.cells.iter().map(|c| c.concrete_copy()).collect()}
+    }
 }
 
 pub type ConcreteRow = BaseRow<ConcreteCell>;
