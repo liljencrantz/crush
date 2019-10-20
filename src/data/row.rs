@@ -1,5 +1,4 @@
 use crate::data::cell::Cell;
-use std::cmp::Ordering;
 use std::cmp::PartialOrd;
 use std::hash::Hasher;
 use crate::data::{CellType, ConcreteCell};

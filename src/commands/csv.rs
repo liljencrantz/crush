@@ -170,7 +170,7 @@ fn run(
             }
         }
 
-        Either::Right(idx) => {}
+        Either::Right(_) => {}
     }
     return Ok(());
 }

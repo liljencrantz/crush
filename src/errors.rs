@@ -1,6 +1,5 @@
 use crate::lexer::Lexer;
 use std::error::Error;
-use std::io;
 
 #[derive(Debug)]
 pub struct JobError {

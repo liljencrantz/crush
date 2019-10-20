@@ -46,7 +46,7 @@ use crate::{
 use std::thread::JoinHandle;
 use std::error::Error;
 use crate::printer::Printer;
-use crate::data::{CellDefinition, ConcreteCell};
+use crate::data::{CellDefinition, ConcreteCell, CellDataType};
 use crate::job::Job;
 use std::sync::{Arc, Mutex};
 use crate::closure::Closure;
@@ -67,9 +67,11 @@ type Mutate = fn(
 pub enum Exec {
     Run(Run),
     Mutate(Mutate),
+    Closure(Closure),
 }
 
 pub enum JobResult {
+    Many(Vec<JobResult>),
     Async(JoinHandle<Result<(), JobError>>),
     Sync(Result<(), JobError>),
 }
@@ -82,17 +84,14 @@ impl JobResult {
                 Err(_) => Err(error("Error while wating for command to finish")),
             },
             JobResult::Sync(s) => s,
+            JobResult::Many(v) => {
+                for j in v {
+                    j.join()?;
+                }
+                Ok(())
+            }
         };
     }
-}
-
-
-pub struct BaseCall<C> {
-    name: String,
-    input_type: Vec<CellType>,
-    arguments: Vec<BaseArgument<C>>,
-    output_type: Vec<CellType>,
-    exec: Exec,
 }
 
 #[derive(Clone)]
@@ -106,7 +105,7 @@ impl CallDefinition {
     pub fn new(name: &str, arguments: Vec<ArgumentDefinition>) -> CallDefinition {
         CallDefinition {
             name: name.to_string(),
-            arguments
+            arguments,
         }
     }
 
@@ -121,7 +120,13 @@ impl CallDefinition {
                 return c(input_type, args);
             }
             Some(ConcreteCell::Closure(closure)) => {
-                return Err(error("Not implemented"));
+                return Ok(Call {
+                    name: self.name.clone(),
+                    input_type,
+                    arguments: args,
+                    output_type: vec![CellType { name: None, cell_type: CellDataType::Text }],
+                    exec: Exec::Closure(closure.clone()),
+                });
             }
             _ => {
                 return Err(error("Unknown command name"));
@@ -130,7 +135,13 @@ impl CallDefinition {
     }
 }
 
-pub type Call = BaseCall<Cell>;
+pub struct Call {
+    name: String,
+    input_type: Vec<CellType>,
+    arguments: Vec<Argument>,
+    output_type: Vec<CellType>,
+    exec: Exec,
+}
 
 impl Call {
     pub fn get_name(&self) -> &String {
@@ -163,6 +174,29 @@ impl Call {
                 }).unwrap()),
             Exec::Mutate(mutate) =>
                 JobResult::Sync(mutate(state, self.input_type, self.arguments)),
+            Exec::Closure(closure) => {
+                let mut res: Vec<JobResult> = Vec::new();
+                if closure.get_jobs().len() == 1 {
+                    match closure.get_jobs()[0].compile(&state, &vec![], input, output) {
+                        Ok(mut job) => {
+                            job.exec(state, &printer);
+                        }
+                        Err(e) => printer.job_error(e),
+                    }
+                } else {
+                    panic!("UNIMPLEMENTED");
+                    /*
+                        for def in closure.get_jobs() {
+                            let mut job = def.compile(state).unwrap();
+                            job.exec(state, &printer, input, output);
+                            res.append(&mut job.take_handlers());
+
+                        }
+                    */
+                }
+
+                JobResult::Many(res)
+            }
         };
     }
 }

@@ -15,7 +15,7 @@ impl ClosureDefinition {
         }
     }
 
-    pub fn compile(&self, parent_state: &State) -> Closure{
+    pub fn compile(&self, parent_state: &State) -> Closure {
         Closure { jobs: self.jobs.clone(), parent_state: parent_state.clone() }
     }
 }
@@ -30,6 +30,12 @@ impl PartialEq for ClosureDefinition {
 pub struct Closure {
     jobs: Vec<JobDefinition>,
     parent_state: State,
+}
+
+impl Closure {
+    pub fn get_jobs(&self) -> &Vec<JobDefinition> {
+        &self.jobs
+    }
 }
 
 impl PartialEq for Closure {

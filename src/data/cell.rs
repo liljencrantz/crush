@@ -2,18 +2,15 @@ use crate::glob::Glob;
 use std::cmp::Ordering;
 use std::hash::Hasher;
 use crate::data::{Output, CellDataType, Command, ConcreteRows, ConcreteRow};
-use crate::data::row::{Row};
 use crate::data::rows::Rows;
 use crate::errors::{error, JobError, to_job_error, mandate};
 use std::path::Path;
 use regex::Regex;
 use chrono::{DateTime, Local};
 use crate::state::{get_cwd, State};
-use std::ffi::OsStr;
-use std::num::ParseIntError;
-use std::error::Error;
 use crate::job::{JobDefinition, Job};
 use crate::closure::{Closure, ClosureDefinition};
+use crate::stream::streams;
 
 #[derive(Clone)]
 pub enum CellDefinition {
@@ -46,8 +43,13 @@ impl CellDefinition {
             CellDefinition::File(v) => Cell::File(v),
             CellDefinition::Rows(r) => Cell::Rows(r.rows()),
             CellDefinition::JobDefintion(def) => {
-                let mut j = def.compile(state)?;
-                let res = Cell::Output(j.take_output().unwrap());
+
+                let (first_output, first_input) = streams();
+                drop(first_output);
+                let (last_output, last_input) = streams();
+                let mut j = def.compile(&state, &vec![], first_input, last_output)?;
+
+                let res = Cell::Output(Output{ types: j.get_output_type().clone(), stream: last_input });
                 dependencies.push(j);
                 res
             }

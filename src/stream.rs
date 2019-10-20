@@ -1,4 +1,4 @@
-use crate::data::{Output, CellDataType, CellType, ConcreteRow, ConcreteCell, ConcreteRows};
+use crate::data::{CellDataType, CellType, ConcreteRow, ConcreteCell, ConcreteRows};
 use crate::data::{Cell, Alignment, Row, Rows};
 use std::cmp::max;
 use std::sync::mpsc::{Receiver, sync_channel, SyncSender, channel, Sender};
@@ -151,17 +151,17 @@ fn print_row(printer: &Printer, w: &Vec<usize>, mut r: ConcreteRow, indent: usiz
 }
 
 fn print_body(printer: &Printer, w: &Vec<usize>,  data: Vec<ConcreteRow>, indent: usize) {
-    for mut r in data.into_iter() {
+    for r in data.into_iter() {
         let mut rows = Vec::new();
         print_row(printer, w, r, indent, &mut rows);
-        for mut r in rows {
+        for r in rows {
             let t = r.types.clone();
             print_internal::<RowsReader>(printer, &mut RowsReader { idx: 0, rows: r.rows() }, &t, indent + 1);
         }
     }
 }
 
-fn print_partial(printer: &Printer, mut data: Vec<ConcreteRow>, types: &Vec<CellType>, has_name: bool, indent: usize) {
+fn print_partial(printer: &Printer, data: Vec<ConcreteRow>, types: &Vec<CellType>, has_name: bool, indent: usize) {
     let mut w = vec![0; types.len()];
 
     calculate_header_width(&mut w, types, has_name);

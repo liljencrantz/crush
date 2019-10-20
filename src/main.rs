@@ -24,6 +24,10 @@ use std::error::Error;
 use std::sync::Arc;
 use std::borrow::BorrowMut;
 use crate::printer::Printer;
+use std::sync::mpsc::channel;
+use crate::stream::streams;
+use crate::job::Job;
+use crate::data::Output;
 
 fn repl() -> Result<(), JobError>{
     let mut state = state::State::new();
@@ -41,10 +45,13 @@ fn repl() -> Result<(), JobError>{
                 match parser::parse(&mut Lexer::new(&cmd)) {
                     Ok(jobs) => {
                         for job_definition in jobs {
-                            match job_definition.compile(&state) {
+                            let (first_output, first_input) = streams();
+                            drop(first_output);
+                            let (last_output, last_input) = streams();
+                            match job_definition.compile(&state, &vec![], first_input, last_output) {
                                 Ok(mut job) => {
                                     job.exec(&mut state, &printer);
-                                    job.print(&printer);
+                                    Job::print(&printer, Output{ types: job.get_output_type().clone(), stream: last_input } );
                                     job.wait(&printer);
                                 }
                                 Err(e) => printer.job_error(e),
