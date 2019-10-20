@@ -46,10 +46,11 @@ use crate::{
 use std::thread::JoinHandle;
 use std::error::Error;
 use crate::printer::Printer;
-use crate::data::{CellDefinition, ConcreteCell, CellDataType};
+use crate::data::{CellDefinition, ConcreteCell, CellDataType, Output};
 use crate::job::Job;
 use std::sync::{Arc, Mutex};
 use crate::closure::Closure;
+use crate::stream::{streams, spawn_print_thread};
 
 type Run = fn(
     Vec<CellType>,
@@ -164,35 +165,70 @@ impl Call {
         self,
         state: &mut State,
         printer: &Printer,
-        input: InputStream,
-        output: OutputStream) -> JobResult {
+        first_input: InputStream,
+        last_output: OutputStream) -> JobResult {
         let printer = printer.clone();
         return match self.exec {
             Exec::Run(run) =>
                 JobResult::Async(thread::Builder::new().name(self.name.clone()).spawn(move || {
-                    return run(self.input_type, self.arguments, input, output, printer);
+                    return run(self.input_type, self.arguments, first_input, last_output, printer);
                 }).unwrap()),
             Exec::Mutate(mutate) =>
                 JobResult::Sync(mutate(state, self.input_type, self.arguments)),
             Exec::Closure(closure) => {
                 let mut res: Vec<JobResult> = Vec::new();
-                if closure.get_jobs().len() == 1 {
-                    match closure.get_jobs()[0].compile(&state, &vec![], input, output) {
-                        Ok(mut job) => {
-                            job.exec(state, &printer);
-                        }
-                        Err(e) => printer.job_error(e),
-                    }
-                } else {
-                    panic!("UNIMPLEMENTED");
-                    /*
-                        for def in closure.get_jobs() {
-                            let mut job = def.compile(state).unwrap();
-                            job.exec(state, &printer, input, output);
-                            res.append(&mut job.take_handlers());
 
+                match closure.get_jobs().len() {
+                    0 => {}
+                    1 => {
+                        match closure.get_jobs()[0].compile(&state, &self.input_type, first_input, last_output) {
+                            Ok(mut job) => {
+                                job.exec(state, &printer);
+                            }
+                            Err(e) => printer.job_error(e),
                         }
-                    */
+                    }
+                    _ => {
+
+                        {
+                            let job_definition = &closure.get_jobs()[0];
+                            let (last_output, last_input) = streams();
+                            match job_definition.compile(&state, &self.input_type, first_input, last_output) {
+                                Ok(mut job) => {
+                                    job.exec(state, &printer);
+                                    spawn_print_thread(&printer, Output { types: job.get_output_type().clone(), stream: last_input });
+                                }
+                                Err(e) => printer.job_error(e),
+                            }
+                        }
+
+                        for job_definition in &closure.get_jobs()[1..closure.get_jobs().len()-1] {
+                            let (first_output, first_input) = streams();
+                            let (last_output, last_input) = streams();
+                            drop(first_output);
+
+                            match job_definition.compile(&state, &vec![], first_input, last_output) {
+                                Ok(mut job) => {
+                                    job.exec(state, &printer);
+                                    spawn_print_thread(&printer, Output{ types: job.get_output_type().clone(), stream: last_input } );
+                                }
+                                Err(e) => printer.job_error(e),
+                            }
+                        }
+
+                        {
+                            let job_definition = &closure.get_jobs()[closure.get_jobs().len()-1];
+                            let (first_output, first_input) = streams();
+                            drop(first_output);
+
+                            match job_definition.compile(&state, &vec![], first_input, last_output) {
+                                Ok(mut job) => {
+                                    job.exec(state, &printer);
+                                }
+                                Err(e) => printer.job_error(e),
+                            }
+                        }
+                    }
                 }
 
                 JobResult::Many(res)

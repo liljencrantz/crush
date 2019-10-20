@@ -76,14 +76,6 @@ impl Job {
         return &self.output_type;
     }
 
-    pub fn print(printer: &Printer, output: Output) {
-        let p = printer.clone();
-        thread::Builder::new()
-            .name("output_formater".to_string())
-            .spawn(move || print(&p, output.stream, output.types)
-            );
-    }
-
     pub fn exec(&mut self, state: &mut State, printer: &Printer) {
         assert_eq!(self.state, JobState::Parsed);
 

@@ -1,4 +1,4 @@
-use crate::data::{CellDataType, CellType, ConcreteRow, ConcreteCell, ConcreteRows};
+use crate::data::{CellDataType, CellType, ConcreteRow, ConcreteCell, ConcreteRows, Output};
 use crate::data::{Cell, Alignment, Row, Rows};
 use std::cmp::max;
 use std::sync::mpsc::{Receiver, sync_channel, SyncSender, channel, Sender};
@@ -6,6 +6,7 @@ use crate::errors::{JobError, error};
 use std::error::Error;
 use crate::printer::Printer;
 use crate::replace::Replace;
+use std::thread;
 
 pub enum OutputStream {
     Sync(SyncSender<Row>),
@@ -48,6 +49,14 @@ impl Readable for InputStream {
             Err(e) => Err(error(e.description())),
         }
     }
+}
+
+pub fn spawn_print_thread(printer: &Printer, output: Output) {
+    let p = printer.clone();
+    thread::Builder::new()
+        .name("output_formater".to_string())
+        .spawn(move || print(&p, output.stream, output.types)
+        );
 }
 
 pub fn print(printer: &Printer, mut stream: InputStream, types: Vec<CellType>) {
