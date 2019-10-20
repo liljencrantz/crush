@@ -4,16 +4,16 @@ use std::hash::Hasher;
 use crate::data::{Output, CellDataType, Command, ConcreteRows, ConcreteRow};
 use crate::data::row::{Row};
 use crate::data::rows::Rows;
-use crate::errors::{error, JobError, to_runtime_error};
+use crate::errors::{error, JobError, to_job_error, mandate};
 use std::path::Path;
 use regex::Regex;
 use chrono::{DateTime, Local};
-use crate::state::get_cwd;
+use crate::state::{get_cwd, State};
 use std::ffi::OsStr;
 use std::num::ParseIntError;
 use std::error::Error;
 use crate::job::{JobDefinition, Job};
-use crate::closure::Closure;
+use crate::closure::{Closure, ClosureDefinition};
 
 #[derive(Clone)]
 pub enum CellDefinition {
@@ -25,14 +25,15 @@ pub enum CellDefinition {
     Regex(Box<str>, Regex),
     Op(Box<str>),
     Command(Command),
-    Closure(Closure),
+    Closure(ClosureDefinition),
     JobDefintion(JobDefinition), // During invocation, this will get replaced with an output
     File(Box<Path>),
     Rows(ConcreteRows),
+    Variable(Box<str>),
 }
 
 impl CellDefinition {
-    pub fn cell(self, dependencies: &mut Vec<Job>) -> Result<Cell, JobError> {
+    pub fn compile(self, dependencies: &mut Vec<Job>, state: &State) -> Result<Cell, JobError> {
         Ok(match self {
             CellDefinition::Text(v) => Cell::Text(v),
             CellDefinition::Integer(v) => Cell::Integer(v),
@@ -45,12 +46,13 @@ impl CellDefinition {
             CellDefinition::File(v) => Cell::File(v),
             CellDefinition::Rows(r) => Cell::Rows(r.rows()),
             CellDefinition::JobDefintion(def) => {
-                let mut j = def.job()?;
+                let mut j = def.compile(state)?;
                 let res = Cell::Output(j.take_output().unwrap());
                 dependencies.push(j);
                 res
             }
-            CellDefinition::Closure(c) => Cell::Closure(c),
+            CellDefinition::Closure(c) => Cell::Closure(c.compile(state)),
+            CellDefinition::Variable(s) => (mandate(state.get(s.as_ref()))?).cell(),
         })
     }
 
@@ -163,22 +165,6 @@ impl ConcreteCell {
             ConcreteCell::File(v) => Cell::File(v),
             ConcreteCell::Rows(r) => Cell::Rows(r.rows()),
             ConcreteCell::Closure(c) => Cell::Closure(c)
-        };
-    }
-
-    pub fn to_cell_definition(self) -> CellDefinition {
-        return match self {
-            ConcreteCell::Text(v) => CellDefinition::Text(v),
-            ConcreteCell::Integer(v) => CellDefinition::Integer(v),
-            ConcreteCell::Time(v) => CellDefinition::Time(v),
-            ConcreteCell::Field(v) => CellDefinition::Field(v),
-            ConcreteCell::Glob(v) => CellDefinition::Glob(v),
-            ConcreteCell::Regex(v, r) => CellDefinition::Regex(v, r),
-            ConcreteCell::Op(v) => CellDefinition::Op(v),
-            ConcreteCell::Command(v) => CellDefinition::Command(v),
-            ConcreteCell::File(v) => CellDefinition::File(v),
-            ConcreteCell::Rows(r) => CellDefinition::Rows(r),
-            ConcreteCell::Closure(c) => CellDefinition::Closure(c),
         };
     }
 
@@ -337,7 +323,7 @@ impl Cell {
         match self {
             Cell::Text(s) => v.push(Box::from(Path::new(s.as_ref()))),
             Cell::File(p) => v.push(p.clone()),
-            Cell::Glob(pattern) => to_runtime_error(pattern.glob_files(
+            Cell::Glob(pattern) => to_job_error(pattern.glob_files(
                 &get_cwd()?, v))?,
             _ => return Err(error("Expected a file name")),
         }
@@ -356,10 +342,10 @@ impl Cell {
         match (self, new_type) {
             (Cell::Text(s), CellDataType::File) => Ok(Cell::File(Box::from(Path::new(s.as_ref())))),
             (Cell::Text(s), CellDataType::Glob) => Ok(Cell::Glob(Glob::new(&s))),
-            (Cell::Text(s), CellDataType::Integer) => to_runtime_error(s.parse::<i128>()).map(|v| Cell::Integer(v)),
+            (Cell::Text(s), CellDataType::Integer) => to_job_error(s.parse::<i128>()).map(|v| Cell::Integer(v)),
             (Cell::Text(s), CellDataType::Field) => Ok(Cell::Field(s)),
             (Cell::Text(s), CellDataType::Op) => Ok(Cell::Op(s)),
-            (Cell::Text(s), CellDataType::Regex) => to_runtime_error(Regex::new(s.as_ref()).map(|v| Cell::Regex(s, v))),
+            (Cell::Text(s), CellDataType::Regex) => to_job_error(Regex::new(s.as_ref()).map(|v| Cell::Regex(s, v))),
 
             (Cell::File(s), CellDataType::Text) => match s.to_str() {
                 Some(s) => Ok(Cell::Text(Box::from(s))),
@@ -370,7 +356,7 @@ impl Cell {
                 None => Err(error("File name is not valid unicode"))
             },
             (Cell::File(s), CellDataType::Integer) => match s.to_str() {
-                Some(s) => to_runtime_error(s.parse::<i128>()).map(|v| Cell::Integer(v)),
+                Some(s) => to_job_error(s.parse::<i128>()).map(|v| Cell::Integer(v)),
                 None => Err(error("File name is not valid unicode"))
             },
             (Cell::File(s), CellDataType::Field) => match s.to_str() {
@@ -382,30 +368,30 @@ impl Cell {
                 None => Err(error("File name is not valid unicode"))
             },
             (Cell::File(s), CellDataType::Regex) => match s.to_str() {
-                Some(s) => to_runtime_error(Regex::new(s.as_ref()).map(|v| Cell::Regex(Box::from(s), v))),
+                Some(s) => to_job_error(Regex::new(s.as_ref()).map(|v| Cell::Regex(Box::from(s), v))),
                 None => Err(error("File name is not valid unicode"))
             },
 
             (Cell::Glob(s), CellDataType::Text) => Ok(Cell::Text(s.to_string().clone().into_boxed_str())),
             (Cell::Glob(s), CellDataType::Field) => Ok(Cell::Field(s.to_string().clone().into_boxed_str())),
             (Cell::Glob(s), CellDataType::File) => Ok(Cell::File(Box::from(Path::new(s.to_string().as_str())))),
-            (Cell::Glob(s), CellDataType::Integer) => to_runtime_error(s.to_string().parse::<i128>()).map(|v| Cell::Integer(v)),
+            (Cell::Glob(s), CellDataType::Integer) => to_job_error(s.to_string().parse::<i128>()).map(|v| Cell::Integer(v)),
             (Cell::Glob(s), CellDataType::Op) => Ok(Cell::op(s.to_string().as_str())),
             (Cell::Glob(g), CellDataType::Regex) => {
                 let s = g.to_string().as_str();
-                to_runtime_error(Regex::new(s).map(|v| Cell::Regex(Box::from(s), v)))
+                to_job_error(Regex::new(s).map(|v| Cell::Regex(Box::from(s), v)))
             },
 
             (Cell::Field(s), CellDataType::File) => Ok(Cell::File(Box::from(Path::new(s.as_ref())))),
             (Cell::Field(s), CellDataType::Glob) => Ok(Cell::Glob(Glob::new(&s))),
-            (Cell::Field(s), CellDataType::Integer) => to_runtime_error(s.parse::<i128>()).map(|v| Cell::Integer(v)),
+            (Cell::Field(s), CellDataType::Integer) => to_job_error(s.parse::<i128>()).map(|v| Cell::Integer(v)),
             (Cell::Field(s), CellDataType::Text) => Ok(Cell::Text(s)),
             (Cell::Field(s), CellDataType::Op) => Ok(Cell::Op(s)),
-            (Cell::Field(s), CellDataType::Regex) => to_runtime_error(Regex::new(s.as_ref()).map(|v| Cell::Regex(s, v))),
+            (Cell::Field(s), CellDataType::Regex) => to_job_error(Regex::new(s.as_ref()).map(|v| Cell::Regex(s, v))),
 
             (Cell::Regex(s, r), CellDataType::File) => Ok(Cell::File(Box::from(Path::new(s.as_ref())))),
             (Cell::Regex(s, r), CellDataType::Glob) => Ok(Cell::Glob(Glob::new(&s))),
-            (Cell::Regex(s, r), CellDataType::Integer) => to_runtime_error(s.parse::<i128>()).map(|v| Cell::Integer(v)),
+            (Cell::Regex(s, r), CellDataType::Integer) => to_job_error(s.parse::<i128>()).map(|v| Cell::Integer(v)),
             (Cell::Regex(s, r), CellDataType::Text) => Ok(Cell::Text(s)),
             (Cell::Regex(s, r), CellDataType::Op) => Ok(Cell::Op(s)),
             (Cell::Regex(s, r), CellDataType::Field) => Ok(Cell::File(Box::from(Path::new(s.as_ref())))),
@@ -417,7 +403,7 @@ impl Cell {
             (Cell::Integer(i), CellDataType::Op) => Ok(Cell::Op(i.to_string().into_boxed_str())),
             (Cell::Integer(i), CellDataType::Regex) => {
                 let s = i.to_string();
-                to_runtime_error(Regex::new(s.as_str()).map(|v| Cell::Regex(s.into_boxed_str(), v)))
+                to_job_error(Regex::new(s.as_str()).map(|v| Cell::Regex(s.into_boxed_str(), v)))
             },
             _ => Err(error("Unimplemented conversion")),
         }

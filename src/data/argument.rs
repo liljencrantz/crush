@@ -2,6 +2,7 @@ use crate::data::cell::Cell;
 use crate::data::CellDefinition;
 use crate::job::Job;
 use crate::errors::JobError;
+use crate::state::State;
 
 #[derive(Debug)]
 pub struct BaseArgument<C> {
@@ -12,8 +13,8 @@ pub struct BaseArgument<C> {
 pub type ArgumentDefinition = BaseArgument<CellDefinition>;
 
 impl ArgumentDefinition {
-    pub fn argument(&self, dependencies: &mut Vec<Job>) -> Result<Argument, JobError> {
-        Ok(Argument { name: self.name.clone(), cell: self.cell.clone().cell(dependencies)? })
+    pub fn argument(&self, dependencies: &mut Vec<Job>, state: &State) -> Result<Argument, JobError> {
+        Ok(Argument { name: self.name.clone(), cell: self.cell.clone().compile(dependencies, state)? })
     }
 }
 

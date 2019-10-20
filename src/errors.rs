@@ -25,9 +25,16 @@ pub fn error(message: &str) -> JobError {
     };
 }
 
-pub fn to_runtime_error<T, E: Error>(result: Result<T, E>) -> Result<T, JobError> {
+pub fn to_job_error<T, E: Error>(result: Result<T, E>) -> Result<T, JobError> {
     match result {
         Ok(v) => Ok(v),
         Err(e) => Err(error(e.description())),
+    }
+}
+
+pub fn mandate<T>(result: Option<T>) -> Result<T, JobError> {
+    match result {
+        Some(v) => Ok(v),
+        None => Err(error("Missing value")),
     }
 }

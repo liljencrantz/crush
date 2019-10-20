@@ -8,14 +8,14 @@ use regex::Regex;
 use std::error::Error;
 use crate::data::Cell;
 use crate::glob::Glob;
-use crate::closure::Closure;
+use crate::closure::{Closure, ClosureDefinition};
 
-pub fn parse(lexer: &mut Lexer, state: &State) -> Result<Vec<JobDefinition>, JobError> {
+pub fn parse(lexer: &mut Lexer) -> Result<Vec<JobDefinition>, JobError> {
     let mut jobs: Vec<JobDefinition> = Vec::new();
     loop {
         match lexer.peek() {
             (TokenType::String, _) => {
-                jobs.push(parse_internal(lexer, state)?);
+                jobs.push(parse_internal(lexer)?);
             }
             _ => {
                 return Err(parse_error("Wrong token type, expected command name", lexer));
@@ -39,17 +39,17 @@ pub fn parse(lexer: &mut Lexer, state: &State) -> Result<Vec<JobDefinition>, Job
     }
 }
 
-fn parse_internal(lexer: &mut Lexer, state: &State) -> Result<JobDefinition, JobError> {
+fn parse_internal(lexer: &mut Lexer) -> Result<JobDefinition, JobError> {
     let mut commands: Vec<CallDefinition> = Vec::new();
-    parse_job(lexer, state, &mut commands)?;
+    parse_job(lexer, &mut commands)?;
     return Ok(JobDefinition::new(commands));
 }
 
-fn parse_job(lexer: &mut Lexer, state: &State, commands: &mut Vec<CallDefinition>) -> Result<(), JobError> {
-    parse_command(lexer, commands, state)?;
+fn parse_job(lexer: &mut Lexer, commands: &mut Vec<CallDefinition>) -> Result<(), JobError> {
+    parse_command(lexer, commands)?;
     while lexer.peek().0 == TokenType::Pipe {
         lexer.pop();
-        parse_command(lexer, commands, state)?;
+        parse_command(lexer, commands)?;
     }
     return Ok(());
 }
@@ -58,7 +58,7 @@ fn unescape(s: &str) -> String {
     s[1..s.len() - 1].to_string()
 }
 
-fn parse_unnamed_argument(lexer: &mut Lexer, state: &State) -> Result<CellDefinition, JobError> {
+fn parse_unnamed_argument(lexer: &mut Lexer) -> Result<CellDefinition, JobError> {
     let token_type = lexer.peek().0;
     match token_type {
         TokenType::String => {
@@ -82,15 +82,15 @@ fn parse_unnamed_argument(lexer: &mut Lexer, state: &State) -> Result<CellDefini
             let sigil_type = lexer.pop().1.chars().next().unwrap();
             match sigil_type {
                 '{' => {
-                    let mut dep = parse_internal(lexer, state)?;
+                    let mut dep = parse_internal(lexer)?;
                     lexer.pop();
                     let res = Ok(CellDefinition::JobDefintion(dep));
                     return res;
                 }
                 '`' => {
-                    let mut dep = parse(lexer, state)?;
+                    let mut dep = parse(lexer)?;
                     lexer.pop();
-                    let res = Ok(CellDefinition::Closure(Closure::new(dep, state.clone())));
+                    let res = Ok(CellDefinition::Closure(ClosureDefinition::new(dep)));
                     return res;
                 }
                 '*' => {
@@ -115,10 +115,7 @@ fn parse_unnamed_argument(lexer: &mut Lexer, state: &State) -> Result<CellDefini
         }
 
         TokenType::Field => Ok(CellDefinition::field(&lexer.pop().1[1..])),
-        TokenType::Variable => match state.get(&lexer.pop().1[1..]) {
-            Some(cell) => Ok(cell.clone().to_cell_definition()),
-            None => Err(parse_error("Unknown variable", lexer)),
-        }
+        TokenType::Variable => Ok(CellDefinition::Variable(lexer.pop().1[1..].to_string().into_boxed_str())),
         TokenType::Regex => {
             let f = lexer.pop().1;
             let s = &f[2..f.len() - 1];
@@ -136,24 +133,24 @@ fn parse_unnamed_argument(lexer: &mut Lexer, state: &State) -> Result<CellDefini
     }
 }
 
-fn parse_argument(lexer: &mut Lexer, state: &State) -> Result<ArgumentDefinition, JobError> {
+fn parse_argument(lexer: &mut Lexer) -> Result<ArgumentDefinition, JobError> {
     match lexer.peek().0 {
         TokenType::String => {
             let ss = lexer.pop().1.to_string();
             if lexer.peek().0 == TokenType::Assign {
                 lexer.pop();
-                return Ok(ArgumentDefinition::named(&ss, parse_unnamed_argument(lexer, state)?));
+                return Ok(ArgumentDefinition::named(&ss, parse_unnamed_argument(lexer)?));
             } else {
                 return Ok(ArgumentDefinition::unnamed(CellDefinition::text(ss.as_str())));
             }
         }
         _ => {
-            return Ok(ArgumentDefinition::unnamed(parse_unnamed_argument(lexer, state)?));
+            return Ok(ArgumentDefinition::unnamed(parse_unnamed_argument(lexer)?));
         }
     }
 }
 
-fn parse_arguments(lexer: &mut Lexer, arguments: &mut Vec<ArgumentDefinition>, state: &State) -> Result<(), JobError> {
+fn parse_arguments(lexer: &mut Lexer, arguments: &mut Vec<ArgumentDefinition>) -> Result<(), JobError> {
     loop {
         match lexer.peek().0 {
             TokenType::Error => {
@@ -162,26 +159,19 @@ fn parse_arguments(lexer: &mut Lexer, arguments: &mut Vec<ArgumentDefinition>, s
             TokenType::Separator | TokenType::EOF | TokenType::Pipe | TokenType::BlockEnd => {
                 return Ok(());
             }
-            _ => arguments.push(parse_argument(lexer, state)?),
+            _ => arguments.push(parse_argument(lexer)?),
         }
     }
 }
 
-fn parse_command(lexer: &mut Lexer, commands: &mut Vec<CallDefinition>, state: &State) -> Result<(), JobError> {
+fn parse_command(lexer: &mut Lexer, commands: &mut Vec<CallDefinition>) -> Result<(), JobError> {
 
     match lexer.peek().0 {
         TokenType::String => {
             let name = String::from(lexer.pop().1);
             let mut arguments: Vec<ArgumentDefinition> = Vec::new();
-            parse_arguments(lexer, &mut arguments, state)?;
-            match &state.get(&name) {
-                Some(ConcreteCell::Command(command)) => {
-                    commands.push(CallDefinition { arguments, command: command.clone() });
-                }
-                _ => {
-                    return Err(parse_error("Expected command name", lexer));
-                }
-            }
+            parse_arguments(lexer, &mut arguments)?;
+            commands.push(CallDefinition::new(name.as_str(), arguments));
             return Ok(());
         }
         _ => {

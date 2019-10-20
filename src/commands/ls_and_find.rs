@@ -2,7 +2,7 @@ use std::fs;
 use crate::stream::{OutputStream, InputStream};
 use crate::data::{Cell, CellType, CellDataType, Row, Argument};
 use crate::commands::{Call, Exec};
-use crate::errors::{JobError, error, to_runtime_error};
+use crate::errors::{JobError, error, to_job_error};
 use chrono::{Local, DateTime};
 use std::path::Path;
 use std::fs::Metadata;
@@ -10,7 +10,7 @@ use crate::state::get_cwd;
 use crate::printer::Printer;
 
 fn insert_entity(meta: &Metadata, file: Box<Path>, output: &mut OutputStream) -> Result<(), JobError> {
-    let modified_system = to_runtime_error(meta.modified())?;
+    let modified_system = to_job_error(meta.modified())?;
     let modified_datetime: DateTime<Local> = DateTime::from(modified_system);
     let f = if file.starts_with("./") {
         let b = file.to_str().map(|s| Box::from(Path::new(&s[2..])));
@@ -34,10 +34,10 @@ fn run_for_single_directory_or_file(
     output: &mut OutputStream) -> Result<(), JobError> {
     if path.is_dir() {
         let dirs = fs::read_dir(path);
-        for maybe_entry in to_runtime_error(dirs)? {
-            let entry = to_runtime_error(maybe_entry)?;
+        for maybe_entry in to_job_error(dirs)? {
+            let entry = to_job_error(maybe_entry)?;
             insert_entity(
-                &to_runtime_error(entry.metadata())?,
+                &to_job_error(entry.metadata())?,
                 entry.path().into_boxed_path(),
                 output)?;
             if recursive && entry.path().is_dir() {
@@ -53,7 +53,7 @@ fn run_for_single_directory_or_file(
         match path.file_name() {
             Some(_) => {
                 insert_entity(
-                    &to_runtime_error(path.metadata())?,
+                    &to_job_error(path.metadata())?,
                     path,
                     output)?;
             }
@@ -82,7 +82,7 @@ fn run_internal(
                     dirs.push(dir.clone());
                 }
                 Cell::Glob(dir) => {
-                    to_runtime_error(
+                    to_job_error(
                         dir.glob_files(
                             &get_cwd()?,
                             &mut dirs))?;

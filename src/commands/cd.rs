@@ -6,7 +6,7 @@ use crate::{
     errors::JobError,
     state::State
 };
-use crate::errors::to_runtime_error;
+use crate::errors::to_job_error;
 
 fn mutate(
     _state: &mut State,
@@ -15,12 +15,12 @@ fn mutate(
     return match arguments.len() {
         0 =>
         // This should move to home, not /...
-            to_runtime_error(std::env::set_current_dir("/")),
+            to_job_error(std::env::set_current_dir("/")),
         1 => {
             let dir = &arguments[0];
             return match &dir.cell {
-                Cell::Text(val) => to_runtime_error(std::env::set_current_dir(&val.to_string())),
-                Cell::File(val) => to_runtime_error(std::env::set_current_dir(val)),
+                Cell::Text(val) => to_job_error(std::env::set_current_dir(&val.to_string())),
+                Cell::File(val) => to_job_error(std::env::set_current_dir(val)),
                 _ => Err(JobError { message: String::from("Wrong parameter type, expected text") })
             };
         }

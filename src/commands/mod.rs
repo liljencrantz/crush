@@ -39,7 +39,7 @@ use crate::{
         BaseArgument,
         ArgumentDefinition,
         Command,
-        Cell
+        Cell,
     },
     stream::{InputStream, OutputStream},
 };
@@ -49,6 +49,7 @@ use crate::printer::Printer;
 use crate::data::{CellDefinition, ConcreteCell};
 use crate::job::Job;
 use std::sync::{Arc, Mutex};
+use crate::closure::Closure;
 
 type Run = fn(
     Vec<CellType>,
@@ -69,7 +70,7 @@ pub enum Exec {
 }
 
 pub enum JobResult {
-     Async(JoinHandle<Result<(), JobError>>),
+    Async(JoinHandle<Result<(), JobError>>),
     Sync(Result<(), JobError>),
 }
 
@@ -81,7 +82,7 @@ impl JobResult {
                 Err(_) => Err(error("Error while wating for command to finish")),
             },
             JobResult::Sync(s) => s,
-        }
+        };
     }
 }
 
@@ -97,19 +98,35 @@ pub struct BaseCall<C> {
 #[derive(Clone)]
 #[derive(PartialEq)]
 pub struct CallDefinition {
-    pub arguments: Vec<ArgumentDefinition>,
-    pub command: Command,
+    name: String,
+    arguments: Vec<ArgumentDefinition>,
 }
 
 impl CallDefinition {
-    pub fn call(&self, input_type: Vec<CellType>, dependencies: &mut Vec<Job>) -> Result<Call, JobError> {
-        let c = self.command.call;
+    pub fn new(name: &str, arguments: Vec<ArgumentDefinition>) -> CallDefinition {
+        CallDefinition {
+            name: name.to_string(),
+            arguments
+        }
+    }
+
+    pub fn compile(&self, input_type: Vec<CellType>, dependencies: &mut Vec<Job>, state: &State) -> Result<Call, JobError> {
         let mut args: Vec<Argument> = Vec::new();
         for arg in self.arguments.iter() {
-          args.push(arg.argument(dependencies)?);
+            args.push(arg.argument(dependencies, state)?);
         }
-
-        return c(input_type, args);
+        match &state.get(&self.name) {
+            Some(ConcreteCell::Command(command)) => {
+                let c = command.call;
+                return c(input_type, args);
+            }
+            Some(ConcreteCell::Closure(closure)) => {
+                return Err(error("Not implemented"));
+            }
+            _ => {
+                return Err(error("Unknown command name"));
+            }
+        }
     }
 }
 

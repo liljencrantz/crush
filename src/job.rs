@@ -27,12 +27,12 @@ impl JobDefinition {
         JobDefinition { commands }
     }
 
-    pub fn job(&self) -> Result<Job, JobError> {
+    pub fn compile(&self, state: &State) -> Result<Job, JobError> {
         let mut deps = Vec::new();
         let mut jobs = Vec::new();
         let mut input_type = Vec::new();
         for def in &self.commands {
-            let c = def.call(input_type, &mut deps)?;
+            let c = def.compile(input_type, &mut deps, state)?;
             input_type = c.get_output_type().clone();
             jobs.push(c);
         }

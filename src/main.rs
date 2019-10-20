@@ -38,10 +38,10 @@ fn repl() -> Result<(), JobError>{
         match readline {
             Ok(cmd) => {
                 rl.add_history_entry(cmd.as_str());
-                match parser::parse(&mut Lexer::new(&cmd), &state) {
+                match parser::parse(&mut Lexer::new(&cmd)) {
                     Ok(jobs) => {
                         for job_definition in jobs {
-                            match job_definition.job() {
+                            match job_definition.compile(&state) {
                                 Ok(mut job) => {
                                     job.exec(&mut state, &printer);
                                     job.print(&printer);

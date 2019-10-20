@@ -10,7 +10,7 @@ use crate::{
     stream::{OutputStream, InputStream, unlimited_streams},
     commands::{Call, Exec},
     errors::{JobError, argument_error, error},
-    errors::to_runtime_error
+    errors::to_job_error
 };
 use std::{
     io::BufReader,
