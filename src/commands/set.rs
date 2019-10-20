@@ -11,7 +11,7 @@ fn mutate(
     _input_type: Vec<CellType>,
     arguments: Vec<Argument>) -> Result<(), JobError> {
     for arg in arguments {
-        state.namespace.set(arg.name.unwrap().as_ref(), arg.cell.concrete())?;
+        state.set(arg.name.unwrap().as_ref(), arg.cell.concrete())?;
     }
     return Ok(());
 }

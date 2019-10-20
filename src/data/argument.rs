@@ -16,9 +16,16 @@ impl ArgumentDefinition {
         Ok(Argument { name: self.name.clone(), cell: self.cell.clone().cell(dependencies)? })
     }
 }
+
 impl Clone for ArgumentDefinition {
     fn clone(&self) -> Self {
         ArgumentDefinition { name: self.name.clone(), cell: self.cell.clone() }
+    }
+}
+
+impl PartialEq for ArgumentDefinition {
+    fn eq(&self, other: &Self) -> bool {
+        return self.name == other.name && self.cell == other.cell;
     }
 }
 

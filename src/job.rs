@@ -17,6 +17,7 @@ pub enum JobState {
 }
 
 #[derive(Clone)]
+#[derive(PartialEq)]
 pub struct JobDefinition {
     commands: Vec<CallDefinition>,
 }
@@ -70,11 +71,11 @@ impl Job {
         self.output.take()
     }
 
-    pub fn exec(&mut self, state: &mut State) {
+    pub fn exec(&mut self, state: &mut State, printer: &Printer) {
         assert_eq!(self.state, JobState::Parsed);
 
         for dep in self.dependencies.iter_mut() {
-            dep.exec(state);
+            dep.exec(state, printer);
         }
         if !self.commands.is_empty() {
             let (prev_output, mut input) = streams();
@@ -82,11 +83,11 @@ impl Job {
             let last_job_idx = self.commands.len() - 1;
             for c in self.commands.drain(..last_job_idx) {
                 let (output, next_input) = streams();
-                self.handlers.push(c.execute(state, input, output));
+                self.handlers.push(c.execute(state, printer, input, output));
                 input = next_input;
             }
             let last_command = self.commands.drain(..).next().unwrap();
-            self.handlers.push(last_command.execute(state, input, self.last_output_stream.take().unwrap()));
+            self.handlers.push(last_command.execute(state, printer, input, self.last_output_stream.take().unwrap()));
         }
         self.state = JobState::Spawned;
     }

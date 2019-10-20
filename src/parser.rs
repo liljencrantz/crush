@@ -8,6 +8,7 @@ use regex::Regex;
 use std::error::Error;
 use crate::data::Cell;
 use crate::glob::Glob;
+use crate::closure::Closure;
 
 pub fn parse(lexer: &mut Lexer, state: &State) -> Result<Vec<JobDefinition>, JobError> {
     let mut jobs: Vec<JobDefinition> = Vec::new();
@@ -86,6 +87,12 @@ fn parse_unnamed_argument(lexer: &mut Lexer, state: &State) -> Result<CellDefini
                     let res = Ok(CellDefinition::JobDefintion(dep));
                     return res;
                 }
+                '`' => {
+                    let mut dep = parse(lexer, state)?;
+                    lexer.pop();
+                    let res = Ok(CellDefinition::Closure(Closure::new(dep, state.clone())));
+                    return res;
+                }
                 '*' => {
                     match lexer.peek().0 {
                         TokenType::Glob => {
@@ -108,7 +115,7 @@ fn parse_unnamed_argument(lexer: &mut Lexer, state: &State) -> Result<CellDefini
         }
 
         TokenType::Field => Ok(CellDefinition::field(&lexer.pop().1[1..])),
-        TokenType::Variable => match state.namespace.get(&lexer.pop().1[1..]) {
+        TokenType::Variable => match state.get(&lexer.pop().1[1..]) {
             Some(cell) => Ok(cell.clone().to_cell_definition()),
             None => Err(parse_error("Unknown variable", lexer)),
         }
@@ -167,7 +174,7 @@ fn parse_command(lexer: &mut Lexer, commands: &mut Vec<CallDefinition>, state: &
             let name = String::from(lexer.pop().1);
             let mut arguments: Vec<ArgumentDefinition> = Vec::new();
             parse_arguments(lexer, &mut arguments, state)?;
-            match &state.namespace.get(&name) {
+            match &state.get(&name) {
                 Some(ConcreteCell::Command(command)) => {
                     commands.push(CallDefinition { arguments, command: command.clone() });
                 }

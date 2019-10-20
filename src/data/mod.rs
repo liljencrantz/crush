@@ -38,6 +38,7 @@ pub enum CellDataType {
     Regex,
     Op,
     Command,
+    Closure,
     File,
     Output(Vec<CellType>),
     Rows(Vec<CellType>),

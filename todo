@@ -26,6 +26,7 @@ Map literals
 List subscripting
 Map lookup
 Only one job allowed in command substitution
+Implement hashing for remaining cell types, e.g. closure
 
 Done:
 Fix all expects calls that aren't impossible, and propagate the errors

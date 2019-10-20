@@ -48,6 +48,7 @@ use std::error::Error;
 use crate::printer::Printer;
 use crate::data::{CellDefinition, ConcreteCell};
 use crate::job::Job;
+use std::sync::{Arc, Mutex};
 
 type Run = fn(
     Vec<CellType>,
@@ -94,6 +95,7 @@ pub struct BaseCall<C> {
 }
 
 #[derive(Clone)]
+#[derive(PartialEq)]
 pub struct CallDefinition {
     pub arguments: Vec<ArgumentDefinition>,
     pub command: Command,
@@ -133,9 +135,10 @@ impl Call {
     pub fn execute(
         self,
         state: &mut State,
+        printer: &Printer,
         input: InputStream,
         output: OutputStream) -> JobResult {
-        let printer = state.printer.clone();
+        let printer = printer.clone();
         return match self.exec {
             Exec::Run(run) =>
                 JobResult::Async(thread::Builder::new().name(self.name.clone()).spawn(move || {
@@ -147,31 +150,31 @@ impl Call {
     }
 }
 
-pub fn add_builtins(namespace: &mut Namespace) -> Result<(), JobError> {
-    namespace.declare("ls", ConcreteCell::Command(Command::new(ls_and_find::ls)))?;
-    namespace.declare("find", ConcreteCell::Command(Command::new(ls_and_find::find)))?;
-    namespace.declare("echo", ConcreteCell::Command(Command::new(echo::echo)))?;
-    namespace.declare("pwd", ConcreteCell::Command(Command::new(pwd::pwd)))?;
-    namespace.declare("cd", ConcreteCell::Command(Command::new(cd::cd)))?;
-    namespace.declare("filter", ConcreteCell::Command(Command::new(filter::filter)))?;
-    namespace.declare("sort", ConcreteCell::Command(Command::new(sort::sort)))?;
-    namespace.declare("set", ConcreteCell::Command(Command::new(set::set)))?;
-    namespace.declare("let", ConcreteCell::Command(Command::new(let_command::let_command)))?;
-    namespace.declare("unset", ConcreteCell::Command(Command::new(unset::unset)))?;
-    namespace.declare("group", ConcreteCell::Command(Command::new(group::group)))?;
-    namespace.declare("join", ConcreteCell::Command(Command::new(join::join)))?;
-    namespace.declare("count", ConcreteCell::Command(Command::new(count::count)))?;
-    namespace.declare("cat", ConcreteCell::Command(Command::new(cat::cat)))?;
-    namespace.declare("select", ConcreteCell::Command(Command::new(select::select)))?;
-    namespace.declare("enumerate", ConcreteCell::Command(Command::new(enumerate::enumerate)))?;
+pub fn add_builtins(state: &State) -> Result<(), JobError> {
+    state.declare("ls", ConcreteCell::Command(Command::new(ls_and_find::ls)))?;
+    state.declare("find", ConcreteCell::Command(Command::new(ls_and_find::find)))?;
+    state.declare("echo", ConcreteCell::Command(Command::new(echo::echo)))?;
+    state.declare("pwd", ConcreteCell::Command(Command::new(pwd::pwd)))?;
+    state.declare("cd", ConcreteCell::Command(Command::new(cd::cd)))?;
+    state.declare("filter", ConcreteCell::Command(Command::new(filter::filter)))?;
+    state.declare("sort", ConcreteCell::Command(Command::new(sort::sort)))?;
+    state.declare("set", ConcreteCell::Command(Command::new(set::set)))?;
+    state.declare("let", ConcreteCell::Command(Command::new(let_command::let_command)))?;
+    state.declare("unset", ConcreteCell::Command(Command::new(unset::unset)))?;
+    state.declare("group", ConcreteCell::Command(Command::new(group::group)))?;
+    state.declare("join", ConcreteCell::Command(Command::new(join::join)))?;
+    state.declare("count", ConcreteCell::Command(Command::new(count::count)))?;
+    state.declare("cat", ConcreteCell::Command(Command::new(cat::cat)))?;
+    state.declare("select", ConcreteCell::Command(Command::new(select::select)))?;
+    state.declare("enumerate", ConcreteCell::Command(Command::new(enumerate::enumerate)))?;
 
-    namespace.declare("cast", ConcreteCell::Command(Command::new(cast::cast)))?;
+    state.declare("cast", ConcreteCell::Command(Command::new(cast::cast)))?;
 
-    namespace.declare("head", ConcreteCell::Command(Command::new(head::head)))?;
-    namespace.declare("tail", ConcreteCell::Command(Command::new(tail::tail)))?;
+    state.declare("head", ConcreteCell::Command(Command::new(head::head)))?;
+    state.declare("tail", ConcreteCell::Command(Command::new(tail::tail)))?;
 
-    namespace.declare("lines", ConcreteCell::Command(Command::new(lines::lines)))?;
-    namespace.declare("csv", ConcreteCell::Command(Command::new(csv::csv)))?;
+    state.declare("lines", ConcreteCell::Command(Command::new(lines::lines)))?;
+    state.declare("csv", ConcreteCell::Command(Command::new(csv::csv)))?;
 
     return Ok(());
 }

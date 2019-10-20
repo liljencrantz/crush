@@ -9,6 +9,7 @@ use crate::{
     }
 };
 
+#[derive(PartialEq)]
 pub struct Namespace {
     data: HashMap<String, ConcreteCell>,
 }

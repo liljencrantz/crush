@@ -21,10 +21,15 @@ use rustyline::Editor;
 use commands::add_builtins;
 use crate::errors::JobError;
 use std::error::Error;
+use std::sync::Arc;
+use std::borrow::BorrowMut;
+use crate::printer::Printer;
 
 fn repl() -> Result<(), JobError>{
     let mut state = state::State::new();
-    add_builtins(&mut state.namespace)?;
+    let printer =  Printer::new();
+
+    add_builtins(&state)?;
     let mut rl = Editor::<()>::new();
     rl.load_history(".crush_history").unwrap();
     loop {
@@ -38,39 +43,39 @@ fn repl() -> Result<(), JobError>{
                         for job_definition in jobs {
                             match job_definition.job() {
                                 Ok(mut job) => {
-                                    job.exec(&mut state);
-                                    job.print(&state.printer);
-                                    job.wait(&state.printer);
+                                    job.exec(&mut state, &printer);
+                                    job.print(&printer);
+                                    job.wait(&printer);
                                 }
-                                Err(e) => state.printer.job_error(e),
+                                Err(e) => printer.job_error(e),
                             }
                         }
                     }
                     Err(error) => {
-                        state.printer.job_error(error);
+                        printer.job_error(error);
                     }
                 }
             }
             Err(ReadlineError::Interrupted) => {
-                state.printer.line("^C");
+                printer.line("^C");
             }
             Err(ReadlineError::Eof) => {
-                state.printer.line("exit");
+                printer.line("exit");
                 break;
             }
             Err(err) => {
-                state.printer.line(err.description());
+                printer.line(err.description());
                 break;
             }
         }
         match rl.save_history(".crush_history") {
             Ok(_) => {}
             Err(_) => {
-                state.printer.line("Error: Failed to save history.");
+                printer.line("Error: Failed to save history.");
             }
         }
     }
-    state.printer.shutdown();
+    printer.shutdown();
     return Ok(());
 }
 

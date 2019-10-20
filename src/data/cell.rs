@@ -13,6 +13,7 @@ use std::ffi::OsStr;
 use std::num::ParseIntError;
 use std::error::Error;
 use crate::job::{JobDefinition, Job};
+use crate::closure::Closure;
 
 #[derive(Clone)]
 pub enum CellDefinition {
@@ -24,6 +25,7 @@ pub enum CellDefinition {
     Regex(Box<str>, Regex),
     Op(Box<str>),
     Command(Command),
+    Closure(Closure),
     JobDefintion(JobDefinition), // During invocation, this will get replaced with an output
     File(Box<Path>),
     Rows(ConcreteRows),
@@ -48,6 +50,7 @@ impl CellDefinition {
                 dependencies.push(j);
                 res
             }
+            CellDefinition::Closure(c) => Cell::Closure(c),
         })
     }
 
@@ -72,6 +75,12 @@ impl CellDefinition {
     }
 }
 
+impl PartialEq for CellDefinition {
+    fn eq(&self, other: &Self) -> bool {
+        unimplemented!()
+    }
+}
+
 pub enum Cell {
     Text(Box<str>),
     Integer(i128),
@@ -81,6 +90,7 @@ pub enum Cell {
     Regex(Box<str>, Regex),
     Op(Box<str>),
     Command(Command), // This is a cell that contains a crush builtin command
+    Closure(Closure),
     Output(Output),
     File(Box<Path>),
     Rows(Rows),
@@ -97,6 +107,7 @@ pub enum ConcreteCell {
     Regex(Box<str>, Regex),
     Op(Box<str>),
     Command(Command),
+    Closure(Closure),
     File(Box<Path>),
     Rows(ConcreteRows),
 }
@@ -128,6 +139,7 @@ impl ConcreteCell {
             ConcreteCell::Command(_) => "Command".to_string(),
             ConcreteCell::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
             ConcreteCell::Rows(_) => "<Table>".to_string(),
+            ConcreteCell::Closure(_) => "<Closure>".to_string(),
         };
     }
 
@@ -150,6 +162,7 @@ impl ConcreteCell {
             ConcreteCell::Command(v) => Cell::Command(v),
             ConcreteCell::File(v) => Cell::File(v),
             ConcreteCell::Rows(r) => Cell::Rows(r.rows()),
+            ConcreteCell::Closure(c) => Cell::Closure(c)
         };
     }
 
@@ -165,6 +178,7 @@ impl ConcreteCell {
             ConcreteCell::Command(v) => CellDefinition::Command(v),
             ConcreteCell::File(v) => CellDefinition::File(v),
             ConcreteCell::Rows(r) => CellDefinition::Rows(r),
+            ConcreteCell::Closure(c) => CellDefinition::Closure(c),
         };
     }
 
@@ -180,6 +194,7 @@ impl ConcreteCell {
             ConcreteCell::Command(_) => CellDataType::Command,
             ConcreteCell::File(_) => CellDataType::File,
             ConcreteCell::Rows(r) => CellDataType::Rows(r.types.clone()),
+            ConcreteCell::Closure(c) => CellDataType::Closure,
         };
     }
 
@@ -198,6 +213,7 @@ impl std::hash::Hash for ConcreteCell {
             ConcreteCell::Command(_) => { panic!("Impossible!") }
             ConcreteCell::File(v) => v.hash(state),
             ConcreteCell::Rows(v) => v.hash(state),
+            ConcreteCell::Closure(c) => {}//c.hash(state),
         }
     }
 }
@@ -278,6 +294,7 @@ impl Cell {
             Cell::File(_) => CellDataType::File,
             Cell::Output(o) => CellDataType::Output(o.types.clone()),
             Cell::Rows(r) => CellDataType::Rows(r.types.clone()),
+            Cell::Closure(c) => CellDataType::Closure,
         };
     }
 
@@ -295,6 +312,7 @@ impl Cell {
             Cell::File(v) => ConcreteCell::File(v),
             Cell::Rows(r) => ConcreteCell::Rows(r.concrete()),
             Cell::Output(s) => ConcreteCell::to_rows(&s),
+            Cell::Closure(c) => ConcreteCell::Closure(c),
         };
     }
 
@@ -311,6 +329,7 @@ impl Cell {
             Cell::File(v) => ConcreteCell::File(v.clone()),
             Cell::Rows(r) => ConcreteCell::Rows(r.concrete_copy()),
             Cell::Output(o) => ConcreteCell::to_rows(o.clone()),
+            Cell::Closure(c) => ConcreteCell::Closure(c.clone()),
         };
     }
 

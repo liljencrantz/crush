@@ -13,7 +13,7 @@ fn mutate(
     arguments: Vec<Argument>) -> Result<(), JobError> {
     for arg in arguments {
         if let Cell::Text(s) = arg.cell {
-            state.namespace.remove(&s);
+            state.remove(&s);
         }
     }
     return Ok(());
