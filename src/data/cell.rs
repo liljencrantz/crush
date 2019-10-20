@@ -1,8 +1,8 @@
 use crate::glob::Glob;
 use std::cmp::Ordering;
 use std::hash::Hasher;
-use crate::data::{Output, CellDataType, Command};
-use crate::data::row::{Row, RowWithTypes};
+use crate::data::{Output, CellDataType, Command, ConcreteRows, ConcreteRow};
+use crate::data::row::{Row};
 use crate::data::rows::Rows;
 use crate::errors::{error, JobError, to_runtime_error};
 use std::path::Path;
@@ -12,9 +12,10 @@ use crate::state::get_cwd;
 use std::ffi::OsStr;
 use std::num::ParseIntError;
 use std::error::Error;
+use crate::job::{JobDefinition, Job};
 
-#[derive(Debug)]
-pub enum Cell {
+#[derive(Clone)]
+pub enum CellDefinition {
     Text(Box<str>),
     Integer(i128),
     Time(DateTime<Local>),
@@ -23,12 +24,225 @@ pub enum Cell {
     Regex(Box<str>, Regex),
     Op(Box<str>),
     Command(Command),
-   // Closure(Closure),
+    JobDefintion(JobDefinition), // During invocation, this will get replaced with an output
+    File(Box<Path>),
+    Rows(ConcreteRows),
+}
+
+impl CellDefinition {
+    pub fn cell(self, dependencies: &mut Vec<Job>) -> Cell {
+        match self {
+            CellDefinition::Text(v) => Cell::Text(v),
+            CellDefinition::Integer(v) => Cell::Integer(v),
+            CellDefinition::Time(v) => Cell::Time(v),
+            CellDefinition::Field(v) => Cell::Field(v),
+            CellDefinition::Glob(v) => Cell::Glob(v),
+            CellDefinition::Regex(v, r) => Cell::Regex(v, r),
+            CellDefinition::Op(v) => Cell::Op(v),
+            CellDefinition::Command(v) => Cell::Command(v),
+            CellDefinition::File(v) => Cell::File(v),
+            CellDefinition::Rows(r) => Cell::Rows(r.rows()),
+            CellDefinition::JobDefintion(def) => {
+                let mut j = def.job();
+                let res = Cell::Output(j.take_output().unwrap());
+                dependencies.push(j);
+                res
+            }
+        }
+    }
+
+    pub fn file(s: &str) -> CellDefinition {
+        CellDefinition::File(Box::from(Path::new(s)))
+    }
+
+    pub fn text(s: &str) -> CellDefinition {
+        CellDefinition::Text(Box::from(s))
+    }
+
+    pub fn field(s: &str) -> CellDefinition {
+        CellDefinition::Field(Box::from(s))
+    }
+
+    pub fn op(s: &str) -> CellDefinition {
+        CellDefinition::Op(Box::from(s))
+    }
+
+    pub fn regex(s: &str, r: Regex) -> CellDefinition {
+        CellDefinition::Regex(Box::from(s), r)
+    }
+}
+
+pub enum Cell {
+    Text(Box<str>),
+    Integer(i128),
+    Time(DateTime<Local>),
+    Field(Box<str>),
+    Glob(Glob),
+    Regex(Box<str>, Regex),
+    Op(Box<str>),
+    Command(Command), // This is a cell that contains a crush builtin command
     Output(Output),
     File(Box<Path>),
     Rows(Rows),
-    Row(RowWithTypes),
 }
+
+
+#[derive(Clone)]
+pub enum ConcreteCell {
+    Text(Box<str>),
+    Integer(i128),
+    Time(DateTime<Local>),
+    Field(Box<str>),
+    Glob(Glob),
+    Regex(Box<str>, Regex),
+    Op(Box<str>),
+    Command(Command),
+    File(Box<Path>),
+    Rows(ConcreteRows),
+}
+
+impl ConcreteCell {
+
+    fn to_rows(s: Output) -> ConcreteCell {
+        let mut rows: Vec<ConcreteRow> = Vec::new();
+        loop {
+            match s.stream.recv() {
+                Ok(row) => {
+                    rows.push(row.concrete());
+                }
+                Err(_) => break,
+            }
+        }
+        return ConcreteCell::Rows(ConcreteRows { types: s.types.clone(), rows });
+    }
+
+    pub fn to_string(&self) -> String {
+        return match self {
+            ConcreteCell::Text(val) => val.to_string(),
+            ConcreteCell::Integer(val) => val.to_string(),
+            ConcreteCell::Time(val) => val.format("%Y-%m-%d %H:%M:%S %z").to_string(),
+            ConcreteCell::Field(val) => format!(r"%{}", val),
+            ConcreteCell::Glob(val) => format!("*{{{}}}", val.to_string()),
+            ConcreteCell::Regex(val, _) => format!("r{{{}}}", val),
+            ConcreteCell::Op(val) => val.to_string(),
+            ConcreteCell::Command(_) => "Command".to_string(),
+            ConcreteCell::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
+            ConcreteCell::Rows(_) => "<Table>".to_string(),
+        };
+    }
+
+    pub fn alignment(&self) -> Alignment {
+        return match self {
+            ConcreteCell::Integer(_) => Alignment::Right,
+            _ => Alignment::Left,
+        };
+    }
+
+    pub fn cell(self) -> Cell {
+        return match self {
+            ConcreteCell::Text(v) => Cell::Text(v),
+            ConcreteCell::Integer(v) => Cell::Integer(v),
+            ConcreteCell::Time(v) => Cell::Time(v),
+            ConcreteCell::Field(v) => Cell::Field(v),
+            ConcreteCell::Glob(v) => Cell::Glob(v),
+            ConcreteCell::Regex(v, r) => Cell::Regex(v, r),
+            ConcreteCell::Op(v) => Cell::Op(v),
+            ConcreteCell::Command(v) => Cell::Command(v),
+            ConcreteCell::File(v) => Cell::File(v),
+            ConcreteCell::Rows(r) => Cell::Rows(r.rows()),
+        };
+    }
+
+    pub fn to_cell_definition(self) -> CellDefinition {
+        return match self {
+            ConcreteCell::Text(v) => CellDefinition::Text(v),
+            ConcreteCell::Integer(v) => CellDefinition::Integer(v),
+            ConcreteCell::Time(v) => CellDefinition::Time(v),
+            ConcreteCell::Field(v) => CellDefinition::Field(v),
+            ConcreteCell::Glob(v) => CellDefinition::Glob(v),
+            ConcreteCell::Regex(v, r) => CellDefinition::Regex(v, r),
+            ConcreteCell::Op(v) => CellDefinition::Op(v),
+            ConcreteCell::Command(v) => CellDefinition::Command(v),
+            ConcreteCell::File(v) => CellDefinition::File(v),
+            ConcreteCell::Rows(r) => CellDefinition::Rows(r),
+        };
+    }
+
+    pub fn cell_data_type(&self) -> CellDataType {
+        return match self {
+            ConcreteCell::Text(_) => CellDataType::Text,
+            ConcreteCell::Integer(_) => CellDataType::Integer,
+            ConcreteCell::Time(_) => CellDataType::Time,
+            ConcreteCell::Field(_) => CellDataType::Field,
+            ConcreteCell::Glob(_) => CellDataType::Glob,
+            ConcreteCell::Regex(_, _) => CellDataType::Regex,
+            ConcreteCell::Op(_) => CellDataType::Op,
+            ConcreteCell::Command(_) => CellDataType::Command,
+            ConcreteCell::File(_) => CellDataType::File,
+            ConcreteCell::Rows(r) => CellDataType::Rows(r.types.clone()),
+        };
+    }
+
+}
+
+impl std::hash::Hash for ConcreteCell {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            ConcreteCell::Text(v) => v.hash(state),
+            ConcreteCell::Integer(v) => v.hash(state),
+            ConcreteCell::Time(v) => v.hash(state),
+            ConcreteCell::Field(v) => v.hash(state),
+            ConcreteCell::Glob(v) => v.hash(state),
+            ConcreteCell::Regex(v, _) => v.hash(state),
+            ConcreteCell::Op(v) => v.hash(state),
+            ConcreteCell::Command(_) => { panic!("Impossible!") }
+            ConcreteCell::File(v) => v.hash(state),
+            ConcreteCell::Rows(v) => v.hash(state),
+        }
+    }
+}
+
+impl std::cmp::PartialEq for ConcreteCell {
+    fn eq(&self, other: &ConcreteCell) -> bool {
+        return match (self, other) {
+            (ConcreteCell::Text(val1), ConcreteCell::Text(val2)) => val1 == val2,
+            (ConcreteCell::Glob(glb), ConcreteCell::Text(val)) => glb.matches(val),
+            (ConcreteCell::Text(val), ConcreteCell::Glob(glb)) => glb.matches(val),
+            (ConcreteCell::Integer(val1), ConcreteCell::Integer(val2)) => val1 == val2,
+            (ConcreteCell::Time(val1), ConcreteCell::Time(val2)) => val1 == val2,
+            (ConcreteCell::Field(val1), ConcreteCell::Field(val2)) => val1 == val2,
+            (ConcreteCell::Glob(val1), ConcreteCell::Glob(val2)) => val1 == val2,
+            (ConcreteCell::Regex(val1, _), ConcreteCell::Regex(val2, _)) => val1 == val2,
+            (ConcreteCell::Op(val1), ConcreteCell::Op(val2)) => val1 == val2,
+            (ConcreteCell::Command(val1), ConcreteCell::Command(val2)) => val1 == val2,
+            (ConcreteCell::File(val1), ConcreteCell::File(val2)) => val1 == val2,
+            _ => panic!("Unimplemented"),
+        };
+    }
+}
+
+pub enum Alignment {
+    Left,
+    Right,
+}
+
+impl std::cmp::PartialOrd for ConcreteCell {
+    fn partial_cmp(&self, other: &ConcreteCell) -> Option<Ordering> {
+        return match (self, other) {
+            (ConcreteCell::Text(val1), ConcreteCell::Text(val2)) => Some(val1.cmp(val2)),
+            (ConcreteCell::Field(val1), ConcreteCell::Field(val2)) => Some(val1.cmp(val2)),
+            (ConcreteCell::Glob(val1), ConcreteCell::Glob(val2)) => Some(val1.cmp(val2)),
+            (ConcreteCell::Regex(val1, _), ConcreteCell::Regex(val2, _)) => Some(val1.cmp(val2)),
+            (ConcreteCell::Integer(val1), ConcreteCell::Integer(val2)) => Some(val1.cmp(val2)),
+            (ConcreteCell::Time(val1), ConcreteCell::Time(val2)) => Some(val1.cmp(val2)),
+            (ConcreteCell::Op(val1), ConcreteCell::Op(val2)) => Some(val1.cmp(val2)),
+            (ConcreteCell::File(val1), ConcreteCell::File(val2)) => Some(val1.cmp(val2)),
+            _ => Option::None,
+        };
+    }
+}
+
+impl std::cmp::Eq for ConcreteCell {}
 
 impl Cell {
     pub fn file(s: &str) -> Cell {
@@ -64,78 +278,23 @@ impl Cell {
             Cell::File(_) => CellDataType::File,
             Cell::Output(o) => CellDataType::Output(o.types.clone()),
             Cell::Rows(r) => CellDataType::Rows(r.types.clone()),
-            Cell::Row(r) => CellDataType::Row(r.types.clone()),
         };
     }
 
-    pub fn partial_clone(&self) -> Result<Cell, JobError> {
-        return match self {
-            Cell::Text(v) => Ok(Cell::Text(v.clone())),
-            Cell::Integer(v) => Ok(Cell::Integer(v.clone())),
-            Cell::Time(v) => Ok(Cell::Time(v.clone())),
-            Cell::Field(v) => Ok(Cell::Field(v.clone())),
-            Cell::Glob(v) => Ok(Cell::Glob(v.clone())),
-            Cell::Regex(v, r) => Ok(Cell::Regex(v.clone(), r.clone())),
-            Cell::Op(v) => Ok(Cell::Op(v.clone())),
-            Cell::Command(v) => Ok(Cell::Command(v.clone())),
-            Cell::File(v) => Ok(Cell::File(v.clone())),
-            Cell::Rows(r) => Ok(Cell::Rows(r.clone())),
-            Cell::Row(r) => Ok(Cell::Row(r.clone())),
-            Cell::Output(_) => Err(error("Invalid use of stream")),
-        };
-    }
 
-    fn to_rows(s: &Output) -> Cell {
-        let mut rows: Vec<Row> = Vec::new();
-        loop {
-            match s.stream.recv() {
-                Ok(row) => {
-                    rows.push(row);
-                }
-                Err(_) => break,
-            }
-        }
-        return Cell::Rows(Rows { types: s.types.clone(), rows });
-    }
-
-    pub fn concrete(&self) -> Cell {
+    pub fn concrete(self) -> ConcreteCell {
         return match self {
-            Cell::Text(v) => Cell::Text(v.clone()),
-            Cell::Integer(v) => Cell::Integer(v.clone()),
-            Cell::Time(v) => Cell::Time(v.clone()),
-            Cell::Field(v) => Cell::Field(v.clone()),
-            Cell::Glob(v) => Cell::Glob(v.clone()),
-            Cell::Regex(v, r) => Cell::Regex(v.clone(), r.clone()),
-            Cell::Op(v) => Cell::Op(v.clone()),
-            Cell::Command(v) => Cell::Command(v.clone()),
-            Cell::File(v) => Cell::File(v.clone()),
-            Cell::Rows(r) => Cell::Rows(r.clone()),
-            Cell::Row(r) => Cell::Row(r.clone()),
-            Cell::Output(s) => Cell::to_rows(s),
-        };
-    }
-
-    pub fn to_string(&self) -> String {
-        return match self {
-            Cell::Text(val) => val.to_string(),
-            Cell::Integer(val) => val.to_string(),
-            Cell::Time(val) => val.format("%Y-%m-%d %H:%M:%S %z").to_string(),
-            Cell::Field(val) => format!(r"%{}", val),
-            Cell::Glob(val) => format!("*{{{}}}", val.to_string()),
-            Cell::Regex(val, _) => format!("r{{{}}}", val),
-            Cell::Op(val) => val.to_string(),
-            Cell::Command(_) => "Command".to_string(),
-            Cell::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
-            Cell::Rows(_) => "<Table>".to_string(),
-            Cell::Row(_) => "<Row>".to_string(),
-            Cell::Output(_) => "<Table>".to_string(),
-        };
-    }
-
-    pub fn alignment(&self) -> Alignment {
-        return match self {
-            Cell::Integer(_) => Alignment::Right,
-            _ => Alignment::Left,
+            Cell::Text(v) => ConcreteCell::Text(v),
+            Cell::Integer(v) => ConcreteCell::Integer(v),
+            Cell::Time(v) => ConcreteCell::Time(v),
+            Cell::Field(v) => ConcreteCell::Field(v),
+            Cell::Glob(v) => ConcreteCell::Glob(v),
+            Cell::Regex(v, r) => ConcreteCell::Regex(v, r),
+            Cell::Op(v) => ConcreteCell::Op(v),
+            Cell::Command(v) => ConcreteCell::Command(v),
+            Cell::File(v) => ConcreteCell::File(v),
+            Cell::Rows(r) => ConcreteCell::Rows(r.concrete()),
+            Cell::Output(s) => ConcreteCell::to_rows(s),
         };
     }
 
@@ -225,74 +384,11 @@ impl Cell {
                 let s = i.to_string();
                 to_runtime_error(Regex::new(s.as_str()).map(|v| Cell::Regex(s.into_boxed_str(), v)))
             },
-
             _ => Err(error("Unimplemented conversion")),
         }
     }
 }
 
-impl std::hash::Hash for Cell {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        match self {
-            Cell::Text(v) => v.hash(state),
-            Cell::Integer(v) => v.hash(state),
-            Cell::Time(v) => v.hash(state),
-            Cell::Field(v) => v.hash(state),
-            Cell::Glob(v) => v.hash(state),
-            Cell::Regex(v, _) => v.hash(state),
-            Cell::Op(v) => v.hash(state),
-            Cell::Command(_) => { panic!("Impossible!") }
-            Cell::Output(_) => { panic!("Impossible!") }
-            Cell::File(v) => v.hash(state),
-            Cell::Rows(v) => v.hash(state),
-            Cell::Row(v) => v.hash(state),
-        }
-    }
-}
-
-pub enum Alignment {
-    Left,
-    Right,
-}
-
-impl std::cmp::PartialOrd for Cell {
-    fn partial_cmp(&self, other: &Cell) -> Option<Ordering> {
-        return match (self, other) {
-            (Cell::Text(val1), Cell::Text(val2)) => Some(val1.cmp(val2)),
-            (Cell::Field(val1), Cell::Field(val2)) => Some(val1.cmp(val2)),
-            (Cell::Glob(val1), Cell::Glob(val2)) => Some(val1.cmp(val2)),
-            (Cell::Regex(val1, _), Cell::Regex(val2, _)) => Some(val1.cmp(val2)),
-            (Cell::Integer(val1), Cell::Integer(val2)) => Some(val1.cmp(val2)),
-            (Cell::Time(val1), Cell::Time(val2)) => Some(val1.cmp(val2)),
-            (Cell::Op(val1), Cell::Op(val2)) => Some(val1.cmp(val2)),
-            (Cell::File(val1), Cell::File(val2)) => Some(val1.cmp(val2)),
-            (Cell::Row(val1), Cell::Row(val2)) => val1.partial_cmp(val2),
-            _ => Option::None,
-        };
-    }
-}
-
-impl std::cmp::PartialEq for Cell {
-    fn eq(&self, other: &Cell) -> bool {
-        return match (self, other) {
-            (Cell::Text(val1), Cell::Text(val2)) => val1 == val2,
-            (Cell::Glob(glb), Cell::Text(val)) => glb.matches(val),
-            (Cell::Text(val), Cell::Glob(glb)) => glb.matches(val),
-            (Cell::Integer(val1), Cell::Integer(val2)) => val1 == val2,
-            (Cell::Time(val1), Cell::Time(val2)) => val1 == val2,
-            (Cell::Field(val1), Cell::Field(val2)) => val1 == val2,
-            (Cell::Glob(val1), Cell::Glob(val2)) => val1 == val2,
-            (Cell::Regex(val1, _), Cell::Regex(val2, _)) => val1 == val2,
-            (Cell::Op(val1), Cell::Op(val2)) => val1 == val2,
-            (Cell::Command(val1), Cell::Command(val2)) => val1 == val2,
-            (Cell::File(val1), Cell::File(val2)) => val1 == val2,
-            (Cell::Row(val1), Cell::Row(val2)) => val1 == val2,
-            _ => false,
-        };
-    }
-}
-
-impl std::cmp::Eq for Cell {}
 
 #[cfg(test)]
 mod tests {

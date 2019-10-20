@@ -16,6 +16,7 @@ use std::iter::Iterator;
 use crate::printer::Printer;
 use crate::errors::error;
 use std::cmp::Ordering;
+use crate::data::ConcreteCell;
 
 fn do_match(needle: &Cell, haystack: &Cell) -> Result<bool, JobError> {
     match (needle, haystack) {
@@ -30,7 +31,7 @@ fn do_match(needle: &Cell, haystack: &Cell) -> Result<bool, JobError> {
     }
 }
 
-fn to_cell<'a>(value: &'a Value, row: &'a Row) -> &'a Cell {
+fn to_cell<'a>(value: &'a Value, row: &'a Row) -> &'a ConcreteCell {
     return match value {
         Value::Cell(c) => &c,
         Value::Field(idx) => &row.cells[*idx],

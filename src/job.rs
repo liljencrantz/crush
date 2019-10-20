@@ -1,10 +1,11 @@
 use crate::state::State;
-use crate::commands::{Call, JobResult};
+use crate::commands::{Call, JobResult, CallDefinition};
 use crate::stream::{print, streams, OutputStream};
 use std::thread;
-use crate::data::Output;
+use crate::data::{Output, CellDefinition};
 use std::thread::JoinHandle;
 use crate::printer::Printer;
+use map_in_place::MapVecInPlace;
 
 #[derive(PartialEq)]
 #[derive(Debug)]
@@ -14,20 +15,27 @@ pub enum JobState {
     Finished,
 }
 
+#[derive(Clone)]
 pub struct JobDefinition {
-    commands: Vec<Call>,
-    dependencies: Vec<JobDefinition>,
+    commands: Vec<CallDefinition>,
 }
 
 impl JobDefinition {
-    pub fn new(commands: Vec<Call>, dependencies: Vec<JobDefinition>) -> JobDefinition {
-        JobDefinition { commands, dependencies }
+    pub fn new(commands: Vec<CallDefinition>) -> JobDefinition {
+        JobDefinition { commands }
     }
 
     pub fn job(&self) -> Job {
+        let mut deps = Vec::new();
+        let mut jobs = Vec::new();
+        let mut input_type = Vec::new();
+        for def in &self.commands {
+            let c = def.call(input_type, &mut deps);
+            input_type = c.get_input_type().clone();
+            jobs.push(c);
+        }
         Job::new(
-            self.commands.clone(),
-            self.dependencies.iter().map(|j| j.job()).collect::<Vec<Job>>())
+            jobs, deps)
     }
 }
 

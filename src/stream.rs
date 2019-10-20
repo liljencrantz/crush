@@ -1,4 +1,4 @@
-use crate::data::{Output, CellDataType, CellType};
+use crate::data::{Output, CellDataType, CellType, ConcreteRow, ConcreteCell, ConcreteRows};
 use crate::data::{Cell, Alignment, Row, Rows};
 use std::cmp::max;
 use std::sync::mpsc::{Receiver, sync_channel, SyncSender, channel, Sender};
@@ -37,13 +37,13 @@ pub fn unlimited_streams() -> (OutputStream, InputStream) {
 }
 
 pub trait Readable {
-    fn read(&mut self) -> Result<Row, JobError>;
+    fn read(&mut self) -> Result<ConcreteRow, JobError>;
 }
 
 impl Readable for InputStream {
-    fn read(&mut self) -> Result<Row, JobError> {
+    fn read(&mut self) -> Result<ConcreteRow, JobError> {
         match self.recv() {
-            Ok(v) => Ok(v),
+            Ok(v) => Ok(v.concrete()),
             Err(e) => Err(error(e.description())),
         }
     }
@@ -55,22 +55,22 @@ pub fn print(printer: &Printer, mut stream: InputStream, types: Vec<CellType>) {
 
 pub struct RowsReader {
     idx: usize,
-    rows: Rows,
+    rows: ConcreteRows,
 }
 
 impl Readable for RowsReader {
-    fn read(&mut self) -> Result<Row, JobError> {
+    fn read(&mut self) -> Result<ConcreteRow, JobError> {
         if self.idx >= self.rows.rows.len() {
             return Err(error("EOF"));
         }
         self.idx += 1;
-        return Ok(self.rows.rows[self.idx - 1].concrete());
+        return Ok(self.rows.rows[self.idx - 1].clone());
     }
 }
 
 
 fn print_internal<T: Readable>(printer: &Printer, stream: &mut T, types: &Vec<CellType>, indent: usize) {
-    let mut data: Vec<Row> = Vec::new();
+    let mut data: Vec<ConcreteRow> = Vec::new();
     let mut has_name = false;
     let mut has_table = false;
 
@@ -110,7 +110,7 @@ fn calculate_header_width(w: &mut Vec<usize>,  types: &Vec<CellType>, has_name: 
     }
 }
 
-fn calculate_body_width(w: &mut Vec<usize>,  data: &Vec<Row>, col_count: usize) {
+fn calculate_body_width(w: &mut Vec<usize>,  data: &Vec<ConcreteRow>, col_count: usize) {
     for r in data {
         assert_eq!(col_count, r.cells.len());
         for (idx, c) in r.cells.iter().enumerate() {
@@ -131,7 +131,7 @@ fn print_header(printer: &Printer, w: &Vec<usize>,  types: &Vec<CellType>, has_n
     }
 }
 
-fn print_row(printer: &Printer, w: &Vec<usize>, mut r: Row, indent: usize, outputs: &mut Vec<Output>, rows: &mut Vec<Rows>) {
+fn print_row(printer: &Printer, w: &Vec<usize>, mut r: ConcreteRow, indent: usize, rows: &mut Vec<ConcreteRows>) {
     let cell_len = r.cells.len();
     let mut row = " ".repeat(indent * 4);
     for (idx, c) in r.cells.drain(..).enumerate() {
@@ -143,25 +143,17 @@ fn print_row(printer: &Printer, w: &Vec<usize>, mut r: Row, indent: usize, outpu
         }
 
         match c {
-            Cell::Output(o) => outputs.push(o),
-            Cell::Rows(r) => rows.push(r),
+            ConcreteCell::Rows(r) => rows.push(r),
             _ => {}
         }
     }
     printer.line(row.as_str());
 }
 
-fn print_body(printer: &Printer, w: &Vec<usize>,  data: Vec<Row>, indent: usize) {
+fn print_body(printer: &Printer, w: &Vec<usize>,  data: Vec<ConcreteRow>, indent: usize) {
     for mut r in data.into_iter() {
-        let mut outputs: Vec<Output> = Vec::new();
-        let mut rows: Vec<Rows> = Vec::new();
-
-        print_row(printer, w, r, indent, &mut outputs, &mut rows);
-
-        for mut o in outputs {
-            print_internal(printer, &mut o.stream, &o.types, indent + 1);
-        }
-
+        let mut rows = Vec::new();
+        print_row(printer, w, r, indent, &mut rows);
         for mut r in rows {
             let t = r.types.clone();
             print_internal::<RowsReader>(printer, &mut RowsReader { idx: 0, rows: r }, &t, indent + 1);
@@ -169,7 +161,7 @@ fn print_body(printer: &Printer, w: &Vec<usize>,  data: Vec<Row>, indent: usize)
     }
 }
 
-fn print_partial(printer: &Printer, mut data: Vec<Row>, types: &Vec<CellType>, has_name: bool, indent: usize) {
+fn print_partial(printer: &Printer, mut data: Vec<ConcreteRow>, types: &Vec<CellType>, has_name: bool, indent: usize) {
     let mut w = vec![0; types.len()];
 
     calculate_header_width(&mut w, types, has_name);

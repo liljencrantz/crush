@@ -5,12 +5,12 @@ use crate::{
     data::{
         CellType,
         Argument,
-        Cell
+        ConcreteCell
     }
 };
 
 pub struct Namespace {
-    data: HashMap<String, Cell>,
+    data: HashMap<String, ConcreteCell>,
 }
 
 impl Namespace {
@@ -20,7 +20,7 @@ impl Namespace {
         };
     }
 
-    pub fn declare(&mut self, name: &str, value: Cell) -> Result<(), JobError> {
+    pub fn declare(&mut self, name: &str, value: ConcreteCell) -> Result<(), JobError> {
         if self.data.contains_key(name) {
             return Err(error(format!("Variable ${{{}}} already exists", name).as_str()));
         }
@@ -28,7 +28,7 @@ impl Namespace {
         return Ok(());
     }
 
-    pub fn set(&mut self, name: &str, value: Cell) -> Result<(), JobError> {
+    pub fn set(&mut self, name: &str, value: ConcreteCell) -> Result<(), JobError> {
         if !self.data.contains_key(name) {
             return Err(error(format!("Unknown variable ${{{}}}", name).as_str()));
         }
@@ -43,13 +43,13 @@ impl Namespace {
         self.data.remove(name);
     }
 
-    pub fn get(&self, name: &str) -> Option<&Cell> {
+    pub fn get(&self, name: &str) -> Option<&ConcreteCell> {
         return self.data.get(&name.to_string());
     }
 
     pub fn call(&self, name: &str, input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
         return match self.data.get(name) {
-            Some(Cell::Command(cmd)) => {
+            Some(ConcreteCell::Command(cmd)) => {
                 let c = cmd.call;
                 return c(input_type, arguments);
             }

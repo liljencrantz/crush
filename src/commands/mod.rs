@@ -17,12 +17,12 @@ mod tail;
 mod lines;
 mod csv;
 
-mod filter;
+//mod filter;
 mod sort;
 mod select;
 mod enumerate;
-mod group;
-mod join;
+//mod group;
+//mod join;
 mod count;
 mod cat;
 
@@ -36,6 +36,8 @@ use crate::{
     data::{
         CellType,
         Argument,
+        BaseArgument,
+        ArgumentDefinition,
         Command,
         Cell
     },
@@ -44,6 +46,8 @@ use crate::{
 use std::thread::JoinHandle;
 use std::error::Error;
 use crate::printer::Printer;
+use crate::data::{CellDefinition, ConcreteCell};
+use crate::job::Job;
 
 type Run = fn(
     Vec<CellType>,
@@ -80,13 +84,29 @@ impl JobResult {
     }
 }
 
-pub struct Call {
+
+pub struct BaseCall<C> {
     name: String,
     input_type: Vec<CellType>,
-    arguments: Vec<Argument>,
+    arguments: Vec<BaseArgument<C>>,
     output_type: Vec<CellType>,
     exec: Exec,
 }
+
+#[derive(Clone)]
+pub struct CallDefinition {
+    pub arguments: Vec<ArgumentDefinition>,
+    pub command: Command,
+}
+
+impl CallDefinition {
+    pub fn call(&self, input_type: Vec<CellType>, dependencies: &mut Vec<Job>) -> Call {
+        let c = self.command.call;
+        return c(input_type, self.arguments.iter().map(|a| a.argument(dependencies)).collect()).unwrap();
+    }
+}
+
+pub type Call = BaseCall<Cell>;
 
 impl Call {
     pub fn get_name(&self) -> &String {
@@ -122,47 +142,31 @@ impl Call {
     }
 }
 
-impl Clone for Call {
-    fn clone(&self) -> Self {
-        Call {
-            name: self.name.clone(),
-            input_type: self.input_type.clone(),
-            arguments: self.arguments.iter()
-                .map(|a| {Argument {
-            name: a.name.clone(),
-            cell: a.cell.partial_clone().unwrap(),
-            }}).collect::<Vec<Argument>>(),
-            output_type: self.output_type.clone(),
-            exec: self.exec.clone(),
-        }
-    }
-}
-
 pub fn add_builtins(namespace: &mut Namespace) -> Result<(), JobError> {
-    namespace.declare("ls", Cell::Command(Command::new(ls_and_find::ls)))?;
-    namespace.declare("find", Cell::Command(Command::new(ls_and_find::find)))?;
-    namespace.declare("echo", Cell::Command(Command::new(echo::echo)))?;
-    namespace.declare("pwd", Cell::Command(Command::new(pwd::pwd)))?;
-    namespace.declare("cd", Cell::Command(Command::new(cd::cd)))?;
-    namespace.declare("filter", Cell::Command(Command::new(filter::filter)))?;
-    namespace.declare("sort", Cell::Command(Command::new(sort::sort)))?;
-    namespace.declare("set", Cell::Command(Command::new(set::set)))?;
-    namespace.declare("let", Cell::Command(Command::new(let_command::let_command)))?;
-    namespace.declare("unset", Cell::Command(Command::new(unset::unset)))?;
-    namespace.declare("group", Cell::Command(Command::new(group::group)))?;
-    namespace.declare("join", Cell::Command(Command::new(join::join)))?;
-    namespace.declare("count", Cell::Command(Command::new(count::count)))?;
-    namespace.declare("cat", Cell::Command(Command::new(cat::cat)))?;
-    namespace.declare("select", Cell::Command(Command::new(select::select)))?;
-    namespace.declare("enumerate", Cell::Command(Command::new(enumerate::enumerate)))?;
+    namespace.declare("ls", ConcreteCell::Command(Command::new(ls_and_find::ls)))?;
+    namespace.declare("find", ConcreteCell::Command(Command::new(ls_and_find::find)))?;
+    namespace.declare("echo", ConcreteCell::Command(Command::new(echo::echo)))?;
+    namespace.declare("pwd", ConcreteCell::Command(Command::new(pwd::pwd)))?;
+    namespace.declare("cd", ConcreteCell::Command(Command::new(cd::cd)))?;
+//    namespace.declare("filter", ConcreteCell::Command(Command::new(filter::filter)))?;
+    namespace.declare("sort", ConcreteCell::Command(Command::new(sort::sort)))?;
+    namespace.declare("set", ConcreteCell::Command(Command::new(set::set)))?;
+    namespace.declare("let", ConcreteCell::Command(Command::new(let_command::let_command)))?;
+    namespace.declare("unset", ConcreteCell::Command(Command::new(unset::unset)))?;
+//    namespace.declare("group", ConcreteCell::Command(Command::new(group::group)))?;
+//    namespace.declare("join", ConcreteCell::Command(Command::new(join::join)))?;
+    namespace.declare("count", ConcreteCell::Command(Command::new(count::count)))?;
+    namespace.declare("cat", ConcreteCell::Command(Command::new(cat::cat)))?;
+    namespace.declare("select", ConcreteCell::Command(Command::new(select::select)))?;
+    namespace.declare("enumerate", ConcreteCell::Command(Command::new(enumerate::enumerate)))?;
 
-    namespace.declare("cast", Cell::Command(Command::new(cast::cast)))?;
+    namespace.declare("cast", ConcreteCell::Command(Command::new(cast::cast)))?;
 
-    namespace.declare("head", Cell::Command(Command::new(head::head)))?;
-    namespace.declare("tail", Cell::Command(Command::new(tail::tail)))?;
+    namespace.declare("head", ConcreteCell::Command(Command::new(head::head)))?;
+    namespace.declare("tail", ConcreteCell::Command(Command::new(tail::tail)))?;
 
-    namespace.declare("lines", Cell::Command(Command::new(lines::lines)))?;
-    namespace.declare("csv", Cell::Command(Command::new(csv::csv)))?;
+    namespace.declare("lines", ConcreteCell::Command(Command::new(lines::lines)))?;
+    namespace.declare("csv", ConcreteCell::Command(Command::new(csv::csv)))?;
 
     return Ok(());
 }

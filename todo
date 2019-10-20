@@ -20,6 +20,12 @@ implement format command for text formating
 add and/or to filter command
 add parens to filter command
 add glob support to select command
+List and map cell types
+List literals
+Map literals
+List subscripting
+Map lookup
+Only one job allowed in command substitution
 
 Done:
 Fix all expects calls that aren't impossible, and propagate the errors

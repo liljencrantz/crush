@@ -8,14 +8,13 @@ use crate::{
     errors::{JobError, argument_error},
     commands::command_util::find_field
 };
+use crate::data::ConcreteCell;
 
-#[derive(Debug)]
 pub enum Value {
-    Cell(Cell),
+    Cell(ConcreteCell),
     Field(usize),
 }
 
-#[derive(Debug)]
 pub enum Condition {
     //    And(Box<Condition>, Box<Condition>),
 //    Or(Box<Condition>, Box<Condition>),
@@ -38,7 +37,7 @@ fn parse_value(input_type: &Vec<CellType>,
                 Cell::Field(_) => Ok(Value::Field(field_lookup[*arg_idx].expect("Impossible"))),
                 Cell::Op(_) => Err(argument_error("Expected value")),
                 Cell::Output(_) => Err(argument_error("Invalid argument type Stream")),
-                _ => arg.cell.partial_clone().and_then({ |a| Ok(Value::Cell(a)) }),
+                _ => Ok(arg.cell.concrete()),
             };
         }
         None => {

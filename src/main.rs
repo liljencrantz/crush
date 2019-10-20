@@ -35,7 +35,8 @@ fn repl() -> Result<(), JobError>{
                 rl.add_history_entry(cmd.as_str());
                 match parser::parse(&mut Lexer::new(&cmd), &state) {
                     Ok(jobs) => {
-                        for mut job in jobs {
+                        for job_definition in jobs {
+                            let mut job = job_definition.job();
                             job.exec(&mut state);
                             job.print(&state.printer);
                             job.wait(&state.printer);

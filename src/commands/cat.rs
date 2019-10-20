@@ -72,9 +72,6 @@ fn run(
                             output.send(row);
                         }
                     }
-                    Cell::Row(row) => {
-                        output.send(row.to_row());
-                    }
                     _ => return Err(error("Invalid data")),
                 }
             }
