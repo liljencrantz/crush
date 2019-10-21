@@ -16,7 +16,7 @@ use crate::{
 use crate::printer::Printer;
 use crate::data::ConcreteCell;
 use crate::replace::Replace;
-use crate::state::State;
+use crate::env::Env;
 
 pub fn get_key(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<(Option<Box<str>>, usize), JobError> {
     if arguments.len() != 1 {
@@ -39,7 +39,7 @@ fn run(
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
-    state: State,
+    env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {
     let (name, column) = get_key(&input_type, &arguments)?;

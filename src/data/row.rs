@@ -28,9 +28,9 @@ impl ConcreteRow {
 }
 
 impl std::hash::Hash for ConcreteRow {
-    fn hash<H: Hasher>(&self, state: &mut H) {
+    fn hash<H: Hasher>(&self, env: &mut H) {
         for c in &self.cells {
-            c.hash(state);
+            c.hash(env);
         }
     }
 }

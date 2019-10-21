@@ -3,7 +3,7 @@ use crate::{
     data::Argument,
     commands::{Call, Exec},
     errors::{JobError, argument_error},
-    state::State
+    env::Env
 };
 use crate::data::Cell;
 use crate::printer::Printer;
@@ -14,12 +14,12 @@ fn run(
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
-    state: State,
+    env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {
     for arg in arguments {
         if let Cell::Text(s) = arg.cell {
-            state.remove(&s);
+            env.remove(&s);
         }
     }
     return Ok(());

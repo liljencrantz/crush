@@ -9,14 +9,14 @@ use crate::{
 };
 use std::collections::VecDeque;
 use crate::printer::Printer;
-use crate::state::State;
+use crate::env::Env;
 
 fn run(
     _input_type: Vec<CellType>,
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
-    state: State,
+    env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {
     let tot = get_line_count(&arguments)?;

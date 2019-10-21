@@ -5,7 +5,7 @@ mod stream;
 mod data;
 mod commands;
 mod namespace;
-mod state;
+mod env;
 mod job;
 mod lexer;
 mod closure;
@@ -30,10 +30,10 @@ use crate::job::Job;
 use crate::data::Output;
 
 fn repl() -> Result<(), JobError>{
-    let mut state = state::State::new();
+    let mut global_env = env::Env::new();
     let printer =  Printer::new();
 
-    add_builtins(&state)?;
+    add_builtins(&global_env)?;
     let mut rl = Editor::<()>::new();
     rl.load_history(".crush_history").unwrap();
     loop {
@@ -48,9 +48,9 @@ fn repl() -> Result<(), JobError>{
                             let (first_output, first_input) = streams();
                             drop(first_output);
                             let (last_output, last_input) = streams();
-                            match job_definition.compile(&state, &vec![], first_input, last_output) {
+                            match job_definition.compile(&global_env, &printer,&vec![], first_input, last_output) {
                                 Ok(mut job) => {
-                                    job.exec(&mut state, &printer);
+                                    job.exec();
                                     spawn_print_thread(&printer, Output{ types: job.get_output_type().clone(), stream: last_input } );
                                     job.wait(&printer);
                                 }

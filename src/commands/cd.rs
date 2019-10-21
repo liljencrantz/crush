@@ -4,7 +4,7 @@ use crate::{
     data::Cell,
     commands::{Call, Exec},
     errors::JobError,
-    state::State
+    env::Env
 };
 use crate::errors::to_job_error;
 use crate::printer::Printer;
@@ -15,7 +15,7 @@ fn run(
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
-    state: State,
+    env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {
     return match arguments.len() {

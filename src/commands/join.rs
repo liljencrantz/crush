@@ -17,7 +17,7 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::data::ConcreteCell;
-use crate::state::State;
+use crate::env::Env;
 
 struct Config {
     left_table_idx: usize,
@@ -138,7 +138,7 @@ fn run(
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
-    state: State,
+    env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {
     let cfg = parse(&input_type, &arguments)?;

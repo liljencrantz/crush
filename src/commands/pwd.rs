@@ -6,17 +6,17 @@ use crate::{
     data::Cell,
     commands::{Call, Exec},
     errors::JobError,
-    state::get_cwd
+    env::get_cwd
 };
 use crate::printer::Printer;
-use crate::state::State;
+use crate::env::Env;
 
 fn run(
     _input_type: Vec<CellType>,
     _arguments: Vec<Argument>,
     _input: InputStream,
     output: OutputStream,
-    state: State,
+    env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {
 

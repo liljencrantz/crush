@@ -19,7 +19,7 @@ use crate::{
     stream::{OutputStream, InputStream, unlimited_streams},
 };
 use crate::printer::Printer;
-use crate::state::State;
+use crate::env::Env;
 
 lazy_static! {
     static ref sub_type: Vec<CellType> = {
@@ -62,7 +62,7 @@ fn run(
     mut arguments: Vec<Argument>,
     input: InputStream,
     mut output: OutputStream,
-    state: State,
+    env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {
     let mut files: Vec<Box<Path>> = Vec::new();

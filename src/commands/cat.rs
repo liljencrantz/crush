@@ -15,7 +15,7 @@ use crate::errors::{argument_error, error};
 use crate::commands::command_util::find_field;
 use crate::replace::Replace;
 use crate::printer::Printer;
-use crate::state::State;
+use crate::env::Env;
 
 struct Config {
     column: usize,
@@ -53,7 +53,7 @@ fn run(
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
-    state: State,
+    env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {
     let cfg = parse(&input_type, &arguments)?;

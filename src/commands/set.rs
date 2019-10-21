@@ -3,7 +3,7 @@ use crate::{
     data::Argument,
     commands::{Call, Exec},
     errors::{JobError, argument_error},
-    state::State
+    env::Env
 };
 use crate::stream::{InputStream, OutputStream};
 use crate::printer::Printer;
@@ -13,11 +13,11 @@ fn run(
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
-    state: State,
+    env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {
     for arg in arguments {
-        state.set(arg.name.unwrap().as_ref(), arg.cell.concrete())?;
+        env.set(arg.name.unwrap().as_ref(), arg.cell.concrete())?;
     }
     return Ok(());
 }

@@ -6,7 +6,7 @@ use crate::{
     errors::{JobError, argument_error}
 };
 use crate::printer::Printer;
-use crate::state::State;
+use crate::env::Env;
 
 pub fn get_line_count(arguments: &Vec<Argument>) -> Result<i128, JobError> {
     return match arguments.len() {
@@ -24,7 +24,7 @@ fn run(
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
-    state: State,
+    env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {
     let mut count = 0;

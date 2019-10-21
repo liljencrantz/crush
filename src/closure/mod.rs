@@ -1,5 +1,5 @@
 use crate::job::JobDefinition;
-use crate::state::State;
+use crate::env::Env;
 use std::sync::Arc;
 use crate::namespace::Namespace;
 
@@ -15,8 +15,8 @@ impl ClosureDefinition {
         }
     }
 
-    pub fn compile(&self, parent_state: &State) -> Closure {
-        Closure { jobs: self.jobs.clone(), parent_state: parent_state.clone() }
+    pub fn compile(&self, parent_env: &Env) -> Closure {
+        Closure { jobs: self.jobs.clone(), parent_env: parent_env.clone() }
     }
 }
 
@@ -29,7 +29,7 @@ impl PartialEq for ClosureDefinition {
 #[derive(Clone)]
 pub struct Closure {
     jobs: Vec<JobDefinition>,
-    parent_state: State,
+    parent_env: Env,
 }
 
 impl Closure {

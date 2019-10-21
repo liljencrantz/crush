@@ -7,10 +7,11 @@ use crate::errors::{error, JobError, to_job_error, mandate};
 use std::path::Path;
 use regex::Regex;
 use chrono::{DateTime, Local};
-use crate::state::{get_cwd, State};
+use crate::env::{get_cwd, Env};
 use crate::job::{JobDefinition, Job};
 use crate::closure::{Closure, ClosureDefinition};
 use crate::stream::streams;
+use crate::printer::Printer;
 
 #[derive(Clone)]
 pub enum CellDefinition {
@@ -30,7 +31,7 @@ pub enum CellDefinition {
 }
 
 impl CellDefinition {
-    pub fn compile(self, dependencies: &mut Vec<Job>, state: &State) -> Result<Cell, JobError> {
+    pub fn compile(self, dependencies: &mut Vec<Job>, env: &Env, printer: &Printer) -> Result<Cell, JobError> {
         Ok(match self {
             CellDefinition::Text(v) => Cell::Text(v),
             CellDefinition::Integer(v) => Cell::Integer(v),
@@ -47,14 +48,14 @@ impl CellDefinition {
                 let (first_output, first_input) = streams();
                 drop(first_output);
                 let (last_output, last_input) = streams();
-                let mut j = def.compile(&state, &vec![], first_input, last_output)?;
+                let mut j = def.compile(&env, printer, &vec![], first_input, last_output)?;
 
                 let res = Cell::Output(Output{ types: j.get_output_type().clone(), stream: last_input });
                 dependencies.push(j);
                 res
             }
-            CellDefinition::Closure(c) => Cell::Closure(c.compile(state)),
-            CellDefinition::Variable(s) => (mandate(state.get(s.as_ref()))?).cell(),
+            CellDefinition::Closure(c) => Cell::Closure(c.compile(env)),
+            CellDefinition::Variable(s) => (mandate(env.get(s.as_ref()))?).cell(),
         })
     }
 
@@ -189,19 +190,19 @@ impl ConcreteCell {
 }
 
 impl std::hash::Hash for ConcreteCell {
-    fn hash<H: Hasher>(&self, state: &mut H) {
+    fn hash<H: Hasher>(&self, env: &mut H) {
         match self {
-            ConcreteCell::Text(v) => v.hash(state),
-            ConcreteCell::Integer(v) => v.hash(state),
-            ConcreteCell::Time(v) => v.hash(state),
-            ConcreteCell::Field(v) => v.hash(state),
-            ConcreteCell::Glob(v) => v.hash(state),
-            ConcreteCell::Regex(v, _) => v.hash(state),
-            ConcreteCell::Op(v) => v.hash(state),
+            ConcreteCell::Text(v) => v.hash(env),
+            ConcreteCell::Integer(v) => v.hash(env),
+            ConcreteCell::Time(v) => v.hash(env),
+            ConcreteCell::Field(v) => v.hash(env),
+            ConcreteCell::Glob(v) => v.hash(env),
+            ConcreteCell::Regex(v, _) => v.hash(env),
+            ConcreteCell::Op(v) => v.hash(env),
             ConcreteCell::Command(_) => { panic!("Impossible!") }
-            ConcreteCell::File(v) => v.hash(state),
-            ConcreteCell::Rows(v) => v.hash(state),
-            ConcreteCell::Closure(c) => {}//c.hash(state),
+            ConcreteCell::File(v) => v.hash(env),
+            ConcreteCell::Rows(v) => v.hash(env),
+            ConcreteCell::Closure(c) => {}//c.hash(env),
         }
     }
 }

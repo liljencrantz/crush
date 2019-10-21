@@ -32,7 +32,7 @@ use std::{io, thread};
 use crate::{
     namespace::Namespace,
     errors::{JobError, error},
-    state::State,
+    env::Env,
     data::{
         CellType,
         Argument,
@@ -57,7 +57,7 @@ type CommandInvocation = fn(
     Vec<Argument>,
     InputStream,
     OutputStream,
-    State,
+    Env,
     Printer) -> Result<(), JobError>;
 
 #[derive(Clone)]
@@ -105,12 +105,12 @@ impl CallDefinition {
         }
     }
 
-    pub fn compile(&self, input_type: Vec<CellType>, dependencies: &mut Vec<Job>, state: &State) -> Result<Call, JobError> {
+    pub fn compile(&self, input_type: Vec<CellType>, dependencies: &mut Vec<Job>, env: &Env, printer: &Printer) -> Result<Call, JobError> {
         let mut args: Vec<Argument> = Vec::new();
         for arg in self.arguments.iter() {
-            args.push(arg.argument(dependencies, state)?);
+            args.push(arg.argument(dependencies, env, printer)?);
         }
-        match &state.get(&self.name) {
+        match &env.get(&self.name) {
             Some(ConcreteCell::Command(command)) => {
                 let c = command.call;
                 return c(input_type, args);
@@ -158,16 +158,16 @@ impl Call {
 
     pub fn execute(
         self,
-        state: &State,
+        env: &Env,
         printer: &Printer,
         first_input: InputStream,
         last_output: OutputStream) -> JobResult {
         let printer = printer.clone();
         return match self.exec {
             Exec::Command(run) => {
-                let state_copy = state.clone();
+                let env_copy = env.clone();
                 JobResult::Async(thread::Builder::new().name(self.name.clone()).spawn(move || {
-                    return run(self.input_type, self.arguments, first_input, last_output, state_copy, printer);
+                    return run(self.input_type, self.arguments, first_input, last_output, env_copy, printer);
                 }).unwrap())
             },
 
@@ -177,9 +177,9 @@ impl Call {
                 match closure.get_jobs().len() {
                     0 => {}
                     1 => {
-                        match closure.get_jobs()[0].compile(&state, &self.input_type, first_input, last_output) {
+                        match closure.get_jobs()[0].compile(&env, &printer,&self.input_type, first_input, last_output) {
                             Ok(mut job) => {
-                                job.exec(state, &printer);
+                                job.exec();
                             }
                             Err(e) => printer.job_error(e),
                         }
@@ -189,9 +189,9 @@ impl Call {
                         {
                             let job_definition = &closure.get_jobs()[0];
                             let (last_output, last_input) = streams();
-                            match job_definition.compile(&state, &self.input_type, first_input, last_output) {
+                            match job_definition.compile(&env, &printer,&self.input_type, first_input, last_output) {
                                 Ok(mut job) => {
-                                    job.exec(state, &printer);
+                                    job.exec();
                                     spawn_print_thread(&printer, Output { types: job.get_output_type().clone(), stream: last_input });
                                 }
                                 Err(e) => printer.job_error(e),
@@ -203,9 +203,9 @@ impl Call {
                             let (last_output, last_input) = streams();
                             drop(first_output);
 
-                            match job_definition.compile(&state, &vec![], first_input, last_output) {
+                            match job_definition.compile(&env, &printer,&vec![], first_input, last_output) {
                                 Ok(mut job) => {
-                                    job.exec(state, &printer);
+                                    job.exec();
                                     spawn_print_thread(&printer, Output{ types: job.get_output_type().clone(), stream: last_input } );
                                 }
                                 Err(e) => printer.job_error(e),
@@ -217,9 +217,9 @@ impl Call {
                             let (first_output, first_input) = streams();
                             drop(first_output);
 
-                            match job_definition.compile(&state, &vec![], first_input, last_output) {
+                            match job_definition.compile(&env, &printer,&vec![], first_input, last_output) {
                                 Ok(mut job) => {
-                                    job.exec(state, &printer);
+                                    job.exec();
                                 }
                                 Err(e) => printer.job_error(e),
                             }
@@ -233,31 +233,31 @@ impl Call {
     }
 }
 
-pub fn add_builtins(state: &State) -> Result<(), JobError> {
-    state.declare("ls", ConcreteCell::Command(Command::new(ls_and_find::ls)))?;
-    state.declare("find", ConcreteCell::Command(Command::new(ls_and_find::find)))?;
-    state.declare("echo", ConcreteCell::Command(Command::new(echo::echo)))?;
-    state.declare("pwd", ConcreteCell::Command(Command::new(pwd::pwd)))?;
-    state.declare("cd", ConcreteCell::Command(Command::new(cd::cd)))?;
-    state.declare("filter", ConcreteCell::Command(Command::new(filter::filter)))?;
-    state.declare("sort", ConcreteCell::Command(Command::new(sort::sort)))?;
-    state.declare("set", ConcreteCell::Command(Command::new(set::set)))?;
-    state.declare("let", ConcreteCell::Command(Command::new(let_command::let_command)))?;
-    state.declare("unset", ConcreteCell::Command(Command::new(unset::unset)))?;
-    state.declare("group", ConcreteCell::Command(Command::new(group::group)))?;
-    state.declare("join", ConcreteCell::Command(Command::new(join::join)))?;
-    state.declare("count", ConcreteCell::Command(Command::new(count::count)))?;
-    state.declare("cat", ConcreteCell::Command(Command::new(cat::cat)))?;
-    state.declare("select", ConcreteCell::Command(Command::new(select::select)))?;
-    state.declare("enumerate", ConcreteCell::Command(Command::new(enumerate::enumerate)))?;
+pub fn add_builtins(env: &Env) -> Result<(), JobError> {
+    env.declare("ls", ConcreteCell::Command(Command::new(ls_and_find::ls)))?;
+    env.declare("find", ConcreteCell::Command(Command::new(ls_and_find::find)))?;
+    env.declare("echo", ConcreteCell::Command(Command::new(echo::echo)))?;
+    env.declare("pwd", ConcreteCell::Command(Command::new(pwd::pwd)))?;
+    env.declare("cd", ConcreteCell::Command(Command::new(cd::cd)))?;
+    env.declare("filter", ConcreteCell::Command(Command::new(filter::filter)))?;
+    env.declare("sort", ConcreteCell::Command(Command::new(sort::sort)))?;
+    env.declare("set", ConcreteCell::Command(Command::new(set::set)))?;
+    env.declare("let", ConcreteCell::Command(Command::new(let_command::let_command)))?;
+    env.declare("unset", ConcreteCell::Command(Command::new(unset::unset)))?;
+    env.declare("group", ConcreteCell::Command(Command::new(group::group)))?;
+    env.declare("join", ConcreteCell::Command(Command::new(join::join)))?;
+    env.declare("count", ConcreteCell::Command(Command::new(count::count)))?;
+    env.declare("cat", ConcreteCell::Command(Command::new(cat::cat)))?;
+    env.declare("select", ConcreteCell::Command(Command::new(select::select)))?;
+    env.declare("enumerate", ConcreteCell::Command(Command::new(enumerate::enumerate)))?;
 
-    state.declare("cast", ConcreteCell::Command(Command::new(cast::cast)))?;
+    env.declare("cast", ConcreteCell::Command(Command::new(cast::cast)))?;
 
-    state.declare("head", ConcreteCell::Command(Command::new(head::head)))?;
-    state.declare("tail", ConcreteCell::Command(Command::new(tail::tail)))?;
+    env.declare("head", ConcreteCell::Command(Command::new(head::head)))?;
+    env.declare("tail", ConcreteCell::Command(Command::new(tail::tail)))?;
 
-    state.declare("lines", ConcreteCell::Command(Command::new(lines::lines)))?;
-    state.declare("csv", ConcreteCell::Command(Command::new(csv::csv)))?;
+    env.declare("lines", ConcreteCell::Command(Command::new(lines::lines)))?;
+    env.declare("csv", ConcreteCell::Command(Command::new(csv::csv)))?;
 
     return Ok(());
 }

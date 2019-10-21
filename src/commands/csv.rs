@@ -23,7 +23,7 @@ use either::Either;
 extern crate map_in_place;
 use map_in_place::MapVecInPlace;
 use crate::printer::Printer;
-use crate::state::State;
+use crate::env::Env;
 
 #[derive(Clone)]
 struct Config {
@@ -161,7 +161,7 @@ fn run(
     mut arguments: Vec<Argument>,
     input: InputStream,
     mut output: OutputStream,
-    state: State,
+    env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {
     let cfg = parse(&input_type, &arguments)?;

@@ -6,7 +6,7 @@ use crate::errors::{JobError, error, to_job_error};
 use chrono::{Local, DateTime};
 use std::path::Path;
 use std::fs::Metadata;
-use crate::state::{get_cwd, State};
+use crate::env::{get_cwd, Env};
 use crate::printer::Printer;
 
 fn insert_entity(meta: &Metadata, file: Box<Path>, output: &mut OutputStream) -> Result<(), JobError> {
@@ -105,7 +105,7 @@ fn run_ls(
     arguments: Vec<Argument>,
     _input: InputStream,
     output: OutputStream,
-    state: State,
+    env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {
     return run_internal(arguments, false, output);
@@ -116,7 +116,7 @@ fn run_find(
     arguments: Vec<Argument>,
     _input: InputStream,
     output: OutputStream,
-    state: State,
+    env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {
     return run_internal(arguments, true, output);

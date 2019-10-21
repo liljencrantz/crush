@@ -12,14 +12,14 @@ use crate::{
 };
 use std::iter::Iterator;
 use crate::printer::Printer;
-use crate::state::State;
+use crate::env::Env;
 
 fn run(
     input_type: Vec<CellType>,
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
-    state: State,
+    env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {
     let mut line: i128 = 1;

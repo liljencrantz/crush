@@ -7,13 +7,13 @@ use std::sync::{Arc, Mutex};
 use crate::data::ConcreteCell;
 
 #[derive(Clone)]
-pub struct State {
+pub struct Env {
     namespace: Arc<Mutex<Namespace>>,
 }
 
-impl State {
-  pub fn new() -> State {
-      return State {
+impl Env {
+  pub fn new() -> Env {
+      return Env {
           namespace: Arc::from(Mutex::new(Namespace::new())),
       };
   }
