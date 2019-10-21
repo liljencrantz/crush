@@ -9,12 +9,14 @@ use crate::{
     state::get_cwd
 };
 use crate::printer::Printer;
+use crate::state::State;
 
 fn run(
     _input_type: Vec<CellType>,
     _arguments: Vec<Argument>,
     _input: InputStream,
     output: OutputStream,
+    state: State,
     printer: Printer,
 ) -> Result<(), JobError> {
 
@@ -28,6 +30,6 @@ pub(crate) fn pwd(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result
         input_type,
         arguments,
         output_type: vec![CellType::named("directory", CellDataType::File)],
-        exec: Exec::Run(run),
+        exec: Exec::Command(run),
     });
 }

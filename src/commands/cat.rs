@@ -15,6 +15,7 @@ use crate::errors::{argument_error, error};
 use crate::commands::command_util::find_field;
 use crate::replace::Replace;
 use crate::printer::Printer;
+use crate::state::State;
 
 struct Config {
     column: usize,
@@ -52,6 +53,7 @@ fn run(
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
+    state: State,
     printer: Printer,
 ) -> Result<(), JobError> {
     let cfg = parse(&input_type, &arguments)?;
@@ -96,6 +98,6 @@ pub fn cat(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, 
         output_type: get_sub_type(&input_type[cfg.column])?,
         input_type,
         arguments,
-        exec: Exec::Run(run),
+        exec: Exec::Command(run),
     })
 }

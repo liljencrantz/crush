@@ -12,12 +12,14 @@ use crate::{
 };
 use std::iter::Iterator;
 use crate::printer::Printer;
+use crate::state::State;
 
 fn run(
     input_type: Vec<CellType>,
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
+    state: State,
     printer: Printer,
 ) -> Result<(), JobError> {
     let mut line: i128 = 1;
@@ -43,6 +45,6 @@ pub fn enumerate(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<
         output_type,
         input_type,
         arguments,
-        exec: Exec::Run(run),
+        exec: Exec::Command(run),
     });
 }

@@ -52,22 +52,17 @@ use std::sync::{Arc, Mutex};
 use crate::closure::Closure;
 use crate::stream::{streams, spawn_print_thread};
 
-type Run = fn(
+type CommandInvocation = fn(
     Vec<CellType>,
     Vec<Argument>,
     InputStream,
     OutputStream,
+    State,
     Printer) -> Result<(), JobError>;
-
-type Mutate = fn(
-    &mut State,
-    Vec<CellType>,
-    Vec<Argument>) -> Result<(), JobError>;
 
 #[derive(Clone)]
 pub enum Exec {
-    Run(Run),
-    Mutate(Mutate),
+    Command(CommandInvocation),
     Closure(Closure),
 }
 
@@ -163,18 +158,19 @@ impl Call {
 
     pub fn execute(
         self,
-        state: &mut State,
+        state: &State,
         printer: &Printer,
         first_input: InputStream,
         last_output: OutputStream) -> JobResult {
         let printer = printer.clone();
         return match self.exec {
-            Exec::Run(run) =>
+            Exec::Command(run) => {
+                let state_copy = state.clone();
                 JobResult::Async(thread::Builder::new().name(self.name.clone()).spawn(move || {
-                    return run(self.input_type, self.arguments, first_input, last_output, printer);
-                }).unwrap()),
-            Exec::Mutate(mutate) =>
-                JobResult::Sync(mutate(state, self.input_type, self.arguments)),
+                    return run(self.input_type, self.arguments, first_input, last_output, state_copy, printer);
+                }).unwrap())
+            },
+
             Exec::Closure(closure) => {
                 let mut res: Vec<JobResult> = Vec::new();
 

@@ -7,11 +7,17 @@ use crate::{
     state::State
 };
 use crate::errors::to_job_error;
+use crate::printer::Printer;
+use crate::stream::{OutputStream, InputStream};
 
-fn mutate(
-    _state: &mut State,
-    _input_type: Vec<CellType>,
-    arguments: Vec<Argument>) -> Result<(), JobError> {
+fn run(
+    input_type: Vec<CellType>,
+    arguments: Vec<Argument>,
+    input: InputStream,
+    output: OutputStream,
+    state: State,
+    printer: Printer,
+) -> Result<(), JobError> {
     return match arguments.len() {
         0 =>
         // This should move to home, not /...
@@ -45,6 +51,6 @@ pub(crate) fn cd(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<
         input_type,
         arguments,
         output_type: vec![],
-        exec: Exec::Mutate(mutate),
+        exec: Exec::Command(run),
     });
 }

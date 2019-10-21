@@ -17,6 +17,7 @@ use crate::printer::Printer;
 use crate::errors::error;
 use std::cmp::Ordering;
 use crate::data::{ConcreteCell, ConcreteRow};
+use crate::state::State;
 
 fn do_match(needle: &ConcreteCell, haystack: &ConcreteCell) -> Result<bool, JobError> {
     match (needle, haystack) {
@@ -76,6 +77,7 @@ fn run(
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
+    state: State,
     printer: Printer,
 ) -> Result<(), JobError> {
     let condition = parse(&input_type, &arguments)?;
@@ -100,6 +102,6 @@ pub fn filter(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Cal
         output_type: input_type.clone(),
         input_type,
         arguments: arguments,
-        exec: Exec::Run(run),
+        exec: Exec::Command(run),
     });
 }

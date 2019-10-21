@@ -23,6 +23,7 @@ use either::Either;
 extern crate map_in_place;
 use map_in_place::MapVecInPlace;
 use crate::printer::Printer;
+use crate::state::State;
 
 #[derive(Clone)]
 struct Config {
@@ -160,6 +161,7 @@ fn run(
     mut arguments: Vec<Argument>,
     input: InputStream,
     mut output: OutputStream,
+    state: State,
     printer: Printer,
 ) -> Result<(), JobError> {
     let cfg = parse(&input_type, &arguments)?;
@@ -189,6 +191,6 @@ pub fn csv(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, 
         input_type,
         arguments,
         output_type,
-        exec: Exec::Run(run),
+        exec: Exec::Command(run),
     });
 }

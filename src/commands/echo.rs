@@ -7,12 +7,14 @@ use crate::{
     errors::JobError
 };
 use crate::printer::Printer;
+use crate::state::State;
 
 fn run(
     _input_type: Vec<CellType>,
     mut arguments: Vec<Argument>,
     _input: InputStream,
     output: OutputStream,
+    state: State,
     printer: Printer,
 ) -> Result<(), JobError> {
     let g = arguments.drain(..).map(|c| c.cell);
@@ -32,6 +34,6 @@ pub fn echo(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call,
         input_type,
         arguments,
         output_type,
-        exec: Exec::Run(run),
+        exec: Exec::Command(run),
     });
 }

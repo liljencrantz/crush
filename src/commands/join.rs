@@ -17,6 +17,7 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::data::ConcreteCell;
+use crate::state::State;
 
 struct Config {
     left_table_idx: usize,
@@ -137,6 +138,7 @@ fn run(
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
+    state: State,
     printer: Printer,
 ) -> Result<(), JobError> {
     let cfg = parse(&input_type, &arguments)?;
@@ -186,6 +188,6 @@ pub fn join(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call,
         output_type: get_output_type(&input_type, &cfg)?,
         input_type,
         arguments,
-        exec: Exec::Run(run),
+        exec: Exec::Command(run),
     });
 }

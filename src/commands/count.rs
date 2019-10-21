@@ -11,6 +11,7 @@ use crate::{
     stream::{OutputStream, InputStream},
 };
 use crate::printer::Printer;
+use crate::state::State;
 
 pub fn has_streams(input_type: &Vec<CellType>) -> bool {
     for t in input_type.iter() {
@@ -47,6 +48,7 @@ fn run(
     _arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
+    state: State,
     printer: Printer,
 ) -> Result<(), JobError> {
     if has_streams(&input_type) {
@@ -83,6 +85,6 @@ pub fn count(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call
         },
         input_type,
         arguments,
-        exec: Exec::Run(run),
+        exec: Exec::Command(run),
     });
 }

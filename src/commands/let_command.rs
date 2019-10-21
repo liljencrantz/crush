@@ -4,11 +4,17 @@ use crate::{
     errors::{JobError, argument_error},
     state::State
 };
+use crate::stream::{OutputStream, InputStream};
+use crate::printer::Printer;
 
-fn mutate(
-    state: &mut State,
-    _input_type: Vec<CellType>,
-    arguments: Vec<Argument>) -> Result<(), JobError> {
+fn run(
+    input_type: Vec<CellType>,
+    arguments: Vec<Argument>,
+    input: InputStream,
+    output: OutputStream,
+    state: State,
+    printer: Printer,
+) -> Result<(), JobError> {
     for arg in arguments {
         state.declare(arg.name.unwrap().as_ref(), arg.cell.concrete())?;
     }
@@ -29,7 +35,7 @@ pub(crate) fn let_command(input_type: Vec<CellType>, arguments: Vec<Argument>) -
         input_type,
         arguments,
         output_type: vec![],
-        exec: Exec::Mutate(mutate),
+        exec: Exec::Command(run),
     });
 }
 

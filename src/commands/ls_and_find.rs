@@ -6,7 +6,7 @@ use crate::errors::{JobError, error, to_job_error};
 use chrono::{Local, DateTime};
 use std::path::Path;
 use std::fs::Metadata;
-use crate::state::get_cwd;
+use crate::state::{get_cwd, State};
 use crate::printer::Printer;
 
 fn insert_entity(meta: &Metadata, file: Box<Path>, output: &mut OutputStream) -> Result<(), JobError> {
@@ -105,6 +105,7 @@ fn run_ls(
     arguments: Vec<Argument>,
     _input: InputStream,
     output: OutputStream,
+    state: State,
     printer: Printer,
 ) -> Result<(), JobError> {
     return run_internal(arguments, false, output);
@@ -115,6 +116,7 @@ fn run_find(
     arguments: Vec<Argument>,
     _input: InputStream,
     output: OutputStream,
+    state: State,
     printer: Printer,
 ) -> Result<(), JobError> {
     return run_internal(arguments, true, output);
@@ -130,7 +132,7 @@ pub fn ls(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, J
             CellType::named("size", CellDataType::Integer),
             CellType::named("modified", CellDataType::Time),
         ],
-        exec: Exec::Run(run_ls),
+        exec: Exec::Command(run_ls),
     });
 }
 
@@ -144,6 +146,6 @@ pub fn find(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call,
             CellType::named("size", CellDataType::Integer),
             CellType::named("modified", CellDataType::Time),
         ],
-        exec: Exec::Run(run_find),
+        exec: Exec::Command(run_find),
     });
 }

@@ -12,6 +12,7 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::data::ConcreteRow;
+use crate::state::State;
 
 pub fn get_key(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<usize, JobError> {
     if arguments.len() != 1 {
@@ -36,6 +37,7 @@ fn run(
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
+    state: State,
     printer: Printer,
 ) -> Result<(), JobError> {
     let idx = get_key(&input_type, &arguments)?;
@@ -63,6 +65,6 @@ pub fn sort(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call,
         output_type: input_type.clone(),
         input_type,
         arguments,
-        exec: Exec::Run(run),
+        exec: Exec::Command(run),
     });
 }

@@ -76,7 +76,7 @@ impl Job {
         return &self.output_type;
     }
 
-    pub fn exec(&mut self, state: &mut State, printer: &Printer) {
+    pub fn exec(&mut self, state: &State, printer: &Printer) {
         assert_eq!(self.state, JobState::Parsed);
 
         for dep in self.dependencies.iter_mut() {

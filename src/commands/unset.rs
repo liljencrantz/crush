@@ -6,11 +6,17 @@ use crate::{
     state::State
 };
 use crate::data::Cell;
+use crate::printer::Printer;
+use crate::stream::{InputStream, OutputStream};
 
-fn mutate(
-    state: &mut State,
-    _input_type: Vec<CellType>,
-    arguments: Vec<Argument>) -> Result<(), JobError> {
+fn run(
+    input_type: Vec<CellType>,
+    arguments: Vec<Argument>,
+    input: InputStream,
+    output: OutputStream,
+    state: State,
+    printer: Printer,
+) -> Result<(), JobError> {
     for arg in arguments {
         if let Cell::Text(s) = arg.cell {
             state.remove(&s);
@@ -35,6 +41,6 @@ pub fn unset(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call
         input_type,
         arguments,
         output_type: vec![],
-        exec: Exec::Mutate(mutate),
+        exec: Exec::Command(run),
     });
 }

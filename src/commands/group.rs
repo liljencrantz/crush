@@ -16,6 +16,7 @@ use crate::{
 use crate::printer::Printer;
 use crate::data::ConcreteCell;
 use crate::replace::Replace;
+use crate::state::State;
 
 pub fn get_key(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<(Option<Box<str>>, usize), JobError> {
     if arguments.len() != 1 {
@@ -38,6 +39,7 @@ fn run(
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
+    state: State,
     printer: Printer,
 ) -> Result<(), JobError> {
     let (name, column) = get_key(&input_type, &arguments)?;
@@ -77,6 +79,6 @@ pub fn group(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call
         output_type: vec![input_type[column].clone(), CellType { name: column_name, cell_type: CellDataType::Output(input_type.clone()) }],
         input_type,
         arguments,
-        exec: Exec::Run(run),
+        exec: Exec::Command(run),
     });
 }

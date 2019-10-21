@@ -14,6 +14,7 @@ use crate::{
 };
 use crate::data::CellDataType;
 use crate::printer::Printer;
+use crate::state::State;
 
 struct Config {
     output_type: Vec<CellType>,
@@ -42,6 +43,7 @@ fn run(
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
+    state: State,
     printer: Printer,
 ) -> Result<(), JobError> {
     let cfg = parse(&input_type, &arguments)?;
@@ -73,6 +75,6 @@ pub fn cast(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call,
         output_type: cfg.output_type,
         input_type,
         arguments,
-        exec: Exec::Run(run),
+        exec: Exec::Command(run),
     });
 }
