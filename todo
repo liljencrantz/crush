@@ -2,8 +2,8 @@ Todo:
 implement file regexps
 make ls support regexps
 implement date command
-implement lambdas with $argv
-implement lambdas with named arguments
+implement closures with $argv
+implement closures with named arguments
 implement for command
 implement env command
 implement unset command

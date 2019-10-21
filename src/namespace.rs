@@ -5,23 +5,25 @@ use crate::{
     data::{
         CellType,
         Argument,
-        ConcreteCell
-    }
+        Cell,
+    },
 };
+use std::sync::{Mutex, Arc};
 
-#[derive(PartialEq)]
 pub struct Namespace {
-    data: HashMap<String, ConcreteCell>,
+    parent: Option<Arc<Mutex<Namespace>>>,
+    data: HashMap<String, Cell>,
 }
 
 impl Namespace {
-    pub fn new() -> Namespace {
+    pub fn new(parent: Option<Arc<Mutex<Namespace>>>) -> Namespace {
         return Namespace {
+            parent,
             data: HashMap::new(),
         };
     }
 
-    pub fn declare(&mut self, name: &str, value: ConcreteCell) -> Result<(), JobError> {
+    pub fn declare(&mut self, name: &str, value: Cell) -> Result<(), JobError> {
         if self.data.contains_key(name) {
             return Err(error(format!("Variable ${{{}}} already exists", name).as_str()));
         }
@@ -29,10 +31,16 @@ impl Namespace {
         return Ok(());
     }
 
-    pub fn set(&mut self, name: &str, value: ConcreteCell) -> Result<(), JobError> {
+    pub fn set(&mut self, name: &str, value: Cell) -> Result<(), JobError> {
         if !self.data.contains_key(name) {
-            return Err(error(format!("Unknown variable ${{{}}}", name).as_str()));
+            match &self.parent {
+                Some(p) => {
+                    return p.lock().unwrap().set(name, value);
+                }
+                None => return Err(error(format!("Unknown variable ${{{}}}", name).as_str())),
+            }
         }
+
         if self.data[name].cell_data_type() != value.cell_data_type() {
             return Err(error(format!("Type mismatch when reassigning variable ${{{}}}. Use `unset ${{{}}}` to remove old variable.", name, name).as_str()));
         }
@@ -41,20 +49,24 @@ impl Namespace {
     }
 
     pub fn remove(&mut self, name: &str) {
+        if !self.data.contains_key(name) {
+            match &self.parent {
+                Some(p) => {
+                    return p.lock().unwrap().remove(name);
+                }
+                None => {}
+            }
+        }
         self.data.remove(name);
     }
 
-    pub fn get(&self, name: &str) -> Option<&ConcreteCell> {
-        return self.data.get(&name.to_string());
-    }
-
-    pub fn call(&self, name: &str, input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
-        return match self.data.get(name) {
-            Some(ConcreteCell::Command(cmd)) => {
-                let c = cmd.call;
-                return c(input_type, arguments);
+    pub fn get(&self, name: &str) -> Option<Cell> {
+        return match self.data.get(&name.to_string()) {
+            Some(v) => Some(v.partial_clone().unwrap()),
+            None => match &self.parent {
+                Some(p) => p.lock().unwrap().get(name),
+                None => None
             }
-            _ => Result::Err(JobError { message: String::from(format!("Unknown command {}.", name)) }),
         };
     }
 }

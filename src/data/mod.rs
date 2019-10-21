@@ -12,17 +12,13 @@ use regex::Regex;
 use std::error::Error;
 
 pub use cell::Cell;
-pub use cell::ConcreteCell;
 pub use cell::CellDefinition;
 pub use cell::Alignment;
 pub use argument::Argument;
 pub use argument::BaseArgument;
 pub use argument::ArgumentDefinition;
-pub use row::BaseRow;
 pub use row::Row;
-pub use row::ConcreteRow;
 pub use rows::Rows;
-pub use rows::ConcreteRows;
 use crate::glob::Glob;
 use std::num::ParseIntError;
 

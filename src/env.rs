@@ -4,7 +4,7 @@ use std::error::Error;
 use std::path::Path;
 use crate::printer::Printer;
 use std::sync::{Arc, Mutex};
-use crate::data::ConcreteCell;
+use crate::data::Cell;
 
 #[derive(Clone)]
 pub struct Env {
@@ -12,18 +12,24 @@ pub struct Env {
 }
 
 impl Env {
-  pub fn new() -> Env {
-      return Env {
-          namespace: Arc::from(Mutex::new(Namespace::new())),
-      };
-  }
+    pub fn new() -> Env {
+        Env {
+            namespace: Arc::from(Mutex::new(Namespace::new(None))),
+        }
+    }
 
-    pub fn declare(&self, name: &str, value: ConcreteCell) -> Result<(), JobError> {
+    pub fn push(&self) -> Env {
+        Env {
+            namespace: Arc::from(Mutex::new(Namespace::new(Some(self.namespace.clone())))),
+        }
+    }
+
+    pub fn declare(&self, name: &str, value: Cell) -> Result<(), JobError> {
         let mut namespace = self.namespace.lock().unwrap();
         return namespace.declare(name, value);
     }
 
-    pub fn set(&self, name: &str, value: ConcreteCell) -> Result<(), JobError> {
+    pub fn set(&self, name: &str, value: Cell) -> Result<(), JobError> {
         let mut namespace = self.namespace.lock().unwrap();
         return namespace.set(name, value);
     }
@@ -33,9 +39,9 @@ impl Env {
         namespace.remove(name);
     }
 
-    pub fn get(&self, name: &str) -> Option<ConcreteCell> {
+    pub fn get(&self, name: &str) -> Option<Cell> {
         let mut namespace = self.namespace.lock().unwrap();
-        return namespace.get(name).cloned();
+        return namespace.get(name);
     }
 }
 

@@ -36,6 +36,9 @@ impl Closure {
     pub fn get_jobs(&self) -> &Vec<JobDefinition> {
         &self.jobs
     }
+    pub fn get_parent_env(&self) -> &Env {
+        &self.parent_env
+    }
 }
 
 impl PartialEq for Closure {

@@ -16,7 +16,7 @@ fn run(
     printer: Printer,
 ) -> Result<(), JobError> {
     for arg in arguments {
-        env.declare(arg.name.unwrap().as_ref(), arg.cell.concrete())?;
+        env.declare(arg.name.unwrap().as_ref(), arg.cell)?;
     }
     return Ok(());
 }

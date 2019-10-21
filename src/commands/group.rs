@@ -14,7 +14,6 @@ use crate::{
     stream::{OutputStream, InputStream, unlimited_streams},
 };
 use crate::printer::Printer;
-use crate::data::ConcreteCell;
 use crate::replace::Replace;
 use crate::env::Env;
 
@@ -44,18 +43,18 @@ fn run(
 ) -> Result<(), JobError> {
     let (name, column) = get_key(&input_type, &arguments)?;
 
-    let mut groups: HashMap<ConcreteCell, OutputStream> = HashMap::new();
+    let mut groups: HashMap<Cell, OutputStream> = HashMap::new();
 
     loop {
         match input.recv() {
             Ok(row) => {
-                let key = row.cells[column].concrete_copy();
+                let key = row.cells[column].partial_clone()?;
                 let val = groups.get(&key);
                 match val {
                     None => {
                         let (output_stream, input_stream) = unlimited_streams();
                         let out_row = Row {
-                            cells: vec![key.clone().cell(), Cell::Output(Output { types: input_type.clone(), stream: input_stream })],
+                            cells: vec![key.partial_clone()?, Cell::Output(Output { types: input_type.clone(), stream: input_stream })],
                         };
                         output.send(out_row)?;
                         output_stream.send(row)?;

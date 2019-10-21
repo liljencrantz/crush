@@ -16,7 +16,6 @@ use crate::{
     commands::command_util::find_field
 };
 use crate::printer::Printer;
-use crate::data::ConcreteCell;
 use crate::env::Env;
 
 struct Config {
@@ -108,12 +107,12 @@ fn combine(mut l: Row, mut r: Row, cfg: &Config) -> Row {
     return Row { cells: l.cells };
 }
 
-fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &OutputStream) {
-    let mut l_data: HashMap<ConcreteCell, Row> = HashMap::new();
+fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &OutputStream) -> Result<(), JobError>{
+    let mut l_data: HashMap<Cell, Row> = HashMap::new();
     loop {
         match l.read() {
             Ok(row) => {
-                l_data.insert(row.cells[cfg.left_column_idx].concrete_copy(), row);
+                l_data.insert(row.cells[cfg.left_column_idx].partial_clone()?, row);
             }
             Err(_) => break,
         }
@@ -123,7 +122,7 @@ fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &
         match r.read() {
             Ok(r_row) => {
                 l_data
-                    .remove(&r_row.cells[cfg.right_column_idx].concrete_copy())
+                    .remove(&r_row.cells[cfg.right_column_idx])
                     .map(|l_row| {
                         output.send(combine(l_row, r_row, cfg));
                     });
@@ -131,6 +130,7 @@ fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &
             Err(_) => break,
         }
     }
+    Ok(())
 }
 
 fn run(

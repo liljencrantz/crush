@@ -1,44 +1,29 @@
 use crate::data::cell::Cell;
 use std::cmp::PartialOrd;
 use std::hash::Hasher;
-use crate::data::{CellType, ConcreteCell};
+use crate::data::{CellType};
+use crate::errors::JobError;
 
-pub struct BaseRow<C> {
-    pub cells: Vec<C>,
+pub struct Row {
+    pub cells: Vec<Cell>,
 }
-
-pub type Row = BaseRow<Cell>;
 
 impl Row {
-    pub fn concrete(mut self) -> ConcreteRow {
-        ConcreteRow {cells: self.cells.drain(..).map(|c| c.concrete()).collect()}
+    pub fn concrete(mut self) -> Row {
+        Row {cells: self.cells.drain(..).map(|c| c.concrete()).collect()}
     }
 
-    pub fn concrete_copy(&self) -> ConcreteRow {
-        ConcreteRow {cells: self.cells.iter().map(|c| c.concrete_copy()).collect()}
-    }
-}
-
-pub type ConcreteRow = BaseRow<ConcreteCell>;
-
-impl ConcreteRow {
-    pub fn row(mut self) -> Row {
-        Row {cells: self.cells.drain(..).map(|c| c.cell()).collect()}
+    pub fn partial_clone(&self) -> Result<Self, JobError> {
+        Ok(Row {
+            cells: self.cells.iter().map(|c| c.partial_clone()).collect::<Result<Vec<Cell>, JobError>>()?,
+        })
     }
 }
 
-impl std::hash::Hash for ConcreteRow {
+impl std::hash::Hash for Row {
     fn hash<H: Hasher>(&self, env: &mut H) {
         for c in &self.cells {
             c.hash(env);
-        }
-    }
-}
-
-impl Clone for ConcreteRow {
-    fn clone(&self) -> Self {
-        ConcreteRow {
-            cells: self.cells.clone(),
         }
     }
 }

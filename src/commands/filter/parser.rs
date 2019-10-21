@@ -8,10 +8,9 @@ use crate::{
     errors::{JobError, argument_error},
     commands::command_util::find_field
 };
-use crate::data::ConcreteCell;
 
 pub enum Value {
-    Cell(ConcreteCell),
+    Cell(Cell),
     Field(usize),
 }
 
@@ -37,7 +36,7 @@ fn parse_value(input_type: &Vec<CellType>,
                 Cell::Field(_) => Ok(Value::Field(field_lookup[*arg_idx].expect("Impossible"))),
                 Cell::Op(_) => Err(argument_error("Expected value")),
                 Cell::Output(_) => Err(argument_error("Invalid argument type Stream")),
-                _ => Ok(Value::Cell(arg.cell.concrete_copy())),
+                _ => Ok(Value::Cell(arg.cell.partial_clone()?.concrete())),
             };
         }
         None => {

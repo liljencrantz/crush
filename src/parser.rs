@@ -2,11 +2,10 @@ use crate::errors::{JobError, parse_error, argument_error};
 use crate::job::JobDefinition;
 use crate::lexer::{Lexer, TokenType};
 use crate::env::Env;
-use crate::data::{CellDefinition, ArgumentDefinition, ConcreteCell};
+use crate::data::{CellDefinition, ArgumentDefinition, Cell};
 use crate::commands::CallDefinition;
 use regex::Regex;
 use std::error::Error;
-use crate::data::Cell;
 use crate::glob::Glob;
 use crate::closure::{Closure, ClosureDefinition};
 

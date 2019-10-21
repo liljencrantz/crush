@@ -46,7 +46,7 @@ use crate::{
 use std::thread::JoinHandle;
 use std::error::Error;
 use crate::printer::Printer;
-use crate::data::{CellDefinition, ConcreteCell, CellDataType, Output};
+use crate::data::{CellDefinition, CellDataType, Output};
 use crate::job::Job;
 use std::sync::{Arc, Mutex};
 use crate::closure::Closure;
@@ -111,16 +111,17 @@ impl CallDefinition {
             args.push(arg.argument(dependencies, env, printer)?);
         }
         match &env.get(&self.name) {
-            Some(ConcreteCell::Command(command)) => {
+            Some(Cell::Command(command)) => {
                 let c = command.call;
                 return c(input_type, args);
             }
-            Some(ConcreteCell::Closure(closure)) => {
+            Some(Cell::Closure(closure)) => {
+                let last_job = &closure.get_jobs()[closure.get_jobs().len()];
                 return Ok(Call {
                     name: self.name.clone(),
                     input_type,
                     arguments: args,
-                    output_type: vec![CellType { name: None, cell_type: CellDataType::Text }],
+                    output_type: last_job.,
                     exec: Exec::Closure(closure.clone()),
                 });
             }
@@ -156,14 +157,23 @@ impl Call {
         return &self.output_type;
     }
 
+    fn push_arguments_to_env(&mut self, local_env: &Env) {
+        for arg in self.arguments.drain(..) {
+            if let Some(name) = &arg.name {
+                local_env.declare(name.as_ref(), arg.cell);
+            }
+        }
+    }
+
+
     pub fn execute(
-        self,
+        mut self,
         env: &Env,
         printer: &Printer,
         first_input: InputStream,
         last_output: OutputStream) -> JobResult {
         let printer = printer.clone();
-        return match self.exec {
+        return match self.exec.clone() {
             Exec::Command(run) => {
                 let env_copy = env.clone();
                 JobResult::Async(thread::Builder::new().name(self.name.clone()).spawn(move || {
@@ -173,11 +183,13 @@ impl Call {
 
             Exec::Closure(closure) => {
                 let mut res: Vec<JobResult> = Vec::new();
+                let local_env = closure.get_parent_env().push();
+                self.push_arguments_to_env(&local_env);
 
                 match closure.get_jobs().len() {
                     0 => {}
                     1 => {
-                        match closure.get_jobs()[0].compile(&env, &printer,&self.input_type, first_input, last_output) {
+                        match closure.get_jobs()[0].compile(&local_env, &printer,&self.input_type, first_input, last_output) {
                             Ok(mut job) => {
                                 job.exec();
                             }
@@ -189,7 +201,7 @@ impl Call {
                         {
                             let job_definition = &closure.get_jobs()[0];
                             let (last_output, last_input) = streams();
-                            match job_definition.compile(&env, &printer,&self.input_type, first_input, last_output) {
+                            match job_definition.compile(&local_env, &printer,&self.input_type, first_input, last_output) {
                                 Ok(mut job) => {
                                     job.exec();
                                     spawn_print_thread(&printer, Output { types: job.get_output_type().clone(), stream: last_input });
@@ -203,7 +215,7 @@ impl Call {
                             let (last_output, last_input) = streams();
                             drop(first_output);
 
-                            match job_definition.compile(&env, &printer,&vec![], first_input, last_output) {
+                            match job_definition.compile(&local_env, &printer,&vec![], first_input, last_output) {
                                 Ok(mut job) => {
                                     job.exec();
                                     spawn_print_thread(&printer, Output{ types: job.get_output_type().clone(), stream: last_input } );
@@ -217,7 +229,7 @@ impl Call {
                             let (first_output, first_input) = streams();
                             drop(first_output);
 
-                            match job_definition.compile(&env, &printer,&vec![], first_input, last_output) {
+                            match job_definition.compile(&local_env, &printer,&vec![], first_input, last_output) {
                                 Ok(mut job) => {
                                     job.exec();
                                 }
@@ -234,30 +246,30 @@ impl Call {
 }
 
 pub fn add_builtins(env: &Env) -> Result<(), JobError> {
-    env.declare("ls", ConcreteCell::Command(Command::new(ls_and_find::ls)))?;
-    env.declare("find", ConcreteCell::Command(Command::new(ls_and_find::find)))?;
-    env.declare("echo", ConcreteCell::Command(Command::new(echo::echo)))?;
-    env.declare("pwd", ConcreteCell::Command(Command::new(pwd::pwd)))?;
-    env.declare("cd", ConcreteCell::Command(Command::new(cd::cd)))?;
-    env.declare("filter", ConcreteCell::Command(Command::new(filter::filter)))?;
-    env.declare("sort", ConcreteCell::Command(Command::new(sort::sort)))?;
-    env.declare("set", ConcreteCell::Command(Command::new(set::set)))?;
-    env.declare("let", ConcreteCell::Command(Command::new(let_command::let_command)))?;
-    env.declare("unset", ConcreteCell::Command(Command::new(unset::unset)))?;
-    env.declare("group", ConcreteCell::Command(Command::new(group::group)))?;
-    env.declare("join", ConcreteCell::Command(Command::new(join::join)))?;
-    env.declare("count", ConcreteCell::Command(Command::new(count::count)))?;
-    env.declare("cat", ConcreteCell::Command(Command::new(cat::cat)))?;
-    env.declare("select", ConcreteCell::Command(Command::new(select::select)))?;
-    env.declare("enumerate", ConcreteCell::Command(Command::new(enumerate::enumerate)))?;
+    env.declare("ls", Cell::Command(Command::new(ls_and_find::ls)))?;
+    env.declare("find", Cell::Command(Command::new(ls_and_find::find)))?;
+    env.declare("echo", Cell::Command(Command::new(echo::echo)))?;
+    env.declare("pwd", Cell::Command(Command::new(pwd::pwd)))?;
+    env.declare("cd", Cell::Command(Command::new(cd::cd)))?;
+    env.declare("filter", Cell::Command(Command::new(filter::filter)))?;
+    env.declare("sort", Cell::Command(Command::new(sort::sort)))?;
+    env.declare("set", Cell::Command(Command::new(set::set)))?;
+    env.declare("let", Cell::Command(Command::new(let_command::let_command)))?;
+    env.declare("unset", Cell::Command(Command::new(unset::unset)))?;
+    env.declare("group", Cell::Command(Command::new(group::group)))?;
+    env.declare("join", Cell::Command(Command::new(join::join)))?;
+    env.declare("count", Cell::Command(Command::new(count::count)))?;
+    env.declare("cat", Cell::Command(Command::new(cat::cat)))?;
+    env.declare("select", Cell::Command(Command::new(select::select)))?;
+    env.declare("enumerate", Cell::Command(Command::new(enumerate::enumerate)))?;
 
-    env.declare("cast", ConcreteCell::Command(Command::new(cast::cast)))?;
+    env.declare("cast", Cell::Command(Command::new(cast::cast)))?;
 
-    env.declare("head", ConcreteCell::Command(Command::new(head::head)))?;
-    env.declare("tail", ConcreteCell::Command(Command::new(tail::tail)))?;
+    env.declare("head", Cell::Command(Command::new(head::head)))?;
+    env.declare("tail", Cell::Command(Command::new(tail::tail)))?;
 
-    env.declare("lines", ConcreteCell::Command(Command::new(lines::lines)))?;
-    env.declare("csv", ConcreteCell::Command(Command::new(csv::csv)))?;
+    env.declare("lines", Cell::Command(Command::new(lines::lines)))?;
+    env.declare("csv", Cell::Command(Command::new(csv::csv)))?;
 
     return Ok(());
 }

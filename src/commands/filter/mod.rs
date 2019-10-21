@@ -16,15 +16,14 @@ use std::iter::Iterator;
 use crate::printer::Printer;
 use crate::errors::error;
 use std::cmp::Ordering;
-use crate::data::{ConcreteCell, ConcreteRow};
 use crate::env::Env;
 
-fn do_match(needle: &ConcreteCell, haystack: &ConcreteCell) -> Result<bool, JobError> {
+fn do_match(needle: &Cell, haystack: &Cell) -> Result<bool, JobError> {
     match (needle, haystack) {
-        (ConcreteCell::Text(s), ConcreteCell::Glob(pattern)) => Ok(pattern.matches( s)),
-        (ConcreteCell::File(f), ConcreteCell::Glob(pattern)) => f.to_str().map(|s| Ok(pattern.matches( s))).unwrap_or(Err(error("Invalid filename"))),
-        (ConcreteCell::Text(s), ConcreteCell::Regex(_, pattern)) => Ok(pattern.is_match(s)),
-        (ConcreteCell::File(f), ConcreteCell::Regex(_, pattern)) => match f.to_str().map(|s| pattern.is_match(s)) {
+        (Cell::Text(s), Cell::Glob(pattern)) => Ok(pattern.matches( s)),
+        (Cell::File(f), Cell::Glob(pattern)) => f.to_str().map(|s| Ok(pattern.matches( s))).unwrap_or(Err(error("Invalid filename"))),
+        (Cell::Text(s), Cell::Regex(_, pattern)) => Ok(pattern.is_match(s)),
+        (Cell::File(f), Cell::Regex(_, pattern)) => match f.to_str().map(|s| pattern.is_match(s)) {
             Some(v) => Ok(v),
             None => Err(error("Invalid filename")),
         },
@@ -32,14 +31,14 @@ fn do_match(needle: &ConcreteCell, haystack: &ConcreteCell) -> Result<bool, JobE
     }
 }
 
-fn to_cell<'a>(value: &'a Value, row: &'a ConcreteRow) -> &'a ConcreteCell {
+fn to_cell<'a>(value: &'a Value, row: &'a Row) -> &'a Cell {
     return match value {
         Value::Cell(c) => &c,
         Value::Field(idx) => &row.cells[*idx],
     };
 }
 
-fn evaluate(condition: &Condition, row: &ConcreteRow) -> Result<bool, JobError> {
+fn evaluate(condition: &Condition, row: &Row) -> Result<bool, JobError> {
     return match condition {
         Condition::Equal(l, r) =>
             Ok(to_cell(&l, row) == to_cell(&r, row)),
@@ -84,8 +83,8 @@ fn run(
     loop {
         match input.recv() {
             Ok(row) => {
-                match evaluate(&condition, &row.concrete_copy()) {
-                    Ok(val) => if output.send(row).is_err() { break },
+                match evaluate(&condition, &row) {
+                    Ok(val) => if val { if output.send(row).is_err() { break }},
                     Err(e) => printer.job_error(e),
                 }
             }

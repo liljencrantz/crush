@@ -17,18 +17,13 @@ fn run(
     env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {
-    let g = arguments.drain(..).map(|c| c.cell);
     output.send(Row {
-        cells: g.collect()
-    })?;
-    return Ok(());
+        cells: arguments.drain(..).map(|c| c.cell).collect()
+    })
 }
 
 pub fn echo(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
-    let output_type = arguments
-        .iter()
-        .map(|a| CellType { name: a.name.clone(), cell_type: a.cell.cell_data_type() })
-        .collect();
+    let output_type = arguments.iter().map(Argument::cell_type).collect();
     return Ok(Call {
         name: String::from("echo"),
         input_type,

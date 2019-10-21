@@ -62,4 +62,3 @@ impl Printer {
         self.sender.send(PrinterMessage::Error(Box::from(err)));
     }
 }
-

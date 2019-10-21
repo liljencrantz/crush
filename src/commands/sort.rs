@@ -11,7 +11,6 @@ use crate::{
     stream::{OutputStream, InputStream},
 };
 use crate::printer::Printer;
-use crate::data::ConcreteRow;
 use crate::env::Env;
 
 pub fn get_key(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<usize, JobError> {
@@ -41,7 +40,7 @@ fn run(
     printer: Printer,
 ) -> Result<(), JobError> {
     let idx = get_key(&input_type, &arguments)?;
-    let mut res: Vec<ConcreteRow> = Vec::new();
+    let mut res: Vec<Row> = Vec::new();
     loop {
         match input.recv() {
             Ok(row) => res.push(row.concrete()),
@@ -52,7 +51,7 @@ fn run(
     res.sort_by(|a, b| a.cells[idx].partial_cmp(&b.cells[idx]).expect("OH NO!"));
 
     for row in res {
-        output.send(row.row())?;
+        output.send(row)?;
     }
 
     return Ok(());
