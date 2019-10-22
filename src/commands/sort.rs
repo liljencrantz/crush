@@ -32,11 +32,8 @@ pub fn get_key(input_type: &Vec<CellFnurp>, arguments: &Vec<Argument>) -> Result
     }
 }
 
-fn run(
-    input_type: Vec<CellFnurp>,
-    arguments: Vec<Argument>,
-    input: InputStream,
-    output: OutputStream,
+pub fn run(
+    config: Config,
     env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {

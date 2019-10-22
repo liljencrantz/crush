@@ -9,12 +9,12 @@ mod cd;
 
 mod set;
 mod lett;
-/*
+
 mod unset;
 
 mod head;
 mod tail;
-
+/*
 mod lines;
 mod csv;
 
@@ -70,21 +70,24 @@ pub enum Exec {
     Cd(cd::Config),
     Cast(cast::Config),
     Find(find::Config),
+    Unset(unset::Config),
+    Head(head::Config),
+    Tail(tail::Config),
 }
 
-pub enum JobResult {
-    Many(Vec<JobResult>),
+pub enum JobJoinHandle {
+    Many(Vec<JobJoinHandle>),
     Async(JoinHandle<Result<(), JobError>>),
 }
 
-impl JobResult {
+impl JobJoinHandle {
     pub fn join(self) -> Result<(), JobError> {
         return match self {
-            JobResult::Async(a) => match a.join() {
+            JobJoinHandle::Async(a) => match a.join() {
                 Ok(r) => r,
                 Err(_) => Err(error("Error while wating for command to finish")),
             },
-            JobResult::Many(v) => {
+            JobJoinHandle::Many(v) => {
                 for j in v {
                     j.join()?;
                 }
@@ -170,8 +173,8 @@ fn build(name: String) -> thread::Builder {
     thread::Builder::new().name(name)
 }
 
-fn handle(h: Result<JoinHandle<Result<(), JobError>>, std::io::Error>) -> JobResult {
-    JobResult::Async(h.unwrap())
+fn handle(h: Result<JoinHandle<Result<(), JobError>>, std::io::Error>) -> JobJoinHandle {
+    JobJoinHandle::Async(h.unwrap())
 }
 
 impl Call {
@@ -184,7 +187,7 @@ impl Call {
     }
 
 
-    pub fn execute(mut self) -> JobResult {
+    pub fn execute(mut self) -> JobJoinHandle {
         let env = self.env.clone();
         let printer = self.printer.clone();
         let name = self.name.clone();
@@ -200,6 +203,9 @@ impl Call {
             Cd(config) => handle((build(name).spawn(move || cd::run(config, env, printer)))),
             Cast(config) => handle((build(name).spawn(move || cast::run(config, env, printer)))),
             Find(config) => handle((build(name).spawn(move || find::run(config, env, printer)))),
+            Unset(config) => handle((build(name).spawn(move || unset::run(config, env, printer)))),
+            Head(config) => handle((build(name).spawn(move || head::run(config, env, printer)))),
+            Tail(config) => handle((build(name).spawn(move || tail::run(config, env, printer)))),
         }
     }
 }
@@ -214,8 +220,9 @@ pub fn add_builtins(env: &Env) -> Result<(), JobError> {
         env.declare("sort", Cell::Command(Command::new(sort::sort)))?;
      */   env.declare("set", Cell::Command(Command::new(set::compile)))?;
         env.declare("let", Cell::Command(Command::new(lett::compile)))?;
-       /* env.declare("unset", Cell::Command(Command::new(unset::unset)))?;
-        env.declare("group", Cell::Command(Command::new(group::group)))?;
+        env.declare("unset", Cell::Command(Command::new(unset::compile)))?;
+
+    /* env.declare("group", Cell::Command(Command::new(group::group)))?;
         env.declare("join", Cell::Command(Command::new(join::join)))?;
         env.declare("count", Cell::Command(Command::new(count::count)))?;
         env.declare("cat", Cell::Command(Command::new(cat::cat)))?;
@@ -223,11 +230,11 @@ pub fn add_builtins(env: &Env) -> Result<(), JobError> {
         env.declare("enumerate", Cell::Command(Command::new(enumerate::enumerate)))?;
 */
         env.declare("cast", Cell::Command(Command::new(cast::compile)))?;
-/*
-        env.declare("head", Cell::Command(Command::new(head::head)))?;
-        env.declare("tail", Cell::Command(Command::new(tail::tail)))?;
 
-        env.declare("lines", Cell::Command(Command::new(lines::lines)))?;
+        env.declare("head", Cell::Command(Command::new(head::compile)))?;
+        env.declare("tail", Cell::Command(Command::new(tail::compile)))?;
+
+/*        env.declare("lines", Cell::Command(Command::new(lines::lines)))?;
         env.declare("csv", Cell::Command(Command::new(csv::csv)))?;
     */
     return Ok(());

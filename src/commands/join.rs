@@ -135,10 +135,7 @@ fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &
 }
 
 pub fn run(
-    input_type: Vec<CellFnurp>,
-    arguments: Vec<Argument>,
-    input: InputStream,
-    output: OutputStream,
+    config: Config,
     env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {

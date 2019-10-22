@@ -15,14 +15,7 @@ use crate::printer::Printer;
 use crate::env::Env;
 use crate::data::CellFnurp;
 
-fn run(
-    input_type: Vec<CellFnurp>,
-    arguments: Vec<Argument>,
-    input: InputStream,
-    output: OutputStream,
-    env: Env,
-    printer: Printer,
-) -> Result<(), JobError> {
+pub fn run(config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
     let mut line: i128 = 1;
     loop {
         match input.recv() {

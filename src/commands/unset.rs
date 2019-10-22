@@ -1,46 +1,46 @@
 use crate::{
-    data::{CellDefinition},
+    data::CellDefinition,
     data::Argument,
     commands::{Call, Exec},
     errors::{JobError, argument_error},
-    env::Env
+    env::Env,
 };
 use crate::data::{Cell, CellFnurp};
 use crate::printer::Printer;
 use crate::stream::{InputStream, OutputStream};
+use crate::errors::JobResult;
 
-fn run(
-    input_type: Vec<CellFnurp>,
-    arguments: Vec<Argument>,
-    input: InputStream,
-    output: OutputStream,
-    env: Env,
-    printer: Printer,
-) -> Result<(), JobError> {
-    for arg in arguments {
-        if let Cell::Text(s) = arg.cell {
-            env.remove(&s);
-        }
-    }
-    return Ok(());
+pub struct Config {
+    vars: Vec<Box<str>>,
 }
 
-pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+fn parse(arguments: Vec<Argument>) -> JobResult<Config> {
+    let mut vars = Vec::new();
     for arg in arguments.iter() {
         if let Cell::Text(s) = &arg.cell {
             if s.len() == 0 {
                 return Err(argument_error("Illegal variable name"));
+            } else {
+                vars.push(s.clone());
             }
         } else {
             return Err(argument_error("Illegal variable name"));
         }
     }
+    Ok(Config { vars })
+}
 
-    return Ok(Call {
-        name: String::from("unset"),
-        input_type,
-        arguments,
-        output_type: vec![],
-        exec: Exec::Command(run),
-    });
+pub fn run(
+    config: Config,
+    env: Env,
+    printer: Printer,
+) -> Result<(), JobError> {
+    for s in config.vars {
+        env.remove(s.as_ref());
+    }
+    return Ok(());
+}
+
+pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+    Ok((Exec::Unset(parse(arguments)?), vec![]))
 }

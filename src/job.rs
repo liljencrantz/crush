@@ -1,5 +1,5 @@
 use crate::env::Env;
-use crate::commands::{Call, JobResult, CallDefinition};
+use crate::commands::{Call, JobJoinHandle, CallDefinition};
 use crate::stream::{print, streams, OutputStream, InputStream, spawn_print_thread};
 use std::thread;
 use crate::data::{JobOutput, CellFnurp, CellDefinition};
@@ -53,7 +53,7 @@ impl JobDefinition {
 pub struct Job {
     commands: Vec<Call>,
     dependencies: Vec<Job>,
-    handlers: Vec<JobResult>,
+    handlers: Vec<JobJoinHandle>,
     env: Env,
     printer: Printer,
     output_type: Vec<CellFnurp>,
@@ -76,7 +76,7 @@ impl Job {
         }
     }
 
-    pub fn take_handlers(&mut self) -> Vec<JobResult> {
+    pub fn take_handlers(&mut self) -> Vec<JobJoinHandle> {
         self.handlers.drain(..).collect()
     }
 
@@ -84,16 +84,16 @@ impl Job {
         return &self.output_type;
     }
 
-    pub fn execute(&mut self) -> JobResult {
+    pub fn execute(&mut self) -> JobJoinHandle {
         for mut dep in self.dependencies.drain(..) {
             dep.execute();
         }
-        let mut res: Vec<JobResult> = Vec::new();
+        let mut res: Vec<JobJoinHandle> = Vec::new();
         for mut call in self.commands.drain(..) {
             res.push(call.execute());
         }
 
-        JobResult::Many(res)
+        JobJoinHandle::Many(res)
     }
 
     pub fn wait(&mut self, printer: &Printer) {

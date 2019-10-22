@@ -44,14 +44,7 @@ fn count_rows(s: &InputStream) -> Cell {
     return Cell::Integer(res);
 }
 
-fn run(
-    input_type: Vec<CellFnurp>,
-    _arguments: Vec<Argument>,
-    input: InputStream,
-    output: OutputStream,
-    env: Env,
-    printer: Printer,
-) -> Result<(), JobError> {
+pub fn run(config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
     if has_streams(&input_type) {
         loop {
             match input.recv() {

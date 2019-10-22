@@ -58,10 +58,7 @@ fn handle(file: Box<Path>, output: &mut OutputStream) -> Result<(), JobError> {
 
 
 pub fn run(
-    input_type: Vec<CellFnurp>,
-    mut arguments: Vec<Argument>,
-    input: InputStream,
-    mut output: OutputStream,
+    config: Config,
     env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {

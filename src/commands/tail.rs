@@ -11,28 +11,27 @@ use std::collections::VecDeque;
 use crate::printer::Printer;
 use crate::env::Env;
 use crate::data::CellFnurp;
+use crate::commands::head;
 
-fn run(
-    _input_type: Vec<CellFnurp>,
-    arguments: Vec<Argument>,
-    input: InputStream,
-    output: OutputStream,
+pub type Config = head::Config;
+
+pub fn run(
+    config: Config,
     env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {
-    let tot = get_line_count(&arguments)?;
     let mut q: VecDeque<Row> = VecDeque::new();
     loop {
-        match input.recv() {
+        match config.input.recv() {
             Ok(row) => {
-                if q.len() >= tot as usize {
+                if q.len() >= config.lines as usize {
                     q.pop_front();
                 }
                 q.push_back(row);
             }
             Err(_) => {
                 for row in q.drain(..) {
-                    output.send(row)?;
+                    config.output.send(row)?;
                 }
                 break;
             },
@@ -42,12 +41,9 @@ fn run(
 }
 
 pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
-    get_line_count(&arguments)?;
-    return Ok(Call {
-        name: String::from("tail"),
-        output_type: input_type.clone(),
-        input_type,
-        arguments: arguments,
-        exec: Exec::Command(run),
-    });
+    Ok((Exec::Tail(Config {
+        lines: get_line_count(arguments)?,
+        input,
+        output
+    }), input_type))
 }

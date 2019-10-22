@@ -6,6 +6,8 @@ pub struct JobError {
     pub message: String,
 }
 
+pub type JobResult<T> = Result<T, JobError>;
+
 pub fn parse_error(message: &str, _lexer: &Lexer) -> JobError {
     return JobError {
         message: String::from(message),

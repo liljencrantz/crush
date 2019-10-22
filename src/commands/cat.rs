@@ -49,14 +49,7 @@ fn parse(input_type: &Vec<CellFnurp>, arguments: &Vec<Argument>) -> Result<Confi
     };
 }
 
-fn run(
-    input_type: Vec<CellFnurp>,
-    arguments: Vec<Argument>,
-    input: InputStream,
-    output: OutputStream,
-    env: Env,
-    printer: Printer,
-) -> Result<(), JobError> {
+pub fn run(config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
     let cfg = parse(&input_type, &arguments)?;
     loop {
         match input.recv() {

@@ -28,11 +28,8 @@ fn parse(input_type: &Vec<CellFnurp>, arguments: &Vec<Argument>) -> Result<Vec<(
     }).collect()
 }
 
-fn run(
-    input_type: Vec<CellFnurp>,
-    arguments: Vec<Argument>,
-    input: InputStream,
-    output: OutputStream,
+pub fn run(
+    config: Config,
     env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {

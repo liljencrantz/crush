@@ -3,13 +3,13 @@ use crate::{
     stream::{OutputStream, InputStream},
     data::Cell,
     commands::{Call, Exec},
-    errors::{JobError, argument_error}
+    errors::{JobError, argument_error},
 };
 use crate::printer::Printer;
 use crate::env::Env;
 use crate::data::CellFnurp;
 
-pub fn get_line_count(arguments: &Vec<Argument>) -> Result<i128, JobError> {
+pub fn get_line_count(arguments: Vec<Argument>) -> Result<i128, JobError> {
     return match arguments.len() {
         0 => Ok(10),
         1 => match arguments[0].cell {
@@ -17,27 +17,29 @@ pub fn get_line_count(arguments: &Vec<Argument>) -> Result<i128, JobError> {
             _ => Err(argument_error("Expected a number"))
         }
         _ => Err(argument_error("Too many arguments"))
-    }
+    };
+}
+
+pub struct Config {
+    pub lines: i128,
+    pub input: InputStream,
+    pub output: OutputStream,
 }
 
 pub fn run(
-    _input_type: Vec<CellFnurp>,
-    arguments: Vec<Argument>,
-    input: InputStream,
-    output: OutputStream,
+    config: Config,
     env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {
     let mut count = 0;
-    let tot = get_line_count(&arguments)?;
     loop {
-        match input.recv() {
+        match config.input.recv() {
             Ok(row) => {
-                if count >= tot {
+                if count >= config.lines {
                     break;
                 }
-                output.send(row)?;
-                count+=1;
+                config.output.send(row)?;
+                count += 1;
             }
             Err(_) => break,
         }
@@ -46,12 +48,9 @@ pub fn run(
 }
 
 pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
-    get_line_count(&arguments)?;
-    return Ok(Call {
-        name: String::from("head"),
-        output_type: input_type.clone(),
-        input_type,
-        arguments,
-        exec: Exec::Command(run),
-    });
+    Ok((Exec::Head(Config {
+        lines: get_line_count(arguments)?,
+        input,
+        output
+    }), input_type))
 }

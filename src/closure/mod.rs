@@ -6,7 +6,7 @@ use crate::data::{CellDefinition, JobOutput, CellFnurp, Argument};
 use crate::stream::{InputStream, OutputStream, streams, spawn_print_thread};
 use crate::printer::Printer;
 use crate::errors::{error, JobError};
-use crate::commands::JobResult;
+use crate::commands::JobJoinHandle;
 
 #[derive(Clone)]
 pub struct ClosureDefinition {
@@ -119,12 +119,12 @@ impl Closure {
         }
     }
 */
-    pub fn execute(self) -> JobResult {
-        let mut res: Vec<JobResult> = Vec::new();
+    pub fn execute(self) -> JobJoinHandle {
+        let mut res: Vec<JobJoinHandle> = Vec::new();
         for mut job in self.jobs {
             res.push(job.execute());
         }
-        JobResult::Many(res)
+        JobJoinHandle::Many(res)
     }
 
 }

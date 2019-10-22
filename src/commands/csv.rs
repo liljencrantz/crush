@@ -157,14 +157,7 @@ fn handle(file: Box<Path>, cfg: &Config, output: &mut OutputStream, printer: &Pr
 }
 
 
-fn run(
-    input_type: Vec<CellFnurp>,
-    mut arguments: Vec<Argument>,
-    input: InputStream,
-    mut output: OutputStream,
-    env: Env,
-    printer: Printer,
-) -> Result<(), JobError> {
+pub fn run(config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
     let cfg = parse(&input_type, &arguments)?;
     match &cfg.files {
         Either::Left(files) => {
