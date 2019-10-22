@@ -4,29 +4,30 @@ use crate::{
     data::{
         Argument,
         Row,
+        CellDefinition,
         CellType,
-        CellDataType,
         Cell
     },
     stream::{OutputStream, InputStream},
 };
 use crate::printer::Printer;
 use crate::env::Env;
+use crate::data::CellFnurp;
 
-pub fn has_streams(input_type: &Vec<CellType>) -> bool {
+pub fn has_streams(input_type: &Vec<CellFnurp>) -> bool {
     for t in input_type.iter() {
         match t.cell_type {
-            CellDataType::Output(_) => return true,
+            CellType::Output(_) => return true,
             _ => (),
         }
     }
     return false;
 }
 
-fn get_output_type(input_type: &Vec<CellType>) -> Vec<CellType> {
-    let res: Vec<CellType> =  input_type.iter().map(|t|
+fn get_output_type(input_type: &Vec<CellFnurp>) -> Vec<CellDefinition> {
+    let res: Vec<CellDefinition> =  input_type.iter().map(|t|
         match t.cell_type {
-            CellDataType::Output(_) => CellType{ name: t.name.clone(), cell_type: CellDataType::Integer},
+            CellType::Output(_) => CellFnurp { name: t.name.clone(), cell_type: CellType::Integer},
             _ => t.clone(),
         }).collect();
     return res;
@@ -44,7 +45,7 @@ fn count_rows(s: &InputStream) -> Cell {
 }
 
 fn run(
-    input_type: Vec<CellType>,
+    input_type: Vec<CellFnurp>,
     _arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
@@ -75,13 +76,13 @@ fn run(
     return Ok(());
 }
 
-pub fn count(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
+pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
     return Ok(Call {
         name: String::from("group"),
         output_type: if has_streams(&input_type) {
             get_output_type(&input_type)
         } else {
-            vec![CellType::named("count", CellDataType::Integer)]
+            vec![CellDefinition::named("count", CellType::Integer)]
         },
         input_type,
         arguments,

@@ -4,9 +4,9 @@ use crate::{
     data::{
         Argument,
         Row,
+        CellDefinition,
         CellType,
-        CellDataType,
-        Output,
+        JobOutput,
         Cell,
     },
     stream::{OutputStream, InputStream},
@@ -16,17 +16,18 @@ use crate::commands::command_util::find_field;
 use crate::replace::Replace;
 use crate::printer::Printer;
 use crate::env::Env;
+use crate::data::CellFnurp;
 
 struct Config {
     column: usize,
 }
 
-fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Config, JobError> {
+fn parse(input_type: &Vec<CellFnurp>, arguments: &Vec<Argument>) -> Result<Config, JobError> {
     let indices: Vec<usize> = input_type
         .iter()
         .enumerate()
         .filter(|(i, t)| match t.cell_type.clone() {
-            CellDataType::Output(_) | CellDataType::Rows(_) => true,
+            CellType::Output(_) | CellType::Rows(_) => true,
             _ => false,
         })
         .map(|(i, t)| i)
@@ -49,7 +50,7 @@ fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Config
 }
 
 fn run(
-    input_type: Vec<CellType>,
+    input_type: Vec<CellFnurp>,
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
@@ -84,14 +85,14 @@ fn run(
     return Ok(());
 }
 
-pub fn get_sub_type(cell_type: &CellType) -> Result<Vec<CellType>, JobError> {
+pub fn get_sub_type(cell_type: &CellDefinition) -> Result<Vec<CellDefinition>, JobError> {
     match &cell_type.cell_type {
-        CellDataType::Output(o) | CellDataType::Rows(o) => Ok(o.clone()),
+        CellType::Output(o) | CellType::Rows(o) => Ok(o.clone()),
         _ => Err(argument_error("Invalid column")),
     }
 }
 
-pub fn cat(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
+pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
     let cfg = parse(&input_type, &arguments)?;
     Ok(Call {
         name: String::from("cat"),

@@ -3,7 +3,7 @@ mod parser;
 use crate::{
     data::{
         Cell,
-        CellType,
+        CellDefinition,
         Row,
         Argument
     },
@@ -17,6 +17,7 @@ use crate::printer::Printer;
 use crate::errors::error;
 use std::cmp::Ordering;
 use crate::env::Env;
+use crate::data::CellFnurp;
 
 fn do_match(needle: &Cell, haystack: &Cell) -> Result<bool, JobError> {
     match (needle, haystack) {
@@ -72,7 +73,7 @@ fn evaluate(condition: &Condition, row: &Row) -> Result<bool, JobError> {
 }
 
 fn run(
-    input_type: Vec<CellType>,
+    input_type: Vec<CellFnurp>,
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
@@ -94,7 +95,7 @@ fn run(
     return Ok(());
 }
 
-pub fn filter(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
+pub fn filter(input_type: Vec<CellFnurp>, arguments: Vec<Argument>) -> Result<Call, JobError> {
     parse(&input_type, &arguments)?;
     return Ok(Call {
         name: String::from("filter"),

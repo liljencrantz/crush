@@ -1,5 +1,5 @@
 use crate::{
-    data::{Argument, CellType},
+    data::{Argument, CellDefinition},
     stream::{OutputStream, InputStream},
     data::Cell,
     commands::{Call, Exec},
@@ -7,6 +7,7 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::env::Env;
+use crate::data::CellFnurp;
 
 pub fn get_line_count(arguments: &Vec<Argument>) -> Result<i128, JobError> {
     return match arguments.len() {
@@ -19,8 +20,8 @@ pub fn get_line_count(arguments: &Vec<Argument>) -> Result<i128, JobError> {
     }
 }
 
-fn run(
-    _input_type: Vec<CellType>,
+pub fn run(
+    _input_type: Vec<CellFnurp>,
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
@@ -44,7 +45,7 @@ fn run(
     return Ok(());
 }
 
-pub fn head(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
+pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
     get_line_count(&arguments)?;
     return Ok(Call {
         name: String::from("head"),

@@ -1,5 +1,5 @@
 use crate::{
-    data::CellType,
+    data::CellDefinition,
     stream::{OutputStream, InputStream},
     data::Row,
     data::Argument,
@@ -8,27 +8,20 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::env::Env;
+use crate::data::CellFnurp;
 
-fn run(
-    _input_type: Vec<CellType>,
-    mut arguments: Vec<Argument>,
-    _input: InputStream,
+pub struct Config {
+    arguments: Vec<Argument>,
     output: OutputStream,
-    env: Env,
-    printer: Printer,
-) -> Result<(), JobError> {
-    output.send(Row {
-        cells: arguments.drain(..).map(|c| c.cell).collect()
+}
+
+pub fn run(mut config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
+    config.output.send(Row {
+        cells: config.arguments.drain(..).map(|c| c.cell).collect()
     })
 }
 
-pub fn echo(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
+pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
     let output_type = arguments.iter().map(Argument::cell_type).collect();
-    return Ok(Call {
-        name: String::from("echo"),
-        input_type,
-        arguments,
-        output_type,
-        exec: Exec::Command(run),
-    });
+    Ok((Exec::Echo(Config{arguments, output}), output_type))
 }

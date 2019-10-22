@@ -5,15 +5,16 @@ use crate::{
     data::{
         Argument,
         Row,
-        CellType,
+        CellDefinition,
         Cell
     },
     stream::{OutputStream, InputStream},
 };
 use crate::printer::Printer;
 use crate::env::Env;
+use crate::data::CellFnurp;
 
-pub fn get_key(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<usize, JobError> {
+pub fn get_key(input_type: &Vec<CellFnurp>, arguments: &Vec<Argument>) -> Result<usize, JobError> {
     if arguments.len() != 1 {
         return Err(argument_error("No comparison key specified"));
     }
@@ -32,7 +33,7 @@ pub fn get_key(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<
 }
 
 fn run(
-    input_type: Vec<CellType>,
+    input_type: Vec<CellFnurp>,
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
@@ -57,7 +58,7 @@ fn run(
     return Ok(());
 }
 
-pub fn sort(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
+pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
     get_key(&input_type, &arguments)?;
     return Ok(Call {
         name: String::from("Sort"),

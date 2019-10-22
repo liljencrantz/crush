@@ -6,7 +6,7 @@ use crate::{
     data::{
         Argument,
         Row,
-        CellType,
+        CellDefinition,
         Cell
     },
     stream::{OutputStream, InputStream},
@@ -14,8 +14,9 @@ use crate::{
 use crate::replace::Replace;
 use crate::printer::Printer;
 use crate::env::Env;
+use crate::data::CellFnurp;
 
-fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Vec<(usize, Option<Box<str>>)>, JobError> {
+fn parse(input_type: &Vec<CellFnurp>, arguments: &Vec<Argument>) -> Result<Vec<(usize, Option<Box<str>>)>, JobError> {
     arguments.iter().enumerate().map(|(idx, a)| {
         match &a.cell {
             Cell::Text(s) | Cell::Field(s) => match find_field(s, input_type) {
@@ -28,7 +29,7 @@ fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Vec<(u
 }
 
 fn run(
-    input_type: Vec<CellType>,
+    input_type: Vec<CellFnurp>,
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
@@ -51,11 +52,11 @@ fn run(
     return Ok(());
 }
 
-pub fn select(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
+pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
     let mut indices = parse(&input_type, &arguments)?;
     return Ok(Call {
         name: String::from("select"),
-        output_type: indices.drain(..).map(|(idx, name)| CellType {cell_type: input_type[idx].cell_type.clone(), name }).collect(),
+        output_type: indices.drain(..).map(|(idx, name)| CellFnurp {cell_type: input_type[idx].cell_type.clone(), name }).collect(),
         input_type,
         arguments,
         exec: Exec::Command(run),

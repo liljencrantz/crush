@@ -1,9 +1,9 @@
-use crate::data::{CellType, Row};
+use crate::data::{CellFnurp, Row};
 use std::hash::Hasher;
 use crate::errors::JobError;
 
 pub struct Rows {
-    pub types: Vec<CellType>,
+    pub types: Vec<CellFnurp>,
     pub rows: Vec<Row>,
 }
 

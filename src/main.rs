@@ -27,7 +27,7 @@ use crate::printer::Printer;
 use std::sync::mpsc::channel;
 use crate::stream::{streams, spawn_print_thread};
 use crate::job::Job;
-use crate::data::Output;
+use crate::data::JobOutput;
 
 fn repl() -> Result<(), JobError>{
     let mut global_env = env::Env::new();
@@ -50,8 +50,8 @@ fn repl() -> Result<(), JobError>{
                             let (last_output, last_input) = streams();
                             match job_definition.compile(&global_env, &printer,&vec![], first_input, last_output) {
                                 Ok(mut job) => {
-                                    job.exec();
-                                    spawn_print_thread(&printer, Output{ types: job.get_output_type().clone(), stream: last_input } );
+                                    job.execute();
+                                    spawn_print_thread(&printer, JobOutput { types: job.get_output_type().clone(), stream: last_input } );
                                     job.wait(&printer);
                                 }
                                 Err(e) => printer.job_error(e),

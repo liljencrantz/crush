@@ -89,7 +89,7 @@ fn parse_unnamed_argument(lexer: &mut Lexer) -> Result<CellDefinition, JobError>
                 '`' => {
                     let mut dep = parse(lexer)?;
                     lexer.pop();
-                    let res = Ok(CellDefinition::Closure(ClosureDefinition::new(dep)));
+                    let res = Ok(CellDefinition::ClosureDefinition(ClosureDefinition::new(dep)));
                     return res;
                 }
                 '*' => {

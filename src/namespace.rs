@@ -3,7 +3,7 @@ use crate::{
     errors::{JobError, error},
     commands::Call,
     data::{
-        CellType,
+        CellDefinition,
         Argument,
         Cell,
     },

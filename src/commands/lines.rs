@@ -11,9 +11,9 @@ use crate::{
     data::{
         Argument,
         Row,
+        CellFnurp,
         CellType,
-        CellDataType,
-        Output,
+        JobOutput,
         Cell,
     },
     stream::{OutputStream, InputStream, unlimited_streams},
@@ -23,7 +23,7 @@ use crate::env::Env;
 
 lazy_static! {
     static ref sub_type: Vec<CellType> = {
-        vec![CellType::named("line", CellDataType::Text)]
+        vec![CellFnurp::named("line", CellType::Text)]
     };
 }
 
@@ -32,7 +32,7 @@ fn handle(file: Box<Path>, output: &mut OutputStream) -> Result<(), JobError> {
     let out_row = Row {
         cells: vec![
             Cell::File(file.clone()),
-            Cell::Output(Output {
+            Cell::JobOutput(JobOutput {
                 types: sub_type.clone(),
                 stream: input_stream,
             }),
@@ -57,8 +57,8 @@ fn handle(file: Box<Path>, output: &mut OutputStream) -> Result<(), JobError> {
 }
 
 
-fn run(
-    input_type: Vec<CellType>,
+pub fn run(
+    input_type: Vec<CellFnurp>,
     mut arguments: Vec<Argument>,
     input: InputStream,
     mut output: OutputStream,
@@ -99,11 +99,11 @@ fn run(
     return Ok(());
 }
 
-pub fn lines(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
-    let output_type: Vec<CellType> =
+pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+    let output_type: Vec<CellFnurp> =
         vec![
-            CellType::named("file", CellDataType::File),
-            CellType::named("lines", CellDataType::Output(sub_type.clone())),
+            CellFnurp::named("file", CellType::File),
+            CellFnurp::named("lines", CellType::Output(sub_type.clone())),
         ];
 
     return Ok(Call {

@@ -1,7 +1,7 @@
 use crate::data::cell::Cell;
 use std::cmp::PartialOrd;
 use std::hash::Hasher;
-use crate::data::{CellType};
+use crate::data::CellDefinition;
 use crate::errors::JobError;
 
 pub struct Row {

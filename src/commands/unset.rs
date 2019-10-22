@@ -1,16 +1,16 @@
 use crate::{
-    data::{CellType},
+    data::{CellDefinition},
     data::Argument,
     commands::{Call, Exec},
     errors::{JobError, argument_error},
     env::Env
 };
-use crate::data::Cell;
+use crate::data::{Cell, CellFnurp};
 use crate::printer::Printer;
 use crate::stream::{InputStream, OutputStream};
 
 fn run(
-    input_type: Vec<CellType>,
+    input_type: Vec<CellFnurp>,
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
@@ -25,7 +25,7 @@ fn run(
     return Ok(());
 }
 
-pub fn unset(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
+pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
     for arg in arguments.iter() {
         if let Cell::Text(s) = &arg.cell {
             if s.len() == 0 {

@@ -6,9 +6,9 @@ use crate::{
     data::{
         Argument,
         Row,
+        CellDefinition,
+        JobOutput,
         CellType,
-        Output,
-        CellDataType,
         Cell
     },
     stream::{OutputStream, InputStream, unlimited_streams},
@@ -16,8 +16,9 @@ use crate::{
 use crate::printer::Printer;
 use crate::replace::Replace;
 use crate::env::Env;
+use crate::data::CellFnurp;
 
-pub fn get_key(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<(Option<Box<str>>, usize), JobError> {
+pub fn get_key(input_type: &Vec<CellFnurp>, arguments: &Vec<Argument>) -> Result<(Option<Box<str>>, usize), JobError> {
     if arguments.len() != 1 {
         return Err(argument_error("No comparison key specified"));
     }
@@ -34,7 +35,7 @@ pub fn get_key(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<
 }
 
 fn run(
-    input_type: Vec<CellType>,
+    input_type: Vec<CellFnurp>,
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
@@ -54,7 +55,7 @@ fn run(
                     None => {
                         let (output_stream, input_stream) = unlimited_streams();
                         let out_row = Row {
-                            cells: vec![key.partial_clone()?, Cell::Output(Output { types: input_type.clone(), stream: input_stream })],
+                            cells: vec![key.partial_clone()?, Cell::JobOutput(JobOutput { types: input_type.clone(), stream: input_stream })],
                         };
                         output.send(out_row)?;
                         output_stream.send(row)?;
@@ -71,11 +72,11 @@ fn run(
     return Ok(());
 }
 
-pub fn group(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
+pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
     let (column_name, column) = get_key(&input_type, &arguments)?;
     return Ok(Call {
         name: String::from("group"),
-        output_type: vec![input_type[column].clone(), CellType { name: column_name, cell_type: CellDataType::Output(input_type.clone()) }],
+        output_type: vec![input_type[column].clone(), CellFnurp { name: column_name, cell_type: CellType::Output(input_type.clone()) }],
         input_type,
         arguments,
         exec: Exec::Command(run),

@@ -1,4 +1,4 @@
-use crate::data::{CellDataType, CellType, Cell, Output};
+use crate::data::{CellType, CellFnurp, Cell, JobOutput};
 use crate::data::{Alignment, Row, Rows};
 use std::cmp::max;
 use std::sync::mpsc::{Receiver, sync_channel, SyncSender, channel, Sender};
@@ -51,7 +51,7 @@ impl Readable for InputStream {
     }
 }
 
-pub fn spawn_print_thread(printer: &Printer, output: Output) {
+pub fn spawn_print_thread(printer: &Printer, output: JobOutput) {
     let p = printer.clone();
     thread::Builder::new()
         .name("output_formater".to_string())
@@ -59,7 +59,7 @@ pub fn spawn_print_thread(printer: &Printer, output: Output) {
         );
 }
 
-pub fn print(printer: &Printer, mut stream: InputStream, types: Vec<CellType>) {
+pub fn print(printer: &Printer, mut stream: InputStream, types: Vec<CellFnurp>) {
     print_internal::<InputStream>(printer, &mut stream, &types, 0);
 }
 
@@ -78,15 +78,15 @@ impl Readable for RowsReader {
     }
 }
 
-fn print_internal<T: Readable>(printer: &Printer, stream: &mut T, types: &Vec<CellType>, indent: usize) {
+fn print_internal<T: Readable>(printer: &Printer, stream: &mut T, types: &Vec<CellFnurp>, indent: usize) {
     let mut data: Vec<Row> = Vec::new();
     let mut has_name = false;
     let mut has_table = false;
 
     for val in types.iter() {
         match val.cell_type {
-            CellDataType::Output(_) => has_table = true,
-            CellDataType::Rows(_) => has_table = true,
+            CellType::Output(_) => has_table = true,
+            CellType::Rows(_) => has_table = true,
             _ => (),
         }
         if val.name.is_some() {
@@ -111,7 +111,7 @@ fn print_internal<T: Readable>(printer: &Printer, stream: &mut T, types: &Vec<Ce
     }
 }
 
-fn calculate_header_width(w: &mut Vec<usize>,  types: &Vec<CellType>, has_name: bool) {
+fn calculate_header_width(w: &mut Vec<usize>, types: &Vec<CellFnurp>, has_name: bool) {
     if has_name {
         for (idx, val) in types.iter().enumerate() {
             w[idx] = max(w[idx], val.len_or_0());
@@ -129,7 +129,7 @@ fn calculate_body_width(w: &mut Vec<usize>,  data: &Vec<Row>, col_count: usize) 
     }
 }
 
-fn print_header(printer: &Printer, w: &Vec<usize>,  types: &Vec<CellType>, has_name: bool, indent: usize) {
+fn print_header(printer: &Printer, w: &Vec<usize>, types: &Vec<CellFnurp>, has_name: bool, indent: usize) {
     if has_name {
         let mut header = " ".repeat(indent * 4);
         for (idx, val) in types.iter().enumerate() {
@@ -170,7 +170,7 @@ fn print_body(printer: &Printer, w: &Vec<usize>,  data: Vec<Row>, indent: usize)
     }
 }
 
-fn print_partial(printer: &Printer, data: Vec<Row>, types: &Vec<CellType>, has_name: bool, indent: usize) {
+fn print_partial(printer: &Printer, data: Vec<Row>, types: &Vec<CellFnurp>, has_name: bool, indent: usize) {
     let mut w = vec![0; types.len()];
 
     calculate_header_width(&mut w, types, has_name);

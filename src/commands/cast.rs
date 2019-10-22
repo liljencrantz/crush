@@ -6,53 +6,57 @@ use crate::{
     data::{
         Argument,
         Row,
-        CellType,
-        Cell
+        CellDefinition,
+        Cell,
     },
     stream::{OutputStream, InputStream},
-    replace::Replace
+    replace::Replace,
 };
-use crate::data::CellDataType;
+use crate::data::{CellType, CellFnurp};
 use crate::printer::Printer;
 use crate::env::Env;
 
-struct Config {
-    output_type: Vec<CellType>,
+pub struct Config {
+    output_type: Vec<CellFnurp>,
+    input: InputStream,
+    output: OutputStream,
 }
 
-fn parse(input_type: &Vec<CellType>, arguments: &Vec<Argument>) -> Result<Config, JobError> {
-
-    let mut output_type: Vec<CellType> = input_type.clone();
+fn parse(
+    input_type: &Vec<CellFnurp>,
+    arguments: &Vec<Argument>,
+    input: InputStream,
+    output: OutputStream,
+) -> Result<Config, JobError> {
+    let mut output_type: Vec<CellFnurp> = input_type.clone();
     for (idx, arg) in arguments.iter().enumerate() {
         let arg_idx = match &arg.name {
             Some(name) => find_field(name, input_type)?,
             None => return Err(argument_error("Expected only named arguments")),
         };
         match &arg.cell {
-            Cell::Text(s) => output_type[arg_idx].cell_type = CellDataType::from(s)?,
+            Cell::Text(s) => output_type[arg_idx].cell_type = CellType::from(s)?,
             _ => return Err(argument_error("Expected argument type as text field")),
         }
     }
     Ok(Config {
         output_type,
+        input,
+        output,
     })
 }
 
-fn run(
-    input_type: Vec<CellType>,
-    arguments: Vec<Argument>,
-    input: InputStream,
-    output: OutputStream,
+pub fn run(
+    config: Config,
     env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {
-    let cfg = parse(&input_type, &arguments)?;
     'outer: loop {
-        match input.recv() {
+        match config.input.recv() {
             Ok(mut row) => {
                 let mut cells = Vec::new();
                 'inner: for (idx, cell) in row.cells.drain(..).enumerate() {
-                    match cell.cast(cfg.output_type[idx].cell_type.clone()) {
+                    match cell.cast(config.output_type[idx].cell_type.clone()) {
                         Ok(c) => cells.push(c),
                         Err(e) => {
                             printer.job_error(e);
@@ -60,7 +64,7 @@ fn run(
                         }
                     }
                 }
-                output.send(Row{cells});
+                config.output.send(Row { cells });
             }
             Err(_) => break,
         }
@@ -68,13 +72,8 @@ fn run(
     return Ok(());
 }
 
-pub fn cast(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
-    let cfg = parse(&input_type, &arguments)?;
-    return Ok(Call {
-        name: String::from("cast"),
-        output_type: cfg.output_type,
-        input_type,
-        arguments,
-        exec: Exec::Command(run),
-    });
+pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+    let cfg = parse(&input_type, &arguments, input, output)?;
+    let output_type = cfg.output_type.clone();
+    Ok((Exec::Cast(cfg), output_type))
 }

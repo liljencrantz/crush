@@ -1,7 +1,7 @@
 use crate::{
     data::{
+        CellDefinition,
         CellType,
-        CellDataType,
         Row,
         Argument,
         Cell
@@ -13,9 +13,10 @@ use crate::{
 use std::iter::Iterator;
 use crate::printer::Printer;
 use crate::env::Env;
+use crate::data::CellFnurp;
 
 fn run(
-    input_type: Vec<CellType>,
+    input_type: Vec<CellFnurp>,
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream,
@@ -37,8 +38,8 @@ fn run(
     return Ok(());
 }
 
-pub fn enumerate(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
-    let mut output_type = vec![CellType::named("idx", CellDataType::Integer)];
+pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+    let mut output_type = vec![CellDefinition::named("idx", CellType::Integer)];
     output_type.extend(input_type.iter().cloned());
     return Ok(Call {
         name: String::from("enumerate"),

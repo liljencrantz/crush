@@ -1,7 +1,7 @@
 use crate::glob::Glob;
 use std::cmp::Ordering;
 use std::hash::Hasher;
-use crate::data::{Output, CellDataType, Command, Row};
+use crate::data::{JobOutput, CellType, Command, Row};
 use crate::data::rows::Rows;
 use crate::errors::{error, JobError, to_job_error, mandate};
 use std::path::Path;
@@ -23,7 +23,7 @@ pub enum CellDefinition {
     Regex(Box<str>, Regex),
     Op(Box<str>),
     Command(Command),
-    Closure(ClosureDefinition),
+    ClosureDefinition(ClosureDefinition),
     JobDefintion(JobDefinition),
     // During invocation, this will get replaced with an output
     File(Box<Path>),
@@ -49,11 +49,11 @@ impl CellDefinition {
                 let (last_output, last_input) = streams();
                 let mut j = def.compile(&env, printer, &vec![], first_input, last_output)?;
 
-                let res = Cell::Output(Output { types: j.get_output_type().clone(), stream: last_input });
+                let res = Cell::JobOutput(JobOutput { types: j.get_output_type().clone(), stream: last_input });
                 dependencies.push(j);
                 res
             }
-            CellDefinition::Closure(c) => Cell::Closure(c.compile(env)),
+            CellDefinition::ClosureDefinition(c) => Cell::ClosureDefinition(c.clone()),
             CellDefinition::Variable(s) => (mandate(env.get(s.as_ref()))?).partial_clone()?,
         })
     }
@@ -95,15 +95,15 @@ pub enum Cell {
     Op(Box<str>),
     Command(Command),
     // This is a cell that contains a crush builtin command
-    Closure(Closure),
-    Output(Output),
+    ClosureDefinition(ClosureDefinition),
+    JobOutput(JobOutput),
     File(Box<Path>),
     Rows(Rows),
 }
 
 
 impl Cell {
-    fn to_rows(s: &Output) -> Cell {
+    fn to_rows(s: &JobOutput) -> Cell {
         let mut rows: Vec<Row> = Vec::new();
         loop {
             match s.stream.recv() {
@@ -128,8 +128,8 @@ impl Cell {
             Cell::Command(_) => "Command".to_string(),
             Cell::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
             Cell::Rows(_) => "<Table>".to_string(),
-            Cell::Closure(_) => "<Closure>".to_string(),
-            Cell::Output(_) => "<Table>".to_string(),
+            Cell::ClosureDefinition(_) => "<Closure>".to_string(),
+            Cell::JobOutput(_) => "<Table>".to_string(),
         };
     }
 
@@ -160,20 +160,20 @@ impl Cell {
         Cell::Regex(Box::from(s), r)
     }
 
-    pub fn cell_data_type(&self) -> CellDataType {
+    pub fn cell_data_type(&self) -> CellType {
         return match self {
-            Cell::Text(_) => CellDataType::Text,
-            Cell::Integer(_) => CellDataType::Integer,
-            Cell::Time(_) => CellDataType::Time,
-            Cell::Field(_) => CellDataType::Field,
-            Cell::Glob(_) => CellDataType::Glob,
-            Cell::Regex(_, _) => CellDataType::Regex,
-            Cell::Op(_) => CellDataType::Op,
-            Cell::Command(_) => CellDataType::Command,
-            Cell::File(_) => CellDataType::File,
-            Cell::Output(o) => CellDataType::Output(o.types.clone()),
-            Cell::Rows(r) => CellDataType::Rows(r.types.clone()),
-            Cell::Closure(c) => CellDataType::Closure,
+            Cell::Text(_) => CellType::Text,
+            Cell::Integer(_) => CellType::Integer,
+            Cell::Time(_) => CellType::Time,
+            Cell::Field(_) => CellType::Field,
+            Cell::Glob(_) => CellType::Glob,
+            Cell::Regex(_, _) => CellType::Regex,
+            Cell::Op(_) => CellType::Op,
+            Cell::Command(_) => CellType::Command,
+            Cell::File(_) => CellType::File,
+            Cell::JobOutput(o) => CellType::Output(o.types.clone()),
+            Cell::Rows(r) => CellType::Rows(r.types.clone()),
+            Cell::ClosureDefinition(c) => CellType::Closure,
         };
     }
 
@@ -189,8 +189,8 @@ impl Cell {
             Cell::Command(v) => Cell::Command(v),
             Cell::File(v) => Cell::File(v),
             Cell::Rows(r) => Cell::Rows(r.concrete()),
-            Cell::Output(s) => Cell::to_rows(&s),
-            Cell::Closure(c) => Cell::Closure(c),
+            Cell::JobOutput(s) => Cell::to_rows(&s),
+            Cell::ClosureDefinition(c) => Cell::ClosureDefinition(c),
         };
     }
 
@@ -217,12 +217,12 @@ impl Cell {
             Cell::Command(v) => Ok(Cell::Command(v.clone())),
             Cell::File(v) => Ok(Cell::File(v.clone())),
             Cell::Rows(r) => Ok(Cell::Rows(r.partial_clone()?)),
-            Cell::Closure(c) => Ok(Cell::Closure(c.clone())),
-            Cell::Output(_) => Err(error("Invalid use of stream")),
+            Cell::ClosureDefinition(c) => Ok(Cell::ClosureDefinition(c.clone())),
+            Cell::JobOutput(_) => Err(error("Invalid use of stream")),
         };
     }
 
-    pub fn cast(self, new_type: CellDataType) -> Result<Cell, JobError> {
+    pub fn cast(self, new_type: CellType) -> Result<Cell, JobError> {
         if self.cell_data_type() == new_type {
             return Ok(self);
         }
@@ -232,68 +232,68 @@ impl Cell {
         this monstrosity to a sane size.
         */
         match (self, new_type) {
-            (Cell::Text(s), CellDataType::File) => Ok(Cell::File(Box::from(Path::new(s.as_ref())))),
-            (Cell::Text(s), CellDataType::Glob) => Ok(Cell::Glob(Glob::new(&s))),
-            (Cell::Text(s), CellDataType::Integer) => to_job_error(s.parse::<i128>()).map(|v| Cell::Integer(v)),
-            (Cell::Text(s), CellDataType::Field) => Ok(Cell::Field(s)),
-            (Cell::Text(s), CellDataType::Op) => Ok(Cell::Op(s)),
-            (Cell::Text(s), CellDataType::Regex) => to_job_error(Regex::new(s.as_ref()).map(|v| Cell::Regex(s, v))),
+            (Cell::Text(s), CellType::File) => Ok(Cell::File(Box::from(Path::new(s.as_ref())))),
+            (Cell::Text(s), CellType::Glob) => Ok(Cell::Glob(Glob::new(&s))),
+            (Cell::Text(s), CellType::Integer) => to_job_error(s.parse::<i128>()).map(|v| Cell::Integer(v)),
+            (Cell::Text(s), CellType::Field) => Ok(Cell::Field(s)),
+            (Cell::Text(s), CellType::Op) => Ok(Cell::Op(s)),
+            (Cell::Text(s), CellType::Regex) => to_job_error(Regex::new(s.as_ref()).map(|v| Cell::Regex(s, v))),
 
-            (Cell::File(s), CellDataType::Text) => match s.to_str() {
+            (Cell::File(s), CellType::Text) => match s.to_str() {
                 Some(s) => Ok(Cell::Text(Box::from(s))),
                 None => Err(error("File name is not valid unicode"))
             },
-            (Cell::File(s), CellDataType::Glob) => match s.to_str() {
+            (Cell::File(s), CellType::Glob) => match s.to_str() {
                 Some(s) => Ok(Cell::Glob(Glob::new(s))),
                 None => Err(error("File name is not valid unicode"))
             },
-            (Cell::File(s), CellDataType::Integer) => match s.to_str() {
+            (Cell::File(s), CellType::Integer) => match s.to_str() {
                 Some(s) => to_job_error(s.parse::<i128>()).map(|v| Cell::Integer(v)),
                 None => Err(error("File name is not valid unicode"))
             },
-            (Cell::File(s), CellDataType::Field) => match s.to_str() {
+            (Cell::File(s), CellType::Field) => match s.to_str() {
                 Some(s) => Ok(Cell::Field(Box::from(s))),
                 None => Err(error("File name is not valid unicode"))
             },
-            (Cell::File(s), CellDataType::Op) => match s.to_str() {
+            (Cell::File(s), CellType::Op) => match s.to_str() {
                 Some(s) => Ok(Cell::Op(Box::from(s))),
                 None => Err(error("File name is not valid unicode"))
             },
-            (Cell::File(s), CellDataType::Regex) => match s.to_str() {
+            (Cell::File(s), CellType::Regex) => match s.to_str() {
                 Some(s) => to_job_error(Regex::new(s.as_ref()).map(|v| Cell::Regex(Box::from(s), v))),
                 None => Err(error("File name is not valid unicode"))
             },
 
-            (Cell::Glob(s), CellDataType::Text) => Ok(Cell::Text(s.to_string().clone().into_boxed_str())),
-            (Cell::Glob(s), CellDataType::Field) => Ok(Cell::Field(s.to_string().clone().into_boxed_str())),
-            (Cell::Glob(s), CellDataType::File) => Ok(Cell::File(Box::from(Path::new(s.to_string().as_str())))),
-            (Cell::Glob(s), CellDataType::Integer) => to_job_error(s.to_string().parse::<i128>()).map(|v| Cell::Integer(v)),
-            (Cell::Glob(s), CellDataType::Op) => Ok(Cell::op(s.to_string().as_str())),
-            (Cell::Glob(g), CellDataType::Regex) => {
+            (Cell::Glob(s), CellType::Text) => Ok(Cell::Text(s.to_string().clone().into_boxed_str())),
+            (Cell::Glob(s), CellType::Field) => Ok(Cell::Field(s.to_string().clone().into_boxed_str())),
+            (Cell::Glob(s), CellType::File) => Ok(Cell::File(Box::from(Path::new(s.to_string().as_str())))),
+            (Cell::Glob(s), CellType::Integer) => to_job_error(s.to_string().parse::<i128>()).map(|v| Cell::Integer(v)),
+            (Cell::Glob(s), CellType::Op) => Ok(Cell::op(s.to_string().as_str())),
+            (Cell::Glob(g), CellType::Regex) => {
                 let s = g.to_string().as_str();
                 to_job_error(Regex::new(s).map(|v| Cell::Regex(Box::from(s), v)))
             }
 
-            (Cell::Field(s), CellDataType::File) => Ok(Cell::File(Box::from(Path::new(s.as_ref())))),
-            (Cell::Field(s), CellDataType::Glob) => Ok(Cell::Glob(Glob::new(&s))),
-            (Cell::Field(s), CellDataType::Integer) => to_job_error(s.parse::<i128>()).map(|v| Cell::Integer(v)),
-            (Cell::Field(s), CellDataType::Text) => Ok(Cell::Text(s)),
-            (Cell::Field(s), CellDataType::Op) => Ok(Cell::Op(s)),
-            (Cell::Field(s), CellDataType::Regex) => to_job_error(Regex::new(s.as_ref()).map(|v| Cell::Regex(s, v))),
+            (Cell::Field(s), CellType::File) => Ok(Cell::File(Box::from(Path::new(s.as_ref())))),
+            (Cell::Field(s), CellType::Glob) => Ok(Cell::Glob(Glob::new(&s))),
+            (Cell::Field(s), CellType::Integer) => to_job_error(s.parse::<i128>()).map(|v| Cell::Integer(v)),
+            (Cell::Field(s), CellType::Text) => Ok(Cell::Text(s)),
+            (Cell::Field(s), CellType::Op) => Ok(Cell::Op(s)),
+            (Cell::Field(s), CellType::Regex) => to_job_error(Regex::new(s.as_ref()).map(|v| Cell::Regex(s, v))),
 
-            (Cell::Regex(s, r), CellDataType::File) => Ok(Cell::File(Box::from(Path::new(s.as_ref())))),
-            (Cell::Regex(s, r), CellDataType::Glob) => Ok(Cell::Glob(Glob::new(&s))),
-            (Cell::Regex(s, r), CellDataType::Integer) => to_job_error(s.parse::<i128>()).map(|v| Cell::Integer(v)),
-            (Cell::Regex(s, r), CellDataType::Text) => Ok(Cell::Text(s)),
-            (Cell::Regex(s, r), CellDataType::Op) => Ok(Cell::Op(s)),
-            (Cell::Regex(s, r), CellDataType::Field) => Ok(Cell::File(Box::from(Path::new(s.as_ref())))),
+            (Cell::Regex(s, r), CellType::File) => Ok(Cell::File(Box::from(Path::new(s.as_ref())))),
+            (Cell::Regex(s, r), CellType::Glob) => Ok(Cell::Glob(Glob::new(&s))),
+            (Cell::Regex(s, r), CellType::Integer) => to_job_error(s.parse::<i128>()).map(|v| Cell::Integer(v)),
+            (Cell::Regex(s, r), CellType::Text) => Ok(Cell::Text(s)),
+            (Cell::Regex(s, r), CellType::Op) => Ok(Cell::Op(s)),
+            (Cell::Regex(s, r), CellType::Field) => Ok(Cell::File(Box::from(Path::new(s.as_ref())))),
 
-            (Cell::Integer(i), CellDataType::Text) => Ok(Cell::Text(i.to_string().into_boxed_str())),
-            (Cell::Integer(i), CellDataType::File) => Ok(Cell::File(Box::from(Path::new(i.to_string().as_str())))),
-            (Cell::Integer(i), CellDataType::Glob) => Ok(Cell::Glob(Glob::new(i.to_string().as_str()))),
-            (Cell::Integer(i), CellDataType::Field) => Ok(Cell::Field(i.to_string().into_boxed_str())),
-            (Cell::Integer(i), CellDataType::Op) => Ok(Cell::Op(i.to_string().into_boxed_str())),
-            (Cell::Integer(i), CellDataType::Regex) => {
+            (Cell::Integer(i), CellType::Text) => Ok(Cell::Text(i.to_string().into_boxed_str())),
+            (Cell::Integer(i), CellType::File) => Ok(Cell::File(Box::from(Path::new(i.to_string().as_str())))),
+            (Cell::Integer(i), CellType::Glob) => Ok(Cell::Glob(Glob::new(i.to_string().as_str()))),
+            (Cell::Integer(i), CellType::Field) => Ok(Cell::Field(i.to_string().into_boxed_str())),
+            (Cell::Integer(i), CellType::Op) => Ok(Cell::Op(i.to_string().into_boxed_str())),
+            (Cell::Integer(i), CellType::Regex) => {
                 let s = i.to_string();
                 to_job_error(Regex::new(s.as_str()).map(|v| Cell::Regex(s.into_boxed_str(), v)))
             }
@@ -315,8 +315,8 @@ impl std::hash::Hash for Cell {
             Cell::Command(_) => { panic!("Impossible!") }
             Cell::File(v) => v.hash(state),
             Cell::Rows(v) => v.hash(state),
-            Cell::Closure(c) => {}//c.hash(state),
-            Cell::Output(o) => {},
+            Cell::ClosureDefinition(c) => {}//c.hash(state),
+            Cell::JobOutput(o) => {},
         }
     }
 }
@@ -370,12 +370,12 @@ mod tests {
 
     #[test]
     fn text_casts() {
-        assert_eq!(Cell::text("112432").cast(CellDataType::Integer).is_err(), false);
-        assert_eq!(Cell::text("1d").cast(CellDataType::Integer).is_err(), true);
-        assert_eq!(Cell::text("1d").cast(CellDataType::Glob).is_err(), false);
-        assert_eq!(Cell::text("1d").cast(CellDataType::File).is_err(), false);
-        assert_eq!(Cell::text("1d").cast(CellDataType::Time).is_err(), true);
-        assert_eq!(Cell::text("fad").cast(CellDataType::Field).is_err(), false);
-        assert_eq!(Cell::text("fad").cast(CellDataType::Op).is_err(), false);
+        assert_eq!(Cell::text("112432").cast(CellType::Integer).is_err(), false);
+        assert_eq!(Cell::text("1d").cast(CellType::Integer).is_err(), true);
+        assert_eq!(Cell::text("1d").cast(CellType::Glob).is_err(), false);
+        assert_eq!(Cell::text("1d").cast(CellType::File).is_err(), false);
+        assert_eq!(Cell::text("1d").cast(CellType::Time).is_err(), true);
+        assert_eq!(Cell::text("fad").cast(CellType::Field).is_err(), false);
+        assert_eq!(Cell::text("fad").cast(CellType::Op).is_err(), false);
     }
 }

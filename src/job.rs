@@ -1,8 +1,8 @@
 use crate::env::Env;
 use crate::commands::{Call, JobResult, CallDefinition};
-use crate::stream::{print, streams, OutputStream, InputStream};
+use crate::stream::{print, streams, OutputStream, InputStream, spawn_print_thread};
 use std::thread;
-use crate::data::{Output, CellDefinition, CellType};
+use crate::data::{JobOutput, CellFnurp, CellDefinition};
 use std::thread::JoinHandle;
 use crate::printer::Printer;
 use map_in_place::MapVecInPlace;
@@ -19,17 +19,34 @@ impl JobDefinition {
         JobDefinition { commands }
     }
 
-    pub fn compile(&self, env: &Env, printer: &Printer, initial_input_type: &Vec<CellType>, input: InputStream, output: OutputStream) -> Result<Job, JobError> {
+    pub fn compile(
+        &self,
+        env: &Env,
+        printer: &Printer,
+        first_input_type: &Vec<CellFnurp>,
+        mut first_input: InputStream,
+        last_output: OutputStream,
+    ) -> Result<Job, JobError> {
         let mut deps = Vec::new();
-        let mut jobs = Vec::new();
-        let mut input_type = initial_input_type.clone();
-        for def in &self.commands {
-            let c = def.compile(input_type, &mut deps, env, printer)?;
-            input_type = c.get_output_type().clone();
-            jobs.push(c);
+        let mut calls = Vec::new();
+
+        let mut input_type = first_input_type.clone();
+        let mut input = first_input;
+
+        let last_job_idx = self.commands.len() - 1;
+        for call_def in &self.commands[..last_job_idx] {
+            let (output, next_input) = streams();
+            let call = call_def.compile(env, printer, input_type, input, output, &mut deps)?;
+
+            input_type = call.get_output_type().clone();
+            input = next_input;
+
+            calls.push(call);
         }
-        Ok(Job::new(
-            jobs, deps, input, output, env, printer))
+        let last_call_def = &self.commands[last_job_idx];
+        calls.push(last_call_def.compile(env, printer, input_type, input, last_output, &mut deps)?);
+
+        Ok(Job::new(calls, deps, env, printer))
     }
 }
 
@@ -37,28 +54,23 @@ pub struct Job {
     commands: Vec<Call>,
     dependencies: Vec<Job>,
     handlers: Vec<JobResult>,
-    first_input: Option<InputStream>,
-    last_output: Option<OutputStream>,
-    output_type: Vec<CellType>,
     env: Env,
     printer: Printer,
+    output_type: Vec<CellFnurp>,
 }
 
 impl Job {
     pub fn new(
         commands: Vec<Call>,
         dependencies: Vec<Job>,
-        first_input: InputStream,
-        last_output: OutputStream,
-    env: &Env,
-    printer: &Printer) -> Job {
+        env: &Env,
+        printer: &Printer,
+    ) -> Job {
         Job {
             output_type: commands[commands.len()-1].get_output_type().clone(),
             commands,
             dependencies,
             handlers: Vec::new(),
-            first_input: Some(first_input),
-            last_output: Some(last_output),
             env: env.clone(),
             printer: printer.clone(),
         }
@@ -68,25 +80,20 @@ impl Job {
         self.handlers.drain(..).collect()
     }
 
-    pub fn get_output_type(&self) -> &Vec<CellType> {
+    pub fn get_output_type(&self) -> &Vec<CellFnurp> {
         return &self.output_type;
     }
 
-    pub fn exec(&mut self) {
-        for dep in self.dependencies.iter_mut() {
-            dep.exec();
+    pub fn execute(&mut self) -> JobResult {
+        for mut dep in self.dependencies.drain(..) {
+            dep.execute();
         }
-        if !self.commands.is_empty() {
-            let mut input = self.first_input.take().unwrap();
-            let last_job_idx = self.commands.len() - 1;
-            for c in self.commands.drain(..last_job_idx) {
-                let (output, next_input) = streams();
-                self.handlers.push(c.execute(&self.env, &self.printer, input, output));
-                input = next_input;
-            }
-            let last_command = self.commands.drain(..).next().unwrap();
-            self.handlers.push(last_command.execute(&self.env, &self.printer, input, self.last_output.take().unwrap()));
+        let mut res: Vec<JobResult> = Vec::new();
+        for mut call in self.commands.drain(..) {
+            res.push(call.execute());
         }
+
+        JobResult::Many(res)
     }
 
     pub fn wait(&mut self, printer: &Printer) {

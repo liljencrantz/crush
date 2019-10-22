@@ -3,10 +3,10 @@ mod row;
 mod rows;
 mod argument;
 
-use crate::commands::Call;
+use crate::commands::{Call, Exec};
 use crate::errors::{JobError, error};
 use std::fmt::Formatter;
-use crate::stream::InputStream;
+use crate::stream::{InputStream, OutputStream};
 use std::hash::Hasher;
 use regex::Regex;
 use std::error::Error;
@@ -25,7 +25,7 @@ use std::num::ParseIntError;
 #[derive(Clone)]
 #[derive(PartialEq)]
 #[derive(Debug)]
-pub enum CellDataType {
+pub enum CellType {
     Text,
     Integer,
     Time,
@@ -36,42 +36,42 @@ pub enum CellDataType {
     Command,
     Closure,
     File,
-    Output(Vec<CellType>),
-    Rows(Vec<CellType>),
+    Output(Vec<CellFnurp>),
+    Rows(Vec<CellFnurp>),
 }
 
-impl CellDataType {
-    pub fn from(s: &str) -> Result<CellDataType, JobError> {
+impl CellType {
+    pub fn from(s: &str) -> Result<CellType, JobError> {
         match s {
-            "text" => Ok(CellDataType::Text),
-            "integer" => Ok(CellDataType::Integer),
-            "time" => Ok(CellDataType::Time),
-            "field" => Ok(CellDataType::Field),
-            "glob" => Ok(CellDataType::Glob),
-            "regex" => Ok(CellDataType::Regex),
-            "op" => Ok(CellDataType::Op),
-            "command" => Ok(CellDataType::Command),
-            "file" => Ok(CellDataType::File),
+            "text" => Ok(CellType::Text),
+            "integer" => Ok(CellType::Integer),
+            "time" => Ok(CellType::Time),
+            "field" => Ok(CellType::Field),
+            "glob" => Ok(CellType::Glob),
+            "regex" => Ok(CellType::Regex),
+            "op" => Ok(CellType::Op),
+            "command" => Ok(CellType::Command),
+            "file" => Ok(CellType::File),
             _ => Err(error(format!("Unknown cell type {}", s).as_str())),
         }
     }
 
     pub fn parse(&self, s: &str) -> Result<Cell, JobError> {
         match self {
-            CellDataType::Text => Ok(Cell::Text(Box::from(s))),
-            CellDataType::Integer => match s.parse::<i128>() {
+            CellType::Text => Ok(Cell::Text(Box::from(s))),
+            CellType::Integer => match s.parse::<i128>() {
                 Ok(n) => Ok(Cell::Integer(n)),
                 Err(e) => Err(error(e.description())),
             }
-            CellDataType::Field => Ok(Cell::Field(Box::from(s))),
-            CellDataType::Glob => Ok(Cell::Glob(Glob::new(s))),
-            CellDataType::Regex => match Regex::new(s) {
+            CellType::Field => Ok(Cell::Field(Box::from(s))),
+            CellType::Glob => Ok(Cell::Glob(Glob::new(s))),
+            CellType::Regex => match Regex::new(s) {
                 Ok(r) => Ok(Cell::Regex(Box::from(s), r)),
                 Err(e) => Err(error(e.description())),
             }
-            CellDataType::File => Ok(Cell::Text(Box::from(s))),
-            CellDataType::Op => match s {
-                "==" | "!=" | ">" | ">=" | "<" | "<=" | "=~" | "!~"=> Ok(Cell::Op(Box::from(s))),
+            CellType::File => Ok(Cell::Text(Box::from(s))),
+            CellType::Op => match s {
+                "==" | "!=" | ">" | ">=" | "<" | "<=" | "=~" | "!~" => Ok(Cell::Op(Box::from(s))),
                 _ => Err(error("Invalid operator")),
             }
             _ => Err(error("Failed to parse cell")),
@@ -81,11 +81,21 @@ impl CellDataType {
 
 #[derive(Clone)]
 pub struct Command {
-    pub call: fn(Vec<CellType>, Vec<Argument>) -> Result<Call, JobError>,
+    pub call: fn(
+        Vec<CellFnurp>,
+        InputStream,
+        OutputStream,
+        Vec<Argument>,
+    ) -> Result<(Exec, Vec<CellFnurp>), JobError>,
 }
 
 impl Command {
-    pub fn new(call: fn(Vec<CellType>, Vec<Argument>) -> Result<Call, JobError>) -> Command {
+    pub fn new(call: fn(
+        Vec<CellFnurp>,
+        InputStream,
+        OutputStream,
+        Vec<Argument>,
+    ) -> Result<(Exec, Vec<CellFnurp>), JobError>) -> Command {
         return Command { call };
     }
 }
@@ -107,14 +117,14 @@ impl std::fmt::Debug for Command {
 #[derive(Clone)]
 #[derive(Debug)]
 #[derive(PartialEq)]
-pub struct CellType {
+pub struct CellFnurp {
     pub name: Option<Box<str>>,
-    pub cell_type: CellDataType,
+    pub cell_type: CellType,
 }
 
-impl CellType {
-    pub fn named(name: &str, cell_type: CellDataType) -> CellType {
-        CellType {
+impl CellFnurp {
+    pub fn named(name: &str, cell_type: CellType) -> CellFnurp {
+        CellFnurp {
             name: Some(Box::from(name)),
             cell_type,
         }
@@ -130,7 +140,7 @@ impl CellType {
 }
 
 #[derive(Debug)]
-pub struct Output {
-    pub types: Vec<CellType>,
+pub struct JobOutput {
+    pub types: Vec<CellFnurp>,
     pub stream: InputStream,
 }

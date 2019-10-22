@@ -1,27 +1,29 @@
 use crate::{
-    data::{CellType, Argument},
+    data::{CellDefinition, Argument},
     commands::{Call, Exec},
     errors::{JobError, argument_error},
     env::Env
 };
 use crate::stream::{OutputStream, InputStream};
 use crate::printer::Printer;
+use crate::data::CellFnurp;
 
-fn run(
-    input_type: Vec<CellType>,
+pub struct Config {
     arguments: Vec<Argument>,
-    input: InputStream,
-    output: OutputStream,
+}
+
+pub fn run(
+    mut config: Config,
     env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {
-    for arg in arguments {
+    for arg in config.arguments {
         env.declare(arg.name.unwrap().as_ref(), arg.cell)?;
     }
     return Ok(());
 }
 
-pub(crate) fn let_command(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
+pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
     for arg in arguments.iter() {
         if arg.val_or_empty().is_empty() {
             return Err(
@@ -29,13 +31,5 @@ pub(crate) fn let_command(input_type: Vec<CellType>, arguments: Vec<Argument>) -
             );
         }
     }
-
-    return Ok(Call {
-        name: String::from("set"),
-        input_type,
-        arguments,
-        output_type: vec![],
-        exec: Exec::Command(run),
-    });
+    Ok((Exec::Let(Config {arguments}), vec![]))
 }
-

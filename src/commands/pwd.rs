@@ -1,7 +1,7 @@
 use crate::{
     data::Argument,
     data::Row,
-    data::{CellType, CellDataType},
+    data::{CellDefinition, CellType},
     stream::{OutputStream, InputStream},
     data::Cell,
     commands::{Call, Exec},
@@ -10,26 +10,19 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::env::Env;
+use crate::data::CellFnurp;
 
-fn run(
-    _input_type: Vec<CellType>,
-    _arguments: Vec<Argument>,
-    _input: InputStream,
-    output: OutputStream,
-    env: Env,
-    printer: Printer,
+pub struct Config {output: OutputStream}
+
+pub fn run(
+    config: Config,
+    _env: Env,
+    _printer: Printer,
 ) -> Result<(), JobError> {
-
-    output.send(Row { cells: vec![Cell::File(get_cwd()?)] })?;
+    config.output.send(Row { cells: vec![Cell::File(get_cwd()?)] })?;
     Ok(())
 }
 
-pub(crate) fn pwd(input_type: Vec<CellType>, arguments: Vec<Argument>) -> Result<Call, JobError> {
-    return Ok(Call {
-        name: String::from("pwd"),
-        input_type,
-        arguments,
-        output_type: vec![CellType::named("directory", CellDataType::File)],
-        exec: Exec::Command(run),
-    });
+pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+    return Ok((Exec::Pwd(Config {output}), vec![CellFnurp::named("directory", CellType::File)]))
 }
