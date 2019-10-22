@@ -14,10 +14,10 @@ mod unset;
 
 mod head;
 mod tail;
-/*
+
 mod lines;
 mod csv;
-
+/*
 mod filter;
 mod sort;
 mod select;
@@ -73,6 +73,8 @@ pub enum Exec {
     Unset(unset::Config),
     Head(head::Config),
     Tail(tail::Config),
+    Lines(lines::Config),
+    Csv(csv::Config),
 }
 
 pub enum JobJoinHandle {
@@ -206,6 +208,8 @@ impl Call {
             Unset(config) => handle((build(name).spawn(move || unset::run(config, env, printer)))),
             Head(config) => handle((build(name).spawn(move || head::run(config, env, printer)))),
             Tail(config) => handle((build(name).spawn(move || tail::run(config, env, printer)))),
+            Lines(config) => handle((build(name).spawn(move || lines::run(config, env, printer)))),
+            Csv(config) => handle((build(name).spawn(move || csv::run(config, env, printer)))),
         }
     }
 }
@@ -234,8 +238,8 @@ pub fn add_builtins(env: &Env) -> Result<(), JobError> {
         env.declare("head", Cell::Command(Command::new(head::compile)))?;
         env.declare("tail", Cell::Command(Command::new(tail::compile)))?;
 
-/*        env.declare("lines", Cell::Command(Command::new(lines::lines)))?;
-        env.declare("csv", Cell::Command(Command::new(csv::csv)))?;
-    */
+        env.declare("lines", Cell::Command(Command::new(lines::compile)))?;
+        env.declare("csv", Cell::Command(Command::new(csv::compile)))?;
+
     return Ok(());
 }

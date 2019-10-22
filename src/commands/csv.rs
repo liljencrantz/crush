@@ -25,17 +25,18 @@ use map_in_place::MapVecInPlace;
 use crate::printer::Printer;
 use crate::env::Env;
 use crate::data::CellFnurp;
+use crate::errors::JobResult;
 
-#[derive(Clone)]
-struct Config {
+pub struct Config {
     separator: char,
-    columns: Vec<CellDefinition>,
+    columns: Vec<CellFnurp>,
     skip_head: usize,
     trim: Option<char>,
-    files: Either<Vec<Box<Path>>, usize>,
+    files: Either<(usize, InputStream), Vec<Box<Path>>>,
+    output: OutputStream,
 }
 
-fn parse(input_type: &Vec<CellFnurp>, arguments: &Vec<Argument>) -> Result<Config, JobError> {
+fn parse(arguments: Vec<Argument>, input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream) -> JobResult<Config> {
     let mut separator = ',';
     let mut columns = Vec::new();
     let mut skip_head = 0;
@@ -54,7 +55,7 @@ fn parse(input_type: &Vec<CellFnurp>, arguments: &Vec<Argument>) -> Result<Confi
                         Cell::Text(s) => {
                             let split: Vec<&str> = s.split(':').collect();
                             match split.len() {
-                                2 => columns.push(CellDefinition::named(split[0], CellType::from(split[1])?)),
+                                2 => columns.push(CellFnurp::named(split[0], CellType::from(split[1])?)),
                                 _ => return Err(argument_error(format!("Expected a column description on the form name:type, got {}", s).as_str())),
                             }
                         }
@@ -96,11 +97,12 @@ fn parse(input_type: &Vec<CellFnurp>, arguments: &Vec<Argument>) -> Result<Confi
         columns,
         skip_head,
         trim,
-        files: Either::Left(files),
+        files: Either::Right(files),
+        output,
     })
 }
 
-fn handle(file: Box<Path>, cfg: &Config, output: &mut OutputStream, printer: &Printer) -> Result<(), JobError> {
+fn handle(file: Box<Path>, cfg: &Config, output: &OutputStream, printer: &Printer) -> Result<(), JobError> {
     let (output_stream, input_stream) = unlimited_streams();
     let cfg_copy = cfg.clone();
 
@@ -115,9 +117,11 @@ fn handle(file: Box<Path>, cfg: &Config, output: &mut OutputStream, printer: &Pr
     };
     output.send(out_row)?;
 
-    let cfg_clone = cfg.clone();
-
     let printer_copy = printer.clone();
+
+    let separator = cfg.separator.clone();
+    let trim = cfg.trim.clone();
+    let columns = cfg.columns.clone();
 
     thread::spawn(move || {
         let fff = File::open(file).unwrap();
@@ -130,20 +134,20 @@ fn handle(file: Box<Path>, cfg: &Config, output: &mut OutputStream, printer: &Pr
             }
             let line_without_newline = &line[0..line.len() - 1];
             let mut split: Vec<&str> = line_without_newline
-                .split(cfg_clone.separator)
-                .map(|s| cfg_clone.trim
+                .split(separator)
+                .map(|s| trim
                     .map(|c| s.trim_matches(c))
                     .unwrap_or(s))
                 .collect();
-            if split.len() != cfg_clone.columns.len() {
+            if split.len() != columns.len() {
                 printer_copy.error("csv: Wrong number of columns in CSV file");
             }
-            if let Some(trim) = cfg_clone.trim {
+            if let Some(trim) = trim {
                 split = split.map(|s| s.trim_matches(trim));
             }
 
             match split.iter()
-                .zip(cfg_clone.columns.iter())
+                .zip(columns.iter())
                     .map({ |(s, t)| t.cell_type.parse(*s) })
                 .collect::<Result<Vec<Cell>, JobError>>() {
                 Ok(cells) => {output_stream.send(Row { cells });}
@@ -157,34 +161,26 @@ fn handle(file: Box<Path>, cfg: &Config, output: &mut OutputStream, printer: &Pr
 }
 
 
-pub fn run(config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
-    let cfg = parse(&input_type, &arguments)?;
-    match &cfg.files {
-        Either::Left(files) => {
+pub fn run(mut config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
+    match &config.files {
+        Either::Right(files) => {
             for file in files {
-                handle(file.clone(), &cfg, &mut output, &printer)?;
+                handle(file.clone(), &config, &config.output, &printer)?;
             }
         }
 
-        Either::Right(_) => {}
+        Either::Left(_) => {}
     }
     return Ok(());
 }
 
 pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
-    let cfg = parse(&input_type, &arguments)?;
+    let cfg = parse(arguments, input_type, input, output)?;
 
     let output_type: Vec<CellFnurp> =
         vec![
-            CellDefinition::named("file", CellType::File ),
-            CellDefinition::named("data", CellType::Output(cfg.columns.clone())),
+            CellFnurp::named("file", CellType::File ),
+            CellFnurp::named("data", CellType::Output(cfg.columns.clone())),
         ];
-
-    return Ok(Call {
-        name: String::from("csv"),
-        input_type,
-        arguments,
-        output_type,
-        exec: Exec::Command(run),
-    });
+    Ok((Exec::Csv(cfg), output_type))
 }

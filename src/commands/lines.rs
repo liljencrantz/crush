@@ -20,9 +20,12 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::env::Env;
+use either::Either;
+use crate::errors::JobResult;
+use std::sync::mpsc::Receiver;
 
 lazy_static! {
-    static ref sub_type: Vec<CellType> = {
+    static ref sub_type: Vec<CellFnurp> = {
         vec![CellFnurp::named("line", CellType::Text)]
     };
 }
@@ -57,57 +60,73 @@ fn handle(file: Box<Path>, output: &mut OutputStream) -> Result<(), JobError> {
 }
 
 
-pub fn run(
-    config: Config,
-    env: Env,
-    printer: Printer,
-) -> Result<(), JobError> {
-    let mut files: Vec<Box<Path>> = Vec::new();
+pub struct Config {
+    files: Either<(usize, InputStream), Vec<Box<Path>>>,
+    output: OutputStream,
+}
+
+fn parse(arguments: Vec<Argument>, input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream) -> JobResult<Config> {
     if input_type.len() == 0 {
+        let mut files: Vec<Box<Path>> = Vec::new();
         for arg in &arguments {
             arg.cell.file_expand(&mut files)?;
         }
-        for file in files {
-            handle(file, &mut output)?;
-        }
+        Ok(Config {
+            files: Either::Right(files),
+            output
+        })
+
     } else {
         if arguments.len() != 1 {
             return Err(argument_error("Expected one argument: column spec"));
         }
         match &arguments[0].cell {
             Cell::Text(s) | Cell::Field(s) => {
-                let idx = find_field(&s, &input_type)?;
-                loop {
-                    match input.recv() {
-                        Ok(row) => {
-                            let mut files: Vec<Box<Path>> = Vec::new();
-                            row.cells[idx].file_expand(&mut files)?;
-                            for file in files {
-                                handle(file, &mut output)?;
-                            }
-                        },
-                        Err(_) => break,
-                    }
-                }
+                Ok(Config {
+                    files: Either::Left((find_field(&s, &input_type)?, input)),
+                    output
+                })
             }
             _ => return Err(argument_error("Expected column of type Field")),
         }
     }
+}
+
+pub fn run(
+    mut config: Config,
+    env: Env,
+    printer: Printer,
+) -> Result<(), JobError> {
+    match config.files {
+        Either::Left((idx, input)) => {
+            loop {
+                match input.recv() {
+                    Ok(row) => {
+                        let mut files: Vec<Box<Path>> = Vec::new();
+                        row.cells[idx].file_expand(&mut files)?;
+                        for file in files {
+                            handle(file, &mut config.output)?;
+                        }
+                    },
+                    Err(_) => break,
+                }
+            }
+
+        },
+        Either::Right(files) => {
+            for file in files {
+                handle(file, &mut config.output)?;
+            }
+        },
+    }
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> JobResult<(Exec, Vec<CellFnurp>)> {
     let output_type: Vec<CellFnurp> =
         vec![
             CellFnurp::named("file", CellType::File),
             CellFnurp::named("lines", CellType::Output(sub_type.clone())),
         ];
-
-    return Ok(Call {
-        name: String::from("lines"),
-        input_type,
-        arguments,
-        output_type,
-        exec: Exec::Command(run),
-    });
+    Ok((Exec::Lines(parse(arguments, input_type, input, output)?), output_type))
 }
