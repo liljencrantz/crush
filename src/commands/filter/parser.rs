@@ -36,7 +36,7 @@ fn parse_value(input_type: &Vec<CellFnurp>,
             return match &arg.cell {
                 Cell::Field(_) => Ok(Value::Field(field_lookup[*arg_idx].expect("Impossible"))),
                 Cell::Op(_) => Err(argument_error("Expected value")),
-                Cell::Output(_) => Err(argument_error("Invalid argument type Stream")),
+                Cell::JobOutput(_) => Err(argument_error("Invalid argument type Stream")),
                 _ => Ok(Value::Cell(arg.cell.partial_clone()?.concrete())),
             };
         }

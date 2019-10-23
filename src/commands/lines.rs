@@ -7,7 +7,7 @@ use lazy_static::lazy_static;
 use crate::{
     commands::command_util::find_field,
     errors::{JobError, argument_error},
-    commands::{Call, Exec},
+    commands::{Exec},
     data::{
         Argument,
         Row,
@@ -22,7 +22,6 @@ use crate::printer::Printer;
 use crate::env::Env;
 use either::Either;
 use crate::errors::JobResult;
-use std::sync::mpsc::Receiver;
 
 lazy_static! {
     static ref sub_type: Vec<CellFnurp> = {

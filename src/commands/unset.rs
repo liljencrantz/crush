@@ -1,7 +1,6 @@
 use crate::{
-    data::CellDefinition,
     data::Argument,
-    commands::{Call, Exec},
+    commands::{Exec},
     errors::{JobError, argument_error},
     env::Env,
 };
@@ -41,6 +40,6 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+pub fn compile(_input_type: Vec<CellFnurp>, _input: InputStream, _output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
     Ok((Exec::Unset(parse(arguments)?), vec![]))
 }

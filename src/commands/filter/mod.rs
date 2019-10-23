@@ -19,6 +19,13 @@ use std::cmp::Ordering;
 use crate::env::Env;
 use crate::data::CellFnurp;
 
+pub struct Config {
+    condition: Condition,
+    input: InputStream,
+    output: OutputStream,
+}
+
+
 fn do_match(needle: &Cell, haystack: &Cell) -> Result<bool, JobError> {
     match (needle, haystack) {
         (Cell::Text(s), Cell::Glob(pattern)) => Ok(pattern.matches( s)),
@@ -72,20 +79,12 @@ fn evaluate(condition: &Condition, row: &Row) -> Result<bool, JobError> {
     };
 }
 
-fn run(
-    input_type: Vec<CellFnurp>,
-    arguments: Vec<Argument>,
-    input: InputStream,
-    output: OutputStream,
-    env: Env,
-    printer: Printer,
-) -> Result<(), JobError> {
-    let condition = parse(&input_type, &arguments)?;
+pub fn run(config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
     loop {
-        match input.recv() {
+        match config.input.recv() {
             Ok(row) => {
-                match evaluate(&condition, &row) {
-                    Ok(val) => if val { if output.send(row).is_err() { break }},
+                match evaluate(&config.condition, &row) {
+                    Ok(val) => if val { if config.output.send(row).is_err() { break }},
                     Err(e) => printer.job_error(e),
                 }
             }
@@ -95,13 +94,11 @@ fn run(
     return Ok(());
 }
 
-pub fn filter(input_type: Vec<CellFnurp>, arguments: Vec<Argument>) -> Result<Call, JobError> {
-    parse(&input_type, &arguments)?;
-    return Ok(Call {
-        name: String::from("filter"),
-        output_type: input_type.clone(),
-        input_type,
-        arguments: arguments,
-        exec: Exec::Command(run),
-    });
+pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+    let config = Config {
+        condition: parse(&input_type, &arguments)?,
+        input,
+        output,
+    };
+    Ok((Exec::Filter(config), input_type))
 }

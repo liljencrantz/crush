@@ -27,67 +27,56 @@ impl ClosureDefinition {
         initial_input_type: &Vec<CellFnurp>,
         first_input: InputStream,
         last_output: OutputStream,
-    arguments: Vec<Argument>) -> Result<Closure, JobError> {
-        let mut jobs: Vec<Job> = Vec::new();
+        arguments: Vec<Argument>) -> Result<Closure, JobError> {
 
+        let mut jobs: Vec<Job> = Vec::new();
+        let env = parent_env.new_stack_frame();
+
+        self.push_arguments_to_env(arguments, &env);
         match self.job_definitions.len() {
             0 => return Err(error("Empty closures not supported")),
             1 => {
-                match self.job_definitions[0].compile(parent_env, &printer, initial_input_type, first_input, last_output) {
-                    Ok(mut job) => {
-                        jobs.push(job);
-                    }
-                    Err(e) => printer.job_error(e),
-                }
+                let mut job = self.job_definitions[0].compile(&env, &printer, initial_input_type, first_input, last_output)?;
+                jobs.push(job);
             }
             _ => {
                 {
                     let job_definition = &self.job_definitions[0];
                     let (last_output, last_input) = streams();
-                    match job_definition.compile(parent_env, &printer, initial_input_type, first_input, last_output) {
-                        Ok(mut job) => {
-                            spawn_print_thread(&printer, JobOutput { types: job.get_output_type().clone(), stream: last_input });
-                            jobs.push(job);
-                        }
-                        Err(e) => printer.job_error(e),
-                    }
+                    let mut first_job = job_definition.compile(&env, &printer, initial_input_type, first_input, last_output)?;
+                    spawn_print_thread(&printer, JobOutput { types: first_job.get_output_type().clone(), stream: last_input });
+                    jobs.push(first_job);
                 }
 
                 for job_definition in &self.job_definitions[1..self.job_definitions.len() - 1] {
                     let (first_output, first_input) = streams();
                     let (last_output, last_input) = streams();
-                    drop(first_output);
-
-                    match job_definition.compile(parent_env, &printer, &vec![], first_input, last_output) {
-                        Ok(mut job) => {
-                            spawn_print_thread(&printer, JobOutput { types: job.get_output_type().clone(), stream: last_input });
-                            jobs.push(job);
-                        }
-                        Err(e) => printer.job_error(e),
-                    }
+                    let mut job = job_definition.compile(&env, &printer, &vec![], first_input, last_output)?;
+                    spawn_print_thread(&printer, JobOutput { types: job.get_output_type().clone(), stream: last_input });
+                    jobs.push(job);
                 }
 
                 {
                     let job_definition = &self.job_definitions[self.job_definitions.len() - 1];
                     let (first_output, first_input) = streams();
-                    drop(first_output);
-
-                    match job_definition.compile(parent_env, &printer, &vec![], first_input, last_output) {
-                        Ok(mut job) => {
-                            jobs.push(job);
-                        }
-                        Err(e) => printer.job_error(e),
-                    }
+                    let mut last_job = job_definition.compile(&env, &printer, &vec![], first_input, last_output)?;
+                    jobs.push(last_job);
                 }
             }
         }
-
         Ok(Closure {
             jobs,
-            parent_env: parent_env.clone(),
-            arguments,
         })
     }
+
+    fn push_arguments_to_env(&self, mut arguments: Vec<Argument>, env: &Env) {
+        for arg in arguments.drain(..) {
+            if let Some(name) = &arg.name {
+                env.declare(name.as_ref(), arg.cell);
+            }
+        }
+    }
+
 }
 
 impl PartialEq for ClosureDefinition {
@@ -96,37 +85,22 @@ impl PartialEq for ClosureDefinition {
     }
 }
 
-//#[derive(Clone)]
 pub struct Closure {
     jobs: Vec<Job>,
-    parent_env: Env,
-    arguments: Vec<Argument>,
 }
 
 impl Closure {
     pub fn get_jobs(&self) -> &Vec<Job> {
         &self.jobs
     }
-    pub fn get_parent_env(&self) -> &Env {
-        &self.parent_env
-    }
-/*
-    fn push_arguments_to_env(&mut self, local_env: &Env) {
-        for arg in self.arguments.drain(..) {
-            if let Some(name) = &arg.name {
-                local_env.declare(name.as_ref(), arg.cell);
-            }
-        }
-    }
-*/
-    pub fn execute(self) -> JobJoinHandle {
+
+    pub fn execute(mut self) -> JobJoinHandle {
         let mut res: Vec<JobJoinHandle> = Vec::new();
         for mut job in self.jobs {
             res.push(job.execute());
         }
         JobJoinHandle::Many(res)
     }
-
 }
 
 impl PartialEq for Closure {

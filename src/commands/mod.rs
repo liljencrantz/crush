@@ -17,7 +17,7 @@ mod tail;
 
 mod lines;
 mod csv;
-/*
+
 mod filter;
 mod sort;
 mod select;
@@ -26,7 +26,7 @@ mod group;
 mod join;
 mod count;
 mod cat;
-*/
+
 mod cast;
 
 use std::{io, thread};
@@ -51,7 +51,6 @@ use crate::data::{CellFnurp, CellType, JobOutput};
 use crate::job::Job;
 use std::sync::{Arc, Mutex};
 use crate::closure::Closure;
-use crate::stream::{streams, spawn_print_thread};
 
 type CommandInvocation = fn(
     Vec<CellFnurp>,
@@ -75,6 +74,14 @@ pub enum Exec {
     Tail(tail::Config),
     Lines(lines::Config),
     Csv(csv::Config),
+    Filter(filter::Config),
+    Sort(sort::Config),
+    Select(select::Config),
+    Enumerate(enumerate::Config),
+    Group(group::Config),
+    Join(join::Config),
+    Count(count::Config),
+    Cat(cat::Config),
 }
 
 pub enum JobJoinHandle {
@@ -83,17 +90,19 @@ pub enum JobJoinHandle {
 }
 
 impl JobJoinHandle {
-    pub fn join(self) -> Result<(), JobError> {
+    pub fn join(self, printer: &Printer) {
         return match self {
             JobJoinHandle::Async(a) => match a.join() {
-                Ok(r) => r,
-                Err(_) => Err(error("Error while wating for command to finish")),
+                Ok(r) => match r {
+                    Ok(_) => {}
+                    Err(e) => printer.job_error(e),
+                },
+                Err(e) => printer.error("Unknown error while waiting for command to exit"),
             },
             JobJoinHandle::Many(v) => {
                 for j in v {
-                    j.join()?;
+                    j.join(printer);
                 }
-                Ok(())
             }
         };
     }
@@ -146,7 +155,7 @@ impl CallDefinition {
                 let closure = closure_definition.compile(env, printer, &input_type,
                                                          input, output,
                                                          args)?;
-                let last_job = &closure.get_jobs()[closure.get_jobs().len()-1];
+                let last_job = &closure.get_jobs()[closure.get_jobs().len() - 1];
 
                 return Ok(Call {
                     name: self.name.clone(),
@@ -157,7 +166,7 @@ impl CallDefinition {
                 });
             }
             _ => {
-                return Err(error("Unknown command name"));
+                return Err(error(format!("Unknown command name {}", &self.name).as_str()));
             }
         }
     }
@@ -193,53 +202,60 @@ impl Call {
         let env = self.env.clone();
         let printer = self.printer.clone();
         let name = self.name.clone();
-
         use Exec::*;
 
         match self.exec {
             Closure(closure) => closure.execute(),
             Pwd(config) => handle(build(name).spawn(move || pwd::run(config, env, printer))),
-            Echo(config) => handle((build(name).spawn(move || echo::run(config, env, printer)))),
-            Let(config) => handle((build(name).spawn(move || lett::run(config, env, printer)))),
-            Set(config) => handle((build(name).spawn(move || set::run(config, env, printer)))),
-            Cd(config) => handle((build(name).spawn(move || cd::run(config, env, printer)))),
-            Cast(config) => handle((build(name).spawn(move || cast::run(config, env, printer)))),
-            Find(config) => handle((build(name).spawn(move || find::run(config, env, printer)))),
-            Unset(config) => handle((build(name).spawn(move || unset::run(config, env, printer)))),
-            Head(config) => handle((build(name).spawn(move || head::run(config, env, printer)))),
-            Tail(config) => handle((build(name).spawn(move || tail::run(config, env, printer)))),
-            Lines(config) => handle((build(name).spawn(move || lines::run(config, env, printer)))),
-            Csv(config) => handle((build(name).spawn(move || csv::run(config, env, printer)))),
+            Echo(config) => handle(build(name).spawn(move || echo::run(config, env, printer))),
+            Let(config) => handle(build(name).spawn(move || lett::run(config, env, printer))),
+            Set(config) => handle(build(name).spawn(move || set::run(config, env, printer))),
+            Cd(config) => handle(build(name).spawn(move || cd::run(config, env, printer))),
+            Cast(config) => handle(build(name).spawn(move || cast::run(config, env, printer))),
+            Find(config) => handle(build(name).spawn(move || find::run(config, env, printer))),
+            Unset(config) => handle(build(name).spawn(move || unset::run(config, env, printer))),
+            Head(config) => handle(build(name).spawn(move || head::run(config, env, printer))),
+            Tail(config) => handle(build(name).spawn(move || tail::run(config, env, printer))),
+            Lines(config) => handle(build(name).spawn(move || lines::run(config, env, printer))),
+            Csv(config) => handle(build(name).spawn(move || csv::run(config, env, printer))),
+            Filter(config) => handle(build(name).spawn(move || filter::run(config, env, printer))),
+            Sort(config) => handle(build(name).spawn(move || sort::run(config, env, printer))),
+            Select(config) => handle(build(name).spawn(move || select::run(config, env, printer))),
+            Enumerate(config) => handle(build(name).spawn(move || enumerate::run(config, env, printer))),
+            Group(config) => handle(build(name).spawn(move || group::run(config, env, printer))),
+            Join(config) => handle(build(name).spawn(move || join::run(config, env, printer))),
+            Count(config) => handle(build(name).spawn(move || count::run(config, env, printer))),
+            Cat(config) => handle(build(name).spawn(move || cat::run(config, env, printer))),
         }
     }
 }
 
 pub fn add_builtins(env: &Env) -> Result<(), JobError> {
-        env.declare("ls", Cell::Command(Command::new(find::compile_ls)))?;
-        env.declare("find", Cell::Command(Command::new(find::compile_find)))?;
-        env.declare("echo", Cell::Command(Command::new(echo::compile)))?;
+    env.declare("ls", Cell::Command(Command::new(find::compile_ls)))?;
+    env.declare("find", Cell::Command(Command::new(find::compile_find)))?;
+    env.declare("echo", Cell::Command(Command::new(echo::compile)))?;
     env.declare("pwd", Cell::Command(Command::new(pwd::compile)))?;
-        env.declare("cd", Cell::Command(Command::new(cd::compile)))?;
-    /*    env.declare("filter", Cell::Command(Command::new(filter::filter)))?;
-        env.declare("sort", Cell::Command(Command::new(sort::sort)))?;
-     */   env.declare("set", Cell::Command(Command::new(set::compile)))?;
-        env.declare("let", Cell::Command(Command::new(lett::compile)))?;
-        env.declare("unset", Cell::Command(Command::new(unset::compile)))?;
+    env.declare("cd", Cell::Command(Command::new(cd::compile)))?;
+    env.declare("filter", Cell::Command(Command::new(filter::compile)))?;
+    env.declare("sort", Cell::Command(Command::new(sort::compile)))?;
+    env.declare("set", Cell::Command(Command::new(set::compile)))?;
+    env.declare("let", Cell::Command(Command::new(lett::compile)))?;
+    env.declare("unset", Cell::Command(Command::new(unset::compile)))?;
 
-    /* env.declare("group", Cell::Command(Command::new(group::group)))?;
-        env.declare("join", Cell::Command(Command::new(join::join)))?;
-        env.declare("count", Cell::Command(Command::new(count::count)))?;
-        env.declare("cat", Cell::Command(Command::new(cat::cat)))?;
-        env.declare("select", Cell::Command(Command::new(select::select)))?;
-        env.declare("enumerate", Cell::Command(Command::new(enumerate::enumerate)))?;
-*/
-        env.declare("cast", Cell::Command(Command::new(cast::compile)))?;
+    env.declare("group", Cell::Command(Command::new(group::compile)))?;
+    env.declare("join", Cell::Command(Command::new(join::compile)))?;
+    env.declare("count", Cell::Command(Command::new(count::compile)))?;
+    env.declare("cat", Cell::Command(Command::new(cat::compile)))?;
+    env.declare("select", Cell::Command(Command::new(select::compile)))?;
+    env.declare("enumerate", Cell::Command(Command::new(enumerate::compile)))?;
 
-        env.declare("head", Cell::Command(Command::new(head::compile)))?;
-        env.declare("tail", Cell::Command(Command::new(tail::compile)))?;
+    env.declare("cast", Cell::Command(Command::new(cast::compile)))?;
 
-        env.declare("lines", Cell::Command(Command::new(lines::compile)))?;
-        env.declare("csv", Cell::Command(Command::new(csv::compile)))?;
+    env.declare("head", Cell::Command(Command::new(head::compile)))?;
+    env.declare("tail", Cell::Command(Command::new(tail::compile)))?;
+
+    env.declare("lines", Cell::Command(Command::new(lines::compile)))?;
+    env.declare("csv", Cell::Command(Command::new(csv::compile)))?;
 
     return Ok(());
 }

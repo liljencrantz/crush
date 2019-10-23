@@ -1,7 +1,7 @@
 use crate::data::{CellFnurp};
-use crate::errors::JobError;
+use crate::errors::{JobResult, JobError};
 
-pub fn find_field(needle: &str, haystack: &Vec<CellFnurp>) -> Result<usize, JobError> {
+pub fn find_field(needle: &str, haystack: &Vec<CellFnurp>) -> JobResult<usize> {
     for (idx, field) in haystack.iter().enumerate() {
         if field.name.as_ref().map(|v| v.as_ref().eq(needle)).unwrap_or(false) {
             return Ok(idx);

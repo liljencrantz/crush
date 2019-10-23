@@ -6,6 +6,14 @@ use crate::printer::Printer;
 use std::sync::{Arc, Mutex};
 use crate::data::Cell;
 
+/**
+  This is where we store variables, including functions.
+
+  The data is protected by a mutex, in order to make sure that all threads can read and write
+  concurrently.
+
+  The data is protected by an Arc, in order to make sure that it gets deallocated.
+*/
 #[derive(Clone)]
 pub struct Env {
     namespace: Arc<Mutex<Namespace>>,
@@ -18,7 +26,7 @@ impl Env {
         }
     }
 
-    pub fn push(&self) -> Env {
+    pub fn new_stack_frame(&self) -> Env {
         Env {
             namespace: Arc::from(Mutex::new(Namespace::new(Some(self.namespace.clone())))),
         }

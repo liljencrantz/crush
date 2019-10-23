@@ -1,6 +1,6 @@
 use crate::{
-    data::{CellDefinition, Argument},
-    commands::{Call, Exec},
+    data::{Argument},
+    commands::Exec,
     errors::{JobError, argument_error},
     env::Env
 };

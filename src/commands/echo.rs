@@ -1,9 +1,8 @@
 use crate::{
-    data::CellDefinition,
     stream::{OutputStream, InputStream},
     data::Row,
     data::Argument,
-    commands::{Call, Exec},
+    commands::{Exec},
     errors::JobError
 };
 use crate::printer::Printer;

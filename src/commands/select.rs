@@ -1,4 +1,3 @@
-use std::iter::Iterator;
 use crate::{
     commands::command_util::find_field,
     errors::{JobError, argument_error},
@@ -10,22 +9,35 @@ use crate::{
         Cell
     },
     stream::{OutputStream, InputStream},
+    replace::Replace,
+    printer::Printer,
+    env::Env,
+    data::CellFnurp,
+    errors::JobResult
 };
-use crate::replace::Replace;
-use crate::printer::Printer;
-use crate::env::Env;
-use crate::data::CellFnurp;
 
-fn parse(input_type: &Vec<CellFnurp>, arguments: &Vec<Argument>) -> Result<Vec<(usize, Option<Box<str>>)>, JobError> {
-    arguments.iter().enumerate().map(|(idx, a)| {
-        match &a.cell {
-            Cell::Text(s) | Cell::Field(s) => match find_field(s, input_type) {
-                Ok(idx) => Ok((idx, a.name.clone().or(input_type[idx].name.clone()))),
-                Err(e) => Err(e),
-            }
-            _ => Err(argument_error(format!("Expected Field, not {:?}", a.cell.cell_data_type()).as_str())),
+pub struct Config {
+    input: InputStream,
+    output: OutputStream,
+    columns: Vec<(usize, Option<Box<str>>)>,
+}
+
+fn parse(input_type: &Vec<CellFnurp>, arguments: &Vec<Argument>, input: InputStream, output: OutputStream) -> JobResult<Config> {
+    let columns: JobResult<Vec<(usize, Option<Box<str>>)>> = arguments.iter().enumerate().map(|(idx, a)| {
+    match &a.cell {
+        Cell::Text(s) | Cell::Field(s) => match find_field(s, input_type) {
+            Ok(idx) => Ok((idx, a.name.clone().or(input_type[idx].name.clone()))),
+            Err(e) => Err(e),
         }
-    }).collect()
+        _ => Err(argument_error(format!("Expected Field, not {:?}", a.cell.cell_data_type()).as_str())),
+    }
+}).collect();
+
+    Ok(Config {
+        input,
+        output,
+        columns: columns?,
+    })
 }
 
 pub fn run(
@@ -33,12 +45,11 @@ pub fn run(
     env: Env,
     printer: Printer,
 ) -> Result<(), JobError> {
-    let indices = parse(&input_type, &arguments)?;
     loop {
-        match input.recv() {
+        match config.input.recv() {
             Ok(mut row) => {
-                output.send(
-                    Row { cells: indices
+                config.output.send(
+                    Row { cells: config.columns
                         .iter()
                         .map(|(idx, name)| row.cells.replace(*idx, Cell::Integer(0)))
                         .collect() })?;
@@ -50,12 +61,9 @@ pub fn run(
 }
 
 pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
-    let mut indices = parse(&input_type, &arguments)?;
-    return Ok(Call {
-        name: String::from("select"),
-        output_type: indices.drain(..).map(|(idx, name)| CellFnurp {cell_type: input_type[idx].cell_type.clone(), name }).collect(),
-        input_type,
-        arguments,
-        exec: Exec::Command(run),
-    });
+    let config = parse(&input_type, &arguments, input, output)?;
+    let output_type = config.columns.iter()
+        .map(|(idx, name)| CellFnurp {cell_type: input_type[*idx].cell_type.clone(), name: name.clone() })
+        .collect();
+    Ok((Exec::Select(config), output_type))
 }

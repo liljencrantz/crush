@@ -2,7 +2,6 @@ use crate::{
     data::{
         Argument,
         Row,
-        CellDefinition,
         CellType,
         JobOutput,
         Cell

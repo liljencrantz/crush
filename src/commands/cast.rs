@@ -29,7 +29,7 @@ fn parse(
     output: OutputStream,
 ) -> Result<Config, JobError> {
     let mut output_type: Vec<CellFnurp> = input_type.clone();
-    for (idx, arg) in arguments.iter().enumerate() {
+    for arg in arguments.iter() {
         let arg_idx = match &arg.name {
             Some(name) => find_field(name, input_type)?,
             None => return Err(argument_error("Expected only named arguments")),

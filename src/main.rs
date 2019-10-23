@@ -50,9 +50,9 @@ fn repl() -> Result<(), JobError>{
                             let (last_output, last_input) = streams();
                             match job_definition.compile(&global_env, &printer,&vec![], first_input, last_output) {
                                 Ok(mut job) => {
-                                    job.execute();
+                                    let handle = job.execute();
                                     spawn_print_thread(&printer, JobOutput { types: job.get_output_type().clone(), stream: last_input } );
-                                    job.wait(&printer);
+                                    job.wait(handle, &printer);
                                 }
                                 Err(e) => printer.job_error(e),
                             }

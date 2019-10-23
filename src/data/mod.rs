@@ -3,7 +3,7 @@ mod row;
 mod rows;
 mod argument;
 
-use crate::commands::{Call, Exec};
+use crate::commands::{Exec};
 use crate::errors::{JobError, error};
 use std::fmt::Formatter;
 use crate::stream::{InputStream, OutputStream};
@@ -20,7 +20,6 @@ pub use argument::ArgumentDefinition;
 pub use row::Row;
 pub use rows::Rows;
 use crate::glob::Glob;
-use std::num::ParseIntError;
 
 #[derive(Clone)]
 #[derive(PartialEq)]

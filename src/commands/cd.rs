@@ -1,16 +1,15 @@
 use crate::{
     data::Argument,
-    data::{CellDefinition, CellType},
-    data::Cell,
-    commands::{Call, Exec},
+    commands::Exec,
     errors::JobError,
-    env::Env
+    env::Env,
+    errors::to_job_error,
+    printer::Printer,
+    stream::{OutputStream, InputStream},
+    data::CellFnurp
 };
-use crate::errors::to_job_error;
-use crate::printer::Printer;
-use crate::stream::{OutputStream, InputStream};
-use crate::data::CellFnurp;
 use std::path::Path;
+use crate::data::Cell;
 
 pub struct Config {dir: Box<Path>}
 

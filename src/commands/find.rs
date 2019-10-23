@@ -1,7 +1,7 @@
 use std::fs;
 use crate::stream::{OutputStream, InputStream};
-use crate::data::{Cell, CellDefinition, CellType, Row, Argument, CellFnurp};
-use crate::commands::{Call, Exec};
+use crate::data::{Cell, CellType, Row, Argument, CellFnurp};
+use crate::commands::{Exec};
 use crate::errors::{JobError, error, to_job_error};
 use chrono::{Local, DateTime};
 use std::path::Path;

@@ -1,10 +1,10 @@
 use crate::{
     data::Argument,
     data::Row,
-    data::{CellDefinition, CellType},
+    data::{CellType},
     stream::{OutputStream, InputStream},
     data::Cell,
-    commands::{Call, Exec},
+    commands::{Exec},
     errors::JobError,
     env::get_cwd
 };
@@ -23,6 +23,6 @@ pub fn run(
     Ok(())
 }
 
-pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+pub fn compile(_input_type: Vec<CellFnurp>, _input: InputStream, output: OutputStream, _arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
     return Ok((Exec::Pwd(Config {output}), vec![CellFnurp::named("directory", CellType::File)]))
 }

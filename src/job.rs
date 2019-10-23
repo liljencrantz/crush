@@ -53,7 +53,6 @@ impl JobDefinition {
 pub struct Job {
     commands: Vec<Call>,
     dependencies: Vec<Job>,
-    handlers: Vec<JobJoinHandle>,
     env: Env,
     printer: Printer,
     output_type: Vec<CellFnurp>,
@@ -70,14 +69,9 @@ impl Job {
             output_type: commands[commands.len()-1].get_output_type().clone(),
             commands,
             dependencies,
-            handlers: Vec::new(),
             env: env.clone(),
             printer: printer.clone(),
         }
-    }
-
-    pub fn take_handlers(&mut self) -> Vec<JobJoinHandle> {
-        self.handlers.drain(..).collect()
     }
 
     pub fn get_output_type(&self) -> &Vec<CellFnurp> {
@@ -92,18 +86,10 @@ impl Job {
         for mut call in self.commands.drain(..) {
             res.push(call.execute());
         }
-
         JobJoinHandle::Many(res)
     }
 
-    pub fn wait(&mut self, printer: &Printer) {
-        for h in self.handlers.drain(..) {
-            match h.join() {
-                Ok(_) => {}
-                Err(e) => {
-                    printer.job_error(e);
-                }
-            }
-        }
+    pub fn wait(&mut self, handle: JobJoinHandle, printer: &Printer) {
+            handle.join(printer);
     }
 }

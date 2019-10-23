@@ -33,9 +33,9 @@ pub fn to_job_error<T, E: Error>(result: Result<T, E>) -> Result<T, JobError> {
     }
 }
 
-pub fn mandate<T>(result: Option<T>) -> Result<T, JobError> {
+pub fn mandate<T>(result: Option<T>, msg: &str) -> Result<T, JobError> {
     match result {
         Some(v) => Ok(v),
-        None => Err(error("Missing value")),
+        None => Err(error(msg)),
     }
 }

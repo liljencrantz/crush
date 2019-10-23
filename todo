@@ -27,6 +27,13 @@ List subscripting
 Map lookup
 Only one job allowed in command substitution
 Implement hashing for remaining cell types, e.g. closure
+Implement if command
+Implement for command
+Implement loop command
+Implement a function command to allow recursive functions, etc?
+Delay variable substitution until execution phase to make variable expansion work correctly inside closures?
+Implement ps command
+Implement http command
 
 Done:
 Fix all expects calls that aren't impossible, and propagate the errors

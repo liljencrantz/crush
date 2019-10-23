@@ -1,17 +1,19 @@
-use crate::glob::Glob;
 use std::cmp::Ordering;
 use std::hash::Hasher;
-use crate::data::{JobOutput, CellType, Command, Row};
-use crate::data::rows::Rows;
-use crate::errors::{error, JobError, to_job_error, mandate};
 use std::path::Path;
 use regex::Regex;
 use chrono::{DateTime, Local};
-use crate::env::{get_cwd, Env};
-use crate::job::{JobDefinition, Job};
-use crate::closure::{Closure, ClosureDefinition};
-use crate::stream::streams;
-use crate::printer::Printer;
+use crate::{
+    closure::{ClosureDefinition},
+    job::{JobDefinition, Job},
+    env::{get_cwd, Env},
+    errors::{error, JobError, to_job_error, mandate},
+    data::rows::Rows,
+    data::{JobOutput, CellType, Command, Row},
+    glob::Glob,
+    stream::streams,
+    printer::Printer
+};
 
 #[derive(Clone)]
 pub enum CellDefinition {
@@ -54,7 +56,7 @@ impl CellDefinition {
                 res
             }
             CellDefinition::ClosureDefinition(c) => Cell::ClosureDefinition(c.clone()),
-            CellDefinition::Variable(s) => (mandate(env.get(s.as_ref()))?).partial_clone()?,
+            CellDefinition::Variable(s) => (mandate(env.get(s.as_ref()), format!("Unknown variable {}", s.as_ref()).as_str())?).partial_clone()?,
         })
     }
 

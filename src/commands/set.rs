@@ -1,9 +1,8 @@
 use crate::{
-    data::{CellDefinition},
     data::Argument,
-    commands::{Call, Exec},
+    commands::{Exec},
     errors::{JobError, argument_error},
-    env::Env
+    env::Env,
 };
 use crate::stream::{InputStream, OutputStream};
 use crate::printer::Printer;
@@ -32,5 +31,5 @@ pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStr
             );
         }
     }
-    Ok((Exec::Set(Config {arguments}), vec![]))
+    Ok((Exec::Set(Config { arguments }), vec![]))
 }

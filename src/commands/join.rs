@@ -6,7 +6,7 @@ use crate::{
     data::{
         Argument,
         Row,
-        CellDefinition,
+        CellFnurp,
         CellType,
         Cell,
     },
@@ -17,24 +17,25 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::data::CellFnurp;
 
-struct Config {
+pub struct Config {
     left_table_idx: usize,
     right_table_idx: usize,
     left_column_idx: usize,
     right_column_idx: usize,
+    input: InputStream,
+    output: OutputStream,
 }
 
-pub fn get_sub_type(cell_type: &CellType) -> Result<&Vec<CellDefinition>, JobError>{
+pub fn get_sub_type(cell_type: &CellType) -> Result<&Vec<CellFnurp>, JobError>{
     match cell_type {
         CellType::Output(sub_types) | CellType::Rows(sub_types) => Ok(sub_types),
         _ => Err(argument_error("Expected a table column")),
     }
 }
 
-pub fn guess_tables(input_type: &Vec<CellFnurp>) -> Result<(usize, usize, &Vec<CellDefinition>, &Vec<CellDefinition>), JobError> {
-    let tables: Vec<(usize, &Vec<CellDefinition>)> = input_type.iter().enumerate().flat_map(|(idx, t)| {
+pub fn guess_tables(input_type: &Vec<CellFnurp>) -> Result<(usize, usize, &Vec<CellFnurp>, &Vec<CellFnurp>), JobError> {
+    let tables: Vec<(usize, &Vec<CellFnurp>)> = input_type.iter().enumerate().flat_map(|(idx, t)| {
         match &t.cell_type {
             CellType::Output(sub_types) | CellType::Rows(sub_types) => Some((idx, sub_types)),
             _ => None,
@@ -53,7 +54,7 @@ fn scan_table(table: &str, column: &str, input_type: &Vec<CellFnurp>) -> Result<
     Ok((table_idx, column_idx))
 }
 
-fn parse(input_type: &Vec<CellFnurp>, arguments: &Vec<Argument>) -> Result<Config, JobError> {
+fn parse(input_type: Vec<CellFnurp>, arguments: Vec<Argument>, input: InputStream, output: OutputStream) -> Result<Config, JobError> {
     if (arguments.len() != 3) {
         return Err(argument_error("Expected exactly 3 aguments"));
     }
@@ -64,22 +65,23 @@ fn parse(input_type: &Vec<CellFnurp>, arguments: &Vec<Argument>) -> Result<Confi
             }
             match (l.matches('.').count(), r.matches('.').count()) {
                 (0, 0) => {
-                    let (left_table_idx, right_table_idx, left_types, right_types) = guess_tables(input_type)?;
+                    let (left_table_idx, right_table_idx, left_types, right_types) = guess_tables(&input_type)?;
                     Ok(Config {
                         left_table_idx,
                         right_table_idx,
                         left_column_idx: find_field(&l, left_types)?,
                         right_column_idx: find_field(&r, right_types)?,
+                        input, output,
                     })
                 }
                 (1, 1) => {
                     let left_split: Vec<&str> = l.split('.').collect();
                     let (left_table_idx, left_column_idx ) =
-                        scan_table(left_split[0], left_split[1], input_type)?;
+                        scan_table(left_split[0], left_split[1], &input_type)?;
 
                     let right_split: Vec<&str> = r.split('.').collect();
                     let (right_table_idx, right_column_idx ) =
-                        scan_table(right_split[0], right_split[1], input_type)?;
+                        scan_table(right_split[0], right_split[1], &input_type)?;
 
                     if left_table_idx == right_table_idx {
                         return Err(argument_error("Left and right table can't be the same"));
@@ -90,6 +92,8 @@ fn parse(input_type: &Vec<CellFnurp>, arguments: &Vec<Argument>) -> Result<Confi
                         right_table_idx,
                         left_column_idx,
                         right_column_idx,
+                        input,
+                        output,
                     })
                 },
                 _ => Err(argument_error("Expected both fields on the form %table.column or %column")),
@@ -136,17 +140,15 @@ fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &
 
 pub fn run(
     config: Config,
-    env: Env,
-    printer: Printer,
+    _env: Env,
+    _printer: Printer,
 ) -> Result<(), JobError> {
-    let cfg = parse(&input_type, &arguments)?;
-
     loop {
-        match input.recv() {
+        match config.input.recv() {
             Ok(mut row) => {
-                match (row.cells.replace(cfg.left_table_idx, Cell::Integer(0)), row.cells.replace(cfg.right_table_idx, Cell::Integer(0))) {
-                    (Cell::Output(mut l), Cell::Output(mut r)) => {
-                        do_join(&cfg, &mut l.stream, &mut r.stream, &output);
+                match (row.cells.replace(config.left_table_idx, Cell::Integer(0)), row.cells.replace(config.right_table_idx, Cell::Integer(0))) {
+                    (Cell::JobOutput(mut l), Cell::JobOutput(mut r)) => {
+                        do_join(&config, &mut l.stream, &mut r.stream, &config.output)?;
                     }
                     _ => panic!("Wrong row format"),
                 }
@@ -157,8 +159,8 @@ pub fn run(
     return Ok(());
 }
 
-fn get_output_type(input_type: &Vec<CellFnurp>, cfg: &Config) -> Result<Vec<CellDefinition>, JobError> {
-    let tables: Vec<Option<&Vec<CellDefinition>>> = input_type.iter().map(|t| {
+fn get_output_type(input_type: &Vec<CellFnurp>, cfg: &Config) -> Result<Vec<CellFnurp>, JobError> {
+    let tables: Vec<Option<&Vec<CellFnurp>>> = input_type.iter().map(|t| {
         match &t.cell_type {
             CellType::Output(sub_types) | CellType::Rows(sub_types) => Some(sub_types),
             _ => None,
@@ -180,12 +182,7 @@ fn get_output_type(input_type: &Vec<CellFnurp>, cfg: &Config) -> Result<Vec<Cell
 }
 
 pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
-    let cfg = parse(&input_type, &arguments)?;
-    return Ok(Call {
-        name: String::from("join"),
-        output_type: get_output_type(&input_type, &cfg)?,
-        input_type,
-        arguments,
-        exec: Exec::Command(run),
-    });
+    let cfg = parse(input_type.clone(), arguments, input, output)?;
+    let output_type = get_output_type(&input_type, &cfg)?;
+    Ok((Exec::Join(cfg), output_type))
 }
