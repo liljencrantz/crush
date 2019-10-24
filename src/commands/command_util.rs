@@ -1,5 +1,10 @@
 use crate::data::{CellFnurp};
 use crate::errors::{JobResult, JobError};
+use std::sync::Mutex;
+use lazy_static::lazy_static;
+use std::collections::HashMap;
+use users::uid_t;
+use users::User;
 
 pub fn find_field(needle: &str, haystack: &Vec<CellFnurp>) -> JobResult<usize> {
     for (idx, field) in haystack.iter().enumerate() {
@@ -17,4 +22,19 @@ pub fn find_field(needle: &str, haystack: &Vec<CellFnurp>) -> JobResult<usize> {
             )
         }
     );
+}
+
+lazy_static! {
+    static ref user_mutex: Mutex<i32> = Mutex::new(0i32);
+}
+
+pub fn create_user_map() -> HashMap<uid_t, User> {
+    let user_lock = user_mutex.lock().unwrap();
+
+    let mut h: HashMap<uid_t, users::User> = HashMap::new();
+    let iter = unsafe {users::all_users()};
+    for user in iter {
+        h.insert(user.uid(), user);
+    }
+    h
 }

@@ -4,6 +4,7 @@ mod find;
 mod echo;
 
 mod pwd;
+mod ps;
 
 mod cd;
 
@@ -82,6 +83,7 @@ pub enum Exec {
     Join(join::Config),
     Count(count::Config),
     Cat(cat::Config),
+    Ps(ps::Config),
 }
 
 pub enum JobJoinHandle {
@@ -226,6 +228,7 @@ impl Call {
             Join(config) => handle(build(name).spawn(move || join::run(config, env, printer))),
             Count(config) => handle(build(name).spawn(move || count::run(config, env, printer))),
             Cat(config) => handle(build(name).spawn(move || cat::run(config, env, printer))),
+            Ps(config) => handle(build(name).spawn(move || ps::run(config, env, printer))),
         }
     }
 }
@@ -234,6 +237,9 @@ pub fn add_builtins(env: &Env) -> Result<(), JobError> {
     env.declare("ls", Cell::Command(Command::new(find::compile_ls)))?;
     env.declare("find", Cell::Command(Command::new(find::compile_find)))?;
     env.declare("echo", Cell::Command(Command::new(echo::compile)))?;
+
+    env.declare("ps", Cell::Command(Command::new(ps::compile)))?;
+
     env.declare("pwd", Cell::Command(Command::new(pwd::compile)))?;
     env.declare("cd", Cell::Command(Command::new(cd::compile)))?;
     env.declare("filter", Cell::Command(Command::new(filter::compile)))?;

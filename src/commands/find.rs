@@ -1,15 +1,34 @@
 use std::fs;
 use crate::stream::{OutputStream, InputStream};
 use crate::data::{Cell, CellType, Row, Argument, CellFnurp};
-use crate::commands::{Exec};
+use crate::commands::Exec;
 use crate::errors::{JobError, error, to_job_error};
 use chrono::{Local, DateTime};
 use std::path::Path;
 use std::fs::Metadata;
 use crate::env::{get_cwd, Env};
 use crate::printer::Printer;
+use crate::commands::command_util::create_user_map;
+use std::collections::HashMap;
+use users::uid_t;
+use users::User;
+use std::os::unix::fs::MetadataExt;
+use lazy_static::lazy_static;
 
-fn insert_entity(meta: &Metadata, file: Box<Path>, output: &mut OutputStream) -> Result<(), JobError> {
+lazy_static! {
+    static ref output_type: Vec<CellFnurp> = vec![
+        CellFnurp::named("user", CellType::Text),
+        CellFnurp::named("size", CellType::Integer),
+        CellFnurp::named("modified", CellType::Time),
+        CellFnurp::named("file", CellType::Text),
+    ];
+}
+
+fn insert_entity(
+    meta: &Metadata,
+    file: Box<Path>,
+    users: &HashMap<uid_t, User>,
+    output: &mut OutputStream) -> Result<(), JobError> {
     let modified_system = to_job_error(meta.modified())?;
     let modified_datetime: DateTime<Local> = DateTime::from(modified_system);
     let f = if file.starts_with("./") {
@@ -20,9 +39,10 @@ fn insert_entity(meta: &Metadata, file: Box<Path>, output: &mut OutputStream) ->
     };
     output.send(Row {
         cells: vec![
-            Cell::File(f),
+            Cell::text(users.get(&meta.uid()).map(|u| u.name().to_str().unwrap_or("<illegal username>")).unwrap_or("<unknown user>")),
             Cell::Integer(i128::from(meta.len())),
             Cell::Time(modified_datetime),
+            Cell::File(f),
         ]
     })?;
     return Ok(());
@@ -30,6 +50,7 @@ fn insert_entity(meta: &Metadata, file: Box<Path>, output: &mut OutputStream) ->
 
 fn run_for_single_directory_or_file(
     path: Box<Path>,
+    users: &HashMap<uid_t, User>,
     recursive: bool,
     output: &mut OutputStream) -> Result<(), JobError> {
     if path.is_dir() {
@@ -39,11 +60,13 @@ fn run_for_single_directory_or_file(
             insert_entity(
                 &to_job_error(entry.metadata())?,
                 entry.path().into_boxed_path(),
+                &users,
                 output)?;
             if recursive && entry.path().is_dir() {
                 if !(entry.file_name().eq(".") || entry.file_name().eq("..")) {
                     run_for_single_directory_or_file(
                         entry.path().into_boxed_path(),
+                        &users,
                         true,
                         output)?;
                 }
@@ -55,6 +78,7 @@ fn run_for_single_directory_or_file(
                 insert_entity(
                     &to_job_error(path.metadata())?,
                     path,
+                    &users,
                     output)?;
             }
             None => {
@@ -66,19 +90,16 @@ fn run_for_single_directory_or_file(
 }
 
 pub fn run(mut config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
+    let users = create_user_map();
     for dir in config.dirs {
-        run_for_single_directory_or_file(dir, config.recursive, &mut config.output);
+        run_for_single_directory_or_file(dir, &users, config.recursive, &mut config.output);
     }
     return Ok(());
 }
 
 pub fn compile_ls(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
     let cfg = parse(output, arguments, false)?;
-    Ok((Exec::Find(cfg), vec![
-        CellFnurp::named("file", CellType::Text),
-        CellFnurp::named("size", CellType::Integer),
-        CellFnurp::named("modified", CellType::Time),
-    ]))
+    Ok((Exec::Find(cfg), output_type.clone()))
 }
 
 pub struct Config {
@@ -111,14 +132,10 @@ fn parse(output: OutputStream, arguments: Vec<Argument>, recursive: bool) -> Res
             }
         }
     }
-    Ok(Config{ dirs, recursive, output })
+    Ok(Config { dirs, recursive, output })
 }
 
 pub fn compile_find(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
     let cfg = parse(output, arguments, true)?;
-    Ok((Exec::Find(cfg), vec![
-        CellFnurp::named("file", CellType::Text),
-        CellFnurp::named("size", CellType::Integer),
-        CellFnurp::named("modified", CellType::Time),
-    ]))
+    Ok((Exec::Find(cfg), output_type.clone()))
 }
