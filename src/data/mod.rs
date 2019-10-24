@@ -7,6 +7,7 @@ mod argument;
 mod call_definition;
 mod column_type;
 mod list;
+mod list_definition;
 
 use crate::commands::{Exec};
 use crate::errors::{JobError, error};
@@ -28,6 +29,7 @@ pub use row::Row;
 pub use rows::Rows;
 pub use call_definition::CallDefinition;
 pub use list::List;
+pub use list_definition::ListDefinition;
 
 use crate::glob::Glob;
 

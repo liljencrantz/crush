@@ -1,4 +1,4 @@
-use crate::data::{Command, Cell, JobOutput};
+use crate::data::{Command, Cell, JobOutput, ListDefinition};
 use crate::closure::ClosureDefinition;
 use crate::job::{JobDefinition, Job};
 use std::path::Path;
@@ -25,20 +25,21 @@ pub enum CellDefinition {
     // During invocation, this will get replaced with an output
     File(Box<Path>),
     Variable(Box<str>),
+    List(ListDefinition),
 }
 
 impl CellDefinition {
-    pub fn compile(self, dependencies: &mut Vec<Job>, env: &Env, printer: &Printer) -> Result<Cell, JobError> {
+    pub fn compile(&self, dependencies: &mut Vec<Job>, env: &Env, printer: &Printer) -> Result<Cell, JobError> {
         Ok(match self {
-            CellDefinition::Text(v) => Cell::Text(v),
-            CellDefinition::Integer(v) => Cell::Integer(v),
-            CellDefinition::Time(v) => Cell::Time(v),
-            CellDefinition::Field(v) => Cell::Field(v),
-            CellDefinition::Glob(v) => Cell::Glob(v),
-            CellDefinition::Regex(v, r) => Cell::Regex(v, r),
-            CellDefinition::Op(v) => Cell::Op(v),
-            CellDefinition::Command(v) => Cell::Command(v),
-            CellDefinition::File(v) => Cell::File(v),
+            CellDefinition::Text(v) => Cell::Text(v.clone()),
+            CellDefinition::Integer(v) => Cell::Integer(v.clone()),
+            CellDefinition::Time(v) => Cell::Time(v.clone()),
+            CellDefinition::Field(v) => Cell::Field(v.clone()),
+            CellDefinition::Glob(v) => Cell::Glob(v.clone()),
+            CellDefinition::Regex(v, r) => Cell::Regex(v.clone(), r.clone()),
+            CellDefinition::Op(v) => Cell::Op(v.clone()),
+            CellDefinition::Command(v) => Cell::Command(v.clone()),
+            CellDefinition::File(v) => Cell::File(v.clone()),
             //CellDefinition::Rows(r) => Cell::Rows(r),
             CellDefinition::JobDefintion(def) => {
                 let (first_output, first_input) = streams();
@@ -52,6 +53,7 @@ impl CellDefinition {
             }
             CellDefinition::ClosureDefinition(c) => Cell::ClosureDefinition(c.clone()),
             CellDefinition::Variable(s) => (mandate(env.get(s.as_ref()), format!("Unknown variable {}", s.as_ref()).as_str())?).partial_clone()?,
+            CellDefinition::List(l) => l.compile(dependencies, env, printer)?,
         })
     }
 

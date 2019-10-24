@@ -15,7 +15,7 @@ pub type ArgumentDefinition = BaseArgument<CellDefinition>;
 
 impl ArgumentDefinition {
     pub fn argument(&self, dependencies: &mut Vec<Job>, env: &Env, printer: &Printer) -> Result<Argument, JobError> {
-        Ok(Argument { name: self.name.clone(), cell: self.cell.clone().compile(dependencies, env, printer)? })
+        Ok(Argument { name: self.name.clone(), cell: self.cell.compile(dependencies, env, printer)? })
     }
 }
 

@@ -14,6 +14,8 @@ pub enum TokenType {
     Glob,
     BlockStart,
     BlockEnd,
+    ListStart,
+    ListEnd,
     Comment,
     Whitespace,
     QuotedString,
@@ -41,7 +43,7 @@ pub struct Lexer {
 }
 
 lazy_static! {
-    static ref LEX_DATA: [(TokenType, Regex); 23] = [
+    static ref LEX_DATA: [(TokenType, Regex); 25] = [
         (TokenType::Separator, Regex::new("^;").unwrap()),
         (TokenType::Pipe, Regex::new(r"^\|").unwrap()),
 
@@ -63,6 +65,9 @@ lazy_static! {
 
         (TokenType::BlockStart, Regex::new(r"^[`*]?\{").unwrap()),
         (TokenType::BlockEnd, Regex::new(r"^\}").unwrap()),
+
+        (TokenType::ListStart, Regex::new(r"^\[").unwrap()),
+        (TokenType::ListEnd, Regex::new(r"^]").unwrap()),
 
         (TokenType::Regex, Regex::new(r"^r\{([^}\\]|\\.)+\}").unwrap()),
 
@@ -172,6 +177,14 @@ mod tests {
         let tt = tokens(&mut l);
         assert_eq!(tt, vec![
             TokenType::String, TokenType::Glob, TokenType::Glob, TokenType::EOF]);
+    }
+
+    #[test]
+    fn list() {
+        let mut l = Lexer::new(&String::from("[a]"));
+        let tt = tokens(&mut l);
+        assert_eq!(tt, vec![
+            TokenType::ListStart, TokenType::String, TokenType::ListEnd, TokenType::EOF]);
     }
 
     #[test]
