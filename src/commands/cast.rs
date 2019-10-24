@@ -12,23 +12,23 @@ use crate::{
     stream::{OutputStream, InputStream},
     replace::Replace,
 };
-use crate::data::{CellType, CellFnurp};
+use crate::data::{CellType, ColumnType};
 use crate::printer::Printer;
 use crate::env::Env;
 
 pub struct Config {
-    output_type: Vec<CellFnurp>,
+    output_type: Vec<ColumnType>,
     input: InputStream,
     output: OutputStream,
 }
 
 fn parse(
-    input_type: &Vec<CellFnurp>,
+    input_type: &Vec<ColumnType>,
     arguments: &Vec<Argument>,
     input: InputStream,
     output: OutputStream,
 ) -> Result<Config, JobError> {
-    let mut output_type: Vec<CellFnurp> = input_type.clone();
+    let mut output_type: Vec<ColumnType> = input_type.clone();
     for arg in arguments.iter() {
         let arg_idx = match &arg.name {
             Some(name) => find_field(name, input_type)?,
@@ -72,7 +72,7 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
     let cfg = parse(&input_type, &arguments, input, output)?;
     let output_type = cfg.output_type.clone();
     Ok((Exec::Cast(cfg), output_type))

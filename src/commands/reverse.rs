@@ -10,7 +10,7 @@ use crate::{
 use std::collections::VecDeque;
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::data::CellFnurp;
+use crate::data::ColumnType;
 use crate::commands::head;
 
 pub struct Config {
@@ -43,6 +43,6 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
     Ok((Exec::Reverse(Config { input, output }), input_type))
 }

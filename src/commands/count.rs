@@ -12,7 +12,7 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::data::CellFnurp;
+use crate::data::ColumnType;
 
 pub struct Config {
     has_streams: bool,
@@ -20,7 +20,7 @@ pub struct Config {
     output: OutputStream,
 }
 
-pub fn parse(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream) -> Config {
+pub fn parse(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream) -> Config {
     for t in input_type.iter() {
         match t.cell_type {
             CellType::Output(_) => return Config {has_streams: true, input, output},
@@ -31,10 +31,10 @@ pub fn parse(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStrea
     Config {has_streams: false, input, output}
 }
 
-fn get_output_type(input_type: &Vec<CellFnurp>) -> Vec<CellFnurp> {
-    let res: Vec<CellFnurp> =  input_type.iter().map(|t|
+fn get_output_type(input_type: &Vec<ColumnType>) -> Vec<ColumnType> {
+    let res: Vec<ColumnType> =  input_type.iter().map(|t|
         match t.cell_type {
-            CellType::Output(_) => CellFnurp { name: t.name.clone(), cell_type: CellType::Integer},
+            CellType::Output(_) => ColumnType { name: t.name.clone(), cell_type: CellType::Integer},
             _ => t.clone(),
         }).collect();
     return res;
@@ -77,12 +77,12 @@ pub fn run(config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
     let config = parse(input_type.clone(), input, output);
     let output_type = if config.has_streams {
         get_output_type(&input_type)
     } else {
-        vec![CellFnurp::named("count", CellType::Integer)]
+        vec![ColumnType::named("count", CellType::Integer)]
     };
 
     Ok((Exec::Count(config), output_type))

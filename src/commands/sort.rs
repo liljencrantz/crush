@@ -12,7 +12,7 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::data::CellFnurp;
+use crate::data::ColumnType;
 use crate::errors::JobResult;
 
 pub struct Config {
@@ -22,7 +22,7 @@ pub struct Config {
 }
 
 fn parse(
-    input_type: Vec<CellFnurp>,
+    input_type: Vec<ColumnType>,
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream) -> JobResult<Config> {
@@ -69,7 +69,7 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> JobResult<(Exec, Vec<CellFnurp>)> {
+pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> JobResult<(Exec, Vec<ColumnType>)> {
     let output_type = input_type.clone();
     Ok((Exec::Sort(parse(input_type, arguments, input, output)?), output_type))
 }

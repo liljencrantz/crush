@@ -49,18 +49,10 @@ use crate::{
 use std::thread::{JoinHandle, spawn};
 use std::error::Error;
 use crate::printer::Printer;
-use crate::data::{CellFnurp, CellType, JobOutput};
+use crate::data::{ColumnType, CellType, JobOutput};
 use crate::job::Job;
 use std::sync::{Arc, Mutex};
 use crate::closure::Closure;
-
-type CommandInvocation = fn(
-    Vec<CellFnurp>,
-    Vec<Argument>,
-    InputStream,
-    OutputStream,
-    Env,
-    Printer) -> Result<(), JobError>;
 
 pub enum Exec {
     Closure(Closure),
@@ -112,95 +104,39 @@ impl JobJoinHandle {
     }
 }
 
-#[derive(Clone)]
-#[derive(PartialEq)]
-pub struct CallDefinition {
-    name: String,
-    arguments: Vec<ArgumentDefinition>,
-}
-
-impl CallDefinition {
-    pub fn new(name: &str, arguments: Vec<ArgumentDefinition>) -> CallDefinition {
-        CallDefinition {
-            name: name.to_string(),
-            arguments,
-        }
-    }
-
-    pub fn compile(
-        &self,
-        env: &Env,
-        printer: &Printer,
-        input_type: Vec<CellFnurp>,
-        input: InputStream,
-        output: OutputStream,
-        dependencies: &mut Vec<Job>,
-    ) -> Result<Call, JobError> {
-        let mut args: Vec<Argument> = Vec::new();
-        for arg in self.arguments.iter() {
-            args.push(arg.argument(dependencies, env, printer)?);
-        }
-        match &env.get(&self.name) {
-            Some(Cell::Command(command)) => {
-                let c = command.call;
-                let (exec, output_type) = c(input_type, input, output, args)?;
-                return Ok(Call {
-                    name: self.name.clone(),
-                    output_type,
-                    exec,
-                    printer: printer.clone(),
-                    env: env.clone(),
-                });
-            }
-
-            Some(Cell::ClosureDefinition(closure_definition)) => {
-                let mut jobs: Vec<Job> = Vec::new();
-
-                let closure = closure_definition.compile(env, printer, &input_type,
-                                                         input, output,
-                                                         args)?;
-                let last_job = &closure.get_jobs()[closure.get_jobs().len() - 1];
-
-                return Ok(Call {
-                    name: self.name.clone(),
-                    output_type: last_job.get_output_type().clone(),
-                    exec: Exec::Closure(closure),
-                    printer: printer.clone(),
-                    env: env.clone(),
-                });
-            }
-            _ => {
-                return Err(error(format!("Unknown command name {}", &self.name).as_str()));
-            }
-        }
-    }
-}
 
 pub struct Call {
     name: String,
-    output_type: Vec<CellFnurp>,
+    output_type: Vec<ColumnType>,
     exec: Exec,
     printer: Printer,
     env: Env,
 }
 
-fn build(name: String) -> thread::Builder {
-    thread::Builder::new().name(name)
-}
-
-fn handle(h: Result<JoinHandle<Result<(), JobError>>, std::io::Error>) -> JobJoinHandle {
-    JobJoinHandle::Async(h.unwrap())
-}
-
 impl Call {
+    pub fn new(
+        name: String,
+        output_type: Vec<ColumnType>,
+        exec: Exec,
+        printer: Printer,
+        env: Env,
+    ) -> Call {
+        Call {
+            name,
+            output_type,
+            exec,
+            printer,
+            env,
+        }
+    }
+
     pub fn get_name(&self) -> &String {
         return &self.name;
     }
 
-    pub fn get_output_type(&self) -> &Vec<CellFnurp> {
+    pub fn get_output_type(&self) -> &Vec<ColumnType> {
         return &self.output_type;
     }
-
 
     pub fn execute(mut self) -> JobJoinHandle {
         let env = self.env.clone();
@@ -234,6 +170,14 @@ impl Call {
             Reverse(config) => handle(build(name).spawn(move || reverse::run(config, env, printer))),
         }
     }
+}
+
+fn build(name: String) -> thread::Builder {
+    thread::Builder::new().name(name)
+}
+
+fn handle(h: Result<JoinHandle<Result<(), JobError>>, std::io::Error>) -> JobJoinHandle {
+    JobJoinHandle::Async(h.unwrap())
 }
 
 pub fn add_builtins(env: &Env) -> Result<(), JobError> {

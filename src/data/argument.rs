@@ -1,5 +1,5 @@
 use crate::data::cell::Cell;
-use crate::data::{CellDefinition, CellFnurp};
+use crate::data::{CellDefinition, ColumnType};
 use crate::job::Job;
 use crate::errors::JobError;
 use crate::env::Env;
@@ -34,8 +34,8 @@ impl PartialEq for ArgumentDefinition {
 pub type Argument = BaseArgument<Cell>;
 
 impl Argument {
-    pub fn cell_type(&self) -> CellFnurp {
-        CellFnurp { name: self.name.clone(), cell_type: self.cell.cell_data_type() }
+    pub fn cell_type(&self) -> ColumnType {
+        ColumnType { name: self.name.clone(), cell_type: self.cell.cell_data_type() }
     }
 }
 

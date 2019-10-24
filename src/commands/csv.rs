@@ -23,19 +23,19 @@ extern crate map_in_place;
 use map_in_place::MapVecInPlace;
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::data::CellFnurp;
+use crate::data::ColumnType;
 use crate::errors::JobResult;
 
 pub struct Config {
     separator: char,
-    columns: Vec<CellFnurp>,
+    columns: Vec<ColumnType>,
     skip_head: usize,
     trim: Option<char>,
     files: Either<(usize, InputStream), Vec<Box<Path>>>,
     output: OutputStream,
 }
 
-fn parse(arguments: Vec<Argument>, input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream) -> JobResult<Config> {
+fn parse(arguments: Vec<Argument>, input_type: Vec<ColumnType>, input: InputStream, output: OutputStream) -> JobResult<Config> {
     let mut separator = ',';
     let mut columns = Vec::new();
     let mut skip_head = 0;
@@ -54,7 +54,7 @@ fn parse(arguments: Vec<Argument>, input_type: Vec<CellFnurp>, input: InputStrea
                         Cell::Text(s) => {
                             let split: Vec<&str> = s.split(':').collect();
                             match split.len() {
-                                2 => columns.push(CellFnurp::named(split[0], CellType::from(split[1])?)),
+                                2 => columns.push(ColumnType::named(split[0], CellType::from(split[1])?)),
                                 _ => return Err(argument_error(format!("Expected a column description on the form name:type, got {}", s).as_str())),
                             }
                         }
@@ -173,13 +173,13 @@ pub fn run(mut config: Config, env: Env, printer: Printer) -> Result<(), JobErro
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
     let cfg = parse(arguments, input_type, input, output)?;
 
-    let output_type: Vec<CellFnurp> =
+    let output_type: Vec<ColumnType> =
         vec![
-            CellFnurp::named("file", CellType::File ),
-            CellFnurp::named("data", CellType::Output(cfg.columns.clone())),
+            ColumnType::named("file", CellType::File ),
+            ColumnType::named("data", CellType::Output(cfg.columns.clone())),
         ];
     Ok((Exec::Csv(cfg), output_type))
 }

@@ -10,7 +10,7 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::data::CellFnurp;
+use crate::data::ColumnType;
 use psutil::process::State;
 use crate::commands::command_util::{create_user_map,UserMap};
 use users::uid_t;
@@ -57,12 +57,12 @@ pub fn run(
     Ok(())
 }
 
-pub fn compile(_input_type: Vec<CellFnurp>, _input: InputStream, output: OutputStream, _arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+pub fn compile(_input_type: Vec<ColumnType>, _input: InputStream, output: OutputStream, _arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
     return Ok((Exec::Ps(Config { output }), vec![
-        CellFnurp::named("pid", CellType::Integer),
-        CellFnurp::named("ppid", CellType::Integer),
-        CellFnurp::named("status", CellType::Text),
-        CellFnurp::named("user", CellType::Text),
-        CellFnurp::named("name", CellType::Text),
+        ColumnType::named("pid", CellType::Integer),
+        ColumnType::named("ppid", CellType::Integer),
+        ColumnType::named("status", CellType::Text),
+        ColumnType::named("user", CellType::Text),
+        ColumnType::named("name", CellType::Text),
     ]));
 }

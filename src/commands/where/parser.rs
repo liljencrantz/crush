@@ -8,7 +8,7 @@ use crate::{
     errors::{JobError, argument_error},
     commands::command_util::find_field
 };
-use crate::data::CellFnurp;
+use crate::data::ColumnType;
 
 pub enum Value {
     Cell(Cell),
@@ -28,7 +28,7 @@ pub enum Condition {
     NotMatch(Value, Value),
 }
 
-fn parse_value(input_type: &Vec<CellFnurp>,
+fn parse_value(input_type: &Vec<ColumnType>,
                arguments: &mut std::slice::Iter<(usize, &Argument)>,
                field_lookup: &Vec<Option<usize>>) -> Result<Value, JobError> {
     match arguments.next() {
@@ -46,14 +46,14 @@ fn parse_value(input_type: &Vec<CellFnurp>,
     }
 }
 
-fn to_cell_data_type(input_type: &Vec<CellFnurp>, value: &Value) -> CellType {
+fn to_cell_data_type(input_type: &Vec<ColumnType>, value: &Value) -> CellType {
     match value {
         Value::Cell(c) => c.cell_data_type(),
         Value::Field(idx) => input_type[*idx].cell_type.clone(),
     }
 }
 
-fn check_value(input_type: &Vec<CellFnurp>, value: &Value, accepted_types: &Vec<CellType>) -> Option<JobError> {
+fn check_value(input_type: &Vec<ColumnType>, value: &Value, accepted_types: &Vec<CellType>) -> Option<JobError> {
     let t = to_cell_data_type(input_type, value);
     for a in accepted_types {
         if t == *a {
@@ -67,14 +67,14 @@ fn check_value(input_type: &Vec<CellFnurp>, value: &Value, accepted_types: &Vec<
     }
 }
 
-fn check_comparison(input_type: &Vec<CellFnurp>, l: &Value, r: &Value) -> Option<JobError> {
+fn check_comparison(input_type: &Vec<ColumnType>, l: &Value, r: &Value) -> Option<JobError> {
     if let Some(err) = check_value(&input_type, r, &vec![to_cell_data_type(input_type, l)]) {
         return Some(err);
     }
     None
 }
 
-fn check_match(input_type: &Vec<CellFnurp>, cond: Result<Condition, JobError>) -> Result<Condition, JobError> {
+fn check_match(input_type: &Vec<ColumnType>, cond: Result<Condition, JobError>) -> Result<Condition, JobError> {
     match &cond {
         Ok(Condition::Match(l, r)) | Ok(Condition::NotMatch(l, r)) => {
             if let Some(err) = check_value(&input_type, r, &vec![CellType::Glob, CellType::Regex]) {
@@ -89,7 +89,7 @@ fn check_match(input_type: &Vec<CellFnurp>, cond: Result<Condition, JobError>) -
     }
 }
 
-fn parse_condition(input_type: &Vec<CellFnurp>,
+fn parse_condition(input_type: &Vec<ColumnType>,
                    arguments: &mut std::slice::Iter<(usize, &Argument)>,
                    field_lookup: &Vec<Option<usize>>) -> Result<Condition, JobError> {
     let val1 = parse_value(input_type, arguments, field_lookup)?;
@@ -112,7 +112,7 @@ fn parse_condition(input_type: &Vec<CellFnurp>,
     }
 }
 
-fn find_checks(input_type: &Vec<CellFnurp>,
+fn find_checks(input_type: &Vec<ColumnType>,
                arguments: &Vec<Argument>) -> Result<Vec<Option<usize>>, JobError> {
     let mut res: Vec<Option<usize>> = Vec::new();
     for arg in arguments {
@@ -128,7 +128,7 @@ fn find_checks(input_type: &Vec<CellFnurp>,
     return Ok(res);
 }
 
-pub fn parse(input_type: &Vec<CellFnurp>,
+pub fn parse(input_type: &Vec<ColumnType>,
              arguments: &Vec<Argument>) -> Result<Condition, JobError> {
     let lookup = find_checks(&input_type, &arguments)?;
 

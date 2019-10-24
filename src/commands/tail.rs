@@ -10,7 +10,7 @@ use crate::{
 use std::collections::VecDeque;
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::data::CellFnurp;
+use crate::data::ColumnType;
 use crate::commands::head;
 
 pub type Config = head::Config;
@@ -40,7 +40,7 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
     Ok((Exec::Tail(Config {
         lines: get_line_count(arguments)?,
         input,

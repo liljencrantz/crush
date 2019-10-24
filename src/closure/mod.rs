@@ -2,7 +2,7 @@ use crate::job::{JobDefinition, Job};
 use crate::env::Env;
 use std::sync::Arc;
 use crate::namespace::Namespace;
-use crate::data::{CellDefinition, JobOutput, CellFnurp, Argument};
+use crate::data::{CellDefinition, JobOutput, ColumnType, Argument};
 use crate::stream::{InputStream, OutputStream, streams, spawn_print_thread};
 use crate::printer::Printer;
 use crate::errors::{error, JobError};
@@ -24,7 +24,7 @@ impl ClosureDefinition {
         &self,
         parent_env: &Env,
         printer: &Printer,
-        initial_input_type: &Vec<CellFnurp>,
+        initial_input_type: &Vec<ColumnType>,
         first_input: InputStream,
         last_output: OutputStream,
         arguments: Vec<Argument>) -> Result<Closure, JobError> {

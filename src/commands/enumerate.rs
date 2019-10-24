@@ -13,7 +13,7 @@ use crate::{
 use std::iter::Iterator;
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::data::CellFnurp;
+use crate::data::ColumnType;
 
 pub struct Config {
     input: InputStream,
@@ -36,8 +36,8 @@ pub fn run(config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
-    let mut output_type = vec![CellFnurp::named("idx", CellType::Integer)];
+pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
+    let mut output_type = vec![ColumnType::named("idx", CellType::Integer)];
     output_type.extend(input_type.iter().cloned());
     return Ok((Exec::Enumerate(Config {input, output}), output_type))
 }

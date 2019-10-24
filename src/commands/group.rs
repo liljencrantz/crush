@@ -16,18 +16,18 @@ use crate::{
 use crate::printer::Printer;
 use crate::replace::Replace;
 use crate::env::Env;
-use crate::data::CellFnurp;
+use crate::data::ColumnType;
 use crate::errors::JobResult;
 
 pub struct Config {
     input: InputStream,
     output: OutputStream,
-    input_type: Vec<CellFnurp>,
+    input_type: Vec<ColumnType>,
     name: Box<str>,
     column: usize,
 }
 
-pub fn parse(input_type: Vec<CellFnurp>, arguments: Vec<Argument>, input: InputStream, output: OutputStream) -> JobResult<Config> {
+pub fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>, input: InputStream, output: OutputStream) -> JobResult<Config> {
     if arguments.len() != 1 {
         return Err(argument_error("No comparison key specified"));
     }
@@ -80,8 +80,8 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
     let config = parse(input_type.clone(), arguments, input, output)?;
-    let output_type= vec![input_type[config.column].clone(), CellFnurp { name: Some(config.name.clone()), cell_type: CellType::Output(input_type.clone()) }];
+    let output_type= vec![input_type[config.column].clone(), ColumnType { name: Some(config.name.clone()), cell_type: CellType::Output(input_type.clone()) }];
     Ok((Exec::Group(config), output_type))
 }

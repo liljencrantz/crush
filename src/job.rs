@@ -1,8 +1,8 @@
 use crate::env::Env;
-use crate::commands::{Call, JobJoinHandle, CallDefinition};
+use crate::commands::{Call, JobJoinHandle};
 use crate::stream::{print, streams, OutputStream, InputStream, spawn_print_thread};
 use std::thread;
-use crate::data::{JobOutput, CellFnurp, CellDefinition};
+use crate::data::{JobOutput, ColumnType, CellDefinition, CallDefinition};
 use std::thread::JoinHandle;
 use crate::printer::Printer;
 use map_in_place::MapVecInPlace;
@@ -23,7 +23,7 @@ impl JobDefinition {
         &self,
         env: &Env,
         printer: &Printer,
-        first_input_type: &Vec<CellFnurp>,
+        first_input_type: &Vec<ColumnType>,
         mut first_input: InputStream,
         last_output: OutputStream,
     ) -> Result<Job, JobError> {
@@ -55,7 +55,7 @@ pub struct Job {
     dependencies: Vec<Job>,
     env: Env,
     printer: Printer,
-    output_type: Vec<CellFnurp>,
+    output_type: Vec<ColumnType>,
 }
 
 impl Job {
@@ -74,7 +74,7 @@ impl Job {
         }
     }
 
-    pub fn get_output_type(&self) -> &Vec<CellFnurp> {
+    pub fn get_output_type(&self) -> &Vec<ColumnType> {
         return &self.output_type;
     }
 

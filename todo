@@ -8,7 +8,6 @@ make ls support regexps
 implement date command
 implement closures with named/typed arguments
 implement env command
-implement reverse command
 implement sum command
 Add support for %<INTEGER> for offset based field identifiers
 make file globing testable via fakes
@@ -75,3 +74,4 @@ implement cast command for cell type conversion
 Implement ps command
 implement unset command
 Rename filter to where
+implement reverse command

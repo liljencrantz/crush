@@ -1,6 +1,6 @@
 use std::fs;
 use crate::stream::{OutputStream, InputStream};
-use crate::data::{Cell, CellType, Row, Argument, CellFnurp};
+use crate::data::{Cell, CellType, Row, Argument, ColumnType};
 use crate::commands::Exec;
 use crate::errors::{JobError, error, to_job_error};
 use chrono::{Local, DateTime};
@@ -16,11 +16,11 @@ use std::os::unix::fs::MetadataExt;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref output_type: Vec<CellFnurp> = vec![
-        CellFnurp::named("user", CellType::Text),
-        CellFnurp::named("size", CellType::Integer),
-        CellFnurp::named("modified", CellType::Time),
-        CellFnurp::named("file", CellType::Text),
+    static ref output_type: Vec<ColumnType> = vec![
+        ColumnType::named("user", CellType::Text),
+        ColumnType::named("size", CellType::Integer),
+        ColumnType::named("modified", CellType::Time),
+        ColumnType::named("file", CellType::Text),
     ];
 }
 
@@ -102,7 +102,7 @@ pub fn run(mut config: Config, env: Env, printer: Printer) -> Result<(), JobErro
     return Ok(());
 }
 
-pub fn compile_ls(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+pub fn compile_ls(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
     let cfg = parse(output, arguments, false)?;
     Ok((Exec::Find(cfg), output_type.clone()))
 }
@@ -140,7 +140,7 @@ fn parse(output: OutputStream, arguments: Vec<Argument>, recursive: bool) -> Res
     Ok(Config { dirs, recursive, output })
 }
 
-pub fn compile_find(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+pub fn compile_find(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
     let cfg = parse(output, arguments, true)?;
     Ok((Exec::Find(cfg), output_type.clone()))
 }

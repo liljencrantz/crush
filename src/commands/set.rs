@@ -6,7 +6,7 @@ use crate::{
 };
 use crate::stream::{InputStream, OutputStream};
 use crate::printer::Printer;
-use crate::data::CellFnurp;
+use crate::data::ColumnType;
 
 pub struct Config {
     arguments: Vec<Argument>,
@@ -23,7 +23,7 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
     for arg in arguments.iter() {
         if arg.val_or_empty().is_empty() {
             return Err(

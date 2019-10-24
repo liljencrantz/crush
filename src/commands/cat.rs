@@ -16,7 +16,7 @@ use crate::commands::command_util::find_field;
 use crate::replace::Replace;
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::data::CellFnurp;
+use crate::data::ColumnType;
 
 pub struct Config {
     column: usize,
@@ -24,7 +24,7 @@ pub struct Config {
     output: OutputStream,
 }
 
-fn parse(input_type: &Vec<CellFnurp>, arguments: &Vec<Argument>, input: InputStream, output: OutputStream) -> Result<Config, JobError> {
+fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>, input: InputStream, output: OutputStream) -> Result<Config, JobError> {
     let indices: Vec<usize> = input_type
         .iter()
         .enumerate()
@@ -79,14 +79,14 @@ pub fn run(config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
     return Ok(());
 }
 
-pub fn get_sub_type(cell_type: &CellFnurp) -> Result<Vec<CellFnurp>, JobError> {
+pub fn get_sub_type(cell_type: &ColumnType) -> Result<Vec<ColumnType>, JobError> {
     match &cell_type.cell_type {
         CellType::Output(o) | CellType::Rows(o) => Ok(o.clone()),
         _ => Err(argument_error("Invalid column")),
     }
 }
 
-pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
     let cfg = parse(&input_type, &arguments, input, output)?;
     let output_type = get_sub_type(&input_type[cfg.column])?;
     Ok((Exec::Cat(cfg), output_type))

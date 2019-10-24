@@ -11,7 +11,7 @@ use crate::{
     data::{
         Argument,
         Row,
-        CellFnurp,
+        ColumnType,
         CellType,
         JobOutput,
         Cell,
@@ -24,8 +24,8 @@ use either::Either;
 use crate::errors::JobResult;
 
 lazy_static! {
-    static ref sub_type: Vec<CellFnurp> = {
-        vec![CellFnurp::named("line", CellType::Text)]
+    static ref sub_type: Vec<ColumnType> = {
+        vec![ColumnType::named("line", CellType::Text)]
     };
 }
 
@@ -64,7 +64,7 @@ pub struct Config {
     output: OutputStream,
 }
 
-fn parse(arguments: Vec<Argument>, input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream) -> JobResult<Config> {
+fn parse(arguments: Vec<Argument>, input_type: Vec<ColumnType>, input: InputStream, output: OutputStream) -> JobResult<Config> {
     if input_type.len() == 0 {
         let mut files: Vec<Box<Path>> = Vec::new();
         for arg in &arguments {
@@ -121,11 +121,11 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> JobResult<(Exec, Vec<CellFnurp>)> {
-    let output_type: Vec<CellFnurp> =
+pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> JobResult<(Exec, Vec<ColumnType>)> {
+    let output_type: Vec<ColumnType> =
         vec![
-            CellFnurp::named("file", CellType::File),
-            CellFnurp::named("lines", CellType::Output(sub_type.clone())),
+            ColumnType::named("file", CellType::File),
+            ColumnType::named("lines", CellType::Output(sub_type.clone())),
         ];
     Ok((Exec::Lines(parse(arguments, input_type, input, output)?), output_type))
 }

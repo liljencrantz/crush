@@ -6,7 +6,7 @@ use crate::{
     data::{
         Argument,
         Row,
-        CellFnurp,
+        ColumnType,
         CellType,
         Cell,
     },
@@ -27,15 +27,15 @@ pub struct Config {
     output: OutputStream,
 }
 
-pub fn get_sub_type(cell_type: &CellType) -> Result<&Vec<CellFnurp>, JobError>{
+pub fn get_sub_type(cell_type: &CellType) -> Result<&Vec<ColumnType>, JobError>{
     match cell_type {
         CellType::Output(sub_types) | CellType::Rows(sub_types) => Ok(sub_types),
         _ => Err(argument_error("Expected a table column")),
     }
 }
 
-pub fn guess_tables(input_type: &Vec<CellFnurp>) -> Result<(usize, usize, &Vec<CellFnurp>, &Vec<CellFnurp>), JobError> {
-    let tables: Vec<(usize, &Vec<CellFnurp>)> = input_type.iter().enumerate().flat_map(|(idx, t)| {
+pub fn guess_tables(input_type: &Vec<ColumnType>) -> Result<(usize, usize, &Vec<ColumnType>, &Vec<ColumnType>), JobError> {
+    let tables: Vec<(usize, &Vec<ColumnType>)> = input_type.iter().enumerate().flat_map(|(idx, t)| {
         match &t.cell_type {
             CellType::Output(sub_types) | CellType::Rows(sub_types) => Some((idx, sub_types)),
             _ => None,
@@ -48,13 +48,13 @@ pub fn guess_tables(input_type: &Vec<CellFnurp>) -> Result<(usize, usize, &Vec<C
     }
 }
 
-fn scan_table(table: &str, column: &str, input_type: &Vec<CellFnurp>) -> Result<(usize, usize), JobError> {
+fn scan_table(table: &str, column: &str, input_type: &Vec<ColumnType>) -> Result<(usize, usize), JobError> {
     let table_idx = find_field(&table.to_string(), input_type)?;
     let column_idx = find_field(&column.to_string(), get_sub_type(&input_type[table_idx].cell_type)?)?;
     Ok((table_idx, column_idx))
 }
 
-fn parse(input_type: Vec<CellFnurp>, arguments: Vec<Argument>, input: InputStream, output: OutputStream) -> Result<Config, JobError> {
+fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>, input: InputStream, output: OutputStream) -> Result<Config, JobError> {
     if (arguments.len() != 3) {
         return Err(argument_error("Expected exactly 3 aguments"));
     }
@@ -159,8 +159,8 @@ pub fn run(
     return Ok(());
 }
 
-fn get_output_type(input_type: &Vec<CellFnurp>, cfg: &Config) -> Result<Vec<CellFnurp>, JobError> {
-    let tables: Vec<Option<&Vec<CellFnurp>>> = input_type.iter().map(|t| {
+fn get_output_type(input_type: &Vec<ColumnType>, cfg: &Config) -> Result<Vec<ColumnType>, JobError> {
+    let tables: Vec<Option<&Vec<ColumnType>>> = input_type.iter().map(|t| {
         match &t.cell_type {
             CellType::Output(sub_types) | CellType::Rows(sub_types) => Some(sub_types),
             _ => None,
@@ -181,7 +181,7 @@ fn get_output_type(input_type: &Vec<CellFnurp>, cfg: &Config) -> Result<Vec<Cell
     };
 }
 
-pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
     let cfg = parse(input_type.clone(), arguments, input, output)?;
     let output_type = get_output_type(&input_type, &cfg)?;
     Ok((Exec::Join(cfg), output_type))

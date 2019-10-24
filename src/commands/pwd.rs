@@ -10,7 +10,7 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::data::CellFnurp;
+use crate::data::ColumnType;
 
 pub struct Config {output: OutputStream}
 
@@ -23,6 +23,6 @@ pub fn run(
     Ok(())
 }
 
-pub fn compile(_input_type: Vec<CellFnurp>, _input: InputStream, output: OutputStream, _arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
-    return Ok((Exec::Pwd(Config {output}), vec![CellFnurp::named("directory", CellType::File)]))
+pub fn compile(_input_type: Vec<ColumnType>, _input: InputStream, output: OutputStream, _arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
+    return Ok((Exec::Pwd(Config {output}), vec![ColumnType::named("directory", CellType::File)]))
 }

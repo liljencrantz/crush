@@ -1,4 +1,4 @@
-use crate::data::{CellFnurp, Cell};
+use crate::data::{ColumnType, Cell};
 use crate::errors::{JobResult, JobError};
 use std::sync::Mutex;
 use lazy_static::lazy_static;
@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use users::uid_t;
 use users::User;
 
-pub fn find_field(needle: &str, haystack: &Vec<CellFnurp>) -> JobResult<usize> {
+pub fn find_field(needle: &str, haystack: &Vec<ColumnType>) -> JobResult<usize> {
     for (idx, field) in haystack.iter().enumerate() {
         if field.name.as_ref().map(|v| v.as_ref().eq(needle)).unwrap_or(false) {
             return Ok(idx);

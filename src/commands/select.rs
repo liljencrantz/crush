@@ -12,7 +12,7 @@ use crate::{
     replace::Replace,
     printer::Printer,
     env::Env,
-    data::CellFnurp,
+    data::ColumnType,
     errors::JobResult
 };
 
@@ -22,7 +22,7 @@ pub struct Config {
     columns: Vec<(usize, Option<Box<str>>)>,
 }
 
-fn parse(input_type: &Vec<CellFnurp>, arguments: &Vec<Argument>, input: InputStream, output: OutputStream) -> JobResult<Config> {
+fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>, input: InputStream, output: OutputStream) -> JobResult<Config> {
     let columns: JobResult<Vec<(usize, Option<Box<str>>)>> = arguments.iter().enumerate().map(|(idx, a)| {
     match &a.cell {
         Cell::Text(s) | Cell::Field(s) => match find_field(s, input_type) {
@@ -60,10 +60,10 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
     let config = parse(&input_type, &arguments, input, output)?;
     let output_type = config.columns.iter()
-        .map(|(idx, name)| CellFnurp {cell_type: input_type[*idx].cell_type.clone(), name: name.clone() })
+        .map(|(idx, name)| ColumnType {cell_type: input_type[*idx].cell_type.clone(), name: name.clone() })
         .collect();
     Ok((Exec::Select(config), output_type))
 }

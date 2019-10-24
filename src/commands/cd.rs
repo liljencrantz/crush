@@ -6,7 +6,7 @@ use crate::{
     errors::to_job_error,
     printer::Printer,
     stream::{OutputStream, InputStream},
-    data::CellFnurp
+    data::ColumnType
 };
 use std::path::Path;
 use crate::data::Cell;
@@ -17,7 +17,7 @@ pub fn run(config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
     to_job_error(std::env::set_current_dir(config.dir))
 }
 
-pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
     match arguments.len() {
         0 => Ok((Exec::Cd(Config {dir: Box::from(Path::new("/"))}), vec![])),
         1 => {

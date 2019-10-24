@@ -3,7 +3,7 @@ use crate::job::JobDefinition;
 use crate::lexer::{Lexer, TokenType};
 use crate::env::Env;
 use crate::data::{CellDefinition, ArgumentDefinition, Cell};
-use crate::commands::CallDefinition;
+use crate::data::CallDefinition;
 use regex::Regex;
 use std::error::Error;
 use crate::glob::Glob;

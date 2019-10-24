@@ -4,7 +4,7 @@ use crate::{
     errors::{JobError, argument_error},
     env::Env,
 };
-use crate::data::{Cell, CellFnurp};
+use crate::data::{Cell, ColumnType};
 use crate::printer::Printer;
 use crate::stream::{InputStream, OutputStream};
 use crate::errors::JobResult;
@@ -40,6 +40,6 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(_input_type: Vec<CellFnurp>, _input: InputStream, _output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+pub fn compile(_input_type: Vec<ColumnType>, _input: InputStream, _output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
     Ok((Exec::Unset(parse(arguments)?), vec![]))
 }

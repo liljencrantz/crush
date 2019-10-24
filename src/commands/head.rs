@@ -7,7 +7,7 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::data::CellFnurp;
+use crate::data::ColumnType;
 
 pub fn get_line_count(arguments: Vec<Argument>) -> Result<i128, JobError> {
     return match arguments.len() {
@@ -47,7 +47,7 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<CellFnurp>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<CellFnurp>), JobError> {
+pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
     Ok((Exec::Head(Config {
         lines: get_line_count(arguments)?,
         input,
