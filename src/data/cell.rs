@@ -15,7 +15,7 @@ use crate::{
     stream::streams,
     printer::Printer
 };
-
+use crate::data::List;
 
 pub enum Cell {
     Text(Box<str>),
@@ -31,6 +31,7 @@ pub enum Cell {
     JobOutput(JobOutput),
     File(Box<Path>),
     Rows(Rows),
+    List(List),
 }
 
 
@@ -62,6 +63,7 @@ impl Cell {
             Cell::Rows(_) => "<Table>".to_string(),
             Cell::ClosureDefinition(_) => "<Closure>".to_string(),
             Cell::JobOutput(_) => "<Table>".to_string(),
+            Cell::List(l) => l.to_string(),
         };
     }
 
@@ -106,6 +108,7 @@ impl Cell {
             Cell::JobOutput(o) => CellType::Output(o.types.clone()),
             Cell::Rows(r) => CellType::Rows(r.types.clone()),
             Cell::ClosureDefinition(c) => CellType::Closure,
+            Cell::List(l) => CellType::List(Box::from(l.cell_type()))
         };
     }
 
@@ -123,6 +126,7 @@ impl Cell {
             Cell::Rows(r) => Cell::Rows(r.concrete()),
             Cell::JobOutput(s) => Cell::to_rows(&s),
             Cell::ClosureDefinition(c) => Cell::ClosureDefinition(c),
+            Cell::List(l) => Cell::List(l),
         };
     }
 
@@ -151,6 +155,7 @@ impl Cell {
             Cell::Rows(r) => Ok(Cell::Rows(r.partial_clone()?)),
             Cell::ClosureDefinition(c) => Ok(Cell::ClosureDefinition(c.clone())),
             Cell::JobOutput(_) => Err(error("Invalid use of stream")),
+            Cell::List(l) => Ok(Cell::List(l.partial_clone()?))
         };
     }
 
@@ -249,6 +254,7 @@ impl std::hash::Hash for Cell {
             Cell::Rows(v) => v.hash(state),
             Cell::ClosureDefinition(c) => {}//c.hash(state),
             Cell::JobOutput(o) => {},
+            Cell::List(v) => v.hash(state),
         }
     }
 }

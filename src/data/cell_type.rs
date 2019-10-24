@@ -20,6 +20,7 @@ pub enum CellType {
     File,
     Output(Vec<ColumnType>),
     Rows(Vec<ColumnType>),
+    List(Box<CellType>),
 }
 
 impl CellType {
