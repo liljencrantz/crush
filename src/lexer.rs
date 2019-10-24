@@ -31,6 +31,7 @@ pub enum TokenType {
     Match,
     NotMatch,
     Variable,
+    ArrayVariable,
     Field,
     Regex,
     EOF,
@@ -43,7 +44,7 @@ pub struct Lexer {
 }
 
 lazy_static! {
-    static ref LEX_DATA: [(TokenType, Regex); 25] = [
+    static ref LEX_DATA: [(TokenType, Regex); 26] = [
         (TokenType::Separator, Regex::new("^;").unwrap()),
         (TokenType::Pipe, Regex::new(r"^\|").unwrap()),
 
@@ -61,6 +62,7 @@ lazy_static! {
         (TokenType::Integer, Regex::new(r"^[0-9]+").unwrap()),
 
         (TokenType::Variable, Regex::new(r"^\$[a-zA-Z_][\.a-zA-Z_0-9]*").unwrap()),
+        (TokenType::ArrayVariable, Regex::new(r"^@[a-zA-Z_][\.a-zA-Z_0-9]*").unwrap()),
         (TokenType::Field, Regex::new(r"^%[a-zA-Z_][\.a-zA-Z_0-9]*").unwrap()),
 
         (TokenType::BlockStart, Regex::new(r"^[`*]?\{").unwrap()),

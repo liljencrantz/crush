@@ -7,7 +7,7 @@ use crate::glob::Glob;
 use chrono::{DateTime, Local};
 use crate::env::Env;
 use crate::printer::Printer;
-use crate::errors::{JobError, mandate};
+use crate::errors::{JobError, mandate, error};
 use crate::stream::streams;
 
 #[derive(Clone)]
@@ -26,6 +26,7 @@ pub enum CellDefinition {
     File(Box<Path>),
     Variable(Box<str>),
     List(ListDefinition),
+    ArrayVariable(Box<str>, Box<CellDefinition>),
 }
 
 impl CellDefinition {
@@ -54,6 +55,19 @@ impl CellDefinition {
             CellDefinition::ClosureDefinition(c) => Cell::ClosureDefinition(c.clone()),
             CellDefinition::Variable(s) => (mandate(env.get(s.as_ref()), format!("Unknown variable {}", s.as_ref()).as_str())?).partial_clone()?,
             CellDefinition::List(l) => l.compile(dependencies, env, printer)?,
+            CellDefinition::ArrayVariable(c, i) => {
+                let cell = mandate(env.get(c.as_ref()), format!("Unknown variable {}", c.as_ref()).as_str())?;
+                if let Cell::List(arr) = cell {
+                    let idx_cell = i.compile(dependencies, env, printer)?;
+                    if let Cell::Integer(idx) = idx_cell {
+                        return arr.get(idx as usize);
+                    } else {
+                        return Err(error("Expected an index"));
+                    }
+                } else {
+                    return Err(error("Expected a list variable"));
+                }
+            }
         })
     }
 

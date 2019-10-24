@@ -1,5 +1,5 @@
 use crate::data::{CellType, Cell};
-use crate::errors::JobError;
+use crate::errors::{JobError, mandate, JobResult};
 use std::hash::Hasher;
 
 pub struct List {
@@ -15,6 +15,14 @@ impl List {
         res += &self.cells.iter().map(|c| c.to_string()).collect::<Vec<String>>().join(" ");
         res += "]";
         res
+    }
+
+    pub fn len(&self) -> usize {
+        self.cells.len()
+    }
+
+    pub fn get(&self, idx: usize) -> JobResult<Cell> {
+        mandate(self.cells.get(idx), "Index out of bounds")?.partial_clone()
     }
 
     pub fn cell_type(&self) -> CellType {

@@ -133,6 +133,20 @@ fn parse_unnamed_argument(lexer: &mut Lexer) -> Result<CellDefinition, JobError>
 
         TokenType::Field => Ok(CellDefinition::field(&lexer.pop().1[1..])),
         TokenType::Variable => Ok(CellDefinition::Variable(lexer.pop().1[1..].to_string().into_boxed_str())),
+        TokenType::ArrayVariable => {
+            let name = lexer.pop().1[1..].to_string().into_boxed_str();
+            if lexer.peek().0 != TokenType::ListStart {
+                return Err(parse_error("Expected '['", lexer));
+            }
+            lexer.pop();
+            let idx = parse_unnamed_argument(lexer)?;
+            if lexer.peek().0 != TokenType::ListEnd {
+                return Err(parse_error("Expected '['", lexer));
+            }
+            lexer.pop();
+
+            Ok(CellDefinition::ArrayVariable(name, Box::from(idx)))
+        },
         TokenType::Regex => {
             let f = lexer.pop().1;
             let s = &f[2..f.len() - 1];
