@@ -94,7 +94,7 @@ impl Cell {
         Cell::Regex(Box::from(s), r)
     }
 
-    pub fn cell_data_type(&self) -> CellType {
+    pub fn cell_type(&self) -> CellType {
         return match self {
             Cell::Text(_) => CellType::Text,
             Cell::Integer(_) => CellType::Integer,
@@ -160,7 +160,7 @@ impl Cell {
     }
 
     pub fn cast(self, new_type: CellType) -> Result<Cell, JobError> {
-        if self.cell_data_type() == new_type {
+        if self.cell_type() == new_type {
             return Ok(self);
         }
         /*

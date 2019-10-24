@@ -41,7 +41,7 @@ impl Namespace {
             }
         }
 
-        if self.data[name].cell_data_type() != value.cell_data_type() {
+        if self.data[name].cell_type() != value.cell_type() {
             return Err(error(format!("Type mismatch when reassigning variable ${{{}}}. Use `unset ${{{}}}` to remove old variable.", name, name).as_str()));
         }
         self.data.insert(name.to_string(), value);

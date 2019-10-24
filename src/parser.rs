@@ -2,7 +2,7 @@ use crate::errors::{JobError, parse_error, argument_error};
 use crate::job::JobDefinition;
 use crate::lexer::{Lexer, TokenType};
 use crate::env::Env;
-use crate::data::{CellDefinition, ArgumentDefinition, Cell};
+use crate::data::{CellDefinition, ArgumentDefinition, Cell, ListDefinition};
 use crate::data::CallDefinition;
 use regex::Regex;
 use std::error::Error;
@@ -124,6 +124,20 @@ fn parse_unnamed_argument(lexer: &mut Lexer) -> Result<CellDefinition, JobError>
             }
         }
         TokenType::QuotedString => Ok(CellDefinition::text(unescape(lexer.pop().1).as_str())),
+
+        TokenType::ListStart => {
+            lexer.pop();
+            let mut cells: Vec<CellDefinition> = Vec::new();
+            loop {
+                let tt = lexer.peek().0;
+                match tt {
+                TokenType::ListEnd => break,
+                _ => cells.push(parse_unnamed_argument(lexer)?),
+                }
+            }
+            lexer.pop();
+            Ok(CellDefinition::List(ListDefinition::new(cells)))
+        }
 
         _ => {
             lexer.pop();

@@ -7,23 +7,22 @@ use crate::job::Job;
 
 #[derive(Clone)]
 pub struct ListDefinition {
-    cell_type: CellType,
     cells: Vec<CellDefinition>,
 }
 
 impl ListDefinition {
-    pub fn new(cell_type: CellType, cells: Vec<CellDefinition>) -> ListDefinition {
-        ListDefinition { cell_type, cells }
-    }
-
-    pub fn cell_type(&self) -> CellType {
-        self.cell_type.clone()
+    pub fn new(cells: Vec<CellDefinition>) -> ListDefinition {
+        ListDefinition { cells }
     }
 
     pub fn compile(&self, dependencies: &mut Vec<Job>, env: &Env, printer: &Printer) -> Result<Cell, JobError> {
+        let cells = self.cells
+            .iter()
+            .map(|c| c.compile(dependencies, env, printer))
+            .collect::<Result<Vec<Cell>, JobError>>()?;
         Ok(Cell::List(List::new(
-            self.cell_type.clone(),
-            self.cells.iter().map(|c| c.compile(dependencies, env, printer)).collect::<Result<Vec<Cell>, JobError>>()?
+            cells[0].cell_type(),
+            cells,
         )))
     }
 }

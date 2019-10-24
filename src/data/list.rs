@@ -11,8 +11,8 @@ impl List {
     pub fn new(cell_type: CellType, cells: Vec<Cell>) -> List { List { cell_type, cells } }
 
     pub fn to_string(&self) -> String {
-        let mut res = "".to_string();
-        res += &self.cells.iter().map(|c| c.to_string()).collect::<Vec<String>>().join(", ");
+        let mut res = "[".to_string();
+        res += &self.cells.iter().map(|c| c.to_string()).collect::<Vec<String>>().join(" ");
         res += "]";
         res
     }

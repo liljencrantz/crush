@@ -29,7 +29,7 @@ fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>, input: InputSt
             Ok(idx) => Ok((idx, a.name.clone().or(input_type[idx].name.clone()))),
             Err(e) => Err(e),
         }
-        _ => Err(argument_error(format!("Expected Field, not {:?}", a.cell.cell_data_type()).as_str())),
+        _ => Err(argument_error(format!("Expected Field, not {:?}", a.cell.cell_type()).as_str())),
     }
 }).collect();
 

@@ -48,7 +48,7 @@ fn parse_value(input_type: &Vec<ColumnType>,
 
 fn to_cell_data_type(input_type: &Vec<ColumnType>, value: &Value) -> CellType {
     match value {
-        Value::Cell(c) => c.cell_data_type(),
+        Value::Cell(c) => c.cell_type(),
         Value::Field(idx) => input_type[*idx].cell_type.clone(),
     }
 }

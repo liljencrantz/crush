@@ -35,7 +35,7 @@ pub type Argument = BaseArgument<Cell>;
 
 impl Argument {
     pub fn cell_type(&self) -> ColumnType {
-        ColumnType { name: self.name.clone(), cell_type: self.cell.cell_data_type() }
+        ColumnType { name: self.name.clone(), cell_type: self.cell.cell_type() }
     }
 }
 
