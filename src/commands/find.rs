@@ -8,8 +8,8 @@ use std::path::Path;
 use std::fs::Metadata;
 use crate::env::{get_cwd, Env};
 use crate::printer::Printer;
-use crate::commands::command_util::create_user_map;
-use std::collections::HashMap;
+use crate::commands::command_util::{create_user_map, UserMap};
+use std::collections::{HashMap, VecDeque};
 use users::uid_t;
 use users::User;
 use std::os::unix::fs::MetadataExt;
@@ -39,7 +39,7 @@ fn insert_entity(
     };
     output.send(Row {
         cells: vec![
-            Cell::text(users.get(&meta.uid()).map(|u| u.name().to_str().unwrap_or("<illegal username>")).unwrap_or("<unknown user>")),
+            users.get_name(meta.uid()),
             Cell::Integer(i128::from(meta.len())),
             Cell::Time(modified_datetime),
             Cell::File(f),
@@ -52,6 +52,7 @@ fn run_for_single_directory_or_file(
     path: Box<Path>,
     users: &HashMap<uid_t, User>,
     recursive: bool,
+    q: &mut VecDeque<Box<Path>>,
     output: &mut OutputStream) -> Result<(), JobError> {
     if path.is_dir() {
         let dirs = fs::read_dir(path);
@@ -64,11 +65,7 @@ fn run_for_single_directory_or_file(
                 output)?;
             if recursive && entry.path().is_dir() {
                 if !(entry.file_name().eq(".") || entry.file_name().eq("..")) {
-                    run_for_single_directory_or_file(
-                        entry.path().into_boxed_path(),
-                        &users,
-                        true,
-                        output)?;
+                    q.push_back(entry.path().into_boxed_path());
                 }
             }
         }
@@ -91,8 +88,16 @@ fn run_for_single_directory_or_file(
 
 pub fn run(mut config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
     let users = create_user_map();
-    for dir in config.dirs {
-        run_for_single_directory_or_file(dir, &users, config.recursive, &mut config.output);
+    let mut q = VecDeque::new();
+        for dir in config.dirs {
+            q.push_back(dir);
+        }
+    loop {
+        if (q.is_empty()) {
+            break;
+        }
+        let dir = q.pop_front().unwrap();
+        run_for_single_directory_or_file(dir, &users, config.recursive, &mut q, &mut config.output);
     }
     return Ok(());
 }

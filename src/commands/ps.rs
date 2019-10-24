@@ -12,7 +12,7 @@ use crate::printer::Printer;
 use crate::env::Env;
 use crate::data::CellFnurp;
 use psutil::process::State;
-use crate::commands::command_util::create_user_map;
+use crate::commands::command_util::{create_user_map,UserMap};
 use users::uid_t;
 
 pub struct Config { output: OutputStream }
@@ -45,7 +45,7 @@ pub fn run(
                 Cell::Integer(proc.pid as i128),
                 Cell::Integer(proc.ppid as i128),
                 Cell::text(state_name(proc.state)),
-                Cell::text(users.get(&(proc.uid as uid_t)).map(|u| u.name().to_str().unwrap_or("<illegal username>")).unwrap_or("<unknown user>")),
+                users.get_name(proc.uid as uid_t),
                 Cell::text(
                     proc.cmdline_vec().unwrap_or_else(|e| Some(vec!["<Illegal name>".to_string()]))
                         .unwrap_or_else(|| vec![format!("[{}]", proc.comm)])[0]
@@ -62,7 +62,7 @@ pub fn compile(_input_type: Vec<CellFnurp>, _input: InputStream, output: OutputS
         CellFnurp::named("pid", CellType::Integer),
         CellFnurp::named("ppid", CellType::Integer),
         CellFnurp::named("status", CellType::Text),
-        CellFnurp::named("owner", CellType::Integer),
+        CellFnurp::named("user", CellType::Text),
         CellFnurp::named("name", CellType::Text),
     ]));
 }

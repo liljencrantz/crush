@@ -10,7 +10,7 @@ use crate::{
     stream::{OutputStream, InputStream},
     commands::{Call, Exec},
     errors::{JobError, argument_error},
-    commands::filter::parser::{Condition, Value, parse}
+    commands::r#where::parser::{Condition, Value, parse}
 };
 use std::iter::Iterator;
 use crate::printer::Printer;

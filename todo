@@ -1,12 +1,14 @@
+Bugs:
+find command output is truncated, e.g. find /etc doesn't show all files
+Some missing comparisons on Cell.
+Variable subsitution happens too early in closures, leads to werid snafus.
+
 Todo:
 implement file regexps
 make ls support regexps
 implement date command
-implement closures with $argv
-implement closures with named arguments
-implement for command
+implement closures with named/typed arguments
 implement env command
-implement unset command
 implement reverse command
 implement sum command
 Add support for %<INTEGER> for offset based field identifiers
@@ -19,6 +21,7 @@ implement cmd command
 implement format command for text formating
 add and/or to filter command
 add parens to filter command
+Add missing pieces to csv command
 add glob support to select command
 List and map cell types
 List literals
@@ -27,13 +30,14 @@ List subscripting
 Map lookup
 Only one job allowed in command substitution
 Implement hashing for remaining cell types, e.g. closure
-Implement if command
+Implement if command if {true} `{} `{}
 Implement for command
 Implement loop command
+Implement break/continue commands
 Implement a function command to allow recursive functions, etc?
 Delay variable substitution until execution phase to make variable expansion work correctly inside closures?
-Implement ps command
 Implement http command
+Rename filter to where
 
 Done:
 Fix all expects calls that aren't impossible, and propagate the errors
@@ -70,3 +74,5 @@ implement regexps
 make filter support regexps
 implement csv command
 implement cast command for cell type conversion
+Implement ps command
+implement unset command

@@ -19,7 +19,7 @@ mod tail;
 mod lines;
 mod csv;
 
-mod filter;
+mod r#where;
 mod sort;
 mod select;
 mod enumerate;
@@ -75,7 +75,7 @@ pub enum Exec {
     Tail(tail::Config),
     Lines(lines::Config),
     Csv(csv::Config),
-    Filter(filter::Config),
+    Filter(r#where::Config),
     Sort(sort::Config),
     Select(select::Config),
     Enumerate(enumerate::Config),
@@ -220,7 +220,7 @@ impl Call {
             Tail(config) => handle(build(name).spawn(move || tail::run(config, env, printer))),
             Lines(config) => handle(build(name).spawn(move || lines::run(config, env, printer))),
             Csv(config) => handle(build(name).spawn(move || csv::run(config, env, printer))),
-            Filter(config) => handle(build(name).spawn(move || filter::run(config, env, printer))),
+            Filter(config) => handle(build(name).spawn(move || r#where::run(config, env, printer))),
             Sort(config) => handle(build(name).spawn(move || sort::run(config, env, printer))),
             Select(config) => handle(build(name).spawn(move || select::run(config, env, printer))),
             Enumerate(config) => handle(build(name).spawn(move || enumerate::run(config, env, printer))),
@@ -242,7 +242,7 @@ pub fn add_builtins(env: &Env) -> Result<(), JobError> {
 
     env.declare("pwd", Cell::Command(Command::new(pwd::compile)))?;
     env.declare("cd", Cell::Command(Command::new(cd::compile)))?;
-    env.declare("filter", Cell::Command(Command::new(filter::compile)))?;
+    env.declare("where", Cell::Command(Command::new(r#where::compile)))?;
     env.declare("sort", Cell::Command(Command::new(sort::compile)))?;
     env.declare("set", Cell::Command(Command::new(set::compile)))?;
     env.declare("let", Cell::Command(Command::new(lett::compile)))?;

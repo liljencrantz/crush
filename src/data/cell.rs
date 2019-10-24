@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::hash::Hasher;
 use std::path::Path;
+use std::path::PathBuf;
 use regex::Regex;
 use chrono::{DateTime, Local};
 use crate::{
@@ -323,6 +324,13 @@ impl std::hash::Hash for Cell {
     }
 }
 
+fn file_result_compare(f1: &Path, f2: &Path) -> bool {
+    match (f1.canonicalize(), f2.canonicalize()) {
+        (Ok(p1), Ok(p2)) => p1 == p2,
+        _ => false,
+    }
+}
+
 impl std::cmp::PartialEq for Cell {
     fn eq(&self, other: &Cell) -> bool {
         return match (self, other) {
@@ -336,8 +344,11 @@ impl std::cmp::PartialEq for Cell {
             (Cell::Regex(val1, _), Cell::Regex(val2, _)) => val1 == val2,
             (Cell::Op(val1), Cell::Op(val2)) => val1 == val2,
             (Cell::Command(val1), Cell::Command(val2)) => val1 == val2,
-            (Cell::File(val1), Cell::File(val2)) => val1 == val2,
-            _ => panic!("Unimplemented"),
+            (Cell::Rows(val1), Cell::Rows(val2)) => panic!("Missing comparison, fixme!"),
+            (Cell::File(val1), Cell::File(val2)) => file_result_compare(val1.as_ref(), val2.as_ref()),
+            (Cell::Text(val1), Cell::File(val2)) => file_result_compare(&Path::new(&val1.to_string()), val2.as_ref()),
+            (Cell::File(val1), Cell::Text(val2)) => file_result_compare(&Path::new(&val2.to_string()), val1.as_ref()),
+            _ => false,
         };
     }
 }

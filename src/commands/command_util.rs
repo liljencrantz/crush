@@ -1,4 +1,4 @@
-use crate::data::{CellFnurp};
+use crate::data::{CellFnurp, Cell};
 use crate::errors::{JobResult, JobError};
 use std::sync::Mutex;
 use lazy_static::lazy_static;
@@ -37,4 +37,14 @@ pub fn create_user_map() -> HashMap<uid_t, User> {
         h.insert(user.uid(), user);
     }
     h
+}
+
+pub trait UserMap {
+    fn get_name(&self, uid: uid_t) -> Cell;
+}
+
+impl UserMap for HashMap<uid_t, User> {
+    fn get_name(&self, uid: uid_t) -> Cell {
+        Cell::text(self.get(&uid).map(|u| u.name().to_str().unwrap_or("<illegal username>")).unwrap_or("<unknown user>"))
+    }
 }
