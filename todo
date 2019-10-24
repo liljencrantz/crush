@@ -1,5 +1,4 @@
 Bugs:
-find command output is truncated, e.g. find /etc doesn't show all files
 Some missing comparisons on Cell.
 Variable subsitution happens too early in closures, leads to werid snafus.
 
@@ -37,7 +36,6 @@ Implement break/continue commands
 Implement a function command to allow recursive functions, etc?
 Delay variable substitution until execution phase to make variable expansion work correctly inside closures?
 Implement http command
-Rename filter to where
 
 Done:
 Fix all expects calls that aren't impossible, and propagate the errors
@@ -76,3 +74,4 @@ implement csv command
 implement cast command for cell type conversion
 Implement ps command
 implement unset command
+Rename filter to where

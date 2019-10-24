@@ -21,6 +21,7 @@ mod csv;
 
 mod r#where;
 mod sort;
+mod reverse;
 mod select;
 mod enumerate;
 mod group;
@@ -84,6 +85,7 @@ pub enum Exec {
     Count(count::Config),
     Cat(cat::Config),
     Ps(ps::Config),
+    Reverse(reverse::Config),
 }
 
 pub enum JobJoinHandle {
@@ -229,6 +231,7 @@ impl Call {
             Count(config) => handle(build(name).spawn(move || count::run(config, env, printer))),
             Cat(config) => handle(build(name).spawn(move || cat::run(config, env, printer))),
             Ps(config) => handle(build(name).spawn(move || ps::run(config, env, printer))),
+            Reverse(config) => handle(build(name).spawn(move || reverse::run(config, env, printer))),
         }
     }
 }
@@ -244,6 +247,7 @@ pub fn add_builtins(env: &Env) -> Result<(), JobError> {
     env.declare("cd", Cell::Command(Command::new(cd::compile)))?;
     env.declare("where", Cell::Command(Command::new(r#where::compile)))?;
     env.declare("sort", Cell::Command(Command::new(sort::compile)))?;
+    env.declare("reverse", Cell::Command(Command::new(reverse::compile)))?;
     env.declare("set", Cell::Command(Command::new(set::compile)))?;
     env.declare("let", Cell::Command(Command::new(lett::compile)))?;
     env.declare("unset", Cell::Command(Command::new(unset::compile)))?;
