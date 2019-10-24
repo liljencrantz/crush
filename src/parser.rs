@@ -54,7 +54,25 @@ fn parse_job(lexer: &mut Lexer, commands: &mut Vec<CallDefinition>) -> Result<()
 }
 
 fn unescape(s: &str) -> String {
-    s[1..s.len() - 1].to_string()
+    let mut res = "".to_string();
+    let mut was_backslash = false;
+    for c in s[1..s.len()-1].chars() {
+        if was_backslash {
+            match c {
+                'n' => res += "\n",
+                'r' => res += "\r",
+                't' => res += "\t",
+                _ => res += &c.to_string(),
+            }
+        } else {
+            if c == '\\' {
+                was_backslash = true;
+            } else {
+                res += &c.to_string();
+            }
+        }
+    }
+    res
 }
 
 fn parse_unnamed_argument(lexer: &mut Lexer) -> Result<CellDefinition, JobError> {
