@@ -21,19 +21,16 @@ add and/or to filter command
 add parens to filter command
 Add missing pieces to csv command
 add glob support to select command
-List and map cell types
-List literals
+Map cell types
 Map literals
-List subscripting
 Map lookup
 Only one job allowed in command substitution
 Implement hashing for remaining cell types, e.g. closure
 Implement if command if {true} `{} `{}
-Implement for command
+Implement for command for {ls} `{}
 Implement loop command
 Implement break/continue commands
 Implement a function command to allow recursive functions, etc?
-Delay variable substitution until execution phase to make variable expansion work correctly inside closures?
 Implement http command
 
 Done:
@@ -75,3 +72,6 @@ Implement ps command
 implement unset command
 Rename filter to where
 implement reverse command
+List cell types
+List literals
+List subscripting

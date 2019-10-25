@@ -1,3 +1,5 @@
+use crate::commands::CompileContext;
+use crate::errors::JobResult;
 use crate::{
     errors::JobError,
     commands::{Call, Exec},
@@ -20,11 +22,9 @@ use crate::data::ColumnType;
 
 pub struct Config {
     column: usize,
-    input: InputStream,
-    output: OutputStream,
 }
 
-fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>, input: InputStream, output: OutputStream) -> Result<Config, JobError> {
+fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> Result<Config, JobError> {
     let indices: Vec<usize> = input_type
         .iter()
         .enumerate()
@@ -37,13 +37,13 @@ fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>, input: InputSt
     return match arguments.len() {
         0 => match indices.len() {
             0 => Err(argument_error("No table-type column found")),
-            1 => Ok(Config { column: indices[0], input, output }),
+            1 => Ok(Config { column: indices[0] }),
             _ => Err(argument_error("Multiple table-type columns found")),
         },
         1 => match &arguments[0].cell {
             Cell::Field(s) | Cell::Text(s) => {
                 let idx = find_field(s, &input_type)?;
-                if indices.contains(&idx) { Ok(Config { column: idx, input, output }) } else { Err(argument_error("Field is not of table-type")) }
+                if indices.contains(&idx) { Ok(Config { column: idx }) } else { Err(argument_error("Field is not of table-type")) }
             }
             _ => Err(argument_error("Expected a field"))
         },
@@ -51,22 +51,26 @@ fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>, input: InputSt
     };
 }
 
-pub fn run(config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
+pub fn run(
+    config: Config,
+    input: InputStream,
+           output: OutputStream,
+) -> JobResult<()> {
     loop {
-        match config.input.recv() {
+        match input.recv() {
             Ok(mut row) => {
                 match row.cells.replace(config.column, Cell::Integer(0)) {
                     Cell::JobOutput(o) => loop {
                         match o.stream.recv() {
                             Ok(row) => {
-                                config.output.send(row);
+                                output.send(row);
                             }
                             Err(_) => break,
                         }
                     }
                     Cell::Rows(mut rows) => {
                         for row in rows.rows {
-                            config.output.send(row);
+                            output.send(row);
                         }
                     }
                     _ => return Err(error("Invalid data")),
@@ -86,8 +90,10 @@ pub fn get_sub_type(cell_type: &ColumnType) -> Result<Vec<ColumnType>, JobError>
     }
 }
 
-pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
-    let cfg = parse(&input_type, &arguments, input, output)?;
-    let output_type = get_sub_type(&input_type[cfg.column])?;
-    Ok((Exec::Cat(cfg), output_type))
+pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+    let input = context.input;
+    let output = context.output;
+    let cfg = parse(&context.input_type, &context.arguments)?;
+    let output_type = get_sub_type(&context.input_type[cfg.column])?;
+    Ok((Exec::Command(Box::from(move || run(cfg, input, output))), output_type))
 }

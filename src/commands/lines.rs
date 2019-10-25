@@ -1,3 +1,4 @@
+use crate::commands::CompileContext;
 use std::io::BufReader;
 use std::io::prelude::*;
 use std::fs::File;
@@ -29,7 +30,7 @@ lazy_static! {
     };
 }
 
-fn handle(file: Box<Path>, output: &mut OutputStream) -> Result<(), JobError> {
+fn handle(file: Box<Path>, output: &OutputStream) -> JobResult<()> {
     let (output_stream, input_stream) = unlimited_streams();
     let out_row = Row {
         cells: vec![
@@ -61,19 +62,16 @@ fn handle(file: Box<Path>, output: &mut OutputStream) -> Result<(), JobError> {
 
 pub struct Config {
     files: Either<(usize, InputStream), Vec<Box<Path>>>,
-    output: OutputStream,
 }
 
-fn parse(arguments: Vec<Argument>, input_type: Vec<ColumnType>, input: InputStream, output: OutputStream) -> JobResult<Config> {
+fn parse(arguments: Vec<Argument>, input_type: Vec<ColumnType>, input: InputStream) -> JobResult<Config> {
     if input_type.len() == 0 {
         let mut files: Vec<Box<Path>> = Vec::new();
         for arg in &arguments {
             arg.cell.file_expand(&mut files)?;
         }
         Ok(Config {
-            files: Either::Right(files),
-            output
-        })
+            files: Either::Right(files)        })
 
     } else {
         if arguments.len() != 1 {
@@ -83,7 +81,6 @@ fn parse(arguments: Vec<Argument>, input_type: Vec<ColumnType>, input: InputStre
             Cell::Text(s) | Cell::Field(s) => {
                 Ok(Config {
                     files: Either::Left((find_field(&s, &input_type)?, input)),
-                    output
                 })
             }
             _ => return Err(argument_error("Expected column of type Field")),
@@ -93,9 +90,8 @@ fn parse(arguments: Vec<Argument>, input_type: Vec<ColumnType>, input: InputStre
 
 pub fn run(
     mut config: Config,
-    env: Env,
-    printer: Printer,
-) -> Result<(), JobError> {
+    output: OutputStream,
+) -> JobResult<()> {
     match config.files {
         Either::Left((idx, input)) => {
             loop {
@@ -104,7 +100,7 @@ pub fn run(
                         let mut files: Vec<Box<Path>> = Vec::new();
                         row.cells[idx].file_expand(&mut files)?;
                         for file in files {
-                            handle(file, &mut config.output)?;
+                            handle(file, &output)?;
                         }
                     },
                     Err(_) => break,
@@ -114,18 +110,20 @@ pub fn run(
         },
         Either::Right(files) => {
             for file in files {
-                handle(file, &mut config.output)?;
+                handle(file, &output)?;
             }
         },
     }
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> JobResult<(Exec, Vec<ColumnType>)> {
+pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+    let output = context.output;
+    let files = parse(context.arguments, context.input_type, context.input)?;
     let output_type: Vec<ColumnType> =
         vec![
             ColumnType::named("file", CellType::File),
             ColumnType::named("lines", CellType::Output(sub_type.clone())),
         ];
-    Ok((Exec::Lines(parse(arguments, input_type, input, output)?), output_type))
+    Ok((Exec::Command(Box::from(move || run(files, output))), output_type))
 }

@@ -1,5 +1,5 @@
 use crate::namespace::Namespace;
-use crate::errors::{error, JobError};
+use crate::errors::{error, JobError, JobResult};
 use std::error::Error;
 use std::path::Path;
 use crate::printer::Printer;
@@ -32,12 +32,12 @@ impl Env {
         }
     }
 
-    pub fn declare(&self, name: &str, value: Cell) -> Result<(), JobError> {
+    pub fn declare(&self, name: &str, value: Cell) -> JobResult<()> {
         let mut namespace = self.namespace.lock().unwrap();
         return namespace.declare(name, value);
     }
 
-    pub fn set(&self, name: &str, value: Cell) -> Result<(), JobError> {
+    pub fn set(&self, name: &str, value: Cell) -> JobResult<()> {
         let mut namespace = self.namespace.lock().unwrap();
         return namespace.set(name, value);
     }

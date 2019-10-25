@@ -1,3 +1,5 @@
+use crate::commands::CompileContext;
+use crate::errors::JobResult;
 use std::iter::Iterator;
 use crate::{
     commands::command_util::find_field,
@@ -18,15 +20,11 @@ use crate::env::Env;
 
 pub struct Config {
     output_type: Vec<ColumnType>,
-    input: InputStream,
-    output: OutputStream,
 }
 
 fn parse(
     input_type: &Vec<ColumnType>,
     arguments: &Vec<Argument>,
-    input: InputStream,
-    output: OutputStream,
 ) -> Result<Config, JobError> {
     let mut output_type: Vec<ColumnType> = input_type.clone();
     for arg in arguments.iter() {
@@ -41,18 +39,17 @@ fn parse(
     }
     Ok(Config {
         output_type,
-        input,
-        output,
     })
 }
 
 pub fn run(
     config: Config,
-    env: Env,
+    input: InputStream,
+    output: OutputStream,
     printer: Printer,
-) -> Result<(), JobError> {
+) -> JobResult<()> {
     'outer: loop {
-        match config.input.recv() {
+        match input.recv() {
             Ok(mut row) => {
                 let mut cells = Vec::new();
                 'inner: for (idx, cell) in row.cells.drain(..).enumerate() {
@@ -64,7 +61,7 @@ pub fn run(
                         }
                     }
                 }
-                config.output.send(Row { cells });
+                output.send(Row { cells });
             }
             Err(_) => break,
         }
@@ -72,8 +69,8 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
-    let cfg = parse(&input_type, &arguments, input, output)?;
+pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+    let cfg = parse(&context.input_type, &context.arguments)?;
     let output_type = cfg.output_type.clone();
-    Ok((Exec::Cast(cfg), output_type))
+    Ok((Exec::Command(Box::from(move || run(cfg, context.input, context.output, context.printer))), output_type))
 }

@@ -19,7 +19,7 @@ extern crate rustyline;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use commands::add_builtins;
-use crate::errors::JobError;
+use crate::errors::{JobError, JobResult};
 use std::error::Error;
 use std::sync::Arc;
 use std::borrow::BorrowMut;
@@ -29,7 +29,7 @@ use crate::stream::{streams, spawn_print_thread};
 use crate::job::Job;
 use crate::data::JobOutput;
 
-fn repl() -> Result<(), JobError>{
+fn repl() -> JobResult<()>{
     let mut global_env = env::Env::new();
     let printer =  Printer::new();
 

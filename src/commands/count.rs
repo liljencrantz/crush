@@ -1,3 +1,5 @@
+use crate::commands::CompileContext;
+use crate::errors::JobResult;
 use crate::{
     errors::{JobError, argument_error},
     commands::{Call, Exec},
@@ -14,21 +16,15 @@ use crate::printer::Printer;
 use crate::env::Env;
 use crate::data::ColumnType;
 
-pub struct Config {
-    has_streams: bool,
-    input: InputStream,
-    output: OutputStream,
-}
-
-pub fn parse(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream) -> Config {
+pub fn parse(input_type: Vec<ColumnType>) -> bool {
     for t in input_type.iter() {
         match t.cell_type {
-            CellType::Output(_) => return Config {has_streams: true, input, output},
-            CellType::Rows(_) => return Config {has_streams: true, input, output},
+            CellType::Output(_) => return true,
+            CellType::Rows(_) => return true,
             _ => (),
         }
     }
-    Config {has_streams: false, input, output}
+    false
 }
 
 fn get_output_type(input_type: &Vec<ColumnType>) -> Vec<ColumnType> {
@@ -51,10 +47,14 @@ fn count_rows(s: &InputStream) -> Cell {
     return Cell::Integer(res);
 }
 
-pub fn run(config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
-    if config.has_streams {
+pub fn run(
+    has_streams: bool,
+    input: InputStream,
+    output: OutputStream,
+) -> JobResult<()> {
+    if has_streams {
         loop {
-            match config.input.recv() {
+            match input.recv() {
                 Ok(row) => {
                     let mut cells: Vec<Cell> = Vec::new();
                     for c in row.cells {
@@ -66,24 +66,26 @@ pub fn run(config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
                             }
                         }
                     }
-                    config.output.send(Row { cells })?;
+                    output.send(Row { cells })?;
                 }
                 Err(_) => break,
             }
         }
     } else {
-        config.output.send(Row { cells: vec![count_rows(&config.input)]})?;
+        output.send(Row { cells: vec![count_rows(&input)]})?;
     }
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
-    let config = parse(input_type.clone(), input, output);
-    let output_type = if config.has_streams {
-        get_output_type(&input_type)
+pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+    let has_streams = parse(context.input_type.clone());
+    let input = context.input;
+    let output = context.output;
+    let output_type = if has_streams {
+        get_output_type(&context.input_type)
     } else {
         vec![ColumnType::named("count", CellType::Integer)]
     };
 
-    Ok((Exec::Count(config), output_type))
+    Ok((Exec::Command(Box::from(move || run(has_streams, input, output))), output_type))
 }

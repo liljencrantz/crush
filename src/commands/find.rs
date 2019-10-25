@@ -1,8 +1,8 @@
 use std::fs;
 use crate::stream::{OutputStream, InputStream};
 use crate::data::{Cell, CellType, Row, Argument, ColumnType};
-use crate::commands::Exec;
-use crate::errors::{JobError, error, to_job_error};
+use crate::commands::{Exec, CompileContext};
+use crate::errors::{JobError, error, to_job_error, JobResult};
 use chrono::{Local, DateTime};
 use std::path::Path;
 use std::fs::Metadata;
@@ -28,7 +28,7 @@ fn insert_entity(
     meta: &Metadata,
     file: Box<Path>,
     users: &HashMap<uid_t, User>,
-    output: &mut OutputStream) -> Result<(), JobError> {
+    output: &mut OutputStream) -> JobResult<()> {
     let modified_system = to_job_error(meta.modified())?;
     let modified_datetime: DateTime<Local> = DateTime::from(modified_system);
     let f = if file.starts_with("./") {
@@ -53,7 +53,7 @@ fn run_for_single_directory_or_file(
     users: &HashMap<uid_t, User>,
     recursive: bool,
     q: &mut VecDeque<Box<Path>>,
-    output: &mut OutputStream) -> Result<(), JobError> {
+    output: &mut OutputStream) -> JobResult<()> {
     if path.is_dir() {
         let dirs = fs::read_dir(path);
         for maybe_entry in to_job_error(dirs)? {
@@ -86,7 +86,7 @@ fn run_for_single_directory_or_file(
     Ok(())
 }
 
-pub fn run(mut config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
+pub fn run(mut config: Config) -> JobResult<()> {
     let users = create_user_map();
     let mut q = VecDeque::new();
         for dir in config.dirs {
@@ -102,9 +102,9 @@ pub fn run(mut config: Config, env: Env, printer: Printer) -> Result<(), JobErro
     return Ok(());
 }
 
-pub fn compile_ls(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
-    let cfg = parse(output, arguments, false)?;
-    Ok((Exec::Find(cfg), output_type.clone()))
+pub fn compile_ls(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+    let cfg = parse(context.output, context.arguments, false)?;
+    Ok((Exec::Command(Box::from(move || run(cfg))), output_type.clone()))
 }
 
 pub struct Config {
@@ -140,7 +140,7 @@ fn parse(output: OutputStream, arguments: Vec<Argument>, recursive: bool) -> Res
     Ok(Config { dirs, recursive, output })
 }
 
-pub fn compile_find(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
-    let cfg = parse(output, arguments, true)?;
-    Ok((Exec::Find(cfg), output_type.clone()))
+pub fn compile_find(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+    let cfg = parse(context.output, context.arguments, true)?;
+    Ok((Exec::Command(Box::from(move || run(cfg))), output_type.clone()))
 }

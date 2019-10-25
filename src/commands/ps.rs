@@ -1,3 +1,5 @@
+use crate::commands::CompileContext;
+use crate::errors::JobResult;
 use crate::{
     data::Argument,
     data::Row,
@@ -15,9 +17,6 @@ use psutil::process::State;
 use crate::commands::command_util::{create_user_map,UserMap};
 use users::uid_t;
 
-pub struct Config { output: OutputStream }
-
-
 fn state_name(s: psutil::process::State) -> &'static str {
     match s {
         State::Running => "Running",
@@ -32,15 +31,11 @@ fn state_name(s: psutil::process::State) -> &'static str {
     }
 }
 
-pub fn run(
-    config: Config,
-    _env: Env,
-    _printer: Printer,
-) -> Result<(), JobError> {
+pub fn run(output: OutputStream) -> JobResult<()> {
     let users = create_user_map();
 
     for proc in &psutil::process::all().unwrap() {
-        config.output.send(Row {
+        output.send(Row {
             cells: vec![
                 Cell::Integer(proc.pid as i128),
                 Cell::Integer(proc.ppid as i128),
@@ -53,12 +48,11 @@ pub fn run(
             ]
         })?;
     }
-
     Ok(())
 }
 
-pub fn compile(_input_type: Vec<ColumnType>, _input: InputStream, output: OutputStream, _arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
-    return Ok((Exec::Ps(Config { output }), vec![
+pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+    return Ok((Exec::Command(Box::from(move || run(context.output))), vec![
         ColumnType::named("pid", CellType::Integer),
         ColumnType::named("ppid", CellType::Integer),
         ColumnType::named("status", CellType::Text),

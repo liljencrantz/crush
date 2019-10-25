@@ -1,3 +1,4 @@
+use crate::commands::CompileContext;
 use crate::{
     commands::command_util::find_field,
     errors::{JobError, argument_error},
@@ -47,9 +48,7 @@ fn parse(
 
 pub fn run(
     config: Config,
-    env: Env,
-    printer: Printer,
-) -> Result<(), JobError> {
+) -> JobResult<()> {
     let mut res: Vec<Row> = Vec::new();
     loop {
         match config.input.recv() {
@@ -69,7 +68,8 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> JobResult<(Exec, Vec<ColumnType>)> {
-    let output_type = input_type.clone();
-    Ok((Exec::Sort(parse(input_type, arguments, input, output)?), output_type))
+pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+    let output_type = context.input_type.clone();
+    let config = parse(context.input_type, context.arguments, context.input, context.output)?;
+    Ok((Exec::Command(Box::from(move || run(config))), output_type))
 }

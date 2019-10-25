@@ -9,8 +9,8 @@ mod column_type;
 mod list;
 mod list_definition;
 
-use crate::commands::{Exec};
-use crate::errors::{JobError, error};
+use crate::commands::{Exec, CompileContext};
+use crate::errors::{JobError, error, JobResult};
 use std::fmt::Formatter;
 use crate::stream::{InputStream, OutputStream};
 use std::hash::Hasher;
@@ -37,20 +37,14 @@ use crate::glob::Glob;
 #[derive(Clone)]
 pub struct Command {
     pub call: fn(
-        Vec<ColumnType>,
-        InputStream,
-        OutputStream,
-        Vec<Argument>,
-    ) -> Result<(Exec, Vec<ColumnType>), JobError>,
+        context: CompileContext,
+    ) -> JobResult<(Exec, Vec<ColumnType>)>,
 }
 
 impl Command {
     pub fn new(call: fn(
-        Vec<ColumnType>,
-        InputStream,
-        OutputStream,
-        Vec<Argument>,
-    ) -> Result<(Exec, Vec<ColumnType>), JobError>) -> Command {
+        context: CompileContext,
+    ) -> JobResult<(Exec, Vec<ColumnType>)>) -> Command {
         return Command { call };
     }
 }

@@ -1,3 +1,5 @@
+use crate::commands::CompileContext;
+use crate::errors::JobResult;
 use crate::{
     data::Row,
     data::CellDefinition,
@@ -13,19 +15,13 @@ use crate::env::Env;
 use crate::data::ColumnType;
 use crate::commands::head;
 
-pub struct Config {
-    pub input: InputStream,
-    pub output: OutputStream,
-}
-
 pub fn run(
-    config: Config,
-    env: Env,
-    printer: Printer,
-) -> Result<(), JobError> {
+    input: InputStream,
+    output: OutputStream,
+) -> JobResult<()> {
     let mut q: Vec<Row> = Vec::new();
     loop {
-        match config.input.recv() {
+        match input.recv() {
             Ok(row) => {
                 q.push(row);
             }
@@ -34,7 +30,7 @@ pub fn run(
                     if q.is_empty() {
                         break;
                     }
-                    config.output.send(q.pop().unwrap())?;
+                    output.send(q.pop().unwrap())?;
                 }
                 break;
             }
@@ -43,6 +39,7 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
-    Ok((Exec::Reverse(Config { input, output }), input_type))
+pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+    let output_type = context.input_type.clone();
+    Ok((Exec::Command(Box::from(move || run(context.input, context.output))), output_type))
 }

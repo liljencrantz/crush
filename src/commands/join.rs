@@ -1,3 +1,5 @@
+use crate::commands::CompileContext;
+use crate::errors::JobResult;
 use std::collections::HashMap;
 use crate::{
     stream::Readable,
@@ -23,8 +25,6 @@ pub struct Config {
     right_table_idx: usize,
     left_column_idx: usize,
     right_column_idx: usize,
-    input: InputStream,
-    output: OutputStream,
 }
 
 pub fn get_sub_type(cell_type: &CellType) -> Result<&Vec<ColumnType>, JobError>{
@@ -54,7 +54,7 @@ fn scan_table(table: &str, column: &str, input_type: &Vec<ColumnType>) -> Result
     Ok((table_idx, column_idx))
 }
 
-fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>, input: InputStream, output: OutputStream) -> Result<Config, JobError> {
+fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Config, JobError> {
     if (arguments.len() != 3) {
         return Err(argument_error("Expected exactly 3 aguments"));
     }
@@ -71,7 +71,6 @@ fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>, input: InputStre
                         right_table_idx,
                         left_column_idx: find_field(&l, left_types)?,
                         right_column_idx: find_field(&r, right_types)?,
-                        input, output,
                     })
                 }
                 (1, 1) => {
@@ -92,8 +91,6 @@ fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>, input: InputStre
                         right_table_idx,
                         left_column_idx,
                         right_column_idx,
-                        input,
-                        output,
                     })
                 },
                 _ => Err(argument_error("Expected both fields on the form %table.column or %column")),
@@ -112,7 +109,7 @@ fn combine(mut l: Row, mut r: Row, cfg: &Config) -> Row {
     return Row { cells: l.cells };
 }
 
-fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &OutputStream) -> Result<(), JobError>{
+fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &OutputStream) -> JobResult<()>{
     let mut l_data: HashMap<Cell, Row> = HashMap::new();
     loop {
         match l.read() {
@@ -140,15 +137,15 @@ fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &
 
 pub fn run(
     config: Config,
-    _env: Env,
-    _printer: Printer,
-) -> Result<(), JobError> {
+    input: InputStream,
+    output: OutputStream,
+) -> JobResult<()> {
     loop {
-        match config.input.recv() {
+        match input.recv() {
             Ok(mut row) => {
                 match (row.cells.replace(config.left_table_idx, Cell::Integer(0)), row.cells.replace(config.right_table_idx, Cell::Integer(0))) {
                     (Cell::JobOutput(mut l), Cell::JobOutput(mut r)) => {
-                        do_join(&config, &mut l.stream, &mut r.stream, &config.output)?;
+                        do_join(&config, &mut l.stream, &mut r.stream, &output)?;
                     }
                     _ => panic!("Wrong row format"),
                 }
@@ -181,8 +178,10 @@ fn get_output_type(input_type: &Vec<ColumnType>, cfg: &Config) -> Result<Vec<Col
     };
 }
 
-pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
-    let cfg = parse(input_type.clone(), arguments, input, output)?;
-    let output_type = get_output_type(&input_type, &cfg)?;
-    Ok((Exec::Join(cfg), output_type))
+pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+    let input = context.input;
+    let output = context.output;
+    let cfg = parse(context.input_type.clone(), context.arguments)?;
+    let output_type = get_output_type(&context.input_type, &cfg)?;
+    Ok((Exec::Command(Box::from(move || run(cfg, input, output))), output_type))
 }

@@ -1,3 +1,5 @@
+use crate::commands::CompileContext;
+use crate::errors::JobResult;
 use crate::{
     data::Row,
     data::{CellDefinition},
@@ -13,25 +15,24 @@ use crate::env::Env;
 use crate::data::ColumnType;
 use crate::commands::head;
 
-pub type Config = head::Config;
 
 pub fn run(
-    config: Config,
-    env: Env,
-    printer: Printer,
-) -> Result<(), JobError> {
+lines: i128,
+    input: InputStream,
+    output: OutputStream,
+) -> JobResult<()> {
     let mut q: VecDeque<Row> = VecDeque::new();
     loop {
-        match config.input.recv() {
+        match input.recv() {
             Ok(row) => {
-                if q.len() >= config.lines as usize {
+                if q.len() >= lines as usize {
                     q.pop_front();
                 }
                 q.push_back(row);
             }
             Err(_) => {
                 for row in q.drain(..) {
-                    config.output.send(row)?;
+                    output.send(row)?;
                 }
                 break;
             },
@@ -40,10 +41,8 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
-    Ok((Exec::Tail(Config {
-        lines: get_line_count(arguments)?,
-        input,
-        output
-    }), input_type))
+pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+    let lines = get_line_count(&context.arguments)?;
+    let output_type = context.input_type.clone();
+    Ok((Exec::Command(Box::from(move || run(lines, context.input, context.output))), output_type))
 }

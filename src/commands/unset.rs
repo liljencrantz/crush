@@ -1,3 +1,4 @@
+use crate::commands::CompileContext;
 use crate::{
     data::Argument,
     commands::{Exec},
@@ -9,11 +10,8 @@ use crate::printer::Printer;
 use crate::stream::{InputStream, OutputStream};
 use crate::errors::JobResult;
 
-pub struct Config {
-    vars: Vec<Box<str>>,
-}
 
-fn parse(arguments: Vec<Argument>) -> JobResult<Config> {
+fn parse(arguments: Vec<Argument>) -> JobResult<Vec<Box<str>>> {
     let mut vars = Vec::new();
     for arg in arguments.iter() {
         if let Cell::Text(s) = &arg.cell {
@@ -26,20 +24,21 @@ fn parse(arguments: Vec<Argument>) -> JobResult<Config> {
             return Err(argument_error("Illegal variable name"));
         }
     }
-    Ok(Config { vars })
+    Ok(vars)
 }
 
 pub fn run(
-    config: Config,
+    vars: Vec<Box<str>>,
     env: Env,
-    printer: Printer,
-) -> Result<(), JobError> {
-    for s in config.vars {
+) -> JobResult<()> {
+    for s in vars {
         env.remove(s.as_ref());
     }
     return Ok(());
 }
 
-pub fn compile(_input_type: Vec<ColumnType>, _input: InputStream, _output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
-    Ok((Exec::Unset(parse(arguments)?), vec![]))
+pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+    let env = context.env.clone();
+    let vars = parse(context.arguments)?;
+    Ok((Exec::Command(Box::from(move || run(vars, env))), vec![]))
 }

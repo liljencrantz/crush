@@ -2,7 +2,7 @@ use crate::data::{ArgumentDefinition, ColumnType, Cell, Argument};
 use crate::stream::{InputStream, OutputStream};
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::commands::{Call, Exec};
+use crate::commands::{Call, Exec, CompileContext};
 use crate::errors::{JobError, error};
 use crate::job::Job;
 
@@ -37,7 +37,14 @@ impl CallDefinition {
         match &env.get(&self.name) {
             Some(Cell::Command(command)) => {
                 let c = command.call;
-                let (exec, output_type) = c(input_type, input, output, args)?;
+                let (exec, output_type) = c(CompileContext {
+                    input_type,
+                    input,
+                    output,
+                    arguments: args,
+                    env: env.clone(),
+                    printer: printer.clone()
+                })?;
                 return Ok(Call::new(
                     self.name.clone(),
                     output_type,

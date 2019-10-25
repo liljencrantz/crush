@@ -1,15 +1,17 @@
+use crate::commands::CompileContext;
+use crate::errors::JobResult;
 use crate::{
-    data::{Argument},
+    data::Argument,
     stream::{OutputStream, InputStream},
     data::Cell,
-    commands::{Exec},
+    commands::Exec,
     errors::{JobError, argument_error},
 };
 use crate::printer::Printer;
 use crate::env::Env;
 use crate::data::ColumnType;
 
-pub fn get_line_count(arguments: Vec<Argument>) -> Result<i128, JobError> {
+pub fn get_line_count(arguments: &Vec<Argument>) -> Result<i128, JobError> {
     return match arguments.len() {
         0 => Ok(10),
         1 => match arguments[0].cell {
@@ -20,25 +22,19 @@ pub fn get_line_count(arguments: Vec<Argument>) -> Result<i128, JobError> {
     };
 }
 
-pub struct Config {
-    pub lines: i128,
-    pub input: InputStream,
-    pub output: OutputStream,
-}
-
 pub fn run(
-    config: Config,
-    env: Env,
-    printer: Printer,
-) -> Result<(), JobError> {
+    lines: i128,
+    input: InputStream,
+    output: OutputStream,
+) -> JobResult<()> {
     let mut count = 0;
     loop {
-        match config.input.recv() {
+        match input.recv() {
             Ok(row) => {
-                if count >= config.lines {
+                if count >= lines {
                     break;
                 }
-                config.output.send(row)?;
+                output.send(row)?;
                 count += 1;
             }
             Err(_) => break,
@@ -47,10 +43,8 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
-    Ok((Exec::Head(Config {
-        lines: get_line_count(arguments)?,
-        input,
-        output
-    }), input_type))
+pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+    let lines = get_line_count(&context.arguments)?;
+    let output_type = context.input_type.clone();
+    Ok((Exec::Command(Box::from(move || run(lines, context.input, context.output))), output_type))
 }

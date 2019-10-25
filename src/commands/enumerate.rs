@@ -1,3 +1,5 @@
+use crate::commands::CompileContext;
+use crate::errors::JobResult;
 use crate::{
     data::{
         CellDefinition,
@@ -15,19 +17,18 @@ use crate::printer::Printer;
 use crate::env::Env;
 use crate::data::ColumnType;
 
-pub struct Config {
+
+pub fn run(
     input: InputStream,
     output: OutputStream,
-}
-
-pub fn run(config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
+) -> JobResult<()> {
     let mut line: i128 = 1;
     loop {
-        match config.input.recv() {
+        match input.recv() {
             Ok(mut row) => {
                 let mut out = vec![Cell::Integer(line)];
                 out.extend(row.cells);
-                config.output.send(Row { cells: out })?;
+                output.send(Row { cells: out })?;
                 line += 1;
             }
             Err(_) => break,
@@ -36,8 +37,10 @@ pub fn run(config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
+pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
     let mut output_type = vec![ColumnType::named("idx", CellType::Integer)];
-    output_type.extend(input_type.iter().cloned());
-    return Ok((Exec::Enumerate(Config {input, output}), output_type))
+    let input = context.input;
+    let output = context.output;
+    output_type.extend(context.input_type.iter().cloned());
+    return Ok((Exec::Command(Box::from(move|| run(input, output))), output_type));
 }

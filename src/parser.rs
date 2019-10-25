@@ -1,4 +1,4 @@
-use crate::errors::{JobError, parse_error, argument_error};
+use crate::errors::{JobError, parse_error, argument_error, JobResult};
 use crate::job::JobDefinition;
 use crate::lexer::{Lexer, TokenType};
 use crate::env::Env;
@@ -44,7 +44,7 @@ fn parse_internal(lexer: &mut Lexer) -> Result<JobDefinition, JobError> {
     return Ok(JobDefinition::new(commands));
 }
 
-fn parse_job(lexer: &mut Lexer, commands: &mut Vec<CallDefinition>) -> Result<(), JobError> {
+fn parse_job(lexer: &mut Lexer, commands: &mut Vec<CallDefinition>) -> JobResult<()> {
     parse_command(lexer, commands)?;
     while lexer.peek().0 == TokenType::Pipe {
         lexer.pop();
@@ -195,7 +195,7 @@ fn parse_argument(lexer: &mut Lexer) -> Result<ArgumentDefinition, JobError> {
     }
 }
 
-fn parse_arguments(lexer: &mut Lexer, arguments: &mut Vec<ArgumentDefinition>) -> Result<(), JobError> {
+fn parse_arguments(lexer: &mut Lexer, arguments: &mut Vec<ArgumentDefinition>) -> JobResult<()> {
     loop {
         match lexer.peek().0 {
             TokenType::Error => {
@@ -209,7 +209,7 @@ fn parse_arguments(lexer: &mut Lexer, arguments: &mut Vec<ArgumentDefinition>) -
     }
 }
 
-fn parse_command(lexer: &mut Lexer, commands: &mut Vec<CallDefinition>) -> Result<(), JobError> {
+fn parse_command(lexer: &mut Lexer, commands: &mut Vec<CallDefinition>) -> JobResult<()> {
 
     match lexer.peek().0 {
         TokenType::String => {

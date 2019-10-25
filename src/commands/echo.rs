@@ -1,3 +1,5 @@
+use crate::commands::CompileContext;
+use crate::errors::JobResult;
 use crate::{
     stream::{OutputStream, InputStream},
     data::Row,
@@ -14,13 +16,14 @@ pub struct Config {
     output: OutputStream,
 }
 
-pub fn run(mut config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
+pub fn run(mut config: Config) -> JobResult<()> {
     config.output.send(Row {
         cells: config.arguments.drain(..).map(|c| c.cell).collect()
     })
 }
 
-pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
-    let output_type = arguments.iter().map(Argument::cell_type).collect();
-    Ok((Exec::Echo(Config{arguments, output}), output_type))
+pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+    let output_type = context.arguments.iter().map(Argument::cell_type).collect();
+    let config = Config{arguments: context.arguments, output: context.output};
+    Ok((Exec::Command(Box::from(move || run(config))), output_type))
 }

@@ -1,3 +1,4 @@
+use crate::commands::CompileContext;
 use std::collections::HashMap;
 use crate::{
     commands::command_util::find_field,
@@ -20,14 +21,12 @@ use crate::data::ColumnType;
 use crate::errors::JobResult;
 
 pub struct Config {
-    input: InputStream,
-    output: OutputStream,
     input_type: Vec<ColumnType>,
     name: Box<str>,
     column: usize,
 }
 
-pub fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>, input: InputStream, output: OutputStream) -> JobResult<Config> {
+pub fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> JobResult<Config> {
     if arguments.len() != 1 {
         return Err(argument_error("No comparison key specified"));
     }
@@ -36,8 +35,6 @@ pub fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>, input: Input
     match &arg.cell {
         Cell::Field(cell_name) | Cell::Text(cell_name) =>
             Ok(Config {
-                input: input,
-                output: output,
                 column: find_field(cell_name, &input_type)?,
                 input_type,
                 name,
@@ -49,13 +46,13 @@ pub fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>, input: Input
 
 pub fn run(
     config: Config,
-    env: Env,
-    printer: Printer,
-) -> Result<(), JobError> {
+    input: InputStream,
+    output: OutputStream,
+) -> JobResult<()> {
     let mut groups: HashMap<Cell, OutputStream> = HashMap::new();
 
     loop {
-        match config.input.recv() {
+        match input.recv() {
             Ok(row) => {
                 let key = row.cells[config.column].partial_clone()?;
                 let val = groups.get(&key);
@@ -65,7 +62,7 @@ pub fn run(
                         let out_row = Row {
                             cells: vec![key.partial_clone()?, Cell::JobOutput(JobOutput { types: config.input_type.clone(), stream: input_stream })],
                         };
-                        config.output.send(out_row)?;
+                        output.send(out_row)?;
                         output_stream.send(row)?;
                         groups.insert(key, output_stream);
                     }
@@ -80,8 +77,10 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
-    let config = parse(input_type.clone(), arguments, input, output)?;
-    let output_type= vec![input_type[config.column].clone(), ColumnType { name: Some(config.name.clone()), cell_type: CellType::Output(input_type.clone()) }];
-    Ok((Exec::Group(config), output_type))
+pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+    let config = parse(context.input_type.clone(), context.arguments)?;
+    let output_type= vec![context.input_type[config.column].clone(), ColumnType { name: Some(config.name.clone()), cell_type: CellType::Output(context.input_type.clone()) }];
+    let input = context.input;
+    let output = context.output;
+    Ok((Exec::Command(Box::from(move || run(config, input, output))), output_type))
 }

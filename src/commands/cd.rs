@@ -1,3 +1,5 @@
+use crate::commands::CompileContext;
+use crate::errors::JobResult;
 use crate::{
     data::Argument,
     commands::Exec,
@@ -11,23 +13,22 @@ use crate::{
 use std::path::Path;
 use crate::data::Cell;
 
-pub struct Config {dir: Box<Path>}
-
-pub fn run(config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
-    to_job_error(std::env::set_current_dir(config.dir))
+pub fn run(dir: Box<Path>) -> JobResult<()> {
+    to_job_error(std::env::set_current_dir(dir))
 }
 
-pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
-    match arguments.len() {
-        0 => Ok((Exec::Cd(Config {dir: Box::from(Path::new("/"))}), vec![])),
+pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+    let dir = match context.arguments.len() {
+        0 => Ok(Box::from(Path::new("/"))),
         1 => {
-            let dir = &arguments[0];
+            let dir = &context.arguments[0];
             match &dir.cell {
-                Cell::Text(val) => Ok((Exec::Cd(Config {dir: Box::from(Path::new(val.as_ref()))}), vec![])),
-                Cell::File(val) => Ok((Exec::Cd(Config {dir: val.clone()}), vec![])),
+                Cell::Text(val) => Ok(Box::from(Path::new(val.as_ref()))),
+                Cell::File(val) => Ok(val.clone()),
                 _ => Err(JobError { message: String::from("Wrong parameter type, expected text") })
             }
         }
         _ => Err(JobError { message: String::from("Wrong number of arguments") })
-    }
+    }?;
+    Ok((Exec::Command(Box::from(move || run(dir))), vec![]))
 }

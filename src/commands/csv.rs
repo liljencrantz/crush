@@ -1,3 +1,4 @@
+use crate::commands::CompileContext;
 use crate::{
     data::{
         Argument,
@@ -32,10 +33,9 @@ pub struct Config {
     skip_head: usize,
     trim: Option<char>,
     files: Either<(usize, InputStream), Vec<Box<Path>>>,
-    output: OutputStream,
 }
 
-fn parse(arguments: Vec<Argument>, input_type: Vec<ColumnType>, input: InputStream, output: OutputStream) -> JobResult<Config> {
+fn parse(arguments: Vec<Argument>, input_type: Vec<ColumnType>, input: InputStream) -> JobResult<Config> {
     let mut separator = ',';
     let mut columns = Vec::new();
     let mut skip_head = 0;
@@ -97,11 +97,10 @@ fn parse(arguments: Vec<Argument>, input_type: Vec<ColumnType>, input: InputStre
         skip_head,
         trim,
         files: Either::Right(files),
-        output,
     })
 }
 
-fn handle(file: Box<Path>, cfg: &Config, output: &OutputStream, printer: &Printer) -> Result<(), JobError> {
+fn handle(file: Box<Path>, cfg: &Config, output: &OutputStream, printer: &Printer) -> JobResult<()> {
     let (output_stream, input_stream) = unlimited_streams();
     let cfg_copy = cfg.clone();
 
@@ -160,11 +159,11 @@ fn handle(file: Box<Path>, cfg: &Config, output: &OutputStream, printer: &Printe
 }
 
 
-pub fn run(mut config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
+pub fn run(mut config: Config, output: OutputStream, printer: Printer) -> JobResult<()> {
     match &config.files {
         Either::Right(files) => {
             for file in files {
-                handle(file.clone(), &config, &config.output, &printer)?;
+                handle(file.clone(), &config, &output, &printer)?;
             }
         }
 
@@ -173,13 +172,15 @@ pub fn run(mut config: Config, env: Env, printer: Printer) -> Result<(), JobErro
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
-    let cfg = parse(arguments, input_type, input, output)?;
+pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+    let output = context.output;
+    let printer = context.printer;
+    let cfg = parse(context.arguments, context.input_type, context.input)?;
 
     let output_type: Vec<ColumnType> =
         vec![
             ColumnType::named("file", CellType::File ),
             ColumnType::named("data", CellType::Output(cfg.columns.clone())),
         ];
-    Ok((Exec::Csv(cfg), output_type))
+    Ok((Exec::Command(Box::from(move || run(cfg, output, printer))), output_type))
 }

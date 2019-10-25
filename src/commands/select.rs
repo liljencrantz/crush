@@ -1,3 +1,4 @@
+use crate::commands::CompileContext;
 use crate::{
     commands::command_util::find_field,
     errors::{JobError, argument_error},
@@ -17,12 +18,10 @@ use crate::{
 };
 
 pub struct Config {
-    input: InputStream,
-    output: OutputStream,
     columns: Vec<(usize, Option<Box<str>>)>,
 }
 
-fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>, input: InputStream, output: OutputStream) -> JobResult<Config> {
+fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> JobResult<Config> {
     let columns: JobResult<Vec<(usize, Option<Box<str>>)>> = arguments.iter().enumerate().map(|(idx, a)| {
     match &a.cell {
         Cell::Text(s) | Cell::Field(s) => match find_field(s, input_type) {
@@ -34,21 +33,19 @@ fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>, input: InputSt
 }).collect();
 
     Ok(Config {
-        input,
-        output,
         columns: columns?,
     })
 }
 
 pub fn run(
     config: Config,
-    env: Env,
-    printer: Printer,
-) -> Result<(), JobError> {
+    input: InputStream,
+    output: OutputStream,
+) -> JobResult<()> {
     loop {
-        match config.input.recv() {
+        match input.recv() {
             Ok(mut row) => {
-                config.output.send(
+                output.send(
                     Row { cells: config.columns
                         .iter()
                         .map(|(idx, name)| row.cells.replace(*idx, Cell::Integer(0)))
@@ -60,10 +57,12 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
-    let config = parse(&input_type, &arguments, input, output)?;
+pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+    let config = parse(&context.input_type, &context.arguments)?;
+    let input_type = context.input_type.clone();
+
     let output_type = config.columns.iter()
         .map(|(idx, name)| ColumnType {cell_type: input_type[*idx].cell_type.clone(), name: name.clone() })
         .collect();
-    Ok((Exec::Select(config), output_type))
+    Ok((Exec::Command(Box::from(move || run(config, context.input, context.output))), output_type))
 }

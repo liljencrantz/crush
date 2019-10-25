@@ -14,10 +14,11 @@ use crate::{
 };
 use std::iter::Iterator;
 use crate::printer::Printer;
-use crate::errors::error;
+use crate::errors::{error, JobResult};
 use std::cmp::Ordering;
 use crate::env::Env;
 use crate::data::ColumnType;
+use crate::commands::CompileContext;
 
 pub struct Config {
     condition: Condition,
@@ -79,7 +80,7 @@ fn evaluate(condition: &Condition, row: &Row) -> Result<bool, JobError> {
     };
 }
 
-pub fn run(config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
+pub fn run(config: Config, printer: Printer) -> JobResult<()> {
     loop {
         match config.input.recv() {
             Ok(row) => {
@@ -94,11 +95,12 @@ pub fn run(config: Config, env: Env, printer: Printer) -> Result<(), JobError> {
     return Ok(());
 }
 
-pub fn compile(input_type: Vec<ColumnType>, input: InputStream, output: OutputStream, arguments: Vec<Argument>) -> Result<(Exec, Vec<ColumnType>), JobError> {
+pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
     let config = Config {
-        condition: parse(&input_type, &arguments)?,
-        input,
-        output,
+        condition: parse(&context.input_type, &context.arguments)?,
+        input: context.input,
+        output: context.output,
     };
-    Ok((Exec::Filter(config), input_type))
+    let printer = context.printer;
+    Ok((Exec::Command(Box::from(move || run(config, printer))), context.input_type))
 }

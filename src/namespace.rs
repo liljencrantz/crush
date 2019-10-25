@@ -9,6 +9,7 @@ use crate::{
     },
 };
 use std::sync::{Mutex, Arc};
+use crate::errors::JobResult;
 
 pub struct Namespace {
     parent: Option<Arc<Mutex<Namespace>>>,
@@ -23,7 +24,7 @@ impl Namespace {
         };
     }
 
-    pub fn declare(&mut self, name: &str, value: Cell) -> Result<(), JobError> {
+    pub fn declare(&mut self, name: &str, value: Cell) -> JobResult<()> {
         if self.data.contains_key(name) {
             return Err(error(format!("Variable ${{{}}} already exists", name).as_str()));
         }
@@ -31,7 +32,7 @@ impl Namespace {
         return Ok(());
     }
 
-    pub fn set(&mut self, name: &str, value: Cell) -> Result<(), JobError> {
+    pub fn set(&mut self, name: &str, value: Cell) -> JobResult<()> {
         if !self.data.contains_key(name) {
             match &self.parent {
                 Some(p) => {

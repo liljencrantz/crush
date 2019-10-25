@@ -16,6 +16,7 @@ use crate::{
     printer::Printer
 };
 use crate::data::List;
+use crate::errors::JobResult;
 
 pub enum Cell {
     Text(Box<str>),
@@ -130,7 +131,7 @@ impl Cell {
         };
     }
 
-    pub fn file_expand(&self, v: &mut Vec<Box<Path>>) -> Result<(), JobError> {
+    pub fn file_expand(&self, v: &mut Vec<Box<Path>>) -> JobResult<()> {
         match self {
             Cell::Text(s) => v.push(Box::from(Path::new(s.as_ref()))),
             Cell::File(p) => v.push(p.clone()),
