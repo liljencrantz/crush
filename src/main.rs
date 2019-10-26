@@ -44,10 +44,9 @@ fn repl() -> JobResult<()>{
                 match parser::parse(&mut Lexer::new(&cmd)) {
                     Ok(jobs) => {
                         for job_definition in jobs {
-                            let (last_output, last_input) = streams();
+                            let last_output = spawn_print_thread(&printer);
                             match job_definition.spawn_and_execute(&global_env, &printer, empty_stream(), last_output) {
                                 Ok(handle) => {
-                                    spawn_print_thread(&printer, last_input );
                                     handle.join(&printer);
                                 }
                                 Err(e) => printer.job_error(e),

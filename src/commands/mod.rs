@@ -59,19 +59,17 @@ use std::sync::{Arc, Mutex};
 use crate::errors::JobResult;
 use crate::stream::{UninitializedInputStream, UninitializedOutputStream};
 
-type CommandInvocation = Box<FnOnce() -> JobResult<()> + Send>;
-
-pub enum JobJoinHandle {
-    Many(Vec<JobJoinHandle>),
-    Async(JoinHandle<JobResult<()>>),
-}
-
 pub struct CompileContext {
     pub input: UninitializedInputStream,
     pub output: UninitializedOutputStream,
     pub argument_definitions: Vec<ArgumentDefinition>,
     pub env: Env,
     pub printer: Printer,
+}
+
+pub enum JobJoinHandle {
+    Many(Vec<JobJoinHandle>),
+    Async(JoinHandle<JobResult<()>>),
 }
 
 impl JobJoinHandle {
@@ -92,39 +90,6 @@ impl JobJoinHandle {
         };
     }
 }
-
-
-pub struct Call {
-    name: String,
-    output_type: Vec<ColumnType>,
-    printer: Printer,
-    env: Env,
-}
-
-impl Call {
-    pub fn new(
-        name: String,
-        output_type: Vec<ColumnType>,
-        printer: Printer,
-        env: Env,
-    ) -> Call {
-        Call {
-            name,
-            output_type,
-            printer,
-            env,
-        }
-    }
-
-    pub fn get_name(&self) -> &String {
-        return &self.name;
-    }
-
-    pub fn get_output_type(&self) -> &Vec<ColumnType> {
-        return &self.output_type;
-    }
-}
-
 
 pub fn add_builtins(env: &Env) -> JobResult<()> {
     env.declare("ls", Cell::Command(Command::new(find::compile_and_run_ls)))?;

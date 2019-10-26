@@ -115,17 +115,19 @@ impl Readable for InputStream {
     }
 }
 
-pub fn spawn_print_thread(printer: &Printer, output: UninitializedInputStream) {
+pub fn spawn_print_thread(printer: &Printer) -> UninitializedOutputStream {
+    let (o, i) = streams();
     let p = printer.clone();
     thread::Builder::new()
         .name("output_formater".to_string())
         .spawn(move || {
-            match output.initialize() {
+            match i.initialize() {
                 Ok(out) => print(&p, out),
                 Err(e) => p.job_error(e),
             }
         }
         );
+    o
 }
 
 pub fn print(printer: &Printer, mut stream: InputStream) {

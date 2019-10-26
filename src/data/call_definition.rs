@@ -2,7 +2,7 @@ use crate::data::{ArgumentDefinition, ColumnType, Cell, Argument};
 use crate::stream::{InputStream, OutputStream, UninitializedInputStream, UninitializedOutputStream};
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::commands::{Call, CompileContext, JobJoinHandle};
+use crate::commands::{CompileContext, JobJoinHandle};
 use crate::errors::{JobError, error, JobResult};
 use std::thread;
 use std::thread::JoinHandle;

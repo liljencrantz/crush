@@ -5,7 +5,7 @@ use crate::namespace::Namespace;
 use crate::data::{CellDefinition, JobOutput, ColumnType, Argument};
 use crate::stream::{InputStream, OutputStream, streams, spawn_print_thread, empty_stream};
 use crate::printer::Printer;
-use crate::errors::{error, JobError, JobResult};
+use crate::errors::{error, JobError, JobResult, mandate};
 use crate::commands::{JobJoinHandle, CompileContext};
 use std::thread;
 use std::thread::JoinHandle;
@@ -13,6 +13,7 @@ use std::thread::JoinHandle;
 #[derive(Clone)]
 pub struct ClosureDefinition {
     job_definitions: Vec<JobDefinition>,
+    env: Option<Env>,
 }
 
 fn build(name: String) -> thread::Builder {
@@ -27,16 +28,25 @@ impl ClosureDefinition {
     pub fn new(job_definitions: Vec<JobDefinition>) -> ClosureDefinition {
         ClosureDefinition {
             job_definitions,
+            env: None,
+        }
+    }
+
+    pub fn with_env(&self, env: &Env) -> ClosureDefinition {
+        ClosureDefinition {
+            job_definitions: self.job_definitions.clone(),
+            env: Some(env.clone())
         }
     }
 
     pub fn spawn_and_execute(&self, context: CompileContext) -> JobResult<JobJoinHandle> {
         let job_definitions = self.job_definitions.clone();
+        let parent_env = mandate(self.env.clone(), "Closure without env")?;
         Ok(handle(build("closure".to_string())
             .spawn(move || -> JobResult<()>{
-                let mut deps: Vec<JobJoinHandle> = Vec::new();
-                let env = context.env.new_stack_frame();
+                let env = parent_env.new_stack_frame();
 
+                let mut deps: Vec<JobJoinHandle> = Vec::new();
                 let arguments =
                     context.argument_definitions
                         .iter()
@@ -48,28 +58,26 @@ impl ClosureDefinition {
                     0 => return Err(error("Empty closures not supported")),
                     1 => {
                         let mut job = job_definitions[0].spawn_and_execute(&env, &context.printer, context.input, context.output)?;
-                        deps.push(job);
+                        job.join(&context.printer);
                         Ok(())
                     }
                     _ => {
                         {
                             let job_definition = &job_definitions[0];
-                            let (last_output, last_input) = streams();
+                            let last_output = spawn_print_thread(&context.printer);
                             let mut first_job = job_definition.spawn_and_execute(&env, &context.printer, context.input, last_output)?;
-                            spawn_print_thread(&context.printer, last_input);
-                            deps.push(first_job);
+                            first_job.join(&context.printer);
                         }
 
                         for job_definition in &job_definitions[1..job_definitions.len() - 1] {
-                            let (last_output, last_input) = streams();
+                            let last_output = spawn_print_thread(&context.printer);
                             let mut job = job_definition.spawn_and_execute(&env, &context.printer, empty_stream(), last_output)?;
-                            spawn_print_thread(&context.printer, last_input);
-                            deps.push(job);
+                            job.join(&context.printer);
                         }
                         {
                             let job_definition = &job_definitions[job_definitions.len() - 1];
                             let mut last_job = job_definition.spawn_and_execute(&env, &context.printer, empty_stream(), context.output)?;
-                            deps.push(last_job);
+                            last_job.join(&context.printer);
                         }
                         Ok(())
                     }

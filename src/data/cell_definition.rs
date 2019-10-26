@@ -53,7 +53,7 @@ impl CellDefinition {
                 dependencies.push(j);
                 res
             }
-            CellDefinition::ClosureDefinition(c) => Cell::ClosureDefinition(c.clone()),
+            CellDefinition::ClosureDefinition(c) => Cell::ClosureDefinition(c.with_env(env)),
             CellDefinition::Variable(s) => (mandate(env.get(s.as_ref()), format!("Unknown variable {}", s.as_ref()).as_str())?).partial_clone()?,
             CellDefinition::List(l) => l.compile(dependencies, env, printer)?,
             CellDefinition::ArrayVariable(c, i) => {
