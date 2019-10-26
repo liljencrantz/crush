@@ -11,7 +11,6 @@ implement env command
 implement sum command
 Add support for %<INTEGER> for offset based field identifiers
 make file globing testable via fakes
-generic (macro-based?) argument parsing
 Error source propagation
 Error gathering thread that collects runtime errors
 help
@@ -27,7 +26,7 @@ Map lookup
 Only one job allowed in command substitution
 Implement hashing for remaining cell types, e.g. closure
 Implement if command if {true} `{} `{}
-Implement for command for {ls} `{}
+Implement for command for find / | each `{}
 Implement loop command
 Implement break/continue commands
 Implement a function command to allow recursive functions, etc?

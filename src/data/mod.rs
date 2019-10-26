@@ -12,7 +12,7 @@ mod list_definition;
 use crate::commands::{Exec, CompileContext};
 use crate::errors::{JobError, error, JobResult};
 use std::fmt::Formatter;
-use crate::stream::{InputStream, OutputStream};
+use crate::stream::{InputStream, OutputStream, UninitializedInputStream};
 use std::hash::Hasher;
 use regex::Regex;
 use std::error::Error;
@@ -36,15 +36,11 @@ use crate::glob::Glob;
 
 #[derive(Clone)]
 pub struct Command {
-    pub call: fn(
-        context: CompileContext,
-    ) -> JobResult<(Exec, Vec<ColumnType>)>,
+    pub call: fn(context: CompileContext) -> JobResult<()>,
 }
 
 impl Command {
-    pub fn new(call: fn(
-        context: CompileContext,
-    ) -> JobResult<(Exec, Vec<ColumnType>)>) -> Command {
+    pub fn new(call: fn(context: CompileContext) -> JobResult<()>) -> Command {
         return Command { call };
     }
 }
@@ -65,6 +61,5 @@ impl std::fmt::Debug for Command {
 
 #[derive(Debug)]
 pub struct JobOutput {
-    pub types: Vec<ColumnType>,
     pub stream: InputStream,
 }

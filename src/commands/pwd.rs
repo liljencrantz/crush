@@ -14,13 +14,10 @@ use crate::printer::Printer;
 use crate::env::Env;
 use crate::data::ColumnType;
 
-pub fn run(
-    output: OutputStream,
-) -> JobResult<()> {
-    output.send(Row { cells: vec![Cell::File(get_cwd()?)] })?;
-    Ok(())
+pub fn run(output: OutputStream) -> JobResult<()> {
+    output.send(Row { cells: vec![Cell::File(get_cwd()?)] })
 }
 
-pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
-    return Ok((Exec::Command(Box::from(move || run(context.output))), vec![ColumnType::named("directory", CellType::File)]))
+pub fn parse_and_run(context: CompileContext) -> JobResult<()> {
+    run(context.output.initialize(vec![ColumnType::named("directory", CellType::File)])?)
 }

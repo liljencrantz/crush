@@ -15,8 +15,9 @@ use crate::{
     stream::streams,
     printer::Printer
 };
-use crate::data::List;
+use crate::data::{List, ColumnType};
 use crate::errors::JobResult;
+use crate::stream::InputStream;
 
 pub enum Cell {
     Text(Box<str>),
@@ -36,6 +37,7 @@ pub enum Cell {
 }
 
 
+
 impl Cell {
     fn to_rows(s: &JobOutput) -> Cell {
         let mut rows: Vec<Row> = Vec::new();
@@ -47,7 +49,7 @@ impl Cell {
                 Err(_) => break,
             }
         }
-        return Cell::Rows(Rows { types: s.types.clone(), rows });
+        return Cell::Rows(Rows { types: s.stream.get_type().clone(), rows });
     }
 
     pub fn to_string(&self) -> String {
@@ -106,7 +108,7 @@ impl Cell {
             Cell::Op(_) => CellType::Op,
             Cell::Command(_) => CellType::Command,
             Cell::File(_) => CellType::File,
-            Cell::JobOutput(o) => CellType::Output(o.types.clone()),
+            Cell::JobOutput(o) => CellType::Output(o.stream.get_type().clone()),
             Cell::Rows(r) => CellType::Rows(r.types.clone()),
             Cell::ClosureDefinition(c) => CellType::Closure,
             Cell::List(l) => CellType::List(Box::from(l.cell_type()))

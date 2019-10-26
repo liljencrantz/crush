@@ -4,6 +4,7 @@ use crate::job::Job;
 use crate::errors::JobError;
 use crate::env::Env;
 use crate::printer::Printer;
+use crate::commands::JobJoinHandle;
 
 #[derive(Debug)]
 pub struct BaseArgument<C> {
@@ -14,7 +15,7 @@ pub struct BaseArgument<C> {
 pub type ArgumentDefinition = BaseArgument<CellDefinition>;
 
 impl ArgumentDefinition {
-    pub fn argument(&self, dependencies: &mut Vec<Job>, env: &Env, printer: &Printer) -> Result<Argument, JobError> {
+    pub fn argument(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Env, printer: &Printer) -> Result<Argument, JobError> {
         Ok(Argument { name: self.name.clone(), cell: self.cell.compile(dependencies, env, printer)? })
     }
 }

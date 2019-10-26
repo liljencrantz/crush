@@ -25,9 +25,9 @@ use std::sync::Arc;
 use std::borrow::BorrowMut;
 use crate::printer::Printer;
 use std::sync::mpsc::channel;
-use crate::stream::{streams, spawn_print_thread};
+use crate::stream::{streams, spawn_print_thread, empty_stream};
 use crate::job::Job;
-use crate::data::JobOutput;
+use crate::data::{JobOutput};
 
 fn repl() -> JobResult<()>{
     let mut global_env = env::Env::new();
@@ -45,14 +45,11 @@ fn repl() -> JobResult<()>{
                 match parser::parse(&mut Lexer::new(&cmd)) {
                     Ok(jobs) => {
                         for job_definition in jobs {
-                            let (first_output, first_input) = streams();
-                            drop(first_output);
                             let (last_output, last_input) = streams();
-                            match job_definition.compile(&global_env, &printer,&vec![], first_input, last_output) {
-                                Ok(mut job) => {
-                                    let handle = job.execute();
-                                    spawn_print_thread(&printer, JobOutput { types: job.get_output_type().clone(), stream: last_input } );
-                                    job.wait(handle, &printer);
+                            match job_definition.spawn_and_execute(&global_env, &printer, empty_stream(), last_output) {
+                                Ok(handle) => {
+                                    spawn_print_thread(&printer, last_input );
+                                    handle.join(&printer);
                                 }
                                 Err(e) => printer.job_error(e),
                             }

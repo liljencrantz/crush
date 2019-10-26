@@ -1,16 +1,26 @@
 use crate::data::{ArgumentDefinition, ColumnType, Cell, Argument};
-use crate::stream::{InputStream, OutputStream};
+use crate::stream::{InputStream, OutputStream, UninitializedInputStream, UninitializedOutputStream};
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::commands::{Call, Exec, CompileContext};
-use crate::errors::{JobError, error};
+use crate::commands::{Call, Exec, CompileContext, JobJoinHandle};
+use crate::errors::{JobError, error, JobResult};
 use crate::job::Job;
+use std::thread;
+use std::thread::JoinHandle;
 
 #[derive(Clone)]
 #[derive(PartialEq)]
 pub struct CallDefinition {
     name: String,
     arguments: Vec<ArgumentDefinition>,
+}
+
+fn build(name: String) -> thread::Builder {
+    thread::Builder::new().name(name)
+}
+
+fn handle(h: Result<JoinHandle<JobResult<()>>, std::io::Error>) -> JobJoinHandle {
+    JobJoinHandle::Async(h.unwrap())
 }
 
 impl CallDefinition {
@@ -21,57 +31,42 @@ impl CallDefinition {
         }
     }
 
-    pub fn compile(
+    pub fn spawn_and_execute(
         &self,
         env: &Env,
         printer: &Printer,
-        input_type: Vec<ColumnType>,
-        input: InputStream,
-        output: OutputStream,
+        input: UninitializedInputStream,
+        output: UninitializedOutputStream,
         dependencies: &mut Vec<Job>,
-    ) -> Result<Call, JobError> {
-        let mut args: Vec<Argument> = Vec::new();
-        for arg in self.arguments.iter() {
-            args.push(arg.argument(dependencies, env, printer)?);
-        }
+    ) -> JobResult<JobJoinHandle> {
         match &env.get(&self.name) {
             Some(Cell::Command(command)) => {
+                let local_printer = printer.clone();
+                let local_arguments = self.arguments.clone();
+                let local_env = env.clone();
                 let c = command.call;
-                let (exec, output_type) = c(CompileContext {
-                    input_type,
-                    input,
-                    output,
-                    arguments: args,
-                    env: env.clone(),
-                    printer: printer.clone()
-                })?;
-                return Ok(Call::new(
-                    self.name.clone(),
-                    output_type,
-                    exec,
-                    printer.clone(),
-                    env.clone(),
-                ));
+                Ok(handle(build(self.name.clone()).spawn(
+                    move || c(CompileContext {
+                        input,
+                        output,
+                        argument_definitions: local_arguments,
+                        env: local_env,
+                        printer: local_printer,
+                    }))))
             }
 
             Some(Cell::ClosureDefinition(closure_definition)) => {
-                let mut jobs: Vec<Job> = Vec::new();
-
-                let closure = closure_definition.compile(env, printer, &input_type,
-                                                         input, output,
-                                                         args)?;
-                let last_job = &closure.get_jobs()[closure.get_jobs().len() - 1];
-
-                return Ok(Call::new(
-                    self.name.clone(),
-                    last_job.get_output_type().clone(),
-                    Exec::Closure(closure),
-                    printer.clone(),
-                    env.clone(),
-                ));
+                closure_definition.spawn_and_execute(
+                    CompileContext {
+                        input,
+                        output,
+                        argument_definitions: self.arguments.clone(),
+                        env: env.clone(),
+                        printer: printer.clone(),
+                    })
             }
             _ => {
-                return Err(error(format!("Unknown command name {}", &self.name).as_str()));
+                Err(error(format!("Unknown command name {}", &self.name).as_str()))
             }
         }
     }

@@ -9,6 +9,7 @@ use crate::env::Env;
 use crate::printer::Printer;
 use crate::errors::{JobError, mandate, error};
 use crate::stream::streams;
+use crate::commands::JobJoinHandle;
 
 #[derive(Clone)]
 pub enum CellDefinition {
@@ -30,7 +31,7 @@ pub enum CellDefinition {
 }
 
 impl CellDefinition {
-    pub fn compile(&self, dependencies: &mut Vec<Job>, env: &Env, printer: &Printer) -> Result<Cell, JobError> {
+    pub fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Env, printer: &Printer) -> Result<Cell, JobError> {
         Ok(match self {
             CellDefinition::Text(v) => Cell::Text(v.clone()),
             CellDefinition::Integer(v) => Cell::Integer(v.clone()),
@@ -46,9 +47,9 @@ impl CellDefinition {
                 let (first_output, first_input) = streams();
                 drop(first_output);
                 let (last_output, last_input) = streams();
-                let mut j = def.compile(&env, printer, &vec![], first_input, last_output)?;
+                let mut j = def.spawn_and_execute(&env, printer, first_input, last_output)?;
 
-                let res = Cell::JobOutput(JobOutput { types: j.get_output_type().clone(), stream: last_input });
+                let res = Cell::JobOutput(JobOutput { stream: last_input.initialize()? });
                 dependencies.push(j);
                 res
             }

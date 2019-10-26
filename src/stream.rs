@@ -1,17 +1,53 @@
 use crate::data::{CellType, ColumnType, Cell, JobOutput};
 use crate::data::{Alignment, Row, Rows};
 use std::cmp::max;
-use std::sync::mpsc::{Receiver, sync_channel, SyncSender, channel, Sender};
-use crate::errors::{JobError, error, JobResult};
+use std::sync::mpsc::{Receiver, sync_channel, SyncSender, channel, Sender, RecvError};
+use crate::errors::{JobError, error, JobResult, to_job_error};
 use std::error::Error;
 use crate::printer::Printer;
 use crate::replace::Replace;
 use std::thread;
 
+pub enum UninitializedOutputStream {
+    Sync(SyncSender<Vec<ColumnType>>, SyncSender<Row>),
+    Async(SyncSender<Vec<ColumnType>>, Sender<Row>),
+}
+
+impl UninitializedOutputStream {
+    pub fn initialize(self, output_type: Vec<ColumnType>) -> JobResult<OutputStream> {
+        match self {
+            UninitializedOutputStream::Sync(s,s2) => {
+                to_job_error(s.send(output_type.clone()))?;
+                Ok(OutputStream::Sync(s2))
+            },
+            UninitializedOutputStream::Async(s, s2) => {
+                to_job_error(s.send(output_type.clone()))?;
+                Ok(OutputStream::Async(s2))
+            },
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct UninitializedInputStream {
+    type_input: Receiver<Vec<ColumnType>>,
+    input: Receiver<Row>,
+}
+
+impl UninitializedInputStream {
+    pub fn initialize(self) -> JobResult<InputStream> {
+        match self.type_input.recv() {
+            Ok(t) => Ok(InputStream{ receiver: self.input, input_type: t }),
+            Err(e) => Err(error(e.description())),
+        }
+    }
+}
+
 pub enum OutputStream {
     Sync(SyncSender<Row>),
     Async(Sender<Row>),
 }
+
 
 impl OutputStream {
     pub fn send(&self, row: Row) -> JobResult<()> {
@@ -26,46 +62,76 @@ impl OutputStream {
     }
 }
 
-pub type InputStream = Receiver<Row>;
-
-pub fn streams() -> (OutputStream, InputStream) {
-    let temp = sync_channel(200000);
-    return (OutputStream::Sync(temp.0), temp.1);
+#[derive(Debug)]
+pub struct InputStream {
+    receiver: Receiver<Row>,
+    input_type: Vec<ColumnType>,
 }
 
-pub fn unlimited_streams() -> (OutputStream, InputStream) {
-    let temp = channel();
-    return (OutputStream::Async(temp.0), temp.1);
+
+impl InputStream {
+
+    pub fn recv(&self) -> JobResult<Row> {
+        to_job_error(self.receiver.recv())
+    }
+
+    pub fn get_type(&self) -> &Vec<ColumnType> {
+        &self.input_type
+    }
+}
+
+pub fn streams() -> (UninitializedOutputStream, UninitializedInputStream) {
+    let (type_send, type_recv) = sync_channel(1);
+    let (send, recv) = sync_channel(200000);
+    (UninitializedOutputStream::Sync(type_send, send), UninitializedInputStream {type_input: type_recv, input: recv})
+}
+
+pub fn unlimited_streams() -> (UninitializedOutputStream, UninitializedInputStream) {
+    let (type_send, type_recv) = sync_channel(1);
+    let (send, recv) = channel();
+    (UninitializedOutputStream::Async(type_send, send), UninitializedInputStream {type_input: type_recv, input: recv})
+}
+
+pub fn empty_stream() -> UninitializedInputStream {
+    let (o, i) = unlimited_streams();
+    o.initialize(vec![]);
+    i
 }
 
 pub trait Readable {
-    fn read(&mut self) -> Result<Row, JobError>;
+    fn read(&mut self) -> JobResult<Row>;
+    fn get_type(&self) -> &Vec<ColumnType>;
 }
 
 impl Readable for InputStream {
     fn read(&mut self) -> Result<Row, JobError> {
         match self.recv() {
             Ok(v) => Ok(v),
-            Err(e) => Err(error(e.description())),
+            Err(e) => Err(error(&e.message)),
         }
+    }
+
+    fn get_type(&self) -> &Vec<ColumnType> {
+        self.get_type()
     }
 }
 
-pub fn spawn_print_thread(printer: &Printer, output: JobOutput) {
+pub fn spawn_print_thread(printer: &Printer, output: UninitializedInputStream) {
     let p = printer.clone();
     thread::Builder::new()
         .name("output_formater".to_string())
-        .spawn(move || print(&p, output.stream, output.types)
+        .spawn(move || print(&p, output.initialize().unwrap())
         );
 }
 
-pub fn print(printer: &Printer, mut stream: InputStream, types: Vec<ColumnType>) {
-    print_internal::<InputStream>(printer, &mut stream, &types, 0);
+pub fn print(printer: &Printer, mut stream: InputStream) {
+    print_internal(printer, &mut stream, 0);
 }
 
 pub struct RowsReader {
     idx: usize,
     rows: Rows,
+    row_type: Vec<ColumnType>,
 }
 
 impl Readable for RowsReader {
@@ -74,16 +140,20 @@ impl Readable for RowsReader {
             return Err(error("EOF"));
         }
         self.idx += 1;
-        return Ok(self.rows.rows.replace(self.idx - 1, Row{cells:vec![Cell::Integer(0)],}));
+        return Ok(self.rows.rows.replace(self.idx - 1, Row { cells: vec![Cell::Integer(0)] }));
+    }
+
+    fn get_type(&self) -> &Vec<ColumnType> {
+        &self.row_type
     }
 }
 
-fn print_internal<T: Readable>(printer: &Printer, stream: &mut T, types: &Vec<ColumnType>, indent: usize) {
+fn print_internal(printer: &Printer, stream: &mut impl Readable, indent: usize) {
     let mut data: Vec<Row> = Vec::new();
     let mut has_name = false;
     let mut has_table = false;
 
-    for val in types.iter() {
+    for val in stream.get_type().iter() {
         match val.cell_type {
             CellType::Output(_) => has_table = true,
             CellType::Rows(_) => has_table = true,
@@ -101,13 +171,13 @@ fn print_internal<T: Readable>(printer: &Printer, stream: &mut T, types: &Vec<Co
             Err(_) => break,
         }
         if data.len() == 49 || has_table {
-            print_partial(printer, data, &types, has_name, indent);
+            print_partial(printer, data, stream.get_type(), has_name, indent);
             data = Vec::new();
             data.drain(..);
         }
     }
     if !data.is_empty() {
-        print_partial(printer, data, &types, has_name, indent);
+        print_partial(printer, data, stream.get_type(), has_name, indent);
     }
 }
 
@@ -119,7 +189,7 @@ fn calculate_header_width(w: &mut Vec<usize>, types: &Vec<ColumnType>, has_name:
     }
 }
 
-fn calculate_body_width(w: &mut Vec<usize>,  data: &Vec<Row>, col_count: usize) {
+fn calculate_body_width(w: &mut Vec<usize>, data: &Vec<Row>, col_count: usize) {
     for r in data {
         assert_eq!(col_count, r.cells.len());
         for (idx, c) in r.cells.iter().enumerate() {
@@ -147,8 +217,16 @@ fn print_row(printer: &Printer, w: &Vec<usize>, mut r: Row, indent: usize, rows:
         let cell = c.to_string();
         let spaces = if idx == cell_len - 1 { "".to_string() } else { " ".repeat(w[idx] - cell.len()) };
         match c.alignment() {
-            Alignment::Right => {row += spaces.as_str(); row += cell.as_str(); row += " "},
-            _ => {row += cell.as_str(); row += spaces.as_str(); row += " "},
+            Alignment::Right => {
+                row += spaces.as_str();
+                row += cell.as_str();
+                row += " "
+            }
+            _ => {
+                row += cell.as_str();
+                row += spaces.as_str();
+                row += " "
+            }
         }
 
         match c {
@@ -159,13 +237,12 @@ fn print_row(printer: &Printer, w: &Vec<usize>, mut r: Row, indent: usize, rows:
     printer.line(row.as_str());
 }
 
-fn print_body(printer: &Printer, w: &Vec<usize>,  data: Vec<Row>, indent: usize) {
+fn print_body(printer: &Printer, w: &Vec<usize>, data: Vec<Row>, indent: usize) {
     for r in data.into_iter() {
         let mut rows = Vec::new();
         print_row(printer, w, r, indent, &mut rows);
         for r in rows {
-            let t = r.types.clone();
-            print_internal::<RowsReader>(printer, &mut RowsReader { idx: 0, rows: r }, &t, indent + 1);
+            print_internal(printer, &mut RowsReader { idx: 0, row_type: r.types.clone(), rows: r, }, indent + 1);
         }
     }
 }

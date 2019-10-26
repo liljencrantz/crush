@@ -4,6 +4,7 @@ use std::hash::Hasher;
 use crate::printer::Printer;
 use crate::env::Env;
 use crate::job::Job;
+use crate::commands::JobJoinHandle;
 
 #[derive(Clone)]
 pub struct ListDefinition {
@@ -15,7 +16,7 @@ impl ListDefinition {
         ListDefinition { cells }
     }
 
-    pub fn compile(&self, dependencies: &mut Vec<Job>, env: &Env, printer: &Printer) -> Result<Cell, JobError> {
+    pub fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Env, printer: &Printer) -> Result<Cell, JobError> {
         let cells = self.cells
             .iter()
             .map(|c| c.compile(dependencies, env, printer))

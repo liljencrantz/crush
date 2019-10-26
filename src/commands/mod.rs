@@ -1,9 +1,10 @@
 mod command_util;
-
+/*
 mod find;
 mod echo;
-
+*/
 mod pwd;
+/*
 mod ps;
 
 mod cd;
@@ -32,7 +33,7 @@ mod cat;
 mod cast;
 
 mod forr;
-
+*/
 use std::{io, thread};
 use crate::{
     namespace::Namespace,
@@ -56,6 +57,7 @@ use crate::job::Job;
 use std::sync::{Arc, Mutex};
 use crate::closure::Closure;
 use crate::errors::JobResult;
+use crate::stream::{UninitializedInputStream, UninitializedOutputStream};
 
 type CommandInvocation = Box<FnOnce() -> JobResult<()> + Send>;
 
@@ -70,10 +72,9 @@ pub enum JobJoinHandle {
 }
 
 pub struct CompileContext {
-    pub input_type: Vec<ColumnType>,
-    pub input: InputStream,
-    pub output: OutputStream,
-    pub arguments: Vec<Argument>,
+    pub input: UninitializedInputStream,
+    pub output: UninitializedOutputStream,
+    pub argument_definitions: Vec<ArgumentDefinition>,
     pub env: Env,
     pub printer: Printer,
 }
@@ -130,36 +131,18 @@ impl Call {
     pub fn get_output_type(&self) -> &Vec<ColumnType> {
         return &self.output_type;
     }
-
-    pub fn execute(mut self) -> JobJoinHandle {
-        let env = self.env.clone();
-        let printer = self.printer.clone();
-        let name = self.name.clone();
-
-        match self.exec {
-            Exec::Closure(closure) => closure.execute(),
-            Exec::Command(cmd) => handle(build(name).spawn(move || cmd())),
-        }
-    }
 }
 
-fn build(name: String) -> thread::Builder {
-    thread::Builder::new().name(name)
-}
-
-fn handle(h: Result<JoinHandle<JobResult<()>>, std::io::Error>) -> JobJoinHandle {
-    JobJoinHandle::Async(h.unwrap())
-}
 
 pub fn add_builtins(env: &Env) -> JobResult<()> {
-    env.declare("ls", Cell::Command(Command::new(find::compile_ls)))?;
+  /*  env.declare("ls", Cell::Command(Command::new(find::compile_ls)))?;
     env.declare("find", Cell::Command(Command::new(find::compile_find)))?;
     env.declare("echo", Cell::Command(Command::new(echo::compile)))?;
 
     env.declare("ps", Cell::Command(Command::new(ps::compile)))?;
-
-    env.declare("pwd", Cell::Command(Command::new(pwd::compile)))?;
-    env.declare("cd", Cell::Command(Command::new(cd::compile)))?;
+*/
+    env.declare("pwd", Cell::Command(Command::new(pwd::parse_and_run)))?;
+/*    env.declare("cd", Cell::Command(Command::new(cd::compile)))?;
     env.declare("where", Cell::Command(Command::new(r#where::compile)))?;
     env.declare("sort", Cell::Command(Command::new(sort::compile)))?;
     env.declare("reverse", Cell::Command(Command::new(reverse::compile)))?;
@@ -183,6 +166,6 @@ pub fn add_builtins(env: &Env) -> JobResult<()> {
     env.declare("csv", Cell::Command(Command::new(csv::compile)))?;
 
     env.declare("for", Cell::Command(Command::new(forr::compile)))?;
-
+*/
     return Ok(());
 }
