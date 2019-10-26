@@ -1,10 +1,9 @@
 use crate::data::cell::Cell;
 use crate::data::{CellDefinition, ColumnType};
-use crate::job::Job;
-use crate::errors::JobError;
+use crate::errors::{JobError, JobResult};
 use crate::env::Env;
 use crate::printer::Printer;
-use crate::commands::JobJoinHandle;
+use crate::commands::{JobJoinHandle, CompileContext};
 
 #[derive(Debug)]
 pub struct BaseArgument<C> {
@@ -61,5 +60,17 @@ impl<C> BaseArgument<C> {
 
     pub fn val_or_empty(&self) -> &str {
         self.name.as_ref().map(|v| v.as_ref()).unwrap_or("")
+    }
+}
+
+pub trait ArgumentVecCompiler {
+    fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, context: &CompileContext) -> JobResult<Vec<Argument>>;
+}
+
+impl ArgumentVecCompiler for Vec<ArgumentDefinition> {
+    fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, context: &CompileContext) -> JobResult<Vec<Argument>> {
+        self.iter()
+            .map(|a| a.argument(dependencies, &context.env, &context.printer))
+            .collect::<JobResult<Vec<Argument>>>()
     }
 }

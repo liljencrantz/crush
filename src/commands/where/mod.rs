@@ -95,7 +95,7 @@ pub fn run(config: Config, printer: Printer) -> JobResult<()> {
     return Ok(());
 }
 
-pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let config = Config {
         condition: parse(&context.input_type, &context.arguments)?,
         input: context.input,

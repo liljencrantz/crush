@@ -7,7 +7,7 @@ use crate::data::CallDefinition;
 use regex::Regex;
 use std::error::Error;
 use crate::glob::Glob;
-use crate::closure::{Closure, ClosureDefinition};
+use crate::closure::{ClosureDefinition};
 
 pub fn parse(lexer: &mut Lexer) -> Result<Vec<JobDefinition>, JobError> {
     let mut jobs: Vec<JobDefinition> = Vec::new();

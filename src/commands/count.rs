@@ -77,7 +77,7 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let has_streams = parse(context.input_type.clone());
     let input = context.input;
     let output = context.output;

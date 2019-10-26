@@ -51,7 +51,7 @@ pub fn run(output: OutputStream) -> JobResult<()> {
     Ok(())
 }
 
-pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     return Ok((Exec::Command(Box::from(move || run(context.output))), vec![
         ColumnType::named("pid", CellType::Integer),
         ColumnType::named("ppid", CellType::Integer),

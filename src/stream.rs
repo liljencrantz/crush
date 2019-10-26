@@ -16,14 +16,14 @@ pub enum UninitializedOutputStream {
 impl UninitializedOutputStream {
     pub fn initialize(self, output_type: Vec<ColumnType>) -> JobResult<OutputStream> {
         match self {
-            UninitializedOutputStream::Sync(s,s2) => {
+            UninitializedOutputStream::Sync(s, s2) => {
                 to_job_error(s.send(output_type.clone()))?;
                 Ok(OutputStream::Sync(s2))
-            },
+            }
             UninitializedOutputStream::Async(s, s2) => {
                 to_job_error(s.send(output_type.clone()))?;
                 Ok(OutputStream::Async(s2))
-            },
+            }
         }
     }
 }
@@ -37,7 +37,7 @@ pub struct UninitializedInputStream {
 impl UninitializedInputStream {
     pub fn initialize(self) -> JobResult<InputStream> {
         match self.type_input.recv() {
-            Ok(t) => Ok(InputStream{ receiver: self.input, input_type: t }),
+            Ok(t) => Ok(InputStream { receiver: self.input, input_type: t }),
             Err(e) => Err(error(e.description())),
         }
     }
@@ -70,7 +70,6 @@ pub struct InputStream {
 
 
 impl InputStream {
-
     pub fn recv(&self) -> JobResult<Row> {
         to_job_error(self.receiver.recv())
     }
@@ -83,13 +82,13 @@ impl InputStream {
 pub fn streams() -> (UninitializedOutputStream, UninitializedInputStream) {
     let (type_send, type_recv) = sync_channel(1);
     let (send, recv) = sync_channel(200000);
-    (UninitializedOutputStream::Sync(type_send, send), UninitializedInputStream {type_input: type_recv, input: recv})
+    (UninitializedOutputStream::Sync(type_send, send), UninitializedInputStream { type_input: type_recv, input: recv })
 }
 
 pub fn unlimited_streams() -> (UninitializedOutputStream, UninitializedInputStream) {
     let (type_send, type_recv) = sync_channel(1);
     let (send, recv) = channel();
-    (UninitializedOutputStream::Async(type_send, send), UninitializedInputStream {type_input: type_recv, input: recv})
+    (UninitializedOutputStream::Async(type_send, send), UninitializedInputStream { type_input: type_recv, input: recv })
 }
 
 pub fn empty_stream() -> UninitializedInputStream {
@@ -120,7 +119,12 @@ pub fn spawn_print_thread(printer: &Printer, output: UninitializedInputStream) {
     let p = printer.clone();
     thread::Builder::new()
         .name("output_formater".to_string())
-        .spawn(move || print(&p, output.initialize().unwrap())
+        .spawn(move || {
+            match output.initialize() {
+                Ok(out) => print(&p, out),
+                Err(e) => p.job_error(e),
+            }
+        }
         );
 }
 
@@ -242,7 +246,7 @@ fn print_body(printer: &Printer, w: &Vec<usize>, data: Vec<Row>, indent: usize) 
         let mut rows = Vec::new();
         print_row(printer, w, r, indent, &mut rows);
         for r in rows {
-            print_internal(printer, &mut RowsReader { idx: 0, row_type: r.types.clone(), rows: r, }, indent + 1);
+            print_internal(printer, &mut RowsReader { idx: 0, row_type: r.types.clone(), rows: r }, indent + 1);
         }
     }
 }

@@ -69,7 +69,7 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let cfg = parse(&context.input_type, &context.arguments)?;
     let output_type = cfg.output_type.clone();
     Ok((Exec::Command(Box::from(move || run(cfg, context.input, context.output, context.printer))), output_type))

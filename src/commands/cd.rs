@@ -17,7 +17,7 @@ pub fn run(dir: Box<Path>) -> JobResult<()> {
     to_job_error(std::env::set_current_dir(dir))
 }
 
-pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let dir = match context.arguments.len() {
         0 => Ok(Box::from(Path::new("/"))),
         1 => {

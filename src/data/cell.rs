@@ -6,7 +6,7 @@ use regex::Regex;
 use chrono::{DateTime, Local};
 use crate::{
     closure::{ClosureDefinition},
-    job::{JobDefinition, Job},
+    job::{JobDefinition},
     env::{get_cwd, Env},
     errors::{error, JobError, to_job_error, mandate},
     data::rows::Rows,

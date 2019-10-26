@@ -37,7 +37,7 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let mut output_type = vec![ColumnType::named("idx", CellType::Integer)];
     let input = context.input;
     let output = context.output;

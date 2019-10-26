@@ -1,7 +1,7 @@
 use std::fs;
 use crate::stream::{OutputStream, InputStream};
 use crate::data::{Cell, CellType, Row, Argument, ColumnType};
-use crate::commands::{Exec, CompileContext};
+use crate::commands::{CompileContext, JobJoinHandle};
 use crate::errors::{JobError, error, to_job_error, JobResult};
 use chrono::{Local, DateTime};
 use std::path::Path;
@@ -14,6 +14,7 @@ use users::uid_t;
 use users::User;
 use std::os::unix::fs::MetadataExt;
 use lazy_static::lazy_static;
+use crate::data::ArgumentVecCompiler;
 
 lazy_static! {
     static ref output_type: Vec<ColumnType> = vec![
@@ -102,11 +103,6 @@ pub fn run(mut config: Config) -> JobResult<()> {
     return Ok(());
 }
 
-pub fn compile_ls(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
-    let cfg = parse(context.output, context.arguments, false)?;
-    Ok((Exec::Command(Box::from(move || run(cfg))), output_type.clone()))
-}
-
 pub struct Config {
     dirs: Vec<Box<Path>>,
     recursive: bool,
@@ -140,7 +136,18 @@ fn parse(output: OutputStream, arguments: Vec<Argument>, recursive: bool) -> Res
     Ok(Config { dirs, recursive, output })
 }
 
-pub fn compile_find(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
-    let cfg = parse(context.output, context.arguments, true)?;
-    Ok((Exec::Command(Box::from(move || run(cfg))), output_type.clone()))
+pub fn compile_and_run_ls(context: CompileContext) -> JobResult<()> {
+    let mut deps: Vec<JobJoinHandle> = Vec::new();
+    let arguments = context.argument_definitions.compile(&mut deps, &context)?;
+    let output = context.output.initialize(output_type.clone())?;
+    let cfg = parse(output, arguments, false)?;
+    run(cfg)
+}
+
+pub fn compile_and_run_find(context: CompileContext) -> JobResult<()> {
+    let mut deps: Vec<JobJoinHandle> = Vec::new();
+    let arguments = context.argument_definitions.compile(&mut deps, &context)?;
+    let output = context.output.initialize(output_type.clone())?;
+    let cfg = parse(output, arguments, true)?;
+    run(cfg)
 }

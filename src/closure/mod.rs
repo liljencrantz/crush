@@ -1,4 +1,4 @@
-use crate::job::{JobDefinition, Job};
+use crate::job::{JobDefinition};
 use crate::env::Env;
 use std::sync::Arc;
 use crate::namespace::Namespace;
@@ -66,7 +66,6 @@ impl ClosureDefinition {
                             spawn_print_thread(&context.printer, last_input);
                             deps.push(job);
                         }
-
                         {
                             let job_definition = &job_definitions[job_definitions.len() - 1];
                             let mut last_job = job_definition.spawn_and_execute(&env, &context.printer, empty_stream(), context.output)?;
@@ -93,27 +92,3 @@ impl PartialEq for ClosureDefinition {
     }
 }
 
-pub struct Closure {
-    jobs: Vec<Job>,
-}
-
-impl Closure {
-    pub fn get_jobs(&self) -> &Vec<Job> {
-        &self.jobs
-    }
-/*
-    pub fn execute(mut self) -> JobJoinHandle {
-        let mut res: Vec<JobJoinHandle> = Vec::new();
-        for mut job in self.jobs {
-            res.push(job.execute());
-        }
-        JobJoinHandle::Many(res)
-    }
-    */
-}
-
-impl PartialEq for Closure {
-    fn eq(&self, other: &Self) -> bool {
-        false
-    }
-}

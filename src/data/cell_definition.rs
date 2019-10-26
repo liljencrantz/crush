@@ -1,6 +1,6 @@
 use crate::data::{Command, Cell, JobOutput, ListDefinition, CellType};
 use crate::closure::ClosureDefinition;
-use crate::job::{JobDefinition, Job};
+use crate::job::{JobDefinition};
 use std::path::Path;
 use regex::Regex;
 use crate::glob::Glob;

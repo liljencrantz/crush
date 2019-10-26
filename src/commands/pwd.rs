@@ -6,7 +6,6 @@ use crate::{
     data::{CellType},
     stream::{OutputStream, InputStream},
     data::Cell,
-    commands::{Exec},
     errors::JobError,
     env::get_cwd
 };

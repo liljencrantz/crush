@@ -57,7 +57,7 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let config = parse(&context.input_type, &context.arguments)?;
     let input_type = context.input_type.clone();
 

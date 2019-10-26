@@ -39,7 +39,7 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let output_type = context.input_type.clone();
     Ok((Exec::Command(Box::from(move || run(context.input, context.output))), output_type))
 }

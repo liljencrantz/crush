@@ -56,7 +56,7 @@ pub fn run(config: Config) -> JobResult<()> {
 //    output.send(Row { cells: vec![Cell::File(get_cwd()?)] })?;
     Ok(()) }
 
-pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let config = parse(context)?;
     let output_type = config.output_type.clone();
     return Ok((Exec::Command(Box::from(move ||run(config))), output_type))

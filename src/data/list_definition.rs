@@ -3,7 +3,6 @@ use crate::errors::JobError;
 use std::hash::Hasher;
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::job::Job;
 use crate::commands::JobJoinHandle;
 
 #[derive(Clone)]

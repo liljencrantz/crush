@@ -43,7 +43,7 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let lines = get_line_count(&context.arguments)?;
     let output_type = context.input_type.clone();
     Ok((Exec::Command(Box::from(move || run(lines, context.input, context.output))), output_type))

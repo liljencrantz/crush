@@ -117,7 +117,7 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let output = context.output;
     let files = parse(context.arguments, context.input_type, context.input)?;
     let output_type: Vec<ColumnType> =

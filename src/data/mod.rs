@@ -9,7 +9,7 @@ mod column_type;
 mod list;
 mod list_definition;
 
-use crate::commands::{Exec, CompileContext};
+use crate::commands::{CompileContext};
 use crate::errors::{JobError, error, JobResult};
 use std::fmt::Formatter;
 use crate::stream::{InputStream, OutputStream, UninitializedInputStream};
@@ -30,6 +30,7 @@ pub use rows::Rows;
 pub use call_definition::CallDefinition;
 pub use list::List;
 pub use list_definition::ListDefinition;
+pub use argument::ArgumentVecCompiler;
 
 use crate::glob::Glob;
 

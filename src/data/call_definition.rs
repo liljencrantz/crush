@@ -2,9 +2,8 @@ use crate::data::{ArgumentDefinition, ColumnType, Cell, Argument};
 use crate::stream::{InputStream, OutputStream, UninitializedInputStream, UninitializedOutputStream};
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::commands::{Call, Exec, CompileContext, JobJoinHandle};
+use crate::commands::{Call, CompileContext, JobJoinHandle};
 use crate::errors::{JobError, error, JobResult};
-use crate::job::Job;
 use std::thread;
 use std::thread::JoinHandle;
 
@@ -37,7 +36,6 @@ impl CallDefinition {
         printer: &Printer,
         input: UninitializedInputStream,
         output: UninitializedOutputStream,
-        dependencies: &mut Vec<Job>,
     ) -> JobResult<JobJoinHandle> {
         match &env.get(&self.name) {
             Some(Cell::Command(command)) => {
@@ -46,13 +44,19 @@ impl CallDefinition {
                 let local_env = env.clone();
                 let c = command.call;
                 Ok(handle(build(self.name.clone()).spawn(
-                    move || c(CompileContext {
-                        input,
-                        output,
-                        argument_definitions: local_arguments,
-                        env: local_env,
-                        printer: local_printer,
-                    }))))
+                    move || {
+                        match c(CompileContext {
+                            input,
+                            output,
+                            argument_definitions: local_arguments,
+                            env: local_env,
+                            printer: local_printer.clone(),
+                        }) {
+                            Ok(_) => {},
+                            Err(e) => local_printer.job_error(e),
+                        }
+                        Ok(())
+                    })))
             }
 
             Some(Cell::ClosureDefinition(closure_definition)) => {

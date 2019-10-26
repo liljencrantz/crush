@@ -77,7 +77,7 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let config = parse(context.input_type.clone(), context.arguments)?;
     let output_type= vec![context.input_type[config.column].clone(), ColumnType { name: Some(config.name.clone()), cell_type: CellType::Output(context.input_type.clone()) }];
     let input = context.input;

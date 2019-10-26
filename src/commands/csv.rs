@@ -172,7 +172,7 @@ pub fn run(mut config: Config, output: OutputStream, printer: Printer) -> JobRes
     return Ok(());
 }
 
-pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let output = context.output;
     let printer = context.printer;
     let cfg = parse(context.arguments, context.input_type, context.input)?;

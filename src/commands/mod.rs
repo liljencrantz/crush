@@ -1,16 +1,18 @@
 mod command_util;
-/*
+
 mod find;
 mod echo;
-*/
+
 mod pwd;
+
+mod set;
+mod lett;
+
 /*
 mod ps;
 
 mod cd;
 
-mod set;
-mod lett;
 
 mod unset;
 
@@ -53,18 +55,11 @@ use std::thread::{JoinHandle, spawn};
 use std::error::Error;
 use crate::printer::Printer;
 use crate::data::{ColumnType, CellType, JobOutput};
-use crate::job::Job;
 use std::sync::{Arc, Mutex};
-use crate::closure::Closure;
 use crate::errors::JobResult;
 use crate::stream::{UninitializedInputStream, UninitializedOutputStream};
 
 type CommandInvocation = Box<FnOnce() -> JobResult<()> + Send>;
-
-pub enum Exec {
-    Closure(Closure),
-    Command(CommandInvocation),
-}
 
 pub enum JobJoinHandle {
     Many(Vec<JobJoinHandle>),
@@ -102,7 +97,6 @@ impl JobJoinHandle {
 pub struct Call {
     name: String,
     output_type: Vec<ColumnType>,
-    exec: Exec,
     printer: Printer,
     env: Env,
 }
@@ -111,14 +105,12 @@ impl Call {
     pub fn new(
         name: String,
         output_type: Vec<ColumnType>,
-        exec: Exec,
         printer: Printer,
         env: Env,
     ) -> Call {
         Call {
             name,
             output_type,
-            exec,
             printer,
             env,
         }
@@ -135,37 +127,39 @@ impl Call {
 
 
 pub fn add_builtins(env: &Env) -> JobResult<()> {
-  /*  env.declare("ls", Cell::Command(Command::new(find::compile_ls)))?;
-    env.declare("find", Cell::Command(Command::new(find::compile_find)))?;
-    env.declare("echo", Cell::Command(Command::new(echo::compile)))?;
+    env.declare("ls", Cell::Command(Command::new(find::compile_and_run_ls)))?;
+    env.declare("find", Cell::Command(Command::new(find::compile_and_run_find)))?;
+    env.declare("echo", Cell::Command(Command::new(echo::compile_and_run)))?;
 
-    env.declare("ps", Cell::Command(Command::new(ps::compile)))?;
-*/
     env.declare("pwd", Cell::Command(Command::new(pwd::parse_and_run)))?;
-/*    env.declare("cd", Cell::Command(Command::new(cd::compile)))?;
-    env.declare("where", Cell::Command(Command::new(r#where::compile)))?;
-    env.declare("sort", Cell::Command(Command::new(sort::compile)))?;
-    env.declare("reverse", Cell::Command(Command::new(reverse::compile)))?;
-    env.declare("set", Cell::Command(Command::new(set::compile)))?;
-    env.declare("let", Cell::Command(Command::new(lett::compile)))?;
-    env.declare("unset", Cell::Command(Command::new(unset::compile)))?;
 
-    env.declare("group", Cell::Command(Command::new(group::compile)))?;
-    env.declare("join", Cell::Command(Command::new(join::compile)))?;
-    env.declare("count", Cell::Command(Command::new(count::compile)))?;
-    env.declare("cat", Cell::Command(Command::new(cat::compile)))?;
-    env.declare("select", Cell::Command(Command::new(select::compile)))?;
-    env.declare("enumerate", Cell::Command(Command::new(enumerate::compile)))?;
+    env.declare("let", Cell::Command(Command::new(lett::compile_and_run)))?;
+    env.declare("set", Cell::Command(Command::new(set::compile_and_run)))?;
 
-    env.declare("cast", Cell::Command(Command::new(cast::compile)))?;
+    /*
+    env.declare("ps", Cell::Command(Command::new(ps::compile_and_run)))?;
+    env.declare("cd", Cell::Command(Command::new(cd::compile_and_run)))?;
+    env.declare("where", Cell::Command(Command::new(r#where::compile_and_run)))?;
+    env.declare("sort", Cell::Command(Command::new(sort::compile_and_run)))?;
+    env.declare("reverse", Cell::Command(Command::new(reverse::compile_and_run)))?;
+    env.declare("unset", Cell::Command(Command::new(unset::compile_and_run)))?;
 
-    env.declare("head", Cell::Command(Command::new(head::compile)))?;
-    env.declare("tail", Cell::Command(Command::new(tail::compile)))?;
+    env.declare("group", Cell::Command(Command::new(group::compile_and_run)))?;
+    env.declare("join", Cell::Command(Command::new(join::compile_and_run)))?;
+    env.declare("count", Cell::Command(Command::new(count::compile_and_run)))?;
+    env.declare("cat", Cell::Command(Command::new(cat::compile_and_run)))?;
+    env.declare("select", Cell::Command(Command::new(select::compile_and_run)))?;
+    env.declare("enumerate", Cell::Command(Command::new(enumerate::compile_and_run)))?;
 
-    env.declare("lines", Cell::Command(Command::new(lines::compile)))?;
-    env.declare("csv", Cell::Command(Command::new(csv::compile)))?;
+    env.declare("cast", Cell::Command(Command::new(cast::compile_and_run)))?;
 
-    env.declare("for", Cell::Command(Command::new(forr::compile)))?;
+    env.declare("head", Cell::Command(Command::new(head::compile_and_run)))?;
+    env.declare("tail", Cell::Command(Command::new(tail::compile_and_run)))?;
+
+    env.declare("lines", Cell::Command(Command::new(lines::compile_and_run)))?;
+    env.declare("csv", Cell::Command(Command::new(csv::compile_and_run)))?;
+
+    env.declare("for", Cell::Command(Command::new(forr::compile_and_run)))?;
 */
     return Ok(());
 }

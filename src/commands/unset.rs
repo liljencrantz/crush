@@ -37,7 +37,7 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile(context: CompileContext) -> JobResult<(Exec, Vec<ColumnType>)> {
+pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let env = context.env.clone();
     let vars = parse(context.arguments)?;
     Ok((Exec::Command(Box::from(move || run(vars, env))), vec![]))

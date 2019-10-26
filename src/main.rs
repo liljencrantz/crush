@@ -26,7 +26,6 @@ use std::borrow::BorrowMut;
 use crate::printer::Printer;
 use std::sync::mpsc::channel;
 use crate::stream::{streams, spawn_print_thread, empty_stream};
-use crate::job::Job;
 use crate::data::{JobOutput};
 
 fn repl() -> JobResult<()>{
