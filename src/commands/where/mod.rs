@@ -8,7 +8,6 @@ use crate::{
         Argument
     },
     stream::{OutputStream, InputStream},
-    commands::{Call, Exec},
     errors::{JobError, argument_error},
     commands::r#where::parser::{Condition, Value, parse}
 };
@@ -96,11 +95,12 @@ pub fn run(config: Config, printer: Printer) -> JobResult<()> {
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
+    let input = context.input.initialize()?;
+    let output = context.output.initialize(input.get_type().clone())?;
     let config = Config {
-        condition: parse(&context.input_type, &context.arguments)?,
-        input: context.input,
-        output: context.output,
+        condition: parse(input.get_type(), &context.arguments)?,
+        input: input,
+        output: output,
     };
-    let printer = context.printer;
-    Ok((Exec::Command(Box::from(move || run(config, printer))), context.input_type))
+    run(config, context.printer)
 }

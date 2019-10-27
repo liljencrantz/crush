@@ -4,7 +4,6 @@ use std::collections::HashMap;
 use crate::{
     stream::Readable,
     errors::JobError,
-    commands::{Call, Exec},
     data::{
         Argument,
         Row,
@@ -179,9 +178,9 @@ fn get_output_type(input_type: &Vec<ColumnType>, cfg: &Config) -> Result<Vec<Col
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let input = context.input;
-    let output = context.output;
-    let cfg = parse(context.input_type.clone(), context.arguments)?;
-    let output_type = get_output_type(&context.input_type, &cfg)?;
-    Ok((Exec::Command(Box::from(move || run(cfg, input, output))), output_type))
+    let input = context.input.initialize()?;
+    let cfg = parse(input.get_type().clone(), context.arguments)?;
+    let output_type = get_output_type(input.get_type(), &cfg)?;
+    let output = context.output.initialize(output_type)?;
+    run(cfg, input, output)
 }

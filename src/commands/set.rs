@@ -21,16 +21,14 @@ pub fn run(
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let mut deps: Vec<JobJoinHandle> = Vec::new();
-    let arguments = context.argument_definitions.compile(&mut deps, &context)?;
     context.output.initialize(vec![]);
 
-    for arg in arguments.iter() {
+    for arg in context.arguments.iter() {
         if arg.val_or_empty().is_empty() {
             return Err(
                 argument_error("Missing variable name")
             );
         }
     }
-    run(arguments, context.env)
+    run(context.arguments, context.env)
 }

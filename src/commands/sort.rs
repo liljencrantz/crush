@@ -2,7 +2,6 @@ use crate::commands::CompileContext;
 use crate::{
     commands::command_util::find_field,
     errors::{JobError, argument_error},
-    commands::{Call, Exec},
     data::{
         Argument,
         Row,
@@ -23,7 +22,6 @@ pub struct Config {
 }
 
 fn parse(
-    input_type: Vec<ColumnType>,
     arguments: Vec<Argument>,
     input: InputStream,
     output: OutputStream) -> JobResult<Config> {
@@ -34,7 +32,7 @@ fn parse(
         match (name.as_ref(), &arguments[0].cell) {
             ("key", Cell::Text(cell_name)) | ("key", Cell::Field(cell_name)) => {
                 Ok(Config{
-                    sort_column_idx: find_field(cell_name, &input_type)?,
+                    sort_column_idx: find_field(cell_name, input.get_type())?,
                     input,
                     output
                 })
@@ -69,7 +67,8 @@ pub fn run(
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let output_type = context.input_type.clone();
-    let config = parse(context.input_type, context.arguments, context.input, context.output)?;
-    Ok((Exec::Command(Box::from(move || run(config))), output_type))
+    let input = context.input.initialize()?;
+    let output = context.output.initialize(input.get_type().clone())?;
+    let config = parse(context.arguments, input, output)?;
+    run(config)
 }

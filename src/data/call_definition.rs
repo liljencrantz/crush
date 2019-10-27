@@ -1,4 +1,4 @@
-use crate::data::{ArgumentDefinition, ColumnType, Cell, Argument};
+use crate::data::{ArgumentDefinition, ColumnType, Cell, Argument, ArgumentVecCompiler};
 use crate::stream::{InputStream, OutputStream, UninitializedInputStream, UninitializedOutputStream};
 use crate::printer::Printer;
 use crate::env::Env;
@@ -37,37 +37,46 @@ impl CallDefinition {
         input: UninitializedInputStream,
         output: UninitializedOutputStream,
     ) -> JobResult<JobJoinHandle> {
-        match &env.get(&self.name) {
+        let local_printer = printer.clone();
+        let local_arguments = self.arguments.clone();
+        let local_env = env.clone();
+        let cmd = env.get(&self.name);
+        match cmd {
             Some(Cell::Command(command)) => {
-                let local_printer = printer.clone();
-                let local_arguments = self.arguments.clone();
-                let local_env = env.clone();
                 let c = command.call;
                 Ok(handle(build(self.name.clone()).spawn(
                     move || {
-                        match c(CompileContext {
+                        let mut deps: Vec<JobJoinHandle> = Vec::new();
+                        let arguments = local_arguments.compile(&mut deps, &local_env, &local_printer)?;
+                        let res = c(CompileContext {
                             input,
                             output,
-                            argument_definitions: local_arguments,
+                            arguments,
                             env: local_env,
                             printer: local_printer.clone(),
-                        }) {
-                            Ok(_) => {},
-                            Err(e) => local_printer.job_error(e),
-                        }
-                        Ok(())
+                        });
+                        JobJoinHandle::Many(deps).join(&local_printer);
+                        res
                     })))
             }
 
             Some(Cell::ClosureDefinition(closure_definition)) => {
-                closure_definition.spawn_and_execute(
-                    CompileContext {
-                        input,
-                        output,
-                        argument_definitions: self.arguments.clone(),
-                        env: env.clone(),
-                        printer: printer.clone(),
-                    })
+                Ok(handle(build(self.name.clone()).spawn(
+                    move || {
+                        let mut deps: Vec<JobJoinHandle> = Vec::new();
+                        let arguments = local_arguments.compile(&mut deps, &local_env, &local_printer)?;
+
+                        let res = closure_definition.spawn_and_execute(
+                            CompileContext {
+                                input,
+                                output,
+                                arguments,
+                                env: local_env.clone(),
+                                printer: local_printer.clone(),
+                            });
+                        JobJoinHandle::Many(deps).join(&local_printer);
+                        Ok(())
+                    })))
             }
             _ => {
                 Err(error(format!("Unknown command name {}", &self.name).as_str()))

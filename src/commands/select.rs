@@ -2,7 +2,6 @@ use crate::commands::CompileContext;
 use crate::{
     commands::command_util::find_field,
     errors::{JobError, argument_error},
-    commands::{Call, Exec},
     data::{
         Argument,
         Row,
@@ -58,11 +57,11 @@ pub fn run(
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let config = parse(&context.input_type, &context.arguments)?;
-    let input_type = context.input_type.clone();
-
+    let input = context.input.initialize()?;
+    let config = parse(input.get_type(), &context.arguments)?;
     let output_type = config.columns.iter()
-        .map(|(idx, name)| ColumnType {cell_type: input_type[*idx].cell_type.clone(), name: name.clone() })
+        .map(|(idx, name)| ColumnType {cell_type: input.get_type()[*idx].cell_type.clone(), name: name.clone() })
         .collect();
-    Ok((Exec::Command(Box::from(move || run(config, context.input, context.output))), output_type))
+    let output = context.output.initialize(output_type)?;
+    run(config, input, output)
 }

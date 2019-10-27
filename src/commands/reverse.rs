@@ -5,7 +5,6 @@ use crate::{
     data::CellDefinition,
     stream::{OutputStream, InputStream},
     data::Argument,
-    commands::{Call, Exec},
     errors::{JobError, argument_error},
     commands::head::get_line_count,
 };
@@ -40,6 +39,7 @@ pub fn run(
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let output_type = context.input_type.clone();
-    Ok((Exec::Command(Box::from(move || run(context.input, context.output))), output_type))
+    let input = context.input.initialize()?;
+    let output = context.output.initialize(input.get_type().clone())?;
+    run(input, output)
 }

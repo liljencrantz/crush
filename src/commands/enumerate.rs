@@ -9,7 +9,6 @@ use crate::{
         Cell,
     },
     stream::{OutputStream, InputStream},
-    commands::{Call, Exec},
     errors::{JobError, argument_error},
 };
 use std::iter::Iterator;
@@ -38,9 +37,9 @@ pub fn run(
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
+    let input = context.input.initialize()?;
     let mut output_type = vec![ColumnType::named("idx", CellType::Integer)];
-    let input = context.input;
-    let output = context.output;
-    output_type.extend(context.input_type.iter().cloned());
-    return Ok((Exec::Command(Box::from(move|| run(input, output))), output_type));
+    output_type.extend(input.get_type().clone());
+    let output = context.output.initialize(output_type)?;
+    run(input, output)
 }

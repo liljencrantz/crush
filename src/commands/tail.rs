@@ -2,12 +2,11 @@ use crate::commands::CompileContext;
 use crate::errors::JobResult;
 use crate::{
     data::Row,
-    data::{CellDefinition},
+    data::CellDefinition,
     stream::{OutputStream, InputStream},
     data::Argument,
-    commands::{Call, Exec},
     errors::{JobError, argument_error},
-    commands::head::get_line_count
+    commands::head::get_line_count,
 };
 use std::collections::VecDeque;
 use crate::printer::Printer;
@@ -17,7 +16,7 @@ use crate::commands::head;
 
 
 pub fn run(
-lines: i128,
+    lines: i128,
     input: InputStream,
     output: OutputStream,
 ) -> JobResult<()> {
@@ -35,7 +34,7 @@ lines: i128,
                     output.send(row)?;
                 }
                 break;
-            },
+            }
         }
     }
     return Ok(());
@@ -43,6 +42,7 @@ lines: i128,
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let lines = get_line_count(&context.arguments)?;
-    let output_type = context.input_type.clone();
-    Ok((Exec::Command(Box::from(move || run(lines, context.input, context.output))), output_type))
+    let input = context.input.initialize()?;
+    let output = context.output.initialize(input.get_type().clone())?;
+    run(lines, input, output)
 }

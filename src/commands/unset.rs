@@ -1,7 +1,6 @@
 use crate::commands::CompileContext;
 use crate::{
     data::Argument,
-    commands::{Exec},
     errors::{JobError, argument_error},
     env::Env,
 };
@@ -38,7 +37,7 @@ pub fn run(
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let env = context.env.clone();
     let vars = parse(context.arguments)?;
-    Ok((Exec::Command(Box::from(move || run(vars, env))), vec![]))
+    context.output.initialize(vec![]);
+    run(vars, context.env)
 }

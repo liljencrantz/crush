@@ -4,7 +4,6 @@ use crate::{
     data::Argument,
     stream::{OutputStream, InputStream},
     data::Cell,
-    commands::Exec,
     errors::{JobError, argument_error},
 };
 use crate::printer::Printer;
@@ -45,6 +44,7 @@ pub fn run(
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let lines = get_line_count(&context.arguments)?;
-    let output_type = context.input_type.clone();
-    Ok((Exec::Command(Box::from(move || run(lines, context.input, context.output))), output_type))
+    let input = context.input.initialize()?;
+    let output = context.output.initialize(input.get_type().clone())?;
+    run(lines, input, output)
 }

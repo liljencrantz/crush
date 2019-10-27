@@ -4,7 +4,6 @@ use std::iter::Iterator;
 use crate::{
     commands::command_util::find_field,
     errors::{JobError, argument_error},
-    commands::{Call, Exec},
     data::{
         Argument,
         Row,
@@ -70,7 +69,8 @@ pub fn run(
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let cfg = parse(&context.input_type, &context.arguments)?;
-    let output_type = cfg.output_type.clone();
-    Ok((Exec::Command(Box::from(move || run(cfg, context.input, context.output, context.printer))), output_type))
+    let input = context.input.initialize()?;
+    let cfg = parse(input.get_type(), &context.arguments)?;
+    let output = context.output.initialize(cfg.output_type.clone())?;
+    run(cfg, input, output, context.printer)
 }

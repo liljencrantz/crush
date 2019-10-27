@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use crate::{
     commands::command_util::find_field,
     errors::{JobError, argument_error},
-    commands::{Call, Exec},
     data::{
         Argument,
         Row,
@@ -58,9 +57,10 @@ pub fn run(
                 let val = groups.get(&key);
                 match val {
                     None => {
-                        let (output_stream, input_stream) = unlimited_streams();
+                        let (uninit_output_stream, input_stream) = unlimited_streams();
+                        let output_stream = uninit_output_stream.initialize(config.input_type.clone())?;
                         let out_row = Row {
-                            cells: vec![key.partial_clone()?, Cell::JobOutput(JobOutput { types: config.input_type.clone(), stream: input_stream })],
+                            cells: vec![key.partial_clone()?, Cell::JobOutput(JobOutput { stream: input_stream.initialize()? })],
                         };
                         output.send(out_row)?;
                         output_stream.send(row)?;
@@ -78,9 +78,15 @@ pub fn run(
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let config = parse(context.input_type.clone(), context.arguments)?;
-    let output_type= vec![context.input_type[config.column].clone(), ColumnType { name: Some(config.name.clone()), cell_type: CellType::Output(context.input_type.clone()) }];
-    let input = context.input;
-    let output = context.output;
-    Ok((Exec::Command(Box::from(move || run(config, input, output))), output_type))
+    let input = context.input.initialize()?;
+    let config = parse(input.get_type().clone(), context.arguments)?;
+    let output_type= vec![
+        input.get_type()[config.column].clone(),
+        ColumnType {
+            name: Some(config.name.clone()),
+            cell_type: CellType::Output(input.get_type().clone())
+        }
+    ];
+    let output = context.output.initialize(output_type)?;
+    run(config, input, output)
 }

@@ -18,9 +18,8 @@ pub fn run(mut arguments: Vec<Argument>, output: OutputStream) -> JobResult<()> 
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let mut deps: Vec<JobJoinHandle> = Vec::new();
-    let arguments = context.argument_definitions.compile(&mut deps, &context)?;
-    let output_type = arguments.iter().map(Argument::cell_type).collect();
+    let output_type = context.arguments.iter().map(Argument::cell_type).collect();
     let output = context.output.initialize(output_type)?;
-    run(arguments, output)
+    run(context.arguments, output);
+    Ok(())
 }

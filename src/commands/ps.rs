@@ -6,7 +6,6 @@ use crate::{
     data::CellType,
     stream::{OutputStream, InputStream},
     data::Cell,
-    commands::Exec,
     errors::JobError,
     env::get_cwd,
 };
@@ -52,11 +51,12 @@ pub fn run(output: OutputStream) -> JobResult<()> {
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    return Ok((Exec::Command(Box::from(move || run(context.output))), vec![
+    let output = context.output.initialize(vec![
         ColumnType::named("pid", CellType::Integer),
         ColumnType::named("ppid", CellType::Integer),
         ColumnType::named("status", CellType::Text),
         ColumnType::named("user", CellType::Text),
         ColumnType::named("name", CellType::Text),
-    ]));
+    ])?;
+    run(output)
 }

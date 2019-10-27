@@ -2,7 +2,6 @@ use crate::commands::CompileContext;
 use crate::errors::JobResult;
 use crate::{
     errors::{JobError, argument_error},
-    commands::{Call, Exec},
     data::{
         Argument,
         Row,
@@ -78,14 +77,13 @@ pub fn run(
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let has_streams = parse(context.input_type.clone());
-    let input = context.input;
-    let output = context.output;
+    let input = context.input.initialize()?;
+    let has_streams = parse(input.get_type().clone());
     let output_type = if has_streams {
-        get_output_type(&context.input_type)
+        get_output_type(input.get_type())
     } else {
         vec![ColumnType::named("count", CellType::Integer)]
     };
-
-    Ok((Exec::Command(Box::from(move || run(has_streams, input, output))), output_type))
+    let output = context.output.initialize(output_type)?;
+    run(has_streams, input, output)
 }

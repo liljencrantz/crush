@@ -8,7 +8,6 @@ use lazy_static::lazy_static;
 use crate::{
     commands::command_util::find_field,
     errors::{JobError, argument_error},
-    commands::{Exec},
     data::{
         Argument,
         Row,
@@ -31,16 +30,17 @@ lazy_static! {
 }
 
 fn handle(file: Box<Path>, output: &OutputStream) -> JobResult<()> {
-    let (output_stream, input_stream) = unlimited_streams();
+    let (uninit_output_stream, input_stream) = unlimited_streams();
+    let output_stream = uninit_output_stream.initialize(sub_type.clone())?;
     let out_row = Row {
         cells: vec![
             Cell::File(file.clone()),
             Cell::JobOutput(JobOutput {
-                types: sub_type.clone(),
-                stream: input_stream,
+                stream: input_stream.initialize()?,
             }),
         ],
     };
+
     output.send(out_row)?;
     let file_copy = file.clone();
     thread::spawn(move || {
@@ -64,8 +64,8 @@ pub struct Config {
     files: Either<(usize, InputStream), Vec<Box<Path>>>,
 }
 
-fn parse(arguments: Vec<Argument>, input_type: Vec<ColumnType>, input: InputStream) -> JobResult<Config> {
-    if input_type.len() == 0 {
+fn parse(arguments: Vec<Argument>, input: InputStream) -> JobResult<Config> {
+    if input.get_type().len() == 0 {
         let mut files: Vec<Box<Path>> = Vec::new();
         for arg in &arguments {
             arg.cell.file_expand(&mut files)?;
@@ -80,7 +80,7 @@ fn parse(arguments: Vec<Argument>, input_type: Vec<ColumnType>, input: InputStre
         match &arguments[0].cell {
             Cell::Text(s) | Cell::Field(s) => {
                 Ok(Config {
-                    files: Either::Left((find_field(&s, &input_type)?, input)),
+                    files: Either::Left((find_field(&s, input.get_type())?, input)),
                 })
             }
             _ => return Err(argument_error("Expected column of type Field")),
@@ -118,12 +118,11 @@ pub fn run(
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let output = context.output;
-    let files = parse(context.arguments, context.input_type, context.input)?;
-    let output_type: Vec<ColumnType> =
+    let output = context.output.initialize(
         vec![
             ColumnType::named("file", CellType::File),
             ColumnType::named("lines", CellType::Output(sub_type.clone())),
-        ];
-    Ok((Exec::Command(Box::from(move || run(files, output))), output_type))
+        ])?;
+    let files = parse(context.arguments, context.input.initialize()?)?;
+    run(files, output)
 }

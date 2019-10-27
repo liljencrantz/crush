@@ -2,7 +2,6 @@ use crate::commands::CompileContext;
 use crate::errors::JobResult;
 use crate::{
     data::Argument,
-    commands::Exec,
     errors::JobError,
     env::Env,
     errors::to_job_error,
@@ -30,5 +29,7 @@ pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
         }
         _ => Err(JobError { message: String::from("Wrong number of arguments") })
     }?;
-    Ok((Exec::Command(Box::from(move || run(dir))), vec![]))
+    context.output.initialize(vec![]);
+    run(dir);
+    Ok(())
 }

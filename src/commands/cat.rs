@@ -2,7 +2,6 @@ use crate::commands::CompileContext;
 use crate::errors::JobResult;
 use crate::{
     errors::JobError,
-    commands::{Call, Exec},
     data::{
         Argument,
         Row,
@@ -54,7 +53,7 @@ fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> Result<Conf
 pub fn run(
     config: Config,
     input: InputStream,
-           output: OutputStream,
+    output: OutputStream,
 ) -> JobResult<()> {
     loop {
         match input.recv() {
@@ -91,9 +90,9 @@ pub fn get_sub_type(cell_type: &ColumnType) -> Result<Vec<ColumnType>, JobError>
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let input = context.input;
-    let output = context.output;
-    let cfg = parse(&context.input_type, &context.arguments)?;
-    let output_type = get_sub_type(&context.input_type[cfg.column])?;
-    Ok((Exec::Command(Box::from(move || run(cfg, input, output))), output_type))
+    let input = context.input.initialize()?;
+    let cfg = parse(input.get_type(), &context.arguments)?;
+    let output_type = get_sub_type(&input.get_type()[cfg.column])?;
+    let output = context.output.initialize(output_type)?;
+    run(cfg, input, output)
 }

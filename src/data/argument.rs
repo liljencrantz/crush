@@ -64,13 +64,13 @@ impl<C> BaseArgument<C> {
 }
 
 pub trait ArgumentVecCompiler {
-    fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, context: &CompileContext) -> JobResult<Vec<Argument>>;
+    fn compile(&self, dependencies: &mut Vec<JobJoinHandle>,  env: &Env, printer: &Printer) -> JobResult<Vec<Argument>>;
 }
 
 impl ArgumentVecCompiler for Vec<ArgumentDefinition> {
-    fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, context: &CompileContext) -> JobResult<Vec<Argument>> {
+    fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Env, printer: &Printer) -> JobResult<Vec<Argument>> {
         self.iter()
-            .map(|a| a.argument(dependencies, &context.env, &context.printer))
+            .map(|a| a.argument(dependencies, env, printer))
             .collect::<JobResult<Vec<Argument>>>()
     }
 }

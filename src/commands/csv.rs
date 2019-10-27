@@ -5,22 +5,23 @@ use crate::{
         Row,
         CellType,
         JobOutput,
-        Cell
+        Cell,
     },
     stream::{OutputStream, InputStream, unlimited_streams},
-    commands::{Call, Exec},
     errors::{JobError, argument_error, error},
-    errors::to_job_error
+    errors::to_job_error,
 };
 use std::{
     io::BufReader,
     io::prelude::*,
     fs::File,
     thread,
-    path::Path
+    path::Path,
 };
 use either::Either;
+
 extern crate map_in_place;
+
 use map_in_place::MapVecInPlace;
 use crate::printer::Printer;
 use crate::env::Env;
@@ -35,7 +36,7 @@ pub struct Config {
     files: Either<(usize, InputStream), Vec<Box<Path>>>,
 }
 
-fn parse(arguments: Vec<Argument>, input_type: Vec<ColumnType>, input: InputStream) -> JobResult<Config> {
+fn parse(arguments: Vec<Argument>, input: InputStream) -> JobResult<Config> {
     let mut separator = ',';
     let mut columns = Vec::new();
     let mut skip_head = 0;
@@ -46,20 +47,20 @@ fn parse(arguments: Vec<Argument>, input_type: Vec<ColumnType>, input: InputStre
         match &arg.name {
             None => {
                 arg.cell.file_expand(&mut files);
-            },
+            }
             Some(name) => {
                 match name.as_ref() {
-                "col" =>
-                    match &arg.cell {
-                        Cell::Text(s) => {
-                            let split: Vec<&str> = s.split(':').collect();
-                            match split.len() {
-                                2 => columns.push(ColumnType::named(split[0], CellType::from(split[1])?)),
-                                _ => return Err(argument_error(format!("Expected a column description on the form name:type, got {}", s).as_str())),
+                    "col" =>
+                        match &arg.cell {
+                            Cell::Text(s) => {
+                                let split: Vec<&str> = s.split(':').collect();
+                                match split.len() {
+                                    2 => columns.push(ColumnType::named(split[0], CellType::from(split[1])?)),
+                                    _ => return Err(argument_error(format!("Expected a column description on the form name:type, got {}", s).as_str())),
+                                }
                             }
+                            _ => return Err(argument_error("Expected a text value")),
                         }
-                        _ => return Err(argument_error("Expected a text value")),
-                    }
 
                     "sep" =>
                         match &arg.cell {
@@ -67,7 +68,7 @@ fn parse(arguments: Vec<Argument>, input_type: Vec<ColumnType>, input: InputStre
                                 if s.len() == 1 {
                                     separator = s.chars().next().unwrap();
                                 } else {
-                                    return Err(argument_error("Separator must be exactly one character long"))
+                                    return Err(argument_error("Separator must be exactly one character long"));
                                 }
                             }
                             _ => return Err(argument_error("Expected a text value")),
@@ -79,7 +80,7 @@ fn parse(arguments: Vec<Argument>, input_type: Vec<ColumnType>, input: InputStre
                                 if s.len() == 1 {
                                     trim = Some(s.chars().next().unwrap());
                                 } else {
-                                    return Err(argument_error("Separator must be exactly one character long"))
+                                    return Err(argument_error("Separator must be exactly one character long"));
                                 }
                             }
                             _ => return Err(argument_error("Expected a text value")),
@@ -101,15 +102,14 @@ fn parse(arguments: Vec<Argument>, input_type: Vec<ColumnType>, input: InputStre
 }
 
 fn handle(file: Box<Path>, cfg: &Config, output: &OutputStream, printer: &Printer) -> JobResult<()> {
-    let (output_stream, input_stream) = unlimited_streams();
+    let (uninit_output_stream, input_stream) = unlimited_streams();
     let cfg_copy = cfg.clone();
-
+    let output_stream = uninit_output_stream.initialize(cfg.columns.clone())?;
     let out_row = Row {
         cells: vec![
             Cell::File(file.clone()),
             Cell::JobOutput(JobOutput {
-                types: cfg.columns.clone(),
-                stream: input_stream,
+                stream: input_stream.initialize()?,
             }),
         ],
     };
@@ -146,10 +146,10 @@ fn handle(file: Box<Path>, cfg: &Config, output: &OutputStream, printer: &Printe
 
             match split.iter()
                 .zip(columns.iter())
-                    .map({ |(s, t)| t.cell_type.parse(*s) })
+                .map({ |(s, t)| t.cell_type.parse(*s) })
                 .collect::<Result<Vec<Cell>, JobError>>() {
-                Ok(cells) => {output_stream.send(Row { cells });}
-                Err(err) => {printer_copy.job_error(err);}
+                Ok(cells) => { output_stream.send(Row { cells }); }
+                Err(err) => { printer_copy.job_error(err); }
             }
 
             line.clear();
@@ -173,14 +173,12 @@ pub fn run(mut config: Config, output: OutputStream, printer: Printer) -> JobRes
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let output = context.output;
-    let printer = context.printer;
-    let cfg = parse(context.arguments, context.input_type, context.input)?;
-
-    let output_type: Vec<ColumnType> =
+    let input = context.input.initialize()?;
+    let cfg = parse(context.arguments, input)?;
+    let output = context.output.initialize(
         vec![
-            ColumnType::named("file", CellType::File ),
+            ColumnType::named("file", CellType::File),
             ColumnType::named("data", CellType::Output(cfg.columns.clone())),
-        ];
-    Ok((Exec::Command(Box::from(move || run(cfg, output, printer))), output_type))
+        ])?;
+    run(cfg, output, context.printer)
 }

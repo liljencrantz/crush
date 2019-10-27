@@ -45,7 +45,7 @@ impl CellDefinition {
             //CellDefinition::Rows(r) => Cell::Rows(r),
             CellDefinition::JobDefintion(def) => {
                 let (first_output, first_input) = streams();
-                drop(first_output);
+                first_output.initialize(vec![])?;
                 let (last_output, last_input) = streams();
                 let mut j = def.spawn_and_execute(&env, printer, first_input, last_output)?;
 

@@ -137,17 +137,13 @@ fn parse(output: OutputStream, arguments: Vec<Argument>, recursive: bool) -> Res
 }
 
 pub fn compile_and_run_ls(context: CompileContext) -> JobResult<()> {
-    let mut deps: Vec<JobJoinHandle> = Vec::new();
-    let arguments = context.argument_definitions.compile(&mut deps, &context)?;
     let output = context.output.initialize(output_type.clone())?;
-    let cfg = parse(output, arguments, false)?;
+    let cfg = parse(output, context.arguments, false)?;
     run(cfg)
 }
 
 pub fn compile_and_run_find(context: CompileContext) -> JobResult<()> {
-    let mut deps: Vec<JobJoinHandle> = Vec::new();
-    let arguments = context.argument_definitions.compile(&mut deps, &context)?;
     let output = context.output.initialize(output_type.clone())?;
-    let cfg = parse(output, arguments, true)?;
+    let cfg = parse(output, context.arguments, true)?;
     run(cfg)
 }
