@@ -70,7 +70,6 @@ pub fn run(config: Config, ) -> JobResult<()> {
             Err(_) => {break;},
         }
     }
-//    output.send(Row { cells: vec![Cell::File(get_cwd()?)] })?;
     Ok(())
 }
 

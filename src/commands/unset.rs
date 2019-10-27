@@ -1,14 +1,8 @@
 use crate::commands::CompileContext;
-use crate::{
-    data::Argument,
-    errors::{JobError, argument_error},
-    env::Env,
-};
-use crate::data::{Cell, ColumnType};
-use crate::printer::Printer;
-use crate::stream::{InputStream, OutputStream};
+use crate::data::Argument;
+use crate::data::Cell;
+use crate::errors::argument_error;
 use crate::errors::JobResult;
-
 
 fn parse(arguments: Vec<Argument>) -> JobResult<Vec<Box<str>>> {
     let mut vars = Vec::new();
@@ -26,18 +20,11 @@ fn parse(arguments: Vec<Argument>) -> JobResult<Vec<Box<str>>> {
     Ok(vars)
 }
 
-pub fn run(
-    vars: Vec<Box<str>>,
-    env: Env,
-) -> JobResult<()> {
-    for s in vars {
-        env.remove(s.as_ref());
-    }
-    return Ok(());
-}
-
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let vars = parse(context.arguments)?;
     context.output.initialize(vec![]);
-    run(vars, context.env)
+    for s in vars {
+        context.env.remove(s.as_ref());
+    }
+    return Ok(());
 }

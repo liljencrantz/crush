@@ -1,20 +1,6 @@
-use crate::commands::{CompileContext, JobJoinHandle};
+use crate::commands::CompileContext;
 use crate::errors::JobResult;
-use crate::{
-    data::{Argument},
-    errors::{JobError, argument_error},
-    env::Env
-};
-use crate::stream::{OutputStream, InputStream};
-use crate::printer::Printer;
-use crate::data::{ColumnType, ArgumentVecCompiler};
-
-pub fn run(arguments: Vec<Argument>, env: Env) -> JobResult<()> {
-    for arg in arguments {
-        env.declare(arg.name.unwrap().as_ref(), arg.cell)?;
-    }
-    return Ok(());
-}
+use crate::errors::argument_error;
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     context.output.initialize(vec![]);
@@ -26,5 +12,8 @@ pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
             );
         }
     }
-    run(context.arguments, context.env)
+    for arg in context.arguments {
+        context.env.declare(arg.name.unwrap().as_ref(), arg.cell)?;
+    }
+    return Ok(());
 }

@@ -1,25 +1,12 @@
-use crate::commands::{CompileContext, JobJoinHandle};
+use crate::commands::CompileContext;
 use crate::errors::JobResult;
-use crate::{
-    stream::{OutputStream, InputStream},
-    data::Row,
-    data::Argument,
-    data::ArgumentVecCompiler,
-    errors::JobError
-};
-use crate::printer::Printer;
-use crate::env::Env;
-use crate::data::ColumnType;
+use crate::data::Row;
+use crate::data::Argument;
 
-pub fn run(mut arguments: Vec<Argument>, output: OutputStream) -> JobResult<()> {
-    output.send(Row {
-        cells: arguments.drain(..).map(|c| c.cell).collect()
-    })
-}
-
-pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
+pub fn compile_and_run(mut context: CompileContext) -> JobResult<()> {
     let output_type = context.arguments.iter().map(Argument::cell_type).collect();
     let output = context.output.initialize(output_type)?;
-    run(context.arguments, output);
-    Ok(())
+    output.send(Row {
+        cells: context.arguments.drain(..).map(|c| c.cell).collect()
+    })
 }
