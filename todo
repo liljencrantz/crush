@@ -1,6 +1,5 @@
 Bugs:
 Some missing comparisons on Cell.
-Variable subsitution happens too early in closures, leads to werid snafus.
 
 Todo:
 implement file regexps
@@ -26,10 +25,8 @@ Map lookup
 Only one job allowed in command substitution
 Implement hashing for remaining cell types, e.g. closure
 Implement if command if {true} `{} `{}
-Implement for command for find / | each `{}
 Implement loop command
 Implement break/continue commands
-Implement a function command to allow recursive functions, etc?
 Implement http command
 
 Done:
@@ -74,3 +71,4 @@ implement reverse command
 List cell types
 List literals
 List subscripting
+Implement for command for {ls} `{echo $file}

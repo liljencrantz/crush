@@ -7,7 +7,7 @@ mod cd;
 mod pwd;
 
 mod set;
-mod lett;
+mod r#let;
 mod unset;
 
 mod ps;
@@ -29,7 +29,7 @@ mod cat;
 
 mod cast;
 
-mod forr;
+mod r#for;
 
 use std::{io, thread};
 use crate::{
@@ -94,7 +94,7 @@ pub fn add_builtins(env: &Env) -> JobResult<()> {
     env.declare("cd", Cell::Command(Command::new(cd::compile_and_run)))?;
     env.declare("pwd", Cell::Command(Command::new(pwd::parse_and_run)))?;
 
-    env.declare("let", Cell::Command(Command::new(lett::compile_and_run)))?;
+    env.declare("let", Cell::Command(Command::new(r#let::compile_and_run)))?;
     env.declare("set", Cell::Command(Command::new(set::compile_and_run)))?;
     env.declare("unset", Cell::Command(Command::new(unset::compile_and_run)))?;
 
@@ -121,7 +121,7 @@ pub fn add_builtins(env: &Env) -> JobResult<()> {
     env.declare("lines", Cell::Command(Command::new(lines::compile_and_run)))?;
     env.declare("csv", Cell::Command(Command::new(csv::compile_and_run)))?;
 
-    env.declare("for", Cell::Command(Command::new(forr::compile_and_run)))?;
+    env.declare("for", Cell::Command(Command::new(r#for::compile_and_run)))?;
 
     return Ok(());
 }
