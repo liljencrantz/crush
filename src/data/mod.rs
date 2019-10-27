@@ -10,12 +10,10 @@ mod list;
 mod list_definition;
 
 use crate::commands::{CompileContext};
-use crate::errors::{JobError, error, JobResult};
+use crate::errors::{JobResult};
 use std::fmt::Formatter;
-use crate::stream::{InputStream, OutputStream, UninitializedInputStream};
+use crate::stream::{InputStream};
 use std::hash::Hasher;
-use regex::Regex;
-use std::error::Error;
 
 pub use cell::Cell;
 pub use column_type::ColumnType;
@@ -31,8 +29,6 @@ pub use call_definition::CallDefinition;
 pub use list::List;
 pub use list_definition::ListDefinition;
 pub use argument::ArgumentVecCompiler;
-
-use crate::glob::Glob;
 
 
 #[derive(Clone)]

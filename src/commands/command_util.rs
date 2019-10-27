@@ -1,10 +1,13 @@
-use crate::data::{ColumnType, Cell};
-use crate::errors::{JobResult, JobError};
-use std::sync::Mutex;
-use lazy_static::lazy_static;
 use std::collections::HashMap;
+use std::sync::Mutex;
+
 use users::uid_t;
 use users::User;
+
+use lazy_static::lazy_static;
+
+use crate::data::{Cell, ColumnType};
+use crate::errors::{JobError, JobResult};
 
 pub fn find_field(needle: &str, haystack: &Vec<ColumnType>) -> JobResult<usize> {
     for (idx, field) in haystack.iter().enumerate() {

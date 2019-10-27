@@ -1,21 +1,22 @@
-use crate::commands::CompileContext;
-use crate::errors::JobResult;
 use std::iter::Iterator;
+
 use crate::{
     commands::command_util::find_field,
-    errors::{JobError, argument_error},
     data::{
         Argument,
-        Row,
-        CellDefinition,
         Cell,
+        CellDefinition,
+        Row,
     },
-    stream::{OutputStream, InputStream},
+    errors::{argument_error, JobError},
     replace::Replace,
+    stream::{InputStream, OutputStream},
 };
+use crate::commands::CompileContext;
 use crate::data::{CellType, ColumnType};
-use crate::printer::Printer;
 use crate::env::Env;
+use crate::errors::JobResult;
+use crate::printer::Printer;
 
 pub struct Config {
     output_type: Vec<ColumnType>,

@@ -7,7 +7,7 @@ use std::path::Path;
 use lazy_static::lazy_static;
 use crate::{
     commands::command_util::find_field,
-    errors::{JobError, argument_error},
+    errors::{argument_error},
     data::{
         Argument,
         Row,
@@ -18,8 +18,6 @@ use crate::{
     },
     stream::{OutputStream, InputStream, unlimited_streams},
 };
-use crate::printer::Printer;
-use crate::env::Env;
 use either::Either;
 use crate::errors::JobResult;
 

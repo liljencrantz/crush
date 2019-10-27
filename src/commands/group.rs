@@ -2,11 +2,10 @@ use crate::commands::CompileContext;
 use std::collections::HashMap;
 use crate::{
     commands::command_util::find_field,
-    errors::{JobError, argument_error},
+    errors::{argument_error},
     data::{
         Argument,
         Row,
-        CellDefinition,
         JobOutput,
         CellType,
         Cell,
@@ -14,7 +13,6 @@ use crate::{
     stream::{OutputStream, InputStream, unlimited_streams},
 };
 use crate::printer::Printer;
-use crate::replace::Replace;
 use crate::env::Env;
 use crate::data::ColumnType;
 use crate::errors::JobResult;

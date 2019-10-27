@@ -1,6 +1,6 @@
 use crate::commands::CompileContext;
-use crate::errors::JobResult;
 use crate::errors::argument_error;
+use crate::errors::JobResult;
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     context.output.initialize(vec![]);

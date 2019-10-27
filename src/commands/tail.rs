@@ -1,19 +1,13 @@
+use std::collections::VecDeque;
+
+use crate::{
+    commands::head::get_line_count,
+    data::Row,
+    errors::argument_error,
+    stream::{InputStream, OutputStream},
+};
 use crate::commands::CompileContext;
 use crate::errors::JobResult;
-use crate::{
-    data::Row,
-    data::CellDefinition,
-    stream::{OutputStream, InputStream},
-    data::Argument,
-    errors::{JobError, argument_error},
-    commands::head::get_line_count,
-};
-use std::collections::VecDeque;
-use crate::printer::Printer;
-use crate::env::Env;
-use crate::data::ColumnType;
-use crate::commands::head;
-
 
 pub fn run(
     lines: i128,

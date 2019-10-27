@@ -1,23 +1,19 @@
-mod parser;
+use std::cmp::Ordering;
+use std::iter::Iterator;
 
 use crate::{
+    commands::r#where::parser::{Condition, parse, Value},
     data::{
         Cell,
-        CellDefinition,
         Row,
-        Argument
     },
-    stream::{OutputStream, InputStream},
-    errors::{JobError, argument_error},
-    commands::r#where::parser::{Condition, Value, parse}
+    stream::{InputStream, OutputStream}
 };
-use std::iter::Iterator;
-use crate::printer::Printer;
-use crate::errors::{error, JobResult};
-use std::cmp::Ordering;
-use crate::env::Env;
-use crate::data::ColumnType;
 use crate::commands::CompileContext;
+use crate::errors::{error, JobResult};
+use crate::printer::Printer;
+
+mod parser;
 
 pub struct Config {
     condition: Condition,
@@ -26,7 +22,7 @@ pub struct Config {
 }
 
 
-fn do_match(needle: &Cell, haystack: &Cell) -> Result<bool, JobError> {
+fn do_match(needle: &Cell, haystack: &Cell) -> JobResult<bool> {
     match (needle, haystack) {
         (Cell::Text(s), Cell::Glob(pattern)) => Ok(pattern.matches( s)),
         (Cell::File(f), Cell::Glob(pattern)) => f.to_str().map(|s| Ok(pattern.matches( s))).unwrap_or(Err(error("Invalid filename"))),
@@ -46,7 +42,7 @@ fn to_cell<'a>(value: &'a Value, row: &'a Row) -> &'a Cell {
     };
 }
 
-fn evaluate(condition: &Condition, row: &Row) -> Result<bool, JobError> {
+fn evaluate(condition: &Condition, row: &Row) -> JobResult<bool> {
     return match condition {
         Condition::Equal(l, r) =>
             Ok(to_cell(&l, row) == to_cell(&r, row)),

@@ -1,7 +1,7 @@
 use crate::commands::CompileContext;
 use crate::{
-    commands::command_util::find_field,
-    errors::{JobError, argument_error},
+     commands::command_util::find_field,
+    errors::{argument_error},
     data::{
         Argument,
         Row,
@@ -10,8 +10,6 @@ use crate::{
     },
     stream::{OutputStream, InputStream},
     replace::Replace,
-    printer::Printer,
-    env::Env,
     data::ColumnType,
     errors::JobResult
 };

@@ -1,9 +1,9 @@
-use crate::data::{ArgumentDefinition, ColumnType, Cell, Argument, ArgumentVecCompiler};
-use crate::stream::{InputStream, OutputStream, UninitializedInputStream, UninitializedOutputStream};
+use crate::data::{ArgumentDefinition, Cell, ArgumentVecCompiler};
+use crate::stream::{UninitializedInputStream, UninitializedOutputStream};
 use crate::printer::Printer;
 use crate::env::Env;
 use crate::commands::{CompileContext, JobJoinHandle};
-use crate::errors::{JobError, error, JobResult};
+use crate::errors::{error, JobResult};
 use std::thread;
 use std::thread::JoinHandle;
 

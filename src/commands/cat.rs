@@ -1,23 +1,23 @@
-use crate::commands::CompileContext;
-use crate::errors::JobResult;
 use crate::{
-    errors::JobError,
     data::{
         Argument,
-        Row,
+        Cell,
         CellDefinition,
         CellType,
         JobOutput,
-        Cell,
+        Row,
     },
-    stream::{OutputStream, InputStream},
+    errors::JobError,
+    stream::{InputStream, OutputStream},
 };
-use crate::errors::{argument_error, error};
 use crate::commands::command_util::find_field;
-use crate::replace::Replace;
-use crate::printer::Printer;
-use crate::env::Env;
+use crate::commands::CompileContext;
 use crate::data::ColumnType;
+use crate::env::Env;
+use crate::errors::{argument_error, error};
+use crate::errors::JobResult;
+use crate::printer::Printer;
+use crate::replace::Replace;
 
 pub struct Config {
     column: usize,

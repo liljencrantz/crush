@@ -8,8 +8,7 @@ use crate::{
         Cell,
     },
     stream::{OutputStream, InputStream, unlimited_streams},
-    errors::{JobError, argument_error, error},
-    errors::to_job_error,
+    errors::{JobError, argument_error},
 };
 use std::{
     io::BufReader,
@@ -24,7 +23,6 @@ extern crate map_in_place;
 
 use map_in_place::MapVecInPlace;
 use crate::printer::Printer;
-use crate::env::Env;
 use crate::data::ColumnType;
 use crate::errors::JobResult;
 

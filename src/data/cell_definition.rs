@@ -1,4 +1,4 @@
-use crate::data::{Command, Cell, JobOutput, ListDefinition, CellType};
+use crate::data::{Command, Cell, JobOutput, ListDefinition};
 use crate::closure::ClosureDefinition;
 use crate::job::{JobDefinition};
 use std::path::Path;

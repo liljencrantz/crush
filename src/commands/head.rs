@@ -6,9 +6,6 @@ use crate::{
     data::Cell,
     errors::{JobError, argument_error},
 };
-use crate::printer::Printer;
-use crate::env::Env;
-use crate::data::ColumnType;
 
 pub fn get_line_count(arguments: &Vec<Argument>) -> Result<i128, JobError> {
     return match arguments.len() {

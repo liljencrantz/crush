@@ -1,26 +1,13 @@
 use crate::commands::CompileContext;
 use crate::errors::JobResult;
-use crate::{
-    data::{
-        CellDefinition,
-        CellType,
-        Row,
-        Argument,
-        Cell,
-    },
-    stream::{OutputStream, InputStream},
-    errors::{JobError, argument_error},
-};
-use std::iter::Iterator;
-use crate::printer::Printer;
-use crate::env::Env;
+use crate::data::CellType;
+use crate::data::Row;
+use crate::data::Cell;
+use crate::stream::OutputStream;
+use crate::stream::InputStream;
 use crate::data::ColumnType;
 
-
-pub fn run(
-    input: InputStream,
-    output: OutputStream,
-) -> JobResult<()> {
+pub fn run(input: InputStream, output: OutputStream) -> JobResult<()> {
     let mut line: i128 = 1;
     loop {
         match input.recv() {

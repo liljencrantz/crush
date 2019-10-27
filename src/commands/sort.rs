@@ -1,18 +1,10 @@
-use crate::commands::CompileContext;
 use crate::{
     commands::command_util::find_field,
-    errors::{JobError, argument_error},
-    data::{
-        Argument,
-        Row,
-        CellDefinition,
-        Cell
-    },
-    stream::{OutputStream, InputStream},
+    errors::argument_error,
+    stream::{InputStream, OutputStream},
 };
-use crate::printer::Printer;
-use crate::env::Env;
-use crate::data::ColumnType;
+use crate::commands::CompileContext;
+use crate::data::{ColumnType, Argument, Cell, Row};
 use crate::errors::JobResult;
 
 pub struct Config {

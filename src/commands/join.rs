@@ -54,7 +54,7 @@ fn scan_table(table: &str, column: &str, input_type: &Vec<ColumnType>) -> Result
 }
 
 fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Config, JobError> {
-    if (arguments.len() != 3) {
+    if arguments.len() != 3 {
         return Err(argument_error("Expected exactly 3 aguments"));
     }
     return match (&arguments[0].cell, &arguments[1].cell, &arguments[2].cell) {

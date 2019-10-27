@@ -1,7 +1,7 @@
-use crate::data::{CellType, ColumnType, Cell, JobOutput};
+use crate::data::{CellType, ColumnType, Cell};
 use crate::data::{Alignment, Row, Rows};
 use std::cmp::max;
-use std::sync::mpsc::{Receiver, sync_channel, SyncSender, channel, Sender, RecvError};
+use std::sync::mpsc::{Receiver, sync_channel, SyncSender, channel, Sender};
 use crate::errors::{JobError, error, JobResult, to_job_error};
 use std::error::Error;
 use crate::printer::Printer;

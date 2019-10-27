@@ -1,12 +1,11 @@
 use crate::{
+    commands::command_util::find_field,
     data::{
-        CellDefinition,
         Argument,
-        CellType,
-        Cell
+        Cell,
+        CellType
     },
-    errors::{JobError, argument_error},
-    commands::command_util::find_field
+    errors::{argument_error, JobError}
 };
 use crate::data::ColumnType;
 

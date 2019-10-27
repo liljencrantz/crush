@@ -1,6 +1,5 @@
-use crate::data::{CellType, CellDefinition, Cell, List};
+use crate::data::{CellDefinition, Cell, List};
 use crate::errors::JobError;
-use std::hash::Hasher;
 use crate::printer::Printer;
 use crate::env::Env;
 use crate::commands::JobJoinHandle;

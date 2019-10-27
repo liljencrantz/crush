@@ -3,7 +3,7 @@ use crate::data::{CellDefinition, ColumnType};
 use crate::errors::{JobError, JobResult};
 use crate::env::Env;
 use crate::printer::Printer;
-use crate::commands::{JobJoinHandle, CompileContext};
+use crate::commands::{JobJoinHandle};
 
 #[derive(Debug)]
 pub struct BaseArgument<C> {

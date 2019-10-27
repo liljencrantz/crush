@@ -1,20 +1,7 @@
 use crate::commands::CompileContext;
-use crate::errors::JobResult;
-use crate::{
-    data::Argument,
-    errors::JobError,
-    env::Env,
-    errors::to_job_error,
-    printer::Printer,
-    stream::{OutputStream, InputStream},
-    data::ColumnType
-};
+use crate::errors::{to_job_error, JobResult, error};
 use std::path::Path;
 use crate::data::Cell;
-
-pub fn run(dir: Box<Path>) -> JobResult<()> {
-    to_job_error(std::env::set_current_dir(dir))
-}
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let dir = match context.arguments.len() {
@@ -24,12 +11,11 @@ pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
             match &dir.cell {
                 Cell::Text(val) => Ok(Box::from(Path::new(val.as_ref()))),
                 Cell::File(val) => Ok(val.clone()),
-                _ => Err(JobError { message: String::from("Wrong parameter type, expected text") })
+                _ => Err(error("Wrong parameter type, expected text"))
             }
         }
-        _ => Err(JobError { message: String::from("Wrong number of arguments") })
+        _ => Err(error("Wrong number of arguments"))
     }?;
     context.output.initialize(vec![]);
-    run(dir);
-    Ok(())
+    to_job_error(std::env::set_current_dir(dir))
 }

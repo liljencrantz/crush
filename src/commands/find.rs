@@ -1,20 +1,21 @@
-use std::fs;
-use crate::stream::{OutputStream, InputStream};
-use crate::data::{Cell, CellType, Row, Argument, ColumnType};
-use crate::commands::{CompileContext, JobJoinHandle};
-use crate::errors::{JobError, error, to_job_error, JobResult};
-use chrono::{Local, DateTime};
-use std::path::Path;
-use std::fs::Metadata;
-use crate::env::{get_cwd, Env};
-use crate::printer::Printer;
-use crate::commands::command_util::{create_user_map, UserMap};
 use std::collections::{HashMap, VecDeque};
+use std::fs;
+use std::fs::Metadata;
+use std::os::unix::fs::MetadataExt;
+use std::path::Path;
+
+use chrono::{DateTime, Local};
 use users::uid_t;
 use users::User;
-use std::os::unix::fs::MetadataExt;
+
 use lazy_static::lazy_static;
-use crate::data::ArgumentVecCompiler;
+
+use crate::commands::CompileContext;
+use crate::commands::command_util::{create_user_map, UserMap};
+use crate::data::{Argument, Cell, CellType, ColumnType, Row};
+use crate::env::get_cwd;
+use crate::errors::{error, JobError, JobResult, to_job_error};
+use crate::stream::OutputStream;
 
 lazy_static! {
     static ref output_type: Vec<ColumnType> = vec![
@@ -94,7 +95,7 @@ pub fn run(mut config: Config) -> JobResult<()> {
             q.push_back(dir);
         }
     loop {
-        if (q.is_empty()) {
+        if q.is_empty() {
             break;
         }
         let dir = q.pop_front().unwrap();

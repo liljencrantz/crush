@@ -1,20 +1,15 @@
 use crate::commands::CompileContext;
 use crate::errors::JobResult;
 use crate::{
-    data::Argument,
     data::Row,
     data::CellType,
-    stream::{OutputStream, InputStream},
+    stream::{OutputStream},
     data::Cell,
-    errors::JobError,
-    env::get_cwd,
 };
-use crate::printer::Printer;
-use crate::env::Env;
-use crate::data::ColumnType;
 use psutil::process::State;
 use crate::commands::command_util::{create_user_map,UserMap};
 use users::uid_t;
+use crate::data::ColumnType;
 
 fn state_name(s: psutil::process::State) -> &'static str {
     match s {
