@@ -1,15 +1,17 @@
-use crate::data::{Command, Cell, JobOutput, ListDefinition};
-use crate::closure::ClosureDefinition;
-use crate::job::{JobDefinition};
 use std::path::Path;
-use regex::Regex;
-use crate::glob::Glob;
+
 use chrono::{DateTime, Local};
-use crate::env::Env;
-use crate::printer::Printer;
-use crate::errors::{JobError, mandate, error};
-use crate::stream::streams;
+use regex::Regex;
+
+use crate::closure::ClosureDefinition;
 use crate::commands::JobJoinHandle;
+use crate::data::{Cell, Command, JobOutput, ListDefinition};
+use crate::env::Env;
+use crate::errors::{error, JobError, mandate};
+use crate::glob::Glob;
+use crate::job::JobDefinition;
+use crate::printer::Printer;
+use crate::stream::streams;
 
 #[derive(Clone)]
 pub enum CellDefinition {

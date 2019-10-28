@@ -1,119 +1,55 @@
-Sigils for a bunch of things:
+Date mode:
 
-# Variable substitution
-echo ${foo}
+# Now:
+echo date{now}
 
-# Regular expressions
-ls r{^[0-9]{3,7}.txt$}
+# Five days into the future
+echo date{now + five days}
 
-Because we want to be able to match wildcards and regular expressions against other things
-than files, they are passed in as their respective type to the commands, and the command
-will decide how to resolve different argument types.
+# These are equivalent:
+echo date{2012-03-30 16:32}
+echo date{3/30/2012 4:32 PM}
 
-# Lambdas
-echo {pwd}   # Passes in the output of the pwd command
-echo `{pwd}  # Passes in the lambda itself
+Durations:
 
-Error handling:
+# One hour
+echo duration{1 hour}
 
-Print errors on stderr.
+# Silly way to say one week
+echo duration{6 days 23 hours 59 minutes 60 seconds}
 
-Should maybe jobs hang around, and we can see their errors?
+Variable expansion in date/time environments:
 
-Variables:
+let hour_count = 5
+echo duration{$hour_count hours}
 
-#declare new variable foo in current scope to hold value bar
-let foo=bar
+let unit = minutes
+echo duration{7 $unit}
 
-#set already existing variable foo to hold value bar, in whatever scope it was declared
-set foo=bar
+let timeout=duration{10 seconds}
+let soft_deadline = date{now + $timeout}
+let hard_deadline = date{now + $timeout*2}
 
-# Set the variable list to contain a listing of all files on this system
-set lst={find /}
+More math with time:
+# Subtract two timestamps to get a durations
+let t1 = t{1970-01-01: 00:00:00}
+let t2 = t{now}
+let dur = t{$t2 - $t1}
 
-# Set the variable re to point to a regular expression
-set re=r{...}
-
-Namespaces:
-
-Should commands live in the same namespace as environment variables?
-
-functions would simply be one more cell type.
-
-# Create a function named some_function that's a wrapper around ls
-set some_function=`{ls|sort key=modified}
-
-Could be nice as we can pass in lambdas as arguments to e.g. the sort command. Pretty cool idea...
-
-Unclear how we do argument handling to functions in this scenario.
-
-Output of commands:
-
-Is it in any way meaningful for commands/jobs to have an exit status?
-
-Language:
-
-In order to support passing in "conditions" to code that reference cells in the output, use the %{}
-sigil:
-
-> ls | filter (%{size} > 123 and %{owner} == axel) or created > {date now - 5 days}
-
-No operator precedence.
-
-Parameter parsing:
-
-Use argument names to set values, e.g.
-
-> ls directory=true ~/*/
-> ls | sort key=size
-> find . follow_symlinks=true max_depth=7 mount=false
-
-Use field sigil to refer to row cell values
-> find . | filter %{name} == *.txt
-
-Combining results:
-
-The echo command can be used to combine separate result streams into one:
-
-echo hair={csv name:text hair_color:text} age={csv name:text age:integer} | join %{name.name}==%{age.age}
-
-The for-loop:
-
-for i={seq 10} `{print $i}
-
-Date command:
-
-date now
-date now+5 days
-date 2012-03-30 16:32
-date 3/30/2012 4:32 PM
+Math mode:
+Math mode inside math{}
+echo math{5*5}
+# 25
+let foo=4
+let bar=16
+let large_number=math{$foo^bar}
+Following operators supported + - * / ^ == != > < >= <= as well as parenthesis for grouping.
 
 Integrating external commands:
 
-cmd git grep fnurp
+Just pass thorugh commands that don't exist in the shell but exist in PATH
 
-Declare new functions:
-
-Just set a variable, and make the variable a lambda. That easy. Yay.
-
-# If no signature is given, all parameters are inserted into the argv array variable
-let lss=`{ls ${argv...} | sort key=size}
-
-# This signature means first argument is named foo and must be a text, bar must be integer and has default value of seven,
-# baz can have any type and has default value of ggg, and remaining inputs are inserted into qux, and must be wildcards.
-let lss=`{|foo:text bar=7 baz:any=ggg qux:wildcard...| echo ${foo} ${bar} ${baz}}
-lss foo bar
-
-File parsing:
-
-The csv command interprets files as columnar data, e.g. csv files.
-The bin command interprets files as a single binary blob.
-The rows command interprets files as a series of text rows.
-The readline command reads interactive input from the user via the terminal
-
-Type conversion:
-
-There should be a type conversion operator of some kind.
+git grep fnurp
 
 IO redirection:
 
@@ -127,9 +63,59 @@ ls | upper file=%file
 # Append new upper-column
 ls | lower upper=%file
 
-#Pass through file and size columns, drop the rest
-ls | pick %file %size
-
 # Replace file column in-place using regex
 ls | sed file=r{a(b*)c(d*)e}{\1\2}g
+
+Extracting single cells from table output:
+
+echo largest_file={ls|sort %size|reverse}[0][%size]
+
+New list literal syntax
+
+Use separate modes for lists and maps:
+
+let my_list = list{1 2 3} list_of_list = list{ list{a} list{b c} list{d}}
+let my_hash = map{sally: row{} john: row{first_name: John last_name: Smith age: 42}}
+
+Modes:
+
+regex{.*} # Regex
+date{now} # Date (with time)
+duration{1 hour 20 minutes} # Durations
+list{1 2 3} # List literal
+map{1:foo 5:bar 9:baz} # Map literal
+math{5*5} # Math
+*{*.txt} # Glob
+`{ls} # Closure
+{ls} # Command substitution
+
+Problems:
+
+How to mutate a list/map?
+
+Possibility
+
+> let my_list = list{1 2 3}
+> list.push $my_list 4 5 6
+> list.pop $my_list
+value
+6
+> list.len $my_list
+size
+5
+
+Another
+> let my_list = list{1 2 3}
+> list.push my_list 4 5 6
+> list.pop my_list
+value
+6
+> list.len my_list
+5
+
+Empty list:
+> list.create empty_list integer
+
+json deserialization:
+How to deal with impedance mismatch, e.g. null values, lists with multiple types of values, etc?
 

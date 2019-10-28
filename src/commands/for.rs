@@ -13,8 +13,9 @@ use crate::data::{ColumnType, JobOutput};
 use crate::errors::{argument_error, JobResult};
 use crate::closure::ClosureDefinition;
 use crate::commands::CompileContext;
-use crate::stream::{spawn_print_thread, empty_stream};
+use crate::stream::empty_stream;
 use std::sync::atomic::Ordering::AcqRel;
+use crate::stream_printer::spawn_print_thread;
 
 pub struct Config {
     iter: JobOutput,

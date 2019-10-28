@@ -11,6 +11,7 @@ mod lexer;
 mod closure;
 mod parser;
 mod printer;
+mod stream_printer;
 
 use crate::lexer::Lexer;
 
@@ -25,12 +26,13 @@ use std::sync::Arc;
 use std::borrow::BorrowMut;
 use crate::printer::Printer;
 use std::sync::mpsc::channel;
-use crate::stream::{streams, spawn_print_thread, empty_stream};
-use crate::data::{JobOutput};
+use crate::stream::{streams, empty_stream};
+use crate::data::JobOutput;
+use crate::stream_printer::spawn_print_thread;
 
-fn repl() -> JobResult<()>{
+fn repl() -> JobResult<()> {
     let mut global_env = env::Env::new();
-    let printer =  Printer::new();
+    let printer = Printer::new();
 
     add_builtins(&global_env)?;
     let mut rl = Editor::<()>::new();
@@ -40,21 +42,23 @@ fn repl() -> JobResult<()>{
 
         match readline {
             Ok(cmd) => {
-                rl.add_history_entry(cmd.as_str());
-                match parser::parse(&mut Lexer::new(&cmd)) {
-                    Ok(jobs) => {
-                        for job_definition in jobs {
-                            let last_output = spawn_print_thread(&printer);
-                            match job_definition.spawn_and_execute(&global_env, &printer, empty_stream(), last_output) {
-                                Ok(handle) => {
-                                    handle.join(&printer);
+                if !cmd.is_empty() {
+                    rl.add_history_entry(cmd.as_str());
+                    match parser::parse(&mut Lexer::new(&cmd)) {
+                        Ok(jobs) => {
+                            for job_definition in jobs {
+                                let last_output = spawn_print_thread(&printer);
+                                match job_definition.spawn_and_execute(&global_env, &printer, empty_stream(), last_output) {
+                                    Ok(handle) => {
+                                        handle.join(&printer);
+                                    }
+                                    Err(e) => printer.job_error(e),
                                 }
-                                Err(e) => printer.job_error(e),
                             }
                         }
-                    }
-                    Err(error) => {
-                        printer.job_error(error);
+                        Err(error) => {
+                            printer.job_error(error);
+                        }
                     }
                 }
             }

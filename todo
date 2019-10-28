@@ -1,17 +1,17 @@
 Bugs:
 Some missing comparisons on Cell.
+Missing type check on list literals, e.g. let foo=[1 horse]
 
 Todo:
 implement file regexps
 make ls support regexps
 implement date command
-implement closures with named/typed arguments
+implement input type declarations for closures
 implement env command
 implement sum command
 Add support for %<INTEGER> for offset based field identifiers
 make file globing testable via fakes
 Error source propagation
-Error gathering thread that collects runtime errors
 help
 implement cmd command
 implement format command for text formating
@@ -28,6 +28,17 @@ Implement if command if {true} `{} `{}
 Implement loop command
 Implement break/continue commands
 Implement http command
+Implement zip command to combine two streams
+The bin command interprets files as a single binary blob.
+The readline command reads interactive input from the user via the terminal
+pbuf command that reads a protobuf message and deserializes it
+avro command that reads avro files and deserialize them
+fields and variables should support dot notation
+add support for using namespace objects as actual namespaces
+Start putting commands into namespaces
+Put inherited environment variables into the namespace
+add support for dot notation in argument names
+
 
 Done:
 Fix all expects calls that aren't impossible, and propagate the errors

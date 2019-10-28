@@ -1,6 +1,6 @@
 use crate::env::Env;
 use crate::commands::{JobJoinHandle};
-use crate::stream::{print, streams, OutputStream, InputStream, spawn_print_thread, UninitializedOutputStream, UninitializedInputStream};
+use crate::stream::{streams, OutputStream, InputStream, UninitializedOutputStream, UninitializedInputStream};
 use std::thread;
 use crate::data::{JobOutput, ColumnType, CellDefinition, CallDefinition};
 use std::thread::JoinHandle;

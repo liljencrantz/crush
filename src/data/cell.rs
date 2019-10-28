@@ -1,17 +1,18 @@
 use std::cmp::Ordering;
 use std::hash::Hasher;
 use std::path::Path;
-use regex::Regex;
+
 use chrono::{DateTime, Local};
+use regex::Regex;
+
 use crate::{
-    closure::{ClosureDefinition},
-    env::{get_cwd},
-    errors::{error, JobError, to_job_error},
+    closure::ClosureDefinition,
+    env::get_cwd,
     data::rows::Rows,
-    data::{JobOutput, CellType, Command, Row},
+    errors::{error, JobError, to_job_error},
     glob::Glob,
 };
-use crate::data::{List};
+use crate::data::{List, Command, JobOutput, Row, CellType};
 use crate::errors::JobResult;
 
 pub enum Cell {

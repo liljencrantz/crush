@@ -29,9 +29,7 @@ fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> JobResult<C
     }
 }).collect();
 
-    Ok(Config {
-        columns: columns?,
-    })
+    Ok(Config { columns: columns? })
 }
 
 pub fn run(

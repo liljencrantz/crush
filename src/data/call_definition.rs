@@ -1,11 +1,12 @@
-use crate::data::{ArgumentDefinition, Cell, ArgumentVecCompiler};
-use crate::stream::{UninitializedInputStream, UninitializedOutputStream};
-use crate::printer::Printer;
-use crate::env::Env;
-use crate::commands::{CompileContext, JobJoinHandle};
-use crate::errors::{error, JobResult};
 use std::thread;
 use std::thread::JoinHandle;
+
+use crate::commands::{CompileContext, JobJoinHandle};
+use crate::data::{ArgumentDefinition, ArgumentVecCompiler, Cell};
+use crate::env::Env;
+use crate::errors::{error, JobResult};
+use crate::printer::Printer;
+use crate::stream::{UninitializedInputStream, UninitializedOutputStream};
 
 #[derive(Clone)]
 #[derive(PartialEq)]

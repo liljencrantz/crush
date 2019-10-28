@@ -3,12 +3,13 @@ use crate::env::Env;
 use std::sync::Arc;
 use crate::namespace::Namespace;
 use crate::data::{CellDefinition, JobOutput, ColumnType, Argument};
-use crate::stream::{InputStream, OutputStream, streams, spawn_print_thread, empty_stream};
+use crate::stream::{InputStream, OutputStream, streams, empty_stream};
 use crate::printer::Printer;
 use crate::errors::{error, JobError, JobResult, mandate};
 use crate::commands::{JobJoinHandle, CompileContext};
 use std::thread;
 use std::thread::JoinHandle;
+use crate::stream_printer::spawn_print_thread;
 
 #[derive(Clone)]
 pub struct ClosureDefinition {
