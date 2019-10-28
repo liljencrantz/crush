@@ -1,6 +1,6 @@
 use crate::commands::CompileContext;
 use crate::{
-     commands::command_util::find_field,
+    commands::command_util::find_field_from_str,
     errors::{argument_error},
     data::{
         Argument,
@@ -13,6 +13,7 @@ use crate::{
     data::ColumnType,
     errors::JobResult
 };
+use crate::commands::command_util::find_field;
 
 pub struct Config {
     columns: Vec<(usize, Option<Box<str>>)>,
@@ -21,7 +22,11 @@ pub struct Config {
 fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> JobResult<Config> {
     let columns: JobResult<Vec<(usize, Option<Box<str>>)>> = arguments.iter().enumerate().map(|(idx, a)| {
     match &a.cell {
-        Cell::Text(s) | Cell::Field(s) => match find_field(s, input_type) {
+        Cell::Text(s) => match find_field_from_str(s, input_type) {
+            Ok(idx) => Ok((idx, a.name.clone().or(input_type[idx].name.clone()))),
+            Err(e) => Err(e),
+        }
+        Cell::Field(s) => match find_field(s, input_type) {
             Ok(idx) => Ok((idx, a.name.clone().or(input_type[idx].name.clone()))),
             Err(e) => Err(e),
         }

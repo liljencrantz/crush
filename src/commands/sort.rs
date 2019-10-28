@@ -1,11 +1,12 @@
 use crate::{
-    commands::command_util::find_field,
+    commands::command_util::find_field_from_str,
     errors::argument_error,
     stream::{InputStream, OutputStream},
 };
 use crate::commands::CompileContext;
 use crate::data::{ColumnType, Argument, Cell, Row};
 use crate::errors::JobResult;
+use crate::commands::command_util::find_field;
 
 pub struct Config {
     sort_column_idx: usize,
@@ -20,19 +21,22 @@ fn parse(
     if arguments.len() != 1 {
         return Err(argument_error("No comparison key specified"));
     }
-    if let Some(name) = &arguments[0].name {
-        match (name.as_ref(), &arguments[0].cell) {
-            ("key", Cell::Text(cell_name)) | ("key", Cell::Field(cell_name)) => {
-                Ok(Config{
-                    sort_column_idx: find_field(cell_name, input.get_type())?,
-                    input,
-                    output
-                })
-            }
-            _ => Err(argument_error("Bad comparison key"))
+    match (&arguments[0].name, &arguments[0].cell) {
+        (None, Cell::Text(cell_name)) => {
+            Ok(Config {
+                sort_column_idx: find_field_from_str(cell_name, input.get_type())?,
+                input,
+                output,
+            })
         }
-    } else {
-        Err(argument_error("Expected comparison key"))
+        (None, Cell::Field(cell_name)) => {
+            Ok(Config {
+                sort_column_idx: find_field(cell_name, input.get_type())?,
+                input,
+                output,
+            })
+        }
+        _ => Err(argument_error("Bad comparison key"))
     }
 }
 

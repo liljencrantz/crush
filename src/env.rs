@@ -47,9 +47,16 @@ impl Env {
         namespace.remove(name);
     }
 
-    pub fn get(&self, name: &str) -> Option<Cell> {
+    pub fn get(&self, name: &[Box<str>]) -> Option<Cell> {
+        if name.is_empty() {
+            return None;
+        }
         let mut namespace = self.namespace.lock().unwrap();
-        return namespace.get(name);
+        if name.len() == 1 {
+            namespace.get(name[0].as_ref())
+        } else {
+            panic!("WOOPS! Unimplemented.");
+        }
     }
 }
 

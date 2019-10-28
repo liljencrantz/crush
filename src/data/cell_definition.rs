@@ -18,7 +18,7 @@ pub enum CellDefinition {
     Text(Box<str>),
     Integer(i128),
     Time(DateTime<Local>),
-    Field(Box<str>),
+    Field(Vec<Box<str>>),
     Glob(Glob),
     Regex(Box<str>, Regex),
     Op(Box<str>),
@@ -27,9 +27,9 @@ pub enum CellDefinition {
     JobDefintion(JobDefinition),
     // During invocation, this will get replaced with an output
     File(Box<Path>),
-    Variable(Box<str>),
+    Variable(Vec<Box<str>>),
     List(ListDefinition),
-    ArrayVariable(Box<str>, Box<CellDefinition>),
+    ArrayVariable(Vec<Box<str>>, Box<CellDefinition>),
 }
 
 impl CellDefinition {
@@ -56,10 +56,13 @@ impl CellDefinition {
                 res
             }
             CellDefinition::ClosureDefinition(c) => Cell::ClosureDefinition(c.with_env(env)),
-            CellDefinition::Variable(s) => (mandate(env.get(s.as_ref()), format!("Unknown variable {}", s.as_ref()).as_str())?).partial_clone()?,
+            CellDefinition::Variable(s) => (
+                mandate(
+                    env.get(s),
+                    format!("Unknown variable").as_str())?).partial_clone()?,
             CellDefinition::List(l) => l.compile(dependencies, env, printer)?,
             CellDefinition::ArrayVariable(c, i) => {
-                let cell = mandate(env.get(c.as_ref()), format!("Unknown variable {}", c.as_ref()).as_str())?;
+                let cell = mandate(env.get(c), format!("Unknown variable").as_str())?;
                 if let Cell::List(arr) = cell {
                     let idx_cell = i.compile(dependencies, env, printer)?;
                     if let Cell::Integer(idx) = idx_cell {
@@ -80,10 +83,6 @@ impl CellDefinition {
 
     pub fn text(s: &str) -> CellDefinition {
         CellDefinition::Text(Box::from(s))
-    }
-
-    pub fn field(s: &str) -> CellDefinition {
-        CellDefinition::Field(Box::from(s))
     }
 
     pub fn op(s: &str) -> CellDefinition {

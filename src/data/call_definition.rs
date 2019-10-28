@@ -11,8 +11,12 @@ use crate::stream::{UninitializedInputStream, UninitializedOutputStream};
 #[derive(Clone)]
 #[derive(PartialEq)]
 pub struct CallDefinition {
-    name: String,
+    name: Vec<Box<str>>,
     arguments: Vec<ArgumentDefinition>,
+}
+
+pub fn format_name(name: &Vec<Box<str>>) -> String {
+    name.join(".")
 }
 
 fn build(name: String) -> thread::Builder {
@@ -24,11 +28,8 @@ fn handle(h: Result<JoinHandle<JobResult<()>>, std::io::Error>) -> JobJoinHandle
 }
 
 impl CallDefinition {
-    pub fn new(name: &str, arguments: Vec<ArgumentDefinition>) -> CallDefinition {
-        CallDefinition {
-            name: name.to_string(),
-            arguments,
-        }
+    pub fn new(name: Vec<Box<str>>, arguments: Vec<ArgumentDefinition>) -> CallDefinition {
+        CallDefinition { name, arguments }
     }
 
     pub fn spawn_and_execute(
@@ -45,7 +46,7 @@ impl CallDefinition {
         match cmd {
             Some(Cell::Command(command)) => {
                 let c = command.call;
-                Ok(handle(build(self.name.clone()).spawn(
+                Ok(handle(build(format_name(&self.name)).spawn(
                     move || {
                         let mut deps: Vec<JobJoinHandle> = Vec::new();
                         let arguments = local_arguments.compile(&mut deps, &local_env, &local_printer)?;
@@ -62,7 +63,7 @@ impl CallDefinition {
             }
 
             Some(Cell::ClosureDefinition(closure_definition)) => {
-                Ok(handle(build(self.name.clone()).spawn(
+                Ok(handle(build(format_name(&self.name)).spawn(
                     move || {
                         let mut deps: Vec<JobJoinHandle> = Vec::new();
                         let arguments = local_arguments.compile(&mut deps, &local_env, &local_printer)?;
@@ -80,7 +81,7 @@ impl CallDefinition {
                     })))
             }
             _ => {
-                Err(error(format!("Unknown command name {}", &self.name).as_str()))
+                Err(error(format!("Unknown command name {}", format_name(&self.name)).as_str()))
             }
         }
     }

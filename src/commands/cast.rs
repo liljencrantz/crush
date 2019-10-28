@@ -1,7 +1,7 @@
 use std::iter::Iterator;
 
 use crate::{
-    commands::command_util::find_field,
+    commands::command_util::find_field_from_str,
     data::{
         Argument,
         Cell,
@@ -29,7 +29,7 @@ fn parse(
     let mut output_type: Vec<ColumnType> = input_type.clone();
     for arg in arguments.iter() {
         let arg_idx = match &arg.name {
-            Some(name) => find_field(name, input_type)?,
+            Some(name) => find_field_from_str(name, input_type)?,
             None => return Err(argument_error("Expected only named arguments")),
         };
         match &arg.cell {

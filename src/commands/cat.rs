@@ -10,7 +10,7 @@ use crate::{
     errors::JobError,
     stream::{InputStream, OutputStream},
 };
-use crate::commands::command_util::find_field;
+use crate::commands::command_util::{find_field_from_str, find_field};
 use crate::commands::CompileContext;
 use crate::data::ColumnType;
 use crate::env::Env;
@@ -40,7 +40,11 @@ fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> Result<Conf
             _ => Err(argument_error("Multiple table-type columns found")),
         },
         1 => match &arguments[0].cell {
-            Cell::Field(s) | Cell::Text(s) => {
+            Cell::Text(s) => {
+                let idx = find_field_from_str(s, &input_type)?;
+                if indices.contains(&idx) { Ok(Config { column: idx }) } else { Err(argument_error("Field is not of table-type")) }
+            }
+            Cell::Field(s) => {
                 let idx = find_field(s, &input_type)?;
                 if indices.contains(&idx) { Ok(Config { column: idx }) } else { Err(argument_error("Field is not of table-type")) }
             }

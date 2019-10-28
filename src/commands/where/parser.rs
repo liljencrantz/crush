@@ -1,5 +1,5 @@
 use crate::{
-    commands::command_util::find_field,
+    commands::command_util::find_field_from_str,
     data::{
         Argument,
         Cell,
@@ -8,6 +8,7 @@ use crate::{
     errors::{argument_error, JobError}
 };
 use crate::data::ColumnType;
+use crate::commands::command_util::find_field;
 
 pub enum Value {
     Cell(Cell),

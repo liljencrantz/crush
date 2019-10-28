@@ -1,8 +1,9 @@
-use crate::errors::{error, JobError};
+use crate::errors::{error, JobError, mandate};
 use crate::data::{Cell, ColumnType};
 use crate::glob::Glob;
 use regex::Regex;
 use std::error::Error;
+use crate::parser::parse_name;
 
 #[derive(Clone)]
 #[derive(PartialEq)]
@@ -46,7 +47,7 @@ impl CellType {
                 Ok(n) => Ok(Cell::Integer(n)),
                 Err(e) => Err(error(e.description())),
             }
-            CellType::Field => Ok(Cell::Field(Box::from(s))),
+            CellType::Field => Ok(Cell::Field(mandate(parse_name(s), "Invalid field name")?)),
             CellType::Glob => Ok(Cell::Glob(Glob::new(s))),
             CellType::Regex => match Regex::new(s) {
                 Ok(r) => Ok(Cell::Regex(Box::from(s), r)),

@@ -1,7 +1,7 @@
 use crate::commands::CompileContext;
 use std::collections::HashMap;
 use crate::{
-    commands::command_util::find_field,
+    commands::command_util::find_field_from_str,
     errors::{argument_error},
     data::{
         Argument,
@@ -16,6 +16,7 @@ use crate::printer::Printer;
 use crate::env::Env;
 use crate::data::ColumnType;
 use crate::errors::JobResult;
+use crate::commands::command_util::find_field;
 
 pub struct Config {
     input_type: Vec<ColumnType>,
@@ -30,7 +31,13 @@ pub fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> JobResult
     let arg = &arguments[0];
     let name = arg.name.clone().unwrap_or(Box::from("group"));
     match &arg.cell {
-        Cell::Field(cell_name) | Cell::Text(cell_name) =>
+        Cell::Text(cell_name) =>
+            Ok(Config {
+                column: find_field_from_str(cell_name, &input_type)?,
+                input_type,
+                name,
+            }),
+        Cell::Field(cell_name) =>
             Ok(Config {
                 column: find_field(cell_name, &input_type)?,
                 input_type,

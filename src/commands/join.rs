@@ -14,10 +14,11 @@ use crate::{
     stream::{OutputStream, InputStream},
     replace::Replace,
     errors::argument_error,
-    commands::command_util::find_field
+    commands::command_util::find_field_from_str
 };
 use crate::printer::Printer;
 use crate::env::Env;
+use crate::commands::command_util::find_field;
 
 pub struct Config {
     left_table_idx: usize,
@@ -48,8 +49,8 @@ pub fn guess_tables(input_type: &Vec<ColumnType>) -> Result<(usize, usize, &Vec<
 }
 
 fn scan_table(table: &str, column: &str, input_type: &Vec<ColumnType>) -> Result<(usize, usize), JobError> {
-    let table_idx = find_field(&table.to_string(), input_type)?;
-    let column_idx = find_field(&column.to_string(), get_sub_type(&input_type[table_idx].cell_type)?)?;
+    let table_idx = find_field_from_str(&table.to_string(), input_type)?;
+    let column_idx = find_field_from_str(&column.to_string(), get_sub_type(&input_type[table_idx].cell_type)?)?;
     Ok((table_idx, column_idx))
 }
 
@@ -62,7 +63,7 @@ fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Config
             if op.as_ref() != "==" {
                 return Err(argument_error("Only == currently supported"));
             }
-            match (l.matches('.').count(), r.matches('.').count()) {
+            match (l.len(), r.len()) {
                 (0, 0) => {
                     let (left_table_idx, right_table_idx, left_types, right_types) = guess_tables(&input_type)?;
                     Ok(Config {
@@ -73,13 +74,11 @@ fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Config
                     })
                 }
                 (1, 1) => {
-                    let left_split: Vec<&str> = l.split('.').collect();
                     let (left_table_idx, left_column_idx ) =
-                        scan_table(left_split[0], left_split[1], &input_type)?;
+                        scan_table(l[0].as_ref(), l[1].as_ref(), &input_type)?;
 
-                    let right_split: Vec<&str> = r.split('.').collect();
                     let (right_table_idx, right_column_idx ) =
-                        scan_table(right_split[0], right_split[1], &input_type)?;
+                        scan_table(r[0].as_ref(), r[1].as_ref(), &input_type)?;
 
                     if left_table_idx == right_table_idx {
                         return Err(argument_error("Left and right table can't be the same"));

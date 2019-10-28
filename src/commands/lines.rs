@@ -6,7 +6,7 @@ use std::thread;
 use std::path::Path;
 use lazy_static::lazy_static;
 use crate::{
-    commands::command_util::find_field,
+    commands::command_util::find_field_from_str,
     errors::{argument_error},
     data::{
         Argument,
@@ -20,6 +20,7 @@ use crate::{
 };
 use either::Either;
 use crate::errors::JobResult;
+use crate::commands::command_util::find_field;
 
 lazy_static! {
     static ref sub_type: Vec<ColumnType> = {
@@ -76,9 +77,14 @@ fn parse(arguments: Vec<Argument>, input: InputStream) -> JobResult<Config> {
             return Err(argument_error("Expected one argument: column spec"));
         }
         match &arguments[0].cell {
-            Cell::Text(s) | Cell::Field(s) => {
+            Cell::Text(s) => {
                 Ok(Config {
-                    files: Either::Left((find_field(&s, input.get_type())?, input)),
+                    files: Either::Left((find_field_from_str(&s, input.get_type())?, input)),
+                })
+            }
+            Cell::Field(s) => {
+                Ok(Config {
+                    files: Either::Left((find_field(s, input.get_type())?, input)),
                 })
             }
             _ => return Err(argument_error("Expected column of type Field")),
