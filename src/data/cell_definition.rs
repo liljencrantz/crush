@@ -12,12 +12,14 @@ use crate::glob::Glob;
 use crate::job::JobDefinition;
 use crate::printer::Printer;
 use crate::stream::streams;
+use std::time::Duration;
 
 #[derive(Clone)]
 pub enum CellDefinition {
     Text(Box<str>),
     Integer(i128),
     Time(DateTime<Local>),
+    Duration(Duration),
     Field(Vec<Box<str>>),
     Glob(Glob),
     Regex(Box<str>, Regex),
@@ -74,6 +76,7 @@ impl CellDefinition {
                     return Err(error("Expected a list variable"));
                 }
             }
+            CellDefinition::Duration(d) => Cell::Duration(d.clone())
         })
     }
 

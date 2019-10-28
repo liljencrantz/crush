@@ -12,6 +12,7 @@ pub enum CellType {
     Text,
     Integer,
     Time,
+    Duration,
     Field,
     Glob,
     Regex,

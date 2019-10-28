@@ -10,6 +10,7 @@ use psutil::process::State;
 use crate::commands::command_util::{create_user_map,UserMap};
 use users::uid_t;
 use crate::data::ColumnType;
+use std::time::Duration;
 
 fn state_name(s: psutil::process::State) -> &'static str {
     match s {
@@ -35,6 +36,7 @@ pub fn run(output: OutputStream) -> JobResult<()> {
                 Cell::Integer(proc.ppid as i128),
                 Cell::text(state_name(proc.state)),
                 users.get_name(proc.uid as uid_t),
+                    Cell::Duration(Duration::from_micros((proc.utime*1000000.0) as u64)),
                 Cell::text(
                     proc.cmdline_vec().unwrap_or_else(|e| Some(vec!["<Illegal name>".to_string()]))
                         .unwrap_or_else(|| vec![format!("[{}]", proc.comm)])[0]
@@ -51,6 +53,7 @@ pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
         ColumnType::named("ppid", CellType::Integer),
         ColumnType::named("status", CellType::Text),
         ColumnType::named("user", CellType::Text),
+        ColumnType::named("cpu", CellType::Duration),
         ColumnType::named("name", CellType::Text),
     ])?;
     run(output)

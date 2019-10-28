@@ -14,11 +14,13 @@ use crate::{
 };
 use crate::data::{List, Command, JobOutput, Row, CellType};
 use crate::errors::JobResult;
+use std::time::Duration;
 
 pub enum Cell {
     Text(Box<str>),
     Integer(i128),
     Time(DateTime<Local>),
+    Duration(Duration),
     Field(Vec<Box<str>>),
     Glob(Glob),
     Regex(Box<str>, Regex),
@@ -33,6 +35,59 @@ pub enum Cell {
 }
 
 
+fn duration_format(d: &Duration) -> String {
+    let MICROS_IN_SECOND = 1_000_000;
+    let MICROS_IN_MINUTE = MICROS_IN_SECOND * 60;
+    let MICROS_IN_HOUR = MICROS_IN_MINUTE * 60;
+    let MICROS_IN_DAY = MICROS_IN_HOUR * 24;
+    let MICROS_IN_YEAR = MICROS_IN_DAY * 365;
+    let mut remaining_micros = d.as_micros();
+
+    let mut res = "".to_string();
+
+    let years = remaining_micros / MICROS_IN_YEAR;
+    if years != 0 {
+        remaining_micros -= years * MICROS_IN_YEAR;
+        res.push_str(format!("{}y", years).as_str());
+    }
+
+    let days = remaining_micros / MICROS_IN_DAY;
+    if days != 0 || !res.is_empty() {
+        remaining_micros -= days * MICROS_IN_DAY;
+        res.push_str(format!("{}d", days).as_str());
+    }
+
+    let hours = remaining_micros / MICROS_IN_HOUR;
+    if hours != 0 || !res.is_empty() {
+        remaining_micros -= hours * MICROS_IN_HOUR;
+        res.push_str(format!("{}:", hours).as_str());
+    }
+
+    let minutes = remaining_micros / MICROS_IN_MINUTE;
+    if minutes != 0 || !res.is_empty() {
+        remaining_micros -= minutes * MICROS_IN_MINUTE;
+        if res.is_empty() {
+            res.push_str(format!("{}:", minutes).as_str());
+        } else {
+            res.push_str(format!("{:02}:", minutes).as_str());
+        }
+    }
+
+    let seconds = remaining_micros / MICROS_IN_SECOND;
+    remaining_micros -= seconds * MICROS_IN_SECOND;
+    if res.is_empty() {
+        res.push_str(format!("{}", seconds).as_str());
+    } else {
+        res.push_str(format!("{:02}", seconds).as_str());
+    }
+
+    if res.len() < 4 {
+        if remaining_micros != 0 {
+            res.push_str(format!(".{:06}", remaining_micros).trim_end_matches('0'))
+        }
+    }
+    res
+}
 
 impl Cell {
     fn to_rows(s: &JobOutput) -> Cell {
@@ -63,6 +118,7 @@ impl Cell {
             Cell::ClosureDefinition(_) => "<Closure>".to_string(),
             Cell::JobOutput(_) => "<Table>".to_string(),
             Cell::List(l) => l.to_string(),
+            Cell::Duration(d) => duration_format(d),
         };
     }
 
@@ -103,7 +159,8 @@ impl Cell {
             Cell::JobOutput(o) => CellType::Output(o.stream.get_type().clone()),
             Cell::Rows(r) => CellType::Rows(r.types.clone()),
             Cell::ClosureDefinition(c) => CellType::Closure,
-            Cell::List(l) => CellType::List(Box::from(l.cell_type()))
+            Cell::List(l) => CellType::List(Box::from(l.cell_type())),
+            Cell::Duration(_) => CellType::Duration,
         };
     }
 
@@ -122,6 +179,7 @@ impl Cell {
             Cell::JobOutput(s) => Cell::to_rows(&s),
             Cell::ClosureDefinition(c) => Cell::ClosureDefinition(c),
             Cell::List(l) => Cell::List(l),
+            Cell::Duration(d) => Cell::Duration(d),
         };
     }
 
@@ -150,7 +208,8 @@ impl Cell {
             Cell::Rows(r) => Ok(Cell::Rows(r.partial_clone()?)),
             Cell::ClosureDefinition(c) => Ok(Cell::ClosureDefinition(c.clone())),
             Cell::JobOutput(_) => Err(error("Invalid use of stream")),
-            Cell::List(l) => Ok(Cell::List(l.partial_clone()?))
+            Cell::List(l) => Ok(Cell::List(l.partial_clone()?)),
+            Cell::Duration(d) => Ok(Cell::Duration(d.clone())),
         };
     }
 
@@ -200,14 +259,14 @@ impl Cell {
                 let s = g.to_string().as_str();
                 to_job_error(Regex::new(s).map(|v| Cell::Regex(Box::from(s), v)))
             }
-/*
-            (Cell::Field(s), CellType::File) => Ok(Cell::File(Box::from(Path::new(s.as_ref())))),
-            (Cell::Field(s), CellType::Glob) => Ok(Cell::Glob(Glob::new(&s))),
-            (Cell::Field(s), CellType::Integer) => to_job_error(s.parse::<i128>()).map(|v| Cell::Integer(v)),
-            (Cell::Field(s), CellType::Text) => Ok(Cell::Text(s)),
-            (Cell::Field(s), CellType::Op) => Ok(Cell::Op(s)),
-            (Cell::Field(s), CellType::Regex) => to_job_error(Regex::new(s.as_ref()).map(|v| Cell::Regex(s, v))),
-*/
+            /*
+                        (Cell::Field(s), CellType::File) => Ok(Cell::File(Box::from(Path::new(s.as_ref())))),
+                        (Cell::Field(s), CellType::Glob) => Ok(Cell::Glob(Glob::new(&s))),
+                        (Cell::Field(s), CellType::Integer) => to_job_error(s.parse::<i128>()).map(|v| Cell::Integer(v)),
+                        (Cell::Field(s), CellType::Text) => Ok(Cell::Text(s)),
+                        (Cell::Field(s), CellType::Op) => Ok(Cell::Op(s)),
+                        (Cell::Field(s), CellType::Regex) => to_job_error(Regex::new(s.as_ref()).map(|v| Cell::Regex(s, v))),
+            */
             (Cell::Regex(s, r), CellType::File) => Ok(Cell::File(Box::from(Path::new(s.as_ref())))),
             (Cell::Regex(s, r), CellType::Glob) => Ok(Cell::Glob(Glob::new(&s))),
             (Cell::Regex(s, r), CellType::Integer) => to_job_error(s.parse::<i128>()).map(|v| Cell::Integer(v)),
@@ -242,8 +301,9 @@ impl std::hash::Hash for Cell {
             Cell::File(v) => v.hash(state),
             Cell::Rows(v) => v.hash(state),
             Cell::ClosureDefinition(c) => {}//c.hash(state),
-            Cell::JobOutput(o) => {},
+            Cell::JobOutput(o) => {}
             Cell::List(v) => v.hash(state),
+            Cell::Duration(d) => { d.hash(state) }
         }
     }
 }
@@ -308,12 +368,27 @@ mod tests {
     #[test]
     fn text_casts() {
         assert_eq!(Cell::Text(Box::from("112432")).cast(CellType::Integer).is_err(), false);
-/*        assert_eq!(Cell::text("1d").cast(CellType::Integer).is_err(), true);
+        assert_eq!(Cell::text("1d").cast(CellType::Integer).is_err(), true);
         assert_eq!(Cell::text("1d").cast(CellType::Glob).is_err(), false);
         assert_eq!(Cell::text("1d").cast(CellType::File).is_err(), false);
         assert_eq!(Cell::text("1d").cast(CellType::Time).is_err(), true);
         assert_eq!(Cell::text("fad").cast(CellType::Field).is_err(), false);
         assert_eq!(Cell::text("fad").cast(CellType::Op).is_err(), false);
-        */
+    }
+
+    #[test]
+    fn test_duration_format() {
+        assert_eq!(duration_format(&Duration::from_micros(0)), "0".to_string());
+        assert_eq!(duration_format(&Duration::from_micros(1)), "0.000001".to_string());
+        assert_eq!(duration_format(&Duration::from_micros(100)), "0.0001".to_string());
+        let d = Duration::from_millis(1);
+        println!("{} {}", d.as_micros(), d.as_nanos());
+        assert_eq!(duration_format(&Duration::from_millis(1)), "0.001".to_string());
+        assert_eq!(duration_format(&Duration::from_millis(1000)), "1".to_string());
+        assert_eq!(duration_format(&Duration::from_millis(1000 * 61)), "1:01".to_string());
+        assert_eq!(duration_format(&Duration::from_millis(1000 * 3601)), "1:00:01".to_string());
+        assert_eq!(duration_format(&Duration::from_millis(1000 * (3600 * 24 * 3 + 1))), "3d0:00:01".to_string());
+        assert_eq!(duration_format(&Duration::from_millis(1000 * (3600 * 24 * 365* 10 + 1))), "10y0d0:00:01".to_string());
+        assert_eq!(duration_format(&Duration::from_millis(1000 * (3600 * 24 * 365* 10 + 1) +1 )), "10y0d0:00:01".to_string());
     }
 }
