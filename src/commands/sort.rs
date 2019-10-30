@@ -4,7 +4,7 @@ use crate::{
     stream::{InputStream, OutputStream},
 };
 use crate::commands::CompileContext;
-use crate::data::{ColumnType, Argument, Cell, Row};
+use crate::data::{Argument, Cell, Row};
 use crate::errors::JobResult;
 use crate::commands::command_util::find_field;
 

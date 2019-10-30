@@ -3,12 +3,23 @@ use crate::data::CellType;
 #[derive(Clone)]
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Eq)]
+#[derive(PartialOrd)]
+#[derive(Ord)]
 pub struct ColumnType {
     pub name: Option<Box<str>>,
     pub cell_type: CellType,
 }
 
 impl ColumnType {
+
+    pub fn to_string(&self) -> String {
+        match &self.name {
+            None => self.cell_type.to_string(),
+            Some(n) => format!("{}={}", n, self.cell_type.to_string()),
+        }
+    }
+
     pub fn named(name: &str, cell_type: CellType) -> ColumnType {
         ColumnType {
             name: Some(Box::from(name)),

@@ -5,16 +5,13 @@ use crate::{
     data::{
         Argument,
         Cell,
-        CellDefinition,
         Row,
     },
     errors::{argument_error, JobError},
-    replace::Replace,
     stream::{InputStream, OutputStream},
 };
 use crate::commands::CompileContext;
 use crate::data::{CellType, ColumnType};
-use crate::env::Env;
 use crate::errors::JobResult;
 use crate::printer::Printer;
 

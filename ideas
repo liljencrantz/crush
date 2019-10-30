@@ -88,6 +88,7 @@ math{5*5} # Math
 *{*.txt} # Glob
 `{ls} # Closure
 {ls} # Command substitution
+?{$foo == %bar} # Condition check mode
 
 Problems:
 

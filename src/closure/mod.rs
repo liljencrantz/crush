@@ -1,14 +1,9 @@
 use crate::job::JobDefinition;
 use crate::env::Env;
-use std::sync::Arc;
-use crate::namespace::Namespace;
-use crate::data::{CellDefinition, JobOutput, ColumnType, Argument};
-use crate::stream::{InputStream, OutputStream, streams, empty_stream};
-use crate::printer::Printer;
-use crate::errors::{error, JobError, JobResult, mandate};
-use crate::commands::{JobJoinHandle, CompileContext};
-use std::thread;
-use std::thread::JoinHandle;
+use crate::data::Argument;
+use crate::stream::empty_stream;
+use crate::errors::{error, JobResult, mandate};
+use crate::commands::{CompileContext};
 use crate::stream_printer::spawn_print_thread;
 
 #[derive(Clone)]
@@ -41,25 +36,25 @@ impl ClosureDefinition {
         match job_definitions.len() {
             0 => return Err(error("Empty closures not supported")),
             1 => {
-                let mut job = job_definitions[0].spawn_and_execute(&env, &context.printer, context.input, context.output)?;
+                let job = job_definitions[0].spawn_and_execute(&env, &context.printer, context.input, context.output)?;
                 job.join(&context.printer);
             }
             _ => {
                 {
                     let job_definition = &job_definitions[0];
                     let last_output = spawn_print_thread(&context.printer);
-                    let mut first_job = job_definition.spawn_and_execute(&env, &context.printer, context.input, last_output)?;
+                    let first_job = job_definition.spawn_and_execute(&env, &context.printer, context.input, last_output)?;
                     first_job.join(&context.printer);
                 }
 
                 for job_definition in &job_definitions[1..job_definitions.len() - 1] {
                     let last_output = spawn_print_thread(&context.printer);
-                    let mut job = job_definition.spawn_and_execute(&env, &context.printer, empty_stream(), last_output)?;
+                    let job = job_definition.spawn_and_execute(&env, &context.printer, empty_stream(), last_output)?;
                     job.join(&context.printer);
                 }
                 {
                     let job_definition = &job_definitions[job_definitions.len() - 1];
-                    let mut last_job = job_definition.spawn_and_execute(&env, &context.printer, empty_stream(), context.output)?;
+                    let last_job = job_definition.spawn_and_execute(&env, &context.printer, empty_stream(), context.output)?;
                     last_job.join(&context.printer);
                 }
             }
@@ -75,10 +70,3 @@ impl ClosureDefinition {
         }
     }
 }
-
-impl PartialEq for ClosureDefinition {
-    fn eq(&self, other: &Self) -> bool {
-        false
-    }
-}
-

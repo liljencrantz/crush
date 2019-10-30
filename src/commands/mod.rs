@@ -31,26 +31,16 @@ mod cast;
 
 mod r#for;
 
-use std::{io, thread};
 use crate::{
-    namespace::Namespace,
-    errors::{JobError, error},
     env::Env,
     data::{
-        CellDefinition,
         Argument,
-        BaseArgument,
-        ArgumentDefinition,
         Command,
         Cell,
     },
-    stream::{InputStream, OutputStream},
 };
-use std::thread::{JoinHandle, spawn};
-use std::error::Error;
+use std::thread::{JoinHandle};
 use crate::printer::Printer;
-use crate::data::{ColumnType, CellType, JobOutput};
-use std::sync::{Arc, Mutex};
 use crate::errors::JobResult;
 use crate::stream::{UninitializedInputStream, UninitializedOutputStream};
 
@@ -75,7 +65,7 @@ impl JobJoinHandle {
                     Ok(_) => {}
                     Err(e) => printer.job_error(e),
                 },
-                Err(e) => printer.error("Unknown error while waiting for command to exit"),
+                Err(_) => printer.error("Unknown error while waiting for command to exit"),
             },
             JobJoinHandle::Many(v) => {
                 for j in v {

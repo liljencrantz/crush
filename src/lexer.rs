@@ -12,8 +12,10 @@ pub enum TokenType {
     Integer,
     String,
     Glob,
-    BlockStart,
-    BlockEnd,
+    DurationModeStart,
+    TimeModeStart,
+    ModeStart,
+    ModeEnd,
     ListStart,
     ListEnd,
     Comment,
@@ -44,7 +46,7 @@ pub struct Lexer {
 }
 
 lazy_static! {
-    static ref LEX_DATA: [(TokenType, Regex); 26] = [
+    static ref LEX_DATA: [(TokenType, Regex); 28] = [
         (TokenType::Separator, Regex::new("^;").unwrap()),
         (TokenType::Pipe, Regex::new(r"^\|").unwrap()),
 
@@ -65,8 +67,10 @@ lazy_static! {
         (TokenType::ArrayVariable, Regex::new(r"^@[a-zA-Z_][\.a-zA-Z_0-9]*").unwrap()),
         (TokenType::Field, Regex::new(r"^%[a-zA-Z_][\.a-zA-Z_0-9]*").unwrap()),
 
-        (TokenType::BlockStart, Regex::new(r"^[`*]?\{").unwrap()),
-        (TokenType::BlockEnd, Regex::new(r"^\}").unwrap()),
+        (TokenType::DurationModeStart, Regex::new(r"^duration\{").unwrap()),
+        (TokenType::TimeModeStart, Regex::new(r"^time\{").unwrap()),
+        (TokenType::ModeStart, Regex::new(r"^[`*]?\{").unwrap()),
+        (TokenType::ModeEnd, Regex::new(r"^\}").unwrap()),
 
         (TokenType::ListStart, Regex::new(r"^\[").unwrap()),
         (TokenType::ListEnd, Regex::new(r"^]").unwrap()),
@@ -169,7 +173,7 @@ mod tests {
         let mut l = Lexer::new(&String::from("echo `{foo}"));
         let tt = tokens(&mut l);
         assert_eq!(tt, vec![
-            TokenType::String, TokenType::BlockStart, TokenType::String, TokenType::BlockEnd,
+            TokenType::String, TokenType::ModeStart, TokenType::String, TokenType::ModeEnd,
             TokenType::EOF]);
     }
 

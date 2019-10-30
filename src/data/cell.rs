@@ -15,6 +15,7 @@ use crate::{
 use crate::data::{List, Command, JobOutput, Row, CellType};
 use crate::errors::JobResult;
 use std::time::Duration;
+use crate::format::duration_format;
 
 pub enum Cell {
     Text(Box<str>),
@@ -26,67 +27,11 @@ pub enum Cell {
     Regex(Box<str>, Regex),
     Op(Box<str>),
     Command(Command),
-    // This is a cell that contains a crush builtin command
     ClosureDefinition(ClosureDefinition),
     JobOutput(JobOutput),
     File(Box<Path>),
     Rows(Rows),
     List(List),
-}
-
-
-fn duration_format(d: &Duration) -> String {
-    let MICROS_IN_SECOND = 1_000_000;
-    let MICROS_IN_MINUTE = MICROS_IN_SECOND * 60;
-    let MICROS_IN_HOUR = MICROS_IN_MINUTE * 60;
-    let MICROS_IN_DAY = MICROS_IN_HOUR * 24;
-    let MICROS_IN_YEAR = MICROS_IN_DAY * 365;
-    let mut remaining_micros = d.as_micros();
-
-    let mut res = "".to_string();
-
-    let years = remaining_micros / MICROS_IN_YEAR;
-    if years != 0 {
-        remaining_micros -= years * MICROS_IN_YEAR;
-        res.push_str(format!("{}y", years).as_str());
-    }
-
-    let days = remaining_micros / MICROS_IN_DAY;
-    if days != 0 || !res.is_empty() {
-        remaining_micros -= days * MICROS_IN_DAY;
-        res.push_str(format!("{}d", days).as_str());
-    }
-
-    let hours = remaining_micros / MICROS_IN_HOUR;
-    if hours != 0 || !res.is_empty() {
-        remaining_micros -= hours * MICROS_IN_HOUR;
-        res.push_str(format!("{}:", hours).as_str());
-    }
-
-    let minutes = remaining_micros / MICROS_IN_MINUTE;
-    if minutes != 0 || !res.is_empty() {
-        remaining_micros -= minutes * MICROS_IN_MINUTE;
-        if res.is_empty() {
-            res.push_str(format!("{}:", minutes).as_str());
-        } else {
-            res.push_str(format!("{:02}:", minutes).as_str());
-        }
-    }
-
-    let seconds = remaining_micros / MICROS_IN_SECOND;
-    remaining_micros -= seconds * MICROS_IN_SECOND;
-    if res.is_empty() {
-        res.push_str(format!("{}", seconds).as_str());
-    } else {
-        res.push_str(format!("{:02}", seconds).as_str());
-    }
-
-    if res.len() < 4 {
-        if remaining_micros != 0 {
-            res.push_str(format!(".{:06}", remaining_micros).trim_end_matches('0'))
-        }
-    }
-    res
 }
 
 impl Cell {
@@ -117,20 +62,16 @@ impl Cell {
             Cell::Rows(_) => "<Table>".to_string(),
             Cell::ClosureDefinition(_) => "<Closure>".to_string(),
             Cell::JobOutput(_) => "<Table>".to_string(),
-            Cell::List(l) => l.to_string(),
+            Cell::List( l) => l.to_string(),
             Cell::Duration(d) => duration_format(d),
         };
     }
 
     pub fn alignment(&self) -> Alignment {
         return match self {
-            Cell::Integer(_) => Alignment::Right,
+            Cell::Time(_) | Cell::Duration(_) | Cell::Integer(_) => Alignment::Right,
             _ => Alignment::Left,
         };
-    }
-
-    pub fn file(s: &str) -> Cell {
-        Cell::File(Box::from(Path::new(s)))
     }
 
     pub fn text(s: &str) -> Cell {
@@ -139,10 +80,6 @@ impl Cell {
 
     pub fn op(s: &str) -> Cell {
         Cell::Op(Box::from(s))
-    }
-
-    pub fn regex(s: &str, r: Regex) -> Cell {
-        Cell::Regex(Box::from(s), r)
     }
 
     pub fn cell_type(&self) -> CellType {
@@ -158,7 +95,7 @@ impl Cell {
             Cell::File(_) => CellType::File,
             Cell::JobOutput(o) => CellType::Output(o.stream.get_type().clone()),
             Cell::Rows(r) => CellType::Rows(r.types.clone()),
-            Cell::ClosureDefinition(c) => CellType::Closure,
+            Cell::ClosureDefinition(_) => CellType::Closure,
             Cell::List(l) => CellType::List(Box::from(l.cell_type())),
             Cell::Duration(_) => CellType::Duration,
         };
@@ -178,7 +115,7 @@ impl Cell {
             Cell::Rows(r) => Cell::Rows(r.concrete()),
             Cell::JobOutput(s) => Cell::to_rows(&s),
             Cell::ClosureDefinition(c) => Cell::ClosureDefinition(c),
-            Cell::List(l) => Cell::List(l),
+            Cell::List(l) => Cell::List( l),
             Cell::Duration(d) => Cell::Duration(d),
         };
     }
@@ -217,6 +154,7 @@ impl Cell {
         if self.cell_type() == new_type {
             return Ok(self);
         }
+
         /*
         This function is silly and overly large. Instead of mathcing on every source/destination pair, it should do
         two matches, one to convert any cell to a string, and one to convert a string to any cell. That would shorten
@@ -267,11 +205,11 @@ impl Cell {
                         (Cell::Field(s), CellType::Op) => Ok(Cell::Op(s)),
                         (Cell::Field(s), CellType::Regex) => to_job_error(Regex::new(s.as_ref()).map(|v| Cell::Regex(s, v))),
             */
-            (Cell::Regex(s, r), CellType::File) => Ok(Cell::File(Box::from(Path::new(s.as_ref())))),
-            (Cell::Regex(s, r), CellType::Glob) => Ok(Cell::Glob(Glob::new(&s))),
-            (Cell::Regex(s, r), CellType::Integer) => to_job_error(s.parse::<i128>()).map(|v| Cell::Integer(v)),
-            (Cell::Regex(s, r), CellType::Text) => Ok(Cell::Text(s)),
-            (Cell::Regex(s, r), CellType::Op) => Ok(Cell::Op(s)),
+            (Cell::Regex(s, _), CellType::File) => Ok(Cell::File(Box::from(Path::new(s.as_ref())))),
+            (Cell::Regex(s, _), CellType::Glob) => Ok(Cell::Glob(Glob::new(&s))),
+            (Cell::Regex(s, _), CellType::Integer) => to_job_error(s.parse::<i128>()).map(|v| Cell::Integer(v)),
+            (Cell::Regex(s, _), CellType::Text) => Ok(Cell::Text(s)),
+            (Cell::Regex(s, _), CellType::Op) => Ok(Cell::Op(s)),
 
             (Cell::Integer(i), CellType::Text) => Ok(Cell::Text(i.to_string().into_boxed_str())),
             (Cell::Integer(i), CellType::File) => Ok(Cell::File(Box::from(Path::new(i.to_string().as_str())))),
@@ -300,8 +238,8 @@ impl std::hash::Hash for Cell {
             Cell::Command(_) => { panic!("Impossible!") }
             Cell::File(v) => v.hash(state),
             Cell::Rows(v) => v.hash(state),
-            Cell::ClosureDefinition(c) => {}//c.hash(state),
-            Cell::JobOutput(o) => {}
+            Cell::ClosureDefinition(_) => {}//c.hash(state),
+            Cell::JobOutput(_) => {}
             Cell::List(v) => v.hash(state),
             Cell::Duration(d) => { d.hash(state) }
         }
@@ -323,12 +261,13 @@ impl std::cmp::PartialEq for Cell {
             (Cell::Text(val), Cell::Glob(glb)) => glb.matches(val),
             (Cell::Integer(val1), Cell::Integer(val2)) => val1 == val2,
             (Cell::Time(val1), Cell::Time(val2)) => val1 == val2,
+            (Cell::Duration(val1), Cell::Duration(val2)) => val1 == val2,
             (Cell::Field(val1), Cell::Field(val2)) => val1 == val2,
             (Cell::Glob(val1), Cell::Glob(val2)) => val1 == val2,
             (Cell::Regex(val1, _), Cell::Regex(val2, _)) => val1 == val2,
             (Cell::Op(val1), Cell::Op(val2)) => val1 == val2,
             (Cell::Command(val1), Cell::Command(val2)) => val1 == val2,
-            (Cell::Rows(val1), Cell::Rows(val2)) => panic!("Missing comparison, fixme!"),
+            (Cell::Rows(_), Cell::Rows(_)) => panic!("Missing comparison, fixme!"),
             (Cell::File(val1), Cell::File(val2)) => file_result_compare(val1.as_ref(), val2.as_ref()),
             (Cell::Text(val1), Cell::File(val2)) => file_result_compare(&Path::new(&val1.to_string()), val2.as_ref()),
             (Cell::File(val1), Cell::Text(val2)) => file_result_compare(&Path::new(&val2.to_string()), val1.as_ref()),
@@ -344,6 +283,11 @@ pub enum Alignment {
 
 impl std::cmp::PartialOrd for Cell {
     fn partial_cmp(&self, other: &Cell) -> Option<Ordering> {
+        let t1 = self.cell_type();
+        let t2 = other.cell_type();
+        if t1 != t2 {
+            return Some(t1.cmp(&t2));
+        }
         return match (self, other) {
             (Cell::Text(val1), Cell::Text(val2)) => Some(val1.cmp(val2)),
             (Cell::Field(val1), Cell::Field(val2)) => Some(val1.cmp(val2)),
@@ -353,13 +297,18 @@ impl std::cmp::PartialOrd for Cell {
             (Cell::Time(val1), Cell::Time(val2)) => Some(val1.cmp(val2)),
             (Cell::Op(val1), Cell::Op(val2)) => Some(val1.cmp(val2)),
             (Cell::File(val1), Cell::File(val2)) => Some(val1.cmp(val2)),
-            _ => Option::None,
+            (Cell::Duration(val1), Cell::Duration(val2)) => Some(val1.cmp(val2)),
+            (Cell::Command(_), Cell::Command(_)) => None,
+            (Cell::ClosureDefinition(_), _) => None,
+            (Cell::JobOutput(_), _) => None,
+            (Cell::Rows(_), _) => None,
+            (Cell::List(_), _) => None,
+            _ => None,
         };
     }
 }
 
 impl std::cmp::Eq for Cell {}
-
 
 #[cfg(test)]
 mod tests {
@@ -381,8 +330,6 @@ mod tests {
         assert_eq!(duration_format(&Duration::from_micros(0)), "0".to_string());
         assert_eq!(duration_format(&Duration::from_micros(1)), "0.000001".to_string());
         assert_eq!(duration_format(&Duration::from_micros(100)), "0.0001".to_string());
-        let d = Duration::from_millis(1);
-        println!("{} {}", d.as_micros(), d.as_nanos());
         assert_eq!(duration_format(&Duration::from_millis(1)), "0.001".to_string());
         assert_eq!(duration_format(&Duration::from_millis(1000)), "1".to_string());
         assert_eq!(duration_format(&Duration::from_millis(1000 * 61)), "1:01".to_string());

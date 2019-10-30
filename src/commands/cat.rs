@@ -2,10 +2,7 @@ use crate::{
     data::{
         Argument,
         Cell,
-        CellDefinition,
         CellType,
-        JobOutput,
-        Row,
     },
     errors::JobError,
     stream::{InputStream, OutputStream},
@@ -13,10 +10,8 @@ use crate::{
 use crate::commands::command_util::{find_field_from_str, find_field};
 use crate::commands::CompileContext;
 use crate::data::ColumnType;
-use crate::env::Env;
 use crate::errors::{argument_error, error};
 use crate::errors::JobResult;
-use crate::printer::Printer;
 use crate::replace::Replace;
 
 pub struct Config {
@@ -27,11 +22,11 @@ fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> Result<Conf
     let indices: Vec<usize> = input_type
         .iter()
         .enumerate()
-        .filter(|(i, t)| match t.cell_type.clone() {
+        .filter(|(_i, t)| match t.cell_type.clone() {
             CellType::Output(_) | CellType::Rows(_) => true,
             _ => false,
         })
-        .map(|(i, t)| i)
+        .map(|(i, _t)| i)
         .collect();
     return match arguments.len() {
         0 => match indices.len() {
@@ -71,7 +66,7 @@ pub fn run(
                             Err(_) => break,
                         }
                     }
-                    Cell::Rows(mut rows) => {
+                    Cell::Rows(rows) => {
                         for row in rows.rows {
                             output.send(row);
                         }

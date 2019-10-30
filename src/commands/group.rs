@@ -12,8 +12,6 @@ use crate::{
     },
     stream::{OutputStream, InputStream, unlimited_streams},
 };
-use crate::printer::Printer;
-use crate::env::Env;
 use crate::data::ColumnType;
 use crate::errors::JobResult;
 use crate::commands::command_util::find_field;

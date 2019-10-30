@@ -1,14 +1,8 @@
 use crate::{
-    commands::head::get_line_count,
-    data::Argument,
-    data::CellDefinition,
     data::Row,
-    errors::{argument_error, JobError},
     stream::{InputStream, OutputStream},
 };
 use crate::commands::CompileContext;
-use crate::commands::head;
-use crate::data::ColumnType;
 use crate::errors::JobResult;
 
 pub fn run(

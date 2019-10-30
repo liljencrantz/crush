@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 use crate::{
-    errors::{JobError, error},
+    errors::{error},
     data::{
-        CellDefinition,
-        Argument,
         Cell,
     },
 };

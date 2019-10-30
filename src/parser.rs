@@ -1,15 +1,14 @@
-use crate::errors::{JobError, parse_error, argument_error, JobResult, mandate};
+use crate::errors::{parse_error, argument_error, JobResult};
 use crate::job::JobDefinition;
 use crate::lexer::{Lexer, TokenType};
-use crate::env::Env;
-use crate::data::{CellDefinition, ArgumentDefinition, Cell, ListDefinition};
+use crate::data::{CellDefinition, ArgumentDefinition, ListDefinition};
 use crate::data::CallDefinition;
 use regex::Regex;
 use std::error::Error;
 use crate::glob::Glob;
 use crate::closure::{ClosureDefinition};
 
-pub fn parse(lexer: &mut Lexer) -> Result<Vec<JobDefinition>, JobError> {
+pub fn parse(lexer: &mut Lexer) -> JobResult<Vec<JobDefinition>> {
     let mut jobs: Vec<JobDefinition> = Vec::new();
     loop {
         match lexer.peek() {
@@ -22,7 +21,7 @@ pub fn parse(lexer: &mut Lexer) -> Result<Vec<JobDefinition>, JobError> {
         }
 
         match lexer.peek().0 {
-            TokenType::EOF | TokenType::BlockEnd => {
+            TokenType::EOF | TokenType::ModeEnd => {
                 return Ok(jobs);
             }
             TokenType::Error => {
@@ -38,7 +37,7 @@ pub fn parse(lexer: &mut Lexer) -> Result<Vec<JobDefinition>, JobError> {
     }
 }
 
-fn parse_internal(lexer: &mut Lexer) -> Result<JobDefinition, JobError> {
+fn parse_internal(lexer: &mut Lexer) -> JobResult<JobDefinition> {
     let mut commands: Vec<CallDefinition> = Vec::new();
     parse_job(lexer, &mut commands)?;
     return Ok(JobDefinition::new(commands));
@@ -103,7 +102,21 @@ fn parse_command_from_lexer(lexer: &mut Lexer) -> JobResult<Vec<Box<str>>> {
     res
 }
 
-fn parse_unnamed_argument(lexer: &mut Lexer) -> Result<CellDefinition, JobError> {
+fn parse_mode(lexer: &mut Lexer) -> JobResult<Vec<CellDefinition>> {
+    lexer.pop();
+    let mut cells: Vec<CellDefinition> = Vec::new();
+    loop {
+        let tt = lexer.peek().0;
+        match tt {
+            TokenType::ModeEnd => break,
+            _ => cells.push(parse_unnamed_argument(lexer)?),
+        }
+    }
+    lexer.pop();
+    Ok(cells)
+}
+
+fn parse_unnamed_argument(lexer: &mut Lexer) -> JobResult<CellDefinition> {
     let token_type = lexer.peek().0;
     match token_type {
         TokenType::String => {
@@ -123,17 +136,17 @@ fn parse_unnamed_argument(lexer: &mut Lexer) -> Result<CellDefinition, JobError>
         | TokenType::Match | TokenType::NotMatch => {
             return Ok(CellDefinition::op(lexer.pop().1));
         }
-        TokenType::BlockStart => {
+        TokenType::ModeStart => {
             let sigil_type = lexer.pop().1.chars().next().unwrap();
             match sigil_type {
                 '{' => {
-                    let mut dep = parse_internal(lexer)?;
+                    let dep = parse_internal(lexer)?;
                     lexer.pop();
                     let res = Ok(CellDefinition::JobDefintion(dep));
                     return res;
                 }
                 '`' => {
-                    let mut dep = parse(lexer)?;
+                    let dep = parse(lexer)?;
                     lexer.pop();
                     let res = Ok(CellDefinition::ClosureDefinition(ClosureDefinition::new(dep)));
                     return res;
@@ -142,7 +155,7 @@ fn parse_unnamed_argument(lexer: &mut Lexer) -> Result<CellDefinition, JobError>
                     match lexer.peek().0 {
                         TokenType::Glob => {
                             let result = Ok(CellDefinition::Glob(Glob::new(lexer.pop().1)));
-                            if lexer.peek().0 != TokenType::BlockEnd {
+                            if lexer.peek().0 != TokenType::ModeEnd {
                                 return Err(parse_error("Expected '}'", lexer));
                             }
                             lexer.pop();
@@ -158,6 +171,9 @@ fn parse_unnamed_argument(lexer: &mut Lexer) -> Result<CellDefinition, JobError>
                 }
             }
         }
+
+        TokenType::DurationModeStart => Ok(CellDefinition::Duration(parse_mode(lexer)?)),
+        TokenType::TimeModeStart => Ok(CellDefinition::Time(parse_mode(lexer)?)),
 
         TokenType::Field => Ok(CellDefinition::Field(parse_name_from_lexer(lexer)?)),
         TokenType::Variable => Ok(CellDefinition::Variable(parse_name_from_lexer(lexer)?)),
@@ -206,7 +222,7 @@ fn parse_unnamed_argument(lexer: &mut Lexer) -> Result<CellDefinition, JobError>
     }
 }
 
-fn parse_argument(lexer: &mut Lexer) -> Result<ArgumentDefinition, JobError> {
+fn parse_argument(lexer: &mut Lexer) -> JobResult<ArgumentDefinition> {
     match lexer.peek().0 {
         TokenType::String => {
             let ss = lexer.pop().1.to_string();
@@ -229,7 +245,7 @@ fn parse_arguments(lexer: &mut Lexer, arguments: &mut Vec<ArgumentDefinition>) -
             TokenType::Error => {
                 return Err(parse_error("Bad token", lexer));
             }
-            TokenType::Separator | TokenType::EOF | TokenType::Pipe | TokenType::BlockEnd => {
+            TokenType::Separator | TokenType::EOF | TokenType::Pipe | TokenType::ModeEnd => {
                 return Ok(());
             }
             _ => arguments.push(parse_argument(lexer)?),

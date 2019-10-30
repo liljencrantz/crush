@@ -1,20 +1,15 @@
 use crate::{
     data::Argument,
-    data::Row,
-    data::CellType,
-    stream::{OutputStream, InputStream},
     data::Cell,
     errors::JobError,
-    env::get_cwd,
 };
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::data::{ColumnType, JobOutput};
+use crate::data::{JobOutput};
 use crate::errors::{argument_error, JobResult};
 use crate::closure::ClosureDefinition;
 use crate::commands::CompileContext;
 use crate::stream::empty_stream;
-use std::sync::atomic::Ordering::AcqRel;
 use crate::stream_printer::spawn_print_thread;
 
 pub struct Config {

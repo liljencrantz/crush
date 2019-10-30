@@ -11,7 +11,7 @@ pub fn run(input: InputStream, output: OutputStream) -> JobResult<()> {
     let mut line: i128 = 1;
     loop {
         match input.recv() {
-            Ok(mut row) => {
+            Ok(row) => {
                 let mut out = vec![Cell::Integer(line)];
                 out.extend(row.cells);
                 output.send(Row { cells: out })?;

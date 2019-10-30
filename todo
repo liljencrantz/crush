@@ -24,7 +24,7 @@ Map literals
 Map lookup
 Only one job allowed in command substitution
 Implement hashing for remaining cell types, e.g. closure
-Implement if command if {true} `{} `{}
+Implement if command if ?{{stat foo.txt}[0][type] == file} {} else {}
 Implement loop command
 Implement break/continue commands
 Implement http command

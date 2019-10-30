@@ -12,6 +12,7 @@ mod closure;
 mod parser;
 mod printer;
 mod stream_printer;
+mod format;
 
 use crate::lexer::Lexer;
 
@@ -20,18 +21,14 @@ extern crate rustyline;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use commands::add_builtins;
-use crate::errors::{JobError, JobResult};
+use crate::errors::{JobResult};
 use std::error::Error;
-use std::sync::Arc;
-use std::borrow::BorrowMut;
 use crate::printer::Printer;
-use std::sync::mpsc::channel;
-use crate::stream::{streams, empty_stream};
-use crate::data::JobOutput;
+use crate::stream::{empty_stream};
 use crate::stream_printer::spawn_print_thread;
 
 fn repl() -> JobResult<()> {
-    let mut global_env = env::Env::new();
+    let global_env = env::Env::new();
     let printer = Printer::new();
 
     add_builtins(&global_env)?;

@@ -51,7 +51,7 @@ lazy_static! {
 }
 
 pub fn create_user_map() -> HashMap<uid_t, User> {
-    let user_lock = user_mutex.lock().unwrap();
+    let _user_lock = user_mutex.lock().unwrap();
 
     let mut h: HashMap<uid_t, users::User> = HashMap::new();
     let iter = unsafe {users::all_users()};

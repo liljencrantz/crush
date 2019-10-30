@@ -1,13 +1,13 @@
 use std::path::Path;
 
-use chrono::{DateTime, Local};
+use chrono::{Local};
 use regex::Regex;
 
 use crate::closure::ClosureDefinition;
 use crate::commands::JobJoinHandle;
 use crate::data::{Cell, Command, JobOutput, ListDefinition};
 use crate::env::Env;
-use crate::errors::{error, JobError, mandate};
+use crate::errors::{error,  mandate, JobResult, argument_error, to_job_error};
 use crate::glob::Glob;
 use crate::job::JobDefinition;
 use crate::printer::Printer;
@@ -18,13 +18,12 @@ use std::time::Duration;
 pub enum CellDefinition {
     Text(Box<str>),
     Integer(i128),
-    Time(DateTime<Local>),
-    Duration(Duration),
+    Time(Vec<CellDefinition>),
+    Duration(Vec<CellDefinition>),
     Field(Vec<Box<str>>),
     Glob(Glob),
     Regex(Box<str>, Regex),
     Op(Box<str>),
-    Command(Command),
     ClosureDefinition(ClosureDefinition),
     JobDefintion(JobDefinition),
     // During invocation, this will get replaced with an output
@@ -34,24 +33,77 @@ pub enum CellDefinition {
     ArrayVariable(Vec<Box<str>>, Box<CellDefinition>),
 }
 
+fn to_duration(a: u64, t: &str) -> JobResult<Duration> {
+    match t {
+        "nanosecond" | "nanoseconds" => Ok(Duration::from_nanos(a)),
+        "microsecond" | "microseconds" => Ok(Duration::from_micros(a)),
+        "millisecond" | "milliseconds" => Ok(Duration::from_millis(a)),
+        "second" | "seconds" => Ok(Duration::from_secs(a)),
+        "minute" | "minutes" => Ok(Duration::from_secs(a*60)),
+        "hour" | "hours" => Ok(Duration::from_secs(a*3600)),
+        "day" | "days" => Ok(Duration::from_secs(a*3600*24)),
+        "year" | "years" => Ok(Duration::from_secs(a*3600*24*365)),
+        _ => Err(error("Invalid duration"))
+    }
+}
+
+fn compile_duration_mode(cells: &Vec<CellDefinition>, dependencies: &mut Vec<JobJoinHandle>, env: &Env, printer: &Printer) -> JobResult<Cell> {
+    let v: Vec<Cell> = cells.iter()
+        .map(|c| c.compile(dependencies, env, printer))
+        .collect::<JobResult<Vec<Cell>>>()?;
+    let duration = match &v[..] {
+        [Cell::Integer(s)] => Duration::from_secs(*s as u64),
+        [Cell::Time(t1), Cell::Text(operator), Cell::Time(t2)] => if operator.as_ref() == "-" {
+            to_job_error(t1.signed_duration_since(t2.clone()).to_std())?
+        } else {
+            return Err(error("Illegal duration"))
+        },
+        _ => if v.len() % 2 == 0 {
+            let vec: Vec<Duration> = v.chunks(2)
+                .map(|chunk| match (&chunk[0], &chunk[1]) {
+                    (Cell::Integer(a), Cell::Text(t)) => to_duration(*a as u64, t.as_ref()),
+                    _ => Err(argument_error("Unknown duration format"))
+                })
+                .collect::<JobResult<Vec<Duration>>>()?;
+            vec.into_iter().sum::<Duration>()
+        } else {
+            return Err(error("Unknown duration format"))
+        },
+    };
+
+    Ok(Cell::Duration(duration))
+}
+
+fn compile_time_mode(cells: &Vec<CellDefinition>, dependencies: &mut Vec<JobJoinHandle>, env: &Env, printer: &Printer) -> JobResult<Cell> {
+    let v: Vec<Cell> = cells.iter()
+        .map(|c | c.compile(dependencies, env, printer))
+        .collect::<JobResult<Vec<Cell>>>()?;
+    let time = match &v[..] {
+        [Cell::Text(t)] => if t.as_ref() == "now" {Local::now()} else {return Err(error("Unknown time"))},
+        _ => return Err(error("Unknown duration format")),
+    };
+
+    Ok(Cell::Time(time))
+}
+
 impl CellDefinition {
-    pub fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Env, printer: &Printer) -> Result<Cell, JobError> {
+    pub fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Env, printer: &Printer) -> JobResult<Cell> {
         Ok(match self {
             CellDefinition::Text(v) => Cell::Text(v.clone()),
             CellDefinition::Integer(v) => Cell::Integer(v.clone()),
-            CellDefinition::Time(v) => Cell::Time(v.clone()),
+            CellDefinition::Time(v) => compile_time_mode(v, dependencies, env, printer)?,
+            CellDefinition::Duration(c) => compile_duration_mode(c, dependencies, env, printer)?,
             CellDefinition::Field(v) => Cell::Field(v.clone()),
             CellDefinition::Glob(v) => Cell::Glob(v.clone()),
             CellDefinition::Regex(v, r) => Cell::Regex(v.clone(), r.clone()),
             CellDefinition::Op(v) => Cell::Op(v.clone()),
-            CellDefinition::Command(v) => Cell::Command(v.clone()),
             CellDefinition::File(v) => Cell::File(v.clone()),
             //CellDefinition::Rows(r) => Cell::Rows(r),
             CellDefinition::JobDefintion(def) => {
                 let (first_output, first_input) = streams();
                 first_output.initialize(vec![])?;
                 let (last_output, last_input) = streams();
-                let mut j = def.spawn_and_execute(&env, printer, first_input, last_output)?;
+                let j = def.spawn_and_execute(&env, printer, first_input, last_output)?;
 
                 let res = Cell::JobOutput(JobOutput { stream: last_input.initialize()? });
                 dependencies.push(j);
@@ -76,12 +128,7 @@ impl CellDefinition {
                     return Err(error("Expected a list variable"));
                 }
             }
-            CellDefinition::Duration(d) => Cell::Duration(d.clone())
         })
-    }
-
-    pub fn file(s: &str) -> CellDefinition {
-        CellDefinition::File(Box::from(Path::new(s)))
     }
 
     pub fn text(s: &str) -> CellDefinition {
@@ -94,11 +141,5 @@ impl CellDefinition {
 
     pub fn regex(s: &str, r: Regex) -> CellDefinition {
         CellDefinition::Regex(Box::from(s), r)
-    }
-}
-
-impl PartialEq for CellDefinition {
-    fn eq(&self, other: &Self) -> bool {
-        unimplemented!()
     }
 }

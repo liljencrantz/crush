@@ -9,7 +9,6 @@ use crate::printer::Printer;
 use crate::stream::{UninitializedInputStream, UninitializedOutputStream};
 
 #[derive(Clone)]
-#[derive(PartialEq)]
 pub struct CallDefinition {
     name: Vec<Box<str>>,
     arguments: Vec<ArgumentDefinition>,
@@ -68,7 +67,7 @@ impl CallDefinition {
                         let mut deps: Vec<JobJoinHandle> = Vec::new();
                         let arguments = local_arguments.compile(&mut deps, &local_env, &local_printer)?;
 
-                        let res = closure_definition.spawn_and_execute(
+                        closure_definition.spawn_and_execute(
                             CompileContext {
                                 input,
                                 output,

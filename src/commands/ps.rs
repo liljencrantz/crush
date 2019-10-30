@@ -38,7 +38,7 @@ pub fn run(output: OutputStream) -> JobResult<()> {
                 users.get_name(proc.uid as uid_t),
                     Cell::Duration(Duration::from_micros((proc.utime*1000000.0) as u64)),
                 Cell::text(
-                    proc.cmdline_vec().unwrap_or_else(|e| Some(vec!["<Illegal name>".to_string()]))
+                    proc.cmdline_vec().unwrap_or_else(|_| Some(vec!["<Illegal name>".to_string()]))
                         .unwrap_or_else(|| vec![format!("[{}]", proc.comm)])[0]
                         .as_ref()),
             ]

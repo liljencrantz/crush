@@ -7,6 +7,9 @@ use crate::parser::parse_name;
 
 #[derive(Clone)]
 #[derive(PartialEq)]
+#[derive(Eq)]
+#[derive(PartialOrd)]
+#[derive(Ord)]
 #[derive(Debug)]
 pub enum CellType {
     Text,
@@ -38,6 +41,25 @@ impl CellType {
             "command" => Ok(CellType::Command),
             "file" => Ok(CellType::File),
             _ => Err(error(format!("Unknown cell type {}", s).as_str())),
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        match self {
+            CellType::Text => "test".to_string(),
+            CellType::Integer => "integer".to_string(),
+            CellType::Time => "time".to_string(),
+            CellType::Duration => "duration".to_string(),
+            CellType::Field => "field".to_string(),
+            CellType::Glob => "glob".to_string(),
+            CellType::Regex => "regex".to_string(),
+            CellType::Op => "op".to_string(),
+            CellType::Command => "command".to_string(),
+            CellType::Closure => "closure".to_string(),
+            CellType::File => "file".to_string(),
+            CellType::Output(o) => format!("output<{}>", o.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
+            CellType::Rows(r) => format!("rows<{}>", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
+            CellType::List(l) => format!("list<{}>", l.to_string()),
         }
     }
 

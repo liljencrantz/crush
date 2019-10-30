@@ -25,12 +25,6 @@ impl Clone for ArgumentDefinition {
     }
 }
 
-impl PartialEq for ArgumentDefinition {
-    fn eq(&self, other: &Self) -> bool {
-        return self.name == other.name && self.cell == other.cell;
-    }
-}
-
 pub type Argument = BaseArgument<Cell>;
 
 impl Argument {

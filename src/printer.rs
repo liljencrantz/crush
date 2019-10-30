@@ -1,4 +1,4 @@
-use std::sync::mpsc::{Receiver, channel, Sender};
+use std::sync::mpsc::{channel, Sender};
 use std::thread;
 use crate::errors::JobError;
 

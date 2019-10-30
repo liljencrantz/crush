@@ -1,15 +1,11 @@
 use crate::env::Env;
 use crate::commands::{JobJoinHandle};
-use crate::stream::{streams, OutputStream, InputStream, UninitializedOutputStream, UninitializedInputStream};
-use std::thread;
-use crate::data::{JobOutput, ColumnType, CellDefinition, CallDefinition};
-use std::thread::JoinHandle;
+use crate::stream::{streams, UninitializedOutputStream, UninitializedInputStream};
+use crate::data::CallDefinition;
 use crate::printer::Printer;
-use map_in_place::MapVecInPlace;
 use crate::errors::JobError;
 
 #[derive(Clone)]
-#[derive(PartialEq)]
 pub struct JobDefinition {
     commands: Vec<CallDefinition>,
 }
@@ -23,7 +19,7 @@ impl JobDefinition {
         &self,
         env: &Env,
         printer: &Printer,
-        mut first_input: UninitializedInputStream,
+        first_input: UninitializedInputStream,
         last_output: UninitializedOutputStream,
     ) -> Result<JobJoinHandle, JobError> {
         let mut calls = Vec::new();

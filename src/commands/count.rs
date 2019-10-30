@@ -1,18 +1,13 @@
 use crate::commands::CompileContext;
 use crate::errors::JobResult;
 use crate::{
-    errors::{JobError, argument_error},
     data::{
-        Argument,
         Row,
-        CellDefinition,
         CellType,
         Cell
     },
     stream::{OutputStream, InputStream},
 };
-use crate::printer::Printer;
-use crate::env::Env;
 use crate::data::ColumnType;
 
 pub fn parse(input_type: Vec<ColumnType>) -> bool {

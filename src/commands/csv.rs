@@ -34,7 +34,7 @@ pub struct Config {
     files: Either<(usize, InputStream), Vec<Box<Path>>>,
 }
 
-fn parse(arguments: Vec<Argument>, input: InputStream) -> JobResult<Config> {
+fn parse(arguments: Vec<Argument>, _input: InputStream) -> JobResult<Config> {
     let mut separator = ',';
     let mut columns = Vec::new();
     let mut skip_head = 0;
@@ -101,7 +101,6 @@ fn parse(arguments: Vec<Argument>, input: InputStream) -> JobResult<Config> {
 
 fn handle(file: Box<Path>, cfg: &Config, output: &OutputStream, printer: &Printer) -> JobResult<()> {
     let (uninit_output_stream, input_stream) = unlimited_streams();
-    let cfg_copy = cfg.clone();
     let output_stream = uninit_output_stream.initialize(cfg.columns.clone())?;
     let out_row = Row {
         cells: vec![
@@ -157,7 +156,7 @@ fn handle(file: Box<Path>, cfg: &Config, output: &OutputStream, printer: &Printe
 }
 
 
-pub fn run(mut config: Config, output: OutputStream, printer: Printer) -> JobResult<()> {
+pub fn run(config: Config, output: OutputStream, printer: Printer) -> JobResult<()> {
     match &config.files {
         Either::Right(files) => {
             for file in files {

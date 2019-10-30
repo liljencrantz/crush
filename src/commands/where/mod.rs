@@ -1,5 +1,4 @@
 use std::cmp::Ordering;
-use std::iter::Iterator;
 
 use crate::{
     commands::r#where::parser::{Condition, parse, Value},

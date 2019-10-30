@@ -3,7 +3,6 @@ use std::collections::VecDeque;
 use crate::{
     commands::head::get_line_count,
     data::Row,
-    errors::argument_error,
     stream::{InputStream, OutputStream},
 };
 use crate::commands::CompileContext;

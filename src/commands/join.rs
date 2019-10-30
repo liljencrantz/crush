@@ -16,8 +16,6 @@ use crate::{
     errors::argument_error,
     commands::command_util::find_field_from_str
 };
-use crate::printer::Printer;
-use crate::env::Env;
 use crate::commands::command_util::find_field;
 
 pub struct Config {

@@ -41,7 +41,6 @@ fn handle(file: Box<Path>, output: &OutputStream) -> JobResult<()> {
     };
 
     output.send(out_row)?;
-    let file_copy = file.clone();
     thread::spawn(move || {
         let fff = File::open(file).unwrap();
         let mut reader = BufReader::new(&fff);
@@ -93,7 +92,7 @@ fn parse(arguments: Vec<Argument>, input: InputStream) -> JobResult<Config> {
 }
 
 pub fn run(
-    mut config: Config,
+    config: Config,
     output: OutputStream,
 ) -> JobResult<()> {
     match config.files {

@@ -1,12 +1,9 @@
-use crate::data::{CellType, ColumnType, Cell};
-use crate::data::{Alignment, Row, Rows};
-use std::cmp::max;
+use crate::data::{ColumnType, Cell};
+use crate::data::{Row, Rows};
 use std::sync::mpsc::{Receiver, sync_channel, SyncSender, channel, Sender};
 use crate::errors::{JobError, error, JobResult, to_job_error};
 use std::error::Error;
-use crate::printer::Printer;
 use crate::replace::Replace;
-use std::thread;
 
 pub enum UninitializedOutputStream {
     Sync(SyncSender<Vec<ColumnType>>, SyncSender<Row>),

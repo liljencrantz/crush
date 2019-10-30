@@ -2,7 +2,6 @@ use crate::namespace::Namespace;
 use crate::errors::{error, JobError, JobResult};
 use std::error::Error;
 use std::path::Path;
-use crate::printer::Printer;
 use std::sync::{Arc, Mutex};
 use crate::data::Cell;
 
@@ -51,7 +50,7 @@ impl Env {
         if name.is_empty() {
             return None;
         }
-        let mut namespace = self.namespace.lock().unwrap();
+        let namespace = self.namespace.lock().unwrap();
         if name.len() == 1 {
             namespace.get(name[0].as_ref())
         } else {

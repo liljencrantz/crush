@@ -13,7 +13,6 @@ use crate::commands::{CompileContext};
 use crate::errors::{JobResult};
 use std::fmt::Formatter;
 use crate::stream::{InputStream};
-use std::hash::Hasher;
 
 pub use cell::Cell;
 pub use column_type::ColumnType;
