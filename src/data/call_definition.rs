@@ -74,7 +74,7 @@ impl CallDefinition {
                                 arguments,
                                 env: local_env.clone(),
                                 printer: local_printer.clone(),
-                            });
+                            })?;
                         JobJoinHandle::Many(deps).join(&local_printer);
                         Ok(())
                     })))

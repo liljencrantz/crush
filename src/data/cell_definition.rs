@@ -5,7 +5,7 @@ use regex::Regex;
 
 use crate::closure::ClosureDefinition;
 use crate::commands::JobJoinHandle;
-use crate::data::{Cell, Command, JobOutput, ListDefinition};
+use crate::data::{Cell, JobOutput, ListDefinition};
 use crate::env::Env;
 use crate::errors::{error,  mandate, JobResult, argument_error, to_job_error};
 use crate::glob::Glob;

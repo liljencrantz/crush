@@ -47,11 +47,11 @@ pub fn find_field(needle_vec: &Vec<Box<str>>, haystack: &Vec<ColumnType>) -> Job
 }
 
 lazy_static! {
-    static ref user_mutex: Mutex<i32> = Mutex::new(0i32);
+    static ref USER_MUTEX: Mutex<i32> = Mutex::new(0i32);
 }
 
 pub fn create_user_map() -> HashMap<uid_t, User> {
-    let _user_lock = user_mutex.lock().unwrap();
+    let _user_lock = USER_MUTEX.lock().unwrap();
 
     let mut h: HashMap<uid_t, users::User> = HashMap::new();
     let iter = unsafe {users::all_users()};
