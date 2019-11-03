@@ -12,12 +12,10 @@ pub enum TokenType {
     Integer,
     String,
     Glob,
-    DurationModeStart,
-    TimeModeStart,
     ModeStart,
     ModeEnd,
-    ListStart,
-    ListEnd,
+    SubscriptStart,
+    SubscriptEnd,
     Comment,
     Whitespace,
     QuotedString,
@@ -33,7 +31,6 @@ pub enum TokenType {
     Match,
     NotMatch,
     Variable,
-    ArrayVariable,
     Field,
     Regex,
     EOF,
@@ -46,7 +43,7 @@ pub struct Lexer {
 }
 
 lazy_static! {
-    static ref LEX_DATA: [(TokenType, Regex); 28] = [
+    static ref LEX_DATA: Vec<(TokenType, Regex)> = vec![
         (TokenType::Separator, Regex::new("^;").unwrap()),
         (TokenType::Pipe, Regex::new(r"^\|").unwrap()),
 
@@ -64,16 +61,13 @@ lazy_static! {
         (TokenType::Integer, Regex::new(r"^[0-9]+").unwrap()),
 
         (TokenType::Variable, Regex::new(r"^\$[a-zA-Z_][\.a-zA-Z_0-9]*").unwrap()),
-        (TokenType::ArrayVariable, Regex::new(r"^@[a-zA-Z_][\.a-zA-Z_0-9]*").unwrap()),
         (TokenType::Field, Regex::new(r"^%[a-zA-Z_][\.a-zA-Z_0-9]*").unwrap()),
 
-        (TokenType::DurationModeStart, Regex::new(r"^duration\{").unwrap()),
-        (TokenType::TimeModeStart, Regex::new(r"^time\{").unwrap()),
-        (TokenType::ModeStart, Regex::new(r"^[`*]?\{").unwrap()),
+        (TokenType::ModeStart, Regex::new(r"^([`*]?|[a-z]+)\{").unwrap()),
         (TokenType::ModeEnd, Regex::new(r"^\}").unwrap()),
 
-        (TokenType::ListStart, Regex::new(r"^\[").unwrap()),
-        (TokenType::ListEnd, Regex::new(r"^]").unwrap()),
+        (TokenType::SubscriptStart, Regex::new(r"^\[").unwrap()),
+        (TokenType::SubscriptEnd, Regex::new(r"^]").unwrap()),
 
         (TokenType::Regex, Regex::new(r"^r\{([^}\\]|\\.)+\}").unwrap()),
 
@@ -101,7 +95,7 @@ impl Lexer {
         if self.idx >= self.input.len() {
             return (EOF, 0, 0);
         }
-        for (token, re) in LEX_DATA.into_iter() {
+        for (token, re) in LEX_DATA.iter() {
             //let re = Regex::new(r".");
             match re.find(&self.input[self.idx..]) {
                 Some(mat) => {
@@ -190,7 +184,7 @@ mod tests {
         let mut l = Lexer::new(&String::from("[a]"));
         let tt = tokens(&mut l);
         assert_eq!(tt, vec![
-            TokenType::ListStart, TokenType::String, TokenType::ListEnd, TokenType::EOF]);
+            TokenType::SubscriptStart, TokenType::String, TokenType::SubscriptEnd, TokenType::EOF]);
     }
 
     #[test]

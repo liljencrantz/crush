@@ -5,14 +5,12 @@ Missing type check on list literals, e.g. let foo=[1 horse]
 Todo:
 implement file regexps
 make ls support regexps
-implement date command
 implement input type declarations for closures
 implement env command
-implement sum command
 Add support for %<INTEGER> for offset based field identifiers
 make file globing testable via fakes
 Error source propagation
-help
+help command
 implement cmd command
 implement format command for text formating
 add and/or to filter command
@@ -89,3 +87,5 @@ List cell types
 List literals
 List subscripting
 Implement for command for {ls} `{echo $file}
+Switch over to new list syntax
+implement sum command

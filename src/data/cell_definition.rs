@@ -31,7 +31,7 @@ pub enum CellDefinition {
     File(Box<Path>),
     Variable(Vec<Box<str>>),
     List(ListDefinition),
-    ArrayVariable(Vec<Box<str>>, Box<CellDefinition>),
+    ArrayLookup(Box<CellDefinition>, Box<CellDefinition>),
 }
 
 fn to_duration(a: u64, t: &str) -> JobResult<Duration> {
@@ -116,17 +116,11 @@ impl CellDefinition {
                     env.get(s),
                     format!("Unknown variable").as_str())?).partial_clone()?,
             CellDefinition::List(l) => l.compile(dependencies, env, printer)?,
-            CellDefinition::ArrayVariable(c, i) => {
-                let cell = mandate(env.get(c), format!("Unknown variable").as_str())?;
-                if let Cell::List(arr) = cell {
-                    let idx_cell = i.compile(dependencies, env, printer)?;
-                    if let Cell::Integer(idx) = idx_cell {
-                        return arr.get(idx as usize);
-                    } else {
-                        return Err(error("Expected an index"));
-                    }
-                } else {
-                    return Err(error("Expected a list variable"));
+            CellDefinition::ArrayLookup(c, i) => {
+                match (c.compile(dependencies, env, printer), i.compile(dependencies, env, printer)) {
+                    (Ok(Cell::List(list)), Ok(Cell::Integer(idx))) =>
+                        list.get(idx as usize)?,
+                    _ => return Err(error("Expected a list variable")),
                 }
             }
         })

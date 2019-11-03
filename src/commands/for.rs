@@ -41,7 +41,7 @@ pub fn parse(mut context: CompileContext) -> JobResult<Config> {
     }
 }
 
-pub fn run(config: Config, ) -> JobResult<()> {
+pub fn run(config: Config) -> JobResult<()> {
     loop {
         match config.iter.stream.recv() {
             Ok(mut line) => {
