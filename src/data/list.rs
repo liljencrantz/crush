@@ -1,7 +1,10 @@
 use crate::data::{CellType, Cell};
 use crate::errors::{JobError, mandate, JobResult};
 use std::hash::Hasher;
+use std::cmp::Ordering;
 
+#[derive(PartialEq)]
+#[derive(PartialOrd)]
 #[derive(Debug)]
 pub struct List {
     cell_type: CellType,

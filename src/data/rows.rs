@@ -3,6 +3,8 @@ use std::hash::Hasher;
 use crate::errors::JobError;
 
 #[derive(Debug)]
+#[derive(PartialEq)]
+#[derive(PartialOrd)]
 pub struct Rows {
     pub types: Vec<ColumnType>,
     pub rows: Vec<Row>,
@@ -24,3 +26,4 @@ impl std::hash::Hash for Rows {
         }
     }
 }
+

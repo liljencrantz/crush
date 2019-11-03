@@ -271,8 +271,8 @@ impl std::cmp::PartialOrd for Cell {
             (Cell::Command(_), Cell::Command(_)) => None,
             (Cell::ClosureDefinition(_), _) => None,
             (Cell::JobOutput(_), _) => None,
-            (Cell::Rows(_), _) => None,
-            (Cell::List(_), _) => None,
+            (Cell::Rows(val1), Cell::Rows(val2)) => val1.partial_cmp(val2),
+            (Cell::List(val1), Cell::List(val2)) => val1.partial_cmp(val2),
             _ => None,
         };
     }
