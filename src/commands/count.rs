@@ -6,7 +6,7 @@ use crate::{
         CellType,
         Cell
     },
-    stream::{OutputStream, InputStream},
+    stream::{InputStream},
 };
 use crate::data::ColumnType;
 

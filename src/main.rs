@@ -13,6 +13,7 @@ mod parser;
 mod printer;
 mod stream_printer;
 mod format;
+mod thread_util;
 
 use crate::lexer::Lexer;
 

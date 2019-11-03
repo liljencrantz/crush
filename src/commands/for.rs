@@ -1,7 +1,6 @@
 use crate::{
     data::Argument,
     data::Cell,
-    errors::JobError,
 };
 use crate::printer::Printer;
 use crate::env::Env;

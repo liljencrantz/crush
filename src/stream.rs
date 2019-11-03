@@ -94,12 +94,11 @@ impl InputStream {
             Err(_) => res,
         }
     }
-
 }
 
 pub fn streams() -> (UninitializedOutputStream, UninitializedInputStream) {
     let (type_send, type_recv) = sync_channel(1);
-    let (send, recv) = sync_channel(200000);
+    let (send, recv) = sync_channel(128);
     (UninitializedOutputStream::Sync(type_send, send), UninitializedInputStream { type_input: type_recv, input: recv })
 }
 

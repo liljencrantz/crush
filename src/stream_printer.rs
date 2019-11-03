@@ -1,14 +1,14 @@
 use crate::stream::{UninitializedOutputStream, streams, InputStream, Readable, RowsReader};
 use crate::printer::Printer;
 use std::thread;
-use crate::data::{Row, ColumnType, CellType, Alignment, Cell, Rows};
+use crate::data::{Row, ColumnType, CellType, Alignment, Cell, Rows, JobOutput};
 use std::cmp::max;
 
 pub fn spawn_print_thread(printer: &Printer) -> UninitializedOutputStream {
     let (o, i) = streams();
     let p = printer.clone();
     thread::Builder::new()
-        .name("output_formater".to_string())
+        .name("output-formater".to_string())
         .spawn(move || {
             match i.initialize() {
                 Ok(out) => print(&p, out),
@@ -22,6 +22,7 @@ pub fn spawn_print_thread(printer: &Printer) -> UninitializedOutputStream {
 fn print(printer: &Printer, mut stream: InputStream) {
     print_internal(printer, &mut stream, 0);
 }
+
 fn print_internal(printer: &Printer, stream: &mut impl Readable, indent: usize) {
     let mut data: Vec<Row> = Vec::new();
     let mut has_name = false;
@@ -40,7 +41,7 @@ fn print_internal(printer: &Printer, stream: &mut impl Readable, indent: usize) 
     loop {
         match stream.read() {
             Ok(r) => {
-                data.push(r.concrete())
+                data.push(r)
             }
             Err(_) => break,
         }
@@ -84,7 +85,7 @@ fn print_header(printer: &Printer, w: &Vec<usize>, types: &Vec<ColumnType>, has_
     }
 }
 
-fn print_row(printer: &Printer, w: &Vec<usize>, mut r: Row, indent: usize, rows: &mut Vec<Rows>) {
+fn print_row(printer: &Printer, w: &Vec<usize>, mut r: Row, indent: usize, rows: &mut Vec<Rows>, outputs: &mut Vec<JobOutput>) {
     let cell_len = r.cells.len();
     let mut row = " ".repeat(indent * 4);
     for (idx, c) in r.cells.drain(..).enumerate() {
@@ -105,6 +106,7 @@ fn print_row(printer: &Printer, w: &Vec<usize>, mut r: Row, indent: usize, rows:
 
         match c {
             Cell::Rows(r) => rows.push(r),
+            Cell::JobOutput(o) => outputs.push(o),
             _ => {}
         }
     }
@@ -114,9 +116,13 @@ fn print_row(printer: &Printer, w: &Vec<usize>, mut r: Row, indent: usize, rows:
 fn print_body(printer: &Printer, w: &Vec<usize>, data: Vec<Row>, indent: usize) {
     for r in data.into_iter() {
         let mut rows = Vec::new();
-        print_row(printer, w, r, indent, &mut rows);
+        let mut outputs = Vec::new();
+        print_row(printer, w, r, indent, &mut rows, &mut outputs);
         for r in rows {
             print_internal(printer, &mut RowsReader::new( r), indent + 1);
+        }
+        for mut r in outputs {
+            print_internal(printer, &mut r.stream, indent + 1);
         }
     }
 }

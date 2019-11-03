@@ -18,7 +18,7 @@ use crate::errors::{error, JobError, JobResult, to_job_error};
 use crate::stream::OutputStream;
 
 lazy_static! {
-    static ref output_type: Vec<ColumnType> = vec![
+    static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
         ColumnType::named("user", CellType::Text),
         ColumnType::named("size", CellType::Integer),
         ColumnType::named("modified", CellType::Time),
@@ -138,13 +138,13 @@ fn parse(output: OutputStream, arguments: Vec<Argument>, recursive: bool) -> Res
 }
 
 pub fn compile_and_run_ls(context: CompileContext) -> JobResult<()> {
-    let output = context.output.initialize(output_type.clone())?;
+    let output = context.output.initialize(OUTPUT_TYPE.clone())?;
     let cfg = parse(output, context.arguments, false)?;
     run(cfg)
 }
 
 pub fn compile_and_run_find(context: CompileContext) -> JobResult<()> {
-    let output = context.output.initialize(output_type.clone())?;
+    let output = context.output.initialize(OUTPUT_TYPE.clone())?;
     let cfg = parse(output, context.arguments, true)?;
     run(cfg)
 }

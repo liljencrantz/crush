@@ -1,12 +1,10 @@
-use std::thread;
-use std::thread::JoinHandle;
-
 use crate::commands::{CompileContext, JobJoinHandle};
 use crate::data::{ArgumentDefinition, ArgumentVecCompiler, Cell};
 use crate::env::Env;
 use crate::errors::{error, JobResult};
 use crate::printer::Printer;
 use crate::stream::{UninitializedInputStream, UninitializedOutputStream};
+use crate::thread_util::{handle, build};
 
 #[derive(Clone)]
 #[derive(Debug)]
@@ -19,13 +17,6 @@ pub fn format_name(name: &Vec<Box<str>>) -> String {
     name.join(".")
 }
 
-fn build(name: String) -> thread::Builder {
-    thread::Builder::new().name(name)
-}
-
-fn handle(h: Result<JoinHandle<JobResult<()>>, std::io::Error>) -> JobJoinHandle {
-    JobJoinHandle::Async(h.unwrap())
-}
 
 impl CallDefinition {
     pub fn new(name: Vec<Box<str>>, arguments: Vec<ArgumentDefinition>) -> CallDefinition {
@@ -57,7 +48,9 @@ impl CallDefinition {
                             env: local_env,
                             printer: local_printer.clone(),
                         });
-                        JobJoinHandle::Many(deps).join(&local_printer);
+                        if !deps.is_empty() {
+                            local_printer.join(JobJoinHandle::Many(deps));
+                        }
                         res
                     })))
             }

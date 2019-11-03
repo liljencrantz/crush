@@ -74,7 +74,7 @@ impl Namespace {
     pub fn get(&mut self, name: &str) -> Option<Cell> {
         match self.data.get(&name.to_string()) {
             Some(v) => {
-                if let Cell::JobOutput(o) = v {
+                if let Cell::JobOutput(_) = v {
                     self.data.remove(&name.to_string())
                 } else {
                     Some(v.partial_clone().unwrap())

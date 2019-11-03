@@ -16,6 +16,6 @@ pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
         }
         _ => Err(error("Wrong number of arguments"))
     }?;
-    context.output.initialize(vec![]);
+    context.output.initialize(vec![])?;
     to_job_error(std::env::set_current_dir(dir))
 }

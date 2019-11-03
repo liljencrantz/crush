@@ -1,6 +1,6 @@
 use std::sync::mpsc::{channel, Sender};
 use std::thread;
-use crate::errors::JobError;
+use crate::errors::{JobError, JobResult, to_job_error};
 
 enum PrinterMessage {
     Shutdown,
@@ -11,6 +11,8 @@ enum PrinterMessage {
 }
 
 use crate::printer::PrinterMessage::*;
+use crate::commands::JobJoinHandle;
+use crate::thread_util::{handle, build};
 
 #[derive(Clone)]
 pub struct Printer {
@@ -43,15 +45,24 @@ impl Printer {
     }
 
     pub fn shutdown(&self) {
-        self.sender.send(PrinterMessage::Shutdown);
+
+        self.handle_error(to_job_error(self.sender.send(PrinterMessage::Shutdown)));
     }
 
     pub fn line(&self, line: &str) {
-        self.sender.send(PrinterMessage::Line(Box::from(line)));
+
+        self.handle_error(to_job_error(self.sender.send(PrinterMessage::Line(Box::from(line)))));
     }
 
     pub fn lines(&self, lines: Vec<Box<str>>) {
-        self.sender.send(PrinterMessage::Lines(lines));
+        self.handle_error(to_job_error(self.sender.send(PrinterMessage::Lines(lines))));
+    }
+
+    pub fn handle_error<T>(&self, result: JobResult<T>) {
+        match result {
+            Err(e) => self.job_error(e),
+            _ => {}
+        }
     }
 
     pub fn job_error(&self, err: JobError) {
@@ -60,5 +71,13 @@ impl Printer {
 
     pub fn error(&self, err: &str) {
         self.sender.send(PrinterMessage::Error(Box::from(err)));
+    }
+
+    pub fn join(&self, h: JobJoinHandle) {
+        let local_printer = self.clone();
+        handle(build("join".to_string()).spawn( move || {
+            h.join(&local_printer);
+            Ok(())
+        }));
     }
 }

@@ -1,7 +1,6 @@
 use crate::{
     data::Argument,
     data::Cell,
-    errors::JobError,
 };
 use crate::printer::Printer;
 use crate::env::Env;
@@ -9,15 +8,11 @@ use crate::data::{JobOutput, ColumnType, CellType, Row};
 use crate::errors::{argument_error, JobResult, error};
 use crate::closure::ClosureDefinition;
 use crate::commands::{CompileContext, JobJoinHandle};
-use crate::stream::{empty_stream, InputStream, OutputStream, UninitializedOutputStream, streams, UninitializedInputStream, unlimited_streams};
-use crate::stream_printer::spawn_print_thread;
-use either::Either;
+use crate::stream::{InputStream, OutputStream, UninitializedOutputStream, streams, UninitializedInputStream};
 use crate::commands::command_util::find_field;
-use std::thread;
-use std::thread::JoinHandle;
 use crate::replace::Replace;
 use std::sync::mpsc::{channel, Receiver, Sender};
-use crate::commands::join::guess_tables;
+use crate::thread_util::{handle, build};
 
 pub struct Config {
     table_idx: usize,
@@ -30,7 +25,7 @@ pub fn guess_table(input_type: &Vec<ColumnType>) -> JobResult<usize> {
         .enumerate()
         .flat_map(|(idx, t)| {
             match &t.cell_type {
-                CellType::Output(sub_types) | CellType::Rows(sub_types) => Some(idx),
+                CellType::Output(_) | CellType::Rows(_) => Some(idx),
                 _ => None,
             }
         }).collect();
@@ -80,14 +75,6 @@ pub fn parse(input_type: &Vec<ColumnType>, argument: Vec<Argument>) -> JobResult
 }
 
 
-fn build(name: String) -> thread::Builder {
-    thread::Builder::new().name(name)
-}
-
-fn handle(h: Result<JoinHandle<JobResult<()>>, std::io::Error>) -> JobJoinHandle {
-    JobJoinHandle::Async(h.unwrap())
-}
-
 fn create_writer(
     uninitialized_output: UninitializedOutputStream,
     mut output_names: Vec<Option<Box<str>>>,
@@ -124,7 +111,7 @@ fn create_writer(
 
 pub fn create_collector(
     rest_input: InputStream,
-    mut uninitialized_inputs: Vec<UninitializedInputStream>,
+    uninitialized_inputs: Vec<UninitializedInputStream>,
     writer_output: Sender<Row>) -> JobJoinHandle {
     handle(build("aggr-collector".to_string()).spawn(
         move || {

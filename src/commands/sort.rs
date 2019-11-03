@@ -44,7 +44,7 @@ pub fn run(config: Config) -> JobResult<()> {
     let mut res: Vec<Row> = Vec::new();
     loop {
         match config.input.recv() {
-            Ok(row) => res.push(row.concrete()),
+            Ok(row) => res.push(row),
             Err(_) => break,
         }
     }

@@ -61,7 +61,7 @@ impl Env {
     }
 
     pub fn dump(&self, map: &mut HashMap<String, CellType>) {
-        let mut namespace = self.namespace.lock().unwrap();
+        let namespace = self.namespace.lock().unwrap();
         namespace.dump(map)
     }
 }

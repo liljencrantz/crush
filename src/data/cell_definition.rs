@@ -27,7 +27,6 @@ pub enum CellDefinition {
     Op(Box<str>),
     ClosureDefinition(ClosureDefinition),
     JobDefintion(JobDefinition),
-    // During invocation, this will get replaced with an output
     File(Box<Path>),
     Variable(Vec<Box<str>>),
     List(ListDefinition),
@@ -99,7 +98,6 @@ impl CellDefinition {
             CellDefinition::Regex(v, r) => Cell::Regex(v.clone(), r.clone()),
             CellDefinition::Op(v) => Cell::Op(v.clone()),
             CellDefinition::File(v) => Cell::File(v.clone()),
-            //CellDefinition::Rows(r) => Cell::Rows(r),
             CellDefinition::JobDefintion(def) => {
                 let (first_output, first_input) = streams();
                 first_output.initialize(vec![])?;
