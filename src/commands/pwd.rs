@@ -6,7 +6,7 @@ use crate::data::Cell;
 use crate::data::ColumnType;
 use crate::env::get_cwd;
 
-pub fn parse_and_run(context: CompileContext) -> JobResult<()> {
+pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     context.output
         .initialize(vec![ColumnType::named("directory", CellType::File)])?
         .send(Row { cells: vec![Cell::File(get_cwd()?)] })

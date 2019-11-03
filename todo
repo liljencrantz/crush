@@ -3,6 +3,14 @@ Some missing comparisons on Cell.
 Missing type check on list literals, e.g. let foo=[1 horse]
 
 Todo:
+Implement list.push
+Implement list.pop
+Implement boolean cell type
+Implement namespace cell type
+Implement dict cell type
+Namespace literal
+add support for dot notation in argument names
+Make names mandatory and unique for stream columns
 implement file regexps
 make ls support regexps
 implement input type declarations for closures
@@ -31,11 +39,7 @@ The bin command interprets files as a single binary blob.
 The readline command reads interactive input from the user via the terminal
 pbuf command that reads a protobuf message and deserializes it
 avro command that reads avro files and deserialize them
-fields and variables should support dot notation
-add support for using namespace objects as actual namespaces
-Start putting commands into namespaces
 Put inherited environment variables into the namespace
-add support for dot notation in argument names
 Rename JobError -> CrushError
 Add Kind to CrushError
 Deal with different error kinds differently
@@ -89,3 +93,6 @@ List subscripting
 Implement for command for {ls} `{echo $file}
 Switch over to new list syntax
 implement sum command
+Start putting commands into namespaces
+fields and variables should support dot notation
+add support for using namespace objects as actual namespaces

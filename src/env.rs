@@ -33,6 +33,14 @@ impl Env {
         }
     }
 
+    pub fn create_namespace(&self, name: &str) -> JobResult<Env> {
+        let res = Env {
+            namespace: Arc::from(Mutex::new(Namespace::new(None))),
+        };
+        self.declare(name, Cell::Env(res.clone()))?;
+        Ok(res)
+    }
+
     pub fn declare(&self, name: &str, value: Cell) -> JobResult<()> {
         let mut namespace = self.namespace.lock().unwrap();
         return namespace.declare(name, value);
@@ -56,7 +64,11 @@ impl Env {
         if name.len() == 1 {
             namespace.get(name[0].as_ref())
         } else {
-            panic!("WOOPS! Unimplemented.");
+            match namespace.get(name[0].as_ref()) {
+                None => None,
+                Some(Cell::Env(env)) => env.get(&name[1..name.len()]),
+                _ => None,
+            }
         }
     }
 

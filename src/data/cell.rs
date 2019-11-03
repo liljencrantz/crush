@@ -12,10 +12,11 @@ use crate::{
     errors::{error, JobError, to_job_error},
     glob::Glob,
 };
-use crate::data::{List, Command, JobOutput, Row, CellType};
+use crate::data::{List, Command, JobOutput, CellType};
 use crate::errors::JobResult;
 use std::time::Duration;
 use crate::format::duration_format;
+use crate::env::Env;
 
 #[derive(Debug)]
 pub enum Cell {
@@ -33,6 +34,7 @@ pub enum Cell {
     File(Box<Path>),
     Rows(Rows),
     List(List),
+    Env(Env),
 }
 
 impl Cell {
@@ -53,6 +55,7 @@ impl Cell {
             Cell::JobOutput(_) => "<Table>".to_string(),
             Cell::List( l) => l.to_string(),
             Cell::Duration(d) => duration_format(d),
+            Cell::Env(_) => "<Env>".to_string()
         };
     }
 
@@ -87,6 +90,7 @@ impl Cell {
             Cell::ClosureDefinition(_) => CellType::Closure,
             Cell::List(l) => CellType::List(Box::from(l.cell_type())),
             Cell::Duration(_) => CellType::Duration,
+            Cell::Env(_) => CellType::Env,
         };
     }
 
@@ -117,6 +121,7 @@ impl Cell {
             Cell::JobOutput(_) => Err(error("Invalid use of stream")),
             Cell::List(l) => Ok(Cell::List(l.partial_clone()?)),
             Cell::Duration(d) => Ok(Cell::Duration(d.clone())),
+            Cell::Env(e) => Ok(Cell::Env(e.clone())),
         };
     }
 
@@ -212,6 +217,7 @@ impl std::hash::Hash for Cell {
             Cell::JobOutput(_) => {}
             Cell::List(v) => v.hash(state),
             Cell::Duration(d) => { d.hash(state) }
+            Cell::Env(_) => {}
         }
     }
 }

@@ -37,6 +37,8 @@ mod cat;
 
 mod cast;
 
+mod list_len;
+
 mod r#for;
 
 use crate::{
@@ -51,6 +53,7 @@ use std::thread::{JoinHandle};
 use crate::printer::Printer;
 use crate::errors::JobResult;
 use crate::stream::{UninitializedInputStream, UninitializedOutputStream};
+use crate::namespace::Namespace;
 
 pub struct CompileContext {
     pub input: UninitializedInputStream,
@@ -90,7 +93,7 @@ pub fn add_commands(env: &Env) -> JobResult<()> {
     env.declare("ls", Cell::Command(Command::new(find::compile_and_run_ls)))?;
     env.declare("find", Cell::Command(Command::new(find::compile_and_run_find)))?;
     env.declare("cd", Cell::Command(Command::new(cd::compile_and_run)))?;
-    env.declare("pwd", Cell::Command(Command::new(pwd::parse_and_run)))?;
+    env.declare("pwd", Cell::Command(Command::new(pwd::compile_and_run)))?;
 
     env.declare("let", Cell::Command(Command::new(r#let::compile_and_run)))?;
     env.declare("set", Cell::Command(Command::new(set::compile_and_run)))?;
@@ -124,6 +127,10 @@ pub fn add_commands(env: &Env) -> JobResult<()> {
     env.declare("csv", Cell::Command(Command::new(csv::compile_and_run)))?;
 
     env.declare("for", Cell::Command(Command::new(r#for::compile_and_run)))?;
+
+    let list = env.create_namespace("list")?;
+
+    list.declare("len", Cell::Command(Command::new(list_len::compile_and_run)))?;
 
     return Ok(());
 }

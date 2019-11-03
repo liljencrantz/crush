@@ -26,6 +26,7 @@ pub enum CellType {
     Output(Vec<ColumnType>),
     Rows(Vec<ColumnType>),
     List(Box<CellType>),
+    Env,
 }
 
 impl CellType {
@@ -60,6 +61,7 @@ impl CellType {
             CellType::Output(o) => format!("output<{}>", o.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
             CellType::Rows(r) => format!("rows<{}>", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
             CellType::List(l) => format!("list<{}>", l.to_string()),
+            CellType::Env => "env".to_string(),
         }
     }
 
