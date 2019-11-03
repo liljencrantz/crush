@@ -12,31 +12,32 @@ use crate::data::{ColumnType, Argument};
 use either::Either;
 use crate::commands::command_util::find_field_from_str;
 
-pub fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> JobResult<(String, usize)> {
-    if arguments.len() != 1 {
-        return Err(error("Expected exactly one argument, a filed defintition"));
-    }
-
-    if let Cell::Field(f) = &arguments[0].cell {
-        match f.len() {
-            1 => {
-                let idx = find_field_from_str(f[0].as_ref(), input_type)?;
-                let name = if arguments[0].name.is_none() {
-                    input_type[idx].name.as_ref().unwrap().to_string()
-                } else {
-                    arguments[0].name.as_ref().unwrap().to_string()
-                };
-                return Ok((name, idx));
+pub fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> JobResult<usize> {
+    match arguments.len() {
+        0 => if input_type.len() == 1 && input_type[0].cell_type == CellType::Integer{
+            Ok(0)
+        } else {
+            Err(error("Unexpected input format, expected a single column of integers"))
+        },
+        1 => {
+            if let Cell::Field(f) = &arguments[0].cell {
+                match f.len() {
+                    1 => {
+                        Ok(find_field_from_str(f[0].as_ref(), input_type)?)
+                    }
+                    _ => {
+                        Err(error("Path contains too many elements"))
+                    }
+                }
+            } else {
+                Err(error("Unexpected cell type, expected field"))
             }
-            _ => {
-                return Err(error("Unexpectd field"));
-            }
-        }
+        },
+        _ => Err(error("Expected exactly one argument, a field defintition"))
     }
-    return Err(error("Expected exactly one argument, a field definitition"));
 }
 
-fn count_rows(s: &InputStream, column: usize) -> JobResult<Cell> {
+fn sum_rows(s: &InputStream, column: usize) -> JobResult<Cell> {
     let mut res: i128 = 0;
     loop {
         match s.recv() {
@@ -51,9 +52,8 @@ fn count_rows(s: &InputStream, column: usize) -> JobResult<Cell> {
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
+    let output = context.output.initialize(vec![ColumnType::named("sum", CellType::Integer)])?;
     let input = context.input.initialize()?;
-    let (name, column) = parse(input.get_type(), &context.arguments)?;
-    let output_type = vec![ColumnType::named(name.as_str(), CellType::Integer)];
-    let output = context.output.initialize(output_type)?;
-    output.send(Row { cells: vec![count_rows(&input, column)?]})
+    let column = parse(input.get_type(), &context.arguments)?;
+    output.send(Row { cells: vec![sum_rows(&input, column)?]})
 }

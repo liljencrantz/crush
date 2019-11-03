@@ -16,7 +16,7 @@ use crate::commands::command_util::find_field;
 use std::thread;
 use std::thread::JoinHandle;
 use crate::replace::Replace;
-use std::sync::mpsc::channel;
+use std::sync::mpsc::{channel, Receiver, Sender};
 use crate::commands::join::guess_tables;
 
 pub struct Config {
@@ -46,14 +46,14 @@ pub fn parse(input_type: &Vec<ColumnType>, argument: Vec<Argument>) -> JobResult
     if argument.len() < 2 {
         return Err(argument_error("Expected at least two paramaters"));
     }
-    let table_idx = match (argument.len() % 2, argument[0].name.is_none()) {
-        (0, false) => guess_table(input_type)?,
-        (1, true) => panic!("NOT IMPLEMENTED"),
+    let (table_idx, aggregations) = match (argument.len() % 2, argument[0].name.is_none(), &argument[0].cell) {
+        (0, false, _) => (guess_table(input_type)?, &argument[..]),
+        (1, true, Cell::Field(f)) => (find_field(&f, input_type)?, &argument[1..]),
         _ => return Err(argument_error("Could not find table to aggregate")),
     };
 
     if let CellType::Output(sub_type) = &input_type[table_idx].cell_type {
-        let output_definition = argument
+        let output_definition = aggregations
             .chunks(2)
             .into_iter()
             .map(|args| {
@@ -70,7 +70,6 @@ pub fn parse(input_type: &Vec<ColumnType>, argument: Vec<Argument>) -> JobResult
                 }
             })
             .collect::<JobResult<Vec<(String, usize, ClosureDefinition)>>>()?;
-        //          println!("WEEEE {:?}", &output_definition);
         Ok(Config {
             table_idx,
             output_definition,
@@ -78,51 +77,6 @@ pub fn parse(input_type: &Vec<ColumnType>, argument: Vec<Argument>) -> JobResult
     } else {
         Err(argument_error("No table to aggregate on found"))
     }
-    /*
-        [
-            (
-                "ss",
-                1,
-             ClosureDefinition {
-                 job_definitions: [JobDefinition {
-                     commands: [CallDefinition {
-                         name: ["sum"], arguments: [
-                             BaseArgument {
-                                 name: None,
-                                 cell: Field(["size"]) }] }] }
-                 ],
-                 env: Some(Env { namespace: Mutex { data: Namespace { parent: None,
-                     data: {"aggr": Command(Command),
-                         "sum": Command(Command),
-                         "reverse": Command(Command),
-                         "enumerate": Command(Command),
-                         "csv": Command(Command),
-                         "set": Command(Command),
-                         "for": Command(Command), "where": Command(Command), "tail": Command(Command),
-                         "sort": Command(Command), "echo": Command(Command), "cd": Command(Command),
-                         "let": Command(Command), "count": Command(Command), "cat": Command(Command),
-                         "cast": Command(Command), "unset": Command(Command), "head": Command(Command),
-                         "select": Command(Command), "join": Command(Command), "pwd": Command(Command),
-                         "lines": Command(Command), "ls": Command(Command), "find": Command(Command), "group": Command(Command), "ps": Command(Command)} } } }) }),
-            ("cnt", 0,
-             ClosureDefinition {
-                 job_definitions: [
-                     JobDefinition {
-                         commands: [
-                             CallDefinition { name: ["count"], arguments: [] }] }],
-                 env: Some(Env { namespace: Mutex { data: Namespace { parent: None,
-                     data: {
-                         "aggr": Command(Command),
-                         "sum": Command(Command), "reverse": Command(Command), "enumerate": Command(Command),
-                         "csv": Command(Command), "set": Command(Command), "for": Command(Command),
-                         "where": Command(Command), "tail": Command(Command), "sort": Command(Command),
-                         "echo": Command(Command), "cd": Command(Command), "let": Command(Command),
-                         "count": Command(Command), "cat": Command(Command), "cast": Command(Command), "unset": Command(Command), "head": Command(Command),
-                         "select": Command(Command), "join": Command(Command), "pwd": Command(Command), "lines": Command(Command), "ls": Command(Command),
-                         "find": Command(Command), "group": Command(Command), "ps": Command(Command)} } } }) }
-        )
-        ]
-    */
 }
 
 
@@ -134,18 +88,13 @@ fn handle(h: Result<JoinHandle<JobResult<()>>, std::io::Error>) -> JobJoinHandle
     JobJoinHandle::Async(h.unwrap())
 }
 
-pub fn run(config: Config, printer: &Printer, env: &Env, input: InputStream, uninitialized_output: UninitializedOutputStream) -> JobResult<()> {
-//    println!("Run aggregator");
-
-    let (writer_output, writer_input) = channel::<Row>();
-    let mut output_names = input.get_type().iter().map(|t| t.name.clone()).collect::<Vec<Option<Box<str>>>>();
-    output_names.remove(config.table_idx);
-    for (name, _, _) in &config.output_definition {
-        output_names.push(Some(name.clone().into_boxed_str()));
-    }
-    let writer_handle = handle(build("aggr-writer".to_string()).spawn(
+fn create_writer(
+    uninitialized_output: UninitializedOutputStream,
+    mut output_names: Vec<Option<Box<str>>>,
+    writer_input: Receiver<Row>) ->
+    JobJoinHandle {
+    handle(build("aggr-writer".to_string()).spawn(
         move || {
-            println!("Created writer thread");
             let output = match writer_input.recv() {
                 Ok(row) => {
                     let tmp = uninitialized_output.initialize(
@@ -170,7 +119,64 @@ pub fn run(config: Config, printer: &Printer, env: &Env, input: InputStream, uni
                 }
             }
             Ok(())
-        }));
+        }))
+}
+
+pub fn create_collector(
+    rest_input: InputStream,
+    mut uninitialized_inputs: Vec<UninitializedInputStream>,
+    writer_output: Sender<Row>) -> JobJoinHandle {
+    handle(build("aggr-collector".to_string()).spawn(
+        move || {
+            match rest_input.recv() {
+                Ok(mut partial_row) => {
+                    for ui in uninitialized_inputs {
+                        let i = ui.initialize()?;
+                        match i.recv() {
+                            Ok(mut r) => {
+                                partial_row.cells.push(std::mem::replace(&mut r.cells[0], Cell::Integer(0)));
+                            }
+                            Err(_) => return Err(error("Missing value")),
+                        }
+                    }
+                    writer_output.send(partial_row);
+                }
+                Err(_) => {}
+            }
+            Ok(())
+        }))
+}
+
+pub fn pump_table(
+    job_output: &JobOutput,
+    outputs: Vec<OutputStream>,
+    output_definition: &Vec<(String, usize, ClosureDefinition)>) -> JobResult<()>{
+
+    let stream_to_column_mapping = output_definition.iter().map(|(_, off, _)| *off).collect::<Vec<usize>>();
+
+    loop {
+        match job_output.stream.recv() {
+            Ok(mut inner_row) => {
+                for stream_idx in 0..stream_to_column_mapping.len() {
+                    outputs[stream_idx].send(Row { cells: vec![inner_row.cells.replace(stream_to_column_mapping[stream_idx], Cell::Integer(0))] })?;
+                }
+            }
+            Err(_) => break,
+        }
+    }
+    Ok(())
+}
+
+pub fn run(config: Config, printer: &Printer, env: &Env, input: InputStream, uninitialized_output: UninitializedOutputStream) -> JobResult<()> {
+    let (writer_output, writer_input) = channel::<Row>();
+
+    let mut output_names = input.get_type().iter().map(|t| t.name.clone()).collect::<Vec<Option<Box<str>>>>();
+    output_names.remove(config.table_idx);
+    for (name, _, _) in &config.output_definition {
+        output_names.push(Some(name.clone().into_boxed_str()));
+    }
+
+    let writer_handle = create_writer(uninitialized_output, output_names, writer_input);
 
     loop {
         match input.recv() {
@@ -179,6 +185,7 @@ pub fn run(config: Config, printer: &Printer, env: &Env, input: InputStream, uni
                 if let Cell::JobOutput(job_output) = table_cell {
                     let mut outputs: Vec<OutputStream> = Vec::new();
                     let mut uninitialized_inputs: Vec<UninitializedInputStream> = Vec::new();
+                    let mut aggregator_handles: Vec<JobJoinHandle> = Vec::new();
 
                     let (uninit_rest_output, uninit_rest_input) = streams();
                     let mut rest_output_type = input.get_type().clone();
@@ -199,7 +206,7 @@ pub fn run(config: Config, printer: &Printer, env: &Env, input: InputStream, uni
                         let local_printer = printer.clone();
                         let local_env = env.clone();
                         let cc = c.clone();
-                        handle(build("aggr-aggregator".to_string()).spawn(
+                        aggregator_handles.push(handle(build("aggr-aggregator".to_string()).spawn(
                             move || {
                                 cc.spawn_and_execute(CompileContext {
                                     input: first_input,
@@ -209,44 +216,23 @@ pub fn run(config: Config, printer: &Printer, env: &Env, input: InputStream, uni
                                     printer: local_printer,
                                 });
                                 Ok(())
-                            }));
+                            })));
                     }
 
-                    let my_writer_output = writer_output.clone();
-                    let collector_handle = handle(build("aggr-collector".to_string()).spawn(
-                        move || {
-                            match rest_input.recv() {
-                                Ok(mut partial_row) => {
-                                    for ui in uninitialized_inputs {
-                                        let i = ui.initialize()?;
-                                        match i.recv() {
-                                            Ok(mut r) => {
-                                                partial_row.cells.push(std::mem::replace(&mut r.cells[0], Cell::Integer(0)));
-                                            }
-                                            Err(_) => return Err(error("Missing value")),
-                                        }
-                                    }
-                                    my_writer_output.send(partial_row);
-                                }
-                                Err(_) => {}
-                            }
-                            Ok(())
-                        }));
+                    let collector_handle = create_collector(
+                        rest_input,
+                        uninitialized_inputs,
+                        writer_output.clone());
 
                     rest_output.send(row)?;
-
-                    loop {
-                        match job_output.stream.recv() {
-                            Ok(mut inner_row) => {
-                                for (stream_idx, (_, column_idx, _)) in config.output_definition.iter().enumerate() {
-                                    outputs[stream_idx].send(Row { cells: vec![inner_row.cells.replace(*column_idx, Cell::Integer(0))] })?;
-                                }
-                            }
-                            Err(_) => break,
-                        }
-                    }
                     drop(rest_output);
-                    drop(outputs);
+
+                    pump_table(&job_output, outputs, &config.output_definition)?;
+
+
+                    for h in aggregator_handles {
+                        h.join(printer);
+                    }
                     collector_handle.join(printer);
                 }
             }
