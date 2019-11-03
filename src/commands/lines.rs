@@ -68,9 +68,7 @@ fn parse(arguments: Vec<Argument>, input: InputStream) -> JobResult<Config> {
         for arg in &arguments {
             arg.cell.file_expand(&mut files)?;
         }
-        Ok(Config {
-            files: Either::Right(files)        })
-
+        Ok(Config { files: Either::Right(files) })
     } else {
         if arguments.len() != 1 {
             return Err(argument_error("Expected one argument: column spec"));
@@ -91,10 +89,7 @@ fn parse(arguments: Vec<Argument>, input: InputStream) -> JobResult<Config> {
     }
 }
 
-pub fn run(
-    config: Config,
-    output: OutputStream,
-) -> JobResult<()> {
+pub fn run(config: Config, output: OutputStream) -> JobResult<()> {
     match config.files {
         Either::Left((idx, input)) => {
             loop {

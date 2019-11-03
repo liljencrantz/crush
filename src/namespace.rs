@@ -7,6 +7,7 @@ use crate::{
 };
 use std::sync::{Mutex, Arc};
 use crate::errors::JobResult;
+use crate::data::CellType;
 
 #[derive(Debug)]
 pub struct Namespace {
@@ -47,6 +48,17 @@ impl Namespace {
         return Ok(());
     }
 
+    pub fn dump(&self, map: &mut HashMap<String, CellType>) {
+        match &self.parent {
+            Some(p) => p.lock().unwrap().dump(map),
+            None => {},
+        }
+        for (k, v) in self.data.iter() {
+            map.insert(k.clone(), v.cell_type());
+        }
+    }
+
+
     pub fn remove(&mut self, name: &str) {
         if !self.data.contains_key(name) {
             match &self.parent {
@@ -59,13 +71,19 @@ impl Namespace {
         self.data.remove(name);
     }
 
-    pub fn get(&self, name: &str) -> Option<Cell> {
-        return match self.data.get(&name.to_string()) {
-            Some(v) => Some(v.partial_clone().unwrap()),
+    pub fn get(&mut self, name: &str) -> Option<Cell> {
+        match self.data.get(&name.to_string()) {
+            Some(v) => {
+                if let Cell::JobOutput(o) = v {
+                    self.data.remove(&name.to_string())
+                } else {
+                    Some(v.partial_clone().unwrap())
+                }
+            },
             None => match &self.parent {
                 Some(p) => p.lock().unwrap().get(name),
                 None => None
             }
-        };
+        }
     }
 }

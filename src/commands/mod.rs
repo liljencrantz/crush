@@ -9,6 +9,7 @@ mod pwd;
 mod set;
 mod r#let;
 mod unset;
+mod env;
 
 mod ps;
 
@@ -83,7 +84,7 @@ impl JobJoinHandle {
     }
 }
 
-pub fn add_builtins(env: &Env) -> JobResult<()> {
+pub fn add_commands(env: &Env) -> JobResult<()> {
     env.declare("echo", Cell::Command(Command::new(echo::compile_and_run)))?;
 
     env.declare("ls", Cell::Command(Command::new(find::compile_and_run_ls)))?;
@@ -94,6 +95,7 @@ pub fn add_builtins(env: &Env) -> JobResult<()> {
     env.declare("let", Cell::Command(Command::new(r#let::compile_and_run)))?;
     env.declare("set", Cell::Command(Command::new(set::compile_and_run)))?;
     env.declare("unset", Cell::Command(Command::new(unset::compile_and_run)))?;
+    env.declare("env", Cell::Command(Command::new(env::compile_and_run)))?;
 
     env.declare("ps", Cell::Command(Command::new(ps::compile_and_run)))?;
 
@@ -108,7 +110,6 @@ pub fn add_builtins(env: &Env) -> JobResult<()> {
     env.declare("group", Cell::Command(Command::new(group::compile_and_run)))?;
     env.declare("join", Cell::Command(Command::new(join::compile_and_run)))?;
 
-
     env.declare("aggr", Cell::Command(Command::new(aggr::compile_and_run)))?;
 
     env.declare("count", Cell::Command(Command::new(count::compile_and_run)))?;
@@ -118,7 +119,6 @@ pub fn add_builtins(env: &Env) -> JobResult<()> {
     env.declare("enumerate", Cell::Command(Command::new(enumerate::compile_and_run)))?;
 
     env.declare("cast", Cell::Command(Command::new(cast::compile_and_run)))?;
-
 
     env.declare("lines", Cell::Command(Command::new(lines::compile_and_run)))?;
     env.declare("csv", Cell::Command(Command::new(csv::compile_and_run)))?;

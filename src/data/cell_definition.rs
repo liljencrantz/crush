@@ -114,7 +114,7 @@ impl CellDefinition {
             CellDefinition::Variable(s) => (
                 mandate(
                     env.get(s),
-                    format!("Unknown variable").as_str())?).partial_clone()?,
+                    format!("Unknown variable").as_str())?),
             CellDefinition::List(l) => l.compile(dependencies, env, printer)?,
             CellDefinition::ArrayLookup(c, i) => {
                 match (c.compile(dependencies, env, printer), i.compile(dependencies, env, printer)) {

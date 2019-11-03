@@ -46,7 +46,7 @@ impl CellType {
 
     pub fn to_string(&self) -> String {
         match self {
-            CellType::Text => "test".to_string(),
+            CellType::Text => "text".to_string(),
             CellType::Integer => "integer".to_string(),
             CellType::Time => "time".to_string(),
             CellType::Duration => "duration".to_string(),

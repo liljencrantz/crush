@@ -20,7 +20,7 @@ extern crate rustyline;
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
-use commands::add_builtins;
+use commands::add_commands;
 use crate::errors::{JobResult};
 use std::error::Error;
 use crate::printer::Printer;
@@ -31,7 +31,7 @@ fn repl() -> JobResult<()> {
     let global_env = env::Env::new();
     let printer = Printer::new();
 
-    add_builtins(&global_env)?;
+    add_commands(&global_env)?;
     let mut rl = Editor::<()>::new();
     rl.load_history(".crush_history").unwrap();
     loop {
