@@ -14,6 +14,7 @@ use crate::data::Cell;
   The data is protected by an Arc, in order to make sure that it gets deallocated.
 */
 #[derive(Clone)]
+#[derive(Debug)]
 pub struct Env {
     namespace: Arc<Mutex<Namespace>>,
 }

@@ -6,6 +6,7 @@ use crate::printer::Printer;
 use crate::errors::JobError;
 
 #[derive(Clone)]
+#[derive(Debug)]
 pub struct JobDefinition {
     commands: Vec<CallDefinition>,
 }

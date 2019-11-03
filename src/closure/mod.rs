@@ -7,6 +7,7 @@ use crate::commands::{CompileContext};
 use crate::stream_printer::spawn_print_thread;
 
 #[derive(Clone)]
+#[derive(Debug)]
 pub struct ClosureDefinition {
     job_definitions: Vec<JobDefinition>,
     env: Option<Env>,

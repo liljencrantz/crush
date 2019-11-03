@@ -15,6 +15,7 @@ use crate::stream::streams;
 use std::time::Duration;
 
 #[derive(Clone)]
+#[derive(Debug)]
 pub enum CellDefinition {
     Text(Box<str>),
     Integer(i128),

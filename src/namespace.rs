@@ -8,6 +8,7 @@ use crate::{
 use std::sync::{Mutex, Arc};
 use crate::errors::JobResult;
 
+#[derive(Debug)]
 pub struct Namespace {
     parent: Option<Arc<Mutex<Namespace>>>,
     data: HashMap<String, Cell>,

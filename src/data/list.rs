@@ -2,6 +2,7 @@ use crate::data::{CellType, Cell};
 use crate::errors::{JobError, mandate, JobResult};
 use std::hash::Hasher;
 
+#[derive(Debug)]
 pub struct List {
     cell_type: CellType,
     cells: Vec<Cell>,

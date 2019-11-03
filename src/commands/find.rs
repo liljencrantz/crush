@@ -22,7 +22,7 @@ lazy_static! {
         ColumnType::named("user", CellType::Text),
         ColumnType::named("size", CellType::Integer),
         ColumnType::named("modified", CellType::Time),
-        ColumnType::named("file", CellType::Text),
+        ColumnType::named("file", CellType::File),
     ];
 }
 

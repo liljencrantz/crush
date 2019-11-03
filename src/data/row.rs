@@ -2,6 +2,7 @@ use crate::data::cell::Cell;
 use std::hash::Hasher;
 use crate::errors::JobError;
 
+#[derive(Debug)]
 pub struct Row {
     pub cells: Vec<Cell>,
 }

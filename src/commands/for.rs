@@ -19,7 +19,7 @@ pub struct Config {
     printer: Printer,
 }
 
-pub fn parse(mut context: CompileContext) -> Result<Config, JobError> {
+pub fn parse(mut context: CompileContext) -> JobResult<Config> {
     context.input.initialize()?;
     context.output.initialize(vec![])?;
 

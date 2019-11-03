@@ -5,6 +5,7 @@ use crate::env::Env;
 use crate::commands::JobJoinHandle;
 
 #[derive(Clone)]
+#[derive(Debug)]
 pub struct ListDefinition {
     cells: Vec<CellDefinition>,
 }

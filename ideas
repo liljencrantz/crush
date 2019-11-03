@@ -122,4 +122,5 @@ How to deal with impedance mismatch, e.g. null values, lists with multiple types
 
 Aggregate rows:
 
-csv some_giant_file.csv | group %country | aggregate table=%group avg_age=`{avg %age} people=`{count} tot_dogs=`{sum %dogs}
+csv some_giant_file.csv | group %country | agg %group avg_age=%age `{avg} people=* `{count} tot_dogs=%dogs `{sum}
+

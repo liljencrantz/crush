@@ -9,6 +9,7 @@ use crate::printer::Printer;
 use crate::stream::{UninitializedInputStream, UninitializedOutputStream};
 
 #[derive(Clone)]
+#[derive(Debug)]
 pub struct CallDefinition {
     name: Vec<Box<str>>,
     arguments: Vec<ArgumentDefinition>,

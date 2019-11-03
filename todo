@@ -38,6 +38,12 @@ add support for using namespace objects as actual namespaces
 Start putting commands into namespaces
 Put inherited environment variables into the namespace
 add support for dot notation in argument names
+Rename JobError -> CrushError
+Add Kind to CrushError
+Deal with different error kinds differently
+Add command-field to CrushError
+Add source field to CrushError
+Make error printing display source of error
 
 
 Done:

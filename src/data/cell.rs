@@ -17,6 +17,7 @@ use crate::errors::JobResult;
 use std::time::Duration;
 use crate::format::duration_format;
 
+#[derive(Debug)]
 pub enum Cell {
     Text(Box<str>),
     Integer(i128),

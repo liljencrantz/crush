@@ -65,15 +65,36 @@ pub struct InputStream {
     input_type: Vec<ColumnType>,
 }
 
-
 impl InputStream {
     pub fn recv(&self) -> JobResult<Row> {
-        to_job_error(self.receiver.recv())
+        self.validate(to_job_error(self.receiver.recv()))
     }
 
     pub fn get_type(&self) -> &Vec<ColumnType> {
         &self.input_type
     }
+
+    fn validate(&self, res: JobResult<Row>) -> JobResult<Row> {
+        match &res {
+            Ok(row) => {
+                if row.cells.len() != self.input_type.len() {
+                    return Err(error("Wrong number of columns in input"));
+                }
+                for (c, ct) in row.cells.iter().zip(self.input_type.iter()) {
+                    if c.cell_type() != ct.cell_type {
+                        return Err(error(format!(
+                            "Wrong cell type in input column {:?}, expected {:?}, got {:?}",
+                            ct.name,
+                            c.cell_type(),
+                            ct.cell_type).as_str()));
+                    }
+                }
+                res
+            },
+            Err(_) => res,
+        }
+    }
+
 }
 
 pub fn streams() -> (UninitializedOutputStream, UninitializedInputStream) {

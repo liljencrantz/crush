@@ -20,12 +20,18 @@ mod csv;
 mod r#where;
 mod sort;
 mod reverse;
+
 mod select;
 mod enumerate;
+
 mod group;
 mod join;
+
+mod aggr;
+
 mod count;
 mod sum;
+
 mod cat;
 
 mod cast;
@@ -101,6 +107,10 @@ pub fn add_builtins(env: &Env) -> JobResult<()> {
 
     env.declare("group", Cell::Command(Command::new(group::compile_and_run)))?;
     env.declare("join", Cell::Command(Command::new(join::compile_and_run)))?;
+
+
+    env.declare("aggr", Cell::Command(Command::new(aggr::compile_and_run)))?;
+
     env.declare("count", Cell::Command(Command::new(count::compile_and_run)))?;
     env.declare("sum", Cell::Command(Command::new(sum::compile_and_run)))?;
     env.declare("cat", Cell::Command(Command::new(cat::compile_and_run)))?;
