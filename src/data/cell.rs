@@ -36,18 +36,6 @@ pub enum Cell {
 }
 
 impl Cell {
-    fn to_rows(s: &JobOutput) -> Cell {
-        let mut rows: Vec<Row> = Vec::new();
-        loop {
-            match s.stream.recv() {
-                Ok(row) => {
-                    rows.push(row.concrete());
-                }
-                Err(_) => break,
-            }
-        }
-        return Cell::Rows(Rows { types: s.stream.get_type().clone(), rows });
-    }
 
     pub fn to_string(&self) -> String {
         return match self {
@@ -99,25 +87,6 @@ impl Cell {
             Cell::ClosureDefinition(_) => CellType::Closure,
             Cell::List(l) => CellType::List(Box::from(l.cell_type())),
             Cell::Duration(_) => CellType::Duration,
-        };
-    }
-
-    pub fn concrete(self) -> Cell {
-        return match self {
-            Cell::Text(v) => Cell::Text(v),
-            Cell::Integer(v) => Cell::Integer(v),
-            Cell::Time(v) => Cell::Time(v),
-            Cell::Field(v) => Cell::Field(v),
-            Cell::Glob(v) => Cell::Glob(v),
-            Cell::Regex(v, r) => Cell::Regex(v, r),
-            Cell::Op(v) => Cell::Op(v),
-            Cell::Command(v) => Cell::Command(v),
-            Cell::File(v) => Cell::File(v),
-            Cell::Rows(r) => Cell::Rows(r.concrete()),
-            Cell::JobOutput(s) => Cell::to_rows(&s),
-            Cell::ClosureDefinition(c) => Cell::ClosureDefinition(c),
-            Cell::List(l) => Cell::List( l),
-            Cell::Duration(d) => Cell::Duration(d),
         };
     }
 

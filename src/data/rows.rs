@@ -8,12 +8,7 @@ pub struct Rows {
     pub rows: Vec<Row>,
 }
 
-
 impl Rows {
-    pub fn concrete(mut self) -> Rows {
-        Rows { types: self.types, rows: self.rows.drain(..).map(|c| c.concrete()).collect() }
-    }
-
     pub fn partial_clone(&self) -> Result<Self, JobError> {
         Ok(Rows {
             types: self.types.clone(),
@@ -29,5 +24,3 @@ impl std::hash::Hash for Rows {
         }
     }
 }
-
-

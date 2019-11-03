@@ -8,10 +8,6 @@ pub struct Row {
 }
 
 impl Row {
-    pub fn concrete(mut self) -> Row {
-        Row {cells: self.cells.drain(..).map(|c| c.concrete()).collect()}
-    }
-
     pub fn partial_clone(&self) -> Result<Self, JobError> {
         Ok(Row {
             cells: self.cells.iter().map(|c| c.partial_clone()).collect::<Result<Vec<Cell>, JobError>>()?,
