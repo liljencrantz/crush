@@ -47,42 +47,32 @@ fn parse(arguments: Vec<Argument>, _input: InputStream) -> JobResult<Config> {
                 arg.cell.file_expand(&mut files);
             }
             Some(name) => {
-                match name.as_ref() {
-                    "col" =>
-                        match &arg.cell {
-                            Cell::Text(s) => {
-                                let split: Vec<&str> = s.split(':').collect();
-                                match split.len() {
-                                    2 => columns.push(ColumnType::named(split[0], CellType::from(split[1])?)),
-                                    _ => return Err(argument_error(format!("Expected a column description on the form name:type, got {}", s).as_str())),
-                                }
-                            }
-                            _ => return Err(argument_error("Expected a text value")),
+                match (name.as_ref(), arg.cell) {
+                    ("col", Cell::Text(s)) => {
+                        let split: Vec<&str> = s.split(':').collect();
+                        match split.len() {
+                            2 => columns.push(ColumnType::named(split[0], CellType::from(split[1])?)),
+                            _ => return Err(argument_error(format!("Expected a column description on the form name:type, got {}", s).as_str())),
                         }
+                    }
 
-                    "sep" =>
-                        match &arg.cell {
-                            Cell::Text(s) => {
-                                if s.len() == 1 {
-                                    separator = s.chars().next().unwrap();
-                                } else {
-                                    return Err(argument_error("Separator must be exactly one character long"));
-                                }
-                            }
-                            _ => return Err(argument_error("Expected a text value")),
-                        }
+                    ("head", Cell::Integer(s)) => skip_head = s as usize,
 
-                    "trim" =>
-                        match &arg.cell {
-                            Cell::Text(s) => {
-                                if s.len() == 1 {
-                                    trim = Some(s.chars().next().unwrap());
-                                } else {
-                                    return Err(argument_error("Separator must be exactly one character long"));
-                                }
-                            }
-                            _ => return Err(argument_error("Expected a text value")),
+                    ("sep", Cell::Text(s)) => {
+                        if s.len() == 1 {
+                            separator = s.chars().next().unwrap();
+                        } else {
+                            return Err(argument_error("Separator must be exactly one character long"));
                         }
+                    }
+
+                    ("trim", Cell::Text(s)) => {
+                        if s.len() == 1 {
+                            trim = Some(s.chars().next().unwrap());
+                        } else {
+                            return Err(argument_error("Only one character can be trimmed"));
+                        }
+                    }
 
                     _ => return Err(argument_error(format!("Unknown parameter {}", name).as_str())),
                 }
@@ -117,15 +107,22 @@ fn handle(file: Box<Path>, cfg: &Config, output: &OutputStream, printer: &Printe
     let separator = cfg.separator.clone();
     let trim = cfg.trim.clone();
     let columns = cfg.columns.clone();
+    let skip = cfg.skip_head;
 
     thread::spawn(move || {
         let fff = File::open(file).unwrap();
         let mut reader = BufReader::new(&fff);
         let mut line = String::new();
+        let mut skipped = 0usize;
         loop {
+            line.clear();
             reader.read_line(&mut line);
             if line.is_empty() {
                 break;
+            }
+            if skipped < skip {
+                skipped += 1;
+                continue;
             }
             let line_without_newline = &line[0..line.len() - 1];
             let mut split: Vec<&str> = line_without_newline
@@ -149,7 +146,6 @@ fn handle(file: Box<Path>, cfg: &Config, output: &OutputStream, printer: &Printe
                 Err(err) => { printer_copy.job_error(err); }
             }
 
-            line.clear();
         }
     });
     return Ok(());
