@@ -1,12 +1,28 @@
 use crate::commands::CompileContext;
 use crate::errors::{JobResult, argument_error};
-use crate::data::CellType;
+use crate::data::{CellType, List};
 use crate::data::Row;
 use crate::data::Cell;
 use crate::data::ColumnType;
 use crate::env::get_cwd;
 
-pub fn len_compile_and_run(context: CompileContext) -> JobResult<()> {
+pub fn create(context: CompileContext) -> JobResult<()> {
+    let output = context.output.initialize(vec![])?;
+    if context.arguments.len() != 2 {
+        return Err(argument_error("Expected 2 arguments"));
+    }
+    match (&context.arguments[0].cell, &context.arguments[1].cell) {
+        (Cell::Text(name), Cell::Text(element_type)) => {
+            context.env.declare(
+                name.as_ref(),
+                Cell::List(List::new(CellType::from(element_type)?, vec![])));
+            Ok(())
+        }
+        _ => Err(argument_error("Invalid argument types")),
+    }
+}
+
+pub fn len(context: CompileContext) -> JobResult<()> {
     let output = context.output.initialize(
         vec![ColumnType::named("lenght", CellType::Integer)])?;
     if context.arguments.len() != 1 {
@@ -18,7 +34,7 @@ pub fn len_compile_and_run(context: CompileContext) -> JobResult<()> {
     }
 }
 
-pub fn empty_compile_and_run(context: CompileContext) -> JobResult<()> {
+pub fn empty(context: CompileContext) -> JobResult<()> {
     let output = context.output.initialize(
         vec![ColumnType::named("empty", CellType::Bool)])?;
     if context.arguments.len() != 1 {
@@ -30,7 +46,7 @@ pub fn empty_compile_and_run(context: CompileContext) -> JobResult<()> {
     }
 }
 
-pub fn push_compile_and_run(mut context: CompileContext) -> JobResult<()> {
+pub fn push(mut context: CompileContext) -> JobResult<()> {
     let output = context.output.initialize(
         vec![ColumnType::named("lenght", CellType::Integer)])?;
     if context.arguments.len() == 0 {
@@ -56,7 +72,7 @@ pub fn push_compile_and_run(mut context: CompileContext) -> JobResult<()> {
     }
 }
 
-pub fn pop_compile_and_run(mut context: CompileContext) -> JobResult<()> {
+pub fn pop(mut context: CompileContext) -> JobResult<()> {
     if context.arguments.len() != 1 {
         return Err(argument_error("Expected single argument to list.len"));
     }

@@ -130,10 +130,11 @@ pub fn add_commands(env: &Env) -> JobResult<()> {
 
     let list = env.create_namespace("list")?;
 
-    list.declare("len", Cell::Command(Command::new(list::len_compile_and_run)))?;
-    list.declare("empty", Cell::Command(Command::new(list::empty_compile_and_run)))?;
-    list.declare("push", Cell::Command(Command::new(list::push_compile_and_run)))?;
-    list.declare("pop", Cell::Command(Command::new(list::pop_compile_and_run)))?;
+    list.declare("create", Cell::Command(Command::new(list::create)))?;
+    list.declare("len", Cell::Command(Command::new(list::len)))?;
+    list.declare("empty", Cell::Command(Command::new(list::empty)))?;
+    list.declare("push", Cell::Command(Command::new(list::push)))?;
+    list.declare("pop", Cell::Command(Command::new(list::pop)))?;
 
     let dict = env.create_namespace("dict")?;
 
