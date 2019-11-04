@@ -2,10 +2,11 @@ use crate::commands::CompileContext;
 use crate::errors::{to_job_error, JobResult, error};
 use std::path::Path;
 use crate::data::Cell;
+use crate::env::get_home;
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let dir = match context.arguments.len() {
-        0 => Ok(Box::from(Path::new("/"))),
+        0 => get_home(),
         1 => {
             let dir = &context.arguments[0];
             match &dir.cell {

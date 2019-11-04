@@ -27,12 +27,16 @@ use std::error::Error;
 use crate::printer::Printer;
 use crate::stream::{empty_stream};
 use crate::stream_printer::spawn_print_thread;
+use crate::data::Cell;
 
 fn repl() -> JobResult<()> {
     let global_env = env::Env::new();
     let printer = Printer::new();
 
     add_commands(&global_env)?;
+    global_env.declare("true", Cell::Bool(true))?;
+    global_env.declare("false", Cell::Bool(false))?;
+
     let mut rl = Editor::<()>::new();
     rl.load_history(".crush_history").unwrap();
     loop {

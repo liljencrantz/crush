@@ -37,7 +37,7 @@ mod cat;
 
 mod cast;
 
-mod list_len;
+mod list;
 
 mod r#for;
 
@@ -105,7 +105,6 @@ pub fn add_commands(env: &Env) -> JobResult<()> {
     env.declare("head", Cell::Command(Command::new(head::compile_and_run)))?;
     env.declare("tail", Cell::Command(Command::new(tail::compile_and_run)))?;
 
-
     env.declare("where", Cell::Command(Command::new(r#where::compile_and_run)))?;
     env.declare("sort", Cell::Command(Command::new(sort::compile_and_run)))?;
     env.declare("reverse", Cell::Command(Command::new(reverse::compile_and_run)))?;
@@ -130,7 +129,10 @@ pub fn add_commands(env: &Env) -> JobResult<()> {
 
     let list = env.create_namespace("list")?;
 
-    list.declare("len", Cell::Command(Command::new(list_len::compile_and_run)))?;
+    list.declare("len", Cell::Command(Command::new(list::len_compile_and_run)))?;
+    list.declare("empty", Cell::Command(Command::new(list::empty_compile_and_run)))?;
+    list.declare("push", Cell::Command(Command::new(list::push_compile_and_run)))?;
+    list.declare("pop", Cell::Command(Command::new(list::pop_compile_and_run)))?;
 
     return Ok(());
 }

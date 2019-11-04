@@ -36,7 +36,6 @@ pub fn guess_table(input_type: &Vec<ColumnType>) -> JobResult<usize> {
     }
 }
 
-
 pub fn parse(input_type: &Vec<ColumnType>, argument: Vec<Argument>) -> JobResult<Config> {
     if argument.len() < 2 {
         return Err(argument_error("Expected at least two paramaters"));
@@ -73,7 +72,6 @@ pub fn parse(input_type: &Vec<ColumnType>, argument: Vec<Argument>) -> JobResult
         Err(argument_error("No table to aggregate on found"))
     }
 }
-
 
 fn create_writer(
     uninitialized_output: UninitializedOutputStream,
@@ -137,8 +135,7 @@ pub fn create_collector(
 pub fn pump_table(
     job_output: &JobOutput,
     outputs: Vec<OutputStream>,
-    output_definition: &Vec<(String, usize, ClosureDefinition)>) -> JobResult<()>{
-
+    output_definition: &Vec<(String, usize, ClosureDefinition)>) -> JobResult<()> {
     let stream_to_column_mapping = output_definition.iter().map(|(_, off, _)| *off).collect::<Vec<usize>>();
 
     loop {
@@ -152,6 +149,40 @@ pub fn pump_table(
         }
     }
     Ok(())
+}
+
+fn create_aggregator(
+    name: &str,
+    idx: usize,
+    c: &ClosureDefinition,
+    input_type: &Vec<ColumnType>,
+    uninitialized_inputs: &mut Vec<UninitializedInputStream>,
+    outputs: &mut Vec<OutputStream>,
+    env: &Env,
+    printer: &Printer) -> JobResult<JobJoinHandle> {
+    let (first_output, first_input) = streams();
+    let (last_output, last_input) = streams();
+    outputs.push(first_output.initialize(
+        vec![
+            ColumnType::named(name, input_type[idx].cell_type.clone())
+        ]
+    )?);
+    uninitialized_inputs.push(last_input);
+
+    let local_printer = printer.clone();
+    let local_env = env.clone();
+    let cc = c.clone();
+    Ok(handle(build("aggr-aggregator".to_string()).spawn(
+        move || {
+            cc.spawn_and_execute(CompileContext {
+                input: first_input,
+                output: last_output,
+                arguments: vec![],
+                env: local_env,
+                printer: local_printer,
+            });
+            Ok(())
+        })))
 }
 
 pub fn run(config: Config, printer: &Printer, env: &Env, input: InputStream, uninitialized_output: UninitializedOutputStream) -> JobResult<()> {
@@ -181,29 +212,15 @@ pub fn run(config: Config, printer: &Printer, env: &Env, input: InputStream, uni
                     let rest_input = uninit_rest_input.initialize()?;
 
                     for (name, idx, c) in config.output_definition.iter() {
-                        let (first_output, first_input) = streams();
-                        let (last_output, last_input) = streams();
-                        outputs.push(first_output.initialize(
-                            vec![
-                                ColumnType::named(name, job_output.stream.get_type()[*idx].cell_type.clone())
-                            ]
-                        )?);
-                        uninitialized_inputs.push(last_input);
-
-                        let local_printer = printer.clone();
-                        let local_env = env.clone();
-                        let cc = c.clone();
-                        aggregator_handles.push(handle(build("aggr-aggregator".to_string()).spawn(
-                            move || {
-                                cc.spawn_and_execute(CompileContext {
-                                    input: first_input,
-                                    output: last_output,
-                                    arguments: vec![],
-                                    env: local_env,
-                                    printer: local_printer,
-                                });
-                                Ok(())
-                            })));
+                        aggregator_handles.push(create_aggregator(
+                            name.as_str(),
+                            *idx,
+                            c,
+                            job_output.stream.get_type(),
+                            &mut uninitialized_inputs,
+                            &mut outputs,
+                            env,
+                            printer)?);
                     }
 
                     let collector_handle = create_collector(
@@ -233,7 +250,6 @@ pub fn run(config: Config, printer: &Printer, env: &Env, input: InputStream, uni
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let input = context.input.initialize()?;
-
     let config = parse(input.get_type(), context.arguments)?;
     run(config, &context.printer, &context.env, input, context.output)
 }

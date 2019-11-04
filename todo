@@ -6,6 +6,7 @@ Todo:
 Implement list.push
 Implement list.pop
 Implement boolean cell type
+Implement boolean literals. Perhaps use ?{true} and ?{false}... Pretty ugly.
 Implement namespace cell type
 Implement dict cell type
 Namespace literal

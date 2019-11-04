@@ -1,5 +1,5 @@
 use crate::namespace::Namespace;
-use crate::errors::{error, JobError, JobResult};
+use crate::errors::{error, JobResult};
 use std::error::Error;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -78,9 +78,16 @@ impl Env {
     }
 }
 
-pub fn get_cwd() -> Result<Box<Path>, JobError> {
+pub fn get_cwd() -> JobResult<Box<Path>> {
     match std::env::current_dir() {
         Ok(d) => Ok(d.into_boxed_path()),
         Err(e) => Err(error(e.description())),
+    }
+}
+
+pub fn get_home() -> JobResult<Box<Path>> {
+    match dirs::home_dir() {
+        Some(d) => Ok(d.into_boxed_path()),
+        None => Err(error("Could not find users home directory")),
     }
 }

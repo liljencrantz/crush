@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;
 
 #[derive(Debug)]
+#[derive(Clone)]
 pub struct List {
     cell_type: CellType,
     cells: Arc<Mutex<Vec<Cell>>>,
@@ -31,16 +32,23 @@ impl List {
         mandate(cells.get(idx), "Index out of bounds")?.partial_clone()
     }
 
+    pub fn append(&self, new_cells: &mut Vec<Cell>) {
+        let mut cells = self.cells.lock().unwrap();
+        cells.append(new_cells);
+    }
+
+    pub fn pop(&self) -> Option<Cell> {
+        let mut cells = self.cells.lock().unwrap();
+        cells.pop()
+    }
+
     pub fn cell_type(&self) -> CellType {
         self.cell_type.clone()
     }
 
     pub fn partial_clone(&self) -> Result<List, JobError> {
         let cells = self.cells.lock().unwrap();
-        Ok(List {
-            cell_type: self.cell_type.clone(),
-            cells: Arc::from(Mutex::new(cells.iter().map(|c| c.partial_clone()).collect::<Result<Vec<Cell>, JobError>>()?))
-        })
+        Ok(self.clone())
     }
 }
 

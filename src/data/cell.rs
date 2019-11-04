@@ -35,6 +35,7 @@ pub enum Cell {
     Rows(Rows),
     List(List),
     Env(Env),
+    Bool(bool),
 }
 
 impl Cell {
@@ -55,7 +56,8 @@ impl Cell {
             Cell::JobOutput(_) => "<Table>".to_string(),
             Cell::List( l) => l.to_string(),
             Cell::Duration(d) => duration_format(d),
-            Cell::Env(_) => "<Env>".to_string()
+            Cell::Env(_) => "<Env>".to_string(),
+            Cell::Bool(v) => (if *v { "true" } else { "false" }).to_string(),
         };
     }
 
@@ -91,6 +93,7 @@ impl Cell {
             Cell::List(l) => CellType::List(Box::from(l.cell_type())),
             Cell::Duration(_) => CellType::Duration,
             Cell::Env(_) => CellType::Env,
+            Cell::Bool(_) => CellType::Bool
         };
     }
 
@@ -122,6 +125,7 @@ impl Cell {
             Cell::List(l) => Ok(Cell::List(l.partial_clone()?)),
             Cell::Duration(d) => Ok(Cell::Duration(d.clone())),
             Cell::Env(e) => Ok(Cell::Env(e.clone())),
+            Cell::Bool(v) => Ok(Cell::Bool(v.clone())),
         };
     }
 
@@ -210,14 +214,15 @@ impl std::hash::Hash for Cell {
             Cell::Glob(v) => v.hash(state),
             Cell::Regex(v, _) => v.hash(state),
             Cell::Op(v) => v.hash(state),
-            Cell::Command(_) => { panic!("Impossible!") }
+            Cell::Command(_) => {}
             Cell::File(v) => v.hash(state),
             Cell::Rows(v) => v.hash(state),
             Cell::ClosureDefinition(_) => {}//c.hash(state),
             Cell::JobOutput(_) => {}
             Cell::List(v) => v.hash(state),
-            Cell::Duration(d) => { d.hash(state) }
+            Cell::Duration(d) => d.hash(state),
             Cell::Env(_) => {}
+            Cell::Bool(v) => v.hash(state),
         }
     }
 }
@@ -243,10 +248,12 @@ impl std::cmp::PartialEq for Cell {
             (Cell::Regex(val1, _), Cell::Regex(val2, _)) => val1 == val2,
             (Cell::Op(val1), Cell::Op(val2)) => val1 == val2,
             (Cell::Command(val1), Cell::Command(val2)) => val1 == val2,
+            (Cell::List(val1), Cell::List(val2)) => val1 == val2,
             (Cell::Rows(_), Cell::Rows(_)) => panic!("Missing comparison, fixme!"),
             (Cell::File(val1), Cell::File(val2)) => file_result_compare(val1.as_ref(), val2.as_ref()),
             (Cell::Text(val1), Cell::File(val2)) => file_result_compare(&Path::new(&val1.to_string()), val2.as_ref()),
             (Cell::File(val1), Cell::Text(val2)) => file_result_compare(&Path::new(&val2.to_string()), val1.as_ref()),
+            (Cell::Bool(val1), Cell::Bool(val2)) => val1 == val2,
             _ => false,
         };
     }
@@ -279,6 +286,7 @@ impl std::cmp::PartialOrd for Cell {
             (Cell::JobOutput(_), _) => None,
             (Cell::Rows(val1), Cell::Rows(val2)) => val1.partial_cmp(val2),
             (Cell::List(val1), Cell::List(val2)) => val1.partial_cmp(val2),
+            (Cell::Bool(val1), Cell::Bool(val2)) => Some(val1.cmp(val2)),
             _ => None,
         };
     }

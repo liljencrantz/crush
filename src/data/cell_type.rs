@@ -27,6 +27,7 @@ pub enum CellType {
     Rows(Vec<ColumnType>),
     List(Box<CellType>),
     Env,
+    Bool,
 }
 
 impl CellType {
@@ -41,6 +42,8 @@ impl CellType {
             "op" => Ok(CellType::Op),
             "command" => Ok(CellType::Command),
             "file" => Ok(CellType::File),
+            "bool" => Ok(CellType::Bool),
+            "env" => Ok(CellType::Env),
             _ => Err(error(format!("Unknown cell type {}", s).as_str())),
         }
     }
@@ -62,6 +65,7 @@ impl CellType {
             CellType::Rows(r) => format!("rows<{}>", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
             CellType::List(l) => format!("list<{}>", l.to_string()),
             CellType::Env => "env".to_string(),
+            CellType::Bool => "bool".to_string(),
         }
     }
 
