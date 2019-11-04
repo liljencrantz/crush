@@ -23,8 +23,8 @@ impl Dict {
 
     pub fn to_string(&self) -> String {
         let mut res = "dict{".to_string();
-//        let cells = self.cells.lock().unwrap();
-//        res += &cells.iter().map(|c| c.to_string()).collect::<Vec<String>>().join(" ");
+        let entries = self.entries.lock().unwrap();
+        res += &entries.iter().map(|(k, v)| format!("{}: {}", k.to_string(), v.to_string())).collect::<Vec<String>>().join(" ");
         res += "}";
         res
     }
