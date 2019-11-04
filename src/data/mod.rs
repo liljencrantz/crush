@@ -7,6 +7,7 @@ mod argument;
 mod call_definition;
 mod column_type;
 mod list;
+mod dict;
 mod list_definition;
 
 use crate::commands::{CompileContext};
@@ -26,6 +27,7 @@ pub use row::Row;
 pub use rows::Rows;
 pub use call_definition::CallDefinition;
 pub use list::List;
+pub use dict::Dict;
 pub use list_definition::ListDefinition;
 pub use argument::ArgumentVecCompiler;
 

@@ -1,4 +1,4 @@
-use crate::errors::{error, JobError, mandate};
+use crate::errors::{error, mandate, JobResult};
 use crate::data::{Cell, ColumnType};
 use crate::glob::Glob;
 use regex::Regex;
@@ -26,12 +26,13 @@ pub enum CellType {
     Output(Vec<ColumnType>),
     Rows(Vec<ColumnType>),
     List(Box<CellType>),
+    Dict(Box<CellType>, Box<CellType>),
     Env,
     Bool,
 }
 
 impl CellType {
-    pub fn from(s: &str) -> Result<CellType, JobError> {
+    pub fn from(s: &str) -> JobResult<CellType> {
         match s {
             "text" => Ok(CellType::Text),
             "integer" => Ok(CellType::Integer),
@@ -64,12 +65,13 @@ impl CellType {
             CellType::Output(o) => format!("output<{}>", o.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
             CellType::Rows(r) => format!("rows<{}>", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
             CellType::List(l) => format!("list<{}>", l.to_string()),
+            CellType::Dict(k, v) => format!("dict<{},{}>", k.to_string(), v.to_string()),
             CellType::Env => "env".to_string(),
             CellType::Bool => "bool".to_string(),
         }
     }
 
-    pub fn parse(&self, s: &str) -> Result<Cell, JobError> {
+    pub fn parse(&self, s: &str) -> JobResult<Cell> {
         match self {
             CellType::Text => Ok(Cell::Text(Box::from(s))),
             CellType::Integer => match s.parse::<i128>() {

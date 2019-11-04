@@ -42,12 +42,15 @@ impl List {
         cells.pop()
     }
 
-    pub fn cell_type(&self) -> CellType {
+    pub fn element_type(&self) -> CellType {
         self.cell_type.clone()
     }
 
+    pub fn list_type(&self) -> CellType {
+        CellType::List(Box::from(self.cell_type.clone()))
+    }
+
     pub fn partial_clone(&self) -> Result<List, JobError> {
-        let cells = self.cells.lock().unwrap();
         Ok(self.clone())
     }
 }

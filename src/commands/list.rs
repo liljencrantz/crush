@@ -41,7 +41,7 @@ pub fn push_compile_and_run(mut context: CompileContext) -> JobResult<()> {
         (None, Cell::List(l)) => {
             let mut new_elements: Vec<Cell> = Vec::new();
             for el in context.arguments.drain(..) {
-                if el.cell.cell_type() == l.cell_type() {
+                if el.cell.cell_type() == l.element_type() {
                     new_elements.push(el.cell)
                 } else {
                     return Err(argument_error("Invalid element type"));
@@ -63,7 +63,7 @@ pub fn pop_compile_and_run(mut context: CompileContext) -> JobResult<()> {
     match (&context.arguments[0].name, &context.arguments[0].cell) {
         (None, Cell::List(l)) => {
             let output = context.output.initialize(
-                vec![ColumnType::named("element", l.cell_type())])?;
+                vec![ColumnType::named("element", l.element_type())])?;
             l.pop().map(|c| output.send(Row { cells: vec![c] }));
             Ok(())
         }

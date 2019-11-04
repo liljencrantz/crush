@@ -38,6 +38,7 @@ mod cat;
 mod cast;
 
 mod list;
+mod dict;
 
 mod r#for;
 
@@ -133,6 +134,15 @@ pub fn add_commands(env: &Env) -> JobResult<()> {
     list.declare("empty", Cell::Command(Command::new(list::empty_compile_and_run)))?;
     list.declare("push", Cell::Command(Command::new(list::push_compile_and_run)))?;
     list.declare("pop", Cell::Command(Command::new(list::pop_compile_and_run)))?;
+
+    let dict = env.create_namespace("dict")?;
+
+    dict.declare("create", Cell::Command(Command::new(dict::create)))?;
+    dict.declare("insert", Cell::Command(Command::new(dict::insert)))?;
+    dict.declare("get", Cell::Command(Command::new(dict::get)))?;
+    dict.declare("remove", Cell::Command(Command::new(dict::remove)))?;
+    dict.declare("len", Cell::Command(Command::new(dict::len)))?;
+    dict.declare("empty", Cell::Command(Command::new(dict::empty)))?;
 
     return Ok(());
 }

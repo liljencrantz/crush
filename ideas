@@ -120,7 +120,3 @@ Empty list:
 json deserialization:
 How to deal with impedance mismatch, e.g. null values, lists with multiple types of values, etc?
 
-Aggregate rows:
-
-csv some_giant_file.csv | group %country | agg %group avg_age=%age `{avg} people=* `{count} tot_dogs=%dogs `{sum}
-

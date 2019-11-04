@@ -12,7 +12,7 @@ use crate::{
     errors::{error, JobError, to_job_error},
     glob::Glob,
 };
-use crate::data::{List, Command, JobOutput, CellType};
+use crate::data::{List, Command, JobOutput, CellType, Dict};
 use crate::errors::JobResult;
 use std::time::Duration;
 use crate::format::duration_format;
@@ -34,6 +34,7 @@ pub enum Cell {
     File(Box<Path>),
     Rows(Rows),
     List(List),
+    Dict(Dict),
     Env(Env),
     Bool(bool),
 }
@@ -58,6 +59,7 @@ impl Cell {
             Cell::Duration(d) => duration_format(d),
             Cell::Env(_) => "<Env>".to_string(),
             Cell::Bool(v) => (if *v { "true" } else { "false" }).to_string(),
+            Cell::Dict(d) => d.to_string(),
         };
     }
 
@@ -90,10 +92,11 @@ impl Cell {
             Cell::JobOutput(o) => CellType::Output(o.stream.get_type().clone()),
             Cell::Rows(r) => CellType::Rows(r.types.clone()),
             Cell::ClosureDefinition(_) => CellType::Closure,
-            Cell::List(l) => CellType::List(Box::from(l.cell_type())),
+            Cell::List(l) => l.list_type(),
             Cell::Duration(_) => CellType::Duration,
             Cell::Env(_) => CellType::Env,
-            Cell::Bool(_) => CellType::Bool
+            Cell::Bool(_) => CellType::Bool,
+            Cell::Dict(d) => d.dict_type(),
         };
     }
 
@@ -126,6 +129,7 @@ impl Cell {
             Cell::Duration(d) => Ok(Cell::Duration(d.clone())),
             Cell::Env(e) => Ok(Cell::Env(e.clone())),
             Cell::Bool(v) => Ok(Cell::Bool(v.clone())),
+            Cell::Dict(d) => Ok(Cell::Dict(d.partial_clone()?))
         };
     }
 
@@ -219,10 +223,11 @@ impl std::hash::Hash for Cell {
             Cell::Rows(v) => v.hash(state),
             Cell::ClosureDefinition(_) => {}//c.hash(state),
             Cell::JobOutput(_) => {}
-            Cell::List(v) => v.hash(state),
+            Cell::List(v) => panic!("Can't hash mutable cell types!"),
             Cell::Duration(d) => d.hash(state),
             Cell::Env(_) => {}
             Cell::Bool(v) => v.hash(state),
+            Cell::Dict(_) => panic!("Can't hash mutable cell types!")
         }
     }
 }
