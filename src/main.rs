@@ -7,6 +7,7 @@ mod commands;
 mod namespace;
 mod env;
 mod job;
+mod base_lexer;
 mod lexer;
 mod closure;
 mod parser;

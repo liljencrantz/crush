@@ -2,11 +2,15 @@ use regex::Regex;
 use std::clone::Clone;
 use lazy_static::lazy_static;
 use crate::lexer::TokenType::{Whitespace, Comment, EOF};
+use std::collections::HashSet;
+use std::hash::Hash;
+use crate::base_lexer::BaseLexer;
+
 
 #[derive(Clone)]
 #[derive(Copy)]
 #[derive(Debug)]
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq, Hash)]
 pub enum TokenType {
     Pipe,
     Integer,
@@ -36,10 +40,28 @@ pub enum TokenType {
     EOF,
 }
 
-pub struct Lexer {
-    input: String,
-    idx: usize,
-    peeked: Option<(TokenType, usize, usize)>,
+pub type Lexer = BaseLexer<TokenType>;
+
+impl Lexer {
+    pub fn new(input: &String, ) -> Lexer {
+        return BaseLexer::construct(
+            input,
+            &LEX_DATA,
+            TokenType::Error,
+            TokenType::EOF,
+            &IGNORED,
+        );
+    }
+
+}
+
+lazy_static! {
+static ref IGNORED: HashSet<TokenType> = {
+let mut ignored = HashSet::new();
+ignored.insert(TokenType::Whitespace);
+ignored.insert(TokenType::Comment);
+ignored
+};
 }
 
 lazy_static! {
@@ -78,72 +100,6 @@ lazy_static! {
         (TokenType::QuotedString, Regex::new(r#"^"([^\\"]|\\.)*""#).unwrap()),
         (TokenType::Error, Regex::new("^.").unwrap()),
     ];
-}
-
-impl Lexer {
-    pub fn new(input: &String) -> Lexer {
-        return Lexer {
-            input: input.clone(),
-            idx: 0,
-            peeked: None,
-        };
-    }
-
-    fn next_of_any(&mut self) -> (TokenType, usize, usize) {
-        let mut max_len = 0;
-        let mut token_type = Whitespace;
-        if self.idx >= self.input.len() {
-            return (EOF, 0, 0);
-        }
-        for (token, re) in LEX_DATA.iter() {
-            //let re = Regex::new(r".");
-            match re.find(&self.input[self.idx..]) {
-                Some(mat) => {
-                    if mat.end() > max_len {
-                        max_len = mat.end();
-                        token_type = token.clone();
-                    }
-                }
-                None => {}
-            }
-        }
-        if max_len > 0 {
-            self.idx += max_len;
-            return (token_type, self.idx - max_len, self.idx);
-        }
-        return (TokenType::Error, 0, 0);
-    }
-
-    pub fn peek(&mut self) -> (TokenType, &str) {
-        let (tt, from, to) = self.next_span();
-        self.peeked = Some((tt, from, to));
-        return (tt, &self.input[from..to]);
-    }
-
-    fn next_span(&mut self) -> (TokenType, usize, usize) {
-        let s = self.peeked;
-        match s {
-            None => {
-                loop {
-                    let (token_type, from, to) = self.next_of_any();
-                    match token_type {
-                        Whitespace | Comment => continue,
-                        _ => return (token_type, from, to),
-                    }
-                }
-            }
-
-            Some(val) => {
-                self.peeked = None;
-                return val;
-            }
-        }
-    }
-
-    pub fn pop(&mut self) -> (TokenType, &str) {
-        let (tt, from, to) = self.next_span();
-        return (tt, &self.input[from..to]);
-    }
 }
 
 #[cfg(test)]

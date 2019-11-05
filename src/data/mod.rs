@@ -9,6 +9,7 @@ mod column_type;
 mod list;
 mod dict;
 mod list_definition;
+mod cell_type_lexer;
 
 use crate::commands::{CompileContext};
 use crate::errors::{JobResult};

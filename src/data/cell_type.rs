@@ -42,10 +42,17 @@ impl CellType {
             "regex" => Ok(CellType::Regex),
             "op" => Ok(CellType::Op),
             "command" => Ok(CellType::Command),
+            "closure" => Ok(CellType::Command),
             "file" => Ok(CellType::File),
-            "bool" => Ok(CellType::Bool),
             "env" => Ok(CellType::Env),
-            _ => Err(error(format!("Unknown cell type {}", s).as_str())),
+            "bool" => Ok(CellType::Bool),
+_ => {
+/*    "output"
+    "rows",
+    "list"
+    "dict"*/
+    panic!("AAAAA")
+}
         }
     }
 
