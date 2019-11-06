@@ -13,9 +13,13 @@ pub fn create(context: CompileContext) -> JobResult<()> {
     }
     match (&context.arguments[0].cell, &context.arguments[1].cell, &context.arguments[2].cell) {
         (Cell::Text(name), Cell::Text(key_type), Cell::Text(value_type)) => {
+            let key_type = CellType::from(key_type)?;
+            if !key_type.is_hashable() {
+                return Err(argument_error("Key type is not hashable"));
+            }
             context.env.declare(
                 name.as_ref(),
-                Cell::Dict(Dict::new(CellType::from(key_type)?, CellType::from(value_type)?)));
+                Cell::Dict(Dict::new(key_type, CellType::from(value_type)?)))?;
             Ok(())
         }
         _ => Err(argument_error("Invalid argument types")),
@@ -42,7 +46,7 @@ pub fn insert(mut context: CompileContext) -> JobResult<()> {
     }
 }
 
-pub fn get(mut context: CompileContext) -> JobResult<()> {
+pub fn get(context: CompileContext) -> JobResult<()> {
     if context.arguments.len() != 2 {
         return Err(argument_error("Expected two arguments"));
     }
@@ -57,7 +61,7 @@ pub fn get(mut context: CompileContext) -> JobResult<()> {
     }
 }
 
-pub fn remove(mut context: CompileContext) -> JobResult<()> {
+pub fn remove(context: CompileContext) -> JobResult<()> {
     if context.arguments.len() != 2 {
         return Err(argument_error("Expected two arguments"));
     }
@@ -72,7 +76,7 @@ pub fn remove(mut context: CompileContext) -> JobResult<()> {
     }
 }
 
-pub fn len(mut context: CompileContext) -> JobResult<()> {
+pub fn len(context: CompileContext) -> JobResult<()> {
     let output = context.output.initialize(
         vec![ColumnType::named("length", CellType::Integer)])?;
     if context.arguments.len() != 1 {
@@ -87,7 +91,7 @@ pub fn len(mut context: CompileContext) -> JobResult<()> {
     }
 }
 
-pub fn empty(mut context: CompileContext) -> JobResult<()> {
+pub fn empty(context: CompileContext) -> JobResult<()> {
     let output = context.output.initialize(
         vec![ColumnType::named("empty", CellType::Bool)])?;
     if context.arguments.len() != 1 {

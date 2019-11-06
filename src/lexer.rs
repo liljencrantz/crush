@@ -43,7 +43,7 @@ pub enum TokenType {
 pub type Lexer = BaseLexer<TokenType>;
 
 impl Lexer {
-    pub fn new(input: &String, ) -> Lexer {
+    pub fn new(input: &str, ) -> Lexer {
         return BaseLexer::construct(
             input,
             &LEX_DATA,

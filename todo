@@ -1,4 +1,6 @@
 Todo:
+take-command for reading N (defaults to 1) lines from an output in a variable variable
+Add map/rows/output subscripting
 Make better to_string methods for various cell types
 Some missing comparisons on Cell
 Missing some cell type serilisations and deserialisations

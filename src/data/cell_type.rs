@@ -1,5 +1,5 @@
 use crate::errors::{error, mandate, JobResult};
-use crate::data::{Cell, ColumnType};
+use crate::data::{Cell, ColumnType, cell_type_parser};
 use crate::glob::Glob;
 use regex::Regex;
 use std::error::Error;
@@ -33,27 +33,14 @@ pub enum CellType {
 
 impl CellType {
     pub fn from(s: &str) -> JobResult<CellType> {
-        match s {
-            "text" => Ok(CellType::Text),
-            "integer" => Ok(CellType::Integer),
-            "time" => Ok(CellType::Time),
-            "field" => Ok(CellType::Field),
-            "glob" => Ok(CellType::Glob),
-            "regex" => Ok(CellType::Regex),
-            "op" => Ok(CellType::Op),
-            "command" => Ok(CellType::Command),
-            "closure" => Ok(CellType::Command),
-            "file" => Ok(CellType::File),
-            "env" => Ok(CellType::Env),
-            "bool" => Ok(CellType::Bool),
-_ => {
-/*    "output"
-    "rows",
-    "list"
-    "dict"*/
-    panic!("AAAAA")
-}
-        }
+        cell_type_parser::parse(s)
+    }
+
+    pub fn is_hashable(&self) -> bool {
+        return match self {
+            CellType::List(_) | CellType::Dict(_, _) | CellType::Output(_) | CellType::Rows(_) => false,
+            _ => true,
+        };
     }
 
     pub fn to_string(&self) -> String {

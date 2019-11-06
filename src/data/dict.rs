@@ -15,6 +15,9 @@ pub struct Dict {
 
 impl Dict {
     pub fn new(key_type: CellType, value_type: CellType) -> Dict {
+        if !key_type.is_hashable() {
+            panic!("Tried to create dict with unhashable key type");
+        }
         Dict {
             key_type,
             value_type,

@@ -1,11 +1,6 @@
 use crate::data::CellType;
 
-#[derive(Clone)]
-#[derive(Debug)]
-#[derive(PartialEq)]
-#[derive(Eq)]
-#[derive(PartialOrd)]
-#[derive(Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ColumnType {
     pub name: Option<Box<str>>,
     pub cell_type: CellType,

@@ -13,6 +13,9 @@ pub enum CellTypeToken {
     Name,
     Begin,
     End,
+    Sep,
+    To,
+    Whitespace,
     EOF,
     Error,
 }
@@ -20,7 +23,7 @@ pub enum CellTypeToken {
 pub type CellTypeLexer = BaseLexer<CellTypeToken>;
 
 impl CellTypeLexer {
-    pub fn new(input: &String) -> CellTypeLexer {
+    pub fn new(input: &str) -> CellTypeLexer {
         return BaseLexer::construct(
             input,
             &LEX_DATA,
@@ -32,16 +35,20 @@ impl CellTypeLexer {
 }
 
 lazy_static! {
-static ref IGNORED: HashSet<CellTypeToken> = {
-let mut ignored = HashSet::new();
-ignored
-};
+    static ref IGNORED: HashSet<CellTypeToken> = {
+        let mut ignored = HashSet::new();
+        ignored.insert(CellTypeToken::Whitespace);
+        ignored
+    };
 }
 
 lazy_static! {
     static ref LEX_DATA: Vec<(CellTypeToken, Regex)> = vec![
         (CellTypeToken::Begin, Regex::new("^<").unwrap()),
         (CellTypeToken::End, Regex::new("^>").unwrap()),
+        (CellTypeToken::Sep, Regex::new("^,").unwrap()),
+        (CellTypeToken::To, Regex::new("^:").unwrap()),
+        (CellTypeToken::Whitespace, Regex::new("^ *").unwrap()),
         (CellTypeToken::Name, Regex::new("^[a-z]*").unwrap()),
         (CellTypeToken::Error, Regex::new("^.").unwrap()),
     ];
@@ -67,9 +74,15 @@ mod tests {
 
     #[test]
     fn blocks() {
-        let mut l = CellTypeLexer::new(&String::from("list<list<integer>>"));
+        let mut l = CellTypeLexer::new(&String::from("list<   :  dict<integer,bool>><::>"));
         let tt = tokens(&mut l);
-        assert_eq!(tt, vec![Name, Begin, Name, Begin, Name, End, End, EOF]);
+        assert_eq!(tt, vec![Name, Begin, To, Name, Begin, Name, Sep, Name, End, End, Begin, To, To, End, EOF]);
     }
 
+    #[test]
+    fn error() {
+        let mut l = CellTypeLexer::new(&String::from("7"));
+        let tt = tokens(&mut l);
+        assert_eq!(tt, vec![Error]);
+    }
 }

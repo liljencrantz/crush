@@ -15,7 +15,7 @@ pub fn create(context: CompileContext) -> JobResult<()> {
         (Cell::Text(name), Cell::Text(element_type)) => {
             context.env.declare(
                 name.as_ref(),
-                Cell::List(List::new(CellType::from(element_type)?, vec![])));
+                Cell::List(List::new(CellType::from(element_type)?, vec![])))?;
             Ok(())
         }
         _ => Err(argument_error("Invalid argument types")),
@@ -72,7 +72,7 @@ pub fn push(mut context: CompileContext) -> JobResult<()> {
     }
 }
 
-pub fn pop(mut context: CompileContext) -> JobResult<()> {
+pub fn pop(context: CompileContext) -> JobResult<()> {
     if context.arguments.len() != 1 {
         return Err(argument_error("Expected single argument to list.len"));
     }

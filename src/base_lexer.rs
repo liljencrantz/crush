@@ -13,9 +13,9 @@ pub struct BaseLexer<T: 'static + Copy + Clone> {
 }
 
 impl<T: 'static + Copy + Clone + Eq + Hash> BaseLexer<T> {
-    pub fn construct(input: &String, lex_data: &'static Vec<(T, Regex)>, error_type: T, eof_type: T, ignored: &'static HashSet<T>) -> BaseLexer<T> {
+    pub fn construct(input: &str, lex_data: &'static Vec<(T, Regex)>, error_type: T, eof_type: T, ignored: &'static HashSet<T>) -> BaseLexer<T> {
         return BaseLexer {
-            input: input.clone(),
+            input: input.to_string(),
             idx: 0,
             peeked: None,
             lex_data,
@@ -76,7 +76,7 @@ impl<T: 'static + Copy + Clone + Eq + Hash> BaseLexer<T> {
         }
     }
 
-    pub fn pop(&mut self) -> (T, &str) {
+    pub fn pop<'a> (&'a mut self) -> (T, &'a str) {
         let (tt, from, to) = self.next_span();
         return (tt, &self.input[from..to]);
     }

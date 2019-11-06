@@ -10,6 +10,7 @@ mod list;
 mod dict;
 mod list_definition;
 mod cell_type_lexer;
+mod cell_type_parser;
 
 use crate::commands::{CompileContext};
 use crate::errors::{JobResult};
