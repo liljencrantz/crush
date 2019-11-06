@@ -108,6 +108,9 @@ fn parse_type(lexer: &mut CellTypeLexer) -> JobResult<CellType> {
         "rows" => {
             CellType::Rows(parse_named_parameters(lexer)?)
         }
+        "row" => {
+            CellType::Row(parse_named_parameters(lexer)?)
+        }
         nam => return Err(error(format!("Unknown type \"{}\"", nam).as_str())),
     })
 }

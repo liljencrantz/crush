@@ -17,6 +17,7 @@ use crate::errors::JobResult;
 use std::time::Duration;
 use crate::format::duration_format;
 use crate::env::Env;
+use crate::data::row::RowWithTypes;
 
 #[derive(Debug)]
 pub enum Cell {
@@ -33,6 +34,7 @@ pub enum Cell {
     Output(JobOutput),
     File(Box<Path>),
     Rows(Rows),
+    Row(RowWithTypes),
     List(List),
     Dict(Dict),
     Env(Env),
@@ -53,6 +55,7 @@ impl Cell {
             Cell::Command(_) => "Command".to_string(),
             Cell::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
             Cell::Rows(_) => "<Table>".to_string(),
+            Cell::Row(_) => "<Row>".to_string(),
             Cell::Closure(_) => "<Closure>".to_string(),
             Cell::Output(_) => "<Table>".to_string(),
             Cell::List( l) => l.to_string(),
@@ -91,6 +94,7 @@ impl Cell {
             Cell::File(_) => CellType::File,
             Cell::Output(o) => CellType::Output(o.stream.get_type().clone()),
             Cell::Rows(r) => CellType::Rows(r.types.clone()),
+            Cell::Row(r) => CellType::Row(r.types.clone()),
             Cell::Closure(_) => CellType::Closure,
             Cell::List(l) => l.list_type(),
             Cell::Duration(_) => CellType::Duration,
@@ -123,6 +127,7 @@ impl Cell {
             Cell::Command(v) => Ok(Cell::Command(v.clone())),
             Cell::File(v) => Ok(Cell::File(v.clone())),
             Cell::Rows(r) => Ok(Cell::Rows(r.partial_clone()?)),
+            Cell::Row(r) => Ok(Cell::Row(r.partial_clone()?)),
             Cell::Closure(c) => Ok(Cell::Closure(c.clone())),
             Cell::Output(_) => Err(error("Invalid use of stream")),
             Cell::List(l) => Ok(Cell::List(l.partial_clone()?)),
@@ -227,7 +232,7 @@ impl std::hash::Hash for Cell {
             Cell::Bool(v) => v.hash(state),
 
             Cell::Env(_) | Cell::Dict(_) | Cell::Rows(_) | Cell::Closure(_) |
-            Cell::List(_) | Cell::Output(_) => panic!("Can't hash output"),
+            Cell::List(_) | Cell::Output(_) | Cell::Row(_) => panic!("Can't hash output"),
         }
     }
 }
@@ -254,7 +259,14 @@ impl std::cmp::PartialEq for Cell {
             (Cell::Op(val1), Cell::Op(val2)) => val1 == val2,
             (Cell::Command(val1), Cell::Command(val2)) => val1 == val2,
             (Cell::List(val1), Cell::List(val2)) => val1 == val2,
-            (Cell::Rows(_), Cell::Rows(_)) => panic!("Missing comparison, fixme!"),
+            (Cell::Rows(val1), Cell::Rows(val2)) => match val1.partial_cmp(val2) {
+                None => false,
+                Some(o) => o == Ordering::Equal,
+            },
+            (Cell::Row(val1), Cell::Row(val2)) => match val1.partial_cmp(val2) {
+                None => false,
+                Some(o) => o == Ordering::Equal,
+            },
             (Cell::File(val1), Cell::File(val2)) => file_result_compare(val1.as_ref(), val2.as_ref()),
             (Cell::Text(val1), Cell::File(val2)) => file_result_compare(&Path::new(&val1.to_string()), val2.as_ref()),
             (Cell::File(val1), Cell::Text(val2)) => file_result_compare(&Path::new(&val2.to_string()), val1.as_ref()),
@@ -290,6 +302,7 @@ impl std::cmp::PartialOrd for Cell {
             (Cell::Closure(_), _) => None,
             (Cell::Output(_), _) => None,
             (Cell::Rows(val1), Cell::Rows(val2)) => val1.partial_cmp(val2),
+            (Cell::Row(val1), Cell::Row(val2)) => val1.partial_cmp(val2),
             (Cell::List(val1), Cell::List(val2)) => val1.partial_cmp(val2),
             (Cell::Bool(val1), Cell::Bool(val2)) => Some(val1.cmp(val2)),
             _ => None,
