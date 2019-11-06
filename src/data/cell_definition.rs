@@ -119,6 +119,10 @@ impl CellDefinition {
                 match (c.compile(dependencies, env, printer), i.compile(dependencies, env, printer)) {
                     (Ok(Cell::List(list)), Ok(Cell::Integer(idx))) =>
                         list.get(idx as usize)?,
+                    (Ok(Cell::Dict(dict)), Ok(c)) =>
+                        mandate(dict.get(&c), "Invalid subscript")?,
+                    (Ok(Cell::Row(row)), Ok(Cell::Text(col))) =>
+                        mandate(row.get(col.as_ref()), "Invalid subscript")?,
                     (Ok(Cell::Output(o)), Ok(Cell::Integer(idx))) => {
                         Cell::Row(RowWithTypes {
                             types: o.stream.get_type().clone(),

@@ -2,6 +2,7 @@ use crate::data::cell::Cell;
 use std::hash::Hasher;
 use crate::errors::{JobResult};
 use crate::data::ColumnType;
+use std::mem;
 
 #[derive(PartialEq)]
 #[derive(PartialOrd)]
@@ -32,6 +33,16 @@ impl RowWithTypes {
             types: self.types.clone(),
             cells: self.cells.iter().map(|c| c.partial_clone()).collect::<JobResult<Vec<Cell>>>()?,
         })
+    }
+
+    pub fn get(mut self, name: &str) -> Option<Cell> {
+        for (idx, t) in self.types.iter().enumerate() {
+            match &t.name {
+                None => {},
+                Some(n) => if n.as_ref() == name {return Some(mem::replace(&mut self.cells[idx], Cell::Integer(0)));},
+            }
+        }
+        None
     }
 }
 

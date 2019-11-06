@@ -116,18 +116,20 @@ fn parse_mode(lexer: &mut Lexer) -> JobResult<Vec<CellDefinition>> {
 }
 
 fn parse_unnamed_argument(lexer: &mut Lexer) -> JobResult<CellDefinition> {
-    let cell = parse_unnamed_argument_without_subscript(lexer)?;
-
-    if lexer.peek().0 != TokenType::SubscriptStart {
-        return Ok(cell);
+    let mut cell = parse_unnamed_argument_without_subscript(lexer)?;
+    loop {
+        if lexer.peek().0 != TokenType::SubscriptStart {
+            break;
+        }
+        lexer.pop();
+        let idx = parse_unnamed_argument(lexer)?;
+        if lexer.peek().0 != TokenType::SubscriptEnd {
+            return Err(parse_error("Expected '['", lexer));
+        }
+        lexer.pop();
+        cell = CellDefinition::Subscript(Box::from(cell), Box::from(idx));
     }
-    lexer.pop();
-    let idx = parse_unnamed_argument(lexer)?;
-    if lexer.peek().0 != TokenType::SubscriptEnd {
-        return Err(parse_error("Expected '['", lexer));
-    }
-    lexer.pop();
-    Ok(CellDefinition::Subscript(Box::from(cell), Box::from(idx)))
+    Ok(cell)
 }
 
 fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> JobResult<CellDefinition> {
