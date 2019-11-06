@@ -6,7 +6,7 @@ use chrono::{DateTime, Local};
 use regex::Regex;
 
 use crate::{
-    closure::ClosureDefinition,
+    closure::Closure,
     env::get_cwd,
     data::rows::Rows,
     errors::{error, JobError, to_job_error},
@@ -29,8 +29,8 @@ pub enum Cell {
     Regex(Box<str>, Regex),
     Op(Box<str>),
     Command(Command),
-    ClosureDefinition(ClosureDefinition),
-    JobOutput(JobOutput),
+    Closure(Closure),
+    Output(JobOutput),
     File(Box<Path>),
     Rows(Rows),
     List(List),
@@ -53,8 +53,8 @@ impl Cell {
             Cell::Command(_) => "Command".to_string(),
             Cell::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
             Cell::Rows(_) => "<Table>".to_string(),
-            Cell::ClosureDefinition(_) => "<Closure>".to_string(),
-            Cell::JobOutput(_) => "<Table>".to_string(),
+            Cell::Closure(_) => "<Closure>".to_string(),
+            Cell::Output(_) => "<Table>".to_string(),
             Cell::List( l) => l.to_string(),
             Cell::Duration(d) => duration_format(d),
             Cell::Env(_) => "<Env>".to_string(),
@@ -89,9 +89,9 @@ impl Cell {
             Cell::Op(_) => CellType::Op,
             Cell::Command(_) => CellType::Command,
             Cell::File(_) => CellType::File,
-            Cell::JobOutput(o) => CellType::Output(o.stream.get_type().clone()),
+            Cell::Output(o) => CellType::Output(o.stream.get_type().clone()),
             Cell::Rows(r) => CellType::Rows(r.types.clone()),
-            Cell::ClosureDefinition(_) => CellType::Closure,
+            Cell::Closure(_) => CellType::Closure,
             Cell::List(l) => l.list_type(),
             Cell::Duration(_) => CellType::Duration,
             Cell::Env(_) => CellType::Env,
@@ -123,8 +123,8 @@ impl Cell {
             Cell::Command(v) => Ok(Cell::Command(v.clone())),
             Cell::File(v) => Ok(Cell::File(v.clone())),
             Cell::Rows(r) => Ok(Cell::Rows(r.partial_clone()?)),
-            Cell::ClosureDefinition(c) => Ok(Cell::ClosureDefinition(c.clone())),
-            Cell::JobOutput(_) => Err(error("Invalid use of stream")),
+            Cell::Closure(c) => Ok(Cell::Closure(c.clone())),
+            Cell::Output(_) => Err(error("Invalid use of stream")),
             Cell::List(l) => Ok(Cell::List(l.partial_clone()?)),
             Cell::Duration(d) => Ok(Cell::Duration(d.clone())),
             Cell::Env(e) => Ok(Cell::Env(e.clone())),
@@ -210,6 +210,9 @@ impl Cell {
 
 impl std::hash::Hash for Cell {
     fn hash<H: Hasher>(&self, state: &mut H) {
+        if !self.cell_type().is_hashable() {
+            panic!("Can't hash mutable cell types!");
+        }
         match self {
             Cell::Text(v) => v.hash(state),
             Cell::Integer(v) => v.hash(state),
@@ -220,14 +223,11 @@ impl std::hash::Hash for Cell {
             Cell::Op(v) => v.hash(state),
             Cell::Command(_) => {}
             Cell::File(v) => v.hash(state),
-            Cell::Rows(v) => v.hash(state),
-            Cell::ClosureDefinition(_) => {}//c.hash(state),
-            Cell::JobOutput(_) => {}
-            Cell::List(v) => panic!("Can't hash mutable cell types!"),
             Cell::Duration(d) => d.hash(state),
-            Cell::Env(_) => {}
             Cell::Bool(v) => v.hash(state),
-            Cell::Dict(_) => panic!("Can't hash mutable cell types!")
+
+            Cell::Env(_) | Cell::Dict(_) | Cell::Rows(_) | Cell::Closure(_) |
+            Cell::List(_) | Cell::Output(_) => panic!("Can't hash output"),
         }
     }
 }
@@ -287,8 +287,8 @@ impl std::cmp::PartialOrd for Cell {
             (Cell::File(val1), Cell::File(val2)) => Some(val1.cmp(val2)),
             (Cell::Duration(val1), Cell::Duration(val2)) => Some(val1.cmp(val2)),
             (Cell::Command(_), Cell::Command(_)) => None,
-            (Cell::ClosureDefinition(_), _) => None,
-            (Cell::JobOutput(_), _) => None,
+            (Cell::Closure(_), _) => None,
+            (Cell::Output(_), _) => None,
             (Cell::Rows(val1), Cell::Rows(val2)) => val1.partial_cmp(val2),
             (Cell::List(val1), Cell::List(val2)) => val1.partial_cmp(val2),
             (Cell::Bool(val1), Cell::Bool(val2)) => Some(val1.cmp(val2)),

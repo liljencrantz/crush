@@ -6,7 +6,7 @@ use crate::printer::Printer;
 use crate::env::Env;
 use crate::data::{JobOutput, ColumnType, CellType, Row};
 use crate::errors::{argument_error, JobResult, error};
-use crate::closure::ClosureDefinition;
+use crate::closure::Closure;
 use crate::commands::{CompileContext, JobJoinHandle};
 use crate::stream::{InputStream, OutputStream, UninitializedOutputStream, streams, UninitializedInputStream};
 use crate::commands::command_util::find_field;
@@ -16,7 +16,7 @@ use crate::thread_util::{handle, build};
 
 pub struct Config {
     table_idx: usize,
-    output_definition: Vec<(String, usize, ClosureDefinition)>,
+    output_definition: Vec<(String, usize, Closure)>,
 }
 
 pub fn guess_table(input_type: &Vec<ColumnType>) -> JobResult<usize> {
@@ -54,7 +54,7 @@ pub fn parse(input_type: &Vec<ColumnType>, argument: Vec<Argument>) -> JobResult
                 let spec = &args[0];
                 let clos = &args[1];
                 match (&spec.name, &spec.cell, &clos.cell) {
-                    (Some(name), Cell::Field(f), Cell::ClosureDefinition(c)) =>
+                    (Some(name), Cell::Field(f), Cell::Closure(c)) =>
                         Ok((
                             name.to_string(),
                             find_field(&f, sub_type)?,
@@ -63,7 +63,7 @@ pub fn parse(input_type: &Vec<ColumnType>, argument: Vec<Argument>) -> JobResult
                     _ => Err(error("Invalid aggragation spec")),
                 }
             })
-            .collect::<JobResult<Vec<(String, usize, ClosureDefinition)>>>()?;
+            .collect::<JobResult<Vec<(String, usize, Closure)>>>()?;
         Ok(Config {
             table_idx,
             output_definition,
@@ -135,7 +135,7 @@ pub fn create_collector(
 pub fn pump_table(
     job_output: &JobOutput,
     outputs: Vec<OutputStream>,
-    output_definition: &Vec<(String, usize, ClosureDefinition)>) -> JobResult<()> {
+    output_definition: &Vec<(String, usize, Closure)>) -> JobResult<()> {
     let stream_to_column_mapping = output_definition.iter().map(|(_, off, _)| *off).collect::<Vec<usize>>();
 
     loop {
@@ -154,7 +154,7 @@ pub fn pump_table(
 fn create_aggregator(
     name: &str,
     idx: usize,
-    c: &ClosureDefinition,
+    c: &Closure,
     input_type: &Vec<ColumnType>,
     uninitialized_inputs: &mut Vec<UninitializedInputStream>,
     outputs: &mut Vec<OutputStream>,
@@ -200,7 +200,7 @@ pub fn run(config: Config, printer: &Printer, env: &Env, input: InputStream, uni
         match input.recv() {
             Ok(mut row) => {
                 let table_cell = row.cells.remove(config.table_idx);
-                if let Cell::JobOutput(job_output) = table_cell {
+                if let Cell::Output(job_output) = table_cell {
                     let mut outputs: Vec<OutputStream> = Vec::new();
                     let mut uninitialized_inputs: Vec<UninitializedInputStream> = Vec::new();
                     let mut aggregator_handles: Vec<JobJoinHandle> = Vec::new();

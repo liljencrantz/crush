@@ -61,15 +61,17 @@ fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Config
             if op.as_ref() != "==" {
                 return Err(argument_error("Only == currently supported"));
             }
-            match (l.len(), r.len()) {
+
+            let config = match (l.len(), r.len()) {
                 (0, 0) => {
                     let (left_table_idx, right_table_idx, left_types, right_types) = guess_tables(&input_type)?;
-                    Ok(Config {
+
+                    Config {
                         left_table_idx,
                         right_table_idx,
                         left_column_idx: find_field(&l, left_types)?,
                         right_column_idx: find_field(&r, right_types)?,
-                    })
+                    }
                 }
                 (1, 1) => {
                     let (left_table_idx, left_column_idx ) =
@@ -82,15 +84,25 @@ fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Config
                         return Err(argument_error("Left and right table can't be the same"));
                     }
 
-                    Ok(Config {
+                    Config {
                         left_table_idx,
                         right_table_idx,
                         left_column_idx,
                         right_column_idx,
-                    })
+                    }
                 },
-                _ => Err(argument_error("Expected both fields on the form %table.column or %column")),
+                _ => return Err(argument_error("Expected both fields on the form %table.column or %column")),
+            };
+
+            let r_type = &get_sub_type(&input_type[config.right_table_idx].cell_type)?[config.right_column_idx].cell_type;
+            let l_type = &get_sub_type(&input_type[config.left_table_idx].cell_type)?[config.left_column_idx].cell_type;
+            if r_type != l_type {
+                return Err(argument_error("Cannot join two columns of different types"));
             }
+            if !r_type.is_hashable() {
+                return Err(argument_error("Cannot join on this column type. (It is either mutable or not comparable)"));
+            }
+            Ok(config)
         }
         _ => Err(argument_error("Expected arguments like %table1.col == %table2.col")),
     };
@@ -140,7 +152,7 @@ pub fn run(
         match input.recv() {
             Ok(mut row) => {
                 match (row.cells.replace(config.left_table_idx, Cell::Integer(0)), row.cells.replace(config.right_table_idx, Cell::Integer(0))) {
-                    (Cell::JobOutput(mut l), Cell::JobOutput(mut r)) => {
+                    (Cell::Output(mut l), Cell::Output(mut r)) => {
                         do_join(&config, &mut l.stream, &mut r.stream, &output)?;
                     }
                     _ => panic!("Wrong row format"),

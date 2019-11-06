@@ -95,7 +95,7 @@ fn handle(file: Box<Path>, cfg: &Config, output: &OutputStream, printer: &Printe
     let out_row = Row {
         cells: vec![
             Cell::File(file.clone()),
-            Cell::JobOutput(JobOutput {
+            Cell::Output(JobOutput {
                 stream: input_stream.initialize()?,
             }),
         ],

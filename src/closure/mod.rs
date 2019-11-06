@@ -8,21 +8,21 @@ use crate::stream_printer::spawn_print_thread;
 
 #[derive(Clone)]
 #[derive(Debug)]
-pub struct ClosureDefinition {
+pub struct Closure {
     job_definitions: Vec<JobDefinition>,
     env: Option<Env>,
 }
 
-impl ClosureDefinition {
-    pub fn new(job_definitions: Vec<JobDefinition>) -> ClosureDefinition {
-        ClosureDefinition {
+impl Closure {
+    pub fn new(job_definitions: Vec<JobDefinition>) -> Closure {
+        Closure {
             job_definitions,
             env: None,
         }
     }
 
-    pub fn with_env(&self, env: &Env) -> ClosureDefinition {
-        ClosureDefinition {
+    pub fn with_env(&self, env: &Env) -> Closure {
+        Closure {
             job_definitions: self.job_definitions.clone(),
             env: Some(env.clone()),
         }
@@ -33,7 +33,7 @@ impl ClosureDefinition {
         let parent_env = mandate(self.env.clone(), "Closure without env")?;
         let env = parent_env.new_stack_frame();
 
-        ClosureDefinition::push_arguments_to_env(context.arguments, &env);
+        Closure::push_arguments_to_env(context.arguments, &env);
         match job_definitions.len() {
             0 => return Err(error("Empty closures not supported")),
             1 => {

@@ -6,7 +6,7 @@ use crate::data::CallDefinition;
 use regex::Regex;
 use std::error::Error;
 use crate::glob::Glob;
-use crate::closure::ClosureDefinition;
+use crate::closure::Closure;
 
 pub fn parse(lexer: &mut Lexer) -> JobResult<Vec<JobDefinition>> {
     let mut jobs: Vec<JobDefinition> = Vec::new();
@@ -163,7 +163,7 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> JobResult<Cell
                 "`{" => {
                     let dep = parse(lexer)?;
                     lexer.pop();
-                    let res = Ok(CellDefinition::ClosureDefinition(ClosureDefinition::new(dep)));
+                    let res = Ok(CellDefinition::ClosureDefinition(Closure::new(dep)));
                     return res;
                 }
 

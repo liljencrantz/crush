@@ -38,7 +38,7 @@ impl CellType {
 
     pub fn is_hashable(&self) -> bool {
         return match self {
-            CellType::List(_) | CellType::Dict(_, _) | CellType::Output(_) | CellType::Rows(_) => false,
+            CellType::Env | CellType::Closure | CellType::List(_) | CellType::Dict(_, _) | CellType::Output(_) | CellType::Rows(_) => false,
             _ => true,
         };
     }

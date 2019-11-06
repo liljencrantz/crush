@@ -58,7 +58,7 @@ pub fn run(
         match input.recv() {
             Ok(mut row) => {
                 match row.cells.replace(config.column, Cell::Integer(0)) {
-                    Cell::JobOutput(o) => loop {
+                    Cell::Output(o) => loop {
                         match o.stream.recv() {
                             Ok(row) => {
                                 output.send(row);

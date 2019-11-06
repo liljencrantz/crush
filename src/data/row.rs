@@ -16,11 +16,3 @@ impl Row {
         })
     }
 }
-
-impl std::hash::Hash for Row {
-    fn hash<H: Hasher>(&self, env: &mut H) {
-        for c in &self.cells {
-            c.hash(env);
-        }
-    }
-}

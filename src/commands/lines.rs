@@ -34,7 +34,7 @@ fn handle(file: Box<Path>, output: &OutputStream) -> JobResult<()> {
     let out_row = Row {
         cells: vec![
             Cell::File(file.clone()),
-            Cell::JobOutput(JobOutput {
+            Cell::Output(JobOutput {
                 stream: input_stream.initialize()?,
             }),
         ],

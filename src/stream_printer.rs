@@ -106,7 +106,7 @@ fn print_row(printer: &Printer, w: &Vec<usize>, mut r: Row, indent: usize, rows:
 
         match c {
             Cell::Rows(r) => rows.push(r),
-            Cell::JobOutput(o) => outputs.push(o),
+            Cell::Output(o) => outputs.push(o),
             _ => {}
         }
     }

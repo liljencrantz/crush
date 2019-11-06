@@ -3,7 +3,7 @@ use std::path::Path;
 use chrono::{Local};
 use regex::Regex;
 
-use crate::closure::ClosureDefinition;
+use crate::closure::Closure;
 use crate::commands::JobJoinHandle;
 use crate::data::{Cell, JobOutput, ListDefinition};
 use crate::env::Env;
@@ -25,7 +25,7 @@ pub enum CellDefinition {
     Glob(Glob),
     Regex(Box<str>, Regex),
     Op(Box<str>),
-    ClosureDefinition(ClosureDefinition),
+    ClosureDefinition(Closure),
     JobDefintion(JobDefinition),
     File(Box<Path>),
     Variable(Vec<Box<str>>),
@@ -104,11 +104,11 @@ impl CellDefinition {
                 let (last_output, last_input) = streams();
                 let j = def.spawn_and_execute(&env, printer, first_input, last_output)?;
 
-                let res = Cell::JobOutput(JobOutput { stream: last_input.initialize()? });
+                let res = Cell::Output(JobOutput { stream: last_input.initialize()? });
                 dependencies.push(j);
                 res
             }
-            CellDefinition::ClosureDefinition(c) => Cell::ClosureDefinition(c.with_env(env)),
+            CellDefinition::ClosureDefinition(c) => Cell::Closure(c.with_env(env)),
             CellDefinition::Variable(s) => (
                 mandate(
                     env.get(s),

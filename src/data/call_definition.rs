@@ -55,7 +55,7 @@ impl CallDefinition {
                     })))
             }
 
-            Some(Cell::ClosureDefinition(closure_definition)) => {
+            Some(Cell::Closure(closure_definition)) => {
                 Ok(handle(build(format_name(&self.name)).spawn(
                     move || {
                         let mut deps: Vec<JobJoinHandle> = Vec::new();
