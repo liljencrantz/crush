@@ -79,6 +79,7 @@ fn parse_type(lexer: &mut CellTypeLexer) -> JobResult<CellType> {
         "text" => CellType::Text,
         "integer" => CellType::Integer,
         "time" => CellType::Time,
+        "duration" => CellType::Duration,
         "field" => CellType::Field,
         "glob" => CellType::Glob,
         "regex" => CellType::Regex,
