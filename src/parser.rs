@@ -127,7 +127,7 @@ fn parse_unnamed_argument(lexer: &mut Lexer) -> JobResult<CellDefinition> {
         return Err(parse_error("Expected '['", lexer));
     }
     lexer.pop();
-    Ok(CellDefinition::ArrayLookup(Box::from(cell), Box::from(idx)))
+    Ok(CellDefinition::Subscript(Box::from(cell), Box::from(idx)))
 }
 
 fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> JobResult<CellDefinition> {

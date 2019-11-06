@@ -5,7 +5,7 @@ use regex::Regex;
 
 use crate::closure::Closure;
 use crate::commands::JobJoinHandle;
-use crate::data::{Cell, JobOutput, ListDefinition};
+use crate::data::{Cell, Output, ListDefinition};
 use crate::env::Env;
 use crate::errors::{error,  mandate, JobResult, argument_error, to_job_error};
 use crate::glob::Glob;
@@ -13,6 +13,7 @@ use crate::job::JobDefinition;
 use crate::printer::Printer;
 use crate::stream::streams;
 use std::time::Duration;
+use crate::data::row::RowWithTypes;
 
 #[derive(Clone)]
 #[derive(Debug)]
@@ -30,7 +31,7 @@ pub enum CellDefinition {
     File(Box<Path>),
     Variable(Vec<Box<str>>),
     List(ListDefinition),
-    ArrayLookup(Box<CellDefinition>, Box<CellDefinition>),
+    Subscript(Box<CellDefinition>, Box<CellDefinition>),
 }
 
 fn to_duration(a: u64, t: &str) -> JobResult<Duration> {
@@ -104,7 +105,7 @@ impl CellDefinition {
                 let (last_output, last_input) = streams();
                 let j = def.spawn_and_execute(&env, printer, first_input, last_output)?;
 
-                let res = Cell::Output(JobOutput { stream: last_input.initialize()? });
+                let res = Cell::Output(Output { stream: last_input.initialize()? });
                 dependencies.push(j);
                 res
             }
@@ -114,10 +115,16 @@ impl CellDefinition {
                     env.get(s),
                     format!("Unknown variable").as_str())?),
             CellDefinition::List(l) => l.compile(dependencies, env, printer)?,
-            CellDefinition::ArrayLookup(c, i) => {
+            CellDefinition::Subscript(c, i) => {
                 match (c.compile(dependencies, env, printer), i.compile(dependencies, env, printer)) {
                     (Ok(Cell::List(list)), Ok(Cell::Integer(idx))) =>
                         list.get(idx as usize)?,
+                    (Ok(Cell::Output(o)), Ok(Cell::Integer(idx))) => {
+                        Cell::Row(RowWithTypes {
+                            types: o.stream.get_type().clone(),
+                            cells: o.get(idx)?.cells
+                        })
+                    }
                     _ => return Err(error("Expected a list variable")),
                 }
             }

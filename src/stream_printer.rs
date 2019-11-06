@@ -1,7 +1,7 @@
 use crate::stream::{UninitializedOutputStream, streams, InputStream, Readable, RowsReader};
 use crate::printer::Printer;
 use std::thread;
-use crate::data::{Row, ColumnType, CellType, Alignment, Cell, Rows, JobOutput};
+use crate::data::{Row, ColumnType, CellType, Alignment, Cell, Rows, Output};
 use std::cmp::max;
 
 pub fn spawn_print_thread(printer: &Printer) -> UninitializedOutputStream {
@@ -85,7 +85,7 @@ fn print_header(printer: &Printer, w: &Vec<usize>, types: &Vec<ColumnType>, has_
     }
 }
 
-fn print_row(printer: &Printer, w: &Vec<usize>, mut r: Row, indent: usize, rows: &mut Vec<Rows>, outputs: &mut Vec<JobOutput>) {
+fn print_row(printer: &Printer, w: &Vec<usize>, mut r: Row, indent: usize, rows: &mut Vec<Rows>, outputs: &mut Vec<Output>) {
     let cell_len = r.cells.len();
     let mut row = " ".repeat(indent * 4);
     for (idx, c) in r.cells.drain(..).enumerate() {

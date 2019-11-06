@@ -6,7 +6,7 @@ use crate::{
     data::{
         Argument,
         Row,
-        JobOutput,
+        Output,
         CellType,
         Cell,
     },
@@ -63,7 +63,7 @@ pub fn run(
                         let (uninit_output_stream, input_stream) = unlimited_streams();
                         let output_stream = uninit_output_stream.initialize(config.input_type.clone())?;
                         let out_row = Row {
-                            cells: vec![key.partial_clone()?, Cell::Output(JobOutput { stream: input_stream.initialize()? })],
+                            cells: vec![key.partial_clone()?, Cell::Output(Output { stream: input_stream.initialize()? })],
                         };
                         output.send(out_row)?;
                         output_stream.send(row)?;

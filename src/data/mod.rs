@@ -13,7 +13,7 @@ mod cell_type_lexer;
 mod cell_type_parser;
 
 use crate::commands::{CompileContext};
-use crate::errors::{JobResult};
+use crate::errors::{JobResult, JobError, error};
 use std::fmt::Formatter;
 use crate::stream::{InputStream};
 
@@ -60,6 +60,23 @@ impl std::fmt::Debug for Command {
 }
 
 #[derive(Debug)]
-pub struct JobOutput {
+pub struct Output {
     pub stream: InputStream,
+}
+
+impl Output {
+    pub fn get(&self, idx: i128) -> JobResult<Row> {
+        let mut i = 0i128;
+        loop {
+            match self.stream.recv() {
+                Ok(row) => {
+                    if i == idx {
+                        return Ok(row);
+                    }
+                    i += 1;
+                },
+                Err(_) => return Err(error("Index out of bounds")),
+            }
+        }
+    }
 }

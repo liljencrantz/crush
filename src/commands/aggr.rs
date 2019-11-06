@@ -4,7 +4,7 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::data::{JobOutput, ColumnType, CellType, Row};
+use crate::data::{Output, ColumnType, CellType, Row};
 use crate::errors::{argument_error, JobResult, error};
 use crate::closure::Closure;
 use crate::commands::{CompileContext, JobJoinHandle};
@@ -133,7 +133,7 @@ pub fn create_collector(
 }
 
 pub fn pump_table(
-    job_output: &JobOutput,
+    job_output: &Output,
     outputs: Vec<OutputStream>,
     output_definition: &Vec<(String, usize, Closure)>) -> JobResult<()> {
     let stream_to_column_mapping = output_definition.iter().map(|(_, off, _)| *off).collect::<Vec<usize>>();

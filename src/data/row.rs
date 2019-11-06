@@ -35,3 +35,9 @@ impl RowWithTypes {
     }
 }
 
+impl ToString for RowWithTypes {
+    fn to_string(&self) -> String {
+        self.cells.iter().map(|c| c.to_string()).collect::<Vec<String>>().join(", ")
+    }
+}
+

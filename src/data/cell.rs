@@ -12,7 +12,7 @@ use crate::{
     errors::{error, JobError, to_job_error},
     glob::Glob,
 };
-use crate::data::{List, Command, JobOutput, CellType, Dict};
+use crate::data::{List, Command, Output, CellType, Dict};
 use crate::errors::JobResult;
 use std::time::Duration;
 use crate::format::duration_format;
@@ -31,7 +31,7 @@ pub enum Cell {
     Op(Box<str>),
     Command(Command),
     Closure(Closure),
-    Output(JobOutput),
+    Output(Output),
     File(Box<Path>),
     Rows(Rows),
     Row(RowWithTypes),
@@ -55,7 +55,7 @@ impl Cell {
             Cell::Command(_) => "Command".to_string(),
             Cell::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
             Cell::Rows(_) => "<Table>".to_string(),
-            Cell::Row(_) => "<Row>".to_string(),
+            Cell::Row(row) => row.to_string(),
             Cell::Closure(_) => "<Closure>".to_string(),
             Cell::Output(_) => "<Table>".to_string(),
             Cell::List( l) => l.to_string(),

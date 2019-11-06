@@ -4,7 +4,7 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::data::{JobOutput};
+use crate::data::{Output};
 use crate::errors::{argument_error, JobResult};
 use crate::closure::Closure;
 use crate::commands::CompileContext;
@@ -12,7 +12,7 @@ use crate::stream::empty_stream;
 use crate::stream_printer::spawn_print_thread;
 
 pub struct Config {
-    iter: JobOutput,
+    iter: Output,
     body: Closure,
     env: Env,
     printer: Printer,
