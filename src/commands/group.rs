@@ -66,11 +66,11 @@ pub fn run(
                             cells: vec![key.partial_clone()?, Cell::Output(Output { stream: input_stream.initialize()? })],
                         };
                         output.send(out_row)?;
-                        output_stream.send(row)?;
+                        output_stream.send(row);
                         groups.insert(key, output_stream);
                     }
                     Some(output_stream) => {
-                        output_stream.send(row)?;
+                        output_stream.send(row);
                     }
                 }
             }

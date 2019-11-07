@@ -8,6 +8,7 @@ use crate::{
 };
 use crate::data::ColumnType;
 use crate::commands::command_util::find_field;
+use crate::errors::error;
 
 pub enum Value {
     Cell(Cell),
@@ -66,7 +67,15 @@ fn check_value(input_type: &Vec<ColumnType>, value: &Value, accepted_types: &Vec
     }
 }
 
+fn check_comparable(input_type: &Vec<ColumnType>, value: &Value) -> bool {
+    let t = to_cell_data_type(input_type, value);
+    return t.is_comparable();
+}
+
 fn check_comparison(input_type: &Vec<ColumnType>, l: &Value, r: &Value) -> Option<JobError> {
+    if !check_comparable(input_type, l) {
+        return Some(error("Type can't be compared"))
+    }
     if let Some(err) = check_value(&input_type, r, &vec![to_cell_data_type(input_type, l)]) {
         return Some(err);
     }
@@ -82,10 +91,10 @@ fn check_match(input_type: &Vec<ColumnType>, cond: Result<Condition, JobError>) 
             if let Some(err) = check_value(&input_type, l, &vec![CellType::Text, CellType::File]) {
                 return Err(err);
             }
-            cond
         }
-        _ => cond,
+        _ => {},
     }
+    cond
 }
 
 fn parse_condition(input_type: &Vec<ColumnType>,
