@@ -37,6 +37,7 @@ fn repl() -> JobResult<()> {
     add_commands(&global_env)?;
     global_env.declare("true", Cell::Bool(true))?;
     global_env.declare("false", Cell::Bool(false))?;
+    global_env.declare("global", Cell::Env(global_env.clone()))?;
 
     let mut rl = Editor::<()>::new();
     rl.load_history(".crush_history").unwrap();

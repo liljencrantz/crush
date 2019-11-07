@@ -76,6 +76,12 @@ impl Env {
         let namespace = self.namespace.lock().unwrap();
         namespace.dump(map)
     }
+
+    pub fn to_string(&self) -> String {
+        let mut map = HashMap::new();
+        self.dump(&mut map);
+        map.iter().map(|(k, v)| k.clone()).collect::<Vec<String>>().join(", ")
+    }
 }
 
 pub fn get_cwd() -> JobResult<Box<Path>> {

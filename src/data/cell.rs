@@ -60,7 +60,7 @@ impl Cell {
             Cell::Output(_) => "<Table>".to_string(),
             Cell::List( l) => l.to_string(),
             Cell::Duration(d) => duration_format(d),
-            Cell::Env(_) => "<Env>".to_string(),
+            Cell::Env(env) => env.to_string(),
             Cell::Bool(v) => (if *v { "true" } else { "false" }).to_string(),
             Cell::Dict(d) => d.to_string(),
         };
