@@ -38,10 +38,14 @@ impl CellType {
     }
 
     pub fn is_hashable(&self) -> bool {
-        return match self {
+        match self {
             CellType::Env | CellType::Closure | CellType::List(_) | CellType::Dict(_, _) | CellType::Output(_) | CellType::Rows(_) => false,
             _ => true,
-        };
+        }
+    }
+
+    pub fn is_comparable(&self) -> bool {
+        self.is_hashable()
     }
 
     pub fn to_string(&self) -> String {

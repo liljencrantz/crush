@@ -21,23 +21,27 @@ fn parse(
     if arguments.len() != 1 {
         return Err(argument_error("No comparison key specified"));
     }
-    match (&arguments[0].name, &arguments[0].cell) {
+    let cfg = match (&arguments[0].name, &arguments[0].cell) {
         (None, Cell::Text(cell_name)) => {
-            Ok(Config {
+            Config {
                 sort_column_idx: find_field_from_str(cell_name, input.get_type())?,
                 input,
                 output,
-            })
+            }
         }
         (None, Cell::Field(cell_name)) => {
-            Ok(Config {
+            Config {
                 sort_column_idx: find_field(cell_name, input.get_type())?,
                 input,
                 output,
-            })
+            }
         }
-        _ => Err(argument_error("Bad comparison key"))
+        _ => return Err(argument_error("No comparison key specified")),
+    };
+    if !cfg.input.get_type()[cfg.sort_column_idx].cell_type.is_comparable() {
+        return Err(argument_error("Bad comparison key"));
     }
+    Ok(cfg)
 }
 
 pub fn run(config: Config) -> JobResult<()> {
