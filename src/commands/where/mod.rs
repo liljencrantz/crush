@@ -42,36 +42,38 @@ fn to_cell<'a>(value: &'a Value, row: &'a Row) -> &'a Cell {
 }
 
 fn evaluate(condition: &Condition, row: &Row) -> JobResult<bool> {
-    return match condition {
+    Ok(match condition {
         Condition::Equal(l, r) =>
-            Ok(to_cell(&l, row) == to_cell(&r, row)),
+            to_cell(&l, row) == to_cell(&r, row),
         Condition::GreaterThan(l, r) =>
             match to_cell(&l, row).partial_cmp(to_cell(&r, row)) {
                 Some(ord) => Ok(ord == Ordering::Greater),
                 None => Err(error("Cell types can't be compared")),
-            },
+            }?,
         Condition::GreaterThanOrEqual(l, r) =>
             match to_cell(&l, row).partial_cmp(to_cell(&r, row)) {
                 Some(ord) => Ok(ord != Ordering::Less),
                 None => Err(error("Cell types can't be compared")),
-            },
+            }?,
         Condition::LessThan(l, r) =>
             match to_cell(&l, row).partial_cmp(to_cell(&r, row)) {
                 Some(ord) => Ok(ord == Ordering::Less),
                 None => Err(error("Cell types can't be compared")),
-            },
+            }?,
         Condition::LessThanOrEqual(l, r) =>
             match to_cell(&l, row).partial_cmp(to_cell(&r, row)) {
                 Some(ord) => Ok(ord != Ordering::Greater),
                 None => Err(error("Cell types can't be compared")),
-            },
+            }?,
         Condition::NotEqual(l, r) =>
-            Ok(to_cell(&l, row) != to_cell(&r, row)),
+            to_cell(&l, row) != to_cell(&r, row),
         Condition::Match(l, r) =>
-            do_match(to_cell(&l, row), to_cell(&r, row)),
+            do_match(to_cell(&l, row), to_cell(&r, row))?,
         Condition::NotMatch(l, r) =>
-            do_match(to_cell(&l, row), to_cell(&r, row)).map(|r| !r),
-    };
+            do_match(to_cell(&l, row), to_cell(&r, row)).map(|r| !r)?,
+        Condition::And(c1, c2) => evaluate(c1, row)? && evaluate(c2, row)?,
+        Condition::Or(c1, c2) => evaluate(c1, row)? || evaluate(c2, row)?,
+    })
 }
 
 pub fn run(config: Config, printer: Printer) -> JobResult<()> {
@@ -89,11 +91,11 @@ pub fn run(config: Config, printer: Printer) -> JobResult<()> {
     return Ok(());
 }
 
-pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
+pub fn compile_and_run(mut context: CompileContext) -> JobResult<()> {
     let input = context.input.initialize()?;
     let output = context.output.initialize(input.get_type().clone())?;
     let config = Config {
-        condition: parse(input.get_type(), &context.arguments)?,
+        condition: parse(input.get_type(), context.arguments.as_mut())?,
         input: input,
         output: output,
     };

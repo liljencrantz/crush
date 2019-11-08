@@ -1,11 +1,8 @@
 Todo:
 take-command for reading N (defaults to 1) lines from an output in a variable variable
-Add map/rows/output subscripting
 Make better to_string methods for various cell types
 Some missing comparisons on Cell
 Missing some cell type serilisations and deserialisations
-Add checks so we don't try to hash on unhashable types in either dict or join
-Add type checks in where command
 Cell::CellType
 Namespace literal
 add support for dot notation in argument names
@@ -19,15 +16,9 @@ Error source propagation
 help command
 implement cmd command
 implement format command for text formating
-add and/or to filter command
 add parens to filter command
 Add missing pieces to csv command
 add glob support to select command
-Map cell types
-Map literals
-Map lookup
-Only one job allowed in command substitution
-Implement hashing for remaining cell types, e.g. closure
 Implement if command if ?{{stat foo.txt}[0][type] == file} {} else {}
 Implement loop command
 Implement break/continue commands
@@ -37,7 +28,6 @@ The bin command interprets files as a single binary blob.
 The readline command reads interactive input from the user via the terminal
 pbuf command that reads a protobuf message and deserializes it
 avro command that reads avro files and deserialize them
-Put inherited environment variables into the namespace
 Rename JobError -> CrushError
 Add Kind to CrushError
 Deal with different error kinds differently
@@ -102,3 +92,7 @@ Implement namespace cell type
 Implement dict cell type
 implement env command
 Missing type check on list literals, e.g. let foo=[1 horse]
+Add map/rows/output subscripting
+Add checks so we don't try to hash on unhashable types in either dict or join
+Add type checks in where command
+add and/or to where command
