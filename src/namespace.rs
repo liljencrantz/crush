@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 use crate::{
-    errors::{error},
-    data::{
-        Cell,
-    },
+    errors::error,
+    data::Cell,
 };
 use std::sync::{Mutex, Arc};
 use crate::errors::JobResult;
@@ -51,7 +49,7 @@ impl Namespace {
     pub fn dump(&self, map: &mut HashMap<String, CellType>) {
         match &self.parent {
             Some(p) => p.lock().unwrap().dump(map),
-            None => {},
+            None => {}
         }
         for (k, v) in self.data.iter() {
             map.insert(k.clone(), v.cell_type());
@@ -59,16 +57,16 @@ impl Namespace {
     }
 
 
-    pub fn remove(&mut self, name: &str) {
+    pub fn remove(&mut self, name: &str) -> Option<Cell> {
         if !self.data.contains_key(name) {
             match &self.parent {
-                Some(p) => {
-                    return p.lock().unwrap().remove(name);
-                }
-                None => {}
+                Some(p) =>
+                    p.lock().unwrap().remove(name),
+                None => None,
             }
+        } else {
+            self.data.remove(name)
         }
-        self.data.remove(name);
     }
 
     pub fn get(&mut self, name: &str) -> Option<Cell> {
@@ -79,7 +77,7 @@ impl Namespace {
                 } else {
                     Some(v.partial_clone().unwrap())
                 }
-            },
+            }
             None => match &self.parent {
                 Some(p) => p.lock().unwrap().get(name),
                 None => None

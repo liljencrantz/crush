@@ -66,7 +66,7 @@ impl Closure {
     fn push_arguments_to_env(mut arguments: Vec<Argument>, env: &Env) {
         for arg in arguments.drain(..) {
             if let Some(name) = &arg.name {
-                env.declare(name.as_ref(), arg.cell);
+                env.declare_str(name.as_ref(), arg.cell);
             }
         }
     }

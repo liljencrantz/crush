@@ -13,7 +13,7 @@ pub fn create(context: CompileContext) -> JobResult<()> {
     }
     match (&context.arguments[0].cell, &context.arguments[1].cell) {
         (Cell::Text(name), Cell::Text(element_type)) => {
-            context.env.declare(
+            context.env.declare_str(
                 name.as_ref(),
                 Cell::List(List::new(CellType::from(element_type)?, vec![])))?;
             Ok(())

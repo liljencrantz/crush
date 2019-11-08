@@ -17,7 +17,7 @@ pub fn create(context: CompileContext) -> JobResult<()> {
             if !key_type.is_hashable() {
                 return Err(argument_error("Key type is not hashable"));
             }
-            context.env.declare(
+            context.env.declare_str(
                 name.as_ref(),
                 Cell::Dict(Dict::new(key_type, CellType::from(value_type)?)))?;
             Ok(())

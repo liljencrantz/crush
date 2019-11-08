@@ -37,23 +37,71 @@ impl Env {
         let res = Env {
             namespace: Arc::from(Mutex::new(Namespace::new(None))),
         };
-        self.declare(name, Cell::Env(res.clone()))?;
+        self.declare(&[Box::from(name)], Cell::Env(res.clone()))?;
         Ok(res)
     }
 
-    pub fn declare(&self, name: &str, value: Cell) -> JobResult<()> {
-        let mut namespace = self.namespace.lock().unwrap();
-        return namespace.declare(name, value);
+    pub fn declare_str(&self, name: &str, value: Cell) -> JobResult<()> {
+        let n = &name.split('.').map(|e: &str| Box::from(e)).collect::<Vec<Box<str>>>()[..];
+        return self.declare(n, value);
     }
 
-    pub fn set(&self, name: &str, value: Cell) -> JobResult<()> {
+    pub fn declare(&self, name: &[Box<str>], value: Cell) -> JobResult<()> {
+        if name.is_empty() {
+            return Err(error("Empty variable name"));
+        }
         let mut namespace = self.namespace.lock().unwrap();
-        return namespace.set(name, value);
+        if name.len() == 1 {
+            namespace.declare(name[0].as_ref(), value)
+        } else {
+            match namespace.get(name[0].as_ref()) {
+                None => Err(error("Not a namespace")),
+                Some(Cell::Env(env)) => env.declare(&name[1..name.len()], value),
+                _ => Err(error("Unknown namespace")),
+            }
+        }
     }
 
-    pub fn remove(&self, name: &str) {
+    pub fn set_str(&self, name: &str, value: Cell) -> JobResult<()> {
+        let n = &name.split('.').map(|e: &str| Box::from(e)).collect::<Vec<Box<str>>>()[..];
+        return self.set(n, value);
+    }
+
+    pub fn set(&self, name: &[Box<str>], value: Cell) -> JobResult<()> {
+        if name.is_empty() {
+            return Err(error("Empty variable name"));
+        }
         let mut namespace = self.namespace.lock().unwrap();
-        namespace.remove(name);
+        if name.len() == 1 {
+            namespace.set(name[0].as_ref(), value)
+        } else {
+            match namespace.get(name[0].as_ref()) {
+                None => Err(error("Not a namespace")),
+                Some(Cell::Env(env)) => env.set(&name[1..name.len()], value),
+                _ => Err(error("Unknown namespace")),
+            }
+        }
+    }
+
+    pub fn remove_str(&self, name: &str) -> Option<Cell> {
+        let n = &name.split('.').map(|e: &str| Box::from(e)).collect::<Vec<Box<str>>>()[..];
+        return self.remove(n);
+    }
+
+    pub fn remove(&self, name: &[Box<str>]) -> Option<Cell> {
+        if name.is_empty() {
+            return None;
+        }
+        let mut namespace = self.namespace.lock().unwrap();
+        if name.len() == 1 {
+            namespace.remove(name[0].as_ref())
+        } else {
+            match namespace.get(name[0].as_ref()) {
+                None => None,
+                Some(Cell::Env(env)) => env.remove(&name[1..name.len()]),
+                _ => None,
+            }
+        }
     }
 
     pub fn get(&self, name: &[Box<str>]) -> Option<Cell> {

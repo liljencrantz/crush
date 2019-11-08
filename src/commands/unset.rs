@@ -24,7 +24,7 @@ pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let vars = parse(context.arguments)?;
     context.output.initialize(vec![]);
     for s in vars {
-        context.env.remove(s.as_ref());
+        context.env.remove_str(s.as_ref());
     }
     return Ok(());
 }
