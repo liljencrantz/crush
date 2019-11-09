@@ -120,6 +120,23 @@ impl Env {
         }
     }
 
+    pub fn get_location(&self, name: &[Box<str>]) -> Option<(Env, Vec<Box<str>>)> {
+        if name.is_empty() {
+            return None;
+        }
+        let mut namespace = self.namespace.lock().unwrap();
+        if name.len() == 1 {
+            Some((self.clone(), name.to_vec()))
+        } else {
+            match namespace.get(name[0].as_ref()) {
+                None => None,
+                Some(Cell::Env(env)) => env.get_location(&name[1..name.len()]),
+                _ => None,
+            }
+        }
+    }
+
+
     pub fn dump(&self, map: &mut HashMap<String, CellType>) {
         let namespace = self.namespace.lock().unwrap();
         namespace.dump(map)

@@ -10,6 +10,7 @@ mod set;
 mod r#let;
 mod unset;
 mod env;
+mod take;
 
 mod ps;
 
@@ -100,6 +101,7 @@ pub fn add_commands(env: &Env) -> JobResult<()> {
     env.declare_str("set", Cell::Command(Command::new(set::compile_and_run)))?;
     env.declare_str("unset", Cell::Command(Command::new(unset::compile_and_run)))?;
     env.declare_str("env", Cell::Command(Command::new(env::compile_and_run)))?;
+    env.declare_str("take", Cell::Command(Command::new(take::compile_and_run)))?;
 
     env.declare_str("ps", Cell::Command(Command::new(ps::compile_and_run)))?;
 

@@ -1,5 +1,4 @@
 Todo:
-take-command for reading N (defaults to 1) lines from an output in a variable variable
 Make better to_string methods for various cell types
 Some missing comparisons on Cell
 Missing some cell type serilisations and deserialisations
@@ -96,3 +95,4 @@ Add map/rows/output subscripting
 Add checks so we don't try to hash on unhashable types in either dict or join
 Add type checks in where command
 add and/or to where command
+take-command for reading N (defaults to 1) lines from an output in a variable variable
