@@ -1,5 +1,4 @@
 use crate::data::cell::Cell;
-use std::hash::Hasher;
 use crate::errors::{JobResult};
 use crate::data::ColumnType;
 use std::mem;

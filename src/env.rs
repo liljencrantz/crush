@@ -104,6 +104,11 @@ impl Env {
         }
     }
 
+    pub fn get_str(&self, name: &str) -> Option<Cell> {
+        let n = &name.split('.').map(|e: &str| Box::from(e)).collect::<Vec<Box<str>>>()[..];
+        return self.get(n);
+    }
+
     pub fn get(&self, name: &[Box<str>]) -> Option<Cell> {
         if name.is_empty() {
             return None;

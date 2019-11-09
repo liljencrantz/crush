@@ -1,5 +1,5 @@
 use crate::data::{CellType, Cell};
-use crate::errors::{JobError, mandate, JobResult};
+use crate::errors::{JobResult};
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;
@@ -63,7 +63,7 @@ impl Dict {
         CellType::Dict(Box::from(self.key_type.clone()), Box::from(self.value_type.clone()))
     }
 
-    pub fn partial_clone(&self) -> Result<Dict, JobError> {
+    pub fn partial_clone(&self) -> JobResult<Dict> {
         Ok(self.clone())
     }
 }

@@ -1,5 +1,4 @@
 use crate::data::{ColumnType, Row};
-use std::hash::Hasher;
 use crate::errors::JobError;
 
 #[derive(Debug)]

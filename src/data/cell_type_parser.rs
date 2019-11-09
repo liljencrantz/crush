@@ -1,6 +1,6 @@
 use crate::data::{CellType, ColumnType};
 use crate::data::cell_type_lexer::{CellTypeLexer, CellTypeToken};
-use crate::errors::{JobResult, error, parse_error};
+use crate::errors::{JobResult, error};
 use CellTypeToken::*;
 
 pub fn parse(s: &str) -> JobResult<CellType> {

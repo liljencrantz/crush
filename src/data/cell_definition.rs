@@ -121,6 +121,8 @@ impl CellDefinition {
                         list.get(idx as usize)?,
                     (Ok(Cell::Dict(dict)), Ok(c)) =>
                         mandate(dict.get(&c), "Invalid subscript")?,
+                    (Ok(Cell::Env(env)), Ok(Cell::Text(name))) =>
+                        mandate(env.get_str(name.as_ref()), "Invalid subscript")?,
                     (Ok(Cell::Row(row)), Ok(Cell::Text(col))) =>
                         mandate(row.get(col.as_ref()), "Invalid subscript")?,
                     (Ok(Cell::Output(o)), Ok(Cell::Integer(idx))) => {

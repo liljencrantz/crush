@@ -1,7 +1,6 @@
 use regex::Regex;
 use std::clone::Clone;
 use lazy_static::lazy_static;
-use crate::lexer::TokenType::{Whitespace, Comment, EOF};
 use std::collections::HashSet;
 use std::hash::Hash;
 use crate::base_lexer::BaseLexer;

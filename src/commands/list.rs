@@ -4,7 +4,6 @@ use crate::data::{CellType, List};
 use crate::data::Row;
 use crate::data::Cell;
 use crate::data::ColumnType;
-use crate::env::get_cwd;
 
 pub fn create(context: CompileContext) -> JobResult<()> {
     let output = context.output.initialize(vec![])?;

@@ -29,6 +29,17 @@ use crate::printer::Printer;
 use crate::stream::{empty_stream};
 use crate::stream_printer::spawn_print_thread;
 use crate::data::Cell;
+use crate::env::get_home;
+use std::path::Path;
+
+fn crush_history_file() -> Box<str> {
+    Box::from(
+        get_home()
+            .unwrap_or(Box::from(Path::new(".")))
+            .join(Path::new(".crush_history"))
+            .to_str()
+            .unwrap_or(".crush_history"))
+}
 
 fn repl() -> JobResult<()> {
     let global_env = env::Env::new();
@@ -40,7 +51,7 @@ fn repl() -> JobResult<()> {
     global_env.declare_str("global", Cell::Env(global_env.clone()))?;
 
     let mut rl = Editor::<()>::new();
-    rl.load_history(".crush_history").unwrap();
+    rl.load_history(crush_history_file().as_ref()).unwrap();
     loop {
         let readline = rl.readline("crush> ");
 
@@ -78,7 +89,7 @@ fn repl() -> JobResult<()> {
                 break;
             }
         }
-        match rl.save_history(".crush_history") {
+        match rl.save_history(crush_history_file().as_ref()) {
             Ok(_) => {}
             Err(_) => {
                 printer.line("Error: Failed to save history.");

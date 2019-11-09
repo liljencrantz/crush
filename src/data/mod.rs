@@ -13,7 +13,7 @@ mod cell_type_lexer;
 mod cell_type_parser;
 
 use crate::commands::{CompileContext};
-use crate::errors::{JobResult, JobError, error};
+use crate::errors::{JobResult, error};
 use std::fmt::Formatter;
 use crate::stream::{InputStream};
 

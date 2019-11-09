@@ -55,7 +55,6 @@ use std::thread::{JoinHandle};
 use crate::printer::Printer;
 use crate::errors::JobResult;
 use crate::stream::{UninitializedInputStream, UninitializedOutputStream};
-use crate::namespace::Namespace;
 
 pub struct CompileContext {
     pub input: UninitializedInputStream,

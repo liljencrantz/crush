@@ -1,9 +1,6 @@
 use crate::commands::CompileContext;
 use crate::errors::{JobResult, mandate, error};
-use crate::data::CellType;
-use crate::data::Row;
 use crate::data::Cell;
-use crate::data::ColumnType;
 use crate::env::Env;
 
 struct Config {
