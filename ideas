@@ -4,7 +4,7 @@ Date mode:
 echo date{now}
 
 # Five days into the future
-echo date{now + five days}
+echo date{now + 5 days}
 
 # These are equivalent:
 echo date{2012-03-30 16:32}
@@ -60,22 +60,12 @@ Stream editing:
 # Convert file column in-place
 ls | upper file=%file
 
-# Append new upper-column
-ls | lower upper=%file
+# Append new column named lower, containing a lower-case version of the column file
+ls | lower lower=%file
 
 # Replace file column in-place using regex
-ls | sed file=r{a(b*)c(d*)e}{\1\2}g
+ls | sed file= regex{a(b*)c(d*)e} replace{\1\2}
 
-Extracting single cells from table output:
-
-echo largest_file={ls|sort %size|reverse}[0][%size]
-
-New list literal syntax
-
-Use separate modes for lists and maps:
-
-let my_list = list{1 2 3} list_of_list = list{ list{a} list{b c} list{d}}
-let my_hash = map{sally: row{} john: row{first_name: John last_name: Smith age: 42}}
 
 Modes:
 
@@ -90,33 +80,26 @@ math{5*5} # Math
 {ls} # Command substitution
 ?{$foo == %bar} # Condition check mode
 
-Problems:
-
-How to mutate a list/map?
-
-Possibility
-
-> let my_list = list{1 2 3}
-> list.push $my_list 4 5 6
-> list.pop $my_list
-value
-6
-> list.len $my_list
-size
-5
-
-Another
-> let my_list = list{1 2 3}
-> list.push my_list 4 5 6
-> list.pop my_list
-value
-6
-> list.len my_list
-5
-
-Empty list:
-> list.create empty_list integer
-
 json deserialization:
 How to deal with impedance mismatch, e.g. null values, lists with multiple types of values, etc?
+
+let foo=material{ls}
+
+text library:
+
+Commands for transforming text fields, e.g.:
+text.lower
+text.upper
+text.lpad
+text.rpad
+text.trim
+text.truncate
+text.format
+
+file library:
+
+Commands for operating on files, e.g.:
+file.stat
+
+if {file.stat foo.txt}[0][is_directory] {} else {}
 

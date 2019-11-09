@@ -1,4 +1,5 @@
 Todo:
+Flesh out time/duration modes with add/subtract support
 Make better to_string methods for various cell types
 Some missing comparisons on Cell
 Missing some cell type serilisations and deserialisations
