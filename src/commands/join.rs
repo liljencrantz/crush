@@ -17,6 +17,7 @@ use crate::{
     commands::command_util::find_field_from_str
 };
 use crate::commands::command_util::find_field;
+use crate::stream::RowsReader;
 
 pub struct Config {
     left_table_idx: usize,
@@ -63,7 +64,7 @@ fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Config
             }
 
             let config = match (l.len(), r.len()) {
-                (0, 0) => {
+                (1, 1) => {
                     let (left_table_idx, right_table_idx, left_types, right_types) = guess_tables(&input_type)?;
 
                     Config {
@@ -73,7 +74,7 @@ fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Config
                         right_column_idx: find_field(&r, right_types)?,
                     }
                 }
-                (1, 1) => {
+                (2, 2) => {
                     let (left_table_idx, left_column_idx ) =
                         scan_table(l[0].as_ref(), l[1].as_ref(), &input_type)?;
 
@@ -154,6 +155,15 @@ pub fn run(
                 match (row.cells.replace(config.left_table_idx, Cell::Integer(0)), row.cells.replace(config.right_table_idx, Cell::Integer(0))) {
                     (Cell::Output(mut l), Cell::Output(mut r)) => {
                         do_join(&config, &mut l.stream, &mut r.stream, &output)?;
+                    }
+                    (Cell::Rows(mut l), Cell::Rows(mut r)) => {
+                        do_join(&config, &mut l.reader(), &mut r.reader(), &output)?;
+                    }
+                    (Cell::Output(mut l), Cell::Rows(mut r)) => {
+                        do_join(&config, &mut l.stream, &mut r.reader(), &output)?;
+                    }
+                    (Cell::Rows(mut l), Cell::Output(mut r)) => {
+                        do_join(&config, &mut l.reader(), &mut r.stream, &output)?;
                     }
                     _ => panic!("Wrong row format"),
                 }
