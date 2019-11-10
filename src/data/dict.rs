@@ -71,8 +71,8 @@ impl Dict {
         let mut entries = self.entries.lock().unwrap();
         let map = entries.drain().map(|(k, v)| (k.materialize(), v.materialize())).collect();
         Dict {
-            key_type: self.key_type,
-            value_type: self.value_type,
+            key_type: self.key_type.materialize(),
+            value_type: self.value_type.materialize(),
             entries: Arc::new(Mutex::new(map))
         }
     }

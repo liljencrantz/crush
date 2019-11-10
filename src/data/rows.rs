@@ -21,7 +21,7 @@ impl Rows {
 
     pub fn materialize(mut self) ->  Rows{
         Rows {
-            types: self.types,
+            types: ColumnType::materialize(&self.types),
             rows: self.rows.drain(..).map(|r| r.materialize()).collect(),
         }
     }

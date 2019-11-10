@@ -58,7 +58,7 @@ impl List {
         let mut cells = self.cells.lock().unwrap();
         let vec: Vec<Cell> = cells.drain(..).map(|c| c.materialize()).collect();
         List {
-            cell_type: self.cell_type,
+            cell_type: self.cell_type.materialize(),
             cells: Arc::new(Mutex::from(vec)),
         }
     }

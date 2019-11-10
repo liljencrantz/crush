@@ -32,12 +32,44 @@ pub enum CellType {
     Bool,
 }
 
+
+
 impl CellType {
     pub fn from(s: &str) -> JobResult<CellType> {
         cell_type_parser::parse(s)
     }
 
-    pub fn is_hashable(&self) -> bool {
+    fn materialize_vec(input: &Vec<CellType>) -> Vec<CellType> {
+        input
+            .iter()
+            .map(|cell| cell.materialize())
+            .collect()
+    }
+
+    pub fn materialize(&self) -> CellType {
+        match self {
+            CellType::Text|
+            CellType::Integer|
+            CellType::Time |
+            CellType::Duration |
+            CellType::Field |
+            CellType::Glob |
+            CellType::Regex |
+            CellType::Op |
+            CellType::Command |
+            CellType::Closure |
+            CellType::File |
+            CellType::Env |
+            CellType::Bool => self.clone(),
+            CellType::Output(o) => CellType::Rows(ColumnType::materialize(o)),
+            CellType::Rows(r) => CellType::Rows(ColumnType::materialize(r)),
+            CellType::Row(r) =>CellType::Row(ColumnType::materialize(r)),
+            CellType::List(l) => CellType::List(Box::from(l.materialize())),
+            CellType::Dict(k, v) => CellType::Dict(Box::from(k.materialize()), Box::from(v.materialize())),
+        }
+    }
+
+        pub fn is_hashable(&self) -> bool {
         match self {
             CellType::Env | CellType::Closure | CellType::List(_) | CellType::Dict(_, _) | CellType::Output(_) | CellType::Rows(_) => false,
             _ => true,

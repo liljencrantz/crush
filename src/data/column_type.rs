@@ -8,6 +8,13 @@ pub struct ColumnType {
 
 impl ColumnType {
 
+    pub fn materialize(input: &Vec<ColumnType>) -> Vec<ColumnType> {
+        input
+            .iter()
+            .map(|col| ColumnType {name: col.name.clone(), cell_type: col.cell_type.materialize()})
+            .collect()
+    }
+
     pub fn to_string(&self) -> String {
         match &self.name {
             None => self.cell_type.to_string(),

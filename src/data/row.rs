@@ -1,6 +1,6 @@
 use crate::data::cell::Cell;
 use crate::errors::{JobResult};
-use crate::data::ColumnType;
+use crate::data::{ColumnType, CellType};
 use std::mem;
 
 #[derive(PartialEq)]
@@ -52,7 +52,7 @@ impl RowWithTypes {
 
     pub fn materialize(mut self) ->  RowWithTypes {
         RowWithTypes {
-            types: self.types,
+            types: ColumnType::materialize(&self.types),
             cells: self.cells.drain(..).map(|c| c.materialize()).collect(),
         }
     }

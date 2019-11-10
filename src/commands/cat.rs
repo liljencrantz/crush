@@ -68,7 +68,7 @@ pub fn run(
                     }
                     Cell::Rows(rows) => {
                         for row in rows.rows {
-                            output.send(row);
+                            output.send(row)?;
                         }
                     }
                     _ => return Err(error("Invalid data")),

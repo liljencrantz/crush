@@ -12,7 +12,7 @@ use crate::{
     errors::{error, JobError, to_job_error},
     glob::Glob,
 };
-use crate::data::{List, Command, Output, CellType, Dict};
+use crate::data::{List, Command, Output, CellType, Dict, ColumnType};
 use crate::errors::JobResult;
 use std::time::Duration;
 use crate::format::duration_format;
@@ -42,7 +42,6 @@ pub enum Cell {
 }
 
 impl Cell {
-
     pub fn to_string(&self) -> String {
         return match self {
             Cell::Text(val) => val.to_string(),
@@ -58,7 +57,7 @@ impl Cell {
             Cell::Row(row) => row.to_string(),
             Cell::Closure(_) => "<Closure>".to_string(),
             Cell::Output(_) => "<Table>".to_string(),
-            Cell::List( l) => l.to_string(),
+            Cell::List(l) => l.to_string(),
             Cell::Duration(d) => duration_format(d),
             Cell::Env(env) => env.to_string(),
             Cell::Bool(v) => (if *v { "true" } else { "false" }).to_string(),
@@ -138,22 +137,8 @@ impl Cell {
         };
     }
 
-    pub fn materialize(self) -> Cell{
+    pub fn materialize(self) -> Cell {
         match self {
-            Cell::Text(_) |
-            Cell::Integer(_) |
-            Cell::Time(_) |
-            Cell::Duration(_) |
-            Cell::Field(_) |
-            Cell::Glob(_) |
-            Cell::Regex(_, _) |
-            Cell::Op(_) |
-            Cell::Command(_) |
-            Cell::Closure(_) |
-            Cell::File(_) |
-            Cell::Env(_) |
-            Cell::Bool(_) => self,
-
             Cell::Output(output) => {
                 let mut rows = Vec::new();
                 loop {
@@ -162,12 +147,13 @@ impl Cell {
                         Err(_) => break,
                     }
                 }
-                Cell::Rows(Rows { types: output.stream.get_type().clone(), rows: rows })
+                Cell::Rows(Rows { types: ColumnType::materialize(output.stream.get_type()), rows: rows })
             }
             Cell::Rows(r) => Cell::Rows(r.materialize()),
             Cell::Dict(d) => Cell::Dict(d.materialize()),
             Cell::Row(r) => Cell::Row(r.materialize()),
             Cell::List(l) => Cell::List(l.materialize()),
+            _ => self,
         }
     }
 
@@ -370,7 +356,7 @@ mod tests {
         assert_eq!(duration_format(&Duration::from_millis(1000 * 61)), "1:01".to_string());
         assert_eq!(duration_format(&Duration::from_millis(1000 * 3601)), "1:00:01".to_string());
         assert_eq!(duration_format(&Duration::from_millis(1000 * (3600 * 24 * 3 + 1))), "3d0:00:01".to_string());
-        assert_eq!(duration_format(&Duration::from_millis(1000 * (3600 * 24 * 365* 10 + 1))), "10y0d0:00:01".to_string());
-        assert_eq!(duration_format(&Duration::from_millis(1000 * (3600 * 24 * 365* 10 + 1) +1 )), "10y0d0:00:01".to_string());
+        assert_eq!(duration_format(&Duration::from_millis(1000 * (3600 * 24 * 365 * 10 + 1))), "10y0d0:00:01".to_string());
+        assert_eq!(duration_format(&Duration::from_millis(1000 * (3600 * 24 * 365 * 10 + 1) + 1)), "10y0d0:00:01".to_string());
     }
 }

@@ -78,10 +78,16 @@ impl InputStream {
         match &res {
             Ok(row) => {
                 if row.cells.len() != self.input_type.len() {
+        println!("AAA");
                     return Err(error("Wrong number of columns in input"));
                 }
                 for (c, ct) in row.cells.iter().zip(self.input_type.iter()) {
                     if c.cell_type() != ct.cell_type {
+                        println!(                            "Wrong cell type in input column {:?}, expected {:?}, got {:?}",
+                                                             ct.name,
+                                                             c.cell_type(),
+                                                             ct.cell_type);
+
                         return Err(error(format!(
                             "Wrong cell type in input column {:?}, expected {:?}, got {:?}",
                             ct.name,

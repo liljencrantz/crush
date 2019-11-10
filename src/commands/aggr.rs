@@ -8,7 +8,7 @@ use crate::data::{Output, ColumnType, CellType, Row};
 use crate::errors::{argument_error, JobResult, error};
 use crate::closure::Closure;
 use crate::commands::{CompileContext, JobJoinHandle};
-use crate::stream::{InputStream, OutputStream, UninitializedOutputStream, streams, UninitializedInputStream};
+use crate::stream::{InputStream, OutputStream, UninitializedOutputStream, streams, UninitializedInputStream, RowsReader, Readable};
 use crate::commands::command_util::find_field;
 use crate::replace::Replace;
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -46,30 +46,34 @@ pub fn parse(input_type: &Vec<ColumnType>, argument: Vec<Argument>) -> JobResult
         _ => return Err(argument_error("Could not find table to aggregate")),
     };
 
-    if let CellType::Output(sub_type) = &input_type[table_idx].cell_type {
-        let output_definition = aggregations
-            .chunks(2)
-            .into_iter()
-            .map(|args| {
-                let spec = &args[0];
-                let clos = &args[1];
-                match (&spec.name, &spec.cell, &clos.cell) {
-                    (Some(name), Cell::Field(f), Cell::Closure(c)) =>
-                        Ok((
-                            name.to_string(),
-                            find_field(&f, sub_type)?,
-                            c.clone()
-                        )),
-                    _ => Err(error("Invalid aggragation spec")),
-                }
+    match &input_type[table_idx].cell_type {
+        CellType::Rows(sub_type) |
+        CellType::Output(sub_type) => {
+            let output_definition = aggregations
+                .chunks(2)
+                .into_iter()
+                .map(|args| {
+                    let spec = &args[0];
+                    let clos = &args[1];
+                    match (&spec.name, &spec.cell, &clos.cell) {
+                        (Some(name), Cell::Field(f), Cell::Closure(c)) =>
+                            Ok((
+                                name.to_string(),
+                                find_field(&f, sub_type)?,
+                                c.clone()
+                            )),
+                        _ => Err(error("Invalid aggragation spec")),
+                    }
+                })
+                .collect::<JobResult<Vec<(String, usize, Closure)>>>()?;
+            Ok(Config {
+                table_idx,
+                output_definition,
             })
-            .collect::<JobResult<Vec<(String, usize, Closure)>>>()?;
-        Ok(Config {
-            table_idx,
-            output_definition,
-        })
-    } else {
-        Err(argument_error("No table to aggregate on found"))
+        }
+        _ => {
+            Err(argument_error("No table to aggregate on found"))
+        }
     }
 }
 
@@ -133,13 +137,13 @@ pub fn create_collector(
 }
 
 pub fn pump_table(
-    job_output: &Output,
+    job_output: &mut impl Readable,
     outputs: Vec<OutputStream>,
     output_definition: &Vec<(String, usize, Closure)>) -> JobResult<()> {
     let stream_to_column_mapping = output_definition.iter().map(|(_, off, _)| *off).collect::<Vec<usize>>();
 
     loop {
-        match job_output.stream.recv() {
+        match job_output.read() {
             Ok(mut inner_row) => {
                 for stream_idx in 0..stream_to_column_mapping.len() {
                     outputs[stream_idx].send(Row { cells: vec![inner_row.cells.replace(stream_to_column_mapping[stream_idx], Cell::Integer(0))] })?;
@@ -185,6 +189,53 @@ fn create_aggregator(
         })))
 }
 
+fn handle_row(
+    row: Row,
+    config: &Config,
+    job_output: &mut impl Readable,
+    printer: &Printer,
+    env: &Env,
+    input: &InputStream,
+    writer_output: &Sender<Row>) -> JobResult<()> {
+    let mut outputs: Vec<OutputStream> = Vec::new();
+    let mut uninitialized_inputs: Vec<UninitializedInputStream> = Vec::new();
+    let mut aggregator_handles: Vec<JobJoinHandle> = Vec::new();
+
+    let (uninit_rest_output, uninit_rest_input) = streams();
+    let mut rest_output_type = input.get_type().clone();
+    rest_output_type.remove(config.table_idx);
+    let rest_output = uninit_rest_output.initialize(rest_output_type)?;
+    let rest_input = uninit_rest_input.initialize()?;
+
+    for (name, idx, c) in config.output_definition.iter() {
+        aggregator_handles.push(create_aggregator(
+            name.as_str(),
+            *idx,
+            c,
+            job_output.get_type(),
+            &mut uninitialized_inputs,
+            &mut outputs,
+            env,
+            printer)?);
+    }
+
+    let collector_handle = create_collector(
+        rest_input,
+        uninitialized_inputs,
+        writer_output.clone());
+
+    rest_output.send(row)?;
+    drop(rest_output);
+
+    pump_table(job_output, outputs, &config.output_definition)?;
+
+    for h in aggregator_handles {
+        h.join(printer);
+    }
+    collector_handle.join(printer);
+    Ok(())
+}
+
 pub fn run(config: Config, printer: &Printer, env: &Env, input: InputStream, uninitialized_output: UninitializedOutputStream) -> JobResult<()> {
     let (writer_output, writer_input) = channel::<Row>();
 
@@ -200,44 +251,15 @@ pub fn run(config: Config, printer: &Printer, env: &Env, input: InputStream, uni
         match input.recv() {
             Ok(mut row) => {
                 let table_cell = row.cells.remove(config.table_idx);
-                if let Cell::Output(job_output) = table_cell {
-                    let mut outputs: Vec<OutputStream> = Vec::new();
-                    let mut uninitialized_inputs: Vec<UninitializedInputStream> = Vec::new();
-                    let mut aggregator_handles: Vec<JobJoinHandle> = Vec::new();
-
-                    let (uninit_rest_output, uninit_rest_input) = streams();
-                    let mut rest_output_type = input.get_type().clone();
-                    rest_output_type.remove(config.table_idx);
-                    let rest_output = uninit_rest_output.initialize(rest_output_type)?;
-                    let rest_input = uninit_rest_input.initialize()?;
-
-                    for (name, idx, c) in config.output_definition.iter() {
-                        aggregator_handles.push(create_aggregator(
-                            name.as_str(),
-                            *idx,
-                            c,
-                            job_output.stream.get_type(),
-                            &mut uninitialized_inputs,
-                            &mut outputs,
-                            env,
-                            printer)?);
+                match table_cell {
+                    Cell::Output(mut job_output) =>
+                        handle_row(row, &config, &mut job_output.stream, printer, env, &input, &writer_output)?,
+                    Cell::Rows(mut rows) =>
+                        handle_row(row, &config, &mut RowsReader::new(rows), printer, env, &input, &writer_output)?,
+                    _ => {
+                        printer.job_error(error("Wrong column type"));
+                        break;
                     }
-
-                    let collector_handle = create_collector(
-                        rest_input,
-                        uninitialized_inputs,
-                        writer_output.clone());
-
-                    rest_output.send(row)?;
-                    drop(rest_output);
-
-                    pump_table(&job_output, outputs, &config.output_definition)?;
-
-
-                    for h in aggregator_handles {
-                        h.join(printer);
-                    }
-                    collector_handle.join(printer);
                 }
             }
             Err(_) => { break; }
