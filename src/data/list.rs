@@ -53,6 +53,15 @@ impl List {
     pub fn partial_clone(&self) -> Result<List, JobError> {
         Ok(self.clone())
     }
+
+    pub fn materialize(self) ->  List {
+        let mut cells = self.cells.lock().unwrap();
+        let vec: Vec<Cell> = cells.drain(..).map(|c| c.materialize()).collect();
+        List {
+            cell_type: self.cell_type,
+            cells: Arc::new(Mutex::from(vec)),
+        }
+    }
 }
 
 impl std::hash::Hash for List {

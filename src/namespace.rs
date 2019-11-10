@@ -4,7 +4,7 @@ use crate::{
     data::Cell,
 };
 use std::sync::{Mutex, Arc};
-use crate::errors::JobResult;
+use crate::errors::{JobResult, JobError};
 use crate::data::CellType;
 
 #[derive(Debug)]
@@ -72,10 +72,9 @@ impl Namespace {
     pub fn get(&mut self, name: &str) -> Option<Cell> {
         match self.data.get(&name.to_string()) {
             Some(v) => {
-                if let Cell::Output(_) = v {
-                    self.data.remove(&name.to_string())
-                } else {
-                    Some(v.partial_clone().unwrap())
+                match v.partial_clone() {
+                    Ok(v) => Some(v),
+                    Err(_) => self.data.remove(&name.to_string()),
                 }
             }
             None => match &self.parent {

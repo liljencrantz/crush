@@ -115,16 +115,9 @@ impl CellDefinition {
                 first_output.initialize(vec![])?;
                 let (last_output, last_input) = streams();
                 let j = def.spawn_and_execute(&env, printer, first_input, last_output)?;
-                let s = last_input.initialize()?;
-                let mut rows = Vec::new();
-                loop {
-                    match s.recv() {
-                        Ok(r) => rows.push(r),
-                        Err(_) => break,
-                    }
-                }
+                let res = Cell::Output(Output { stream: last_input.initialize()? }).materialize();
                 dependencies.push(j);
-                Cell::Rows(Rows { types: s.get_type().clone(), rows: rows })
+                res
             }
             CellDefinition::ClosureDefinition(c) => Cell::Closure(c.with_env(env)),
             CellDefinition::Variable(s) => (

@@ -66,6 +66,16 @@ impl Dict {
     pub fn partial_clone(&self) -> JobResult<Dict> {
         Ok(self.clone())
     }
+
+    pub fn materialize(mut self) ->  Dict {
+        let mut entries = self.entries.lock().unwrap();
+        let map = entries.drain().map(|(k, v)| (k.materialize(), v.materialize())).collect();
+        Dict {
+            key_type: self.key_type,
+            value_type: self.value_type,
+            entries: Arc::new(Mutex::new(map))
+        }
+    }
 }
 
 impl std::hash::Hash for Dict {

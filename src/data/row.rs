@@ -16,6 +16,12 @@ impl Row {
             cells: self.cells.iter().map(|c| c.partial_clone()).collect::<JobResult<Vec<Cell>>>()?,
         })
     }
+
+    pub fn materialize(mut self) ->  Row{
+        Row {
+            cells: self.cells.drain(..).map(|c| c.materialize()).collect(),
+        }
+    }
 }
 
 #[derive(PartialEq)]
@@ -42,6 +48,13 @@ impl RowWithTypes {
             }
         }
         None
+    }
+
+    pub fn materialize(mut self) ->  RowWithTypes {
+        RowWithTypes {
+            types: self.types,
+            cells: self.cells.drain(..).map(|c| c.materialize()).collect(),
+        }
     }
 }
 

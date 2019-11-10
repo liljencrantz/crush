@@ -138,6 +138,39 @@ impl Cell {
         };
     }
 
+    pub fn materialize(self) -> Cell{
+        match self {
+            Cell::Text(_) |
+            Cell::Integer(_) |
+            Cell::Time(_) |
+            Cell::Duration(_) |
+            Cell::Field(_) |
+            Cell::Glob(_) |
+            Cell::Regex(_, _) |
+            Cell::Op(_) |
+            Cell::Command(_) |
+            Cell::Closure(_) |
+            Cell::File(_) |
+            Cell::Env(_) |
+            Cell::Bool(_) => self,
+
+            Cell::Output(output) => {
+                let mut rows = Vec::new();
+                loop {
+                    match output.stream.recv() {
+                        Ok(r) => rows.push(r.materialize()),
+                        Err(_) => break,
+                    }
+                }
+                Cell::Rows(Rows { types: output.stream.get_type().clone(), rows: rows })
+            }
+            Cell::Rows(r) => Cell::Rows(r.materialize()),
+            Cell::Dict(d) => Cell::Dict(d.materialize()),
+            Cell::Row(r) => Cell::Row(r.materialize()),
+            Cell::List(l) => Cell::List(l.materialize()),
+        }
+    }
+
     pub fn cast(self, new_type: CellType) -> Result<Cell, JobError> {
         if self.cell_type() == new_type {
             return Ok(self);

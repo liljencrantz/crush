@@ -1,6 +1,7 @@
 use crate::data::{ColumnType, Row};
 use crate::errors::JobError;
 use crate::stream::RowsReader;
+use map_in_place::MapVecInPlace;
 
 #[derive(Debug)]
 #[derive(PartialEq)]
@@ -16,6 +17,13 @@ impl Rows {
             types: self.types.clone(),
             rows: self.rows.iter().map(|r| r.partial_clone()).collect::<Result<Vec<Row>, JobError>>()?,
         })
+    }
+
+    pub fn materialize(mut self) ->  Rows{
+        Rows {
+            types: self.types,
+            rows: self.rows.drain(..).map(|r| r.materialize()).collect(),
+        }
     }
 
     pub fn reader(self) -> RowsReader {
