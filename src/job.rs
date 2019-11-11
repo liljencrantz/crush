@@ -7,13 +7,13 @@ use crate::errors::JobError;
 
 #[derive(Clone)]
 #[derive(Debug)]
-pub struct JobDefinition {
+pub struct Job {
     commands: Vec<CallDefinition>,
 }
 
-impl JobDefinition {
-    pub fn new(commands: Vec<CallDefinition>) -> JobDefinition {
-        JobDefinition { commands }
+impl Job {
+    pub fn new(commands: Vec<CallDefinition>) -> Job {
+        Job { commands }
     }
 
     pub fn spawn_and_execute(
@@ -41,3 +41,8 @@ impl JobDefinition {
     }
 }
 
+impl ToString for Job {
+    fn to_string(&self) -> String {
+        self.commands.iter().map(|c| c.to_string()).collect::<Vec<String>>().join("|")
+    }
+}

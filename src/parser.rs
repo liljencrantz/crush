@@ -1,5 +1,5 @@
 use crate::errors::{parse_error, argument_error, JobResult};
-use crate::job::JobDefinition;
+use crate::job::Job;
 use crate::lexer::{Lexer, TokenType};
 use crate::data::{CellDefinition, ArgumentDefinition, ListDefinition};
 use crate::data::CallDefinition;
@@ -8,8 +8,8 @@ use std::error::Error;
 use crate::glob::Glob;
 use crate::closure::Closure;
 
-pub fn parse(lexer: &mut Lexer) -> JobResult<Vec<JobDefinition>> {
-    let mut jobs: Vec<JobDefinition> = Vec::new();
+pub fn parse(lexer: &mut Lexer) -> JobResult<Vec<Job>> {
+    let mut jobs: Vec<Job> = Vec::new();
     loop {
         match lexer.peek() {
             (TokenType::String, _) => {
@@ -37,10 +37,10 @@ pub fn parse(lexer: &mut Lexer) -> JobResult<Vec<JobDefinition>> {
     }
 }
 
-fn parse_internal(lexer: &mut Lexer) -> JobResult<JobDefinition> {
+fn parse_internal(lexer: &mut Lexer) -> JobResult<Job> {
     let mut commands: Vec<CallDefinition> = Vec::new();
     parse_job(lexer, &mut commands)?;
-    return Ok(JobDefinition::new(commands));
+    return Ok(Job::new(commands));
 }
 
 fn parse_job(lexer: &mut Lexer, commands: &mut Vec<CallDefinition>) -> JobResult<()> {

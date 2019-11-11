@@ -9,7 +9,7 @@ use crate::data::{Cell, Output, ListDefinition, Row, Rows};
 use crate::env::Env;
 use crate::errors::{error, mandate, JobResult, argument_error, to_job_error, JobError};
 use crate::glob::Glob;
-use crate::job::JobDefinition;
+use crate::job::Job;
 use crate::printer::Printer;
 use crate::stream::streams;
 use std::time::Duration;
@@ -27,8 +27,8 @@ pub enum CellDefinition {
     Regex(Box<str>, Regex),
     Op(Box<str>),
     ClosureDefinition(Closure),
-    JobDefintion(JobDefinition),
-    MaterializedJobDefintion(JobDefinition),
+    JobDefintion(Job),
+    MaterializedJobDefintion(Job),
     File(Box<Path>),
     Variable(Vec<Box<str>>),
     List(ListDefinition),

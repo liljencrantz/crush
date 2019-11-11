@@ -1,4 +1,4 @@
-use crate::job::JobDefinition;
+use crate::job::Job;
 use crate::env::Env;
 use crate::data::Argument;
 use crate::stream::empty_stream;
@@ -9,12 +9,12 @@ use crate::stream_printer::spawn_print_thread;
 #[derive(Clone)]
 #[derive(Debug)]
 pub struct Closure {
-    job_definitions: Vec<JobDefinition>,
+    job_definitions: Vec<Job>,
     env: Option<Env>,
 }
 
 impl Closure {
-    pub fn new(job_definitions: Vec<JobDefinition>) -> Closure {
+    pub fn new(job_definitions: Vec<Job>) -> Closure {
         Closure {
             job_definitions,
             env: None,
@@ -69,5 +69,11 @@ impl Closure {
                 env.declare_str(name.as_ref(), arg.cell);
             }
         }
+    }
+}
+
+impl ToString for Closure {
+    fn to_string(&self) -> String {
+        self.job_definitions.iter().map(|j| j.to_string()).collect::<Vec<String>>().join("; ")
     }
 }

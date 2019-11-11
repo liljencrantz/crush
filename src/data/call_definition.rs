@@ -79,3 +79,9 @@ impl CallDefinition {
         }
     }
 }
+
+impl ToString for CallDefinition {
+    fn to_string(&self) -> String {
+        self.name.last().unwrap().to_string()
+    }
+}
