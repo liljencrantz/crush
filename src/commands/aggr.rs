@@ -4,7 +4,7 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::data::{Output, ColumnType, CellType, Row};
+use crate::data::{ColumnType, CellType, Row};
 use crate::errors::{argument_error, JobResult, error};
 use crate::closure::Closure;
 use crate::commands::{CompileContext, JobJoinHandle};

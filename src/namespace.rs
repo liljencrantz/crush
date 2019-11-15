@@ -4,7 +4,7 @@ use crate::{
     data::Cell,
 };
 use std::sync::{Mutex, Arc};
-use crate::errors::{JobResult, JobError};
+use crate::errors::JobResult;
 use crate::data::CellType;
 
 #[derive(Debug)]

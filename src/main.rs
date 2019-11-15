@@ -51,7 +51,7 @@ fn repl() -> JobResult<()> {
     global_env.declare_str("global", Cell::Env(global_env.clone()))?;
 
     let mut rl = Editor::<()>::new();
-    rl.load_history(crush_history_file().as_ref()).unwrap();
+    rl.load_history(crush_history_file().as_ref());
     loop {
         let readline = rl.readline("crush> ");
 

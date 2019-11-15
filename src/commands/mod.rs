@@ -28,6 +28,7 @@ mod enumerate;
 
 mod group;
 mod join;
+mod zip;
 
 mod aggr;
 
@@ -128,6 +129,7 @@ pub fn add_commands(env: &Env) -> JobResult<()> {
     env.declare_str("csv", Cell::Command(Command::new(csv::compile_and_run)))?;
 
     env.declare_str("for", Cell::Command(Command::new(r#for::compile_and_run)))?;
+    env.declare_str("zip", Cell::Command(Command::new(zip::compile_and_run)))?;
 
     let list = env.create_namespace("list")?;
 
