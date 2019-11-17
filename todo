@@ -1,9 +1,20 @@
 Todo:
+Any cell can be the output of a command
+Make type of stream be cell instead of row
+Rename output -> stream
+Rename row struct
+Rename cell value
+Rename rows -> ImmutableList
+Rename list -> MutableList
+Rename dict -> MutableDict
+Rename text -> str
+Create type ImmutableDict
+Create new type Type
+Create str namespace with commands upper, lower
 Flesh out time/duration modes with add/subtract support
 Make better to_string methods for various cell types
 Some missing comparisons on Cell
 Missing some cell type serilisations and deserialisations
-Cell::CellType
 Namespace literal
 add support for dot notation in argument names
 Make names mandatory and unique for stream columns
@@ -23,7 +34,7 @@ Implement if command if ?{{stat foo.txt}[0][type] == file} {} else {}
 Implement loop command
 Implement break/continue commands
 Implement http command
-Implement zip command to combine two streams
+Binary blob type
 The bin command interprets files as a single binary blob.
 The readline command reads interactive input from the user via the terminal
 pbuf command that reads a protobuf message and deserializes it
@@ -31,7 +42,7 @@ avro command that reads avro files and deserialize them
 Rename JobError -> CrushError
 Add Kind to CrushError
 Deal with different error kinds differently
-Add command-field to CrushError
+Add command-field to CrushError§
 Add source field to CrushError
 Make error printing display source of error
 
@@ -97,3 +108,4 @@ Add checks so we don't try to hash on unhashable types in either dict or join
 Add type checks in where command
 add and/or to where command
 take-command for reading N (defaults to 1) lines from an output in a variable variable
+Implement zip command to combine two streams

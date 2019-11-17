@@ -103,3 +103,19 @@ file.stat
 
 if {file.stat foo.txt}[0][is_directory] {} else {}
 
+Any type as output:
+
+pwd outputs a single string
+stat outputs a single struct
+json outputs a single struct
+
+list.create outputs a list instead of storing it, so we would declare a list by writing
+
+let foo={list.create int}
+
+Same with dict.create.
+
+state can be used to query a single attribute, which is returned directly like this:
+
+if {stat $some_file is_directory} `{echo "It's a directory"}
+if {comp.gt $foo $bar}
