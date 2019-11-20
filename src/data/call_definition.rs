@@ -3,7 +3,7 @@ use crate::data::{ArgumentDefinition, ArgumentVecCompiler, Cell};
 use crate::env::Env;
 use crate::errors::{error, JobResult};
 use crate::printer::Printer;
-use crate::stream::{UninitializedInputStream, UninitializedOutputStream};
+use crate::stream::{ValueReceiver, ValueSender};
 use crate::thread_util::{handle, build};
 
 #[derive(Clone)]
@@ -27,8 +27,8 @@ impl CallDefinition {
         &self,
         env: &Env,
         printer: &Printer,
-        input: UninitializedInputStream,
-        output: UninitializedOutputStream,
+        input: ValueReceiver,
+        output: ValueSender,
     ) -> JobResult<JobJoinHandle> {
         let local_printer = printer.clone();
         let local_arguments = self.arguments.clone();

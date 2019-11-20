@@ -24,7 +24,7 @@ pub fn run(input: InputStream, output: OutputStream) -> JobResult<()> {
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let input = context.input.initialize()?;
+    let input = context.input.initialize_stream()?;
     let mut output_type = vec![ColumnType::named("idx", CellType::Integer)];
     output_type.extend(input.get_type().clone());
     let output = context.output.initialize(output_type)?;

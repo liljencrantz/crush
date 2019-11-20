@@ -59,7 +59,7 @@ pub fn run(
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let input = context.input.initialize()?;
+    let input = context.input.initialize_stream()?;
     let config = parse(input.get_type(), &context.arguments)?;
     let output_type = config.columns.iter()
         .map(|(idx, name)| ColumnType { cell_type: input.get_type()[*idx].cell_type.clone(), name: name.clone() })

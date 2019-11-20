@@ -26,7 +26,7 @@ use commands::add_commands;
 use crate::errors::{JobResult};
 use std::error::Error;
 use crate::printer::Printer;
-use crate::stream::{empty_stream};
+use crate::stream::{empty_channel};
 use crate::stream_printer::spawn_print_thread;
 use crate::data::Cell;
 use crate::env::get_home;
@@ -63,7 +63,7 @@ fn repl() -> JobResult<()> {
                         Ok(jobs) => {
                             for job_definition in jobs {
                                 let last_output = spawn_print_thread(&printer);
-                                match job_definition.spawn_and_execute(&global_env, &printer, empty_stream(), last_output) {
+                                match job_definition.spawn_and_execute(&global_env, &printer, empty_channel(), last_output) {
                                     Ok(handle) => {
                                         handle.join(&printer);
                                     }

@@ -197,7 +197,7 @@ fn get_output_type(input_type: &Vec<ColumnType>, cfg: &Config) -> Result<Vec<Col
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let input = context.input.initialize()?;
+    let input = context.input.initialize_stream()?;
     let cfg = parse(input.get_type().clone(), context.arguments)?;
     let output_type = get_output_type(input.get_type(), &cfg)?;
     let output = context.output.initialize(output_type)?;

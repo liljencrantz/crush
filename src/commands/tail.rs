@@ -35,7 +35,7 @@ pub fn run(
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let lines = get_line_count(&context.arguments)?;
-    let input = context.input.initialize()?;
+    let input = context.input.initialize_stream()?;
     let output = context.output.initialize(input.get_type().clone())?;
     run(lines, input, output)
 }

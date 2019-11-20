@@ -20,7 +20,7 @@ pub fn run(input1: &mut impl Readable, input2: &mut impl Readable, output: Outpu
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let input = context.input.initialize()?;
+    let input = context.input.initialize_stream()?;
     let input_type = input.get_type();
     if input_type.len() != 2 {
         return Err(error("Expected exactly two arguments"));
@@ -35,16 +35,14 @@ pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
             match input.recv() {
                 Ok(mut row) => {
                     match (row.cells.remove(0), row.cells.remove(0)) {
-                        (Cell::Output(mut r1), Cell::Output(mut r2)) => {
-                            run(&mut r1.stream, &mut r2.stream, output)
-                        }
-                        _ => return Err(error("Expected two streams of data")),
-                    }        
+                        (Cell::Output(mut r1), Cell::Output(mut r2)) => run(&mut r1.stream, &mut r2.stream, output),
+                        _ => return Err(error("Expected two streams of data as input arguments")),
+                    }
                 }
                 Err(_) => Ok(()),
             }
         }
-        _ => return Err(error("Expected two streams of data")),
+        _ => return Err(error("Expected two input arguments")),
 
     }
 }

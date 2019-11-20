@@ -23,6 +23,6 @@ fn count_rows(s: &InputStream) -> Cell {
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let output = context.output.initialize(vec![ColumnType::named("count", CellType::Integer)])?;
-    let input = context.input.initialize()?;
+    let input = context.input.initialize_stream()?;
     output.send(Row { cells: vec![count_rows(&input)]})
 }

@@ -29,13 +29,12 @@ lazy_static! {
 }
 
 fn handle(file: Box<Path>, output: &OutputStream) -> JobResult<()> {
-    let (uninit_output_stream, input_stream) = unlimited_streams();
-    let output_stream = uninit_output_stream.initialize(sub_type.clone())?;
+    let (output_stream, input_stream) = unlimited_streams(sub_type.clone());
     let out_row = Row {
         cells: vec![
             Cell::File(file.clone()),
             Cell::Output(Output {
-                stream: input_stream.initialize()?,
+                stream: input_stream,
             }),
         ],
     };
@@ -57,60 +56,21 @@ fn handle(file: Box<Path>, output: &OutputStream) -> JobResult<()> {
     return Ok(());
 }
 
-
 pub struct Config {
-    files: Either<(usize, InputStream), Vec<Box<Path>>>,
+    files: Vec<Box<Path>>,
 }
 
-fn parse(arguments: Vec<Argument>, input: InputStream) -> JobResult<Config> {
-    if input.get_type().len() == 0 {
-        let mut files: Vec<Box<Path>> = Vec::new();
-        for arg in &arguments {
-            arg.cell.file_expand(&mut files)?;
-        }
-        Ok(Config { files: Either::Right(files) })
-    } else {
-        if arguments.len() != 1 {
-            return Err(argument_error("Expected one argument: column spec"));
-        }
-        match &arguments[0].cell {
-            Cell::Text(s) => {
-                Ok(Config {
-                    files: Either::Left((find_field_from_str(&s, input.get_type())?, input)),
-                })
-            }
-            Cell::Field(s) => {
-                Ok(Config {
-                    files: Either::Left((find_field(s, input.get_type())?, input)),
-                })
-            }
-            _ => return Err(argument_error("Expected column of type Field")),
-        }
+fn parse(arguments: Vec<Argument>) -> JobResult<Config> {
+    let mut files: Vec<Box<Path>> = Vec::new();
+    for arg in &arguments {
+        arg.cell.file_expand(&mut files)?;
     }
+    Ok(Config { files: files })
 }
 
 pub fn run(config: Config, output: OutputStream) -> JobResult<()> {
-    match config.files {
-        Either::Left((idx, input)) => {
-            loop {
-                match input.recv() {
-                    Ok(row) => {
-                        let mut files: Vec<Box<Path>> = Vec::new();
-                        row.cells[idx].file_expand(&mut files)?;
-                        for file in files {
-                            handle(file, &output)?;
-                        }
-                    },
-                    Err(_) => break,
-                }
-            }
-
-        },
-        Either::Right(files) => {
-            for file in files {
-                handle(file, &output)?;
-            }
-        },
+    for file in config.files {
+        handle(file, &output)?;
     }
     return Ok(());
 }
@@ -121,6 +81,6 @@ pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
             ColumnType::named("file", CellType::File),
             ColumnType::named("lines", CellType::Output(sub_type.clone())),
         ])?;
-    let files = parse(context.arguments, context.input.initialize()?)?;
+    let files = parse(context.arguments)?;
     run(files, output)
 }

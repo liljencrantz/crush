@@ -52,7 +52,7 @@ fn sum_rows(s: &InputStream, column: usize) -> JobResult<Cell> {
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let output = context.output.initialize(vec![ColumnType::named("sum", CellType::Integer)])?;
-    let input = context.input.initialize()?;
+    let input = context.input.initialize_stream()?;
     let column = parse(input.get_type(), &context.arguments)?;
     output.send(Row { cells: vec![sum_rows(&input, column)?]})
 }

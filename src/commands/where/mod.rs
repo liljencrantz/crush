@@ -92,7 +92,7 @@ pub fn run(config: Config, printer: Printer) -> JobResult<()> {
 }
 
 pub fn compile_and_run(mut context: CompileContext) -> JobResult<()> {
-    let input = context.input.initialize()?;
+    let input = context.input.initialize_stream()?;
     let output = context.output.initialize(input.get_type().clone())?;
     let config = Config {
         condition: parse(input.get_type(), context.arguments.as_mut())?,

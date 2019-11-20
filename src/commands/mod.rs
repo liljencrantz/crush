@@ -16,6 +16,7 @@ mod ps;
 
 mod head;
 mod tail;
+
 mod lines;
 mod csv;
 
@@ -30,7 +31,7 @@ mod group;
 mod join;
 mod zip;
 
-mod aggr;
+//mod aggr;
 
 mod count;
 mod sum;
@@ -55,11 +56,11 @@ use crate::{
 use std::thread::{JoinHandle};
 use crate::printer::Printer;
 use crate::errors::JobResult;
-use crate::stream::{UninitializedInputStream, UninitializedOutputStream};
+use crate::stream::{ValueReceiver, ValueSender};
 
 pub struct CompileContext {
-    pub input: UninitializedInputStream,
-    pub output: UninitializedOutputStream,
+    pub input: ValueReceiver,
+    pub output: ValueSender,
     pub arguments: Vec<Argument>,
     pub env: Env,
     pub printer: Printer,
@@ -115,7 +116,7 @@ pub fn add_commands(env: &Env) -> JobResult<()> {
     env.declare_str("group", Cell::Command(Command::new(group::compile_and_run)))?;
     env.declare_str("join", Cell::Command(Command::new(join::compile_and_run)))?;
 
-    env.declare_str("aggr", Cell::Command(Command::new(aggr::compile_and_run)))?;
+//    env.declare_str("aggr", Cell::Command(Command::new(aggr::compile_and_run)))?;
 
     env.declare_str("count", Cell::Command(Command::new(count::compile_and_run)))?;
     env.declare_str("sum", Cell::Command(Command::new(sum::compile_and_run)))?;

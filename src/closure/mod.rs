@@ -1,7 +1,7 @@
 use crate::job::Job;
 use crate::env::Env;
 use crate::data::Argument;
-use crate::stream::empty_stream;
+use crate::stream::empty_channel;
 use crate::errors::{error, JobResult, mandate};
 use crate::commands::{CompileContext};
 use crate::stream_printer::spawn_print_thread;
@@ -50,12 +50,12 @@ impl Closure {
 
                 for job_definition in &job_definitions[1..job_definitions.len() - 1] {
                     let last_output = spawn_print_thread(&context.printer);
-                    let job = job_definition.spawn_and_execute(&env, &context.printer, empty_stream(), last_output)?;
+                    let job = job_definition.spawn_and_execute(&env, &context.printer, empty_channel(), last_output)?;
                     job.join(&context.printer);
                 }
                 {
                     let job_definition = &job_definitions[job_definitions.len() - 1];
-                    let last_job = job_definition.spawn_and_execute(&env, &context.printer, empty_stream(), context.output)?;
+                    let last_job = job_definition.spawn_and_execute(&env, &context.printer, empty_channel(), context.output)?;
                     last_job.join(&context.printer);
                 }
             }

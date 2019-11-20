@@ -12,6 +12,8 @@ use crate::glob::Glob;
 use crate::job::Job;
 use crate::printer::Printer;
 use crate::stream::streams;
+use crate::stream::channels;
+use crate::stream::empty_channel;
 use std::time::Duration;
 use crate::data::row::RowWithTypes;
 
@@ -101,23 +103,18 @@ impl CellDefinition {
             CellDefinition::Op(v) => Cell::Op(v.clone()),
             CellDefinition::File(v) => Cell::File(v.clone()),
             CellDefinition::JobDefintion(def) => {
-                let (first_output, first_input) = streams();
-                first_output.initialize(vec![])?;
-                let (last_output, last_input) = streams();
+                let first_input = empty_channel();
+                let (last_output, last_input) = channels();
                 let j = def.spawn_and_execute(&env, printer, first_input, last_output)?;
-
-                let res = Cell::Output(Output { stream: last_input.initialize()? });
                 dependencies.push(j);
-                res
+                last_input.recv()?
             }
             CellDefinition::MaterializedJobDefintion(def) => {
-                let (first_output, first_input) = streams();
-                first_output.initialize(vec![])?;
-                let (last_output, last_input) = streams();
+                let first_input = empty_channel();
+                let (last_output, last_input) = channels();
                 let j = def.spawn_and_execute(&env, printer, first_input, last_output)?;
-                let res = Cell::Output(Output { stream: last_input.initialize()? }).materialize();
                 dependencies.push(j);
-                res
+                last_input.recv()?.materialize()
             }
             CellDefinition::ClosureDefinition(c) => Cell::Closure(c.with_env(env)),
             CellDefinition::Variable(s) => (

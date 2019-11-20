@@ -60,10 +60,9 @@ pub fn run(
                 let val = groups.get(&key);
                 match val {
                     None => {
-                        let (uninit_output_stream, input_stream) = unlimited_streams();
-                        let output_stream = uninit_output_stream.initialize(config.input_type.clone())?;
+                        let (output_stream, input_stream) = unlimited_streams(config.input_type.clone());
                         let out_row = Row {
-                            cells: vec![key.partial_clone()?, Cell::Output(Output { stream: input_stream.initialize()? })],
+                            cells: vec![key.partial_clone()?, Cell::Output(Output { stream: input_stream })],
                         };
                         output.send(out_row)?;
                         output_stream.send(row);
@@ -81,7 +80,7 @@ pub fn run(
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let input = context.input.initialize()?;
+    let input = context.input.initialize_stream()?;
     let config = parse(input.get_type().clone(), context.arguments)?;
     let output_type= vec![
         input.get_type()[config.column].clone(),

@@ -31,7 +31,7 @@ pub struct Config {
     columns: Vec<ColumnType>,
     skip_head: usize,
     trim: Option<char>,
-    files: Either<(usize, InputStream), Vec<Box<Path>>>,
+    files: Vec<Box<Path>>,
 }
 
 fn parse(arguments: Vec<Argument>, _input: InputStream) -> JobResult<Config> {
@@ -85,18 +85,17 @@ fn parse(arguments: Vec<Argument>, _input: InputStream) -> JobResult<Config> {
         columns,
         skip_head,
         trim,
-        files: Either::Right(files),
+        files: files,
     })
 }
 
 fn handle(file: Box<Path>, cfg: &Config, output: &OutputStream, printer: &Printer) -> JobResult<()> {
-    let (uninit_output_stream, input_stream) = unlimited_streams();
-    let output_stream = uninit_output_stream.initialize(cfg.columns.clone())?;
+    let (output_stream, input_stream) = unlimited_streams(cfg.columns.clone());
     let out_row = Row {
         cells: vec![
             Cell::File(file.clone()),
             Cell::Output(Output {
-                stream: input_stream.initialize()?,
+                stream: input_stream,
             }),
         ],
     };
@@ -153,20 +152,14 @@ fn handle(file: Box<Path>, cfg: &Config, output: &OutputStream, printer: &Printe
 
 
 pub fn run(config: Config, output: OutputStream, printer: Printer) -> JobResult<()> {
-    match &config.files {
-        Either::Right(files) => {
-            for file in files {
-                handle(file.clone(), &config, &output, &printer)?;
-            }
-        }
-
-        Either::Left(_) => {}
+    for file in &config.files {
+        handle(file.clone(), &config, &output, &printer)?;
     }
     return Ok(());
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let input = context.input.initialize()?;
+    let input = context.input.initialize_stream()?;
     let cfg = parse(context.arguments, input)?;
     let output = context.output.initialize(
         vec![

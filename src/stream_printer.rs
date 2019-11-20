@@ -1,22 +1,29 @@
-use crate::stream::{UninitializedOutputStream, streams, InputStream, Readable, RowsReader};
+use crate::stream::{ValueSender, channels, InputStream, Readable, RowsReader};
 use crate::printer::Printer;
 use std::thread;
 use crate::data::{Row, ColumnType, CellType, Alignment, Cell, Rows, Output};
 use std::cmp::max;
 
-pub fn spawn_print_thread(printer: &Printer) -> UninitializedOutputStream {
-    let (o, i) = streams();
+pub fn spawn_print_thread(printer: &Printer) -> ValueSender {
+    let (o, i) = channels();
     let p = printer.clone();
     thread::Builder::new()
         .name("output-formater".to_string())
         .spawn(move || {
-            match i.initialize() {
-                Ok(out) => print(&p, out),
+            match i.recv() {
+                Ok(val) => print_value(&p, val),
                 Err(e) => p.job_error(e),
             }
         }
         );
     o
+}
+
+fn print_value(printer: &Printer, mut cell: Cell) {
+    match cell {
+        Cell::Output(output) => print(printer, output.stream),
+        _ => printer.line("LALALALA"),
+    };
 }
 
 fn print(printer: &Printer, mut stream: InputStream) {

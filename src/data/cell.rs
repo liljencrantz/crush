@@ -18,6 +18,7 @@ use std::time::Duration;
 use crate::format::duration_format;
 use crate::env::Env;
 use crate::data::row::RowWithTypes;
+use crate::stream::streams;
 
 #[derive(Debug)]
 pub enum Cell {
@@ -70,6 +71,11 @@ impl Cell {
             Cell::Time(_) | Cell::Duration(_) | Cell::Integer(_) => Alignment::Right,
             _ => Alignment::Left,
         };
+    }
+
+    pub fn empty_stream() -> Cell {
+        let (s, r) = streams(vec![]);
+        Cell::Output(Output {stream: r})
     }
 
     pub fn text(s: &str) -> Cell {

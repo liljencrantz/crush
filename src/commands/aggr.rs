@@ -8,7 +8,7 @@ use crate::data::{ColumnType, CellType, Row};
 use crate::errors::{argument_error, JobResult, error};
 use crate::closure::Closure;
 use crate::commands::{CompileContext, JobJoinHandle};
-use crate::stream::{InputStream, OutputStream, UninitializedOutputStream, streams, UninitializedInputStream, RowsReader, Readable};
+use crate::stream::{InputStream, OutputStream, ValueSender, streams, ValueReceiver, RowsReader, Readable};
 use crate::commands::command_util::find_field;
 use crate::replace::Replace;
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -78,7 +78,7 @@ pub fn parse(input_type: &Vec<ColumnType>, argument: Vec<Argument>) -> JobResult
 }
 
 fn create_writer(
-    uninitialized_output: UninitializedOutputStream,
+    uninitialized_output: ValueSender,
     mut output_names: Vec<Option<Box<str>>>,
     writer_input: Receiver<Row>) ->
     JobJoinHandle {
@@ -113,7 +113,7 @@ fn create_writer(
 
 pub fn create_collector(
     rest_input: InputStream,
-    uninitialized_inputs: Vec<UninitializedInputStream>,
+    uninitialized_inputs: Vec<ValueReceiver>,
     writer_output: Sender<Row>) -> JobJoinHandle {
     handle(build("aggr-collector".to_string()).spawn(
         move || {
@@ -160,7 +160,7 @@ fn create_aggregator(
     idx: usize,
     c: &Closure,
     input_type: &Vec<ColumnType>,
-    uninitialized_inputs: &mut Vec<UninitializedInputStream>,
+    uninitialized_inputs: &mut Vec<ValueReceiver>,
     outputs: &mut Vec<OutputStream>,
     env: &Env,
     printer: &Printer) -> JobResult<JobJoinHandle> {
@@ -198,7 +198,7 @@ fn handle_row(
     input: &InputStream,
     writer_output: &Sender<Row>) -> JobResult<()> {
     let mut outputs: Vec<OutputStream> = Vec::new();
-    let mut uninitialized_inputs: Vec<UninitializedInputStream> = Vec::new();
+    let mut uninitialized_inputs: Vec<ValueReceiver> = Vec::new();
     let mut aggregator_handles: Vec<JobJoinHandle> = Vec::new();
 
     let (uninit_rest_output, uninit_rest_input) = streams();
@@ -236,7 +236,7 @@ fn handle_row(
     Ok(())
 }
 
-pub fn run(config: Config, printer: &Printer, env: &Env, input: InputStream, uninitialized_output: UninitializedOutputStream) -> JobResult<()> {
+pub fn run(config: Config, printer: &Printer, env: &Env, input: InputStream, uninitialized_output: ValueSender) -> JobResult<()> {
     let (writer_output, writer_input) = channel::<Row>();
 
     let mut output_names = input.get_type().iter().map(|t| t.name.clone()).collect::<Vec<Option<Box<str>>>>();
@@ -271,7 +271,7 @@ pub fn run(config: Config, printer: &Printer, env: &Env, input: InputStream, uni
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let input = context.input.initialize()?;
+    let input = context.input.initialize_stream()?;
     let config = parse(input.get_type(), context.arguments)?;
     run(config, &context.printer, &context.env, input, context.output)
 }

@@ -1,41 +1,41 @@
 use crate::data::{ColumnType, Cell};
-use crate::data::{Row, Rows};
+use crate::data::{Row, Rows, Output};
 use std::sync::mpsc::{Receiver, sync_channel, SyncSender, channel, Sender};
 use crate::errors::{JobError, error, JobResult, to_job_error};
 use std::error::Error;
 use crate::replace::Replace;
 
-pub enum UninitializedOutputStream {
-    Sync(SyncSender<Vec<ColumnType>>, SyncSender<Row>),
-    Async(SyncSender<Vec<ColumnType>>, Sender<Row>),
+pub struct ValueSender {
+    sender: SyncSender<Cell>,
 }
 
-impl UninitializedOutputStream {
-    pub fn initialize(self, output_type: Vec<ColumnType>) -> JobResult<OutputStream> {
-        match self {
-            UninitializedOutputStream::Sync(s, s2) => {
-                to_job_error(s.send(output_type.clone()))?;
-                Ok(OutputStream::Sync(s2))
-            }
-            UninitializedOutputStream::Async(s, s2) => {
-                to_job_error(s.send(output_type.clone()))?;
-                Ok(OutputStream::Async(s2))
-            }
-        }
+impl ValueSender {
+    pub fn send(self, cell: Cell) -> JobResult<()> {
+        to_job_error(self.sender.send(cell))?;
+        Ok(())
+    }
+
+    pub fn initialize(self, signature: Vec<ColumnType>) -> JobResult<OutputStream> {
+        let (output, input) = streams(signature);
+        self.send(Cell::Output(Output { stream: input }))?;
+        Ok(output)
     }
 }
 
 #[derive(Debug)]
-pub struct UninitializedInputStream {
-    type_input: Receiver<Vec<ColumnType>>,
-    input: Receiver<Row>,
+pub struct ValueReceiver {
+    receiver: Receiver<Cell>,
 }
 
-impl UninitializedInputStream {
-    pub fn initialize(self) -> JobResult<InputStream> {
-        match self.type_input.recv() {
-            Ok(t) => Ok(InputStream { receiver: self.input, input_type: t }),
-            Err(e) => Err(error(e.description())),
+impl ValueReceiver {
+    pub fn recv(self) -> JobResult<Cell> {
+        to_job_error(self.receiver.recv())
+    }
+
+    pub fn initialize_stream(self) -> JobResult<InputStream> {
+        match self.recv()? {
+            Cell::Output(out) => Ok(out.stream),
+            _ => Err(error("Expected a stream")),
         }
     }
 }
@@ -44,7 +44,6 @@ pub enum OutputStream {
     Sync(SyncSender<Row>),
     Async(Sender<Row>),
 }
-
 
 impl OutputStream {
     pub fn send(&self, row: Row) -> JobResult<()> {
@@ -78,16 +77,10 @@ impl InputStream {
         match &res {
             Ok(row) => {
                 if row.cells.len() != self.input_type.len() {
-        println!("AAA");
                     return Err(error("Wrong number of columns in input"));
                 }
                 for (c, ct) in row.cells.iter().zip(self.input_type.iter()) {
                     if c.cell_type() != ct.cell_type {
-                        println!(                            "Wrong cell type in input column {:?}, expected {:?}, got {:?}",
-                                                             ct.name,
-                                                             c.cell_type(),
-                                                             ct.cell_type);
-
                         return Err(error(format!(
                             "Wrong cell type in input column {:?}, expected {:?}, got {:?}",
                             ct.name,
@@ -102,21 +95,24 @@ impl InputStream {
     }
 }
 
-pub fn streams() -> (UninitializedOutputStream, UninitializedInputStream) {
-    let (type_send, type_recv) = sync_channel(1);
-    let (send, recv) = sync_channel(128);
-    (UninitializedOutputStream::Sync(type_send, send), UninitializedInputStream { type_input: type_recv, input: recv })
+pub fn channels() -> (ValueSender, ValueReceiver) {
+    let (send, recv) = sync_channel(1);
+    (ValueSender {sender: send}, ValueReceiver { receiver: recv })
 }
 
-pub fn unlimited_streams() -> (UninitializedOutputStream, UninitializedInputStream) {
-    let (type_send, type_recv) = sync_channel(1);
-    let (send, recv) = channel();
-    (UninitializedOutputStream::Async(type_send, send), UninitializedInputStream { type_input: type_recv, input: recv })
+pub fn streams(signature: Vec<ColumnType>) -> (OutputStream, InputStream) {
+    let (output, input) = sync_channel(128);
+    (OutputStream::Sync(output), InputStream { receiver: input, input_type: signature })
 }
 
-pub fn empty_stream() -> UninitializedInputStream {
-    let (o, i) = unlimited_streams();
-    o.initialize(vec![]);
+pub fn unlimited_streams(signature: Vec<ColumnType>) -> (OutputStream, InputStream) {
+    let (output, input) = channel();
+    (OutputStream::Async(output), InputStream { receiver: input, input_type: signature })
+}
+
+pub fn empty_channel() -> ValueReceiver {
+    let (o, i) = channels();
+    o.send(Cell::empty_stream());
     i
 }
 

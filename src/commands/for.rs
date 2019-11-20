@@ -8,7 +8,7 @@ use crate::data::{Output};
 use crate::errors::{argument_error, JobResult};
 use crate::closure::Closure;
 use crate::commands::CompileContext;
-use crate::stream::empty_stream;
+use crate::stream::empty_channel;
 use crate::stream_printer::spawn_print_thread;
 
 pub struct Config {
@@ -19,7 +19,7 @@ pub struct Config {
 }
 
 pub fn parse(mut context: CompileContext) -> JobResult<Config> {
-    context.input.initialize()?;
+    context.input.initialize_stream()?;
     context.output.initialize(vec![])?;
 
     if context.arguments.len() != 2 {
@@ -55,7 +55,7 @@ pub fn run(config: Config) -> JobResult<()> {
                     })
                     .collect();
                 config.body.spawn_and_execute(CompileContext{
-                    input: empty_stream(),
+                    input: empty_channel(),
                     output: spawn_print_thread(&config.printer),
                     arguments,
                     env: config.env.clone(),
