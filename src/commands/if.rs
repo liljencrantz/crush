@@ -19,8 +19,9 @@ pub fn compile_and_run(mut context: CompileContext) -> JobResult<()> {
         2 => match (context.arguments.remove(0).cell, context.arguments.remove(0).cell) {
             (Cell::Bool(b), Cell::Closure(c)) => {
                 if b {
-                    c.spawn_and_execute(cc);
+                    c.spawn_and_execute(cc)
                 } else {
+                    cc.output.initialize(vec![])?;
                     Ok(())
                 }
             }
