@@ -44,6 +44,7 @@ mod list;
 mod dict;
 
 mod r#for;
+mod r#if;
 
 use crate::{
     env::Env,
@@ -129,6 +130,7 @@ pub fn add_commands(env: &Env) -> JobResult<()> {
     env.declare_str("lines", Cell::Command(Command::new(lines::compile_and_run)))?;
     env.declare_str("csv", Cell::Command(Command::new(csv::compile_and_run)))?;
 
+    env.declare_str("if", Cell::Command(Command::new(r#if::compile_and_run)))?;
     env.declare_str("for", Cell::Command(Command::new(r#for::compile_and_run)))?;
     env.declare_str("zip", Cell::Command(Command::new(zip::compile_and_run)))?;
 

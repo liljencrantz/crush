@@ -30,7 +30,6 @@ implement format command for text formating
 add parens to filter command
 Add missing pieces to csv command
 add glob support to select command
-Implement if command if ?{{stat foo.txt}[0][type] == file} {} else {}
 Implement loop command
 Implement break/continue commands
 Implement http command
@@ -42,7 +41,7 @@ avro command that reads avro files and deserialize them
 Rename JobError -> CrushError
 Add Kind to CrushError
 Deal with different error kinds differently
-Add command-field to CrushError§
+Add command-field to CrushError
 Add source field to CrushError
 Make error printing display source of error
 
@@ -109,3 +108,4 @@ Add type checks in where command
 add and/or to where command
 take-command for reading N (defaults to 1) lines from an output in a variable variable
 Implement zip command to combine two streams
+Implement if command if {stat foo.txt is_file} {} else {}
