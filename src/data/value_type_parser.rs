@@ -1,10 +1,10 @@
-use crate::data::{CellType, ColumnType};
-use crate::data::cell_type_lexer::{CellTypeLexer, CellTypeToken};
+use crate::data::{ValueType, ColumnType};
+use crate::data::value_type_lexer::{ValueTypeLexer, ValueTypeToken};
 use crate::errors::{JobResult, error};
-use CellTypeToken::*;
+use ValueTypeToken::*;
 
-pub fn parse(s: &str) -> JobResult<CellType> {
-    let mut lexer = CellTypeLexer::new(s);
+pub fn parse(s: &str) -> JobResult<ValueType> {
+    let mut lexer = ValueTypeLexer::new(s);
     let res = parse_type(&mut lexer);
     match (&res, lexer.peek().0) {
         (Ok(_), EOF) => res,
@@ -13,49 +13,49 @@ pub fn parse(s: &str) -> JobResult<CellType> {
     }
 }
 
-fn parse_begin_token(lexer: &mut CellTypeLexer) -> JobResult<()> {
+fn parse_begin_token(lexer: &mut ValueTypeLexer) -> JobResult<()> {
     match lexer.pop().0 {
         Begin => Ok(()),
         _ => Err(error("Unexpected token, expected '<'"))
     }
 }
 
-fn parse_end_token(lexer: &mut CellTypeLexer) -> JobResult<()> {
+fn parse_end_token(lexer: &mut ValueTypeLexer) -> JobResult<()> {
     match lexer.pop().0 {
         End => Ok(()),
         _ => Err(error("Unexpected token, expected '>'"))
     }
 }
 
-fn parse_sep_token(lexer: &mut CellTypeLexer) -> JobResult<()> {
+fn parse_sep_token(lexer: &mut ValueTypeLexer) -> JobResult<()> {
     match lexer.pop().0 {
         Sep => Ok(()),
         _ => Err(error("Unexpected token, expected ','"))
     }
 }
 
-fn parse_to_token(lexer: &mut CellTypeLexer) -> JobResult<()> {
+fn parse_to_token(lexer: &mut ValueTypeLexer) -> JobResult<()> {
     match lexer.pop().0 {
         To => Ok(()),
         _ => Err(error("Unexpected token, expected ':'"))
     }
 }
 
-fn parse_name_token(lexer: &mut CellTypeLexer) -> JobResult<String> {
+fn parse_name_token(lexer: &mut ValueTypeLexer) -> JobResult<String> {
     match lexer.pop() {
         (Name, name) => Ok(name.to_string()),
         _ => Err(error("Unexpected token, expected ','"))
     }
 }
 
-fn parse_named_parameter(lexer: &mut CellTypeLexer) -> JobResult<ColumnType> {
+fn parse_named_parameter(lexer: &mut ValueTypeLexer) -> JobResult<ColumnType> {
     let name = parse_name_token(lexer)?;
     parse_to_token(lexer)?;
     let t = parse_type(lexer)?;
     Ok(ColumnType::named(name.as_str(), t))
 }
 
-fn parse_named_parameters(lexer: &mut CellTypeLexer) -> JobResult<Vec<ColumnType>> {
+fn parse_named_parameters(lexer: &mut ValueTypeLexer) -> JobResult<Vec<ColumnType>> {
     let mut res = Vec::new();
     parse_begin_token(lexer)?;
 
@@ -74,26 +74,26 @@ fn parse_named_parameters(lexer: &mut CellTypeLexer) -> JobResult<Vec<ColumnType
     Ok(res)
 }
 
-fn parse_type(lexer: &mut CellTypeLexer) -> JobResult<CellType> {
+fn parse_type(lexer: &mut ValueTypeLexer) -> JobResult<ValueType> {
     Ok(match parse_name_token(lexer)?.as_str() {
-        "text" => CellType::Text,
-        "integer" => CellType::Integer,
-        "time" => CellType::Time,
-        "duration" => CellType::Duration,
-        "field" => CellType::Field,
-        "glob" => CellType::Glob,
-        "regex" => CellType::Regex,
-        "op" => CellType::Op,
-        "command" => CellType::Command,
-        "closure" => CellType::Command,
-        "file" => CellType::File,
-        "env" => CellType::Env,
-        "bool" => CellType::Bool,
+        "text" => ValueType::Text,
+        "integer" => ValueType::Integer,
+        "time" => ValueType::Time,
+        "duration" => ValueType::Duration,
+        "field" => ValueType::Field,
+        "glob" => ValueType::Glob,
+        "regex" => ValueType::Regex,
+        "op" => ValueType::Op,
+        "command" => ValueType::Command,
+        "closure" => ValueType::Command,
+        "file" => ValueType::File,
+        "env" => ValueType::Env,
+        "bool" => ValueType::Bool,
         "list" => {
             parse_begin_token(lexer)?;
             let sub_type = parse_type(lexer)?;
             parse_end_token(lexer)?;
-            CellType::List(Box::from(sub_type))
+            ValueType::List(Box::from(sub_type))
         }
         "dict" => {
             parse_begin_token(lexer)?;
@@ -101,16 +101,16 @@ fn parse_type(lexer: &mut CellTypeLexer) -> JobResult<CellType> {
             parse_sep_token(lexer)?;
             let value_type = parse_type(lexer)?;
             parse_end_token(lexer)?;
-            CellType::Dict(Box::from(key_type), Box::from(value_type))
+            ValueType::Dict(Box::from(key_type), Box::from(value_type))
         }
         "output" => {
-            CellType::Output(parse_named_parameters(lexer)?)
+            ValueType::Output(parse_named_parameters(lexer)?)
         }
         "rows" => {
-            CellType::Rows(parse_named_parameters(lexer)?)
+            ValueType::Rows(parse_named_parameters(lexer)?)
         }
         "row" => {
-            CellType::Row(parse_named_parameters(lexer)?)
+            ValueType::Row(parse_named_parameters(lexer)?)
         }
         nam => return Err(error(format!("Unknown type \"{}\"", nam).as_str())),
     })
@@ -119,7 +119,7 @@ fn parse_type(lexer: &mut CellTypeLexer) -> JobResult<CellType> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use CellType::*;
+    use ValueType::*;
     use crate::data::ColumnType;
 
     #[test]

@@ -6,7 +6,7 @@ use users::User;
 
 use lazy_static::lazy_static;
 
-use crate::data::{Cell, ColumnType};
+use crate::data::{Value, ColumnType};
 use crate::errors::{JobError, JobResult, error};
 
 pub fn find_field_from_str(needle: &str, haystack: &Vec<ColumnType>) -> JobResult<usize> {
@@ -62,11 +62,11 @@ pub fn create_user_map() -> HashMap<uid_t, User> {
 }
 
 pub trait UserMap {
-    fn get_name(&self, uid: uid_t) -> Cell;
+    fn get_name(&self, uid: uid_t) -> Value;
 }
 
 impl UserMap for HashMap<uid_t, User> {
-    fn get_name(&self, uid: uid_t) -> Cell {
-        Cell::text(self.get(&uid).map(|u| u.name().to_str().unwrap_or("<illegal username>")).unwrap_or("<unknown user>"))
+    fn get_name(&self, uid: uid_t) -> Value {
+        Value::text(self.get(&uid).map(|u| u.name().to_str().unwrap_or("<illegal username>")).unwrap_or("<unknown user>"))
     }
 }

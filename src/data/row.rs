@@ -1,19 +1,19 @@
-use crate::data::cell::Cell;
+use crate::data::value::Value;
 use crate::errors::{JobResult};
-use crate::data::{ColumnType, CellType};
+use crate::data::{ColumnType, ValueType};
 use std::mem;
 
 #[derive(PartialEq)]
 #[derive(PartialOrd)]
 #[derive(Debug)]
 pub struct Row {
-    pub cells: Vec<Cell>,
+    pub cells: Vec<Value>,
 }
 
 impl Row {
     pub fn partial_clone(&self) -> JobResult<Self> {
         Ok(Row {
-            cells: self.cells.iter().map(|c| c.partial_clone()).collect::<JobResult<Vec<Cell>>>()?,
+            cells: self.cells.iter().map(|c| c.partial_clone()).collect::<JobResult<Vec<Value>>>()?,
         })
     }
 
@@ -29,22 +29,22 @@ impl Row {
 #[derive(Debug)]
 pub struct RowWithTypes {
     pub types: Vec<ColumnType>,
-    pub cells: Vec<Cell>,
+    pub cells: Vec<Value>,
 }
 
 impl RowWithTypes {
     pub fn partial_clone(&self) -> JobResult<Self> {
         Ok(RowWithTypes {
             types: self.types.clone(),
-            cells: self.cells.iter().map(|c| c.partial_clone()).collect::<JobResult<Vec<Cell>>>()?,
+            cells: self.cells.iter().map(|c| c.partial_clone()).collect::<JobResult<Vec<Value>>>()?,
         })
     }
 
-    pub fn get(mut self, name: &str) -> Option<Cell> {
+    pub fn get(mut self, name: &str) -> Option<Value> {
         for (idx, t) in self.types.iter().enumerate() {
             match &t.name {
                 None => {},
-                Some(n) => if n.as_ref() == name {return Some(mem::replace(&mut self.cells[idx], Cell::Integer(0)));},
+                Some(n) => if n.as_ref() == name {return Some(mem::replace(&mut self.cells[idx], Value::Integer(0)));},
             }
         }
         None

@@ -1,5 +1,5 @@
 use crate::commands::{CompileContext, JobJoinHandle};
-use crate::data::{ArgumentDefinition, ArgumentVecCompiler, Cell};
+use crate::data::{ArgumentDefinition, ArgumentVecCompiler, Value};
 use crate::env::Env;
 use crate::errors::{error, JobResult};
 use crate::printer::Printer;
@@ -35,7 +35,7 @@ impl CallDefinition {
         let local_env = env.clone();
         let cmd = env.get(&self.name);
         match cmd {
-            Some(Cell::Command(command)) => {
+            Some(Value::Command(command)) => {
                 let c = command.call;
                 Ok(handle(build(format_name(&self.name)).spawn(
                     move || {
@@ -55,7 +55,7 @@ impl CallDefinition {
                     })))
             }
 
-            Some(Cell::Closure(closure_definition)) => {
+            Some(Value::Closure(closure_definition)) => {
                 Ok(handle(build(format_name(&self.name)).spawn(
                     move || {
                         let mut deps: Vec<JobJoinHandle> = Vec::new();

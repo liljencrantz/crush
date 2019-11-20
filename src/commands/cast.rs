@@ -4,14 +4,14 @@ use crate::{
     commands::command_util::find_field_from_str,
     data::{
         Argument,
-        Cell,
+        Value,
         Row,
     },
     errors::{argument_error, JobError},
     stream::{InputStream, OutputStream},
 };
 use crate::commands::CompileContext;
-use crate::data::{CellType, ColumnType};
+use crate::data::{ValueType, ColumnType};
 use crate::errors::JobResult;
 use crate::printer::Printer;
 
@@ -29,8 +29,8 @@ fn parse(
             Some(name) => find_field_from_str(name, input_type)?,
             None => return Err(argument_error("Expected only named arguments")),
         };
-        match &arg.cell {
-            Cell::Text(s) => output_type[arg_idx].cell_type = CellType::from(s)?,
+        match &arg.value {
+            Value::Text(s) => output_type[arg_idx].cell_type = ValueType::from(s)?,
             _ => return Err(argument_error("Expected argument type as text field")),
         }
     }

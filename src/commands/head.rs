@@ -3,15 +3,15 @@ use crate::errors::JobResult;
 use crate::{
     data::Argument,
     stream::{OutputStream, InputStream},
-    data::Cell,
+    data::Value,
     errors::{JobError, argument_error},
 };
 
 pub fn get_line_count(arguments: &Vec<Argument>) -> Result<i128, JobError> {
     return match arguments.len() {
         0 => Ok(10),
-        1 => match arguments[0].cell {
-            Cell::Integer(v) => Ok(v),
+        1 => match arguments[0].value {
+            Value::Integer(v) => Ok(v),
             _ => Err(argument_error("Expected a number"))
         }
         _ => Err(argument_error("Too many arguments"))

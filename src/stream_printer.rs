@@ -1,7 +1,7 @@
 use crate::stream::{ValueSender, channels, InputStream, Readable, RowsReader};
 use crate::printer::Printer;
 use std::thread;
-use crate::data::{Row, ColumnType, CellType, Alignment, Cell, Rows, Output};
+use crate::data::{Row, ColumnType, ValueType, Alignment, Value, Rows, Output};
 use std::cmp::max;
 
 pub fn spawn_print_thread(printer: &Printer) -> ValueSender {
@@ -19,10 +19,10 @@ pub fn spawn_print_thread(printer: &Printer) -> ValueSender {
     o
 }
 
-fn print_value(printer: &Printer, mut cell: Cell) {
+fn print_value(printer: &Printer, mut cell: Value) {
     match cell {
-        Cell::Output(mut output) => print(printer, &mut output.stream),
-        Cell::Rows(rows) => print(printer, &mut RowsReader::new(rows)),
+        Value::Output(mut output) => print(printer, &mut output.stream),
+        Value::Rows(rows) => print(printer, &mut RowsReader::new(rows)),
         _ => printer.line(cell.to_string().as_str()),
     };
 }
@@ -38,8 +38,8 @@ fn print_internal(printer: &Printer, stream: &mut impl Readable, indent: usize) 
 
     for val in stream.get_type().iter() {
         match val.cell_type {
-            CellType::Output(_) => has_table = true,
-            CellType::Rows(_) => has_table = true,
+            ValueType::Output(_) => has_table = true,
+            ValueType::Rows(_) => has_table = true,
             _ => (),
         }
         if val.name.is_some() {
@@ -113,8 +113,8 @@ fn print_row(printer: &Printer, w: &Vec<usize>, mut r: Row, indent: usize, rows:
         }
 
         match c {
-            Cell::Rows(r) => rows.push(r),
-            Cell::Output(o) => outputs.push(o),
+            Value::Rows(r) => rows.push(r),
+            Value::Output(o) => outputs.push(o),
             _ => {}
         }
     }

@@ -12,17 +12,17 @@ use lazy_static::lazy_static;
 
 use crate::commands::CompileContext;
 use crate::commands::command_util::{create_user_map, UserMap};
-use crate::data::{Argument, Cell, CellType, ColumnType, Row};
+use crate::data::{Argument, Value, ValueType, ColumnType, Row};
 use crate::env::get_cwd;
 use crate::errors::{error, JobError, JobResult, to_job_error};
 use crate::stream::OutputStream;
 
 lazy_static! {
     static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
-        ColumnType::named("user", CellType::Text),
-        ColumnType::named("size", CellType::Integer),
-        ColumnType::named("modified", CellType::Time),
-        ColumnType::named("file", CellType::File),
+        ColumnType::named("user", ValueType::Text),
+        ColumnType::named("size", ValueType::Integer),
+        ColumnType::named("modified", ValueType::Time),
+        ColumnType::named("file", ValueType::File),
     ];
 }
 
@@ -42,9 +42,9 @@ fn insert_entity(
     output.send(Row {
         cells: vec![
             users.get_name(meta.uid()),
-            Cell::Integer(i128::from(meta.len())),
-            Cell::Time(modified_datetime),
-            Cell::File(f),
+            Value::Integer(i128::from(meta.len())),
+            Value::Time(modified_datetime),
+            Value::File(f),
         ]
     })?;
     return Ok(());
@@ -116,14 +116,14 @@ fn parse(output: OutputStream, arguments: Vec<Argument>, recursive: bool) -> Res
         dirs.push(Box::from(Path::new(".")));
     }
     for arg in arguments {
-        match &arg.cell {
-            Cell::Text(dir) => {
+        match &arg.value {
+            Value::Text(dir) => {
                 dirs.push(Box::from(Path::new(dir.as_ref())));
             }
-            Cell::File(dir) => {
+            Value::File(dir) => {
                 dirs.push(dir.clone());
             }
-            Cell::Glob(dir) => {
+            Value::Glob(dir) => {
                 to_job_error(
                     dir.glob_files(
                         &get_cwd()?,

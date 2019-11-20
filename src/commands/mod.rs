@@ -51,7 +51,7 @@ use crate::{
     data::{
         Argument,
         Command,
-        Cell,
+        Value,
     },
 };
 use std::thread::{JoinHandle};
@@ -92,64 +92,64 @@ impl JobJoinHandle {
 }
 
 pub fn add_commands(env: &Env) -> JobResult<()> {
-    env.declare_str("echo", Cell::Command(Command::new(echo::compile_and_run)))?;
+    env.declare_str("echo", Value::Command(Command::new(echo::compile_and_run)))?;
 
-    env.declare_str("ls", Cell::Command(Command::new(find::compile_and_run_ls)))?;
-    env.declare_str("find", Cell::Command(Command::new(find::compile_and_run_find)))?;
-    env.declare_str("cd", Cell::Command(Command::new(cd::compile_and_run)))?;
-    env.declare_str("pwd", Cell::Command(Command::new(pwd::compile_and_run)))?;
+    env.declare_str("ls", Value::Command(Command::new(find::compile_and_run_ls)))?;
+    env.declare_str("find", Value::Command(Command::new(find::compile_and_run_find)))?;
+    env.declare_str("cd", Value::Command(Command::new(cd::compile_and_run)))?;
+    env.declare_str("pwd", Value::Command(Command::new(pwd::compile_and_run)))?;
 
-    env.declare_str("let", Cell::Command(Command::new(r#let::compile_and_run)))?;
-    env.declare_str("set", Cell::Command(Command::new(set::compile_and_run)))?;
-    env.declare_str("unset", Cell::Command(Command::new(unset::compile_and_run)))?;
-    env.declare_str("env", Cell::Command(Command::new(env::compile_and_run)))?;
-    env.declare_str("take", Cell::Command(Command::new(take::compile_and_run)))?;
+    env.declare_str("let", Value::Command(Command::new(r#let::compile_and_run)))?;
+    env.declare_str("set", Value::Command(Command::new(set::compile_and_run)))?;
+    env.declare_str("unset", Value::Command(Command::new(unset::compile_and_run)))?;
+    env.declare_str("env", Value::Command(Command::new(env::compile_and_run)))?;
+    env.declare_str("take", Value::Command(Command::new(take::compile_and_run)))?;
 
-    env.declare_str("ps", Cell::Command(Command::new(ps::compile_and_run)))?;
+    env.declare_str("ps", Value::Command(Command::new(ps::compile_and_run)))?;
 
-    env.declare_str("head", Cell::Command(Command::new(head::compile_and_run)))?;
-    env.declare_str("tail", Cell::Command(Command::new(tail::compile_and_run)))?;
+    env.declare_str("head", Value::Command(Command::new(head::compile_and_run)))?;
+    env.declare_str("tail", Value::Command(Command::new(tail::compile_and_run)))?;
 
-    env.declare_str("where", Cell::Command(Command::new(r#where::compile_and_run)))?;
-    env.declare_str("sort", Cell::Command(Command::new(sort::compile_and_run)))?;
-    env.declare_str("reverse", Cell::Command(Command::new(reverse::compile_and_run)))?;
+    env.declare_str("where", Value::Command(Command::new(r#where::compile_and_run)))?;
+    env.declare_str("sort", Value::Command(Command::new(sort::compile_and_run)))?;
+    env.declare_str("reverse", Value::Command(Command::new(reverse::compile_and_run)))?;
 
-    env.declare_str("group", Cell::Command(Command::new(group::compile_and_run)))?;
-    env.declare_str("join", Cell::Command(Command::new(join::compile_and_run)))?;
+    env.declare_str("group", Value::Command(Command::new(group::compile_and_run)))?;
+    env.declare_str("join", Value::Command(Command::new(join::compile_and_run)))?;
 
 //    env.declare_str("aggr", Cell::Command(Command::new(aggr::compile_and_run)))?;
 
-    env.declare_str("count", Cell::Command(Command::new(count::compile_and_run)))?;
-    env.declare_str("sum", Cell::Command(Command::new(sum::compile_and_run)))?;
-    env.declare_str("cat", Cell::Command(Command::new(cat::compile_and_run)))?;
-    env.declare_str("select", Cell::Command(Command::new(select::compile_and_run)))?;
-    env.declare_str("enumerate", Cell::Command(Command::new(enumerate::compile_and_run)))?;
+    env.declare_str("count", Value::Command(Command::new(count::compile_and_run)))?;
+    env.declare_str("sum", Value::Command(Command::new(sum::compile_and_run)))?;
+    env.declare_str("cat", Value::Command(Command::new(cat::compile_and_run)))?;
+    env.declare_str("select", Value::Command(Command::new(select::compile_and_run)))?;
+    env.declare_str("enumerate", Value::Command(Command::new(enumerate::compile_and_run)))?;
 
-    env.declare_str("cast", Cell::Command(Command::new(cast::compile_and_run)))?;
+    env.declare_str("cast", Value::Command(Command::new(cast::compile_and_run)))?;
 
-    env.declare_str("lines", Cell::Command(Command::new(lines::compile_and_run)))?;
-    env.declare_str("csv", Cell::Command(Command::new(csv::compile_and_run)))?;
+    env.declare_str("lines", Value::Command(Command::new(lines::compile_and_run)))?;
+    env.declare_str("csv", Value::Command(Command::new(csv::compile_and_run)))?;
 
-    env.declare_str("if", Cell::Command(Command::new(r#if::compile_and_run)))?;
-    env.declare_str("for", Cell::Command(Command::new(r#for::compile_and_run)))?;
-    env.declare_str("zip", Cell::Command(Command::new(zip::compile_and_run)))?;
+    env.declare_str("if", Value::Command(Command::new(r#if::compile_and_run)))?;
+    env.declare_str("for", Value::Command(Command::new(r#for::compile_and_run)))?;
+    env.declare_str("zip", Value::Command(Command::new(zip::compile_and_run)))?;
 
     let list = env.create_namespace("list")?;
 
-    list.declare_str("create", Cell::Command(Command::new(list::create)))?;
-    list.declare_str("len", Cell::Command(Command::new(list::len)))?;
-    list.declare_str("empty", Cell::Command(Command::new(list::empty)))?;
-    list.declare_str("push", Cell::Command(Command::new(list::push)))?;
-    list.declare_str("pop", Cell::Command(Command::new(list::pop)))?;
+    list.declare_str("create", Value::Command(Command::new(list::create)))?;
+    list.declare_str("len", Value::Command(Command::new(list::len)))?;
+    list.declare_str("empty", Value::Command(Command::new(list::empty)))?;
+    list.declare_str("push", Value::Command(Command::new(list::push)))?;
+    list.declare_str("pop", Value::Command(Command::new(list::pop)))?;
 
     let dict = env.create_namespace("dict")?;
 
-    dict.declare_str("create", Cell::Command(Command::new(dict::create)))?;
-    dict.declare_str("insert", Cell::Command(Command::new(dict::insert)))?;
-    dict.declare_str("get", Cell::Command(Command::new(dict::get)))?;
-    dict.declare_str("remove", Cell::Command(Command::new(dict::remove)))?;
-    dict.declare_str("len", Cell::Command(Command::new(dict::len)))?;
-    dict.declare_str("empty", Cell::Command(Command::new(dict::empty)))?;
+    dict.declare_str("create", Value::Command(Command::new(dict::create)))?;
+    dict.declare_str("insert", Value::Command(Command::new(dict::insert)))?;
+    dict.declare_str("get", Value::Command(Command::new(dict::get)))?;
+    dict.declare_str("remove", Value::Command(Command::new(dict::remove)))?;
+    dict.declare_str("len", Value::Command(Command::new(dict::len)))?;
+    dict.declare_str("empty", Value::Command(Command::new(dict::empty)))?;
 
     return Ok(());
 }

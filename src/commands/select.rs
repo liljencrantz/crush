@@ -5,7 +5,7 @@ use crate::{
     data::{
         Argument,
         Row,
-        Cell,
+        Value,
     },
     stream::{OutputStream, InputStream},
     replace::Replace,
@@ -20,16 +20,16 @@ pub struct Config {
 
 fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> JobResult<Config> {
     let columns: JobResult<Vec<(usize, Option<Box<str>>)>> = arguments.iter().map(|a| {
-        match &a.cell {
-            Cell::Text(s) => match find_field_from_str(s, input_type) {
+        match &a.value {
+            Value::Text(s) => match find_field_from_str(s, input_type) {
                 Ok(idx) => Ok((idx, a.name.clone().or(input_type[idx].name.clone()))),
                 Err(e) => Err(e),
             }
-            Cell::Field(s) => match find_field(s, input_type) {
+            Value::Field(s) => match find_field(s, input_type) {
                 Ok(idx) => Ok((idx, a.name.clone().or(input_type[idx].name.clone()))),
                 Err(e) => Err(e),
             }
-            _ => Err(argument_error(format!("Expected Field, not {:?}", a.cell.cell_type()).as_str())),
+            _ => Err(argument_error(format!("Expected Field, not {:?}", a.value.value_type()).as_str())),
         }
     }).collect();
 
@@ -48,7 +48,7 @@ pub fn run(
                     Row {
                         cells: config.columns
                             .iter()
-                            .map(|(idx, _name)| row.cells.replace(*idx, Cell::Integer(0)))
+                            .map(|(idx, _name)| row.cells.replace(*idx, Value::Integer(0)))
                             .collect()
                     })?;
             }

@@ -28,7 +28,7 @@ use std::error::Error;
 use crate::printer::Printer;
 use crate::stream::{empty_channel};
 use crate::stream_printer::spawn_print_thread;
-use crate::data::Cell;
+use crate::data::Value;
 use crate::env::get_home;
 use std::path::Path;
 
@@ -46,9 +46,9 @@ fn repl() -> JobResult<()> {
     let printer = Printer::new();
 
     add_commands(&global_env)?;
-    global_env.declare_str("true", Cell::Bool(true))?;
-    global_env.declare_str("false", Cell::Bool(false))?;
-    global_env.declare_str("global", Cell::Env(global_env.clone()))?;
+    global_env.declare_str("true", Value::Bool(true))?;
+    global_env.declare_str("false", Value::Bool(false))?;
+    global_env.declare_str("global", Value::Env(global_env.clone()))?;
 
     let mut rl = Editor::<()>::new();
     rl.load_history(crush_history_file().as_ref());

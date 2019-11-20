@@ -3,9 +3,9 @@ use crate::{
     data::{
         Argument,
         Row,
-        CellType,
+        ValueType,
         Output,
-        Cell,
+        Value,
     },
     stream::{OutputStream, InputStream, unlimited_streams},
     errors::{JobError, argument_error},
@@ -44,21 +44,21 @@ fn parse(arguments: Vec<Argument>, _input: InputStream) -> JobResult<Config> {
     for arg in arguments {
         match &arg.name {
             None => {
-                arg.cell.file_expand(&mut files);
+                arg.value.file_expand(&mut files);
             }
             Some(name) => {
-                match (name.as_ref(), arg.cell) {
-                    ("col", Cell::Text(s)) => {
+                match (name.as_ref(), arg.value) {
+                    ("col", Value::Text(s)) => {
                         let split: Vec<&str> = s.split(':').collect();
                         match split.len() {
-                            2 => columns.push(ColumnType::named(split[0], CellType::from(split[1])?)),
+                            2 => columns.push(ColumnType::named(split[0], ValueType::from(split[1])?)),
                             _ => return Err(argument_error(format!("Expected a column description on the form name:type, got {}", s).as_str())),
                         }
                     }
 
-                    ("head", Cell::Integer(s)) => skip_head = s as usize,
+                    ("head", Value::Integer(s)) => skip_head = s as usize,
 
-                    ("sep", Cell::Text(s)) => {
+                    ("sep", Value::Text(s)) => {
                         if s.len() == 1 {
                             separator = s.chars().next().unwrap();
                         } else {
@@ -66,7 +66,7 @@ fn parse(arguments: Vec<Argument>, _input: InputStream) -> JobResult<Config> {
                         }
                     }
 
-                    ("trim", Cell::Text(s)) => {
+                    ("trim", Value::Text(s)) => {
                         if s.len() == 1 {
                             trim = Some(s.chars().next().unwrap());
                         } else {
@@ -93,8 +93,8 @@ fn handle(file: Box<Path>, cfg: &Config, output: &OutputStream, printer: &Printe
     let (output_stream, input_stream) = unlimited_streams(cfg.columns.clone());
     let out_row = Row {
         cells: vec![
-            Cell::File(file.clone()),
-            Cell::Output(Output {
+            Value::File(file.clone()),
+            Value::Output(Output {
                 stream: input_stream,
             }),
         ],
@@ -140,7 +140,7 @@ fn handle(file: Box<Path>, cfg: &Config, output: &OutputStream, printer: &Printe
             match split.iter()
                 .zip(columns.iter())
                 .map({ |(s, t)| t.cell_type.parse(*s) })
-                .collect::<Result<Vec<Cell>, JobError>>() {
+                .collect::<Result<Vec<Value>, JobError>>() {
                 Ok(cells) => { output_stream.send(Row { cells }); }
                 Err(err) => { printer_copy.job_error(err); }
             }
@@ -163,8 +163,8 @@ pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let cfg = parse(context.arguments, input)?;
     let output = context.output.initialize(
         vec![
-            ColumnType::named("file", CellType::File),
-            ColumnType::named("data", CellType::Output(cfg.columns.clone())),
+            ColumnType::named("file", ValueType::File),
+            ColumnType::named("data", ValueType::Output(cfg.columns.clone())),
         ])?;
     run(cfg, output, context.printer)
 }

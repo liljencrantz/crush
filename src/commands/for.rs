@@ -1,6 +1,6 @@
 use crate::{
     data::Argument,
-    data::Cell,
+    data::Value,
 };
 use crate::printer::Printer;
 use crate::env::Env;
@@ -27,8 +27,8 @@ pub fn parse(mut context: CompileContext) -> JobResult<Config> {
     }
 
     let mut it = context.arguments.drain(..);
-    match (it.next().unwrap().cell, it.next().unwrap().cell) {
-        (Cell::Output(o), Cell::Closure(c)) => {
+    match (it.next().unwrap().value, it.next().unwrap().value) {
+        (Value::Output(o), Value::Closure(c)) => {
             Ok(Config {
                 iter: o,
                 body: c,

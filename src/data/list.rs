@@ -1,4 +1,4 @@
-use crate::data::{CellType, Cell};
+use crate::data::{ValueType, Value};
 use crate::errors::{JobError, mandate, JobResult};
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
@@ -7,12 +7,12 @@ use std::cmp::Ordering;
 #[derive(Debug)]
 #[derive(Clone)]
 pub struct List {
-    cell_type: CellType,
-    cells: Arc<Mutex<Vec<Cell>>>,
+    cell_type: ValueType,
+    cells: Arc<Mutex<Vec<Value>>>,
 }
 
 impl List {
-    pub fn new(cell_type: CellType, cells: Vec<Cell>) -> List { List { cell_type, cells: Arc::from(Mutex::new(cells)) } }
+    pub fn new(cell_type: ValueType, cells: Vec<Value>) -> List { List { cell_type, cells: Arc::from(Mutex::new(cells)) } }
 
     pub fn to_string(&self) -> String {
         let mut res = "[".to_string();
@@ -27,27 +27,27 @@ impl List {
         cells.len()
     }
 
-    pub fn get(&self, idx: usize) -> JobResult<Cell> {
+    pub fn get(&self, idx: usize) -> JobResult<Value> {
         let cells = self.cells.lock().unwrap();
         mandate(cells.get(idx), "Index out of bounds")?.partial_clone()
     }
 
-    pub fn append(&self, new_cells: &mut Vec<Cell>) {
+    pub fn append(&self, new_cells: &mut Vec<Value>) {
         let mut cells = self.cells.lock().unwrap();
         cells.append(new_cells);
     }
 
-    pub fn pop(&self) -> Option<Cell> {
+    pub fn pop(&self) -> Option<Value> {
         let mut cells = self.cells.lock().unwrap();
         cells.pop()
     }
 
-    pub fn element_type(&self) -> CellType {
+    pub fn element_type(&self) -> ValueType {
         self.cell_type.clone()
     }
 
-    pub fn list_type(&self) -> CellType {
-        CellType::List(Box::from(self.cell_type.clone()))
+    pub fn list_type(&self) -> ValueType {
+        ValueType::List(Box::from(self.cell_type.clone()))
     }
 
     pub fn partial_clone(&self) -> Result<List, JobError> {
@@ -56,7 +56,7 @@ impl List {
 
     pub fn materialize(self) ->  List {
         let mut cells = self.cells.lock().unwrap();
-        let vec: Vec<Cell> = cells.drain(..).map(|c| c.materialize()).collect();
+        let vec: Vec<Value> = cells.drain(..).map(|c| c.materialize()).collect();
         List {
             cell_type: self.cell_type.materialize(),
             cells: Arc::new(Mutex::from(vec)),

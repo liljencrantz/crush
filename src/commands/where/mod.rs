@@ -1,9 +1,9 @@
 use std::cmp::Ordering;
 
 use crate::{
-    commands::r#where::parser::{Condition, parse, Value},
+    commands::r#where::parser::{Condition, parse, WhereValue},
     data::{
-        Cell,
+        Value,
         Row,
     },
     stream::{InputStream, OutputStream}
@@ -21,12 +21,12 @@ pub struct Config {
 }
 
 
-fn do_match(needle: &Cell, haystack: &Cell) -> JobResult<bool> {
+fn do_match(needle: &Value, haystack: &Value) -> JobResult<bool> {
     match (needle, haystack) {
-        (Cell::Text(s), Cell::Glob(pattern)) => Ok(pattern.matches( s)),
-        (Cell::File(f), Cell::Glob(pattern)) => f.to_str().map(|s| Ok(pattern.matches( s))).unwrap_or(Err(error("Invalid filename"))),
-        (Cell::Text(s), Cell::Regex(_, pattern)) => Ok(pattern.is_match(s)),
-        (Cell::File(f), Cell::Regex(_, pattern)) => match f.to_str().map(|s| pattern.is_match(s)) {
+        (Value::Text(s), Value::Glob(pattern)) => Ok(pattern.matches( s)),
+        (Value::File(f), Value::Glob(pattern)) => f.to_str().map(|s| Ok(pattern.matches( s))).unwrap_or(Err(error("Invalid filename"))),
+        (Value::Text(s), Value::Regex(_, pattern)) => Ok(pattern.is_match(s)),
+        (Value::File(f), Value::Regex(_, pattern)) => match f.to_str().map(|s| pattern.is_match(s)) {
             Some(v) => Ok(v),
             None => Err(error("Invalid filename")),
         },
@@ -34,10 +34,10 @@ fn do_match(needle: &Cell, haystack: &Cell) -> JobResult<bool> {
     }
 }
 
-fn to_cell<'a>(value: &'a Value, row: &'a Row) -> &'a Cell {
+fn to_cell<'a>(value: &'a WhereValue, row: &'a Row) -> &'a Value {
     return match value {
-        Value::Cell(c) => &c,
-        Value::Field(idx) => &row.cells[*idx],
+        WhereValue::Value(c) => &c,
+        WhereValue::Field(idx) => &row.cells[*idx],
     };
 }
 

@@ -1,9 +1,9 @@
-use crate::data::CellType;
+use crate::data::ValueType;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ColumnType {
     pub name: Option<Box<str>>,
-    pub cell_type: CellType,
+    pub cell_type: ValueType,
 }
 
 impl ColumnType {
@@ -22,7 +22,7 @@ impl ColumnType {
         }
     }
 
-    pub fn named(name: &str, cell_type: CellType) -> ColumnType {
+    pub fn named(name: &str, cell_type: ValueType) -> ColumnType {
         ColumnType {
             name: Some(Box::from(name)),
             cell_type,

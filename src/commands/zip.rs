@@ -1,8 +1,8 @@
 use crate::commands::CompileContext;
 use crate::errors::JobResult;
 use crate::errors::error;
-use crate::data::CellType;
-use crate::data::Cell;
+use crate::data::ValueType;
+use crate::data::Value;
 use crate::stream::OutputStream;
 use crate::stream::Readable;
 
@@ -26,7 +26,7 @@ pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
         return Err(error("Expected exactly two arguments"));
     }
     match (&input_type[0].cell_type, &input_type[1].cell_type) {
-        (CellType::Output(o1), CellType::Output(o2)) => {
+        (ValueType::Output(o1), ValueType::Output(o2)) => {
             let mut output_type = Vec::new();
             output_type.append(&mut o1.clone());
             output_type.append(&mut o2.clone());
@@ -35,7 +35,7 @@ pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
             match input.recv() {
                 Ok(mut row) => {
                     match (row.cells.remove(0), row.cells.remove(0)) {
-                        (Cell::Output(mut r1), Cell::Output(mut r2)) => run(&mut r1.stream, &mut r2.stream, output),
+                        (Value::Output(mut r1), Value::Output(mut r2)) => run(&mut r1.stream, &mut r2.stream, output),
                         _ => return Err(error("Expected two streams of data as input arguments")),
                     }
                 }

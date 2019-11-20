@@ -1,7 +1,7 @@
 use crate::errors::{parse_error, argument_error, JobResult};
 use crate::job::Job;
 use crate::lexer::{Lexer, TokenType};
-use crate::data::{CellDefinition, ArgumentDefinition, ListDefinition};
+use crate::data::{ValueDefinition, ArgumentDefinition, ListDefinition};
 use crate::data::CallDefinition;
 use regex::Regex;
 use std::error::Error;
@@ -102,8 +102,8 @@ fn parse_command_from_lexer(lexer: &mut Lexer) -> JobResult<Vec<Box<str>>> {
     res
 }
 
-fn parse_mode(lexer: &mut Lexer) -> JobResult<Vec<CellDefinition>> {
-    let mut cells: Vec<CellDefinition> = Vec::new();
+fn parse_mode(lexer: &mut Lexer) -> JobResult<Vec<ValueDefinition>> {
+    let mut cells: Vec<ValueDefinition> = Vec::new();
     loop {
         let tt = lexer.peek().0;
         match tt {
@@ -115,7 +115,7 @@ fn parse_mode(lexer: &mut Lexer) -> JobResult<Vec<CellDefinition>> {
     Ok(cells)
 }
 
-fn parse_unnamed_argument(lexer: &mut Lexer) -> JobResult<CellDefinition> {
+fn parse_unnamed_argument(lexer: &mut Lexer) -> JobResult<ValueDefinition> {
     let mut cell = parse_unnamed_argument_without_subscript(lexer)?;
     loop {
         if lexer.peek().0 != TokenType::SubscriptStart {
@@ -127,30 +127,30 @@ fn parse_unnamed_argument(lexer: &mut Lexer) -> JobResult<CellDefinition> {
             return Err(parse_error("Expected '['", lexer));
         }
         lexer.pop();
-        cell = CellDefinition::Subscript(Box::from(cell), Box::from(idx));
+        cell = ValueDefinition::Subscript(Box::from(cell), Box::from(idx));
     }
     Ok(cell)
 }
 
-fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> JobResult<CellDefinition> {
+fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> JobResult<ValueDefinition> {
     let token_type = lexer.peek().0;
     match token_type {
         TokenType::String => {
-            return Ok(CellDefinition::text(lexer.pop().1));
+            return Ok(ValueDefinition::text(lexer.pop().1));
         }
         TokenType::Glob => {
-            return Ok(CellDefinition::Glob(Glob::new(lexer.pop().1)));
+            return Ok(ValueDefinition::Glob(Glob::new(lexer.pop().1)));
         }
         TokenType::Integer => {
             return match String::from(lexer.pop().1).parse::<i128>() {
-                Ok(ival) => Ok(CellDefinition::Integer(ival)),
+                Ok(ival) => Ok(ValueDefinition::Integer(ival)),
                 Err(_) => Err(parse_error("Invalid number", lexer)),
             };
         }
         TokenType::Equal | TokenType::NotEqual | TokenType::GreaterThan
         | TokenType::GreaterThanOrEqual | TokenType::LessThan | TokenType::LessThanOrEqual
         | TokenType::Match | TokenType::NotMatch => {
-            return Ok(CellDefinition::op(lexer.pop().1));
+            return Ok(ValueDefinition::op(lexer.pop().1));
         }
         TokenType::ModeStart => {
             let sigil = lexer.pop().1;
@@ -158,28 +158,28 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> JobResult<Cell
                 "{" => {
                     let dep = parse_internal(lexer)?;
                     lexer.pop();
-                    let res = Ok(CellDefinition::JobDefintion(dep));
+                    let res = Ok(ValueDefinition::JobDefintion(dep));
                     return res;
                 }
 
                 "materialized{" => {
                     let dep = parse_internal(lexer)?;
                     lexer.pop();
-                    let res = Ok(CellDefinition::MaterializedJobDefintion(dep));
+                    let res = Ok(ValueDefinition::MaterializedJobDefintion(dep));
                     return res;
                 }
 
                 "`{" => {
                     let dep = parse(lexer)?;
                     lexer.pop();
-                    let res = Ok(CellDefinition::ClosureDefinition(Closure::new(dep)));
+                    let res = Ok(ValueDefinition::ClosureDefinition(Closure::new(dep)));
                     return res;
                 }
 
                 "*{" => {
                     match lexer.peek().0 {
                         TokenType::Glob => {
-                            let result = Ok(CellDefinition::Glob(Glob::new(lexer.pop().1)));
+                            let result = Ok(ValueDefinition::Glob(Glob::new(lexer.pop().1)));
                             if lexer.peek().0 != TokenType::ModeEnd {
                                 return Err(parse_error("Expected '}'", lexer));
                             }
@@ -192,11 +192,11 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> JobResult<Cell
                     }
                 }
 
-                "duration{" => Ok(CellDefinition::Duration(parse_mode(lexer)?)),
+                "duration{" => Ok(ValueDefinition::Duration(parse_mode(lexer)?)),
 
-                "time{" => Ok(CellDefinition::Time(parse_mode(lexer)?)),
+                "time{" => Ok(ValueDefinition::Time(parse_mode(lexer)?)),
 
-                "list{" => Ok(CellDefinition::List(ListDefinition::new(parse_mode(lexer)?))),
+                "list{" => Ok(ValueDefinition::List(ListDefinition::new(parse_mode(lexer)?))),
 
                 other => {
                     return Err(parse_error(format!("Cannot handle mode with sigil {}}}", other).as_str(), lexer));
@@ -204,21 +204,21 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> JobResult<Cell
             }
         }
 
-        TokenType::Field => Ok(CellDefinition::Field(parse_name_from_lexer(lexer)?)),
-        TokenType::Variable => Ok(CellDefinition::Variable(parse_name_from_lexer(lexer)?)),
+        TokenType::Field => Ok(ValueDefinition::Field(parse_name_from_lexer(lexer)?)),
+        TokenType::Variable => Ok(ValueDefinition::Variable(parse_name_from_lexer(lexer)?)),
         TokenType::Regex => {
             let f = lexer.pop().1;
             let s = &f[2..f.len() - 1];
             match Regex::new(s) {
-                Ok(r) => Ok(CellDefinition::regex(s, r)),
+                Ok(r) => Ok(ValueDefinition::regex(s, r)),
                 Err(e) => Err(argument_error(e.description())),
             }
         }
-        TokenType::QuotedString => Ok(CellDefinition::text(unescape(lexer.pop().1).as_str())),
+        TokenType::QuotedString => Ok(ValueDefinition::text(unescape(lexer.pop().1).as_str())),
 
         TokenType::SubscriptStart => {
             lexer.pop();
-            let mut cells: Vec<CellDefinition> = Vec::new();
+            let mut cells: Vec<ValueDefinition> = Vec::new();
             loop {
                 let tt = lexer.peek().0;
                 match tt {
@@ -227,7 +227,7 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> JobResult<Cell
                 }
             }
             lexer.pop();
-            Ok(CellDefinition::List(ListDefinition::new(cells)))
+            Ok(ValueDefinition::List(ListDefinition::new(cells)))
         }
 
         _ => {
@@ -245,7 +245,7 @@ fn parse_argument(lexer: &mut Lexer) -> JobResult<ArgumentDefinition> {
                 lexer.pop();
                 return Ok(ArgumentDefinition::named(&ss, parse_unnamed_argument(lexer)?));
             } else {
-                return Ok(ArgumentDefinition::unnamed(CellDefinition::text(ss.as_str())));
+                return Ok(ArgumentDefinition::unnamed(ValueDefinition::text(ss.as_str())));
             }
         }
         _ => {

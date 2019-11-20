@@ -1,6 +1,6 @@
-mod cell;
-mod cell_definition;
-mod cell_type;
+mod value;
+mod value_definition;
+mod value_type;
 mod row;
 mod rows;
 mod argument;
@@ -9,19 +9,19 @@ mod column_type;
 mod list;
 mod dict;
 mod list_definition;
-mod cell_type_lexer;
-mod cell_type_parser;
+mod value_type_lexer;
+mod value_type_parser;
 
 use crate::commands::{CompileContext};
 use crate::errors::{JobResult, error};
 use std::fmt::Formatter;
 use crate::stream::{InputStream};
 
-pub use cell::Cell;
+pub use value::Value;
 pub use column_type::ColumnType;
-pub use cell_type::CellType;
-pub use cell_definition::CellDefinition;
-pub use cell::Alignment;
+pub use value_type::ValueType;
+pub use value_definition::ValueDefinition;
+pub use value::Alignment;
 pub use argument::Argument;
 pub use argument::BaseArgument;
 pub use argument::ArgumentDefinition;

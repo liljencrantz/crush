@@ -1,8 +1,8 @@
 use crate::{
     data::{
         Argument,
-        Cell,
-        CellType,
+        Value,
+        ValueType,
     },
     errors::{argument_error, JobError},
 };
@@ -10,42 +10,42 @@ use crate::data::ColumnType;
 use crate::commands::command_util::find_field;
 use crate::errors::error;
 
-pub enum Value {
-    Cell(Cell),
+pub enum WhereValue {
+    Value(Value),
     Field(usize),
 }
 
 pub enum Condition {
     And(Box<Condition>, Box<Condition>),
     Or(Box<Condition>, Box<Condition>),
-    Equal(Value, Value),
-    GreaterThan(Value, Value),
-    GreaterThanOrEqual(Value, Value),
-    LessThan(Value, Value),
-    LessThanOrEqual(Value, Value),
-    NotEqual(Value, Value),
-    Match(Value, Value),
-    NotMatch(Value, Value),
+    Equal(WhereValue, WhereValue),
+    GreaterThan(WhereValue, WhereValue),
+    GreaterThanOrEqual(WhereValue, WhereValue),
+    LessThan(WhereValue, WhereValue),
+    LessThanOrEqual(WhereValue, WhereValue),
+    NotEqual(WhereValue, WhereValue),
+    Match(WhereValue, WhereValue),
+    NotMatch(WhereValue, WhereValue),
 }
 
 fn parse_value(input_type: &Vec<ColumnType>,
-               arg: Argument) -> Result<Value, JobError> {
-    match arg.cell {
-        Cell::Field(s) => Ok(Value::Field(find_field(&s, input_type)?)),
-        Cell::Op(_) => Err(argument_error("Expected value")),
-        Cell::Output(_) => Err(argument_error("Invalid argument type Stream")),
-        _ => Ok(Value::Cell(arg.cell)),
+               arg: Argument) -> Result<WhereValue, JobError> {
+    match arg.value {
+        Value::Field(s) => Ok(WhereValue::Field(find_field(&s, input_type)?)),
+        Value::Op(_) => Err(argument_error("Expected value")),
+        Value::Output(_) => Err(argument_error("Invalid argument type Stream")),
+        _ => Ok(WhereValue::Value(arg.value)),
     }
 }
 
-fn to_cell_data_type(input_type: &Vec<ColumnType>, value: &Value) -> CellType {
+fn to_cell_data_type(input_type: &Vec<ColumnType>, value: &WhereValue) -> ValueType {
     match value {
-        Value::Cell(c) => c.cell_type(),
-        Value::Field(idx) => input_type[*idx].cell_type.clone(),
+        WhereValue::Value(c) => c.value_type(),
+        WhereValue::Field(idx) => input_type[*idx].cell_type.clone(),
     }
 }
 
-fn check_value(input_type: &Vec<ColumnType>, value: &Value, accepted_types: &Vec<CellType>) -> Option<JobError> {
+fn check_value(input_type: &Vec<ColumnType>, value: &WhereValue, accepted_types: &Vec<ValueType>) -> Option<JobError> {
     let t = to_cell_data_type(input_type, value);
     for a in accepted_types {
         if t == *a {
@@ -59,12 +59,12 @@ fn check_value(input_type: &Vec<ColumnType>, value: &Value, accepted_types: &Vec
     }
 }
 
-fn check_comparable(input_type: &Vec<ColumnType>, value: &Value) -> bool {
+fn check_comparable(input_type: &Vec<ColumnType>, value: &WhereValue) -> bool {
     let t = to_cell_data_type(input_type, value);
     return t.is_comparable();
 }
 
-fn check_comparison(input_type: &Vec<ColumnType>, l: &Value, r: &Value) -> Option<JobError> {
+fn check_comparison(input_type: &Vec<ColumnType>, l: &WhereValue, r: &WhereValue) -> Option<JobError> {
     if !check_comparable(input_type, l) {
         return Some(error("Type can't be compared"));
     }
@@ -77,10 +77,10 @@ fn check_comparison(input_type: &Vec<ColumnType>, l: &Value, r: &Value) -> Optio
 fn check_match(input_type: &Vec<ColumnType>, cond: Result<Condition, JobError>) -> Result<Condition, JobError> {
     match &cond {
         Ok(Condition::Match(l, r)) | Ok(Condition::NotMatch(l, r)) => {
-            if let Some(err) = check_value(&input_type, r, &vec![CellType::Glob, CellType::Regex]) {
+            if let Some(err) = check_value(&input_type, r, &vec![ValueType::Glob, ValueType::Regex]) {
                 return Err(err);
             }
-            if let Some(err) = check_value(&input_type, l, &vec![CellType::Text, CellType::File]) {
+            if let Some(err) = check_value(&input_type, l, &vec![ValueType::Text, ValueType::File]) {
                 return Err(err);
             }
         }
@@ -95,8 +95,8 @@ fn parse_value_condition(input_type: &Vec<ColumnType>,
         return Err(error("Wrong number of arguments"));
     }
     let val1 = parse_value(input_type, arguments.remove(0))?;
-    match arguments.remove(0).cell {
-        Cell::Op(op) => {
+    match arguments.remove(0).value {
+        Value::Op(op) => {
             let val2 = parse_value(input_type, arguments.remove(0))?;
             return match op.as_ref() {
                 "==" => if let Some(e) = check_comparison(input_type, &val1, &val2) { Err(e) } else { Ok(Condition::Equal(val1, val2)) },
@@ -120,8 +120,8 @@ fn parse_bool_condition(input_type: &Vec<ColumnType>,
     if arguments.len() < 2 {
        return Ok(cond1);
     }
-    match arguments.remove(0).cell {
-        Cell::Text(op) => {
+    match arguments.remove(0).value {
+        Value::Text(op) => {
             let cond2 = parse_value_condition(input_type, arguments)?;
             return match op.as_ref() {
                 "and" => Ok(Condition::And(Box::from(cond1), Box::from(cond2))),

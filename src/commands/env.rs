@@ -1,15 +1,15 @@
 use crate::commands::CompileContext;
 use crate::errors::JobResult;
-use crate::data::{ColumnType, CellType, Row, Cell};
+use crate::data::{ColumnType, ValueType, Row, Value};
 use std::collections::HashMap;
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let output = context.output.initialize(vec![
-        ColumnType::named("name", CellType::Text),
-        ColumnType::named("type", CellType::Text),
+        ColumnType::named("name", ValueType::Text),
+        ColumnType::named("type", ValueType::Text),
     ])?;
 
-    let mut vals : HashMap<String, CellType> = HashMap::new();
+    let mut vals : HashMap<String, ValueType> = HashMap::new();
     context.env.dump(&mut vals);
 
     let mut keys = vals.keys().collect::<Vec<&String>>();
@@ -17,8 +17,8 @@ pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
 
     for k in keys {
         output.send(Row {cells: vec![
-            Cell::Text(k.clone().into_boxed_str()),
-            Cell::Text(vals[k].to_string().into_boxed_str())
+            Value::Text(k.clone().into_boxed_str()),
+            Value::Text(vals[k].to_string().into_boxed_str())
         ]});
     }
 

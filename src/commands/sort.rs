@@ -4,7 +4,7 @@ use crate::{
     stream::{InputStream, OutputStream},
 };
 use crate::commands::CompileContext;
-use crate::data::{Argument, Cell, Row};
+use crate::data::{Argument, Value, Row};
 use crate::errors::JobResult;
 use crate::commands::command_util::find_field;
 
@@ -21,9 +21,9 @@ fn parse(
     if arguments.len() != 1 {
         return Err(argument_error("No comparison key specified"));
     }
-    let sort_column_idx = match (&arguments[0].name, &arguments[0].cell) {
-        (None, Cell::Text(cell_name)) => find_field_from_str(cell_name, input.get_type())?,
-        (None, Cell::Field(cell_name)) => find_field(cell_name, input.get_type())?,
+    let sort_column_idx = match (&arguments[0].name, &arguments[0].value) {
+        (None, Value::Text(cell_name)) => find_field_from_str(cell_name, input.get_type())?,
+        (None, Value::Field(cell_name)) => find_field(cell_name, input.get_type())?,
         _ => return Err(argument_error("No comparison key specified")),
     };
     if !input.get_type()[sort_column_idx].cell_type.is_comparable() {

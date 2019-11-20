@@ -13,7 +13,7 @@ pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
         }
     }
     for arg in context.arguments {
-        context.env.declare_str(arg.name.unwrap().as_ref(), arg.cell)?;
+        context.env.declare_str(arg.name.unwrap().as_ref(), arg.value)?;
     }
     return Ok(());
 }

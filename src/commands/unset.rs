@@ -1,13 +1,13 @@
 use crate::commands::CompileContext;
 use crate::data::Argument;
-use crate::data::Cell;
+use crate::data::Value;
 use crate::errors::argument_error;
 use crate::errors::JobResult;
 
 fn parse(arguments: Vec<Argument>) -> JobResult<Vec<Box<str>>> {
     let mut vars = Vec::new();
     for arg in arguments.iter() {
-        if let Cell::Text(s) = &arg.cell {
+        if let Value::Text(s) = &arg.value {
             if s.len() == 0 {
                 return Err(argument_error("Illegal variable name"));
             } else {

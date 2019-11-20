@@ -8,8 +8,8 @@ use crate::{
         Argument,
         Row,
         ColumnType,
-        CellType,
-        Cell,
+        ValueType,
+        Value,
     },
     stream::{OutputStream, InputStream},
     replace::Replace,
@@ -26,9 +26,9 @@ pub struct Config {
     right_column_idx: usize,
 }
 
-pub fn get_sub_type(cell_type: &CellType) -> Result<&Vec<ColumnType>, JobError>{
+pub fn get_sub_type(cell_type: &ValueType) -> Result<&Vec<ColumnType>, JobError>{
     match cell_type {
-        CellType::Output(sub_types) | CellType::Rows(sub_types) => Ok(sub_types),
+        ValueType::Output(sub_types) | ValueType::Rows(sub_types) => Ok(sub_types),
         _ => Err(argument_error("Expected a table column")),
     }
 }
@@ -36,7 +36,7 @@ pub fn get_sub_type(cell_type: &CellType) -> Result<&Vec<ColumnType>, JobError>{
 pub fn guess_tables(input_type: &Vec<ColumnType>) -> Result<(usize, usize, &Vec<ColumnType>, &Vec<ColumnType>), JobError> {
     let tables: Vec<(usize, &Vec<ColumnType>)> = input_type.iter().enumerate().flat_map(|(idx, t)| {
         match &t.cell_type {
-            CellType::Output(sub_types) | CellType::Rows(sub_types) => Some((idx, sub_types)),
+            ValueType::Output(sub_types) | ValueType::Rows(sub_types) => Some((idx, sub_types)),
             _ => None,
         }
     }).collect();
@@ -57,8 +57,8 @@ fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Config
     if arguments.len() != 3 {
         return Err(argument_error("Expected exactly 3 aguments"));
     }
-    return match (&arguments[0].cell, &arguments[1].cell, &arguments[2].cell) {
-        (Cell::Field(l), Cell::Op(op), Cell::Field(r)) => {
+    return match (&arguments[0].value, &arguments[1].value, &arguments[2].value) {
+        (Value::Field(l), Value::Op(op), Value::Field(r)) => {
             if op.as_ref() != "==" {
                 return Err(argument_error("Only == currently supported"));
             }
@@ -119,7 +119,7 @@ fn combine(mut l: Row, mut r: Row, cfg: &Config) -> Row {
 }
 
 fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &OutputStream) -> JobResult<()>{
-    let mut l_data: HashMap<Cell, Row> = HashMap::new();
+    let mut l_data: HashMap<Value, Row> = HashMap::new();
     loop {
         match l.read() {
             Ok(row) => {
@@ -152,17 +152,17 @@ pub fn run(
     loop {
         match input.recv() {
             Ok(mut row) => {
-                match (row.cells.replace(config.left_table_idx, Cell::Integer(0)), row.cells.replace(config.right_table_idx, Cell::Integer(0))) {
-                    (Cell::Output(mut l), Cell::Output(mut r)) => {
+                match (row.cells.replace(config.left_table_idx, Value::Integer(0)), row.cells.replace(config.right_table_idx, Value::Integer(0))) {
+                    (Value::Output(mut l), Value::Output(mut r)) => {
                         do_join(&config, &mut l.stream, &mut r.stream, &output)?;
                     }
-                    (Cell::Rows(mut l), Cell::Rows(mut r)) => {
+                    (Value::Rows(mut l), Value::Rows(mut r)) => {
                         do_join(&config, &mut l.reader(), &mut r.reader(), &output)?;
                     }
-                    (Cell::Output(mut l), Cell::Rows(mut r)) => {
+                    (Value::Output(mut l), Value::Rows(mut r)) => {
                         do_join(&config, &mut l.stream, &mut r.reader(), &output)?;
                     }
-                    (Cell::Rows(mut l), Cell::Output(mut r)) => {
+                    (Value::Rows(mut l), Value::Output(mut r)) => {
                         do_join(&config, &mut l.reader(), &mut r.stream, &output)?;
                     }
                     _ => panic!("Wrong row format"),
@@ -177,7 +177,7 @@ pub fn run(
 fn get_output_type(input_type: &Vec<ColumnType>, cfg: &Config) -> Result<Vec<ColumnType>, JobError> {
     let tables: Vec<Option<&Vec<ColumnType>>> = input_type.iter().map(|t| {
         match &t.cell_type {
-            CellType::Output(sub_types) | CellType::Rows(sub_types) => Some(sub_types),
+            ValueType::Output(sub_types) | ValueType::Rows(sub_types) => Some(sub_types),
             _ => None,
         }
     }).collect();

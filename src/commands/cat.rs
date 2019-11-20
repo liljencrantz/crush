@@ -1,8 +1,8 @@
 use crate::{
     data::{
         Argument,
-        Cell,
-        CellType,
+        Value,
+        ValueType,
     },
     errors::JobError,
     stream::{InputStream, OutputStream},
@@ -23,7 +23,7 @@ fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> Result<Conf
         .iter()
         .enumerate()
         .filter(|(_i, t)| match t.cell_type.clone() {
-            CellType::Output(_) | CellType::Rows(_) => true,
+            ValueType::Output(_) | ValueType::Rows(_) => true,
             _ => false,
         })
         .map(|(i, _t)| i)
@@ -34,12 +34,12 @@ fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> Result<Conf
             1 => Ok(Config { column: indices[0] }),
             _ => Err(argument_error("Multiple table-type columns found")),
         },
-        1 => match &arguments[0].cell {
-            Cell::Text(s) => {
+        1 => match &arguments[0].value {
+            Value::Text(s) => {
                 let idx = find_field_from_str(s, &input_type)?;
                 if indices.contains(&idx) { Ok(Config { column: idx }) } else { Err(argument_error("Field is not of table-type")) }
             }
-            Cell::Field(s) => {
+            Value::Field(s) => {
                 let idx = find_field(s, &input_type)?;
                 if indices.contains(&idx) { Ok(Config { column: idx }) } else { Err(argument_error("Field is not of table-type")) }
             }
@@ -57,8 +57,8 @@ pub fn run(
     loop {
         match input.recv() {
             Ok(mut row) => {
-                match row.cells.replace(config.column, Cell::Integer(0)) {
-                    Cell::Output(o) => loop {
+                match row.cells.replace(config.column, Value::Integer(0)) {
+                    Value::Output(o) => loop {
                         match o.stream.recv() {
                             Ok(row) => {
                                 output.send(row);
@@ -66,7 +66,7 @@ pub fn run(
                             Err(_) => break,
                         }
                     }
-                    Cell::Rows(rows) => {
+                    Value::Rows(rows) => {
                         for row in rows.rows {
                             output.send(row)?;
                         }
@@ -83,7 +83,7 @@ pub fn run(
 
 pub fn get_sub_type(cell_type: &ColumnType) -> Result<Vec<ColumnType>, JobError> {
     match &cell_type.cell_type {
-        CellType::Output(o) | CellType::Rows(o) => Ok(o.clone()),
+        ValueType::Output(o) | ValueType::Rows(o) => Ok(o.clone()),
         _ => Err(argument_error("Invalid column")),
     }
 }

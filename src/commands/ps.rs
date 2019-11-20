@@ -2,9 +2,9 @@ use crate::commands::CompileContext;
 use crate::errors::JobResult;
 use crate::{
     data::Row,
-    data::CellType,
+    data::ValueType,
     stream::{OutputStream},
-    data::Cell,
+    data::Value,
 };
 use psutil::process::State;
 use crate::commands::command_util::{create_user_map,UserMap};
@@ -32,12 +32,12 @@ pub fn run(output: OutputStream) -> JobResult<()> {
     for proc in &psutil::process::all().unwrap() {
         output.send(Row {
             cells: vec![
-                Cell::Integer(proc.pid as i128),
-                Cell::Integer(proc.ppid as i128),
-                Cell::text(state_name(proc.state)),
+                Value::Integer(proc.pid as i128),
+                Value::Integer(proc.ppid as i128),
+                Value::text(state_name(proc.state)),
                 users.get_name(proc.uid as uid_t),
-                    Cell::Duration(Duration::from_micros((proc.utime*1000000.0) as u64)),
-                Cell::text(
+                Value::Duration(Duration::from_micros((proc.utime*1000000.0) as u64)),
+                Value::text(
                     proc.cmdline_vec().unwrap_or_else(|_| Some(vec!["<Illegal name>".to_string()]))
                         .unwrap_or_else(|| vec![format!("[{}]", proc.comm)])[0]
                         .as_ref()),
@@ -49,12 +49,12 @@ pub fn run(output: OutputStream) -> JobResult<()> {
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let output = context.output.initialize(vec![
-        ColumnType::named("pid", CellType::Integer),
-        ColumnType::named("ppid", CellType::Integer),
-        ColumnType::named("status", CellType::Text),
-        ColumnType::named("user", CellType::Text),
-        ColumnType::named("cpu", CellType::Duration),
-        ColumnType::named("name", CellType::Text),
+        ColumnType::named("pid", ValueType::Integer),
+        ColumnType::named("ppid", ValueType::Integer),
+        ColumnType::named("status", ValueType::Text),
+        ColumnType::named("user", ValueType::Text),
+        ColumnType::named("cpu", ValueType::Duration),
+        ColumnType::named("name", ValueType::Text),
     ])?;
     run(output)
 }
