@@ -21,13 +21,14 @@ pub fn spawn_print_thread(printer: &Printer) -> ValueSender {
 
 fn print_value(printer: &Printer, mut cell: Cell) {
     match cell {
-        Cell::Output(output) => print(printer, output.stream),
-        _ => printer.line("LALALALA"),
+        Cell::Output(mut output) => print(printer, &mut output.stream),
+        Cell::Rows(rows) => print(printer, &mut RowsReader::new(rows)),
+        _ => printer.line(cell.to_string().as_str()),
     };
 }
 
-fn print(printer: &Printer, mut stream: InputStream) {
-    print_internal(printer, &mut stream, 0);
+fn print(printer: &Printer, stream: &mut impl Readable) {
+    print_internal(printer, stream, 0);
 }
 
 fn print_internal(printer: &Printer, stream: &mut impl Readable, indent: usize) {
