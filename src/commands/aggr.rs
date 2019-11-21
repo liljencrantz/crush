@@ -1,10 +1,10 @@
 use crate::{
     data::Argument,
-    data::Cell,
+    data::Value,
 };
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::data::{ColumnType, CellType, Row};
+use crate::data::{ColumnType, ValueType, Row};
 use crate::errors::{argument_error, JobResult, error};
 use crate::closure::Closure;
 use crate::commands::{CompileContext, JobJoinHandle};
@@ -25,7 +25,7 @@ pub fn guess_table(input_type: &Vec<ColumnType>) -> JobResult<usize> {
         .enumerate()
         .flat_map(|(idx, t)| {
             match &t.cell_type {
-                CellType::Output(_) | CellType::Rows(_) => Some(idx),
+                ValueType::Output(_) | ValueType::Rows(_) => Some(idx),
                 _ => None,
             }
         }).collect();
@@ -40,23 +40,23 @@ pub fn parse(input_type: &Vec<ColumnType>, argument: Vec<Argument>) -> JobResult
     if argument.len() < 2 {
         return Err(argument_error("Expected at least two paramaters"));
     }
-    let (table_idx, aggregations) = match (argument.len() % 2, argument[0].name.is_none(), &argument[0].cell) {
+    let (table_idx, aggregations) = match (argument.len() % 2, argument[0].name.is_none(), &argument[0].value) {
         (0, false, _) => (guess_table(input_type)?, &argument[..]),
-        (1, true, Cell::Field(f)) => (find_field(&f, input_type)?, &argument[1..]),
+        (1, true, Value::Field(f)) => (find_field(&f, input_type)?, &argument[1..]),
         _ => return Err(argument_error("Could not find table to aggregate")),
     };
 
     match &input_type[table_idx].cell_type {
-        CellType::Rows(sub_type) |
-        CellType::Output(sub_type) => {
+        ValueType::Rows(sub_type) |
+        ValueType::Output(sub_type) => {
             let output_definition = aggregations
                 .chunks(2)
                 .into_iter()
                 .map(|args| {
                     let spec = &args[0];
                     let clos = &args[1];
-                    match (&spec.name, &spec.cell, &clos.cell) {
-                        (Some(name), Cell::Field(f), Cell::Closure(c)) =>
+                    match (&spec.name, &spec.value, &clos.value) {
+                        (Some(name), Value::Field(f), Value::Closure(c)) =>
                             Ok((
                                 name.to_string(),
                                 find_field(&f, sub_type)?,
@@ -90,7 +90,7 @@ fn create_writer(
                         row.cells
                             .iter()
                             .enumerate()
-                            .map(|(idx, cell)| ColumnType { name: output_names[idx].take(), cell_type: cell.cell_type() })
+                            .map(|(idx, cell)| ColumnType { name: output_names[idx].take(), cell_type: cell.value_type() })
                             .collect()
                     )?;
                     tmp.send(row);
@@ -120,10 +120,10 @@ pub fn create_collector(
             match rest_input.recv() {
                 Ok(mut partial_row) => {
                     for ui in uninitialized_inputs {
-                        let i = ui.initialize()?;
+                        let i = ui.initialize_stream()?;
                         match i.recv() {
                             Ok(mut r) => {
-                                partial_row.cells.push(std::mem::replace(&mut r.cells[0], Cell::Integer(0)));
+                                partial_row.cells.push(std::mem::replace(&mut r.cells[0], Value::Integer(0)));
                             }
                             Err(_) => return Err(error("Missing value")),
                         }
@@ -146,7 +146,7 @@ pub fn pump_table(
         match job_output.read() {
             Ok(mut inner_row) => {
                 for stream_idx in 0..stream_to_column_mapping.len() {
-                    outputs[stream_idx].send(Row { cells: vec![inner_row.cells.replace(stream_to_column_mapping[stream_idx], Cell::Integer(0))] })?;
+                    outputs[stream_idx].send(Row { cells: vec![inner_row.cells.replace(stream_to_column_mapping[stream_idx], Value::Integer(0))] })?;
                 }
             }
             Err(_) => break,
@@ -164,13 +164,11 @@ fn create_aggregator(
     outputs: &mut Vec<OutputStream>,
     env: &Env,
     printer: &Printer) -> JobResult<JobJoinHandle> {
-    let (first_output, first_input) = streams();
+    let (first_output, first_input) = streams(vec![
+        ColumnType::named(name, input_type[idx].value_type.clone())
+    ]);
     let (last_output, last_input) = streams();
-    outputs.push(first_output.initialize(
-        vec![
-            ColumnType::named(name, input_type[idx].cell_type.clone())
-        ]
-    )?);
+    outputs.push(first_output);
     uninitialized_inputs.push(last_input);
 
     let local_printer = printer.clone();
@@ -252,9 +250,9 @@ pub fn run(config: Config, printer: &Printer, env: &Env, input: InputStream, uni
             Ok(mut row) => {
                 let table_cell = row.cells.remove(config.table_idx);
                 match table_cell {
-                    Cell::Output(mut job_output) =>
+                    Value::Output(mut job_output) =>
                         handle_row(row, &config, &mut job_output.stream, printer, env, &input, &writer_output)?,
-                    Cell::Rows(mut rows) =>
+                    Value::Rows(mut rows) =>
                         handle_row(row, &config, &mut RowsReader::new(rows), printer, env, &input, &writer_output)?,
                     _ => {
                         printer.job_error(error("Wrong column type"));

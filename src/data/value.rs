@@ -35,7 +35,7 @@ pub enum Value {
     Stream(Stream),
     File(Box<Path>),
     Rows(Rows),
-    Row(Struct),
+    Struct(Struct),
     List(List),
     Dict(Dict),
     Env(Env),
@@ -55,7 +55,7 @@ impl Value {
             Value::Command(_) => "Command".to_string(),
             Value::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
             Value::Rows(_) => "<Rows>".to_string(),
-            Value::Row(row) => row.to_string(),
+            Value::Struct(row) => row.to_string(),
             Value::Closure(c) => c.to_string(),
             Value::Stream(_) => "<Output>".to_string(),
             Value::List(l) => l.to_string(),
@@ -99,7 +99,7 @@ impl Value {
             Value::File(_) => ValueType::File,
             Value::Stream(o) => ValueType::Output(o.stream.get_type().clone()),
             Value::Rows(r) => ValueType::Rows(r.types.clone()),
-            Value::Row(r) => ValueType::Row(r.types.clone()),
+            Value::Struct(r) => ValueType::Row(r.types.clone()),
             Value::Closure(_) => ValueType::Closure,
             Value::List(l) => l.list_type(),
             Value::Duration(_) => ValueType::Duration,
@@ -132,7 +132,7 @@ impl Value {
             Value::Command(v) => Ok(Value::Command(v.clone())),
             Value::File(v) => Ok(Value::File(v.clone())),
             Value::Rows(r) => Ok(Value::Rows(r.partial_clone()?)),
-            Value::Row(r) => Ok(Value::Row(r.partial_clone()?)),
+            Value::Struct(r) => Ok(Value::Struct(r.partial_clone()?)),
             Value::Closure(c) => Ok(Value::Closure(c.clone())),
             Value::Stream(_) => Err(error("Invalid use of stream")),
             Value::List(l) => Ok(Value::List(l.partial_clone()?)),
@@ -157,7 +157,7 @@ impl Value {
             }
             Value::Rows(r) => Value::Rows(r.materialize()),
             Value::Dict(d) => Value::Dict(d.materialize()),
-            Value::Row(r) => Value::Row(r.materialize()),
+            Value::Struct(r) => Value::Struct(r.materialize()),
             Value::List(l) => Value::List(l.materialize()),
             _ => self,
         }
@@ -257,7 +257,7 @@ impl std::hash::Hash for Value {
             Value::Bool(v) => v.hash(state),
 
             Value::Env(_) | Value::Dict(_) | Value::Rows(_) | Value::Closure(_) |
-            Value::List(_) | Value::Stream(_) | Value::Row(_) => panic!("Can't hash output"),
+            Value::List(_) | Value::Stream(_) | Value::Struct(_) => panic!("Can't hash output"),
         }
     }
 }
@@ -288,7 +288,7 @@ impl std::cmp::PartialEq for Value {
                 None => false,
                 Some(o) => o == Ordering::Equal,
             },
-            (Value::Row(val1), Value::Row(val2)) => match val1.partial_cmp(val2) {
+            (Value::Struct(val1), Value::Struct(val2)) => match val1.partial_cmp(val2) {
                 None => false,
                 Some(o) => o == Ordering::Equal,
             },
@@ -327,7 +327,7 @@ impl std::cmp::PartialOrd for Value {
             (Value::Closure(_), _) => None,
             (Value::Stream(_), _) => None,
             (Value::Rows(val1), Value::Rows(val2)) => val1.partial_cmp(val2),
-            (Value::Row(val1), Value::Row(val2)) => val1.partial_cmp(val2),
+            (Value::Struct(val1), Value::Struct(val2)) => val1.partial_cmp(val2),
             (Value::List(val1), Value::List(val2)) => val1.partial_cmp(val2),
             (Value::Bool(val1), Value::Bool(val2)) => Some(val1.cmp(val2)),
             _ => None,

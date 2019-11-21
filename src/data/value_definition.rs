@@ -130,10 +130,10 @@ impl ValueDefinition {
                         mandate(dict.get(&c), "Invalid subscript")?,
                     (Ok(Value::Env(env)), Ok(Value::Text(name))) =>
                         mandate(env.get_str(name.as_ref()), "Invalid subscript")?,
-                    (Ok(Value::Row(row)), Ok(Value::Text(col))) =>
+                    (Ok(Value::Struct(row)), Ok(Value::Text(col))) =>
                         mandate(row.get(col.as_ref()), "Invalid subscript")?,
                     (Ok(Value::Stream(o)), Ok(Value::Integer(idx))) => {
-                        Value::Row(Struct {
+                        Value::Struct(Struct {
                             types: o.stream.get_type().clone(),
                             cells: o.get(idx)?.cells
                         })

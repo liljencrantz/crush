@@ -1,6 +1,6 @@
 mod command_util;
 
-mod echo;
+mod r#struct;
 
 mod find;
 mod cd;
@@ -92,7 +92,7 @@ impl JobJoinHandle {
 }
 
 pub fn add_commands(env: &Env) -> JobResult<()> {
-    env.declare_str("echo", Value::Command(Command::new(echo::compile_and_run)))?;
+    env.declare_str("struct", Value::Command(Command::new(r#struct::compile_and_run)))?;
 
     env.declare_str("ls", Value::Command(Command::new(find::compile_and_run_ls)))?;
     env.declare_str("find", Value::Command(Command::new(find::compile_and_run_find)))?;
@@ -117,7 +117,7 @@ pub fn add_commands(env: &Env) -> JobResult<()> {
     env.declare_str("group", Value::Command(Command::new(group::compile_and_run)))?;
     env.declare_str("join", Value::Command(Command::new(join::compile_and_run)))?;
 
-//    env.declare_str("aggr", Cell::Command(Command::new(aggr::compile_and_run)))?;
+//    env.declare_str("aggr", Value::Command(Command::new(aggr::compile_and_run)))?;
 
     env.declare_str("count", Value::Command(Command::new(count::compile_and_run)))?;
     env.declare_str("sum", Value::Command(Command::new(sum::compile_and_run)))?;

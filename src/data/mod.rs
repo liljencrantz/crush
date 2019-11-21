@@ -26,6 +26,7 @@ pub use argument::Argument;
 pub use argument::BaseArgument;
 pub use argument::ArgumentDefinition;
 pub use row::Row;
+pub use row::Struct;
 pub use rows::Rows;
 pub use call_definition::CallDefinition;
 pub use list::List;

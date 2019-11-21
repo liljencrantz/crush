@@ -40,6 +40,10 @@ impl Struct {
         })
     }
 
+    pub fn get_types(&self) -> &Vec<ColumnType> {
+        &self.types
+    }
+
     pub fn get(mut self, name: &str) -> Option<Value> {
         for (idx, t) in self.types.iter().enumerate() {
             match &t.name {

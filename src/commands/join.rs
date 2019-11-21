@@ -14,10 +14,11 @@ use crate::{
     stream::{OutputStream, InputStream},
     replace::Replace,
     errors::argument_error,
-    commands::command_util::find_field_from_str
+    commands::command_util::find_field_from_str,
 };
 use crate::commands::command_util::find_field;
 use crate::stream::RowsReader;
+use crate::data::Struct;
 
 pub struct Config {
     left_table_idx: usize,
@@ -26,7 +27,7 @@ pub struct Config {
     right_column_idx: usize,
 }
 
-pub fn get_sub_type(cell_type: &ValueType) -> Result<&Vec<ColumnType>, JobError>{
+pub fn get_sub_type(cell_type: &ValueType) -> Result<&Vec<ColumnType>, JobError> {
     match cell_type {
         ValueType::Output(sub_types) | ValueType::Rows(sub_types) => Ok(sub_types),
         _ => Err(argument_error("Expected a table column")),
@@ -53,7 +54,7 @@ fn scan_table(table: &str, column: &str, input_type: &Vec<ColumnType>) -> Result
     Ok((table_idx, column_idx))
 }
 
-fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Config, JobError> {
+fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Config, JobError> {
     if arguments.len() != 3 {
         return Err(argument_error("Expected exactly 3 aguments"));
     }
@@ -75,10 +76,10 @@ fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Config
                     }
                 }
                 (2, 2) => {
-                    let (left_table_idx, left_column_idx ) =
+                    let (left_table_idx, left_column_idx) =
                         scan_table(l[0].as_ref(), l[1].as_ref(), &input_type)?;
 
-                    let (right_table_idx, right_column_idx ) =
+                    let (right_table_idx, right_column_idx) =
                         scan_table(r[0].as_ref(), r[1].as_ref(), &input_type)?;
 
                     if left_table_idx == right_table_idx {
@@ -91,7 +92,7 @@ fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Config
                         left_column_idx,
                         right_column_idx,
                     }
-                },
+                }
                 _ => return Err(argument_error("Expected both fields on the form %table.column or %column")),
             };
 
@@ -118,7 +119,7 @@ fn combine(mut l: Row, mut r: Row, cfg: &Config) -> Row {
     return Row { cells: l.cells };
 }
 
-fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &OutputStream) -> JobResult<()>{
+fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &OutputStream) -> JobResult<()> {
     let mut l_data: HashMap<Value, Row> = HashMap::new();
     loop {
         match l.read() {
@@ -146,32 +147,25 @@ fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &
 
 pub fn run(
     config: Config,
-    input: InputStream,
+    mut row: Struct,
     output: OutputStream,
 ) -> JobResult<()> {
-    loop {
-        match input.recv() {
-            Ok(mut row) => {
-                match (row.cells.replace(config.left_table_idx, Value::Integer(0)), row.cells.replace(config.right_table_idx, Value::Integer(0))) {
-                    (Value::Stream(mut l), Value::Stream(mut r)) => {
-                        do_join(&config, &mut l.stream, &mut r.stream, &output)?;
-                    }
-                    (Value::Rows(mut l), Value::Rows(mut r)) => {
-                        do_join(&config, &mut l.reader(), &mut r.reader(), &output)?;
-                    }
-                    (Value::Stream(mut l), Value::Rows(mut r)) => {
-                        do_join(&config, &mut l.stream, &mut r.reader(), &output)?;
-                    }
-                    (Value::Rows(mut l), Value::Stream(mut r)) => {
-                        do_join(&config, &mut l.reader(), &mut r.stream, &output)?;
-                    }
-                    _ => panic!("Wrong row format"),
-                }
-            }
-            Err(_) => break,
+    match (row.cells.replace(config.left_table_idx, Value::Integer(0)), row.cells.replace(config.right_table_idx, Value::Integer(0))) {
+        (Value::Stream(mut l), Value::Stream(mut r)) => {
+            do_join(&config, &mut l.stream, &mut r.stream, &output)?;
         }
+        (Value::Rows(mut l), Value::Rows(mut r)) => {
+            do_join(&config, &mut l.reader(), &mut r.reader(), &output)?;
+        }
+        (Value::Stream(mut l), Value::Rows(mut r)) => {
+            do_join(&config, &mut l.stream, &mut r.reader(), &output)?;
+        }
+        (Value::Rows(mut l), Value::Stream(mut r)) => {
+            do_join(&config, &mut l.reader(), &mut r.stream, &output)?;
+        }
+        _ => panic!("Wrong row format"),
     }
-    return Ok(());
+    Ok(())
 }
 
 fn get_output_type(input_type: &Vec<ColumnType>, cfg: &Config) -> Result<Vec<ColumnType>, JobError> {
@@ -197,9 +191,13 @@ fn get_output_type(input_type: &Vec<ColumnType>, cfg: &Config) -> Result<Vec<Col
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let input = context.input.initialize_stream()?;
-    let cfg = parse(input.get_type().clone(), context.arguments)?;
-    let output_type = get_output_type(input.get_type(), &cfg)?;
-    let output = context.output.initialize(output_type)?;
-    run(cfg, input, output)
+    match context.input.recv()? {
+        Value::Struct(s) => {
+            let cfg = parse(s.get_types(), context.arguments)?;
+            let output_type = get_output_type(s.get_types(), &cfg)?;
+            let output = context.output.initialize(output_type)?;
+            run(cfg, s, output)
+        }
+        _ => Err(argument_error("Expected a struct"))
+    }
 }
