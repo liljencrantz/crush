@@ -1,5 +1,5 @@
 use crate::data::{ColumnType, Value};
-use crate::data::{Row, Rows, Output};
+use crate::data::{Row, Rows, Stream};
 use std::sync::mpsc::{Receiver, sync_channel, SyncSender, channel, Sender};
 use crate::errors::{JobError, error, JobResult, to_job_error};
 use std::error::Error;
@@ -17,7 +17,7 @@ impl ValueSender {
 
     pub fn initialize(self, signature: Vec<ColumnType>) -> JobResult<OutputStream> {
         let (output, input) = streams(signature);
-        self.send(Value::Output(Output { stream: input }))?;
+        self.send(Value::Stream(Stream { stream: input }))?;
         Ok(output)
     }
 }
@@ -34,7 +34,7 @@ impl ValueReceiver {
 
     pub fn initialize_stream(self) -> JobResult<InputStream> {
         match self.recv()? {
-            Value::Output(out) => Ok(out.stream),
+            Value::Stream(out) => Ok(out.stream),
             _ => Err(error("Expected a stream")),
         }
     }

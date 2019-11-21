@@ -5,7 +5,7 @@ use regex::Regex;
 
 use crate::closure::Closure;
 use crate::commands::JobJoinHandle;
-use crate::data::{Value, Output, ListDefinition, Row, Rows};
+use crate::data::{Value, Stream, ListDefinition, Row, Rows};
 use crate::env::Env;
 use crate::errors::{error, mandate, JobResult, argument_error, to_job_error, JobError};
 use crate::glob::Glob;
@@ -15,7 +15,7 @@ use crate::stream::streams;
 use crate::stream::channels;
 use crate::stream::empty_channel;
 use std::time::Duration;
-use crate::data::row::RowWithTypes;
+use crate::data::row::Struct;
 
 #[derive(Clone)]
 #[derive(Debug)]
@@ -132,8 +132,8 @@ impl ValueDefinition {
                         mandate(env.get_str(name.as_ref()), "Invalid subscript")?,
                     (Ok(Value::Row(row)), Ok(Value::Text(col))) =>
                         mandate(row.get(col.as_ref()), "Invalid subscript")?,
-                    (Ok(Value::Output(o)), Ok(Value::Integer(idx))) => {
-                        Value::Row(RowWithTypes {
+                    (Ok(Value::Stream(o)), Ok(Value::Integer(idx))) => {
+                        Value::Row(Struct {
                             types: o.stream.get_type().clone(),
                             cells: o.get(idx)?.cells
                         })

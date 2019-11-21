@@ -4,7 +4,7 @@ use crate::{
         Argument,
         Row,
         ValueType,
-        Output,
+        Stream,
         Value,
     },
     stream::{OutputStream, InputStream, unlimited_streams},
@@ -94,7 +94,7 @@ fn handle(file: Box<Path>, cfg: &Config, output: &OutputStream, printer: &Printe
     let out_row = Row {
         cells: vec![
             Value::File(file.clone()),
-            Value::Output(Output {
+            Value::Stream(Stream {
                 stream: input_stream,
             }),
         ],

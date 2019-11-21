@@ -27,14 +27,14 @@ impl Row {
 #[derive(PartialEq)]
 #[derive(PartialOrd)]
 #[derive(Debug)]
-pub struct RowWithTypes {
+pub struct Struct {
     pub types: Vec<ColumnType>,
     pub cells: Vec<Value>,
 }
 
-impl RowWithTypes {
+impl Struct {
     pub fn partial_clone(&self) -> JobResult<Self> {
-        Ok(RowWithTypes {
+        Ok(Struct {
             types: self.types.clone(),
             cells: self.cells.iter().map(|c| c.partial_clone()).collect::<JobResult<Vec<Value>>>()?,
         })
@@ -50,15 +50,15 @@ impl RowWithTypes {
         None
     }
 
-    pub fn materialize(mut self) ->  RowWithTypes {
-        RowWithTypes {
+    pub fn materialize(mut self) -> Struct {
+        Struct {
             types: ColumnType::materialize(&self.types),
             cells: self.cells.drain(..).map(|c| c.materialize()).collect(),
         }
     }
 }
 
-impl ToString for RowWithTypes {
+impl ToString for Struct {
     fn to_string(&self) -> String {
         self.cells.iter().map(|c| c.to_string()).collect::<Vec<String>>().join(", ")
     }

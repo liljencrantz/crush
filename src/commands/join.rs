@@ -153,16 +153,16 @@ pub fn run(
         match input.recv() {
             Ok(mut row) => {
                 match (row.cells.replace(config.left_table_idx, Value::Integer(0)), row.cells.replace(config.right_table_idx, Value::Integer(0))) {
-                    (Value::Output(mut l), Value::Output(mut r)) => {
+                    (Value::Stream(mut l), Value::Stream(mut r)) => {
                         do_join(&config, &mut l.stream, &mut r.stream, &output)?;
                     }
                     (Value::Rows(mut l), Value::Rows(mut r)) => {
                         do_join(&config, &mut l.reader(), &mut r.reader(), &output)?;
                     }
-                    (Value::Output(mut l), Value::Rows(mut r)) => {
+                    (Value::Stream(mut l), Value::Rows(mut r)) => {
                         do_join(&config, &mut l.stream, &mut r.reader(), &output)?;
                     }
-                    (Value::Rows(mut l), Value::Output(mut r)) => {
+                    (Value::Rows(mut l), Value::Stream(mut r)) => {
                         do_join(&config, &mut l.reader(), &mut r.stream, &output)?;
                     }
                     _ => panic!("Wrong row format"),

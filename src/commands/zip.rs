@@ -35,7 +35,7 @@ pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
             match input.recv() {
                 Ok(mut row) => {
                     match (row.cells.remove(0), row.cells.remove(0)) {
-                        (Value::Output(mut r1), Value::Output(mut r2)) => run(&mut r1.stream, &mut r2.stream, output),
+                        (Value::Stream(mut r1), Value::Stream(mut r2)) => run(&mut r1.stream, &mut r2.stream, output),
                         _ => return Err(error("Expected two streams of data as input arguments")),
                     }
                 }

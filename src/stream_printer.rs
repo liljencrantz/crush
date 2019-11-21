@@ -1,7 +1,7 @@
 use crate::stream::{ValueSender, channels, InputStream, Readable, RowsReader};
 use crate::printer::Printer;
 use std::thread;
-use crate::data::{Row, ColumnType, ValueType, Alignment, Value, Rows, Output};
+use crate::data::{Row, ColumnType, ValueType, Alignment, Value, Rows, Stream};
 use std::cmp::max;
 
 pub fn spawn_print_thread(printer: &Printer) -> ValueSender {
@@ -21,7 +21,7 @@ pub fn spawn_print_thread(printer: &Printer) -> ValueSender {
 
 fn print_value(printer: &Printer, mut cell: Value) {
     match cell {
-        Value::Output(mut output) => print(printer, &mut output.stream),
+        Value::Stream(mut output) => print(printer, &mut output.stream),
         Value::Rows(rows) => print(printer, &mut RowsReader::new(rows)),
         _ => printer.line(cell.to_string().as_str()),
     };
@@ -93,7 +93,7 @@ fn print_header(printer: &Printer, w: &Vec<usize>, types: &Vec<ColumnType>, has_
     }
 }
 
-fn print_row(printer: &Printer, w: &Vec<usize>, mut r: Row, indent: usize, rows: &mut Vec<Rows>, outputs: &mut Vec<Output>) {
+fn print_row(printer: &Printer, w: &Vec<usize>, mut r: Row, indent: usize, rows: &mut Vec<Rows>, outputs: &mut Vec<Stream>) {
     let cell_len = r.cells.len();
     let mut row = " ".repeat(indent * 4);
     for (idx, c) in r.cells.drain(..).enumerate() {
@@ -114,7 +114,7 @@ fn print_row(printer: &Printer, w: &Vec<usize>, mut r: Row, indent: usize, rows:
 
         match c {
             Value::Rows(r) => rows.push(r),
-            Value::Output(o) => outputs.push(o),
+            Value::Stream(o) => outputs.push(o),
             _ => {}
         }
     }

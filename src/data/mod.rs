@@ -60,11 +60,11 @@ impl std::fmt::Debug for Command {
 }
 
 #[derive(Debug)]
-pub struct Output {
+pub struct Stream {
     pub stream: InputStream,
 }
 
-impl Output {
+impl Stream {
     pub fn get(&self, idx: i128) -> JobResult<Row> {
         let mut i = 0i128;
         loop {

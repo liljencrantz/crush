@@ -13,7 +13,7 @@ use crate::{
         Row,
         ColumnType,
         ValueType,
-        Output,
+        Stream,
         Value,
     },
     stream::{OutputStream, InputStream, unlimited_streams},
@@ -33,7 +33,7 @@ fn handle(file: Box<Path>, output: &OutputStream) -> JobResult<()> {
     let out_row = Row {
         cells: vec![
             Value::File(file.clone()),
-            Value::Output(Output {
+            Value::Stream(Stream {
                 stream: input_stream,
             }),
         ],

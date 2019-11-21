@@ -6,7 +6,7 @@ use crate::{
     data::{
         Argument,
         Row,
-        Output,
+        Stream,
         ValueType,
         Value,
     },
@@ -62,7 +62,7 @@ pub fn run(
                     None => {
                         let (output_stream, input_stream) = unlimited_streams(config.input_type.clone());
                         let out_row = Row {
-                            cells: vec![key.partial_clone()?, Value::Output(Output { stream: input_stream })],
+                            cells: vec![key.partial_clone()?, Value::Stream(Stream { stream: input_stream })],
                         };
                         output.send(out_row)?;
                         output_stream.send(row);

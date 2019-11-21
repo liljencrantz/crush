@@ -4,7 +4,7 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::env::Env;
-use crate::data::{Output};
+use crate::data::{Stream};
 use crate::errors::{argument_error, JobResult};
 use crate::closure::Closure;
 use crate::commands::CompileContext;
@@ -12,7 +12,7 @@ use crate::stream::empty_channel;
 use crate::stream_printer::spawn_print_thread;
 
 pub struct Config {
-    iter: Output,
+    iter: Stream,
     body: Closure,
     env: Env,
     printer: Printer,
@@ -28,7 +28,7 @@ pub fn parse(mut context: CompileContext) -> JobResult<Config> {
 
     let mut it = context.arguments.drain(..);
     match (it.next().unwrap().value, it.next().unwrap().value) {
-        (Value::Output(o), Value::Closure(c)) => {
+        (Value::Stream(o), Value::Closure(c)) => {
             Ok(Config {
                 iter: o,
                 body: c,

@@ -33,7 +33,7 @@ fn parse_value(input_type: &Vec<ColumnType>,
     match arg.value {
         Value::Field(s) => Ok(WhereValue::Field(find_field(&s, input_type)?)),
         Value::Op(_) => Err(argument_error("Expected value")),
-        Value::Output(_) => Err(argument_error("Invalid argument type Stream")),
+        Value::Stream(_) => Err(argument_error("Invalid argument type Stream")),
         _ => Ok(WhereValue::Value(arg.value)),
     }
 }

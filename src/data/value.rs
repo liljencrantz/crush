@@ -12,12 +12,12 @@ use crate::{
     errors::{error, JobError, to_job_error},
     glob::Glob,
 };
-use crate::data::{List, Command, Output, ValueType, Dict, ColumnType};
+use crate::data::{List, Command, Stream, ValueType, Dict, ColumnType};
 use crate::errors::JobResult;
 use std::time::Duration;
 use crate::format::duration_format;
 use crate::env::Env;
-use crate::data::row::RowWithTypes;
+use crate::data::row::Struct;
 use crate::stream::streams;
 
 #[derive(Debug)]
@@ -32,10 +32,10 @@ pub enum Value {
     Op(Box<str>),
     Command(Command),
     Closure(Closure),
-    Output(Output),
+    Stream(Stream),
     File(Box<Path>),
     Rows(Rows),
-    Row(RowWithTypes),
+    Row(Struct),
     List(List),
     Dict(Dict),
     Env(Env),
@@ -57,7 +57,7 @@ impl Value {
             Value::Rows(_) => "<Rows>".to_string(),
             Value::Row(row) => row.to_string(),
             Value::Closure(c) => c.to_string(),
-            Value::Output(_) => "<Output>".to_string(),
+            Value::Stream(_) => "<Output>".to_string(),
             Value::List(l) => l.to_string(),
             Value::Duration(d) => duration_format(d),
             Value::Env(env) => env.to_string(),
@@ -75,7 +75,7 @@ impl Value {
 
     pub fn empty_stream() -> Value {
         let (s, r) = streams(vec![]);
-        Value::Output(Output {stream: r})
+        Value::Stream(Stream {stream: r})
     }
 
     pub fn text(s: &str) -> Value {
@@ -97,7 +97,7 @@ impl Value {
             Value::Op(_) => ValueType::Op,
             Value::Command(_) => ValueType::Command,
             Value::File(_) => ValueType::File,
-            Value::Output(o) => ValueType::Output(o.stream.get_type().clone()),
+            Value::Stream(o) => ValueType::Output(o.stream.get_type().clone()),
             Value::Rows(r) => ValueType::Rows(r.types.clone()),
             Value::Row(r) => ValueType::Row(r.types.clone()),
             Value::Closure(_) => ValueType::Closure,
@@ -134,7 +134,7 @@ impl Value {
             Value::Rows(r) => Ok(Value::Rows(r.partial_clone()?)),
             Value::Row(r) => Ok(Value::Row(r.partial_clone()?)),
             Value::Closure(c) => Ok(Value::Closure(c.clone())),
-            Value::Output(_) => Err(error("Invalid use of stream")),
+            Value::Stream(_) => Err(error("Invalid use of stream")),
             Value::List(l) => Ok(Value::List(l.partial_clone()?)),
             Value::Duration(d) => Ok(Value::Duration(d.clone())),
             Value::Env(e) => Ok(Value::Env(e.clone())),
@@ -145,7 +145,7 @@ impl Value {
 
     pub fn materialize(self) -> Value {
         match self {
-            Value::Output(output) => {
+            Value::Stream(output) => {
                 let mut rows = Vec::new();
                 loop {
                     match output.stream.recv() {
@@ -257,7 +257,7 @@ impl std::hash::Hash for Value {
             Value::Bool(v) => v.hash(state),
 
             Value::Env(_) | Value::Dict(_) | Value::Rows(_) | Value::Closure(_) |
-            Value::List(_) | Value::Output(_) | Value::Row(_) => panic!("Can't hash output"),
+            Value::List(_) | Value::Stream(_) | Value::Row(_) => panic!("Can't hash output"),
         }
     }
 }
@@ -325,7 +325,7 @@ impl std::cmp::PartialOrd for Value {
             (Value::Duration(val1), Value::Duration(val2)) => Some(val1.cmp(val2)),
             (Value::Command(_), Value::Command(_)) => None,
             (Value::Closure(_), _) => None,
-            (Value::Output(_), _) => None,
+            (Value::Stream(_), _) => None,
             (Value::Rows(val1), Value::Rows(val2)) => val1.partial_cmp(val2),
             (Value::Row(val1), Value::Row(val2)) => val1.partial_cmp(val2),
             (Value::List(val1), Value::List(val2)) => val1.partial_cmp(val2),
