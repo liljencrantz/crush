@@ -26,6 +26,10 @@ impl Rows {
         }
     }
 
+    pub fn get_type(&self) -> &Vec<ColumnType> {
+        &self.types
+    }
+
     pub fn reader(self) -> RowsReader {
         RowsReader::new(self)
     }

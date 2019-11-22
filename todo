@@ -1,7 +1,6 @@
 Todo:
 Add a bunch of system tests
 Fix aggr command and think through it's input/output types
-Think through input/output types of join
 Rename rows -> ImmutableList
 Rename list -> MutableList
 Rename dict -> MutableDict
@@ -111,3 +110,4 @@ Any cell can be the output of a command
 Rename cell -> value
 Rename output -> stream
 Rename row -> struct
+Think through input/output types of join

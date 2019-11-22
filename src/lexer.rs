@@ -66,6 +66,7 @@ ignored
 lazy_static! {
     static ref LEX_DATA: Vec<(TokenType, Regex)> = vec![
         (TokenType::Separator, Regex::new("^;").unwrap()),
+        (TokenType::Separator, Regex::new("^\n").unwrap()),
         (TokenType::Pipe, Regex::new(r"^\|").unwrap()),
 
         (TokenType::Assign, Regex::new(r"^=").unwrap()),
@@ -94,33 +95,33 @@ lazy_static! {
 
         (TokenType::String, Regex::new(r"^[/._a-zA-Z][/.:_a-z-A-Z0-9]*").unwrap()),
         (TokenType::Glob, Regex::new(r"^[/._a-zA-Z*.?][/_a-z-A-Z0-9*.?]*").unwrap()),
-        (TokenType::Comment, Regex::new("(?m)^#.*$").unwrap()),
-        (TokenType::Whitespace, Regex::new(r"^\s+").unwrap()),
+        (TokenType::Comment, Regex::new("^#[^\n]*").unwrap()),
+        (TokenType::Whitespace, Regex::new(r"^[ \t]+").unwrap()),
         (TokenType::QuotedString, Regex::new(r#"^"([^\\"]|\\.)*""#).unwrap()),
         (TokenType::Error, Regex::new("^.").unwrap()),
     ];
+}
+
+pub fn extract_tokens(lexer: &mut Lexer) -> Vec<TokenType> {
+    let mut res: Vec<TokenType> = Vec::new();
+    loop {
+        let t = lexer.pop().0;
+        res.push(t);
+        if t == TokenType::EOF || t == TokenType::Error {
+            break;
+        }
+    }
+    return res;
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn tokens(lexer: &mut Lexer) -> Vec<TokenType> {
-        let mut res: Vec<TokenType> = Vec::new();
-        loop {
-            let t = lexer.pop().0;
-            res.push(t);
-            if t == TokenType::EOF || t == TokenType::Error {
-                break;
-            }
-        }
-        return res;
-    }
-
     #[test]
     fn blocks() {
         let mut l = Lexer::new(&String::from("echo `{foo}"));
-        let tt = tokens(&mut l);
+        let tt = extract_tokens(&mut l);
         assert_eq!(tt, vec![
             TokenType::String, TokenType::ModeStart, TokenType::String, TokenType::ModeEnd,
             TokenType::EOF]);
@@ -129,7 +130,7 @@ mod tests {
     #[test]
     fn globs() {
         let mut l = Lexer::new(&String::from("echo foo.* abc??def"));
-        let tt = tokens(&mut l);
+        let tt = extract_tokens(&mut l);
         assert_eq!(tt, vec![
             TokenType::String, TokenType::Glob, TokenType::Glob, TokenType::EOF]);
     }
@@ -137,31 +138,34 @@ mod tests {
     #[test]
     fn list() {
         let mut l = Lexer::new(&String::from("[a]"));
-        let tt = tokens(&mut l);
+        let tt = extract_tokens(&mut l);
         assert_eq!(tt, vec![
             TokenType::SubscriptStart, TokenType::String, TokenType::SubscriptEnd, TokenType::EOF]);
     }
 
     #[test]
     fn separators() {
-        let mut l = Lexer::new(&String::from("a|b;c"));
-        let tt = tokens(&mut l);
+        let mut l = Lexer::new(&String::from("a|b;c\nd\n"));
+        let tt = extract_tokens(&mut l);
         assert_eq!(tt, vec![
-            TokenType::String, TokenType::Pipe, TokenType::String, TokenType::Separator, TokenType::String, TokenType::EOF]);
+            TokenType::String, TokenType::Pipe, TokenType::String, TokenType::Separator,
+            TokenType::String, TokenType::Separator,
+            TokenType::String, TokenType::Separator,
+            TokenType::EOF]);
     }
 
     #[test]
     fn comments() {
-        let mut l = Lexer::new(&String::from("a # this is a comment"));
-        let tt = tokens(&mut l);
+        let mut l = Lexer::new(&String::from("a # this is a comment\n"));
+        let tt = extract_tokens(&mut l);
         assert_eq!(tt, vec![
-            TokenType::String, TokenType::EOF]);
+            TokenType::String, TokenType::Separator, TokenType::EOF]);
     }
 
     #[test]
     fn numbers() {
         let mut l = Lexer::new(&String::from("b 2 d"));
-        let tt = tokens(&mut l);
+        let tt = extract_tokens(&mut l);
         assert_eq!(tt, vec![
             TokenType::String, TokenType::Integer, TokenType::String, TokenType::EOF]);
     }
@@ -169,7 +173,7 @@ mod tests {
     #[test]
     fn quoted_string() {
         let mut l = Lexer::new(&String::from(r##" "abc"  "\" ggg" "\d \\"  "##));
-        let tt = tokens(&mut l);
+        let tt = extract_tokens(&mut l);
         assert_eq!(tt, vec![
             TokenType::QuotedString, TokenType::QuotedString,
             TokenType::QuotedString, TokenType::EOF]);
@@ -178,7 +182,7 @@ mod tests {
     #[test]
     fn assign() {
         let mut l = Lexer::new(&String::from("foo=bar baz = 7"));
-        let tt = tokens(&mut l);
+        let tt = extract_tokens(&mut l);
         assert_eq!(tt, vec![
             TokenType::String, TokenType::Assign, TokenType::String,
             TokenType::String, TokenType::Assign, TokenType::Integer,
@@ -189,7 +193,7 @@ mod tests {
     #[test]
     fn comparison_operators() {
         let mut l = Lexer::new(&String::from("== >= > < <= !="));
-        let tt = tokens(&mut l);
+        let tt = extract_tokens(&mut l);
         assert_eq!(tt, vec![
             TokenType::Equal, TokenType::GreaterThanOrEqual, TokenType::GreaterThan,
             TokenType::LessThan, TokenType::LessThanOrEqual, TokenType::NotEqual, TokenType::EOF]);
@@ -198,7 +202,7 @@ mod tests {
     #[test]
     fn variables_and_fields() {
         let mut l = Lexer::new(&String::from("$foo %bar $foo.bar %baz.qux"));
-        let tt = tokens(&mut l);
+        let tt = extract_tokens(&mut l);
         assert_eq!(tt, vec![
             TokenType::Variable, TokenType::Field, TokenType::Variable, TokenType::Field, TokenType::EOF]);
     }
@@ -206,7 +210,7 @@ mod tests {
     #[test]
     fn regex() {
         let mut l = Lexer::new(&String::from(r"   r{^.$}   r{{foo\}}  "));
-        let tt = tokens(&mut l);
+        let tt = extract_tokens(&mut l);
         assert_eq!(tt, vec![
             TokenType::Regex, TokenType::Regex, TokenType::EOF]);
     }

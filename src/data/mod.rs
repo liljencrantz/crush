@@ -80,4 +80,8 @@ impl Stream {
             }
         }
     }
+
+    pub fn reader(self) -> InputStream {
+        self.stream
+    }
 }

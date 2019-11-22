@@ -1,4 +1,4 @@
-use crate::errors::{parse_error, argument_error, JobResult};
+use crate::errors::{parse_error, argument_error, JobResult, error};
 use crate::job::Job;
 use crate::lexer::{Lexer, TokenType};
 use crate::data::{ValueDefinition, ArgumentDefinition, ListDefinition};
@@ -9,41 +9,49 @@ use crate::glob::Glob;
 use crate::closure::Closure;
 
 pub fn parse(lexer: &mut Lexer) -> JobResult<Vec<Job>> {
+    let res = parse_internal(lexer)?;
+    if lexer.peek().0 != TokenType::EOF {
+        return Err(parse_error("Expected end of file", lexer))
+    }
+    Ok(res)
+}
+
+pub fn parse_internal(lexer: &mut Lexer) -> JobResult<Vec<Job>> {
     let mut jobs: Vec<Job> = Vec::new();
     loop {
+        loop {
+            match lexer.peek().0 {
+                TokenType::Separator => lexer.pop(),
+                TokenType::EOF | TokenType::ModeEnd => return Ok(jobs),
+                _ => break,
+            };
+        }
         match lexer.peek() {
             (TokenType::String, _) => {
-                jobs.push(parse_internal(lexer)?);
+                jobs.push(parse_job(lexer)?);
             }
             _ => {
-                return Err(parse_error("Wrong token type, expected command name", lexer));
+                return Err(parse_error(
+                    format!("Wrong token type, expected command name, got {:?}", lexer.peek().0).as_str(),
+                    lexer));
             }
         }
-
         match lexer.peek().0 {
-            TokenType::EOF | TokenType::ModeEnd => {
-                return Ok(jobs);
-            }
-            TokenType::Error => {
-                return Err(parse_error("Bad token", lexer));
-            }
-            TokenType::Separator => {
-                lexer.pop();
-            }
-            _ => {
-                return Err(parse_error("Wrong token type", lexer));
-            }
-        }
+            TokenType::EOF | TokenType::ModeEnd => return Ok(jobs),
+            TokenType::Separator => lexer.pop(),
+            TokenType::Error => return Err(parse_error("Bad token", lexer)),
+            _ => return Err(parse_error("Expected end of command", lexer)),
+        };
     }
 }
 
-fn parse_internal(lexer: &mut Lexer) -> JobResult<Job> {
+fn parse_job(lexer: &mut Lexer) -> JobResult<Job> {
     let mut commands: Vec<CallDefinition> = Vec::new();
-    parse_job(lexer, &mut commands)?;
+    parse_job_internal(lexer, &mut commands)?;
     return Ok(Job::new(commands));
 }
 
-fn parse_job(lexer: &mut Lexer, commands: &mut Vec<CallDefinition>) -> JobResult<()> {
+fn parse_job_internal(lexer: &mut Lexer, commands: &mut Vec<CallDefinition>) -> JobResult<()> {
     parse_command(lexer, commands)?;
     while lexer.peek().0 == TokenType::Pipe {
         lexer.pop();
@@ -156,21 +164,21 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> JobResult<Valu
             let sigil = lexer.pop().1;
             match sigil {
                 "{" => {
-                    let dep = parse_internal(lexer)?;
+                    let dep = parse_job(lexer)?;
                     lexer.pop();
                     let res = Ok(ValueDefinition::JobDefintion(dep));
                     return res;
                 }
 
                 "materialized{" => {
-                    let dep = parse_internal(lexer)?;
+                    let dep = parse_job(lexer)?;
                     lexer.pop();
                     let res = Ok(ValueDefinition::MaterializedJobDefintion(dep));
                     return res;
                 }
 
                 "`{" => {
-                    let dep = parse(lexer)?;
+                    let dep = parse_internal(lexer)?;
                     lexer.pop();
                     let res = Ok(ValueDefinition::ClosureDefinition(Closure::new(dep)));
                     return res;

@@ -29,7 +29,7 @@ pub struct Config {
 
 pub fn get_sub_type(cell_type: &ValueType) -> Result<&Vec<ColumnType>, JobError> {
     match cell_type {
-        ValueType::Output(sub_types) | ValueType::Rows(sub_types) => Ok(sub_types),
+        ValueType::Stream(sub_types) | ValueType::Rows(sub_types) => Ok(sub_types),
         _ => Err(argument_error("Expected a table column")),
     }
 }
@@ -37,7 +37,7 @@ pub fn get_sub_type(cell_type: &ValueType) -> Result<&Vec<ColumnType>, JobError>
 pub fn guess_tables(input_type: &Vec<ColumnType>) -> Result<(usize, usize, &Vec<ColumnType>, &Vec<ColumnType>), JobError> {
     let tables: Vec<(usize, &Vec<ColumnType>)> = input_type.iter().enumerate().flat_map(|(idx, t)| {
         match &t.cell_type {
-            ValueType::Output(sub_types) | ValueType::Rows(sub_types) => Some((idx, sub_types)),
+            ValueType::Stream(sub_types) | ValueType::Rows(sub_types) => Some((idx, sub_types)),
             _ => None,
         }
     }).collect();
@@ -171,7 +171,7 @@ pub fn run(
 fn get_output_type(input_type: &Vec<ColumnType>, cfg: &Config) -> Result<Vec<ColumnType>, JobError> {
     let tables: Vec<Option<&Vec<ColumnType>>> = input_type.iter().map(|t| {
         match &t.cell_type {
-            ValueType::Output(sub_types) | ValueType::Rows(sub_types) => Some(sub_types),
+            ValueType::Stream(sub_types) | ValueType::Rows(sub_types) => Some(sub_types),
             _ => None,
         }
     }).collect();

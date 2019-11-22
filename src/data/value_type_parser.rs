@@ -104,7 +104,7 @@ fn parse_type(lexer: &mut ValueTypeLexer) -> JobResult<ValueType> {
             ValueType::Dict(Box::from(key_type), Box::from(value_type))
         }
         "output" => {
-            ValueType::Output(parse_named_parameters(lexer)?)
+            ValueType::Stream(parse_named_parameters(lexer)?)
         }
         "rows" => {
             ValueType::Rows(parse_named_parameters(lexer)?)
@@ -129,8 +129,8 @@ mod tests {
         assert_eq!(parse("dict<integer, list<file>>").unwrap(), Dict(Box::from(Integer), Box::from(List(Box::from(File)))));
         assert!(parse("list<text,text>").is_err());
         assert!(parse("hello").is_err());
-        assert_eq!(parse("output<>").unwrap(), Output(vec![]));
-        assert_eq!(parse("output<pie:text>").unwrap(), Output(vec![ColumnType::named("pie", Text)]));
+        assert_eq!(parse("output<>").unwrap(), Stream(vec![]));
+        assert_eq!(parse("output<pie:text>").unwrap(), Stream(vec![ColumnType::named("pie", Text)]));
         assert_eq!(parse("rows<pie:text>").unwrap(), Rows(vec![ColumnType::named("pie", Text)]));
         assert_eq!(parse("rows<pie:text,custard:bool,>").unwrap(),
                    Rows(vec![

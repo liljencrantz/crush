@@ -31,7 +31,7 @@ pub struct Config {
     columns: Vec<ColumnType>,
     skip_head: usize,
     trim: Option<char>,
-    files: Vec<Box<Path>>,
+    file: Box<Path>,
 }
 
 fn parse(arguments: Vec<Argument>, _input: InputStream) -> JobResult<Config> {
@@ -80,26 +80,20 @@ fn parse(arguments: Vec<Argument>, _input: InputStream) -> JobResult<Config> {
         }
     }
 
+    if files.len() != 1 {
+        return Err(argument_error("Expected one CSV file"));
+    }
+
     Ok(Config {
         separator,
         columns,
         skip_head,
         trim,
-        files: files,
+        file: files.remove(0),
     })
 }
 
-fn handle(file: Box<Path>, cfg: &Config, output: &OutputStream, printer: &Printer) -> JobResult<()> {
-    let (output_stream, input_stream) = unlimited_streams(cfg.columns.clone());
-    let out_row = Row {
-        cells: vec![
-            Value::File(file.clone()),
-            Value::Stream(Stream {
-                stream: input_stream,
-            }),
-        ],
-    };
-    output.send(out_row)?;
+fn run(cfg: Config, output: OutputStream, printer: Printer) -> JobResult<()> {
 
     let printer_copy = printer.clone();
 
@@ -108,52 +102,41 @@ fn handle(file: Box<Path>, cfg: &Config, output: &OutputStream, printer: &Printe
     let columns = cfg.columns.clone();
     let skip = cfg.skip_head;
 
-    thread::spawn(move || {
-        let fff = File::open(file).unwrap();
-        let mut reader = BufReader::new(&fff);
-        let mut line = String::new();
-        let mut skipped = 0usize;
-        loop {
-            line.clear();
-            reader.read_line(&mut line);
-            if line.is_empty() {
-                break;
-            }
-            if skipped < skip {
-                skipped += 1;
-                continue;
-            }
-            let line_without_newline = &line[0..line.len() - 1];
-            let mut split: Vec<&str> = line_without_newline
-                .split(separator)
-                .map(|s| trim
-                    .map(|c| s.trim_matches(c))
-                    .unwrap_or(s))
-                .collect();
-            if split.len() != columns.len() {
-                printer_copy.error("csv: Wrong number of columns in CSV file");
-            }
-            if let Some(trim) = trim {
-                split = split.map(|s| s.trim_matches(trim));
-            }
-
-            match split.iter()
-                .zip(columns.iter())
-                .map({ |(s, t)| t.cell_type.parse(*s) })
-                .collect::<Result<Vec<Value>, JobError>>() {
-                Ok(cells) => { output_stream.send(Row { cells }); }
-                Err(err) => { printer_copy.job_error(err); }
-            }
-
+    let fff = File::open(cfg.file).unwrap();
+    let mut reader = BufReader::new(&fff);
+    let mut line = String::new();
+    let mut skipped = 0usize;
+    loop {
+        line.clear();
+        reader.read_line(&mut line);
+        if line.is_empty() {
+            break;
         }
-    });
-    return Ok(());
-}
+        if skipped < skip {
+            skipped += 1;
+            continue;
+        }
+        let line_without_newline = &line[0..line.len() - 1];
+        let mut split: Vec<&str> = line_without_newline
+            .split(separator)
+            .map(|s| trim
+                .map(|c| s.trim_matches(c))
+                .unwrap_or(s))
+            .collect();
+        if split.len() != columns.len() {
+            printer_copy.error("csv: Wrong number of columns in CSV file");
+        }
+        if let Some(trim) = trim {
+            split = split.map(|s| s.trim_matches(trim));
+        }
 
-
-pub fn run(config: Config, output: OutputStream, printer: Printer) -> JobResult<()> {
-    for file in &config.files {
-        handle(file.clone(), &config, &output, &printer)?;
+        match split.iter()
+            .zip(columns.iter())
+            .map({ |(s, t)| t.cell_type.parse(*s) })
+            .collect::<Result<Vec<Value>, JobError>>() {
+            Ok(cells) => { output.send(Row { cells }); }
+            Err(err) => { printer_copy.job_error(err); }
+        }
     }
     return Ok(());
 }
@@ -162,9 +145,6 @@ pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     let input = context.input.initialize_stream()?;
     let cfg = parse(context.arguments, input)?;
     let output = context.output.initialize(
-        vec![
-            ColumnType::named("file", ValueType::File),
-            ColumnType::named("data", ValueType::Output(cfg.columns.clone())),
-        ])?;
+        cfg.columns.clone())?;
     run(cfg, output, context.printer)
 }

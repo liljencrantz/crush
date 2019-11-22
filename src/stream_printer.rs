@@ -38,7 +38,7 @@ fn print_internal(printer: &Printer, stream: &mut impl Readable, indent: usize) 
 
     for val in stream.get_type().iter() {
         match val.cell_type {
-            ValueType::Output(_) => has_table = true,
+            ValueType::Stream(_) => has_table = true,
             ValueType::Rows(_) => has_table = true,
             _ => (),
         }
@@ -85,9 +85,13 @@ fn calculate_body_width(w: &mut Vec<usize>, data: &Vec<Row>, col_count: usize) {
 fn print_header(printer: &Printer, w: &Vec<usize>, types: &Vec<ColumnType>, has_name: bool, indent: usize) {
     if has_name {
         let mut header = " ".repeat(indent * 4);
+        let last_idx = types.len() - 1;
         for (idx, val) in types.iter().enumerate() {
+            let is_last = idx == last_idx;
             header += val.val_or_empty();
-            header += &" ".repeat(w[idx] - val.len_or_0() + 1);
+            if !is_last {
+                header += &" ".repeat(w[idx] - val.len_or_0() + 1);
+            }
         }
         printer.line(header.as_str())
     }
@@ -96,19 +100,25 @@ fn print_header(printer: &Printer, w: &Vec<usize>, types: &Vec<ColumnType>, has_
 fn print_row(printer: &Printer, w: &Vec<usize>, mut r: Row, indent: usize, rows: &mut Vec<Rows>, outputs: &mut Vec<Stream>) {
     let cell_len = r.cells.len();
     let mut row = " ".repeat(indent * 4);
+    let last_idx = r.cells.len() - 1;
     for (idx, c) in r.cells.drain(..).enumerate() {
         let cell = c.to_string();
         let spaces = if idx == cell_len - 1 { "".to_string() } else { " ".repeat(w[idx] - cell.len()) };
+        let is_last = idx == last_idx;
         match c.alignment() {
             Alignment::Right => {
                 row += spaces.as_str();
                 row += cell.as_str();
-                row += " "
+                if !is_last {
+                    row += " "
+                }
             }
             _ => {
                 row += cell.as_str();
-                row += spaces.as_str();
-                row += " "
+                if !is_last {
+                    row += spaces.as_str();
+                    row += " "
+                }
             }
         }
 
@@ -127,7 +137,7 @@ fn print_body(printer: &Printer, w: &Vec<usize>, data: Vec<Row>, indent: usize) 
         let mut outputs = Vec::new();
         print_row(printer, w, r, indent, &mut rows, &mut outputs);
         for r in rows {
-            print_internal(printer, &mut RowsReader::new( r), indent + 1);
+            print_internal(printer, &mut RowsReader::new(r), indent + 1);
         }
         for mut r in outputs {
             print_internal(printer, &mut r.stream, indent + 1);

@@ -7,7 +7,7 @@ use std::path::Path;
 use lazy_static::lazy_static;
 use crate::{
     commands::command_util::find_field_from_str,
-    errors::{argument_error},
+    errors::argument_error,
     data::{
         Argument,
         Row,
@@ -28,59 +28,34 @@ lazy_static! {
     };
 }
 
-fn handle(file: Box<Path>, output: &OutputStream) -> JobResult<()> {
-    let (output_stream, input_stream) = unlimited_streams(sub_type.clone());
-    let out_row = Row {
-        cells: vec![
-            Value::File(file.clone()),
-            Value::Stream(Stream {
-                stream: input_stream,
-            }),
-        ],
-    };
-
-    output.send(out_row)?;
-    thread::spawn(move || {
-        let fff = File::open(file).unwrap();
-        let mut reader = BufReader::new(&fff);
-        let mut line = String::new();
-        loop {
-            reader.read_line(&mut line);
-            if line.is_empty() {
-                break;
-            }
-            output_stream.send(Row { cells: vec![Value::Text(line[0..line.len() - 1].to_string().into_boxed_str())] });
-            line.clear();
+fn run(file: Box<Path>, output: OutputStream) -> JobResult<()> {
+    let fff = File::open(file).unwrap();
+    let mut reader = BufReader::new(&fff);
+    let mut line = String::new();
+    loop {
+        reader.read_line(&mut line);
+        if line.is_empty() {
+            break;
         }
-    });
+        output.send(Row { cells: vec![Value::Text(line[0..line.len() - 1].to_string().into_boxed_str())] });
+        line.clear();
+    }
     return Ok(());
 }
 
-pub struct Config {
-    files: Vec<Box<Path>>,
-}
-
-fn parse(arguments: Vec<Argument>) -> JobResult<Config> {
+fn parse(arguments: Vec<Argument>) -> JobResult<Box<Path>> {
     let mut files: Vec<Box<Path>> = Vec::new();
     for arg in &arguments {
         arg.value.file_expand(&mut files)?;
     }
-    Ok(Config { files: files })
-}
-
-pub fn run(config: Config, output: OutputStream) -> JobResult<()> {
-    for file in config.files {
-        handle(file, &output)?;
+    if files.len() != 1 {
+        return Err(argument_error("Expected exactly one file"));
     }
-    return Ok(());
+    Ok(files.remove(0))
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let output = context.output.initialize(
-        vec![
-            ColumnType::named("file", ValueType::File),
-            ColumnType::named("lines", ValueType::Output(sub_type.clone())),
-        ])?;
-    let files = parse(context.arguments)?;
-    run(files, output)
+    let output = context.output.initialize(sub_type.clone())?;
+    let file = parse(context.arguments)?;
+    run(file, output)
 }

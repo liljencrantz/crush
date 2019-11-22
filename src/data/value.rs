@@ -97,7 +97,7 @@ impl Value {
             Value::Op(_) => ValueType::Op,
             Value::Command(_) => ValueType::Command,
             Value::File(_) => ValueType::File,
-            Value::Stream(o) => ValueType::Output(o.stream.get_type().clone()),
+            Value::Stream(o) => ValueType::Stream(o.stream.get_type().clone()),
             Value::Rows(r) => ValueType::Rows(r.types.clone()),
             Value::Struct(r) => ValueType::Row(r.types.clone()),
             Value::Closure(_) => ValueType::Closure,

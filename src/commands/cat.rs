@@ -23,7 +23,7 @@ fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> Result<Conf
         .iter()
         .enumerate()
         .filter(|(_i, t)| match t.cell_type.clone() {
-            ValueType::Output(_) | ValueType::Rows(_) => true,
+            ValueType::Stream(_) | ValueType::Rows(_) => true,
             _ => false,
         })
         .map(|(i, _t)| i)
@@ -83,7 +83,7 @@ pub fn run(
 
 pub fn get_sub_type(cell_type: &ColumnType) -> Result<Vec<ColumnType>, JobError> {
     match &cell_type.cell_type {
-        ValueType::Output(o) | ValueType::Rows(o) => Ok(o.clone()),
+        ValueType::Stream(o) | ValueType::Rows(o) => Ok(o.clone()),
         _ => Err(argument_error("Invalid column")),
     }
 }

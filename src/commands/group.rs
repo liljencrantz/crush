@@ -86,7 +86,7 @@ pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
         input.get_type()[config.column].clone(),
         ColumnType {
             name: Some(config.name.clone()),
-            cell_type: ValueType::Output(input.get_type().clone())
+            cell_type: ValueType::Stream(input.get_type().clone())
         }
     ];
     let output = context.output.initialize(output_type)?;

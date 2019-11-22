@@ -23,7 +23,7 @@ pub enum ValueType {
     Command,
     Closure,
     File,
-    Output(Vec<ColumnType>),
+    Stream(Vec<ColumnType>),
     Rows(Vec<ColumnType>),
     Row(Vec<ColumnType>),
     List(Box<ValueType>),
@@ -61,7 +61,7 @@ impl ValueType {
             ValueType::File |
             ValueType::Env |
             ValueType::Bool => self.clone(),
-            ValueType::Output(o) => ValueType::Rows(ColumnType::materialize(o)),
+            ValueType::Stream(o) => ValueType::Rows(ColumnType::materialize(o)),
             ValueType::Rows(r) => ValueType::Rows(ColumnType::materialize(r)),
             ValueType::Row(r) => ValueType::Row(ColumnType::materialize(r)),
             ValueType::List(l) => ValueType::List(Box::from(l.materialize())),
@@ -71,7 +71,7 @@ impl ValueType {
 
         pub fn is_hashable(&self) -> bool {
         match self {
-            ValueType::Env | ValueType::Closure | ValueType::List(_) | ValueType::Dict(_, _) | ValueType::Output(_) | ValueType::Rows(_) => false,
+            ValueType::Env | ValueType::Closure | ValueType::List(_) | ValueType::Dict(_, _) | ValueType::Stream(_) | ValueType::Rows(_) => false,
             _ => true,
         }
     }
@@ -93,7 +93,7 @@ impl ValueType {
             ValueType::Command => "command".to_string(),
             ValueType::Closure => "closure".to_string(),
             ValueType::File => "file".to_string(),
-            ValueType::Output(o) => format!("output<{}>", o.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
+            ValueType::Stream(o) => format!("output<{}>", o.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
             ValueType::Rows(r) => format!("rows<{}>", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
             ValueType::Row(r) => format!("row<{}>", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
             ValueType::List(l) => format!("list<{}>", l.to_string()),

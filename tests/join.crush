@@ -1,0 +1,5 @@
+let home={csv example_data/home.csv col=name:text col=country:text}
+let age={csv example_data/age.csv col=name:text col=age:integer}
+
+struct l=$home r=$age | join %l.name == %r.name | sort %name
+# join l=$home r=$age on %l.name == %r.name | sort %name

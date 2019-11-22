@@ -120,7 +120,7 @@ impl ValueDefinition {
             ValueDefinition::Variable(s) => (
                 mandate(
                     env.get(s),
-                    format!("Unknown variable").as_str())?),
+                    format!("Unknown variable {}", self.to_string()).as_str())?),
             ValueDefinition::List(l) => l.compile(dependencies, env, printer)?,
             ValueDefinition::Subscript(c, i) => {
                 match (c.compile(dependencies, env, printer), i.compile(dependencies, env, printer)) {
@@ -154,5 +154,16 @@ impl ValueDefinition {
 
     pub fn regex(s: &str, r: Regex) -> ValueDefinition {
         ValueDefinition::Regex(Box::from(s), r)
+    }
+}
+
+impl ToString for ValueDefinition {
+    fn to_string(&self) -> String {
+        match self {
+            ValueDefinition::Text(t) => t.to_string(),
+            ValueDefinition::Integer(i) => format!("{}", i),
+            ValueDefinition::Variable(v) => format!("${}", v.join(".")),
+            _ => panic!("Unimplementd conversion"),
+        }
     }
 }

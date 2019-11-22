@@ -3,10 +3,14 @@ use crate::errors::JobResult;
 use crate::errors::error;
 use crate::data::ValueType;
 use crate::data::Value;
-use crate::stream::OutputStream;
+use crate::stream::{OutputStream, ValueSender};
 use crate::stream::Readable;
 
-pub fn run(input1: &mut impl Readable, input2: &mut impl Readable, output: OutputStream) -> JobResult<()> {
+pub fn run(input1: &mut impl Readable, input2: &mut impl Readable, sender: ValueSender) -> JobResult<()> {
+    let mut output_type = Vec::new();
+    output_type.append(&mut input1.get_type().clone());
+    output_type.append(&mut input2.get_type().clone());
+    let output = sender.initialize(output_type)?;
     loop {
         match (input1.read(), input2.read()) {
             (Ok(mut row1), Ok(mut row2)) => {
@@ -19,30 +23,19 @@ pub fn run(input1: &mut impl Readable, input2: &mut impl Readable, output: Outpu
     return Ok(());
 }
 
-pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let input = context.input.initialize_stream()?;
-    let input_type = input.get_type();
-    if input_type.len() != 2 {
+pub fn compile_and_run(mut context: CompileContext) -> JobResult<()> {
+    if context.arguments.len() != 2 {
         return Err(error("Expected exactly two arguments"));
     }
-    match (&input_type[0].cell_type, &input_type[1].cell_type) {
-        (ValueType::Output(o1), ValueType::Output(o2)) => {
-            let mut output_type = Vec::new();
-            output_type.append(&mut o1.clone());
-            output_type.append(&mut o2.clone());
-            let output = context.output.initialize(output_type)?;
-
-            match input.recv() {
-                Ok(mut row) => {
-                    match (row.cells.remove(0), row.cells.remove(0)) {
-                        (Value::Stream(mut r1), Value::Stream(mut r2)) => run(&mut r1.stream, &mut r2.stream, output),
-                        _ => return Err(error("Expected two streams of data as input arguments")),
-                    }
-                }
-                Err(_) => Ok(()),
-            }
-        }
-        _ => return Err(error("Expected two input arguments")),
-
+    match (context.arguments.remove(0).value, context.arguments.remove(0).value) {
+        (Value::Stream(mut o1), Value::Stream(mut o2)) =>
+            run(&mut o1.reader(), &mut o2.reader(), context.output),
+        (Value::Rows(mut o1), Value::Rows(mut o2)) =>
+            run(&mut o1.reader(), &mut o2.reader(), context.output),
+        (Value::Stream(mut o1), Value::Rows(mut o2)) =>
+            run(&mut o1.reader(), &mut o2.reader(), context.output),
+        (Value::Rows(mut o1), Value::Stream(mut o2)) =>
+            run(&mut o1.reader(), &mut o2.reader(), context.output),
+        _ => return Err(error("Expected two datasets")),
     }
 }

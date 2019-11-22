@@ -1,4 +1,4 @@
-use std::sync::mpsc::{channel, Sender};
+use std::sync::mpsc::{channel, Sender, Receiver};
 use std::thread;
 use crate::errors::{JobError, JobResult, to_job_error};
 
@@ -13,6 +13,8 @@ enum PrinterMessage {
 use crate::printer::PrinterMessage::*;
 use crate::commands::JobJoinHandle;
 use crate::thread_util::{handle, build};
+use std::sync::Arc;
+use std::thread::JoinHandle;
 
 #[derive(Clone)]
 pub struct Printer {
@@ -21,9 +23,9 @@ pub struct Printer {
 
 impl Printer {
 
-    pub fn new() -> Printer {
+    pub fn new() -> (Printer, JoinHandle<()>) {
         let (sender, receiver) = channel();
-        thread::Builder::new().name("printer".to_string()).spawn(move || {
+        let handle = thread::Builder::new().name("printer".to_string()).spawn(move || {
             loop {
                 match receiver.recv() {
                     Ok(message) => {
@@ -38,14 +40,13 @@ impl Printer {
                     Err(_) => break,
                 }
             }
-        });
-        Printer {
+        }).unwrap();
+        (Printer {
             sender,
-        }
+        }, handle)
     }
 
-    pub fn shutdown(&self) {
-
+    pub fn shutdown(self) {
         self.handle_error(to_job_error(self.sender.send(PrinterMessage::Shutdown)));
     }
 
