@@ -4,7 +4,7 @@ Fix aggr command and think through it's input/output types
 Rename rows -> ImmutableList
 Rename list -> MutableList
 Rename dict -> MutableDict
-Rename text -> str
+Rename text -> string
 Create type ImmutableDict
 Create new type Type
 Create str namespace with commands upper, lower

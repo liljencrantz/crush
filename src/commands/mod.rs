@@ -3,6 +3,7 @@ mod command_util;
 mod r#struct;
 
 mod find;
+mod stat;
 mod cd;
 mod pwd;
 
@@ -96,6 +97,7 @@ pub fn add_commands(env: &Env) -> JobResult<()> {
 
     env.declare_str("ls", Value::Command(Command::new(find::compile_and_run_ls)))?;
     env.declare_str("find", Value::Command(Command::new(find::compile_and_run_find)))?;
+    env.declare_str("stat", Value::Command(Command::new(stat::compile_and_run)))?;
     env.declare_str("cd", Value::Command(Command::new(cd::compile_and_run)))?;
     env.declare_str("pwd", Value::Command(Command::new(pwd::compile_and_run)))?;
 

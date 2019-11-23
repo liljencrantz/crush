@@ -17,7 +17,6 @@ use std::{
     thread,
     path::Path,
 };
-use either::Either;
 
 extern crate map_in_place;
 

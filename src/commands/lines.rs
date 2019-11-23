@@ -18,7 +18,6 @@ use crate::{
     },
     stream::{OutputStream, InputStream, unlimited_streams},
 };
-use either::Either;
 use crate::errors::JobResult;
 use crate::commands::command_util::find_field;
 
