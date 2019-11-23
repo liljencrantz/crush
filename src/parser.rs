@@ -166,14 +166,14 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> JobResult<Valu
                 "{" => {
                     let dep = parse_job(lexer)?;
                     lexer.pop();
-                    let res = Ok(ValueDefinition::JobDefintion(dep));
+                    let res = Ok(ValueDefinition::JobDefinition(dep));
                     return res;
                 }
 
                 "materialized{" => {
                     let dep = parse_job(lexer)?;
                     lexer.pop();
-                    let res = Ok(ValueDefinition::MaterializedJobDefintion(dep));
+                    let res = Ok(ValueDefinition::MaterializedJobDefinition(dep));
                     return res;
                 }
 

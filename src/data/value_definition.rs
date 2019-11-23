@@ -1,21 +1,23 @@
 use std::path::Path;
 
-use chrono::{Local};
+use chrono::Local;
 use regex::Regex;
 
-use crate::closure::Closure;
-use crate::commands::JobJoinHandle;
-use crate::data::{Value, Stream, ListDefinition, Row, Rows};
-use crate::env::Env;
-use crate::errors::{error, mandate, JobResult, argument_error, to_job_error, JobError};
-use crate::glob::Glob;
-use crate::job::Job;
-use crate::printer::Printer;
-use crate::stream::streams;
-use crate::stream::channels;
-use crate::stream::empty_channel;
+use crate::{
+    stream::streams,
+    printer::Printer,
+    job::Job,
+    glob::Glob,
+    errors::{error, mandate, JobResult, argument_error, to_job_error, JobError},
+    env::Env,
+    data::{Value, Stream, ListDefinition, Row, Rows},
+    commands::JobJoinHandle,
+    closure::Closure,
+    stream::channels,
+    stream::empty_channel,
+    data::row::Struct
+};
 use std::time::Duration;
-use crate::data::row::Struct;
 
 #[derive(Clone)]
 #[derive(Debug)]
@@ -29,8 +31,8 @@ pub enum ValueDefinition {
     Regex(Box<str>, Regex),
     Op(Box<str>),
     ClosureDefinition(Closure),
-    JobDefintion(Job),
-    MaterializedJobDefintion(Job),
+    JobDefinition(Job),
+    MaterializedJobDefinition(Job),
     File(Box<Path>),
     Variable(Vec<Box<str>>),
     List(ListDefinition),
@@ -102,14 +104,14 @@ impl ValueDefinition {
             ValueDefinition::Regex(v, r) => Value::Regex(v.clone(), r.clone()),
             ValueDefinition::Op(v) => Value::Op(v.clone()),
             ValueDefinition::File(v) => Value::File(v.clone()),
-            ValueDefinition::JobDefintion(def) => {
+            ValueDefinition::JobDefinition(def) => {
                 let first_input = empty_channel();
                 let (last_output, last_input) = channels();
                 let j = def.spawn_and_execute(&env, printer, first_input, last_output)?;
                 dependencies.push(j);
                 last_input.recv()?
             }
-            ValueDefinition::MaterializedJobDefintion(def) => {
+            ValueDefinition::MaterializedJobDefinition(def) => {
                 let first_input = empty_channel();
                 let (last_output, last_input) = channels();
                 let j = def.spawn_and_execute(&env, printer, first_input, last_output)?;

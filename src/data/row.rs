@@ -33,6 +33,20 @@ pub struct Struct {
 }
 
 impl Struct {
+    pub fn new(mut vec: Vec<(&str, Value)>) -> Struct {
+        let types = vec
+            .iter()
+            .map(|e| ColumnType::named(e.0, e.1.value_type()))
+            .collect();
+        let cells = vec
+            .drain(..)
+            .map(|e| e.1)
+            .collect();
+        Struct {
+            types, cells
+        }
+    }
+
     pub fn partial_clone(&self) -> JobResult<Self> {
         Ok(Struct {
             types: self.types.clone(),
@@ -67,4 +81,3 @@ impl ToString for Struct {
         self.cells.iter().map(|c| c.to_string()).collect::<Vec<String>>().join(", ")
     }
 }
-

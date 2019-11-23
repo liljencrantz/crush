@@ -23,29 +23,21 @@ fn parse(arguments: Vec<Argument>) -> JobResult<Box<Path>> {
 
 fn run(file: Box<Path>, sender: ValueSender) -> JobResult<()> {
     let metadata = to_job_error(metadata(file))?;
-    sender.send(Value::Struct(
-        Struct {
-            types: vec![
-                ColumnType::named("is_directory", ValueType::Bool),
-                ColumnType::named("is_file", ValueType::Bool),
-                ColumnType::named("is_symlink", ValueType::Bool),
-                ColumnType::named("inode", ValueType::Integer),
-                ColumnType::named("nlink", ValueType::Integer),
-                ColumnType::named("mode", ValueType::Integer),
-                ColumnType::named("len", ValueType::Integer),
-            ],
-            cells: vec![
-                Value::Bool(metadata.is_dir()),
-                Value::Bool(metadata.is_file()),
-                Value::Bool(metadata.file_type().is_symlink()),
-                Value::Integer(metadata.ino() as i128),
-                Value::Integer(metadata.nlink() as i128),
-                Value::Integer(metadata.mode() as i128),
-                Value::Integer(metadata.len() as i128),
-            ],
-        }
-    ));
-    Ok(())
+    sender.send(
+        Value::Struct(
+            Struct::new(
+                vec![
+                    ("is_directory", Value::Bool(metadata.is_dir())),
+                    ("is_file", Value::Bool(metadata.is_file())),
+                    ("is_symlink", Value::Bool(metadata.file_type().is_symlink())),
+                    ("inode", Value::Integer(metadata.ino() as i128)),
+                    ("nlink", Value::Integer(metadata.nlink() as i128)),
+                    ("mode", Value::Integer(metadata.mode() as i128)),
+                    ("len", Value::Integer(metadata.len() as i128)),
+                ]
+            )
+        )
+    )
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
