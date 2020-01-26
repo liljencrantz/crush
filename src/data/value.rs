@@ -40,6 +40,8 @@ pub enum Value {
     Dict(Dict),
     Env(Env),
     Bool(bool),
+    Float(f64),
+    Empty(),
 }
 
 impl Value {
@@ -63,6 +65,8 @@ impl Value {
             Value::Env(env) => env.to_string(),
             Value::Bool(v) => (if *v { "true" } else { "false" }).to_string(),
             Value::Dict(d) => d.to_string(),
+            Value::Float(f) => f.to_string(),
+            Value::Empty() => "<empty>".to_string(),
         };
     }
 
@@ -74,7 +78,7 @@ impl Value {
     }
 
     pub fn empty_stream() -> Value {
-        let (s, r) = streams(vec![]);
+        let (_s, r) = streams(vec![]);
         Value::Stream(Stream {stream: r})
     }
 
@@ -106,6 +110,8 @@ impl Value {
             Value::Env(_) => ValueType::Env,
             Value::Bool(_) => ValueType::Bool,
             Value::Dict(d) => d.dict_type(),
+            Value::Float(_) => ValueType::Float,
+            Value::Empty() => ValueType::Empty,
         };
     }
 
@@ -139,7 +145,9 @@ impl Value {
             Value::Duration(d) => Ok(Value::Duration(d.clone())),
             Value::Env(e) => Ok(Value::Env(e.clone())),
             Value::Bool(v) => Ok(Value::Bool(v.clone())),
-            Value::Dict(d) => Ok(Value::Dict(d.partial_clone()?))
+            Value::Dict(d) => Ok(Value::Dict(d.partial_clone()?)),
+            Value::Float(f) => Ok(Value::Float(f.clone())),
+            Value::Empty() => Ok(Value::Empty())
         };
     }
 
@@ -257,7 +265,8 @@ impl std::hash::Hash for Value {
             Value::Bool(v) => v.hash(state),
 
             Value::Env(_) | Value::Dict(_) | Value::Rows(_) | Value::Closure(_) |
-            Value::List(_) | Value::Stream(_) | Value::Struct(_) => panic!("Can't hash output"),
+            Value::List(_) | Value::Stream(_) | Value::Struct(_) | Value::Float(_)=> panic!("Can't hash output"),
+            Value::Empty() => {}
         }
     }
 }

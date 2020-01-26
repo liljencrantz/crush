@@ -1,4 +1,5 @@
 Todo:
+Add uniq command
 Add a bunch of system tests
 Fix aggr command and think through it's input/output types
 Rename rows -> ImmutableList

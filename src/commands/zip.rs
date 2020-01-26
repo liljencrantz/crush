@@ -1,9 +1,8 @@
 use crate::commands::CompileContext;
 use crate::errors::JobResult;
 use crate::errors::error;
-use crate::data::ValueType;
 use crate::data::Value;
-use crate::stream::{OutputStream, ValueSender};
+use crate::stream::{ValueSender};
 use crate::stream::Readable;
 
 pub fn run(input1: &mut impl Readable, input2: &mut impl Readable, sender: ValueSender) -> JobResult<()> {

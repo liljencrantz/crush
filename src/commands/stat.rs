@@ -1,10 +1,7 @@
 use crate::commands::CompileContext;
 use crate::errors::{JobResult, argument_error, to_job_error};
-use crate::data::{ValueType, Argument, Struct};
-use crate::data::Row;
+use crate::data::{Argument, Struct};
 use crate::data::Value;
-use crate::data::ColumnType;
-use crate::env::get_cwd;
 use std::fs::metadata;
 use std::path::Path;
 use crate::stream::ValueSender;

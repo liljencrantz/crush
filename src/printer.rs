@@ -1,4 +1,4 @@
-use std::sync::mpsc::{channel, Sender, Receiver};
+use std::sync::mpsc::{channel, Sender};
 use std::thread;
 use crate::errors::{JobError, JobResult, to_job_error};
 
@@ -13,7 +13,6 @@ enum PrinterMessage {
 use crate::printer::PrinterMessage::*;
 use crate::commands::JobJoinHandle;
 use crate::thread_util::{handle, build};
-use std::sync::Arc;
 use std::thread::JoinHandle;
 
 #[derive(Clone)]

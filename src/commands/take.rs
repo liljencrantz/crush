@@ -39,7 +39,7 @@ pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
     if let Value::Stream(cell) = mandate(config.location.get(&config.name), "Unknown variable")? {
         let output = context.output
             .initialize(cell.stream.get_type().clone())?;
-        for i in 0..config.lines {
+        for _i in 0..config.lines {
             output.send(cell.stream.recv()?);
         }
         config.location.declare(&config.name, Value::Stream(cell));

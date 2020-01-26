@@ -1,4 +1,4 @@
-use crate::stream::{ValueSender, channels, InputStream, Readable, RowsReader};
+use crate::stream::{ValueSender, channels, Readable, RowsReader};
 use crate::printer::Printer;
 use std::thread;
 use crate::data::{Row, ColumnType, ValueType, Alignment, Value, Rows, Stream};

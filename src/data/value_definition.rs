@@ -4,13 +4,11 @@ use chrono::Local;
 use regex::Regex;
 
 use crate::{
-    stream::streams,
     printer::Printer,
-    job::Job,
     glob::Glob,
-    errors::{error, mandate, JobResult, argument_error, to_job_error, JobError},
+    errors::{error, mandate, JobResult, argument_error, to_job_error},
     env::Env,
-    data::{Value, Stream, ListDefinition, Row, Rows},
+    data::{Value, ListDefinition},
     commands::JobJoinHandle,
     closure::Closure,
     stream::channels,
@@ -18,6 +16,7 @@ use crate::{
     data::row::Struct
 };
 use std::time::Duration;
+use crate::job::Job;
 
 #[derive(Clone)]
 #[derive(Debug)]

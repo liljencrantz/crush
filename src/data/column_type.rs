@@ -1,6 +1,6 @@
-use crate::data::ValueType;
+use crate::data::{ValueType, Value};
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ColumnType {
     pub name: Option<Box<str>>,
     pub cell_type: ValueType,
@@ -26,6 +26,13 @@ impl ColumnType {
         ColumnType {
             name: Some(Box::from(name)),
             cell_type,
+        }
+    }
+
+    pub fn format_value(&self, v: &Value) -> String {
+        match &self.name {
+            Some(n) => format!("{}: {}", n, v.to_string()),
+            None => v.to_string(),
         }
     }
 

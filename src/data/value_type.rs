@@ -11,6 +11,7 @@ use crate::parser::parse_name;
 #[derive(PartialOrd)]
 #[derive(Ord)]
 #[derive(Debug)]
+#[derive(Hash)]
 pub enum ValueType {
     Text,
     Integer,
@@ -30,6 +31,9 @@ pub enum ValueType {
     Dict(Box<ValueType>, Box<ValueType>),
     Env,
     Bool,
+    Float,
+    Empty,
+    Any,
 }
 
 
@@ -60,6 +64,9 @@ impl ValueType {
             ValueType::Closure |
             ValueType::File |
             ValueType::Env |
+            ValueType::Float |
+            ValueType::Empty |
+            ValueType::Any |
             ValueType::Bool => self.clone(),
             ValueType::Stream(o) => ValueType::Rows(ColumnType::materialize(o)),
             ValueType::Rows(r) => ValueType::Rows(ColumnType::materialize(r)),
@@ -100,6 +107,9 @@ impl ValueType {
             ValueType::Dict(k, v) => format!("dict<{},{}>", k.to_string(), v.to_string()),
             ValueType::Env => "env".to_string(),
             ValueType::Bool => "bool".to_string(),
+            ValueType::Float => "float".to_string(),
+            ValueType::Empty => "empty".to_string(),
+            ValueType::Any => "any".to_string(),
         }
     }
 

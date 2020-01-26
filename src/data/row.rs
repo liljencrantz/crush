@@ -1,6 +1,6 @@
 use crate::data::value::Value;
 use crate::errors::{JobResult};
-use crate::data::{ColumnType, ValueType};
+use crate::data::{ColumnType};
 use std::mem;
 
 #[derive(PartialEq)]
@@ -78,6 +78,12 @@ impl Struct {
 
 impl ToString for Struct {
     fn to_string(&self) -> String {
-        self.cells.iter().map(|c| c.to_string()).collect::<Vec<String>>().join(", ")
+        format!("{{{}}}",
+        self.cells
+            .iter()
+            .zip(self.types.iter())
+            .map(|(c, t)| t.format_value(c))
+            .collect::<Vec<String>>()
+            .join(", "))
     }
 }

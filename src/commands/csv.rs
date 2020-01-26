@@ -4,17 +4,15 @@ use crate::{
         Argument,
         Row,
         ValueType,
-        Stream,
         Value,
     },
-    stream::{OutputStream, InputStream, unlimited_streams},
+    stream::{OutputStream},
     errors::{JobError, argument_error},
 };
 use std::{
     io::BufReader,
     io::prelude::*,
     fs::File,
-    thread,
     path::Path,
 };
 
@@ -33,7 +31,7 @@ pub struct Config {
     file: Box<Path>,
 }
 
-fn parse(arguments: Vec<Argument>, _input: InputStream) -> JobResult<Config> {
+fn parse(arguments: Vec<Argument>) -> JobResult<Config> {
     let mut separator = ',';
     let mut columns = Vec::new();
     let mut skip_head = 0;
@@ -141,8 +139,7 @@ fn run(cfg: Config, output: OutputStream, printer: Printer) -> JobResult<()> {
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let input = context.input.initialize_stream()?;
-    let cfg = parse(context.arguments, input)?;
+    let cfg = parse(context.arguments)?;
     let output = context.output.initialize(
         cfg.columns.clone())?;
     run(cfg, output, context.printer)

@@ -11,13 +11,12 @@ use crate::{
         ValueType,
         Value,
     },
-    stream::{OutputStream, InputStream},
+    stream::OutputStream,
     replace::Replace,
     errors::argument_error,
     commands::command_util::find_field_from_str,
 };
 use crate::commands::command_util::find_field;
-use crate::stream::RowsReader;
 use crate::data::Struct;
 
 pub struct Config {

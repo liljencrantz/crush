@@ -20,6 +20,7 @@ mod tail;
 
 mod lines;
 mod csv;
+mod json;
 
 mod r#where;
 mod sort;
@@ -131,6 +132,7 @@ pub fn add_commands(env: &Env) -> JobResult<()> {
 
     env.declare_str("lines", Value::Command(Command::new(lines::compile_and_run)))?;
     env.declare_str("csv", Value::Command(Command::new(csv::compile_and_run)))?;
+    env.declare_str("json", Value::Command(Command::new(json::compile_and_run)))?;
 
     env.declare_str("if", Value::Command(Command::new(r#if::compile_and_run)))?;
     env.declare_str("for", Value::Command(Command::new(r#for::compile_and_run)))?;

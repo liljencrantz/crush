@@ -14,14 +14,6 @@ pub struct List {
 impl List {
     pub fn new(cell_type: ValueType, cells: Vec<Value>) -> List { List { cell_type, cells: Arc::from(Mutex::new(cells)) } }
 
-    pub fn to_string(&self) -> String {
-        let mut res = "[".to_string();
-        let cells = self.cells.lock().unwrap();
-        res += &cells.iter().map(|c| c.to_string()).collect::<Vec<String>>().join(" ");
-        res += "]";
-        res
-    }
-
     pub fn len(&self) -> usize {
         let cells = self.cells.lock().unwrap();
         cells.len()
@@ -61,6 +53,16 @@ impl List {
             cell_type: self.cell_type.materialize(),
             cells: Arc::new(Mutex::from(vec)),
         }
+    }
+}
+
+impl ToString for List {
+    fn to_string(&self) -> String {
+        let mut res = "[".to_string();
+        let cells = self.cells.lock().unwrap();
+        res += &cells.iter().map(|c| c.to_string()).collect::<Vec<String>>().join(", ");
+        res += "]";
+        res
     }
 }
 

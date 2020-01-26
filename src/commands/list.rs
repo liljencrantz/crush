@@ -1,9 +1,7 @@
 use crate::commands::CompileContext;
 use crate::errors::{JobResult, argument_error};
 use crate::data::{ValueType, List};
-use crate::data::Row;
 use crate::data::Value;
-use crate::data::ColumnType;
 
 pub fn create(context: CompileContext) -> JobResult<()> {
     if context.arguments.len() != 1 {

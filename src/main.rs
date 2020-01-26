@@ -16,7 +16,7 @@ mod stream_printer;
 mod format;
 mod thread_util;
 
-use crate::lexer::{Lexer, extract_tokens, TokenType};
+use crate::lexer::{Lexer};
 
 extern crate rustyline;
 
@@ -32,7 +32,6 @@ use crate::data::Value;
 use crate::env::get_home;
 use std::path::Path;
 use std::fs;
-use std::time::Duration;
 
 fn crush_history_file() -> Box<str> {
     Box::from(

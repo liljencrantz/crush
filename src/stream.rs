@@ -2,7 +2,6 @@ use crate::data::{ColumnType, Value};
 use crate::data::{Row, Rows, Stream};
 use std::sync::mpsc::{Receiver, sync_channel, SyncSender, channel, Sender};
 use crate::errors::{JobError, error, JobResult, to_job_error};
-use std::error::Error;
 use crate::replace::Replace;
 
 pub struct ValueSender {

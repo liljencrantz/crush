@@ -30,11 +30,10 @@ Crush does not have user defined types, but it does have a rich set of built in 
 * booleans,
 * integer numbers,
 * structs, which contain any number of named fields of any type,
-* tables, which are essentially a list of structs,
-* streams, where each element on the stream is a struct of the same type,
+* tables, which are essentially a list where each element is the same type of struct,
+* streams, which are like tables but can only be traversed once
 * types,
-* closures,
-* built in commands.
+* commands, which are either closures or built in commands.
 
 
 Expressive language with static scoping rules and true closures
@@ -43,7 +42,7 @@ DEMO CODE GOES HERE
 
 Semi-lazy stream evaluation
 
-If you assign the output of the find command to a varaible like so:
+If you assign the output of the find command to a variable like so:
 
     crush> let all_the_files={find /}
 
@@ -71,7 +70,7 @@ operate on:
 
 echo $some_data | where %color == green | group %shoe_size | aggr green_shoes_of_size=`{count}
 
-Unlike in SQL, these commands all operate in input streams, meaning they can be combined in
+Unlike in SQL, these commands all operate on input streams, meaning they can be combined in
 any order, and the input source can be file/http resources in a variety of formats or putput of
 commands like ps, find.
 

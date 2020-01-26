@@ -1,7 +1,6 @@
 use crate::data::{ColumnType, Row};
 use crate::errors::JobError;
 use crate::stream::RowsReader;
-use map_in_place::MapVecInPlace;
 
 #[derive(Debug)]
 #[derive(PartialEq)]

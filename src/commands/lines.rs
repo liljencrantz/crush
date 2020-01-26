@@ -2,24 +2,20 @@ use crate::commands::CompileContext;
 use std::io::BufReader;
 use std::io::prelude::*;
 use std::fs::File;
-use std::thread;
 use std::path::Path;
 use lazy_static::lazy_static;
 use crate::{
-    commands::command_util::find_field_from_str,
     errors::argument_error,
     data::{
         Argument,
         Row,
         ColumnType,
         ValueType,
-        Stream,
         Value,
     },
-    stream::{OutputStream, InputStream, unlimited_streams},
+    stream::{OutputStream},
 };
 use crate::errors::JobResult;
-use crate::commands::command_util::find_field;
 
 lazy_static! {
     static ref sub_type: Vec<ColumnType> = {

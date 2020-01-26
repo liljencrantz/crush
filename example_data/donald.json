@@ -1,0 +1,35 @@
+{
+  "first_name": "Donald",
+  "last_name": "Duck",
+  "type": "Duck",
+  "hand": {
+    "fingers": 4,
+    "opposable_thumbs": true
+  },
+  "pants": null,
+  "clothes": [
+    "hat",
+    "jacket"
+  ],
+  "feet": [
+    {
+      "type": "shoe",
+      "foot": "left",
+      "size": 8
+    },
+    {
+      "type": "shoe",
+      "foot": "right",
+      "size": 8
+    }
+  ],
+  "pockets": [
+    "keys",
+    "comb",
+    {
+      "count": 1,
+      "currency": "USD",
+      "denomination": 10
+    }
+  ]
+}

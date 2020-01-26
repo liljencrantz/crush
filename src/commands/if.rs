@@ -1,11 +1,7 @@
 use crate::commands::CompileContext;
 use crate::errors::JobResult;
 use crate::errors::error;
-use crate::data::ValueType;
-use crate::data::Row;
 use crate::data::Value;
-use crate::data::ColumnType;
-use crate::env::get_cwd;
 
 pub fn compile_and_run(mut context: CompileContext) -> JobResult<()> {
     let cc = CompileContext{

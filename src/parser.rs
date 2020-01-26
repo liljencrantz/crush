@@ -1,4 +1,4 @@
-use crate::errors::{parse_error, argument_error, JobResult, error};
+use crate::errors::{parse_error, argument_error, JobResult};
 use crate::job::Job;
 use crate::lexer::{Lexer, TokenType};
 use crate::data::{ValueDefinition, ArgumentDefinition, ListDefinition};
