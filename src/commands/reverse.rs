@@ -3,15 +3,17 @@ use crate::{
     stream::{InputStream, OutputStream},
 };
 use crate::commands::CompileContext;
-use crate::errors::JobResult;
+use crate::errors::{JobResult, error};
+use crate::data::Value;
+use crate::stream::{RowsReader, Readable};
 
 pub fn run(
-    input: InputStream,
+    mut input: impl Readable,
     output: OutputStream,
 ) -> JobResult<()> {
     let mut q: Vec<Row> = Vec::new();
     loop {
-        match input.recv() {
+        match input.read() {
             Ok(row) => {
                 q.push(row);
             }
@@ -30,7 +32,17 @@ pub fn run(
 }
 
 pub fn perform(context: CompileContext) -> JobResult<()> {
-    let input = context.input.initialize_stream()?;
-    let output = context.output.initialize(input.get_type().clone())?;
-    run(input, output)
+    match context.input.recv()? {
+        Value::Stream(s) => {
+            let input = s.stream;
+            let output = context.output.initialize(input.get_type().clone())?;
+            run(input, output)
+        }
+        Value::Rows(r) => {
+            let input = RowsReader::new(r);
+            let output = context.output.initialize(input.get_type().clone())?;
+            run(input, output)
+        }
+        _ => Err(error("Expected a stream")),
+    }
 }

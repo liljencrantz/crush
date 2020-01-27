@@ -12,12 +12,12 @@ use crate::data::Value;
 
 pub fn run(
     lines: i128,
-    input: impl Readable,
+    mut input: impl Readable,
     output: OutputStream,
 ) -> JobResult<()> {
     let mut q: VecDeque<Row> = VecDeque::new();
     loop {
-        match input.recv() {
+        match input.read() {
             Ok(row) => {
                 if q.len() >= lines as usize {
                     q.pop_front();

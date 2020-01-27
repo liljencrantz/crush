@@ -12,8 +12,9 @@ use crate::{
 };
 use crate::commands::CompileContext;
 use crate::data::{ValueType, ColumnType};
-use crate::errors::JobResult;
+use crate::errors::{JobResult, error};
 use crate::printer::Printer;
+use crate::stream::{RowsReader, Readable};
 
 pub struct Config {
     output_type: Vec<ColumnType>,
@@ -41,12 +42,12 @@ fn parse(
 
 pub fn run(
     config: Config,
-    input: InputStream,
+    mut input: impl Readable,
     output: OutputStream,
     printer: Printer,
 ) -> JobResult<()> {
     'outer: loop {
-        match input.recv() {
+        match input.read() {
             Ok(mut row) => {
                 let mut cells = Vec::new();
                 'inner: for (idx, cell) in row.cells.drain(..).enumerate() {
@@ -67,8 +68,19 @@ pub fn run(
 }
 
 pub fn perform(context: CompileContext) -> JobResult<()> {
-    let input = context.input.initialize_stream()?;
-    let cfg = parse(input.get_type(), &context.arguments)?;
-    let output = context.output.initialize(cfg.output_type.clone())?;
-    run(cfg, input, output, context.printer)
+    match context.input.recv()? {
+        Value::Stream(s) => {
+            let input = s.stream;
+            let cfg = parse(input.get_type(), &context.arguments)?;
+            let output = context.output.initialize(cfg.output_type.clone())?;
+            run(cfg, input, output, context.printer)
+        }
+        Value::Rows(r) => {
+            let input = RowsReader::new(r);
+            let cfg = parse(input.get_type(), &context.arguments)?;
+            let output = context.output.initialize(cfg.output_type.clone())?;
+            run(cfg, input, output, context.printer)
+        }
+        _ => Err(error("Expected a stream")),
+    }
 }

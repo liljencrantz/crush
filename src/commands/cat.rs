@@ -13,6 +13,7 @@ use crate::data::ColumnType;
 use crate::errors::{argument_error, error};
 use crate::errors::JobResult;
 use crate::replace::Replace;
+use crate::stream::{RowsReader, Readable};
 
 pub struct Config {
     column: usize,
@@ -51,11 +52,11 @@ fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> Result<Conf
 
 pub fn run(
     config: Config,
-    input: InputStream,
+    mut input: impl Readable,
     output: OutputStream,
 ) -> JobResult<()> {
     loop {
-        match input.recv() {
+        match input.read() {
             Ok(mut row) => {
                 match row.cells.replace(config.column, Value::Integer(0)) {
                     Value::Stream(o) => loop {
@@ -89,9 +90,21 @@ pub fn get_sub_type(cell_type: &ColumnType) -> Result<Vec<ColumnType>, JobError>
 }
 
 pub fn perform(context: CompileContext) -> JobResult<()> {
-    let input = context.input.initialize_stream()?;
-    let cfg = parse(input.get_type(), &context.arguments)?;
-    let output_type = get_sub_type(&input.get_type()[cfg.column])?;
-    let output = context.output.initialize(output_type)?;
-    run(cfg, input, output)
+    match context.input.recv()? {
+        Value::Stream(s) => {
+            let input = s.stream;
+            let cfg = parse(input.get_type(), &context.arguments)?;
+            let output_type = get_sub_type(&input.get_type()[cfg.column])?;
+            let output = context.output.initialize(output_type)?;
+            run(cfg, input, output)
+        }
+        Value::Rows(r) => {
+            let input = RowsReader::new(r);
+            let cfg = parse(input.get_type(), &context.arguments)?;
+            let output_type = get_sub_type(&input.get_type()[cfg.column])?;
+            let output = context.output.initialize(output_type)?;
+            run(cfg, input, output)
+        }
+        _ => Err(error("Expected a stream")),
+    }
 }

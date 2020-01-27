@@ -1,5 +1,5 @@
 use crate::commands::CompileContext;
-use crate::errors::JobResult;
+use crate::errors::{JobResult, error};
 use crate::{
     data::{
         Row,
@@ -9,11 +9,12 @@ use crate::{
     stream::{InputStream},
 };
 use crate::data::ColumnType;
+use crate::stream::{RowsReader, Readable};
 
-fn count_rows(s: &InputStream) -> Value {
+fn count_rows(mut s: impl Readable) -> Value {
     let mut res: i128 = 0;
     loop {
-        match s.recv() {
+        match s.read() {
             Ok(_) => res+= 1,
             Err(_) => break,
         }
@@ -23,6 +24,15 @@ fn count_rows(s: &InputStream) -> Value {
 
 pub fn perform(context: CompileContext) -> JobResult<()> {
     let output = context.output.initialize(vec![ColumnType::named("count", ValueType::Integer)])?;
-    let input = context.input.initialize_stream()?;
-    output.send(Row { cells: vec![count_rows(&input)]})
+    match context.input.recv()? {
+        Value::Stream(s) => {
+            let input = s.stream;
+            output.send(Row { cells: vec![count_rows(input)]})
+        }
+        Value::Rows(r) => {
+            let input = RowsReader::new(r);
+            output.send(Row { cells: vec![count_rows(input)]})
+        }
+        _ => Err(error("Expected a stream")),
+    }
 }

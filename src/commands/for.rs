@@ -19,7 +19,6 @@ pub struct Config {
 }
 
 pub fn parse(mut context: CompileContext) -> JobResult<Config> {
-    context.input.initialize_stream()?;
     context.output.initialize(vec![])?;
 
     if context.arguments.len() != 2 {

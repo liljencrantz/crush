@@ -13,8 +13,9 @@ use crate::{
     stream::{OutputStream, InputStream, unlimited_streams},
 };
 use crate::data::ColumnType;
-use crate::errors::JobResult;
+use crate::errors::{JobResult, error};
 use crate::commands::command_util::find_field;
+use crate::stream::{RowsReader, Readable};
 
 pub struct Config {
     input_type: Vec<ColumnType>,
@@ -48,13 +49,13 @@ pub fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> JobResult
 
 pub fn run(
     config: Config,
-    input: InputStream,
+    mut input: impl Readable,
     output: OutputStream,
 ) -> JobResult<()> {
     let mut groups: HashMap<Value, OutputStream> = HashMap::new();
 
     loop {
-        match input.recv() {
+        match input.read() {
             Ok(row) => {
                 let key = row.cells[config.column].partial_clone()?;
                 let val = groups.get(&key);
@@ -80,15 +81,33 @@ pub fn run(
 }
 
 pub fn perform(context: CompileContext) -> JobResult<()> {
-    let input = context.input.initialize_stream()?;
-    let config = parse(input.get_type().clone(), context.arguments)?;
-    let output_type= vec![
-        input.get_type()[config.column].clone(),
-        ColumnType {
-            name: Some(config.name.clone()),
-            cell_type: ValueType::Stream(input.get_type().clone())
+    match context.input.recv()? {
+        Value::Stream(s) => {
+            let input = s.stream;
+            let config = parse(input.get_type().clone(), context.arguments)?;
+            let output_type= vec![
+                input.get_type()[config.column].clone(),
+                ColumnType {
+                    name: Some(config.name.clone()),
+                    cell_type: ValueType::Stream(input.get_type().clone())
+                }
+            ];
+            let output = context.output.initialize(output_type)?;
+            run(config, input, output)
         }
-    ];
-    let output = context.output.initialize(output_type)?;
-    run(config, input, output)
+        Value::Rows(r) => {
+            let input = RowsReader::new(r);
+            let config = parse(input.get_type().clone(), context.arguments)?;
+            let output_type= vec![
+                input.get_type()[config.column].clone(),
+                ColumnType {
+                    name: Some(config.name.clone()),
+                    cell_type: ValueType::Stream(input.get_type().clone())
+                }
+            ];
+            let output = context.output.initialize(output_type)?;
+            run(config, input, output)
+        }
+        _ => Err(error("Expected a stream")),
+    }
 }

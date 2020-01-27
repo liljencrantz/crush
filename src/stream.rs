@@ -30,13 +30,6 @@ impl ValueReceiver {
     pub fn recv(self) -> JobResult<Value> {
         to_job_error(self.receiver.recv())
     }
-
-    pub fn initialize_stream(self) -> JobResult<InputStream> {
-        match self.recv()? {
-            Value::Stream(out) => Ok(out.stream),
-            _ => Err(error("Expected a stream")),
-        }
-    }
 }
 
 pub enum OutputStream {
