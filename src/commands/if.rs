@@ -3,7 +3,7 @@ use crate::errors::JobResult;
 use crate::errors::error;
 use crate::data::Value;
 
-pub fn compile_and_run(mut context: CompileContext) -> JobResult<()> {
+pub fn perform(mut context: CompileContext) -> JobResult<()> {
     let cc = CompileContext{
         input: context.input,
         output: context.output,

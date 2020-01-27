@@ -4,7 +4,7 @@ use std::path::Path;
 use crate::data::Value;
 use crate::env::get_home;
 
-pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> JobResult<()> {
     let dir = match context.arguments.len() {
         0 => get_home(),
         1 => {

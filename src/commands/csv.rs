@@ -138,7 +138,7 @@ fn run(cfg: Config, output: OutputStream, printer: Printer) -> JobResult<()> {
     return Ok(());
 }
 
-pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> JobResult<()> {
     let cfg = parse(context.arguments)?;
     let output = context.output.initialize(
         cfg.columns.clone())?;

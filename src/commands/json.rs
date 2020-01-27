@@ -102,7 +102,7 @@ fn run(cfg: Config, output: ValueSender, printer: Printer) -> JobResult<()> {
     return Ok(());
 }
 
-pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> JobResult<()> {
     let cfg = parse(context.arguments)?;
     run(cfg, context.output, context.printer)
 }

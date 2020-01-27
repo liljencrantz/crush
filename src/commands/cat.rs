@@ -88,7 +88,7 @@ pub fn get_sub_type(cell_type: &ColumnType) -> Result<Vec<ColumnType>, JobError>
     }
 }
 
-pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> JobResult<()> {
     let input = context.input.initialize_stream()?;
     let cfg = parse(input.get_type(), &context.arguments)?;
     let output_type = get_sub_type(&input.get_type()[cfg.column])?;

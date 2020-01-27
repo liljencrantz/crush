@@ -137,13 +137,13 @@ fn parse(output: OutputStream, arguments: Vec<Argument>, recursive: bool) -> Res
     Ok(Config { dirs, recursive, output })
 }
 
-pub fn compile_and_run_ls(context: CompileContext) -> JobResult<()> {
+pub fn perform_ls(context: CompileContext) -> JobResult<()> {
     let output = context.output.initialize(OUTPUT_TYPE.clone())?;
     let cfg = parse(output, context.arguments, false)?;
     run(cfg)
 }
 
-pub fn compile_and_run_find(context: CompileContext) -> JobResult<()> {
+pub fn perform_find(context: CompileContext) -> JobResult<()> {
     let output = context.output.initialize(OUTPUT_TYPE.clone())?;
     let cfg = parse(output, context.arguments, true)?;
     run(cfg)

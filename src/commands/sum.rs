@@ -10,6 +10,7 @@ use crate::{
 };
 use crate::data::{ColumnType, Argument};
 use crate::commands::command_util::find_field_from_str;
+use crate::stream::{RowsReader, Readable};
 
 pub fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> JobResult<usize> {
     match arguments.len() {
@@ -36,10 +37,10 @@ pub fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> JobResu
     }
 }
 
-fn sum_rows(s: &InputStream, column: usize) -> JobResult<Value> {
+fn sum_rows(mut s: impl Readable, column: usize) -> JobResult<Value> {
     let mut res: i128 = 0;
     loop {
-        match s.recv() {
+        match s.read() {
             Ok(row) => match row.cells[column] {
                 Value::Integer(i) => res += i,
                 _ => return Err(error("Invalid cell value, expected an integer"))
@@ -50,9 +51,20 @@ fn sum_rows(s: &InputStream, column: usize) -> JobResult<Value> {
     Ok(Value::Integer(res))
 }
 
-pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let output = context.output.initialize(vec![ColumnType::named("sum", ValueType::Integer)])?;
-    let input = context.input.initialize_stream()?;
-    let column = parse(input.get_type(), &context.arguments)?;
-    output.send(Row { cells: vec![sum_rows(&input, column)?]})
+pub fn perform(context: CompileContext) -> JobResult<()> {
+    match context.input.recv()? {
+        Value::Stream(s) => {
+            let input = s.stream;
+            let output = context.output.initialize(vec![ColumnType::named("sum", ValueType::Integer)])?;
+            let column = parse(input.get_type(), &context.arguments)?;
+            output.send(Row { cells: vec![sum_rows(input, column)?]})
+        }
+        Value::Rows(r) => {
+            let input = RowsReader::new(r);
+            let output = context.output.initialize(vec![ColumnType::named("sum", ValueType::Integer)])?;
+            let column = parse(input.get_type(), &context.arguments)?;
+            output.send(Row { cells: vec![sum_rows(input, column)?]})
+        }
+        _ => Err(error("Expected a stream")),
+    }
 }

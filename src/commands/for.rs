@@ -68,7 +68,7 @@ pub fn run(config: Config) -> JobResult<()> {
     Ok(())
 }
 
-pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> JobResult<()> {
     let config = parse(context)?;
     run(config)
 }

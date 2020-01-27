@@ -2,7 +2,7 @@ use crate::commands::CompileContext;
 use crate::errors::argument_error;
 use crate::errors::JobResult;
 
-pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> JobResult<()> {
     context.output.initialize(vec![]);
 
     for arg in context.arguments.iter() {

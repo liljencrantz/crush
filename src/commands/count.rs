@@ -21,7 +21,7 @@ fn count_rows(s: &InputStream) -> Value {
     return Value::Integer(res);
 }
 
-pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> JobResult<()> {
     let output = context.output.initialize(vec![ColumnType::named("count", ValueType::Integer)])?;
     let input = context.input.initialize_stream()?;
     output.send(Row { cells: vec![count_rows(&input)]})

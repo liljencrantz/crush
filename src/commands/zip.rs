@@ -22,7 +22,7 @@ pub fn run(input1: &mut impl Readable, input2: &mut impl Readable, sender: Value
     return Ok(());
 }
 
-pub fn compile_and_run(mut context: CompileContext) -> JobResult<()> {
+pub fn perform(mut context: CompileContext) -> JobResult<()> {
     if context.arguments.len() != 2 {
         return Err(error("Expected exactly two arguments"));
     }

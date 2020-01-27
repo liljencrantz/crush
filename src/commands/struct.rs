@@ -3,7 +3,7 @@ use crate::errors::JobResult;
 use crate::data::{Struct, Value};
 use crate::data::Argument;
 
-pub fn compile_and_run(mut context: CompileContext) -> JobResult<()> {
+pub fn perform(mut context: CompileContext) -> JobResult<()> {
     context.output.send(
         Value::Struct(Struct {
             types: context.arguments.iter().map(Argument::cell_type).collect(),

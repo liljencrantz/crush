@@ -66,7 +66,7 @@ pub fn run(
     return Ok(());
 }
 
-pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> JobResult<()> {
     let input = context.input.initialize_stream()?;
     let cfg = parse(input.get_type(), &context.arguments)?;
     let output = context.output.initialize(cfg.output_type.clone())?;

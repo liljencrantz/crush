@@ -55,7 +55,7 @@ pub fn run<T: Readable>(mut config: Config<T>) -> JobResult<()> {
     return Ok(());
 }
 
-pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> JobResult<()> {
     match context.input.recv()? {
         Value::Stream(s) => {
             let input = s.stream;

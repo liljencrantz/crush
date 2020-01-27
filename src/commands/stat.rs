@@ -37,6 +37,6 @@ fn run(file: Box<Path>, sender: ValueSender) -> JobResult<()> {
     )
 }
 
-pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> JobResult<()> {
     run(parse(context.arguments)?, context.output)
 }

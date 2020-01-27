@@ -47,7 +47,7 @@ pub fn run(output: OutputStream) -> JobResult<()> {
     Ok(())
 }
 
-pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> JobResult<()> {
     let output = context.output.initialize(vec![
         ColumnType::named("pid", ValueType::Integer),
         ColumnType::named("ppid", ValueType::Integer),

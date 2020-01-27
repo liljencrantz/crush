@@ -20,7 +20,7 @@ fn parse(arguments: Vec<Argument>) -> JobResult<Vec<Box<str>>> {
     Ok(vars)
 }
 
-pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> JobResult<()> {
     let vars = parse(context.arguments)?;
     context.output.initialize(vec![]);
     for s in vars {

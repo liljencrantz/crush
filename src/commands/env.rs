@@ -3,7 +3,7 @@ use crate::errors::JobResult;
 use crate::data::{ColumnType, ValueType, Row, Value};
 use std::collections::HashMap;
 
-pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> JobResult<()> {
     let output = context.output.initialize(vec![
         ColumnType::named("name", ValueType::Text),
         ColumnType::named("type", ValueType::Text),

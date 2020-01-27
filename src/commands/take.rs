@@ -34,7 +34,7 @@ fn parse(context: &CompileContext) -> JobResult<Config> {
     })
 }
 
-pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> JobResult<()> {
     let config = parse(&context)?;
     if let Value::Stream(cell) = mandate(config.location.get(&config.name), "Unknown variable")? {
         let output = context.output

@@ -49,7 +49,7 @@ fn parse(arguments: Vec<Argument>) -> JobResult<Box<Path>> {
     Ok(files.remove(0))
 }
 
-pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> JobResult<()> {
     let output = context.output.initialize(sub_type.clone())?;
     let file = parse(context.arguments)?;
     run(file, output)

@@ -93,7 +93,7 @@ pub fn run<T: Readable>(mut config: Config<T>, printer: Printer) -> JobResult<()
     return Ok(());
 }
 
-pub fn compile_and_run(mut context: CompileContext) -> JobResult<()> {
+pub fn perform(mut context: CompileContext) -> JobResult<()> {
     match context.input.recv()? {
         Value::Stream(input) => {
             let output = context.output.initialize(input.stream.get_type().clone())?;

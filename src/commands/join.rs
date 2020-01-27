@@ -189,7 +189,7 @@ fn get_output_type(input_type: &Vec<ColumnType>, cfg: &Config) -> Result<Vec<Col
     };
 }
 
-pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> JobResult<()> {
     match context.input.recv()? {
         Value::Struct(s) => {
             let cfg = parse(s.get_types(), context.arguments)?;
