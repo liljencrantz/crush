@@ -8,7 +8,7 @@ Rename dict -> MutableDict
 Rename text -> string
 Create type ImmutableDict
 Create new type Type
-Create str namespace with commands upper, lower
+Create str namespace with string commands like upper, lower
 Flesh out time/duration modes with add/subtract support
 Make better to_string methods for various cell types
 Some missing comparisons on Cell
