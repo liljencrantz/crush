@@ -5,19 +5,21 @@ use crate::{
 };
 use crate::commands::CompileContext;
 use crate::data::{Argument, Value, Row};
-use crate::errors::JobResult;
+use crate::errors::{JobResult, error};
 use crate::commands::command_util::find_field;
+use crate::stream::RowsReader;
+use crate::stream::Readable;
 
-pub struct Config {
+pub struct Config<T: Readable> {
     sort_column_idx: usize,
-    input: InputStream,
+    input: T,
     output: OutputStream,
 }
 
-fn parse(
+fn parse<T: Readable>(
     arguments: Vec<Argument>,
-    input: InputStream,
-    output: OutputStream) -> JobResult<Config> {
+    input: T,
+    output: OutputStream) -> JobResult<Config<T>> {
     if arguments.len() != 1 {
         return Err(argument_error("No comparison key specified"));
     }
@@ -32,10 +34,10 @@ fn parse(
     Ok(Config { sort_column_idx, input, output })
 }
 
-pub fn run(config: Config) -> JobResult<()> {
+pub fn run<T: Readable>(mut config: Config<T>) -> JobResult<()> {
     let mut res: Vec<Row> = Vec::new();
     loop {
-        match config.input.recv() {
+        match config.input.read() {
             Ok(row) => res.push(row),
             Err(_) => break,
         }
@@ -54,8 +56,19 @@ pub fn run(config: Config) -> JobResult<()> {
 }
 
 pub fn compile_and_run(context: CompileContext) -> JobResult<()> {
-    let input = context.input.initialize_stream()?;
-    let output = context.output.initialize(input.get_type().clone())?;
-    let config = parse(context.arguments, input, output)?;
-    run(config)
+    match context.input.recv()? {
+        Value::Stream(s) => {
+            let input = s.stream;
+            let output = context.output.initialize(input.get_type().clone())?;
+            let config = parse(context.arguments, input, output)?;
+            run(config)
+        }
+        Value::Rows(r) => {
+            let input = RowsReader::new(r);
+            let output = context.output.initialize(input.get_type().clone())?;
+            let mut config = parse(context.arguments, input, output)?;
+            run(config)
+        }
+        _ => Err(error("Expected a stream")),
+    }
 }
