@@ -11,12 +11,14 @@ use crate::{
 use crate::commands::CompileContext;
 use crate::errors::{error, JobResult};
 use crate::printer::Printer;
+use crate::stream::RowsReader;
+use crate::stream::Readable;
 
 mod parser;
 
-pub struct Config {
+pub struct Config<T: Readable> {
     condition: Condition,
-    input: InputStream,
+    input: T,
     output: OutputStream,
 }
 
@@ -76,9 +78,9 @@ fn evaluate(condition: &Condition, row: &Row) -> JobResult<bool> {
     })
 }
 
-pub fn run(config: Config, printer: Printer) -> JobResult<()> {
+pub fn run<T: Readable>(mut config: Config<T>, printer: Printer) -> JobResult<()> {
     loop {
-        match config.input.recv() {
+        match config.input.read() {
             Ok(row) => {
                 match evaluate(&config.condition, &row) {
                     Ok(val) => if val { if config.output.send(row).is_err() { break }},
@@ -92,12 +94,28 @@ pub fn run(config: Config, printer: Printer) -> JobResult<()> {
 }
 
 pub fn compile_and_run(mut context: CompileContext) -> JobResult<()> {
-    let input = context.input.initialize_stream()?;
-    let output = context.output.initialize(input.get_type().clone())?;
-    let config = Config {
-        condition: parse(input.get_type(), context.arguments.as_mut())?,
-        input: input,
-        output: output,
-    };
-    run(config, context.printer)
+    match context.input.recv()? {
+        Value::Stream(input) => {
+            let output = context.output.initialize(input.stream.get_type().clone())?;
+            let config = Config {
+                condition: parse(input.stream.get_type(), context.arguments.as_mut())?,
+                input: input.stream,
+                output: output,
+            };
+            run(config, context.printer)
+        }
+        Value::Rows(r) => {
+            let input = RowsReader::new(r);
+            let output = context.output.initialize(input.get_type().clone())?;
+            let config = Config {
+                condition: parse(input.get_type(), context.arguments.as_mut())?,
+                input: input,
+                output: output,
+            };
+            run(config, context.printer)
+        }
+        _ => Err(error("Expected a stream")),
+    }
+
+
 }

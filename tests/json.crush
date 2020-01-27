@@ -1,0 +1,2 @@
+json example_data/din*.json | sort %name
+json example_data/din*.json | where %name =~ r{Tri.*}
