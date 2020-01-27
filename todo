@@ -1,5 +1,4 @@
 Todo:
-Add uniq command
 Add a bunch of system tests
 Fix aggr command and think through it's input/output types
 Rename rows -> ImmutableList
@@ -112,3 +111,4 @@ Rename cell -> value
 Rename output -> stream
 Rename row -> struct
 Think through input/output types of join
+Add uniq command

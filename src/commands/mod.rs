@@ -29,6 +29,7 @@ mod reverse;
 mod select;
 mod enumerate;
 
+mod uniq;
 mod group;
 mod join;
 mod zip;
@@ -119,6 +120,7 @@ pub fn add_commands(env: &Env) -> JobResult<()> {
 
     env.declare_str("group", Value::Command(Command::new(group::perform)))?;
     env.declare_str("join", Value::Command(Command::new(join::perform)))?;
+    env.declare_str("uniq", Value::Command(Command::new(uniq::perform)))?;
 
 //    env.declare_str("aggr", Value::Command(Command::new(aggr::perform)))?;
 

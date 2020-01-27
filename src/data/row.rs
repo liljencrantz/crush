@@ -5,7 +5,7 @@ use std::mem;
 
 #[derive(PartialEq)]
 #[derive(PartialOrd)]
-#[derive(Debug)]
+#[derive(Debug, Eq, Hash)]
 pub struct Row {
     pub cells: Vec<Value>,
 }
@@ -26,7 +26,7 @@ impl Row {
 
 #[derive(PartialEq)]
 #[derive(PartialOrd)]
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct Struct {
     pub types: Vec<ColumnType>,
     pub cells: Vec<Value>,
