@@ -34,6 +34,8 @@ pub enum ValueType {
     Float,
     Empty,
     Any,
+    Binary,
+    Type,
 }
 
 
@@ -67,6 +69,8 @@ impl ValueType {
             ValueType::Float |
             ValueType::Empty |
             ValueType::Any |
+            ValueType::Binary |
+            ValueType::Type |
             ValueType::Bool => self.clone(),
             ValueType::Stream(o) => ValueType::Rows(ColumnType::materialize(o)),
             ValueType::Rows(r) => ValueType::Rows(ColumnType::materialize(r)),
@@ -110,6 +114,8 @@ impl ValueType {
             ValueType::Float => "float".to_string(),
             ValueType::Empty => "empty".to_string(),
             ValueType::Any => "any".to_string(),
+            ValueType::Binary => "binary".to_string(),
+            ValueType::Type => "type".to_string(),
         }
     }
 

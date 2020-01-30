@@ -12,13 +12,14 @@ use crate::{
     errors::{error, JobError, to_job_error},
     glob::Glob,
 };
-use crate::data::{List, Command, Stream, ValueType, Dict, ColumnType};
+use crate::data::{List, Command, Stream, ValueType, Dict, ColumnType, value_type_parser};
 use crate::errors::JobResult;
 use std::time::Duration;
 use crate::format::duration_format;
 use crate::env::Env;
 use crate::data::row::Struct;
 use crate::stream::streams;
+use std::io::{BufReader, Read};
 
 #[derive(Debug)]
 pub enum Value {
@@ -42,6 +43,8 @@ pub enum Value {
     Bool(bool),
     Float(f64),
     Empty(),
+    Binary(dyn BufReader<T: Read>),
+    Type(ValueType),
 }
 
 impl Value {
@@ -67,6 +70,8 @@ impl Value {
             Value::Dict(d) => d.to_string(),
             Value::Float(f) => f.to_string(),
             Value::Empty() => "<empty>".to_string(),
+            Value::Binary(_) => "<binary>".to_string(),
+            Value::Type(t) => t.to_string(),
         };
     }
 
@@ -112,6 +117,8 @@ impl Value {
             Value::Dict(d) => d.dict_type(),
             Value::Float(_) => ValueType::Float,
             Value::Empty() => ValueType::Empty,
+            Value::Binary(_) => ValueType::Binary,
+            Value::Type(_) => ValueType::Type,
         };
     }
 
@@ -147,7 +154,9 @@ impl Value {
             Value::Bool(v) => Ok(Value::Bool(v.clone())),
             Value::Dict(d) => Ok(Value::Dict(d.partial_clone()?)),
             Value::Float(f) => Ok(Value::Float(f.clone())),
-            Value::Empty() => Ok(Value::Empty())
+            Value::Empty() => Ok(Value::Empty()),
+            Value::Binary(v) => Ok(Value::Binary(v.clone())),
+            Value::Type(t) => Ok(Value::Type(t.clone())),
         };
     }
 
@@ -188,6 +197,7 @@ impl Value {
             (Value::Text(s), ValueType::Field) => Ok(Value::Field(vec![s])),
             (Value::Text(s), ValueType::Op) => Ok(Value::Op(s)),
             (Value::Text(s), ValueType::Regex) => to_job_error(Regex::new(s.as_ref()).map(|v| Value::Regex(s, v))),
+            (Value::Text(s), ValueType::Type) => Ok(Value::Type(value_type_parser::parse(s.as_ref())?)),
 
             (Value::File(s), ValueType::Text) => match s.to_str() {
                 Some(s) => Ok(Value::Text(Box::from(s))),
@@ -241,6 +251,9 @@ impl Value {
                 let s = i.to_string();
                 to_job_error(Regex::new(s.as_str()).map(|v| Value::Regex(s.into_boxed_str(), v)))
             }
+
+            (Value::Type(s), ValueType::Text) => Ok(Value::Text(Box::from(s.to_string()))),
+
             _ => Err(error("Unimplemented conversion")),
         }
     }
@@ -267,6 +280,8 @@ impl std::hash::Hash for Value {
             Value::Env(_) | Value::Dict(_) | Value::Rows(_) | Value::Closure(_) |
             Value::List(_) | Value::Stream(_) | Value::Struct(_) | Value::Float(_)=> panic!("Can't hash output"),
             Value::Empty() => {}
+            Value::Binary(v) => v.hash(state),
+            Value::Type(v) => v.to_string().hash(state),
         }
     }
 }
