@@ -12,14 +12,13 @@ use crate::{
     errors::{error, JobError, to_job_error},
     glob::Glob,
 };
-use crate::data::{List, Command, Stream, ValueType, Dict, ColumnType, value_type_parser};
+use crate::data::{List, Command, Stream, ValueType, Dict, ColumnType, value_type_parser, BinaryReader};
 use crate::errors::JobResult;
 use std::time::Duration;
 use crate::format::duration_format;
 use crate::env::Env;
 use crate::data::row::Struct;
 use crate::stream::streams;
-use std::io::{BufReader, Read};
 
 #[derive(Debug)]
 pub enum Value {
@@ -43,7 +42,7 @@ pub enum Value {
     Bool(bool),
     Float(f64),
     Empty(),
-    Binary(dyn BufReader<T: Read>),
+    BinaryReader(BinaryReader),
     Type(ValueType),
 }
 
@@ -70,7 +69,7 @@ impl Value {
             Value::Dict(d) => d.to_string(),
             Value::Float(f) => f.to_string(),
             Value::Empty() => "<empty>".to_string(),
-            Value::Binary(_) => "<binary>".to_string(),
+            Value::BinaryReader(_) => "<binary>".to_string(),
             Value::Type(t) => t.to_string(),
         };
     }
@@ -117,7 +116,7 @@ impl Value {
             Value::Dict(d) => d.dict_type(),
             Value::Float(_) => ValueType::Float,
             Value::Empty() => ValueType::Empty,
-            Value::Binary(_) => ValueType::Binary,
+            Value::BinaryReader(_) => ValueType::Binary,
             Value::Type(_) => ValueType::Type,
         };
     }
@@ -155,7 +154,7 @@ impl Value {
             Value::Dict(d) => Ok(Value::Dict(d.partial_clone()?)),
             Value::Float(f) => Ok(Value::Float(f.clone())),
             Value::Empty() => Ok(Value::Empty()),
-            Value::Binary(v) => Ok(Value::Binary(v.clone())),
+            Value::BinaryReader(v) => Err(error("Invalid use of stream")),
             Value::Type(t) => Ok(Value::Type(t.clone())),
         };
     }
@@ -278,9 +277,9 @@ impl std::hash::Hash for Value {
             Value::Bool(v) => v.hash(state),
 
             Value::Env(_) | Value::Dict(_) | Value::Rows(_) | Value::Closure(_) |
-            Value::List(_) | Value::Stream(_) | Value::Struct(_) | Value::Float(_)=> panic!("Can't hash output"),
+            Value::List(_) | Value::Stream(_) | Value::Struct(_) | Value::Float(_)
+            | Value::BinaryReader(_) => panic!("Can't hash output"),
             Value::Empty() => {}
-            Value::Binary(v) => v.hash(state),
             Value::Type(v) => v.to_string().hash(state),
         }
     }

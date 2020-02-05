@@ -15,6 +15,7 @@ use crate::{
 use crate::commands::command_util::find_field;
 use crate::stream::{RowsReader, Readable, ValueSender};
 use crate::errors::error;
+use crate::data::Struct;
 
 pub struct Config {
     columns: Vec<(usize, Option<Box<str>>)>,
@@ -42,7 +43,7 @@ pub fn run(
     return Ok(());
 }
 
-fn perform_for(input: impl Readable, output: ValueSender, arguments: &Vec<Argument>) -> JobResult<()> {
+fn perform_for(input: impl Readable, output: ValueSender, arguments: Vec<Argument>) -> JobResult<()> {
     let input_type = input.get_type();
     let columns = arguments.iter().map(|a| {
         match &a.value {
@@ -65,15 +66,29 @@ fn perform_for(input: impl Readable, output: ValueSender, arguments: &Vec<Argume
     run(Config { columns: columns }, input, output)
 }
 
+fn perform_single(mut input: Struct, output: ValueSender, arguments: Vec<Argument>) -> JobResult<()> {
+    if arguments.len() == 1 && arguments[0].name.is_none() {
+        match &arguments[0].value {
+            Value::Field(s) => output.send(input.cells.remove(find_field(s, &input.types)?)),
+            _ => Err(argument_error("Expected Field")),
+        }
+    } else {
+        Err(error("NOT IMPLEMENTED!!!"))
+    }
+}
+
 pub fn perform(context: CompileContext) -> JobResult<()> {
     match context.input.recv()? {
         Value::Stream(s) => {
             let input = s.stream;
-            perform_for(input, context.output, &context.arguments)
+            perform_for(input, context.output, context.arguments)
         }
         Value::Rows(r) => {
             let input = RowsReader::new(r);
-            perform_for(input, context.output, &context.arguments)
+            perform_for(input, context.output, context.arguments)
+        }
+        Value::Struct(s) => {
+            perform_single(s, context.output, context.arguments)
         }
         _ => Err(error("Expected a stream")),
     }

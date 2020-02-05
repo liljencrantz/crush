@@ -1,8 +1,9 @@
 use crate::stream::{ValueSender, channels, Readable, RowsReader};
 use crate::printer::Printer;
 use std::thread;
-use crate::data::{Row, ColumnType, ValueType, Alignment, Value, Rows, Stream};
+use crate::data::{Row, ColumnType, ValueType, Alignment, Value, Rows, Stream, BinaryReader};
 use std::cmp::max;
+use std::io::{Read, BufReader, BufRead};
 
 pub fn spawn_print_thread(printer: &Printer) -> ValueSender {
     let (o, i) = channels();
@@ -23,6 +24,7 @@ fn print_value(printer: &Printer, mut cell: Value) {
     match cell {
         Value::Stream(mut output) => print(printer, &mut output.stream),
         Value::Rows(rows) => print(printer, &mut RowsReader::new(rows)),
+        Value::BinaryReader(mut b) => print_binary(printer, b.reader.as_mut(), 0),
         _ => printer.line(cell.to_string().as_str()),
     };
 }
@@ -97,7 +99,7 @@ fn print_header(printer: &Printer, w: &Vec<usize>, types: &Vec<ColumnType>, has_
     }
 }
 
-fn print_row(printer: &Printer, w: &Vec<usize>, mut r: Row, indent: usize, rows: &mut Vec<Rows>, outputs: &mut Vec<Stream>) {
+fn print_row(printer: &Printer, w: &Vec<usize>, mut r: Row, indent: usize, rows: &mut Vec<Rows>, outputs: &mut Vec<Stream>, binaries: &mut Vec<BinaryReader>) {
     let cell_len = r.cells.len();
     let mut row = " ".repeat(indent * 4);
     let last_idx = r.cells.len() - 1;
@@ -125,6 +127,7 @@ fn print_row(printer: &Printer, w: &Vec<usize>, mut r: Row, indent: usize, rows:
         match c {
             Value::Rows(r) => rows.push(r),
             Value::Stream(o) => outputs.push(o),
+            Value::BinaryReader(b) => binaries.push(b),
             _ => {}
         }
     }
@@ -135,13 +138,32 @@ fn print_body(printer: &Printer, w: &Vec<usize>, data: Vec<Row>, indent: usize) 
     for r in data.into_iter() {
         let mut rows = Vec::new();
         let mut outputs = Vec::new();
-        print_row(printer, w, r, indent, &mut rows, &mut outputs);
+        let mut binaries = Vec::new();
+        print_row(printer, w, r, indent, &mut rows, &mut outputs, &mut binaries);
         for r in rows {
             print_internal(printer, &mut RowsReader::new(r), indent + 1);
         }
         for mut r in outputs {
             print_internal(printer, &mut r.stream, indent + 1);
         }
+        for mut r in binaries {
+            print_binary(printer, r.reader.as_mut(), indent + 1);
+        }
+    }
+}
+
+fn print_binary(printer: &Printer, binary: &mut dyn Read, indent: usize) {
+    let mut reader = BufReader::new(binary);
+
+    let mut line = String::new();
+    loop {
+        line.clear();
+        let len = reader.read_line(&mut line).unwrap();
+        if len == 0 {
+            break;
+        }
+        let msg = if line.ends_with('\n') { &line[0..line.len()-1]} else {line.as_str()};
+        printer.line(msg);
     }
 }
 

@@ -20,18 +20,19 @@ extern crate map_in_place;
 
 use map_in_place::MapVecInPlace;
 use crate::printer::Printer;
-use crate::data::ColumnType;
+use crate::data::{ColumnType, BinaryReader};
 use crate::errors::JobResult;
+use crate::stream::ValueReceiver;
 
 pub struct Config {
     separator: char,
     columns: Vec<ColumnType>,
     skip_head: usize,
     trim: Option<char>,
-    file: Box<Path>,
+    input: BinaryReader,
 }
 
-fn parse(arguments: Vec<Argument>) -> JobResult<Config> {
+fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<Config> {
     let mut separator = ',';
     let mut columns = Vec::new();
     let mut skip_head = 0;
@@ -77,16 +78,28 @@ fn parse(arguments: Vec<Argument>) -> JobResult<Config> {
         }
     }
 
-    if files.len() != 1 {
-        return Err(argument_error("Expected one CSV file"));
-    }
+    let reader = match files.len() {
+            0 => {
+                let v = input.recv()?;
+                match v {
+                    Value::BinaryReader(b) => {
+                        b
+                    }
+                    _ => return Err(argument_error("Expected either a file to read or binary pipe input"))
+                }
+            }
+            1 => {
+                BinaryReader::from(&files[0])?
+            }
+            _ => return Err(argument_error("Expected a file name"))
+        };
 
     Ok(Config {
         separator,
         columns,
         skip_head,
         trim,
-        file: files.remove(0),
+        input: reader,
     })
 }
 
@@ -99,8 +112,7 @@ fn run(cfg: Config, output: OutputStream, printer: Printer) -> JobResult<()> {
     let columns = cfg.columns.clone();
     let skip = cfg.skip_head;
 
-    let fff = File::open(cfg.file).unwrap();
-    let mut reader = BufReader::new(&fff);
+    let mut reader = BufReader::new(cfg.input.reader);
     let mut line = String::new();
     let mut skipped = 0usize;
     loop {
@@ -139,7 +151,7 @@ fn run(cfg: Config, output: OutputStream, printer: Printer) -> JobResult<()> {
 }
 
 pub fn perform(context: CompileContext) -> JobResult<()> {
-    let cfg = parse(context.arguments)?;
+    let cfg = parse(context.arguments, context.input)?;
     let output = context.output.initialize(
         cfg.columns.clone())?;
     run(cfg, output, context.printer)

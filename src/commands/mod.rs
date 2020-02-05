@@ -40,6 +40,7 @@ mod count;
 mod sum;
 
 mod cat;
+mod http;
 
 mod cast;
 
@@ -127,6 +128,7 @@ pub fn add_commands(env: &Env) -> JobResult<()> {
     env.declare_str("count", Value::Command(Command::new(count::perform)))?;
     env.declare_str("sum", Value::Command(Command::new(sum::perform)))?;
     env.declare_str("cat", Value::Command(Command::new(cat::perform)))?;
+    env.declare_str("http", Value::Command(Command::new(http::perform)))?;
     env.declare_str("select", Value::Command(Command::new(select::perform)))?;
     env.declare_str("enumerate", Value::Command(Command::new(enumerate::perform)))?;
 

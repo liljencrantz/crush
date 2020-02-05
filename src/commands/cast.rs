@@ -8,7 +8,7 @@ use crate::{
         Row,
     },
     errors::{argument_error, JobError},
-    stream::{InputStream, OutputStream},
+    stream::{OutputStream},
 };
 use crate::commands::CompileContext;
 use crate::data::{ValueType, ColumnType};
@@ -50,7 +50,7 @@ pub fn run(
         match input.read() {
             Ok(mut row) => {
                 let mut cells = Vec::new();
-                'inner: for (idx, cell) in row.cells.drain(..).enumerate() {
+                for (idx, cell) in row.cells.drain(..).enumerate() {
                     match cell.cast(config.output_type[idx].cell_type.clone()) {
                         Ok(c) => cells.push(c),
                         Err(e) => {

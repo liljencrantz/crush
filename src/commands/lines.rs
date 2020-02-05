@@ -15,7 +15,9 @@ use crate::{
     },
     stream::{OutputStream},
 };
-use crate::errors::JobResult;
+use crate::errors::{JobResult, to_job_error};
+use crate::data::BinaryReader;
+use crate::stream::ValueReceiver;
 
 lazy_static! {
     static ref sub_type: Vec<ColumnType> = {
@@ -23,9 +25,8 @@ lazy_static! {
     };
 }
 
-fn run(file: Box<Path>, output: OutputStream) -> JobResult<()> {
-    let fff = File::open(file).unwrap();
-    let mut reader = BufReader::new(&fff);
+fn run(input: BinaryReader, output: OutputStream) -> JobResult<()> {
+    let mut reader = BufReader::new(input.reader);
     let mut line = String::new();
     loop {
         reader.read_line(&mut line);
@@ -38,19 +39,28 @@ fn run(file: Box<Path>, output: OutputStream) -> JobResult<()> {
     return Ok(());
 }
 
-fn parse(arguments: Vec<Argument>) -> JobResult<Box<Path>> {
-    let mut files: Vec<Box<Path>> = Vec::new();
-    for arg in &arguments {
-        arg.value.file_expand(&mut files)?;
+fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<BinaryReader> {
+    match arguments.len() {
+        0 => {
+            let v = input.recv()?;
+            match v {
+                Value::BinaryReader(b) => {
+                    Ok(b)
+                }
+                _ => Err(argument_error("Expected either a file to read or binary pipe input"))
+            }
+        }
+        1 => {
+            let mut files = Vec::new();
+            arguments[0].value.file_expand(&mut files);
+            Ok(BinaryReader::from(&files.remove(0))?)
+        }
+        _ => Err(argument_error("Expected a file name"))
     }
-    if files.len() != 1 {
-        return Err(argument_error("Expected exactly one file"));
-    }
-    Ok(files.remove(0))
 }
 
 pub fn perform(context: CompileContext) -> JobResult<()> {
     let output = context.output.initialize(sub_type.clone())?;
-    let file = parse(context.arguments)?;
+    let file = parse(context.arguments, context.input)?;
     run(file, output)
 }
