@@ -1,6 +1,7 @@
 mod command_util;
 
 mod r#struct;
+mod val;
 
 mod find;
 mod stat;
@@ -97,6 +98,7 @@ impl JobJoinHandle {
 
 pub fn add_commands(env: &Env) -> JobResult<()> {
     env.declare_str("struct", Value::Command(Command::new(r#struct::perform)))?;
+    env.declare_str("val", Value::Command(Command::new(val::perform)))?;
 
     env.declare_str("ls", Value::Command(Command::new(find::perform_ls)))?;
     env.declare_str("find", Value::Command(Command::new(find::perform_find)))?;
