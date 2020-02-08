@@ -24,7 +24,7 @@ fn print_value(printer: &Printer, mut cell: Value) {
     match cell {
         Value::Stream(mut output) => print(printer, &mut output.stream),
         Value::Rows(rows) => print(printer, &mut RowsReader::new(rows)),
-        Value::BinaryReader(mut b) => print_binary(printer, b.reader.as_mut(), 0),
+        Value::BinaryReader(mut b) => print_binary(printer, b.reader().as_mut(), 0),
         _ => printer.line(cell.to_string().as_str()),
     };
 }
@@ -99,7 +99,14 @@ fn print_header(printer: &Printer, w: &Vec<usize>, types: &Vec<ColumnType>, has_
     }
 }
 
-fn print_row(printer: &Printer, w: &Vec<usize>, mut r: Row, indent: usize, rows: &mut Vec<Rows>, outputs: &mut Vec<Stream>, binaries: &mut Vec<BinaryReader>) {
+fn print_row(
+    printer: &Printer,
+    w: &Vec<usize>,
+    mut r: Row,
+    indent: usize,
+    rows: &mut Vec<Rows>,
+    outputs: &mut Vec<Stream>,
+    binaries: &mut Vec<Box<BinaryReader>>) {
     let cell_len = r.cells.len();
     let mut row = " ".repeat(indent * 4);
     let last_idx = r.cells.len() - 1;
@@ -147,7 +154,7 @@ fn print_body(printer: &Printer, w: &Vec<usize>, data: Vec<Row>, indent: usize) 
             print_internal(printer, &mut r.stream, indent + 1);
         }
         for mut r in binaries {
-            print_binary(printer, r.reader.as_mut(), indent + 1);
+            print_binary(printer, r.reader().as_mut(), indent + 1);
         }
     }
 }

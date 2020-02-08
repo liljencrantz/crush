@@ -29,7 +29,7 @@ pub struct Config {
     columns: Vec<ColumnType>,
     skip_head: usize,
     trim: Option<char>,
-    input: BinaryReader,
+    input: Box<BinaryReader>,
 }
 
 fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<Config> {
@@ -83,16 +83,16 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<Config> {
                 let v = input.recv()?;
                 match v {
                     Value::BinaryReader(b) => {
-                        b
+                        Ok(b)
                     }
-                    _ => return Err(argument_error("Expected either a file to read or binary pipe input"))
+                    _ => Err(argument_error("Expected either a file to read or binary pipe input"))
                 }
             }
             1 => {
-                BinaryReader::from(&files[0])?
+                BinaryReader::from(&files[0])
             }
-            _ => return Err(argument_error("Expected a file name"))
-        };
+            _ => Err(argument_error("Expected a file name"))
+        }?;
 
     Ok(Config {
         separator,
@@ -112,7 +112,7 @@ fn run(cfg: Config, output: OutputStream, printer: Printer) -> JobResult<()> {
     let columns = cfg.columns.clone();
     let skip = cfg.skip_head;
 
-    let mut reader = BufReader::new(cfg.input.reader);
+    let mut reader = BufReader::new(cfg.input.reader());
     let mut line = String::new();
     let mut skipped = 0usize;
     loop {

@@ -19,12 +19,12 @@ pub struct Config {
     column: usize,
 }
 
-fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<BinaryReader> {
+fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<Box<BinaryReader>> {
     match arguments.len() {
         1 => {
             let mut files = Vec::new();
             arguments[0].value.file_expand(&mut files);
-            Ok(BinaryReader::from(&files.remove(0))?)
+            BinaryReader::from(&files.remove(0))
         }
         _ => Err(argument_error("Expected a file name"))
     }

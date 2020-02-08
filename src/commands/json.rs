@@ -21,7 +21,7 @@ use crate::stream::{ValueSender, ValueReceiver};
 use std::collections::HashSet;
 
 pub struct Config {
-    input: BinaryReader,
+    input: Box<BinaryReader>,
 }
 
 fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<Config> {
@@ -106,7 +106,7 @@ fn convert_json(json_value: &serde_json::Value) -> JobResult<Value> {
 }
 
 fn run(cfg: Config, output: ValueSender, printer: Printer) -> JobResult<()> {
-    let mut reader = BufReader::new(cfg.input.reader);
+    let mut reader = BufReader::new(cfg.input.reader());
 
     let v = to_job_error(serde_json::from_reader(reader))?;
     let crush_value = convert_json(&v)?;

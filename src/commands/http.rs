@@ -1,6 +1,6 @@
 use crate::data::{Argument, Value, Struct, Rows, ColumnType, ValueType, Row};
 use crate::commands::CompileContext;
-use crate::data::{binary, ChannelWriter, BinaryReader};
+use crate::data::{binary, BinaryReader};
 use crate::errors::{argument_error, to_job_error, JobResult};
 use reqwest::StatusCode;
 use reqwest::header::HeaderMap;
@@ -43,9 +43,9 @@ pub fn perform(context: CompileContext) -> JobResult<()> {
                 vec![
                     ("status", Value::Integer(status.as_u16() as i128)),
                     ("headers", Value::Rows(headers)),
-                    ("body", Value::BinaryReader(BinaryReader { reader: Box::from(input) }))
+                    ("body", Value::BinaryReader(input))
                 ]
         )));
-    to_job_error(b.copy_to(&mut output))?;
-    return Ok(());
+    to_job_error(b.copy_to(output.as_mut()))?;
+    Ok(())
 }

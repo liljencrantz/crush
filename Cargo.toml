@@ -17,3 +17,4 @@ users = "0.9.1"
 dirs = "1.0.5"
 serde_json = "1.0"
 reqwest = { version = "0.10", features = ["blocking"] }
+crossbeam = "0.7"

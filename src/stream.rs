@@ -1,11 +1,11 @@
 use crate::data::{ColumnType, Value};
 use crate::data::{Row, Rows, Stream};
-use std::sync::mpsc::{Receiver, sync_channel, SyncSender, channel, Sender};
+use crossbeam::{Receiver, bounded, unbounded, Sender};
 use crate::errors::{JobError, error, JobResult, to_job_error};
 use crate::replace::Replace;
 
 pub struct ValueSender {
-    sender: SyncSender<Value>,
+    sender: Sender<Value>,
 }
 
 impl ValueSender {
@@ -33,7 +33,7 @@ impl ValueReceiver {
 }
 
 pub enum OutputStream {
-    Sync(SyncSender<Row>),
+    Sync(Sender<Row>),
     Async(Sender<Row>),
 }
 
@@ -88,17 +88,17 @@ impl InputStream {
 }
 
 pub fn channels() -> (ValueSender, ValueReceiver) {
-    let (send, recv) = sync_channel(1);
+    let (send, recv) = bounded(1);
     (ValueSender {sender: send}, ValueReceiver { receiver: recv })
 }
 
 pub fn streams(signature: Vec<ColumnType>) -> (OutputStream, InputStream) {
-    let (output, input) = sync_channel(128);
+    let (output, input) = bounded(128);
     (OutputStream::Sync(output), InputStream { receiver: input, input_type: signature })
 }
 
 pub fn unlimited_streams(signature: Vec<ColumnType>) -> (OutputStream, InputStream) {
-    let (output, input) = channel();
+    let (output, input) = unbounded();
     (OutputStream::Async(output), InputStream { receiver: input, input_type: signature })
 }
 

@@ -4,14 +4,15 @@ use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::io::{Error, Read, Write, ErrorKind};
-use std::sync::mpsc::{SyncSender, Receiver, sync_channel, RecvError};
+use crossbeam::{Receiver, bounded, Sender};
 use std::fmt::{Debug, Formatter};
 use std::fs::File;
 use serde_json::to_vec;
 use std::path::Path;
 
 
-pub struct ChannelReader {
+#[derive(Clone)]
+struct ChannelReader {
     receiver: Receiver<Box<[u8]>>,
     buff: Option<Box<[u8]>>,
 }
@@ -19,6 +20,16 @@ pub struct ChannelReader {
 impl Debug for ChannelReader {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         f.write_str("<channel reader>")//.map_err(|e| std::fmt::Error::default())
+    }
+}
+
+impl BinaryReader for ChannelReader {
+    fn reader(&self) -> Box<Read> {
+        Box::from(ChannelReader { receiver: self.receiver.clone(), buff: None })
+    }
+
+    fn try_clone(&self) -> JobResult<Box<BinaryReader>> {
+        Ok(Box::from(ChannelReader { receiver: self.receiver.clone(), buff: None }))
     }
 }
 
@@ -57,8 +68,8 @@ impl std::io::Read for ChannelReader {
     }
 }
 
-pub struct ChannelWriter {
-    sender: SyncSender<Box<[u8]>>,
+struct ChannelWriter {
+    sender: Sender<Box<[u8]>>,
 }
 
 impl std::io::Write for ChannelWriter {
@@ -73,29 +84,47 @@ impl std::io::Write for ChannelWriter {
     }
 }
 
-pub fn binary() -> JobResult<(ChannelWriter, ChannelReader)> {
-    let (s, r) = sync_channel(32);
-    Ok((ChannelWriter { sender: s }, ChannelReader { receiver: r, buff: None }))
+pub trait BinaryReader: Debug + Send {
+    fn reader(&self) -> Box<Read>;
+    fn try_clone(&self) -> JobResult<Box<BinaryReader>>;
 }
 
-pub struct BinaryReader {
-    pub reader: Box<dyn Read + Send>,
+struct FileReader {
+    file: File,
+}
+
+impl FileReader {
+    pub fn new(file: File) -> FileReader {
+        FileReader { file }
+    }
+}
+
+impl Debug for FileReader {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        f.write_str("<file reader>")
+    }
+}
+
+impl BinaryReader for FileReader {
+    fn reader(&self) -> Box<Read> {
+        Box::from(self.file.try_clone().unwrap())
+    }
+
+    fn try_clone(&self) -> JobResult<Box<BinaryReader>> {
+        Ok(Box::from(FileReader { file: to_job_error(self.file.try_clone())? }))
+    }
 }
 
 impl BinaryReader {
-    pub fn new<T: 'static + Read + Send>(f: T) -> BinaryReader {
-        BinaryReader {
-            reader: Box::new(f)
-        }
-    }
-
-    pub fn from(file: &Path) -> JobResult<BinaryReader>{
-        return Ok(BinaryReader::new(to_job_error(File::open(file))?))
+    pub fn from(file: &Path) -> JobResult<Box<BinaryReader>> {
+        return Ok(Box::from(FileReader::new(to_job_error(File::open(file))?)));
     }
 }
 
-impl Debug for BinaryReader {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        f.write_str("<binary stream>")//.map_err(|e| std::fmt::Error::default())
-    }
+pub fn binary() -> JobResult<(Box<Write>, Box<BinaryReader>)> {
+    let (s, r) = bounded(32);
+    Ok((
+        Box::from(ChannelWriter { sender: s }),
+        Box::from(ChannelReader { receiver: r, buff: None })
+    ))
 }

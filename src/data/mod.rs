@@ -35,8 +35,6 @@ pub use dict::Dict;
 pub use list_definition::ListDefinition;
 pub use argument::ArgumentVecCompiler;
 pub use binary::BinaryReader;
-pub use binary::ChannelReader;
-pub use binary::ChannelWriter;
 pub use binary::binary;
 
 #[derive(Clone)]

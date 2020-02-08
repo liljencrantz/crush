@@ -42,7 +42,7 @@ pub enum Value {
     Bool(bool),
     Float(f64),
     Empty(),
-    BinaryReader(BinaryReader),
+    BinaryReader(Box<dyn BinaryReader>),
     Type(ValueType),
 }
 
@@ -154,7 +154,7 @@ impl Value {
             Value::Dict(d) => Ok(Value::Dict(d.partial_clone()?)),
             Value::Float(f) => Ok(Value::Float(f.clone())),
             Value::Empty() => Ok(Value::Empty()),
-            Value::BinaryReader(v) => Err(error("Invalid use of stream")),
+            Value::BinaryReader(v) => Ok(Value::BinaryReader(v.try_clone()?)),
             Value::Type(t) => Ok(Value::Type(t.clone())),
         };
     }

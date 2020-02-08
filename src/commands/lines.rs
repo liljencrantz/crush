@@ -16,7 +16,7 @@ use crate::{
     stream::{OutputStream},
 };
 use crate::errors::{JobResult, to_job_error};
-use crate::data::BinaryReader;
+use crate::data::{BinaryReader};
 use crate::stream::ValueReceiver;
 
 lazy_static! {
@@ -25,8 +25,8 @@ lazy_static! {
     };
 }
 
-fn run(input: BinaryReader, output: OutputStream) -> JobResult<()> {
-    let mut reader = BufReader::new(input.reader);
+fn run(input: Box<dyn BinaryReader>, output: OutputStream) -> JobResult<()> {
+    let mut reader = BufReader::new(input.reader());
     let mut line = String::new();
     loop {
         reader.read_line(&mut line);
@@ -39,7 +39,7 @@ fn run(input: BinaryReader, output: OutputStream) -> JobResult<()> {
     return Ok(());
 }
 
-fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<BinaryReader> {
+fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<Box<BinaryReader>> {
     match arguments.len() {
         0 => {
             let v = input.recv()?;
@@ -53,7 +53,7 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<BinaryRead
         1 => {
             let mut files = Vec::new();
             arguments[0].value.file_expand(&mut files);
-            Ok(BinaryReader::from(&files.remove(0))?)
+            BinaryReader::from(&files.remove(0))
         }
         _ => Err(argument_error("Expected a file name"))
     }
