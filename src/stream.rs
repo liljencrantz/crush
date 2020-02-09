@@ -50,7 +50,7 @@ impl OutputStream {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct InputStream {
     receiver: Receiver<Row>,
     input_type: Vec<ColumnType>,

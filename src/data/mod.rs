@@ -62,7 +62,7 @@ impl std::fmt::Debug for Command {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Stream {
     pub stream: InputStream,
 }

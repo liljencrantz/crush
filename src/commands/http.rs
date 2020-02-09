@@ -20,7 +20,6 @@ fn parse(arguments: &Vec<Argument>) -> JobResult<Config> {
 }
 
 pub fn perform(context: CompileContext) -> JobResult<()> {
-
     let cfg = parse(&context.arguments)?;
     let (mut output, input) = binary()?;
     let mut b = to_job_error(reqwest::blocking::get(cfg.url.as_str()))?;

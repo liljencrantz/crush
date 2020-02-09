@@ -132,7 +132,7 @@ impl Value {
         Ok(())
     }
 
-    pub fn partial_clone(&self) -> Result<Value, JobError> {
+    pub fn partial_clone(&self) -> JobResult<Value> {
         return match self {
             Value::Text(v) => Ok(Value::Text(v.clone())),
             Value::Integer(v) => Ok(Value::Integer(v.clone())),
@@ -146,7 +146,7 @@ impl Value {
             Value::Rows(r) => Ok(Value::Rows(r.partial_clone()?)),
             Value::Struct(r) => Ok(Value::Struct(r.partial_clone()?)),
             Value::Closure(c) => Ok(Value::Closure(c.clone())),
-            Value::Stream(_) => Err(error("Invalid use of stream")),
+            Value::Stream(s) => Ok(Value::Stream(s.clone())),
             Value::List(l) => Ok(Value::List(l.partial_clone()?)),
             Value::Duration(d) => Ok(Value::Duration(d.clone())),
             Value::Env(e) => Ok(Value::Env(e.clone())),

@@ -12,7 +12,6 @@ mod set;
 mod r#let;
 mod unset;
 mod env;
-mod take;
 
 mod ps;
 
@@ -110,7 +109,6 @@ pub fn add_commands(env: &Env) -> JobResult<()> {
     env.declare_str("set", Value::Command(Command::new(set::perform)))?;
     env.declare_str("unset", Value::Command(Command::new(unset::perform)))?;
     env.declare_str("env", Value::Command(Command::new(env::perform)))?;
-    env.declare_str("take", Value::Command(Command::new(take::perform)))?;
 
     env.declare_str("ps", Value::Command(Command::new(ps::perform)))?;
 

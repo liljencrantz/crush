@@ -1,11 +1,13 @@
 Todo:
+Add dot operator or something else for picking a single field off a struct.
+type command that outputs type of input
 Add a bunch of system tests
 Fix aggr command and think through it's input/output types
-Rename rows -> ImmutableList
 Rename list -> MutableList
+Create new type ImmutableList
 Rename dict -> MutableDict
+Create new type ImmutableDict
 Rename text -> string
-Create type ImmutableDict
 Create new type Type
 Create str namespace with string commands like upper, lower
 Flesh out time/duration modes with add/subtract support
@@ -13,8 +15,7 @@ Make better to_string methods for various cell types
 Some missing comparisons on Cell
 Missing some cell type serilisations and deserialisations
 Namespace literal
-add support for dot notation in argument names
-Make names mandatory and unique for stream columns
+Make names mandatory and unique for struct fields
 implement file regexps
 make ls support regexps
 implement input type declarations for closures
@@ -29,12 +30,10 @@ Add missing pieces to csv command
 add glob support to select command
 Implement loop command
 Implement break/continue commands
-Implement http command
-Binary blob type
-The bin command interprets files as a single binary blob.
-The readline command reads interactive input from the user via the terminal
-pbuf command that reads a protobuf message and deserializes it
-avro command that reads avro files and deserialize them
+The readline command reads interactive text input from the user via the terminal
+pbuf command that takes a protobuf definition and uses it to deserialize protobuf data
+avro command that deserializes avro data
+toml command that deserializes toml data
 Rename JobError -> CrushError
 Add Kind to CrushError
 Deal with different error kinds differently
@@ -112,3 +111,7 @@ Rename output -> stream
 Rename row -> struct
 Think through input/output types of join
 Add uniq command
+Implement http command
+Binary blob type
+The bin command interprets files as a single binary blob.
+Head takes on the role of take command
