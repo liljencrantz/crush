@@ -40,7 +40,7 @@ impl Dict {
 
     pub fn get(&self, key: &Value) -> Option<Value> {
         let entries = self.entries.lock().unwrap();
-        entries.get(key).map(|c| c.partial_clone().unwrap())
+        entries.get(key).map(|c| c.clone())
     }
 
     pub fn remove(&self, key: &Value) -> Option<Value> {
@@ -61,10 +61,6 @@ impl Dict {
     }
     pub fn dict_type(&self) -> ValueType {
         ValueType::Dict(Box::from(self.key_type.clone()), Box::from(self.value_type.clone()))
-    }
-
-    pub fn partial_clone(&self) -> JobResult<Dict> {
-        Ok(self.clone())
     }
 
     pub fn materialize(mut self) ->  Dict {

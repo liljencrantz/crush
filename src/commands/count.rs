@@ -5,8 +5,7 @@ use crate::{
         Row,
         ValueType,
         Value
-    },
-    stream::{InputStream},
+    }
 };
 use crate::data::ColumnType;
 use crate::stream::{RowsReader, Readable};

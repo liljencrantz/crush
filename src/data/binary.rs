@@ -11,7 +11,6 @@ use serde_json::to_vec;
 use std::path::Path;
 
 
-#[derive(Clone)]
 struct ChannelReader {
     receiver: Receiver<Box<[u8]>>,
     buff: Option<Box<[u8]>>,
@@ -24,12 +23,12 @@ impl Debug for ChannelReader {
 }
 
 impl BinaryReader for ChannelReader {
-    fn reader(&self) -> Box<Read> {
+    fn reader(&self) -> Box<dyn Read> {
         Box::from(ChannelReader { receiver: self.receiver.clone(), buff: None })
     }
 
-    fn try_clone(&self) -> JobResult<Box<BinaryReader>> {
-        Ok(Box::from(ChannelReader { receiver: self.receiver.clone(), buff: None }))
+    fn clone(&self) -> Box<dyn BinaryReader> {
+        Box::from(ChannelReader { receiver: self.receiver.clone(), buff: None })
     }
 }
 
@@ -85,8 +84,8 @@ impl std::io::Write for ChannelWriter {
 }
 
 pub trait BinaryReader: Debug + Send {
-    fn reader(&self) -> Box<Read>;
-    fn try_clone(&self) -> JobResult<Box<BinaryReader>>;
+    fn reader(&self) -> Box<dyn Read>;
+    fn clone(&self) -> Box<dyn BinaryReader>;
 }
 
 struct FileReader {
@@ -97,6 +96,7 @@ impl FileReader {
     pub fn new(file: File) -> FileReader {
         FileReader { file }
     }
+
 }
 
 impl Debug for FileReader {
@@ -106,22 +106,22 @@ impl Debug for FileReader {
 }
 
 impl BinaryReader for FileReader {
-    fn reader(&self) -> Box<Read> {
+    fn reader(&self) -> Box<dyn Read> {
         Box::from(self.file.try_clone().unwrap())
     }
 
-    fn try_clone(&self) -> JobResult<Box<BinaryReader>> {
-        Ok(Box::from(FileReader { file: to_job_error(self.file.try_clone())? }))
+    fn clone(&self) -> Box<dyn BinaryReader> {
+        Box::from(FileReader { file: self.file.try_clone().unwrap() })
     }
 }
 
-impl BinaryReader {
-    pub fn from(file: &Path) -> JobResult<Box<BinaryReader>> {
+impl dyn BinaryReader {
+    pub fn from(file: &Path) -> JobResult<Box<dyn BinaryReader>> {
         return Ok(Box::from(FileReader::new(to_job_error(File::open(file))?)));
     }
 }
 
-pub fn binary() -> JobResult<(Box<Write>, Box<BinaryReader>)> {
+pub fn binary_channel() -> JobResult<(Box<dyn Write>, Box<dyn BinaryReader>)> {
     let (s, r) = bounded(32);
     Ok((
         Box::from(ChannelWriter { sender: s }),

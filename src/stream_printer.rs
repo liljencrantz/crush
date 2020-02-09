@@ -106,7 +106,7 @@ fn print_row(
     indent: usize,
     rows: &mut Vec<Rows>,
     outputs: &mut Vec<Stream>,
-    binaries: &mut Vec<Box<BinaryReader>>) {
+    binaries: &mut Vec<Box<dyn BinaryReader>>) {
     let cell_len = r.cells.len();
     let mut row = " ".repeat(indent * 4);
     let last_idx = r.cells.len() - 1;

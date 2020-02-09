@@ -1,25 +1,15 @@
-use crate::{
-    data::{
-        Argument,
-        Value,
-        ValueType,
-    },
-    errors::JobError,
-    stream::{OutputStream},
-};
-use crate::commands::command_util::{find_field_from_str, find_field};
+use crate::data::{Argument, Value};
 use crate::commands::CompileContext;
-use crate::data::{ColumnType, BinaryReader};
-use crate::errors::{argument_error, error};
+use crate::data::{BinaryReader};
+use crate::errors::{argument_error};
 use crate::errors::JobResult;
-use crate::replace::Replace;
-use crate::stream::{RowsReader, Readable, ValueReceiver};
+use crate::stream::{ValueReceiver};
 
 pub struct Config {
     column: usize,
 }
 
-fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<Box<BinaryReader>> {
+fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<Box<dyn BinaryReader>> {
     match arguments.len() {
         1 => {
             let mut files = Vec::new();

@@ -5,7 +5,6 @@ use crate::{
     data::{
         Argument,
         Row,
-        Stream,
     },
 };
 use crate::data::{Value, ColumnType};
@@ -40,7 +39,7 @@ pub fn run(
                 match input.read() {
                     Ok(row) => {
                         if !seen.contains(&row) {
-                            seen.insert(row.partial_clone().unwrap());
+                            seen.insert(row.clone());
                             output.send(row);
                         }
                     }
@@ -54,7 +53,7 @@ pub fn run(
                 match input.read() {
                     Ok(row) => {
                         if !seen.contains(&row.cells[idx]) {
-                            seen.insert(row.cells[idx].partial_clone().unwrap());
+                            seen.insert(row.cells[idx].clone());
                             output.send(row);
                         }
                     }

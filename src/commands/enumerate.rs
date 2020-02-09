@@ -4,7 +4,6 @@ use crate::data::ValueType;
 use crate::data::Row;
 use crate::data::Value;
 use crate::stream::{OutputStream, RowsReader, Readable};
-use crate::stream::InputStream;
 use crate::data::ColumnType;
 
 pub fn run(mut input: impl Readable, output: OutputStream) -> JobResult<()> {

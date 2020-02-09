@@ -71,12 +71,7 @@ impl Namespace {
 
     pub fn get(&mut self, name: &str) -> Option<Value> {
         match self.data.get(&name.to_string()) {
-            Some(v) => {
-                match v.partial_clone() {
-                    Ok(v) => Some(v),
-                    Err(_) => self.data.remove(&name.to_string()),
-                }
-            }
+            Some(v) => Some(v.clone()),
             None => match &self.parent {
                 Some(p) => p.lock().unwrap().get(name),
                 None => None

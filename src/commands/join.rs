@@ -123,7 +123,7 @@ fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &
     loop {
         match l.read() {
             Ok(row) => {
-                l_data.insert(row.cells[cfg.left_column_idx].partial_clone()?, row);
+                l_data.insert(row.cells[cfg.left_column_idx].clone(), row);
             }
             Err(_) => break,
         }

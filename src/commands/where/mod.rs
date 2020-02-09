@@ -6,7 +6,7 @@ use crate::{
         Value,
         Row,
     },
-    stream::{InputStream, OutputStream}
+    stream::{OutputStream}
 };
 use crate::commands::CompileContext;
 use crate::errors::{error, JobResult};

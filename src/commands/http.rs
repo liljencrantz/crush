@@ -1,6 +1,5 @@
-use crate::data::{Argument, Value, Struct, Rows, ColumnType, ValueType, Row};
+use crate::data::{Argument, Value, Struct, Rows, ColumnType, ValueType, Row, binary_channel};
 use crate::commands::CompileContext;
-use crate::data::{binary, BinaryReader};
 use crate::errors::{argument_error, to_job_error, JobResult};
 use reqwest::StatusCode;
 use reqwest::header::HeaderMap;
@@ -21,7 +20,7 @@ fn parse(arguments: &Vec<Argument>) -> JobResult<Config> {
 
 pub fn perform(context: CompileContext) -> JobResult<()> {
     let cfg = parse(&context.arguments)?;
-    let (mut output, input) = binary()?;
+    let (mut output, input) = binary_channel()?;
     let mut b = to_job_error(reqwest::blocking::get(cfg.url.as_str()))?;
     let status: StatusCode = b.status();
     let header_map: &HeaderMap = b.headers();

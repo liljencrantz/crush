@@ -3,19 +3,12 @@ use crate::errors::{JobResult};
 use crate::data::{ColumnType};
 use std::mem;
 
-#[derive(PartialEq)]
-#[derive(PartialOrd)]
-#[derive(Debug, Eq, Hash)]
+#[derive(PartialEq, PartialOrd, Debug, Eq, Hash, Clone)]
 pub struct Row {
     pub cells: Vec<Value>,
 }
 
 impl Row {
-    pub fn partial_clone(&self) -> JobResult<Self> {
-        Ok(Row {
-            cells: self.cells.iter().map(|c| c.partial_clone()).collect::<JobResult<Vec<Value>>>()?,
-        })
-    }
 
     pub fn materialize(mut self) ->  Row{
         Row {
@@ -24,9 +17,7 @@ impl Row {
     }
 }
 
-#[derive(PartialEq)]
-#[derive(PartialOrd)]
-#[derive(Debug, Hash)]
+#[derive(PartialEq, PartialOrd, Debug, Hash, Clone)]
 pub struct Struct {
     pub types: Vec<ColumnType>,
     pub cells: Vec<Value>,
@@ -45,13 +36,6 @@ impl Struct {
         Struct {
             types, cells
         }
-    }
-
-    pub fn partial_clone(&self) -> JobResult<Self> {
-        Ok(Struct {
-            types: self.types.clone(),
-            cells: self.cells.iter().map(|c| c.partial_clone()).collect::<JobResult<Vec<Value>>>()?,
-        })
     }
 
     pub fn get_types(&self) -> &Vec<ColumnType> {

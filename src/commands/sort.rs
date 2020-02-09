@@ -1,7 +1,7 @@
 use crate::{
     commands::command_util::find_field_from_str,
     errors::argument_error,
-    stream::{InputStream, OutputStream},
+    stream::{OutputStream},
 };
 use crate::commands::CompileContext;
 use crate::data::{Argument, Value, Row};

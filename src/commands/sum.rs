@@ -5,8 +5,7 @@ use crate::{
         Row,
         ValueType,
         Value
-    },
-    stream::{InputStream},
+    }
 };
 use crate::data::{ColumnType, Argument};
 use crate::commands::command_util::find_field_from_str;

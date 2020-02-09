@@ -83,7 +83,7 @@ impl Value {
 
     pub fn empty_stream() -> Value {
         let (_s, r) = streams(vec![]);
-        Value::Stream(Stream {stream: r})
+        Value::Stream(Stream { stream: r })
     }
 
     pub fn text(s: &str) -> Value {
@@ -130,33 +130,6 @@ impl Value {
             _ => return Err(error("Expected a file name")),
         }
         Ok(())
-    }
-
-    pub fn partial_clone(&self) -> JobResult<Value> {
-        return match self {
-            Value::Text(v) => Ok(Value::Text(v.clone())),
-            Value::Integer(v) => Ok(Value::Integer(v.clone())),
-            Value::Time(v) => Ok(Value::Time(v.clone())),
-            Value::Field(v) => Ok(Value::Field(v.clone())),
-            Value::Glob(v) => Ok(Value::Glob(v.clone())),
-            Value::Regex(v, r) => Ok(Value::Regex(v.clone(), r.clone())),
-            Value::Op(v) => Ok(Value::Op(v.clone())),
-            Value::Command(v) => Ok(Value::Command(v.clone())),
-            Value::File(v) => Ok(Value::File(v.clone())),
-            Value::Rows(r) => Ok(Value::Rows(r.partial_clone()?)),
-            Value::Struct(r) => Ok(Value::Struct(r.partial_clone()?)),
-            Value::Closure(c) => Ok(Value::Closure(c.clone())),
-            Value::Stream(s) => Ok(Value::Stream(s.clone())),
-            Value::List(l) => Ok(Value::List(l.partial_clone()?)),
-            Value::Duration(d) => Ok(Value::Duration(d.clone())),
-            Value::Env(e) => Ok(Value::Env(e.clone())),
-            Value::Bool(v) => Ok(Value::Bool(v.clone())),
-            Value::Dict(d) => Ok(Value::Dict(d.partial_clone()?)),
-            Value::Float(f) => Ok(Value::Float(f.clone())),
-            Value::Empty() => Ok(Value::Empty()),
-            Value::BinaryReader(v) => Ok(Value::BinaryReader(v.try_clone()?)),
-            Value::Type(t) => Ok(Value::Type(t.clone())),
-        };
     }
 
     pub fn materialize(self) -> Value {
@@ -254,6 +227,35 @@ impl Value {
             (Value::Type(s), ValueType::Text) => Ok(Value::Text(Box::from(s.to_string()))),
 
             _ => Err(error("Unimplemented conversion")),
+        }
+    }
+}
+
+impl Clone for Value {
+    fn clone(&self) -> Self {
+        match self {
+            Value::Text(v) => Value::Text(v.clone()),
+            Value::Integer(v) => Value::Integer(v.clone()),
+            Value::Time(v) => Value::Time(v.clone()),
+            Value::Field(v) => Value::Field(v.clone()),
+            Value::Glob(v) => Value::Glob(v.clone()),
+            Value::Regex(v, r) => Value::Regex(v.clone(), r.clone()),
+            Value::Op(v) => Value::Op(v.clone()),
+            Value::Command(v) => Value::Command(v.clone()),
+            Value::File(v) => Value::File(v.clone()),
+            Value::Rows(r) => Value::Rows(r.clone()),
+            Value::Struct(r) => Value::Struct(r.clone()),
+            Value::Closure(c) => Value::Closure(c.clone()),
+            Value::Stream(s) => Value::Stream(s.clone()),
+            Value::List(l) => Value::List(l.clone()),
+            Value::Duration(d) => Value::Duration(d.clone()),
+            Value::Env(e) => Value::Env(e.clone()),
+            Value::Bool(v) => Value::Bool(v.clone()),
+            Value::Dict(d) => Value::Dict(d.clone()),
+            Value::Float(f) => Value::Float(f.clone()),
+            Value::Empty() => Value::Empty(),
+            Value::BinaryReader(v) => Value::BinaryReader(v.as_ref().clone()),
+            Value::Type(t) => Value::Type(t.clone()),
         }
     }
 }

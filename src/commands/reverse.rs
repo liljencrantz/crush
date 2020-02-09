@@ -1,6 +1,6 @@
 use crate::{
     data::Row,
-    stream::{InputStream, OutputStream},
+    stream::{OutputStream},
 };
 use crate::commands::CompileContext;
 use crate::errors::{JobResult, error};

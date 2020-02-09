@@ -21,7 +21,7 @@ impl List {
 
     pub fn get(&self, idx: usize) -> JobResult<Value> {
         let cells = self.cells.lock().unwrap();
-        mandate(cells.get(idx), "Index out of bounds")?.partial_clone()
+        Ok(mandate(cells.get(idx), "Index out of bounds")?.clone())
     }
 
     pub fn append(&self, new_cells: &mut Vec<Value>) {
@@ -40,10 +40,6 @@ impl List {
 
     pub fn list_type(&self) -> ValueType {
         ValueType::List(Box::from(self.cell_type.clone()))
-    }
-
-    pub fn partial_clone(&self) -> Result<List, JobError> {
-        Ok(self.clone())
     }
 
     pub fn materialize(self) ->  List {

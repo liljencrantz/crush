@@ -7,7 +7,7 @@ use crate::{
         Row,
         Value,
     },
-    stream::{OutputStream, InputStream},
+    stream::{OutputStream},
     replace::Replace,
     data::ColumnType,
     errors::JobResult,
