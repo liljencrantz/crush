@@ -71,7 +71,7 @@ fn convert_json(json_value: &serde_json::Value) -> JobResult<Value> {
                         let row_list = lst
                             .drain(..)
                             .map(|v| match v {
-                                Value::Struct(r) => Ok(Row { cells: r.cells }),
+                                Value::Struct(r) => Ok(Row::new(r.cells)),
                                 _ => Err(error("Impossible!"))
                             })
                             .collect::<JobResult<Vec<Row>>>()?;

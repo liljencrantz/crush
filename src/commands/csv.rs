@@ -141,7 +141,7 @@ fn run(cfg: Config, output: OutputStream, printer: Printer) -> JobResult<()> {
             .zip(columns.iter())
             .map({ |(s, t)| t.cell_type.parse(*s) })
             .collect::<Result<Vec<Value>, JobError>>() {
-            Ok(cells) => { output.send(Row { cells }); }
+            Ok(cells) => { output.send(Row::new(cells)); }
             Err(err) => { printer_copy.job_error(err); }
         }
     }

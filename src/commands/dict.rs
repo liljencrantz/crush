@@ -49,7 +49,7 @@ pub fn get(context: CompileContext) -> JobResult<()> {
         Value::Dict(dict) => {
             let output = context.output.initialize(
                 vec![ColumnType::named("value", dict.value_type())])?;
-            dict.get(&context.arguments[1].value).map(|c| output.send(Row { cells: vec![c] }));
+            dict.get(&context.arguments[1].value).map(|c| output.send(Row::new(vec![c])));
             Ok(())
         }
         _ => Err(argument_error("Argument is not a list")),

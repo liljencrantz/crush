@@ -43,7 +43,7 @@ pub fn run(config: Config) -> JobResult<()> {
     loop {
         match config.iter.stream.recv() {
             Ok(mut line) => {
-                let arguments = line.cells
+                let arguments = line.into_vec()
                     .drain(..)
                     .zip(config.iter.stream.get_type().iter())
                     .map(|(c, t)| {

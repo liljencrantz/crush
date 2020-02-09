@@ -31,7 +31,7 @@ fn run(input: Box<dyn BinaryReader>, output: OutputStream) -> JobResult<()> {
         if line.is_empty() {
             break;
         }
-        output.send(Row { cells: vec![Value::Text(line[0..line.len() - 1].to_string().into_boxed_str())] });
+        output.send(Row::new(vec![Value::Text(line[0..line.len() - 1].to_string().into_boxed_str())]));
         line.clear();
     }
     return Ok(());

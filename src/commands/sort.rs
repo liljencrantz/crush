@@ -43,8 +43,8 @@ pub fn run<T: Readable>(mut config: Config<T>) -> JobResult<()> {
     }
 
     res.sort_by(|a, b|
-        a.cells[config.sort_column_idx]
-            .partial_cmp(&b.cells[config.sort_column_idx])
+        a.cells()[config.sort_column_idx]
+            .partial_cmp(&b.cells()[config.sort_column_idx])
             .expect("OH NO!"));
 
     for row in res {

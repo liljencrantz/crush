@@ -16,10 +16,10 @@ pub fn perform(context: CompileContext) -> JobResult<()> {
     keys.sort();
 
     for k in keys {
-        output.send(Row {cells: vec![
+        output.send(Row::new(vec![
             Value::Text(k.clone().into_boxed_str()),
             Value::Text(vals[k].to_string().into_boxed_str())
-        ]});
+        ]));
     }
 
     Ok(())

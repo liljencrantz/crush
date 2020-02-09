@@ -110,12 +110,12 @@ fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Confi
 }
 
 fn combine(mut l: Row, mut r: Row, cfg: &Config) -> Row {
-    for (idx, c) in r.cells.drain(..).enumerate() {
+    for (idx, c) in r.into_vec().drain(..).enumerate() {
         if idx != cfg.right_column_idx {
-            l.cells.push(c);
+            l.push(c);
         }
     }
-    return Row { cells: l.cells };
+    return l;
 }
 
 fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &OutputStream) -> JobResult<()> {
@@ -123,7 +123,7 @@ fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &
     loop {
         match l.read() {
             Ok(row) => {
-                l_data.insert(row.cells[cfg.left_column_idx].clone(), row);
+                l_data.insert(row.cells()[cfg.left_column_idx].clone(), row);
             }
             Err(_) => break,
         }
@@ -133,7 +133,7 @@ fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &
         match r.read() {
             Ok(r_row) => {
                 l_data
-                    .remove(&r_row.cells[cfg.right_column_idx])
+                    .remove(&r_row.cells()[cfg.right_column_idx])
                     .map(|l_row| {
                         output.send(combine(l_row, r_row, cfg));
                     });

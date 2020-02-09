@@ -40,7 +40,7 @@ fn sum_rows(mut s: impl Readable, column: usize) -> JobResult<Value> {
     let mut res: i128 = 0;
     loop {
         match s.read() {
-            Ok(row) => match row.cells[column] {
+            Ok(row) => match row.cells()[column] {
                 Value::Integer(i) => res += i,
                 _ => return Err(error("Invalid cell value, expected an integer"))
             },
@@ -56,13 +56,13 @@ pub fn perform(context: CompileContext) -> JobResult<()> {
             let input = s.stream;
             let output = context.output.initialize(vec![ColumnType::named("sum", ValueType::Integer)])?;
             let column = parse(input.get_type(), &context.arguments)?;
-            output.send(Row { cells: vec![sum_rows(input, column)?]})
+            output.send(Row::new(vec![sum_rows(input, column)?]))
         }
         Value::Rows(r) => {
             let input = RowsReader::new(r);
             let output = context.output.initialize(vec![ColumnType::named("sum", ValueType::Integer)])?;
             let column = parse(input.get_type(), &context.arguments)?;
-            output.send(Row { cells: vec![sum_rows(input, column)?]})
+            output.send(Row::new(vec![sum_rows(input, column)?]))
         }
         _ => Err(error("Expected a stream")),
     }

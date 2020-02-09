@@ -30,12 +30,11 @@ pub fn run(
         match input.read() {
             Ok(mut row) => {
                 output.send(
-                    Row {
-                        cells: config.columns
+                    Row::new(config.columns
                             .iter()
-                            .map(|(idx, _name)| row.cells.replace(*idx, Value::Integer(0)))
+                            .map(|(idx, _name)| row.replace(*idx, Value::Integer(0)))
                             .collect()
-                    })?;
+                    ))?;
             }
             Err(_) => break,
         }

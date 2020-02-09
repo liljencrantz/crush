@@ -39,14 +39,11 @@ fn insert_entity(
     } else {
         file
     };
-    output.send(Row {
-        cells: vec![
+    output.send(Row ::new(vec![
             users.get_name(meta.uid()),
             Value::Integer(i128::from(meta.len())),
             Value::Time(modified_datetime),
-            Value::File(f),
-        ]
-    })?;
+            Value::File(f)]))?;
     return Ok(());
 }
 

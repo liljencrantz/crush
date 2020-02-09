@@ -68,10 +68,10 @@ impl InputStream {
     fn validate(&self, res: JobResult<Row>) -> JobResult<Row> {
         match &res {
             Ok(row) => {
-                if row.cells.len() != self.input_type.len() {
+                if row.cells().len() != self.input_type.len() {
                     return Err(error("Wrong number of columns in input"));
                 }
-                for (c, ct) in row.cells.iter().zip(self.input_type.iter()) {
+                for (c, ct) in row.cells().iter().zip(self.input_type.iter()) {
                     if c.value_type() != ct.cell_type {
                         return Err(error(format!(
                             "Wrong cell type in input column {:?}, expected {:?}, got {:?}",

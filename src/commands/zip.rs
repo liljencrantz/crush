@@ -13,7 +13,7 @@ pub fn run(input1: &mut impl Readable, input2: &mut impl Readable, sender: Value
     loop {
         match (input1.read(), input2.read()) {
             (Ok(mut row1), Ok(mut row2)) => {
-                row1.cells.append(&mut row2.cells);
+                row1.append(&mut row2.into_vec());
                 output.send(row1)?;
             }
             _ => break,

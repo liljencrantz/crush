@@ -76,8 +76,8 @@ fn calculate_header_width(w: &mut Vec<usize>, types: &Vec<ColumnType>, has_name:
 
 fn calculate_body_width(w: &mut Vec<usize>, data: &Vec<Row>, col_count: usize) {
     for r in data {
-        assert_eq!(col_count, r.cells.len());
-        for (idx, c) in r.cells.iter().enumerate() {
+        assert_eq!(col_count, r.cells().len());
+        for (idx, c) in r.cells().iter().enumerate() {
             let l = c.to_string().len();
             w[idx] = max(w[idx], l);
         }
@@ -107,10 +107,10 @@ fn print_row(
     rows: &mut Vec<Rows>,
     outputs: &mut Vec<Stream>,
     binaries: &mut Vec<Box<dyn BinaryReader>>) {
-    let cell_len = r.cells.len();
+    let cell_len = r.len();
     let mut row = " ".repeat(indent * 4);
-    let last_idx = r.cells.len() - 1;
-    for (idx, c) in r.cells.drain(..).enumerate() {
+    let last_idx = r.len() - 1;
+    for (idx, c) in r.into_vec().drain(..).enumerate() {
         let cell = c.to_string();
         let spaces = if idx == cell_len - 1 { "".to_string() } else { " ".repeat(w[idx] - cell.len()) };
         let is_last = idx == last_idx;

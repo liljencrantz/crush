@@ -26,11 +26,11 @@ pub fn perform(context: CompileContext) -> JobResult<()> {
     match context.input.recv()? {
         Value::Stream(s) => {
             let input = s.stream;
-            output.send(Row { cells: vec![count_rows(input)]})
+            output.send(Row::new(vec![count_rows(input)]))
         }
         Value::Rows(r) => {
             let input = RowsReader::new(r);
-            output.send(Row { cells: vec![count_rows(input)]})
+            output.send(Row::new(vec![count_rows(input)]))
         }
         _ => Err(error("Expected a stream")),
     }

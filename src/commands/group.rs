@@ -57,14 +57,12 @@ pub fn run(
     loop {
         match input.read() {
             Ok(row) => {
-                let key = row.cells[config.column].clone();
+                let key = row.cells()[config.column].clone();
                 let val = groups.get(&key);
                 match val {
                     None => {
                         let (output_stream, input_stream) = unlimited_streams(config.input_type.clone());
-                        let out_row = Row {
-                            cells: vec![key.clone(), Value::Stream(Stream { stream: input_stream })],
-                        };
+                        let out_row = Row::new(vec![key.clone(), Value::Stream(Stream { stream: input_stream })]);
                         output.send(out_row)?;
                         output_stream.send(row);
                         groups.insert(key, output_stream);

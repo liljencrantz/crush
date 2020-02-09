@@ -39,7 +39,7 @@ fn do_match(needle: &Value, haystack: &Value) -> JobResult<bool> {
 fn to_cell<'a>(value: &'a WhereValue, row: &'a Row) -> &'a Value {
     return match value {
         WhereValue::Value(c) => &c,
-        WhereValue::Field(idx) => &row.cells[*idx],
+        WhereValue::Field(idx) => &row.cells()[*idx],
     };
 }
 

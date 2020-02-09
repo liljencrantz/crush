@@ -31,9 +31,7 @@ pub fn perform(context: CompileContext) -> JobResult<()> {
         ],
         header_map
             .iter()
-            .map(|(n, v)| Row {
-                cells: vec![Value::text(n.as_str()), Value::text(v.to_str().unwrap())]
-            })
+            .map(|(n, v)| Row::new(vec![Value::text(n.as_str()), Value::text(v.to_str().unwrap())]))
             .collect());
     context.output.send(
         Value::Struct(Struct::new(

@@ -12,8 +12,8 @@ pub fn run(mut input: impl Readable, output: OutputStream) -> JobResult<()> {
         match input.read() {
             Ok(row) => {
                 let mut out = vec![Value::Integer(line)];
-                out.extend(row.cells);
-                output.send(Row { cells: out })?;
+                out.extend(row.into_vec());
+                output.send(Row::new(out))?;
                 line += 1;
             }
             Err(_) => break,

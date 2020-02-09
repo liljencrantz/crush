@@ -30,8 +30,7 @@ pub fn run(output: OutputStream) -> JobResult<()> {
     let users = create_user_map();
 
     for proc in &psutil::process::all().unwrap() {
-        output.send(Row {
-            cells: vec![
+        output.send(Row::new(vec![
                 Value::Integer(proc.pid as i128),
                 Value::Integer(proc.ppid as i128),
                 Value::text(state_name(proc.state)),
@@ -41,8 +40,7 @@ pub fn run(output: OutputStream) -> JobResult<()> {
                     proc.cmdline_vec().unwrap_or_else(|_| Some(vec!["<Illegal name>".to_string()]))
                         .unwrap_or_else(|| vec![format!("[{}]", proc.comm)])[0]
                         .as_ref()),
-            ]
-        })?;
+            ]))?;
     }
     Ok(())
 }

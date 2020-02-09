@@ -52,8 +52,8 @@ pub fn run(
             loop {
                 match input.read() {
                     Ok(row) => {
-                        if !seen.contains(&row.cells[idx]) {
-                            seen.insert(row.cells[idx].clone());
+                        if !seen.contains(&row.cells()[idx]) {
+                            seen.insert(row.cells()[idx].clone());
                             output.send(row);
                         }
                     }

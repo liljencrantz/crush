@@ -134,10 +134,7 @@ impl ValueDefinition {
                     (Ok(Value::Struct(row)), Ok(Value::Text(col))) =>
                         mandate(row.get(col.as_ref()), "Invalid subscript")?,
                     (Ok(Value::Stream(o)), Ok(Value::Integer(idx))) => {
-                        Value::Struct(Struct {
-                            types: o.stream.get_type().clone(),
-                            cells: o.get(idx)?.cells
-                        })
+                        Value::Struct(o.get(idx)?.into_struct(o.stream.get_type()))
                     }
                     _ => return Err(error("Expected a list variable")),
                 }
