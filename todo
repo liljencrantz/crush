@@ -26,8 +26,6 @@ help command
 implement cmd command
 implement format command for text formating
 add parens to filter command
-Add missing pieces to csv command
-add glob support to select command
 Implement loop command
 Implement break/continue commands
 The readline command reads interactive text input from the user via the terminal

@@ -68,7 +68,7 @@ fn perform_for(input: impl Readable, output: ValueSender, arguments: Vec<Argumen
 fn perform_single(mut input: Struct, output: ValueSender, arguments: Vec<Argument>) -> JobResult<()> {
     if arguments.len() == 1 && arguments[0].name.is_none() {
         match &arguments[0].value {
-            Value::Field(s) => output.send(input.cells.remove(find_field(s, &input.types)?)),
+            Value::Field(s) => output.send(input.remove(find_field(s, &input.types())?)),
             _ => Err(argument_error("Expected Field")),
         }
     } else {

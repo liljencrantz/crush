@@ -71,7 +71,7 @@ fn convert_json(json_value: &serde_json::Value) -> JobResult<Value> {
                         let row_list = lst
                             .drain(..)
                             .map(|v| match v {
-                                Value::Struct(r) => Ok(Row::new(r.cells)),
+                                Value::Struct(r) => Ok(r.into_row()),
                                 _ => Err(error("Impossible!"))
                             })
                             .collect::<JobResult<Vec<Row>>>()?;
@@ -88,12 +88,12 @@ fn convert_json(json_value: &serde_json::Value) -> JobResult<Value> {
                 Struct::new(
                     o
                         .iter()
-                        .map(|(k, v)| (k.as_str(), convert_json(v)))
+                        .map(|(k, v)| (Box::from(k.as_str()), convert_json(v)))
                         .map(|(k, v)| match v {
                             Ok(vv) => Ok((k, vv)),
                             Err(e) => Err(e)
                         })
-                        .collect::<Result<Vec<(&str, Value)>, JobError>>()?)))
+                        .collect::<Result<Vec<(Box<str>, Value)>, JobError>>()?)))
         }
     }
 }

@@ -107,7 +107,7 @@ impl Value {
             Value::File(_) => ValueType::File,
             Value::Stream(o) => ValueType::Stream(o.stream.get_type().clone()),
             Value::Rows(r) => ValueType::Rows(r.types().clone()),
-            Value::Struct(r) => ValueType::Row(r.types.clone()),
+            Value::Struct(r) => ValueType::Row(r.types().clone()),
             Value::Closure(_) => ValueType::Closure,
             Value::List(l) => l.list_type(),
             Value::Duration(_) => ValueType::Duration,

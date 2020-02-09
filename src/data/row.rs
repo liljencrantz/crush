@@ -51,15 +51,15 @@ impl Row {
 
 #[derive(PartialEq, PartialOrd, Debug, Hash, Clone)]
 pub struct Struct {
-    pub types: Vec<ColumnType>,
-    pub cells: Vec<Value>,
+    types: Vec<ColumnType>,
+    cells: Vec<Value>,
 }
 
 impl Struct {
-    pub fn new(mut vec: Vec<(&str, Value)>) -> Struct {
+    pub fn new(mut vec: Vec<(Box<str>, Value)>) -> Struct {
         let types = vec
             .iter()
-            .map(|e| ColumnType::named(e.0, e.1.value_type()))
+            .map(|e| ColumnType::named(e.0.as_ref(), e.1.value_type()))
             .collect();
         let cells = vec
             .drain(..)
@@ -71,8 +71,24 @@ impl Struct {
         }
     }
 
-    pub fn get_types(&self) -> &Vec<ColumnType> {
+    pub fn types(&self) -> &Vec<ColumnType> {
         &self.types
+    }
+
+    pub fn cells(&self) -> &Vec<Value> {
+        &self.cells
+    }
+
+    pub fn remove(&mut self, idx: usize) -> Value {
+        self.cells.remove(idx)
+    }
+
+    pub fn into_row(self) -> Row {
+        Row { cells: self.cells }
+    }
+
+    pub fn into_vec(self) -> Vec<Value> {
+        self.cells
     }
 
     pub fn get(mut self, name: &str) -> Option<Value> {

@@ -36,9 +36,9 @@ pub fn perform(context: CompileContext) -> JobResult<()> {
     context.output.send(
         Value::Struct(Struct::new(
             vec![
-                ("status", Value::Integer(status.as_u16() as i128)),
-                ("headers", Value::Rows(headers)),
-                ("body", Value::BinaryReader(input))
+                (Box::from("status"), Value::Integer(status.as_u16() as i128)),
+                (Box::from("headers"), Value::Rows(headers)),
+                (Box::from("body"), Value::BinaryReader(input))
             ]
         )));
     to_job_error(b.copy_to(output.as_mut()))?;

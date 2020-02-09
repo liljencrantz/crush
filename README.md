@@ -46,7 +46,7 @@ If you assign the output of the find command to a variable like so:
 
     crush> let all_the_files={find /}
 
-What will really be stored in the all_The_files variable is simply a stream. A small number
+What will really be stored in the `all_the_files` variable is simply a stream. A small number
 of lines of output will be eagerly evaluated, before the thread executing the find command
 will start blocking. If the stream is consumed, for example by writing
 
@@ -55,9 +55,9 @@ will start blocking. If the stream is consumed, for example by writing
 then all hell will break lose on your screen as tens of thousands of lines are printed to
 your screen.
 
-Another option would be to use the take command
+Another option would be to use the head command
 
-    crush> take all_the_files
+    crush> val $all_the_files | head 1
 
 Which will consume one line of output from the stream. This command can be re-executed until
 the stream is empty.
@@ -71,7 +71,7 @@ operate on:
 echo $some_data | where %color == green | group %shoe_size | aggr green_shoes_of_size=`{count}
 
 Unlike in SQL, these commands all operate on input streams, meaning they can be combined in
-any order, and the input source can be file/http resources in a variety of formats or putput of
+any order, and the input source can be file/http resources in a variety of formats or output of
 commands like ps, find.
 
 Modes

@@ -149,7 +149,8 @@ pub fn run(
     mut row: Struct,
     output: OutputStream,
 ) -> JobResult<()> {
-    match (row.cells.replace(config.left_table_idx, Value::Integer(0)), row.cells.replace(config.right_table_idx, Value::Integer(0))) {
+    let mut v = row.into_vec();
+    match (v.replace(config.left_table_idx, Value::Integer(0)), v.replace(config.right_table_idx, Value::Integer(0))) {
         (Value::Stream(mut l), Value::Stream(mut r)) => {
             do_join(&config, &mut l.stream, &mut r.stream, &output)?;
         }
@@ -192,8 +193,8 @@ fn get_output_type(input_type: &Vec<ColumnType>, cfg: &Config) -> Result<Vec<Col
 pub fn perform(context: CompileContext) -> JobResult<()> {
     match context.input.recv()? {
         Value::Struct(s) => {
-            let cfg = parse(s.get_types(), context.arguments)?;
-            let output_type = get_output_type(s.get_types(), &cfg)?;
+            let cfg = parse(s.types(), context.arguments)?;
+            let output_type = get_output_type(s.types(), &cfg)?;
             let output = context.output.initialize(output_type)?;
             run(cfg, s, output)
         }
