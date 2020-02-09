@@ -1,8 +1,6 @@
 use crate::commands::CompileContext;
 use std::io::BufReader;
 use std::io::prelude::*;
-use std::fs::File;
-use std::path::Path;
 use lazy_static::lazy_static;
 use crate::{
     errors::argument_error,
@@ -15,7 +13,7 @@ use crate::{
     },
     stream::{OutputStream},
 };
-use crate::errors::{JobResult, to_job_error};
+use crate::errors::{JobResult};
 use crate::data::{BinaryReader};
 use crate::stream::ValueReceiver;
 
@@ -39,7 +37,7 @@ fn run(input: Box<dyn BinaryReader>, output: OutputStream) -> JobResult<()> {
     return Ok(());
 }
 
-fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<Box<BinaryReader>> {
+fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<Box<dyn BinaryReader>> {
     match arguments.len() {
         0 => {
             let v = input.recv()?;

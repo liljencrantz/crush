@@ -3,12 +3,12 @@ use std::collections::VecDeque;
 use crate::{
     commands::head::get_line_count,
     data::Row,
-    stream::{InputStream, OutputStream},
+    stream::OutputStream,
 };
 use crate::commands::CompileContext;
 use crate::errors::{JobResult, error};
-use crate::stream::{RowsReader, Readable};
-use crate::data::Value;
+use crate::stream::Readable;
+use crate::data::{Value, RowsReader};
 
 pub fn run(
     lines: i128,

@@ -7,9 +7,9 @@ use crate::{
         Value
     }
 };
-use crate::data::{ColumnType, Argument};
+use crate::data::{ColumnType, Argument, RowsReader};
 use crate::commands::command_util::find_field_from_str;
-use crate::stream::{RowsReader, Readable};
+use crate::stream::{Readable};
 
 pub fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> JobResult<usize> {
     match arguments.len() {

@@ -11,10 +11,10 @@ use crate::{
     stream::{OutputStream},
 };
 use crate::commands::CompileContext;
-use crate::data::{ValueType, ColumnType};
+use crate::data::{ValueType, ColumnType, RowsReader};
 use crate::errors::{JobResult, error};
 use crate::printer::Printer;
-use crate::stream::{RowsReader, Readable};
+use crate::stream::Readable;
 
 pub struct Config {
     output_type: Vec<ColumnType>,

@@ -7,8 +7,8 @@ use crate::{
         Value
     }
 };
-use crate::data::ColumnType;
-use crate::stream::{RowsReader, Readable};
+use crate::data::{ColumnType, RowsReader};
+use crate::stream::{Readable};
 
 fn count_rows(mut s: impl Readable) -> Value {
     let mut res: i128 = 0;

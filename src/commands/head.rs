@@ -2,11 +2,12 @@ use crate::commands::CompileContext;
 use crate::errors::{JobResult, error};
 use crate::{
     data::Argument,
-    stream::{OutputStream, InputStream},
+    stream::{OutputStream},
     data::Value,
     errors::{JobError, argument_error},
 };
-use crate::stream::{RowsReader, Readable};
+use crate::stream::Readable;
+use crate::data::RowsReader;
 
 pub fn get_line_count(arguments: &Vec<Argument>) -> Result<i128, JobError> {
     return match arguments.len() {

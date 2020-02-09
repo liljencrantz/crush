@@ -8,11 +8,7 @@ use crate::{
     },
     errors::{JobError, argument_error},
 };
-use std::{
-    io::BufReader,
-    fs::File,
-    path::Path,
-};
+use std::io::BufReader;
 
 use crate::printer::Printer;
 use crate::data::{Struct, List, Rows, BinaryReader};
@@ -21,7 +17,7 @@ use crate::stream::{ValueSender, ValueReceiver};
 use std::collections::HashSet;
 
 pub struct Config {
-    input: Box<BinaryReader>,
+    input: Box<dyn BinaryReader>,
 }
 
 fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<Config> {
@@ -79,10 +75,7 @@ fn convert_json(json_value: &serde_json::Value) -> JobResult<Value> {
                                 _ => Err(error("Impossible!"))
                             })
                             .collect::<JobResult<Vec<Row>>>()?;
-                        Ok(Value::Rows(Rows {
-                            types: r.clone(),
-                            rows: row_list,
-                        }))
+                        Ok(Value::Rows(Rows::new(r.clone(), row_list)))
                     } else {
                         Ok(Value::List(List::new(list_type.clone(), lst)))
                     }

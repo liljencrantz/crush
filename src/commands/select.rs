@@ -13,9 +13,9 @@ use crate::{
     errors::JobResult,
 };
 use crate::commands::command_util::find_field;
-use crate::stream::{RowsReader, Readable, ValueSender};
+use crate::stream::{Readable, ValueSender};
 use crate::errors::error;
-use crate::data::Struct;
+use crate::data::{Struct, RowsReader};
 
 pub struct Config {
     columns: Vec<(usize, Option<Box<str>>)>,

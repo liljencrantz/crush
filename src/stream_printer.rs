@@ -1,7 +1,7 @@
-use crate::stream::{ValueSender, channels, Readable, RowsReader};
+use crate::stream::{ValueSender, channels, Readable};
 use crate::printer::Printer;
 use std::thread;
-use crate::data::{Row, ColumnType, ValueType, Alignment, Value, Rows, Stream, BinaryReader};
+use crate::data::{Row, ColumnType, ValueType, Alignment, Value, Rows, Stream, BinaryReader, RowsReader};
 use std::cmp::max;
 use std::io::{Read, BufReader, BufRead};
 

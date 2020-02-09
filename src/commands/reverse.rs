@@ -4,8 +4,8 @@ use crate::{
 };
 use crate::commands::CompileContext;
 use crate::errors::{JobResult, error};
-use crate::data::Value;
-use crate::stream::{RowsReader, Readable};
+use crate::data::{Value, RowsReader};
+use crate::stream::Readable;
 
 pub fn run(
     mut input: impl Readable,

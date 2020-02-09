@@ -11,8 +11,8 @@ use crate::{
 use crate::commands::CompileContext;
 use crate::errors::{error, JobResult};
 use crate::printer::Printer;
-use crate::stream::RowsReader;
 use crate::stream::Readable;
+use crate::data::RowsReader;
 
 mod parser;
 

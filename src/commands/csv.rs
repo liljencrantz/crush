@@ -12,8 +12,6 @@ use crate::{
 use std::{
     io::BufReader,
     io::prelude::*,
-    fs::File,
-    path::Path,
 };
 
 extern crate map_in_place;
@@ -29,7 +27,7 @@ pub struct Config {
     columns: Vec<ColumnType>,
     skip_head: usize,
     trim: Option<char>,
-    input: Box<BinaryReader>,
+    input: Box<dyn BinaryReader>,
 }
 
 fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<Config> {

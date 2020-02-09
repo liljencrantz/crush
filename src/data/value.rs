@@ -106,7 +106,7 @@ impl Value {
             Value::Command(_) => ValueType::Command,
             Value::File(_) => ValueType::File,
             Value::Stream(o) => ValueType::Stream(o.stream.get_type().clone()),
-            Value::Rows(r) => ValueType::Rows(r.types.clone()),
+            Value::Rows(r) => ValueType::Rows(r.get_types().clone()),
             Value::Struct(r) => ValueType::Row(r.types.clone()),
             Value::Closure(_) => ValueType::Closure,
             Value::List(l) => l.list_type(),
@@ -142,7 +142,7 @@ impl Value {
                         Err(_) => break,
                     }
                 }
-                Value::Rows(Rows { types: ColumnType::materialize(output.stream.get_type()), rows: rows })
+                Value::Rows(Rows::new(ColumnType::materialize(output.stream.get_type()), rows ))
             }
             Value::Rows(r) => Value::Rows(r.materialize()),
             Value::Dict(d) => Value::Dict(d.materialize()),

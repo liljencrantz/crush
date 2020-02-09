@@ -7,10 +7,10 @@ use crate::{
         Row,
     },
 };
-use crate::data::{Value, ColumnType};
+use crate::data::{Value, ColumnType, RowsReader};
 use crate::errors::{JobResult, error};
 use crate::commands::command_util::find_field;
-use crate::stream::{RowsReader, Readable, OutputStream};
+use crate::stream::{Readable, OutputStream};
 
 pub struct Config {
     column: Option<usize>,

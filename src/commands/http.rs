@@ -24,25 +24,24 @@ pub fn perform(context: CompileContext) -> JobResult<()> {
     let mut b = to_job_error(reqwest::blocking::get(cfg.url.as_str()))?;
     let status: StatusCode = b.status();
     let header_map: &HeaderMap = b.headers();
-    let headers = Rows {
-        types: vec![
+    let headers = Rows::new(
+        vec![
             ColumnType::named("name", ValueType::Text),
             ColumnType::named("value", ValueType::Text),
         ],
-        rows: header_map
+        header_map
             .iter()
             .map(|(n, v)| Row {
                 cells: vec![Value::text(n.as_str()), Value::text(v.to_str().unwrap())]
             })
-            .collect(),
-    };
+            .collect());
     context.output.send(
-            Value::Struct(Struct::new(
-                vec![
-                    ("status", Value::Integer(status.as_u16() as i128)),
-                    ("headers", Value::Rows(headers)),
-                    ("body", Value::BinaryReader(input))
-                ]
+        Value::Struct(Struct::new(
+            vec![
+                ("status", Value::Integer(status.as_u16() as i128)),
+                ("headers", Value::Rows(headers)),
+                ("body", Value::BinaryReader(input))
+            ]
         )));
     to_job_error(b.copy_to(output.as_mut()))?;
     Ok(())

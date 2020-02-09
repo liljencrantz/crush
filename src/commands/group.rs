@@ -12,10 +12,10 @@ use crate::{
     },
     stream::{OutputStream, unlimited_streams},
 };
-use crate::data::ColumnType;
+use crate::data::{ColumnType, RowsReader};
 use crate::errors::{JobResult, error};
 use crate::commands::command_util::find_field;
-use crate::stream::{RowsReader, Readable};
+use crate::stream::{Readable};
 
 pub struct Config {
     input_type: Vec<ColumnType>,

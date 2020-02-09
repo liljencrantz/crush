@@ -4,10 +4,9 @@ use crate::{
     stream::{OutputStream},
 };
 use crate::commands::CompileContext;
-use crate::data::{Argument, Value, Row};
+use crate::data::{Argument, Value, Row, RowsReader};
 use crate::errors::{JobResult, error};
 use crate::commands::command_util::find_field;
-use crate::stream::RowsReader;
 use crate::stream::Readable;
 
 pub struct Config<T: Readable> {

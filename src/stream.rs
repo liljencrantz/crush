@@ -125,35 +125,3 @@ impl Readable for InputStream {
         self.get_type()
     }
 }
-
-
-pub struct RowsReader {
-    idx: usize,
-    rows: Rows,
-    row_type: Vec<ColumnType>,
-}
-
-impl RowsReader {
-    pub fn new(rows: Rows) -> RowsReader {
-        RowsReader{
-            idx: 0,
-            row_type: rows.types.clone(),
-            rows,
-        }
-    }
-}
-
-impl Readable for RowsReader {
-
-    fn read(&mut self) -> Result<Row, JobError> {
-        if self.idx >= self.rows.rows.len() {
-            return Err(error("EOF"));
-        }
-        self.idx += 1;
-        return Ok(self.rows.rows.replace(self.idx - 1, Row { cells: vec![Value::Integer(0)] }));
-    }
-
-    fn get_type(&self) -> &Vec<ColumnType> {
-        &self.row_type
-    }
-}
