@@ -1,5 +1,5 @@
 use crate::commands::CompileContext;
-use crate::errors::{JobResult, error};
+use crate::errors::{CrushResult, error};
 use crate::{
     data::{
         Row,
@@ -11,7 +11,7 @@ use crate::data::{ColumnType, Argument, RowsReader};
 use crate::commands::command_util::find_field_from_str;
 use crate::stream::{Readable};
 
-pub fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> JobResult<usize> {
+pub fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> CrushResult<usize> {
     match arguments.len() {
         0 => if input_type.len() == 1 && input_type[0].cell_type == ValueType::Integer{
             Ok(0)
@@ -36,7 +36,7 @@ pub fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> JobResu
     }
 }
 
-fn sum_rows(mut s: impl Readable, column: usize) -> JobResult<Value> {
+fn sum_rows(mut s: impl Readable, column: usize) -> CrushResult<Value> {
     let mut res: i128 = 0;
     loop {
         match s.read() {
@@ -50,7 +50,7 @@ fn sum_rows(mut s: impl Readable, column: usize) -> JobResult<Value> {
     Ok(Value::Integer(res))
 }
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Stream(s) => {
             let input = s.stream;

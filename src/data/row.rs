@@ -1,5 +1,5 @@
 use crate::data::value::Value;
-use crate::errors::JobResult;
+use crate::errors::CrushResult;
 use crate::data::ColumnType;
 use std::mem;
 use crate::replace::Replace;

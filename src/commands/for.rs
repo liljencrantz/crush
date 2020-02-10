@@ -5,7 +5,7 @@ use crate::{
 use crate::printer::Printer;
 use crate::env::Env;
 use crate::data::{Stream};
-use crate::errors::{argument_error, JobResult};
+use crate::errors::{argument_error, CrushResult};
 use crate::closure::Closure;
 use crate::commands::CompileContext;
 use crate::stream::empty_channel;
@@ -18,7 +18,7 @@ pub struct Config {
     printer: Printer,
 }
 
-pub fn parse(mut context: CompileContext) -> JobResult<Config> {
+pub fn parse(mut context: CompileContext) -> CrushResult<Config> {
     context.output.initialize(vec![])?;
 
     if context.arguments.len() != 2 {
@@ -39,7 +39,7 @@ pub fn parse(mut context: CompileContext) -> JobResult<Config> {
     }
 }
 
-pub fn run(config: Config) -> JobResult<()> {
+pub fn run(config: Config) -> CrushResult<()> {
     loop {
         match config.iter.stream.recv() {
             Ok(mut line) => {
@@ -67,7 +67,7 @@ pub fn run(config: Config) -> JobResult<()> {
     Ok(())
 }
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> CrushResult<()> {
     let config = parse(context)?;
     run(config)
 }

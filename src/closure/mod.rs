@@ -2,7 +2,7 @@ use crate::job::Job;
 use crate::env::Env;
 use crate::data::Argument;
 use crate::stream::empty_channel;
-use crate::errors::{error, JobResult, mandate};
+use crate::errors::{error, CrushResult, mandate};
 use crate::commands::{CompileContext};
 use crate::stream_printer::spawn_print_thread;
 
@@ -28,7 +28,7 @@ impl Closure {
         }
     }
 
-    pub fn spawn_and_execute(&self, context: CompileContext) -> JobResult<()> {
+    pub fn spawn_and_execute(&self, context: CompileContext) -> CrushResult<()> {
         let job_definitions = self.job_definitions.clone();
         let parent_env = mandate(self.env.clone(), "Closure without env")?;
         let env = parent_env.new_stack_frame();

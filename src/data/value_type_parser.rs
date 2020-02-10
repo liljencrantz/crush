@@ -1,9 +1,9 @@
 use crate::data::{ValueType, ColumnType};
 use crate::data::value_type_lexer::{ValueTypeLexer, ValueTypeToken};
-use crate::errors::{JobResult, error};
+use crate::errors::{CrushResult, error};
 use ValueTypeToken::*;
 
-pub fn parse(s: &str) -> JobResult<ValueType> {
+pub fn parse(s: &str) -> CrushResult<ValueType> {
     let mut lexer = ValueTypeLexer::new(s);
     let res = parse_type(&mut lexer);
     match (&res, lexer.peek().0) {
@@ -13,49 +13,49 @@ pub fn parse(s: &str) -> JobResult<ValueType> {
     }
 }
 
-fn parse_begin_token(lexer: &mut ValueTypeLexer) -> JobResult<()> {
+fn parse_begin_token(lexer: &mut ValueTypeLexer) -> CrushResult<()> {
     match lexer.pop().0 {
         Begin => Ok(()),
         _ => Err(error("Unexpected token, expected '<'"))
     }
 }
 
-fn parse_end_token(lexer: &mut ValueTypeLexer) -> JobResult<()> {
+fn parse_end_token(lexer: &mut ValueTypeLexer) -> CrushResult<()> {
     match lexer.pop().0 {
         End => Ok(()),
         _ => Err(error("Unexpected token, expected '>'"))
     }
 }
 
-fn parse_sep_token(lexer: &mut ValueTypeLexer) -> JobResult<()> {
+fn parse_sep_token(lexer: &mut ValueTypeLexer) -> CrushResult<()> {
     match lexer.pop().0 {
         Sep => Ok(()),
         _ => Err(error("Unexpected token, expected ','"))
     }
 }
 
-fn parse_to_token(lexer: &mut ValueTypeLexer) -> JobResult<()> {
+fn parse_to_token(lexer: &mut ValueTypeLexer) -> CrushResult<()> {
     match lexer.pop().0 {
         To => Ok(()),
         _ => Err(error("Unexpected token, expected ':'"))
     }
 }
 
-fn parse_name_token(lexer: &mut ValueTypeLexer) -> JobResult<String> {
+fn parse_name_token(lexer: &mut ValueTypeLexer) -> CrushResult<String> {
     match lexer.pop() {
         (Name, name) => Ok(name.to_string()),
         _ => Err(error("Unexpected token, expected ','"))
     }
 }
 
-fn parse_named_parameter(lexer: &mut ValueTypeLexer) -> JobResult<ColumnType> {
+fn parse_named_parameter(lexer: &mut ValueTypeLexer) -> CrushResult<ColumnType> {
     let name = parse_name_token(lexer)?;
     parse_to_token(lexer)?;
     let t = parse_type(lexer)?;
     Ok(ColumnType::named(name.as_str(), t))
 }
 
-fn parse_named_parameters(lexer: &mut ValueTypeLexer) -> JobResult<Vec<ColumnType>> {
+fn parse_named_parameters(lexer: &mut ValueTypeLexer) -> CrushResult<Vec<ColumnType>> {
     let mut res = Vec::new();
     parse_begin_token(lexer)?;
 
@@ -74,7 +74,7 @@ fn parse_named_parameters(lexer: &mut ValueTypeLexer) -> JobResult<Vec<ColumnTyp
     Ok(res)
 }
 
-fn parse_type(lexer: &mut ValueTypeLexer) -> JobResult<ValueType> {
+fn parse_type(lexer: &mut ValueTypeLexer) -> CrushResult<ValueType> {
     Ok(match parse_name_token(lexer)?.as_str() {
         "text" => ValueType::Text,
         "integer" => ValueType::Integer,

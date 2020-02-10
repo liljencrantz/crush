@@ -6,13 +6,13 @@ use crate::{
         ValueType,
         Value,
     },
-    errors::{JobError, argument_error},
+    errors::{CrushError, argument_error},
 };
 use std::io::BufReader;
 
 use crate::printer::Printer;
 use crate::data::{Struct, List, Rows, BinaryReader};
-use crate::errors::{JobResult, to_job_error, error};
+use crate::errors::{CrushResult, to_job_error, error};
 use crate::stream::{ValueSender, ValueReceiver};
 use std::collections::HashSet;
 
@@ -20,7 +20,7 @@ pub struct Config {
     input: Box<dyn BinaryReader>,
 }
 
-fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<Config> {
+fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> {
     match arguments.len() {
         0 => {
             let v = input.recv()?;
@@ -44,7 +44,7 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<Config> {
     }
 }
 
-fn convert_json(json_value: &serde_json::Value) -> JobResult<Value> {
+fn convert_json(json_value: &serde_json::Value) -> CrushResult<Value> {
     match json_value {
         serde_json::Value::Null => Ok(Value::Empty()),
         serde_json::Value::Bool(b) => Ok(Value::Bool(b.clone())),
@@ -61,7 +61,7 @@ fn convert_json(json_value: &serde_json::Value) -> JobResult<Value> {
         serde_json::Value::Array(arr) => {
             let mut lst = arr.iter()
                 .map(|v| convert_json(v))
-                .collect::<JobResult<Vec<Value>>>()?;
+                .collect::<CrushResult<Vec<Value>>>()?;
             let types: HashSet<ValueType> = lst.iter().map(|v| v.value_type()).collect();
             match types.len() {
                 0 => Ok(Value::Empty()),
@@ -74,7 +74,7 @@ fn convert_json(json_value: &serde_json::Value) -> JobResult<Value> {
                                 Value::Struct(r) => Ok(r.into_row()),
                                 _ => Err(error("Impossible!"))
                             })
-                            .collect::<JobResult<Vec<Row>>>()?;
+                            .collect::<CrushResult<Vec<Row>>>()?;
                         Ok(Value::Rows(Rows::new(r.clone(), row_list)))
                     } else {
                         Ok(Value::List(List::new(list_type.clone(), lst)))
@@ -93,12 +93,12 @@ fn convert_json(json_value: &serde_json::Value) -> JobResult<Value> {
                             Ok(vv) => Ok((k, vv)),
                             Err(e) => Err(e)
                         })
-                        .collect::<Result<Vec<(Box<str>, Value)>, JobError>>()?)))
+                        .collect::<Result<Vec<(Box<str>, Value)>, CrushError>>()?)))
         }
     }
 }
 
-fn run(cfg: Config, output: ValueSender, printer: Printer) -> JobResult<()> {
+fn run(cfg: Config, output: ValueSender, printer: Printer) -> CrushResult<()> {
     let mut reader = BufReader::new(cfg.input.reader());
 
     let v = to_job_error(serde_json::from_reader(reader))?;
@@ -107,7 +107,7 @@ fn run(cfg: Config, output: ValueSender, printer: Printer) -> JobResult<()> {
     return Ok(());
 }
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> CrushResult<()> {
     let cfg = parse(context.arguments, context.input)?;
     run(cfg, context.output, context.printer)
 }

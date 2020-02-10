@@ -1,11 +1,11 @@
 use crate::commands::CompileContext;
-use crate::errors::{JobResult, argument_error};
+use crate::errors::{CrushResult, argument_error};
 use crate::data::{ValueType, Dict};
 use crate::data::Row;
 use crate::data::Value;
 use crate::data::ColumnType;
 
-pub fn create(context: CompileContext) -> JobResult<()> {
+pub fn create(context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
         return Err(argument_error("Expected 2 arguments to dict.create"));
     }
@@ -21,7 +21,7 @@ pub fn create(context: CompileContext) -> JobResult<()> {
     }
 }
 
-pub fn insert(mut context: CompileContext) -> JobResult<()> {
+pub fn insert(mut context: CompileContext) -> CrushResult<()> {
     let output = context.output.initialize(vec![])?;
     if context.arguments.len() != 3 {
         return Err(argument_error("Expected three arguments"));
@@ -41,7 +41,7 @@ pub fn insert(mut context: CompileContext) -> JobResult<()> {
     }
 }
 
-pub fn get(context: CompileContext) -> JobResult<()> {
+pub fn get(context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
         return Err(argument_error("Expected two arguments"));
     }
@@ -56,7 +56,7 @@ pub fn get(context: CompileContext) -> JobResult<()> {
     }
 }
 
-pub fn remove(context: CompileContext) -> JobResult<()> {
+pub fn remove(context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
         return Err(argument_error("Expected two arguments"));
     }
@@ -69,7 +69,7 @@ pub fn remove(context: CompileContext) -> JobResult<()> {
     }
 }
 
-pub fn len(context: CompileContext) -> JobResult<()> {
+pub fn len(context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 1 {
         return Err(argument_error("Expected one argument"));
     }
@@ -81,7 +81,7 @@ pub fn len(context: CompileContext) -> JobResult<()> {
     }
 }
 
-pub fn empty(context: CompileContext) -> JobResult<()> {
+pub fn empty(context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 1 {
         return Err(argument_error("Expected one argument"));
     }

@@ -9,7 +9,7 @@ use crate::{
     stream::{OutputStream}
 };
 use crate::commands::CompileContext;
-use crate::errors::{error, JobResult};
+use crate::errors::{error, CrushResult};
 use crate::printer::Printer;
 use crate::stream::Readable;
 use crate::data::RowsReader;
@@ -23,7 +23,7 @@ pub struct Config<T: Readable> {
 }
 
 
-fn do_match(needle: &Value, haystack: &Value) -> JobResult<bool> {
+fn do_match(needle: &Value, haystack: &Value) -> CrushResult<bool> {
     match (needle, haystack) {
         (Value::Text(s), Value::Glob(pattern)) => Ok(pattern.matches( s)),
         (Value::File(f), Value::Glob(pattern)) => f.to_str().map(|s| Ok(pattern.matches( s))).unwrap_or(Err(error("Invalid filename"))),
@@ -43,7 +43,7 @@ fn to_cell<'a>(value: &'a WhereValue, row: &'a Row) -> &'a Value {
     };
 }
 
-fn evaluate(condition: &Condition, row: &Row) -> JobResult<bool> {
+fn evaluate(condition: &Condition, row: &Row) -> CrushResult<bool> {
     Ok(match condition {
         Condition::Equal(l, r) =>
             to_cell(&l, row) == to_cell(&r, row),
@@ -78,7 +78,7 @@ fn evaluate(condition: &Condition, row: &Row) -> JobResult<bool> {
     })
 }
 
-pub fn run<T: Readable>(mut config: Config<T>, printer: Printer) -> JobResult<()> {
+pub fn run<T: Readable>(mut config: Config<T>, printer: Printer) -> CrushResult<()> {
     loop {
         match config.input.read() {
             Ok(row) => {
@@ -93,7 +93,7 @@ pub fn run<T: Readable>(mut config: Config<T>, printer: Printer) -> JobResult<()
     return Ok(());
 }
 
-pub fn perform(mut context: CompileContext) -> JobResult<()> {
+pub fn perform(mut context: CompileContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Stream(input) => {
             let output = context.output.initialize(input.stream.get_type().clone())?;

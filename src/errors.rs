@@ -2,38 +2,38 @@ use crate::lexer::Lexer;
 use std::error::Error;
 
 #[derive(Debug)]
-pub struct JobError {
+pub struct CrushError {
     pub message: String,
 }
 
-pub type JobResult<T> = Result<T, JobError>;
+pub type CrushResult<T> = Result<T, CrushError>;
 
-pub fn parse_error(message: &str, _lexer: &Lexer) -> JobError {
-    return JobError {
+pub fn parse_error(message: &str, _lexer: &Lexer) -> CrushError {
+    return CrushError {
         message: String::from(message),
     };
 }
 
-pub fn argument_error(message: &str) -> JobError {
-    return JobError {
+pub fn argument_error(message: &str) -> CrushError {
+    return CrushError {
         message: String::from(message),
     };
 }
 
-pub fn error(message: &str) -> JobError {
-    return JobError {
+pub fn error(message: &str) -> CrushError {
+    return CrushError {
         message: String::from(message),
     };
 }
 
-pub fn to_job_error<T, E: Error>(result: Result<T, E>) -> Result<T, JobError> {
+pub fn to_job_error<T, E: Error>(result: Result<T, E>) -> Result<T, CrushError> {
     match result {
         Ok(v) => Ok(v),
         Err(e) => Err(error(e.description())),
     }
 }
 
-pub fn mandate<T>(result: Option<T>, msg: &str) -> Result<T, JobError> {
+pub fn mandate<T>(result: Option<T>, msg: &str) -> Result<T, CrushError> {
     match result {
         Some(v) => Ok(v),
         None => Err(error(msg)),

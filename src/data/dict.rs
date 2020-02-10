@@ -1,5 +1,5 @@
 use crate::data::{ValueType, Value};
-use crate::errors::{JobResult};
+use crate::errors::CrushResult;
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;

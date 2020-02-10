@@ -1,4 +1,4 @@
-use crate::errors::{parse_error, argument_error, JobResult};
+use crate::errors::{parse_error, argument_error, CrushResult};
 use crate::job::Job;
 use crate::lexer::{Lexer, TokenType};
 use crate::data::{ValueDefinition, ArgumentDefinition, ListDefinition};
@@ -8,7 +8,7 @@ use std::error::Error;
 use crate::glob::Glob;
 use crate::closure::Closure;
 
-pub fn parse(lexer: &mut Lexer) -> JobResult<Vec<Job>> {
+pub fn parse(lexer: &mut Lexer) -> CrushResult<Vec<Job>> {
     let res = parse_internal(lexer)?;
     if lexer.peek().0 != TokenType::EOF {
         return Err(parse_error("Expected end of file", lexer))
@@ -16,7 +16,7 @@ pub fn parse(lexer: &mut Lexer) -> JobResult<Vec<Job>> {
     Ok(res)
 }
 
-pub fn parse_internal(lexer: &mut Lexer) -> JobResult<Vec<Job>> {
+pub fn parse_internal(lexer: &mut Lexer) -> CrushResult<Vec<Job>> {
     let mut jobs: Vec<Job> = Vec::new();
     loop {
         loop {
@@ -45,13 +45,13 @@ pub fn parse_internal(lexer: &mut Lexer) -> JobResult<Vec<Job>> {
     }
 }
 
-fn parse_job(lexer: &mut Lexer) -> JobResult<Job> {
+fn parse_job(lexer: &mut Lexer) -> CrushResult<Job> {
     let mut commands: Vec<CallDefinition> = Vec::new();
     parse_job_internal(lexer, &mut commands)?;
     return Ok(Job::new(commands));
 }
 
-fn parse_job_internal(lexer: &mut Lexer, commands: &mut Vec<CallDefinition>) -> JobResult<()> {
+fn parse_job_internal(lexer: &mut Lexer, commands: &mut Vec<CallDefinition>) -> CrushResult<()> {
     parse_command(lexer, commands)?;
     while lexer.peek().0 == TokenType::Pipe {
         lexer.pop();
@@ -92,7 +92,7 @@ pub fn parse_name(s: &str) -> Option<Vec<Box<str>>> {
     Some(res.iter().map(|e| e.to_string().into_boxed_str()).collect())
 }
 
-fn parse_name_from_lexer(lexer: &mut Lexer) -> JobResult<Vec<Box<str>>> {
+fn parse_name_from_lexer(lexer: &mut Lexer) -> CrushResult<Vec<Box<str>>> {
     let res = match parse_name(&lexer.peek().1[1..]) {
         None => Err(parse_error("Illegal varaible name", lexer)),
         Some(v) => Ok(v),
@@ -101,7 +101,7 @@ fn parse_name_from_lexer(lexer: &mut Lexer) -> JobResult<Vec<Box<str>>> {
     res
 }
 
-fn parse_command_from_lexer(lexer: &mut Lexer) -> JobResult<Vec<Box<str>>> {
+fn parse_command_from_lexer(lexer: &mut Lexer) -> CrushResult<Vec<Box<str>>> {
     let res = match parse_name(&lexer.peek().1) {
         None => Err(parse_error("Illegal command name", lexer)),
         Some(v) => Ok(v),
@@ -110,7 +110,7 @@ fn parse_command_from_lexer(lexer: &mut Lexer) -> JobResult<Vec<Box<str>>> {
     res
 }
 
-fn parse_mode(lexer: &mut Lexer) -> JobResult<Vec<ValueDefinition>> {
+fn parse_mode(lexer: &mut Lexer) -> CrushResult<Vec<ValueDefinition>> {
     let mut cells: Vec<ValueDefinition> = Vec::new();
     loop {
         let tt = lexer.peek().0;
@@ -123,7 +123,7 @@ fn parse_mode(lexer: &mut Lexer) -> JobResult<Vec<ValueDefinition>> {
     Ok(cells)
 }
 
-fn parse_unnamed_argument(lexer: &mut Lexer) -> JobResult<ValueDefinition> {
+fn parse_unnamed_argument(lexer: &mut Lexer) -> CrushResult<ValueDefinition> {
     let mut cell = parse_unnamed_argument_without_subscript(lexer)?;
     loop {
         if lexer.peek().0 != TokenType::SubscriptStart {
@@ -140,7 +140,7 @@ fn parse_unnamed_argument(lexer: &mut Lexer) -> JobResult<ValueDefinition> {
     Ok(cell)
 }
 
-fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> JobResult<ValueDefinition> {
+fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> CrushResult<ValueDefinition> {
     let token_type = lexer.peek().0;
     match token_type {
         TokenType::String => {
@@ -245,7 +245,7 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> JobResult<Valu
     }
 }
 
-fn parse_argument(lexer: &mut Lexer) -> JobResult<ArgumentDefinition> {
+fn parse_argument(lexer: &mut Lexer) -> CrushResult<ArgumentDefinition> {
     match lexer.peek().0 {
         TokenType::String => {
             let ss = lexer.pop().1.to_string();
@@ -262,7 +262,7 @@ fn parse_argument(lexer: &mut Lexer) -> JobResult<ArgumentDefinition> {
     }
 }
 
-fn parse_arguments(lexer: &mut Lexer, arguments: &mut Vec<ArgumentDefinition>) -> JobResult<()> {
+fn parse_arguments(lexer: &mut Lexer, arguments: &mut Vec<ArgumentDefinition>) -> CrushResult<()> {
     loop {
         match lexer.peek().0 {
             TokenType::Error => {
@@ -276,7 +276,7 @@ fn parse_arguments(lexer: &mut Lexer, arguments: &mut Vec<ArgumentDefinition>) -
     }
 }
 
-fn parse_command(lexer: &mut Lexer, commands: &mut Vec<CallDefinition>) -> JobResult<()> {
+fn parse_command(lexer: &mut Lexer, commands: &mut Vec<CallDefinition>) -> CrushResult<()> {
     match lexer.peek().0 {
         TokenType::String => {
             let name = parse_command_from_lexer(lexer)?;

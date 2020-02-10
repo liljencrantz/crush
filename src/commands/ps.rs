@@ -1,5 +1,5 @@
 use crate::commands::CompileContext;
-use crate::errors::JobResult;
+use crate::errors::CrushResult;
 use crate::{
     data::Row,
     data::ValueType,
@@ -26,7 +26,7 @@ fn state_name(s: psutil::process::State) -> &'static str {
     }
 }
 
-pub fn run(output: OutputStream) -> JobResult<()> {
+pub fn run(output: OutputStream) -> CrushResult<()> {
     let users = create_user_map();
 
     for proc in &psutil::process::all().unwrap() {
@@ -45,7 +45,7 @@ pub fn run(output: OutputStream) -> JobResult<()> {
     Ok(())
 }
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> CrushResult<()> {
     let output = context.output.initialize(vec![
         ColumnType::named("pid", ValueType::Integer),
         ColumnType::named("ppid", ValueType::Integer),

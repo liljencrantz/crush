@@ -1,10 +1,10 @@
 use crate::commands::CompileContext;
-use crate::errors::{to_job_error, JobResult, error};
+use crate::errors::{to_job_error, CrushResult, error};
 use std::path::Path;
 use crate::data::Value;
 use crate::env::get_home;
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> CrushResult<()> {
     let dir = match context.arguments.len() {
         0 => get_home(),
         1 => {

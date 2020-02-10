@@ -23,7 +23,7 @@ extern crate rustyline;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use commands::add_commands;
-use crate::errors::{JobResult, to_job_error};
+use crate::errors::{CrushResult, to_job_error};
 use std::error::Error;
 use crate::printer::Printer;
 use crate::stream::empty_channel;
@@ -42,7 +42,7 @@ fn crush_history_file() -> Box<str> {
             .unwrap_or(".crush_history"))
 }
 
-fn run_interactive(global_env: env::Env, printer: &Printer) -> JobResult<()> {
+fn run_interactive(global_env: env::Env, printer: &Printer) -> CrushResult<()> {
     let mut rl = Editor::<()>::new();
     rl.load_history(crush_history_file().as_ref());
     loop {
@@ -93,7 +93,7 @@ fn run_interactive(global_env: env::Env, printer: &Printer) -> JobResult<()> {
 }
 
 
-fn run_script(global_env: env::Env, printer: &Printer, filename: &str) -> JobResult<()> {
+fn run_script(global_env: env::Env, printer: &Printer, filename: &str) -> CrushResult<()> {
     let cmd = to_job_error(fs::read_to_string(filename))?;
     match parser::parse(&mut Lexer::new(&cmd)) {
         Ok(jobs) => {
@@ -114,7 +114,7 @@ fn run_script(global_env: env::Env, printer: &Printer, filename: &str) -> JobRes
     Ok(())
 }
 
-fn run() -> JobResult<()> {
+fn run() -> CrushResult<()> {
     let global_env = env::Env::new();
     let (printer, printer_handle) = Printer::new();
 

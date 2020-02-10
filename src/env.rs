@@ -1,5 +1,5 @@
 use crate::namespace::Namespace;
-use crate::errors::{error, JobResult};
+use crate::errors::{error, CrushResult};
 use std::error::Error;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -33,7 +33,7 @@ impl Env {
         }
     }
 
-    pub fn create_namespace(&self, name: &str) -> JobResult<Env> {
+    pub fn create_namespace(&self, name: &str) -> CrushResult<Env> {
         let res = Env {
             namespace: Arc::from(Mutex::new(Namespace::new(None))),
         };
@@ -41,12 +41,12 @@ impl Env {
         Ok(res)
     }
 
-    pub fn declare_str(&self, name: &str, value: Value) -> JobResult<()> {
+    pub fn declare_str(&self, name: &str, value: Value) -> CrushResult<()> {
         let n = &name.split('.').map(|e: &str| Box::from(e)).collect::<Vec<Box<str>>>()[..];
         return self.declare(n, value);
     }
 
-    pub fn declare(&self, name: &[Box<str>], value: Value) -> JobResult<()> {
+    pub fn declare(&self, name: &[Box<str>], value: Value) -> CrushResult<()> {
         if name.is_empty() {
             return Err(error("Empty variable name"));
         }
@@ -62,12 +62,12 @@ impl Env {
         }
     }
 
-    pub fn set_str(&self, name: &str, value: Value) -> JobResult<()> {
+    pub fn set_str(&self, name: &str, value: Value) -> CrushResult<()> {
         let n = &name.split('.').map(|e: &str| Box::from(e)).collect::<Vec<Box<str>>>()[..];
         return self.set(n, value);
     }
 
-    pub fn set(&self, name: &[Box<str>], value: Value) -> JobResult<()> {
+    pub fn set(&self, name: &[Box<str>], value: Value) -> CrushResult<()> {
         if name.is_empty() {
             return Err(error("Empty variable name"));
         }
@@ -154,14 +154,14 @@ impl Env {
     }
 }
 
-pub fn get_cwd() -> JobResult<Box<Path>> {
+pub fn get_cwd() -> CrushResult<Box<Path>> {
     match std::env::current_dir() {
         Ok(d) => Ok(d.into_boxed_path()),
         Err(e) => Err(error(e.description())),
     }
 }
 
-pub fn get_home() -> JobResult<Box<Path>> {
+pub fn get_home() -> CrushResult<Box<Path>> {
     match dirs::home_dir() {
         Some(d) => Ok(d.into_boxed_path()),
         None => Err(error("Could not find users home directory")),

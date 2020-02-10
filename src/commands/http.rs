@@ -1,6 +1,6 @@
 use crate::data::{Argument, Value, Struct, Rows, ColumnType, ValueType, Row, binary_channel};
 use crate::commands::CompileContext;
-use crate::errors::{argument_error, to_job_error, JobResult};
+use crate::errors::{argument_error, to_job_error, CrushResult};
 use reqwest::StatusCode;
 use reqwest::header::HeaderMap;
 
@@ -8,7 +8,7 @@ pub struct Config {
     url: String,
 }
 
-fn parse(arguments: &Vec<Argument>) -> JobResult<Config> {
+fn parse(arguments: &Vec<Argument>) -> CrushResult<Config> {
     match arguments.len() {
         1 => match &arguments[0].value {
             Value::Text(t) => Ok(Config { url: t.to_string() }),
@@ -18,7 +18,7 @@ fn parse(arguments: &Vec<Argument>) -> JobResult<Config> {
     }
 }
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> CrushResult<()> {
     let cfg = parse(&context.arguments)?;
     let (mut output, input) = binary_channel()?;
     let mut b = to_job_error(reqwest::blocking::get(cfg.url.as_str()))?;

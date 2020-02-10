@@ -1,9 +1,9 @@
 use crate::commands::CompileContext;
-use crate::errors::JobResult;
+use crate::errors::CrushResult;
 use crate::errors::error;
 use crate::data::Value;
 
-pub fn perform(mut context: CompileContext) -> JobResult<()> {
+pub fn perform(mut context: CompileContext) -> CrushResult<()> {
     let cc = CompileContext{
         input: context.input,
         output: context.output,

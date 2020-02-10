@@ -1,4 +1,4 @@
-use crate::errors::{JobResult, to_job_error};
+use crate::errors::{CrushResult, to_job_error};
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;
@@ -116,12 +116,12 @@ impl BinaryReader for FileReader {
 }
 
 impl dyn BinaryReader {
-    pub fn from(file: &Path) -> JobResult<Box<dyn BinaryReader>> {
+    pub fn from(file: &Path) -> CrushResult<Box<dyn BinaryReader>> {
         return Ok(Box::from(FileReader::new(to_job_error(File::open(file))?)));
     }
 }
 
-pub fn binary_channel() -> JobResult<(Box<dyn Write>, Box<dyn BinaryReader>)> {
+pub fn binary_channel() -> CrushResult<(Box<dyn Write>, Box<dyn BinaryReader>)> {
     let (s, r) = bounded(32);
     Ok((
         Box::from(ChannelWriter { sender: s }),

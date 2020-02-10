@@ -2,14 +2,14 @@ use crate::data::{Argument, Value};
 use crate::commands::CompileContext;
 use crate::data::{BinaryReader};
 use crate::errors::{argument_error};
-use crate::errors::JobResult;
+use crate::errors::CrushResult;
 use crate::stream::{ValueReceiver};
 
 pub struct Config {
     column: usize,
 }
 
-fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<Box<dyn BinaryReader>> {
+fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Box<dyn BinaryReader>> {
     match arguments.len() {
         1 => {
             let mut files = Vec::new();
@@ -20,7 +20,7 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<Box<dyn Bi
     }
 }
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> CrushResult<()> {
     let input = parse(context.arguments, context.input)?;
     context.output.send(Value::BinaryReader(input))
 }

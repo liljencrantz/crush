@@ -1,5 +1,5 @@
 use crate::data::{ValueDefinition, Value, List};
-use crate::errors::{error, JobResult};
+use crate::errors::{error, CrushResult};
 use crate::printer::Printer;
 use crate::env::Env;
 use crate::commands::JobJoinHandle;
@@ -15,11 +15,11 @@ impl ListDefinition {
         ListDefinition { cells }
     }
 
-    pub fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Env, printer: &Printer) -> JobResult<Value> {
+    pub fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Env, printer: &Printer) -> CrushResult<Value> {
         let cells = self.cells
             .iter()
             .map(|c| c.compile(dependencies, env, printer))
-            .collect::<JobResult<Vec<Value>>>()?;
+            .collect::<CrushResult<Vec<Value>>>()?;
         if cells.len() == 0 {
             return Err(error("Empty list literals not supported"));
         }

@@ -1,9 +1,9 @@
 use crate::commands::CompileContext;
-use crate::errors::JobResult;
+use crate::errors::CrushResult;
 use crate::data::{ColumnType, ValueType, Row, Value};
 use std::collections::HashMap;
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> CrushResult<()> {
     let output = context.output.initialize(vec![
         ColumnType::named("name", ValueType::Text),
         ColumnType::named("type", ValueType::Text),

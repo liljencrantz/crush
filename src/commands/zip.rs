@@ -1,11 +1,11 @@
 use crate::commands::CompileContext;
-use crate::errors::JobResult;
+use crate::errors::CrushResult;
 use crate::errors::error;
 use crate::data::Value;
 use crate::stream::{ValueSender};
 use crate::stream::Readable;
 
-pub fn run(input1: &mut impl Readable, input2: &mut impl Readable, sender: ValueSender) -> JobResult<()> {
+pub fn run(input1: &mut impl Readable, input2: &mut impl Readable, sender: ValueSender) -> CrushResult<()> {
     let mut output_type = Vec::new();
     output_type.append(&mut input1.get_type().clone());
     output_type.append(&mut input2.get_type().clone());
@@ -22,7 +22,7 @@ pub fn run(input1: &mut impl Readable, input2: &mut impl Readable, sender: Value
     return Ok(());
 }
 
-pub fn perform(mut context: CompileContext) -> JobResult<()> {
+pub fn perform(mut context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
         return Err(error("Expected exactly two arguments"));
     }

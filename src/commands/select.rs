@@ -10,7 +10,7 @@ use crate::{
     stream::{OutputStream},
     replace::Replace,
     data::ColumnType,
-    errors::JobResult,
+    errors::CrushResult,
 };
 use crate::commands::command_util::find_field;
 use crate::stream::{Readable, ValueSender};
@@ -25,7 +25,7 @@ pub fn run(
     config: Config,
     mut input: impl Readable,
     output: OutputStream,
-) -> JobResult<()> {
+) -> CrushResult<()> {
     loop {
         match input.read() {
             Ok(mut row) => {
@@ -42,7 +42,7 @@ pub fn run(
     return Ok(());
 }
 
-fn perform_for(input: impl Readable, output: ValueSender, arguments: Vec<Argument>) -> JobResult<()> {
+fn perform_for(input: impl Readable, output: ValueSender, arguments: Vec<Argument>) -> CrushResult<()> {
     let input_type = input.get_type();
     let columns = arguments.iter().map(|a| {
         match &a.value {
@@ -56,7 +56,7 @@ fn perform_for(input: impl Readable, output: ValueSender, arguments: Vec<Argumen
             }
             _ => Err(argument_error(format!("Expected Field, not {:?}", a.value.value_type()).as_str())),
         }
-    }).collect::<JobResult<Vec<(usize, Option<Box<str>>)>>>()?;
+    }).collect::<CrushResult<Vec<(usize, Option<Box<str>>)>>>()?;
 
     let output_type = columns.iter()
         .map(|(idx, name)| ColumnType { cell_type: input.get_type()[*idx].cell_type.clone(), name: name.clone() })
@@ -65,7 +65,7 @@ fn perform_for(input: impl Readable, output: ValueSender, arguments: Vec<Argumen
     run(Config { columns: columns }, input, output)
 }
 
-fn perform_single(mut input: Struct, output: ValueSender, arguments: Vec<Argument>) -> JobResult<()> {
+fn perform_single(mut input: Struct, output: ValueSender, arguments: Vec<Argument>) -> CrushResult<()> {
     if arguments.len() == 1 && arguments[0].name.is_none() {
         match &arguments[0].value {
             Value::Field(s) => output.send(input.remove(find_field(s, &input.types())?)),
@@ -76,7 +76,7 @@ fn perform_single(mut input: Struct, output: ValueSender, arguments: Vec<Argumen
     }
 }
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Stream(s) => {
             let input = s.stream;

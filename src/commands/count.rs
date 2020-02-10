@@ -1,5 +1,5 @@
 use crate::commands::CompileContext;
-use crate::errors::{JobResult, error};
+use crate::errors::{CrushResult, error};
 use crate::{
     data::{
         Row,
@@ -21,7 +21,7 @@ fn count_rows(mut s: impl Readable) -> Value {
     return Value::Integer(res);
 }
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> CrushResult<()> {
     let output = context.output.initialize(vec![ColumnType::named("count", ValueType::Integer)])?;
     match context.input.recv()? {
         Value::Stream(s) => {

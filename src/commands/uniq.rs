@@ -8,7 +8,7 @@ use crate::{
     },
 };
 use crate::data::{Value, ColumnType, RowsReader};
-use crate::errors::{JobResult, error};
+use crate::errors::{CrushResult, error};
 use crate::commands::command_util::find_field;
 use crate::stream::{Readable, OutputStream};
 
@@ -16,7 +16,7 @@ pub struct Config {
     column: Option<usize>,
 }
 
-pub fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> JobResult<Config> {
+pub fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> CrushResult<Config> {
     match arguments.len() {
         0 => Ok(Config { column: None }),
         1 => match (&arguments[0].name, &arguments[0].value) {
@@ -31,7 +31,7 @@ pub fn run(
     config: Config,
     mut input: impl Readable,
     output: OutputStream,
-) -> JobResult<()> {
+) -> CrushResult<()> {
     match config.column {
         None => {
             let mut seen: HashSet<Row> = HashSet::new();
@@ -65,7 +65,7 @@ pub fn run(
     return Ok(());
 }
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Stream(s) => {
             let input = s.stream;

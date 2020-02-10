@@ -7,9 +7,9 @@ use users::User;
 use lazy_static::lazy_static;
 
 use crate::data::{Value, ColumnType};
-use crate::errors::{JobError, JobResult, error};
+use crate::errors::{CrushError, CrushResult, error};
 
-pub fn find_field_from_str(needle: &str, haystack: &Vec<ColumnType>) -> JobResult<usize> {
+pub fn find_field_from_str(needle: &str, haystack: &Vec<ColumnType>) -> CrushResult<usize> {
     for (idx, field) in haystack.iter().enumerate() {
         if field.name.as_ref().map(|v| v.as_ref().eq(needle)).unwrap_or(false) {
             return Ok(idx);
@@ -17,7 +17,7 @@ pub fn find_field_from_str(needle: &str, haystack: &Vec<ColumnType>) -> JobResul
     }
 
     return Err(
-        JobError {
+        CrushError {
             message: format!(
                 "Unknown column {}, available columns are {}",
                 needle,
@@ -27,7 +27,7 @@ pub fn find_field_from_str(needle: &str, haystack: &Vec<ColumnType>) -> JobResul
     );
 }
 
-pub fn find_field(needle_vec: &Vec<Box<str>>, haystack: &Vec<ColumnType>) -> JobResult<usize> {
+pub fn find_field(needle_vec: &Vec<Box<str>>, haystack: &Vec<ColumnType>) -> CrushResult<usize> {
     if needle_vec.len() != 1 {
         return Err(error("Expected direct field"))
     }

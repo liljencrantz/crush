@@ -60,7 +60,7 @@ use crate::{
 };
 use std::thread::{JoinHandle};
 use crate::printer::Printer;
-use crate::errors::JobResult;
+use crate::errors::CrushResult;
 use crate::stream::{ValueReceiver, ValueSender};
 
 pub struct CompileContext {
@@ -73,7 +73,7 @@ pub struct CompileContext {
 
 pub enum JobJoinHandle {
     Many(Vec<JobJoinHandle>),
-    Async(JoinHandle<JobResult<()>>),
+    Async(JoinHandle<CrushResult<()>>),
 }
 
 impl JobJoinHandle {
@@ -95,7 +95,7 @@ impl JobJoinHandle {
     }
 }
 
-pub fn add_commands(env: &Env) -> JobResult<()> {
+pub fn add_commands(env: &Env) -> CrushResult<()> {
     env.declare_str("struct", Value::Command(Command::new(r#struct::perform)))?;
     env.declare_str("val", Value::Command(Command::new(val::perform)))?;
 

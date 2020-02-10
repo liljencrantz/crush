@@ -1,5 +1,5 @@
 use crate::commands::CompileContext;
-use crate::errors::{JobResult, argument_error, to_job_error};
+use crate::errors::{CrushResult, argument_error, to_job_error};
 use crate::data::{Argument, Struct};
 use crate::data::Value;
 use std::fs::metadata;
@@ -7,7 +7,7 @@ use std::path::Path;
 use crate::stream::ValueSender;
 use std::os::unix::fs::MetadataExt;
 
-fn parse(arguments: Vec<Argument>) -> JobResult<Box<Path>> {
+fn parse(arguments: Vec<Argument>) -> CrushResult<Box<Path>> {
     let mut files: Vec<Box<Path>> = Vec::new();
     for arg in &arguments {
         arg.value.file_expand(&mut files)?;
@@ -18,7 +18,7 @@ fn parse(arguments: Vec<Argument>) -> JobResult<Box<Path>> {
     Ok(files.remove(0))
 }
 
-fn run(file: Box<Path>, sender: ValueSender) -> JobResult<()> {
+fn run(file: Box<Path>, sender: ValueSender) -> CrushResult<()> {
     let metadata = to_job_error(metadata(file))?;
     sender.send(
         Value::Struct(
@@ -37,6 +37,6 @@ fn run(file: Box<Path>, sender: ValueSender) -> JobResult<()> {
     )
 }
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> CrushResult<()> {
     run(parse(context.arguments)?, context.output)
 }

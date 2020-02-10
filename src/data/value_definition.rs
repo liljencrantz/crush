@@ -6,7 +6,7 @@ use regex::Regex;
 use crate::{
     printer::Printer,
     glob::Glob,
-    errors::{error, mandate, JobResult, argument_error, to_job_error},
+    errors::{error, mandate, CrushResult, argument_error, to_job_error},
     env::Env,
     data::{Value, ListDefinition},
     commands::JobJoinHandle,
@@ -38,7 +38,7 @@ pub enum ValueDefinition {
     Subscript(Box<ValueDefinition>, Box<ValueDefinition>),
 }
 
-fn to_duration(a: u64, t: &str) -> JobResult<Duration> {
+fn to_duration(a: u64, t: &str) -> CrushResult<Duration> {
     match t {
         "nanosecond" | "nanoseconds" => Ok(Duration::from_nanos(a)),
         "microsecond" | "microseconds" => Ok(Duration::from_micros(a)),
@@ -52,10 +52,10 @@ fn to_duration(a: u64, t: &str) -> JobResult<Duration> {
     }
 }
 
-fn compile_duration_mode(cells: &Vec<ValueDefinition>, dependencies: &mut Vec<JobJoinHandle>, env: &Env, printer: &Printer) -> JobResult<Value> {
+fn compile_duration_mode(cells: &Vec<ValueDefinition>, dependencies: &mut Vec<JobJoinHandle>, env: &Env, printer: &Printer) -> CrushResult<Value> {
     let v: Vec<Value> = cells.iter()
         .map(|c| c.compile(dependencies, env, printer))
-        .collect::<JobResult<Vec<Value>>>()?;
+        .collect::<CrushResult<Vec<Value>>>()?;
     let duration = match &v[..] {
         [Value::Integer(s)] => Duration::from_secs(*s as u64),
         [Value::Time(t1), Value::Text(operator), Value::Time(t2)] => if operator.as_ref() == "-" {
@@ -69,7 +69,7 @@ fn compile_duration_mode(cells: &Vec<ValueDefinition>, dependencies: &mut Vec<Jo
                     (Value::Integer(a), Value::Text(t)) => to_duration(*a as u64, t.as_ref()),
                     _ => Err(argument_error("Unknown duration format"))
                 })
-                .collect::<JobResult<Vec<Duration>>>()?;
+                .collect::<CrushResult<Vec<Duration>>>()?;
             vec.into_iter().sum::<Duration>()
         } else {
             return Err(error("Unknown duration format"))
@@ -79,10 +79,10 @@ fn compile_duration_mode(cells: &Vec<ValueDefinition>, dependencies: &mut Vec<Jo
     Ok(Value::Duration(duration))
 }
 
-fn compile_time_mode(cells: &Vec<ValueDefinition>, dependencies: &mut Vec<JobJoinHandle>, env: &Env, printer: &Printer) -> JobResult<Value> {
+fn compile_time_mode(cells: &Vec<ValueDefinition>, dependencies: &mut Vec<JobJoinHandle>, env: &Env, printer: &Printer) -> CrushResult<Value> {
     let v: Vec<Value> = cells.iter()
         .map(|c | c.compile(dependencies, env, printer))
-        .collect::<JobResult<Vec<Value>>>()?;
+        .collect::<CrushResult<Vec<Value>>>()?;
     let time = match &v[..] {
         [Value::Text(t)] => if t.as_ref() == "now" {Local::now()} else {return Err(error("Unknown time"))},
         _ => return Err(error("Unknown duration format")),
@@ -92,7 +92,7 @@ fn compile_time_mode(cells: &Vec<ValueDefinition>, dependencies: &mut Vec<JobJoi
 }
 
 impl ValueDefinition {
-    pub fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Env, printer: &Printer) -> JobResult<Value> {
+    pub fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Env, printer: &Printer) -> CrushResult<Value> {
         Ok(match self {
             ValueDefinition::Text(v) => Value::Text(v.clone()),
             ValueDefinition::Integer(v) => Value::Integer(v.clone()),

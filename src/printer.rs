@@ -1,10 +1,10 @@
 use std::sync::mpsc::{channel, Sender};
 use std::thread;
-use crate::errors::{JobError, JobResult, to_job_error};
+use crate::errors::{CrushError, CrushResult, to_job_error};
 
 enum PrinterMessage {
     Shutdown,
-    JobError(JobError),
+    JobError(CrushError),
     Error(Box<str>),
     Line(Box<str>),
     Lines(Vec<Box<str>>),
@@ -58,14 +58,14 @@ impl Printer {
         self.handle_error(to_job_error(self.sender.send(PrinterMessage::Lines(lines))));
     }
 
-    pub fn handle_error<T>(&self, result: JobResult<T>) {
+    pub fn handle_error<T>(&self, result: CrushResult<T>) {
         match result {
             Err(e) => self.job_error(e),
             _ => {}
         }
     }
 
-    pub fn job_error(&self, err: JobError) {
+    pub fn job_error(&self, err: CrushError) {
         self.sender.send(PrinterMessage::JobError(err));
     }
 

@@ -9,11 +9,11 @@ use crate::{
     closure::Closure,
     env::get_cwd,
     data::rows::Rows,
-    errors::{error, JobError, to_job_error},
+    errors::{error, CrushError, to_job_error},
     glob::Glob,
 };
 use crate::data::{List, Command, Stream, ValueType, Dict, ColumnType, value_type_parser, BinaryReader};
-use crate::errors::JobResult;
+use crate::errors::CrushResult;
 use std::time::Duration;
 use crate::format::duration_format;
 use crate::env::Env;
@@ -121,7 +121,7 @@ impl Value {
         };
     }
 
-    pub fn file_expand(&self, v: &mut Vec<Box<Path>>) -> JobResult<()> {
+    pub fn file_expand(&self, v: &mut Vec<Box<Path>>) -> CrushResult<()> {
         match self {
             Value::Text(s) => v.push(Box::from(Path::new(s.as_ref()))),
             Value::File(p) => v.push(p.clone()),
@@ -152,7 +152,7 @@ impl Value {
         }
     }
 
-    pub fn cast(self, new_type: ValueType) -> Result<Value, JobError> {
+    pub fn cast(self, new_type: ValueType) -> Result<Value, CrushError> {
         if self.value_type() == new_type {
             return Ok(self);
         }

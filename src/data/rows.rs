@@ -1,5 +1,5 @@
 use crate::data::{ColumnType, Row, Value};
-use crate::errors::{JobError, error};
+use crate::errors::{CrushError, error};
 use crate::stream::Readable;
 use crate::replace::Replace;
 
@@ -52,7 +52,7 @@ impl RowsReader {
 
 impl Readable for RowsReader {
 
-    fn read(&mut self) -> Result<Row, JobError> {
+    fn read(&mut self) -> Result<Row, CrushError> {
         if self.idx >= self.rows.rows().len() {
             return Err(error("EOF"));
         }

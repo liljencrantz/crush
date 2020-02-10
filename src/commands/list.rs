@@ -1,9 +1,9 @@
 use crate::commands::CompileContext;
-use crate::errors::{JobResult, argument_error};
+use crate::errors::{CrushResult, argument_error};
 use crate::data::{ValueType, List};
 use crate::data::Value;
 
-pub fn create(context: CompileContext) -> JobResult<()> {
+pub fn create(context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 1 {
         return Err(argument_error("Expected 1 argument"));
     }
@@ -15,7 +15,7 @@ pub fn create(context: CompileContext) -> JobResult<()> {
     }
 }
 
-pub fn len(context: CompileContext) -> JobResult<()> {
+pub fn len(context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 1 {
         return Err(argument_error("Expected single argument to list.len"));
     }
@@ -25,7 +25,7 @@ pub fn len(context: CompileContext) -> JobResult<()> {
     }
 }
 
-pub fn empty(context: CompileContext) -> JobResult<()> {
+pub fn empty(context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 1 {
         return Err(argument_error("Expected single argument to list.len"));
     }
@@ -35,7 +35,7 @@ pub fn empty(context: CompileContext) -> JobResult<()> {
     }
 }
 
-pub fn push(mut context: CompileContext) -> JobResult<()> {
+pub fn push(mut context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() == 0 {
         return Err(argument_error("Expected at least one argument to list.push"));
     }
@@ -60,7 +60,7 @@ pub fn push(mut context: CompileContext) -> JobResult<()> {
     }
 }
 
-pub fn pop(context: CompileContext) -> JobResult<()> {
+pub fn pop(context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 1 {
         return Err(argument_error("Expected single argument to list.len"));
     }

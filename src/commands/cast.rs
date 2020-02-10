@@ -7,12 +7,12 @@ use crate::{
         Value,
         Row,
     },
-    errors::{argument_error, JobError},
+    errors::{argument_error, CrushError},
     stream::{OutputStream},
 };
 use crate::commands::CompileContext;
 use crate::data::{ValueType, ColumnType, RowsReader};
-use crate::errors::{JobResult, error};
+use crate::errors::{CrushResult, error};
 use crate::printer::Printer;
 use crate::stream::Readable;
 
@@ -23,7 +23,7 @@ pub struct Config {
 fn parse(
     input_type: &Vec<ColumnType>,
     arguments: &Vec<Argument>,
-) -> Result<Config, JobError> {
+) -> Result<Config, CrushError> {
     let mut output_type: Vec<ColumnType> = input_type.clone();
     for arg in arguments.iter() {
         let arg_idx = match &arg.name {
@@ -45,7 +45,7 @@ pub fn run(
     mut input: impl Readable,
     output: OutputStream,
     printer: Printer,
-) -> JobResult<()> {
+) -> CrushResult<()> {
     'outer: loop {
         match input.read() {
             Ok(mut row) => {
@@ -67,7 +67,7 @@ pub fn run(
     return Ok(());
 }
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Stream(s) => {
             let input = s.stream;

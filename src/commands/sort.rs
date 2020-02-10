@@ -5,7 +5,7 @@ use crate::{
 };
 use crate::commands::CompileContext;
 use crate::data::{Argument, Value, Row, RowsReader};
-use crate::errors::{JobResult, error};
+use crate::errors::{CrushResult, error};
 use crate::commands::command_util::find_field;
 use crate::stream::Readable;
 
@@ -18,7 +18,7 @@ pub struct Config<T: Readable> {
 fn parse<T: Readable>(
     arguments: Vec<Argument>,
     input: T,
-    output: OutputStream) -> JobResult<Config<T>> {
+    output: OutputStream) -> CrushResult<Config<T>> {
     if arguments.len() != 1 {
         return Err(argument_error("No comparison key specified"));
     }
@@ -33,7 +33,7 @@ fn parse<T: Readable>(
     Ok(Config { sort_column_idx, input, output })
 }
 
-pub fn run<T: Readable>(mut config: Config<T>) -> JobResult<()> {
+pub fn run<T: Readable>(mut config: Config<T>) -> CrushResult<()> {
     let mut res: Vec<Row> = Vec::new();
     loop {
         match config.input.read() {
@@ -54,7 +54,7 @@ pub fn run<T: Readable>(mut config: Config<T>) -> JobResult<()> {
     return Ok(());
 }
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Stream(s) => {
             let input = s.stream;

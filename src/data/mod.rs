@@ -14,7 +14,7 @@ mod value_type_lexer;
 mod value_type_parser;
 
 use crate::commands::{CompileContext};
-use crate::errors::{JobResult, error};
+use crate::errors::{CrushResult, error};
 use std::fmt::Formatter;
 use crate::stream::{InputStream};
 
@@ -40,11 +40,11 @@ pub use binary::binary_channel;
 
 #[derive(Clone)]
 pub struct Command {
-    pub call: fn(context: CompileContext) -> JobResult<()>,
+    pub call: fn(context: CompileContext) -> CrushResult<()>,
 }
 
 impl Command {
-    pub fn new(call: fn(context: CompileContext) -> JobResult<()>) -> Command {
+    pub fn new(call: fn(context: CompileContext) -> CrushResult<()>) -> Command {
         return Command { call };
     }
 }
@@ -69,7 +69,7 @@ pub struct Stream {
 }
 
 impl Stream {
-    pub fn get(&self, idx: i128) -> JobResult<Row> {
+    pub fn get(&self, idx: i128) -> CrushResult<Row> {
         let mut i = 0i128;
         loop {
             match self.stream.recv() {

@@ -13,7 +13,7 @@ use crate::{
     stream::{OutputStream, unlimited_streams},
 };
 use crate::data::{ColumnType, RowsReader};
-use crate::errors::{JobResult, error};
+use crate::errors::{CrushResult, error};
 use crate::commands::command_util::find_field;
 use crate::stream::{Readable};
 
@@ -23,7 +23,7 @@ pub struct Config {
     column: usize,
 }
 
-pub fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> JobResult<Config> {
+pub fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> CrushResult<Config> {
     if arguments.len() != 1 {
         return Err(argument_error("No comparison key specified"));
     }
@@ -51,7 +51,7 @@ pub fn run(
     config: Config,
     mut input: impl Readable,
     output: OutputStream,
-) -> JobResult<()> {
+) -> CrushResult<()> {
     let mut groups: HashMap<Value, OutputStream> = HashMap::new();
 
     loop {
@@ -78,7 +78,7 @@ pub fn run(
     return Ok(());
 }
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Stream(s) => {
             let input = s.stream;

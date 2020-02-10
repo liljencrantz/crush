@@ -7,7 +7,7 @@ use crate::{
         Value,
     },
     stream::{OutputStream},
-    errors::{JobError, argument_error},
+    errors::{CrushError, argument_error},
 };
 use std::{
     io::BufReader,
@@ -19,7 +19,7 @@ extern crate map_in_place;
 use map_in_place::MapVecInPlace;
 use crate::printer::Printer;
 use crate::data::{ColumnType, BinaryReader};
-use crate::errors::JobResult;
+use crate::errors::CrushResult;
 use crate::stream::ValueReceiver;
 
 pub struct Config {
@@ -30,7 +30,7 @@ pub struct Config {
     input: Box<dyn BinaryReader>,
 }
 
-fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<Config> {
+fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> {
     let mut separator = ',';
     let mut columns = Vec::new();
     let mut skip_head = 0;
@@ -101,7 +101,7 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<Config> {
     })
 }
 
-fn run(cfg: Config, output: OutputStream, printer: Printer) -> JobResult<()> {
+fn run(cfg: Config, output: OutputStream, printer: Printer) -> CrushResult<()> {
 
     let printer_copy = printer.clone();
 
@@ -140,7 +140,7 @@ fn run(cfg: Config, output: OutputStream, printer: Printer) -> JobResult<()> {
         match split.iter()
             .zip(columns.iter())
             .map({ |(s, t)| t.cell_type.parse(*s) })
-            .collect::<Result<Vec<Value>, JobError>>() {
+            .collect::<Result<Vec<Value>, CrushError>>() {
             Ok(cells) => { output.send(Row::new(cells)); }
             Err(err) => { printer_copy.job_error(err); }
         }
@@ -148,7 +148,7 @@ fn run(cfg: Config, output: OutputStream, printer: Printer) -> JobResult<()> {
     return Ok(());
 }
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> CrushResult<()> {
     let cfg = parse(context.arguments, context.input)?;
     let output = context.output.initialize(
         cfg.columns.clone())?;

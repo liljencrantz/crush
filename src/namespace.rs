@@ -4,7 +4,7 @@ use crate::{
     data::Value,
 };
 use std::sync::{Mutex, Arc};
-use crate::errors::JobResult;
+use crate::errors::CrushResult;
 use crate::data::ValueType;
 
 #[derive(Debug)]
@@ -21,7 +21,7 @@ impl Namespace {
         };
     }
 
-    pub fn declare(&mut self, name: &str, value: Value) -> JobResult<()> {
+    pub fn declare(&mut self, name: &str, value: Value) -> CrushResult<()> {
         if self.data.contains_key(name) {
             return Err(error(format!("Variable ${{{}}} already exists", name).as_str()));
         }
@@ -29,7 +29,7 @@ impl Namespace {
         return Ok(());
     }
 
-    pub fn set(&mut self, name: &str, value: Value) -> JobResult<()> {
+    pub fn set(&mut self, name: &str, value: Value) -> CrushResult<()> {
         if !self.data.contains_key(name) {
             match &self.parent {
                 Some(p) => {

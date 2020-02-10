@@ -2,9 +2,9 @@ use crate::commands::CompileContext;
 use crate::data::Argument;
 use crate::data::Value;
 use crate::errors::argument_error;
-use crate::errors::JobResult;
+use crate::errors::CrushResult;
 
-fn parse(arguments: Vec<Argument>) -> JobResult<Vec<Box<str>>> {
+fn parse(arguments: Vec<Argument>) -> CrushResult<Vec<Box<str>>> {
     let mut vars = Vec::new();
     for arg in arguments.iter() {
         if let Value::Text(s) = &arg.value {
@@ -20,7 +20,7 @@ fn parse(arguments: Vec<Argument>) -> JobResult<Vec<Box<str>>> {
     Ok(vars)
 }
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> CrushResult<()> {
     let vars = parse(context.arguments)?;
     context.output.initialize(vec![]);
     for s in vars {

@@ -1,15 +1,15 @@
 use crate::commands::CompileContext;
-use crate::errors::{JobResult, error};
+use crate::errors::{CrushResult, error};
 use crate::{
     data::Argument,
     stream::{OutputStream},
     data::Value,
-    errors::{JobError, argument_error},
+    errors::{CrushError, argument_error},
 };
 use crate::stream::Readable;
 use crate::data::RowsReader;
 
-pub fn get_line_count(arguments: &Vec<Argument>) -> Result<i128, JobError> {
+pub fn get_line_count(arguments: &Vec<Argument>) -> Result<i128, CrushError> {
     return match arguments.len() {
         0 => Ok(10),
         1 => match arguments[0].value {
@@ -24,7 +24,7 @@ pub fn run(
     lines: i128,
     mut input: impl Readable,
     output: OutputStream,
-) -> JobResult<()> {
+) -> CrushResult<()> {
     let mut count = 0;
     loop {
         match input.read() {
@@ -41,7 +41,7 @@ pub fn run(
     return Ok(());
 }
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> CrushResult<()> {
     let lines = get_line_count(&context.arguments)?;
     match context.input.recv()? {
         Value::Stream(s) => {

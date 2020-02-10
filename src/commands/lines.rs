@@ -13,7 +13,7 @@ use crate::{
     },
     stream::{OutputStream},
 };
-use crate::errors::{JobResult};
+use crate::errors::{CrushResult};
 use crate::data::{BinaryReader};
 use crate::stream::ValueReceiver;
 
@@ -23,7 +23,7 @@ lazy_static! {
     };
 }
 
-fn run(input: Box<dyn BinaryReader>, output: OutputStream) -> JobResult<()> {
+fn run(input: Box<dyn BinaryReader>, output: OutputStream) -> CrushResult<()> {
     let mut reader = BufReader::new(input.reader());
     let mut line = String::new();
     loop {
@@ -37,7 +37,7 @@ fn run(input: Box<dyn BinaryReader>, output: OutputStream) -> JobResult<()> {
     return Ok(());
 }
 
-fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<Box<dyn BinaryReader>> {
+fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Box<dyn BinaryReader>> {
     match arguments.len() {
         0 => {
             let v = input.recv()?;
@@ -57,7 +57,7 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> JobResult<Box<dyn Bi
     }
 }
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> CrushResult<()> {
     let output = context.output.initialize(sub_type.clone())?;
     let file = parse(context.arguments, context.input)?;
     run(file, output)

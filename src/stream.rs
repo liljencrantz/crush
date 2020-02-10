@@ -1,7 +1,7 @@
 use crate::data::{ColumnType, Value};
 use crate::data::{Row, Rows, Stream};
 use crossbeam::{Receiver, bounded, unbounded, Sender};
-use crate::errors::{JobError, error, JobResult, to_job_error};
+use crate::errors::{CrushError, error, CrushResult, to_job_error};
 use crate::replace::Replace;
 
 pub struct ValueSender {
@@ -9,12 +9,12 @@ pub struct ValueSender {
 }
 
 impl ValueSender {
-    pub fn send(self, cell: Value) -> JobResult<()> {
+    pub fn send(self, cell: Value) -> CrushResult<()> {
         to_job_error(self.sender.send(cell))?;
         Ok(())
     }
 
-    pub fn initialize(self, signature: Vec<ColumnType>) -> JobResult<OutputStream> {
+    pub fn initialize(self, signature: Vec<ColumnType>) -> CrushResult<OutputStream> {
         let (output, input) = streams(signature);
         self.send(Value::Stream(Stream { stream: input }))?;
         Ok(output)
@@ -27,7 +27,7 @@ pub struct ValueReceiver {
 }
 
 impl ValueReceiver {
-    pub fn recv(self) -> JobResult<Value> {
+    pub fn recv(self) -> CrushResult<Value> {
         to_job_error(self.receiver.recv())
     }
 }
@@ -38,7 +38,7 @@ pub enum OutputStream {
 }
 
 impl OutputStream {
-    pub fn send(&self, row: Row) -> JobResult<()> {
+    pub fn send(&self, row: Row) -> CrushResult<()> {
         let native_output = match self {
             OutputStream::Sync(s) => s.send(row),
             OutputStream::Async(s) => s.send(row),
@@ -57,7 +57,7 @@ pub struct InputStream {
 }
 
 impl InputStream {
-    pub fn recv(&self) -> JobResult<Row> {
+    pub fn recv(&self) -> CrushResult<Row> {
         self.validate(to_job_error(self.receiver.recv()))
     }
 
@@ -65,7 +65,7 @@ impl InputStream {
         &self.input_type
     }
 
-    fn validate(&self, res: JobResult<Row>) -> JobResult<Row> {
+    fn validate(&self, res: CrushResult<Row>) -> CrushResult<Row> {
         match &res {
             Ok(row) => {
                 if row.cells().len() != self.input_type.len() {
@@ -109,12 +109,12 @@ pub fn empty_channel() -> ValueReceiver {
 }
 
 pub trait Readable {
-    fn read(&mut self) -> JobResult<Row>;
+    fn read(&mut self) -> CrushResult<Row>;
     fn get_type(&self) -> &Vec<ColumnType>;
 }
 
 impl Readable for InputStream {
-    fn read(&mut self) -> Result<Row, JobError> {
+    fn read(&mut self) -> Result<Row, CrushError> {
         match self.recv() {
             Ok(v) => Ok(v),
             Err(e) => Err(error(&e.message)),

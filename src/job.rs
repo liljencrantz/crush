@@ -3,7 +3,7 @@ use crate::commands::{JobJoinHandle};
 use crate::stream::{channels, ValueSender, ValueReceiver};
 use crate::data::CallDefinition;
 use crate::printer::Printer;
-use crate::errors::JobError;
+use crate::errors::CrushError;
 
 #[derive(Clone)]
 #[derive(Debug)]
@@ -22,7 +22,7 @@ impl Job {
         printer: &Printer,
         first_input: ValueReceiver,
         last_output: ValueSender,
-    ) -> Result<JobJoinHandle, JobError> {
+    ) -> Result<JobJoinHandle, CrushError> {
         let mut calls = Vec::new();
 
         let mut input = first_input;

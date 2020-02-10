@@ -1,9 +1,9 @@
 use crate::commands::CompileContext;
-use crate::errors::JobResult;
+use crate::errors::CrushResult;
 use std::collections::HashMap;
 use crate::{
     stream::Readable,
-    errors::JobError,
+    errors::CrushError,
     data::{
         Argument,
         Row,
@@ -26,14 +26,14 @@ pub struct Config {
     right_column_idx: usize,
 }
 
-pub fn get_sub_type(cell_type: &ValueType) -> Result<&Vec<ColumnType>, JobError> {
+pub fn get_sub_type(cell_type: &ValueType) -> Result<&Vec<ColumnType>, CrushError> {
     match cell_type {
         ValueType::Stream(sub_types) | ValueType::Rows(sub_types) => Ok(sub_types),
         _ => Err(argument_error("Expected a table column")),
     }
 }
 
-pub fn guess_tables(input_type: &Vec<ColumnType>) -> Result<(usize, usize, &Vec<ColumnType>, &Vec<ColumnType>), JobError> {
+pub fn guess_tables(input_type: &Vec<ColumnType>) -> Result<(usize, usize, &Vec<ColumnType>, &Vec<ColumnType>), CrushError> {
     let tables: Vec<(usize, &Vec<ColumnType>)> = input_type.iter().enumerate().flat_map(|(idx, t)| {
         match &t.cell_type {
             ValueType::Stream(sub_types) | ValueType::Rows(sub_types) => Some((idx, sub_types)),
@@ -47,13 +47,13 @@ pub fn guess_tables(input_type: &Vec<ColumnType>) -> Result<(usize, usize, &Vec<
     }
 }
 
-fn scan_table(table: &str, column: &str, input_type: &Vec<ColumnType>) -> Result<(usize, usize), JobError> {
+fn scan_table(table: &str, column: &str, input_type: &Vec<ColumnType>) -> Result<(usize, usize), CrushError> {
     let table_idx = find_field_from_str(&table.to_string(), input_type)?;
     let column_idx = find_field_from_str(&column.to_string(), get_sub_type(&input_type[table_idx].cell_type)?)?;
     Ok((table_idx, column_idx))
 }
 
-fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Config, JobError> {
+fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Config, CrushError> {
     if arguments.len() != 3 {
         return Err(argument_error("Expected exactly 3 aguments"));
     }
@@ -118,7 +118,7 @@ fn combine(mut l: Row, mut r: Row, cfg: &Config) -> Row {
     return l;
 }
 
-fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &OutputStream) -> JobResult<()> {
+fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &OutputStream) -> CrushResult<()> {
     let mut l_data: HashMap<Value, Row> = HashMap::new();
     loop {
         match l.read() {
@@ -148,7 +148,7 @@ pub fn run(
     config: Config,
     mut row: Struct,
     output: OutputStream,
-) -> JobResult<()> {
+) -> CrushResult<()> {
     let mut v = row.into_vec();
     match (v.replace(config.left_table_idx, Value::Integer(0)), v.replace(config.right_table_idx, Value::Integer(0))) {
         (Value::Stream(mut l), Value::Stream(mut r)) => {
@@ -168,7 +168,7 @@ pub fn run(
     Ok(())
 }
 
-fn get_output_type(input_type: &Vec<ColumnType>, cfg: &Config) -> Result<Vec<ColumnType>, JobError> {
+fn get_output_type(input_type: &Vec<ColumnType>, cfg: &Config) -> Result<Vec<ColumnType>, CrushError> {
     let tables: Vec<Option<&Vec<ColumnType>>> = input_type.iter().map(|t| {
         match &t.cell_type {
             ValueType::Stream(sub_types) | ValueType::Rows(sub_types) => Some(sub_types),
@@ -190,7 +190,7 @@ fn get_output_type(input_type: &Vec<ColumnType>, cfg: &Config) -> Result<Vec<Col
     };
 }
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Struct(s) => {
             let cfg = parse(s.types(), context.arguments)?;

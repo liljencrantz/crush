@@ -14,7 +14,7 @@ use crate::commands::CompileContext;
 use crate::commands::command_util::{create_user_map, UserMap};
 use crate::data::{Argument, Value, ValueType, ColumnType, Row};
 use crate::env::get_cwd;
-use crate::errors::{error, JobError, JobResult, to_job_error};
+use crate::errors::{error, CrushError, CrushResult, to_job_error};
 use crate::stream::OutputStream;
 
 lazy_static! {
@@ -30,7 +30,7 @@ fn insert_entity(
     meta: &Metadata,
     file: Box<Path>,
     users: &HashMap<uid_t, User>,
-    output: &mut OutputStream) -> JobResult<()> {
+    output: &mut OutputStream) -> CrushResult<()> {
     let modified_system = to_job_error(meta.modified())?;
     let modified_datetime: DateTime<Local> = DateTime::from(modified_system);
     let f = if file.starts_with("./") {
@@ -52,7 +52,7 @@ fn run_for_single_directory_or_file(
     users: &HashMap<uid_t, User>,
     recursive: bool,
     q: &mut VecDeque<Box<Path>>,
-    output: &mut OutputStream) -> JobResult<()> {
+    output: &mut OutputStream) -> CrushResult<()> {
     if path.is_dir() {
         let dirs = fs::read_dir(path);
         for maybe_entry in to_job_error(dirs)? {
@@ -85,7 +85,7 @@ fn run_for_single_directory_or_file(
     Ok(())
 }
 
-pub fn run(mut config: Config) -> JobResult<()> {
+pub fn run(mut config: Config) -> CrushResult<()> {
     let users = create_user_map();
     let mut q = VecDeque::new();
         for dir in config.dirs {
@@ -107,7 +107,7 @@ pub struct Config {
     output: OutputStream,
 }
 
-fn parse(output: OutputStream, arguments: Vec<Argument>, recursive: bool) -> Result<Config, JobError> {
+fn parse(output: OutputStream, arguments: Vec<Argument>, recursive: bool) -> Result<Config, CrushError> {
     let mut dirs: Vec<Box<Path>> = Vec::new();
     if arguments.is_empty() {
         dirs.push(Box::from(Path::new(".")));
@@ -134,13 +134,13 @@ fn parse(output: OutputStream, arguments: Vec<Argument>, recursive: bool) -> Res
     Ok(Config { dirs, recursive, output })
 }
 
-pub fn perform_ls(context: CompileContext) -> JobResult<()> {
+pub fn perform_ls(context: CompileContext) -> CrushResult<()> {
     let output = context.output.initialize(OUTPUT_TYPE.clone())?;
     let cfg = parse(output, context.arguments, false)?;
     run(cfg)
 }
 
-pub fn perform_find(context: CompileContext) -> JobResult<()> {
+pub fn perform_find(context: CompileContext) -> CrushResult<()> {
     let output = context.output.initialize(OUTPUT_TYPE.clone())?;
     let cfg = parse(output, context.arguments, true)?;
     run(cfg)

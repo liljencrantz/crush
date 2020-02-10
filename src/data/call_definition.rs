@@ -1,7 +1,7 @@
 use crate::commands::{CompileContext, JobJoinHandle};
 use crate::data::{ArgumentDefinition, ArgumentVecCompiler, Value};
 use crate::env::Env;
-use crate::errors::{error, JobResult};
+use crate::errors::{error, CrushResult};
 use crate::printer::Printer;
 use crate::stream::{ValueReceiver, ValueSender};
 use crate::thread_util::{handle, build};
@@ -29,7 +29,7 @@ impl CallDefinition {
         printer: &Printer,
         input: ValueReceiver,
         output: ValueSender,
-    ) -> JobResult<JobJoinHandle> {
+    ) -> CrushResult<JobJoinHandle> {
         let local_printer = printer.clone();
         let local_arguments = self.arguments.clone();
         let local_env = env.clone();

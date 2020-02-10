@@ -1,5 +1,5 @@
 use crate::data::{ValueType, Value};
-use crate::errors::{JobError, mandate, JobResult};
+use crate::errors::{CrushError, mandate, CrushResult};
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;
@@ -19,7 +19,7 @@ impl List {
         cells.len()
     }
 
-    pub fn get(&self, idx: usize) -> JobResult<Value> {
+    pub fn get(&self, idx: usize) -> CrushResult<Value> {
         let cells = self.cells.lock().unwrap();
         Ok(mandate(cells.get(idx), "Index out of bounds")?.clone())
     }

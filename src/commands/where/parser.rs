@@ -4,7 +4,7 @@ use crate::{
         Value,
         ValueType,
     },
-    errors::{argument_error, JobError},
+    errors::{argument_error, CrushError},
 };
 use crate::data::ColumnType;
 use crate::commands::command_util::find_field;
@@ -29,7 +29,7 @@ pub enum Condition {
 }
 
 fn parse_value(input_type: &Vec<ColumnType>,
-               arg: Argument) -> Result<WhereValue, JobError> {
+               arg: Argument) -> Result<WhereValue, CrushError> {
     match arg.value {
         Value::Field(s) => Ok(WhereValue::Field(find_field(&s, input_type)?)),
         Value::Op(_) => Err(argument_error("Expected value")),
@@ -45,7 +45,7 @@ fn to_cell_data_type(input_type: &Vec<ColumnType>, value: &WhereValue) -> ValueT
     }
 }
 
-fn check_value(input_type: &Vec<ColumnType>, value: &WhereValue, accepted_types: &Vec<ValueType>) -> Option<JobError> {
+fn check_value(input_type: &Vec<ColumnType>, value: &WhereValue, accepted_types: &Vec<ValueType>) -> Option<CrushError> {
     let t = to_cell_data_type(input_type, value);
     for a in accepted_types {
         if t == *a {
@@ -64,7 +64,7 @@ fn check_comparable(input_type: &Vec<ColumnType>, value: &WhereValue) -> bool {
     return t.is_comparable();
 }
 
-fn check_comparison(input_type: &Vec<ColumnType>, l: &WhereValue, r: &WhereValue) -> Option<JobError> {
+fn check_comparison(input_type: &Vec<ColumnType>, l: &WhereValue, r: &WhereValue) -> Option<CrushError> {
     if !check_comparable(input_type, l) {
         return Some(error("Type can't be compared"));
     }
@@ -74,7 +74,7 @@ fn check_comparison(input_type: &Vec<ColumnType>, l: &WhereValue, r: &WhereValue
     None
 }
 
-fn check_match(input_type: &Vec<ColumnType>, cond: Result<Condition, JobError>) -> Result<Condition, JobError> {
+fn check_match(input_type: &Vec<ColumnType>, cond: Result<Condition, CrushError>) -> Result<Condition, CrushError> {
     match &cond {
         Ok(Condition::Match(l, r)) | Ok(Condition::NotMatch(l, r)) => {
             if let Some(err) = check_value(&input_type, r, &vec![ValueType::Glob, ValueType::Regex]) {
@@ -90,7 +90,7 @@ fn check_match(input_type: &Vec<ColumnType>, cond: Result<Condition, JobError>) 
 }
 
 fn parse_value_condition(input_type: &Vec<ColumnType>,
-                         arguments: &mut Vec<Argument>) -> Result<Condition, JobError> {
+                         arguments: &mut Vec<Argument>) -> Result<Condition, CrushError> {
     if arguments.len() < 3 {
         return Err(error("Wrong number of arguments"));
     }
@@ -115,7 +115,7 @@ fn parse_value_condition(input_type: &Vec<ColumnType>,
 }
 
 fn parse_bool_condition(input_type: &Vec<ColumnType>,
-                        arguments: &mut Vec<Argument>) -> Result<Condition, JobError> {
+                        arguments: &mut Vec<Argument>) -> Result<Condition, CrushError> {
     let cond1 = parse_value_condition(input_type, arguments)?;
     if arguments.len() < 2 {
        return Ok(cond1);
@@ -134,7 +134,7 @@ fn parse_bool_condition(input_type: &Vec<ColumnType>,
 }
 
 pub fn parse(input_type: &Vec<ColumnType>,
-             arguments: &mut Vec<Argument>) -> Result<Condition, JobError> {
+             arguments: &mut Vec<Argument>) -> Result<Condition, CrushError> {
     let numbered_arguments: Vec<(usize, &Argument)> = arguments.iter().enumerate().collect();
     return parse_bool_condition(&input_type, arguments);
 }

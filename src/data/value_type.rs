@@ -1,4 +1,4 @@
-use crate::errors::{error, mandate, JobResult};
+use crate::errors::{error, mandate, CrushResult};
 use crate::data::{Value, ColumnType, value_type_parser};
 use crate::glob::Glob;
 use regex::Regex;
@@ -41,7 +41,7 @@ pub enum ValueType {
 
 
 impl ValueType {
-    pub fn from(s: &str) -> JobResult<ValueType> {
+    pub fn from(s: &str) -> CrushResult<ValueType> {
         value_type_parser::parse(s)
     }
 
@@ -119,7 +119,7 @@ impl ValueType {
         }
     }
 
-    pub fn parse(&self, s: &str) -> JobResult<Value> {
+    pub fn parse(&self, s: &str) -> CrushResult<Value> {
         match self {
             ValueType::Text => Ok(Value::Text(Box::from(s))),
             ValueType::Integer => match s.parse::<i128>() {

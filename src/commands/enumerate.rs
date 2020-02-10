@@ -1,12 +1,12 @@
 use crate::commands::CompileContext;
-use crate::errors::{JobResult, error};
+use crate::errors::{CrushResult, error};
 use crate::data::{ValueType, RowsReader};
 use crate::data::Row;
 use crate::data::Value;
 use crate::stream::{OutputStream, Readable};
 use crate::data::ColumnType;
 
-pub fn run(mut input: impl Readable, output: OutputStream) -> JobResult<()> {
+pub fn run(mut input: impl Readable, output: OutputStream) -> CrushResult<()> {
     let mut line: i128 = 1;
     loop {
         match input.read() {
@@ -22,7 +22,7 @@ pub fn run(mut input: impl Readable, output: OutputStream) -> JobResult<()> {
     return Ok(());
 }
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
+pub fn perform(context: CompileContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Stream(s) => {
             let input = s.stream;
