@@ -42,7 +42,7 @@ mod sum;
 mod cat;
 mod http;
 
-mod cast;
+mod r#type;
 
 mod list;
 mod dict;
@@ -132,7 +132,6 @@ pub fn add_commands(env: &Env) -> CrushResult<()> {
     env.declare_str("select", Value::Command(Command::new(select::perform)))?;
     env.declare_str("enumerate", Value::Command(Command::new(enumerate::perform)))?;
 
-    env.declare_str("cast", Value::Command(Command::new(cast::perform)))?;
 
     env.declare_str("lines", Value::Command(Command::new(lines::perform)))?;
     env.declare_str("csv", Value::Command(Command::new(csv::perform)))?;
@@ -141,6 +140,11 @@ pub fn add_commands(env: &Env) -> CrushResult<()> {
     env.declare_str("if", Value::Command(Command::new(r#if::perform)))?;
     env.declare_str("for", Value::Command(Command::new(r#for::perform)))?;
     env.declare_str("zip", Value::Command(Command::new(zip::perform)))?;
+
+    let type_env = env.create_namespace("type")?;
+
+    type_env.declare_str("to", Value::Command(Command::new(r#type::to)))?;
+    type_env.declare_str("of", Value::Command(Command::new(r#type::of)))?;
 
     let list = env.create_namespace("list")?;
 

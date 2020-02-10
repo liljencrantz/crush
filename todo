@@ -1,6 +1,6 @@
 Todo:
+Type literals, e.g. type{integer}
 Add dot operator or something else for picking a single field off a struct.
-type command that outputs type of input
 Add a bunch of system tests
 Fix aggr command and think through it's input/output types
 Rename list -> MutableList
@@ -8,7 +8,6 @@ Create new type ImmutableList
 Rename dict -> MutableDict
 Create new type ImmutableDict
 Rename text -> string
-Create new type Type
 Create str namespace with string commands like upper, lower
 Flesh out time/duration modes with add/subtract support
 Make better to_string methods for various cell types
@@ -113,3 +112,5 @@ Implement http command
 Binary blob type
 The bin command interprets files as a single binary blob.
 Head takes on the role of take command
+type.of command that outputs type of input
+Create new type Type
