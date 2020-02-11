@@ -1,7 +1,5 @@
 use crate::commands::CompileContext;
-use std::io::BufReader;
-use std::io::prelude::*;
-use lazy_static::lazy_static;
+use std::io::{BufReader, BufRead};
 use crate::{
     errors::argument_error,
     data::{
@@ -11,17 +9,11 @@ use crate::{
         ValueType,
         Value,
     },
-    stream::{OutputStream},
+    stream::OutputStream,
 };
-use crate::errors::{CrushResult};
-use crate::data::{BinaryReader};
 use crate::stream::ValueReceiver;
-
-lazy_static! {
-    static ref sub_type: Vec<ColumnType> = {
-        vec![ColumnType::named("line", ValueType::Text)]
-    };
-}
+use crate::errors::CrushResult;
+use crate::data::BinaryReader;
 
 fn run(input: Box<dyn BinaryReader>, output: OutputStream) -> CrushResult<()> {
     let mut reader = BufReader::new(input.reader());
@@ -58,7 +50,7 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Box<dyn 
 }
 
 pub fn perform(context: CompileContext) -> CrushResult<()> {
-    let output = context.output.initialize(sub_type.clone())?;
+    let output = context.output.initialize(vec![ColumnType::named("line", ValueType::Text)])?;
     let file = parse(context.arguments, context.input)?;
     run(file, output)
 }

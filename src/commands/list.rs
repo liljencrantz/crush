@@ -3,13 +3,13 @@ use crate::errors::{CrushResult, argument_error};
 use crate::data::{ValueType, List};
 use crate::data::Value;
 
-pub fn create(context: CompileContext) -> CrushResult<()> {
+pub fn create(mut context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 1 {
         return Err(argument_error("Expected 1 argument"));
     }
-    match &context.arguments[0].value {
-        Value::Text(element_type) => {
-            context.output.send(Value::List(List::new(ValueType::from(element_type)?, vec![])))
+    match context.arguments.remove(0).value {
+        Value::Type(element_type) => {
+            context.output.send(Value::List(List::new(element_type, vec![])))
         }
         _ => Err(argument_error("Invalid argument types")),
     }
@@ -39,8 +39,8 @@ pub fn push(mut context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() == 0 {
         return Err(argument_error("Expected at least one argument to list.push"));
     }
-    let list_cell = context.arguments.remove(0);
-    match (&list_cell.name, &list_cell.value) {
+    let cell = context.arguments.remove(0);
+    match (&cell.name, &cell.value) {
         (None, Value::List(l)) => {
             let mut new_elements: Vec<Value> = Vec::new();
             for el in context.arguments.drain(..) {
@@ -53,7 +53,7 @@ pub fn push(mut context: CompileContext) -> CrushResult<()> {
             if !new_elements.is_empty() {
                l.append(&mut new_elements);
             }
-            context.output.send(list_cell.value);
+            context.output.send(cell.value);
             Ok(())
         },
         _ => Err(argument_error("Argument is not a list")),

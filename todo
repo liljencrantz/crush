@@ -1,7 +1,12 @@
 Todo:
+the for command should not be limited to loops, and it should be possible to name the entire row, e.g. for i={ls} `{val $i}
 Type literals, e.g. type{integer}
-Add dot operator or something else for picking a single field off a struct.
-Add a bunch of system tests
+Add a command for picking a single field off a struct, e.g. struct foo=bar | field %foo
+Add system tests for type casting
+Add system tests for for loop
+Add system tests for binary stream handling
+Add system tests for structs
+Add system tests for dealing with tables as streams
 Fix aggr command and think through it's input/output types
 Rename list -> MutableList
 Create new type ImmutableList

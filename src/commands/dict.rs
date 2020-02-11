@@ -5,17 +5,19 @@ use crate::data::Row;
 use crate::data::Value;
 use crate::data::ColumnType;
 
-pub fn create(context: CompileContext) -> CrushResult<()> {
+pub fn create(mut context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
         return Err(argument_error("Expected 2 arguments to dict.create"));
     }
-    match (&context.arguments[0].value, &context.arguments[1].value) {
-        (Value::Text(key_type), Value::Text(value_type)) => {
-            let key_type = ValueType::from(key_type)?;
+    let first_type = context.arguments.remove(0).value;
+    let second_type = context.arguments.remove(0).value;
+
+    match (first_type, second_type) {
+        (Value::Type(key_type), Value::Type(value_type)) => {
             if !key_type.is_hashable() {
                 return Err(argument_error("Key type is not hashable"));
             }
-            context.output.send(Value::Dict(Dict::new(key_type, ValueType::from(value_type)?)))
+            context.output.send(Value::Dict(Dict::new(key_type, value_type)))
         }
         _ => Err(argument_error("Invalid argument types")),
     }
