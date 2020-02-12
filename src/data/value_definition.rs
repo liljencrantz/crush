@@ -8,7 +8,7 @@ use crate::{
     glob::Glob,
     errors::{error, mandate, CrushResult, argument_error, to_job_error},
     env::Env,
-    data::{Value, ListDefinition},
+    data::{Value},
     commands::JobJoinHandle,
     closure::Closure,
     stream::channels,
@@ -23,8 +23,6 @@ use crate::job::Job;
 pub enum ValueDefinition {
     Text(Box<str>),
     Integer(i128),
-    Time(Vec<ValueDefinition>),
-    Duration(Vec<ValueDefinition>),
     Field(Vec<Box<str>>),
     Glob(Glob),
     Regex(Box<str>, Regex),
@@ -34,61 +32,7 @@ pub enum ValueDefinition {
     MaterializedJobDefinition(Job),
     File(Box<Path>),
     Variable(Vec<Box<str>>),
-    List(ListDefinition),
     Subscript(Box<ValueDefinition>, Box<ValueDefinition>),
-}
-
-fn to_duration(a: u64, t: &str) -> CrushResult<Duration> {
-    match t {
-        "nanosecond" | "nanoseconds" => Ok(Duration::from_nanos(a)),
-        "microsecond" | "microseconds" => Ok(Duration::from_micros(a)),
-        "millisecond" | "milliseconds" => Ok(Duration::from_millis(a)),
-        "second" | "seconds" => Ok(Duration::from_secs(a)),
-        "minute" | "minutes" => Ok(Duration::from_secs(a*60)),
-        "hour" | "hours" => Ok(Duration::from_secs(a*3600)),
-        "day" | "days" => Ok(Duration::from_secs(a*3600*24)),
-        "year" | "years" => Ok(Duration::from_secs(a*3600*24*365)),
-        _ => Err(error("Invalid duration"))
-    }
-}
-
-fn compile_duration_mode(cells: &Vec<ValueDefinition>, dependencies: &mut Vec<JobJoinHandle>, env: &Env, printer: &Printer) -> CrushResult<Value> {
-    let v: Vec<Value> = cells.iter()
-        .map(|c| c.compile(dependencies, env, printer))
-        .collect::<CrushResult<Vec<Value>>>()?;
-    let duration = match &v[..] {
-        [Value::Integer(s)] => Duration::from_secs(*s as u64),
-        [Value::Time(t1), Value::Text(operator), Value::Time(t2)] => if operator.as_ref() == "-" {
-            to_job_error(t1.signed_duration_since(t2.clone()).to_std())?
-        } else {
-            return Err(error("Illegal duration"))
-        },
-        _ => if v.len() % 2 == 0 {
-            let vec: Vec<Duration> = v.chunks(2)
-                .map(|chunk| match (&chunk[0], &chunk[1]) {
-                    (Value::Integer(a), Value::Text(t)) => to_duration(*a as u64, t.as_ref()),
-                    _ => Err(argument_error("Unknown duration format"))
-                })
-                .collect::<CrushResult<Vec<Duration>>>()?;
-            vec.into_iter().sum::<Duration>()
-        } else {
-            return Err(error("Unknown duration format"))
-        },
-    };
-
-    Ok(Value::Duration(duration))
-}
-
-fn compile_time_mode(cells: &Vec<ValueDefinition>, dependencies: &mut Vec<JobJoinHandle>, env: &Env, printer: &Printer) -> CrushResult<Value> {
-    let v: Vec<Value> = cells.iter()
-        .map(|c | c.compile(dependencies, env, printer))
-        .collect::<CrushResult<Vec<Value>>>()?;
-    let time = match &v[..] {
-        [Value::Text(t)] => if t.as_ref() == "now" {Local::now()} else {return Err(error("Unknown time"))},
-        _ => return Err(error("Unknown duration format")),
-    };
-
-    Ok(Value::Time(time))
 }
 
 impl ValueDefinition {
@@ -96,8 +40,6 @@ impl ValueDefinition {
         Ok(match self {
             ValueDefinition::Text(v) => Value::Text(v.clone()),
             ValueDefinition::Integer(v) => Value::Integer(v.clone()),
-            ValueDefinition::Time(v) => compile_time_mode(v, dependencies, env, printer)?,
-            ValueDefinition::Duration(c) => compile_duration_mode(c, dependencies, env, printer)?,
             ValueDefinition::Field(v) => Value::Field(v.clone()),
             ValueDefinition::Glob(v) => Value::Glob(v.clone()),
             ValueDefinition::Regex(v, r) => Value::Regex(v.clone(), r.clone()),
@@ -122,7 +64,6 @@ impl ValueDefinition {
                 mandate(
                     env.get(s),
                     format!("Unknown variable {}", self.to_string()).as_str())?),
-            ValueDefinition::List(l) => l.compile(dependencies, env, printer)?,
             ValueDefinition::Subscript(c, i) => {
                 match (c.compile(dependencies, env, printer), i.compile(dependencies, env, printer)) {
                     (Ok(Value::List(list)), Ok(Value::Integer(idx))) =>

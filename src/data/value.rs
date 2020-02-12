@@ -14,7 +14,7 @@ use crate::{
 };
 use crate::data::{List, Command, Stream, ValueType, Dict, ColumnType, value_type_parser, BinaryReader};
 use crate::errors::CrushResult;
-use std::time::Duration;
+use chrono::Duration;
 use crate::format::duration_format;
 use crate::env::Env;
 use crate::data::row::Struct;
@@ -379,15 +379,15 @@ mod tests {
 
     #[test]
     fn test_duration_format() {
-        assert_eq!(duration_format(&Duration::from_micros(0)), "0".to_string());
-        assert_eq!(duration_format(&Duration::from_micros(1)), "0.000001".to_string());
-        assert_eq!(duration_format(&Duration::from_micros(100)), "0.0001".to_string());
-        assert_eq!(duration_format(&Duration::from_millis(1)), "0.001".to_string());
-        assert_eq!(duration_format(&Duration::from_millis(1000)), "1".to_string());
-        assert_eq!(duration_format(&Duration::from_millis(1000 * 61)), "1:01".to_string());
-        assert_eq!(duration_format(&Duration::from_millis(1000 * 3601)), "1:00:01".to_string());
-        assert_eq!(duration_format(&Duration::from_millis(1000 * (3600 * 24 * 3 + 1))), "3d0:00:01".to_string());
-        assert_eq!(duration_format(&Duration::from_millis(1000 * (3600 * 24 * 365 * 10 + 1))), "10y0d0:00:01".to_string());
-        assert_eq!(duration_format(&Duration::from_millis(1000 * (3600 * 24 * 365 * 10 + 1) + 1)), "10y0d0:00:01".to_string());
+        assert_eq!(duration_format(&Duration::microseconds(0)), "0".to_string());
+        assert_eq!(duration_format(&Duration::microseconds(1)), "0.000001".to_string());
+        assert_eq!(duration_format(&Duration::microseconds(100)), "0.0001".to_string());
+        assert_eq!(duration_format(&Duration::milliseconds(1)), "0.001".to_string());
+        assert_eq!(duration_format(&Duration::milliseconds(1000)), "1".to_string());
+        assert_eq!(duration_format(&Duration::milliseconds(1000 * 61)), "1:01".to_string());
+        assert_eq!(duration_format(&Duration::milliseconds(1000 * 3601)), "1:00:01".to_string());
+        assert_eq!(duration_format(&Duration::milliseconds(1000 * (3600 * 24 * 3 + 1))), "3d0:00:01".to_string());
+        assert_eq!(duration_format(&Duration::milliseconds(1000 * (3600 * 24 * 365 * 10 + 1))), "10y0d0:00:01".to_string());
+        assert_eq!(duration_format(&Duration::milliseconds(1000 * (3600 * 24 * 365 * 10 + 1) + 1)), "10y0d0:00:01".to_string());
     }
 }

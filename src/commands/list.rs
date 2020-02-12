@@ -2,6 +2,23 @@ use crate::commands::CompileContext;
 use crate::errors::{CrushResult, argument_error};
 use crate::data::{ValueType, List};
 use crate::data::Value;
+use std::collections::HashSet;
+
+pub fn of(mut context: CompileContext) -> CrushResult<()> {
+    if context.arguments.len() == 0 {
+        return Err(argument_error("Expected at least one element"));
+    }
+
+    let types = context.arguments.iter().map(|a| a.value.value_type()).collect::<HashSet<ValueType>>();
+    let lst = List::new(
+        if types.len() == 1 {
+            context.arguments[0].value.value_type()
+        } else {
+            ValueType::Any
+        },
+        context.arguments.drain(..).map(|a| a.value).collect());
+    context.output.send(Value::List(lst))
+}
 
 pub fn create(mut context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 1 {
@@ -30,7 +47,7 @@ pub fn empty(context: CompileContext) -> CrushResult<()> {
         return Err(argument_error("Expected single argument to list.len"));
     }
     match (&context.arguments[0].name, &context.arguments[0].value) {
-        (None, Value::List(l)) => context.output.send(Value::Bool(l.len()==0)),
+        (None, Value::List(l)) => context.output.send(Value::Bool(l.len() == 0)),
         _ => Err(argument_error("Argument is not a list")),
     }
 }
@@ -51,11 +68,11 @@ pub fn push(mut context: CompileContext) -> CrushResult<()> {
                 }
             }
             if !new_elements.is_empty() {
-               l.append(&mut new_elements);
+                l.append(&mut new_elements);
             }
             context.output.send(cell.value);
             Ok(())
-        },
+        }
         _ => Err(argument_error("Argument is not a list")),
     }
 }

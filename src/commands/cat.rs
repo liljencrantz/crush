@@ -5,10 +5,6 @@ use crate::errors::{argument_error};
 use crate::errors::CrushResult;
 use crate::stream::{ValueReceiver};
 
-pub struct Config {
-    column: usize,
-}
-
 fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Box<dyn BinaryReader>> {
     match arguments.len() {
         1 => {

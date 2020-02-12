@@ -10,7 +10,7 @@ use psutil::process::State;
 use crate::commands::command_util::{create_user_map,UserMap};
 use users::uid_t;
 use crate::data::ColumnType;
-use std::time::Duration;
+use chrono::Duration;
 
 fn state_name(s: psutil::process::State) -> &'static str {
     match s {
@@ -35,7 +35,7 @@ pub fn run(output: OutputStream) -> CrushResult<()> {
                 Value::Integer(proc.ppid as i128),
                 Value::text(state_name(proc.state)),
                 users.get_name(proc.uid as uid_t),
-                Value::Duration(Duration::from_micros((proc.utime*1000000.0) as u64)),
+                Value::Duration(Duration::microseconds((proc.utime*1000000.0) as i64)),
                 Value::text(
                     proc.cmdline_vec().unwrap_or_else(|_| Some(vec!["<Illegal name>".to_string()]))
                         .unwrap_or_else(|| vec![format!("[{}]", proc.comm)])[0]

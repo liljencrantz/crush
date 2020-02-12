@@ -1,7 +1,5 @@
 Todo:
-the for command should not be limited to loops, and it should be possible to name the entire row, e.g. for i={ls} `{val $i}
-Type literals, e.g. type{integer}
-Add a command for picking a single field off a struct, e.g. struct foo=bar | field %foo
+the for command should not be limited to streams, and it should be possible to name the entire row, e.g. for i={ls} `{val $i},
 Add system tests for type casting
 Add system tests for for loop
 Add system tests for binary stream handling
@@ -17,7 +15,7 @@ Create str namespace with string commands like upper, lower
 Flesh out time/duration modes with add/subtract support
 Make better to_string methods for various cell types
 Some missing comparisons on Cell
-Missing some cell type serilisations and deserialisations
+Missing some cell type serialisations and deserialisations
 Namespace literal
 Make names mandatory and unique for struct fields
 implement file regexps
@@ -119,3 +117,4 @@ The bin command interprets files as a single binary blob.
 Head takes on the role of take command
 type.of command that outputs type of input
 Create new type Type
+Add a command for picking a single field off a struct, e.g. struct foo=bar | field %foo

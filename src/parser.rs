@@ -1,7 +1,7 @@
 use crate::errors::{parse_error, argument_error, CrushResult};
 use crate::job::Job;
 use crate::lexer::{Lexer, TokenType};
-use crate::data::{ValueDefinition, ArgumentDefinition, ListDefinition};
+use crate::data::{ValueDefinition, ArgumentDefinition};
 use crate::data::CallDefinition;
 use regex::Regex;
 use std::error::Error;
@@ -200,12 +200,6 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> CrushResult<Va
                     }
                 }
 
-                "duration{" => Ok(ValueDefinition::Duration(parse_mode(lexer)?)),
-
-                "time{" => Ok(ValueDefinition::Time(parse_mode(lexer)?)),
-
-                "list{" => Ok(ValueDefinition::List(ListDefinition::new(parse_mode(lexer)?))),
-
                 other => {
                     return Err(parse_error(format!("Cannot handle mode with sigil {}}}", other).as_str(), lexer));
                 }
@@ -223,20 +217,6 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> CrushResult<Va
             }
         }
         TokenType::QuotedString => Ok(ValueDefinition::text(unescape(lexer.pop().1).as_str())),
-
-        TokenType::SubscriptStart => {
-            lexer.pop();
-            let mut cells: Vec<ValueDefinition> = Vec::new();
-            loop {
-                let tt = lexer.peek().0;
-                match tt {
-                    TokenType::SubscriptEnd => break,
-                    _ => cells.push(parse_unnamed_argument(lexer)?),
-                }
-            }
-            lexer.pop();
-            Ok(ValueDefinition::List(ListDefinition::new(cells)))
-        }
 
         _ => {
             lexer.pop();

@@ -1,11 +1,12 @@
 use crate::commands::CompileContext;
 use crate::errors::{CrushResult, argument_error};
-use crate::data::{ValueType, Dict};
+use crate::data::{ValueType, Dict, Command};
 use crate::data::Row;
 use crate::data::Value;
 use crate::data::ColumnType;
+use crate::env::Env;
 
-pub fn create(mut context: CompileContext) -> CrushResult<()> {
+fn create(mut context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
         return Err(argument_error("Expected 2 arguments to dict.create"));
     }
@@ -23,7 +24,7 @@ pub fn create(mut context: CompileContext) -> CrushResult<()> {
     }
 }
 
-pub fn insert(mut context: CompileContext) -> CrushResult<()> {
+fn insert(mut context: CompileContext) -> CrushResult<()> {
     let output = context.output.initialize(vec![])?;
     if context.arguments.len() != 3 {
         return Err(argument_error("Expected three arguments"));
@@ -43,7 +44,7 @@ pub fn insert(mut context: CompileContext) -> CrushResult<()> {
     }
 }
 
-pub fn get(context: CompileContext) -> CrushResult<()> {
+fn get(context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
         return Err(argument_error("Expected two arguments"));
     }
@@ -58,7 +59,7 @@ pub fn get(context: CompileContext) -> CrushResult<()> {
     }
 }
 
-pub fn remove(context: CompileContext) -> CrushResult<()> {
+fn remove(context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
         return Err(argument_error("Expected two arguments"));
     }
@@ -71,7 +72,7 @@ pub fn remove(context: CompileContext) -> CrushResult<()> {
     }
 }
 
-pub fn len(context: CompileContext) -> CrushResult<()> {
+fn len(context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 1 {
         return Err(argument_error("Expected one argument"));
     }
@@ -83,7 +84,7 @@ pub fn len(context: CompileContext) -> CrushResult<()> {
     }
 }
 
-pub fn empty(context: CompileContext) -> CrushResult<()> {
+fn empty(context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 1 {
         return Err(argument_error("Expected one argument"));
     }
@@ -93,4 +94,15 @@ pub fn empty(context: CompileContext) -> CrushResult<()> {
         }
         _ => Err(argument_error("Argument is not a list")),
     }
+}
+
+pub fn declare(root: &Env) -> CrushResult<()> {
+    let dict = root.create_namespace("dict")?;
+    dict.declare_str("create", Value::Command(Command::new(create)))?;
+    dict.declare_str("insert", Value::Command(Command::new(insert)))?;
+    dict.declare_str("get", Value::Command(Command::new(get)))?;
+    dict.declare_str("remove", Value::Command(Command::new(remove)))?;
+    dict.declare_str("len", Value::Command(Command::new(len)))?;
+    dict.declare_str("empty", Value::Command(Command::new(empty)))?;
+    Ok(())
 }

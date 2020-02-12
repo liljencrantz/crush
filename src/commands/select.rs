@@ -65,17 +65,6 @@ fn perform_for(input: impl Readable, output: ValueSender, arguments: Vec<Argumen
     run(Config { columns: columns }, input, output)
 }
 
-fn perform_single(mut input: Struct, output: ValueSender, arguments: Vec<Argument>) -> CrushResult<()> {
-    if arguments.len() == 1 && arguments[0].name.is_none() {
-        match &arguments[0].value {
-            Value::Field(s) => output.send(input.remove(find_field(s, &input.types())?)),
-            _ => Err(argument_error("Expected Field")),
-        }
-    } else {
-        Err(error("NOT IMPLEMENTED!!!"))
-    }
-}
-
 pub fn perform(context: CompileContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Stream(s) => {
@@ -85,9 +74,6 @@ pub fn perform(context: CompileContext) -> CrushResult<()> {
         Value::Rows(r) => {
             let input = RowsReader::new(r);
             perform_for(input, context.output, context.arguments)
-        }
-        Value::Struct(s) => {
-            perform_single(s, context.output, context.arguments)
         }
         _ => Err(error("Expected a stream")),
     }

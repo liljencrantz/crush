@@ -9,7 +9,6 @@ mod column_type;
 mod list;
 mod dict;
 mod binary;
-mod list_definition;
 mod value_type_lexer;
 mod value_type_parser;
 
@@ -33,7 +32,6 @@ pub use rows::RowsReader;
 pub use call_definition::CallDefinition;
 pub use list::List;
 pub use dict::Dict;
-pub use list_definition::ListDefinition;
 pub use argument::ArgumentVecCompiler;
 pub use binary::BinaryReader;
 pub use binary::binary_channel;

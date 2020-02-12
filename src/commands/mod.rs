@@ -1,5 +1,7 @@
 mod command_util;
 
+pub mod parse_util;
+
 mod r#struct;
 mod val;
 
@@ -26,6 +28,7 @@ mod r#where;
 mod sort;
 mod reverse;
 
+mod field;
 mod select;
 mod enumerate;
 
@@ -47,6 +50,8 @@ mod r#type;
 mod list;
 mod dict;
 
+mod time;
+
 mod r#for;
 mod r#if;
 
@@ -62,6 +67,7 @@ use std::thread::{JoinHandle};
 use crate::printer::Printer;
 use crate::errors::CrushResult;
 use crate::stream::{ValueReceiver, ValueSender};
+use crate::data::ValueType;
 
 pub struct CompileContext {
     pub input: ValueReceiver,
@@ -129,9 +135,10 @@ pub fn add_commands(env: &Env) -> CrushResult<()> {
     env.declare_str("sum", Value::Command(Command::new(sum::perform)))?;
     env.declare_str("cat", Value::Command(Command::new(cat::perform)))?;
     env.declare_str("http", Value::Command(Command::new(http::perform)))?;
+
+    env.declare_str("field", Value::Command(Command::new(field::perform)))?;
     env.declare_str("select", Value::Command(Command::new(select::perform)))?;
     env.declare_str("enumerate", Value::Command(Command::new(enumerate::perform)))?;
-
 
     env.declare_str("lines", Value::Command(Command::new(lines::perform)))?;
     env.declare_str("csv", Value::Command(Command::new(csv::perform)))?;
@@ -141,27 +148,19 @@ pub fn add_commands(env: &Env) -> CrushResult<()> {
     env.declare_str("for", Value::Command(Command::new(r#for::perform)))?;
     env.declare_str("zip", Value::Command(Command::new(zip::perform)))?;
 
-    let type_env = env.create_namespace("type")?;
-
-    type_env.declare_str("to", Value::Command(Command::new(r#type::to)))?;
-    type_env.declare_str("of", Value::Command(Command::new(r#type::of)))?;
-
     let list = env.create_namespace("list")?;
 
+    list.declare_str("of", Value::Command(Command::new(list::of)))?;
     list.declare_str("create", Value::Command(Command::new(list::create)))?;
     list.declare_str("len", Value::Command(Command::new(list::len)))?;
     list.declare_str("empty", Value::Command(Command::new(list::empty)))?;
     list.declare_str("push", Value::Command(Command::new(list::push)))?;
     list.declare_str("pop", Value::Command(Command::new(list::pop)))?;
 
-    let dict = env.create_namespace("dict")?;
 
-    dict.declare_str("create", Value::Command(Command::new(dict::create)))?;
-    dict.declare_str("insert", Value::Command(Command::new(dict::insert)))?;
-    dict.declare_str("get", Value::Command(Command::new(dict::get)))?;
-    dict.declare_str("remove", Value::Command(Command::new(dict::remove)))?;
-    dict.declare_str("len", Value::Command(Command::new(dict::len)))?;
-    dict.declare_str("empty", Value::Command(Command::new(dict::empty)))?;
+    dict::declare(env)?;
+    r#type::declare(env)?;
+    time::declare(env)?;
 
     return Ok(());
 }

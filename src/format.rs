@@ -1,12 +1,20 @@
-use std::time::Duration;
+use chrono::Duration;
 
 pub fn duration_format(d: &Duration) -> String {
-    const MICROS_IN_SECOND: u128 = 1_000_000_000;
-    const MICROS_IN_MINUTE: u128 = MICROS_IN_SECOND * 60;
-    const MICROS_IN_HOUR: u128 = MICROS_IN_MINUTE * 60;
-    const MICROS_IN_DAY: u128 = MICROS_IN_HOUR * 24;
-    const MICROS_IN_YEAR: u128 = MICROS_IN_DAY * 365;
-    let mut remaining_nanos = d.as_nanos();
+    const MICROS_IN_SECOND: i128 = 1_000_000_000;
+    const MICROS_IN_MINUTE: i128 = MICROS_IN_SECOND * 60;
+    const MICROS_IN_HOUR: i128 = MICROS_IN_MINUTE * 60;
+    const MICROS_IN_DAY: i128 = MICROS_IN_HOUR * 24;
+    const MICROS_IN_YEAR: i128 = MICROS_IN_DAY * 365;
+    let mut remaining_nanos = d.num_nanoseconds()
+        .map(|v| v as i128)
+        .unwrap_or(
+        d.num_microseconds()
+            .map(|v| v as i128 * 1000)
+            .unwrap_or(
+                d.num_milliseconds() as i128 * 1000_000
+            )
+    );
 
     let mut res = "".to_string();
 
