@@ -26,5 +26,5 @@ pub fn perform(context: CompileContext) -> CrushResult<()> {
     for s in vars {
         context.env.remove_str(s.as_ref());
     }
-    return Ok(());
+    Ok(())
 }

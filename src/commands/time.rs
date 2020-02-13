@@ -50,7 +50,7 @@ fn to_duration(a: i64, t: &str) -> CrushResult<chrono::Duration> {
         "hour" | "hours" => Ok(Duration::seconds(a * 3600)),
         "day" | "days" => Ok(Duration::seconds(a * 3600 * 24)),
         "year" | "years" => Ok(Duration::seconds(a * 3600 * 24 * 365)),
-        _ => Err(argument_error("Invalid duration"))
+        _ => Err(argument_error("Invalid duration")),
     }
 }
 
@@ -65,7 +65,7 @@ fn duration(mut context: CompileContext) -> CrushResult<()> {
         } else {
             return Err(argument_error("Illegal duration"));
         },
-        _ => {
+        _ =>
             if v.len() % 2 == 0 {
                 let vec = v.chunks(2)
                     .map(|chunks| match (&chunks[0], &chunks[1]) {
@@ -81,8 +81,7 @@ fn duration(mut context: CompileContext) -> CrushResult<()> {
                 res
             } else {
                 return Err(argument_error("Unknown duration format"));
-            }
-        }
+            },
     };
     context.output.send(Value::Duration(duration))
 }

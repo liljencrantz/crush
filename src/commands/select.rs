@@ -39,7 +39,7 @@ pub fn run(
             Err(_) => break,
         }
     }
-    return Ok(());
+    Ok(())
 }
 
 fn perform_for(input: impl Readable, output: ValueSender, arguments: Vec<Argument>) -> CrushResult<()> {
@@ -67,14 +67,8 @@ fn perform_for(input: impl Readable, output: ValueSender, arguments: Vec<Argumen
 
 pub fn perform(context: CompileContext) -> CrushResult<()> {
     match context.input.recv()? {
-        Value::Stream(s) => {
-            let input = s.stream;
-            perform_for(input, context.output, context.arguments)
-        }
-        Value::Rows(r) => {
-            let input = RowsReader::new(r);
-            perform_for(input, context.output, context.arguments)
-        }
+        Value::Stream(s) => perform_for(s.stream, context.output, context.arguments),
+        Value::Rows(r) => perform_for(RowsReader::new(r), context.output, context.arguments),
         _ => Err(error("Expected a stream")),
     }
 }
