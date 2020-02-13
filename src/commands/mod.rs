@@ -148,16 +148,7 @@ pub fn add_commands(env: &Env) -> CrushResult<()> {
     env.declare_str("for", Value::Command(Command::new(r#for::perform)))?;
     env.declare_str("zip", Value::Command(Command::new(zip::perform)))?;
 
-    let list = env.create_namespace("list")?;
-
-    list.declare_str("of", Value::Command(Command::new(list::of)))?;
-    list.declare_str("create", Value::Command(Command::new(list::create)))?;
-    list.declare_str("len", Value::Command(Command::new(list::len)))?;
-    list.declare_str("empty", Value::Command(Command::new(list::empty)))?;
-    list.declare_str("push", Value::Command(Command::new(list::push)))?;
-    list.declare_str("pop", Value::Command(Command::new(list::pop)))?;
-
-
+    list::declare(env)?;
     dict::declare(env)?;
     r#type::declare(env)?;
     time::declare(env)?;

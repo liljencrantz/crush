@@ -1,10 +1,12 @@
 use crate::commands::CompileContext;
 use crate::errors::{CrushResult, argument_error};
-use crate::data::{ValueType, List};
+use crate::data::{ValueType, List, Command};
 use crate::data::Value;
 use std::collections::HashSet;
+use crate::commands::parse_util::{single_argument_list, single_argument_type};
+use crate::env::Env;
 
-pub fn of(mut context: CompileContext) -> CrushResult<()> {
+fn of(mut context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() == 0 {
         return Err(argument_error("Expected at least one element"));
     }
@@ -20,39 +22,19 @@ pub fn of(mut context: CompileContext) -> CrushResult<()> {
     context.output.send(Value::List(lst))
 }
 
-pub fn create(mut context: CompileContext) -> CrushResult<()> {
-    if context.arguments.len() != 1 {
-        return Err(argument_error("Expected 1 argument"));
-    }
-    match context.arguments.remove(0).value {
-        Value::Type(element_type) => {
-            context.output.send(Value::List(List::new(element_type, vec![])))
-        }
-        _ => Err(argument_error("Invalid argument types")),
-    }
+fn create(mut context: CompileContext) -> CrushResult<()> {
+    context.output.send(Value::List(List::new(single_argument_type(context.arguments)?, vec![])))
 }
 
-pub fn len(context: CompileContext) -> CrushResult<()> {
-    if context.arguments.len() != 1 {
-        return Err(argument_error("Expected single argument to list.len"));
-    }
-    match (&context.arguments[0].name, &context.arguments[0].value) {
-        (None, Value::List(l)) => context.output.send(Value::Integer(l.len() as i128)),
-        _ => Err(argument_error("Argument is not a list")),
-    }
+fn len(context: CompileContext) -> CrushResult<()> {
+    context.output.send(Value::Integer(single_argument_list(context.arguments)?.len() as i128))
 }
 
-pub fn empty(context: CompileContext) -> CrushResult<()> {
-    if context.arguments.len() != 1 {
-        return Err(argument_error("Expected single argument to list.len"));
-    }
-    match (&context.arguments[0].name, &context.arguments[0].value) {
-        (None, Value::List(l)) => context.output.send(Value::Bool(l.len() == 0)),
-        _ => Err(argument_error("Argument is not a list")),
-    }
+fn empty(context: CompileContext) -> CrushResult<()> {
+    context.output.send(Value::Bool(single_argument_list(context.arguments)?.len() == 0))
 }
 
-pub fn push(mut context: CompileContext) -> CrushResult<()> {
+fn push(mut context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() == 0 {
         return Err(argument_error("Expected at least one argument to list.push"));
     }
@@ -61,7 +43,7 @@ pub fn push(mut context: CompileContext) -> CrushResult<()> {
         (None, Value::List(l)) => {
             let mut new_elements: Vec<Value> = Vec::new();
             for el in context.arguments.drain(..) {
-                if el.value.value_type() == l.element_type() {
+                if el.value.value_type() == l.element_type() || l.element_type() == ValueType::Any {
                     new_elements.push(el.value)
                 } else {
                     return Err(argument_error("Invalid element type"));
@@ -77,15 +59,19 @@ pub fn push(mut context: CompileContext) -> CrushResult<()> {
     }
 }
 
-pub fn pop(context: CompileContext) -> CrushResult<()> {
-    if context.arguments.len() != 1 {
-        return Err(argument_error("Expected single argument to list.len"));
-    }
-    match (&context.arguments[0].name, &context.arguments[0].value) {
-        (None, Value::List(l)) => {
-            l.pop().map(|c| context.output.send(c));
-            Ok(())
-        }
-        _ => Err(argument_error("Argument is not a list")),
-    }
+fn pop(context: CompileContext) -> CrushResult<()> {
+    let o = context.output;
+    single_argument_list(context.arguments)?.pop().map(|c| o.send(c));
+    Ok(())
+}
+
+pub fn declare(root: &Env) -> CrushResult<()> {
+    let list = root.create_namespace("list")?;
+    list.declare_str("of", Value::Command(Command::new(of)))?;
+    list.declare_str("create", Value::Command(Command::new(create)))?;
+    list.declare_str("len", Value::Command(Command::new(len)))?;
+    list.declare_str("empty", Value::Command(Command::new(empty)))?;
+    list.declare_str("push", Value::Command(Command::new(push)))?;
+    list.declare_str("pop", Value::Command(Command::new(pop)))?;
+    Ok(())
 }

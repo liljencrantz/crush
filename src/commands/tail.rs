@@ -1,7 +1,6 @@
 use std::collections::VecDeque;
 
 use crate::{
-    commands::head::get_line_count,
     data::Row,
     stream::OutputStream,
 };
@@ -9,6 +8,7 @@ use crate::commands::CompileContext;
 use crate::errors::{CrushResult, error};
 use crate::stream::Readable;
 use crate::data::{Value, RowsReader};
+use crate::commands::parse_util::single_argument_integer;
 
 pub fn run(
     lines: i128,
@@ -36,7 +36,7 @@ pub fn run(
 }
 
 pub fn perform(context: CompileContext) -> CrushResult<()> {
-    let lines = get_line_count(&context.arguments)?;
+    let lines = single_argument_integer(context.arguments)?;
     match context.input.recv()? {
         Value::Stream(s) => {
             let input = s.stream;

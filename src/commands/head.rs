@@ -8,17 +8,7 @@ use crate::{
 };
 use crate::stream::Readable;
 use crate::data::RowsReader;
-
-pub fn get_line_count(arguments: &Vec<Argument>) -> Result<i128, CrushError> {
-    return match arguments.len() {
-        0 => Ok(10),
-        1 => match arguments[0].value {
-            Value::Integer(v) => Ok(v),
-            _ => Err(argument_error("Expected a number"))
-        }
-        _ => Err(argument_error("Too many arguments"))
-    };
-}
+use crate::commands::parse_util::single_argument_integer;
 
 pub fn run(
     lines: i128,
@@ -42,7 +32,7 @@ pub fn run(
 }
 
 pub fn perform(context: CompileContext) -> CrushResult<()> {
-    let lines = get_line_count(&context.arguments)?;
+    let lines = single_argument_integer(context.arguments)?;
     match context.input.recv()? {
         Value::Stream(s) => {
             let input = s.stream;

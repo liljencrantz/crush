@@ -8,6 +8,7 @@ use crate::data::{Argument, Value, Row, RowsReader};
 use crate::errors::{CrushResult, error};
 use crate::commands::command_util::find_field;
 use crate::stream::Readable;
+use crate::commands::parse_util::single_argument_field;
 
 pub struct Config<T: Readable> {
     sort_column_idx: usize,
@@ -19,14 +20,7 @@ fn parse<T: Readable>(
     arguments: Vec<Argument>,
     input: T,
     output: OutputStream) -> CrushResult<Config<T>> {
-    if arguments.len() != 1 {
-        return Err(argument_error("No comparison key specified"));
-    }
-    let sort_column_idx = match (&arguments[0].name, &arguments[0].value) {
-        (None, Value::Text(cell_name)) => find_field_from_str(cell_name, input.get_type())?,
-        (None, Value::Field(cell_name)) => find_field(cell_name, input.get_type())?,
-        _ => return Err(argument_error("No comparison key specified")),
-    };
+    let sort_column_idx = find_field(&single_argument_field(arguments)?, input.get_type())?;
     if !input.get_type()[sort_column_idx].cell_type.is_comparable() {
         return Err(argument_error("Bad comparison key"));
     }

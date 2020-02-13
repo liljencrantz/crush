@@ -4,20 +4,14 @@ use crate::data::Struct;
 use crate::stream::ValueSender;
 use crate::errors::{CrushResult, argument_error};
 use crate::commands::command_util::find_field;
+use crate::commands::parse_util::single_argument_field;
 
 pub struct Config {
     columns: Vec<(usize, Option<Box<str>>)>,
 }
 
 fn perform_single(mut input: Struct, output: ValueSender, arguments: Vec<Argument>) -> CrushResult<()> {
-    if arguments.len() == 1 && arguments[0].name.is_none() {
-        match &arguments[0].value {
-            Value::Field(s) => output.send(input.remove(find_field(s, &input.types())?)),
-            _ => Err(argument_error("Expected Field")),
-        }
-    } else {
-        Err(argument_error("Specify exactly one field to access"))
-    }
+    output.send(input.remove(find_field(&single_argument_field(arguments)?, &input.types())?))
 }
 
 pub fn perform(context: CompileContext) -> CrushResult<()> {

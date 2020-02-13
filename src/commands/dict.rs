@@ -5,6 +5,7 @@ use crate::data::Row;
 use crate::data::Value;
 use crate::data::ColumnType;
 use crate::env::Env;
+use crate::commands::parse_util::single_argument_dict;
 
 fn create(mut context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
@@ -73,27 +74,11 @@ fn remove(context: CompileContext) -> CrushResult<()> {
 }
 
 fn len(context: CompileContext) -> CrushResult<()> {
-    if context.arguments.len() != 1 {
-        return Err(argument_error("Expected one argument"));
-    }
-    match &context.arguments[0].value {
-        Value::Dict(dict) => {
-            context.output.send(Value::Integer(dict.len() as i128))
-        }
-        _ => Err(argument_error("Argument is not a list")),
-    }
+    context.output.send(Value::Integer(single_argument_dict(context.arguments)?.len() as i128))
 }
 
 fn empty(context: CompileContext) -> CrushResult<()> {
-    if context.arguments.len() != 1 {
-        return Err(argument_error("Expected one argument"));
-    }
-    match &context.arguments[0].value {
-        Value::Dict(dict) => {
-            context.output.send(Value::Bool(dict.len() == 0))
-        }
-        _ => Err(argument_error("Argument is not a list")),
-    }
+    context.output.send(Value::Bool(single_argument_dict(context.arguments)?.len() == 0))
 }
 
 pub fn declare(root: &Env) -> CrushResult<()> {
