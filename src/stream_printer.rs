@@ -24,7 +24,7 @@ fn print_value(printer: &Printer, mut cell: Value) {
     match cell {
         Value::Stream(mut output) => print(printer, &mut output.stream),
         Value::Rows(rows) => print(printer, &mut RowsReader::new(rows)),
-        Value::BinaryReader(mut b) => print_binary(printer, b.reader().as_mut(), 0),
+        Value::BinaryReader(mut b) => print_binary(printer, b.as_mut(), 0),
         _ => printer.line(cell.to_string().as_str()),
     };
 }
@@ -154,12 +154,12 @@ fn print_body(printer: &Printer, w: &Vec<usize>, data: Vec<Row>, indent: usize) 
             print_internal(printer, &mut r.stream, indent + 1);
         }
         for mut r in binaries {
-            print_binary(printer, r.reader().as_mut(), indent + 1);
+            print_binary(printer, r.as_mut(), indent + 1);
         }
     }
 }
 
-fn print_binary(printer: &Printer, binary: &mut dyn Read, indent: usize) {
+fn print_binary(printer: &Printer, binary: &mut dyn BinaryReader, indent: usize) {
     let mut reader = BufReader::new(binary);
 
     let mut line = String::new();

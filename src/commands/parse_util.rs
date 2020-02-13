@@ -1,5 +1,14 @@
 use crate::data::{Argument, Value, List, ValueType, Dict};
 use crate::errors::{CrushResult, argument_error};
+use std::path::Path;
+
+pub fn argument_files(mut arguments: Vec<Argument>) -> CrushResult<Vec<Box<Path>>> {
+    let mut files = Vec::new();
+    for a in arguments.drain(..) {
+        a.value.file_expand(&mut files);
+    }
+    Ok(files)
+}
 
 pub fn single_argument_type(mut arg: Vec<Argument>) -> CrushResult<ValueType> {
     match arg.len() {

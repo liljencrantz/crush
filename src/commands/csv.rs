@@ -21,6 +21,7 @@ use crate::printer::Printer;
 use crate::data::{ColumnType, BinaryReader};
 use crate::errors::CrushResult;
 use crate::stream::ValueReceiver;
+use crate::commands::parse_util::argument_files;
 
 pub struct Config {
     separator: char,
@@ -40,7 +41,7 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> 
     for arg in arguments {
         match &arg.name {
             None => {
-                arg.value.file_expand(&mut files);
+                files.push(arg);
             }
             Some(name) => {
                 match (name.as_ref(), arg.value) {
@@ -78,18 +79,12 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> 
 
     let reader = match files.len() {
             0 => {
-                let v = input.recv()?;
-                match v {
-                    Value::BinaryReader(b) => {
-                        Ok(b)
-                    }
-                    _ => Err(argument_error("Expected either a file to read or binary pipe input"))
+                match input.recv()? {
+                    Value::BinaryReader(b) => Ok(b),
+                    _ => Err(argument_error("Expected either a file to read or binary pipe input")),
                 }
             }
-            1 => {
-                BinaryReader::from(&files[0])
-            }
-            _ => Err(argument_error("Expected a file name"))
+            _ => BinaryReader::paths(argument_files(files)?),
         }?;
 
     Ok(Config {
@@ -110,7 +105,7 @@ fn run(cfg: Config, output: OutputStream, printer: Printer) -> CrushResult<()> {
     let columns = cfg.columns.clone();
     let skip = cfg.skip_head;
 
-    let mut reader = BufReader::new(cfg.input.reader());
+    let mut reader = BufReader::new(cfg.input);
     let mut line = String::new();
     let mut skipped = 0usize;
     loop {
@@ -130,9 +125,11 @@ fn run(cfg: Config, output: OutputStream, printer: Printer) -> CrushResult<()> {
                 .map(|c| s.trim_matches(c))
                 .unwrap_or(s))
             .collect();
+
         if split.len() != columns.len() {
             printer_copy.error("csv: Wrong number of columns in CSV file");
         }
+
         if let Some(trim) = trim {
             split = split.map(|s| s.trim_matches(trim));
         }
@@ -141,11 +138,15 @@ fn run(cfg: Config, output: OutputStream, printer: Printer) -> CrushResult<()> {
             .zip(columns.iter())
             .map({ |(s, t)| t.cell_type.parse(*s) })
             .collect::<Result<Vec<Value>, CrushError>>() {
-            Ok(cells) => { output.send(Row::new(cells)); }
-            Err(err) => { printer_copy.job_error(err); }
+            Ok(cells) => {
+                output.send(Row::new(cells));
+            }
+            Err(err) => {
+                printer_copy.job_error(err);
+            }
         }
     }
-    return Ok(());
+    Ok(())
 }
 
 pub fn perform(context: CompileContext) -> CrushResult<()> {

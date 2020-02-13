@@ -6,15 +6,16 @@ use crate::{
 };
 use crate::commands::CompileContext;
 use crate::errors::{CrushResult, error};
-use crate::stream::Readable;
+use crate::stream::{Readable, ValueSender};
 use crate::data::{Value, RowsReader};
 use crate::commands::parse_util::single_argument_integer;
 
 pub fn run(
     lines: i128,
     mut input: impl Readable,
-    output: OutputStream,
+    sender: ValueSender,
 ) -> CrushResult<()> {
+    let output = sender.initialize(input.get_type().clone())?;
     let mut q: VecDeque<Row> = VecDeque::new();
     loop {
         match input.read() {
@@ -38,16 +39,8 @@ pub fn run(
 pub fn perform(context: CompileContext) -> CrushResult<()> {
     let lines = single_argument_integer(context.arguments)?;
     match context.input.recv()? {
-        Value::Stream(s) => {
-            let input = s.stream;
-            let output = context.output.initialize(input.get_type().clone())?;
-            run(lines, input, output)
-        }
-        Value::Rows(r) => {
-            let input = RowsReader::new(r);
-            let output = context.output.initialize(input.get_type().clone())?;
-            run(lines, input, output)
-        }
+        Value::Stream(s) => run(lines, s.stream, context.output),
+        Value::Rows(r) => run(lines, RowsReader::new(r), context.output),
         _ => Err(error("Expected a stream")),
     }
 }

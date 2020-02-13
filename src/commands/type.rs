@@ -2,18 +2,10 @@ use crate::commands::CompileContext;
 use crate::errors::{CrushResult, argument_error};
 use crate::data::{Value, Command, ValueType};
 use crate::env::Env;
+use crate::commands::parse_util::single_argument_type;
 
 fn to(mut context: CompileContext) -> CrushResult<()> {
-    match context.arguments.len() {
-        1 => {
-            let a = context.arguments.remove(0);
-            match (a.name, a.value) {
-                (None, Value::Type(new_type)) => context.output.send(context.input.recv()?.cast(new_type)?),
-                _ => return Err(argument_error("Expected argument type")),
-            }
-        }
-        _ => Err(argument_error("Expected exactly one argument")),
-    }
+    context.output.send(context.input.recv()?.cast(single_argument_type(context.arguments)?)?)
 }
 
 fn of(mut context: CompileContext) -> CrushResult<()> {

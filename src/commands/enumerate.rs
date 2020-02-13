@@ -1,12 +1,14 @@
 use crate::commands::CompileContext;
 use crate::errors::{CrushResult, error};
-use crate::data::{ValueType, RowsReader};
-use crate::data::Row;
-use crate::data::Value;
-use crate::stream::{OutputStream, Readable};
+use crate::data::{ValueType, RowsReader, Row, Value};
+use crate::stream::{Readable, ValueSender};
 use crate::data::ColumnType;
 
-pub fn run(mut input: impl Readable, output: OutputStream) -> CrushResult<()> {
+pub fn run(mut input: impl Readable, sender: ValueSender) -> CrushResult<()> {
+    let mut output_type = vec![ColumnType::named("idx", ValueType::Integer)];
+    output_type.extend(input.get_type().clone());
+    let output = sender.initialize(output_type)?;
+
     let mut line: i128 = 1;
     loop {
         match input.read() {
@@ -19,25 +21,13 @@ pub fn run(mut input: impl Readable, output: OutputStream) -> CrushResult<()> {
             Err(_) => break,
         }
     }
-    return Ok(());
+    Ok(())
 }
 
 pub fn perform(context: CompileContext) -> CrushResult<()> {
     match context.input.recv()? {
-        Value::Stream(s) => {
-            let input = s.stream;
-            let mut output_type = vec![ColumnType::named("idx", ValueType::Integer)];
-            output_type.extend(input.get_type().clone());
-            let output = context.output.initialize(output_type)?;
-            run(input, output)
-        }
-        Value::Rows(r) => {
-            let input = RowsReader::new(r);
-            let mut output_type = vec![ColumnType::named("idx", ValueType::Integer)];
-            output_type.extend(input.get_type().clone());
-            let output = context.output.initialize(output_type)?;
-            run(input, output)
-        }
+        Value::Stream(s) => run(s.stream, context.output),
+        Value::Rows(r) => run(RowsReader::new(r), context.output),
         _ => Err(error("Expected a stream")),
     }
 }

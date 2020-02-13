@@ -15,33 +15,23 @@ use crate::data::{Struct, List, Rows, BinaryReader};
 use crate::errors::{CrushResult, to_job_error, error};
 use crate::stream::{ValueSender, ValueReceiver};
 use std::collections::HashSet;
+use crate::commands::parse_util::argument_files;
 
 pub struct Config {
     input: Box<dyn BinaryReader>,
 }
 
 fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> {
-    match arguments.len() {
-        0 => {
-            let v = input.recv()?;
-            match v {
-                Value::BinaryReader(b) => {
-                    Ok(Config {
-                        input: b,
-                    })
-                }
-                _ => Err(argument_error("Expected either a file to read or binary pipe input"))
-            }
-        }
-        1 => {
-            let mut files = Vec::new();
-            arguments[0].value.file_expand(&mut files);
-            Ok(Config {
-                input: BinaryReader::from(&files.remove(0))?,
-            })
-        }
-        _ => Err(argument_error("Expected a file name"))
-    }
+    let reader = match arguments.len() {
+        0 => match input.recv()? {
+            Value::BinaryReader(b) => Ok(b),
+            _ => Err(argument_error("Expected either a file to read or binary pipe input")),
+        },
+        _ => BinaryReader::paths(argument_files(arguments)?),
+    };
+    Ok(Config {
+        input: reader?,
+    })
 }
 
 fn convert_json(json_value: &serde_json::Value) -> CrushResult<Value> {
@@ -99,12 +89,11 @@ fn convert_json(json_value: &serde_json::Value) -> CrushResult<Value> {
 }
 
 fn run(cfg: Config, output: ValueSender, printer: Printer) -> CrushResult<()> {
-    let mut reader = BufReader::new(cfg.input.reader());
-
+    let mut reader = BufReader::new(cfg.input);
     let v = to_job_error(serde_json::from_reader(reader))?;
     let crush_value = convert_json(&v)?;
     output.send(crush_value)?;
-    return Ok(());
+    Ok(())
 }
 
 pub fn perform(context: CompileContext) -> CrushResult<()> {

@@ -54,15 +54,13 @@ pub fn perform(context: CompileContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Stream(s) => {
             let input = s.stream;
-            let output = context.output.initialize(vec![ColumnType::named("sum", ValueType::Integer)])?;
             let column = parse(input.get_type(), &context.arguments)?;
-            output.send(Row::new(vec![sum_rows(input, column)?]))
+            context.output.send(sum_rows(input, column)?)
         }
         Value::Rows(r) => {
             let input = RowsReader::new(r);
-            let output = context.output.initialize(vec![ColumnType::named("sum", ValueType::Integer)])?;
             let column = parse(input.get_type(), &context.arguments)?;
-            output.send(Row::new(vec![sum_rows(input, column)?]))
+            context.output.send(sum_rows(input, column)?)
         }
         _ => Err(error("Expected a stream")),
     }

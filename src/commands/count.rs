@@ -4,17 +4,18 @@ use crate::{
     data::{
         Row,
         ValueType,
-        Value
+        Value,
+        ColumnType,
+        RowsReader,
     }
 };
-use crate::data::{ColumnType, RowsReader};
-use crate::stream::{Readable};
+use crate::stream::Readable;
 
 fn count_rows(mut s: impl Readable) -> Value {
     let mut res: i128 = 0;
     loop {
         match s.read() {
-            Ok(_) => res+= 1,
+            Ok(_) => res += 1,
             Err(_) => break,
         }
     }
@@ -22,16 +23,9 @@ fn count_rows(mut s: impl Readable) -> Value {
 }
 
 pub fn perform(context: CompileContext) -> CrushResult<()> {
-    let output = context.output.initialize(vec![ColumnType::named("count", ValueType::Integer)])?;
     match context.input.recv()? {
-        Value::Stream(s) => {
-            let input = s.stream;
-            output.send(Row::new(vec![count_rows(input)]))
-        }
-        Value::Rows(r) => {
-            let input = RowsReader::new(r);
-            output.send(Row::new(vec![count_rows(input)]))
-        }
+        Value::Stream(s) => context.output.send(count_rows(s.stream)),
+        Value::Rows(r) => context.output.send(Value::Integer(r.rows().len() as i128)),
         _ => Err(error("Expected a stream")),
     }
 }

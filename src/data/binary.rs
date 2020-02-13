@@ -2,14 +2,14 @@ use crate::errors::{CrushResult, to_job_error};
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::io::{Error, Read, Write, ErrorKind};
 use crossbeam::{Receiver, bounded, Sender};
 use std::fmt::{Debug, Formatter};
 use std::fs::File;
 use serde_json::to_vec;
 use std::path::Path;
-
+use map_in_place::MapVecInPlace;
 
 struct ChannelReader {
     receiver: Receiver<Box<[u8]>>,
@@ -23,10 +23,6 @@ impl Debug for ChannelReader {
 }
 
 impl BinaryReader for ChannelReader {
-    fn reader(&self) -> Box<dyn Read> {
-        Box::from(ChannelReader { receiver: self.receiver.clone(), buff: None })
-    }
-
     fn clone(&self) -> Box<dyn BinaryReader> {
         Box::from(ChannelReader { receiver: self.receiver.clone(), buff: None })
     }
@@ -83,8 +79,7 @@ impl std::io::Write for ChannelWriter {
     }
 }
 
-pub trait BinaryReader: Debug + Send {
-    fn reader(&self) -> Box<dyn Read>;
+pub trait BinaryReader: Read + Debug + Send {
     fn clone(&self) -> Box<dyn BinaryReader>;
 }
 
@@ -105,21 +100,39 @@ impl Debug for FileReader {
     }
 }
 
-impl BinaryReader for FileReader {
-    fn reader(&self) -> Box<dyn Read> {
-        Box::from(self.file.try_clone().unwrap())
+impl Read for FileReader {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
+        self.file.read(buf)
     }
+}
 
+impl BinaryReader for FileReader {
     fn clone(&self) -> Box<dyn BinaryReader> {
         Box::from(FileReader { file: self.file.try_clone().unwrap() })
     }
 }
 
 impl dyn BinaryReader {
-    pub fn from(file: &Path) -> CrushResult<Box<dyn BinaryReader>> {
+    pub fn path(file: &Path) -> CrushResult<Box<dyn BinaryReader>> {
         return Ok(Box::from(FileReader::new(to_job_error(File::open(file))?)));
     }
+
+    pub fn paths(mut files: Vec<Box<Path>>) -> CrushResult<Box<dyn BinaryReader>> {
+        if files.len() == 1 {
+            Ok(Box::from(FileReader::new(to_job_error(File::open(files.remove(0)))?)))
+        } else {
+            let mut readers: Vec<Box<dyn BinaryReader>> = Vec::new();
+
+            for p in files.drain(..) {
+                let f = to_job_error(File::open(p).map(|f| Box::from(FileReader::new(f))))?;
+                readers.push(f)
+            }
+            Ok(Box::from(MultiReader {inner: VecDeque::from(readers)}))
+        }
+    }
+
 }
+
 
 pub fn binary_channel() -> CrushResult<(Box<dyn Write>, Box<dyn BinaryReader>)> {
     let (s, r) = bounded(32);
@@ -127,4 +140,39 @@ pub fn binary_channel() -> CrushResult<(Box<dyn Write>, Box<dyn BinaryReader>)> 
         Box::from(ChannelWriter { sender: s }),
         Box::from(ChannelReader { receiver: r, buff: None })
     ))
+}
+
+struct MultiReader {
+    inner: VecDeque<Box<dyn BinaryReader>>,
+}
+
+impl BinaryReader for MultiReader {
+    fn clone(&self) -> Box<BinaryReader> {
+        let vec = self.inner.iter()
+            .map(|r| r.as_ref().clone())
+            .collect::<Vec<Box<dyn BinaryReader>>>();
+        Box::from(MultiReader { inner: VecDeque::from(vec)})
+    }
+}
+
+impl Read for MultiReader {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
+        if self.inner.len() == 0 {
+            return Ok(0);
+        }
+        match self.inner[0].read(buf) {
+            Ok(0) => {
+                self.inner.pop_front();
+                self.read(buf)
+            }
+            Ok(s) => Ok(s),
+            Err(e) => Err(e),
+        }
+    }
+}
+
+impl Debug for MultiReader {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        f.write_str("<multi reader>")//.map_err(|e| std::fmt::Error::default())
+    }
 }
