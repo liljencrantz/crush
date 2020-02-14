@@ -22,7 +22,7 @@ pub fn parse(mut context: CompileContext) -> CrushResult<Config> {
     context.output.initialize(vec![])?;
 
     if context.arguments.len() != 2 {
-        return Err(argument_error("Expected exactly two arguments"));
+        return argument_error("Expected exactly two arguments");
     }
 
     let mut it = context.arguments.drain(..);
@@ -35,7 +35,7 @@ pub fn parse(mut context: CompileContext) -> CrushResult<Config> {
                 printer: context.printer,
             })
         }
-        _ => Err(argument_error("First argument to for must be a job, the second must be a closure")),
+        _ => argument_error("First argument to for must be a job, the second must be a closure"),
     }
 }
 

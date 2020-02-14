@@ -12,10 +12,10 @@ pub fn perform(context: CompileContext) -> CrushResult<()> {
             match &dir.value {
                 Value::Text(val) => Ok(Box::from(Path::new(val.as_ref()))),
                 Value::File(val) => Ok(val.clone()),
-                _ => Err(error("Wrong parameter type, expected text"))
+                _ => error("Wrong parameter type, expected text")
             }
         }
-        _ => Err(error("Wrong number of arguments"))
+        _ => error("Wrong number of arguments")
     }?;
     to_job_error(std::env::set_current_dir(dir))
 }

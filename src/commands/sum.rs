@@ -16,7 +16,7 @@ pub fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> CrushRe
         0 => if input_type.len() == 1 && input_type[0].cell_type == ValueType::Integer{
             Ok(0)
         } else {
-            Err(error("Unexpected input format, expected a single column of integers"))
+            error("Unexpected input format, expected a single column of integers")
         },
         1 => {
             if let Value::Field(f) = &arguments[0].value {
@@ -25,14 +25,14 @@ pub fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> CrushRe
                         Ok(find_field_from_str(f[0].as_ref(), input_type)?)
                     }
                     _ => {
-                        Err(error("Path contains too many elements"))
+                        error("Path contains too many elements")
                     }
                 }
             } else {
-                Err(error("Unexpected cell type, expected field"))
+                error("Unexpected cell type, expected field")
             }
         },
-        _ => Err(error("Expected exactly one argument, a field defintition"))
+        _ => error("Expected exactly one argument, a field defintition")
     }
 }
 
@@ -42,7 +42,7 @@ fn sum_rows(mut s: impl Readable, column: usize) -> CrushResult<Value> {
         match s.read() {
             Ok(row) => match row.cells()[column] {
                 Value::Integer(i) => res += i,
-                _ => return Err(error("Invalid cell value, expected an integer"))
+                _ => return error("Invalid cell value, expected an integer")
             },
             Err(_) => break,
         }
@@ -62,6 +62,6 @@ pub fn perform(context: CompileContext) -> CrushResult<()> {
             let column = parse(input.get_type(), &context.arguments)?;
             context.output.send(sum_rows(input, column)?)
         }
-        _ => Err(error("Expected a stream")),
+        _ => error("Expected a stream"),
     }
 }

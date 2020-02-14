@@ -19,6 +19,6 @@ pub fn perform(context: CompileContext) -> CrushResult<()> {
         Value::Struct(s) => {
             perform_single(s, context.output, context.arguments)
         }
-        _ => Err(argument_error("Expected a struct")),
+        _ => argument_error("Expected a struct"),
     }
 }

@@ -13,7 +13,7 @@ fn parse(arguments: Vec<Argument>) -> CrushResult<Box<Path>> {
         arg.value.file_expand(&mut files)?;
     }
     if files.len() != 1 {
-        return Err(argument_error("Expected exactly one file"));
+        return argument_error("Expected exactly one file");
     }
     Ok(files.remove(0))
 }

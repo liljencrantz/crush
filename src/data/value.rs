@@ -127,7 +127,7 @@ impl Value {
             Value::File(p) => v.push(p.clone()),
             Value::Glob(pattern) => to_job_error(pattern.glob_files(
                 &get_cwd()?, v))?,
-            _ => return Err(error("Expected a file name")),
+            _ => return error("Expected a file name"),
         }
         Ok(())
     }
@@ -173,23 +173,23 @@ impl Value {
 
             (Value::File(s), ValueType::Text) => match s.to_str() {
                 Some(s) => Ok(Value::Text(Box::from(s))),
-                None => Err(error("File name is not valid unicode"))
+                None => error("File name is not valid unicode")
             },
             (Value::File(s), ValueType::Glob) => match s.to_str() {
                 Some(s) => Ok(Value::Glob(Glob::new(s))),
-                None => Err(error("File name is not valid unicode"))
+                None => error("File name is not valid unicode")
             },
             (Value::File(s), ValueType::Integer) => match s.to_str() {
                 Some(s) => to_job_error(s.parse::<i128>()).map(|v| Value::Integer(v)),
-                None => Err(error("File name is not valid unicode"))
+                None => error("File name is not valid unicode")
             },
             (Value::File(s), ValueType::Op) => match s.to_str() {
                 Some(s) => Ok(Value::Op(Box::from(s))),
-                None => Err(error("File name is not valid unicode"))
+                None => error("File name is not valid unicode")
             },
             (Value::File(s), ValueType::Regex) => match s.to_str() {
                 Some(s) => to_job_error(Regex::new(s.as_ref()).map(|v| Value::Regex(Box::from(s), v))),
-                None => Err(error("File name is not valid unicode"))
+                None => error("File name is not valid unicode")
             },
 
             (Value::Glob(s), ValueType::Text) => Ok(Value::Text(s.to_string().clone().into_boxed_str())),
@@ -226,7 +226,7 @@ impl Value {
 
             (Value::Type(s), ValueType::Text) => Ok(Value::Text(Box::from(s.to_string()))),
 
-            _ => Err(error("Unimplemented conversion")),
+            _ => error("Unimplemented conversion"),
         }
     }
 }

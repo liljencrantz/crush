@@ -32,8 +32,8 @@ fn parse_value(input_type: &Vec<ColumnType>,
                arg: Argument) -> Result<WhereValue, CrushError> {
     match arg.value {
         Value::Field(s) => Ok(WhereValue::Field(find_field(&s, input_type)?)),
-        Value::Op(_) => Err(argument_error("Expected value")),
-        Value::Stream(_) => Err(argument_error("Invalid argument type Stream")),
+        Value::Op(_) => argument_error("Expected value"),
+        Value::Stream(_) => argument_error("Invalid argument type Stream"),
         _ => Ok(WhereValue::Value(arg.value)),
     }
 }
@@ -53,9 +53,11 @@ fn check_value(input_type: &Vec<ColumnType>, value: &WhereValue, accepted_types:
         }
     }
     if accepted_types.len() == 1 {
-        Some(argument_error(format!("Invalid cell type, saw {:?}, required {:?}", t, accepted_types[0]).as_str()))
+        Some(CrushError {
+            message: format!("Invalid cell type, saw {:?}, required {:?}", t, accepted_types[0])})
     } else {
-        Some(argument_error(format!("Invalid cell type, saw {:?}, required one of {:?}", t, accepted_types).as_str()))
+        Some(CrushError {
+            message: format!("Invalid cell type, saw {:?}, required one of {:?}", t, accepted_types)})
     }
 }
 
@@ -66,7 +68,8 @@ fn check_comparable(input_type: &Vec<ColumnType>, value: &WhereValue) -> bool {
 
 fn check_comparison(input_type: &Vec<ColumnType>, l: &WhereValue, r: &WhereValue) -> Option<CrushError> {
     if !check_comparable(input_type, l) {
-        return Some(error("Type can't be compared"));
+        return Some(CrushError {
+            message: "Type can't be compared".to_string()});
     }
     if let Some(err) = check_value(&input_type, r, &vec![to_cell_data_type(input_type, l)]) {
         return Some(err);
@@ -92,13 +95,13 @@ fn check_match(input_type: &Vec<ColumnType>, cond: Result<Condition, CrushError>
 fn parse_value_condition(input_type: &Vec<ColumnType>,
                          arguments: &mut Vec<Argument>) -> Result<Condition, CrushError> {
     if arguments.len() < 3 {
-        return Err(error("Wrong number of arguments"));
+        return error("Wrong number of arguments");
     }
     let val1 = parse_value(input_type, arguments.remove(0))?;
     match arguments.remove(0).value {
         Value::Op(op) => {
             let val2 = parse_value(input_type, arguments.remove(0))?;
-            return match op.as_ref() {
+            match op.as_ref() {
                 "==" => if let Some(e) = check_comparison(input_type, &val1, &val2) { Err(e) } else { Ok(Condition::Equal(val1, val2)) },
                 ">" => if let Some(e) = check_comparison(input_type, &val1, &val2) { Err(e) } else { Ok(Condition::GreaterThan(val1, val2)) },
                 ">=" => if let Some(e) = check_comparison(input_type, &val1, &val2) { Err(e) } else { Ok(Condition::GreaterThanOrEqual(val1, val2)) },
@@ -107,10 +110,10 @@ fn parse_value_condition(input_type: &Vec<ColumnType>,
                 "!=" => if let Some(e) = check_comparison(input_type, &val1, &val2) { Err(e) } else { Ok(Condition::NotEqual(val1, val2)) },
                 "=~" => check_match(input_type, Ok(Condition::Match(val1, val2))),
                 "!~" => check_match(input_type, Ok(Condition::NotMatch(val1, val2))),
-                other => Err(argument_error(format!("Unknown comparison operation {}", other).as_str())),
-            };
+                other => argument_error(format!("Unknown comparison operation {}", other).as_str()),
+            }
         }
-        _ => return Err(argument_error("Expected comparison"))
+        _ => argument_error("Expected comparison")
     }
 }
 
@@ -123,13 +126,13 @@ fn parse_bool_condition(input_type: &Vec<ColumnType>,
     match arguments.remove(0).value {
         Value::Text(op) => {
             let cond2 = parse_value_condition(input_type, arguments)?;
-            return match op.as_ref() {
+            match op.as_ref() {
                 "and" => Ok(Condition::And(Box::from(cond1), Box::from(cond2))),
                 "or" => Ok(Condition::Or(Box::from(cond1), Box::from(cond2))),
-                other => Err(argument_error(format!("Unknown comparison operation {}", other).as_str())),
-            };
+                other => argument_error(format!("Unknown comparison operation {}", other).as_str()),
+            }
         }
-        _ => return Err(argument_error("Expected comparison"))
+        _ => argument_error("Expected comparison"),
     }
 }
 

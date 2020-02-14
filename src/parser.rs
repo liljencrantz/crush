@@ -11,7 +11,7 @@ use crate::closure::Closure;
 pub fn parse(lexer: &mut Lexer) -> CrushResult<Vec<Job>> {
     let res = parse_internal(lexer)?;
     if lexer.peek().0 != TokenType::EOF {
-        return Err(parse_error("Expected end of file", lexer))
+        return parse_error("Expected end of file", lexer)
     }
     Ok(res)
 }
@@ -31,16 +31,16 @@ pub fn parse_internal(lexer: &mut Lexer) -> CrushResult<Vec<Job>> {
                 jobs.push(parse_job(lexer)?);
             }
             _ => {
-                return Err(parse_error(
+                return parse_error(
                     format!("Wrong token type, expected command name, got {:?}", lexer.peek().0).as_str(),
-                    lexer));
+                    lexer);
             }
         }
         match lexer.peek().0 {
             TokenType::EOF | TokenType::ModeEnd => return Ok(jobs),
             TokenType::Separator => lexer.pop(),
-            TokenType::Error => return Err(parse_error("Bad token", lexer)),
-            _ => return Err(parse_error("Expected end of command", lexer)),
+            TokenType::Error => return parse_error("Bad token", lexer),
+            _ => return parse_error("Expected end of command", lexer),
         };
     }
 }
@@ -94,7 +94,7 @@ pub fn parse_name(s: &str) -> Option<Vec<Box<str>>> {
 
 fn parse_name_from_lexer(lexer: &mut Lexer) -> CrushResult<Vec<Box<str>>> {
     let res = match parse_name(&lexer.peek().1[1..]) {
-        None => Err(parse_error("Illegal varaible name", lexer)),
+        None => parse_error("Illegal varaible name", lexer),
         Some(v) => Ok(v),
     };
     lexer.pop();
@@ -103,7 +103,7 @@ fn parse_name_from_lexer(lexer: &mut Lexer) -> CrushResult<Vec<Box<str>>> {
 
 fn parse_command_from_lexer(lexer: &mut Lexer) -> CrushResult<Vec<Box<str>>> {
     let res = match parse_name(&lexer.peek().1) {
-        None => Err(parse_error("Illegal command name", lexer)),
+        None => parse_error("Illegal command name", lexer),
         Some(v) => Ok(v),
     };
     lexer.pop();
@@ -132,7 +132,7 @@ fn parse_unnamed_argument(lexer: &mut Lexer) -> CrushResult<ValueDefinition> {
         lexer.pop();
         let idx = parse_unnamed_argument(lexer)?;
         if lexer.peek().0 != TokenType::SubscriptEnd {
-            return Err(parse_error("Expected '['", lexer));
+            return parse_error("Expected '['", lexer);
         }
         lexer.pop();
         cell = ValueDefinition::Subscript(Box::from(cell), Box::from(idx));
@@ -152,7 +152,7 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> CrushResult<Va
         TokenType::Integer => {
             return match String::from(lexer.pop().1).parse::<i128>() {
                 Ok(ival) => Ok(ValueDefinition::Integer(ival)),
-                Err(_) => Err(parse_error("Invalid number", lexer)),
+                Err(_) => parse_error("Invalid number", lexer),
             };
         }
         TokenType::Equal | TokenType::NotEqual | TokenType::GreaterThan
@@ -189,19 +189,19 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> CrushResult<Va
                         TokenType::Glob => {
                             let result = Ok(ValueDefinition::Glob(Glob::new(lexer.pop().1)));
                             if lexer.peek().0 != TokenType::ModeEnd {
-                                return Err(parse_error("Expected '}'", lexer));
+                                return parse_error("Expected '}'", lexer);
                             }
                             lexer.pop();
                             return result;
                         }
                         _ => {
-                            return Err(parse_error("Expected string token", lexer));
+                            return parse_error("Expected string token", lexer);
                         }
                     }
                 }
 
                 other => {
-                    return Err(parse_error(format!("Cannot handle mode with sigil {}}}", other).as_str(), lexer));
+                    return parse_error(format!("Cannot handle mode with sigil {}}}", other).as_str(), lexer);
                 }
             }
         }
@@ -213,14 +213,14 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> CrushResult<Va
             let s = &f[2..f.len() - 1];
             match Regex::new(s) {
                 Ok(r) => Ok(ValueDefinition::regex(s, r)),
-                Err(e) => Err(argument_error(e.description())),
+                Err(e) => argument_error(e.description()),
             }
         }
         TokenType::QuotedString => Ok(ValueDefinition::text(unescape(lexer.pop().1).as_str())),
 
         _ => {
             lexer.pop();
-            return Err(parse_error(format!("Unknown token {:?}", token_type).as_str(), lexer));
+            return parse_error(format!("Unknown token {:?}", token_type).as_str(), lexer);
         }
     }
 }
@@ -246,7 +246,7 @@ fn parse_arguments(lexer: &mut Lexer, arguments: &mut Vec<ArgumentDefinition>) -
     loop {
         match lexer.peek().0 {
             TokenType::Error => {
-                return Err(parse_error("Bad token", lexer));
+                return parse_error("Bad token", lexer);
             }
             TokenType::Separator | TokenType::EOF | TokenType::Pipe | TokenType::ModeEnd => {
                 return Ok(());
@@ -266,7 +266,7 @@ fn parse_command(lexer: &mut Lexer, commands: &mut Vec<CallDefinition>) -> Crush
             return Ok(());
         }
         _ => {
-            return Err(parse_error("Expected command name", lexer));
+            return parse_error("Expected command name", lexer);
         }
     }
 }

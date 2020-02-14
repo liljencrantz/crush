@@ -19,7 +19,7 @@ fn parse(mut context: CompileContext) -> CrushResult<()> {
         match (arg.name.as_deref().unwrap_or(""), arg.value) {
             ("format", Value::Text(s)) => fmt = Some(s),
             ("date", Value::Text(s)) => tm = Some(s),
-            _ => return Err(argument_error("Invalid argument")),
+            _ => return argument_error("Invalid argument"),
         }
     }
 
@@ -36,7 +36,7 @@ fn parse(mut context: CompileContext) -> CrushResult<()> {
                 .with_nanosecond(tm.tm_nsec as u32).unwrap();
             context.output.send(Value::Time(dt))
         }
-        _ => Err(argument_error("Must specify both time and format")),
+        _ => argument_error("Must specify both time and format"),
     }
 }
 
@@ -50,7 +50,7 @@ fn to_duration(a: i64, t: &str) -> CrushResult<chrono::Duration> {
         "hour" | "hours" => Ok(Duration::seconds(a * 3600)),
         "day" | "days" => Ok(Duration::seconds(a * 3600 * 24)),
         "year" | "years" => Ok(Duration::seconds(a * 3600 * 24 * 365)),
-        _ => Err(argument_error("Invalid duration")),
+        _ => argument_error("Invalid duration"),
     }
 }
 
@@ -63,14 +63,14 @@ fn duration(mut context: CompileContext) -> CrushResult<()> {
         [Value::Time(t1), Value::Text(operator), Value::Time(t2)] => if operator.as_ref() == "-" {
             t1.signed_duration_since(t2.clone())
         } else {
-            return Err(argument_error("Illegal duration"));
+            return argument_error("Illegal duration");
         },
         _ =>
             if v.len() % 2 == 0 {
                 let vec = v.chunks(2)
                     .map(|chunks| match (&chunks[0], &chunks[1]) {
                         (Value::Integer(a), Value::Text(t)) => to_duration(*a as i64, t.as_ref()),
-                        _ => Err(argument_error("Unknown duration format")),
+                        _ => argument_error("Unknown duration format"),
                     })
                     .collect::<CrushResult<Vec<Duration>>>()?;
                 let mut res = Duration::seconds(0);
@@ -80,7 +80,7 @@ fn duration(mut context: CompileContext) -> CrushResult<()> {
                     });
                 res
             } else {
-                return Err(argument_error("Unknown duration format"));
+                return argument_error("Unknown duration format");
             },
     };
     context.output.send(Value::Duration(duration))

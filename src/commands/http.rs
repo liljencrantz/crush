@@ -25,7 +25,7 @@ fn parse_method(m: &str) -> CrushResult<Method> {
         "connect" => Method::CONNECT,
         "patch" => Method::PATCH,
         "trace" => Method::TRACE,
-        _ => { return Err(argument_error(format!("Unknown method {}", m).as_str())); }
+        _ => { return argument_error(format!("Unknown method {}", m).as_str()); }
     })
 }
 
@@ -46,10 +46,10 @@ fn parse(mut arguments: Vec<Argument>) -> CrushResult<Config> {
                 let h = t.splitn(2, ':').collect::<Vec<&str>>();
                 match h.len() {
                     2 => { headers.push((h[0].to_string(), h[1].to_string()));}
-                    _ => { return Err(argument_error("Bad header format")) }
+                    _ => { return argument_error("Bad header format") }
                 }
             }
-            _ => { return Err(argument_error("Unknown argument")); }
+            _ => { return argument_error("Unknown argument"); }
         }
     }
     return Ok(Config {

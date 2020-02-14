@@ -49,7 +49,7 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> 
                         let split: Vec<&str> = s.split(':').collect();
                         match split.len() {
                             2 => columns.push(ColumnType::named(split[0], ValueType::from(split[1])?)),
-                            _ => return Err(argument_error(format!("Expected a column description on the form name:type, got {}", s).as_str())),
+                            _ => return argument_error(format!("Expected a column description on the form name:type, got {}", s).as_str()),
                         }
                     }
 
@@ -59,7 +59,7 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> 
                         if s.len() == 1 {
                             separator = s.chars().next().unwrap();
                         } else {
-                            return Err(argument_error("Separator must be exactly one character long"));
+                            return argument_error("Separator must be exactly one character long");
                         }
                     }
 
@@ -67,11 +67,11 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> 
                         if s.len() == 1 {
                             trim = Some(s.chars().next().unwrap());
                         } else {
-                            return Err(argument_error("Only one character can be trimmed"));
+                            return argument_error("Only one character can be trimmed");
                         }
                     }
 
-                    _ => return Err(argument_error(format!("Unknown parameter {}", name).as_str())),
+                    _ => return argument_error(format!("Unknown parameter {}", name).as_str()),
                 }
             }
         }
@@ -81,7 +81,7 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> 
             0 => {
                 match input.recv()? {
                     Value::BinaryReader(b) => Ok(b),
-                    _ => Err(argument_error("Expected either a file to read or binary pipe input")),
+                    _ => argument_error("Expected either a file to read or binary pipe input"),
                 }
             }
             _ => BinaryReader::paths(argument_files(files)?),

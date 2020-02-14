@@ -24,7 +24,7 @@ pub fn run(input1: &mut impl Readable, input2: &mut impl Readable, sender: Value
 
 pub fn perform(mut context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
-        return Err(error("Expected exactly two arguments"));
+        return error("Expected exactly two arguments");
     }
     match (context.arguments.remove(0).value, context.arguments.remove(0).value) {
         (Value::Stream(mut o1), Value::Stream(mut o2)) =>
@@ -35,6 +35,6 @@ pub fn perform(mut context: CompileContext) -> CrushResult<()> {
             run(&mut o1.reader(), &mut o2.reader(), context.output),
         (Value::Rows(mut o1), Value::Stream(mut o2)) =>
             run(&mut o1.reader(), &mut o2.reader(), context.output),
-        _ => return Err(error("Expected two datasets")),
+        _ => return error("Expected two datasets"),
     }
 }

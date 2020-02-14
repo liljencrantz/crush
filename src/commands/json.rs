@@ -25,7 +25,7 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> 
     let reader = match arguments.len() {
         0 => match input.recv()? {
             Value::BinaryReader(b) => Ok(b),
-            _ => Err(argument_error("Expected either a file to read or binary pipe input")),
+            _ => argument_error("Expected either a file to read or binary pipe input"),
         },
         _ => BinaryReader::paths(argument_files(arguments)?),
     };
@@ -44,7 +44,7 @@ fn convert_json(json_value: &serde_json::Value) -> CrushResult<Value> {
             } else if f.is_i64() {
                 Ok(Value::Integer(f.as_i64().expect("") as i128))
             } else {
-                Ok(Value::Float(f.as_f64().ok_or(error("Not a valid number"))?))
+                Ok(Value::Float(f.as_f64().ok_or(CrushError { message: "Not a valid number".to_string() })?))
             }
         }
         serde_json::Value::String(s) => Ok(Value::Text(Box::from(s.clone()))),
@@ -62,7 +62,7 @@ fn convert_json(json_value: &serde_json::Value) -> CrushResult<Value> {
                             .drain(..)
                             .map(|v| match v {
                                 Value::Struct(r) => Ok(r.into_row()),
-                                _ => Err(error("Impossible!"))
+                                _ => error("Impossible!")
                             })
                             .collect::<CrushResult<Vec<Row>>>()?;
                         Ok(Value::Rows(Rows::new(r.clone(), row_list)))

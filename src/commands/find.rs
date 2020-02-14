@@ -44,7 +44,7 @@ fn insert_entity(
             Value::Integer(i128::from(meta.len())),
             Value::Time(modified_datetime),
             Value::File(f)]))?;
-    return Ok(());
+    Ok(())
 }
 
 fn run_for_single_directory_or_file(
@@ -78,7 +78,7 @@ fn run_for_single_directory_or_file(
                     output)?;
             }
             None => {
-                return Err(error("Invalid file name"));
+                return error("Invalid file name");
             }
         }
     }
@@ -127,7 +127,7 @@ fn parse(output: OutputStream, arguments: Vec<Argument>, recursive: bool) -> Res
                         &mut dirs))?;
             }
             _ => {
-                return Err(error("Invalid argument type to ls, expected string or glob"));
+                return error("Invalid argument type to ls, expected string or glob");
             }
         }
     }

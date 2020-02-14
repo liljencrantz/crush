@@ -8,7 +8,7 @@ use crate::env::Env;
 
 fn of(mut context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() == 0 {
-        return Err(argument_error("Expected at least one element"));
+        return argument_error("Expected at least one element");
     }
 
     let types = context.arguments.iter().map(|a| a.value.value_type()).collect::<HashSet<ValueType>>();
@@ -36,7 +36,7 @@ fn empty(context: CompileContext) -> CrushResult<()> {
 
 fn push(mut context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() == 0 {
-        return Err(argument_error("Expected at least one argument to list.push"));
+        return argument_error("Expected at least one argument to list.push");
     }
     let cell = context.arguments.remove(0);
     match (&cell.name, &cell.value) {
@@ -46,7 +46,7 @@ fn push(mut context: CompileContext) -> CrushResult<()> {
                 if el.value.value_type() == l.element_type() || l.element_type() == ValueType::Any {
                     new_elements.push(el.value)
                 } else {
-                    return Err(argument_error("Invalid element type"));
+                    return argument_error("Invalid element type");
                 }
             }
             if !new_elements.is_empty() {
@@ -55,7 +55,7 @@ fn push(mut context: CompileContext) -> CrushResult<()> {
             context.output.send(cell.value);
             Ok(())
         }
-        _ => Err(argument_error("Argument is not a list")),
+        _ => argument_error("Argument is not a list"),
     }
 }
 

@@ -48,16 +48,16 @@ impl Env {
 
     pub fn declare(&self, name: &[Box<str>], value: Value) -> CrushResult<()> {
         if name.is_empty() {
-            return Err(error("Empty variable name"));
+            return error("Empty variable name");
         }
         let mut namespace = self.namespace.lock().unwrap();
         if name.len() == 1 {
             namespace.declare(name[0].as_ref(), value)
         } else {
             match namespace.get(name[0].as_ref()) {
-                None => Err(error("Not a namespace")),
+                None => error("Not a namespace"),
                 Some(Value::Env(env)) => env.declare(&name[1..name.len()], value),
-                _ => Err(error("Unknown namespace")),
+                _ => error("Unknown namespace"),
             }
         }
     }
@@ -69,16 +69,16 @@ impl Env {
 
     pub fn set(&self, name: &[Box<str>], value: Value) -> CrushResult<()> {
         if name.is_empty() {
-            return Err(error("Empty variable name"));
+            return error("Empty variable name");
         }
         let mut namespace = self.namespace.lock().unwrap();
         if name.len() == 1 {
             namespace.set(name[0].as_ref(), value)
         } else {
             match namespace.get(name[0].as_ref()) {
-                None => Err(error("Not a namespace")),
+                None => error("Not a namespace"),
                 Some(Value::Env(env)) => env.set(&name[1..name.len()], value),
-                _ => Err(error("Unknown namespace")),
+                _ => error("Unknown namespace"),
             }
         }
     }
@@ -157,13 +157,13 @@ impl Env {
 pub fn get_cwd() -> CrushResult<Box<Path>> {
     match std::env::current_dir() {
         Ok(d) => Ok(d.into_boxed_path()),
-        Err(e) => Err(error(e.description())),
+        Err(e) => error(e.description()),
     }
 }
 
 pub fn get_home() -> CrushResult<Box<Path>> {
     match dirs::home_dir() {
         Some(d) => Ok(d.into_boxed_path()),
-        None => Err(error("Could not find users home directory")),
+        None => error("Could not find users home directory"),
     }
 }

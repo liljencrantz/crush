@@ -9,42 +9,42 @@ pub fn parse(s: &str) -> CrushResult<ValueType> {
     match (&res, lexer.peek().0) {
         (Ok(_), EOF) => res,
         (Err(_), _) => res,
-        _ => Err(error(format!("End of type expected, got {:?}", lexer.peek().0).as_str()))
+        _ => error(format!("End of type expected, got {:?}", lexer.peek().0).as_str())
     }
 }
 
 fn parse_begin_token(lexer: &mut ValueTypeLexer) -> CrushResult<()> {
     match lexer.pop().0 {
         Begin => Ok(()),
-        _ => Err(error("Unexpected token, expected '<'"))
+        _ => error("Unexpected token, expected '<'")
     }
 }
 
 fn parse_end_token(lexer: &mut ValueTypeLexer) -> CrushResult<()> {
     match lexer.pop().0 {
         End => Ok(()),
-        _ => Err(error("Unexpected token, expected '>'"))
+        _ => error("Unexpected token, expected '>'")
     }
 }
 
 fn parse_sep_token(lexer: &mut ValueTypeLexer) -> CrushResult<()> {
     match lexer.pop().0 {
         Sep => Ok(()),
-        _ => Err(error("Unexpected token, expected ','"))
+        _ => error("Unexpected token, expected ','")
     }
 }
 
 fn parse_to_token(lexer: &mut ValueTypeLexer) -> CrushResult<()> {
     match lexer.pop().0 {
         To => Ok(()),
-        _ => Err(error("Unexpected token, expected ':'"))
+        _ => error("Unexpected token, expected ':'")
     }
 }
 
 fn parse_name_token(lexer: &mut ValueTypeLexer) -> CrushResult<String> {
     match lexer.pop() {
         (Name, name) => Ok(name.to_string()),
-        _ => Err(error("Unexpected token, expected ','"))
+        _ => error("Unexpected token, expected ','")
     }
 }
 
@@ -112,7 +112,7 @@ fn parse_type(lexer: &mut ValueTypeLexer) -> CrushResult<ValueType> {
         "row" => {
             ValueType::Row(parse_named_parameters(lexer)?)
         }
-        nam => return Err(error(format!("Unknown type \"{}\"", nam).as_str())),
+        nam => return error(format!("Unknown type \"{}\"", nam).as_str()),
     })
 }
 

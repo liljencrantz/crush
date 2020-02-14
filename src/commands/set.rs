@@ -7,7 +7,7 @@ pub fn perform(context: CompileContext) -> CrushResult<()> {
 
     for arg in context.arguments.iter() {
         if arg.val_or_empty().is_empty() {
-            return Err(argument_error("Missing variable name"));
+            return argument_error("Missing variable name");
         }
     }
     for arg in context.arguments {

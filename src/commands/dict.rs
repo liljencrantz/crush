@@ -9,7 +9,7 @@ use crate::commands::parse_util::single_argument_dict;
 
 fn create(mut context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
-        return Err(argument_error("Expected 2 arguments to dict.create"));
+        return argument_error("Expected 2 arguments to dict.create");
     }
     let first_type = context.arguments.remove(0).value;
     let second_type = context.arguments.remove(0).value;
@@ -17,18 +17,18 @@ fn create(mut context: CompileContext) -> CrushResult<()> {
     match (first_type, second_type) {
         (Value::Type(key_type), Value::Type(value_type)) => {
             if !key_type.is_hashable() {
-                return Err(argument_error("Key type is not hashable"));
+                return argument_error("Key type is not hashable");
             }
             context.output.send(Value::Dict(Dict::new(key_type, value_type)))
         }
-        _ => Err(argument_error("Invalid argument types")),
+        _ => argument_error("Invalid argument types"),
     }
 }
 
 fn insert(mut context: CompileContext) -> CrushResult<()> {
     let output = context.output.initialize(vec![])?;
     if context.arguments.len() != 3 {
-        return Err(argument_error("Expected three arguments"));
+        return argument_error("Expected three arguments");
     }
     let value = context.arguments.remove(2).value;
     let key = context.arguments.remove(1).value;
@@ -38,16 +38,16 @@ fn insert(mut context: CompileContext) -> CrushResult<()> {
                 dict.insert(key, value);
                 Ok(())
             } else {
-                Err(argument_error("Wrong key/value type"))
+                argument_error("Wrong key/value type")
             }
         }
-        _ => Err(argument_error("Argument is not a dict")),
+        _ => argument_error("Argument is not a dict"),
     }
 }
 
 fn get(context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
-        return Err(argument_error("Expected two arguments"));
+        return argument_error("Expected two arguments");
     }
     match &context.arguments[0].value {
         Value::Dict(dict) => {
@@ -56,20 +56,20 @@ fn get(context: CompileContext) -> CrushResult<()> {
             dict.get(&context.arguments[1].value).map(|c| output.send(Row::new(vec![c])));
             Ok(())
         }
-        _ => Err(argument_error("Argument is not a list")),
+        _ => argument_error("Argument is not a list"),
     }
 }
 
 fn remove(context: CompileContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
-        return Err(argument_error("Expected two arguments"));
+        return argument_error("Expected two arguments");
     }
     match &context.arguments[0].value {
         Value::Dict(dict) => {
             dict.remove(&context.arguments[1].value).map(|c| context.output.send(c));
             Ok(())
         }
-        _ => Err(argument_error("Argument is not a dict")),
+        _ => argument_error("Argument is not a dict"),
     }
 }
 

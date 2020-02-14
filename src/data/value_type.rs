@@ -124,20 +124,20 @@ impl ValueType {
             ValueType::Text => Ok(Value::Text(Box::from(s))),
             ValueType::Integer => match s.parse::<i128>() {
                 Ok(n) => Ok(Value::Integer(n)),
-                Err(e) => Err(error(e.description())),
+                Err(e) => error(e.description()),
             }
             ValueType::Field => Ok(Value::Field(mandate(parse_name(s), "Invalid field name")?)),
             ValueType::Glob => Ok(Value::Glob(Glob::new(s))),
             ValueType::Regex => match Regex::new(s) {
                 Ok(r) => Ok(Value::Regex(Box::from(s), r)),
-                Err(e) => Err(error(e.description())),
+                Err(e) => error(e.description()),
             }
             ValueType::File => Ok(Value::Text(Box::from(s))),
             ValueType::Op => match s {
                 "==" | "!=" | ">" | ">=" | "<" | "<=" | "=~" | "!~" => Ok(Value::Op(Box::from(s))),
-                _ => Err(error("Invalid operator")),
+                _ => error("Invalid operator"),
             }
-            _ => Err(error("Failed to parse cell")),
+            _ => error("Failed to parse cell"),
         }
     }
 }

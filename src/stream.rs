@@ -45,7 +45,7 @@ impl OutputStream {
         };
         return match native_output {
             Ok(_) => Ok(()),
-            Err(_) => Err(error("Broken pipe")),
+            Err(_) => error("Broken pipe"),
         };
     }
 }
@@ -69,15 +69,15 @@ impl InputStream {
         match &res {
             Ok(row) => {
                 if row.cells().len() != self.input_type.len() {
-                    return Err(error("Wrong number of columns in input"));
+                    return error("Wrong number of columns in input");
                 }
                 for (c, ct) in row.cells().iter().zip(self.input_type.iter()) {
                     if c.value_type() != ct.cell_type {
-                        return Err(error(format!(
+                        return error(format!(
                             "Wrong cell type in input column {:?}, expected {:?}, got {:?}",
                             ct.name,
                             c.value_type(),
-                            ct.cell_type).as_str()));
+                            ct.cell_type).as_str());
                     }
                 }
                 res
@@ -117,7 +117,7 @@ impl Readable for InputStream {
     fn read(&mut self) -> Result<Row, CrushError> {
         match self.recv() {
             Ok(v) => Ok(v),
-            Err(e) => Err(error(&e.message)),
+            Err(e) => error(&e.message),
         }
     }
 

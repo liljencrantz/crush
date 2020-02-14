@@ -77,7 +77,7 @@ impl Stream {
                     }
                     i += 1;
                 },
-                Err(_) => return Err(error("Index out of bounds")),
+                Err(_) => return error("Index out of bounds"),
             }
         }
     }

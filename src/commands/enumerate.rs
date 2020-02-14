@@ -28,6 +28,6 @@ pub fn perform(context: CompileContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Stream(s) => run(s.stream, context.output),
         Value::Rows(r) => run(RowsReader::new(r), context.output),
-        _ => Err(error("Expected a stream")),
+        _ => error("Expected a stream"),
     }
 }

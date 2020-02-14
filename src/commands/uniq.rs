@@ -21,9 +21,9 @@ pub fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> CrushRes
         0 => Ok(Config { column: None }),
         1 => match (&arguments[0].name, &arguments[0].value) {
             (None, Value::Field(f)) => Ok(Config { column: Some(find_field(f, input_type)?) }),
-            _ => Err(argument_error("Expected field name"))
+            _ => argument_error("Expected field name")
         }
-        _ => Err(argument_error("Expected zero or one argument")),
+        _ => argument_error("Expected zero or one argument"),
     }
 }
 
@@ -79,6 +79,6 @@ pub fn perform(context: CompileContext) -> CrushResult<()> {
             let output = context.output.initialize(input.get_type().clone())?;
             run(config, input, output)
         }
-        _ => Err(error("Expected a stream")),
+        _ => error("Expected a stream"),
     }
 }

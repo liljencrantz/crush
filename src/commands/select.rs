@@ -54,7 +54,7 @@ fn perform_for(input: impl Readable, output: ValueSender, arguments: Vec<Argumen
                 Ok(idx) => Ok((idx, a.name.clone().or(input_type[idx].name.clone()))),
                 Err(e) => Err(e),
             }
-            _ => Err(argument_error(format!("Expected Field, not {:?}", a.value.value_type()).as_str())),
+            _ => argument_error(format!("Expected Field, not {:?}", a.value.value_type()).as_str()),
         }
     }).collect::<CrushResult<Vec<(usize, Option<Box<str>>)>>>()?;
 
@@ -69,6 +69,6 @@ pub fn perform(context: CompileContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Stream(s) => perform_for(s.stream, context.output, context.arguments),
         Value::Rows(r) => perform_for(RowsReader::new(r), context.output, context.arguments),
-        _ => Err(error("Expected a stream")),
+        _ => error("Expected a stream"),
     }
 }

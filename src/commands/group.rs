@@ -25,7 +25,7 @@ pub struct Config {
 
 pub fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> CrushResult<Config> {
     if arguments.len() != 1 {
-        return Err(argument_error("No comparison key specified"));
+        return argument_error("No comparison key specified");
     }
     let arg = &arguments[0];
     let name = arg.name.clone().unwrap_or(Box::from("group"));
@@ -42,8 +42,7 @@ pub fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> CrushResu
                 input_type,
                 name,
             }),
-        _ =>
-            Err(argument_error("Bad comparison key")),
+        _ => argument_error("Bad comparison key"),
     }
 }
 
@@ -106,6 +105,6 @@ pub fn perform(context: CompileContext) -> CrushResult<()> {
             let output = context.output.initialize(output_type)?;
             run(config, input, output)
         }
-        _ => Err(error("Expected a stream")),
+        _ => error("Expected a stream"),
     }
 }

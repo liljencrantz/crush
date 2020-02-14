@@ -74,7 +74,7 @@ impl CallDefinition {
                     })))
             }
             _ => {
-                Err(error(format!("Unknown command name {}", format_name(&self.name)).as_str()))
+                error(format!("Unknown command name {}", format_name(&self.name)).as_str())
             }
         }
     }

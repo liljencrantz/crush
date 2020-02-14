@@ -35,7 +35,7 @@ impl Closure {
 
         Closure::push_arguments_to_env(context.arguments, &env);
         match job_definitions.len() {
-            0 => return Err(error("Empty closures not supported")),
+            0 => return error("Empty closures not supported"),
             1 => {
                 let job = job_definitions[0].spawn_and_execute(&env, &context.printer, context.input, context.output)?;
                 job.join(&context.printer);

@@ -9,12 +9,12 @@ fn parse(arguments: Vec<Argument>) -> CrushResult<Vec<Box<str>>> {
     for arg in arguments.iter() {
         if let Value::Text(s) = &arg.value {
             if s.len() == 0 {
-                return Err(argument_error("Illegal variable name"));
+                return argument_error("Illegal variable name");
             } else {
                 vars.push(s.clone());
             }
         } else {
-            return Err(argument_error("Illegal variable name"));
+            return argument_error("Illegal variable name");
         }
     }
     Ok(vars)

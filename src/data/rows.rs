@@ -54,7 +54,7 @@ impl Readable for RowsReader {
 
     fn read(&mut self) -> Result<Row, CrushError> {
         if self.idx >= self.rows.rows().len() {
-            return Err(error("EOF"));
+            return error("EOF");
         }
         self.idx += 1;
         return Ok(self.rows.rows.replace(self.idx - 1, Row::new(vec![Value::Integer(0)])));

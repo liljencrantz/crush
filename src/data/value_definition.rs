@@ -77,7 +77,7 @@ impl ValueDefinition {
                     (Ok(Value::Stream(o)), Ok(Value::Integer(idx))) => {
                         Value::Struct(o.get(idx)?.into_struct(o.stream.get_type()))
                     }
-                    _ => return Err(error("Expected a list variable")),
+                    _ => return error("Expected a list variable"),
                 }
             }
         })

@@ -23,7 +23,7 @@ impl Namespace {
 
     pub fn declare(&mut self, name: &str, value: Value) -> CrushResult<()> {
         if self.data.contains_key(name) {
-            return Err(error(format!("Variable ${{{}}} already exists", name).as_str()));
+            return error(format!("Variable ${{{}}} already exists", name).as_str());
         }
         self.data.insert(name.to_string(), value);
         return Ok(());
@@ -35,12 +35,12 @@ impl Namespace {
                 Some(p) => {
                     return p.lock().unwrap().set(name, value);
                 }
-                None => return Err(error(format!("Unknown variable ${{{}}}", name).as_str())),
+                None => return error(format!("Unknown variable ${{{}}}", name).as_str()),
             }
         }
 
         if self.data[name].value_type() != value.value_type() {
-            return Err(error(format!("Type mismatch when reassigning variable ${{{}}}. Use `unset ${{{}}}` to remove old variable.", name, name).as_str()));
+            return error(format!("Type mismatch when reassigning variable ${{{}}}. Use `unset ${{{}}}` to remove old variable.", name, name).as_str());
         }
         self.data.insert(name.to_string(), value);
         return Ok(());

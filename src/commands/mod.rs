@@ -55,6 +55,8 @@ mod time;
 mod r#for;
 mod r#if;
 
+mod smath;
+
 use crate::{
     env::Env,
     data::{
@@ -152,6 +154,7 @@ pub fn add_commands(env: &Env) -> CrushResult<()> {
     dict::declare(env)?;
     r#type::declare(env)?;
     time::declare(env)?;
+    smath::declare(env)?;
 
     return Ok(());
 }

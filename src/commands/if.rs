@@ -21,7 +21,7 @@ pub fn perform(mut context: CompileContext) -> CrushResult<()> {
                     Ok(())
                 }
             }
-            _ => Err(error("Wrong argument types, expected boolean and closure")),
+            _ => error("Wrong argument types, expected boolean and closure"),
         }
         3 => match (context.arguments.remove(0).value, context.arguments.remove(0).value, context.arguments.remove(0).value) {
             (Value::Bool(b), Value::Closure(c1), Value::Closure(c2)) => {
@@ -31,8 +31,8 @@ pub fn perform(mut context: CompileContext) -> CrushResult<()> {
                     c2.spawn_and_execute(cc)
                 }
             }
-            _ => Err(error("Wrong argument types, expected boolean and two closures")),
+            _ => error("Wrong argument types, expected boolean and two closures"),
         }
-        _ => Err(error("Wrong number of arguments")),
+        _ => error("Wrong number of arguments"),
     }
 }

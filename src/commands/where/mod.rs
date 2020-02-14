@@ -26,13 +26,13 @@ pub struct Config<T: Readable> {
 fn do_match(needle: &Value, haystack: &Value) -> CrushResult<bool> {
     match (needle, haystack) {
         (Value::Text(s), Value::Glob(pattern)) => Ok(pattern.matches( s)),
-        (Value::File(f), Value::Glob(pattern)) => f.to_str().map(|s| Ok(pattern.matches( s))).unwrap_or(Err(error("Invalid filename"))),
+        (Value::File(f), Value::Glob(pattern)) => f.to_str().map(|s| Ok(pattern.matches( s))).unwrap_or(error("Invalid filename")),
         (Value::Text(s), Value::Regex(_, pattern)) => Ok(pattern.is_match(s)),
         (Value::File(f), Value::Regex(_, pattern)) => match f.to_str().map(|s| pattern.is_match(s)) {
             Some(v) => Ok(v),
-            None => Err(error("Invalid filename")),
+            None => error("Invalid filename"),
         },
-        _ => Err(error("Invalid match"))
+        _ => error("Invalid match")
     }
 }
 
@@ -50,22 +50,22 @@ fn evaluate(condition: &Condition, row: &Row) -> CrushResult<bool> {
         Condition::GreaterThan(l, r) =>
             match to_cell(&l, row).partial_cmp(to_cell(&r, row)) {
                 Some(ord) => Ok(ord == Ordering::Greater),
-                None => Err(error("Cell types can't be compared")),
+                None => error("Cell types can't be compared"),
             }?,
         Condition::GreaterThanOrEqual(l, r) =>
             match to_cell(&l, row).partial_cmp(to_cell(&r, row)) {
                 Some(ord) => Ok(ord != Ordering::Less),
-                None => Err(error("Cell types can't be compared")),
+                None => error("Cell types can't be compared"),
             }?,
         Condition::LessThan(l, r) =>
             match to_cell(&l, row).partial_cmp(to_cell(&r, row)) {
                 Some(ord) => Ok(ord == Ordering::Less),
-                None => Err(error("Cell types can't be compared")),
+                None => error("Cell types can't be compared"),
             }?,
         Condition::LessThanOrEqual(l, r) =>
             match to_cell(&l, row).partial_cmp(to_cell(&r, row)) {
                 Some(ord) => Ok(ord != Ordering::Greater),
-                None => Err(error("Cell types can't be compared")),
+                None => error("Cell types can't be compared"),
             }?,
         Condition::NotEqual(l, r) =>
             to_cell(&l, row) != to_cell(&r, row),
@@ -114,7 +114,7 @@ pub fn perform(mut context: CompileContext) -> CrushResult<()> {
             };
             run(config, context.printer)
         }
-        _ => Err(error("Expected a stream")),
+        _ => error("Expected a stream"),
     }
 
 

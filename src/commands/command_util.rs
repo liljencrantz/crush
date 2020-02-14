@@ -29,7 +29,7 @@ pub fn find_field_from_str(needle: &str, haystack: &Vec<ColumnType>) -> CrushRes
 
 pub fn find_field(needle_vec: &Vec<Box<str>>, haystack: &Vec<ColumnType>) -> CrushResult<usize> {
     if needle_vec.len() != 1 {
-        return Err(error("Expected direct field"))
+        return error("Expected direct field")
     }
     let needle = needle_vec[0].as_ref();
     for (idx, field) in haystack.iter().enumerate() {
@@ -38,12 +38,11 @@ pub fn find_field(needle_vec: &Vec<Box<str>>, haystack: &Vec<ColumnType>) -> Cru
         }
     }
 
-    return Err(
-        error(format!(
+    error(format!(
                 "Unknown column {}, available columns are {}",
                 needle,
                 haystack.iter().map(|t| t.val_or_empty().to_string()).collect::<Vec<String>>().join(", "),
-            ).as_str()));
+            ).as_str())
 }
 
 lazy_static! {

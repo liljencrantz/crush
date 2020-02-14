@@ -29,7 +29,7 @@ pub struct Config {
 pub fn get_sub_type(cell_type: &ValueType) -> Result<&Vec<ColumnType>, CrushError> {
     match cell_type {
         ValueType::Stream(sub_types) | ValueType::Rows(sub_types) => Ok(sub_types),
-        _ => Err(argument_error("Expected a table column")),
+        _ => argument_error("Expected a table column"),
     }
 }
 
@@ -43,7 +43,7 @@ pub fn guess_tables(input_type: &Vec<ColumnType>) -> Result<(usize, usize, &Vec<
     if tables.len() == 2 {
         Ok((tables[0].0, tables[1].0, tables[0].1, tables[1].1))
     } else {
-        Err(argument_error(format!("Could not guess tables to join, expected two tables, found {}", tables.len()).as_str()))
+        argument_error(format!("Could not guess tables to join, expected two tables, found {}", tables.len()).as_str())
     }
 }
 
@@ -55,12 +55,12 @@ fn scan_table(table: &str, column: &str, input_type: &Vec<ColumnType>) -> Result
 
 fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Config, CrushError> {
     if arguments.len() != 3 {
-        return Err(argument_error("Expected exactly 3 aguments"));
+        return argument_error("Expected exactly 3 aguments");
     }
     return match (&arguments[0].value, &arguments[1].value, &arguments[2].value) {
         (Value::Field(l), Value::Op(op), Value::Field(r)) => {
             if op.as_ref() != "==" {
-                return Err(argument_error("Only == currently supported"));
+                return argument_error("Only == currently supported");
             }
 
             let config = match (l.len(), r.len()) {
@@ -82,7 +82,7 @@ fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Confi
                         scan_table(r[0].as_ref(), r[1].as_ref(), &input_type)?;
 
                     if left_table_idx == right_table_idx {
-                        return Err(argument_error("Left and right table can't be the same"));
+                        return argument_error("Left and right table can't be the same");
                     }
 
                     Config {
@@ -92,20 +92,20 @@ fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Confi
                         right_column_idx,
                     }
                 }
-                _ => return Err(argument_error("Expected both fields on the form %table.column or %column")),
+                _ => return argument_error("Expected both fields on the form %table.column or %column"),
             };
 
             let r_type = &get_sub_type(&input_type[config.right_table_idx].cell_type)?[config.right_column_idx].cell_type;
             let l_type = &get_sub_type(&input_type[config.left_table_idx].cell_type)?[config.left_column_idx].cell_type;
             if r_type != l_type {
-                return Err(argument_error("Cannot join two columns of different types"));
+                return argument_error("Cannot join two columns of different types");
             }
             if !r_type.is_hashable() {
-                return Err(argument_error("Cannot join on this column type. (It is either mutable or not comparable)"));
+                return argument_error("Cannot join on this column type. (It is either mutable or not comparable)");
             }
             Ok(config)
         }
-        _ => Err(argument_error("Expected arguments like %table1.col == %table2.col")),
+        _ => argument_error("Expected arguments like %table1.col == %table2.col"),
     };
 }
 
@@ -186,7 +186,7 @@ fn get_output_type(input_type: &Vec<ColumnType>, cfg: &Config) -> Result<Vec<Col
             }
             Ok(res)
         }
-        _ => Err(argument_error("Impossible error?"))
+        _ => argument_error("Impossible error?"),
     };
 }
 
@@ -198,6 +198,6 @@ pub fn perform(context: CompileContext) -> CrushResult<()> {
             let output = context.output.initialize(output_type)?;
             run(cfg, s, output)
         }
-        _ => Err(argument_error("Expected a struct"))
+        _ => argument_error("Expected a struct"),
     }
 }

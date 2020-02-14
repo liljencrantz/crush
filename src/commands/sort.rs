@@ -22,7 +22,7 @@ fn parse<T: Readable>(
     output: OutputStream) -> CrushResult<Config<T>> {
     let sort_column_idx = find_field(&single_argument_field(arguments)?, input.get_type())?;
     if !input.get_type()[sort_column_idx].cell_type.is_comparable() {
-        return Err(argument_error("Bad comparison key"));
+        return argument_error("Bad comparison key");
     }
     Ok(Config { sort_column_idx, input, output })
 }
@@ -62,6 +62,6 @@ pub fn perform(context: CompileContext) -> CrushResult<()> {
             let mut config = parse(context.arguments, input, output)?;
             run(config)
         }
-        _ => Err(error("Expected a stream")),
+        _ => error("Expected a stream"),
     }
 }
