@@ -3,8 +3,6 @@ use crate::errors::CrushResult;
 use crate::errors::argument_error;
 
 pub fn perform(context: CompileContext) -> CrushResult<()> {
-    context.output.initialize(vec![]);
-
     for arg in context.arguments.iter() {
         if arg.val_or_empty().is_empty() {
             return Err(argument_error("Missing variable name"));

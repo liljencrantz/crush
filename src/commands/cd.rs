@@ -17,6 +17,5 @@ pub fn perform(context: CompileContext) -> CrushResult<()> {
         }
         _ => Err(error("Wrong number of arguments"))
     }?;
-    context.output.initialize(vec![])?;
     to_job_error(std::env::set_current_dir(dir))
 }

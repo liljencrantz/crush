@@ -26,6 +26,8 @@ pub fn perform(context: CompileContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Stream(s) => context.output.send(count_rows(s.stream)),
         Value::Rows(r) => context.output.send(Value::Integer(r.rows().len() as i128)),
+        Value::List(r) => context.output.send(Value::Integer(r.len() as i128)),
+        Value::Dict(r) => context.output.send(Value::Integer(r.len() as i128)),
         _ => Err(error("Expected a stream")),
     }
 }
