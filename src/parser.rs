@@ -163,7 +163,7 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> CrushResult<Va
         TokenType::ModeStart => {
             let sigil = lexer.pop().1;
             match sigil {
-                "{" => {
+                "(" => {
                     let dep = parse_job(lexer)?;
                     lexer.pop();
                     let res = Ok(ValueDefinition::JobDefinition(dep));
@@ -177,7 +177,7 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> CrushResult<Va
                     return res;
                 }
 
-                "`{" => {
+                "{" => {
                     let dep = parse_internal(lexer)?;
                     lexer.pop();
                     let res = Ok(ValueDefinition::ClosureDefinition(Closure::new(dep)));

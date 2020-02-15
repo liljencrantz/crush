@@ -1,49 +1,6 @@
-Date mode:
-
-# Now:
-echo date{now}
-
-# Five days into the future
-echo date{now + 5 days}
-
-# These are equivalent:
-echo date{2012-03-30 16:32}
-echo date{3/30/2012 4:32 PM}
-
-Durations:
-
-# One hour
-echo duration{1 hour}
-
-# Silly way to say one week
-echo duration{6 days 23 hours 59 minutes 60 seconds}
-
-Variable expansion in date/time environments:
-
-let hour_count = 5
-echo duration{$hour_count hours}
-
-let unit = minutes
-echo duration{7 $unit}
-
-let timeout=duration{10 seconds}
-let soft_deadline = date{now + $timeout}
-let hard_deadline = date{now + $timeout*2}
-
-More math with time:
-# Subtract two timestamps to get a durations
-let t1 = t{1970-01-01: 00:00:00}
-let t2 = t{now}
-let dur = t{$t2 - $t1}
-
-Math mode:
-Math mode inside math{}
-echo math{5*5}
-# 25
-let foo=4
-let bar=16
-let large_number=math{$foo^bar}
-Following operators supported + - * / ^ == != > < >= <= as well as parenthesis for grouping.
+ls| where {gt $size 5}
+json some_file.json | select elapsed={add $setup_time $work_time teardown_time}
+ls | sort {neg $size}
 
 Integrating external commands:
 
@@ -51,34 +8,23 @@ Just pass thorugh commands that don't exist in the shell but exist in PATH
 
 git grep fnurp
 
-IO redirection:
-
-???
-
 Stream editing:
 
 # Convert file column in-place
-ls | upper file=%file
+ls | select * file={upper $file}
 
 # Append new column named lower, containing a lower-case version of the column file
-ls | lower lower=%file
+ls | select * lower={lower $file}
 
 # Replace file column in-place using regex
 ls | sed file= regex{a(b*)c(d*)e} replace{\1\2}
 
-
 Modes:
 
 regex{.*} # Regex
-date{now} # Date (with time)
-duration{1 hour 20 minutes} # Durations
-list{1 2 3} # List literal
-map{1:foo 5:bar 9:baz} # Map literal
-math{5*5} # Math
-*{*.txt} # Glob
-`{ls} # Closure
-{ls} # Command substitution
-?{$foo == %bar} # Condition check mode
+*{*.txt}  # Glob
+{ls}      # Closure
+(ls)      # Command substitution
 
 json deserialization:
 How to deal with impedance mismatch, e.g. null values, lists with multiple types of values, etc?
@@ -98,24 +44,5 @@ text.format
 
 file library:
 
-Commands for operating on files, e.g.:
-file.stat
+if (file.stat foo.txt)[is_directory] {val yay} else {val nay}
 
-if {file.stat foo.txt}[0][is_directory] {} else {}
-
-Any type as output:
-
-pwd outputs a single string
-stat outputs a single struct
-json outputs a single struct
-
-list.create outputs a list instead of storing it, so we would declare a list by writing
-
-let foo={list.create int}
-
-Same with dict.create.
-
-state can be used to query a single attribute, which is returned directly like this:
-
-if {stat $some_file is_directory} `{echo "It's a directory"}
-if {comp.gt $foo $bar}

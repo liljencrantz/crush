@@ -87,11 +87,13 @@ lazy_static! {
 
         (TokenType::ModeStart, Regex::new(r"^([`*]?|[a-z]+)\{").unwrap()),
         (TokenType::ModeEnd, Regex::new(r"^\}").unwrap()),
+        (TokenType::ModeStart, Regex::new(r"^\(").unwrap()),
+        (TokenType::ModeEnd, Regex::new(r"^\)").unwrap()),
 
         (TokenType::SubscriptStart, Regex::new(r"^\[").unwrap()),
         (TokenType::SubscriptEnd, Regex::new(r"^]").unwrap()),
 
-        (TokenType::Regex, Regex::new(r"^r\{([^}\\]|\\.)+\}").unwrap()),
+        (TokenType::Regex, Regex::new(r"^regex\{([^}\\]|\\.)+\}").unwrap()),
 
         (TokenType::String, Regex::new(r"^[/._a-zA-Z][/.:_a-z-A-Z0-9]*").unwrap()),
         (TokenType::Glob, Regex::new(r"^[/._a-zA-Z*.?][/_a-z-A-Z0-9*.?]*").unwrap()),

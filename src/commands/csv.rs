@@ -6,7 +6,7 @@ use crate::{
         ValueType,
         Value,
     },
-    stream::{OutputStream},
+    stream::OutputStream,
     errors::{CrushError, argument_error},
 };
 use std::{
@@ -45,31 +45,23 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> 
             }
             Some(name) => {
                 match (name.as_ref(), arg.value) {
-                    ("col", Value::Text(s)) => {
-                        let split: Vec<&str> = s.split(':').collect();
-                        match split.len() {
-                            2 => columns.push(ColumnType::named(split[0], ValueType::from(split[1])?)),
-                            _ => return argument_error(format!("Expected a column description on the form name:type, got {}", s).as_str()),
-                        }
-                    }
+                    (_, Value::Type(s)) => columns.push(ColumnType::named(name, s)),
 
                     ("head", Value::Integer(s)) => skip_head = s as usize,
 
-                    ("sep", Value::Text(s)) => {
+                    ("separator", Value::Text(s)) =>
                         if s.len() == 1 {
                             separator = s.chars().next().unwrap();
                         } else {
                             return argument_error("Separator must be exactly one character long");
                         }
-                    }
 
-                    ("trim", Value::Text(s)) => {
+                    ("trim", Value::Text(s)) =>
                         if s.len() == 1 {
                             trim = Some(s.chars().next().unwrap());
                         } else {
                             return argument_error("Only one character can be trimmed");
                         }
-                    }
 
                     _ => return argument_error(format!("Unknown parameter {}", name).as_str()),
                 }
@@ -78,14 +70,14 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> 
     }
 
     let reader = match files.len() {
-            0 => {
-                match input.recv()? {
-                    Value::BinaryReader(b) => Ok(b),
-                    _ => argument_error("Expected either a file to read or binary pipe input"),
-                }
+        0 => {
+            match input.recv()? {
+                Value::BinaryReader(b) => Ok(b),
+                _ => argument_error("Expected either a file to read or binary pipe input"),
             }
-            _ => BinaryReader::paths(argument_files(files)?),
-        }?;
+        }
+        _ => BinaryReader::paths(argument_files(files)?),
+    }?;
 
     Ok(Config {
         separator,
@@ -97,7 +89,6 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> 
 }
 
 fn run(cfg: Config, output: OutputStream, printer: Printer) -> CrushResult<()> {
-
     let printer_copy = printer.clone();
 
     let separator = cfg.separator.clone();

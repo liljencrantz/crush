@@ -28,7 +28,6 @@ mod r#where;
 mod sort;
 mod reverse;
 
-mod field;
 mod select;
 mod enumerate;
 
@@ -55,7 +54,7 @@ mod time;
 mod r#for;
 mod r#if;
 
-mod smath;
+mod math;
 
 use crate::{
     env::Env,
@@ -138,7 +137,6 @@ pub fn add_commands(env: &Env) -> CrushResult<()> {
     env.declare_str("cat", Value::Command(Command::new(cat::perform)))?;
     env.declare_str("http", Value::Command(Command::new(http::perform)))?;
 
-    env.declare_str("field", Value::Command(Command::new(field::perform)))?;
     env.declare_str("select", Value::Command(Command::new(select::perform)))?;
     env.declare_str("enumerate", Value::Command(Command::new(enumerate::perform)))?;
 
@@ -154,7 +152,7 @@ pub fn add_commands(env: &Env) -> CrushResult<()> {
     dict::declare(env)?;
     r#type::declare(env)?;
     time::declare(env)?;
-    smath::declare(env)?;
+    math::declare(env)?;
 
     return Ok(());
 }
