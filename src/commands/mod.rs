@@ -44,17 +44,15 @@ mod sum;
 mod cat;
 mod http;
 
-mod r#type;
-
-mod list;
-mod dict;
-
-mod time;
-
 mod r#for;
 mod r#if;
 
+mod r#type;
+mod list;
+mod dict;
+mod time;
 mod math;
+mod comp;
 
 use crate::{
     env::Env,
@@ -153,6 +151,7 @@ pub fn add_commands(env: &Env) -> CrushResult<()> {
     r#type::declare(env)?;
     time::declare(env)?;
     math::declare(env)?;
+    comp::declare(env)?;
 
     return Ok(());
 }

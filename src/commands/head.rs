@@ -8,7 +8,7 @@ use crate::{
 };
 use crate::stream::{Readable, ValueSender};
 use crate::data::RowsReader;
-use crate::commands::parse_util::single_argument_integer;
+use crate::commands::parse_util::{optional_argument_integer};
 
 pub fn run(
     lines: i128,
@@ -33,7 +33,7 @@ pub fn run(
 }
 
 pub fn perform(context: CompileContext) -> CrushResult<()> {
-    let lines = single_argument_integer(context.arguments)?;
+    let lines = optional_argument_integer(context.arguments)?.unwrap_or(10);
     match context.input.recv()? {
         Value::Stream(s) => run(lines, s.stream, context.output),
         Value::Rows(r) => run(lines, RowsReader::new(r), context.output),

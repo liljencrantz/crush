@@ -87,3 +87,17 @@ pub fn single_argument_integer(mut arg: Vec<Argument>) -> CrushResult<i128> {
         _ => argument_error("Expected a single value"),
     }
 }
+
+pub fn optional_argument_integer(mut arg: Vec<Argument>) -> CrushResult<Option<i128>> {
+    match arg.len() {
+        0 => Ok(None),
+        1 => {
+            let a = arg.remove(0);
+            match (a.name, a.value) {
+                (None, Value::Integer(i)) => Ok(Some(i)),
+                _ => argument_error("Expected a text value"),
+            }
+        }
+        _ => argument_error("Expected a single value"),
+    }
+}

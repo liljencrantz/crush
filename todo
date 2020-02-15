@@ -1,4 +1,5 @@
 Todo:
+Redo the select command to use closures
 the for command should not be limited to streams, and it should be possible to name the entire row, e.g. for i={ls} `{val $i},
 Add system tests for type casting
 Add system tests for for loop
