@@ -42,6 +42,7 @@ mod count;
 mod sum;
 
 mod cat;
+mod materialize;
 mod http;
 
 mod r#for;
@@ -114,6 +115,7 @@ pub fn declare(root: &Env) -> CrushResult<()> {
 
     root.declare_str("struct", Value::Command(Command::new(r#struct::perform)))?;
     root.declare_str("val", Value::Command(Command::new(val::perform)))?;
+    root.declare_str("materialize", Value::Command(Command::new(materialize::perform)))?;
 
     root.declare_str("ls", Value::Command(Command::new(find::perform_ls)))?;
     root.declare_str("find", Value::Command(Command::new(find::perform_find)))?;

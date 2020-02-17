@@ -171,13 +171,6 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> CrushResult<Va
                     return res;
                 }
 
-                "materialized{" => {
-                    let dep = parse_job(lexer)?;
-                    lexer.pop();
-                    let res = Ok(ValueDefinition::MaterializedJobDefinition(dep));
-                    return res;
-                }
-
                 "{" => {
                     let dep = parse_internal(lexer)?;
                     lexer.pop();

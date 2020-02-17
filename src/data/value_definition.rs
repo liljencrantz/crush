@@ -24,7 +24,6 @@ pub enum ValueDefinition {
     Value(Value),
     ClosureDefinition(Closure),
     JobDefinition(Job),
-    MaterializedJobDefinition(Job),
     Variable(Vec<Box<str>>),
     Subscript(Box<ValueDefinition>, Box<ValueDefinition>),
 }
@@ -39,13 +38,6 @@ impl ValueDefinition {
                 let j = def.spawn_and_execute(&env, printer, first_input, last_output)?;
                 dependencies.push(j);
                 last_input.recv()?
-            }
-            ValueDefinition::MaterializedJobDefinition(def) => {
-                let first_input = empty_channel();
-                let (last_output, last_input) = channels();
-                let j = def.spawn_and_execute(&env, printer, first_input, last_output)?;
-                dependencies.push(j);
-                last_input.recv()?.materialize()
             }
             ValueDefinition::ClosureDefinition(c) => Value::Closure(c.with_env(env)),
             ValueDefinition::Variable(s) => (
