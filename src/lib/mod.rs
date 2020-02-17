@@ -11,29 +11,11 @@ mod var;
 
 mod ps;
 
-mod head;
-mod tail;
 
 mod lines;
 mod csv;
 mod json;
 
-mod r#where;
-mod sort;
-mod reverse;
-
-mod select;
-mod enumerate;
-
-mod uniq;
-mod group;
-mod join;
-mod zip;
-
-//mod aggr;
-
-mod count;
-mod sum;
 
 mod cat;
 mod materialize;
@@ -48,6 +30,7 @@ mod dict;
 mod time;
 mod math;
 mod comp;
+mod stream;
 
 use crate::{
     env::Env,
@@ -111,23 +94,7 @@ pub fn declare(root: &Env) -> CrushResult<()> {
     root.declare_str("val", Value::Command(Command::new(val::perform)))?;
     root.declare_str("materialize", Value::Command(Command::new(materialize::perform)))?;
 
-
     root.declare_str("ps", Value::Command(Command::new(ps::perform)))?;
-
-    root.declare_str("head", Value::Command(Command::new(head::perform)))?;
-    root.declare_str("tail", Value::Command(Command::new(tail::perform)))?;
-    root.declare_str("where", Value::Command(Command::new(r#where::perform)))?;
-    root.declare_str("sort", Value::Command(Command::new(sort::perform)))?;
-    root.declare_str("reverse", Value::Command(Command::new(reverse::perform)))?;
-    root.declare_str("group", Value::Command(Command::new(group::perform)))?;
-    root.declare_str("join", Value::Command(Command::new(join::perform)))?;
-    root.declare_str("uniq", Value::Command(Command::new(uniq::perform)))?;
-//    env.declare_str("aggr", Value::Command(Command::new(aggr::perform)))?;
-    root.declare_str("count", Value::Command(Command::new(count::perform)))?;
-    root.declare_str("sum", Value::Command(Command::new(sum::perform)))?;
-    root.declare_str("select", Value::Command(Command::new(select::perform)))?;
-    root.declare_str("enumerate", Value::Command(Command::new(enumerate::perform)))?;
-    root.declare_str("zip", Value::Command(Command::new(zip::perform)))?;
 
     root.declare_str("cat", Value::Command(Command::new(cat::perform)))?;
     root.declare_str("http", Value::Command(Command::new(http::perform)))?;
@@ -146,6 +113,7 @@ pub fn declare(root: &Env) -> CrushResult<()> {
     comp::declare(root)?;
     file::declare(root)?;
     var::declare(root)?;
+    stream::declare(root)?;
 
     return Ok(());
 }
