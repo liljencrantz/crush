@@ -40,10 +40,10 @@ fn insert_entity(
         file
     };
     output.send(Row ::new(vec![
-            users.get_name(meta.uid()),
-            Value::Integer(i128::from(meta.len())),
-            Value::Time(modified_datetime),
-            Value::File(f)]))?;
+        users.get_name(meta.uid()),
+        Value::Integer(i128::from(meta.len())),
+        Value::Time(modified_datetime),
+        Value::File(f)]))?;
     Ok(())
 }
 
@@ -88,9 +88,9 @@ fn run_for_single_directory_or_file(
 pub fn run(mut config: Config) -> CrushResult<()> {
     let users = create_user_map();
     let mut q = VecDeque::new();
-        for dir in config.dirs {
-            q.push_back(dir);
-        }
+    for dir in config.dirs {
+        q.push_back(dir);
+    }
     loop {
         if q.is_empty() {
             break;
