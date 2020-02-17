@@ -44,7 +44,7 @@ Semi-lazy stream evaluation
 
 If you assign the output of the find command to a variable like so:
 
-    crush> let all_the_files={find /}
+    crush> let all_the_files=(find /)
 
 What will really be stored in the `all_the_files` variable is simply a stream. A small number
 of lines of output will be eagerly evaluated, before the thread executing the find command
@@ -68,7 +68,7 @@ Crush features many commands to operate om arbitrary streams of data using a SQL
 These commands use field-specifiers like %foo to specify columns in the data stream that they
 operate on:
 
-echo $some_data | where %color == green | group %shoe_size | aggr green_shoes_of_size=`{count}
+echo $some_data | where {comp.eq $color green) | group %shoe_size | aggr green_shoes_of_size={count}
 
 Unlike in SQL, these commands all operate on input streams, meaning they can be combined in
 any order, and the input source can be file/http resources in a variety of formats or output of
@@ -83,7 +83,7 @@ crush> echo Hello world
 
 Like most other scripting languages, crush uses the $-sigil to perform variable expansion:
 
-    crush> let greeting = "Hello, world!"
+    crush> let greeting="Hello, world!"
     crush> echo $greeting
 
 But crush takes this a step longer by adding a variety of additional modes
@@ -95,10 +95,7 @@ Regular expression mode:
 The output of a regular expression mode literal is a regular expression object. This object can
 be used for matching in any command that does matching, e.g. the where command.
 
-Expression mode:
+Closures mode:
 
-    crush> echo expr{1+1} 
+    crush> let greet={val Hello} 
 
-In expression mode, crush functions a lot more like a normal scripting language. The $-sigil is
-not required, strings must be escaped, and crush has a large number of additional operators like
-+ - * / that perform the expected operation.

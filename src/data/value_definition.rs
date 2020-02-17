@@ -9,7 +9,7 @@ use crate::{
     errors::{error, mandate, CrushResult, argument_error, to_job_error},
     env::Env,
     data::{Value},
-    commands::JobJoinHandle,
+    lib::JobJoinHandle,
     closure::Closure,
     stream::channels,
     stream::empty_channel,

@@ -1,9 +1,9 @@
-use crate::commands::{CompileContext, JobJoinHandle};
+use crate::lib::{ExecutionContext, JobJoinHandle};
 use crate::data::{ArgumentDefinition, ArgumentVecCompiler, Value};
 use crate::env::Env;
 use crate::errors::{error, CrushResult};
 use crate::printer::Printer;
-use crate::stream::{ValueReceiver, ValueSender};
+use crate::stream::{ValueReceiver, ValueSender, InputStream};
 use crate::thread_util::{handle, build};
 
 #[derive(Clone)]
@@ -21,6 +21,42 @@ pub fn format_name(name: &Vec<Box<str>>) -> String {
 impl CallDefinition {
     pub fn new(name: Vec<Box<str>>, arguments: Vec<ArgumentDefinition>) -> CallDefinition {
         CallDefinition { name, arguments }
+    }
+
+    pub fn spawn_stream(
+        &self,
+        env: &Env,
+        printer: &Printer,
+        mut argument_stream: InputStream,
+        output: ValueSender,
+    ) -> CrushResult<JobJoinHandle> {
+        let cmd = env.get(&self.name);
+        match cmd {
+            Some(Value::Command(command)) => {
+                let c = command.call;
+                Ok(handle(build(format_name(&self.name)).spawn(
+                    move || {
+
+                        loop {
+                            match argument_stream.recv() {
+                                Ok(mut row) => {
+
+
+
+                                }
+                                Err(_) => break,
+                            }
+                        }
+
+                        Ok(())
+                    })))
+            }
+            _ => {
+                error("Can't stream call")
+            }
+        }
+
+
     }
 
     pub fn spawn_and_execute(
@@ -41,7 +77,7 @@ impl CallDefinition {
                     move || {
                         let mut deps: Vec<JobJoinHandle> = Vec::new();
                         let arguments = local_arguments.compile(&mut deps, &local_env, &local_printer)?;
-                        let res = c(CompileContext {
+                        let res = c(ExecutionContext {
                             input,
                             output,
                             arguments,
@@ -62,7 +98,7 @@ impl CallDefinition {
                         let arguments = local_arguments.compile(&mut deps, &local_env, &local_printer)?;
 
                         closure_definition.spawn_and_execute(
-                            CompileContext {
+                            ExecutionContext {
                                 input,
                                 output,
                                 arguments,

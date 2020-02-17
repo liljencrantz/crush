@@ -11,7 +11,7 @@ enum PrinterMessage {
 }
 
 use crate::printer::PrinterMessage::*;
-use crate::commands::JobJoinHandle;
+use crate::lib::JobJoinHandle;
 use crate::thread_util::{handle, build};
 use std::thread::JoinHandle;
 

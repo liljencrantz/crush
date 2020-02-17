@@ -22,6 +22,10 @@ impl ColumnType {
         }
     }
 
+    pub fn new(name: Option<Box<str>>, cell_type: ValueType) -> ColumnType {
+        ColumnType { name, cell_type }
+    }
+
     pub fn named(name: &str, cell_type: ValueType) -> ColumnType {
         ColumnType {
             name: Some(Box::from(name)),

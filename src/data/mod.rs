@@ -12,7 +12,7 @@ mod binary;
 mod value_type_lexer;
 mod value_type_parser;
 
-use crate::commands::{CompileContext};
+use crate::lib::{ExecutionContext};
 use crate::errors::{CrushResult, error};
 use std::fmt::Formatter;
 use crate::stream::{InputStream};
@@ -38,11 +38,11 @@ pub use binary::binary_channel;
 
 #[derive(Clone)]
 pub struct Command {
-    pub call: fn(context: CompileContext) -> CrushResult<()>,
+    pub call: fn(context: ExecutionContext) -> CrushResult<()>,
 }
 
 impl Command {
-    pub fn new(call: fn(context: CompileContext) -> CrushResult<()>) -> Command {
+    pub fn new(call: fn(context: ExecutionContext) -> CrushResult<()>) -> Command {
         return Command { call };
     }
 }

@@ -3,7 +3,7 @@ mod errors;
 mod glob;
 mod stream;
 mod data;
-mod commands;
+mod lib;
 mod namespace;
 mod env;
 mod job;
@@ -22,7 +22,7 @@ extern crate rustyline;
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
-use commands::add_commands;
+use lib::declare;
 use crate::errors::{CrushResult, to_job_error};
 use std::error::Error;
 use crate::printer::Printer;
@@ -118,10 +118,7 @@ fn run() -> CrushResult<()> {
     let global_env = env::Env::new();
     let (printer, printer_handle) = Printer::new();
 
-    add_commands(&global_env)?;
-    global_env.declare_str("true", Value::Bool(true))?;
-    global_env.declare_str("false", Value::Bool(false))?;
-    global_env.declare_str("global", Value::Env(global_env.clone()))?;
+    declare(&global_env)?;
 
     let mut args = std::env::args().collect::<Vec<String>>();
     match args.len() {

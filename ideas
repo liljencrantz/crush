@@ -46,3 +46,6 @@ file library:
 
 if (file.stat foo.txt)[is_directory] {val yay} else {val nay}
 
+aggregating streams:
+
+find . | group %size | aggr group={count}
