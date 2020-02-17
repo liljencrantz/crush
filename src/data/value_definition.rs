@@ -21,16 +21,10 @@ use crate::job::Job;
 #[derive(Clone)]
 #[derive(Debug)]
 pub enum ValueDefinition {
-    Text(Box<str>),
-    Integer(i128),
-    Field(Vec<Box<str>>),
-    Glob(Glob),
-    Regex(Box<str>, Regex),
-    Op(Box<str>),
+    Value(Value),
     ClosureDefinition(Closure),
     JobDefinition(Job),
     MaterializedJobDefinition(Job),
-    File(Box<Path>),
     Variable(Vec<Box<str>>),
     Subscript(Box<ValueDefinition>, Box<ValueDefinition>),
 }
@@ -38,13 +32,7 @@ pub enum ValueDefinition {
 impl ValueDefinition {
     pub fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Env, printer: &Printer) -> CrushResult<Value> {
         Ok(match self {
-            ValueDefinition::Text(v) => Value::Text(v.clone()),
-            ValueDefinition::Integer(v) => Value::Integer(v.clone()),
-            ValueDefinition::Field(v) => Value::Field(v.clone()),
-            ValueDefinition::Glob(v) => Value::Glob(v.clone()),
-            ValueDefinition::Regex(v, r) => Value::Regex(v.clone(), r.clone()),
-            ValueDefinition::Op(v) => Value::Op(v.clone()),
-            ValueDefinition::File(v) => Value::File(v.clone()),
+            ValueDefinition::Value(v) => v.clone(),
             ValueDefinition::JobDefinition(def) => {
                 let first_input = empty_channel();
                 let (last_output, last_input) = channels();
@@ -77,30 +65,41 @@ impl ValueDefinition {
                     (Ok(Value::Stream(o)), Ok(Value::Integer(idx))) => {
                         Value::Struct(o.get(idx)?.into_struct(o.stream.get_type()))
                     }
-                    _ => return error("Expected a list variable"),
+                    _ => return error("Value can't be subscripted"),
                 }
             }
         })
     }
 
     pub fn text(s: &str) -> ValueDefinition {
-        ValueDefinition::Text(Box::from(s))
+        ValueDefinition::Value(Value::Text(Box::from(s)))
     }
 
-    pub fn op(s: &str) -> ValueDefinition {
-        ValueDefinition::Op(Box::from(s))
+    pub fn field(s: Vec<Box<str>>) -> ValueDefinition {
+        ValueDefinition::Value(Value::Field(s))
+    }
+
+    pub fn glob(s: &str) -> ValueDefinition {
+        ValueDefinition::Value(Value::Glob(Glob::new(s)))
+    }
+
+    pub fn integer(i: i128) -> ValueDefinition {
+        ValueDefinition::Value(Value::Integer(i))
+    }
+
+    pub fn float(f: f64) -> ValueDefinition {
+        ValueDefinition::Value(Value::Float(f))
     }
 
     pub fn regex(s: &str, r: Regex) -> ValueDefinition {
-        ValueDefinition::Regex(Box::from(s), r)
+        ValueDefinition::Value(Value::Regex(Box::from(s), r))
     }
 }
 
 impl ToString for ValueDefinition {
     fn to_string(&self) -> String {
         match self {
-            ValueDefinition::Text(t) => t.to_string(),
-            ValueDefinition::Integer(i) => format!("{}", i),
+            ValueDefinition::Value(v) => v.to_string(),
             ValueDefinition::Variable(v) => format!("${}", v.join(".")),
             _ => panic!("Unimplementd conversion"),
         }

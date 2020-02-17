@@ -13,6 +13,7 @@ use crate::base_lexer::BaseLexer;
 pub enum TokenType {
     Pipe,
     Integer,
+    Float,
     String,
     Glob,
     ModeStart,
@@ -23,12 +24,6 @@ pub enum TokenType {
     Whitespace,
     QuotedString,
     Assign,
-    Equal,
-    NotEqual,
-    GreaterThan,
-    LessThan,
-    GreaterThanOrEqual,
-    LessThanOrEqual,
     Separator,
     Error,
     Match,
@@ -70,16 +65,11 @@ lazy_static! {
         (TokenType::Pipe, Regex::new(r"^\|").unwrap()),
 
         (TokenType::Assign, Regex::new(r"^=").unwrap()),
-        (TokenType::Equal, Regex::new(r"^==").unwrap()),
-        (TokenType::LessThan, Regex::new(r"^<").unwrap()),
-        (TokenType::LessThanOrEqual, Regex::new(r"^<=").unwrap()),
-        (TokenType::GreaterThan, Regex::new(r"^>").unwrap()),
-        (TokenType::GreaterThanOrEqual, Regex::new(r"^>=").unwrap()),
-        (TokenType::NotEqual, Regex::new(r"^!=").unwrap()),
 
         (TokenType::Match, Regex::new(r"^=~").unwrap()),
         (TokenType::NotMatch, Regex::new(r"^!~").unwrap()),
 
+        (TokenType::Float, Regex::new(r"^[0-9]+\.[0-9]+").unwrap()),
         (TokenType::Integer, Regex::new(r"^[0-9]+").unwrap()),
 
         (TokenType::Variable, Regex::new(r"^\$[a-zA-Z_][\.a-zA-Z_0-9]*").unwrap()),
@@ -166,10 +156,10 @@ mod tests {
 
     #[test]
     fn numbers() {
-        let mut l = Lexer::new(&String::from("b 2 d"));
+        let mut l = Lexer::new(&String::from("b 2 d 1.5"));
         let tt = extract_tokens(&mut l);
         assert_eq!(tt, vec![
-            TokenType::String, TokenType::Integer, TokenType::String, TokenType::EOF]);
+            TokenType::String, TokenType::Integer, TokenType::String, TokenType::Float, TokenType::EOF]);
     }
 
     #[test]
@@ -193,15 +183,6 @@ mod tests {
     }
 
     #[test]
-    fn comparison_operators() {
-        let mut l = Lexer::new(&String::from("== >= > < <= !="));
-        let tt = extract_tokens(&mut l);
-        assert_eq!(tt, vec![
-            TokenType::Equal, TokenType::GreaterThanOrEqual, TokenType::GreaterThan,
-            TokenType::LessThan, TokenType::LessThanOrEqual, TokenType::NotEqual, TokenType::EOF]);
-    }
-
-    #[test]
     fn variables_and_fields() {
         let mut l = Lexer::new(&String::from("$foo %bar $foo.bar %baz.qux"));
         let tt = extract_tokens(&mut l);
@@ -211,7 +192,7 @@ mod tests {
 
     #[test]
     fn regex() {
-        let mut l = Lexer::new(&String::from(r"   r{^.$}   r{{foo\}}  "));
+        let mut l = Lexer::new(&String::from(r"   regex{^.$}   regex{{foo\}}  "));
         let tt = extract_tokens(&mut l);
         assert_eq!(tt, vec![
             TokenType::Regex, TokenType::Regex, TokenType::EOF]);

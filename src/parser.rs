@@ -1,7 +1,7 @@
 use crate::errors::{parse_error, argument_error, CrushResult};
 use crate::job::Job;
 use crate::lexer::{Lexer, TokenType};
-use crate::data::{ValueDefinition, ArgumentDefinition};
+use crate::data::{ValueDefinition, ArgumentDefinition, Value};
 use crate::data::CallDefinition;
 use regex::Regex;
 use std::error::Error;
@@ -147,18 +147,19 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> CrushResult<Va
             return Ok(ValueDefinition::text(lexer.pop().1));
         }
         TokenType::Glob => {
-            return Ok(ValueDefinition::Glob(Glob::new(lexer.pop().1)));
+            return Ok(ValueDefinition::glob(lexer.pop().1));
         }
         TokenType::Integer => {
             return match String::from(lexer.pop().1).parse::<i128>() {
-                Ok(ival) => Ok(ValueDefinition::Integer(ival)),
+                Ok(ival) => Ok(ValueDefinition::integer(ival)),
                 Err(_) => parse_error("Invalid number", lexer),
             };
         }
-        TokenType::Equal | TokenType::NotEqual | TokenType::GreaterThan
-        | TokenType::GreaterThanOrEqual | TokenType::LessThan | TokenType::LessThanOrEqual
-        | TokenType::Match | TokenType::NotMatch => {
-            return Ok(ValueDefinition::op(lexer.pop().1));
+        TokenType::Float => {
+            return match String::from(lexer.pop().1).parse::<f64>() {
+                Ok(val) => Ok(ValueDefinition::float(val)),
+                Err(_) => parse_error("Invalid number", lexer),
+            };
         }
         TokenType::ModeStart => {
             let sigil = lexer.pop().1;
@@ -187,7 +188,7 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> CrushResult<Va
                 "*{" => {
                     match lexer.peek().0 {
                         TokenType::Glob => {
-                            let result = Ok(ValueDefinition::Glob(Glob::new(lexer.pop().1)));
+                            let result = Ok(ValueDefinition::glob(lexer.pop().1));
                             if lexer.peek().0 != TokenType::ModeEnd {
                                 return parse_error("Expected '}'", lexer);
                             }
@@ -206,7 +207,7 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> CrushResult<Va
             }
         }
 
-        TokenType::Field => Ok(ValueDefinition::Field(parse_name_from_lexer(lexer)?)),
+        TokenType::Field => Ok(ValueDefinition::field(parse_name_from_lexer(lexer)?)),
         TokenType::Variable => Ok(ValueDefinition::Variable(parse_name_from_lexer(lexer)?)),
         TokenType::Regex => {
             let f = lexer.pop().1;
