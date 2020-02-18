@@ -69,14 +69,14 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Stream(s) => {
             let input = s.stream;
-            let config = parse(input.get_type(), context.arguments)?;
-            let output = context.output.initialize(input.get_type().clone())?;
+            let config = parse(input.types(), context.arguments)?;
+            let output = context.output.initialize(input.types().clone())?;
             run(config, input, output)
         }
         Value::Rows(r) => {
             let input = RowsReader::new(r);
-            let config = parse(input.get_type(), context.arguments)?;
-            let output = context.output.initialize(input.get_type().clone())?;
+            let config = parse(input.types(), context.arguments)?;
+            let output = context.output.initialize(input.types().clone())?;
             run(config, input, output)
         }
         _ => error("Expected a stream"),

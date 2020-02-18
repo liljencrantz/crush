@@ -7,8 +7,8 @@ use crate::stream::Readable;
 
 pub fn run(input1: &mut impl Readable, input2: &mut impl Readable, sender: ValueSender) -> CrushResult<()> {
     let mut output_type = Vec::new();
-    output_type.append(&mut input1.get_type().clone());
-    output_type.append(&mut input2.get_type().clone());
+    output_type.append(&mut input1.types().clone());
+    output_type.append(&mut input2.types().clone());
     let output = sender.initialize(output_type)?;
     loop {
         match (input1.read(), input2.read()) {

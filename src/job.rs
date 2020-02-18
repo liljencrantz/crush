@@ -1,4 +1,4 @@
-use crate::env::Env;
+use crate::namepspace::Namespace;
 use crate::lib::{JobJoinHandle};
 use crate::stream::{channels, ValueSender, ValueReceiver};
 use crate::data::CallDefinition;
@@ -18,7 +18,7 @@ impl Job {
 
     pub fn spawn_and_execute(
         &self,
-        env: &Env,
+        env: &Namespace,
         printer: &Printer,
         first_input: ValueReceiver,
         last_output: ValueSender,

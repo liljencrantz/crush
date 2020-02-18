@@ -81,12 +81,12 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Stream(s) => {
             let input = s.stream;
-            let config = parse(input.get_type().clone(), context.arguments)?;
+            let config = parse(input.types().clone(), context.arguments)?;
             let output_type= vec![
-                input.get_type()[config.column].clone(),
+                input.types()[config.column].clone(),
                 ColumnType {
                     name: Some(config.name.clone()),
-                    cell_type: ValueType::Stream(input.get_type().clone())
+                    cell_type: ValueType::Stream(input.types().clone())
                 }
             ];
             let output = context.output.initialize(output_type)?;
@@ -94,12 +94,12 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
         }
         Value::Rows(r) => {
             let input = RowsReader::new(r);
-            let config = parse(input.get_type().clone(), context.arguments)?;
+            let config = parse(input.types().clone(), context.arguments)?;
             let output_type= vec![
-                input.get_type()[config.column].clone(),
+                input.types()[config.column].clone(),
                 ColumnType {
                     name: Some(config.name.clone()),
-                    cell_type: ValueType::Stream(input.get_type().clone())
+                    cell_type: ValueType::Stream(input.types().clone())
                 }
             ];
             let output = context.output.initialize(output_type)?;

@@ -1,7 +1,7 @@
 use crate::lib::ExecutionContext;
 use crate::errors::{CrushResult, argument_error};
 use crate::data::{Command, Value};
-use crate::env::Env;
+use crate::namepspace::Namespace;
 use std::cmp::Ordering;
 
 fn gt(mut context: ExecutionContext) -> CrushResult<()> {
@@ -70,13 +70,14 @@ fn neq(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Bool(!l.eq(&r)))
 }
 
-pub fn declare(root: &Env) -> CrushResult<()> {
-    let list = root.create_namespace("comp")?;
-    list.declare_str("gt", Value::Command(Command::new(gt)))?;
-    list.declare_str("gte", Value::Command(Command::new(gte)))?;
-    list.declare_str("lt", Value::Command(Command::new(lt)))?;
-    list.declare_str("lte", Value::Command(Command::new(lte)))?;
-    list.declare_str("eq", Value::Command(Command::new(eq)))?;
-    list.declare_str("neq", Value::Command(Command::new(neq)))?;
+pub fn declare(root: &Namespace) -> CrushResult<()> {
+    let env = root.create_namespace("comp")?;
+    root.uses(&env);
+    env.declare_str("gt", Value::Command(Command::new(gt)))?;
+    env.declare_str("gte", Value::Command(Command::new(gte)))?;
+    env.declare_str("lt", Value::Command(Command::new(lt)))?;
+    env.declare_str("lte", Value::Command(Command::new(lte)))?;
+    env.declare_str("eq", Value::Command(Command::new(eq)))?;
+    env.declare_str("neq", Value::Command(Command::new(neq)))?;
     Ok(())
 }

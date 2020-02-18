@@ -3,7 +3,7 @@ use crate::{
     data::Value,
 };
 use crate::printer::Printer;
-use crate::env::Env;
+use crate::namepspace::Namespace;
 use crate::data::{Stream};
 use crate::errors::{argument_error, CrushResult};
 use crate::closure::Closure;
@@ -14,7 +14,7 @@ use crate::stream_printer::spawn_print_thread;
 pub struct Config {
     iter: Stream,
     body: Closure,
-    env: Env,
+    env: Namespace,
     printer: Printer,
 }
 
@@ -45,7 +45,7 @@ pub fn run(config: Config) -> CrushResult<()> {
             Ok(mut line) => {
                 let arguments = line.into_vec()
                     .drain(..)
-                    .zip(config.iter.stream.get_type().iter())
+                    .zip(config.iter.stream.types().iter())
                     .map(|(c, t)| {
                         match &t.name {
                             None => Argument::unnamed(c),

@@ -1,7 +1,7 @@
 use crate::lib::ExecutionContext;
 use crate::errors::{CrushResult, argument_error};
 use crate::data::{Value, Command, ValueType};
-use crate::env::Env;
+use crate::namepspace::Namespace;
 use crate::lib::parse_util::single_argument_type;
 
 fn to(mut context: ExecutionContext) -> CrushResult<()> {
@@ -12,7 +12,7 @@ fn of(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Type(context.input.recv()?.value_type()))
 }
 
-pub fn declare(root: &Env) -> CrushResult<()> {
+pub fn declare(root: &Namespace) -> CrushResult<()> {
     let env = root.create_namespace("type")?;
 
     env.declare_str("to", Value::Command(Command::new(to)))?;

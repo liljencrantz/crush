@@ -1,5 +1,5 @@
 use crate::job::Job;
-use crate::env::Env;
+use crate::namepspace::Namespace;
 use crate::data::Argument;
 use crate::stream::empty_channel;
 use crate::errors::{error, CrushResult, mandate};
@@ -10,7 +10,7 @@ use crate::stream_printer::spawn_print_thread;
 #[derive(Debug)]
 pub struct Closure {
     job_definitions: Vec<Job>,
-    env: Option<Env>,
+    env: Option<Namespace>,
 }
 
 impl Closure {
@@ -21,7 +21,7 @@ impl Closure {
         }
     }
 
-    pub fn with_env(&self, env: &Env) -> Closure {
+    pub fn with_env(&self, env: &Namespace) -> Closure {
         Closure {
             job_definitions: self.job_definitions.clone(),
             env: Some(env.clone()),
@@ -37,7 +37,7 @@ impl Closure {
     pub fn spawn_and_execute(&self, context: ExecutionContext) -> CrushResult<()> {
         let job_definitions = self.job_definitions.clone();
         let parent_env = mandate(self.env.clone(), "Closure without env")?;
-        let env = parent_env.new_stack_frame();
+        let env = parent_env.create_child();
 
         Closure::push_arguments_to_env(context.arguments, &env);
         match job_definitions.len() {
@@ -72,7 +72,7 @@ impl Closure {
 
 
 
-    fn push_arguments_to_env(mut arguments: Vec<Argument>, env: &Env) {
+    fn push_arguments_to_env(mut arguments: Vec<Argument>, env: &Namespace) {
         for arg in arguments.drain(..) {
             if let Some(name) = &arg.name {
                 env.declare_str(name.as_ref(), arg.value);

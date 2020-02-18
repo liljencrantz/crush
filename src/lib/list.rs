@@ -4,7 +4,7 @@ use crate::data::{ValueType, List, Command};
 use crate::data::Value;
 use std::collections::HashSet;
 use crate::lib::parse_util::{single_argument_list, single_argument_type};
-use crate::env::Env;
+use crate::namepspace::Namespace;
 
 fn of(mut context: ExecutionContext) -> CrushResult<()> {
     if context.arguments.len() == 0 {
@@ -65,7 +65,7 @@ fn pop(context: ExecutionContext) -> CrushResult<()> {
     Ok(())
 }
 
-pub fn declare(root: &Env) -> CrushResult<()> {
+pub fn declare(root: &Namespace) -> CrushResult<()> {
     let list = root.create_namespace("list")?;
     list.declare_str("of", Value::Command(Command::new(of)))?;
     list.declare_str("create", Value::Command(Command::new(create)))?;

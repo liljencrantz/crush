@@ -13,7 +13,7 @@ use lazy_static::lazy_static;
 use crate::lib::ExecutionContext;
 use crate::lib::command_util::{create_user_map, UserMap};
 use crate::data::{Argument, Value, ValueType, ColumnType, Row};
-use crate::env::get_cwd;
+use crate::namepspace::cwd;
 use crate::errors::{error, CrushError, CrushResult, to_job_error};
 use crate::stream::OutputStream;
 
@@ -123,7 +123,7 @@ fn parse(output: OutputStream, arguments: Vec<Argument>, recursive: bool) -> Res
             Value::Glob(dir) => {
                 to_job_error(
                     dir.glob_files(
-                        &get_cwd()?,
+                        &cwd()?,
                         &mut dirs))?;
             }
             _ => {

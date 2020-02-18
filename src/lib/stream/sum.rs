@@ -54,12 +54,12 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Stream(s) => {
             let input = s.stream;
-            let column = parse(input.get_type(), &context.arguments)?;
+            let column = parse(input.types(), &context.arguments)?;
             context.output.send(sum_rows(input, column)?)
         }
         Value::Rows(r) => {
             let input = RowsReader::new(r);
-            let column = parse(input.get_type(), &context.arguments)?;
+            let column = parse(input.types(), &context.arguments)?;
             context.output.send(sum_rows(input, column)?)
         }
         _ => error("Expected a stream"),

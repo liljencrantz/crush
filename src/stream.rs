@@ -53,7 +53,7 @@ impl OutputStream {
 #[derive(Debug, Clone)]
 pub struct InputStream {
     receiver: Receiver<Row>,
-    input_type: Vec<ColumnType>,
+    types: Vec<ColumnType>,
 }
 
 impl InputStream {
@@ -61,17 +61,17 @@ impl InputStream {
         self.validate(to_job_error(self.receiver.recv()))
     }
 
-    pub fn get_type(&self) -> &Vec<ColumnType> {
-        &self.input_type
+    pub fn types(&self) -> &Vec<ColumnType> {
+        &self.types
     }
 
     fn validate(&self, res: CrushResult<Row>) -> CrushResult<Row> {
         match &res {
             Ok(row) => {
-                if row.cells().len() != self.input_type.len() {
+                if row.cells().len() != self.types.len() {
                     return error("Wrong number of columns in input");
                 }
-                for (c, ct) in row.cells().iter().zip(self.input_type.iter()) {
+                for (c, ct) in row.cells().iter().zip(self.types.iter()) {
                     if c.value_type() != ct.cell_type {
                         return error(format!(
                             "Wrong cell type in input column {:?}, expected {:?}, got {:?}",
@@ -94,12 +94,12 @@ pub fn channels() -> (ValueSender, ValueReceiver) {
 
 pub fn streams(signature: Vec<ColumnType>) -> (OutputStream, InputStream) {
     let (output, input) = bounded(128);
-    (OutputStream::Sync(output), InputStream { receiver: input, input_type: signature })
+    (OutputStream::Sync(output), InputStream { receiver: input, types: signature })
 }
 
 pub fn unlimited_streams(signature: Vec<ColumnType>) -> (OutputStream, InputStream) {
     let (output, input) = unbounded();
-    (OutputStream::Async(output), InputStream { receiver: input, input_type: signature })
+    (OutputStream::Async(output), InputStream { receiver: input, types: signature })
 }
 
 pub fn empty_channel() -> ValueReceiver {
@@ -110,7 +110,7 @@ pub fn empty_channel() -> ValueReceiver {
 
 pub trait Readable {
     fn read(&mut self) -> CrushResult<Row>;
-    fn get_type(&self) -> &Vec<ColumnType>;
+    fn types(&self) -> &Vec<ColumnType>;
 }
 
 impl Readable for InputStream {
@@ -121,7 +121,7 @@ impl Readable for InputStream {
         }
     }
 
-    fn get_type(&self) -> &Vec<ColumnType> {
-        self.get_type()
+    fn types(&self) -> &Vec<ColumnType> {
+        self.types()
     }
 }

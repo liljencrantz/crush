@@ -2,11 +2,11 @@ use crate::lib::ExecutionContext;
 use crate::errors::{to_job_error, CrushResult, error};
 use std::path::Path;
 use crate::data::Value;
-use crate::env::get_home;
+use crate::namepspace::home;
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     let dir = match context.arguments.len() {
-        0 => get_home(),
+        0 => home(),
         1 => {
             let dir = &context.arguments[0];
             match &dir.value {

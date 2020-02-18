@@ -1,6 +1,6 @@
 use crate::lib::ExecutionContext;
 use crate::errors::{CrushResult, argument_error};
-use crate::env::Env;
+use crate::namepspace::Namespace;
 use crate::data::{Value, Command};
 use chrono::Duration;
 
@@ -106,11 +106,12 @@ combine_functions!(sub, Integer => isub, Float => fsub, Duration => dsub, Time =
 combine_functions!(mul, Integer => imul, Float => fmul, Duration => dmul);
 combine_functions!(div, Integer => idiv, Float => fdiv, Duration => ddiv);
 
-pub fn declare(root: &Env) -> CrushResult<()> {
-    let list = root.create_namespace("math")?;
-    list.declare_str("add", Value::Command(Command::new(add)))?;
-    list.declare_str("sub", Value::Command(Command::new(sub)))?;
-    list.declare_str("mul", Value::Command(Command::new(mul)))?;
-    list.declare_str("div", Value::Command(Command::new(div)))?;
+pub fn declare(root: &Namespace) -> CrushResult<()> {
+    let env = root.create_namespace("math")?;
+    root.uses(&env);
+    env.declare_str("add", Value::Command(Command::new(add)))?;
+    env.declare_str("sub", Value::Command(Command::new(sub)))?;
+    env.declare_str("mul", Value::Command(Command::new(mul)))?;
+    env.declare_str("div", Value::Command(Command::new(div)))?;
     Ok(())
 }

@@ -11,7 +11,7 @@ pub fn run(
     mut input: impl Readable,
     sender: ValueSender,
 ) -> CrushResult<()> {
-    let output = sender.initialize(input.get_type().clone())?;
+    let output = sender.initialize(input.types().clone())?;
     let mut q: Vec<Row> = Vec::new();
     loop {
         match input.read() {

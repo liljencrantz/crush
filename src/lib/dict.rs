@@ -4,7 +4,7 @@ use crate::data::{ValueType, Dict, Command};
 use crate::data::Row;
 use crate::data::Value;
 use crate::data::ColumnType;
-use crate::env::Env;
+use crate::namepspace::Namespace;
 use crate::lib::parse_util::single_argument_dict;
 
 fn create(mut context: ExecutionContext) -> CrushResult<()> {
@@ -81,7 +81,7 @@ fn empty(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Bool(single_argument_dict(context.arguments)?.len() == 0))
 }
 
-pub fn declare(root: &Env) -> CrushResult<()> {
+pub fn declare(root: &Namespace) -> CrushResult<()> {
     let dict = root.create_namespace("dict")?;
     dict.declare_str("create", Value::Command(Command::new(create)))?;
     dict.declare_str("insert", Value::Command(Command::new(insert)))?;

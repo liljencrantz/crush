@@ -38,7 +38,7 @@ fn print_internal(printer: &Printer, stream: &mut impl Readable, indent: usize) 
     let mut has_name = false;
     let mut has_table = false;
 
-    for val in stream.get_type().iter() {
+    for val in stream.types().iter() {
         match val.cell_type {
             ValueType::Stream(_) => has_table = true,
             ValueType::Rows(_) => has_table = true,
@@ -56,13 +56,13 @@ fn print_internal(printer: &Printer, stream: &mut impl Readable, indent: usize) 
             Err(_) => break,
         }
         if data.len() == 49 || has_table {
-            print_partial(printer, data, stream.get_type(), has_name, indent);
+            print_partial(printer, data, stream.types(), has_name, indent);
             data = Vec::new();
             data.drain(..);
         }
     }
     if !data.is_empty() {
-        print_partial(printer, data, stream.get_type(), has_name, indent);
+        print_partial(printer, data, stream.types(), has_name, indent);
     }
 }
 

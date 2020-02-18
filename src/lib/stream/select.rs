@@ -18,7 +18,7 @@ use crate::errors::error;
 use crate::data::{Struct, RowsReader};
 use crate::closure::Closure;
 use crate::printer::Printer;
-use crate::env::Env;
+use crate::namepspace::Namespace;
 
 enum Location {
     Replace(usize),
@@ -39,10 +39,10 @@ pub fn run(
     config: Config,
     mut input: impl Readable,
     sender: ValueSender,
-    env: &Env,
+    env: &Namespace,
     printer: &Printer,
 ) -> CrushResult<()> {
-    let input_type = input.get_type().clone();
+    let input_type = input.types().clone();
     let mut output_type = if config.copy {
         input_type.clone()
     } else {
@@ -151,7 +151,7 @@ fn perform_for(
     input: impl Readable,
     sender: ValueSender,
     mut arguments: Vec<Argument>,
-    env: &Env,
+    env: &Namespace,
     printer: &Printer,
 ) -> CrushResult<()> {
     let mut copy = false;
@@ -170,7 +170,7 @@ fn perform_for(
         }
     }
 
-    let input_type = input.get_type();
+    let input_type = input.types();
     for a in arguments {
         match (a.name.as_deref(), a.value) {
             (Some(name), Value::Closure(closure)) => {

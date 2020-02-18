@@ -1,41 +1,40 @@
 Todo:
-Redo the select command to use closures
-the for command should not be limited to streams, and it should be possible to name the entire row, e.g. for i={ls} `{val $i},
+Add use command
+Add default use clauses
+Move for/if to control namespace
+Move cat/lines to io namespace
+Move json to json.parse
+Move csv to csv.parse
+Move struct/val/materializ/list/dict to data namespace
+The for command should not be limited to streams, and it should be possible to name the entire row, e.g. for i={ls} `{val $i},
+Add source command
 Add system tests for type casting
 Add system tests for for loop
 Add system tests for binary stream handling
 Add system tests for structs
 Add system tests for dealing with tables as streams
-Fix aggr command and think through it's input/output types
-Rename list -> MutableList
-Create new type ImmutableList
-Rename dict -> MutableDict
-Create new type ImmutableDict
-Rename text -> string
-Create str namespace with string commands like upper, lower
+Rethink aggr and figure out how to make custom reduce commands
+Create text namespace with string commands like upper, lower, format, substr, split
 Flesh out time/duration modes with add/subtract support
 Make better to_string methods for various cell types
 Some missing comparisons on Cell
 Missing some cell type serialisations and deserialisations
-Namespace literal
+Add package command to create a new namespace
 Make names mandatory and unique for struct fields
 implement file regexps
 make ls support regexps
-implement input type declarations for closures
 Add support for %<INTEGER> for offset based field identifiers
 make file globing testable via fakes
 Error source propagation
 help command
 implement cmd command
 implement format command for text formating
-add parens to filter command
 Implement loop command
-Implement break/continue commands
+Implement break/continue commands for for/loop
 The readline command reads interactive text input from the user via the terminal
-pbuf command that takes a protobuf definition and uses it to deserialize protobuf data
-avro command that deserializes avro data
-toml command that deserializes toml data
-Rename JobError -> CrushError
+pbuf.parse command that takes a protobuf definition and uses it to deserialize protobuf data
+avro.parse command that deserializes avro data
+toml.parse command that deserializes toml data
 Add Kind to CrushError
 Deal with different error kinds differently
 Add command-field to CrushError
@@ -119,3 +118,5 @@ Head takes on the role of take command
 type.of command that outputs type of input
 Create new type Type
 Add a command for picking a single field off a struct, e.g. struct foo=bar | field %foo
+Redo the select command to use closures
+Rename JobError -> CrushError

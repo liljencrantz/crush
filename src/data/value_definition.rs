@@ -7,7 +7,7 @@ use crate::{
     printer::Printer,
     glob::Glob,
     errors::{error, mandate, CrushResult, argument_error, to_job_error},
-    env::Env,
+    namepspace::Namespace,
     data::{Value},
     lib::JobJoinHandle,
     closure::Closure,
@@ -29,7 +29,7 @@ pub enum ValueDefinition {
 }
 
 impl ValueDefinition {
-    pub fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Env, printer: &Printer) -> CrushResult<Value> {
+    pub fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Namespace, printer: &Printer) -> CrushResult<Value> {
         Ok(match self {
             ValueDefinition::Value(v) => v.clone(),
             ValueDefinition::JobDefinition(def) => {
@@ -55,7 +55,7 @@ impl ValueDefinition {
                     (Ok(Value::Struct(row)), Ok(Value::Text(col))) =>
                         mandate(row.get(col.as_ref()), "Invalid subscript")?,
                     (Ok(Value::Stream(o)), Ok(Value::Integer(idx))) => {
-                        Value::Struct(o.get(idx)?.into_struct(o.stream.get_type()))
+                        Value::Struct(o.get(idx)?.into_struct(o.stream.types()))
                     }
                     _ => return error("Value can't be subscripted"),
                 }

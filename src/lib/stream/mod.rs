@@ -1,4 +1,4 @@
-use crate::env::Env;
+use crate::namepspace::Namespace;
 use crate::errors::CrushResult;
 use crate::data::{Value, Command};
 
@@ -21,8 +21,9 @@ mod zip;
 mod count;
 mod sum;
 
-pub fn declare(root: &Env) -> CrushResult<()> {
-    let env = root.create_namespace("var")?;
+pub fn declare(root: &Namespace) -> CrushResult<()> {
+    let env = root.create_namespace("stream")?;
+    root.uses(&env);
     env.declare_str("head", Value::Command(Command::new(head::perform)))?;
     env.declare_str("tail", Value::Command(Command::new(tail::perform)))?;
     env.declare_str("where", Value::Command(Command::new(r#where::perform)))?;

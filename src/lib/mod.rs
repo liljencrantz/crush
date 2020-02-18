@@ -33,7 +33,7 @@ mod comp;
 mod stream;
 
 use crate::{
-    env::Env,
+    namepspace::Namespace,
     data::{
         Argument,
         Command,
@@ -50,14 +50,14 @@ pub struct ExecutionContext {
     pub input: ValueReceiver,
     pub output: ValueSender,
     pub arguments: Vec<Argument>,
-    pub env: Env,
+    pub env: Namespace,
     pub printer: Printer,
 }
 
 pub struct StreamExecutionContext {
     pub argument_stream: InputStream,
     pub output: ValueSender,
-    pub env: Env,
+    pub env: Namespace,
     pub printer: Printer,
 }
 
@@ -85,7 +85,7 @@ impl JobJoinHandle {
     }
 }
 
-pub fn declare(root: &Env) -> CrushResult<()> {
+pub fn declare(root: &Namespace) -> CrushResult<()> {
     root.declare_str("true", Value::Bool(true))?;
     root.declare_str("false", Value::Bool(false))?;
     root.declare_str("global", Value::Env(root.clone()))?;

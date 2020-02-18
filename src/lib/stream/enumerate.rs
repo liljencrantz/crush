@@ -6,10 +6,10 @@ use crate::data::ColumnType;
 
 pub fn run(mut input: impl Readable, sender: ValueSender) -> CrushResult<()> {
     let mut output_type = vec![ColumnType::named("idx", ValueType::Integer)];
-    output_type.extend(input.get_type().clone());
+    output_type.extend(input.types().clone());
     let output = sender.initialize(output_type)?;
 
-    let mut line: i128 = 1;
+    let mut line: i128 = 0;
     loop {
         match input.read() {
             Ok(row) => {

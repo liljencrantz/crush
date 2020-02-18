@@ -15,7 +15,7 @@ pub fn run(
     mut input: impl Readable,
     sender: ValueSender,
 ) -> CrushResult<()> {
-    let output = sender.initialize(input.get_type().clone())?;
+    let output = sender.initialize(input.types().clone())?;
     let mut q: VecDeque<Row> = VecDeque::new();
     loop {
         match input.read() {

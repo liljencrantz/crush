@@ -60,7 +60,7 @@ impl Readable for RowsReader {
         return Ok(self.rows.rows.replace(self.idx - 1, Row::new(vec![Value::Integer(0)])));
     }
 
-    fn get_type(&self) -> &Vec<ColumnType> {
+    fn types(&self) -> &Vec<ColumnType> {
         &self.row_type
     }
 }

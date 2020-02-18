@@ -4,8 +4,8 @@ mod glob;
 mod stream;
 mod data;
 mod lib;
-mod namespace;
-mod env;
+mod namespace_node;
+mod namepspace;
 mod job;
 mod base_lexer;
 mod lexer;
@@ -29,20 +29,20 @@ use crate::printer::Printer;
 use crate::stream::empty_channel;
 use crate::stream_printer::spawn_print_thread;
 use crate::data::Value;
-use crate::env::get_home;
+use crate::namepspace::home;
 use std::path::Path;
 use std::fs;
 
 fn crush_history_file() -> Box<str> {
     Box::from(
-        get_home()
+        home()
             .unwrap_or(Box::from(Path::new(".")))
             .join(Path::new(".crush_history"))
             .to_str()
             .unwrap_or(".crush_history"))
 }
 
-fn run_interactive(global_env: env::Env, printer: &Printer) -> CrushResult<()> {
+fn run_interactive(global_env: namepspace::Namespace, printer: &Printer) -> CrushResult<()> {
     let mut rl = Editor::<()>::new();
     rl.load_history(crush_history_file().as_ref());
     loop {
@@ -93,7 +93,7 @@ fn run_interactive(global_env: env::Env, printer: &Printer) -> CrushResult<()> {
 }
 
 
-fn run_script(global_env: env::Env, printer: &Printer, filename: &str) -> CrushResult<()> {
+fn run_script(global_env: namepspace::Namespace, printer: &Printer, filename: &str) -> CrushResult<()> {
     let cmd = to_job_error(fs::read_to_string(filename))?;
     match parser::parse(&mut Lexer::new(&cmd)) {
         Ok(jobs) => {
@@ -115,7 +115,7 @@ fn run_script(global_env: env::Env, printer: &Printer, filename: &str) -> CrushR
 }
 
 fn run() -> CrushResult<()> {
-    let global_env = env::Env::new();
+    let global_env = namepspace::Namespace::new();
     let (printer, printer_handle) = Printer::new();
 
     declare(&global_env)?;

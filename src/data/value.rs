@@ -7,7 +7,7 @@ use regex::Regex;
 
 use crate::{
     closure::Closure,
-    env::get_cwd,
+    namepspace::cwd,
     data::rows::Rows,
     errors::{error, CrushError, to_job_error},
     glob::Glob,
@@ -16,7 +16,7 @@ use crate::data::{List, Command, Stream, ValueType, Dict, ColumnType, value_type
 use crate::errors::CrushResult;
 use chrono::Duration;
 use crate::format::duration_format;
-use crate::env::Env;
+use crate::namepspace::Namespace;
 use crate::data::row::Struct;
 use crate::stream::streams;
 
@@ -38,7 +38,7 @@ pub enum Value {
     Struct(Struct),
     List(List),
     Dict(Dict),
-    Env(Env),
+    Env(Namespace),
     Bool(bool),
     Float(f64),
     Empty(),
@@ -105,7 +105,7 @@ impl Value {
             Value::Op(_) => ValueType::Op,
             Value::Command(_) => ValueType::Command,
             Value::File(_) => ValueType::File,
-            Value::Stream(o) => ValueType::Stream(o.stream.get_type().clone()),
+            Value::Stream(o) => ValueType::Stream(o.stream.types().clone()),
             Value::Rows(r) => ValueType::Rows(r.types().clone()),
             Value::Struct(r) => ValueType::Row(r.types().clone()),
             Value::Closure(_) => ValueType::Closure,
@@ -126,7 +126,7 @@ impl Value {
             Value::Text(s) => v.push(Box::from(Path::new(s.as_ref()))),
             Value::File(p) => v.push(p.clone()),
             Value::Glob(pattern) => to_job_error(pattern.glob_files(
-                &get_cwd()?, v))?,
+                &cwd()?, v))?,
             _ => return error("Expected a file name"),
         }
         Ok(())
@@ -142,7 +142,7 @@ impl Value {
                         Err(_) => break,
                     }
                 }
-                Value::Rows(Rows::new(ColumnType::materialize(output.stream.get_type()), rows ))
+                Value::Rows(Rows::new(ColumnType::materialize(output.stream.types()), rows ))
             }
             Value::Rows(r) => Value::Rows(r.materialize()),
             Value::Dict(d) => Value::Dict(d.materialize()),

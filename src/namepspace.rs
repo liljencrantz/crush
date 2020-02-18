@@ -1,4 +1,4 @@
-use crate::namespace::Namespace;
+use crate::namespace_node::NamespaceNode;
 use crate::errors::{error, CrushResult};
 use std::error::Error;
 use std::path::Path;
@@ -16,26 +16,26 @@ use std::collections::HashMap;
 */
 #[derive(Clone)]
 #[derive(Debug)]
-pub struct Env {
-    namespace: Arc<Mutex<Namespace>>,
+pub struct Namespace {
+    namespace: Arc<Mutex<NamespaceNode>>,
 }
 
-impl Env {
-    pub fn new() -> Env {
-        Env {
-            namespace: Arc::from(Mutex::new(Namespace::new(None))),
+impl Namespace {
+    pub fn new() -> Namespace {
+        Namespace {
+            namespace: Arc::from(Mutex::new(NamespaceNode::new(None))),
         }
     }
 
-    pub fn new_stack_frame(&self) -> Env {
-        Env {
-            namespace: Arc::from(Mutex::new(Namespace::new(Some(self.namespace.clone())))),
+    pub fn create_child(&self) -> Namespace {
+        Namespace {
+            namespace: Arc::from(Mutex::new(NamespaceNode::new(Some(self.namespace.clone())))),
         }
     }
 
-    pub fn create_namespace(&self, name: &str) -> CrushResult<Env> {
-        let res = Env {
-            namespace: Arc::from(Mutex::new(Namespace::new(None))),
+    pub fn create_namespace(&self, name: &str) -> CrushResult<Namespace> {
+        let res = Namespace {
+            namespace: Arc::from(Mutex::new(NamespaceNode::new(None))),
         };
         self.declare(&[Box::from(name)], Value::Env(res.clone()))?;
         Ok(res)
@@ -125,7 +125,11 @@ impl Env {
         }
     }
 
-    pub fn get_location(&self, name: &[Box<str>]) -> Option<(Env, Vec<Box<str>>)> {
+    pub fn uses(&self, other: &Namespace) {
+        self.namespace.lock().unwrap().uses(&other.namespace);
+    }
+
+    fn get_location(&self, name: &[Box<str>]) -> Option<(Namespace, Vec<Box<str>>)> {
         if name.is_empty() {
             return None;
         }
@@ -141,7 +145,6 @@ impl Env {
         }
     }
 
-
     pub fn dump(&self, map: &mut HashMap<String, ValueType>) {
         let namespace = self.namespace.lock().unwrap();
         namespace.dump(map)
@@ -154,14 +157,14 @@ impl Env {
     }
 }
 
-pub fn get_cwd() -> CrushResult<Box<Path>> {
+pub fn cwd() -> CrushResult<Box<Path>> {
     match std::env::current_dir() {
         Ok(d) => Ok(d.into_boxed_path()),
         Err(e) => error(e.description()),
     }
 }
 
-pub fn get_home() -> CrushResult<Box<Path>> {
+pub fn home() -> CrushResult<Box<Path>> {
     match dirs::home_dir() {
         Some(d) => Ok(d.into_boxed_path()),
         None => error("Could not find users home directory"),

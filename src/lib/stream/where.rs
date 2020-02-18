@@ -14,7 +14,7 @@ use crate::stream::{Readable, empty_channel, channels};
 use crate::data::{RowsReader, ColumnType, Argument};
 use crate::closure::Closure;
 use crate::stream_printer::spawn_print_thread;
-use crate::env::Env;
+use crate::namepspace::Namespace;
 
 pub struct Config<T: Readable> {
     condition: Closure,
@@ -22,7 +22,7 @@ pub struct Config<T: Readable> {
     output: OutputStream,
 }
 
-fn evaluate(condition: &Closure, row: &Row, input_type: &Vec<ColumnType>, env: &Env, printer: &Printer) -> CrushResult<bool> {
+fn evaluate(condition: &Closure, row: &Row, input_type: &Vec<ColumnType>, env: &Namespace, printer: &Printer) -> CrushResult<bool> {
     let arguments = row.clone().into_vec()
         .drain(..)
         .zip(input_type.iter())
@@ -50,11 +50,11 @@ fn evaluate(condition: &Closure, row: &Row, input_type: &Vec<ColumnType>, env: &
     }
 }
 
-pub fn run<T: Readable>(mut config: Config<T>, env: Env, printer: Printer) -> CrushResult<()> {
+pub fn run<T: Readable>(mut config: Config<T>, env: Namespace, printer: Printer) -> CrushResult<()> {
     loop {
         match config.input.read() {
             Ok(row) => {
-                match evaluate(&config.condition, &row, config.input.get_type(), &env, &printer) {
+                match evaluate(&config.condition, &row, config.input.types(), &env, &printer) {
                     Ok(val) => if val { if config.output.send(row).is_err() { break }},
                     Err(e) => printer.job_error(e),
                 }
@@ -76,9 +76,9 @@ pub fn parse(_input_type: &Vec<ColumnType>,
 pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Stream(input) => {
-            let output = context.output.initialize(input.stream.get_type().clone())?;
+            let output = context.output.initialize(input.stream.types().clone())?;
             let config = Config {
-                condition: parse(input.stream.get_type(), context.arguments.as_mut())?,
+                condition: parse(input.stream.types(), context.arguments.as_mut())?,
                 input: input.stream,
                 output: output,
             };
@@ -86,9 +86,9 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
         }
         Value::Rows(r) => {
             let input = RowsReader::new(r);
-            let output = context.output.initialize(input.get_type().clone())?;
+            let output = context.output.initialize(input.types().clone())?;
             let config = Config {
-                condition: parse(input.get_type(), context.arguments.as_mut())?,
+                condition: parse(input.types(), context.arguments.as_mut())?,
                 input: input,
                 output: output,
             };

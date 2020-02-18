@@ -20,8 +20,8 @@ fn parse<T: Readable>(
     arguments: Vec<Argument>,
     input: T,
     output: OutputStream) -> CrushResult<Config<T>> {
-    let sort_column_idx = find_field(&single_argument_field(arguments)?, input.get_type())?;
-    if !input.get_type()[sort_column_idx].cell_type.is_comparable() {
+    let sort_column_idx = find_field(&single_argument_field(arguments)?, input.types())?;
+    if !input.types()[sort_column_idx].cell_type.is_comparable() {
         return argument_error("Bad comparison key");
     }
     Ok(Config { sort_column_idx, input, output })
@@ -52,13 +52,13 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Stream(s) => {
             let input = s.stream;
-            let output = context.output.initialize(input.get_type().clone())?;
+            let output = context.output.initialize(input.types().clone())?;
             let config = parse(context.arguments, input, output)?;
             run(config)
         }
         Value::Rows(r) => {
             let input = RowsReader::new(r);
-            let output = context.output.initialize(input.get_type().clone())?;
+            let output = context.output.initialize(input.types().clone())?;
             let mut config = parse(context.arguments, input, output)?;
             run(config)
         }
