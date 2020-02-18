@@ -1,13 +1,17 @@
 Todo:
-Add use command
-Add default use clauses
-Move for/if to control namespace
-Move cat/lines to io namespace
-Move json to json.parse
-Move csv to csv.parse
-Move struct/val/materializ/list/dict to data namespace
+Materialized binary
+Add var.use command
+Add control.source command
+Add proc.kill command
+Add proj.jobs command
+Add control.cmd command
+Add text.format command
+Add text.upper command
+Add text.lower command
+Add control.loop command
+Add control.break/control.continue commands
+Add readline command that reads one line of interactive text input from the user via the terminal
 The for command should not be limited to streams, and it should be possible to name the entire row, e.g. for i={ls} `{val $i},
-Add source command
 Add system tests for type casting
 Add system tests for for loop
 Add system tests for binary stream handling
@@ -27,11 +31,6 @@ Add support for %<INTEGER> for offset based field identifiers
 make file globing testable via fakes
 Error source propagation
 help command
-implement cmd command
-implement format command for text formating
-Implement loop command
-Implement break/continue commands for for/loop
-The readline command reads interactive text input from the user via the terminal
 pbuf.parse command that takes a protobuf definition and uses it to deserialize protobuf data
 avro.parse command that deserializes avro data
 toml.parse command that deserializes toml data
@@ -120,3 +119,7 @@ Create new type Type
 Add a command for picking a single field off a struct, e.g. struct foo=bar | field %foo
 Redo the select command to use closures
 Rename JobError -> CrushError
+Add default use clauses
+Move for/if to control namespace
+Move cat/lines/json/csv to io namespace
+Move struct/val/materializ/list/dict to data namespace

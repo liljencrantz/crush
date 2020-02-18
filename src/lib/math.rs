@@ -5,16 +5,16 @@ use crate::data::{Value, Command};
 use chrono::Duration;
 
 macro_rules! combine_many {
-    ($name:ident, $type:ident, $identity:expr, $operation:expr) => {
+    ($name:ident, $identity:expr, $output:ident, $( $type:ident,  $operation:expr), *) => {
 fn $name(mut context: ExecutionContext) -> CrushResult<()> {
     let mut res = $identity;
     for a in context.arguments.drain(..) {
         match a.value {
-            Value::$type(i) => {res = $operation(res, i)},
+            $( Value::$type(i) => {res = $operation(res, i)}, )*
             _ => return argument_error("Expected only arguments of the same type"),
         }
     }
-    context.output.send(Value::$type(res))
+    context.output.send(Value::$output(res))
 }
     }
 }
@@ -47,10 +47,9 @@ fn $name(mut context: ExecutionContext) -> CrushResult<()> {
     }
 }
 
-
-combine_many!(iadd, Integer, 0i128, |a, b| a+b);
-combine_many!(fadd, Float, 0.0, |a, b| a+b);
-combine_many!(dadd, Duration, Duration::seconds(0), |a, b| a+b);
+combine_many!(iadd, 0i128, Integer, Integer, |a, b| a+b);
+combine_many!(fadd, 0.0, Float, Float, |a, b| a+b, Integer, |a, b| a + (b as f64));
+combine_many!(dadd, Duration::seconds(0), Duration, Duration, |a, b| a+b);
 
 fn tadd(mut context: ExecutionContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
@@ -77,8 +76,9 @@ fn tsub(mut context: ExecutionContext) -> CrushResult<()> {
     }
 }
 
-combine_many!(imul, Integer, 1i128, |a, b| a*b);
-combine_many!(fmul, Float, 1.0, |a, b| a*b);
+combine_many!(imul, 1i128, Integer, Integer, |a, b| a*b);
+combine_many!(fmul, 1.0, Float, Float, |a, b| a*b, Integer, |a, b| a*(b as f64));
+
 fn dmul(mut context: ExecutionContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
         return argument_error("Expected exactly two arguments");

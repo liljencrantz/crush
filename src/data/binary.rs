@@ -1,7 +1,7 @@
 use crate::errors::{CrushResult, to_job_error};
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
-use std::cmp::Ordering;
+use std::cmp::{Ordering, min};
 use std::collections::{HashMap, VecDeque};
 use std::io::{Error, Read, Write, ErrorKind};
 use crossbeam::{Receiver, bounded, Sender};
@@ -91,7 +91,6 @@ impl FileReader {
     pub fn new(file: File) -> FileReader {
         FileReader { file }
     }
-
 }
 
 impl Debug for FileReader {
@@ -127,10 +126,13 @@ impl dyn BinaryReader {
                 let f = to_job_error(File::open(p).map(|f| Box::from(FileReader::new(f))))?;
                 readers.push(f)
             }
-            Ok(Box::from(MultiReader {inner: VecDeque::from(readers)}))
+            Ok(Box::from(MultiReader { inner: VecDeque::from(readers) }))
         }
     }
 
+    pub fn vec(vec: &Vec<u8>) -> CrushResult<Box<dyn BinaryReader>> {
+        return Ok(Box::from(VecReader { vec: vec.clone(), offset: 0 }));
+    }
 }
 
 
@@ -151,7 +153,7 @@ impl BinaryReader for MultiReader {
         let vec = self.inner.iter()
             .map(|r| r.as_ref().clone())
             .collect::<Vec<Box<dyn BinaryReader>>>();
-        Box::from(MultiReader { inner: VecDeque::from(vec)})
+        Box::from(MultiReader { inner: VecDeque::from(vec) })
     }
 }
 
@@ -174,5 +176,31 @@ impl Read for MultiReader {
 impl Debug for MultiReader {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         f.write_str("<multi reader>")//.map_err(|e| std::fmt::Error::default())
+    }
+}
+
+struct VecReader {
+    vec: Vec<u8>,
+    offset: usize,
+}
+
+impl BinaryReader for VecReader {
+    fn clone(&self) -> Box<BinaryReader> {
+        Box::new(VecReader { vec: self.vec.clone(), offset: 0 })
+    }
+}
+
+impl Read for VecReader {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
+        let len = min(buf.len(), self.vec.len()-self.offset);
+        buf[0..len].copy_from_slice(&self.vec[self.offset..self.offset + len]);
+        self.offset += len;
+        Ok(len)
+    }
+}
+
+impl Debug for VecReader {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        f.write_str("<vec reader>")
     }
 }

@@ -32,10 +32,10 @@ pub fn declare(root: &Namespace) -> CrushResult<()> {
     env.declare_str("file", Value::Type(ValueType::File))?;
     env.declare_str("glob", Value::Type(ValueType::Glob))?;
     env.declare_str("regex", Value::Type(ValueType::Regex))?;
-    env.declare_str("op", Value::Type(ValueType::Op))?;
     env.declare_str("env", Value::Type(ValueType::Env))?;
     env.declare_str("any", Value::Type(ValueType::Any))?;
     env.declare_str("binary", Value::Type(ValueType::Binary))?;
+    env.declare_str("binary_reader", Value::Type(ValueType::BinaryReader))?;
     /*
     Missing types:
     Stream(Vec<ColumnType>),

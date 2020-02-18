@@ -20,7 +20,6 @@ pub enum ValueType {
     Field,
     Glob,
     Regex,
-    Op,
     Command,
     Closure,
     File,
@@ -34,6 +33,7 @@ pub enum ValueType {
     Float,
     Empty,
     Any,
+    BinaryReader,
     Binary,
     Type,
 }
@@ -61,7 +61,6 @@ impl ValueType {
             ValueType::Field |
             ValueType::Glob |
             ValueType::Regex |
-            ValueType::Op |
             ValueType::Command |
             ValueType::Closure |
             ValueType::File |
@@ -72,6 +71,7 @@ impl ValueType {
             ValueType::Binary |
             ValueType::Type |
             ValueType::Bool => self.clone(),
+            ValueType::BinaryReader => ValueType::Binary,
             ValueType::Stream(o) => ValueType::Rows(ColumnType::materialize(o)),
             ValueType::Rows(r) => ValueType::Rows(ColumnType::materialize(r)),
             ValueType::Row(r) => ValueType::Row(ColumnType::materialize(r)),
@@ -100,7 +100,6 @@ impl ValueType {
             ValueType::Field => "field".to_string(),
             ValueType::Glob => "glob".to_string(),
             ValueType::Regex => "regex".to_string(),
-            ValueType::Op => "op".to_string(),
             ValueType::Command => "command".to_string(),
             ValueType::Closure => "closure".to_string(),
             ValueType::File => "file".to_string(),
@@ -114,6 +113,7 @@ impl ValueType {
             ValueType::Float => "float".to_string(),
             ValueType::Empty => "empty".to_string(),
             ValueType::Any => "any".to_string(),
+            ValueType::BinaryReader => "binary_reader".to_string(),
             ValueType::Binary => "binary".to_string(),
             ValueType::Type => "type".to_string(),
         }
@@ -133,10 +133,6 @@ impl ValueType {
                 Err(e) => error(e.description()),
             }
             ValueType::File => Ok(Value::Text(Box::from(s))),
-            ValueType::Op => match s {
-                "==" | "!=" | ">" | ">=" | "<" | "<=" | "=~" | "!~" => Ok(Value::Op(Box::from(s))),
-                _ => error("Invalid operator"),
-            }
             _ => error("Failed to parse cell"),
         }
     }

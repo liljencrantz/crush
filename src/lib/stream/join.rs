@@ -58,7 +58,7 @@ fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Confi
         return argument_error("Expected exactly 3 aguments");
     }
     return match (&arguments[0].value, &arguments[1].value, &arguments[2].value) {
-        (Value::Field(l), Value::Op(op), Value::Field(r)) => {
+        (Value::Field(l), Value::Text(op), Value::Field(r)) => {
             if op.as_ref() != "==" {
                 return argument_error("Only == currently supported");
             }

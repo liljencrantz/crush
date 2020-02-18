@@ -83,7 +83,6 @@ fn parse_type(lexer: &mut ValueTypeLexer) -> CrushResult<ValueType> {
         "field" => ValueType::Field,
         "glob" => ValueType::Glob,
         "regex" => ValueType::Regex,
-        "op" => ValueType::Op,
         "command" => ValueType::Command,
         "closure" => ValueType::Command,
         "file" => ValueType::File,

@@ -19,6 +19,7 @@ use crate::format::duration_format;
 use crate::namepspace::Namespace;
 use crate::data::row::Struct;
 use crate::stream::streams;
+use std::io::{Read, Error};
 
 #[derive(Debug)]
 pub enum Value {
@@ -29,7 +30,6 @@ pub enum Value {
     Field(Vec<Box<str>>),
     Glob(Glob),
     Regex(Box<str>, Regex),
-    Op(Box<str>),
     Command(Command),
     Closure(Closure),
     Stream(Stream),
@@ -43,7 +43,13 @@ pub enum Value {
     Float(f64),
     Empty(),
     BinaryReader(Box<dyn BinaryReader>),
+    Binary(Vec<u8>),
     Type(ValueType),
+}
+
+fn hex(v: u8) -> String {
+    let arr = vec!["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"];
+    format!("{}{}", v>>4, v & 15)
 }
 
 impl Value {
@@ -55,7 +61,6 @@ impl Value {
             Value::Field(val) => format!(r"%{}", val.join(".")),
             Value::Glob(val) => format!("*{{{}}}", val.to_string()),
             Value::Regex(val, _) => format!("r{{{}}}", val),
-            Value::Op(val) => val.to_string(),
             Value::Command(_) => "Command".to_string(),
             Value::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
             Value::Rows(_) => "<Rows>".to_string(),
@@ -69,7 +74,8 @@ impl Value {
             Value::Dict(d) => d.to_string(),
             Value::Float(f) => f.to_string(),
             Value::Empty() => "<empty>".to_string(),
-            Value::BinaryReader(_) => "<binary>".to_string(),
+            Value::BinaryReader(_) => "<binary stream>".to_string(),
+            Value::Binary(v) => v.iter().map(|u| hex(*u)).collect::<Vec<String>>().join(""),
             Value::Type(t) => t.to_string(),
         };
     }
@@ -90,10 +96,6 @@ impl Value {
         Value::Text(Box::from(s))
     }
 
-    pub fn op(s: &str) -> Value {
-        Value::Op(Box::from(s))
-    }
-
     pub fn value_type(&self) -> ValueType {
         return match self {
             Value::Text(_) => ValueType::Text,
@@ -102,7 +104,6 @@ impl Value {
             Value::Field(_) => ValueType::Field,
             Value::Glob(_) => ValueType::Glob,
             Value::Regex(_, _) => ValueType::Regex,
-            Value::Op(_) => ValueType::Op,
             Value::Command(_) => ValueType::Command,
             Value::File(_) => ValueType::File,
             Value::Stream(o) => ValueType::Stream(o.stream.types().clone()),
@@ -116,7 +117,8 @@ impl Value {
             Value::Dict(d) => d.dict_type(),
             Value::Float(_) => ValueType::Float,
             Value::Empty() => ValueType::Empty,
-            Value::BinaryReader(_) => ValueType::Binary,
+            Value::BinaryReader(_) => ValueType::BinaryReader,
+            Value::Binary(_) => ValueType::Binary,
             Value::Type(_) => ValueType::Type,
         };
     }
@@ -144,6 +146,11 @@ impl Value {
                 }
                 Value::Rows(Rows::new(ColumnType::materialize(output.stream.types()), rows ))
             }
+            Value::BinaryReader(mut s) => {
+                let mut vec = Vec::new();
+                std::io::copy(s.as_mut(), &mut vec);
+                Value::Binary(vec)
+            }
             Value::Rows(r) => Value::Rows(r.materialize()),
             Value::Dict(d) => Value::Dict(d.materialize()),
             Value::Struct(r) => Value::Struct(r.materialize()),
@@ -167,7 +174,6 @@ impl Value {
             (Value::Text(s), ValueType::Glob) => Ok(Value::Glob(Glob::new(&s))),
             (Value::Text(s), ValueType::Integer) => to_job_error(s.parse::<i128>()).map(|v| Value::Integer(v)),
             (Value::Text(s), ValueType::Field) => Ok(Value::Field(vec![s])),
-            (Value::Text(s), ValueType::Op) => Ok(Value::Op(s)),
             (Value::Text(s), ValueType::Regex) => to_job_error(Regex::new(s.as_ref()).map(|v| Value::Regex(s, v))),
             (Value::Text(s), ValueType::Type) => Ok(Value::Type(value_type_parser::parse(s.as_ref())?)),
 
@@ -183,10 +189,6 @@ impl Value {
                 Some(s) => to_job_error(s.parse::<i128>()).map(|v| Value::Integer(v)),
                 None => error("File name is not valid unicode")
             },
-            (Value::File(s), ValueType::Op) => match s.to_str() {
-                Some(s) => Ok(Value::Op(Box::from(s))),
-                None => error("File name is not valid unicode")
-            },
             (Value::File(s), ValueType::Regex) => match s.to_str() {
                 Some(s) => to_job_error(Regex::new(s.as_ref()).map(|v| Value::Regex(Box::from(s), v))),
                 None => error("File name is not valid unicode")
@@ -195,7 +197,6 @@ impl Value {
             (Value::Glob(s), ValueType::Text) => Ok(Value::Text(s.to_string().clone().into_boxed_str())),
             (Value::Glob(s), ValueType::File) => Ok(Value::File(Box::from(Path::new(s.to_string().as_str())))),
             (Value::Glob(s), ValueType::Integer) => to_job_error(s.to_string().parse::<i128>()).map(|v| Value::Integer(v)),
-            (Value::Glob(s), ValueType::Op) => Ok(Value::op(s.to_string().as_str())),
             (Value::Glob(g), ValueType::Regex) => {
                 let s = g.to_string().as_str();
                 to_job_error(Regex::new(s).map(|v| Value::Regex(Box::from(s), v)))
@@ -212,13 +213,11 @@ impl Value {
             (Value::Regex(s, _), ValueType::Glob) => Ok(Value::Glob(Glob::new(&s))),
             (Value::Regex(s, _), ValueType::Integer) => to_job_error(s.parse::<i128>()).map(|v| Value::Integer(v)),
             (Value::Regex(s, _), ValueType::Text) => Ok(Value::Text(s)),
-            (Value::Regex(s, _), ValueType::Op) => Ok(Value::Op(s)),
 
             (Value::Integer(i), ValueType::Text) => Ok(Value::Text(i.to_string().into_boxed_str())),
             (Value::Integer(i), ValueType::File) => Ok(Value::File(Box::from(Path::new(i.to_string().as_str())))),
             (Value::Integer(i), ValueType::Glob) => Ok(Value::Glob(Glob::new(i.to_string().as_str()))),
             (Value::Integer(i), ValueType::Field) => Ok(Value::Field(vec![i.to_string().into_boxed_str()])),
-            (Value::Integer(i), ValueType::Op) => Ok(Value::Op(i.to_string().into_boxed_str())),
             (Value::Integer(i), ValueType::Regex) => {
                 let s = i.to_string();
                 to_job_error(Regex::new(s.as_str()).map(|v| Value::Regex(s.into_boxed_str(), v)))
@@ -240,7 +239,6 @@ impl Clone for Value {
             Value::Field(v) => Value::Field(v.clone()),
             Value::Glob(v) => Value::Glob(v.clone()),
             Value::Regex(v, r) => Value::Regex(v.clone(), r.clone()),
-            Value::Op(v) => Value::Op(v.clone()),
             Value::Command(v) => Value::Command(v.clone()),
             Value::File(v) => Value::File(v.clone()),
             Value::Rows(r) => Value::Rows(r.clone()),
@@ -255,6 +253,7 @@ impl Clone for Value {
             Value::Float(f) => Value::Float(f.clone()),
             Value::Empty() => Value::Empty(),
             Value::BinaryReader(v) => Value::BinaryReader(v.as_ref().clone()),
+            Value::Binary(v) => Value::Binary(v.clone()),
             Value::Type(t) => Value::Type(t.clone()),
         }
     }
@@ -272,11 +271,11 @@ impl std::hash::Hash for Value {
             Value::Field(v) => v.hash(state),
             Value::Glob(v) => v.hash(state),
             Value::Regex(v, _) => v.hash(state),
-            Value::Op(v) => v.hash(state),
             Value::Command(_) => {}
             Value::File(v) => v.hash(state),
             Value::Duration(d) => d.hash(state),
             Value::Bool(v) => v.hash(state),
+            Value::Binary(v) => v.hash(state),
 
             Value::Env(_) | Value::Dict(_) | Value::Rows(_) | Value::Closure(_) |
             Value::List(_) | Value::Stream(_) | Value::Struct(_) | Value::Float(_)
@@ -306,7 +305,6 @@ impl std::cmp::PartialEq for Value {
             (Value::Field(val1), Value::Field(val2)) => val1 == val2,
             (Value::Glob(val1), Value::Glob(val2)) => val1 == val2,
             (Value::Regex(val1, _), Value::Regex(val2, _)) => val1 == val2,
-            (Value::Op(val1), Value::Op(val2)) => val1 == val2,
             (Value::Command(val1), Value::Command(val2)) => val1 == val2,
             (Value::List(val1), Value::List(val2)) => val1 == val2,
             (Value::Rows(val1), Value::Rows(val2)) => match val1.partial_cmp(val2) {
@@ -345,7 +343,6 @@ impl std::cmp::PartialOrd for Value {
             (Value::Regex(val1, _), Value::Regex(val2, _)) => Some(val1.cmp(val2)),
             (Value::Integer(val1), Value::Integer(val2)) => Some(val1.cmp(val2)),
             (Value::Time(val1), Value::Time(val2)) => Some(val1.cmp(val2)),
-            (Value::Op(val1), Value::Op(val2)) => Some(val1.cmp(val2)),
             (Value::File(val1), Value::File(val2)) => Some(val1.cmp(val2)),
             (Value::Duration(val1), Value::Duration(val2)) => Some(val1.cmp(val2)),
             (Value::Command(_), Value::Command(_)) => None,
@@ -374,7 +371,6 @@ mod tests {
         assert_eq!(Value::text("1d").cast(ValueType::File).is_err(), false);
         assert_eq!(Value::text("1d").cast(ValueType::Time).is_err(), true);
         assert_eq!(Value::text("fad").cast(ValueType::Field).is_err(), false);
-        assert_eq!(Value::text("fad").cast(ValueType::Op).is_err(), false);
     }
 
     #[test]

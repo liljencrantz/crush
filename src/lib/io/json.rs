@@ -25,6 +25,7 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> 
     let reader = match arguments.len() {
         0 => match input.recv()? {
             Value::BinaryReader(b) => Ok(b),
+            Value::Binary(b) => BinaryReader::vec(&b),
             _ => argument_error("Expected either a file to read or binary pipe input"),
         },
         _ => BinaryReader::paths(argument_files(arguments)?),

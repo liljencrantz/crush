@@ -2,35 +2,18 @@ mod command_util;
 
 pub mod parse_util;
 
-mod r#struct;
-mod val;
-
 mod file;
-
 mod var;
-
-mod ps;
-
-
-mod lines;
-mod csv;
-mod json;
-
-
-mod cat;
-mod materialize;
-mod http;
-
-mod r#for;
-mod r#if;
+mod proc;
+mod io;
 
 mod r#type;
-mod list;
-mod dict;
 mod time;
 mod math;
 mod comp;
 mod stream;
+mod data;
+mod control;
 
 use crate::{
     namepspace::Namespace,
@@ -90,23 +73,6 @@ pub fn declare(root: &Namespace) -> CrushResult<()> {
     root.declare_str("false", Value::Bool(false))?;
     root.declare_str("global", Value::Env(root.clone()))?;
 
-    root.declare_str("struct", Value::Command(Command::new(r#struct::perform)))?;
-    root.declare_str("val", Value::Command(Command::new(val::perform)))?;
-    root.declare_str("materialize", Value::Command(Command::new(materialize::perform)))?;
-
-    root.declare_str("ps", Value::Command(Command::new(ps::perform)))?;
-
-    root.declare_str("cat", Value::Command(Command::new(cat::perform)))?;
-    root.declare_str("http", Value::Command(Command::new(http::perform)))?;
-    root.declare_str("lines", Value::Command(Command::new(lines::perform)))?;
-    root.declare_str("csv", Value::Command(Command::new(csv::perform)))?;
-    root.declare_str("json", Value::Command(Command::new(json::perform)))?;
-
-    root.declare_str("if", Value::Command(Command::new(r#if::perform)))?;
-    root.declare_str("for", Value::Command(Command::new(r#for::perform)))?;
-
-    list::declare(root)?;
-    dict::declare(root)?;
     r#type::declare(root)?;
     time::declare(root)?;
     math::declare(root)?;
@@ -114,6 +80,9 @@ pub fn declare(root: &Namespace) -> CrushResult<()> {
     file::declare(root)?;
     var::declare(root)?;
     stream::declare(root)?;
+    data::declare(root)?;
+    proc::declare(root)?;
+    io::declare(root)?;
 
     return Ok(());
 }
