@@ -54,14 +54,11 @@ fn scan_table(table: &str, column: &str, input_type: &Vec<ColumnType>) -> Result
 }
 
 fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Config, CrushError> {
-    if arguments.len() != 3 {
-        return argument_error("Expected exactly 3 aguments");
+    if arguments.len() != 2 {
+        return argument_error("Expected exactly 2 aguments");
     }
-    return match (&arguments[0].value, &arguments[1].value, &arguments[2].value) {
-        (Value::Field(l), Value::Text(op), Value::Field(r)) => {
-            if op.as_ref() != "==" {
-                return argument_error("Only == currently supported");
-            }
+    return match (&arguments[0].value, &arguments[1].value) {
+        (Value::Field(l), Value::Field(r)) => {
 
             let config = match (l.len(), r.len()) {
                 (1, 1) => {

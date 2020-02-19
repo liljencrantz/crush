@@ -1,7 +1,7 @@
 use crate::data::value::Value;
 use crate::data::{ValueDefinition, ColumnType};
 use crate::errors::{CrushError, CrushResult};
-use crate::namepspace::Namespace;
+use crate::namespace::Namespace;
 use crate::printer::Printer;
 use crate::lib::{JobJoinHandle};
 

@@ -1,4 +1,4 @@
-use crate::namepspace::Namespace;
+use crate::namespace::Namespace;
 use crate::errors::CrushResult;
 use crate::data::{Value, Command};
 

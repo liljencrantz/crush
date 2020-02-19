@@ -1,7 +1,7 @@
 use crate::lib::ExecutionContext;
 use crate::errors::{CrushResult, argument_error};
 use crate::data::{Command, Value};
-use crate::namepspace::Namespace;
+use crate::namespace::Namespace;
 use std::cmp::Ordering;
 
 fn gt(mut context: ExecutionContext) -> CrushResult<()> {

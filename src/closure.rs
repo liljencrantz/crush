@@ -1,5 +1,5 @@
 use crate::job::Job;
-use crate::namepspace::Namespace;
+use crate::namespace::Namespace;
 use crate::data::Argument;
 use crate::stream::empty_channel;
 use crate::errors::{error, CrushResult, mandate};

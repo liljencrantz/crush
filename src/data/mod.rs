@@ -30,7 +30,7 @@ pub use row::Struct;
 pub use rows::Rows;
 pub use rows::RowsReader;
 pub use call_definition::CallDefinition;
-pub use list::List;
+pub use list::{List, ListReader};
 pub use dict::Dict;
 pub use argument::ArgumentVecCompiler;
 pub use binary::BinaryReader;

@@ -1,8 +1,9 @@
-use crate::data::{ValueType, Value};
-use crate::errors::{CrushError, mandate, CrushResult};
+use crate::data::{ValueType, Value, ColumnType, Row};
+use crate::errors::{CrushError, mandate, CrushResult, error};
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;
+use crate::stream::Readable;
 
 #[derive(Debug)]
 #[derive(Clone)]
@@ -42,7 +43,7 @@ impl List {
         ValueType::List(Box::from(self.cell_type.clone()))
     }
 
-    pub fn materialize(self) ->  List {
+    pub fn materialize(self) -> List {
         let mut cells = self.cells.lock().unwrap();
         let vec: Vec<Value> = cells.drain(..).map(|c| c.materialize()).collect();
         List {
@@ -80,5 +81,34 @@ impl std::cmp::PartialEq for List {
 impl std::cmp::PartialOrd for List {
     fn partial_cmp(&self, other: &List) -> Option<Ordering> {
         None
+    }
+}
+
+pub struct ListReader {
+    list: List,
+    idx: usize,
+    types: Vec<ColumnType>,
+}
+
+impl ListReader {
+    pub fn new(list: List,
+           name: &str,
+    ) -> ListReader {
+        ListReader {
+            types: vec![ColumnType::named(name, list.element_type())],
+            list,
+            idx: 0usize,
+        }
+    }
+}
+
+impl Readable for ListReader {
+    fn read(&mut self) -> CrushResult<Row> {
+        self.idx += 1;
+        Ok(Row::new(vec![self.list.get(self.idx - 1)?]))
+    }
+
+    fn types(&self) -> &Vec<ColumnType> {
+        &self.types
     }
 }

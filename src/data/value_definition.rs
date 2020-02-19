@@ -7,7 +7,7 @@ use crate::{
     printer::Printer,
     glob::Glob,
     errors::{error, mandate, CrushResult, argument_error, to_job_error},
-    namepspace::Namespace,
+    namespace::Namespace,
     data::{Value},
     lib::JobJoinHandle,
     closure::Closure,

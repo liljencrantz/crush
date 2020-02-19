@@ -93,7 +93,7 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
             vec![
                 (Box::from("status"), Value::Integer(status.as_u16() as i128)),
                 (Box::from("headers"), Value::Rows(headers)),
-                (Box::from("body"), Value::BinaryReader(input))
+                (Box::from("body"), Value::BinaryStream(input))
             ]
         )));
     to_job_error(b.copy_to(output.as_mut()))?;

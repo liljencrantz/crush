@@ -71,6 +71,13 @@ impl Struct {
         }
     }
 
+    pub fn from_vec(cells: Vec<Value>, types: Vec<ColumnType>) -> Struct {
+        Struct {
+            cells,
+            types,
+        }
+    }
+
     pub fn types(&self) -> &Vec<ColumnType> {
         &self.types
     }

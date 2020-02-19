@@ -11,7 +11,7 @@ use crate::lib::command_util::{create_user_map, UserMap};
 use users::uid_t;
 use crate::data::{ColumnType, Command};
 use chrono::Duration;
-use crate::namepspace::Namespace;
+use crate::namespace::Namespace;
 use nix::sys::signal;
 use nix::unistd::Pid;
 use std::str::FromStr;

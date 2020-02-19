@@ -1,6 +1,6 @@
 use crate::lib::ExecutionContext;
 use crate::errors::{CrushResult, argument_error};
-use crate::namepspace::Namespace;
+use crate::namespace::Namespace;
 use crate::data::{Value, Command};
 use chrono::Duration;
 
@@ -106,6 +106,18 @@ combine_functions!(sub, Integer => isub, Float => fsub, Duration => dsub, Time =
 combine_functions!(mul, Integer => imul, Float => fmul, Duration => dmul);
 combine_functions!(div, Integer => idiv, Float => fdiv, Duration => ddiv);
 
+fn neg(mut context: ExecutionContext) -> CrushResult<()> {
+    if context.arguments.len() != 1 {
+        return argument_error("Expected exactly one arguments");
+    }
+    match context.arguments.remove(0).value {
+        Value::Duration(v) => context.output.send(Value::Duration(-v)),
+        Value::Integer(v) => context.output.send(Value::Integer(-v)),
+        Value::Float(v) => context.output.send(Value::Float(-v)),
+        _ => return argument_error("Bad argument type"),
+    }
+}
+
 pub fn declare(root: &Namespace) -> CrushResult<()> {
     let env = root.create_namespace("math")?;
     root.uses(&env);
@@ -113,5 +125,6 @@ pub fn declare(root: &Namespace) -> CrushResult<()> {
     env.declare_str("sub", Value::Command(Command::new(sub)))?;
     env.declare_str("mul", Value::Command(Command::new(mul)))?;
     env.declare_str("div", Value::Command(Command::new(div)))?;
+    env.declare_str("neg", Value::Command(Command::new(neg)))?;
     Ok(())
 }

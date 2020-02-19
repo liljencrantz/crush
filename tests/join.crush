@@ -1,5 +1,4 @@
-let home={csv example_data/home.csv col=name:text col=country:text}
-let age={csv example_data/age.csv col=name:text col=age:integer}
+let home=(csv example_data/home.csv name=$type.text country=$type.text)
+let age=(csv example_data/age.csv name=$type.text age=$type.integer)
 
-struct l=$home r=$age | join %l.name == %r.name | sort %name
-# join l=$home r=$age on %l.name == %r.name | sort %name
+struct l=$home r=$age | join %l.name %r.name | sort %name

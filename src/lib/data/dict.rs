@@ -4,7 +4,7 @@ use crate::data::{ValueType, Dict, Command};
 use crate::data::Row;
 use crate::data::Value;
 use crate::data::ColumnType;
-use crate::namepspace::Namespace;
+use crate::namespace::Namespace;
 use crate::lib::parse_util::single_argument_dict;
 
 fn create(mut context: ExecutionContext) -> CrushResult<()> {

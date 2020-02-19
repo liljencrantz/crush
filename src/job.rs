@@ -1,4 +1,4 @@
-use crate::namepspace::Namespace;
+use crate::namespace::Namespace;
 use crate::lib::{JobJoinHandle};
 use crate::stream::{channels, ValueSender, ValueReceiver};
 use crate::data::CallDefinition;

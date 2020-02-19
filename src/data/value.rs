@@ -7,7 +7,7 @@ use regex::Regex;
 
 use crate::{
     closure::Closure,
-    namepspace::cwd,
+    namespace::cwd,
     data::rows::Rows,
     errors::{error, CrushError, to_job_error},
     glob::Glob,
@@ -16,7 +16,7 @@ use crate::data::{List, Command, Stream, ValueType, Dict, ColumnType, value_type
 use crate::errors::CrushResult;
 use chrono::Duration;
 use crate::format::duration_format;
-use crate::namepspace::Namespace;
+use crate::namespace::Namespace;
 use crate::data::row::Struct;
 use crate::stream::streams;
 use std::io::{Read, Error};
@@ -42,7 +42,7 @@ pub enum Value {
     Bool(bool),
     Float(f64),
     Empty(),
-    BinaryReader(Box<dyn BinaryReader>),
+    BinaryStream(Box<dyn BinaryReader>),
     Binary(Vec<u8>),
     Type(ValueType),
 }
@@ -74,7 +74,7 @@ impl Value {
             Value::Dict(d) => d.to_string(),
             Value::Float(f) => f.to_string(),
             Value::Empty() => "<empty>".to_string(),
-            Value::BinaryReader(_) => "<binary stream>".to_string(),
+            Value::BinaryStream(_) => "<binary stream>".to_string(),
             Value::Binary(v) => v.iter().map(|u| hex(*u)).collect::<Vec<String>>().join(""),
             Value::Type(t) => t.to_string(),
         };
@@ -117,7 +117,7 @@ impl Value {
             Value::Dict(d) => d.dict_type(),
             Value::Float(_) => ValueType::Float,
             Value::Empty() => ValueType::Empty,
-            Value::BinaryReader(_) => ValueType::BinaryReader,
+            Value::BinaryStream(_) => ValueType::BinaryStream,
             Value::Binary(_) => ValueType::Binary,
             Value::Type(_) => ValueType::Type,
         };
@@ -127,8 +127,7 @@ impl Value {
         match self {
             Value::Text(s) => v.push(Box::from(Path::new(s.as_ref()))),
             Value::File(p) => v.push(p.clone()),
-            Value::Glob(pattern) => to_job_error(pattern.glob_files(
-                &cwd()?, v))?,
+            Value::Glob(pattern) => pattern.glob_files(&cwd()?, v)?,
             _ => return error("Expected a file name"),
         }
         Ok(())
@@ -146,7 +145,7 @@ impl Value {
                 }
                 Value::Rows(Rows::new(ColumnType::materialize(output.stream.types()), rows ))
             }
-            Value::BinaryReader(mut s) => {
+            Value::BinaryStream(mut s) => {
                 let mut vec = Vec::new();
                 std::io::copy(s.as_mut(), &mut vec);
                 Value::Binary(vec)
@@ -252,7 +251,7 @@ impl Clone for Value {
             Value::Dict(d) => Value::Dict(d.clone()),
             Value::Float(f) => Value::Float(f.clone()),
             Value::Empty() => Value::Empty(),
-            Value::BinaryReader(v) => Value::BinaryReader(v.as_ref().clone()),
+            Value::BinaryStream(v) => Value::BinaryStream(v.as_ref().clone()),
             Value::Binary(v) => Value::Binary(v.clone()),
             Value::Type(t) => Value::Type(t.clone()),
         }
@@ -279,7 +278,7 @@ impl std::hash::Hash for Value {
 
             Value::Env(_) | Value::Dict(_) | Value::Rows(_) | Value::Closure(_) |
             Value::List(_) | Value::Stream(_) | Value::Struct(_) | Value::Float(_)
-            | Value::BinaryReader(_) => panic!("Can't hash output"),
+            | Value::BinaryStream(_) => panic!("Can't hash output"),
             Value::Empty() => {}
             Value::Type(v) => v.to_string().hash(state),
         }

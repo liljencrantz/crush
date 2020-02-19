@@ -13,7 +13,7 @@ use lazy_static::lazy_static;
 use crate::lib::ExecutionContext;
 use crate::lib::command_util::{create_user_map, UserMap};
 use crate::data::{Argument, Value, ValueType, ColumnType, Row};
-use crate::namepspace::cwd;
+use crate::namespace::cwd;
 use crate::errors::{error, CrushError, CrushResult, to_job_error};
 use crate::stream::OutputStream;
 
@@ -114,18 +114,11 @@ fn parse(output: OutputStream, arguments: Vec<Argument>, recursive: bool) -> Res
     }
     for arg in arguments {
         match &arg.value {
-            Value::Text(dir) => {
-                dirs.push(Box::from(Path::new(dir.as_ref())));
-            }
-            Value::File(dir) => {
-                dirs.push(dir.clone());
-            }
-            Value::Glob(dir) => {
-                to_job_error(
-                    dir.glob_files(
-                        &cwd()?,
-                        &mut dirs))?;
-            }
+            Value::Text(dir) =>
+                dirs.push(Box::from(Path::new(dir.as_ref()))),
+            Value::File(dir) =>
+                dirs.push(dir.clone()),
+            Value::Glob(dir) => dir.glob_files(&cwd()?, &mut dirs)?,
             _ => {
                 return error("Invalid argument type to ls, expected string or glob");
             }

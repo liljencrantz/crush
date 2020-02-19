@@ -1,7 +1,7 @@
 use crate::lib::ExecutionContext;
 use crate::errors::{CrushResult, argument_error};
 use crate::data::{Value, Command, ValueType};
-use crate::namepspace::Namespace;
+use crate::namespace::Namespace;
 use crate::lib::parse_util::single_argument_type;
 
 fn to(mut context: ExecutionContext) -> CrushResult<()> {
@@ -35,7 +35,7 @@ pub fn declare(root: &Namespace) -> CrushResult<()> {
     env.declare_str("env", Value::Type(ValueType::Env))?;
     env.declare_str("any", Value::Type(ValueType::Any))?;
     env.declare_str("binary", Value::Type(ValueType::Binary))?;
-    env.declare_str("binary_reader", Value::Type(ValueType::BinaryReader))?;
+    env.declare_str("binary_stream", Value::Type(ValueType::BinaryStream))?;
     /*
     Missing types:
     Stream(Vec<ColumnType>),

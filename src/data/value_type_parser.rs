@@ -62,7 +62,7 @@ fn parse_named_parameters(lexer: &mut ValueTypeLexer) -> CrushResult<Vec<ColumnT
     loop {
         match lexer.peek().0 {
             End => break,
-            _ => {},
+            _ => {}
         };
         res.push(parse_named_parameter(lexer)?);
         match lexer.peek().0 {
@@ -84,10 +84,16 @@ fn parse_type(lexer: &mut ValueTypeLexer) -> CrushResult<ValueType> {
         "glob" => ValueType::Glob,
         "regex" => ValueType::Regex,
         "command" => ValueType::Command,
-        "closure" => ValueType::Command,
+        "closure" => ValueType::Closure,
         "file" => ValueType::File,
         "env" => ValueType::Env,
         "bool" => ValueType::Bool,
+        "binary" => ValueType::Binary,
+        "binary_stream" => ValueType::BinaryStream,
+        "type" => ValueType::Type,
+        "any" => ValueType::Any,
+        "empty" => ValueType::Empty,
+        "float" => ValueType::Float,
         "list" => {
             parse_begin_token(lexer)?;
             let sub_type = parse_type(lexer)?;

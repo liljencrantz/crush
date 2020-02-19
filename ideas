@@ -46,6 +46,26 @@ file library:
 
 if (file.stat foo.txt)[is_directory] {val yay} else {val nay}
 
-aggregating streams:
+Aggregating streams:
 
 find . | group %size | aggr group={count}
+find . | group %user | aggr group={sum %size}
+
+Joining streams:
+
+The current syntax is
+
+struct l=(...) r=(...) | join %l.foo == %r.bar
+
+Can we do better? The unneeded == token feels a bit silly. Also, it's whitespace sensitive. Perhaps it should just be dropped.
+Finally, we can only join on actual columns of the respective tables. It would save a step to be abe to join on computed values.
+Maybe worthwhile?
+
+Graph/Tree data:
+
+Is there a nice way to represent and visualize graph data such as trees that makes sense for crush?
+Could be useful for showing a tree view of processes (ps), file trees (find, du), etc.
+
+* Should this be represented by a special type of tree-struct or just use regular structs with members of the same type? The latter can't represent cycles.
+* What additional primitives are needed to efficiently manipulate tree data?
+

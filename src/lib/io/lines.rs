@@ -35,7 +35,7 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Box<dyn 
         0 => {
             let v = input.recv()?;
             match v {
-                Value::BinaryReader(b) => Ok(b),
+                Value::BinaryStream(b) => Ok(b),
                 Value::Binary(b) => BinaryReader::vec(&b),
                 _ => argument_error("Expected either a file to read or binary pipe input"),
             }

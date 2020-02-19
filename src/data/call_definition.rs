@@ -1,6 +1,6 @@
 use crate::lib::{ExecutionContext, JobJoinHandle};
 use crate::data::{ArgumentDefinition, ArgumentVecCompiler, Value};
-use crate::namepspace::Namespace;
+use crate::namespace::Namespace;
 use crate::errors::{error, CrushResult};
 use crate::printer::Printer;
 use crate::stream::{ValueReceiver, ValueSender, InputStream};

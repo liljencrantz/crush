@@ -16,7 +16,7 @@ mod data;
 mod control;
 
 use crate::{
-    namepspace::Namespace,
+    namespace::Namespace,
     data::{
         Argument,
         Command,
@@ -83,6 +83,7 @@ pub fn declare(root: &Namespace) -> CrushResult<()> {
     data::declare(root)?;
     proc::declare(root)?;
     io::declare(root)?;
+    control::declare(root)?;
 
     return Ok(());
 }

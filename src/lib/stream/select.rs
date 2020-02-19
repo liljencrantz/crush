@@ -18,7 +18,7 @@ use crate::errors::error;
 use crate::data::{Struct, RowsReader};
 use crate::closure::Closure;
 use crate::printer::Printer;
-use crate::namepspace::Namespace;
+use crate::namespace::Namespace;
 
 enum Location {
     Replace(usize),

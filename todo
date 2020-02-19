@@ -1,9 +1,11 @@
 Todo:
-Materialized binary
+Support for iterating over dicts with the for command
+Remove the dot operator in favor of []
+Make it possible to use the pipe operator with the for command
+Do we really need the field type or can we just use text?
 Add var.use command
 Add control.source command
-Add proc.kill command
-Add proj.jobs command
+Add proc.jobs command
 Add control.cmd command
 Add text.format command
 Add text.upper command
@@ -11,7 +13,6 @@ Add text.lower command
 Add control.loop command
 Add control.break/control.continue commands
 Add readline command that reads one line of interactive text input from the user via the terminal
-The for command should not be limited to streams, and it should be possible to name the entire row, e.g. for i={ls} `{val $i},
 Add system tests for type casting
 Add system tests for for loop
 Add system tests for binary stream handling
@@ -123,3 +124,8 @@ Add default use clauses
 Move for/if to control namespace
 Move cat/lines/json/csv to io namespace
 Move struct/val/materializ/list/dict to data namespace
+Materialized binary
+Add proc.kill command
+Rethink join syntax
+Add math.neg command
+The for command should not be limited to streams, and it should be possible to name the entire row, e.g. for i=(ls) {val $i},

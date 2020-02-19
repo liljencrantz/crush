@@ -14,7 +14,7 @@ use crate::stream::{Readable, empty_channel, channels};
 use crate::data::{RowsReader, ColumnType, Argument};
 use crate::closure::Closure;
 use crate::stream_printer::spawn_print_thread;
-use crate::namepspace::Namespace;
+use crate::namespace::Namespace;
 
 pub struct Config<T: Readable> {
     condition: Closure,

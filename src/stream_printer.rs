@@ -13,10 +13,9 @@ pub fn spawn_print_thread(printer: &Printer) -> ValueSender {
         .spawn(move || {
             match i.recv() {
                 Ok(val) => print_value(&p, val),
-                Err(e) => p.job_error(e),
+                Err(e) => {}
             }
-        }
-        );
+        });
     o
 }
 
@@ -24,7 +23,7 @@ fn print_value(printer: &Printer, mut cell: Value) {
     match cell {
         Value::Stream(mut output) => print(printer, &mut output.stream),
         Value::Rows(rows) => print(printer, &mut RowsReader::new(rows)),
-        Value::BinaryReader(mut b) => print_binary(printer, b.as_mut(), 0),
+        Value::BinaryStream(mut b) => print_binary(printer, b.as_mut(), 0),
         _ => printer.line(cell.to_string().as_str()),
     };
 }
@@ -134,7 +133,7 @@ fn print_row(
         match c {
             Value::Rows(r) => rows.push(r),
             Value::Stream(o) => outputs.push(o),
-            Value::BinaryReader(b) => binaries.push(b),
+            Value::BinaryStream(b) => binaries.push(b),
             _ => {}
         }
     }

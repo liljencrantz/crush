@@ -3,6 +3,7 @@ use std::iter::Peekable;
 use std::path::Path;
 use std::io;
 use std::fs::{read_dir, ReadDir};
+use crate::errors::{to_job_error, argument_error, CrushResult};
 
 #[derive(Clone)]
 #[derive(PartialEq)]
@@ -25,15 +26,24 @@ impl Glob {
     }
 
     pub fn matches(&self, v: &str) -> bool {
-        return glob_match(&mut self.pattern.chars(), &mut v.chars().peekable());
+        glob_match(&mut self.pattern.chars(), &mut v.chars().peekable())
     }
 
-    pub fn glob_files(&self, cwd: &Path, out: &mut Vec<Box<Path>>) -> io::Result<()> {
-        return Glob::glob_files_testable(self.pattern.as_str(), cwd, out, |p| read_dir(p));
+    pub fn glob_files(&self, cwd: &Path, out: &mut Vec<Box<Path>>) -> CrushResult<()> {
+        to_job_error(Glob::glob_files_testable(self.pattern.as_str(), cwd, out, |p| read_dir(p)))
+    }
+
+    pub fn glob_to_single_file(&self, cwd: &Path) -> CrushResult<Box<Path>> {
+        let mut dirs = Vec::new();
+        self.glob_files(cwd, &mut dirs)?;
+        match dirs.len() {
+            1 => Ok(dirs.remove(0)),
+            _ => argument_error("Glob expanded to wrong number of files"),
+        }
     }
 
     fn glob(pattern: &str, v: &str) -> bool {
-        return glob_match(&mut pattern.chars(), &mut v.chars().peekable());
+        glob_match(&mut pattern.chars(), &mut v.chars().peekable())
     }
 
     fn glob_files_testable(original_glob: &str, cwd: &Path, out: &mut Vec<Box<Path>>, lister: fn(&Path) -> io::Result<ReadDir>) -> io::Result<()> {
@@ -41,9 +51,9 @@ impl Glob {
         let without_trailing_slashes = original_glob.trim_end_matches('/');
         if without_trailing_slashes.starts_with('/') {
             let without_leading_slashes = without_trailing_slashes.trim_start_matches('/');
-            return Glob::glob_files_internal(without_leading_slashes, Path::new("/"), only_directories, "/", out, lister);
+            Glob::glob_files_internal(without_leading_slashes, Path::new("/"), only_directories, "/", out, lister)
         } else {
-            return Glob::glob_files_internal(without_trailing_slashes, cwd, only_directories, "", out, lister);
+            Glob::glob_files_internal(without_trailing_slashes, cwd, only_directories, "", out, lister)
         }
     }
 
@@ -83,7 +93,7 @@ impl Glob {
                 }
             }
         }
-        return Ok(());
+        Ok(())
     }
 
 }
@@ -123,7 +133,7 @@ fn glob_match(glob: &mut Chars, value: &mut Peekable<Chars>) -> bool {
         }
         (Some(_), None) => {}
     }
-    return false;
+    false
 }
 
 

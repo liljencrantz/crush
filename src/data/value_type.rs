@@ -1,4 +1,4 @@
-use crate::errors::{error, mandate, CrushResult};
+use crate::errors::{error, mandate, CrushResult, to_job_error};
 use crate::data::{Value, ColumnType, value_type_parser};
 use crate::glob::Glob;
 use regex::Regex;
@@ -33,7 +33,7 @@ pub enum ValueType {
     Float,
     Empty,
     Any,
-    BinaryReader,
+    BinaryStream,
     Binary,
     Type,
 }
@@ -71,7 +71,7 @@ impl ValueType {
             ValueType::Binary |
             ValueType::Type |
             ValueType::Bool => self.clone(),
-            ValueType::BinaryReader => ValueType::Binary,
+            ValueType::BinaryStream => ValueType::Binary,
             ValueType::Stream(o) => ValueType::Rows(ColumnType::materialize(o)),
             ValueType::Rows(r) => ValueType::Rows(ColumnType::materialize(r)),
             ValueType::Row(r) => ValueType::Row(ColumnType::materialize(r)),
@@ -91,7 +91,27 @@ impl ValueType {
         self.is_hashable()
     }
 
-    pub fn to_string(&self) -> String {
+    pub fn parse(&self, s: &str) -> CrushResult<Value> {
+        match self {
+            ValueType::Text => Ok(Value::Text(Box::from(s))),
+            ValueType::Integer => match s.parse::<i128>() {
+                Ok(n) => Ok(Value::Integer(n)),
+                Err(e) => error(e.description()),
+            }
+            ValueType::Field => Ok(Value::Field(mandate(parse_name(s), "Invalid field name")?)),
+            ValueType::Glob => Ok(Value::Glob(Glob::new(s))),
+            ValueType::Regex => Ok(Value::Regex(Box::from(s), to_job_error(Regex::new(s))?)),
+            ValueType::File => Ok(Value::Text(Box::from(s))),
+            ValueType::Float => Ok(Value::Float(to_job_error(s.parse::<f64>())?)),
+            ValueType::Type => Ok(Value::Type(value_type_parser::parse(s)?)),
+            ValueType::Bool => Ok(Value::Bool(to_job_error(s.parse::<bool>())?)),
+            _ => error("Failed to parse cell"),
+        }
+    }
+}
+
+impl ToString for ValueType {
+    fn to_string(&self) -> String {
         match self {
             ValueType::Text => "text".to_string(),
             ValueType::Integer => "integer".to_string(),
@@ -113,27 +133,9 @@ impl ValueType {
             ValueType::Float => "float".to_string(),
             ValueType::Empty => "empty".to_string(),
             ValueType::Any => "any".to_string(),
-            ValueType::BinaryReader => "binary_reader".to_string(),
+            ValueType::BinaryStream => "binary_reader".to_string(),
             ValueType::Binary => "binary".to_string(),
             ValueType::Type => "type".to_string(),
-        }
-    }
-
-    pub fn parse(&self, s: &str) -> CrushResult<Value> {
-        match self {
-            ValueType::Text => Ok(Value::Text(Box::from(s))),
-            ValueType::Integer => match s.parse::<i128>() {
-                Ok(n) => Ok(Value::Integer(n)),
-                Err(e) => error(e.description()),
-            }
-            ValueType::Field => Ok(Value::Field(mandate(parse_name(s), "Invalid field name")?)),
-            ValueType::Glob => Ok(Value::Glob(Glob::new(s))),
-            ValueType::Regex => match Regex::new(s) {
-                Ok(r) => Ok(Value::Regex(Box::from(s), r)),
-                Err(e) => error(e.description()),
-            }
-            ValueType::File => Ok(Value::Text(Box::from(s))),
-            _ => error("Failed to parse cell"),
         }
     }
 }

@@ -2,7 +2,7 @@ use crate::lib::ExecutionContext;
 use crate::errors::{to_job_error, CrushResult, error};
 use std::path::Path;
 use crate::data::Value;
-use crate::namepspace::home;
+use crate::namespace::{home, cwd};
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     let dir = match context.arguments.len() {
@@ -12,7 +12,8 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
             match &dir.value {
                 Value::Text(val) => Ok(Box::from(Path::new(val.as_ref()))),
                 Value::File(val) => Ok(val.clone()),
-                _ => error("Wrong parameter type, expected text")
+                Value::Glob(val) => val.glob_to_single_file(&cwd()?),
+                _ => error(format!("Wrong parameter type, expected text or file, found {}", &dir.value.value_type().to_string()).as_str())
             }
         }
         _ => error("Wrong number of arguments")
