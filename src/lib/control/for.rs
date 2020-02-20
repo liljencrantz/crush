@@ -4,7 +4,7 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::namespace::Namespace;
-use crate::data::{Stream, RowsReader, ListReader, Struct};
+use crate::data::{Stream, RowsReader, ListReader, Struct, DictReader};
 use crate::errors::{argument_error, CrushResult};
 use crate::closure::Closure;
 use crate::lib::ExecutionContext;
@@ -95,6 +95,14 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
                     printer: context.printer,
                     name: None,
                 }, ListReader::new(l, name))
+            }
+            (_, Value::Dict(l)) => {
+                run(Config {
+                    body,
+                    env: context.env,
+                    printer: context.printer,
+                    name: name,
+                }, DictReader::new(l))
             }
             _ => argument_error(format!("Can not iterate over value of type {}", t.to_string()).as_str()),
         }

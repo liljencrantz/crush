@@ -1,5 +1,4 @@
 Todo:
-Support for iterating over dicts with the for command
 Remove the dot operator in favor of []
 Make it possible to use the pipe operator with the for command
 Do we really need the field type or can we just use text?
@@ -129,3 +128,4 @@ Add proc.kill command
 Rethink join syntax
 Add math.neg command
 The for command should not be limited to streams, and it should be possible to name the entire row, e.g. for i=(ls) {val $i},
+Support for iterating over dicts with the for command

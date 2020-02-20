@@ -31,7 +31,7 @@ pub use rows::Rows;
 pub use rows::RowsReader;
 pub use call_definition::CallDefinition;
 pub use list::{List, ListReader};
-pub use dict::Dict;
+pub use dict::{Dict, DictReader};
 pub use argument::ArgumentVecCompiler;
 pub use binary::BinaryReader;
 pub use binary::binary_channel;

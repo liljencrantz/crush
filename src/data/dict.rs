@@ -1,9 +1,11 @@
-use crate::data::{ValueType, Value};
-use crate::errors::CrushResult;
+use crate::data::{ValueType, Value, ColumnType, Row};
+use crate::errors::{CrushResult, mandate, error};
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use crate::stream::Readable;
+use crate::replace::Replace;
 
 #[derive(Debug)]
 #[derive(Clone)]
@@ -63,6 +65,13 @@ impl Dict {
         ValueType::Dict(Box::from(self.key_type.clone()), Box::from(self.value_type.clone()))
     }
 
+    pub fn elements(&self) ->  Vec<(Value, Value)> {
+        let mut entries = self.entries.lock().unwrap();
+        entries.iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect()
+    }
+
     pub fn materialize(mut self) ->  Dict {
         let mut entries = self.entries.lock().unwrap();
         let map = entries.drain().map(|(k, v)| (k.materialize(), v.materialize())).collect();
@@ -88,5 +97,39 @@ impl std::cmp::PartialEq for Dict {
 impl std::cmp::PartialOrd for Dict {
     fn partial_cmp(&self, other: &Dict) -> Option<Ordering> {
         None
+    }
+}
+
+pub struct DictReader {
+    list: Vec<(Value, Value)>,
+    idx: usize,
+    types: Vec<ColumnType>,
+}
+
+impl DictReader {
+    pub fn new(dict: Dict,
+    ) -> DictReader {
+        DictReader {
+            types: vec![
+                ColumnType::named("key", dict.key_type.clone()),
+                ColumnType::named("value", dict.value_type.clone())],
+            list: dict.elements(),
+            idx: 0usize,
+        }
+    }
+}
+
+impl Readable for DictReader {
+    fn read(&mut self) -> CrushResult<Row> {
+        if self.idx >= self.list.len() {
+            return error("End of stream");
+        }
+        let (a, b) = self.list.replace(self.idx, (Value::Bool(false), Value::Bool(false)));
+        self.idx += 1;
+        Ok(Row::new(vec![a, b]))
+    }
+
+    fn types(&self) -> &Vec<ColumnType> {
+        &self.types
     }
 }
