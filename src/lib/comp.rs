@@ -70,6 +70,16 @@ fn neq(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Bool(!l.eq(&r)))
 }
 
+fn not(mut context: ExecutionContext) -> CrushResult<()> {
+    if context.arguments.len() != 1 {
+        return argument_error("Expected exactly one argument");
+    }
+    match context.arguments.remove(0).value {
+        Value::Bool(b) => context.output.send(Value::Bool(!b)),
+        _ => argument_error("Expected a boolean argument")
+    }
+}
+
 pub fn declare(root: &Namespace) -> CrushResult<()> {
     let env = root.create_namespace("comp")?;
     root.uses(&env);
@@ -79,5 +89,6 @@ pub fn declare(root: &Namespace) -> CrushResult<()> {
     env.declare_str("lte", Value::Command(Command::new(lte)))?;
     env.declare_str("eq", Value::Command(Command::new(eq)))?;
     env.declare_str("neq", Value::Command(Command::new(neq)))?;
+    env.declare_str("not", Value::Command(Command::new(not)))?;
     Ok(())
 }
