@@ -37,35 +37,51 @@ impl Closure {
     pub fn spawn_and_execute(&self, context: ExecutionContext) -> CrushResult<()> {
         let job_definitions = self.job_definitions.clone();
         let parent_env = mandate(self.env.clone(), "Closure without env")?;
-        let env = parent_env.create_child();
+        let env = parent_env.create_child(&context.env, false);
 
         Closure::push_arguments_to_env(context.arguments, &env);
         match job_definitions.len() {
             0 => return error("Empty closures not supported"),
             1 => {
+                if env.is_stopped() {
+                    return Ok(());
+                }
                 let job = job_definitions[0].spawn_and_execute(&env, &context.printer, context.input, context.output)?;
                 job.join(&context.printer);
+                if env.is_stopped() {
+                    return Ok(());
+                }
             }
             _ => {
+                if env.is_stopped() {
+                    return Ok(());
+                }
                 let first_job_definition = &job_definitions[0];
                 let last_output = spawn_print_thread(&context.printer);
                 let first_job = first_job_definition.spawn_and_execute(&env, &context.printer, context.input, last_output)?;
                 first_job.join(&context.printer);
-
+                if env.is_stopped() {
+                    return Ok(());
+                }
                 for job_definition in &job_definitions[1..job_definitions.len() - 1] {
                     let last_output = spawn_print_thread(&context.printer);
                     let job = job_definition.spawn_and_execute(&env, &context.printer, empty_channel(), last_output)?;
                     job.join(&context.printer);
+                    if env.is_stopped() {
+                        return Ok(());
+                    }
                 }
 
                 let last_job_definition = &job_definitions[job_definitions.len() - 1];
                 let last_job = last_job_definition.spawn_and_execute(&env, &context.printer, empty_channel(), context.output)?;
                 last_job.join(&context.printer);
+                if env.is_stopped() {
+                    return Ok(());
+                }
             }
         }
         Ok(())
     }
-
 
     fn push_arguments_to_env(mut arguments: Vec<Argument>, env: &Namespace) {
         for arg in arguments.drain(..) {

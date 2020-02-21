@@ -35,6 +35,7 @@ pub struct ExecutionContext {
     pub arguments: Vec<Argument>,
     pub env: Namespace,
     pub printer: Printer,
+    pub is_loop: bool,
 }
 
 pub struct StreamExecutionContext {

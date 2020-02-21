@@ -23,19 +23,34 @@ pub struct Namespace {
 impl Namespace {
     pub fn new() -> Namespace {
         Namespace {
-            namespace: Arc::from(Mutex::new(NamespaceNode::new(None))),
+            namespace: Arc::from(Mutex::new(NamespaceNode::new(None, None, false))),
         }
     }
 
-    pub fn create_child(&self) -> Namespace {
+    pub fn create_child(&self, caller: &Namespace, is_loop: bool) -> Namespace {
         Namespace {
-            namespace: Arc::from(Mutex::new(NamespaceNode::new(Some(self.namespace.clone())))),
+            namespace: Arc::from(Mutex::new(NamespaceNode::new(
+                Some(self.namespace.clone()),
+                Some(caller.namespace.clone()),
+                is_loop))),
         }
+    }
+
+    pub fn do_break(&self) -> bool {
+        self.namespace.lock().unwrap().do_break()
+    }
+
+    pub fn do_continue(&self) -> bool {
+        self.namespace.lock().unwrap().do_continue()
+    }
+
+    pub fn is_stopped(&self) -> bool {
+        self.namespace.lock().unwrap().is_stopped()
     }
 
     pub fn create_namespace(&self, name: &str) -> CrushResult<Namespace> {
         let res = Namespace {
-            namespace: Arc::from(Mutex::new(NamespaceNode::new(None))),
+            namespace: Arc::from(Mutex::new(NamespaceNode::new(None, None, false))),
         };
         self.declare(&[Box::from(name)], Value::Env(res.clone()))?;
         Ok(res)

@@ -19,6 +19,7 @@ pub struct Config {
 }
 
 pub fn run(mut config: Config, mut input: impl Readable) -> CrushResult<()> {
+    let env = config.env.create_child(&config.env, true);
     loop {
         match input.read() {
             Ok(mut line) => {
@@ -45,16 +46,19 @@ pub fn run(mut config: Config, mut input: impl Readable) -> CrushResult<()> {
                                 )))]
                         }
                     };
-
                 config.body.spawn_and_execute(ExecutionContext {
                     input: empty_channel(),
                     output: spawn_print_thread(&config.printer),
                     arguments,
-                    env: config.env.clone(),
+                    env: env.clone(),
                     printer: config.printer.clone(),
+                    is_loop: true,
                 });
-            },
-            Err(_) => {break;},
+                if env.is_stopped() {
+                    break;
+                }
+            }
+            Err(_) => break,
         }
     }
     Ok(())

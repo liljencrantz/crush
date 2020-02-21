@@ -16,6 +16,7 @@ use crate::errors::{CrushResult, to_job_error, error};
 use crate::stream::{ValueSender, ValueReceiver};
 use std::collections::HashSet;
 use crate::lib::parse_util::argument_files;
+use crate::errors::Kind::INVALID_DATA;
 
 pub struct Config {
     input: Box<dyn BinaryReader>,
@@ -45,7 +46,7 @@ fn convert_json(json_value: &serde_json::Value) -> CrushResult<Value> {
             } else if f.is_i64() {
                 Ok(Value::Integer(f.as_i64().expect("") as i128))
             } else {
-                Ok(Value::Float(f.as_f64().ok_or(CrushError { message: "Not a valid number".to_string() })?))
+                Ok(Value::Float(f.as_f64().ok_or(CrushError { kind: INVALID_DATA, message: "Not a valid number".to_string() })?))
             }
         }
         serde_json::Value::String(s) => Ok(Value::Text(Box::from(s.clone()))),

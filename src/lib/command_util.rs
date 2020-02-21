@@ -7,7 +7,7 @@ use users::User;
 use lazy_static::lazy_static;
 
 use crate::data::{Value, ColumnType};
-use crate::errors::{CrushError, CrushResult, error};
+use crate::errors::{CrushError, CrushResult, error, argument_error};
 
 pub fn find_field_from_str(needle: &str, haystack: &Vec<ColumnType>) -> CrushResult<usize> {
     for (idx, field) in haystack.iter().enumerate() {
@@ -16,33 +16,30 @@ pub fn find_field_from_str(needle: &str, haystack: &Vec<ColumnType>) -> CrushRes
         }
     }
 
-    return Err(
-        CrushError {
-            message: format!(
-                "Unknown column {}, available columns are {}",
-                needle,
-                haystack.iter().map(|t| t.val_or_empty().to_string()).collect::<Vec<String>>().join(", "),
-            )
-        }
-    );
-}
-
-pub fn find_field(needle_vec: &Vec<Box<str>>, haystack: &Vec<ColumnType>) -> CrushResult<usize> {
-    if needle_vec.len() != 1 {
-        return error("Expected direct field")
-    }
-    let needle = needle_vec[0].as_ref();
-    for (idx, field) in haystack.iter().enumerate() {
-        if field.name.as_ref().map(|v| v.as_ref().eq(needle)).unwrap_or(false) {
-            return Ok(idx);
-        }
-    }
-
-    error(format!(
+    argument_error(format!(
                 "Unknown column {}, available columns are {}",
                 needle,
                 haystack.iter().map(|t| t.val_or_empty().to_string()).collect::<Vec<String>>().join(", "),
             ).as_str())
+}
+
+pub fn find_field(needle_vec: &Vec<Box<str>>, haystack: &Vec<ColumnType>) -> CrushResult<usize> {
+    if needle_vec.len() != 1 {
+        argument_error("Expected direct field")
+    } else {
+        let needle = needle_vec[0].as_ref();
+        for (idx, field) in haystack.iter().enumerate() {
+            if field.name.as_ref().map(|v| v.as_ref().eq(needle)).unwrap_or(false) {
+                return Ok(idx);
+            }
+        }
+
+        error(format!(
+            "Unknown column {}, available columns are {}",
+            needle,
+            haystack.iter().map(|t| t.val_or_empty().to_string()).collect::<Vec<String>>().join(", "),
+        ).as_str())
+    }
 }
 
 lazy_static! {

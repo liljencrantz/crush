@@ -74,6 +74,7 @@ pub fn run(
                                 arguments,
                                 env: env.clone(),
                                 printer: printer.clone(),
+                                is_loop: false,
                             }
                         );
                         receiver.recv()?
@@ -124,6 +125,7 @@ pub fn run(
                                     arguments,
                                     env: env.clone(),
                                     printer: printer.clone(),
+                                    is_loop: false,
                                 }
                             );
                             receiver.recv()?
