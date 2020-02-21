@@ -18,7 +18,7 @@ fn parse(mut context: ExecutionContext) -> CrushResult<()> {
     for arg in context.arguments.drain(..) {
         match (arg.name.as_deref().unwrap_or(""), arg.value) {
             ("format", Value::Text(s)) => fmt = Some(s),
-            ("date", Value::Text(s)) => tm = Some(s),
+            ("time", Value::Text(s)) => tm = Some(s),
             _ => return argument_error("Invalid argument"),
         }
     }

@@ -1,17 +1,14 @@
-Todo:
+Todo for MVP 1:
 Stop the namespace deadlocks
 Remove the dot operator in favor of []
-Make it possible to use the pipe operator with the for command
-Do we really need the field type or can we just use text?
 Add var.use command
 Add control.source command
-Add proc.jobs command
 Add control.cmd command
 Add text.format command
 Add text.upper command
 Add text.lower command
-Add control.loop command
-Add history command with all previous interactive invocations, including invocation string, current status, and misc metadata.
+Add text.substr command
+Add text.split command
 Add readline command that reads one line of interactive text input from the user via the terminal
 Add system tests for type casting
 Add system tests for for loop
@@ -19,27 +16,29 @@ Add system tests for binary stream handling
 Add system tests for structs
 Add system tests for dealing with tables as streams
 Rethink aggr and figure out how to make custom reduce commands
-Create text namespace with string commands like upper, lower, format, substr, split
-Flesh out time/duration modes with add/subtract support
-Make better to_string methods for various cell types
 Some missing comparisons on Cell
 Missing some cell type serialisations and deserialisations
-Add package command to create a new namespace
-Make names mandatory and unique for struct fields
-implement file regexps
-make ls support regexps
-Add support for %<INTEGER> for offset based field identifiers
-make file globing testable via fakes
 Error source propagation
 help command
-pbuf.parse command that takes a protobuf definition and uses it to deserialize protobuf data
-avro.parse command that deserializes avro data
-toml.parse command that deserializes toml data
 Add Kind to CrushError
 Deal with different error kinds differently
 Add command-field to CrushError
 Add source field to CrushError
 Make error printing display source of error
+
+Future features:
+make file globing testable via fakes
+implement file regexps
+make ls support regexps
+Add package command to create a new namespace
+Make names mandatory and unique for struct fields
+Add support for %<INTEGER> for offset based field identifiers
+Make it possible to use the pipe operator with the for command
+pbuf.parse command that takes a protobuf definition and uses it to deserialize protobuf data
+avro.parse command that deserializes avro data
+toml.parse command that deserializes toml data
+Add history command with all previous interactive invocations, including invocation string, current status, and misc metadata.
+Add proc.jobs command
 
 
 Done:
@@ -131,3 +130,4 @@ Add math.neg command
 The for command should not be limited to streams, and it should be possible to name the entire row, e.g. for i=(ls) {val $i},
 Support for iterating over dicts with the for command
 Add control.break/control.continue commands
+Flesh out time/duration modes with add/subtract support

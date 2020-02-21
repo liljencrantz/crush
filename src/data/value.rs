@@ -60,7 +60,7 @@ impl Value {
             Value::Time(val) => val.format("%Y-%m-%d %H:%M:%S %z").to_string(),
             Value::Field(val) => format!(r"%{}", val.join(".")),
             Value::Glob(val) => format!("*{{{}}}", val.to_string()),
-            Value::Regex(val, _) => format!("r{{{}}}", val),
+            Value::Regex(val, _) => format!("regex{{{}}}", val),
             Value::Command(_) => "Command".to_string(),
             Value::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
             Value::Rows(_) => "<Rows>".to_string(),

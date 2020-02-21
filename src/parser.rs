@@ -204,7 +204,7 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> CrushResult<Va
         TokenType::Variable => Ok(ValueDefinition::Variable(parse_name_from_lexer(lexer)?)),
         TokenType::Regex => {
             let f = lexer.pop().1;
-            let s = &f[2..f.len() - 1];
+            let s = &f[6..f.len() - 1];
             match Regex::new(s) {
                 Ok(r) => Ok(ValueDefinition::regex(s, r)),
                 Err(e) => argument_error(e.description()),
