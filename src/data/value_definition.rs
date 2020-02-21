@@ -22,7 +22,7 @@ use crate::job::Job;
 #[derive(Debug)]
 pub enum ValueDefinition {
     Value(Value),
-    ClosureDefinition(Closure),
+    ClosureDefinition(Vec<Job>),
     JobDefinition(Job),
     Variable(Vec<Box<str>>),
     Subscript(Box<ValueDefinition>, Box<ValueDefinition>),
@@ -39,12 +39,12 @@ impl ValueDefinition {
                 dependencies.push(j);
                 last_input.recv()?
             }
-            ValueDefinition::ClosureDefinition(c) => Value::Closure(c.with_env(env)),
-            ValueDefinition::Variable(s) => (
+            ValueDefinition::ClosureDefinition(c) => Value::Closure(Closure::new(c.clone(), env)),
+            ValueDefinition::Variable(s) =>
                 mandate(
                     env.get(s),
-                    format!("Unknown variable {}", self.to_string()).as_str())?),
-            ValueDefinition::Subscript(c, i) => {
+                    format!("Unknown variable {}", self.to_string()).as_str())?,
+            ValueDefinition::Subscript(c, i) =>
                 match (c.compile(dependencies, env, printer), i.compile(dependencies, env, printer)) {
                     (Ok(Value::List(list)), Ok(Value::Integer(idx))) =>
                         list.get(idx as usize)?,
@@ -59,7 +59,6 @@ impl ValueDefinition {
                     }
                     _ => return error("Value can't be subscripted"),
                 }
-            }
         })
     }
 

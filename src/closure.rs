@@ -10,33 +10,26 @@ use crate::stream_printer::spawn_print_thread;
 #[derive(Debug)]
 pub struct Closure {
     job_definitions: Vec<Job>,
-    env: Option<Namespace>,
+    env: Namespace,
 }
 
 impl Closure {
-    pub fn new(job_definitions: Vec<Job>) -> Closure {
+    pub fn new(job_definitions: Vec<Job>, env: &Namespace) -> Closure {
         Closure {
             job_definitions,
-            env: None,
-        }
-    }
-
-    pub fn with_env(&self, env: &Namespace) -> Closure {
-        Closure {
-            job_definitions: self.job_definitions.clone(),
-            env: Some(env.clone()),
+            env: env.clone(),
         }
     }
 
     pub fn spawn_stream(&self, context: StreamExecutionContext) -> CrushResult<()> {
         let job_definitions = self.job_definitions.clone();
-        let parent_env = mandate(self.env.clone(), "Closure without env")?;
+        let parent_env = self.env.clone();
         Ok(())
     }
 
     pub fn spawn_and_execute(&self, context: ExecutionContext) -> CrushResult<()> {
         let job_definitions = self.job_definitions.clone();
-        let parent_env = mandate(self.env.clone(), "Closure without env")?;
+        let parent_env = self.env.clone();
         let env = parent_env.create_child(&context.env, false);
 
         Closure::push_arguments_to_env(context.arguments, &env);

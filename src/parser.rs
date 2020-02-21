@@ -174,7 +174,7 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> CrushResult<Va
                 "{" => {
                     let dep = parse_internal(lexer)?;
                     lexer.pop();
-                    let res = Ok(ValueDefinition::ClosureDefinition(Closure::new(dep)));
+                    let res = Ok(ValueDefinition::ClosureDefinition(dep));
                     return res;
                 }
 
