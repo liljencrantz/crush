@@ -2,6 +2,7 @@ use crate::namespace::Namespace;
 use crate::errors::CrushResult;
 use crate::data::{Value, Command};
 
+mod echo;
 mod lines;
 mod csv;
 mod json;
@@ -17,6 +18,7 @@ pub fn declare(root: &Namespace) -> CrushResult<()> {
     root.declare_str("lines", Value::Command(Command::new(lines::perform)))?;
     root.declare_str("csv", Value::Command(Command::new(csv::perform)))?;
     root.declare_str("json", Value::Command(Command::new(json::perform)))?;
+    env.declare_str("echo", Value::Command(Command::new(echo::perform)))?;
 
     Ok(())
 }
