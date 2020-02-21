@@ -42,7 +42,6 @@ fn evaluate(condition: &Closure, row: &Row, input_type: &Vec<ColumnType>, env: &
         arguments,
         env: env.clone(),
         printer: printer.clone(),
-        is_loop: false,
     });
 
     match reciever.recv()? {

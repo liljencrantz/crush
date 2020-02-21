@@ -52,7 +52,6 @@ pub fn run(mut config: Config, mut input: impl Readable) -> CrushResult<()> {
                     arguments,
                     env: env.clone(),
                     printer: config.printer.clone(),
-                    is_loop: true,
                 });
                 if env.is_stopped() {
                     break;

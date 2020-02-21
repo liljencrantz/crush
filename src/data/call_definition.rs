@@ -81,7 +81,6 @@ impl CallDefinition {
                             arguments,
                             env: local_env,
                             printer: local_printer.clone(),
-                            is_loop: false,
                         });
                         if !deps.is_empty() {
                             local_printer.join(JobJoinHandle::Many(deps));
@@ -103,7 +102,6 @@ impl CallDefinition {
                                 arguments,
                                 env: local_env.clone(),
                                 printer: local_printer.clone(),
-                                is_loop: false,
                             })?;
                         JobJoinHandle::Many(deps).join(&local_printer);
                         Ok(())

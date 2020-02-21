@@ -1,6 +1,6 @@
 use crate::lexer::Lexer;
 use std::error::Error;
-use crate::errors::Kind::{PARSE_ERROR, INVALID_ARGUMENT, GENERIC_ERROR};
+use crate::errors::Kind::{PARSE_ERROR, INVALID_ARGUMENT, GENERIC_ERROR, INVALID_DATA};
 
 #[derive(Debug)]
 pub enum Kind {
@@ -29,6 +29,13 @@ pub fn argument_error<T>(message: &str) -> Result<T, CrushError> {
     return Err(CrushError {
         message: String::from(message),
         kind: INVALID_ARGUMENT,
+    });
+}
+
+pub fn data_error<T>(message: &str) -> Result<T, CrushError> {
+    return Err(CrushError {
+        message: String::from(message),
+        kind: INVALID_DATA,
     });
 }
 

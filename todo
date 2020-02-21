@@ -1,4 +1,5 @@
 Todo:
+Stop the namespace deadlocks
 Remove the dot operator in favor of []
 Make it possible to use the pipe operator with the for command
 Do we really need the field type or can we just use text?
@@ -10,6 +11,7 @@ Add text.format command
 Add text.upper command
 Add text.lower command
 Add control.loop command
+Add history command with all previous interactive invocations, including invocation string, current status, and misc metadata.
 Add readline command that reads one line of interactive text input from the user via the terminal
 Add system tests for type casting
 Add system tests for for loop
