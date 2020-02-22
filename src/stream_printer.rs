@@ -3,7 +3,7 @@ use crate::printer::Printer;
 use std::thread;
 use crate::data::{Row, ColumnType, ValueType, Alignment, Value, Rows, Stream, BinaryReader, RowsReader};
 use std::cmp::max;
-use std::io::{Read, BufReader, BufRead};
+use std::io::{BufReader, BufRead};
 
 pub fn spawn_print_thread(printer: &Printer) -> ValueSender {
     let (o, i) = channels();

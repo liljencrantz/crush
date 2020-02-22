@@ -13,6 +13,7 @@ mod math;
 mod comp;
 mod stream;
 mod data;
+mod text;
 mod control;
 
 use crate::{
@@ -27,7 +28,6 @@ use std::thread::{JoinHandle};
 use crate::printer::Printer;
 use crate::errors::CrushResult;
 use crate::stream::{ValueReceiver, ValueSender, InputStream};
-use crate::data::ValueType;
 
 pub struct ExecutionContext {
     pub input: ValueReceiver,
@@ -84,6 +84,7 @@ pub fn declare(root: &Namespace) -> CrushResult<()> {
     proc::declare(root)?;
     io::declare(root)?;
     control::declare(root)?;
+    text::declare(root)?;
 
     return Ok(());
 }

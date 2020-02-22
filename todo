@@ -5,8 +5,6 @@ Add var.use command
 Add control.source command
 Add control.cmd command
 Add text.format command
-Add text.upper command
-Add text.lower command
 Add text.substr command
 Add text.split command
 Add readline command that reads one line of interactive text input from the user via the terminal
@@ -131,3 +129,5 @@ The for command should not be limited to streams, and it should be possible to n
 Support for iterating over dicts with the for command
 Add control.break/control.continue commands
 Flesh out time/duration modes with add/subtract support
+Add text.upper command
+Add text.lower command

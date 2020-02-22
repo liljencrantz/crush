@@ -1,5 +1,4 @@
 use crate::errors::{CrushResult, to_job_error};
-use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::cmp::{Ordering, min};
 use std::collections::{HashMap, VecDeque};
@@ -9,7 +8,6 @@ use std::fmt::{Debug, Formatter};
 use std::fs::File;
 use serde_json::to_vec;
 use std::path::Path;
-use map_in_place::MapVecInPlace;
 
 struct ChannelReader {
     receiver: Receiver<Box<[u8]>>,

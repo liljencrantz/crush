@@ -2,6 +2,22 @@ use crate::data::{Argument, Value, List, ValueType, Dict};
 use crate::errors::{CrushResult, argument_error};
 use std::path::Path;
 
+pub fn two_arguments(arguments: &Vec<Argument>) -> CrushResult<()> {
+    if arguments.len() != 2 {
+        argument_error("Expected exactly two argument")
+    } else {
+        Ok(())
+    }
+}
+
+pub fn single_argument(arguments: &Vec<Argument>) -> CrushResult<()> {
+    if arguments.len() != 1 {
+        argument_error("Expected exactly one argument")
+    } else {
+        Ok(())
+    }
+}
+
 pub fn argument_files(mut arguments: Vec<Argument>) -> CrushResult<Vec<Box<Path>>> {
     let mut files = Vec::new();
     for a in arguments.drain(..) {

@@ -2,7 +2,7 @@ use crate::job::Job;
 use crate::namespace::Namespace;
 use crate::data::Argument;
 use crate::stream::empty_channel;
-use crate::errors::{error, CrushResult, mandate};
+use crate::errors::{error, CrushResult};
 use crate::lib::{ExecutionContext, StreamExecutionContext};
 use crate::stream_printer::spawn_print_thread;
 

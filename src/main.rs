@@ -28,7 +28,6 @@ use std::error::Error;
 use crate::printer::Printer;
 use crate::stream::empty_channel;
 use crate::stream_printer::spawn_print_thread;
-use crate::data::Value;
 use crate::namespace::home;
 use std::path::Path;
 use std::fs;
