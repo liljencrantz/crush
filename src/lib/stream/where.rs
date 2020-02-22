@@ -1,18 +1,18 @@
 use std::cmp::Ordering;
 
 use crate::{
-    data::{
+    lang::{
         Value,
         Row,
     },
     stream::{OutputStream}
 };
-use crate::lib::ExecutionContext;
+use crate::lang::ExecutionContext;
 use crate::errors::{error, CrushResult, argument_error};
 use crate::printer::Printer;
 use crate::stream::{Readable, empty_channel, channels};
-use crate::data::{RowsReader, ColumnType, Argument};
-use crate::closure::Closure;
+use crate::lang::{RowsReader, ColumnType, Argument};
+use crate::lang::Closure;
 use crate::stream_printer::spawn_print_thread;
 use crate::scope::Scope;
 

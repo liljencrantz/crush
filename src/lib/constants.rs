@@ -1,4 +1,4 @@
-use crate::data::Value;
+use crate::lang::Value;
 use crate::scope::Scope;
 use crate::errors::CrushResult;
 

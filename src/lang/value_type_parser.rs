@@ -1,5 +1,5 @@
-use crate::data::{ValueType, ColumnType};
-use crate::data::value_type_lexer::{ValueTypeLexer, ValueTypeToken};
+use crate::lang::{ValueType, ColumnType};
+use crate::lang::value_type_lexer::{ValueTypeLexer, ValueTypeToken};
 use crate::errors::{CrushResult, error};
 use ValueTypeToken::*;
 
@@ -125,7 +125,7 @@ fn parse_type(lexer: &mut ValueTypeLexer) -> CrushResult<ValueType> {
 mod tests {
     use super::*;
     use ValueType::*;
-    use crate::data::ColumnType;
+    use crate::lang::ColumnType;
 
     #[test]
     fn parse_test() {

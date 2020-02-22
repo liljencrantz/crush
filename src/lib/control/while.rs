@@ -1,13 +1,13 @@
 use crate::{
-    data::Argument,
-    data::Value,
+    lang::Argument,
+    lang::Value,
 };
 use crate::printer::Printer;
 use crate::scope::Scope;
-use crate::data::{Stream, RowsReader, ListReader, Struct, DictReader};
+use crate::lang::{Stream, RowsReader, ListReader, Struct, DictReader};
 use crate::errors::{argument_error, CrushResult, data_error};
-use crate::closure::Closure;
-use crate::lib::ExecutionContext;
+use crate::lang::Closure;
+use crate::lang::ExecutionContext;
 use crate::stream::{empty_channel, Readable, channels};
 use crate::stream_printer::spawn_print_thread;
 

@@ -1,9 +1,9 @@
-use crate::job::Job;
+use crate::lang::Job;
 use crate::scope::Scope;
-use crate::data::Argument;
+use crate::lang::Argument;
 use crate::stream::empty_channel;
 use crate::errors::{error, CrushResult};
-use crate::lib::{ExecutionContext, StreamExecutionContext};
+use crate::lang::{ExecutionContext/*, StreamExecutionContext*/};
 use crate::stream_printer::spawn_print_thread;
 
 #[derive(Clone)]
@@ -20,13 +20,13 @@ impl Closure {
             env: env.clone(),
         }
     }
-
+/*
     pub fn spawn_stream(&self, context: StreamExecutionContext) -> CrushResult<()> {
         let job_definitions = self.job_definitions.clone();
         let parent_env = self.env.clone();
         Ok(())
     }
-
+*/
     pub fn spawn_and_execute(&self, context: ExecutionContext) -> CrushResult<()> {
         let job_definitions = self.job_definitions.clone();
         let parent_env = self.env.clone();

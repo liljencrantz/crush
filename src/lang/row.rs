@@ -1,6 +1,6 @@
-use crate::data::value::Value;
+use crate::lang::value::Value;
 use crate::errors::CrushResult;
-use crate::data::ColumnType;
+use crate::lang::ColumnType;
 use std::mem;
 use crate::replace::Replace;
 

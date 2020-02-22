@@ -1,6 +1,6 @@
 use crate::stream::InputStream;
 use crate::errors::{CrushResult, error};
-use crate::data::Row;
+use crate::lang::Row;
 
 #[derive(Debug, Clone)]
 pub struct Stream {

@@ -1,9 +1,9 @@
-use crate::lib::ExecutionContext;
+use crate::lang::ExecutionContext;
 use crate::errors::{CrushResult, argument_error};
-use crate::data::{ValueType, Dict, Command};
-use crate::data::Row;
-use crate::data::Value;
-use crate::data::ColumnType;
+use crate::lang::{ValueType, Dict, Command};
+use crate::lang::Row;
+use crate::lang::Value;
+use crate::lang::ColumnType;
 use crate::scope::Scope;
 use crate::lib::parse_util::single_argument_dict;
 

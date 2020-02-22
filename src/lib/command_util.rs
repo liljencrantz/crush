@@ -6,7 +6,7 @@ use users::User;
 
 use lazy_static::lazy_static;
 
-use crate::data::{Value, ColumnType};
+use crate::lang::{Value, ColumnType};
 use crate::errors::{CrushError, CrushResult, error, argument_error};
 
 pub fn find_field_from_str(needle: &str, haystack: &Vec<ColumnType>) -> CrushResult<usize> {

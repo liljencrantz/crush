@@ -1,7 +1,7 @@
-use crate::lib::ExecutionContext;
+use crate::lang::ExecutionContext;
 use crate::errors::{to_job_error, CrushResult, error};
 use std::path::Path;
-use crate::data::Value;
+use crate::lang::Value;
 use crate::scope::{home, cwd};
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {

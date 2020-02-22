@@ -6,7 +6,7 @@ use crate::printer::Printer;
 use crate::env::Env;
 use crate::data::{ColumnType, ValueType, Row};
 use crate::errors::{argument_error, JobResult, error};
-use crate::closure::Closure;
+use crate::lang::Closure;
 use crate::commands::{CompileContext, JobJoinHandle};
 use crate::stream::{InputStream, OutputStream, ValueSender, streams, ValueReceiver, RowsReader, Readable};
 use crate::commands::command_util::find_field;

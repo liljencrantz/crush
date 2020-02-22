@@ -1,5 +1,5 @@
-use crate::lib::{ExecutionContext, JobJoinHandle};
-use crate::data::{ArgumentDefinition, ArgumentVecCompiler, Value};
+use crate::lang::{ExecutionContext, JobJoinHandle};
+use crate::lang::{ArgumentDefinition, ArgumentVecCompiler, Value};
 use crate::scope::Scope;
 use crate::errors::{error, CrushResult};
 use crate::printer::Printer;

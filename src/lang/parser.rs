@@ -1,8 +1,8 @@
 use crate::errors::{parse_error, argument_error, CrushResult};
-use crate::job::Job;
+use crate::lang::Job;
 use crate::lexer::{Lexer, TokenType};
-use crate::data::{ValueDefinition, ArgumentDefinition};
-use crate::data::CallDefinition;
+use crate::lang::{ValueDefinition, ArgumentDefinition};
+use crate::lang::CallDefinition;
 use regex::Regex;
 use std::error::Error;
 

@@ -5,7 +5,7 @@ use crate::errors::{error, CrushResult};
 use std::error::Error;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use crate::data::{Value, ValueType};
+use crate::lang::{Value, ValueType};
 use std::collections::HashMap;
 
 

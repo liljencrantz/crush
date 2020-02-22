@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 use crate::{
     errors::error,
-    data::Value,
+    lang::Value,
 };
 use std::sync::{Mutex, Arc};
 use crate::errors::CrushResult;
-use crate::data::ValueType;
+use crate::lang::ValueType;
 
 #[derive(Debug)]
 pub struct ScopeData {

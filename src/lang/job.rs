@@ -1,9 +1,33 @@
 use crate::scope::Scope;
-use crate::lib::{JobJoinHandle};
 use crate::stream::{channels, ValueSender, ValueReceiver};
-use crate::data::CallDefinition;
+use crate::lang::CallDefinition;
 use crate::printer::Printer;
-use crate::errors::CrushError;
+use crate::errors::{CrushError, CrushResult};
+use std::thread::JoinHandle;
+
+pub enum JobJoinHandle {
+    Many(Vec<JobJoinHandle>),
+    Async(JoinHandle<CrushResult<()>>),
+}
+
+impl JobJoinHandle {
+    pub fn join(self, printer: &Printer) {
+        return match self {
+            JobJoinHandle::Async(a) => match a.join() {
+                Ok(r) => match r {
+                    Ok(_) => {}
+                    Err(e) => printer.job_error(e),
+                },
+                Err(_) => printer.error("Unknown error while waiting for command to exit"),
+            },
+            JobJoinHandle::Many(v) => {
+                for j in v {
+                    j.join(printer);
+                }
+            }
+        };
+    }
+}
 
 #[derive(Clone)]
 #[derive(Debug)]

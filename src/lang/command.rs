@@ -1,6 +1,24 @@
 use crate::errors::CrushResult;
-use crate::lib::ExecutionContext;
 use std::fmt::Formatter;
+use crate::stream::{ValueReceiver, ValueSender, InputStream};
+use crate::lang::Argument;
+use crate::scope::Scope;
+use crate::printer::Printer;
+
+pub struct ExecutionContext {
+    pub input: ValueReceiver,
+    pub output: ValueSender,
+    pub arguments: Vec<Argument>,
+    pub env: Scope,
+    pub printer: Printer,
+}
+
+pub struct StreamExecutionContext {
+    pub argument_stream: InputStream,
+    pub output: ValueSender,
+    pub env: Scope,
+    pub printer: Printer,
+}
 
 #[derive(Clone)]
 pub struct Command {

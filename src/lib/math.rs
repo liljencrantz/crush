@@ -1,7 +1,7 @@
-use crate::lib::ExecutionContext;
+use crate::lang::ExecutionContext;
 use crate::errors::{CrushResult, argument_error};
 use crate::scope::Scope;
-use crate::data::{Value, Command};
+use crate::lang::{Value, Command};
 use chrono::Duration;
 
 macro_rules! combine_many {

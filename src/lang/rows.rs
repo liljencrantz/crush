@@ -1,4 +1,4 @@
-use crate::data::{ColumnType, Row, Value};
+use crate::lang::{ColumnType, Row, Value};
 use crate::errors::{CrushError, error};
 use crate::stream::Readable;
 use crate::replace::Replace;

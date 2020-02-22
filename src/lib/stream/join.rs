@@ -1,10 +1,10 @@
-use crate::lib::ExecutionContext;
+use crate::lang::ExecutionContext;
 use crate::errors::CrushResult;
 use std::collections::HashMap;
 use crate::{
     stream::Readable,
     errors::CrushError,
-    data::{
+    lang::{
         Argument,
         Row,
         ColumnType,
@@ -17,7 +17,7 @@ use crate::{
     lib::command_util::find_field_from_str,
 };
 use crate::lib::command_util::find_field;
-use crate::data::Struct;
+use crate::lang::Struct;
 
 pub struct Config {
     left_table_idx: usize,

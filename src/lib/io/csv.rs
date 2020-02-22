@@ -1,6 +1,6 @@
-use crate::lib::ExecutionContext;
+use crate::lang::ExecutionContext;
 use crate::{
-    data::{
+    lang::{
         Argument,
         Row,
         ValueType,
@@ -18,7 +18,7 @@ extern crate map_in_place;
 
 use map_in_place::MapVecInPlace;
 use crate::printer::Printer;
-use crate::data::{ColumnType, BinaryReader};
+use crate::lang::{ColumnType, BinaryReader};
 use crate::errors::CrushResult;
 use crate::stream::ValueReceiver;
 use crate::lib::parse_util::argument_files;

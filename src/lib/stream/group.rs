@@ -1,9 +1,9 @@
-use crate::lib::ExecutionContext;
+use crate::lang::ExecutionContext;
 use std::collections::HashMap;
 use crate::{
     lib::command_util::find_field_from_str,
     errors::{argument_error},
-    data::{
+    lang::{
         Argument,
         Row,
         Stream,
@@ -12,7 +12,7 @@ use crate::{
     },
     stream::{OutputStream, unlimited_streams},
 };
-use crate::data::{ColumnType, RowsReader};
+use crate::lang::{ColumnType, RowsReader};
 use crate::errors::{CrushResult, error};
 use crate::lib::command_util::find_field;
 use crate::stream::{Readable};

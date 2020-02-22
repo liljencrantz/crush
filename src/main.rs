@@ -2,14 +2,11 @@ mod replace;
 mod errors;
 mod glob;
 mod stream;
-mod data;
+mod lang;
 mod lib;
 mod scope;
-mod job;
 mod base_lexer;
 mod lexer;
-mod closure;
-mod parser;
 mod printer;
 mod stream_printer;
 mod format;
@@ -30,6 +27,7 @@ use crate::stream_printer::spawn_print_thread;
 use crate::scope::home;
 use std::path::Path;
 use std::fs;
+use crate::lang::parse;
 
 fn crush_history_file() -> Box<str> {
     Box::from(
@@ -50,7 +48,7 @@ fn run_interactive(global_env: scope::Scope, printer: &Printer) -> CrushResult<(
             Ok(cmd) => {
                 if !cmd.is_empty() {
                     rl.add_history_entry(cmd.as_str());
-                    match parser::parse(&mut Lexer::new(&cmd)) {
+                    match parse(&mut Lexer::new(&cmd)) {
                         Ok(jobs) => {
                             for job_definition in jobs {
                                 let last_output = spawn_print_thread(&printer);
@@ -93,7 +91,7 @@ fn run_interactive(global_env: scope::Scope, printer: &Printer) -> CrushResult<(
 
 fn run_script(global_env: scope::Scope, printer: &Printer, filename: &str) -> CrushResult<()> {
     let cmd = to_job_error(fs::read_to_string(filename))?;
-    match parser::parse(&mut Lexer::new(&cmd)) {
+    match parse(&mut Lexer::new(&cmd)) {
         Ok(jobs) => {
             for job_definition in jobs {
                 let last_output = spawn_print_thread(&printer);

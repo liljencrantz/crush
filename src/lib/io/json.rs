@@ -1,6 +1,6 @@
-use crate::lib::ExecutionContext;
+use crate::lang::ExecutionContext;
 use crate::{
-    data::{
+    lang::{
         Argument,
         Row,
         ValueType,
@@ -11,7 +11,7 @@ use crate::{
 use std::io::BufReader;
 
 use crate::printer::Printer;
-use crate::data::{Struct, List, Rows, BinaryReader};
+use crate::lang::{Struct, List, Rows, BinaryReader};
 use crate::errors::{CrushResult, to_job_error, error};
 use crate::stream::{ValueSender, ValueReceiver};
 use std::collections::HashSet;

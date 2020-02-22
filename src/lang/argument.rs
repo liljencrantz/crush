@@ -1,9 +1,9 @@
-use crate::data::value::Value;
-use crate::data::{ValueDefinition, ColumnType};
+use crate::lang::value::Value;
+use crate::lang::{ValueDefinition, ColumnType};
 use crate::errors::{CrushError, CrushResult};
 use crate::scope::Scope;
 use crate::printer::Printer;
-use crate::lib::{JobJoinHandle};
+use crate::lang::{JobJoinHandle};
 
 #[derive(Debug, Clone)]
 pub struct BaseArgument<C> {

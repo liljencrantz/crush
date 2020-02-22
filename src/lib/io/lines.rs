@@ -1,8 +1,8 @@
-use crate::lib::ExecutionContext;
+use crate::lang::ExecutionContext;
 use std::io::{BufReader, BufRead};
 use crate::{
     errors::argument_error,
-    data::{
+    lang::{
         Argument,
         Row,
         ColumnType,
@@ -13,7 +13,7 @@ use crate::{
 };
 use crate::stream::ValueReceiver;
 use crate::errors::CrushResult;
-use crate::data::BinaryReader;
+use crate::lang::BinaryReader;
 use crate::lib::parse_util::argument_files;
 
 fn run(input: Box<dyn BinaryReader>, output: OutputStream) -> CrushResult<()> {

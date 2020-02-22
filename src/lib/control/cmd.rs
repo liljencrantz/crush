@@ -1,6 +1,6 @@
-use crate::lib::ExecutionContext;
+use crate::lang::ExecutionContext;
 use crate::errors::{CrushResult, argument_error, to_job_error};
-use crate::data::{Value, Command, BinaryReader};
+use crate::lang::{Value, Command, BinaryReader};
 use crate::scope::cwd;
 
 

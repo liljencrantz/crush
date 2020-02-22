@@ -1,6 +1,6 @@
-use crate::lib::ExecutionContext;
+use crate::lang::ExecutionContext;
 use crate::errors::{CrushResult, argument_error};
-use crate::data::{Value, Command, ValueType};
+use crate::lang::{Value, Command, ValueType};
 use crate::scope::Scope;
 use crate::lib::parse_util::single_argument_type;
 

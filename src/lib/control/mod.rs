@@ -1,6 +1,6 @@
 use crate::scope::Scope;
 use crate::errors::CrushResult;
-use crate::data::{Value, Command};
+use crate::lang::{Value, Command};
 
 mod r#if;
 mod r#while;

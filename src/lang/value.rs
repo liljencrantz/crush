@@ -6,18 +6,18 @@ use chrono::{DateTime, Local};
 use regex::Regex;
 
 use crate::{
-    closure::Closure,
+    lang::Closure,
     scope::cwd,
-    data::rows::Rows,
+    lang::rows::Rows,
     errors::{error, CrushError, to_job_error},
     glob::Glob,
 };
-use crate::data::{List, Command, Stream, ValueType, Dict, ColumnType, value_type_parser, BinaryReader};
+use crate::lang::{List, Command, Stream, ValueType, Dict, ColumnType, value_type_parser, BinaryReader};
 use crate::errors::CrushResult;
 use chrono::Duration;
 use crate::format::duration_format;
 use crate::scope::Scope;
-use crate::data::row::Struct;
+use crate::lang::row::Struct;
 use crate::stream::streams;
 use std::io::{Read, Error};
 

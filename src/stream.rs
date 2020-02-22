@@ -1,5 +1,5 @@
-use crate::data::{ColumnType, Value};
-use crate::data::{Row, Rows, Stream};
+use crate::lang::{ColumnType, Value};
+use crate::lang::{Row, Rows, Stream};
 use crossbeam::{Receiver, bounded, unbounded, Sender};
 use crate::errors::{CrushError, error, CrushResult, to_job_error};
 use crate::replace::Replace;

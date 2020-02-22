@@ -1,6 +1,6 @@
-use crate::lib::ExecutionContext;
+use crate::lang::ExecutionContext;
 use crate::errors::CrushResult;
-use crate::data::{ColumnType, ValueType, Row, Value};
+use crate::lang::{ColumnType, ValueType, Row, Value};
 use std::collections::HashMap;
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
