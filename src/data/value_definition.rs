@@ -7,7 +7,7 @@ use crate::{
     printer::Printer,
     glob::Glob,
     errors::{error, mandate, CrushResult, argument_error, to_job_error},
-    namespace::Namespace,
+    scope::Scope,
     data::{Value},
     lib::JobJoinHandle,
     closure::Closure,
@@ -29,7 +29,7 @@ pub enum ValueDefinition {
 }
 
 impl ValueDefinition {
-    pub fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Namespace, printer: &Printer) -> CrushResult<Value> {
+    pub fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope, printer: &Printer) -> CrushResult<Value> {
         Ok(match self {
             ValueDefinition::Value(v) => v.clone(),
             ValueDefinition::JobDefinition(def) => {

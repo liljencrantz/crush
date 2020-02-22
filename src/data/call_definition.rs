@@ -1,6 +1,6 @@
 use crate::lib::{ExecutionContext, JobJoinHandle};
 use crate::data::{ArgumentDefinition, ArgumentVecCompiler, Value};
-use crate::namespace::Namespace;
+use crate::scope::Scope;
 use crate::errors::{error, CrushResult};
 use crate::printer::Printer;
 use crate::stream::{ValueReceiver, ValueSender, InputStream};
@@ -25,7 +25,7 @@ impl CallDefinition {
 
     pub fn spawn_stream(
         &self,
-        env: &Namespace,
+        env: &Scope,
         printer: &Printer,
         mut argument_stream: InputStream,
         output: ValueSender,
@@ -59,7 +59,7 @@ impl CallDefinition {
 
     pub fn spawn_and_execute(
         &self,
-        env: &Namespace,
+        env: &Scope,
         printer: &Printer,
         input: ValueReceiver,
         output: ValueSender,

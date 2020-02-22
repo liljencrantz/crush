@@ -18,7 +18,7 @@ mod control;
 mod constants;
 
 use crate::{
-    namespace::Namespace,
+    scope::Scope,
     data::{
         Argument,
         Command,
@@ -34,14 +34,14 @@ pub struct ExecutionContext {
     pub input: ValueReceiver,
     pub output: ValueSender,
     pub arguments: Vec<Argument>,
-    pub env: Namespace,
+    pub env: Scope,
     pub printer: Printer,
 }
 
 pub struct StreamExecutionContext {
     pub argument_stream: InputStream,
     pub output: ValueSender,
-    pub env: Namespace,
+    pub env: Scope,
     pub printer: Printer,
 }
 
@@ -69,7 +69,7 @@ impl JobJoinHandle {
     }
 }
 
-pub fn declare(root: &Namespace) -> CrushResult<()> {
+pub fn declare(root: &Scope) -> CrushResult<()> {
     r#type::declare(root)?;
     time::declare(root)?;
     math::declare(root)?;
@@ -83,6 +83,6 @@ pub fn declare(root: &Namespace) -> CrushResult<()> {
     control::declare(root)?;
     text::declare(root)?;
     constants::declare(root)?;
-
+    root.readonly();
     return Ok(());
 }

@@ -18,7 +18,7 @@ use crate::errors::error;
 use crate::data::{Struct, RowsReader};
 use crate::closure::Closure;
 use crate::printer::Printer;
-use crate::namespace::Namespace;
+use crate::scope::Scope;
 
 enum Location {
     Replace(usize),
@@ -39,7 +39,7 @@ pub fn run(
     config: Config,
     mut input: impl Readable,
     sender: ValueSender,
-    env: &Namespace,
+    env: &Scope,
     printer: &Printer,
 ) -> CrushResult<()> {
     let input_type = input.types().clone();
@@ -151,7 +151,7 @@ fn perform_for(
     input: impl Readable,
     sender: ValueSender,
     mut arguments: Vec<Argument>,
-    env: &Namespace,
+    env: &Scope,
     printer: &Printer,
 ) -> CrushResult<()> {
     let mut copy = false;

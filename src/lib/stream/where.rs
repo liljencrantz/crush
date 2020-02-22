@@ -14,7 +14,7 @@ use crate::stream::{Readable, empty_channel, channels};
 use crate::data::{RowsReader, ColumnType, Argument};
 use crate::closure::Closure;
 use crate::stream_printer::spawn_print_thread;
-use crate::namespace::Namespace;
+use crate::scope::Scope;
 
 pub struct Config<T: Readable> {
     condition: Closure,
@@ -22,7 +22,7 @@ pub struct Config<T: Readable> {
     output: OutputStream,
 }
 
-fn evaluate(condition: &Closure, row: &Row, input_type: &Vec<ColumnType>, env: &Namespace, printer: &Printer) -> CrushResult<bool> {
+fn evaluate(condition: &Closure, row: &Row, input_type: &Vec<ColumnType>, env: &Scope, printer: &Printer) -> CrushResult<bool> {
     let arguments = row.clone().into_vec()
         .drain(..)
         .zip(input_type.iter())
@@ -50,7 +50,7 @@ fn evaluate(condition: &Closure, row: &Row, input_type: &Vec<ColumnType>, env: &
     }
 }
 
-pub fn run<T: Readable>(mut config: Config<T>, env: Namespace, printer: Printer) -> CrushResult<()> {
+pub fn run<T: Readable>(mut config: Config<T>, env: Scope, printer: Printer) -> CrushResult<()> {
     loop {
         match config.input.read() {
             Ok(row) => {

@@ -4,7 +4,7 @@ use crate::data::{ValueType, List, Command};
 use crate::data::Value;
 use std::collections::HashSet;
 use crate::lib::parse_util::{single_argument_list, single_argument_type};
-use crate::namespace::Namespace;
+use crate::scope::Scope;
 
 fn of(mut context: ExecutionContext) -> CrushResult<()> {
     if context.arguments.len() == 0 {
@@ -65,13 +65,14 @@ fn pop(context: ExecutionContext) -> CrushResult<()> {
     Ok(())
 }
 
-pub fn declare(root: &Namespace) -> CrushResult<()> {
-    let list = root.create_namespace("list")?;
-    list.declare_str("of", Value::Command(Command::new(of)))?;
-    list.declare_str("create", Value::Command(Command::new(create)))?;
-    list.declare_str("len", Value::Command(Command::new(len)))?;
-    list.declare_str("empty", Value::Command(Command::new(empty)))?;
-    list.declare_str("push", Value::Command(Command::new(push)))?;
-    list.declare_str("pop", Value::Command(Command::new(pop)))?;
+pub fn declare(root: &Scope) -> CrushResult<()> {
+    let env = root.create_namespace("list")?;
+    env.declare_str("of", Value::Command(Command::new(of)))?;
+    env.declare_str("create", Value::Command(Command::new(create)))?;
+    env.declare_str("len", Value::Command(Command::new(len)))?;
+    env.declare_str("empty", Value::Command(Command::new(empty)))?;
+    env.declare_str("push", Value::Command(Command::new(push)))?;
+    env.declare_str("pop", Value::Command(Command::new(pop)))?;
+    env.readonly();
     Ok(())
 }

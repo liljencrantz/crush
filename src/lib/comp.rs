@@ -1,7 +1,7 @@
 use crate::lib::ExecutionContext;
 use crate::errors::{CrushResult, argument_error};
 use crate::data::{Command, Value};
-use crate::namespace::Namespace;
+use crate::scope::Scope;
 use std::cmp::Ordering;
 
 fn gt(mut context: ExecutionContext) -> CrushResult<()> {
@@ -80,7 +80,7 @@ fn not(mut context: ExecutionContext) -> CrushResult<()> {
     }
 }
 
-pub fn declare(root: &Namespace) -> CrushResult<()> {
+pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("comp")?;
     root.uses(&env);
     env.declare_str("gt", Value::Command(Command::new(gt)))?;
@@ -90,5 +90,6 @@ pub fn declare(root: &Namespace) -> CrushResult<()> {
     env.declare_str("eq", Value::Command(Command::new(eq)))?;
     env.declare_str("neq", Value::Command(Command::new(neq)))?;
     env.declare_str("not", Value::Command(Command::new(not)))?;
+    env.readonly();
     Ok(())
 }

@@ -4,7 +4,7 @@ use crate::data::{ValueType, Dict, Command};
 use crate::data::Row;
 use crate::data::Value;
 use crate::data::ColumnType;
-use crate::namespace::Namespace;
+use crate::scope::Scope;
 use crate::lib::parse_util::single_argument_dict;
 
 fn create(mut context: ExecutionContext) -> CrushResult<()> {
@@ -81,13 +81,14 @@ fn empty(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Bool(single_argument_dict(context.arguments)?.len() == 0))
 }
 
-pub fn declare(root: &Namespace) -> CrushResult<()> {
-    let dict = root.create_namespace("dict")?;
-    dict.declare_str("create", Value::Command(Command::new(create)))?;
-    dict.declare_str("insert", Value::Command(Command::new(insert)))?;
-    dict.declare_str("get", Value::Command(Command::new(get)))?;
-    dict.declare_str("remove", Value::Command(Command::new(remove)))?;
-    dict.declare_str("len", Value::Command(Command::new(len)))?;
-    dict.declare_str("empty", Value::Command(Command::new(empty)))?;
+pub fn declare(root: &Scope) -> CrushResult<()> {
+    let env = root.create_namespace("dict")?;
+    env.declare_str("create", Value::Command(Command::new(create)))?;
+    env.declare_str("insert", Value::Command(Command::new(insert)))?;
+    env.declare_str("get", Value::Command(Command::new(get)))?;
+    env.declare_str("remove", Value::Command(Command::new(remove)))?;
+    env.declare_str("len", Value::Command(Command::new(len)))?;
+    env.declare_str("empty", Value::Command(Command::new(empty)))?;
+    env.readonly();
     Ok(())
 }

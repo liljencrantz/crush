@@ -1,7 +1,7 @@
 use crate::lib::ExecutionContext;
 use crate::errors::{CrushResult, argument_error, to_job_error};
 use crate::data::{Value, Command, BinaryReader};
-use crate::namespace::cwd;
+use crate::scope::cwd;
 
 
 pub fn cmd(mut context: ExecutionContext) -> CrushResult<()> {

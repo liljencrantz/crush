@@ -1,6 +1,6 @@
 use crate::lib::ExecutionContext;
 use crate::errors::{CrushResult, argument_error};
-use crate::namespace::Namespace;
+use crate::scope::Scope;
 use crate::data::{Value, Command};
 use chrono::Duration;
 
@@ -118,7 +118,7 @@ fn neg(mut context: ExecutionContext) -> CrushResult<()> {
     }
 }
 
-pub fn declare(root: &Namespace) -> CrushResult<()> {
+pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("math")?;
     root.uses(&env);
     env.declare_str("add", Value::Command(Command::new(add)))?;
@@ -126,5 +126,6 @@ pub fn declare(root: &Namespace) -> CrushResult<()> {
     env.declare_str("mul", Value::Command(Command::new(mul)))?;
     env.declare_str("div", Value::Command(Command::new(div)))?;
     env.declare_str("neg", Value::Command(Command::new(neg)))?;
+    env.readonly();
     Ok(())
 }

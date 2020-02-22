@@ -13,7 +13,7 @@ use lazy_static::lazy_static;
 use crate::lib::ExecutionContext;
 use crate::lib::command_util::{create_user_map, UserMap};
 use crate::data::{Argument, Value, ValueType, ColumnType, Row};
-use crate::namespace::cwd;
+use crate::scope::cwd;
 use crate::errors::{error, CrushError, CrushResult, to_job_error};
 use crate::stream::OutputStream;
 

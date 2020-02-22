@@ -1,4 +1,4 @@
-use crate::namespace::Namespace;
+use crate::scope::Scope;
 use crate::errors::CrushResult;
 use crate::data::{Value, Command};
 
@@ -7,7 +7,7 @@ mod stat;
 mod cd;
 mod pwd;
 
-pub fn declare(root: &Namespace) -> CrushResult<()> {
+pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("file")?;
     root.uses(&env);
     env.declare_str("ls", Value::Command(Command::new(find::perform_ls)))?;
@@ -15,5 +15,6 @@ pub fn declare(root: &Namespace) -> CrushResult<()> {
     env.declare_str("stat", Value::Command(Command::new(stat::perform)))?;
     env.declare_str("cd", Value::Command(Command::new(cd::perform)))?;
     env.declare_str("pwd", Value::Command(Command::new(pwd::perform)))?;
+    env.readonly();
     Ok(())
 }

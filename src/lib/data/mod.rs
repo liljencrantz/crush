@@ -1,4 +1,4 @@
-use crate::namespace::Namespace;
+use crate::scope::Scope;
 use crate::errors::CrushResult;
 use crate::data::{Value, Command, Struct};
 use crate::lib::ExecutionContext;
@@ -18,7 +18,7 @@ fn r#struct(mut context: ExecutionContext) -> CrushResult<()> {
         Value::Struct(Struct::new(arr)))
 }
 
-pub fn declare(root: &Namespace) -> CrushResult<()> {
+pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("data")?;
     root.uses(&env);
 
@@ -27,6 +27,7 @@ pub fn declare(root: &Namespace) -> CrushResult<()> {
 
     list::declare(&env)?;
     dict::declare(&env)?;
+    env.readonly();
 
     Ok(())
 }

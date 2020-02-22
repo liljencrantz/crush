@@ -8,18 +8,18 @@ use crate::errors::CrushResult;
 use crate::data::ValueType;
 
 #[derive(Debug)]
-pub struct NamespaceNode {
+pub struct ScopeData {
     /** This is the parent scope used to perform variable name resolution. If a variable lookup
      fails in the current scope, it proceeds to this scope.*/
-    parent_scope: Option<Arc<Mutex<NamespaceNode>>>,
+    parent_scope: Option<Arc<Mutex<ScopeData>>>,
     /** This is the scope in which the current scope was called. Since a closure can be called
      from inside any scope, it need not be the same as the parent scope. This scope is the one used
      for break/continue loop control. */
-    calling_scope: Option<Arc<Mutex<NamespaceNode>>>,
+    calling_scope: Option<Arc<Mutex<ScopeData>>>,
 
     /** This is a list of scopes that are imported into the current scope. Anything directly inside one
     of these scopes is also considered part of this scope. */
-    uses: Vec<Arc<Mutex<NamespaceNode>>>,
+    uses: Vec<Arc<Mutex<ScopeData>>>,
 
     /** The actual data of this scope. */
     data: HashMap<String, Value>,
@@ -29,21 +29,27 @@ pub struct NamespaceNode {
 
     /** True if this scope should stop execution, i.e. if the continue or break commands have been called.  */
     is_stopped: bool,
+
+    is_readonly: bool,
 }
 
-impl NamespaceNode {
-    pub fn new(parent_scope: Option<Arc<Mutex<NamespaceNode>>>, caller: Option<Arc<Mutex<NamespaceNode>>>, is_loop: bool) -> NamespaceNode {
-        return NamespaceNode {
+impl ScopeData {
+    pub fn new(parent_scope: Option<Arc<Mutex<ScopeData>>>, caller: Option<Arc<Mutex<ScopeData>>>, is_loop: bool) -> ScopeData {
+        return ScopeData {
             parent_scope,
             calling_scope: caller,
             is_loop,
             uses: Vec::new(),
             data: HashMap::new(),
             is_stopped: false,
+            is_readonly: false,
         };
     }
 
     pub fn declare(&mut self, name: &str, value: Value) -> CrushResult<()> {
+        if self.is_readonly {
+            return error("Scope is read only");
+        }
         if self.data.contains_key(name) {
             return error(format!("Variable ${{{}}} already exists", name).as_str());
         }
@@ -51,8 +57,14 @@ impl NamespaceNode {
         return Ok(());
     }
 
+    pub fn readonly(&mut self) {
+        self.is_readonly = true;
+    }
+
     pub fn do_break(&mut self) -> bool {
-        if self.is_loop {
+        if self.is_readonly {
+            return false;
+        } else if self.is_loop {
             self.is_stopped = true;
             true
         } else {
@@ -69,7 +81,9 @@ impl NamespaceNode {
     }
 
     pub fn do_continue(&mut self) -> bool {
-        if self.is_loop {
+        if self.is_readonly {
+            return false;
+        } else if self.is_loop {
             true
         } else {
             let ok = self.calling_scope.as_deref()
@@ -96,6 +110,9 @@ impl NamespaceNode {
                 }
                 None => return error(format!("Unknown variable ${{{}}}", name).as_str()),
             }
+        }
+        if self.is_readonly {
+            return error("Scope is read only");
         }
 
         if self.data[name].value_type() != value.value_type() {
@@ -124,11 +141,14 @@ impl NamespaceNode {
                 None => None,
             }
         } else {
+            if self.is_readonly {
+                return None;
+            }
             self.data.remove(name)
         }
     }
 
-    pub fn uses(&mut self, other: &Arc<Mutex<NamespaceNode>>) {
+    pub fn uses(&mut self, other: &Arc<Mutex<ScopeData>>) {
         self.uses.push(other.clone());
     }
 

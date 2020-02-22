@@ -7,7 +7,7 @@ use regex::Regex;
 
 use crate::{
     closure::Closure,
-    namespace::cwd,
+    scope::cwd,
     data::rows::Rows,
     errors::{error, CrushError, to_job_error},
     glob::Glob,
@@ -16,7 +16,7 @@ use crate::data::{List, Command, Stream, ValueType, Dict, ColumnType, value_type
 use crate::errors::CrushResult;
 use chrono::Duration;
 use crate::format::duration_format;
-use crate::namespace::Namespace;
+use crate::scope::Scope;
 use crate::data::row::Struct;
 use crate::stream::streams;
 use std::io::{Read, Error};
@@ -38,7 +38,7 @@ pub enum Value {
     Struct(Struct),
     List(List),
     Dict(Dict),
-    Env(Namespace),
+    Env(Scope),
     Bool(bool),
     Float(f64),
     Empty(),

@@ -1,10 +1,13 @@
-use crate::namespace_node::NamespaceNode;
+mod data;
+
+use data::ScopeData;
 use crate::errors::{error, CrushResult};
 use std::error::Error;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use crate::data::{Value, ValueType};
 use std::collections::HashMap;
+
 
 /**
   This is where we store variables, including functions.
@@ -16,20 +19,20 @@ use std::collections::HashMap;
 */
 #[derive(Clone)]
 #[derive(Debug)]
-pub struct Namespace {
-    namespace: Arc<Mutex<NamespaceNode>>,
+pub struct Scope {
+    namespace: Arc<Mutex<ScopeData>>,
 }
 
-impl Namespace {
-    pub fn new() -> Namespace {
-        Namespace {
-            namespace: Arc::from(Mutex::new(NamespaceNode::new(None, None, false))),
+impl Scope {
+    pub fn new() -> Scope {
+        Scope {
+            namespace: Arc::from(Mutex::new(ScopeData::new(None, None, false))),
         }
     }
 
-    pub fn create_child(&self, caller: &Namespace, is_loop: bool) -> Namespace {
-        Namespace {
-            namespace: Arc::from(Mutex::new(NamespaceNode::new(
+    pub fn create_child(&self, caller: &Scope, is_loop: bool) -> Scope {
+        Scope {
+            namespace: Arc::from(Mutex::new(ScopeData::new(
                 Some(self.namespace.clone()),
                 Some(caller.namespace.clone()),
                 is_loop))),
@@ -48,9 +51,9 @@ impl Namespace {
         self.namespace.lock().unwrap().is_stopped()
     }
 
-    pub fn create_namespace(&self, name: &str) -> CrushResult<Namespace> {
-        let res = Namespace {
-            namespace: Arc::from(Mutex::new(NamespaceNode::new(None, None, false))),
+    pub fn create_namespace(&self, name: &str) -> CrushResult<Scope> {
+        let res = Scope {
+            namespace: Arc::from(Mutex::new(ScopeData::new(None, None, false))),
         };
         self.declare(&[Box::from(name)], Value::Env(res.clone()))?;
         Ok(res)
@@ -140,11 +143,11 @@ impl Namespace {
         }
     }
 
-    pub fn uses(&self, other: &Namespace) {
+    pub fn uses(&self, other: &Scope) {
         self.namespace.lock().unwrap().uses(&other.namespace);
     }
 
-    fn get_location(&self, name: &[Box<str>]) -> Option<(Namespace, Vec<Box<str>>)> {
+    fn get_location(&self, name: &[Box<str>]) -> Option<(Scope, Vec<Box<str>>)> {
         if name.is_empty() {
             return None;
         }
@@ -163,6 +166,10 @@ impl Namespace {
     pub fn dump(&self, map: &mut HashMap<String, ValueType>) {
         let namespace = self.namespace.lock().unwrap();
         namespace.dump(map)
+    }
+
+    pub fn readonly(&self) {
+        self.namespace.lock().unwrap().readonly();
     }
 
     pub fn to_string(&self) -> String {

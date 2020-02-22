@@ -2,7 +2,7 @@ use crate::lib::ExecutionContext;
 use crate::errors::{to_job_error, CrushResult, error};
 use std::path::Path;
 use crate::data::Value;
-use crate::namespace::{home, cwd};
+use crate::scope::{home, cwd};
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     let dir = match context.arguments.len() {

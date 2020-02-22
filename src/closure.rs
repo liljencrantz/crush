@@ -1,5 +1,5 @@
 use crate::job::Job;
-use crate::namespace::Namespace;
+use crate::scope::Scope;
 use crate::data::Argument;
 use crate::stream::empty_channel;
 use crate::errors::{error, CrushResult};
@@ -10,11 +10,11 @@ use crate::stream_printer::spawn_print_thread;
 #[derive(Debug)]
 pub struct Closure {
     job_definitions: Vec<Job>,
-    env: Namespace,
+    env: Scope,
 }
 
 impl Closure {
-    pub fn new(job_definitions: Vec<Job>, env: &Namespace) -> Closure {
+    pub fn new(job_definitions: Vec<Job>, env: &Scope) -> Closure {
         Closure {
             job_definitions,
             env: env.clone(),
@@ -76,7 +76,7 @@ impl Closure {
         Ok(())
     }
 
-    fn push_arguments_to_env(mut arguments: Vec<Argument>, env: &Namespace) {
+    fn push_arguments_to_env(mut arguments: Vec<Argument>, env: &Scope) {
         for arg in arguments.drain(..) {
             if let Some(name) = &arg.name {
                 env.declare_str(name.as_ref(), arg.value);

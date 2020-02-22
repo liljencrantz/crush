@@ -3,7 +3,7 @@ use crate::{
     data::Value,
 };
 use crate::printer::Printer;
-use crate::namespace::Namespace;
+use crate::scope::Scope;
 use crate::data::{Stream, RowsReader, ListReader, Struct, DictReader};
 use crate::errors::{argument_error, CrushResult, data_error};
 use crate::closure::Closure;
@@ -14,7 +14,7 @@ use crate::stream_printer::spawn_print_thread;
 pub struct Config {
     condition: Closure,
     body: Closure,
-    env: Namespace,
+    env: Scope,
     printer: Printer,
 }
 

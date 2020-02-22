@@ -11,7 +11,7 @@ use crate::lib::command_util::{create_user_map, UserMap};
 use users::uid_t;
 use crate::data::{ColumnType, Command};
 use chrono::Duration;
-use crate::namespace::Namespace;
+use crate::scope::Scope;
 use nix::sys::signal;
 use nix::unistd::Pid;
 use std::str::FromStr;
@@ -75,10 +75,11 @@ fn kill(context: ExecutionContext) -> CrushResult<()> {
     Ok(())
 }
 
-pub fn declare(root: &Namespace) -> CrushResult<()> {
+pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("proc")?;
     root.uses(&env);
     env.declare_str("ps", Value::Command(Command::new(ps)))?;
     env.declare_str("kill", Value::Command(Command::new(kill)))?;
+    env.readonly();
     Ok(())
 }
