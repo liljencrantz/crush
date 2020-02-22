@@ -11,11 +11,8 @@ mod dict;
 mod binary;
 mod value_type_lexer;
 mod value_type_parser;
-
-use crate::lib::{ExecutionContext};
-use crate::errors::{CrushResult, error};
-use std::fmt::Formatter;
-use crate::stream::{InputStream};
+mod command;
+mod stream;
 
 pub use value::Value;
 pub use column_type::ColumnType;
@@ -35,54 +32,5 @@ pub use dict::{Dict, DictReader};
 pub use argument::ArgumentVecCompiler;
 pub use binary::BinaryReader;
 pub use binary::binary_channel;
-
-#[derive(Clone)]
-pub struct Command {
-    pub call: fn(context: ExecutionContext) -> CrushResult<()>,
-}
-
-impl Command {
-    pub fn new(call: fn(context: ExecutionContext) -> CrushResult<()>) -> Command {
-        return Command { call };
-    }
-}
-
-impl std::cmp::PartialEq for Command {
-    fn eq(&self, _other: &Command) -> bool {
-        return false;
-    }
-}
-
-impl std::cmp::Eq for Command {}
-
-impl std::fmt::Debug for Command {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Command")
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Stream {
-    pub stream: InputStream,
-}
-
-impl Stream {
-    pub fn get(&self, idx: i128) -> CrushResult<Row> {
-        let mut i = 0i128;
-        loop {
-            match self.stream.recv() {
-                Ok(row) => {
-                    if i == idx {
-                        return Ok(row);
-                    }
-                    i += 1;
-                },
-                Err(_) => return error("Index out of bounds"),
-            }
-        }
-    }
-
-    pub fn reader(self) -> InputStream {
-        self.stream
-    }
-}
+pub use command::Command;
+pub use stream::Stream;
