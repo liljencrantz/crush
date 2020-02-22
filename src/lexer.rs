@@ -75,7 +75,7 @@ lazy_static! {
         (TokenType::Variable, Regex::new(r"^\$[a-zA-Z_][\.a-zA-Z_0-9]*").unwrap()),
         (TokenType::Field, Regex::new(r"^%[a-zA-Z_][\.a-zA-Z_0-9]*").unwrap()),
 
-        (TokenType::ModeStart, Regex::new(r"^([`*]?|[a-z]+)\{").unwrap()),
+        (TokenType::ModeStart, Regex::new(r"^[a-z*]*\{").unwrap()),
         (TokenType::ModeEnd, Regex::new(r"^\}").unwrap()),
         (TokenType::ModeStart, Regex::new(r"^\(").unwrap()),
         (TokenType::ModeEnd, Regex::new(r"^\)").unwrap()),
@@ -112,10 +112,13 @@ mod tests {
 
     #[test]
     fn blocks() {
-        let mut l = Lexer::new(&String::from("echo `{foo}"));
+        let mut l = Lexer::new(&String::from("echo *{foo} aaa{foo} {foo}"));
         let tt = extract_tokens(&mut l);
         assert_eq!(tt, vec![
-            TokenType::String, TokenType::ModeStart, TokenType::String, TokenType::ModeEnd,
+            TokenType::String,
+            TokenType::ModeStart, TokenType::String, TokenType::ModeEnd,
+            TokenType::ModeStart, TokenType::String, TokenType::ModeEnd,
+            TokenType::ModeStart, TokenType::String, TokenType::ModeEnd,
             TokenType::EOF]);
     }
 

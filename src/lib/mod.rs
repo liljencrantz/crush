@@ -15,6 +15,7 @@ mod stream;
 mod data;
 mod text;
 mod control;
+mod constants;
 
 use crate::{
     namespace::Namespace,
@@ -69,10 +70,6 @@ impl JobJoinHandle {
 }
 
 pub fn declare(root: &Namespace) -> CrushResult<()> {
-    root.declare_str("true", Value::Bool(true))?;
-    root.declare_str("false", Value::Bool(false))?;
-    root.declare_str("global", Value::Env(root.clone()))?;
-
     r#type::declare(root)?;
     time::declare(root)?;
     math::declare(root)?;
@@ -85,6 +82,7 @@ pub fn declare(root: &Namespace) -> CrushResult<()> {
     io::declare(root)?;
     control::declare(root)?;
     text::declare(root)?;
+    constants::declare(root)?;
 
     return Ok(());
 }

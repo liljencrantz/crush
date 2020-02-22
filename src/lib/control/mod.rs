@@ -7,6 +7,7 @@ mod r#while;
 mod r#for;
 mod r#break;
 mod r#continue;
+mod r#cmd;
 
 pub fn declare(root: &Namespace) -> CrushResult<()> {
     let env = root.create_namespace("control")?;
@@ -17,6 +18,7 @@ pub fn declare(root: &Namespace) -> CrushResult<()> {
     root.declare_str("for", Value::Command(Command::new(r#for::perform)))?;
     env.declare_str("break", Value::Command(Command::new(r#break::perform)))?;
     env.declare_str("continue", Value::Command(Command::new(r#continue::perform)))?;
+    env.declare_str("cmd", Value::Command(Command::new(r#cmd::cmd)))?;
 
     Ok(())
 }

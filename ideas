@@ -17,7 +17,7 @@ ls | select * file={upper $file}
 ls | select * lower={lower $file}
 
 # Replace file column in-place using regex
-ls | sed file= regex{a(b*)c(d*)e} replace{\1\2}
+ls | select * file={regex.replace regex{a(b*)c} "A\\1B"}
 
 Modes:
 

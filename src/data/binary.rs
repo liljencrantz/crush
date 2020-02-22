@@ -128,8 +128,8 @@ impl dyn BinaryReader {
         }
     }
 
-    pub fn vec(vec: &Vec<u8>) -> CrushResult<Box<dyn BinaryReader>> {
-        return Ok(Box::from(VecReader { vec: vec.clone(), offset: 0 }));
+    pub fn vec(vec: &Vec<u8>) -> Box<dyn BinaryReader> {
+        return Box::from(VecReader { vec: vec.clone(), offset: 0 });
     }
 }
 
