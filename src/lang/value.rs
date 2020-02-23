@@ -12,7 +12,7 @@ use crate::{
     errors::{error, CrushError, to_job_error},
     glob::Glob,
 };
-use crate::lang::{List, Command, Stream, ValueType, Dict, ColumnType, value_type_parser, BinaryReader};
+use crate::lang::{List, SimpleCommand, Stream, ValueType, Dict, ColumnType, value_type_parser, BinaryReader};
 use crate::errors::CrushResult;
 use chrono::Duration;
 use crate::format::duration_format;
@@ -30,7 +30,7 @@ pub enum Value {
     Field(Vec<Box<str>>),
     Glob(Glob),
     Regex(Box<str>, Regex),
-    Command(Command),
+    Command(SimpleCommand),
     Closure(Closure),
     Stream(Stream),
     File(Box<Path>),

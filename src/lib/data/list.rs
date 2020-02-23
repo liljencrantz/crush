@@ -1,6 +1,6 @@
 use crate::lang::ExecutionContext;
 use crate::errors::{CrushResult, argument_error};
-use crate::lang::{ValueType, List, Command};
+use crate::lang::{ValueType, List, SimpleCommand};
 use crate::lang::Value;
 use std::collections::HashSet;
 use crate::lib::parse_util::{single_argument_list, single_argument_type};
@@ -67,12 +67,12 @@ fn pop(context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("list")?;
-    env.declare_str("of", Value::Command(Command::new(of)))?;
-    env.declare_str("create", Value::Command(Command::new(create)))?;
-    env.declare_str("len", Value::Command(Command::new(len)))?;
-    env.declare_str("empty", Value::Command(Command::new(empty)))?;
-    env.declare_str("push", Value::Command(Command::new(push)))?;
-    env.declare_str("pop", Value::Command(Command::new(pop)))?;
+    env.declare_str("of", Value::Command(SimpleCommand::new(of)))?;
+    env.declare_str("create", Value::Command(SimpleCommand::new(create)))?;
+    env.declare_str("len", Value::Command(SimpleCommand::new(len)))?;
+    env.declare_str("empty", Value::Command(SimpleCommand::new(empty)))?;
+    env.declare_str("push", Value::Command(SimpleCommand::new(push)))?;
+    env.declare_str("pop", Value::Command(SimpleCommand::new(pop)))?;
     env.readonly();
     Ok(())
 }

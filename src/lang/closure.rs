@@ -5,6 +5,7 @@ use crate::stream::empty_channel;
 use crate::errors::{error, CrushResult};
 use crate::lang::{ExecutionContext/*, StreamExecutionContext*/};
 use crate::stream_printer::spawn_print_thread;
+use crate::lang::command::CrushCommand;
 
 #[derive(Clone)]
 #[derive(Debug)]
@@ -13,21 +14,8 @@ pub struct Closure {
     env: Scope,
 }
 
-impl Closure {
-    pub fn new(job_definitions: Vec<Job>, env: &Scope) -> Closure {
-        Closure {
-            job_definitions,
-            env: env.clone(),
-        }
-    }
-/*
-    pub fn spawn_stream(&self, context: StreamExecutionContext) -> CrushResult<()> {
-        let job_definitions = self.job_definitions.clone();
-        let parent_env = self.env.clone();
-        Ok(())
-    }
-*/
-    pub fn spawn_and_execute(&self, context: ExecutionContext) -> CrushResult<()> {
+impl CrushCommand for Closure {
+    fn invoke(&self, context: ExecutionContext) -> CrushResult<()> {
         let job_definitions = self.job_definitions.clone();
         let parent_env = self.env.clone();
         let env = parent_env.create_child(&context.env, false);
@@ -75,6 +63,22 @@ impl Closure {
         }
         Ok(())
     }
+}
+
+impl Closure {
+    pub fn new(job_definitions: Vec<Job>, env: &Scope) -> Closure {
+        Closure {
+            job_definitions,
+            env: env.clone(),
+        }
+    }
+/*
+    pub fn spawn_stream(&self, context: StreamExecutionContext) -> CrushResult<()> {
+        let job_definitions = self.job_definitions.clone();
+        let parent_env = self.env.clone();
+        Ok(())
+    }
+*/
 
     fn push_arguments_to_env(mut arguments: Vec<Argument>, env: &Scope) {
         for arg in arguments.drain(..) {

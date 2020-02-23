@@ -1,6 +1,5 @@
 Todo for MVP 1:
 Terminal emulation for cmd command
-Fall back to cmd if a command does not exist internally
 Stop the namespace deadlocks
 Remove the dot operator in favor of []
 Add var.use command
@@ -138,3 +137,4 @@ Add text.upper command
 Add text.lower command
 Add text.format command
 Add control.cmd command
+Fall back to cmd if a command does not exist internally

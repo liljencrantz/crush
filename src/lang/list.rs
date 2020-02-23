@@ -30,6 +30,12 @@ impl List {
         cells.append(new_cells);
     }
 
+    pub fn dump(&self) -> Vec<Value> {
+        let mut res = Vec::new();
+        res.append(&mut self.cells.lock().unwrap().clone());
+        res
+    }
+
     pub fn pop(&self) -> Option<Value> {
         let mut cells = self.cells.lock().unwrap();
         cells.pop()

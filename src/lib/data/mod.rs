@@ -1,6 +1,6 @@
 use crate::scope::Scope;
 use crate::errors::CrushResult;
-use crate::lang::{Value, Command, Struct};
+use crate::lang::{Value, SimpleCommand, Struct};
 use crate::lang::ExecutionContext;
 
 mod list;
@@ -22,8 +22,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("data")?;
     root.uses(&env);
 
-    env.declare_str("struct", Value::Command(Command::new(r#struct)))?;
-    env.declare_str("materialize", Value::Command(Command::new(materialize)))?;
+    env.declare_str("struct", Value::Command(SimpleCommand::new(r#struct)))?;
+    env.declare_str("materialize", Value::Command(SimpleCommand::new(materialize)))?;
 
     list::declare(&env)?;
     dict::declare(&env)?;

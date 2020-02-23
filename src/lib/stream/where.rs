@@ -15,6 +15,7 @@ use crate::lang::{RowsReader, ColumnType, Argument};
 use crate::lang::Closure;
 use crate::stream_printer::spawn_print_thread;
 use crate::scope::Scope;
+use crate::lang::CrushCommand;
 
 pub struct Config<T: Readable> {
     condition: Closure,
@@ -36,7 +37,7 @@ fn evaluate(condition: &Closure, row: &Row, input_type: &Vec<ColumnType>, env: &
 
     let (sender, reciever) = channels();
 
-    condition.spawn_and_execute(ExecutionContext {
+    condition.invoke(ExecutionContext {
         input: empty_channel(),
         output: sender,
         arguments,

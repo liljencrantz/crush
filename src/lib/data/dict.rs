@@ -1,6 +1,6 @@
 use crate::lang::ExecutionContext;
 use crate::errors::{CrushResult, argument_error};
-use crate::lang::{ValueType, Dict, Command};
+use crate::lang::{ValueType, Dict, SimpleCommand};
 use crate::lang::Row;
 use crate::lang::Value;
 use crate::lang::ColumnType;
@@ -83,12 +83,12 @@ fn empty(context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("dict")?;
-    env.declare_str("create", Value::Command(Command::new(create)))?;
-    env.declare_str("insert", Value::Command(Command::new(insert)))?;
-    env.declare_str("get", Value::Command(Command::new(get)))?;
-    env.declare_str("remove", Value::Command(Command::new(remove)))?;
-    env.declare_str("len", Value::Command(Command::new(len)))?;
-    env.declare_str("empty", Value::Command(Command::new(empty)))?;
+    env.declare_str("create", Value::Command(SimpleCommand::new(create)))?;
+    env.declare_str("insert", Value::Command(SimpleCommand::new(insert)))?;
+    env.declare_str("get", Value::Command(SimpleCommand::new(get)))?;
+    env.declare_str("remove", Value::Command(SimpleCommand::new(remove)))?;
+    env.declare_str("len", Value::Command(SimpleCommand::new(len)))?;
+    env.declare_str("empty", Value::Command(SimpleCommand::new(empty)))?;
     env.readonly();
     Ok(())
 }

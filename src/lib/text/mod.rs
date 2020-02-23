@@ -2,7 +2,7 @@ use crate::scope::Scope;
 use crate::errors::{CrushResult, argument_error};
 use crate::lang::ExecutionContext;
 use crate::lib::parse_util::{single_argument, two_arguments};
-use crate::lang::{Value, Command, Argument};
+use crate::lang::{Value, SimpleCommand, Argument};
 use nix::sys::ptrace::cont;
 
 mod format;
@@ -38,9 +38,9 @@ fn split(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("text")?;
     root.uses(&env);
-    env.declare_str("upper", Value::Command(Command::new(upper)))?;
-    env.declare_str("lower", Value::Command(Command::new(lower)))?;
-    env.declare_str("format", Value::Command(Command::new(format::format)))?;
+    env.declare_str("upper", Value::Command(SimpleCommand::new(upper)))?;
+    env.declare_str("lower", Value::Command(SimpleCommand::new(lower)))?;
+    env.declare_str("format", Value::Command(SimpleCommand::new(format::format)))?;
     env.readonly();
     Ok(())
 }

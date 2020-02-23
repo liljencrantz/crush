@@ -20,26 +20,37 @@ pub struct StreamExecutionContext {
     pub printer: Printer,
 }
 
+pub trait CrushCommand {
+    fn invoke(&self, context: ExecutionContext) -> CrushResult<()>;
+}
+
 #[derive(Clone)]
-pub struct Command {
+pub struct SimpleCommand {
     pub call: fn(context: ExecutionContext) -> CrushResult<()>,
 }
 
-impl Command {
-    pub fn new(call: fn(context: ExecutionContext) -> CrushResult<()>) -> Command {
-        return Command { call };
+impl SimpleCommand {
+    pub fn new(call: fn(context: ExecutionContext) -> CrushResult<()>) -> SimpleCommand {
+        return SimpleCommand { call };
     }
 }
 
-impl std::cmp::PartialEq for Command {
-    fn eq(&self, _other: &Command) -> bool {
+impl CrushCommand for SimpleCommand {
+    fn invoke(&self, context: ExecutionContext) -> CrushResult<()> {
+        let c = self.call;
+        c(context)
+    }
+}
+
+impl std::cmp::PartialEq for SimpleCommand {
+    fn eq(&self, _other: &SimpleCommand) -> bool {
         return false;
     }
 }
 
-impl std::cmp::Eq for Command {}
+impl std::cmp::Eq for SimpleCommand {}
 
-impl std::fmt::Debug for Command {
+impl std::fmt::Debug for SimpleCommand {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Command")
     }

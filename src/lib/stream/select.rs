@@ -1,4 +1,4 @@
-use crate::lang::ExecutionContext;
+use crate::lang::{ExecutionContext, CrushCommand};
 use crate::{
     lib::command_util::find_field_from_str,
     errors::argument_error,
@@ -67,7 +67,7 @@ pub fn run(
                             .zip(&input_type)
                             .map(|(cell, cell_type)| Argument::new(cell_type.name.clone(), cell.clone()))
                             .collect();
-                        closure.spawn_and_execute(
+                        closure.invoke(
                             ExecutionContext {
                                 input: empty_channel(),
                                 output: sender,
@@ -117,7 +117,7 @@ pub fn run(
                                 .map(|(cell, cell_type)| Argument::new(cell_type.name.clone(), cell.clone()))
                                 .collect();
                             let (sender, receiver) = channels();
-                            closure.spawn_and_execute(
+                            closure.invoke(
                                 ExecutionContext {
                                     input: empty_channel(),
                                     output: sender,

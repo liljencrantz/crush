@@ -1,6 +1,6 @@
 use crate::lang::ExecutionContext;
 use crate::errors::{CrushResult, argument_error};
-use crate::lang::{Value, Command, ValueType};
+use crate::lang::{Value, SimpleCommand, ValueType};
 use crate::scope::Scope;
 use crate::lib::parse_util::single_argument_type;
 
@@ -15,8 +15,8 @@ fn of(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("type")?;
 
-    env.declare_str("to", Value::Command(Command::new(to)))?;
-    env.declare_str("of", Value::Command(Command::new(of)))?;
+    env.declare_str("to", Value::Command(SimpleCommand::new(to)))?;
+    env.declare_str("of", Value::Command(SimpleCommand::new(of)))?;
 
     env.declare_str("integer", Value::Type(ValueType::Integer))?;
     env.declare_str("type", Value::Type(ValueType::Type))?;

@@ -4,7 +4,7 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::scope::Scope;
-use crate::lang::{Stream, RowsReader, ListReader, Struct, DictReader};
+use crate::lang::{Stream, RowsReader, ListReader, Struct, DictReader, CrushCommand};
 use crate::errors::{argument_error, CrushResult, data_error};
 use crate::lang::Closure;
 use crate::lang::ExecutionContext;
@@ -23,7 +23,7 @@ pub fn run(mut config: Config) -> CrushResult<()> {
     loop {
         let (sender, receiver) = channels();
 
-        config.condition.spawn_and_execute(ExecutionContext {
+        config.condition.invoke(ExecutionContext {
             input: empty_channel(),
             output: sender,
             arguments: Vec::new(),
@@ -33,7 +33,7 @@ pub fn run(mut config: Config) -> CrushResult<()> {
 
         match receiver.recv()? {
             Value::Bool(true) => {
-                config.body.spawn_and_execute(ExecutionContext {
+                config.body.invoke(ExecutionContext {
                     input: empty_channel(),
                     output: spawn_print_thread(&config.printer),
                     arguments: Vec::new(),

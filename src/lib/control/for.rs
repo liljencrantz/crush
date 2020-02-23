@@ -4,7 +4,7 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::scope::Scope;
-use crate::lang::{Stream, RowsReader, ListReader, Struct, DictReader};
+use crate::lang::{Stream, RowsReader, ListReader, Struct, DictReader, CrushCommand};
 use crate::errors::{argument_error, CrushResult};
 use crate::lang::Closure;
 use crate::lang::ExecutionContext;
@@ -46,7 +46,7 @@ pub fn run(mut config: Config, mut input: impl Readable) -> CrushResult<()> {
                                 )))]
                         }
                     };
-                config.body.spawn_and_execute(ExecutionContext {
+                config.body.invoke(ExecutionContext {
                     input: empty_channel(),
                     output: spawn_print_thread(&config.printer),
                     arguments,

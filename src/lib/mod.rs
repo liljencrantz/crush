@@ -21,7 +21,7 @@ use crate::{
     scope::Scope,
     lang::{
         Argument,
-        Command,
+        SimpleCommand,
         Value,
     },
 };
@@ -29,6 +29,8 @@ use std::thread::{JoinHandle};
 use crate::printer::Printer;
 use crate::errors::CrushResult;
 use crate::stream::{ValueReceiver, ValueSender, InputStream};
+
+pub use control::cmd;
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     r#type::declare(root)?;

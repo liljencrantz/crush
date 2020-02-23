@@ -54,12 +54,12 @@ impl Job {
         let last_job_idx = self.commands.len() - 1;
         for call_def in &self.commands[..last_job_idx] {
             let (output, next_input) = channels();
-            let call = call_def.spawn_and_execute(env, printer, input, output)?;
+            let call = call_def.invoke(env, printer, input, output)?;
             input = next_input;
             calls.push(call);
         }
         let last_call_def = &self.commands[last_job_idx];
-        calls.push(last_call_def.spawn_and_execute(env, printer, input, last_output)?);
+        calls.push(last_call_def.invoke(env, printer, input, last_output)?);
 
         Ok(JobJoinHandle::Many(calls))
     }
