@@ -11,26 +11,26 @@ use crate::lang::ValueType;
 pub struct ScopeData {
     /** This is the parent scope used to perform variable name resolution. If a variable lookup
      fails in the current scope, it proceeds to this scope.*/
-    parent_scope: Option<Arc<Mutex<ScopeData>>>,
+    pub parent_scope: Option<Arc<Mutex<ScopeData>>>,
     /** This is the scope in which the current scope was called. Since a closure can be called
      from inside any scope, it need not be the same as the parent scope. This scope is the one used
      for break/continue loop control. */
-    calling_scope: Option<Arc<Mutex<ScopeData>>>,
+    pub calling_scope: Option<Arc<Mutex<ScopeData>>>,
 
     /** This is a list of scopes that are imported into the current scope. Anything directly inside one
     of these scopes is also considered part of this scope. */
-    uses: Vec<Arc<Mutex<ScopeData>>>,
+    pub uses: Vec<Arc<Mutex<ScopeData>>>,
 
     /** The actual data of this scope. */
-    data: HashMap<String, Value>,
+    pub data: HashMap<String, Value>,
 
     /** True if this scope is a loop. */
-    is_loop: bool,
+    pub is_loop: bool,
 
     /** True if this scope should stop execution, i.e. if the continue or break commands have been called.  */
-    is_stopped: bool,
+    pub is_stopped: bool,
 
-    is_readonly: bool,
+    pub is_readonly: bool,
 }
 
 impl ScopeData {
@@ -44,17 +44,6 @@ impl ScopeData {
             is_stopped: false,
             is_readonly: false,
         };
-    }
-
-    pub fn declare(&mut self, name: &str, value: Value) -> CrushResult<()> {
-        if self.is_readonly {
-            return error("Scope is read only");
-        }
-        if self.data.contains_key(name) {
-            return error(format!("Variable ${{{}}} already exists", name).as_str());
-        }
-        self.data.insert(name.to_string(), value);
-        return Ok(());
     }
 
     pub fn readonly(&mut self) {
@@ -152,23 +141,4 @@ impl ScopeData {
         self.uses.push(other.clone());
     }
 
-    fn get_from_uses(&mut self, name: &str) -> Option<Value> {
-        for ulock in &self.uses {
-            let mut u = ulock.lock().unwrap();
-            if let Some(res) = u.get(name) {
-                return Some(res);
-            }
-        }
-        None
-    }
-
-    pub fn get(&mut self, name: &str) -> Option<Value> {
-        match self.data.get(&name.to_string()) {
-            Some(v) => Some(v.clone()),
-            None => match &self.parent_scope {
-                Some(p) => p.lock().unwrap().get(name),
-                None => self.get_from_uses(name)
-            }
-        }
-    }
 }

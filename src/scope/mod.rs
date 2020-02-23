@@ -7,6 +7,8 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use crate::lang::{Value, ValueType};
 use std::collections::HashMap;
+use std::ops::Deref;
+use std::borrow::Borrow;
 
 
 /**
@@ -20,40 +22,40 @@ use std::collections::HashMap;
 #[derive(Clone)]
 #[derive(Debug)]
 pub struct Scope {
-    namespace: Arc<Mutex<ScopeData>>,
+    data: Arc<Mutex<ScopeData>>,
 }
 
 impl Scope {
     pub fn new() -> Scope {
         Scope {
-            namespace: Arc::from(Mutex::new(ScopeData::new(None, None, false))),
+            data: Arc::from(Mutex::new(ScopeData::new(None, None, false))),
         }
     }
 
     pub fn create_child(&self, caller: &Scope, is_loop: bool) -> Scope {
         Scope {
-            namespace: Arc::from(Mutex::new(ScopeData::new(
-                Some(self.namespace.clone()),
-                Some(caller.namespace.clone()),
+            data: Arc::from(Mutex::new(ScopeData::new(
+                Some(self.data.clone()),
+                Some(caller.data.clone()),
                 is_loop))),
         }
     }
 
     pub fn do_break(&self) -> bool {
-        self.namespace.lock().unwrap().do_break()
+        self.data.lock().unwrap().do_break()
     }
 
     pub fn do_continue(&self) -> bool {
-        self.namespace.lock().unwrap().do_continue()
+        self.data.lock().unwrap().do_continue()
     }
 
     pub fn is_stopped(&self) -> bool {
-        self.namespace.lock().unwrap().is_stopped()
+        self.data.lock().unwrap().is_stopped()
     }
 
     pub fn create_namespace(&self, name: &str) -> CrushResult<Scope> {
         let res = Scope {
-            namespace: Arc::from(Mutex::new(ScopeData::new(None, None, false))),
+            data: Arc::from(Mutex::new(ScopeData::new(None, None, false))),
         };
         self.declare(&[Box::from(name)], Value::Env(res.clone()))?;
         Ok(res)
@@ -68,11 +70,18 @@ impl Scope {
         if name.is_empty() {
             return error("Empty variable name");
         }
-        let mut namespace = self.namespace.lock().unwrap();
         if name.len() == 1 {
-            namespace.declare(name[0].as_ref(), value)
+            let mut data = self.data.lock().unwrap();
+            if data.is_readonly {
+                return error("Scope is read only");
+            }
+            if data.data.contains_key(name[0].deref()) {
+                return error(format!("Variable ${{{}}} already exists", name[0]).as_str());
+            }
+            data.data.insert(name[0].to_string(), value);
+            Ok(())
         } else {
-            match namespace.get(name[0].as_ref()) {
+            match get_from_data(&self.data, name[0].as_ref()) {
                 None => error("Not a namespace"),
                 Some(Value::Env(env)) => env.declare(&name[1..name.len()], value),
                 _ => error("Unknown namespace"),
@@ -89,11 +98,11 @@ impl Scope {
         if name.is_empty() {
             return error("Empty variable name");
         }
-        let mut namespace = self.namespace.lock().unwrap();
         if name.len() == 1 {
+            let mut namespace = self.data.lock().unwrap();
             namespace.set(name[0].as_ref(), value)
         } else {
-            match namespace.get(name[0].as_ref()) {
+            match get_from_data(&self.data, name[0].as_ref()) {
                 None => error("Not a namespace"),
                 Some(Value::Env(env)) => env.set(&name[1..name.len()], value),
                 _ => error("Unknown namespace"),
@@ -110,11 +119,11 @@ impl Scope {
         if name.is_empty() {
             return None;
         }
-        let mut namespace = self.namespace.lock().unwrap();
         if name.len() == 1 {
+            let mut namespace = self.data.lock().unwrap();
             namespace.remove(name[0].as_ref())
         } else {
-            match namespace.get(name[0].as_ref()) {
+            match get_from_data(&self.data, name[0].as_ref()) {
                 None => None,
                 Some(Value::Env(env)) => env.remove(&name[1..name.len()]),
                 _ => None,
@@ -131,11 +140,10 @@ impl Scope {
         if name.is_empty() {
             return None;
         }
-        let mut namespace = self.namespace.lock().unwrap();
         if name.len() == 1 {
-            namespace.get(name[0].as_ref())
+            get_from_data(&self.data, name[0].as_ref())
         } else {
-            match namespace.get(name[0].as_ref()) {
+            match get_from_data(&self.data, name[0].as_ref()) {
                 None => None,
                 Some(Value::Env(env)) => env.get(&name[1..name.len()]),
                 _ => None,
@@ -144,18 +152,17 @@ impl Scope {
     }
 
     pub fn uses(&self, other: &Scope) {
-        self.namespace.lock().unwrap().uses(&other.namespace);
+        self.data.lock().unwrap().uses(&other.data);
     }
 
     fn get_location(&self, name: &[Box<str>]) -> Option<(Scope, Vec<Box<str>>)> {
         if name.is_empty() {
             return None;
         }
-        let mut namespace = self.namespace.lock().unwrap();
         if name.len() == 1 {
             Some((self.clone(), name.to_vec()))
         } else {
-            match namespace.get(name[0].as_ref()) {
+            match get_from_data(&self.data, name[0].as_ref()) {
                 None => None,
                 Some(Value::Env(env)) => env.get_location(&name[1..name.len()]),
                 _ => None,
@@ -164,18 +171,42 @@ impl Scope {
     }
 
     pub fn dump(&self, map: &mut HashMap<String, ValueType>) {
-        let namespace = self.namespace.lock().unwrap();
+        let namespace = self.data.lock().unwrap();
         namespace.dump(map)
     }
 
     pub fn readonly(&self) {
-        self.namespace.lock().unwrap().readonly();
+        self.data.lock().unwrap().readonly();
     }
 
     pub fn to_string(&self) -> String {
         let mut map = HashMap::new();
         self.dump(&mut map);
         map.iter().map(|(k, v)| k.clone()).collect::<Vec<String>>().join(", ")
+    }
+
+}
+
+fn get_from_data(data: &Arc<Mutex<ScopeData>>, name: &str) -> Option<Value> {
+    let data = data.lock().unwrap();
+    match data.data.get(&name.to_string()) {
+        Some(v) => Some(v.clone()),
+        None => match data.parent_scope.clone() {
+            Some(p) => {
+                drop(data);
+                get_from_data(&p, name)
+            },
+            None => {
+                let uses = data.uses.clone();
+                drop(data);
+                for ulock in &uses {
+                    if let Some(res) = get_from_data(ulock, name) {
+                        return Some(res);
+                    }
+                }
+                None
+            }
+        }
     }
 }
 
