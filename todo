@@ -1,13 +1,17 @@
 Todo for MVP 1:
-Terminal emulation for cmd command
-Stop the namespace deadlocks
-Remove the dot operator in favor of []
+pseudo-tty for cmd command output
+pseudo-tty for cmd command input
+Stop the scope deadlocks
+Remove the dot operator in favor of [] for fields
+Replace dot with / in command names?
 Add var.use command
 Add control.source command
+Add text.join command
 Add text.lpad command
 Add text.rpad command
 Add text.substr command
 Add text.split command
+Add text.trim command
 Add regex.create command
 Add regex.match command
 Add regex.replace command
@@ -22,7 +26,6 @@ Some missing comparisons on Cell
 Missing some cell type serialisations and deserialisations
 Error source propagation
 help command
-Add Kind to CrushError
 Deal with different error kinds differently
 Add command-field to CrushError
 Add source field to CrushError
@@ -41,7 +44,6 @@ avro.parse command that deserializes avro data
 toml.parse command that deserializes toml data
 Add history command with all previous interactive invocations, including invocation string, current status, and misc metadata.
 Add proc.jobs command
-
 
 Done:
 Fix all expects calls that aren't impossible, and propagate the errors
@@ -138,3 +140,4 @@ Add text.lower command
 Add text.format command
 Add control.cmd command
 Fall back to cmd if a command does not exist internally
+Add Kind to CrushError

@@ -17,7 +17,7 @@ ls | select * file={upper $file}
 ls | select * lower={lower $file}
 
 # Replace file column in-place using regex
-ls | select * file={regex.replace regex{a(b*)c} "A\\1B"}
+ls | select * file={regex.replace $file regex{a(b*)c} "A\\1B"}
 
 Modes:
 
@@ -31,35 +31,10 @@ How to deal with impedance mismatch, e.g. null values, lists with multiple types
 
 let foo=material{ls}
 
-text library:
-
-Commands for transforming text fields, e.g.:
-text.lower
-text.upper
-text.lpad
-text.rpad
-text.trim
-text.truncate
-text.format
-
-file library:
-
-if (file.stat foo.txt)[is_directory] {val yay} else {val nay}
-
 Aggregating streams:
 
 find . | group %size | aggr group={count}
 find . | group %user | aggr group={sum %size}
-
-Joining streams:
-
-The current syntax is
-
-struct l=(...) r=(...) | join %l.foo == %r.bar
-
-Can we do better? The unneeded == token feels a bit silly. Also, it's whitespace sensitive. Perhaps it should just be dropped.
-Finally, we can only join on actual columns of the respective tables. It would save a step to be abe to join on computed values.
-Maybe worthwhile?
 
 Graph/Tree data:
 
@@ -69,3 +44,6 @@ Could be useful for showing a tree view of processes (ps), file trees (find, du)
 * Should this be represented by a special type of tree-struct or just use regular structs with members of the same type? The latter can't represent cycles.
 * What additional primitives are needed to efficiently manipulate tree data?
 
+Drop the file type:
+
+Do we really need to distinguish file from regular text fields? What problem is solved, exactly?
