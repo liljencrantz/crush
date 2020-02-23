@@ -26,8 +26,6 @@ pub enum TokenType {
     Assign,
     Separator,
     Error,
-    Match,
-    NotMatch,
     Variable,
     Field,
     Regex,
@@ -63,11 +61,7 @@ lazy_static! {
         (TokenType::Separator, Regex::new("^;").unwrap()),
         (TokenType::Separator, Regex::new("^\n").unwrap()),
         (TokenType::Pipe, Regex::new(r"^\|").unwrap()),
-
         (TokenType::Assign, Regex::new(r"^=").unwrap()),
-
-        (TokenType::Match, Regex::new(r"^=~").unwrap()),
-        (TokenType::NotMatch, Regex::new(r"^!~").unwrap()),
 
         (TokenType::Float, Regex::new(r"^[0-9]+\.[0-9]+").unwrap()),
         (TokenType::Integer, Regex::new(r"^[0-9]+").unwrap()),

@@ -212,7 +212,7 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> CrushResult<Va
 
         _ => {
             lexer.pop();
-            return parse_error(format!("Unknown token {:?}", token_type).as_str(), lexer);
+            return parse_error(format!("Unexpected token {:?}", token_type).as_str(), lexer);
         }
     }
 }

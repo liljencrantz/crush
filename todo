@@ -1,9 +1,10 @@
 Todo for MVP 1:
+Terminal emulation for cmd command
+Fall back to cmd if a command does not exist internally
 Stop the namespace deadlocks
 Remove the dot operator in favor of []
 Add var.use command
 Add control.source command
-Add control.cmd command
 Add text.lpad command
 Add text.rpad command
 Add text.substr command
@@ -136,3 +137,4 @@ Flesh out time/duration modes with add/subtract support
 Add text.upper command
 Add text.lower command
 Add text.format command
+Add control.cmd command
