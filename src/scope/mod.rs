@@ -7,8 +7,6 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use crate::lang::{Value, ValueType};
 use std::collections::HashMap;
-use std::ops::Deref;
-use std::borrow::Borrow;
 
 
 /**
@@ -18,6 +16,9 @@ use std::borrow::Borrow;
   concurrently.
 
   The data is protected by an Arc, in order to make sure that it gets deallocated.
+
+  In order to ensure that there are no deadlocks, we only ever take one mutex at a time. This
+  forces us to manually drop some references and overall write some wonky code.
 */
 #[derive(Clone)]
 #[derive(Debug)]
@@ -42,15 +43,15 @@ impl Scope {
     }
 
     pub fn do_break(&self) -> bool {
-        self.data.lock().unwrap().do_break()
+        do_break(&self.data)
     }
 
     pub fn do_continue(&self) -> bool {
-        self.data.lock().unwrap().do_continue()
+        do_continue(&self.data)
     }
 
     pub fn is_stopped(&self) -> bool {
-        self.data.lock().unwrap().is_stopped()
+        self.data.lock().unwrap().is_stopped
     }
 
     pub fn create_namespace(&self, name: &str) -> CrushResult<Scope> {
@@ -75,7 +76,7 @@ impl Scope {
             if data.is_readonly {
                 return error("Scope is read only");
             }
-            if data.data.contains_key(name[0].deref()) {
+            if data.data.contains_key(name[0].as_ref()) {
                 return error(format!("Variable ${{{}}} already exists", name[0]).as_str());
             }
             data.data.insert(name[0].to_string(), value);
@@ -99,8 +100,7 @@ impl Scope {
             return error("Empty variable name");
         }
         if name.len() == 1 {
-            let mut namespace = self.data.lock().unwrap();
-            namespace.set(name[0].as_ref(), value)
+            set_on_data(&self.data, name[0].as_ref(), value)
         } else {
             match get_from_data(&self.data, name[0].as_ref()) {
                 None => error("Not a namespace"),
@@ -120,8 +120,7 @@ impl Scope {
             return None;
         }
         if name.len() == 1 {
-            let mut namespace = self.data.lock().unwrap();
-            namespace.remove(name[0].as_ref())
+            remove_from_data(&self.data, name[0].as_ref())
         } else {
             match get_from_data(&self.data, name[0].as_ref()) {
                 None => None,
@@ -152,7 +151,7 @@ impl Scope {
     }
 
     pub fn uses(&self, other: &Scope) {
-        self.data.lock().unwrap().uses(&other.data);
+        self.data.lock().unwrap().uses.push(other.data.clone());
     }
 
     fn get_location(&self, name: &[Box<str>]) -> Option<(Scope, Vec<Box<str>>)> {
@@ -171,12 +170,11 @@ impl Scope {
     }
 
     pub fn dump(&self, map: &mut HashMap<String, ValueType>) {
-        let namespace = self.data.lock().unwrap();
-        namespace.dump(map)
+        dump_data(&self.data, map);
     }
 
     pub fn readonly(&self) {
-        self.data.lock().unwrap().readonly();
+        self.data.lock().unwrap().is_readonly = true;
     }
 
     pub fn to_string(&self) -> String {
@@ -184,7 +182,24 @@ impl Scope {
         self.dump(&mut map);
         map.iter().map(|(k, v)| k.clone()).collect::<Vec<String>>().join(", ")
     }
+}
 
+fn remove_from_data(data: &Arc<Mutex<ScopeData>>, key: &str) -> Option<Value> {
+    let mut data = data.lock().unwrap();
+    if !data.data.contains_key(key) {
+        match data.parent_scope.clone() {
+            Some(p) => {
+                drop(data);
+                remove_from_data(&p, key)
+            }
+            None => None,
+        }
+    } else {
+        if data.is_readonly {
+            return None;
+        }
+        data.data.remove(key)
+    }
 }
 
 fn get_from_data(data: &Arc<Mutex<ScopeData>>, name: &str) -> Option<Value> {
@@ -209,6 +224,88 @@ fn get_from_data(data: &Arc<Mutex<ScopeData>>, name: &str) -> Option<Value> {
         }
     }
 }
+
+fn set_on_data(data: &Arc<Mutex<ScopeData>>, name: &str, value: Value) -> CrushResult<()> {
+    let mut data = data.lock().unwrap();
+    if !data.data.contains_key(name) {
+        match data.parent_scope.clone() {
+            Some(p) => {
+                drop(data);
+                set_on_data(&p, name, value)
+            }
+            None => error(format!("Unknown variable ${{{}}}", name).as_str()),
+        }
+    } else {
+        if data.is_readonly {
+            error("Scope is read only")
+        } else if data.data[name].value_type() != value.value_type() {
+            error(format!("Type mismatch when reassigning variable ${{{}}}. Use `unset ${{{}}}` to remove old variable.", name, name).as_str())
+        } else {
+            data.data.insert(name.to_string(), value);
+            Ok(())
+        }
+    }
+}
+
+/**
+    This function takes the lock twice. We could avoid that with a bit of extra copying, not sure if
+    that would be an improvement.
+*/
+fn dump_data(data: &Arc<Mutex<ScopeData>>, map: &mut HashMap<String, ValueType>) {
+    match data.lock().unwrap().parent_scope.clone() {
+        Some(p) => dump_data(&p, map),
+        None => {}
+    }
+
+    let data = data.lock().unwrap();
+    for (k, v) in data.data.iter() {
+        map.insert(k.clone(), v.value_type());
+    }
+}
+
+fn do_continue(shared: &Arc<Mutex<ScopeData>>) -> bool {
+    let data = shared.lock().unwrap();
+    if data.is_readonly {
+        return false;
+    } else if data.is_loop {
+        true
+    } else {
+        let caller = data.calling_scope.clone();
+        drop(data);
+        let ok = caller
+            .map(|p| do_continue(&p))
+            .unwrap_or(false);
+        if !ok {
+            false
+        } else {
+            shared.lock().unwrap().is_stopped = true;
+            true
+        }
+    }
+}
+
+pub fn do_break(shared: &Arc<Mutex<ScopeData>>) -> bool {
+    let mut data = shared.lock().unwrap();
+    if data.is_readonly {
+        false
+    } else if data.is_loop {
+        data.is_stopped = true;
+        true
+    } else {
+        let caller = data.calling_scope.clone();
+        drop(data);
+        let ok = caller
+            .map(|p| do_break(&p))
+            .unwrap_or(false);
+        if !ok {
+            false
+        } else {
+            shared.lock().unwrap().is_stopped = true;
+            true
+        }
+    }
+}
+
 
 pub fn cwd() -> CrushResult<Box<Path>> {
     match std::env::current_dir() {
