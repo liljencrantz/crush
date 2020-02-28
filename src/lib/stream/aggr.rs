@@ -1,42 +1,53 @@
-use crate::{
-    data::Argument,
-    data::Value,
-};
+use crate::lang::{Closure, Argument, ExecutionContext, Value, ColumnType, RowsReader, Row, JobJoinHandle};
+use crate::stream::{Readable, ValueSender};
+use crate::errors::{CrushResult, argument_error, mandate, error};
+use crate::lib::command_util::{find_field, find_field_from_str};
 use crate::printer::Printer;
-use crate::env::Env;
-use crate::data::{ColumnType, ValueType, Row};
-use crate::errors::{argument_error, JobResult, error};
-use crate::lang::Closure;
-use crate::commands::{CompileContext, JobJoinHandle};
-use crate::stream::{InputStream, OutputStream, ValueSender, streams, ValueReceiver, RowsReader, Readable};
-use crate::commands::command_util::find_field;
-use crate::replace::Replace;
-use std::sync::mpsc::{channel, Receiver, Sender};
+use crossbeam::{Receiver, bounded, unbounded, Sender};
 use crate::thread_util::{handle, build};
+
+struct Aggregation {
+    idx: usize,
+    name: Box<str>,
+    command: Closure,
+}
 
 pub struct Config {
     table_idx: usize,
-    output_definition: Vec<(String, usize, Closure)>,
+    aggregations: Vec<Aggregation>,
 }
 
-pub fn guess_table(input_type: &Vec<ColumnType>) -> JobResult<usize> {
-    let tables: Vec<usize> = input_type
-        .iter()
-        .enumerate()
-        .flat_map(|(idx, t)| {
-            match &t.cell_type {
-                ValueType::Output(_) | ValueType::Rows(_) => Some(idx),
-                _ => None,
+
+
+pub fn parse(input_type: &Vec<ColumnType>, argument: Vec<Argument>) -> CrushResult<Config> {
+    let mut table=None;
+    let mut aggregations = Vec::new();
+    let mut next_idx = input_type.len();
+
+    for a in &argument {
+        match (a.name.as_deref(), a.value) {
+            (Some("column"), Value::Field(name)) => {
+                table = Some(find_field(name.as_ref(), input_type)?);
             }
-        }).collect();
-    if tables.len() == 1 {
-        Ok(tables[0])
-    } else {
-        Err(argument_error(format!("Could not guess tables to join, expected one table, found {}", tables.len()).as_str()))
+            (Some(name), Value::Closure(command)) => {
+                aggregations.push(
+                    Aggregation {
+                        command,
+                        name: Box::from(name),
+                        idx: find_field_from_str(name, input_type)
+                            .unwrap_or_else(|| {next_idx += 1; next_idx - 1})
+                    }
+                )
+            }
+            _ => return argument_error("Bad argument"),
+        }
     }
-}
 
-pub fn parse(input_type: &Vec<ColumnType>, argument: Vec<Argument>) -> JobResult<Config> {
+    Ok(Config {
+        table_idx: mandate(table, "Missing table spec")?,
+        aggregations,
+    })
+/*
     if argument.len() < 2 {
         return Err(argument_error("Expected at least two paramaters"));
     }
@@ -75,7 +86,28 @@ pub fn parse(input_type: &Vec<ColumnType>, argument: Vec<Argument>) -> JobResult
             Err(argument_error("No table to aggregate on found"))
         }
     }
+    */
 }
+
+/*
+
+pub fn guess_table(input_type: &Vec<ColumnType>) -> JobResult<usize> {
+    let tables: Vec<usize> = input_type
+        .iter()
+        .enumerate()
+        .flat_map(|(idx, t)| {
+            match &t.cell_type {
+                ValueType::Output(_) | ValueType::Rows(_) => Some(idx),
+                _ => None,
+            }
+        }).collect();
+    if tables.len() == 1 {
+        Ok(tables[0])
+    } else {
+        Err(argument_error(format!("Could not guess tables to join, expected one table, found {}", tables.len()).as_str()))
+    }
+}
+*/
 
 fn create_writer(
     uninitialized_output: ValueSender,
@@ -234,8 +266,8 @@ fn handle_row(
     Ok(())
 }
 
-pub fn run(config: Config, printer: &Printer, env: &Env, input: InputStream, uninitialized_output: ValueSender) -> JobResult<()> {
-    let (writer_output, writer_input) = channel::<Row>();
+pub fn run(config: Config, printer: &Printer, env: &Env, mut input: impl Readable, uninitialized_output: ValueSender) -> JobResult<()> {
+    let (writer_output, writer_input) = bounded::<Row>(16);
 
     let mut output_names = input.get_type().iter().map(|t| t.name.clone()).collect::<Vec<Option<Box<str>>>>();
     output_names.remove(config.table_idx);
@@ -268,8 +300,19 @@ pub fn run(config: Config, printer: &Printer, env: &Env, input: InputStream, uni
     Ok(())
 }
 
-pub fn perform(context: CompileContext) -> JobResult<()> {
-    let input = context.input.initialize_stream()?;
-    let config = parse(input.get_type(), context.arguments)?;
-    run(config, &context.printer, &context.env, input, context.output)
+fn perform_on(arguments: Vec<Argument>, input: &Readable, sender: ValueSender) -> CrushResult<()> {
+    let config = parse(input.types(), arguments)?;
+    Ok(())
+}
+
+pub fn perform(context: ExecutionContext) -> CrushResult<()> {
+    match context.input.recv()? {
+        Value::Stream(s) => {
+            perform_on(context.arguments, &s.stream, context.output)
+        }
+        Value::Rows(r) => {
+            perform_on(context.arguments, &r.reader(), context.output)
+        }
+        _ => argument_error("Expected a struct"),
+    }
 }

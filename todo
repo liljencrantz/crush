@@ -1,7 +1,7 @@
 Todo for MVP 1:
+Add range command.
 pseudo-tty for cmd command output
 pseudo-tty for cmd command input
-Stop the scope deadlocks
 Remove the dot operator in favor of [] for fields
 Replace dot with / in command names?
 Add var.use command
@@ -141,3 +141,4 @@ Add text.format command
 Add control.cmd command
 Fall back to cmd if a command does not exist internally
 Add Kind to CrushError
+Stop the scope deadlocks

@@ -15,7 +15,6 @@ mod uniq;
 mod group;
 mod join;
 mod zip;
-
 //mod aggr;
 
 mod count;
@@ -32,7 +31,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     env.declare_str("group", Value::Command(SimpleCommand::new(group::perform)))?;
     env.declare_str("join", Value::Command(SimpleCommand::new(join::perform)))?;
     env.declare_str("uniq", Value::Command(SimpleCommand::new(uniq::perform)))?;
-//    env.declare_str("aggr", Value::Command(Command::new(aggr::perform)))?;
+    //env.declare_str("aggr", Value::Command(SimpleCommand::new(aggr::perform)))?;
     env.declare_str("count", Value::Command(SimpleCommand::new(count::perform)))?;
     env.declare_str("sum", Value::Command(SimpleCommand::new(sum::perform)))?;
     env.declare_str("select", Value::Command(SimpleCommand::new(select::perform)))?;

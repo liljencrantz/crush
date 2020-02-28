@@ -6,6 +6,7 @@ mod set;
 mod r#let;
 mod unset;
 mod env;
+mod r#use;
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("var")?;
@@ -14,6 +15,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     env.declare_str("set", Value::Command(SimpleCommand::new(set::perform)))?;
     env.declare_str("unset", Value::Command(SimpleCommand::new(unset::perform)))?;
     env.declare_str("env", Value::Command(SimpleCommand::new(env::perform)))?;
+    env.declare_str("use", Value::Command(SimpleCommand::new(r#use::perform)))?;
     env.readonly();
     Ok(())
 }

@@ -1,6 +1,3 @@
-mod data;
-
-use data::ScopeData;
 use crate::errors::{error, CrushResult};
 use std::error::Error;
 use std::path::Path;
@@ -15,7 +12,8 @@ use std::collections::HashMap;
   The data is protected by a mutex, in order to make sure that all threads can read and write
   concurrently.
 
-  The data is protected by an Arc, in order to make sure that it gets deallocated.
+  The data is protected by an Arc, in order to make sure that it gets deallocated and can be shared
+  across threads.
 
   In order to ensure that there are no deadlocks, we only ever take one mutex at a time. This
   forces us to manually drop some references and overall write some wonky code.
@@ -24,6 +22,47 @@ use std::collections::HashMap;
 #[derive(Debug)]
 pub struct Scope {
     data: Arc<Mutex<ScopeData>>,
+}
+
+#[derive(Debug)]
+struct ScopeData {
+    /** This is the parent scope used to perform variable name resolution. If a variable lookup
+     fails in the current scope, it proceeds to this scope.*/
+    pub parent_scope: Option<Arc<Mutex<ScopeData>>>,
+    /** This is the scope in which the current scope was called. Since a closure can be called
+     from inside any scope, it need not be the same as the parent scope. This scope is the one used
+     for break/continue loop control. */
+    pub calling_scope: Option<Arc<Mutex<ScopeData>>>,
+
+    /** This is a list of scopes that are imported into the current scope. Anything directly inside one
+    of these scopes is also considered part of this scope. */
+    pub uses: Vec<Arc<Mutex<ScopeData>>>,
+
+    /** The actual data of this scope. */
+    pub mapping: HashMap<String, Value>,
+
+    /** True if this scope is a loop. Required to implement the break/continue commands.*/
+    pub is_loop: bool,
+
+    /** True if this scope should stop execution, i.e. if the continue or break commands have been called.  */
+    pub is_stopped: bool,
+
+    /** True if this scope can not be further modified. Note that mutable variables in it, e.g. lists can still be modified. */
+    pub is_readonly: bool,
+}
+
+impl ScopeData {
+    pub fn new(parent_scope: Option<Arc<Mutex<ScopeData>>>, caller: Option<Arc<Mutex<ScopeData>>>, is_loop: bool) -> ScopeData {
+        return ScopeData {
+            parent_scope,
+            calling_scope: caller,
+            is_loop,
+            uses: Vec::new(),
+            mapping: HashMap::new(),
+            is_stopped: false,
+            is_readonly: false,
+        };
+    }
 }
 
 impl Scope {
@@ -76,10 +115,10 @@ impl Scope {
             if data.is_readonly {
                 return error("Scope is read only");
             }
-            if data.data.contains_key(name[0].as_ref()) {
+            if data.mapping.contains_key(name[0].as_ref()) {
                 return error(format!("Variable ${{{}}} already exists", name[0]).as_str());
             }
-            data.data.insert(name[0].to_string(), value);
+            data.mapping.insert(name[0].to_string(), value);
             Ok(())
         } else {
             match get_from_data(&self.data, name[0].as_ref()) {
@@ -186,7 +225,7 @@ impl Scope {
 
 fn remove_from_data(data: &Arc<Mutex<ScopeData>>, key: &str) -> Option<Value> {
     let mut data = data.lock().unwrap();
-    if !data.data.contains_key(key) {
+    if !data.mapping.contains_key(key) {
         match data.parent_scope.clone() {
             Some(p) => {
                 drop(data);
@@ -198,13 +237,13 @@ fn remove_from_data(data: &Arc<Mutex<ScopeData>>, key: &str) -> Option<Value> {
         if data.is_readonly {
             return None;
         }
-        data.data.remove(key)
+        data.mapping.remove(key)
     }
 }
 
 fn get_from_data(data: &Arc<Mutex<ScopeData>>, name: &str) -> Option<Value> {
     let data = data.lock().unwrap();
-    match data.data.get(&name.to_string()) {
+    match data.mapping.get(&name.to_string()) {
         Some(v) => Some(v.clone()),
         None => match data.parent_scope.clone() {
             Some(p) => {
@@ -227,7 +266,7 @@ fn get_from_data(data: &Arc<Mutex<ScopeData>>, name: &str) -> Option<Value> {
 
 fn set_on_data(data: &Arc<Mutex<ScopeData>>, name: &str, value: Value) -> CrushResult<()> {
     let mut data = data.lock().unwrap();
-    if !data.data.contains_key(name) {
+    if !data.mapping.contains_key(name) {
         match data.parent_scope.clone() {
             Some(p) => {
                 drop(data);
@@ -238,10 +277,10 @@ fn set_on_data(data: &Arc<Mutex<ScopeData>>, name: &str, value: Value) -> CrushR
     } else {
         if data.is_readonly {
             error("Scope is read only")
-        } else if data.data[name].value_type() != value.value_type() {
+        } else if data.mapping[name].value_type() != value.value_type() {
             error(format!("Type mismatch when reassigning variable ${{{}}}. Use `unset ${{{}}}` to remove old variable.", name, name).as_str())
         } else {
-            data.data.insert(name.to_string(), value);
+            data.mapping.insert(name.to_string(), value);
             Ok(())
         }
     }
@@ -258,7 +297,7 @@ fn dump_data(data: &Arc<Mutex<ScopeData>>, map: &mut HashMap<String, ValueType>)
     }
 
     let data = data.lock().unwrap();
-    for (k, v) in data.data.iter() {
+    for (k, v) in data.mapping.iter() {
         map.insert(k.clone(), v.value_type());
     }
 }
@@ -284,7 +323,7 @@ fn do_continue(shared: &Arc<Mutex<ScopeData>>) -> bool {
     }
 }
 
-pub fn do_break(shared: &Arc<Mutex<ScopeData>>) -> bool {
+fn do_break(shared: &Arc<Mutex<ScopeData>>) -> bool {
     let mut data = shared.lock().unwrap();
     if data.is_readonly {
         false
