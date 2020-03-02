@@ -25,6 +25,20 @@ impl List {
         Ok(mandate(cells.get(idx), "Index out of bounds")?.clone())
     }
 
+    pub fn set(&self, idx: usize, value: Value) -> CrushResult<()> {
+        if self.cell_type != value.value_type() && self.cell_type != ValueType::Any {
+            return error("Invalid element type");
+        }
+        let mut cells = self.cells.lock().unwrap();
+        if idx >= cells.len() {
+            return error("Index out of range");
+        }
+
+        cells[idx] = value;
+
+        Ok(())
+    }
+
     pub fn append(&self, new_cells: &mut Vec<Value>) {
         let mut cells = self.cells.lock().unwrap();
         cells.append(new_cells);
@@ -39,6 +53,26 @@ impl List {
     pub fn pop(&self) -> Option<Value> {
         let mut cells = self.cells.lock().unwrap();
         cells.pop()
+    }
+
+    pub fn clear(&self) {
+        let mut cells = self.cells.lock().unwrap();
+        cells.clear();
+    }
+
+    pub fn remove(&self, idx: usize) {
+        let mut cells = self.cells.lock().unwrap();
+        cells.remove(idx);
+    }
+
+    pub fn truncate(&self, idx: usize) {
+        let mut cells = self.cells.lock().unwrap();
+        cells.truncate(idx);
+    }
+
+    pub fn peek(&self) -> Option<Value> {
+        let mut cells = self.cells.lock().unwrap();
+        cells.get(cells.len()-1).map(|v| v.clone())
     }
 
     pub fn element_type(&self) -> ValueType {

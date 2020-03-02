@@ -2,7 +2,7 @@ use crate::lang::ExecutionContext;
 use crate::errors::{CrushResult, argument_error};
 use crate::lang::{Value, SimpleCommand, ValueType};
 use crate::scope::Scope;
-use crate::lib::parse_util::single_argument_type;
+use crate::lib::parse_util::{single_argument_type, single_argument_list};
 
 fn to(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(context.input.recv()?.cast(single_argument_type(context.arguments)?)?)
@@ -12,11 +12,18 @@ fn of(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Type(context.input.recv()?.value_type()))
 }
 
+fn list(mut context: ExecutionContext) -> CrushResult<()> {
+    let l = single_argument_type(context.arguments)?;
+    context.output.send(Value::Type(ValueType::List(Box::new(l))))
+}
+
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("type")?;
 
     env.declare_str("to", Value::Command(SimpleCommand::new(to)))?;
     env.declare_str("of", Value::Command(SimpleCommand::new(of)))?;
+
+    env.declare_str("list", Value::Command(SimpleCommand::new(list)))?;
 
     env.declare_str("integer", Value::Type(ValueType::Integer))?;
     env.declare_str("type", Value::Type(ValueType::Type))?;

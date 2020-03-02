@@ -120,7 +120,6 @@ fn neg(mut context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("math")?;
-    root.uses(&env);
     env.declare_str("add", Value::Command(SimpleCommand::new(add)))?;
     env.declare_str("sub", Value::Command(SimpleCommand::new(sub)))?;
     env.declare_str("mul", Value::Command(SimpleCommand::new(mul)))?;

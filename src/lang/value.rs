@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::hash::Hasher;
 use std::path::Path;
+use std::str::FromStr;
 
 use chrono::{DateTime, Local};
 use regex::Regex;
@@ -12,14 +13,15 @@ use crate::{
     errors::{error, CrushError, to_job_error},
     glob::Glob,
 };
-use crate::lang::{List, SimpleCommand, Stream, ValueType, Dict, ColumnType, value_type_parser, BinaryReader};
+use crate::lang::{List, SimpleCommand, Stream, ValueType, Dict, ColumnType, value_type_parser, BinaryReader, RowsReader, ListReader, DictReader, Row};
 use crate::errors::CrushResult;
 use chrono::Duration;
 use crate::format::duration_format;
 use crate::scope::Scope;
 use crate::lang::row::Struct;
-use crate::stream::streams;
+use crate::stream::{streams, Readable};
 use std::io::{Read, Error};
+use std::convert::TryFrom;
 
 #[derive(Debug)]
 pub enum Value {
@@ -96,6 +98,16 @@ impl Value {
         Value::Text(Box::from(s))
     }
 
+    pub fn readable(&self) -> Option<Box<Readable>> {
+        return match self {
+            Value::Stream(s) => Some(Box::from(s.stream.clone())),
+            Value::Rows(r) => Some(Box::from(RowsReader::new(r.clone()))),
+            Value::List(l) => Some(Box::from(ListReader::new(l.clone(), "value"))),
+            Value::Dict(d) => Some(Box::from(DictReader::new(d.clone()))),
+            _ => None,
+        }
+    }
+
     pub fn value_type(&self) -> ValueType {
         return match self {
             Value::Text(_) => ValueType::Text,
@@ -158,7 +170,7 @@ impl Value {
         }
     }
 
-    pub fn cast(self, new_type: ValueType) -> Result<Value, CrushError> {
+    pub fn cast(self, new_type: ValueType) -> CrushResult<Value> {
         if self.value_type() == new_type {
             return Ok(self);
         }
@@ -175,6 +187,8 @@ impl Value {
             (Value::Text(s), ValueType::Field) => Ok(Value::Field(vec![s])),
             (Value::Text(s), ValueType::Regex) => to_job_error(Regex::new(s.as_ref()).map(|v| Value::Regex(s, v))),
             (Value::Text(s), ValueType::Type) => Ok(Value::Type(value_type_parser::parse(s.as_ref())?)),
+            (Value::Text(s), ValueType::Binary) => Ok(Value::Binary(s.bytes().collect())),
+            (Value::Text(s), ValueType::Float) => Ok(Value::Float(to_job_error(f64::from_str(&s))?)),
 
             (Value::File(s), ValueType::Text) => match s.to_str() {
                 Some(s) => Ok(Value::Text(Box::from(s))),
@@ -221,8 +235,37 @@ impl Value {
                 let s = i.to_string();
                 to_job_error(Regex::new(s.as_str()).map(|v| Value::Regex(s.into_boxed_str(), v)))
             }
+            (Value::Integer(i), ValueType::Float) => Ok(Value::Float(i as f64)),
 
             (Value::Type(s), ValueType::Text) => Ok(Value::Text(Box::from(s.to_string()))),
+
+            (Value::Float(i), ValueType::Integer) => Ok(Value::Integer(i as i128)),
+            (Value::Float(i), ValueType::Text) => Ok(Value::Text(i.to_string().into_boxed_str())),
+
+            (Value::Binary(s), ValueType::Text) => Ok(Value::Text(to_job_error(String::from_utf8(s))?.into_boxed_str())),
+
+            (Value::BinaryStream(mut s), ValueType::Text) => {
+                let mut v = Vec::new();
+                s.read_to_end(&mut v);
+                Ok(Value::Text(to_job_error(String::from_utf8(v))?.into_boxed_str()))
+            },
+
+            (Value::Stream(s), ValueType::List(t)) => {
+                if s.stream.types().len()!=1 {
+                    return error("Stream must have exactly one element to convert to list");
+                }
+                if s.stream.types()[0].cell_type != t.as_ref().clone() {
+                    return error(format!("Incompatible stream type, {} vs {}", s.stream.types()[0].cell_type.to_string(), t.to_string()).as_str());
+                }
+                let mut v = Vec::new();
+                loop {
+                    match s.stream.recv() {
+                        Ok(r) => v.push(r.into_vec().remove(0)),
+                        Err(_) => break,
+                    }
+                }
+                Ok(Value::List(List::new(t.as_ref().clone(), v)))
+            }
 
             _ => error("Unimplemented conversion"),
         }

@@ -10,6 +10,14 @@ pub fn two_arguments(arguments: &Vec<Argument>) -> CrushResult<()> {
     }
 }
 
+pub fn three_arguments(arguments: &Vec<Argument>) -> CrushResult<()> {
+    if arguments.len() != 3 {
+        argument_error("Expected exactly three argument")
+    } else {
+        Ok(())
+    }
+}
+
 pub fn single_argument(arguments: &Vec<Argument>) -> CrushResult<()> {
     if arguments.len() != 1 {
         argument_error("Expected exactly one argument")
@@ -32,7 +40,7 @@ pub fn single_argument_type(mut arg: Vec<Argument>) -> CrushResult<ValueType> {
             let a = arg.remove(0);
             match (a.name, a.value) {
                 (None, Value::Type(t)) => Ok(t),
-                _ => argument_error("Expected a list value"),
+                _ => argument_error("Expected a type"),
             }
         }
         _ => argument_error("Expected a single value"),

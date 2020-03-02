@@ -1,10 +1,21 @@
 Todo for MVP 1:
-Add range command.
+Make argument parsing in list and dict more consistent
+Make echo always send to printer and accepts multiple arguments
+Add val command that always pipes single argument to stream
+Some kind of pattern matching syntax
+Add list.insert command
+Add dict.clear command
+use command is b0rked
+Figure out reading non-streams
+Make lists and dicts streamable
+Add loop command
+Add range command
+Add ceil, floor, pow, log, sin, cos, tan, etc to math lib
+Figure out how to make crush less chatty
 pseudo-tty for cmd command output
 pseudo-tty for cmd command input
-Remove the dot operator in favor of [] for fields
+Remove the dot operator in favor of [] for fields. Use slash on commands?
 Replace dot with / in command names?
-Add var.use command
 Add control.source command
 Add text.join command
 Add text.lpad command
@@ -12,9 +23,6 @@ Add text.rpad command
 Add text.substr command
 Add text.split command
 Add text.trim command
-Add regex.create command
-Add regex.match command
-Add regex.replace command
 Add readline command that reads one line of interactive text input from the user via the terminal
 Add system tests for type casting
 Add system tests for for loop
@@ -142,3 +150,10 @@ Add control.cmd command
 Fall back to cmd if a command does not exist internally
 Add Kind to CrushError
 Stop the scope deadlocks
+Add var.use command
+Add regex.new command
+Add regex.match command
+Add regex.replace command
+Add byte <-> text conversions
+Add list.clear command
+Add list.remove command

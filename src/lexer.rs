@@ -28,7 +28,6 @@ pub enum TokenType {
     Error,
     Variable,
     Field,
-    Regex,
     EOF,
 }
 
@@ -76,8 +75,6 @@ lazy_static! {
 
         (TokenType::SubscriptStart, Regex::new(r"^\[").unwrap()),
         (TokenType::SubscriptEnd, Regex::new(r"^]").unwrap()),
-
-        (TokenType::Regex, Regex::new(r"^regex\{([^}\\]|\\.)+\}").unwrap()),
 
         (TokenType::String, Regex::new(r"^[-/._a-zA-Z][-/.:_a-z-A-Z0-9]*").unwrap()),
         (TokenType::Glob, Regex::new(r"^[/._a-zA-Z*.?][/_a-z-A-Z0-9*.?]*").unwrap()),
@@ -185,13 +182,5 @@ mod tests {
         let tt = extract_tokens(&mut l);
         assert_eq!(tt, vec![
             TokenType::Variable, TokenType::Field, TokenType::Variable, TokenType::Field, TokenType::EOF]);
-    }
-
-    #[test]
-    fn regex() {
-        let mut l = Lexer::new(&String::from(r"   regex{^.$}   regex{{foo\}}  "));
-        let tt = extract_tokens(&mut l);
-        assert_eq!(tt, vec![
-            TokenType::Regex, TokenType::Regex, TokenType::EOF]);
     }
 }

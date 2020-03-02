@@ -37,7 +37,7 @@ pub struct Config {
 
 pub fn run(
     config: Config,
-    mut input: impl Readable,
+    mut input: Box<dyn Readable>,
     sender: ValueSender,
     env: &Scope,
     printer: &Printer,
@@ -148,7 +148,7 @@ pub fn run(
 }
 
 fn perform_for(
-    input: impl Readable,
+    input: Box<dyn Readable>,
     sender: ValueSender,
     mut arguments: Vec<Argument>,
     env: &Scope,
@@ -193,9 +193,8 @@ fn perform_for(
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    match context.input.recv()? {
-        Value::Stream(s) => perform_for(s.stream, context.output, context.arguments, &context.env, &context.printer),
-        Value::Rows(r) => perform_for(RowsReader::new(r), context.output, context.arguments, &context.env, &context.printer),
+    match context.input.recv()?.readable() {
+        Some(r) => perform_for(r, context.output, context.arguments, &context.env, &context.printer),
         _ => error("Expected a stream"),
     }
 }

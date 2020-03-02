@@ -5,6 +5,7 @@ use crate::lang::ExecutionContext;
 
 mod list;
 mod dict;
+mod re;
 
 fn materialize(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(context.input.recv()?.materialize())
@@ -27,6 +28,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     list::declare(&env)?;
     dict::declare(&env)?;
+    re::declare(&env)?;
     env.readonly();
 
     Ok(())

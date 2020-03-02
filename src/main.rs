@@ -115,11 +115,12 @@ fn run() -> CrushResult<()> {
     let (printer, printer_handle) = Printer::new();
 
     declare(&global_env)?;
+    let my_scope = global_env.create_child(&global_env, false);
 
     let mut args = std::env::args().collect::<Vec<String>>();
     match args.len() {
-        1 => run_interactive(global_env, &printer)?,
-        2 => run_script(global_env, &printer, args[1].as_str())?,
+        1 => run_interactive(my_scope, &printer)?,
+        2 => run_script(my_scope, &printer, args[1].as_str())?,
         _ => {}
     }
 //    std::thread::sleep(Duration::from_secs(1));

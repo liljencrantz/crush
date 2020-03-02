@@ -1,35 +1,16 @@
-ls| where {gt $size 5}
-json some_file.json | select elapsed={add $setup_time $work_time teardown_time}
-ls | sort {neg $size}
-
-Integrating external commands:
-
-Just pass thorugh commands that don't exist in the shell but exist in PATH
-
-git grep fnurp
-
-Stream editing:
-
-# Convert file column in-place
-ls | select * file={upper $file}
-
-# Append new column named lower, containing a lower-case version of the column file
-ls | select * lower={lower $file}
+Regex library:
 
 # Replace file column in-place using regex
-ls | select * file={regex.replace $file regex{a(b*)c} "A\\1B"}
+ls | select * file={regex.replace $file (regex.new "a(b*)c") "A\\1B"}
 
 Modes:
 
 regex{.*} # Regex
+(regex.new ".*")
 *{*.txt}  # Glob
 {ls}      # Closure
 (ls)      # Command substitution
 
-json deserialization:
-How to deal with impedance mismatch, e.g. null values, lists with multiple types of values, etc?
-
-let foo=material{ls}
 
 Aggregating streams:
 
@@ -43,7 +24,3 @@ Could be useful for showing a tree view of processes (ps), file trees (find, du)
 
 * Should this be represented by a special type of tree-struct or just use regular structs with members of the same type? The latter can't represent cycles.
 * What additional primitives are needed to efficiently manipulate tree data?
-
-Drop the file type:
-
-Do we really need to distinguish file from regular text fields? What problem is solved, exactly?

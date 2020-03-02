@@ -3,7 +3,7 @@ use crate::errors::{CrushResult, argument_error};
 use crate::lang::{ValueType, List, SimpleCommand};
 use crate::lang::Value;
 use std::collections::HashSet;
-use crate::lib::parse_util::{single_argument_list, single_argument_type};
+use crate::lib::parse_util::{single_argument_list, single_argument_type, two_arguments, three_arguments};
 use crate::scope::Scope;
 
 fn of(mut context: ExecutionContext) -> CrushResult<()> {
@@ -22,7 +22,7 @@ fn of(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::List(lst))
 }
 
-fn create(mut context: ExecutionContext) -> CrushResult<()> {
+fn new(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::List(List::new(single_argument_type(context.arguments)?, vec![])))
 }
 
@@ -65,14 +65,91 @@ fn pop(context: ExecutionContext) -> CrushResult<()> {
     Ok(())
 }
 
+fn peek(context: ExecutionContext) -> CrushResult<()> {
+    let o = context.output;
+    single_argument_list(context.arguments)?.peek().map(|c| o.send(c));
+    Ok(())
+}
+
+fn clear(context: ExecutionContext) -> CrushResult<()> {
+    single_argument_list(context.arguments)?.clear();
+    Ok(())
+}
+
+fn set(mut context: ExecutionContext) -> CrushResult<()> {
+    three_arguments(&context.arguments)?;
+    let mut list = None;
+    let mut idx = None;
+    let mut value = None;
+
+    for arg in context.arguments.drain(..) {
+        match (arg.name.as_deref(), arg.value) {
+            (Some("list"), Value::List(l)) => list = Some(l),
+            (Some("index"), Value::Integer(l)) => idx = Some(l),
+            (Some("value"), l) => value = Some(l),
+            _ => return argument_error("Unexpected argument"),
+        }
+    }
+
+    match (list, idx, value) {
+        (Some(l), Some(i), Some(v)) => l.set(i as usize, v),
+        _ => argument_error("Missing arguments"),
+    }
+}
+
+fn remove(mut context: ExecutionContext) -> CrushResult<()> {
+    two_arguments(&context.arguments)?;
+    let mut list = None;
+    let mut idx = None;
+
+    for arg in context.arguments.drain(..) {
+        match (arg.name.as_deref(), arg.value) {
+            (Some("list"), Value::List(l)) | (None, Value::List(l)) => list = Some(l),
+            (Some("index"), Value::Integer(l)) | (None, Value::Integer(l)) => idx = Some(l),
+            _ => return argument_error("Unexpected argument"),
+        }
+    }
+
+    match (list, idx) {
+        (Some(l), Some(i)) => l.remove(i as usize),
+        _ => return argument_error("Missing arguments"),
+    }
+    Ok(())
+}
+
+fn truncate(mut context: ExecutionContext) -> CrushResult<()> {
+    two_arguments(&context.arguments)?;
+    let mut list = None;
+    let mut idx = None;
+
+    for arg in context.arguments.drain(..) {
+        match (arg.name.as_deref(), arg.value) {
+            (Some("list"), Value::List(l)) | (None, Value::List(l)) => list = Some(l),
+            (Some("index"), Value::Integer(l)) | (None, Value::Integer(l)) => idx = Some(l),
+            _ => return argument_error("Unexpected argument"),
+        }
+    }
+
+    match (list, idx) {
+        (Some(l), Some(i)) => l.truncate(i as usize),
+        _ => return argument_error("Missing arguments"),
+    }
+    Ok(())
+}
+
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("list")?;
     env.declare_str("of", Value::Command(SimpleCommand::new(of)))?;
-    env.declare_str("create", Value::Command(SimpleCommand::new(create)))?;
+    env.declare_str("new", Value::Command(SimpleCommand::new(new)))?;
     env.declare_str("len", Value::Command(SimpleCommand::new(len)))?;
     env.declare_str("empty", Value::Command(SimpleCommand::new(empty)))?;
     env.declare_str("push", Value::Command(SimpleCommand::new(push)))?;
     env.declare_str("pop", Value::Command(SimpleCommand::new(pop)))?;
+    env.declare_str("peek", Value::Command(SimpleCommand::new(peek)))?;
+    env.declare_str("set", Value::Command(SimpleCommand::new(set)))?;
+    env.declare_str("clear", Value::Command(SimpleCommand::new(clear)))?;
+    env.declare_str("remove", Value::Command(SimpleCommand::new(remove)))?;
+    env.declare_str("truncate", Value::Command(SimpleCommand::new(truncate)))?;
     env.readonly();
     Ok(())
 }

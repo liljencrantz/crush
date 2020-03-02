@@ -7,7 +7,7 @@ use crate::lang::ColumnType;
 use crate::scope::Scope;
 use crate::lib::parse_util::single_argument_dict;
 
-fn create(mut context: ExecutionContext) -> CrushResult<()> {
+fn new(mut context: ExecutionContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
         return argument_error("Expected 2 arguments to dict.create");
     }
@@ -83,7 +83,7 @@ fn empty(context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("dict")?;
-    env.declare_str("create", Value::Command(SimpleCommand::new(create)))?;
+    env.declare_str("new", Value::Command(SimpleCommand::new(new)))?;
     env.declare_str("insert", Value::Command(SimpleCommand::new(insert)))?;
     env.declare_str("get", Value::Command(SimpleCommand::new(get)))?;
     env.declare_str("remove", Value::Command(SimpleCommand::new(remove)))?;

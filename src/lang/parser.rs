@@ -3,7 +3,6 @@ use crate::lang::Job;
 use crate::lexer::{Lexer, TokenType};
 use crate::lang::{ValueDefinition, ArgumentDefinition};
 use crate::lang::CallDefinition;
-use regex::Regex;
 use std::error::Error;
 
 pub fn parse(lexer: &mut Lexer) -> CrushResult<Vec<Job>> {
@@ -200,14 +199,6 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> CrushResult<Va
 
         TokenType::Field => Ok(ValueDefinition::field(parse_name_from_lexer(lexer)?)),
         TokenType::Variable => Ok(ValueDefinition::Variable(parse_name_from_lexer(lexer)?)),
-        TokenType::Regex => {
-            let f = lexer.pop().1;
-            let s = &f[6..f.len() - 1];
-            match Regex::new(s) {
-                Ok(r) => Ok(ValueDefinition::regex(s, r)),
-                Err(e) => argument_error(e.description()),
-            }
-        }
         TokenType::QuotedString => Ok(ValueDefinition::text(unescape(lexer.pop().1).as_str())),
 
         _ => {

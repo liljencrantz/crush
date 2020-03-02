@@ -36,7 +36,7 @@ pub fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> CrushRe
     }
 }
 
-fn sum_rows(mut s: impl Readable, column: usize) -> CrushResult<Value> {
+fn sum_rows(mut s: Box<dyn Readable>, column: usize) -> CrushResult<Value> {
     let mut res: i128 = 0;
     loop {
         match s.read() {
@@ -51,14 +51,8 @@ fn sum_rows(mut s: impl Readable, column: usize) -> CrushResult<Value> {
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    match context.input.recv()? {
-        Value::Stream(s) => {
-            let input = s.stream;
-            let column = parse(input.types(), &context.arguments)?;
-            context.output.send(sum_rows(input, column)?)
-        }
-        Value::Rows(r) => {
-            let input = RowsReader::new(r);
+    match context.input.recv()?.readable() {
+        Some(input) => {
             let column = parse(input.types(), &context.arguments)?;
             context.output.send(sum_rows(input, column)?)
         }
