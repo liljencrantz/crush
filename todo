@@ -3,6 +3,7 @@ Make argument parsing in list and dict more consistent
 Some kind of pattern matching syntax
 Add list.insert command
 Add dict.clear command
+Add dict.clone command
 use command is b0rked
 Figure out reading non-streams
 Make lists and dicts streamable

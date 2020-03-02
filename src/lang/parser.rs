@@ -52,6 +52,9 @@ fn parse_job_internal(lexer: &mut Lexer, commands: &mut Vec<CallDefinition>) -> 
     parse_command(lexer, commands)?;
     while lexer.peek().0 == TokenType::Pipe {
         lexer.pop();
+        while lexer.peek().0 == TokenType::Separator {
+            lexer.pop();
+        }
         parse_command(lexer, commands)?;
     }
     return Ok(());
@@ -162,6 +165,9 @@ fn parse_unnamed_argument_without_subscript(lexer: &mut Lexer) -> CrushResult<Va
             let sigil = lexer.pop().1;
             match sigil {
                 "(" => {
+                    while lexer.peek().0 == TokenType::Separator {
+                        lexer.pop();
+                    }
                     let dep = parse_job(lexer)?;
                     lexer.pop();
                     let res = Ok(ValueDefinition::JobDefinition(dep));

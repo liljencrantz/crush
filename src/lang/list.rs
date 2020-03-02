@@ -91,6 +91,14 @@ impl List {
             cells: Arc::new(Mutex::from(vec)),
         }
     }
+
+    pub fn copy(&self) -> List {
+        let cells = self.cells.lock().unwrap();
+        List {
+            cell_type: self.cell_type.clone(),
+            cells: Arc::from(Mutex::new(cells.clone())),
+        }
+    }
 }
 
 impl ToString for List {

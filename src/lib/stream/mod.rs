@@ -19,6 +19,7 @@ mod zip;
 
 mod count;
 mod sum;
+mod seq;
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("stream")?;
@@ -37,6 +38,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     env.declare_str("select", Value::Command(SimpleCommand::new(select::perform)))?;
     env.declare_str("enumerate", Value::Command(SimpleCommand::new(enumerate::perform)))?;
     env.declare_str("zip", Value::Command(SimpleCommand::new(zip::perform)))?;
+    env.declare_str("seq", Value::Command(SimpleCommand::new(seq::perform)))?;
     env.readonly();
     Ok(())
 }

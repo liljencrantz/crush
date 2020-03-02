@@ -137,6 +137,10 @@ fn truncate(mut context: ExecutionContext) -> CrushResult<()> {
     Ok(())
 }
 
+fn clone(context: ExecutionContext) -> CrushResult<()> {
+    context.output.send(Value::List(single_argument_list(context.arguments)?.copy()))
+}
+
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("list")?;
     env.declare_str("of", Value::Command(SimpleCommand::new(of)))?;
@@ -150,6 +154,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     env.declare_str("clear", Value::Command(SimpleCommand::new(clear)))?;
     env.declare_str("remove", Value::Command(SimpleCommand::new(remove)))?;
     env.declare_str("truncate", Value::Command(SimpleCommand::new(truncate)))?;
+    env.declare_str("clone", Value::Command(SimpleCommand::new(clone)))?;
     env.readonly();
     Ok(())
 }
