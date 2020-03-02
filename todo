@@ -1,7 +1,5 @@
 Todo for MVP 1:
 Make argument parsing in list and dict more consistent
-Make echo always send to printer and accepts multiple arguments
-Add val command that always pipes single argument to stream
 Some kind of pattern matching syntax
 Add list.insert command
 Add dict.clear command
@@ -157,3 +155,5 @@ Add regex.replace command
 Add byte <-> text conversions
 Add list.clear command
 Add list.remove command
+Make echo always send to printer and accepts multiple arguments
+Add val command that always pipes single argument to stream

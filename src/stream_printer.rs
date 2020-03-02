@@ -19,7 +19,7 @@ pub fn spawn_print_thread(printer: &Printer) -> ValueSender {
     o
 }
 
-fn print_value(printer: &Printer, mut cell: Value) {
+pub fn print_value(printer: &Printer, mut cell: Value) {
     match cell {
         Value::Stream(mut output) => print(printer, &mut output.stream),
         Value::Rows(rows) => print(printer, &mut RowsReader::new(rows)),
