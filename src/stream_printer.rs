@@ -1,7 +1,7 @@
 use crate::stream::{ValueSender, channels, Readable};
 use crate::printer::Printer;
 use std::thread;
-use crate::lang::{Row, ColumnType, ValueType, Alignment, Value, Rows, Stream, BinaryReader, RowsReader};
+use crate::lang::{Row, ColumnType, ValueType, Alignment, Value, Table, TableStream, BinaryReader, TableReader};
 use std::cmp::max;
 use std::io::{BufReader, BufRead};
 
@@ -21,8 +21,8 @@ pub fn spawn_print_thread(printer: &Printer) -> ValueSender {
 
 pub fn print_value(printer: &Printer, mut cell: Value) {
     match cell {
-        Value::Stream(mut output) => print(printer, &mut output.stream),
-        Value::Rows(rows) => print(printer, &mut RowsReader::new(rows)),
+        Value::TableStream(mut output) => print(printer, &mut output.stream),
+        Value::Table(rows) => print(printer, &mut TableReader::new(rows)),
         Value::BinaryStream(mut b) => print_binary(printer, b.as_mut(), 0),
         _ => printer.line(cell.to_string().as_str()),
     };
@@ -103,8 +103,8 @@ fn print_row(
     w: &Vec<usize>,
     mut r: Row,
     indent: usize,
-    rows: &mut Vec<Rows>,
-    outputs: &mut Vec<Stream>,
+    rows: &mut Vec<Table>,
+    outputs: &mut Vec<TableStream>,
     binaries: &mut Vec<Box<dyn BinaryReader>>) {
     let cell_len = r.len();
     let mut row = " ".repeat(indent * 4);
@@ -131,8 +131,8 @@ fn print_row(
         }
 
         match c {
-            Value::Rows(r) => rows.push(r),
-            Value::Stream(o) => outputs.push(o),
+            Value::Table(r) => rows.push(r),
+            Value::TableStream(o) => outputs.push(o),
             Value::BinaryStream(b) => binaries.push(b),
             _ => {}
         }
@@ -147,7 +147,7 @@ fn print_body(printer: &Printer, w: &Vec<usize>, data: Vec<Row>, indent: usize) 
         let mut binaries = Vec::new();
         print_row(printer, w, r, indent, &mut rows, &mut outputs, &mut binaries);
         for r in rows {
-            print_internal(printer, &mut RowsReader::new(r), indent + 1);
+            print_internal(printer, &mut TableReader::new(r), indent + 1);
         }
         for mut r in outputs {
             print_internal(printer, &mut r.stream, indent + 1);

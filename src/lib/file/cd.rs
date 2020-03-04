@@ -1,5 +1,5 @@
 use crate::lang::ExecutionContext;
-use crate::errors::{to_job_error, CrushResult, error};
+use crate::errors::{to_crush_error, CrushResult, error};
 use std::path::Path;
 use crate::lang::Value;
 use crate::scope::{home, cwd};
@@ -18,5 +18,5 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
         }
         _ => error("Wrong number of arguments")
     }?;
-    to_job_error(std::env::set_current_dir(dir))
+    to_crush_error(std::env::set_current_dir(dir))
 }

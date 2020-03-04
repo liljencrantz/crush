@@ -4,7 +4,7 @@ use crate::{
 };
 use crate::lang::ExecutionContext;
 use crate::errors::{CrushResult, error};
-use crate::lang::{Value, RowsReader};
+use crate::lang::{Value, TableReader};
 use crate::stream::{Readable, ValueSender};
 
 pub fn run(
@@ -34,8 +34,8 @@ pub fn run(
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()? {
-        Value::Stream(s) => run(s.stream, context.output),
-        Value::Rows(r) => run(RowsReader::new(r), context.output),
+        Value::TableStream(s) => run(s.stream, context.output),
+        Value::Table(r) => run(TableReader::new(r), context.output),
         _ => error("Expected a stream"),
     }
 }

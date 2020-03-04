@@ -1,6 +1,6 @@
 use std::sync::mpsc::{channel, Sender};
 use std::thread;
-use crate::errors::{CrushError, CrushResult, to_job_error};
+use crate::errors::{CrushError, CrushResult, to_crush_error};
 
 enum PrinterMessage {
     Shutdown,
@@ -46,16 +46,16 @@ impl Printer {
     }
 
     pub fn shutdown(self) {
-        self.handle_error(to_job_error(self.sender.send(PrinterMessage::Shutdown)));
+        self.handle_error(to_crush_error(self.sender.send(PrinterMessage::Shutdown)));
     }
 
     pub fn line(&self, line: &str) {
 
-        self.handle_error(to_job_error(self.sender.send(PrinterMessage::Line(Box::from(line)))));
+        self.handle_error(to_crush_error(self.sender.send(PrinterMessage::Line(Box::from(line)))));
     }
 
     pub fn lines(&self, lines: Vec<Box<str>>) {
-        self.handle_error(to_job_error(self.sender.send(PrinterMessage::Lines(lines))));
+        self.handle_error(to_crush_error(self.sender.send(PrinterMessage::Lines(lines))));
     }
 
     pub fn handle_error<T>(&self, result: CrushResult<T>) {

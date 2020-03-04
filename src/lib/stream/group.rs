@@ -6,13 +6,13 @@ use crate::{
     lang::{
         Argument,
         Row,
-        Stream,
+        TableStream,
         ValueType,
         Value,
     },
     stream::{OutputStream, unlimited_streams},
 };
-use crate::lang::{ColumnType, RowsReader};
+use crate::lang::{ColumnType, TableReader};
 use crate::errors::{CrushResult, error};
 use crate::lib::command_util::find_field;
 use crate::stream::{Readable};
@@ -61,7 +61,7 @@ pub fn run(
                 match val {
                     None => {
                         let (output_stream, input_stream) = unlimited_streams(config.input_type.clone());
-                        let out_row = Row::new(vec![key.clone(), Value::Stream(Stream { stream: input_stream })]);
+                        let out_row = Row::new(vec![key.clone(), Value::TableStream(TableStream { stream: input_stream })]);
                         output.send(out_row)?;
                         output_stream.send(row);
                         groups.insert(key, output_stream);
@@ -79,7 +79,7 @@ pub fn run(
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()? {
-        Value::Stream(s) => {
+        Value::TableStream(s) => {
             let input = s.stream;
             let config = parse(input.types().clone(), context.arguments)?;
             let output_type= vec![
@@ -92,8 +92,8 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
             let output = context.output.initialize(output_type)?;
             run(config, input, output)
         }
-        Value::Rows(r) => {
-            let input = RowsReader::new(r);
+        Value::Table(r) => {
+            let input = TableReader::new(r);
             let config = parse(input.types().clone(), context.arguments)?;
             let output_type= vec![
                 input.types()[config.column].clone(),

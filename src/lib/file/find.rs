@@ -14,7 +14,7 @@ use crate::lang::ExecutionContext;
 use crate::lib::command_util::{create_user_map, UserMap};
 use crate::lang::{Argument, Value, ValueType, ColumnType, Row};
 use crate::scope::cwd;
-use crate::errors::{error, CrushError, CrushResult, to_job_error};
+use crate::errors::{error, CrushError, CrushResult, to_crush_error};
 use crate::stream::OutputStream;
 
 lazy_static! {
@@ -31,7 +31,7 @@ fn insert_entity(
     file: Box<Path>,
     users: &HashMap<uid_t, User>,
     output: &mut OutputStream) -> CrushResult<()> {
-    let modified_system = to_job_error(meta.modified())?;
+    let modified_system = to_crush_error(meta.modified())?;
     let modified_datetime: DateTime<Local> = DateTime::from(modified_system);
     let f = if file.starts_with("./") {
         let b = file.to_str().map(|s| Box::from(Path::new(&s[2..])));
@@ -55,10 +55,10 @@ fn run_for_single_directory_or_file(
     output: &mut OutputStream) -> CrushResult<()> {
     if path.is_dir() {
         let dirs = fs::read_dir(path);
-        for maybe_entry in to_job_error(dirs)? {
-            let entry = to_job_error(maybe_entry)?;
+        for maybe_entry in to_crush_error(dirs)? {
+            let entry = to_crush_error(maybe_entry)?;
             insert_entity(
-                &to_job_error(entry.metadata())?,
+                &to_crush_error(entry.metadata())?,
                 entry.path().into_boxed_path(),
                 &users,
                 output)?;
@@ -72,7 +72,7 @@ fn run_for_single_directory_or_file(
         match path.file_name() {
             Some(_) => {
                 insert_entity(
-                    &to_job_error(path.metadata())?,
+                    &to_crush_error(path.metadata())?,
                     path,
                     &users,
                     output)?;

@@ -11,7 +11,7 @@ use crate::lang::ExecutionContext;
 use crate::errors::{error, CrushResult, argument_error};
 use crate::printer::Printer;
 use crate::stream::{Readable, empty_channel, channels};
-use crate::lang::{RowsReader, ColumnType, Argument};
+use crate::lang::{TableReader, ColumnType, Argument};
 use crate::lang::Closure;
 use crate::stream_printer::spawn_print_thread;
 use crate::scope::Scope;
@@ -76,7 +76,7 @@ pub fn parse(_input_type: &Vec<ColumnType>,
 
 pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()? {
-        Value::Stream(input) => {
+        Value::TableStream(input) => {
             let output = context.output.initialize(input.stream.types().clone())?;
             let config = Config {
                 condition: parse(input.stream.types(), context.arguments.as_mut())?,
@@ -85,8 +85,8 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
             };
             run(config, context.env, context.printer)
         }
-        Value::Rows(r) => {
-            let input = RowsReader::new(r);
+        Value::Table(r) => {
+            let input = TableReader::new(r);
             let output = context.output.initialize(input.types().clone())?;
             let config = Config {
                 condition: parse(input.types(), context.arguments.as_mut())?,

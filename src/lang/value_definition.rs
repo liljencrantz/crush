@@ -6,7 +6,7 @@ use regex::Regex;
 use crate::{
     printer::Printer,
     glob::Glob,
-    errors::{error, mandate, CrushResult, argument_error, to_job_error},
+    errors::{error, mandate, CrushResult, argument_error, to_crush_error},
     scope::Scope,
     lang::{Value},
     lang::JobJoinHandle,
@@ -77,7 +77,7 @@ impl ValueDefinition {
                         mandate(env.get_str(name.as_ref()), "Invalid subscript")?,
                     (Ok(Value::Struct(row)), Ok(Value::Text(col))) =>
                         mandate(row.get(col.as_ref()), "Invalid subscript")?,
-                    (Ok(Value::Stream(o)), Ok(Value::Integer(idx))) => {
+                    (Ok(Value::TableStream(o)), Ok(Value::Integer(idx))) => {
                         Value::Struct(o.get(idx)?.into_struct(o.stream.types()))
                     }
                     _ => return error("Value can't be subscripted"),

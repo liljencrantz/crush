@@ -1,6 +1,6 @@
 use crate::lang::ExecutionContext;
 use crate::errors::{CrushResult, error};
-use crate::lang::{ValueType, RowsReader, Row, Value};
+use crate::lang::{ValueType, TableReader, Row, Value};
 use crate::stream::{Readable, ValueSender};
 use crate::lang::ColumnType;
 
@@ -26,8 +26,8 @@ pub fn run(mut input: impl Readable, sender: ValueSender) -> CrushResult<()> {
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()? {
-        Value::Stream(s) => run(s.stream, context.output),
-        Value::Rows(r) => run(RowsReader::new(r), context.output),
+        Value::TableStream(s) => run(s.stream, context.output),
+        Value::Table(r) => run(TableReader::new(r), context.output),
         _ => error("Expected a stream"),
     }
 }

@@ -1,5 +1,5 @@
 use crate::lang::ExecutionContext;
-use crate::errors::{CrushResult, argument_error, to_job_error};
+use crate::errors::{CrushResult, argument_error, to_crush_error};
 use crate::{
     lang::Row,
     lang::ValueType,
@@ -65,7 +65,7 @@ fn kill(context: ExecutionContext) -> CrushResult<()> {
         match (arg.name.as_deref(), arg.value) {
             (None, Value::Integer(pid)) => pids.push(Pid::from_raw(pid as i32)),
             (Some("pid"), Value::Integer(pid)) => pids.push(Pid::from_raw(pid as i32)),
-            (Some("signal"), Value::Text(sig)) => sig_to_send = to_job_error(signal::Signal::from_str(sig.as_ref()))?,
+            (Some("signal"), Value::Text(sig)) => sig_to_send = to_crush_error(signal::Signal::from_str(sig.as_ref()))?,
             _ => return argument_error("Unknown argument")
         }
     }

@@ -1,6 +1,6 @@
-use crate::lang::{Argument, Value, Struct, Rows, ColumnType, ValueType, Row, binary_channel};
+use crate::lang::{Argument, Value, Struct, Table, ColumnType, ValueType, Row, binary_channel};
 use crate::lang::ExecutionContext;
-use crate::errors::{argument_error, to_job_error, CrushResult, demand};
+use crate::errors::{argument_error, to_crush_error, CrushResult, demand};
 use reqwest::{StatusCode, Method};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use std::str::FromStr;
@@ -75,11 +75,11 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
         request = request.body(body)
     }
 
-    let mut b = to_job_error(request.send())?;
+    let mut b = to_crush_error(request.send())?;
 
     let status: StatusCode = b.status();
     let header_map: &HeaderMap = b.headers();
-    let headers = Rows::new(
+    let headers = Table::new(
         vec![
             ColumnType::named("name", ValueType::Text),
             ColumnType::named("value", ValueType::Text),
@@ -92,10 +92,10 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
         Value::Struct(Struct::new(
             vec![
                 (Box::from("status"), Value::Integer(status.as_u16() as i128)),
-                (Box::from("headers"), Value::Rows(headers)),
+                (Box::from("headers"), Value::Table(headers)),
                 (Box::from("body"), Value::BinaryStream(input))
             ]
         )));
-    to_job_error(b.copy_to(output.as_mut()))?;
+    to_crush_error(b.copy_to(output.as_mut()))?;
     Ok(())
 }

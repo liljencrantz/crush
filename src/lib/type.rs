@@ -48,7 +48,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     Stream(Vec<ColumnType>),
     Rows(Vec<ColumnType>),
     Row(Vec<ColumnType>),
-    List(Box<ValueType>),
     Dict(Box<ValueType>, Box<ValueType>),
     */
     env.readonly();

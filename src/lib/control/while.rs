@@ -4,7 +4,7 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::scope::Scope;
-use crate::lang::{Stream, RowsReader, ListReader, Struct, DictReader, CrushCommand};
+use crate::lang::{TableStream, TableReader, ListReader, Struct, DictReader, CrushCommand};
 use crate::errors::{argument_error, CrushResult, data_error};
 use crate::lang::Closure;
 use crate::lang::ExecutionContext;

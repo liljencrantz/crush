@@ -7,7 +7,7 @@ use crate::{
         Value
     }
 };
-use crate::lang::{ColumnType, Argument, RowsReader};
+use crate::lang::{ColumnType, Argument, TableReader};
 use crate::lib::command_util::find_field_from_str;
 use crate::stream::{Readable};
 use crate::lib::parse_util::single_argument_integer;

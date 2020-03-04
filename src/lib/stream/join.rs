@@ -148,16 +148,16 @@ pub fn run(
 ) -> CrushResult<()> {
     let mut v = row.into_vec();
     match (v.replace(config.left_table_idx, Value::Integer(0)), v.replace(config.right_table_idx, Value::Integer(0))) {
-        (Value::Stream(mut l), Value::Stream(mut r)) => {
+        (Value::TableStream(mut l), Value::TableStream(mut r)) => {
             do_join(&config, &mut l.stream, &mut r.stream, &output)?;
         }
-        (Value::Rows(mut l), Value::Rows(mut r)) => {
+        (Value::Table(mut l), Value::Table(mut r)) => {
             do_join(&config, &mut l.reader(), &mut r.reader(), &output)?;
         }
-        (Value::Stream(mut l), Value::Rows(mut r)) => {
+        (Value::TableStream(mut l), Value::Table(mut r)) => {
             do_join(&config, &mut l.stream, &mut r.reader(), &output)?;
         }
-        (Value::Rows(mut l), Value::Stream(mut r)) => {
+        (Value::Table(mut l), Value::TableStream(mut r)) => {
             do_join(&config, &mut l.reader(), &mut r.stream, &output)?;
         }
         _ => panic!("Wrong row format"),

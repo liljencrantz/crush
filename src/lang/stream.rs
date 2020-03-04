@@ -3,11 +3,11 @@ use crate::errors::{CrushResult, error};
 use crate::lang::Row;
 
 #[derive(Debug, Clone)]
-pub struct Stream {
+pub struct TableStream {
     pub stream: InputStream,
 }
 
-impl Stream {
+impl TableStream {
     pub fn get(&self, idx: i128) -> CrushResult<Row> {
         let mut i = 0i128;
         loop {

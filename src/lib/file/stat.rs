@@ -1,5 +1,5 @@
 use crate::lang::ExecutionContext;
-use crate::errors::{CrushResult, argument_error, to_job_error};
+use crate::errors::{CrushResult, argument_error, to_crush_error};
 use crate::lang::{Argument, Struct};
 use crate::lang::Value;
 use std::fs::metadata;
@@ -19,7 +19,7 @@ fn parse(arguments: Vec<Argument>) -> CrushResult<Box<Path>> {
 }
 
 fn run(file: Box<Path>, sender: ValueSender) -> CrushResult<()> {
-    let metadata = to_job_error(metadata(file))?;
+    let metadata = to_crush_error(metadata(file))?;
     sender.send(
         Value::Struct(
             Struct::new(

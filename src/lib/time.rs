@@ -1,5 +1,5 @@
 use crate::lang::ExecutionContext;
-use crate::errors::{CrushResult, argument_error, to_job_error};
+use crate::errors::{CrushResult, argument_error, to_crush_error};
 use crate::lang::{Value, SimpleCommand, ValueType};
 use crate::scope::Scope;
 use chrono::{Local, Duration, DateTime, Datelike, Timelike};
@@ -25,7 +25,7 @@ fn parse(mut context: ExecutionContext) -> CrushResult<()> {
 
     match (tm, fmt) {
         (Some(t), Some(f)) => {
-            let tm = to_job_error(strptime(t.as_ref(), f.as_ref()))?;
+            let tm = to_crush_error(strptime(t.as_ref(), f.as_ref()))?;
             let mut dt = Local::now()
                 .with_year(tm.tm_year + 1900).unwrap()
                 .with_month0(tm.tm_mon as u32).unwrap()

@@ -9,11 +9,11 @@ use regex::Regex;
 use crate::{
     lang::Closure,
     scope::cwd,
-    lang::rows::Rows,
-    errors::{error, CrushError, to_job_error},
+    lang::rows::Table,
+    errors::{error, CrushError, to_crush_error},
     glob::Glob,
 };
-use crate::lang::{List, SimpleCommand, ConditionCommand, Stream, ValueType, Dict, ColumnType, value_type_parser, BinaryReader, RowsReader, ListReader, DictReader, Row};
+use crate::lang::{List, SimpleCommand, ConditionCommand, TableStream, ValueType, Dict, ColumnType, value_type_parser, BinaryReader, TableReader, ListReader, DictReader, Row};
 use crate::errors::CrushResult;
 use chrono::Duration;
 use crate::format::duration_format;
@@ -35,9 +35,9 @@ pub enum Value {
     Command(SimpleCommand),
     Closure(Closure),
     ConditionCommand(ConditionCommand),
-    Stream(Stream),
+    TableStream(TableStream),
     File(Box<Path>),
-    Rows(Rows),
+    Table(Table),
     Struct(Struct),
     List(List),
     Dict(Dict),
@@ -67,10 +67,10 @@ impl Value {
             Value::Command(_) => "Command".to_string(),
             Value::ConditionCommand(_) => "Command".to_string(),
             Value::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
-            Value::Rows(_) => "<Rows>".to_string(),
+            Value::Table(_) => "<Rows>".to_string(),
             Value::Struct(row) => row.to_string(),
             Value::Closure(c) => c.to_string(),
-            Value::Stream(_) => "<Output>".to_string(),
+            Value::TableStream(_) => "<Output>".to_string(),
             Value::List(l) => l.to_string(),
             Value::Duration(d) => duration_format(d),
             Value::Env(env) => env.to_string(),
@@ -93,7 +93,7 @@ impl Value {
 
     pub fn empty_stream() -> Value {
         let (_s, r) = streams(vec![]);
-        Value::Stream(Stream { stream: r })
+        Value::TableStream(TableStream { stream: r })
     }
 
     pub fn text(s: &str) -> Value {
@@ -102,8 +102,8 @@ impl Value {
 
     pub fn readable(&self) -> Option<Box<Readable>> {
         return match self {
-            Value::Stream(s) => Some(Box::from(s.stream.clone())),
-            Value::Rows(r) => Some(Box::from(RowsReader::new(r.clone()))),
+            Value::TableStream(s) => Some(Box::from(s.stream.clone())),
+            Value::Table(r) => Some(Box::from(TableReader::new(r.clone()))),
             Value::List(l) => Some(Box::from(ListReader::new(l.clone(), "value"))),
             Value::Dict(d) => Some(Box::from(DictReader::new(d.clone()))),
             _ => None,
@@ -121,8 +121,8 @@ impl Value {
             Value::Command(_) => ValueType::Command,
             Value::ConditionCommand(_) => ValueType::Command,
             Value::File(_) => ValueType::File,
-            Value::Stream(o) => ValueType::Stream(o.stream.types().clone()),
-            Value::Rows(r) => ValueType::Rows(r.types().clone()),
+            Value::TableStream(o) => ValueType::Stream(o.stream.types().clone()),
+            Value::Table(r) => ValueType::Rows(r.types().clone()),
             Value::Struct(r) => ValueType::Row(r.types().clone()),
             Value::Closure(_) => ValueType::Closure,
             Value::List(l) => l.list_type(),
@@ -150,7 +150,7 @@ impl Value {
 
     pub fn materialize(self) -> Value {
         match self {
-            Value::Stream(output) => {
+            Value::TableStream(output) => {
                 let mut rows = Vec::new();
                 loop {
                     match output.stream.recv() {
@@ -158,14 +158,14 @@ impl Value {
                         Err(_) => break,
                     }
                 }
-                Value::Rows(Rows::new(ColumnType::materialize(output.stream.types()), rows ))
+                Value::Table(Table::new(ColumnType::materialize(output.stream.types()), rows ))
             }
             Value::BinaryStream(mut s) => {
                 let mut vec = Vec::new();
                 std::io::copy(s.as_mut(), &mut vec);
                 Value::Binary(vec)
             }
-            Value::Rows(r) => Value::Rows(r.materialize()),
+            Value::Table(r) => Value::Table(r.materialize()),
             Value::Dict(d) => Value::Dict(d.materialize()),
             Value::Struct(r) => Value::Struct(r.materialize()),
             Value::List(l) => Value::List(l.materialize()),
@@ -186,12 +186,12 @@ impl Value {
         match (self, new_type) {
             (Value::Text(s), ValueType::File) => Ok(Value::File(Box::from(Path::new(s.as_ref())))),
             (Value::Text(s), ValueType::Glob) => Ok(Value::Glob(Glob::new(&s))),
-            (Value::Text(s), ValueType::Integer) => to_job_error(s.parse::<i128>()).map(|v| Value::Integer(v)),
+            (Value::Text(s), ValueType::Integer) => to_crush_error(s.parse::<i128>()).map(|v| Value::Integer(v)),
             (Value::Text(s), ValueType::Field) => Ok(Value::Field(vec![s])),
-            (Value::Text(s), ValueType::Regex) => to_job_error(Regex::new(s.as_ref()).map(|v| Value::Regex(s, v))),
+            (Value::Text(s), ValueType::Regex) => to_crush_error(Regex::new(s.as_ref()).map(|v| Value::Regex(s, v))),
             (Value::Text(s), ValueType::Type) => Ok(Value::Type(value_type_parser::parse(s.as_ref())?)),
             (Value::Text(s), ValueType::Binary) => Ok(Value::Binary(s.bytes().collect())),
-            (Value::Text(s), ValueType::Float) => Ok(Value::Float(to_job_error(f64::from_str(&s))?)),
+            (Value::Text(s), ValueType::Float) => Ok(Value::Float(to_crush_error(f64::from_str(&s))?)),
 
             (Value::File(s), ValueType::Text) => match s.to_str() {
                 Some(s) => Ok(Value::Text(Box::from(s))),
@@ -202,20 +202,20 @@ impl Value {
                 None => error("File name is not valid unicode")
             },
             (Value::File(s), ValueType::Integer) => match s.to_str() {
-                Some(s) => to_job_error(s.parse::<i128>()).map(|v| Value::Integer(v)),
+                Some(s) => to_crush_error(s.parse::<i128>()).map(|v| Value::Integer(v)),
                 None => error("File name is not valid unicode")
             },
             (Value::File(s), ValueType::Regex) => match s.to_str() {
-                Some(s) => to_job_error(Regex::new(s.as_ref()).map(|v| Value::Regex(Box::from(s), v))),
+                Some(s) => to_crush_error(Regex::new(s.as_ref()).map(|v| Value::Regex(Box::from(s), v))),
                 None => error("File name is not valid unicode")
             },
 
             (Value::Glob(s), ValueType::Text) => Ok(Value::Text(s.to_string().clone().into_boxed_str())),
             (Value::Glob(s), ValueType::File) => Ok(Value::File(Box::from(Path::new(s.to_string().as_str())))),
-            (Value::Glob(s), ValueType::Integer) => to_job_error(s.to_string().parse::<i128>()).map(|v| Value::Integer(v)),
+            (Value::Glob(s), ValueType::Integer) => to_crush_error(s.to_string().parse::<i128>()).map(|v| Value::Integer(v)),
             (Value::Glob(g), ValueType::Regex) => {
                 let s = g.to_string().as_str();
-                to_job_error(Regex::new(s).map(|v| Value::Regex(Box::from(s), v)))
+                to_crush_error(Regex::new(s).map(|v| Value::Regex(Box::from(s), v)))
             }
             /*
                         (Cell::Field(s), CellType::File) => Ok(Cell::File(Box::from(Path::new(s.as_ref())))),
@@ -227,7 +227,7 @@ impl Value {
             */
             (Value::Regex(s, _), ValueType::File) => Ok(Value::File(Box::from(Path::new(s.as_ref())))),
             (Value::Regex(s, _), ValueType::Glob) => Ok(Value::Glob(Glob::new(&s))),
-            (Value::Regex(s, _), ValueType::Integer) => to_job_error(s.parse::<i128>()).map(|v| Value::Integer(v)),
+            (Value::Regex(s, _), ValueType::Integer) => to_crush_error(s.parse::<i128>()).map(|v| Value::Integer(v)),
             (Value::Regex(s, _), ValueType::Text) => Ok(Value::Text(s)),
 
             (Value::Integer(i), ValueType::Text) => Ok(Value::Text(i.to_string().into_boxed_str())),
@@ -236,7 +236,7 @@ impl Value {
             (Value::Integer(i), ValueType::Field) => Ok(Value::Field(vec![i.to_string().into_boxed_str()])),
             (Value::Integer(i), ValueType::Regex) => {
                 let s = i.to_string();
-                to_job_error(Regex::new(s.as_str()).map(|v| Value::Regex(s.into_boxed_str(), v)))
+                to_crush_error(Regex::new(s.as_str()).map(|v| Value::Regex(s.into_boxed_str(), v)))
             }
             (Value::Integer(i), ValueType::Float) => Ok(Value::Float(i as f64)),
 
@@ -245,15 +245,15 @@ impl Value {
             (Value::Float(i), ValueType::Integer) => Ok(Value::Integer(i as i128)),
             (Value::Float(i), ValueType::Text) => Ok(Value::Text(i.to_string().into_boxed_str())),
 
-            (Value::Binary(s), ValueType::Text) => Ok(Value::Text(to_job_error(String::from_utf8(s))?.into_boxed_str())),
+            (Value::Binary(s), ValueType::Text) => Ok(Value::Text(to_crush_error(String::from_utf8(s))?.into_boxed_str())),
 
             (Value::BinaryStream(mut s), ValueType::Text) => {
                 let mut v = Vec::new();
                 s.read_to_end(&mut v);
-                Ok(Value::Text(to_job_error(String::from_utf8(v))?.into_boxed_str()))
+                Ok(Value::Text(to_crush_error(String::from_utf8(v))?.into_boxed_str()))
             },
 
-            (Value::Stream(s), ValueType::List(t)) => {
+            (Value::TableStream(s), ValueType::List(t)) => {
                 if s.stream.types().len()!=1 {
                     return error("Stream must have exactly one element to convert to list");
                 }
@@ -287,10 +287,10 @@ impl Clone for Value {
             Value::Command(v) => Value::Command(v.clone()),
             Value::ConditionCommand(v) => Value::ConditionCommand(v.clone()),
             Value::File(v) => Value::File(v.clone()),
-            Value::Rows(r) => Value::Rows(r.clone()),
+            Value::Table(r) => Value::Table(r.clone()),
             Value::Struct(r) => Value::Struct(r.clone()),
             Value::Closure(c) => Value::Closure(c.clone()),
-            Value::Stream(s) => Value::Stream(s.clone()),
+            Value::TableStream(s) => Value::TableStream(s.clone()),
             Value::List(l) => Value::List(l.clone()),
             Value::Duration(d) => Value::Duration(d.clone()),
             Value::Env(e) => Value::Env(e.clone()),
@@ -324,8 +324,8 @@ impl std::hash::Hash for Value {
             Value::Bool(v) => v.hash(state),
             Value::Binary(v) => v.hash(state),
 
-            Value::Env(_) | Value::Dict(_) | Value::Rows(_) | Value::Closure(_) |
-            Value::List(_) | Value::Stream(_) | Value::Struct(_) | Value::Float(_)
+            Value::Env(_) | Value::Dict(_) | Value::Table(_) | Value::Closure(_) |
+            Value::List(_) | Value::TableStream(_) | Value::Struct(_) | Value::Float(_)
             | Value::BinaryStream(_) => panic!("Can't hash output"),
             Value::Empty() => {}
             Value::Type(v) => v.to_string().hash(state),
@@ -354,7 +354,7 @@ impl std::cmp::PartialEq for Value {
             (Value::Regex(val1, _), Value::Regex(val2, _)) => val1 == val2,
             (Value::Command(val1), Value::Command(val2)) => val1 == val2,
             (Value::List(val1), Value::List(val2)) => val1 == val2,
-            (Value::Rows(val1), Value::Rows(val2)) => match val1.partial_cmp(val2) {
+            (Value::Table(val1), Value::Table(val2)) => match val1.partial_cmp(val2) {
                 None => false,
                 Some(o) => o == Ordering::Equal,
             },
@@ -394,8 +394,8 @@ impl std::cmp::PartialOrd for Value {
             (Value::Duration(val1), Value::Duration(val2)) => Some(val1.cmp(val2)),
             (Value::Command(_), Value::Command(_)) => None,
             (Value::Closure(_), _) => None,
-            (Value::Stream(_), _) => None,
-            (Value::Rows(val1), Value::Rows(val2)) => val1.partial_cmp(val2),
+            (Value::TableStream(_), _) => None,
+            (Value::Table(val1), Value::Table(val2)) => val1.partial_cmp(val2),
             (Value::Struct(val1), Value::Struct(val2)) => val1.partial_cmp(val2),
             (Value::List(val1), Value::List(val2)) => val1.partial_cmp(val2),
             (Value::Bool(val1), Value::Bool(val2)) => Some(val1.cmp(val2)),

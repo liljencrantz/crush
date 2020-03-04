@@ -19,7 +19,7 @@ extern crate rustyline;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use lib::declare;
-use crate::errors::{CrushResult, to_job_error};
+use crate::errors::{CrushResult, to_crush_error};
 use std::error::Error;
 use crate::printer::Printer;
 use crate::stream::empty_channel;
@@ -90,7 +90,7 @@ fn run_interactive(global_env: scope::Scope, printer: &Printer) -> CrushResult<(
 
 
 fn run_script(global_env: scope::Scope, printer: &Printer, filename: &str) -> CrushResult<()> {
-    let cmd = to_job_error(fs::read_to_string(filename))?;
+    let cmd = to_crush_error(fs::read_to_string(filename))?;
     match parse(&mut Lexer::new(&cmd)) {
         Ok(jobs) => {
             for job_definition in jobs {

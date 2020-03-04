@@ -1,4 +1,4 @@
-use crate::errors::{CrushResult, to_job_error};
+use crate::errors::{CrushResult, to_crush_error};
 use std::sync::{Arc, Mutex};
 use std::cmp::{Ordering, min};
 use std::collections::{HashMap, VecDeque};
@@ -111,17 +111,17 @@ impl BinaryReader for FileReader {
 
 impl dyn BinaryReader {
     pub fn path(file: &Path) -> CrushResult<Box<dyn BinaryReader>> {
-        return Ok(Box::from(FileReader::new(to_job_error(File::open(file))?)));
+        return Ok(Box::from(FileReader::new(to_crush_error(File::open(file))?)));
     }
 
     pub fn paths(mut files: Vec<Box<Path>>) -> CrushResult<Box<dyn BinaryReader>> {
         if files.len() == 1 {
-            Ok(Box::from(FileReader::new(to_job_error(File::open(files.remove(0)))?)))
+            Ok(Box::from(FileReader::new(to_crush_error(File::open(files.remove(0)))?)))
         } else {
             let mut readers: Vec<Box<dyn BinaryReader>> = Vec::new();
 
             for p in files.drain(..) {
-                let f = to_job_error(File::open(p).map(|f| Box::from(FileReader::new(f))))?;
+                let f = to_crush_error(File::open(p).map(|f| Box::from(FileReader::new(f))))?;
                 readers.push(f)
             }
             Ok(Box::from(MultiReader { inner: VecDeque::from(readers) }))

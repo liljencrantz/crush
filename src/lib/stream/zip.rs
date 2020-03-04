@@ -27,13 +27,13 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
         return error("Expected exactly two arguments");
     }
     match (context.arguments.remove(0).value, context.arguments.remove(0).value) {
-        (Value::Stream(mut o1), Value::Stream(mut o2)) =>
+        (Value::TableStream(mut o1), Value::TableStream(mut o2)) =>
             run(&mut o1.reader(), &mut o2.reader(), context.output),
-        (Value::Rows(mut o1), Value::Rows(mut o2)) =>
+        (Value::Table(mut o1), Value::Table(mut o2)) =>
             run(&mut o1.reader(), &mut o2.reader(), context.output),
-        (Value::Stream(mut o1), Value::Rows(mut o2)) =>
+        (Value::TableStream(mut o1), Value::Table(mut o2)) =>
             run(&mut o1.reader(), &mut o2.reader(), context.output),
-        (Value::Rows(mut o1), Value::Stream(mut o2)) =>
+        (Value::Table(mut o1), Value::TableStream(mut o2)) =>
             run(&mut o1.reader(), &mut o2.reader(), context.output),
         _ => return error("Expected two datasets"),
     }

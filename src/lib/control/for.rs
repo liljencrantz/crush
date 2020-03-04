@@ -4,7 +4,7 @@ use crate::{
 };
 use crate::printer::Printer;
 use crate::scope::Scope;
-use crate::lang::{Stream, RowsReader, ListReader, Struct, DictReader, CrushCommand};
+use crate::lang::{TableStream, TableReader, ListReader, Struct, DictReader, CrushCommand};
 use crate::errors::{argument_error, CrushResult};
 use crate::lang::Closure;
 use crate::lang::ExecutionContext;
@@ -75,7 +75,7 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
         let t = iter.value.value_type();
         let name = iter.name.clone();
         match (iter.name.as_deref(), iter.value) {
-            (_, Value::Stream(o)) => {
+            (_, Value::TableStream(o)) => {
                 run(Config {
                     body,
                     env: context.env,
@@ -83,13 +83,13 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
                     name: name,
                 }, o.stream)
             }
-            (_, Value::Rows(r)) => {
+            (_, Value::Table(r)) => {
                 run(Config {
                     body,
                     env: context.env,
                     printer: context.printer,
                     name: name,
-                }, RowsReader::new(r))
+                }, TableReader::new(r))
             }
             (Some(name), Value::List(l)) => {
                 run(Config {

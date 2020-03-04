@@ -3,7 +3,7 @@ use std::iter::Peekable;
 use std::path::Path;
 use std::io;
 use std::fs::{read_dir, ReadDir};
-use crate::errors::{to_job_error, argument_error, CrushResult};
+use crate::errors::{to_crush_error, argument_error, CrushResult};
 
 #[derive(Clone)]
 #[derive(PartialEq)]
@@ -30,7 +30,7 @@ impl Glob {
     }
 
     pub fn glob_files(&self, cwd: &Path, out: &mut Vec<Box<Path>>) -> CrushResult<()> {
-        to_job_error(Glob::glob_files_testable(self.pattern.as_str(), cwd, out, |p| read_dir(p)))
+        to_crush_error(Glob::glob_files_testable(self.pattern.as_str(), cwd, out, |p| read_dir(p)))
     }
 
     pub fn glob_to_single_file(&self, cwd: &Path) -> CrushResult<Box<Path>> {

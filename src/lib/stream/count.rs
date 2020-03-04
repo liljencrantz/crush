@@ -6,7 +6,7 @@ use crate::{
         ValueType,
         Value,
         ColumnType,
-        RowsReader,
+        TableReader,
     }
 };
 use crate::stream::Readable;
@@ -24,8 +24,8 @@ fn count_rows(mut s: impl Readable) -> Value {
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()? {
-        Value::Stream(s) => context.output.send(count_rows(s.stream)),
-        Value::Rows(r) => context.output.send(Value::Integer(r.rows().len() as i128)),
+        Value::TableStream(s) => context.output.send(count_rows(s.stream)),
+        Value::Table(r) => context.output.send(Value::Integer(r.rows().len() as i128)),
         Value::List(r) => context.output.send(Value::Integer(r.len() as i128)),
         Value::Dict(r) => context.output.send(Value::Integer(r.len() as i128)),
         _ => error("Expected a stream"),

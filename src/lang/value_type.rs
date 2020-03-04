@@ -1,4 +1,4 @@
-use crate::errors::{error, mandate, CrushResult, to_job_error};
+use crate::errors::{error, mandate, CrushResult, to_crush_error};
 use crate::lang::{Value, ColumnType, value_type_parser};
 use crate::glob::Glob;
 use regex::Regex;
@@ -100,11 +100,11 @@ impl ValueType {
             }
             ValueType::Field => Ok(Value::Field(mandate(parse_name(s), "Invalid field name")?)),
             ValueType::Glob => Ok(Value::Glob(Glob::new(s))),
-            ValueType::Regex => Ok(Value::Regex(Box::from(s), to_job_error(Regex::new(s))?)),
+            ValueType::Regex => Ok(Value::Regex(Box::from(s), to_crush_error(Regex::new(s))?)),
             ValueType::File => Ok(Value::Text(Box::from(s))),
-            ValueType::Float => Ok(Value::Float(to_job_error(s.parse::<f64>())?)),
+            ValueType::Float => Ok(Value::Float(to_crush_error(s.parse::<f64>())?)),
             ValueType::Type => Ok(Value::Type(value_type_parser::parse(s)?)),
-            ValueType::Bool => Ok(Value::Bool(to_job_error(s.parse::<bool>())?)),
+            ValueType::Bool => Ok(Value::Bool(to_crush_error(s.parse::<bool>())?)),
             _ => error("Failed to parse cell"),
         }
     }

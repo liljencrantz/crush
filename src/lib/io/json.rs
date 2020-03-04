@@ -11,8 +11,8 @@ use crate::{
 use std::io::BufReader;
 
 use crate::printer::Printer;
-use crate::lang::{Struct, List, Rows, BinaryReader};
-use crate::errors::{CrushResult, to_job_error, error};
+use crate::lang::{Struct, List, Table, BinaryReader};
+use crate::errors::{CrushResult, to_crush_error, error};
 use crate::stream::{ValueSender, ValueReceiver};
 use std::collections::HashSet;
 use crate::lib::parse_util::argument_files;
@@ -67,7 +67,7 @@ fn convert_json(json_value: &serde_json::Value) -> CrushResult<Value> {
                                 _ => error("Impossible!")
                             })
                             .collect::<CrushResult<Vec<Row>>>()?;
-                        Ok(Value::Rows(Rows::new(r.clone(), row_list)))
+                        Ok(Value::Table(Table::new(r.clone(), row_list)))
                     } else {
                         Ok(Value::List(List::new(list_type.clone(), lst)))
                     }
@@ -92,7 +92,7 @@ fn convert_json(json_value: &serde_json::Value) -> CrushResult<Value> {
 
 fn run(cfg: Config, output: ValueSender, printer: Printer) -> CrushResult<()> {
     let mut reader = BufReader::new(cfg.input);
-    let v = to_job_error(serde_json::from_reader(reader))?;
+    let v = to_crush_error(serde_json::from_reader(reader))?;
     let crush_value = convert_json(&v)?;
     output.send(crush_value)?;
     Ok(())

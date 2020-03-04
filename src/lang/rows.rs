@@ -4,18 +4,18 @@ use crate::stream::Readable;
 use crate::replace::Replace;
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
-pub struct Rows {
+pub struct Table {
     types: Vec<ColumnType>,
     rows: Vec<Row>,
 }
 
-impl Rows {
-    pub fn new(types: Vec<ColumnType>, rows: Vec<Row>) -> Rows {
-        Rows {types, rows}
+impl Table {
+    pub fn new(types: Vec<ColumnType>, rows: Vec<Row>) -> Table {
+        Table {types, rows}
     }
 
-    pub fn materialize(mut self) ->  Rows{
-        Rows {
+    pub fn materialize(mut self) -> Table {
+        Table {
             types: ColumnType::materialize(&self.types),
             rows: self.rows.drain(..).map(|r| r.materialize()).collect(),
         }
@@ -29,20 +29,20 @@ impl Rows {
         &self.rows
     }
 
-    pub fn reader(self) -> RowsReader {
-        RowsReader::new(self)
+    pub fn reader(self) -> TableReader {
+        TableReader::new(self)
     }
 }
 
-pub struct RowsReader {
+pub struct TableReader {
     idx: usize,
-    rows: Rows,
+    rows: Table,
     row_type: Vec<ColumnType>,
 }
 
-impl RowsReader {
-    pub fn new(rows: Rows) -> RowsReader {
-        RowsReader{
+impl TableReader {
+    pub fn new(rows: Table) -> TableReader {
+        TableReader {
             idx: 0,
             row_type: rows.types().clone(),
             rows,
@@ -50,7 +50,7 @@ impl RowsReader {
     }
 }
 
-impl Readable for RowsReader {
+impl Readable for TableReader {
 
     fn read(&mut self) -> Result<Row, CrushError> {
         if self.idx >= self.rows.rows().len() {

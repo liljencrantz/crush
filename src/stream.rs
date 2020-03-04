@@ -1,7 +1,7 @@
 use crate::lang::{ColumnType, Value};
-use crate::lang::{Row, Rows, Stream};
+use crate::lang::{Row, Table, TableStream};
 use crossbeam::{Receiver, bounded, unbounded, Sender};
-use crate::errors::{CrushError, error, CrushResult, to_job_error};
+use crate::errors::{CrushError, error, CrushResult, to_crush_error};
 use crate::replace::Replace;
 
 pub struct ValueSender {
@@ -10,13 +10,13 @@ pub struct ValueSender {
 
 impl ValueSender {
     pub fn send(self, cell: Value) -> CrushResult<()> {
-        to_job_error(self.sender.send(cell))?;
+        to_crush_error(self.sender.send(cell))?;
         Ok(())
     }
 
     pub fn initialize(self, signature: Vec<ColumnType>) -> CrushResult<OutputStream> {
         let (output, input) = streams(signature);
-        self.send(Value::Stream(Stream { stream: input }))?;
+        self.send(Value::TableStream(TableStream { stream: input }))?;
         Ok(output)
     }
 }
@@ -28,7 +28,7 @@ pub struct ValueReceiver {
 
 impl ValueReceiver {
     pub fn recv(self) -> CrushResult<Value> {
-        to_job_error(self.receiver.recv())
+        to_crush_error(self.receiver.recv())
     }
 }
 
@@ -58,7 +58,7 @@ pub struct InputStream {
 
 impl InputStream {
     pub fn recv(&self) -> CrushResult<Row> {
-        self.validate(to_job_error(self.receiver.recv()))
+        self.validate(to_crush_error(self.receiver.recv()))
     }
 
     pub fn types(&self) -> &Vec<ColumnType> {

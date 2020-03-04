@@ -4,7 +4,7 @@ use crate::{
     stream::{OutputStream},
 };
 use crate::lang::ExecutionContext;
-use crate::lang::{Argument, Value, Row, RowsReader};
+use crate::lang::{Argument, Value, Row, TableReader};
 use crate::errors::{CrushResult, error};
 use crate::lib::command_util::find_field;
 use crate::stream::Readable;
@@ -50,14 +50,14 @@ pub fn run<T: Readable>(mut config: Config<T>) -> CrushResult<()> {
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()? {
-        Value::Stream(s) => {
+        Value::TableStream(s) => {
             let input = s.stream;
             let output = context.output.initialize(input.types().clone())?;
             let config = parse(context.arguments, input, output)?;
             run(config)
         }
-        Value::Rows(r) => {
-            let input = RowsReader::new(r);
+        Value::Table(r) => {
+            let input = TableReader::new(r);
             let output = context.output.initialize(input.types().clone())?;
             let mut config = parse(context.arguments, input, output)?;
             run(config)

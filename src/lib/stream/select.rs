@@ -15,7 +15,7 @@ use crate::{
 use crate::lib::command_util::find_field;
 use crate::stream::{Readable, ValueSender, empty_channel, channels};
 use crate::errors::error;
-use crate::lang::{Struct, RowsReader};
+use crate::lang::{Struct, TableReader};
 use crate::lang::Closure;
 use crate::printer::Printer;
 use crate::scope::Scope;

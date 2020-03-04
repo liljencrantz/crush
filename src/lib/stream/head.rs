@@ -7,7 +7,7 @@ use crate::{
     errors::{CrushError, argument_error},
 };
 use crate::stream::{Readable, ValueSender};
-use crate::lang::RowsReader;
+use crate::lang::TableReader;
 use crate::lib::parse_util::{optional_argument_integer};
 
 pub fn run(
@@ -35,8 +35,8 @@ pub fn run(
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     let lines = optional_argument_integer(context.arguments)?.unwrap_or(10);
     match context.input.recv()? {
-        Value::Stream(s) => run(lines, s.stream, context.output),
-        Value::Rows(r) => run(lines, RowsReader::new(r), context.output),
+        Value::TableStream(s) => run(lines, s.stream, context.output),
+        Value::Table(r) => run(lines, TableReader::new(r), context.output),
         _ => error("Expected a stream"),
     }
 }
