@@ -16,7 +16,7 @@ use crate::{
     lang::row::Struct
 };
 use std::time::Duration;
-use crate::lang::Job;
+use crate::lang::{Job, ArgumentDefinition, CrushCommand};
 
 #[derive(Clone)]
 #[derive(Debug)]
@@ -29,13 +29,36 @@ pub enum ValueDefinition {
 }
 
 impl ValueDefinition {
+    pub fn can_block(&self, arg: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
+        match self {
+            ValueDefinition::JobDefinition(j) => j.can_block(arg, env),
+            ValueDefinition::Subscript(inner1, inner2) => inner1.can_block(arg, env) || inner2.can_block(arg, env),
+            _ => false,
+        }
+    }
+
+    pub fn can_block_when_called(&self, arg: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
+        match self {
+            ValueDefinition::ClosureDefinition(c) => {
+                if (c.len() == 1) {
+                    Closure::new(c.clone(), env).can_block(arg, env)
+                } else {
+                    true
+                }
+            }
+            ValueDefinition::JobDefinition(j) => j.can_block(arg, env),
+            ValueDefinition::Subscript(inner1, inner2) => inner1.can_block(arg, env) || inner2.can_block(arg, env),
+            _ => false,
+        }
+    }
+
     pub fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope, printer: &Printer) -> CrushResult<Value> {
         Ok(match self {
             ValueDefinition::Value(v) => v.clone(),
             ValueDefinition::JobDefinition(def) => {
                 let first_input = empty_channel();
                 let (last_output, last_input) = channels();
-                let j = def.spawn_and_execute(&env, printer, first_input, last_output)?;
+                let j = def.invoke(&env, printer, first_input, last_output)?;
                 dependencies.push(j);
                 last_input.recv()?
             }

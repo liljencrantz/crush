@@ -1,6 +1,6 @@
 use crate::scope::Scope;
 use crate::stream::{channels, ValueSender, ValueReceiver};
-use crate::lang::CallDefinition;
+use crate::lang::{CallDefinition, ArgumentDefinition};
 use crate::printer::Printer;
 use crate::errors::{CrushError, CrushResult};
 use std::thread::JoinHandle;
@@ -40,13 +40,21 @@ impl Job {
         Job { commands }
     }
 
-    pub fn spawn_and_execute(
+    pub fn can_block(&self, arg: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
+        if self.commands.len() == 1 {
+            self.commands[0].can_block(arg, env)
+        } else {
+            true
+        }
+    }
+
+    pub fn invoke(
         &self,
         env: &Scope,
         printer: &Printer,
         first_input: ValueReceiver,
         last_output: ValueSender,
-    ) -> Result<JobJoinHandle, CrushError> {
+    ) -> CrushResult<JobJoinHandle> {
         let mut calls = Vec::new();
 
         let mut input = first_input;

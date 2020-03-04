@@ -83,13 +83,13 @@ fn not(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("comp")?;
     root.uses(&env);
-    env.declare_str("gt", Value::Command(SimpleCommand::new(gt)))?;
-    env.declare_str("gte", Value::Command(SimpleCommand::new(gte)))?;
-    env.declare_str("lt", Value::Command(SimpleCommand::new(lt)))?;
-    env.declare_str("lte", Value::Command(SimpleCommand::new(lte)))?;
-    env.declare_str("eq", Value::Command(SimpleCommand::new(eq)))?;
-    env.declare_str("neq", Value::Command(SimpleCommand::new(neq)))?;
-    env.declare_str("not", Value::Command(SimpleCommand::new(not)))?;
+    env.declare_str("gt", Value::Command(SimpleCommand::new(gt, false)))?;
+    env.declare_str("gte", Value::Command(SimpleCommand::new(gte, false)))?;
+    env.declare_str("lt", Value::Command(SimpleCommand::new(lt, false)))?;
+    env.declare_str("lte", Value::Command(SimpleCommand::new(lte, false)))?;
+    env.declare_str("eq", Value::Command(SimpleCommand::new(eq, false)))?;
+    env.declare_str("neq", Value::Command(SimpleCommand::new(neq, false)))?;
+    env.declare_str("not", Value::Command(SimpleCommand::new(not, false)))?;
     env.readonly();
     Ok(())
 }

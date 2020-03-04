@@ -38,11 +38,21 @@ fn resolve_external_command(name: &str, env: Scope) -> Option<Box<Path>> {
     None
 }
 
+fn can_block(local_arguments: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
+    for arg in local_arguments {
+        if arg.value.can_block(local_arguments, env) {
+            return true;
+        }
+    }
+    false
+}
+
 impl CallDefinition {
     pub fn new(name: Vec<Box<str>>, arguments: Vec<ArgumentDefinition>) -> CallDefinition {
         CallDefinition { name, arguments }
     }
 
+    /*
     pub fn spawn_stream(
         &self,
         env: &Scope,
@@ -62,7 +72,6 @@ impl CallDefinition {
                                 Err(_) => break,
                             }
                         }
-
                         Ok(())
                     })))
             }
@@ -71,7 +80,7 @@ impl CallDefinition {
             }
         }
     }
-
+*/
     fn make_context(
         deps: &mut Vec<JobJoinHandle>,
         local_printer: Printer,
@@ -91,7 +100,26 @@ impl CallDefinition {
         })
     }
 
-    fn invoke_in_thread(
+    pub fn can_block(&self, arg: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
+        let cmd = env.get(&self.name);
+        match cmd {
+            Some(Value::Command(command)) => {
+                command.can_block(arg, env) || can_block(&self.arguments, env)
+            }
+
+            Some(Value::ConditionCommand(command)) => {
+                command.can_block(arg, env) || can_block(&self.arguments, env)
+            }
+
+            Some(Value::Closure(closure)) => {
+                closure.can_block(arg, env) || can_block(&self.arguments, env)
+            }
+
+            _ => true,
+        }
+    }
+
+    fn invoke_command(
         &self,
         action: impl CrushCommand + Send + 'static,
         local_printer: Printer,
@@ -100,18 +128,29 @@ impl CallDefinition {
         input: ValueReceiver,
         output: ValueSender,
     ) -> CrushResult<JobJoinHandle> {
-        Ok(handle(build(format_name(&self.name)).spawn(
-            move || {
-                let mut deps: Vec<JobJoinHandle> = Vec::new();
-                let context = CallDefinition::make_context(
-                    &mut deps, local_printer.clone(),
-                    local_arguments,
-                    local_env,
-                    input, output)?;
-                action.invoke(context)?;
-                JobJoinHandle::Many(deps).join(&local_printer);
-                Ok(())
-            })))
+        if !action.can_block(&local_arguments, &local_env) && !can_block(&local_arguments, &local_env) {
+            let mut deps: Vec<JobJoinHandle> = Vec::new();
+            let context = CallDefinition::make_context(
+                &mut deps, local_printer,
+                local_arguments,
+                local_env,
+                input, output)?;
+            action.invoke(context)?;
+            Ok(JobJoinHandle::Many(deps))
+        } else {
+            Ok(handle(build(format_name(&self.name)).spawn(
+                move || {
+                    let mut deps: Vec<JobJoinHandle> = Vec::new();
+                    let context = CallDefinition::make_context(
+                        &mut deps, local_printer.clone(),
+                        local_arguments,
+                        local_env,
+                        input, output)?;
+                    action.invoke(context)?;
+//                    JobJoinHandle::Many(deps).join(&local_printer);
+                    Ok(())
+                })))
+        }
     }
 
     pub fn invoke(
@@ -128,11 +167,15 @@ impl CallDefinition {
 
         match cmd {
             Some(Value::Command(command)) => {
-                self.invoke_in_thread(command, local_printer, local_arguments, local_env, input, output)
+                self.invoke_command(command, local_printer, local_arguments, local_env, input, output)
+            }
+
+            Some(Value::ConditionCommand(command)) => {
+                self.invoke_command(command, local_printer, local_arguments, local_env, input, output)
             }
 
             Some(Value::Closure(closure)) => {
-                self.invoke_in_thread(closure, local_printer, local_arguments, local_env, input, output)
+                self.invoke_command(closure, local_printer, local_arguments, local_env, input, output)
             }
             None =>
                 if self.name.len() == 1 {
@@ -141,7 +184,7 @@ impl CallDefinition {
                         Some(path) => {
                             local_arguments.insert(0,
                                                    ArgumentDefinition::unnamed(ValueDefinition::Value(Value::File(path))));
-                            self.invoke_in_thread(SimpleCommand::new(crate::lib::cmd), local_printer, local_arguments, local_env, input, output)
+                            self.invoke_command(SimpleCommand::new(crate::lib::cmd, true), local_printer, local_arguments, local_env, input, output)
                         }
                     }
                 } else {

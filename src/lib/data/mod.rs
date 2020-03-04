@@ -23,8 +23,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("data")?;
     root.uses(&env);
 
-    env.declare_str("struct", Value::Command(SimpleCommand::new(r#struct)))?;
-    env.declare_str("materialize", Value::Command(SimpleCommand::new(materialize)))?;
+    env.declare_str("struct", Value::Command(SimpleCommand::new(r#struct, false)))?;
+    env.declare_str("materialize", Value::Command(SimpleCommand::new(materialize, true)))?;
 
     list::declare(&env)?;
     dict::declare(&env)?;

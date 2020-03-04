@@ -20,10 +20,10 @@ fn list(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("type")?;
 
-    env.declare_str("to", Value::Command(SimpleCommand::new(to)))?;
-    env.declare_str("of", Value::Command(SimpleCommand::new(of)))?;
+    env.declare_str("to", Value::Command(SimpleCommand::new(to, false)))?;
+    env.declare_str("of", Value::Command(SimpleCommand::new(of, false)))?;
 
-    env.declare_str("list", Value::Command(SimpleCommand::new(list)))?;
+    env.declare_str("list", Value::Command(SimpleCommand::new(list, false)))?;
 
     env.declare_str("integer", Value::Type(ValueType::Integer))?;
     env.declare_str("type", Value::Type(ValueType::Type))?;

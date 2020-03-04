@@ -1,4 +1,4 @@
-use crate::lang::Job;
+use crate::lang::{Job, ArgumentDefinition};
 use crate::scope::Scope;
 use crate::lang::Argument;
 use crate::stream::empty_channel;
@@ -27,7 +27,7 @@ impl CrushCommand for Closure {
                 if env.is_stopped() {
                     return Ok(());
                 }
-                let job = job_definitions[0].spawn_and_execute(&env, &context.printer, context.input, context.output)?;
+                let job = job_definitions[0].invoke(&env, &context.printer, context.input, context.output)?;
                 job.join(&context.printer);
                 if env.is_stopped() {
                     return Ok(());
@@ -39,14 +39,14 @@ impl CrushCommand for Closure {
                 }
                 let first_job_definition = &job_definitions[0];
                 let last_output = spawn_print_thread(&context.printer);
-                let first_job = first_job_definition.spawn_and_execute(&env, &context.printer, context.input, last_output)?;
+                let first_job = first_job_definition.invoke(&env, &context.printer, context.input, last_output)?;
                 first_job.join(&context.printer);
                 if env.is_stopped() {
                     return Ok(());
                 }
                 for job_definition in &job_definitions[1..job_definitions.len() - 1] {
                     let last_output = spawn_print_thread(&context.printer);
-                    let job = job_definition.spawn_and_execute(&env, &context.printer, empty_channel(), last_output)?;
+                    let job = job_definition.invoke(&env, &context.printer, empty_channel(), last_output)?;
                     job.join(&context.printer);
                     if env.is_stopped() {
                         return Ok(());
@@ -54,7 +54,7 @@ impl CrushCommand for Closure {
                 }
 
                 let last_job_definition = &job_definitions[job_definitions.len() - 1];
-                let last_job = last_job_definition.spawn_and_execute(&env, &context.printer, empty_channel(), context.output)?;
+                let last_job = last_job_definition.invoke(&env, &context.printer, empty_channel(), context.output)?;
                 last_job.join(&context.printer);
                 if env.is_stopped() {
                     return Ok(());
@@ -62,6 +62,14 @@ impl CrushCommand for Closure {
             }
         }
         Ok(())
+    }
+
+    fn can_block(&self, arg: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
+        if self.job_definitions.len() == 1 {
+            self.job_definitions[0].can_block(arg, env)
+        } else {
+            true
+        }
     }
 }
 

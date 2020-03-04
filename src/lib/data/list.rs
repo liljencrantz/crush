@@ -143,18 +143,18 @@ fn clone(context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("list")?;
-    env.declare_str("of", Value::Command(SimpleCommand::new(of)))?;
-    env.declare_str("new", Value::Command(SimpleCommand::new(new)))?;
-    env.declare_str("len", Value::Command(SimpleCommand::new(len)))?;
-    env.declare_str("empty", Value::Command(SimpleCommand::new(empty)))?;
-    env.declare_str("push", Value::Command(SimpleCommand::new(push)))?;
-    env.declare_str("pop", Value::Command(SimpleCommand::new(pop)))?;
-    env.declare_str("peek", Value::Command(SimpleCommand::new(peek)))?;
-    env.declare_str("set", Value::Command(SimpleCommand::new(set)))?;
-    env.declare_str("clear", Value::Command(SimpleCommand::new(clear)))?;
-    env.declare_str("remove", Value::Command(SimpleCommand::new(remove)))?;
-    env.declare_str("truncate", Value::Command(SimpleCommand::new(truncate)))?;
-    env.declare_str("clone", Value::Command(SimpleCommand::new(clone)))?;
+    env.declare_str("of", Value::Command(SimpleCommand::new(of, false)))?;
+    env.declare_str("new", Value::Command(SimpleCommand::new(new, false)))?;
+    env.declare_str("len", Value::Command(SimpleCommand::new(len, false)))?;
+    env.declare_str("empty", Value::Command(SimpleCommand::new(empty, false)))?;
+    env.declare_str("push", Value::Command(SimpleCommand::new(push, false)))?;
+    env.declare_str("pop", Value::Command(SimpleCommand::new(pop, false)))?;
+    env.declare_str("peek", Value::Command(SimpleCommand::new(peek, false)))?;
+    env.declare_str("set", Value::Command(SimpleCommand::new(set, false)))?;
+    env.declare_str("clear", Value::Command(SimpleCommand::new(clear, false)))?;
+    env.declare_str("remove", Value::Command(SimpleCommand::new(remove, false)))?;
+    env.declare_str("truncate", Value::Command(SimpleCommand::new(truncate, false)))?;
+    env.declare_str("clone", Value::Command(SimpleCommand::new(clone, false)))?;
     env.readonly();
     Ok(())
 }

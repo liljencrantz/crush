@@ -13,7 +13,7 @@ use crate::{
     errors::{error, CrushError, to_job_error},
     glob::Glob,
 };
-use crate::lang::{List, SimpleCommand, Stream, ValueType, Dict, ColumnType, value_type_parser, BinaryReader, RowsReader, ListReader, DictReader, Row};
+use crate::lang::{List, SimpleCommand, ConditionCommand, Stream, ValueType, Dict, ColumnType, value_type_parser, BinaryReader, RowsReader, ListReader, DictReader, Row};
 use crate::errors::CrushResult;
 use chrono::Duration;
 use crate::format::duration_format;
@@ -34,6 +34,7 @@ pub enum Value {
     Regex(Box<str>, Regex),
     Command(SimpleCommand),
     Closure(Closure),
+    ConditionCommand(ConditionCommand),
     Stream(Stream),
     File(Box<Path>),
     Rows(Rows),
@@ -64,6 +65,7 @@ impl Value {
             Value::Glob(val) => format!("*{{{}}}", val.to_string()),
             Value::Regex(val, _) => format!("regex{{{}}}", val),
             Value::Command(_) => "Command".to_string(),
+            Value::ConditionCommand(_) => "Command".to_string(),
             Value::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
             Value::Rows(_) => "<Rows>".to_string(),
             Value::Struct(row) => row.to_string(),
@@ -117,6 +119,7 @@ impl Value {
             Value::Glob(_) => ValueType::Glob,
             Value::Regex(_, _) => ValueType::Regex,
             Value::Command(_) => ValueType::Command,
+            Value::ConditionCommand(_) => ValueType::Command,
             Value::File(_) => ValueType::File,
             Value::Stream(o) => ValueType::Stream(o.stream.types().clone()),
             Value::Rows(r) => ValueType::Rows(r.types().clone()),
@@ -282,6 +285,7 @@ impl Clone for Value {
             Value::Glob(v) => Value::Glob(v.clone()),
             Value::Regex(v, r) => Value::Regex(v.clone(), r.clone()),
             Value::Command(v) => Value::Command(v.clone()),
+            Value::ConditionCommand(v) => Value::ConditionCommand(v.clone()),
             Value::File(v) => Value::File(v.clone()),
             Value::Rows(r) => Value::Rows(r.clone()),
             Value::Struct(r) => Value::Struct(r.clone()),
@@ -314,6 +318,7 @@ impl std::hash::Hash for Value {
             Value::Glob(v) => v.hash(state),
             Value::Regex(v, _) => v.hash(state),
             Value::Command(_) => {}
+            Value::ConditionCommand(_) => {}
             Value::File(v) => v.hash(state),
             Value::Duration(d) => d.hash(state),
             Value::Bool(v) => v.hash(state),

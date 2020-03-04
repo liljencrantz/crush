@@ -1,4 +1,4 @@
-use crate::lang::{Argument, Value, List, ValueType, Dict};
+use crate::lang::{Argument, Value, List, ValueType, Dict, Closure};
 use crate::errors::{CrushResult, argument_error};
 use std::path::Path;
 
@@ -53,6 +53,19 @@ pub fn single_argument_list(mut arg: Vec<Argument>) -> CrushResult<List> {
             let a = arg.remove(0);
             match (a.name, a.value) {
                 (None, Value::List(t)) => Ok(t),
+                _ => argument_error("Expected a list value"),
+            }
+        }
+        _ => argument_error("Expected a single value"),
+    }
+}
+
+pub fn single_argument_closure(mut arg: Vec<Argument>) -> CrushResult<Closure> {
+    match arg.len() {
+        1 => {
+            let a = arg.remove(0);
+            match (a.name, a.value) {
+                (None, Value::Closure(t)) => Ok(t),
                 _ => argument_error("Expected a list value"),
             }
         }

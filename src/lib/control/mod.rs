@@ -1,10 +1,11 @@
 use crate::scope::Scope;
 use crate::errors::CrushResult;
-use crate::lang::{Value, SimpleCommand, List, ValueType};
+use crate::lang::{Value, SimpleCommand, List, ValueType, ConditionCommand};
 use std::env;
 
 mod r#if;
 mod r#while;
+mod r#loop;
 mod r#for;
 mod r#break;
 mod r#continue;
@@ -27,12 +28,13 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     });
     env.declare_str("cmd_path", Value::List(path));
 
-    env.declare_str("if", Value::Command(SimpleCommand::new(r#if::perform)))?;
-    env.declare_str("while", Value::Command(SimpleCommand::new(r#while::perform)))?;
-    env.declare_str("for", Value::Command(SimpleCommand::new(r#for::perform)))?;
-    env.declare_str("break", Value::Command(SimpleCommand::new(r#break::perform)))?;
-    env.declare_str("continue", Value::Command(SimpleCommand::new(r#continue::perform)))?;
-    env.declare_str("cmd", Value::Command(SimpleCommand::new(cmd::cmd)))?;
+    env.declare_str("if", Value::ConditionCommand(ConditionCommand::new(r#if::perform)))?;
+    env.declare_str("while", Value::ConditionCommand(ConditionCommand::new(r#while::perform)))?;
+    env.declare_str("loop", Value::ConditionCommand(ConditionCommand::new(r#loop::perform)))?;
+    env.declare_str("for", Value::ConditionCommand(ConditionCommand::new(r#for::perform)))?;
+    env.declare_str("break", Value::Command(SimpleCommand::new(r#break::perform, false)))?;
+    env.declare_str("continue", Value::Command(SimpleCommand::new(r#continue::perform, false)))?;
+    env.declare_str("cmd", Value::Command(SimpleCommand::new(cmd::cmd, true)))?;
     env.readonly();
 
     Ok(())

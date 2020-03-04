@@ -52,7 +52,7 @@ fn run_interactive(global_env: scope::Scope, printer: &Printer) -> CrushResult<(
                         Ok(jobs) => {
                             for job_definition in jobs {
                                 let last_output = spawn_print_thread(&printer);
-                                match job_definition.spawn_and_execute(&global_env, printer, empty_channel(), last_output) {
+                                match job_definition.invoke(&global_env, printer, empty_channel(), last_output) {
                                     Ok(handle) => {
                                         handle.join(printer);
                                     }
@@ -95,7 +95,7 @@ fn run_script(global_env: scope::Scope, printer: &Printer, filename: &str) -> Cr
         Ok(jobs) => {
             for job_definition in jobs {
                 let last_output = spawn_print_thread(&printer);
-                match job_definition.spawn_and_execute(&global_env, printer, empty_channel(), last_output) {
+                match job_definition.invoke(&global_env, printer, empty_channel(), last_output) {
                     Ok(handle) => {
                         handle.join(printer);
                     }

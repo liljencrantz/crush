@@ -1,5 +1,7 @@
 Todo for MVP 1:
-Make argument parsing in list and dict more consistent
+Try skipping threads for commands that we *know* are super fast
+Flesh out seq command with support for from and step
+Make argument parsing in list and dict commands more consistent
 Some kind of pattern matching syntax
 Add list.insert command
 Add dict.clear command

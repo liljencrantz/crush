@@ -88,9 +88,9 @@ fn duration(mut context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("time")?;
-    env.declare_str("now", Value::Command(SimpleCommand::new(now)))?;
-    env.declare_str("parse", Value::Command(SimpleCommand::new(parse)))?;
-    env.declare_str("duration", Value::Command(SimpleCommand::new(duration)))?;
+    env.declare_str("now", Value::Command(SimpleCommand::new(now, false)))?;
+    env.declare_str("parse", Value::Command(SimpleCommand::new(parse, false)))?;
+    env.declare_str("duration", Value::Command(SimpleCommand::new(duration, false)))?;
     env.readonly();
     Ok(())
 }
