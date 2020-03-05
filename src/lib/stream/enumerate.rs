@@ -26,7 +26,7 @@ pub fn run(mut input: impl Readable, sender: ValueSender) -> CrushResult<()> {
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()? {
-        Value::TableStream(s) => run(s.stream, context.output),
+        Value::TableStream(s) => run(s, context.output),
         Value::Table(r) => run(TableReader::new(r), context.output),
         _ => error("Expected a stream"),
     }

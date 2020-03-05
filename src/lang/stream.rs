@@ -1,6 +1,6 @@
 use crate::lang::table::ColumnType;
 use crate::lang::value::Value;
-use crate::lang::{table::Row, table::Table, table::TableStream};
+use crate::lang::{table::Row, table::Table};
 use crossbeam::{Receiver, bounded, unbounded, Sender};
 use crate::lang::errors::{CrushError, error, CrushResult, to_crush_error};
 use crate::util::replace::Replace;
@@ -17,7 +17,7 @@ impl ValueSender {
 
     pub fn initialize(self, signature: Vec<ColumnType>) -> CrushResult<OutputStream> {
         let (output, input) = streams(signature);
-        self.send(Value::TableStream(TableStream { stream: input }))?;
+        self.send(Value::TableStream(input))?;
         Ok(output)
     }
 }
@@ -58,6 +58,22 @@ pub struct InputStream {
 }
 
 impl InputStream {
+
+    pub fn get(&self, idx: i128) -> CrushResult<Row> {
+        let mut i = 0i128;
+        loop {
+            match self.recv() {
+                Ok(row) => {
+                    if i == idx {
+                        return Ok(row);
+                    }
+                    i += 1;
+                },
+                Err(_) => return error("Index out of bounds"),
+            }
+        }
+    }
+
     pub fn recv(&self) -> CrushResult<Row> {
         self.validate(to_crush_error(self.receiver.recv()))
     }

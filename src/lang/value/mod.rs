@@ -16,13 +16,13 @@ use crate::{
     lang::errors::{error, CrushError, to_crush_error},
     util::glob::Glob,
 };
-use crate::lang::{list::List, command::SimpleCommand, command::ConditionCommand, table::TableStream, dict::Dict, table::ColumnType, binary::BinaryReader, table::TableReader, list::ListReader, dict::DictReader, table::Row};
+use crate::lang::{list::List, command::SimpleCommand, command::ConditionCommand, dict::Dict, table::ColumnType, binary::BinaryReader, table::TableReader, list::ListReader, dict::DictReader, table::Row};
 use crate::lang::errors::{CrushResult, argument_error};
 use chrono::Duration;
 use crate::util::time::duration_format;
 use crate::lang::scope::Scope;
 use crate::lang::r#struct::Struct;
-use crate::lang::stream::{streams, Readable};
+use crate::lang::stream::{streams, Readable, InputStream};
 use std::io::{Read, Error};
 use std::convert::TryFrom;
 
@@ -41,7 +41,7 @@ pub enum Value {
     Command(SimpleCommand),
     Closure(Closure),
     ConditionCommand(ConditionCommand),
-    TableStream(TableStream),
+    TableStream(InputStream),
     File(Box<Path>),
     Table(Table),
     Struct(Struct),
@@ -99,7 +99,7 @@ impl Value {
 
     pub fn empty_stream() -> Value {
         let (_s, r) = streams(vec![]);
-        Value::TableStream(TableStream { stream: r })
+        Value::TableStream(r)
     }
 
     pub fn text(s: &str) -> Value {
@@ -108,7 +108,7 @@ impl Value {
 
     pub fn readable(&self) -> Option<Box<Readable>> {
         return match self {
-            Value::TableStream(s) => Some(Box::from(s.stream.clone())),
+            Value::TableStream(s) => Some(Box::from(s.clone())),
             Value::Table(r) => Some(Box::from(TableReader::new(r.clone()))),
             Value::List(l) => Some(Box::from(ListReader::new(l.clone(), "value"))),
             Value::Dict(d) => Some(Box::from(DictReader::new(d.clone()))),
@@ -127,7 +127,7 @@ impl Value {
             Value::Command(_) => ValueType::Command,
             Value::ConditionCommand(_) => ValueType::Command,
             Value::File(_) => ValueType::File,
-            Value::TableStream(o) => ValueType::TableStream(o.stream.types().clone()),
+            Value::TableStream(o) => ValueType::TableStream(o.types().clone()),
             Value::Table(r) => ValueType::Table(r.types().clone()),
             Value::Struct(r) => ValueType::Struct(r.types().clone()),
             Value::Closure(_) => ValueType::Closure,
@@ -150,10 +150,10 @@ impl Value {
             Value::File(p) => v.push(p.clone()),
             Value::Glob(pattern) => pattern.glob_files(&cwd()?, v)?,
             Value::TableStream(s) => {
-                let t = s.stream.types();
+                let t = s.types();
                 if t.len() == 1 && t[0].cell_type == ValueType::File {
                     loop {
-                        match s.stream.recv() {
+                        match s.recv() {
                             Ok(row) => {
                                 if let Value::File(f) = row.into_vec().remove(0) {
                                     v.push(f);
@@ -176,12 +176,12 @@ impl Value {
             Value::TableStream(output) => {
                 let mut rows = Vec::new();
                 loop {
-                    match output.stream.recv() {
+                    match output.recv() {
                         Ok(r) => rows.push(r.materialize()),
                         Err(_) => break,
                     }
                 }
-                Value::Table(Table::new(ColumnType::materialize(output.stream.types()), rows ))
+                Value::Table(Table::new(ColumnType::materialize(output.types()), rows ))
             }
             Value::BinaryStream(mut s) => {
                 let mut vec = Vec::new();
@@ -276,15 +276,15 @@ impl Value {
             },
 
             (Value::TableStream(s), ValueType::List(t)) => {
-                if s.stream.types().len()!=1 {
+                if s.types().len()!=1 {
                     return error("Stream must have exactly one element to convert to list");
                 }
-                if s.stream.types()[0].cell_type != t.as_ref().clone() {
-                    return error(format!("Incompatible stream type, {} vs {}", s.stream.types()[0].cell_type.to_string(), t.to_string()).as_str());
+                if s.types()[0].cell_type != t.as_ref().clone() {
+                    return error(format!("Incompatible stream type, {} vs {}", s.types()[0].cell_type.to_string(), t.to_string()).as_str());
                 }
                 let mut v = Vec::new();
                 loop {
-                    match s.stream.recv() {
+                    match s.recv() {
                         Ok(r) => v.push(r.into_vec().remove(0)),
                         Err(_) => break,
                     }

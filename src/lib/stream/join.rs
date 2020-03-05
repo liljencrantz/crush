@@ -149,16 +149,16 @@ pub fn run(
     let mut v = row.into_vec();
     match (v.replace(config.left_table_idx, Value::Integer(0)), v.replace(config.right_table_idx, Value::Integer(0))) {
         (Value::TableStream(mut l), Value::TableStream(mut r)) => {
-            do_join(&config, &mut l.stream, &mut r.stream, &output)?;
+            do_join(&config, &mut l, &mut r, &output)?;
         }
         (Value::Table(mut l), Value::Table(mut r)) => {
             do_join(&config, &mut l.reader(), &mut r.reader(), &output)?;
         }
         (Value::TableStream(mut l), Value::Table(mut r)) => {
-            do_join(&config, &mut l.stream, &mut r.reader(), &output)?;
+            do_join(&config, &mut l, &mut r.reader(), &output)?;
         }
         (Value::Table(mut l), Value::TableStream(mut r)) => {
-            do_join(&config, &mut l.reader(), &mut r.stream, &output)?;
+            do_join(&config, &mut l.reader(), &mut r, &output)?;
         }
         _ => panic!("Wrong row format"),
     }

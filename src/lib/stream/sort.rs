@@ -50,8 +50,7 @@ pub fn run<T: Readable>(mut config: Config<T>) -> CrushResult<()> {
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()? {
-        Value::TableStream(s) => {
-            let input = s.stream;
+        Value::TableStream(input) => {
             let output = context.output.initialize(input.types().clone())?;
             let config = parse(context.arguments, input, output)?;
             run(config)

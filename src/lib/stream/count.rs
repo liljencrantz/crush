@@ -24,7 +24,7 @@ fn count_rows(mut s: impl Readable) -> Value {
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()? {
-        Value::TableStream(s) => context.output.send(count_rows(s.stream)),
+        Value::TableStream(s) => context.output.send(count_rows(s)),
         Value::Table(r) => context.output.send(Value::Integer(r.rows().len() as i128)),
         Value::List(r) => context.output.send(Value::Integer(r.len() as i128)),
         Value::Dict(r) => context.output.send(Value::Integer(r.len() as i128)),

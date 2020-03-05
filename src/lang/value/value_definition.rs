@@ -78,7 +78,7 @@ impl ValueDefinition {
                     (Ok(Value::Struct(row)), Ok(Value::Text(col))) =>
                         mandate(row.get(col.as_ref()), "Invalid subscript")?,
                     (Ok(Value::TableStream(o)), Ok(Value::Integer(idx))) => {
-                        Value::Struct(o.get(idx)?.into_struct(o.stream.types()))
+                        Value::Struct(o.get(idx)?.into_struct(o.types()))
                     }
                     _ => return error("Value can't be subscripted"),
                 }

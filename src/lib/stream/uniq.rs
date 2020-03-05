@@ -67,8 +67,7 @@ pub fn run(
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()? {
-        Value::TableStream(s) => {
-            let input = s.stream;
+        Value::TableStream(input) => {
             let config = parse(input.types(), context.arguments)?;
             let output = context.output.initialize(input.types().clone())?;
             run(config, input, output)

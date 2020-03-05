@@ -1,7 +1,6 @@
-use crate::lang::stream::{ValueSender, channels, Readable};
+use crate::lang::stream::{ValueSender, channels, Readable, InputStream};
 use crate::lang::printer::Printer;
 use std::thread;
-use crate::lang::table::TableStream;
 use crate::lang::table::Table;
 use crate::lang::value::Value;
 use crate::lang::value::Alignment;
@@ -29,7 +28,7 @@ pub fn spawn_print_thread(printer: &Printer) -> ValueSender {
 
 pub fn print_value(printer: &Printer, mut cell: Value) {
     match cell {
-        Value::TableStream(mut output) => print(printer, &mut output.stream),
+        Value::TableStream(mut output) => print(printer, &mut output),
         Value::Table(rows) => print(printer, &mut TableReader::new(rows)),
         Value::BinaryStream(mut b) => print_binary(printer, b.as_mut(), 0),
         _ => printer.line(cell.to_string().as_str()),
@@ -112,7 +111,7 @@ fn print_row(
     mut r: Row,
     indent: usize,
     rows: &mut Vec<Table>,
-    outputs: &mut Vec<TableStream>,
+    outputs: &mut Vec<InputStream>,
     binaries: &mut Vec<Box<dyn BinaryReader>>) {
     let cell_len = r.len();
     let mut row = " ".repeat(indent * 4);
@@ -158,7 +157,7 @@ fn print_body(printer: &Printer, w: &Vec<usize>, data: Vec<Row>, indent: usize) 
             print_internal(printer, &mut TableReader::new(r), indent + 1);
         }
         for mut r in outputs {
-            print_internal(printer, &mut r.stream, indent + 1);
+            print_internal(printer, &mut r, indent + 1);
         }
         for mut r in binaries {
             print_binary(printer, r.as_mut(), indent + 1);

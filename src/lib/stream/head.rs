@@ -35,7 +35,7 @@ pub fn run(
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     let lines = optional_argument_integer(context.arguments)?.unwrap_or(10);
     match context.input.recv()? {
-        Value::TableStream(s) => run(lines, s.stream, context.output),
+        Value::TableStream(s) => run(lines, s, context.output),
         Value::Table(r) => run(lines, TableReader::new(r), context.output),
         _ => error("Expected a stream"),
     }

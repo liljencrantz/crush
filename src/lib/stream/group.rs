@@ -6,7 +6,6 @@ use crate::{
     lang::{
         argument::Argument,
         table::Row,
-        table::TableStream,
         value::ValueType,
         value::Value,
     },
@@ -61,7 +60,7 @@ pub fn run(
                 match val {
                     None => {
                         let (output_stream, input_stream) = unlimited_streams(config.input_type.clone());
-                        let out_row = Row::new(vec![key.clone(), Value::TableStream(TableStream { stream: input_stream })]);
+                        let out_row = Row::new(vec![key.clone(), Value::TableStream(input_stream)]);
                         output.send(out_row)?;
                         output_stream.send(row);
                         groups.insert(key, output_stream);
@@ -79,8 +78,7 @@ pub fn run(
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()? {
-        Value::TableStream(s) => {
-            let input = s.stream;
+        Value::TableStream(input) => {
             let config = parse(input.types().clone(), context.arguments)?;
             let output_type= vec![
                 input.types()[config.column].clone(),

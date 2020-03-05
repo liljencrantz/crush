@@ -28,13 +28,13 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
     }
     match (context.arguments.remove(0).value, context.arguments.remove(0).value) {
         (Value::TableStream(mut o1), Value::TableStream(mut o2)) =>
-            run(&mut o1.stream, &mut o2.stream, context.output),
+            run(&mut o1, &mut o2, context.output),
         (Value::Table(mut o1), Value::Table(mut o2)) =>
             run(&mut o1.reader(), &mut o2.reader(), context.output),
         (Value::TableStream(mut o1), Value::Table(mut o2)) =>
-            run(&mut o1.stream, &mut o2.reader(), context.output),
+            run(&mut o1, &mut o2.reader(), context.output),
         (Value::Table(mut o1), Value::TableStream(mut o2)) =>
-            run(&mut o1.reader(), &mut o2.stream, context.output),
+            run(&mut o1.reader(), &mut o2, context.output),
         _ => return error("Expected two datasets"),
     }
 }

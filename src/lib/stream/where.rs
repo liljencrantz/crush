@@ -77,11 +77,11 @@ pub fn parse(_input_type: &Vec<ColumnType>,
 pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::TableStream(input) => {
-            let output = context.output.initialize(input.stream.types().clone())?;
+            let output = context.output.initialize(input.types().clone())?;
             let config = Config {
-                condition: parse(input.stream.types(), context.arguments.as_mut())?,
-                input: input.stream,
-                output: output,
+                condition: parse(input.types(), context.arguments.as_mut())?,
+                input,
+                output,
             };
             run(config, context.env, context.printer)
         }

@@ -4,7 +4,7 @@ use crate::{
 };
 use crate::lang::printer::Printer;
 use crate::lang::scope::Scope;
-use crate::lang::{table::TableStream, table::TableReader, list::ListReader, r#struct::Struct, dict::DictReader, command::CrushCommand};
+use crate::lang::{table::TableReader, list::ListReader, r#struct::Struct, dict::DictReader, command::CrushCommand};
 use crate::lang::errors::{argument_error, CrushResult};
 use crate::lang::command::Closure;
 use crate::lang::command::ExecutionContext;
@@ -81,7 +81,7 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
                     env: context.env,
                     printer: context.printer,
                     name: name,
-                }, o.stream)
+                }, o)
             }
             (_, Value::Table(r)) => {
                 run(Config {
