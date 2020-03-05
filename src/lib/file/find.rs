@@ -22,6 +22,7 @@ lazy_static! {
         ColumnType::named("user", ValueType::Text),
         ColumnType::named("size", ValueType::Integer),
         ColumnType::named("modified", ValueType::Time),
+        ColumnType::named("type", ValueType::Text),
         ColumnType::named("file", ValueType::File),
     ];
 }
@@ -39,10 +40,23 @@ fn insert_entity(
     } else {
         file
     };
+    let file_type = meta.file_type();
+    let ftype = if file_type.is_dir() {
+        "directory"
+    } else {
+        if file_type.is_symlink() {
+            "symlink"
+        } else {
+            "file"
+        }
+    };
+
+
     output.send(Row ::new(vec![
         users.get_name(meta.uid()),
         Value::Integer(i128::from(meta.len())),
         Value::Time(modified_datetime),
+        Value::text(ftype),
         Value::File(f)]))?;
     Ok(())
 }
