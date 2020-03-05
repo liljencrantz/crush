@@ -8,7 +8,7 @@ use crate::{
         value::Value,
     },
     lang::stream::OutputStream,
-    replace::Replace,
+    util::replace::Replace,
     lang::table::ColumnType,
     lang::errors::CrushResult,
 };

@@ -12,7 +12,7 @@ use crate::{
         value::Value,
     },
     lang::stream::OutputStream,
-    replace::Replace,
+    util::replace::Replace,
     lang::errors::argument_error,
     lib::command_util::find_field_from_str,
 };

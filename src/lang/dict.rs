@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use crate::lang::stream::Readable;
-use crate::replace::Replace;
+use crate::util::replace::Replace;
 
 #[derive(Debug)]
 #[derive(Clone)]
