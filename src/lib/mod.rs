@@ -27,7 +27,7 @@ use crate::{
 };
 use std::thread::{JoinHandle};
 use crate::lang::printer::Printer;
-use crate::errors::CrushResult;
+use crate::lang::errors::CrushResult;
 use crate::lang::stream::{ValueReceiver, ValueSender, InputStream};
 
 pub use control::cmd;

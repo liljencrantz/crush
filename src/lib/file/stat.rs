@@ -1,5 +1,5 @@
 use crate::lang::command::ExecutionContext;
-use crate::errors::{CrushResult, argument_error, to_crush_error};
+use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
 use crate::lang::{argument::Argument, r#struct::Struct};
 use crate::lang::value::Value;
 use std::fs::metadata;

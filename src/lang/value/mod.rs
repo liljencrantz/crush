@@ -13,11 +13,11 @@ use crate::{
     lang::command::Closure,
     util::file::cwd,
     lang::table::Table,
-    errors::{error, CrushError, to_crush_error},
+    lang::errors::{error, CrushError, to_crush_error},
     util::glob::Glob,
 };
 use crate::lang::{list::List, command::SimpleCommand, command::ConditionCommand, table::TableStream, dict::Dict, table::ColumnType, binary::BinaryReader, table::TableReader, list::ListReader, dict::DictReader, table::Row};
-use crate::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, argument_error};
 use chrono::Duration;
 use crate::util::time::duration_format;
 use crate::lang::scope::Scope;

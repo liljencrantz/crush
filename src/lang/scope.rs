@@ -1,4 +1,4 @@
-use crate::errors::{error, CrushResult};
+use crate::lang::errors::{error, CrushResult};
 use std::error::Error;
 use std::path::Path;
 use std::sync::{Arc, Mutex};

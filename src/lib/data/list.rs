@@ -1,5 +1,5 @@
 use crate::lang::command::ExecutionContext;
-use crate::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::ValueType, list::List, command::SimpleCommand};
 use crate::lang::value::Value;
 use std::collections::HashSet;

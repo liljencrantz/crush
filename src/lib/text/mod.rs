@@ -1,5 +1,5 @@
 use crate::lang::scope::Scope;
-use crate::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{command::ExecutionContext, value::ValueType, list::List};
 use crate::lib::parse_util::{single_argument, two_arguments, single_argument_field, single_argument_text};
 use crate::lang::{value::Value, command::SimpleCommand, argument::Argument};

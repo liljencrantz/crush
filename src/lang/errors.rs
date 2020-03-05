@@ -1,6 +1,6 @@
 use crate::lang::lexer::Lexer;
 use std::error::Error;
-use crate::errors::Kind::{PARSE_ERROR, INVALID_ARGUMENT, GENERIC_ERROR, INVALID_DATA};
+use crate::lang::errors::Kind::{PARSE_ERROR, INVALID_ARGUMENT, GENERIC_ERROR, INVALID_DATA};
 
 #[derive(Debug)]
 pub enum Kind {

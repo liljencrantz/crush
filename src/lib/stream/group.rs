@@ -2,7 +2,7 @@ use crate::lang::command::ExecutionContext;
 use std::collections::HashMap;
 use crate::{
     lib::command_util::find_field_from_str,
-    errors::{argument_error},
+    lang::errors::{argument_error},
     lang::{
         argument::Argument,
         table::Row,
@@ -13,7 +13,7 @@ use crate::{
     lang::stream::{OutputStream, unlimited_streams},
 };
 use crate::lang::{table::ColumnType, table::TableReader};
-use crate::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult, error};
 use crate::lib::command_util::find_field;
 use crate::lang::stream::{Readable};
 

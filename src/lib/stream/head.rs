@@ -1,10 +1,10 @@
 use crate::lang::command::ExecutionContext;
-use crate::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult, error};
 use crate::{
     lang::argument::Argument,
     lang::stream::{OutputStream},
     lang::value::Value,
-    errors::{CrushError, argument_error},
+    lang::errors::{CrushError, argument_error},
 };
 use crate::lang::stream::{Readable, ValueSender};
 use crate::lang::table::TableReader;

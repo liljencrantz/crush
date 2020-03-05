@@ -14,4 +14,4 @@ pub mod scope;
 pub mod stream;
 pub mod printer;
 pub mod stream_printer;
-
+pub mod errors;

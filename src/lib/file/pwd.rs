@@ -1,5 +1,5 @@
 use crate::lang::command::ExecutionContext;
-use crate::errors::CrushResult;
+use crate::lang::errors::CrushResult;
 use crate::lang::value::Value;
 use crate::util::file::cwd;
 

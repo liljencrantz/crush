@@ -1,4 +1,4 @@
-use crate::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult, error};
 use std::fmt::Formatter;
 use crate::lang::stream::{ValueReceiver, ValueSender, InputStream, empty_channel};
 use crate::lang::{argument::Argument, argument::ArgumentDefinition};

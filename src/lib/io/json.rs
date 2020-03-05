@@ -6,17 +6,17 @@ use crate::{
         value::ValueType,
         value::Value,
     },
-    errors::{CrushError, argument_error},
+    lang::errors::{CrushError, argument_error},
 };
 use std::io::BufReader;
 
 use crate::lang::printer::Printer;
 use crate::lang::{r#struct::Struct, list::List, table::Table, binary::BinaryReader};
-use crate::errors::{CrushResult, to_crush_error, error};
+use crate::lang::errors::{CrushResult, to_crush_error, error};
 use crate::lang::stream::{ValueSender, ValueReceiver};
 use std::collections::HashSet;
 use crate::lib::parse_util::argument_files;
-use crate::errors::Kind::INVALID_DATA;
+use crate::lang::errors::Kind::INVALID_DATA;
 
 pub struct Config {
     input: Box<dyn BinaryReader>,

@@ -1,9 +1,9 @@
 use crate::lang::command::ExecutionContext;
-use crate::errors::CrushResult;
+use crate::lang::errors::CrushResult;
 use std::collections::HashMap;
 use crate::{
     lang::stream::Readable,
-    errors::CrushError,
+    lang::errors::CrushError,
     lang::{
         argument::Argument,
         table::Row,
@@ -13,7 +13,7 @@ use crate::{
     },
     lang::stream::OutputStream,
     replace::Replace,
-    errors::argument_error,
+    lang::errors::argument_error,
     lib::command_util::find_field_from_str,
 };
 use crate::lib::command_util::find_field;

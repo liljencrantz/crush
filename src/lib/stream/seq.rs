@@ -1,5 +1,5 @@
 use crate::lang::command::ExecutionContext;
-use crate::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult, error};
 use crate::{
     lang::{
         table::Row,

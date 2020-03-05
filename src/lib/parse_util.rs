@@ -1,5 +1,5 @@
 use crate::lang::{argument::Argument, value::Value, list::List, value::ValueType, dict::Dict, command::Closure};
-use crate::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, argument_error};
 use std::path::Path;
 
 pub fn two_arguments(arguments: &Vec<Argument>) -> CrushResult<()> {

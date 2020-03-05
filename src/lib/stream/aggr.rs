@@ -1,6 +1,6 @@
 use crate::lang::{Closure, Argument, ExecutionContext, Value, ColumnType, RowsReader, Row, JobJoinHandle};
 use crate::lang::stream::{Readable, ValueSender};
-use crate::errors::{CrushResult, argument_error, mandate, error};
+use crate::lang::errors::{CrushResult, argument_error, mandate, error};
 use crate::lib::command_util::{find_field, find_field_from_str};
 use crate::lang::printer::Printer;
 use crossbeam::{Receiver, bounded, unbounded, Sender};

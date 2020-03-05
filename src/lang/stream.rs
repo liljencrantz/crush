@@ -2,7 +2,7 @@ use crate::lang::table::ColumnType;
 use crate::lang::value::Value;
 use crate::lang::{table::Row, table::Table, table::TableStream};
 use crossbeam::{Receiver, bounded, unbounded, Sender};
-use crate::errors::{CrushError, error, CrushResult, to_crush_error};
+use crate::lang::errors::{CrushError, error, CrushResult, to_crush_error};
 use crate::replace::Replace;
 
 pub struct ValueSender {

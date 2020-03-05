@@ -5,7 +5,7 @@ use crate::{
 use crate::lang::printer::Printer;
 use crate::lang::scope::Scope;
 use crate::lang::{table::TableStream, table::TableReader, list::ListReader, r#struct::Struct, dict::DictReader, command::CrushCommand};
-use crate::errors::{argument_error, CrushResult};
+use crate::lang::errors::{argument_error, CrushResult};
 use crate::lang::command::Closure;
 use crate::lang::command::ExecutionContext;
 use crate::lang::stream::{empty_channel, Readable};

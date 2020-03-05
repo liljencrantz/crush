@@ -6,7 +6,7 @@ use regex::Regex;
 use crate::{
     lang::printer::Printer,
     util::glob::Glob,
-    errors::{error, mandate, CrushResult, argument_error, to_crush_error},
+    lang::errors::{error, mandate, CrushResult, argument_error, to_crush_error},
     lang::scope::Scope,
     lang::value::Value,
     lang::job::JobJoinHandle,

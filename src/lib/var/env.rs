@@ -1,5 +1,5 @@
 use crate::lang::command::ExecutionContext;
-use crate::errors::CrushResult;
+use crate::lang::errors::CrushResult;
 use crate::lang::{table::ColumnType, value::ValueType, table::Row, value::Value};
 use std::collections::HashMap;
 

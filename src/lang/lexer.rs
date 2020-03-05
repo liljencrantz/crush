@@ -3,7 +3,7 @@ use std::clone::Clone;
 use lazy_static::lazy_static;
 use std::collections::HashSet;
 use std::hash::Hash;
-use crate::generic_lexer::GenericLexer;
+use crate::util::generic_lexer::GenericLexer;
 
 
 #[derive(Clone)]

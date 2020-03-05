@@ -1,5 +1,5 @@
 use crate::lang::{value::Value, argument::Argument};
-use crate::errors::{argument_error, CrushResult, mandate};
+use crate::lang::errors::{argument_error, CrushResult, mandate};
 use crate::lang::command::ExecutionContext;
 use crate::lib::text::format::FormatState::{NORMAL, BRACKET, IDX, NAME};
 

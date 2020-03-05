@@ -1,4 +1,4 @@
-use crate::errors::{CrushResult, to_crush_error};
+use crate::lang::errors::{CrushResult, to_crush_error};
 use std::sync::{Arc, Mutex};
 use std::cmp::{Ordering, min};
 use std::collections::{HashMap, VecDeque};

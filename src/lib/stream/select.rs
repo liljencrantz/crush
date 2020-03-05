@@ -1,7 +1,7 @@
 use crate::lang::command::{ExecutionContext, CrushCommand};
 use crate::{
     lib::command_util::find_field_from_str,
-    errors::argument_error,
+    lang::errors::argument_error,
     lang::{
         argument::Argument,
         table::Row,
@@ -10,11 +10,11 @@ use crate::{
     lang::stream::OutputStream,
     replace::Replace,
     lang::table::ColumnType,
-    errors::CrushResult,
+    lang::errors::CrushResult,
 };
 use crate::lib::command_util::find_field;
 use crate::lang::stream::{Readable, ValueSender, empty_channel, channels};
-use crate::errors::error;
+use crate::lang::errors::error;
 use crate::lang::{r#struct::Struct, table::TableReader};
 use crate::lang::command::Closure;
 use crate::lang::printer::Printer;

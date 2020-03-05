@@ -1,7 +1,7 @@
 use crate::lang::command::ExecutionContext;
 use std::io::{BufReader, BufRead};
 use crate::{
-    errors::argument_error,
+    lang::errors::argument_error,
     lang::{
         argument::Argument,
         table::Row,
@@ -12,7 +12,7 @@ use crate::{
     lang::stream::OutputStream,
 };
 use crate::lang::stream::ValueReceiver;
-use crate::errors::CrushResult;
+use crate::lang::errors::CrushResult;
 use crate::lang::binary::BinaryReader;
 use crate::lib::parse_util::argument_files;
 

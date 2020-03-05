@@ -1,5 +1,5 @@
 use crate::lang::scope::Scope;
-use crate::errors::{CrushResult, argument_error, to_crush_error};
+use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
 use crate::lang::{value::Value, command::SimpleCommand, list::List, value::ValueType, command::ConditionCommand, command::ExecutionContext, binary::BinaryReader};
 use std::env;
 

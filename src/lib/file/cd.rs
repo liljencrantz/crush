@@ -1,5 +1,5 @@
 use crate::lang::command::ExecutionContext;
-use crate::errors::{to_crush_error, CrushResult, error};
+use crate::lang::errors::{to_crush_error, CrushResult, error};
 use std::path::Path;
 use crate::lang::value::Value;
 use crate::util::file::{home, cwd};

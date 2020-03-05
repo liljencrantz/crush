@@ -1,8 +1,6 @@
 mod replace;
-mod errors;
 mod lang;
 mod lib;
-mod generic_lexer;
 mod util;
 
 use crate::lang::lexer::Lexer;
@@ -12,7 +10,7 @@ extern crate rustyline;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use lib::declare;
-use crate::errors::{CrushResult, to_crush_error};
+use crate::lang::errors::{CrushResult, to_crush_error};
 use std::error::Error;
 use crate::lang::printer::Printer;
 use crate::lang::stream::empty_channel;

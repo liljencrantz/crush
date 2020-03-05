@@ -3,7 +3,7 @@ use std::iter::Peekable;
 use std::path::Path;
 use std::io;
 use std::fs::{read_dir, ReadDir};
-use crate::errors::{to_crush_error, argument_error, CrushResult};
+use crate::lang::errors::{to_crush_error, argument_error, CrushResult};
 
 #[derive(Clone)]
 #[derive(PartialEq)]

@@ -1,5 +1,5 @@
 use crate::lang::scope::Scope;
-use crate::errors::CrushResult;
+use crate::lang::errors::CrushResult;
 use crate::lang::{value::Value, command::SimpleCommand, command::ExecutionContext, binary::BinaryReader};
 use crate::lang::stream_printer::print_value;
 use crate::lib::parse_util::argument_files;

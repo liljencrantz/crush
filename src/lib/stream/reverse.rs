@@ -3,7 +3,7 @@ use crate::{
     lang::stream::{OutputStream},
 };
 use crate::lang::command::ExecutionContext;
-use crate::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult, error};
 use crate::lang::{value::Value, table::TableReader};
 use crate::lang::stream::{Readable, ValueSender};
 

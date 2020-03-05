@@ -1,5 +1,5 @@
 use crate::lang::command::ExecutionContext;
-use crate::errors::{CrushResult, argument_error, to_crush_error};
+use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
 use crate::lang::{value::Value, command::SimpleCommand, value::ValueType};
 use crate::lang::scope::Scope;
 use chrono::{Local, Duration, DateTime, Datelike, Timelike};

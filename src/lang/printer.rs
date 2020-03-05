@@ -1,6 +1,6 @@
 use std::sync::mpsc::{channel, Sender};
 use std::thread;
-use crate::errors::{CrushError, CrushResult, to_crush_error};
+use crate::lang::errors::{CrushError, CrushResult, to_crush_error};
 
 enum PrinterMessage {
     Shutdown,

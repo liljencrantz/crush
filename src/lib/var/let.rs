@@ -1,6 +1,6 @@
 use crate::lang::command::ExecutionContext;
-use crate::errors::CrushResult;
-use crate::errors::argument_error;
+use crate::lang::errors::CrushResult;
+use crate::lang::errors::argument_error;
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     for arg in context.arguments.iter() {

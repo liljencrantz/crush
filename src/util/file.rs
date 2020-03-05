@@ -1,5 +1,5 @@
 use std::error::Error;
-use crate::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult, error};
 use std::path::Path;
 
 pub fn cwd() -> CrushResult<Box<Path>> {

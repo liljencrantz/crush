@@ -1,5 +1,5 @@
 use crate::lang::command::ExecutionContext;
-use crate::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::ValueType, dict::Dict, command::SimpleCommand};
 use crate::lang::table::Row;
 use crate::lang::value::Value;

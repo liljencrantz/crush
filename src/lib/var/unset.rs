@@ -1,8 +1,8 @@
 use crate::lang::command::ExecutionContext;
 use crate::lang::argument::Argument;
 use crate::lang::value::Value;
-use crate::errors::argument_error;
-use crate::errors::CrushResult;
+use crate::lang::errors::argument_error;
+use crate::lang::errors::CrushResult;
 
 fn parse(arguments: Vec<Argument>) -> CrushResult<Vec<Box<str>>> {
     let mut vars = Vec::new();

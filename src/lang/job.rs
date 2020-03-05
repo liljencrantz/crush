@@ -2,7 +2,7 @@ use crate::lang::scope::Scope;
 use crate::lang::stream::{channels, ValueSender, ValueReceiver};
 use crate::lang::{call_definition::CallDefinition, argument::ArgumentDefinition};
 use crate::lang::printer::Printer;
-use crate::errors::{CrushError, CrushResult};
+use crate::lang::errors::{CrushError, CrushResult};
 use std::thread::JoinHandle;
 
 pub enum JobJoinHandle {

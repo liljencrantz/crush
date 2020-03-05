@@ -1,7 +1,7 @@
 use crate::lang::{command::ExecutionContext, job::JobJoinHandle, command::SimpleCommand, command::Closure, value::ValueDefinition, value::ValueType};
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, value::Value};
 use crate::lang::scope::Scope;
-use crate::errors::{error, CrushResult};
+use crate::lang::errors::{error, CrushResult};
 use crate::lang::printer::Printer;
 use crate::lang::stream::{ValueReceiver, ValueSender, InputStream};
 use crate::util::thread::{handle, build};

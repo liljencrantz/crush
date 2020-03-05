@@ -1,5 +1,5 @@
 use std::thread::JoinHandle;
-use crate::errors::CrushResult;
+use crate::lang::errors::CrushResult;
 use std::thread;
 use crate::lang::job::JobJoinHandle;
 
