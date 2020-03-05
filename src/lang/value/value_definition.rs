@@ -4,15 +4,15 @@ use chrono::Local;
 use regex::Regex;
 
 use crate::{
-    printer::Printer,
-    glob::Glob,
+    lang::printer::Printer,
+    util::glob::Glob,
     errors::{error, mandate, CrushResult, argument_error, to_crush_error},
     lang::scope::Scope,
     lang::value::Value,
     lang::job::JobJoinHandle,
     lang::command::Closure,
-    stream::channels,
-    stream::empty_channel,
+    lang::stream::channels,
+    lang::stream::empty_channel,
     lang::r#struct::Struct
 };
 use std::time::Duration;

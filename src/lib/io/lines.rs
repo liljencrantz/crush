@@ -9,9 +9,9 @@ use crate::{
         value::ValueType,
         value::Value,
     },
-    stream::OutputStream,
+    lang::stream::OutputStream,
 };
-use crate::stream::ValueReceiver;
+use crate::lang::stream::ValueReceiver;
 use crate::errors::CrushResult;
 use crate::lang::binary::BinaryReader;
 use crate::lib::parse_util::argument_files;

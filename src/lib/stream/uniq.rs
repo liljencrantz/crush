@@ -10,7 +10,7 @@ use crate::{
 use crate::lang::{value::Value, table::ColumnType, table::TableReader};
 use crate::errors::{CrushResult, error};
 use crate::lib::command_util::find_field;
-use crate::stream::{Readable, OutputStream};
+use crate::lang::stream::{Readable, OutputStream};
 
 pub struct Config {
     column: Option<usize>,

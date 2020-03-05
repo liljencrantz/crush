@@ -14,7 +14,7 @@ use crate::{
     util::file::cwd,
     lang::table::Table,
     errors::{error, CrushError, to_crush_error},
-    glob::Glob,
+    util::glob::Glob,
 };
 use crate::lang::{list::List, command::SimpleCommand, command::ConditionCommand, table::TableStream, dict::Dict, table::ColumnType, binary::BinaryReader, table::TableReader, list::ListReader, dict::DictReader, table::Row};
 use crate::errors::{CrushResult, argument_error};
@@ -22,7 +22,7 @@ use chrono::Duration;
 use crate::util::time::duration_format;
 use crate::lang::scope::Scope;
 use crate::lang::r#struct::Struct;
-use crate::stream::{streams, Readable};
+use crate::lang::stream::{streams, Readable};
 use std::io::{Read, Error};
 use std::convert::TryFrom;
 

@@ -6,7 +6,7 @@ use crate::{
         value::ValueType,
         value::Value,
     },
-    stream::OutputStream,
+    lang::stream::OutputStream,
     errors::{CrushError, argument_error},
 };
 use std::{
@@ -17,10 +17,10 @@ use std::{
 extern crate map_in_place;
 
 use map_in_place::MapVecInPlace;
-use crate::printer::Printer;
+use crate::lang::printer::Printer;
 use crate::lang::{table::ColumnType, binary::BinaryReader};
 use crate::errors::CrushResult;
-use crate::stream::ValueReceiver;
+use crate::lang::stream::ValueReceiver;
 use crate::lib::parse_util::argument_files;
 
 pub struct Config {

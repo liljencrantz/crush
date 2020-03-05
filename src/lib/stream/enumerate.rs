@@ -1,7 +1,7 @@
 use crate::lang::command::ExecutionContext;
 use crate::errors::{CrushResult, error};
 use crate::lang::{value::ValueType, table::TableReader, table::Row, value::Value};
-use crate::stream::{Readable, ValueSender};
+use crate::lang::stream::{Readable, ValueSender};
 use crate::lang::table::ColumnType;
 
 pub fn run(mut input: impl Readable, sender: ValueSender) -> CrushResult<()> {

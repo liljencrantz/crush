@@ -4,7 +4,7 @@ use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use crate::stream::Readable;
+use crate::lang::stream::Readable;
 use crate::replace::Replace;
 
 #[derive(Debug)]

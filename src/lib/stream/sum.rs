@@ -9,7 +9,7 @@ use crate::{
 };
 use crate::lang::{table::ColumnType, argument::Argument, table::TableReader};
 use crate::lib::command_util::find_field_from_str;
-use crate::stream::{Readable};
+use crate::lang::stream::{Readable};
 
 pub fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> CrushResult<usize> {
     match arguments.len() {

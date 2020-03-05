@@ -2,8 +2,8 @@ use crate::lang::{command::ExecutionContext, job::JobJoinHandle, command::Simple
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, value::Value};
 use crate::lang::scope::Scope;
 use crate::errors::{error, CrushResult};
-use crate::printer::Printer;
-use crate::stream::{ValueReceiver, ValueSender, InputStream};
+use crate::lang::printer::Printer;
+use crate::lang::stream::{ValueReceiver, ValueSender, InputStream};
 use crate::util::thread::{handle, build};
 use std::ops::Deref;
 use crate::lang::command::CrushCommand;

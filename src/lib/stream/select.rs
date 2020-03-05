@@ -7,17 +7,17 @@ use crate::{
         table::Row,
         value::Value,
     },
-    stream::OutputStream,
+    lang::stream::OutputStream,
     replace::Replace,
     lang::table::ColumnType,
     errors::CrushResult,
 };
 use crate::lib::command_util::find_field;
-use crate::stream::{Readable, ValueSender, empty_channel, channels};
+use crate::lang::stream::{Readable, ValueSender, empty_channel, channels};
 use crate::errors::error;
 use crate::lang::{r#struct::Struct, table::TableReader};
 use crate::lang::command::Closure;
-use crate::printer::Printer;
+use crate::lang::printer::Printer;
 use crate::lang::scope::Scope;
 
 enum Location {

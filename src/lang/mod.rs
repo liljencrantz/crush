@@ -11,4 +11,7 @@ pub mod parser;
 pub mod lexer;
 pub mod r#struct;
 pub mod scope;
+pub mod stream;
+pub mod printer;
+pub mod stream_printer;
 

@@ -10,7 +10,7 @@ enum PrinterMessage {
     Lines(Vec<Box<str>>),
 }
 
-use crate::printer::PrinterMessage::*;
+use crate::lang::printer::PrinterMessage::*;
 use crate::lang::job::JobJoinHandle;
 use crate::util::thread::{handle, build};
 use std::thread::JoinHandle;

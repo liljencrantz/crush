@@ -10,12 +10,12 @@ use crate::{
         value::ValueType,
         value::Value,
     },
-    stream::{OutputStream, unlimited_streams},
+    lang::stream::{OutputStream, unlimited_streams},
 };
 use crate::lang::{table::ColumnType, table::TableReader};
 use crate::errors::{CrushResult, error};
 use crate::lib::command_util::find_field;
-use crate::stream::{Readable};
+use crate::lang::stream::{Readable};
 
 pub struct Config {
     input_type: Vec<ColumnType>,

@@ -1,11 +1,11 @@
 use crate::{
     lang::table::Row,
-    stream::{OutputStream},
+    lang::stream::{OutputStream},
 };
 use crate::lang::command::ExecutionContext;
 use crate::errors::{CrushResult, error};
 use crate::lang::{value::Value, table::TableReader};
-use crate::stream::{Readable, ValueSender};
+use crate::lang::stream::{Readable, ValueSender};
 
 pub fn run(
     mut input: impl Readable,

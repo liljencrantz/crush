@@ -1,13 +1,13 @@
 use crate::{
     lib::command_util::find_field_from_str,
     errors::argument_error,
-    stream::{OutputStream},
+    lang::stream::{OutputStream},
 };
 use crate::lang::command::ExecutionContext;
 use crate::lang::{argument::Argument, value::Value, table::Row, table::TableReader};
 use crate::errors::{CrushResult, error};
 use crate::lib::command_util::find_field;
-use crate::stream::Readable;
+use crate::lang::stream::Readable;
 use crate::lib::parse_util::single_argument_field;
 
 pub struct Config<T: Readable> {

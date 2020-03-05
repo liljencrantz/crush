@@ -10,10 +10,10 @@ use crate::{
 };
 use std::io::BufReader;
 
-use crate::printer::Printer;
+use crate::lang::printer::Printer;
 use crate::lang::{r#struct::Struct, list::List, table::Table, binary::BinaryReader};
 use crate::errors::{CrushResult, to_crush_error, error};
-use crate::stream::{ValueSender, ValueReceiver};
+use crate::lang::stream::{ValueSender, ValueReceiver};
 use std::collections::HashSet;
 use crate::lib::parse_util::argument_files;
 use crate::errors::Kind::INVALID_DATA;

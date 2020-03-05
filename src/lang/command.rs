@@ -1,11 +1,11 @@
 use crate::errors::{CrushResult, error};
 use std::fmt::Formatter;
-use crate::stream::{ValueReceiver, ValueSender, InputStream, empty_channel};
+use crate::lang::stream::{ValueReceiver, ValueSender, InputStream, empty_channel};
 use crate::lang::{argument::Argument, argument::ArgumentDefinition};
 use crate::lang::scope::Scope;
-use crate::printer::Printer;
+use crate::lang::printer::Printer;
 use crate::lang::job::Job;
-use crate::stream_printer::spawn_print_thread;
+use crate::lang::stream_printer::spawn_print_thread;
 
 pub struct ExecutionContext {
     pub input: ValueReceiver,

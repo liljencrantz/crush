@@ -4,7 +4,7 @@ use crate::lang::{argument::Argument, r#struct::Struct};
 use crate::lang::value::Value;
 use std::fs::metadata;
 use std::path::Path;
-use crate::stream::ValueSender;
+use crate::lang::stream::ValueSender;
 use std::os::unix::fs::MetadataExt;
 
 fn parse(arguments: Vec<Argument>) -> CrushResult<Box<Path>> {

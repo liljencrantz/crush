@@ -2,8 +2,8 @@ use crate::lang::command::ExecutionContext;
 use crate::errors::CrushResult;
 use crate::errors::error;
 use crate::lang::value::Value;
-use crate::stream::{ValueSender};
-use crate::stream::Readable;
+use crate::lang::stream::{ValueSender};
+use crate::lang::stream::Readable;
 
 pub fn run(input1: &mut impl Readable, input2: &mut impl Readable, sender: ValueSender) -> CrushResult<()> {
     let mut output_type = Vec::new();

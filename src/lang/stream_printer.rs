@@ -1,5 +1,5 @@
-use crate::stream::{ValueSender, channels, Readable};
-use crate::printer::Printer;
+use crate::lang::stream::{ValueSender, channels, Readable};
+use crate::lang::printer::Printer;
 use std::thread;
 use crate::lang::table::TableStream;
 use crate::lang::table::Table;

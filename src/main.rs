@@ -1,12 +1,8 @@
 mod replace;
 mod errors;
-mod glob;
-mod stream;
 mod lang;
 mod lib;
 mod generic_lexer;
-mod printer;
-mod stream_printer;
 mod util;
 
 use crate::lang::lexer::Lexer;
@@ -18,9 +14,9 @@ use rustyline::Editor;
 use lib::declare;
 use crate::errors::{CrushResult, to_crush_error};
 use std::error::Error;
-use crate::printer::Printer;
-use crate::stream::empty_channel;
-use crate::stream_printer::spawn_print_thread;
+use crate::lang::printer::Printer;
+use crate::lang::stream::empty_channel;
+use crate::lang::stream_printer::spawn_print_thread;
 use crate::util::file::home;
 use std::path::Path;
 use std::fs;

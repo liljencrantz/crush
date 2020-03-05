@@ -15,7 +15,7 @@ use crate::lib::command_util::{create_user_map, UserMap};
 use crate::lang::{argument::Argument, value::Value, value::ValueType, table::ColumnType, table::Row};
 use crate::util::file::cwd;
 use crate::errors::{error, CrushError, CrushResult, to_crush_error};
-use crate::stream::OutputStream;
+use crate::lang::stream::OutputStream;
 
 lazy_static! {
     static ref OUTPUT_TYPE: Vec<ColumnType> = vec![

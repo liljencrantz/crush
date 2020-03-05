@@ -1,6 +1,6 @@
 use crate::errors::{error, mandate, CrushResult, to_crush_error};
 use crate::lang::{value::Value, table::ColumnType};
-use crate::glob::Glob;
+use crate::util::glob::Glob;
 use regex::Regex;
 use std::error::Error;
 use crate::lang::parser::parse_name;

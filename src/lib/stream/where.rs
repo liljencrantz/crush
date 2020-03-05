@@ -5,15 +5,15 @@ use crate::{
         value::Value,
         table::Row,
     },
-    stream::{OutputStream}
+    lang::stream::{OutputStream}
 };
 use crate::lang::command::ExecutionContext;
 use crate::errors::{error, CrushResult, argument_error};
-use crate::printer::Printer;
-use crate::stream::{Readable, empty_channel, channels};
+use crate::lang::printer::Printer;
+use crate::lang::stream::{Readable, empty_channel, channels};
 use crate::lang::{table::TableReader, table::ColumnType, argument::Argument};
 use crate::lang::command::Closure;
-use crate::stream_printer::spawn_print_thread;
+use crate::lang::stream_printer::spawn_print_thread;
 use crate::lang::scope::Scope;
 use crate::lang::command::CrushCommand;
 

@@ -9,7 +9,7 @@ use crate::{
         table::TableReader,
     }
 };
-use crate::stream::Readable;
+use crate::lang::stream::Readable;
 
 fn count_rows(mut s: impl Readable) -> Value {
     let mut res: i128 = 0;

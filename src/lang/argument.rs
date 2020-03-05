@@ -2,7 +2,7 @@ use crate::lang::value::Value;
 use crate::lang::{value::ValueDefinition, table::ColumnType};
 use crate::errors::{CrushError, CrushResult};
 use crate::lang::scope::Scope;
-use crate::printer::Printer;
+use crate::lang::printer::Printer;
 use crate::lang::job::JobJoinHandle;
 
 #[derive(Debug, Clone)]

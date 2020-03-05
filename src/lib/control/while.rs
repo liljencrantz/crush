@@ -2,14 +2,14 @@ use crate::{
     lang::argument::Argument,
     lang::value::Value,
 };
-use crate::printer::Printer;
+use crate::lang::printer::Printer;
 use crate::lang::scope::Scope;
 use crate::lang::{table::TableStream, table::TableReader, list::ListReader, r#struct::Struct, dict::DictReader, command::CrushCommand};
 use crate::errors::{argument_error, CrushResult, data_error};
 use crate::lang::command::Closure;
 use crate::lang::command::ExecutionContext;
-use crate::stream::{empty_channel, Readable, channels};
-use crate::stream_printer::spawn_print_thread;
+use crate::lang::stream::{empty_channel, Readable, channels};
+use crate::lang::stream_printer::spawn_print_thread;
 
 pub struct Config {
     condition: Closure,

@@ -1,6 +1,6 @@
 use crate::lang::{value::Value, r#struct::Struct};
 use crate::errors::{CrushError, error, CrushResult};
-use crate::stream::{Readable, InputStream};
+use crate::lang::stream::{Readable, InputStream};
 use crate::replace::Replace;
 use crate::lang::value::ValueType;
 

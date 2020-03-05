@@ -2,11 +2,11 @@ use crate::lang::command::ExecutionContext;
 use crate::errors::{CrushResult, error};
 use crate::{
     lang::argument::Argument,
-    stream::{OutputStream},
+    lang::stream::{OutputStream},
     lang::value::Value,
     errors::{CrushError, argument_error},
 };
-use crate::stream::{Readable, ValueSender};
+use crate::lang::stream::{Readable, ValueSender};
 use crate::lang::table::TableReader;
 use crate::lib::parse_util::{optional_argument_integer};
 

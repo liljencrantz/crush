@@ -3,7 +3,7 @@ use crate::errors::{CrushError, mandate, CrushResult, error};
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;
-use crate::stream::Readable;
+use crate::lang::stream::Readable;
 
 #[derive(Debug)]
 #[derive(Clone)]
