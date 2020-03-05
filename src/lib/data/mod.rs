@@ -1,7 +1,7 @@
 use crate::scope::Scope;
 use crate::errors::CrushResult;
-use crate::lang::{Value, SimpleCommand, Struct};
-use crate::lang::ExecutionContext;
+use crate::lang::{value::Value, command::SimpleCommand, r#struct::Struct};
+use crate::lang::command::ExecutionContext;
 
 mod list;
 mod dict;

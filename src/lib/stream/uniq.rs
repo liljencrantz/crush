@@ -1,13 +1,13 @@
-use crate::lang::ExecutionContext;
+use crate::lang::command::ExecutionContext;
 use std::collections::HashSet;
 use crate::{
     errors::argument_error,
     lang::{
-        Argument,
-        Row,
+        argument::Argument,
+        row::Row,
     },
 };
-use crate::lang::{Value, ColumnType, TableReader};
+use crate::lang::{value::Value, column_type::ColumnType, table::TableReader};
 use crate::errors::{CrushResult, error};
 use crate::lib::command_util::find_field;
 use crate::stream::{Readable, OutputStream};

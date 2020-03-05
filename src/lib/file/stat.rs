@@ -1,7 +1,7 @@
-use crate::lang::ExecutionContext;
+use crate::lang::command::ExecutionContext;
 use crate::errors::{CrushResult, argument_error, to_crush_error};
-use crate::lang::{Argument, Struct};
-use crate::lang::Value;
+use crate::lang::{argument::Argument, r#struct::Struct};
+use crate::lang::value::Value;
 use std::fs::metadata;
 use std::path::Path;
 use crate::stream::ValueSender;

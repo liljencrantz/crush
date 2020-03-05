@@ -1,5 +1,6 @@
-use crate::lang::{ColumnType, Value};
-use crate::lang::{Row, Table, TableStream};
+use crate::lang::column_type::ColumnType;
+use crate::lang::value::Value;
+use crate::lang::{row::Row, table::Table, table::TableStream};
 use crossbeam::{Receiver, bounded, unbounded, Sender};
 use crate::errors::{CrushError, error, CrushResult, to_crush_error};
 use crate::replace::Replace;

@@ -1,7 +1,7 @@
 use std::thread::JoinHandle;
 use crate::errors::CrushResult;
 use std::thread;
-use crate::lang::JobJoinHandle;
+use crate::lang::job::JobJoinHandle;
 
 pub fn build(name: String) -> thread::Builder {
     thread::Builder::new().name(name)

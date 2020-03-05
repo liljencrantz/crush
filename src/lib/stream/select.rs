@@ -1,22 +1,22 @@
-use crate::lang::{ExecutionContext, CrushCommand};
+use crate::lang::command::{ExecutionContext, CrushCommand};
 use crate::{
     lib::command_util::find_field_from_str,
     errors::argument_error,
     lang::{
-        Argument,
-        Row,
-        Value,
+        argument::Argument,
+        row::Row,
+        value::Value,
     },
     stream::OutputStream,
     replace::Replace,
-    lang::ColumnType,
+    lang::column_type::ColumnType,
     errors::CrushResult,
 };
 use crate::lib::command_util::find_field;
 use crate::stream::{Readable, ValueSender, empty_channel, channels};
 use crate::errors::error;
-use crate::lang::{Struct, TableReader};
-use crate::lang::Closure;
+use crate::lang::{r#struct::Struct, table::TableReader};
+use crate::lang::closure::Closure;
 use crate::printer::Printer;
 use crate::scope::Scope;
 

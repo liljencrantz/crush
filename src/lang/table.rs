@@ -1,6 +1,6 @@
-use crate::lang::{ColumnType, Row, Value};
-use crate::errors::{CrushError, error};
-use crate::stream::Readable;
+use crate::lang::{column_type::ColumnType, row::Row, value::Value};
+use crate::errors::{CrushError, error, CrushResult};
+use crate::stream::{Readable, InputStream};
 use crate::replace::Replace;
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
@@ -63,4 +63,27 @@ impl Readable for TableReader {
     fn types(&self) -> &Vec<ColumnType> {
         &self.row_type
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct TableStream {
+    pub stream: InputStream,
+}
+
+impl TableStream {
+    pub fn get(&self, idx: i128) -> CrushResult<Row> {
+        let mut i = 0i128;
+        loop {
+            match self.stream.recv() {
+                Ok(row) => {
+                    if i == idx {
+                        return Ok(row);
+                    }
+                    i += 1;
+                },
+                Err(_) => return error("Index out of bounds"),
+            }
+        }
+    }
+
 }

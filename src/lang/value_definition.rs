@@ -8,15 +8,15 @@ use crate::{
     glob::Glob,
     errors::{error, mandate, CrushResult, argument_error, to_crush_error},
     scope::Scope,
-    lang::{Value},
-    lang::JobJoinHandle,
-    lang::Closure,
+    lang::value::Value,
+    lang::job::JobJoinHandle,
+    lang::closure::Closure,
     stream::channels,
     stream::empty_channel,
-    lang::row::Struct
+    lang::r#struct::Struct
 };
 use std::time::Duration;
-use crate::lang::{Job, ArgumentDefinition, CrushCommand};
+use crate::lang::{job::Job, argument::ArgumentDefinition, command::CrushCommand};
 
 #[derive(Clone)]
 #[derive(Debug)]

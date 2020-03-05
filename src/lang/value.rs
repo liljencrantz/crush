@@ -7,18 +7,18 @@ use chrono::{DateTime, Local};
 use regex::Regex;
 
 use crate::{
-    lang::Closure,
+    lang::closure::Closure,
     scope::cwd,
-    lang::rows::Table,
+    lang::table::Table,
     errors::{error, CrushError, to_crush_error},
     glob::Glob,
 };
-use crate::lang::{List, SimpleCommand, ConditionCommand, TableStream, ValueType, Dict, ColumnType, BinaryReader, TableReader, ListReader, DictReader, Row};
+use crate::lang::{list::List, command::SimpleCommand, command::ConditionCommand, table::TableStream, value_type::ValueType, dict::Dict, column_type::ColumnType, binary::BinaryReader, table::TableReader, list::ListReader, dict::DictReader, row::Row};
 use crate::errors::{CrushResult, argument_error};
 use chrono::Duration;
-use crate::format::duration_format;
+use crate::time_util::duration_format;
 use crate::scope::Scope;
-use crate::lang::row::Struct;
+use crate::lang::r#struct::Struct;
 use crate::stream::{streams, Readable};
 use std::io::{Read, Error};
 use std::convert::TryFrom;

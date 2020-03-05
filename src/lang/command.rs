@@ -1,7 +1,7 @@
 use crate::errors::CrushResult;
 use std::fmt::Formatter;
 use crate::stream::{ValueReceiver, ValueSender, InputStream};
-use crate::lang::{Argument, ArgumentDefinition};
+use crate::lang::{argument::Argument, argument::ArgumentDefinition};
 use crate::scope::Scope;
 use crate::printer::Printer;
 

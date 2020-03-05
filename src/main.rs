@@ -6,13 +6,12 @@ mod lang;
 mod lib;
 mod scope;
 mod base_lexer;
-mod lexer;
 mod printer;
 mod stream_printer;
-mod format;
+mod time_util;
 mod thread_util;
 
-use crate::lexer::{Lexer};
+use crate::lang::lexer::Lexer;
 
 extern crate rustyline;
 
@@ -27,7 +26,7 @@ use crate::stream_printer::spawn_print_thread;
 use crate::scope::home;
 use std::path::Path;
 use std::fs;
-use crate::lang::parse;
+use crate::lang::parser::parse;
 
 fn crush_history_file() -> Box<str> {
     Box::from(

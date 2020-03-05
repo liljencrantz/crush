@@ -1,6 +1,6 @@
 use crate::scope::Scope;
 use crate::stream::{channels, ValueSender, ValueReceiver};
-use crate::lang::{CallDefinition, ArgumentDefinition};
+use crate::lang::{call_definition::CallDefinition, argument::ArgumentDefinition};
 use crate::printer::Printer;
 use crate::errors::{CrushError, CrushResult};
 use std::thread::JoinHandle;

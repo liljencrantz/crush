@@ -1,5 +1,5 @@
-use crate::lang::{Argument, Value, Struct, Table, ColumnType, ValueType, Row, binary_channel};
-use crate::lang::ExecutionContext;
+use crate::lang::{argument::Argument, value::Value, r#struct::Struct, table::Table, column_type::ColumnType, value_type::ValueType, row::Row, binary::binary_channel};
+use crate::lang::command::ExecutionContext;
 use crate::errors::{argument_error, to_crush_error, CrushResult, demand};
 use reqwest::{StatusCode, Method};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};

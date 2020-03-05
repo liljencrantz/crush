@@ -1,6 +1,6 @@
-use crate::lang::ExecutionContext;
-use crate::lang::Argument;
-use crate::lang::Value;
+use crate::lang::command::ExecutionContext;
+use crate::lang::argument::Argument;
+use crate::lang::value::Value;
 use crate::errors::argument_error;
 use crate::errors::CrushResult;
 

@@ -1,6 +1,6 @@
-use crate::lang::ExecutionContext;
+use crate::lang::command::ExecutionContext;
 use crate::errors::{CrushResult, argument_error};
-use crate::lang::{SimpleCommand, Value};
+use crate::lang::{command::SimpleCommand, value::Value};
 use crate::scope::Scope;
 use std::cmp::Ordering;
 

@@ -10,9 +10,9 @@ use users::User;
 
 use lazy_static::lazy_static;
 
-use crate::lang::ExecutionContext;
+use crate::lang::command::ExecutionContext;
 use crate::lib::command_util::{create_user_map, UserMap};
-use crate::lang::{Argument, Value, ValueType, ColumnType, Row};
+use crate::lang::{argument::Argument, value::Value, value_type::ValueType, column_type::ColumnType, row::Row};
 use crate::scope::cwd;
 use crate::errors::{error, CrushError, CrushResult, to_crush_error};
 use crate::stream::OutputStream;

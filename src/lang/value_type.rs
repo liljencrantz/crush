@@ -1,9 +1,9 @@
 use crate::errors::{error, mandate, CrushResult, to_crush_error};
-use crate::lang::{Value, ColumnType};
+use crate::lang::{value::Value, column_type::ColumnType};
 use crate::glob::Glob;
 use regex::Regex;
 use std::error::Error;
-use crate::lang::parse_name;
+use crate::lang::parser::parse_name;
 
 #[derive(Clone)]
 #[derive(PartialEq)]

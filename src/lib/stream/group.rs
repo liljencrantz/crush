@@ -1,18 +1,18 @@
-use crate::lang::ExecutionContext;
+use crate::lang::command::ExecutionContext;
 use std::collections::HashMap;
 use crate::{
     lib::command_util::find_field_from_str,
     errors::{argument_error},
     lang::{
-        Argument,
-        Row,
-        TableStream,
-        ValueType,
-        Value,
+        argument::Argument,
+        row::Row,
+        table::TableStream,
+        value_type::ValueType,
+        value::Value,
     },
     stream::{OutputStream, unlimited_streams},
 };
-use crate::lang::{ColumnType, TableReader};
+use crate::lang::{column_type::ColumnType, table::TableReader};
 use crate::errors::{CrushResult, error};
 use crate::lib::command_util::find_field;
 use crate::stream::{Readable};

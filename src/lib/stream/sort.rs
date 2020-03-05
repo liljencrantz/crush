@@ -3,8 +3,8 @@ use crate::{
     errors::argument_error,
     stream::{OutputStream},
 };
-use crate::lang::ExecutionContext;
-use crate::lang::{Argument, Value, Row, TableReader};
+use crate::lang::command::ExecutionContext;
+use crate::lang::{argument::Argument, value::Value, row::Row, table::TableReader};
 use crate::errors::{CrushResult, error};
 use crate::lib::command_util::find_field;
 use crate::stream::Readable;

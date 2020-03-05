@@ -1,17 +1,17 @@
-use crate::lang::ExecutionContext;
+use crate::lang::command::ExecutionContext;
 use crate::{
     lang::{
-        Argument,
-        Row,
-        ValueType,
-        Value,
+        argument::Argument,
+        row::Row,
+        value_type::ValueType,
+        value::Value,
     },
     errors::{CrushError, argument_error},
 };
 use std::io::BufReader;
 
 use crate::printer::Printer;
-use crate::lang::{Struct, List, Table, BinaryReader};
+use crate::lang::{r#struct::Struct, list::List, table::Table, binary::BinaryReader};
 use crate::errors::{CrushResult, to_crush_error, error};
 use crate::stream::{ValueSender, ValueReceiver};
 use std::collections::HashSet;

@@ -1,9 +1,9 @@
-use crate::lang::{Job, ArgumentDefinition};
+use crate::lang::{job::Job, argument::ArgumentDefinition};
 use crate::scope::Scope;
-use crate::lang::Argument;
+use crate::lang::argument::Argument;
 use crate::stream::empty_channel;
 use crate::errors::{error, CrushResult};
-use crate::lang::{ExecutionContext/*, StreamExecutionContext*/};
+use crate::lang::{command::ExecutionContext/*, StreamExecutionContext*/};
 use crate::stream_printer::spawn_print_thread;
 use crate::lang::command::CrushCommand;
 

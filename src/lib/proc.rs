@@ -1,15 +1,15 @@
-use crate::lang::ExecutionContext;
+use crate::lang::command::ExecutionContext;
 use crate::errors::{CrushResult, argument_error, to_crush_error};
 use crate::{
-    lang::Row,
-    lang::ValueType,
+    lang::row::Row,
+    lang::value_type::ValueType,
     stream::{OutputStream},
-    lang::Value,
+    lang::value::Value,
 };
 use psutil::process::State;
 use crate::lib::command_util::{create_user_map, UserMap};
 use users::uid_t;
-use crate::lang::{ColumnType, SimpleCommand};
+use crate::lang::{column_type::ColumnType, command::SimpleCommand};
 use chrono::Duration;
 use crate::scope::Scope;
 use nix::sys::signal;

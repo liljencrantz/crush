@@ -1,8 +1,8 @@
-use crate::lang::ExecutionContext;
+use crate::lang::command::ExecutionContext;
 use crate::errors::CrushResult;
 use crate::errors::error;
-use crate::lang::Value;
-use crate::lang::CrushCommand;
+use crate::lang::value::Value;
+use crate::lang::command::CrushCommand;
 
 pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
     let cc = ExecutionContext {

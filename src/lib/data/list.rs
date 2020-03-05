@@ -1,7 +1,7 @@
-use crate::lang::ExecutionContext;
+use crate::lang::command::ExecutionContext;
 use crate::errors::{CrushResult, argument_error};
-use crate::lang::{ValueType, List, SimpleCommand};
-use crate::lang::Value;
+use crate::lang::{value_type::ValueType, list::List, command::SimpleCommand};
+use crate::lang::value::Value;
 use std::collections::HashSet;
 use crate::lib::parse_util::{single_argument_list, single_argument_type, two_arguments, three_arguments};
 use crate::scope::Scope;

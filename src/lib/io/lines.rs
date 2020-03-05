@@ -1,19 +1,19 @@
-use crate::lang::ExecutionContext;
+use crate::lang::command::ExecutionContext;
 use std::io::{BufReader, BufRead};
 use crate::{
     errors::argument_error,
     lang::{
-        Argument,
-        Row,
-        ColumnType,
-        ValueType,
-        Value,
+        argument::Argument,
+        row::Row,
+        column_type::ColumnType,
+        value_type::ValueType,
+        value::Value,
     },
     stream::OutputStream,
 };
 use crate::stream::ValueReceiver;
 use crate::errors::CrushResult;
-use crate::lang::BinaryReader;
+use crate::lang::binary::BinaryReader;
 use crate::lib::parse_util::argument_files;
 
 fn run(input: Box<dyn BinaryReader>, output: OutputStream) -> CrushResult<()> {

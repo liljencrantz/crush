@@ -1,12 +1,12 @@
-use crate::lang::ExecutionContext;
+use crate::lang::command::ExecutionContext;
 use crate::errors::{CrushResult, error};
 use crate::{
     lang::{
-        Row,
-        ValueType,
-        Value,
-        ColumnType,
-        TableReader,
+        row::Row,
+        value_type::ValueType,
+        value::Value,
+        column_type::ColumnType,
+        table::TableReader,
     }
 };
 use crate::stream::Readable;

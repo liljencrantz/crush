@@ -1,13 +1,13 @@
 use std::collections::VecDeque;
 
 use crate::{
-    lang::Row,
+    lang::row::Row,
     stream::OutputStream,
 };
-use crate::lang::ExecutionContext;
+use crate::lang::command::ExecutionContext;
 use crate::errors::{CrushResult, error};
 use crate::stream::{Readable, ValueSender};
-use crate::lang::{Value, TableReader};
+use crate::lang::{value::Value, table::TableReader};
 use crate::lib::parse_util::{optional_argument_integer};
 
 pub fn run(

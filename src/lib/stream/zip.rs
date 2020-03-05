@@ -1,7 +1,7 @@
-use crate::lang::ExecutionContext;
+use crate::lang::command::ExecutionContext;
 use crate::errors::CrushResult;
 use crate::errors::error;
-use crate::lang::Value;
+use crate::lang::value::Value;
 use crate::stream::{ValueSender};
 use crate::stream::Readable;
 
@@ -28,13 +28,13 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
     }
     match (context.arguments.remove(0).value, context.arguments.remove(0).value) {
         (Value::TableStream(mut o1), Value::TableStream(mut o2)) =>
-            run(&mut o1.reader(), &mut o2.reader(), context.output),
+            run(&mut o1.stream, &mut o2.stream, context.output),
         (Value::Table(mut o1), Value::Table(mut o2)) =>
             run(&mut o1.reader(), &mut o2.reader(), context.output),
         (Value::TableStream(mut o1), Value::Table(mut o2)) =>
-            run(&mut o1.reader(), &mut o2.reader(), context.output),
+            run(&mut o1.stream, &mut o2.reader(), context.output),
         (Value::Table(mut o1), Value::TableStream(mut o2)) =>
-            run(&mut o1.reader(), &mut o2.reader(), context.output),
+            run(&mut o1.reader(), &mut o2.stream, context.output),
         _ => return error("Expected two datasets"),
     }
 }

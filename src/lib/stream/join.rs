@@ -1,15 +1,15 @@
-use crate::lang::ExecutionContext;
+use crate::lang::command::ExecutionContext;
 use crate::errors::CrushResult;
 use std::collections::HashMap;
 use crate::{
     stream::Readable,
     errors::CrushError,
     lang::{
-        Argument,
-        Row,
-        ColumnType,
-        ValueType,
-        Value,
+        argument::Argument,
+        row::Row,
+        column_type::ColumnType,
+        value_type::ValueType,
+        value::Value,
     },
     stream::OutputStream,
     replace::Replace,
@@ -17,7 +17,7 @@ use crate::{
     lib::command_util::find_field_from_str,
 };
 use crate::lib::command_util::find_field;
-use crate::lang::Struct;
+use crate::lang::r#struct::Struct;
 
 pub struct Config {
     left_table_idx: usize,

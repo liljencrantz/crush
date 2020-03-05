@@ -1,5 +1,5 @@
-use crate::lang::{ExecutionContext, JobJoinHandle, SimpleCommand, Closure, ValueDefinition, ValueType};
-use crate::lang::{ArgumentDefinition, ArgumentVecCompiler, Value};
+use crate::lang::{command::ExecutionContext, job::JobJoinHandle, command::SimpleCommand, closure::Closure, value_definition::ValueDefinition, value_type::ValueType};
+use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, value::Value};
 use crate::scope::Scope;
 use crate::errors::{error, CrushResult};
 use crate::printer::Printer;

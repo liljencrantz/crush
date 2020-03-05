@@ -1,4 +1,4 @@
-use crate::lang::{ValueType, Value};
+use crate::lang::{value_type::ValueType, value::Value};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ColumnType {

@@ -20,9 +20,9 @@ mod constants;
 use crate::{
     scope::Scope,
     lang::{
-        Argument,
-        SimpleCommand,
-        Value,
+        argument::Argument,
+        command::SimpleCommand,
+        value::Value,
     },
 };
 use std::thread::{JoinHandle};

@@ -2,20 +2,20 @@ use std::cmp::Ordering;
 
 use crate::{
     lang::{
-        Value,
-        Row,
+        value::Value,
+        row::Row,
     },
     stream::{OutputStream}
 };
-use crate::lang::ExecutionContext;
+use crate::lang::command::ExecutionContext;
 use crate::errors::{error, CrushResult, argument_error};
 use crate::printer::Printer;
 use crate::stream::{Readable, empty_channel, channels};
-use crate::lang::{TableReader, ColumnType, Argument};
-use crate::lang::Closure;
+use crate::lang::{table::TableReader, column_type::ColumnType, argument::Argument};
+use crate::lang::closure::Closure;
 use crate::stream_printer::spawn_print_thread;
 use crate::scope::Scope;
-use crate::lang::CrushCommand;
+use crate::lang::command::CrushCommand;
 
 pub struct Config<T: Readable> {
     condition: Closure,

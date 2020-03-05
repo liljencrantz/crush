@@ -1,13 +1,13 @@
-use crate::lang::ExecutionContext;
+use crate::lang::command::ExecutionContext;
 use crate::errors::{CrushResult, error};
 use crate::{
     lang::{
-        Row,
-        ValueType,
-        Value
+        row::Row,
+        value_type::ValueType,
+        value::Value
     }
 };
-use crate::lang::{ColumnType, Argument, TableReader};
+use crate::lang::{column_type::ColumnType, argument::Argument, table::TableReader};
 use crate::lib::command_util::find_field_from_str;
 use crate::stream::{Readable};
 

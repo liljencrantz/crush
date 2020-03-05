@@ -1,10 +1,10 @@
-use crate::lang::ExecutionContext;
+use crate::lang::command::ExecutionContext;
 use crate::{
     lang::{
-        Argument,
-        Row,
-        ValueType,
-        Value,
+        argument::Argument,
+        row::Row,
+        value_type::ValueType,
+        value::Value,
     },
     stream::OutputStream,
     errors::{CrushError, argument_error},
@@ -18,7 +18,7 @@ extern crate map_in_place;
 
 use map_in_place::MapVecInPlace;
 use crate::printer::Printer;
-use crate::lang::{ColumnType, BinaryReader};
+use crate::lang::{column_type::ColumnType, binary::BinaryReader};
 use crate::errors::CrushResult;
 use crate::stream::ValueReceiver;
 use crate::lib::parse_util::argument_files;

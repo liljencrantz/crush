@@ -1,6 +1,6 @@
 use crate::scope::Scope;
 use crate::errors::CrushResult;
-use crate::lang::{Value, SimpleCommand};
+use crate::lang::{value::Value, command::SimpleCommand};
 
 mod find;
 mod stat;
