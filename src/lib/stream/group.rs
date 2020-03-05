@@ -86,7 +86,7 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
                 input.types()[config.column].clone(),
                 ColumnType {
                     name: Some(config.name.clone()),
-                    cell_type: ValueType::Stream(input.types().clone())
+                    cell_type: ValueType::TableStream(input.types().clone())
                 }
             ];
             let output = context.output.initialize(output_type)?;
@@ -99,7 +99,7 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
                 input.types()[config.column].clone(),
                 ColumnType {
                     name: Some(config.name.clone()),
-                    cell_type: ValueType::Stream(input.types().clone())
+                    cell_type: ValueType::TableStream(input.types().clone())
                 }
             ];
             let output = context.output.initialize(output_type)?;

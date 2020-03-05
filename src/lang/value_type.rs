@@ -1,5 +1,5 @@
 use crate::errors::{error, mandate, CrushResult, to_crush_error};
-use crate::lang::{Value, ColumnType, value_type_parser};
+use crate::lang::{Value, ColumnType};
 use crate::glob::Glob;
 use regex::Regex;
 use std::error::Error;
@@ -23,12 +23,12 @@ pub enum ValueType {
     Command,
     Closure,
     File,
-    Stream(Vec<ColumnType>),
-    Rows(Vec<ColumnType>),
-    Row(Vec<ColumnType>),
+    TableStream(Vec<ColumnType>),
+    Table(Vec<ColumnType>),
+    Struct(Vec<ColumnType>),
     List(Box<ValueType>),
     Dict(Box<ValueType>, Box<ValueType>),
-    Env,
+    Scope,
     Bool,
     Float,
     Empty,
@@ -38,13 +38,7 @@ pub enum ValueType {
     Type,
 }
 
-
-
 impl ValueType {
-    pub fn from(s: &str) -> CrushResult<ValueType> {
-        value_type_parser::parse(s)
-    }
-
     fn materialize_vec(input: &Vec<ValueType>) -> Vec<ValueType> {
         input
             .iter()
@@ -64,7 +58,7 @@ impl ValueType {
             ValueType::Command |
             ValueType::Closure |
             ValueType::File |
-            ValueType::Env |
+            ValueType::Scope |
             ValueType::Float |
             ValueType::Empty |
             ValueType::Any |
@@ -72,9 +66,9 @@ impl ValueType {
             ValueType::Type |
             ValueType::Bool => self.clone(),
             ValueType::BinaryStream => ValueType::Binary,
-            ValueType::Stream(o) => ValueType::Rows(ColumnType::materialize(o)),
-            ValueType::Rows(r) => ValueType::Rows(ColumnType::materialize(r)),
-            ValueType::Row(r) => ValueType::Row(ColumnType::materialize(r)),
+            ValueType::TableStream(o) => ValueType::Table(ColumnType::materialize(o)),
+            ValueType::Table(r) => ValueType::Table(ColumnType::materialize(r)),
+            ValueType::Struct(r) => ValueType::Struct(ColumnType::materialize(r)),
             ValueType::List(l) => ValueType::List(Box::from(l.materialize())),
             ValueType::Dict(k, v) => ValueType::Dict(Box::from(k.materialize()), Box::from(v.materialize())),
         }
@@ -82,7 +76,7 @@ impl ValueType {
 
         pub fn is_hashable(&self) -> bool {
         match self {
-            ValueType::Env | ValueType::Closure | ValueType::List(_) | ValueType::Dict(_, _) | ValueType::Stream(_) | ValueType::Rows(_) => false,
+            ValueType::Scope | ValueType::Closure | ValueType::List(_) | ValueType::Dict(_, _) | ValueType::TableStream(_) | ValueType::Table(_) => false,
             _ => true,
         }
     }
@@ -103,7 +97,6 @@ impl ValueType {
             ValueType::Regex => Ok(Value::Regex(Box::from(s), to_crush_error(Regex::new(s))?)),
             ValueType::File => Ok(Value::Text(Box::from(s))),
             ValueType::Float => Ok(Value::Float(to_crush_error(s.parse::<f64>())?)),
-            ValueType::Type => Ok(Value::Type(value_type_parser::parse(s)?)),
             ValueType::Bool => Ok(Value::Bool(to_crush_error(s.parse::<bool>())?)),
             _ => error("Failed to parse cell"),
         }
@@ -123,12 +116,12 @@ impl ToString for ValueType {
             ValueType::Command => "command".to_string(),
             ValueType::Closure => "closure".to_string(),
             ValueType::File => "file".to_string(),
-            ValueType::Stream(o) => format!("output<{}>", o.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
-            ValueType::Rows(r) => format!("rows<{}>", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
-            ValueType::Row(r) => format!("row<{}>", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
+            ValueType::TableStream(o) => format!("output<{}>", o.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
+            ValueType::Table(r) => format!("rows<{}>", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
+            ValueType::Struct(r) => format!("row<{}>", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
             ValueType::List(l) => format!("list<{}>", l.to_string()),
             ValueType::Dict(k, v) => format!("dict<{},{}>", k.to_string(), v.to_string()),
-            ValueType::Env => "env".to_string(),
+            ValueType::Scope => "env".to_string(),
             ValueType::Bool => "bool".to_string(),
             ValueType::Float => "float".to_string(),
             ValueType::Empty => "empty".to_string(),

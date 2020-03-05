@@ -97,7 +97,7 @@ impl Scope {
         let res = Scope {
             data: Arc::from(Mutex::new(ScopeData::new(None, None, false))),
         };
-        self.declare(&[Box::from(name)], Value::Env(res.clone()))?;
+        self.declare(&[Box::from(name)], Value::Scope(res.clone()))?;
         Ok(res)
     }
 
@@ -123,7 +123,7 @@ impl Scope {
         } else {
             match get_from_data(&self.data, name[0].as_ref()) {
                 None => error("Not a namespace"),
-                Some(Value::Env(env)) => env.declare(&name[1..name.len()], value),
+                Some(Value::Scope(env)) => env.declare(&name[1..name.len()], value),
                 _ => error("Unknown namespace"),
             }
         }
@@ -143,7 +143,7 @@ impl Scope {
         } else {
             match get_from_data(&self.data, name[0].as_ref()) {
                 None => error("Not a namespace"),
-                Some(Value::Env(env)) => env.set(&name[1..name.len()], value),
+                Some(Value::Scope(env)) => env.set(&name[1..name.len()], value),
                 _ => error("Unknown namespace"),
             }
         }
@@ -163,7 +163,7 @@ impl Scope {
         } else {
             match get_from_data(&self.data, name[0].as_ref()) {
                 None => None,
-                Some(Value::Env(env)) => env.remove(&name[1..name.len()]),
+                Some(Value::Scope(env)) => env.remove(&name[1..name.len()]),
                 _ => None,
             }
         }
@@ -183,7 +183,7 @@ impl Scope {
         } else {
             match get_from_data(&self.data, name[0].as_ref()) {
                 None => None,
-                Some(Value::Env(env)) => env.get(&name[1..name.len()]),
+                Some(Value::Scope(env)) => env.get(&name[1..name.len()]),
                 _ => None,
             }
         }
@@ -202,7 +202,7 @@ impl Scope {
         } else {
             match get_from_data(&self.data, name[0].as_ref()) {
                 None => None,
-                Some(Value::Env(env)) => env.get_location(&name[1..name.len()]),
+                Some(Value::Scope(env)) => env.get_location(&name[1..name.len()]),
                 _ => None,
             }
         }

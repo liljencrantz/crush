@@ -10,7 +10,6 @@ mod list;
 mod dict;
 mod binary;
 mod value_type_lexer;
-mod value_type_parser;
 mod command;
 mod stream;
 mod job;

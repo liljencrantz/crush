@@ -59,7 +59,7 @@ fn convert_json(json_value: &serde_json::Value) -> CrushResult<Value> {
                 0 => Ok(Value::Empty()),
                 1 => {
                     let list_type = types.iter().next().unwrap();
-                    if let ValueType::Row(r) = list_type {
+                    if let ValueType::Struct(r) = list_type {
                         let row_list = lst
                             .drain(..)
                             .map(|v| match v {

@@ -39,8 +39,8 @@ fn print_internal(printer: &Printer, stream: &mut impl Readable, indent: usize) 
 
     for val in stream.types().iter() {
         match val.cell_type {
-            ValueType::Stream(_) => has_table = true,
-            ValueType::Rows(_) => has_table = true,
+            ValueType::TableStream(_) => has_table = true,
+            ValueType::Table(_) => has_table = true,
             _ => (),
         }
         if val.name.is_some() {

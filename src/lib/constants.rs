@@ -7,7 +7,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.uses(&env);
     env.declare_str("true", Value::Bool(true))?;
     env.declare_str("false", Value::Bool(false))?;
-    env.declare_str("global", Value::Env(root.clone()))?;
+    env.declare_str("global", Value::Scope(root.clone()))?;
     env.readonly();
     Ok(())
 }

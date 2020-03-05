@@ -73,7 +73,7 @@ impl ValueDefinition {
                         list.get(idx as usize)?,
                     (Ok(Value::Dict(dict)), Ok(c)) =>
                         mandate(dict.get(&c), "Invalid subscript")?,
-                    (Ok(Value::Env(env)), Ok(Value::Text(name))) =>
+                    (Ok(Value::Scope(env)), Ok(Value::Text(name))) =>
                         mandate(env.get_str(name.as_ref()), "Invalid subscript")?,
                     (Ok(Value::Struct(row)), Ok(Value::Text(col))) =>
                         mandate(row.get(col.as_ref()), "Invalid subscript")?,

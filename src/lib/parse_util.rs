@@ -29,7 +29,7 @@ pub fn single_argument(arguments: &Vec<Argument>) -> CrushResult<()> {
 pub fn argument_files(mut arguments: Vec<Argument>) -> CrushResult<Vec<Box<Path>>> {
     let mut files = Vec::new();
     for a in arguments.drain(..) {
-        a.value.file_expand(&mut files);
+        a.value.file_expand(&mut files)?;
     }
     Ok(files)
 }

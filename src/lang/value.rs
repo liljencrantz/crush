@@ -13,8 +13,8 @@ use crate::{
     errors::{error, CrushError, to_crush_error},
     glob::Glob,
 };
-use crate::lang::{List, SimpleCommand, ConditionCommand, TableStream, ValueType, Dict, ColumnType, value_type_parser, BinaryReader, TableReader, ListReader, DictReader, Row};
-use crate::errors::CrushResult;
+use crate::lang::{List, SimpleCommand, ConditionCommand, TableStream, ValueType, Dict, ColumnType, BinaryReader, TableReader, ListReader, DictReader, Row};
+use crate::errors::{CrushResult, argument_error};
 use chrono::Duration;
 use crate::format::duration_format;
 use crate::scope::Scope;
@@ -41,7 +41,7 @@ pub enum Value {
     Struct(Struct),
     List(List),
     Dict(Dict),
-    Env(Scope),
+    Scope(Scope),
     Bool(bool),
     Float(f64),
     Empty(),
@@ -73,7 +73,7 @@ impl Value {
             Value::TableStream(_) => "<Output>".to_string(),
             Value::List(l) => l.to_string(),
             Value::Duration(d) => duration_format(d),
-            Value::Env(env) => env.to_string(),
+            Value::Scope(env) => env.to_string(),
             Value::Bool(v) => (if *v { "true" } else { "false" }).to_string(),
             Value::Dict(d) => d.to_string(),
             Value::Float(f) => f.to_string(),
@@ -121,13 +121,13 @@ impl Value {
             Value::Command(_) => ValueType::Command,
             Value::ConditionCommand(_) => ValueType::Command,
             Value::File(_) => ValueType::File,
-            Value::TableStream(o) => ValueType::Stream(o.stream.types().clone()),
-            Value::Table(r) => ValueType::Rows(r.types().clone()),
-            Value::Struct(r) => ValueType::Row(r.types().clone()),
+            Value::TableStream(o) => ValueType::TableStream(o.stream.types().clone()),
+            Value::Table(r) => ValueType::Table(r.types().clone()),
+            Value::Struct(r) => ValueType::Struct(r.types().clone()),
             Value::Closure(_) => ValueType::Closure,
             Value::List(l) => l.list_type(),
             Value::Duration(_) => ValueType::Duration,
-            Value::Env(_) => ValueType::Env,
+            Value::Scope(_) => ValueType::Scope,
             Value::Bool(_) => ValueType::Bool,
             Value::Dict(d) => d.dict_type(),
             Value::Float(_) => ValueType::Float,
@@ -143,6 +143,23 @@ impl Value {
             Value::Text(s) => v.push(Box::from(Path::new(s.as_ref()))),
             Value::File(p) => v.push(p.clone()),
             Value::Glob(pattern) => pattern.glob_files(&cwd()?, v)?,
+            Value::TableStream(s) => {
+                let t = s.stream.types();
+                if t.len() == 1 && t[0].cell_type == ValueType::File {
+                    loop {
+                        match s.stream.recv() {
+                            Ok(row) => {
+                                if let Value::File(f) = row.into_vec().remove(0) {
+                                    v.push(f);
+                                }
+                            },
+                            Err(_) => break,
+                        }
+                    }
+                } else {
+                    return argument_error("Table stream must contain one column of type file");
+                }
+            }
             _ => return error("Expected a file name"),
         }
         Ok(())
@@ -189,7 +206,6 @@ impl Value {
             (Value::Text(s), ValueType::Integer) => to_crush_error(s.parse::<i128>()).map(|v| Value::Integer(v)),
             (Value::Text(s), ValueType::Field) => Ok(Value::Field(vec![s])),
             (Value::Text(s), ValueType::Regex) => to_crush_error(Regex::new(s.as_ref()).map(|v| Value::Regex(s, v))),
-            (Value::Text(s), ValueType::Type) => Ok(Value::Type(value_type_parser::parse(s.as_ref())?)),
             (Value::Text(s), ValueType::Binary) => Ok(Value::Binary(s.bytes().collect())),
             (Value::Text(s), ValueType::Float) => Ok(Value::Float(to_crush_error(f64::from_str(&s))?)),
 
@@ -293,7 +309,7 @@ impl Clone for Value {
             Value::TableStream(s) => Value::TableStream(s.clone()),
             Value::List(l) => Value::List(l.clone()),
             Value::Duration(d) => Value::Duration(d.clone()),
-            Value::Env(e) => Value::Env(e.clone()),
+            Value::Scope(e) => Value::Scope(e.clone()),
             Value::Bool(v) => Value::Bool(v.clone()),
             Value::Dict(d) => Value::Dict(d.clone()),
             Value::Float(f) => Value::Float(f.clone()),
@@ -324,7 +340,7 @@ impl std::hash::Hash for Value {
             Value::Bool(v) => v.hash(state),
             Value::Binary(v) => v.hash(state),
 
-            Value::Env(_) | Value::Dict(_) | Value::Table(_) | Value::Closure(_) |
+            Value::Scope(_) | Value::Dict(_) | Value::Table(_) | Value::Closure(_) |
             Value::List(_) | Value::TableStream(_) | Value::Struct(_) | Value::Float(_)
             | Value::BinaryStream(_) => panic!("Can't hash output"),
             Value::Empty() => {}
