@@ -9,7 +9,6 @@ pub mod dict;
 pub mod binary;
 pub mod command;
 pub mod job;
-pub mod closure;
 pub mod parser;
 pub mod lexer;
 pub mod r#struct;

@@ -10,7 +10,7 @@ use crate::{
     scope::Scope,
     lang::value::Value,
     lang::job::JobJoinHandle,
-    lang::closure::Closure,
+    lang::command::Closure,
     stream::channels,
     stream::empty_channel,
     lang::r#struct::Struct

@@ -6,7 +6,7 @@ use crate::printer::Printer;
 use crate::scope::Scope;
 use crate::lang::{table::TableStream, table::TableReader, list::ListReader, r#struct::Struct, dict::DictReader, command::CrushCommand};
 use crate::errors::{argument_error, CrushResult, data_error};
-use crate::lang::closure::Closure;
+use crate::lang::command::Closure;
 use crate::lang::command::ExecutionContext;
 use crate::stream::{empty_channel, Readable, channels};
 use crate::stream_printer::spawn_print_thread;

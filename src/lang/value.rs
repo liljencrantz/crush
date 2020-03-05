@@ -7,7 +7,7 @@ use chrono::{DateTime, Local};
 use regex::Regex;
 
 use crate::{
-    lang::closure::Closure,
+    lang::command::Closure,
     scope::cwd,
     lang::table::Table,
     errors::{error, CrushError, to_crush_error},

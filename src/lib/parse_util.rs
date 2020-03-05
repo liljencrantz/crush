@@ -1,4 +1,4 @@
-use crate::lang::{argument::Argument, value::Value, list::List, value_type::ValueType, dict::Dict, closure::Closure};
+use crate::lang::{argument::Argument, value::Value, list::List, value_type::ValueType, dict::Dict, command::Closure};
 use crate::errors::{CrushResult, argument_error};
 use std::path::Path;
 
