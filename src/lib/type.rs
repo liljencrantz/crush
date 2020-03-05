@@ -1,4 +1,4 @@
-use crate::lang::{command::ExecutionContext, column_type::ColumnType, argument::Argument};
+use crate::lang::{command::ExecutionContext, table::ColumnType, argument::Argument};
 use crate::errors::{CrushResult, argument_error};
 use crate::lang::{value::Value, command::SimpleCommand, value_type::ValueType};
 use crate::scope::Scope;

@@ -1,7 +1,7 @@
-use crate::lang::column_type::ColumnType;
+use crate::lang::table::ColumnType;
 use crate::lang::value::Value;
 use std::mem;
-use crate::lang::row::Row;
+use crate::lang::table::Row;
 
 #[derive(PartialEq, PartialOrd, Debug, Hash, Clone)]
 pub struct Struct {

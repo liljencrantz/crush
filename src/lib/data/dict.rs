@@ -1,9 +1,9 @@
 use crate::lang::command::ExecutionContext;
 use crate::errors::{CrushResult, argument_error};
 use crate::lang::{value_type::ValueType, dict::Dict, command::SimpleCommand};
-use crate::lang::row::Row;
+use crate::lang::table::Row;
 use crate::lang::value::Value;
-use crate::lang::column_type::ColumnType;
+use crate::lang::table::ColumnType;
 use crate::scope::Scope;
 use crate::lib::parse_util::single_argument_dict;
 

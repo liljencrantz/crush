@@ -13,7 +13,7 @@ use crate::{
     errors::{error, CrushError, to_crush_error},
     glob::Glob,
 };
-use crate::lang::{list::List, command::SimpleCommand, command::ConditionCommand, table::TableStream, value_type::ValueType, dict::Dict, column_type::ColumnType, binary::BinaryReader, table::TableReader, list::ListReader, dict::DictReader, row::Row};
+use crate::lang::{list::List, command::SimpleCommand, command::ConditionCommand, table::TableStream, value_type::ValueType, dict::Dict, table::ColumnType, binary::BinaryReader, table::TableReader, list::ListReader, dict::DictReader, table::Row};
 use crate::errors::{CrushResult, argument_error};
 use chrono::Duration;
 use crate::time_util::duration_format;

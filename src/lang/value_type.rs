@@ -1,5 +1,5 @@
 use crate::errors::{error, mandate, CrushResult, to_crush_error};
-use crate::lang::{value::Value, column_type::ColumnType};
+use crate::lang::{value::Value, table::ColumnType};
 use crate::glob::Glob;
 use regex::Regex;
 use std::error::Error;

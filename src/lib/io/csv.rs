@@ -2,7 +2,7 @@ use crate::lang::command::ExecutionContext;
 use crate::{
     lang::{
         argument::Argument,
-        row::Row,
+        table::Row,
         value_type::ValueType,
         value::Value,
     },
@@ -18,7 +18,7 @@ extern crate map_in_place;
 
 use map_in_place::MapVecInPlace;
 use crate::printer::Printer;
-use crate::lang::{column_type::ColumnType, binary::BinaryReader};
+use crate::lang::{table::ColumnType, binary::BinaryReader};
 use crate::errors::CrushResult;
 use crate::stream::ValueReceiver;
 use crate::lib::parse_util::argument_files;

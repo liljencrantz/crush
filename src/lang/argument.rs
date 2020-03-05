@@ -1,5 +1,5 @@
 use crate::lang::value::Value;
-use crate::lang::{value_definition::ValueDefinition, column_type::ColumnType};
+use crate::lang::{value_definition::ValueDefinition, table::ColumnType};
 use crate::errors::{CrushError, CrushResult};
 use crate::scope::Scope;
 use crate::printer::Printer;

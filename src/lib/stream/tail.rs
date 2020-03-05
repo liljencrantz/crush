@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use crate::{
-    lang::row::Row,
+    lang::table::Row,
     stream::OutputStream,
 };
 use crate::lang::command::ExecutionContext;

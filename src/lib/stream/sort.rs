@@ -4,7 +4,7 @@ use crate::{
     stream::{OutputStream},
 };
 use crate::lang::command::ExecutionContext;
-use crate::lang::{argument::Argument, value::Value, row::Row, table::TableReader};
+use crate::lang::{argument::Argument, value::Value, table::Row, table::TableReader};
 use crate::errors::{CrushResult, error};
 use crate::lib::command_util::find_field;
 use crate::stream::Readable;

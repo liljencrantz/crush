@@ -2,12 +2,12 @@ use crate::lang::command::ExecutionContext;
 use crate::errors::{CrushResult, error};
 use crate::{
     lang::{
-        row::Row,
+        table::Row,
         value_type::ValueType,
         value::Value
     }
 };
-use crate::lang::{column_type::ColumnType, argument::Argument, table::TableReader};
+use crate::lang::{table::ColumnType, argument::Argument, table::TableReader};
 use crate::lib::command_util::find_field_from_str;
 use crate::stream::{Readable};
 use crate::lib::parse_util::single_argument_integer;

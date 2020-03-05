@@ -4,12 +4,12 @@ use crate::{
     errors::argument_error,
     lang::{
         argument::Argument,
-        row::Row,
+        table::Row,
         value::Value,
     },
     stream::OutputStream,
     replace::Replace,
-    lang::column_type::ColumnType,
+    lang::table::ColumnType,
     errors::CrushResult,
 };
 use crate::lib::command_util::find_field;

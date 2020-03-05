@@ -2,7 +2,7 @@ use crate::lang::command::ExecutionContext;
 use crate::{
     lang::{
         argument::Argument,
-        row::Row,
+        table::Row,
         value_type::ValueType,
         value::Value,
     },

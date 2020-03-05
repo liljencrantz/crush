@@ -4,8 +4,8 @@ use crate::{
     errors::argument_error,
     lang::{
         argument::Argument,
-        row::Row,
-        column_type::ColumnType,
+        table::Row,
+        table::ColumnType,
         value_type::ValueType,
         value::Value,
     },

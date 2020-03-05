@@ -1,11 +1,9 @@
 pub mod value;
 pub mod value_definition;
 pub mod value_type;
-pub mod row;
 pub mod table;
 pub mod argument;
 pub mod call_definition;
-pub mod column_type;
 pub mod list;
 pub mod dict;
 pub mod binary;

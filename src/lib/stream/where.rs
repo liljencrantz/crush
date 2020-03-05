@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use crate::{
     lang::{
         value::Value,
-        row::Row,
+        table::Row,
     },
     stream::{OutputStream}
 };
@@ -11,7 +11,7 @@ use crate::lang::command::ExecutionContext;
 use crate::errors::{error, CrushResult, argument_error};
 use crate::printer::Printer;
 use crate::stream::{Readable, empty_channel, channels};
-use crate::lang::{table::TableReader, column_type::ColumnType, argument::Argument};
+use crate::lang::{table::TableReader, table::ColumnType, argument::Argument};
 use crate::lang::closure::Closure;
 use crate::stream_printer::spawn_print_thread;
 use crate::scope::Scope;

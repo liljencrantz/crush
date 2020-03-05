@@ -2,10 +2,10 @@ use crate::lang::command::ExecutionContext;
 use crate::errors::{CrushResult, error};
 use crate::{
     lang::{
-        row::Row,
+        table::Row,
         value_type::ValueType,
         value::Value,
-        column_type::ColumnType,
+        table::ColumnType,
         table::TableReader,
     }
 };

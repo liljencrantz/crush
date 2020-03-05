@@ -4,10 +4,10 @@ use crate::{
     errors::argument_error,
     lang::{
         argument::Argument,
-        row::Row,
+        table::Row,
     },
 };
-use crate::lang::{value::Value, column_type::ColumnType, table::TableReader};
+use crate::lang::{value::Value, table::ColumnType, table::TableReader};
 use crate::errors::{CrushResult, error};
 use crate::lib::command_util::find_field;
 use crate::stream::{Readable, OutputStream};
