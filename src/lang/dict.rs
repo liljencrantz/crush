@@ -1,4 +1,4 @@
-use crate::lang::{value_type::ValueType, value::Value, table::ColumnType, table::Row};
+use crate::lang::{value::ValueType, value::Value, table::ColumnType, table::Row};
 use crate::errors::{CrushResult, mandate, error};
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};

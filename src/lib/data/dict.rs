@@ -1,6 +1,6 @@
 use crate::lang::command::ExecutionContext;
 use crate::errors::{CrushResult, argument_error};
-use crate::lang::{value_type::ValueType, dict::Dict, command::SimpleCommand};
+use crate::lang::{value::ValueType, dict::Dict, command::SimpleCommand};
 use crate::lang::table::Row;
 use crate::lang::value::Value;
 use crate::lang::table::ColumnType;

@@ -1,6 +1,4 @@
 pub mod value;
-pub mod value_definition;
-pub mod value_type;
 pub mod table;
 pub mod argument;
 pub mod call_definition;

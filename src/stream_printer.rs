@@ -5,7 +5,7 @@ use crate::lang::table::TableStream;
 use crate::lang::table::Table;
 use crate::lang::value::Value;
 use crate::lang::value::Alignment;
-use crate::lang::value_type::ValueType;
+use crate::lang::value::ValueType;
 use crate::lang::table::ColumnType;
 use crate::lang::table::Row;
 use crate::lang::binary::BinaryReader;

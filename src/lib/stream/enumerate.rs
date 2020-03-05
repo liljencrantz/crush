@@ -1,6 +1,6 @@
 use crate::lang::command::ExecutionContext;
 use crate::errors::{CrushResult, error};
-use crate::lang::{value_type::ValueType, table::TableReader, table::Row, value::Value};
+use crate::lang::{value::ValueType, table::TableReader, table::Row, value::Value};
 use crate::stream::{Readable, ValueSender};
 use crate::lang::table::ColumnType;
 

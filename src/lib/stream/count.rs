@@ -3,7 +3,7 @@ use crate::errors::{CrushResult, error};
 use crate::{
     lang::{
         table::Row,
-        value_type::ValueType,
+        value::ValueType,
         value::Value,
         table::ColumnType,
         table::TableReader,

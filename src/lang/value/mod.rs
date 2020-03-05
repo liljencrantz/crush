@@ -1,3 +1,6 @@
+mod value_definition;
+mod value_type;
+
 use std::cmp::Ordering;
 use std::hash::Hasher;
 use std::path::Path;
@@ -13,7 +16,7 @@ use crate::{
     errors::{error, CrushError, to_crush_error},
     glob::Glob,
 };
-use crate::lang::{list::List, command::SimpleCommand, command::ConditionCommand, table::TableStream, value_type::ValueType, dict::Dict, table::ColumnType, binary::BinaryReader, table::TableReader, list::ListReader, dict::DictReader, table::Row};
+use crate::lang::{list::List, command::SimpleCommand, command::ConditionCommand, table::TableStream, dict::Dict, table::ColumnType, binary::BinaryReader, table::TableReader, list::ListReader, dict::DictReader, table::Row};
 use crate::errors::{CrushResult, argument_error};
 use chrono::Duration;
 use crate::time_util::duration_format;
@@ -22,6 +25,9 @@ use crate::lang::r#struct::Struct;
 use crate::stream::{streams, Readable};
 use std::io::{Read, Error};
 use std::convert::TryFrom;
+
+pub use value_type::ValueType;
+pub use value_definition::ValueDefinition;
 
 #[derive(Debug)]
 pub enum Value {

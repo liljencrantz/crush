@@ -1,7 +1,7 @@
 use crate::errors::{parse_error, argument_error, CrushResult};
 use crate::lang::job::Job;
 use crate::lang::lexer::{Lexer, TokenType};
-use crate::lang::{value_definition::ValueDefinition, argument::ArgumentDefinition};
+use crate::lang::{value::ValueDefinition, argument::ArgumentDefinition};
 use crate::lang::call_definition::CallDefinition;
 use std::error::Error;
 

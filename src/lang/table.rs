@@ -2,7 +2,7 @@ use crate::lang::{value::Value, r#struct::Struct};
 use crate::errors::{CrushError, error, CrushResult};
 use crate::stream::{Readable, InputStream};
 use crate::replace::Replace;
-use crate::lang::value_type::ValueType;
+use crate::lang::value::ValueType;
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub struct Table {

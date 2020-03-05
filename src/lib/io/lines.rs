@@ -6,7 +6,7 @@ use crate::{
         argument::Argument,
         table::Row,
         table::ColumnType,
-        value_type::ValueType,
+        value::ValueType,
         value::Value,
     },
     stream::OutputStream,

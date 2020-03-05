@@ -1,6 +1,6 @@
 use crate::scope::Scope;
 use crate::errors::{CrushResult, argument_error, to_crush_error};
-use crate::lang::{value::Value, command::SimpleCommand, list::List, value_type::ValueType, command::ConditionCommand, command::ExecutionContext, binary::BinaryReader};
+use crate::lang::{value::Value, command::SimpleCommand, list::List, value::ValueType, command::ConditionCommand, command::ExecutionContext, binary::BinaryReader};
 use std::env;
 
 mod r#if;

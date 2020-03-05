@@ -1,6 +1,6 @@
 use crate::lang::{command::ExecutionContext, table::ColumnType, argument::Argument};
 use crate::errors::{CrushResult, argument_error};
-use crate::lang::{value::Value, command::SimpleCommand, value_type::ValueType};
+use crate::lang::{value::Value, command::SimpleCommand, value::ValueType};
 use crate::scope::Scope;
 use crate::lib::parse_util::{single_argument_type, single_argument_list, two_arguments};
 

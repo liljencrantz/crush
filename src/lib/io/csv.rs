@@ -3,7 +3,7 @@ use crate::{
     lang::{
         argument::Argument,
         table::Row,
-        value_type::ValueType,
+        value::ValueType,
         value::Value,
     },
     stream::OutputStream,
