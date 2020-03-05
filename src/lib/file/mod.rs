@@ -1,4 +1,4 @@
-use crate::scope::Scope;
+use crate::lang::scope::Scope;
 use crate::errors::CrushResult;
 use crate::lang::{value::Value, command::SimpleCommand};
 

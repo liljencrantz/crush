@@ -4,7 +4,7 @@ use crate::lang::{value::ValueType, list::List, command::SimpleCommand};
 use crate::lang::value::Value;
 use std::collections::HashSet;
 use crate::lib::parse_util::{single_argument_list, single_argument_type, two_arguments, three_arguments};
-use crate::scope::Scope;
+use crate::lang::scope::Scope;
 
 fn of(mut context: ExecutionContext) -> CrushResult<()> {
     if context.arguments.len() == 0 {

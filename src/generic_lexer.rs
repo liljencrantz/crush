@@ -2,7 +2,7 @@ use regex::Regex;
 use std::collections::HashSet;
 use std::hash::Hash;
 
-pub struct BaseLexer<T: 'static + Copy + Clone> {
+pub struct GenericLexer<T: 'static + Copy + Clone> {
     input: String,
     idx: usize,
     peeked: Option<(T, usize, usize)>,
@@ -12,9 +12,9 @@ pub struct BaseLexer<T: 'static + Copy + Clone> {
     ignored: &'static HashSet<T>,
 }
 
-impl<T: 'static + Copy + Clone + Eq + Hash> BaseLexer<T> {
-    pub fn construct(input: &str, lex_data: &'static Vec<(T, Regex)>, error_type: T, eof_type: T, ignored: &'static HashSet<T>) -> BaseLexer<T> {
-        return BaseLexer {
+impl<T: 'static + Copy + Clone + Eq + Hash> GenericLexer<T> {
+    pub fn construct(input: &str, lex_data: &'static Vec<(T, Regex)>, error_type: T, eof_type: T, ignored: &'static HashSet<T>) -> GenericLexer<T> {
+        return GenericLexer {
             input: input.to_string(),
             idx: 0,
             peeked: None,

@@ -4,12 +4,10 @@ mod glob;
 mod stream;
 mod lang;
 mod lib;
-mod scope;
-mod base_lexer;
+mod generic_lexer;
 mod printer;
 mod stream_printer;
-mod time_util;
-mod thread_util;
+mod util;
 
 use crate::lang::lexer::Lexer;
 
@@ -23,7 +21,7 @@ use std::error::Error;
 use crate::printer::Printer;
 use crate::stream::empty_channel;
 use crate::stream_printer::spawn_print_thread;
-use crate::scope::home;
+use crate::util::file::home;
 use std::path::Path;
 use std::fs;
 use crate::lang::parser::parse;
@@ -37,7 +35,7 @@ fn crush_history_file() -> Box<str> {
             .unwrap_or(".crush_history"))
 }
 
-fn run_interactive(global_env: scope::Scope, printer: &Printer) -> CrushResult<()> {
+fn run_interactive(global_env: lang::scope::Scope, printer: &Printer) -> CrushResult<()> {
     let mut rl = Editor::<()>::new();
     rl.load_history(crush_history_file().as_ref());
     loop {
@@ -88,7 +86,7 @@ fn run_interactive(global_env: scope::Scope, printer: &Printer) -> CrushResult<(
 }
 
 
-fn run_script(global_env: scope::Scope, printer: &Printer, filename: &str) -> CrushResult<()> {
+fn run_script(global_env: lang::scope::Scope, printer: &Printer, filename: &str) -> CrushResult<()> {
     let cmd = to_crush_error(fs::read_to_string(filename))?;
     match parse(&mut Lexer::new(&cmd)) {
         Ok(jobs) => {
@@ -110,7 +108,7 @@ fn run_script(global_env: scope::Scope, printer: &Printer, filename: &str) -> Cr
 }
 
 fn run() -> CrushResult<()> {
-    let global_env = scope::Scope::new();
+    let global_env = lang::scope::Scope::new();
     let (printer, printer_handle) = Printer::new();
 
     declare(&global_env)?;

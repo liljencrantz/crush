@@ -3,7 +3,7 @@ use crate::{
     lang::value::Value,
 };
 use crate::printer::Printer;
-use crate::scope::Scope;
+use crate::lang::scope::Scope;
 use crate::lang::{table::TableStream, table::TableReader, list::ListReader, r#struct::Struct, dict::DictReader, command::CrushCommand};
 use crate::errors::{argument_error, CrushResult};
 use crate::lang::command::Closure;

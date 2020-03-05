@@ -11,7 +11,7 @@ use regex::Regex;
 
 use crate::{
     lang::command::Closure,
-    scope::cwd,
+    util::file::cwd,
     lang::table::Table,
     errors::{error, CrushError, to_crush_error},
     glob::Glob,
@@ -19,8 +19,8 @@ use crate::{
 use crate::lang::{list::List, command::SimpleCommand, command::ConditionCommand, table::TableStream, dict::Dict, table::ColumnType, binary::BinaryReader, table::TableReader, list::ListReader, dict::DictReader, table::Row};
 use crate::errors::{CrushResult, argument_error};
 use chrono::Duration;
-use crate::time_util::duration_format;
-use crate::scope::Scope;
+use crate::util::time::duration_format;
+use crate::lang::scope::Scope;
 use crate::lang::r#struct::Struct;
 use crate::stream::{streams, Readable};
 use std::io::{Read, Error};

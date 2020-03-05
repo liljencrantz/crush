@@ -4,7 +4,7 @@ use crate::errors::{CrushResult, argument_error, mandate, error};
 use crate::lib::command_util::{find_field, find_field_from_str};
 use crate::printer::Printer;
 use crossbeam::{Receiver, bounded, unbounded, Sender};
-use crate::thread_util::{handle, build};
+use crate::util::thread::{handle, build};
 
 struct Aggregation {
     idx: usize,

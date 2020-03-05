@@ -18,7 +18,7 @@ use crate::errors::error;
 use crate::lang::{r#struct::Struct, table::TableReader};
 use crate::lang::command::Closure;
 use crate::printer::Printer;
-use crate::scope::Scope;
+use crate::lang::scope::Scope;
 
 enum Location {
     Replace(usize),

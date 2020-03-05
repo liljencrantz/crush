@@ -1,6 +1,6 @@
 use crate::lang::command::ExecutionContext;
 use crate::errors::{CrushResult, argument_error};
-use crate::scope::Scope;
+use crate::lang::scope::Scope;
 use crate::lang::{value::Value, command::SimpleCommand};
 use chrono::Duration;
 

@@ -10,4 +10,5 @@ pub mod job;
 pub mod parser;
 pub mod lexer;
 pub mod r#struct;
+pub mod scope;
 

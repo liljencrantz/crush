@@ -12,7 +12,7 @@ enum PrinterMessage {
 
 use crate::printer::PrinterMessage::*;
 use crate::lang::job::JobJoinHandle;
-use crate::thread_util::{handle, build};
+use crate::util::thread::{handle, build};
 use std::thread::JoinHandle;
 
 #[derive(Clone)]

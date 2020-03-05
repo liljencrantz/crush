@@ -14,7 +14,7 @@ use crate::stream::{Readable, empty_channel, channels};
 use crate::lang::{table::TableReader, table::ColumnType, argument::Argument};
 use crate::lang::command::Closure;
 use crate::stream_printer::spawn_print_thread;
-use crate::scope::Scope;
+use crate::lang::scope::Scope;
 use crate::lang::command::CrushCommand;
 
 pub struct Config<T: Readable> {

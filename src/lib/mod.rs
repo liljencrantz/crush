@@ -18,7 +18,7 @@ mod control;
 mod constants;
 
 use crate::{
-    scope::Scope,
+    lang::scope::Scope,
     lang::{
         argument::Argument,
         command::SimpleCommand,

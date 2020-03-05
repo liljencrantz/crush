@@ -1,10 +1,10 @@
 use crate::lang::{command::ExecutionContext, job::JobJoinHandle, command::SimpleCommand, command::Closure, value::ValueDefinition, value::ValueType};
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, value::Value};
-use crate::scope::Scope;
+use crate::lang::scope::Scope;
 use crate::errors::{error, CrushResult};
 use crate::printer::Printer;
 use crate::stream::{ValueReceiver, ValueSender, InputStream};
-use crate::thread_util::{handle, build};
+use crate::util::thread::{handle, build};
 use std::ops::Deref;
 use crate::lang::command::CrushCommand;
 use std::path::Path;

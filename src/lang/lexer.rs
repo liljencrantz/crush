@@ -3,7 +3,7 @@ use std::clone::Clone;
 use lazy_static::lazy_static;
 use std::collections::HashSet;
 use std::hash::Hash;
-use crate::base_lexer::BaseLexer;
+use crate::generic_lexer::GenericLexer;
 
 
 #[derive(Clone)]
@@ -31,11 +31,11 @@ pub enum TokenType {
     EOF,
 }
 
-pub type Lexer = BaseLexer<TokenType>;
+pub type Lexer = GenericLexer<TokenType>;
 
 impl Lexer {
     pub fn new(input: &str, ) -> Lexer {
-        return BaseLexer::construct(
+        return GenericLexer::construct(
             input,
             &LEX_DATA,
             TokenType::Error,

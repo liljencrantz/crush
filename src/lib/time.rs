@@ -1,7 +1,7 @@
 use crate::lang::command::ExecutionContext;
 use crate::errors::{CrushResult, argument_error, to_crush_error};
 use crate::lang::{value::Value, command::SimpleCommand, value::ValueType};
-use crate::scope::Scope;
+use crate::lang::scope::Scope;
 use chrono::{Local, Duration, DateTime, Datelike, Timelike};
 use crate::lib::parse_util::single_argument_text;
 use time::{strptime, Tm};

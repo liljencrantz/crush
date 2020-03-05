@@ -1,7 +1,7 @@
 use crate::lang::command::ExecutionContext;
 use crate::errors::{CrushResult, argument_error};
 use crate::lang::{command::SimpleCommand, value::Value};
-use crate::scope::Scope;
+use crate::lang::scope::Scope;
 use std::cmp::Ordering;
 
 fn gt(mut context: ExecutionContext) -> CrushResult<()> {

@@ -1,4 +1,4 @@
-use crate::scope::Scope;
+use crate::lang::scope::Scope;
 use crate::errors::{CrushResult, argument_error};
 use crate::lang::{value::Value, command::SimpleCommand, command::ExecutionContext};
 use crate::lib::parse_util::single_argument_text;

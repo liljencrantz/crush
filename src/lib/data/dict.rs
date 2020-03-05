@@ -4,7 +4,7 @@ use crate::lang::{value::ValueType, dict::Dict, command::SimpleCommand};
 use crate::lang::table::Row;
 use crate::lang::value::Value;
 use crate::lang::table::ColumnType;
-use crate::scope::Scope;
+use crate::lang::scope::Scope;
 use crate::lib::parse_util::single_argument_dict;
 
 fn new(mut context: ExecutionContext) -> CrushResult<()> {

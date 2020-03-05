@@ -7,7 +7,7 @@ use crate::{
     printer::Printer,
     glob::Glob,
     errors::{error, mandate, CrushResult, argument_error, to_crush_error},
-    scope::Scope,
+    lang::scope::Scope,
     lang::value::Value,
     lang::job::JobJoinHandle,
     lang::command::Closure,
