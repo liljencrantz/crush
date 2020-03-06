@@ -97,7 +97,7 @@ impl Value {
         };
     }
 
-    pub fn empty_stream() -> Value {
+    pub fn empty_table_stream() -> Value {
         let (_s, r) = streams(vec![]);
         Value::TableStream(r)
     }

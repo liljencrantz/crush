@@ -47,7 +47,7 @@ pub fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> CrushResu
 
 pub fn run(
     config: Config,
-    mut input: impl Readable,
+    input: &mut dyn Readable,
     output: OutputStream,
 ) -> CrushResult<()> {
     let mut groups: HashMap<Value, OutputStream> = HashMap::new();
@@ -77,8 +77,8 @@ pub fn run(
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    match context.input.recv()? {
-        Value::TableStream(input) => {
+    match context.input.recv()?.readable() {
+        Some(mut input) => {
             let config = parse(input.types().clone(), context.arguments)?;
             let output_type= vec![
                 input.types()[config.column].clone(),
@@ -88,21 +88,8 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
                 }
             ];
             let output = context.output.initialize(output_type)?;
-            run(config, input, output)
+            run(config, input.as_mut(), output)
         }
-        Value::Table(r) => {
-            let input = TableReader::new(r);
-            let config = parse(input.types().clone(), context.arguments)?;
-            let output_type= vec![
-                input.types()[config.column].clone(),
-                ColumnType {
-                    name: Some(config.name.clone()),
-                    cell_type: ValueType::TableStream(input.types().clone())
-                }
-            ];
-            let output = context.output.initialize(output_type)?;
-            run(config, input, output)
-        }
-        _ => error("Expected a stream"),
+        None => error("Expected a stream"),
     }
 }

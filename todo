@@ -6,6 +6,8 @@ Some kind of pattern matching syntax
 Add list.insert command
 Add dict.clear command
 Add dict.clone command
+Add reject command that removes specified columns
+Add avg command
 use command is b0rked
 Figure out reading non-streams
 Make lists and dicts streamable

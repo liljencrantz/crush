@@ -11,6 +11,7 @@ mod r#type;
 mod time;
 mod math;
 mod comp;
+mod cond;
 mod stream;
 mod data;
 mod text;
@@ -37,6 +38,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     time::declare(root)?;
     math::declare(root)?;
     comp::declare(root)?;
+    cond::declare(root)?;
     file::declare(root)?;
     var::declare(root)?;
     stream::declare(root)?;

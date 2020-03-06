@@ -51,7 +51,6 @@ fn insert_entity(
         }
     };
 
-
     output.send(Row ::new(vec![
         users.get_name(meta.uid()),
         Value::Integer(i128::from(meta.len())),

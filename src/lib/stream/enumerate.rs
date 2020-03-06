@@ -4,7 +4,7 @@ use crate::lang::{value::ValueType, table::TableReader, table::Row, value::Value
 use crate::lang::stream::{Readable, ValueSender};
 use crate::lang::table::ColumnType;
 
-pub fn run(mut input: impl Readable, sender: ValueSender) -> CrushResult<()> {
+pub fn run(input: &mut dyn Readable, sender: ValueSender) -> CrushResult<()> {
     let mut output_type = vec![ColumnType::named("idx", ValueType::Integer)];
     output_type.extend(input.types().clone());
     let output = sender.initialize(output_type)?;
@@ -25,9 +25,8 @@ pub fn run(mut input: impl Readable, sender: ValueSender) -> CrushResult<()> {
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    match context.input.recv()? {
-        Value::TableStream(s) => run(s, context.output),
-        Value::Table(r) => run(TableReader::new(r), context.output),
-        _ => error("Expected a stream"),
+    match context.input.recv()?.readable() {
+        Some(mut r) => run(r.as_mut(), context.output),
+        None => error("Expected a stream"),
     }
 }

@@ -12,7 +12,7 @@ use crate::lib::parse_util::{optional_argument_integer};
 
 pub fn run(
     lines: i128,
-    mut input: impl Readable,
+    input: &mut dyn Readable,
     sender: ValueSender,
 ) -> CrushResult<()> {
     let output = sender.initialize(input.types().clone())?;
@@ -34,9 +34,8 @@ pub fn run(
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     let lines = optional_argument_integer(context.arguments)?.unwrap_or(10);
-    match context.input.recv()? {
-        Value::TableStream(s) => run(lines, s, context.output),
-        Value::Table(r) => run(lines, TableReader::new(r), context.output),
-        _ => error("Expected a stream"),
+    match context.input.recv()?.readable() {
+        Some(mut r) => run(lines, r.as_mut(), context.output),
+        None => error("Expected a stream"),
     }
 }

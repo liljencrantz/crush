@@ -9,28 +9,36 @@ use crate::lang::errors::{CrushResult, error};
 use crate::lib::command_util::find_field;
 use crate::lang::stream::Readable;
 use crate::lib::parse_util::single_argument_field;
+use crate::lang::table::ColumnType;
 
-pub struct Config<T: Readable> {
+pub struct Config {
     sort_column_idx: usize,
-    input: T,
-    output: OutputStream,
 }
 
-fn parse<T: Readable>(
+fn parse(
     arguments: Vec<Argument>,
-    input: T,
-    output: OutputStream) -> CrushResult<Config<T>> {
-    let sort_column_idx = find_field(&single_argument_field(arguments)?, input.types())?;
-    if !input.types()[sort_column_idx].cell_type.is_comparable() {
+    types: &Vec<ColumnType>) -> CrushResult<Config> {
+    let sort_column_idx =
+        match arguments.len() {
+            0 => {
+                if types.len() != 1 {
+                    return argument_error("No sort key specified")
+                }
+                0
+            }
+            1 => find_field(&single_argument_field(arguments)?, types)?,
+            _ => return argument_error("Too many arguments")
+        };
+    if !types[sort_column_idx].cell_type.is_comparable() {
         return argument_error("Bad comparison key");
     }
-    Ok(Config { sort_column_idx, input, output })
+    Ok(Config { sort_column_idx})
 }
 
-pub fn run<T: Readable>(mut config: Config<T>) -> CrushResult<()> {
+pub fn run(config: Config, input: &mut dyn Readable, output: OutputStream) -> CrushResult<()> {
     let mut res: Vec<Row> = Vec::new();
     loop {
-        match config.input.read() {
+        match input.read() {
             Ok(row) => res.push(row),
             Err(_) => break,
         }
@@ -42,25 +50,19 @@ pub fn run<T: Readable>(mut config: Config<T>) -> CrushResult<()> {
             .expect("OH NO!"));
 
     for row in res {
-        config.output.send(row)?;
+        output.send(row)?;
     }
 
     return Ok(());
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    match context.input.recv()? {
-        Value::TableStream(input) => {
+    match context.input.recv()?.readable() {
+        Some(mut input) => {
             let output = context.output.initialize(input.types().clone())?;
-            let config = parse(context.arguments, input, output)?;
-            run(config)
+            let config = parse(context.arguments, input.types())?;
+            run(config, input.as_mut(), output)
         }
-        Value::Table(r) => {
-            let input = TableReader::new(r);
-            let output = context.output.initialize(input.types().clone())?;
-            let mut config = parse(context.arguments, input, output)?;
-            run(config)
-        }
-        _ => error("Expected a stream"),
+        None => error("Expected a stream"),
     }
 }

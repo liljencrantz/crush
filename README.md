@@ -36,11 +36,11 @@ Crush does not have user defined types, but it does have a rich set of built in 
 * commands, which are either closures or built in commands.
 
 
-Expressive language with static scoping rules and true closures
+Expressive language with static scoping rules and true closures:
 
 DEMO CODE GOES HERE
 
-Semi-lazy stream evaluation
+Semi-lazy stream evaluation:
 
 If you assign the output of the find command to a variable like so:
 

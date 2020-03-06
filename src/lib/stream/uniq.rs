@@ -29,7 +29,7 @@ pub fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> CrushRes
 
 pub fn run(
     config: Config,
-    mut input: impl Readable,
+    input: &mut dyn Readable,
     output: OutputStream,
 ) -> CrushResult<()> {
     match config.column {
@@ -66,17 +66,11 @@ pub fn run(
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    match context.input.recv()? {
-        Value::TableStream(input) => {
+    match context.input.recv()?.readable() {
+        Some(mut input) => {
             let config = parse(input.types(), context.arguments)?;
             let output = context.output.initialize(input.types().clone())?;
-            run(config, input, output)
-        }
-        Value::Table(r) => {
-            let input = TableReader::new(r);
-            let config = parse(input.types(), context.arguments)?;
-            let output = context.output.initialize(input.types().clone())?;
-            run(config, input, output)
+            run(config, input.as_mut(), output)
         }
         _ => error("Expected a stream"),
     }

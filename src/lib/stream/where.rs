@@ -10,18 +10,12 @@ use crate::{
 use crate::lang::command::ExecutionContext;
 use crate::lang::errors::{error, CrushResult, argument_error};
 use crate::lang::printer::Printer;
-use crate::lang::stream::{Readable, empty_channel, channels};
+use crate::lang::stream::{Readable, empty_channel, channels, ValueSender};
 use crate::lang::{table::TableReader, table::ColumnType, argument::Argument};
 use crate::lang::command::Closure;
 use crate::lang::stream_printer::spawn_print_thread;
 use crate::lang::scope::Scope;
 use crate::lang::command::CrushCommand;
-
-pub struct Config<T: Readable> {
-    condition: Closure,
-    input: T,
-    output: OutputStream,
-}
 
 fn evaluate(condition: &Closure, row: &Row, input_type: &Vec<ColumnType>, env: &Scope, printer: &Printer) -> CrushResult<bool> {
     let arguments = row.clone().into_vec()
@@ -51,12 +45,12 @@ fn evaluate(condition: &Closure, row: &Row, input_type: &Vec<ColumnType>, env: &
     }
 }
 
-pub fn run<T: Readable>(mut config: Config<T>, env: Scope, printer: Printer) -> CrushResult<()> {
+pub fn run(mut condition: &Closure, input: &mut dyn Readable, output: OutputStream, env: Scope, printer: Printer) -> CrushResult<()> {
     loop {
-        match config.input.read() {
+        match input.read() {
             Ok(row) => {
-                match evaluate(&config.condition, &row, config.input.types(), &env, &printer) {
-                    Ok(val) => if val { if config.output.send(row).is_err() { break }},
+                match evaluate(condition, &row, input.types(), &env, &printer) {
+                    Ok(val) => if val { if output.send(row).is_err() { break }},
                     Err(e) => printer.job_error(e),
                 }
             }
@@ -75,26 +69,15 @@ pub fn parse(_input_type: &Vec<ColumnType>,
 }
 
 pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
-    match context.input.recv()? {
-        Value::TableStream(input) => {
+    match context.input.recv()?.readable() {
+        Some(mut input) => {
             let output = context.output.initialize(input.types().clone())?;
-            let config = Config {
-                condition: parse(input.types(), context.arguments.as_mut())?,
-                input,
+            run(&parse(input.types(), context.arguments.as_mut())?,
+                input.as_mut(),
                 output,
-            };
-            run(config, context.env, context.printer)
+                context.env,
+                context.printer)
         }
-        Value::Table(r) => {
-            let input = TableReader::new(r);
-            let output = context.output.initialize(input.types().clone())?;
-            let config = Config {
-                condition: parse(input.types(), context.arguments.as_mut())?,
-                input: input,
-                output: output,
-            };
-            run(config, context.env, context.printer)
-        }
-        _ => error("Expected a stream"),
+        None => error("Expected a stream"),
     }
 }

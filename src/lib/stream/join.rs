@@ -115,7 +115,7 @@ fn combine(mut l: Row, mut r: Row, cfg: &Config) -> Row {
     return l;
 }
 
-fn do_join(cfg: &Config, l: &mut impl Readable, r: &mut impl Readable, output: &OutputStream) -> CrushResult<()> {
+fn do_join(cfg: &Config, l: &mut dyn Readable, r: &mut dyn Readable, output: &OutputStream) -> CrushResult<()> {
     let mut l_data: HashMap<Value, Row> = HashMap::new();
     loop {
         match l.read() {
@@ -147,18 +147,9 @@ pub fn run(
     output: OutputStream,
 ) -> CrushResult<()> {
     let mut v = row.into_vec();
-    match (v.replace(config.left_table_idx, Value::Integer(0)), v.replace(config.right_table_idx, Value::Integer(0))) {
-        (Value::TableStream(mut l), Value::TableStream(mut r)) => {
-            do_join(&config, &mut l, &mut r, &output)?;
-        }
-        (Value::Table(mut l), Value::Table(mut r)) => {
-            do_join(&config, &mut l.reader(), &mut r.reader(), &output)?;
-        }
-        (Value::TableStream(mut l), Value::Table(mut r)) => {
-            do_join(&config, &mut l, &mut r.reader(), &output)?;
-        }
-        (Value::Table(mut l), Value::TableStream(mut r)) => {
-            do_join(&config, &mut l.reader(), &mut r, &output)?;
+    match (v.replace(config.left_table_idx, Value::Integer(0)).readable(), v.replace(config.right_table_idx, Value::Integer(0)).readable()) {
+        (Some(mut l), Some(mut r)) => {
+            do_join(&config, l.as_mut(), r.as_mut(), &output)?;
         }
         _ => panic!("Wrong row format"),
     }

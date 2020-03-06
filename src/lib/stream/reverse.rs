@@ -8,7 +8,7 @@ use crate::lang::{value::Value, table::TableReader};
 use crate::lang::stream::{Readable, ValueSender};
 
 pub fn run(
-    mut input: impl Readable,
+    input: &mut dyn Readable,
     sender: ValueSender,
 ) -> CrushResult<()> {
     let output = sender.initialize(input.types().clone())?;
@@ -33,9 +33,8 @@ pub fn run(
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    match context.input.recv()? {
-        Value::TableStream(s) => run(s, context.output),
-        Value::Table(r) => run(TableReader::new(r), context.output),
-        _ => error("Expected a stream"),
+    match context.input.recv()?.readable() {
+        Some(mut input) => run(input.as_mut(), context.output),
+        None => error("Expected a stream"),
     }
 }
