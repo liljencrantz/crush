@@ -10,7 +10,7 @@ mod r#use;
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("var")?;
-    root.uses(&env);
+    root.r#use(&env);
     env.declare_str("let", Value::Command(SimpleCommand::new(r#let::perform, false)))?;
     env.declare_str("set", Value::Command(SimpleCommand::new(set::perform, false)))?;
     env.declare_str("unset", Value::Command(SimpleCommand::new(unset::perform, false)))?;

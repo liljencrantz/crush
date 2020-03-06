@@ -77,7 +77,7 @@ fn kill(context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("proc")?;
-    root.uses(&env);
+    root.r#use(&env);
     env.declare_str("ps", Value::Command(SimpleCommand::new(ps, true)))?;
     env.declare_str("kill", Value::Command(SimpleCommand::new(kill, false)))?;
     env.readonly();

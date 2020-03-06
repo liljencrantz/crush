@@ -9,7 +9,7 @@ mod pwd;
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("file")?;
-    root.uses(&env);
+    root.r#use(&env);
     env.declare_str("ls", Value::Command(SimpleCommand::new(find::perform_ls, true)))?;
     env.declare_str("find", Value::Command(SimpleCommand::new(find::perform_find, true)))?;
     env.declare_str("stat", Value::Command(SimpleCommand::new(stat::perform, true)))?;

@@ -1,13 +1,14 @@
 use crate::lang::{value::Value, argument::Argument};
 use crate::lang::errors::{argument_error, CrushResult, mandate};
 use crate::lang::command::ExecutionContext;
-use crate::lib::text::format::FormatState::{NORMAL, BRACKET, IDX, NAME};
+use crate::lib::text::format::FormatState::{Normal, OpenBrace, Index, Name, CloseBrace};
 
 enum FormatState {
-    NORMAL,
-    BRACKET,
-    IDX(usize),
-    NAME(String),
+    Normal,
+    OpenBrace,
+    CloseBrace,
+    Index(usize),
+    Name(String),
 }
 
 fn format_argument(res: &mut String, arg: Option<&Argument>) -> CrushResult<()> {
@@ -29,48 +30,63 @@ fn argument_by_name<'a>(name: &str, param: & 'a Vec<Argument>) -> Option<& 'a Ar
 fn do_format(format: &str, param: Vec<Argument>) -> CrushResult<String> {
     let mut implicit_idx = 0;
     let mut res = String::new();
-    let mut state = NORMAL;
+    let mut state = Normal;
     for ch in format.chars() {
         state = match state {
-            NORMAL =>
+            Normal =>
                 match ch {
-                    '{' => BRACKET,
+                    '{' => OpenBrace,
+                    '}' => CloseBrace,
                     _ => {
                         res.push(ch);
-                        NORMAL
+                        Normal
                     }
                 }
 
-            BRACKET =>
+            CloseBrace => {
                 match ch {
+                    '}' => {
+                        res.push('}');
+                        Normal
+                    }
+                    _ => return argument_error("Unmatched closing brace"),
+                }
+            }
+
+            OpenBrace =>
+                match ch {
+                    '{' => {
+                        res.push('{');
+                        Normal
+                    }
                     '}' => {
                         format_argument(&mut res, param.get(implicit_idx))?;
                         implicit_idx += 1;
-                        NORMAL
+                        Normal
                     }
-                    '0'..='9' => IDX(ch.to_digit(10).unwrap() as usize),
-                    'a'..='z' | 'A'..='Z' => NAME(ch.to_string()),
+                    '0'..='9' => Index(ch.to_digit(10).unwrap() as usize),
+                    'a'..='z' | 'A'..='Z' => Name(ch.to_string()),
                     _ => return argument_error("Invalid format string"),
                 }
 
-            IDX(idx) =>
+            Index(idx) =>
                 match ch {
                     '}' => {
                         format_argument(&mut res, param.get(idx))?;
-                        NORMAL
+                        Normal
                     }
-                    '0'..='9' => IDX(idx*10 + ch.to_digit(10).unwrap() as usize),
+                    '0'..='9' => Index(idx*10 + ch.to_digit(10).unwrap() as usize),
                     _ => return argument_error("Invalid format string"),
 
                 }
 
-            NAME(name) =>
+            Name(name) =>
                 match ch {
                     '}' => {
                         format_argument(&mut res, argument_by_name(name.as_str(), &param))?;
-                        NORMAL
+                        Normal
                     }
-                    _ => NAME(name + ch.to_string().as_str()),
+                    _ => Name(name + ch.to_string().as_str()),
                 }
         }
     }

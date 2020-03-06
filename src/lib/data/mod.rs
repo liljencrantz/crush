@@ -21,7 +21,7 @@ fn r#struct(mut context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("data")?;
-    root.uses(&env);
+    root.r#use(&env);
 
     env.declare_str("struct", Value::Command(SimpleCommand::new(r#struct, false)))?;
     env.declare_str("materialize", Value::Command(SimpleCommand::new(materialize, true)))?;

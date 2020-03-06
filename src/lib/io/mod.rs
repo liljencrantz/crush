@@ -26,7 +26,7 @@ fn cat(context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("io")?;
-    root.uses(&env);
+    root.r#use(&env);
     env.declare_str("cat", Value::Command(SimpleCommand::new(cat, true)))?;
     env.declare_str("http", Value::Command(SimpleCommand::new(http::perform, true)))?;
     env.declare_str("lines", Value::Command(SimpleCommand::new(lines::perform, true)))?;

@@ -41,7 +41,7 @@ pub fn cmd(mut context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("control")?;
-    root.uses(&env);
+    root.r#use(&env);
 
     let path = List::new(ValueType::File, vec![]);
     env::var("PATH").map(|v| {

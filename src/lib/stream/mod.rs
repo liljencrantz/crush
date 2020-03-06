@@ -23,7 +23,7 @@ mod seq;
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("stream")?;
-    root.uses(&env);
+    root.r#use(&env);
     env.declare_str("head", Value::Command(SimpleCommand::new(head::perform, true)))?;
     env.declare_str("tail", Value::Command(SimpleCommand::new(tail::perform, true)))?;
     env.declare_str("where", Value::Command(SimpleCommand::new(r#where::perform, true)))?;

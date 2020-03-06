@@ -1,12 +1,9 @@
 mod command_util;
-
-pub mod parse_util;
-
+mod parse_util;
 mod file;
 mod var;
 mod proc;
 mod io;
-
 mod r#type;
 mod time;
 mod math;
@@ -19,17 +16,15 @@ mod control;
 mod constants;
 
 use crate::{
+    lang::argument::Argument,
     lang::scope::Scope,
-    lang::{
-        argument::Argument,
-        command::SimpleCommand,
-        value::Value,
-    },
+    lang::command::SimpleCommand,
+    lang::value::Value,
+    lang::printer::Printer,
+    lang::errors::CrushResult,
+    lang::stream::{ValueReceiver, ValueSender, InputStream}
 };
-use std::thread::{JoinHandle};
-use crate::lang::printer::Printer;
-use crate::lang::errors::CrushResult;
-use crate::lang::stream::{ValueReceiver, ValueSender, InputStream};
+use std::thread::JoinHandle;
 
 pub use control::cmd;
 

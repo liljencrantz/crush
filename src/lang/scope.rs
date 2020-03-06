@@ -5,7 +5,6 @@ use std::sync::{Arc, Mutex};
 use crate::lang::{value::Value, value::ValueType};
 use std::collections::HashMap;
 
-
 /**
   This is where we store variables, including functions.
 
@@ -15,8 +14,8 @@ use std::collections::HashMap;
   The data is protected by an Arc, in order to make sure that it gets deallocated and can be shared
   across threads.
 
-  In order to ensure that there are no deadlocks, we only ever take one mutex at a time. This
-  forces us to manually drop some references and overall write some wonky code.
+  In order to ensure that there are no deadlocks, a given thread will only ever lock one scope at a
+  time. This forces us to manually drop some variables.
 */
 #[derive(Clone)]
 #[derive(Debug)]
@@ -27,16 +26,18 @@ pub struct Scope {
 #[derive(Debug)]
 struct ScopeData {
     /** This is the parent scope used to perform variable name resolution. If a variable lookup
-     fails in the current scope, it proceeds to this scope.*/
-    pub parent_scope: Option<Arc<Mutex<ScopeData>>>,
+     fails in the current scope, it proceeds to this scope. This is usually the scope in which this
+     scope was *created*.
+     */
+    pub parent_scope: Option<Scope>,
     /** This is the scope in which the current scope was called. Since a closure can be called
      from inside any scope, it need not be the same as the parent scope. This scope is the one used
      for break/continue loop control. */
-    pub calling_scope: Option<Arc<Mutex<ScopeData>>>,
+    pub calling_scope: Option<Scope>,
 
-    /** This is a list of scopes that are imported into the current scope. Anything directly inside one
-    of these scopes is also considered part of this scope. */
-    pub uses: Vec<Arc<Mutex<ScopeData>>>,
+    /** This is a list of scopes that are imported into the current scope. Anything directly inside
+    one of these scopes is also considered part of this scope. */
+    pub uses: Vec<Scope>,
 
     /** The actual data of this scope. */
     pub mapping: HashMap<String, Value>,
@@ -44,18 +45,20 @@ struct ScopeData {
     /** True if this scope is a loop. Required to implement the break/continue commands.*/
     pub is_loop: bool,
 
-    /** True if this scope should stop execution, i.e. if the continue or break commands have been called.  */
+    /** True if this scope should stop execution, i.e. if the continue or break commands have been
+    called.  */
     pub is_stopped: bool,
 
-    /** True if this scope can not be further modified. Note that mutable variables in it, e.g. lists can still be modified. */
+    /** True if this scope can not be further modified. Note that mutable variables in it, e.g.
+    lists can still be modified. */
     pub is_readonly: bool,
 }
 
 impl ScopeData {
-    pub fn new(parent_scope: Option<Arc<Mutex<ScopeData>>>, caller: Option<Arc<Mutex<ScopeData>>>, is_loop: bool) -> ScopeData {
+    fn new(parent_scope: Option<Scope>, calling_scope: Option<Scope>, is_loop: bool) -> ScopeData {
         return ScopeData {
             parent_scope,
-            calling_scope: caller,
+            calling_scope,
             is_loop,
             uses: Vec::new(),
             mapping: HashMap::new(),
@@ -75,18 +78,53 @@ impl Scope {
     pub fn create_child(&self, caller: &Scope, is_loop: bool) -> Scope {
         Scope {
             data: Arc::from(Mutex::new(ScopeData::new(
-                Some(self.data.clone()),
-                Some(caller.data.clone()),
+                Some(self.clone()),
+                Some(caller.clone()),
                 is_loop))),
         }
     }
 
-    pub fn do_break(&self) -> bool {
-        do_break(&self.data)
+    pub fn do_continue(&self) -> bool {
+        let data = self.data.lock().unwrap();
+        if data.is_readonly {
+            false
+        } else if data.is_loop {
+            true
+        } else {
+            let caller = data.calling_scope.clone();
+            drop(data);
+            let ok = caller
+                .map(|p| p.do_continue())
+                .unwrap_or(false);
+            if !ok {
+                false
+            } else {
+                self.data.lock().unwrap().is_stopped = true;
+                true
+            }
+        }
     }
 
-    pub fn do_continue(&self) -> bool {
-        do_continue(&self.data)
+    pub fn do_break(&self) -> bool {
+        let mut data = self.data.lock().unwrap();
+        if data.is_readonly {
+            false
+        } else if data.is_loop {
+            data.is_stopped = true;
+            true
+        } else {
+            let caller = data.calling_scope.clone();
+            drop(data);
+            let ok = caller
+                .map(|p| p.do_break())
+                .unwrap_or(false);
+            if !ok {
+                false
+            } else {
+                self.data.lock().unwrap().is_stopped = true;
+                true
+            }
+        }
     }
 
     pub fn is_stopped(&self) -> bool {
@@ -121,7 +159,7 @@ impl Scope {
             data.mapping.insert(name[0].to_string(), value);
             Ok(())
         } else {
-            match get_from_data(&self.data, name[0].as_ref()) {
+            match self.get_from_data(name[0].as_ref()) {
                 None => error("Not a namespace"),
                 Some(Value::Scope(env)) => env.declare(&name[1..name.len()], value),
                 _ => error("Unknown namespace"),
@@ -139,12 +177,34 @@ impl Scope {
             return error("Empty variable name");
         }
         if name.len() == 1 {
-            set_on_data(&self.data, name[0].as_ref(), value)
+            self.set_on_data(name[0].as_ref(), value)
         } else {
-            match get_from_data(&self.data, name[0].as_ref()) {
+            match self.get_from_data(name[0].as_ref()) {
                 None => error("Not a namespace"),
                 Some(Value::Scope(env)) => env.set(&name[1..name.len()], value),
                 _ => error("Unknown namespace"),
+            }
+        }
+    }
+
+    fn set_on_data(&self, name: &str, value: Value) -> CrushResult<()> {
+        let mut data = self.data.lock().unwrap();
+        if !data.mapping.contains_key(name) {
+            match data.parent_scope.clone() {
+                Some(p) => {
+                    drop(data);
+                    p.set_on_data(name, value)
+                }
+                None => error(format!("Unknown variable ${{{}}}", name).as_str()),
+            }
+        } else {
+            if data.is_readonly {
+                error("Scope is read only")
+            } else if data.mapping[name].value_type() != value.value_type() {
+                error(format!("Type mismatch when reassigning variable ${{{}}}. Use `unset ${{{}}}` to remove old variable.", name, name).as_str())
+            } else {
+                data.mapping.insert(name.to_string(), value);
+                Ok(())
             }
         }
     }
@@ -159,13 +219,31 @@ impl Scope {
             return None;
         }
         if name.len() == 1 {
-            remove_from_data(&self.data, name[0].as_ref())
+            self.remove_here(name[0].as_ref())
         } else {
-            match get_from_data(&self.data, name[0].as_ref()) {
+            match self.get_from_data(name[0].as_ref()) {
                 None => None,
                 Some(Value::Scope(env)) => env.remove(&name[1..name.len()]),
                 _ => None,
             }
+        }
+    }
+
+    fn remove_here(&self, key: &str) -> Option<Value> {
+        let mut data = self.data.lock().unwrap();
+        if !data.mapping.contains_key(key) {
+            match data.parent_scope.clone() {
+                Some(p) => {
+                    drop(data);
+                    p.remove_here(key)
+                }
+                None => None,
+            }
+        } else {
+            if data.is_readonly {
+                return None;
+            }
+            data.mapping.remove(key)
         }
     }
 
@@ -179,9 +257,9 @@ impl Scope {
             return None;
         }
         if name.len() == 1 {
-            get_from_data(&self.data, name[0].as_ref())
+            self.get_from_data(name[0].as_ref())
         } else {
-            match get_from_data(&self.data, name[0].as_ref()) {
+            match self.get_from_data(name[0].as_ref()) {
                 None => None,
                 Some(Value::Scope(env)) => env.get(&name[1..name.len()]),
                 _ => None,
@@ -189,8 +267,8 @@ impl Scope {
         }
     }
 
-    pub fn uses(&self, other: &Scope) {
-        self.data.lock().unwrap().uses.push(other.data.clone());
+    pub fn r#use(&self, other: &Scope) {
+        self.data.lock().unwrap().uses.push(other.clone());
     }
 
     fn get_location(&self, name: &[Box<str>]) -> Option<(Scope, Vec<Box<str>>)> {
@@ -200,7 +278,7 @@ impl Scope {
         if name.len() == 1 {
             Some((self.clone(), name.to_vec()))
         } else {
-            match get_from_data(&self.data, name[0].as_ref()) {
+            match self.get_from_data(name[0].as_ref()) {
                 None => None,
                 Some(Value::Scope(env)) => env.get_location(&name[1..name.len()]),
                 _ => None,
@@ -208,9 +286,45 @@ impl Scope {
         }
     }
 
-    pub fn dump(&self, map: &mut HashMap<String, ValueType>) {
-        dump_data(&self.data, map);
+    fn get_from_data(&self, name: &str) -> Option<Value> {
+        let data = self.data.lock().unwrap();
+        match data.mapping.get(&name.to_string()) {
+            Some(v) => Some(v.clone()),
+            None => match data.parent_scope.clone() {
+                Some(p) => {
+                    drop(data);
+                    p.get_from_data(name)
+                },
+                None => {
+                    let uses = data.uses.clone();
+                    drop(data);
+                    for used in &uses {
+                        if let Some(res) = used.get_from_data(name) {
+                            return Some(res);
+                        }
+                    }
+                    None
+                }
+            }
+        }
     }
+
+    pub fn dump(&self, map: &mut HashMap<String, ValueType>) {
+        match self.data.lock().unwrap().parent_scope.clone() {
+            Some(p) => p.dump(map),
+            None => {}
+        }
+
+        for u in self.data.lock().unwrap().uses.clone().iter().rev() {
+            u.dump(map);
+        }
+
+        let data = self.data.lock().unwrap();
+        for (k, v) in data.mapping.iter() {
+            map.insert(k.clone(), v.value_type());
+        }
+    }
+
 
     pub fn readonly(&self) {
         self.data.lock().unwrap().is_readonly = true;
@@ -220,127 +334,5 @@ impl Scope {
         let mut map = HashMap::new();
         self.dump(&mut map);
         map.iter().map(|(k, v)| k.clone()).collect::<Vec<String>>().join(", ")
-    }
-}
-
-fn remove_from_data(data: &Arc<Mutex<ScopeData>>, key: &str) -> Option<Value> {
-    let mut data = data.lock().unwrap();
-    if !data.mapping.contains_key(key) {
-        match data.parent_scope.clone() {
-            Some(p) => {
-                drop(data);
-                remove_from_data(&p, key)
-            }
-            None => None,
-        }
-    } else {
-        if data.is_readonly {
-            return None;
-        }
-        data.mapping.remove(key)
-    }
-}
-
-fn get_from_data(data: &Arc<Mutex<ScopeData>>, name: &str) -> Option<Value> {
-    let data = data.lock().unwrap();
-    match data.mapping.get(&name.to_string()) {
-        Some(v) => Some(v.clone()),
-        None => match data.parent_scope.clone() {
-            Some(p) => {
-                drop(data);
-                get_from_data(&p, name)
-            },
-            None => {
-                let uses = data.uses.clone();
-                drop(data);
-                for ulock in &uses {
-                    if let Some(res) = get_from_data(ulock, name) {
-                        return Some(res);
-                    }
-                }
-                None
-            }
-        }
-    }
-}
-
-fn set_on_data(data: &Arc<Mutex<ScopeData>>, name: &str, value: Value) -> CrushResult<()> {
-    let mut data = data.lock().unwrap();
-    if !data.mapping.contains_key(name) {
-        match data.parent_scope.clone() {
-            Some(p) => {
-                drop(data);
-                set_on_data(&p, name, value)
-            }
-            None => error(format!("Unknown variable ${{{}}}", name).as_str()),
-        }
-    } else {
-        if data.is_readonly {
-            error("Scope is read only")
-        } else if data.mapping[name].value_type() != value.value_type() {
-            error(format!("Type mismatch when reassigning variable ${{{}}}. Use `unset ${{{}}}` to remove old variable.", name, name).as_str())
-        } else {
-            data.mapping.insert(name.to_string(), value);
-            Ok(())
-        }
-    }
-}
-
-/**
-    This function takes the lock twice. We could avoid that with a bit of extra copying, not sure if
-    that would be an improvement.
-*/
-fn dump_data(data: &Arc<Mutex<ScopeData>>, map: &mut HashMap<String, ValueType>) {
-    match data.lock().unwrap().parent_scope.clone() {
-        Some(p) => dump_data(&p, map),
-        None => {}
-    }
-
-    let data = data.lock().unwrap();
-    for (k, v) in data.mapping.iter() {
-        map.insert(k.clone(), v.value_type());
-    }
-}
-
-fn do_continue(shared: &Arc<Mutex<ScopeData>>) -> bool {
-    let data = shared.lock().unwrap();
-    if data.is_readonly {
-        return false;
-    } else if data.is_loop {
-        true
-    } else {
-        let caller = data.calling_scope.clone();
-        drop(data);
-        let ok = caller
-            .map(|p| do_continue(&p))
-            .unwrap_or(false);
-        if !ok {
-            false
-        } else {
-            shared.lock().unwrap().is_stopped = true;
-            true
-        }
-    }
-}
-
-fn do_break(shared: &Arc<Mutex<ScopeData>>) -> bool {
-    let mut data = shared.lock().unwrap();
-    if data.is_readonly {
-        false
-    } else if data.is_loop {
-        data.is_stopped = true;
-        true
-    } else {
-        let caller = data.calling_scope.clone();
-        drop(data);
-        let ok = caller
-            .map(|p| do_break(&p))
-            .unwrap_or(false);
-        if !ok {
-            false
-        } else {
-            shared.lock().unwrap().is_stopped = true;
-            true
-        }
     }
 }

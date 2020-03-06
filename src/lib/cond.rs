@@ -42,10 +42,48 @@ fn and(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Bool(res))
 }
 
+fn or(mut context: ExecutionContext) -> CrushResult<()> {
+    let mut res = false;
+    for arg in context.arguments.drain(..) {
+        match arg.value {
+            Value::Bool(b) => {
+                if b {
+                    res = true;
+                    break;
+                }
+            }
+
+            Value::Closure(c) => {
+                let (sender, receiver) = channels();
+                let cc = ExecutionContext {
+                    input: empty_channel(),
+                    output: sender,
+                    arguments: vec![],
+                    env: context.env.clone(),
+                    printer: context.printer.clone(),
+                };
+                c.invoke(cc)?;
+                match receiver.recv()? {
+                    Value::Bool(b) => {
+                        if b {
+                            res = true;
+                            break;
+                        }
+                    }
+                    _ => return argument_error("Expected boolean values"),
+                }
+            }
+            _ => return argument_error("Expected boolean values"),
+        }
+    }
+    context.output.send(Value::Bool(res))
+}
+
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("cond")?;
-    root.uses(&env);
+    root.r#use(&env);
     env.declare_str("and", Value::ConditionCommand(ConditionCommand::new(and)))?;
+    env.declare_str("or", Value::ConditionCommand(ConditionCommand::new(or)))?;
     env.readonly();
     Ok(())
 }

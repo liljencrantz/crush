@@ -82,7 +82,7 @@ fn not(mut context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("comp")?;
-    root.uses(&env);
+    root.r#use(&env);
     env.declare_str("gt", Value::Command(SimpleCommand::new(gt, false)))?;
     env.declare_str("gte", Value::Command(SimpleCommand::new(gte, false)))?;
     env.declare_str("lt", Value::Command(SimpleCommand::new(lt, false)))?;
