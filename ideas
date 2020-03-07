@@ -24,3 +24,31 @@ Could be useful for showing a tree view of processes (ps), file trees (find, du)
 
 * Should this be represented by a special type of tree-struct or just use regular structs with members of the same type? The latter can't represent cycles.
 * What additional primitives are needed to efficiently manipulate tree data?
+
+Idea: Change language to allow operators:
+
+* No more sigils for variables. true means true, etc.
+* text arguments need to be quoted, "foo"
+* glob literals start with **, so ***.txt is the glob *.txt
+* boolean flags supported using --foo, equivalent to foo=true
+* operator support for math symbols + - * /, foo + bar equivalent to (math.add foo bar)
+* operator support for comparison operators ! == != < > <= and >=, foo > bar equivalent to (comp.gt foo bar)
+* operator support for list/dict assignment foo[bar]=baz equivalent to data.set foo bar baz
+* javascript-style [], use / for role of .
+* External commands need to be adapted to not be annoying
+* Add methods to types, e.g. instead of calling list.push some_list some_value, you write some_list.push some_value
+* The files in the current directory are part of the current namespace. Do something clever to allow '.' to either be part of name or separator.
+* The slash operator on files works like the . operator
+* File literals use ``, e.g. `if` is a file named if. Also useful for touching non-existing files.
+* Slash at the start of an expression is the filesystem root
+
+Example invocations:
+    git/status
+    git/commit --a m="This is a commit message"
+    git/add .
+    ls ***.txt
+    cd foo
+    cd ..
+    cd `My Documents`
+    [foo bar baz] # List literal
+    find /etc
