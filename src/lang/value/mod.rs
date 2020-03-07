@@ -345,9 +345,9 @@ impl std::hash::Hash for Value {
             Value::Duration(d) => d.hash(state),
             Value::Bool(v) => v.hash(state),
             Value::Binary(v) => v.hash(state),
-
+            Value::Struct(v) => v.hash(state),
             Value::Scope(_) | Value::Dict(_) | Value::Table(_) | Value::Closure(_) |
-            Value::List(_) | Value::TableStream(_) | Value::Struct(_) | Value::Float(_)
+            Value::List(_) | Value::TableStream(_) | Value::Float(_)
             | Value::BinaryStream(_) => panic!("Can't hash output"),
             Value::Empty() => {}
             Value::Type(v) => v.to_string().hash(state),

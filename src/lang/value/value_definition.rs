@@ -77,6 +77,9 @@ impl ValueDefinition {
                         mandate(env.get_str(name.as_ref()), "Invalid subscript")?,
                     (Ok(Value::Struct(row)), Ok(Value::Text(col))) =>
                         mandate(row.get(col.as_ref()), "Invalid subscript")?,
+                    (Ok(Value::Table(o)), Ok(Value::Integer(idx))) => {
+                        Value::Struct(mandate(o.rows().get(idx as usize), "Index out of range")?.clone().into_struct(o.types()))
+                    }
                     (Ok(Value::TableStream(o)), Ok(Value::Integer(idx))) => {
                         Value::Struct(o.get(idx)?.into_struct(o.types()))
                     }

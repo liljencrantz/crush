@@ -159,7 +159,7 @@ impl Scope {
             data.mapping.insert(name[0].to_string(), value);
             Ok(())
         } else {
-            match self.get_from_data(name[0].as_ref()) {
+            match self.get_recursive(name[0].as_ref()) {
                 None => error("Not a namespace"),
                 Some(Value::Scope(env)) => env.declare(&name[1..name.len()], value),
                 _ => error("Unknown namespace"),
@@ -179,7 +179,7 @@ impl Scope {
         if name.len() == 1 {
             self.set_on_data(name[0].as_ref(), value)
         } else {
-            match self.get_from_data(name[0].as_ref()) {
+            match self.get_recursive(name[0].as_ref()) {
                 None => error("Not a namespace"),
                 Some(Value::Scope(env)) => env.set(&name[1..name.len()], value),
                 _ => error("Unknown namespace"),
@@ -221,7 +221,7 @@ impl Scope {
         if name.len() == 1 {
             self.remove_here(name[0].as_ref())
         } else {
-            match self.get_from_data(name[0].as_ref()) {
+            match self.get_recursive(name[0].as_ref()) {
                 None => None,
                 Some(Value::Scope(env)) => env.remove(&name[1..name.len()]),
                 _ => None,
@@ -257,9 +257,9 @@ impl Scope {
             return None;
         }
         if name.len() == 1 {
-            self.get_from_data(name[0].as_ref())
+            self.get_recursive(name[0].as_ref())
         } else {
-            match self.get_from_data(name[0].as_ref()) {
+            match self.get_recursive(name[0].as_ref()) {
                 None => None,
                 Some(Value::Scope(env)) => env.get(&name[1..name.len()]),
                 _ => None,
@@ -278,7 +278,7 @@ impl Scope {
         if name.len() == 1 {
             Some((self.clone(), name.to_vec()))
         } else {
-            match self.get_from_data(name[0].as_ref()) {
+            match self.get_recursive(name[0].as_ref()) {
                 None => None,
                 Some(Value::Scope(env)) => env.get_location(&name[1..name.len()]),
                 _ => None,
@@ -286,20 +286,20 @@ impl Scope {
         }
     }
 
-    fn get_from_data(&self, name: &str) -> Option<Value> {
+    fn get_recursive(&self, name: &str) -> Option<Value> {
         let data = self.data.lock().unwrap();
         match data.mapping.get(&name.to_string()) {
             Some(v) => Some(v.clone()),
             None => match data.parent_scope.clone() {
                 Some(p) => {
                     drop(data);
-                    p.get_from_data(name)
+                    p.get_recursive(name)
                 },
                 None => {
                     let uses = data.uses.clone();
                     drop(data);
                     for used in &uses {
-                        if let Some(res) = used.get_from_data(name) {
+                        if let Some(res) = used.get_recursive(name) {
                             return Some(res);
                         }
                     }
