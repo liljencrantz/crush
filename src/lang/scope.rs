@@ -251,20 +251,26 @@ impl Scope {
         let data = self.data.lock().unwrap();
         match data.mapping.get(&name.to_string()) {
             Some(v) => Some(v.clone()),
-            None => match data.parent_scope.clone() {
-                Some(p) => {
-                    drop(data);
-                    p.get(name)
-                },
-                None => {
-                    let uses = data.uses.clone();
-                    drop(data);
-                    for used in &uses {
-                        if let Some(res) = used.get(name) {
-                            return Some(res);
-                        }
+            None => {
+
+                let uses = data.uses.clone();
+                drop(data);
+                for used in &uses {
+                    if let Some(res) = used.get(name) {
+                        return Some(res);
                     }
-                    None
+                }
+
+                let data2 = self.data.lock().unwrap();
+
+                match data2.parent_scope.clone() {
+                    Some(p) => {
+                        drop(data2);
+                        p.get(name)
+                    }
+                    None => {
+                        None
+                    }
                 }
             }
         }

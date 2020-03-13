@@ -12,7 +12,6 @@ Add dict.clear command
 Add dict.clone command
 Add reject command that removes specified columns
 Add avg command
-use command is b0rked
 Add ceil, floor, pow, log, sin, cos, tan, etc to math lib
 pseudo-tty for cmd command output
 pseudo-tty for cmd command input
@@ -164,4 +163,5 @@ Replace dot with / in command names?
 Add text.split command
 Make lists and dicts streamable
 Figure out reading non-streams
-Skiå threads for commands that we know can't block
+Skip threads for commands that we know can't block
+use command is b0rked
