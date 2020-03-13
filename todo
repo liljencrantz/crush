@@ -1,5 +1,9 @@
 Todo for MVP 1:
-Try skipping threads for commands that we *know* are super fast
+Fix infinite loop on "val (true || false)"
+Make newline a separator again
+&&/|| => and/or
+Arbitrary precision integers?
+support adding methods to types
 Flesh out seq command with support for from and step
 Make argument parsing in list and dict commands more consistent
 Some kind of pattern matching syntax
@@ -9,22 +13,15 @@ Add dict.clone command
 Add reject command that removes specified columns
 Add avg command
 use command is b0rked
-Figure out reading non-streams
-Make lists and dicts streamable
-Add loop command
-Add range command
 Add ceil, floor, pow, log, sin, cos, tan, etc to math lib
-Figure out how to make crush less chatty
 pseudo-tty for cmd command output
 pseudo-tty for cmd command input
 Remove the dot operator in favor of [] for fields. Use slash on commands?
-Replace dot with / in command names?
 Add control.source command
 Add text.join command
 Add text.lpad command
 Add text.rpad command
 Add text.substr command
-Add text.split command
 Add text.trim command
 Add readline command that reads one line of interactive text input from the user via the terminal
 Add system tests for type casting
@@ -33,8 +30,8 @@ Add system tests for binary stream handling
 Add system tests for structs
 Add system tests for dealing with tables as streams
 Rethink aggr and figure out how to make custom reduce commands
-Some missing comparisons on Cell
-Missing some cell type serialisations and deserialisations
+Some missing comparisons on Value
+Missing some value serialisations and deserialisations
 Error source propagation
 help command
 Deal with different error kinds differently
@@ -162,3 +159,9 @@ Add list.clear command
 Add list.remove command
 Make echo always send to printer and accepts multiple arguments
 Add val command that always pipes single argument to stream
+Add loop command
+Replace dot with / in command names?
+Add text.split command
+Make lists and dicts streamable
+Figure out reading non-streams
+Skiå threads for commands that we know can't block

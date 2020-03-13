@@ -159,7 +159,7 @@ impl Scope {
             data.mapping.insert(name[0].to_string(), value);
             Ok(())
         } else {
-            match self.get_recursive(name[0].as_ref()) {
+            match self.get(name[0].as_ref()) {
                 None => error("Not a namespace"),
                 Some(Value::Scope(env)) => env.declare(&name[1..name.len()], value),
                 _ => error("Unknown namespace"),
@@ -179,7 +179,7 @@ impl Scope {
         if name.len() == 1 {
             self.set_on_data(name[0].as_ref(), value)
         } else {
-            match self.get_recursive(name[0].as_ref()) {
+            match self.get(name[0].as_ref()) {
                 None => error("Not a namespace"),
                 Some(Value::Scope(env)) => env.set(&name[1..name.len()], value),
                 _ => error("Unknown namespace"),
@@ -221,7 +221,7 @@ impl Scope {
         if name.len() == 1 {
             self.remove_here(name[0].as_ref())
         } else {
-            match self.get_recursive(name[0].as_ref()) {
+            match self.get(name[0].as_ref()) {
                 None => None,
                 Some(Value::Scope(env)) => env.remove(&name[1..name.len()]),
                 _ => None,
@@ -247,59 +247,20 @@ impl Scope {
         }
     }
 
-    pub fn get_str(&self, name: &str) -> Option<Value> {
-        let n = &name.split('.').map(|e: &str| Box::from(e)).collect::<Vec<Box<str>>>()[..];
-        return self.get(n);
-    }
-
-    pub fn get(&self, name: &[Box<str>]) -> Option<Value> {
-        if name.is_empty() {
-            return None;
-        }
-        if name.len() == 1 {
-            self.get_recursive(name[0].as_ref())
-        } else {
-            match self.get_recursive(name[0].as_ref()) {
-                None => None,
-                Some(Value::Scope(env)) => env.get(&name[1..name.len()]),
-                _ => None,
-            }
-        }
-    }
-
-    pub fn r#use(&self, other: &Scope) {
-        self.data.lock().unwrap().uses.push(other.clone());
-    }
-
-    fn get_location(&self, name: &[Box<str>]) -> Option<(Scope, Vec<Box<str>>)> {
-        if name.is_empty() {
-            return None;
-        }
-        if name.len() == 1 {
-            Some((self.clone(), name.to_vec()))
-        } else {
-            match self.get_recursive(name[0].as_ref()) {
-                None => None,
-                Some(Value::Scope(env)) => env.get_location(&name[1..name.len()]),
-                _ => None,
-            }
-        }
-    }
-
-    fn get_recursive(&self, name: &str) -> Option<Value> {
+    pub fn get(&self, name: &str) -> Option<Value> {
         let data = self.data.lock().unwrap();
         match data.mapping.get(&name.to_string()) {
             Some(v) => Some(v.clone()),
             None => match data.parent_scope.clone() {
                 Some(p) => {
                     drop(data);
-                    p.get_recursive(name)
+                    p.get(name)
                 },
                 None => {
                     let uses = data.uses.clone();
                     drop(data);
                     for used in &uses {
-                        if let Some(res) = used.get_recursive(name) {
+                        if let Some(res) = used.get(name) {
                             return Some(res);
                         }
                     }
@@ -307,6 +268,10 @@ impl Scope {
                 }
             }
         }
+    }
+
+    pub fn r#use(&self, other: &Scope) {
+        self.data.lock().unwrap().uses.push(other.clone());
     }
 
     pub fn dump(&self, map: &mut HashMap<String, ValueType>) {

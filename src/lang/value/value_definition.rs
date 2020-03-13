@@ -13,10 +13,11 @@ use crate::{
     lang::command::Closure,
     lang::stream::channels,
     lang::stream::empty_channel,
-    lang::r#struct::Struct
+    lang::r#struct::Struct,
 };
 use std::time::Duration;
 use crate::lang::{job::Job, argument::ArgumentDefinition, command::CrushCommand};
+use crate::util::file::cwd;
 
 #[derive(Clone)]
 #[derive(Debug)]
@@ -24,15 +25,27 @@ pub enum ValueDefinition {
     Value(Value),
     ClosureDefinition(Vec<Job>),
     JobDefinition(Job),
-    Variable(Vec<Box<str>>),
-    Subscript(Box<ValueDefinition>, Box<ValueDefinition>),
+    Lookup(Box<str>),
+    Get(Box<ValueDefinition>, Box<ValueDefinition>),
+    Path(Box<ValueDefinition>, Box<str>),
+}
+
+fn file_get(f: &str) -> Option<Value> {
+    let c = cwd();
+    if c.is_err() {return None;}
+    let p = c.unwrap().join(f);
+        if p.exists() {
+            Some(Value::File(p.into_boxed_path()))
+        } else {
+            None
+        }
 }
 
 impl ValueDefinition {
     pub fn can_block(&self, arg: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
         match self {
             ValueDefinition::JobDefinition(j) => j.can_block(arg, env),
-            ValueDefinition::Subscript(inner1, inner2) => inner1.can_block(arg, env) || inner2.can_block(arg, env),
+            ValueDefinition::Get(inner1, inner2) => inner1.can_block(arg, env) || inner2.can_block(arg, env),
             _ => false,
         }
     }
@@ -47,9 +60,29 @@ impl ValueDefinition {
                 }
             }
             ValueDefinition::JobDefinition(j) => j.can_block(arg, env),
-            ValueDefinition::Subscript(inner1, inner2) => inner1.can_block(arg, env) || inner2.can_block(arg, env),
+            ValueDefinition::Get(inner1, inner2) => inner1.can_block(arg, env) || inner2.can_block(arg, env),
             _ => false,
         }
+    }
+
+    pub fn compile_non_blocking(&self, env: &Scope) -> CrushResult<Value> {
+        Ok(match self {
+            ValueDefinition::Value(v) => v.clone(),
+            ValueDefinition::Lookup(s) =>
+                mandate(
+                    env.get(s).or_else(|| file_get(s)),
+                    format!("Unknown variable {}", self.to_string()).as_str())?,
+            ValueDefinition::Path(vd, l) => {
+                let v = vd.compile_non_blocking(env)?;
+                match v {
+                    Value::File(s) => Value::File(s.join(l.as_ref()).into_boxed_path()),
+                    Value::Struct(s) => mandate(s.get(l), "Missing value")?,
+                    Value::Scope(subenv) => mandate(subenv.get(l), "Missing value")?,
+                    _ => return error(format!("Invalid path operation on type {}", v.value_type().to_string()).as_str()),
+                }
+            }
+            _ => return error("Value is not a command"),
+        })
     }
 
     pub fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope, printer: &Printer) -> CrushResult<Value> {
@@ -63,18 +96,18 @@ impl ValueDefinition {
                 last_input.recv()?
             }
             ValueDefinition::ClosureDefinition(c) => Value::Closure(Closure::new(c.clone(), env)),
-            ValueDefinition::Variable(s) =>
+            ValueDefinition::Lookup(s) =>
                 mandate(
-                    env.get(s),
+                    env.get(s).or_else(|| file_get(s)),
                     format!("Unknown variable {}", self.to_string()).as_str())?,
-            ValueDefinition::Subscript(c, i) =>
+            ValueDefinition::Get(c, i) =>
                 match (c.compile(dependencies, env, printer), i.compile(dependencies, env, printer)) {
                     (Ok(Value::List(list)), Ok(Value::Integer(idx))) =>
                         list.get(idx as usize)?,
                     (Ok(Value::Dict(dict)), Ok(c)) =>
                         mandate(dict.get(&c), "Invalid subscript")?,
                     (Ok(Value::Scope(env)), Ok(Value::Text(name))) =>
-                        mandate(env.get_str(name.as_ref()), "Invalid subscript")?,
+                        mandate(env.get(name.as_ref()), "Invalid subscript")?,
                     (Ok(Value::Struct(row)), Ok(Value::Text(col))) =>
                         mandate(row.get(col.as_ref()), "Invalid subscript")?,
                     (Ok(Value::Table(o)), Ok(Value::Integer(idx))) => {
@@ -85,6 +118,15 @@ impl ValueDefinition {
                     }
                     _ => return error("Value can't be subscripted"),
                 }
+            ValueDefinition::Path(vd, l) => {
+                let v = vd.compile(dependencies, env, printer)?;
+                match v {
+                    Value::File(s) => Value::File(s.join(l.as_ref()).into_boxed_path()),
+                    Value::Struct(s) => mandate(s.get(&l), "Missing value")?,
+                    Value::Scope(subenv) => mandate(subenv.get(l), "Missing value")?,
+                    _ => return error("Invalid path operation"),
+                }
+            }
         })
     }
 
@@ -115,10 +157,13 @@ impl ValueDefinition {
 
 impl ToString for ValueDefinition {
     fn to_string(&self) -> String {
-        match self {
+        match &self {
             ValueDefinition::Value(v) => v.to_string(),
-            ValueDefinition::Variable(v) => format!("${}", v.join(".")),
-            _ => panic!("Unimplementd conversion"),
+            ValueDefinition::Lookup(v) => v.to_string(),
+            ValueDefinition::ClosureDefinition(c) => "<closure>".to_string(),
+            ValueDefinition::JobDefinition(_) => "<job>".to_string(),
+            ValueDefinition::Get(v, l) => format!("{}[{}]", v.to_string(), l.to_string()),
+            ValueDefinition::Path(v, l) => format!("{}/{}", v.to_string(), l),
         }
     }
 }

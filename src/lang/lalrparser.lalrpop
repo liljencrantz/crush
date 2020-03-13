@@ -1,0 +1,96 @@
+use std::str::FromStr;
+use crate::lang::ast::*;
+
+grammar;
+
+pub JobList: JobListNode = {
+  => JobListNode {jobs: Vec::new()},
+  <l:NonEmptyJobList> => l,
+};
+
+NonEmptyJobList: JobListNode = {
+  <mut l:NonEmptyJobList> ";" <j:Job> =>  {l.jobs.push(j); l},
+  <j:Job> => JobListNode {jobs: vec![j]},
+};
+
+Job: JobNode = {
+    <c:Command> => JobNode{commands: vec![c]},
+    <mut j:Job> "|" <c:Command> => {j.commands.push(c); j}
+};
+
+Command: CommandNode = {
+  <a:Expression> => CommandNode{expressions: vec![a]},
+  <mut c: Command> <a:Expression> => {c.expressions.push(a); c}
+};
+
+Expression: ExpressionNode = {
+  <a: Assignment> => ExpressionNode::Assignment(a),
+  "{" <l: NonEmptyJobList> "}" => ExpressionNode::Closure(l),
+  "(" <j:Job> ")" => ExpressionNode::Substitution(j),
+};
+
+Assignment: AssignmentNode = {
+  <i: Item> "=" <e: Expression> => AssignmentNode::Assignment(i, Box::new(e)),
+  <a: Logical> => AssignmentNode::Logical(a),
+}
+
+Logical: LogicalNode = {
+    <c: Comparison> => LogicalNode::Comparison(c),
+    <l: Logical> <op: LogicalOperator> <c: Comparison> => LogicalNode::LogicalOperation(Box::new(l), op, c),
+}
+
+Comparison: ComparisonNode = {
+    <t: Term> => ComparisonNode::Term(t),
+    <c: Comparison> <op: ComparisonOperator> <t: Term> => ComparisonNode::Comparison(Box::new(c), op, t),
+}
+
+Term: TermNode = {
+    <f: Factor> => TermNode::Factor(f),
+    <t: Term> <op: TermOperator> <f: Factor> => TermNode::Term(Box::new(t), op, f),
+}
+
+Factor: FactorNode = {
+    <u: Unary> => FactorNode::Unary(u),
+    <f: Factor> <op: FactorOperator> <u: Unary> => FactorNode::Factor(Box::new(f), op, u),
+}
+
+Unary: UnaryNode = {
+    <i: Item> => UnaryNode::Item(i),
+    <op: UnaryOperator> <u: Unary> => UnaryNode::Unary(op, Box::new(u)),
+}
+
+Item: ItemNode = {
+    <l: Label> => ItemNode::Label(l),
+    <s: QuotedString> => ItemNode::Text(s),
+    <s:r"[0-9]+"> => ItemNode::Integer(i128::from_str(s).unwrap()),
+    <i: Item> "[" <j: Job> "]" => ItemNode::Get(Box::new(i), Box::new(j)),
+    <i: Item> "/" <l: Label> => ItemNode::Path(Box::new(i), l),
+}
+
+Label: Box<str> = {
+   <l:r"[\._a-zA-Z][\._a-zA-Z0-9]*"> => Box::from(l),
+}
+
+QuotedString: Box<str> = {
+   <l:r#""([^\\"]|\\.)*""#> => Box::from(l),
+}
+
+LogicalOperator: Box<str> = {
+   <l:r"(&&|\|\|)"> => Box::from(l),
+}
+
+TermOperator: Box<str> = {
+   <l:r"(\+|-)"> => Box::from(l),
+}
+
+FactorOperator: Box<str> = {
+   <l:r"(\*|//)"> => Box::from(l),
+}
+
+UnaryOperator: Box<str> = {
+   <l:r"!"> => Box::from(l),
+}
+
+ComparisonOperator: Box<str> = {
+   <l:r"(>|<|>=|<=|==|!=)"> => Box::from(l),
+}
