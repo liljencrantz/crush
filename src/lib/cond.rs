@@ -6,7 +6,7 @@ use std::cmp::Ordering;
 use crate::lang::command::ConditionCommand;
 use crate::lang::stream::{empty_channel, channels};
 
-fn and(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn and(mut context: ExecutionContext) -> CrushResult<()> {
     let mut res = true;
     for arg in context.arguments.drain(..) {
         match arg.value {
@@ -42,7 +42,7 @@ fn and(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Bool(res))
 }
 
-fn or(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn or(mut context: ExecutionContext) -> CrushResult<()> {
     let mut res = false;
     for arg in context.arguments.drain(..) {
         match arg.value {

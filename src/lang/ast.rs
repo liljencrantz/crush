@@ -1,35 +1,26 @@
-/*
-job_list := | non_empty_job_list
-
-non_empty_job_list := non_empty_job_list Separator job | job
-
-job := expression | job Pipe expression
-
-expression := assignment_expression | expression assignment_expression | '[' job_list ']' | '(' job ')'
-
-assignment_expression := label assignment_op assignment_expression | expression1 '[' job ']' '=' job | logical_expression;
-
-logical_expression := logical_expression logical_op comparison_expression | comparsion_expression
-
-comparison_expression := comparison_expression comparison_op term | term
-
-term := term add_op factor | factor
-
-factor := factor mul_op unary_expression
-
-unary_expression := unary_op item | item
-
-item := text | label | item [ job ] | item '/' label | integer | glob | float
-
-*/
-
-
 use crate::lang::job::Job;
 use crate::lang::errors::{CrushResult, error, argument_error};
 use crate::lang::call_definition::CallDefinition;
 use crate::lang::argument::ArgumentDefinition;
 use crate::lang::value::{ValueDefinition, Value};
 use std::ops::Deref;
+use crate::lang::command::SimpleCommand;
+
+static ADD: SimpleCommand = SimpleCommand { call:crate::lib::math::add, can_block:true};
+static SUB: SimpleCommand = SimpleCommand { call:crate::lib::math::sub, can_block:true};
+static MUL: SimpleCommand = SimpleCommand { call:crate::lib::math::mul, can_block:true};
+static DIV: SimpleCommand = SimpleCommand { call:crate::lib::math::div, can_block:true};
+
+static LT: SimpleCommand = SimpleCommand { call:crate::lib::comp::lt, can_block:true};
+static LTE: SimpleCommand = SimpleCommand { call:crate::lib::comp::lte, can_block:true};
+static GT: SimpleCommand = SimpleCommand { call:crate::lib::comp::gt, can_block:true};
+static GTE: SimpleCommand = SimpleCommand { call:crate::lib::comp::gte, can_block:true};
+static EQ: SimpleCommand = SimpleCommand { call:crate::lib::comp::eq, can_block:true};
+static NEQ: SimpleCommand = SimpleCommand { call:crate::lib::comp::neq, can_block:true};
+static NOT: SimpleCommand = SimpleCommand { call:crate::lib::comp::not, can_block:true};
+
+static AND: SimpleCommand = SimpleCommand { call:crate::lib::cond::and, can_block:true};
+static OR: SimpleCommand = SimpleCommand { call:crate::lib::cond::or, can_block:true};
 
 #[derive(Debug)]
 pub struct JobListNode {
@@ -173,13 +164,13 @@ impl LogicalNode {
                 match op.as_ref() {
                     "&&" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Path(Box::new(ValueDefinition::Lookup(Box::from("cond"))), Box::from("and")),
+                            ValueDefinition::Value(Value::Command(AND.clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "||" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Path(Box::new(ValueDefinition::Lookup(Box::from("cond"))), Box::from("or")),
+                            ValueDefinition::Value(Value::Command(OR.clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
@@ -219,37 +210,37 @@ impl ComparisonNode {
                 match op.as_ref() {
                     "<" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Path(Box::new(ValueDefinition::Lookup(Box::from("comp"))), Box::from("lt")),
+                            ValueDefinition::Value(Value::Command(LT.clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "<=" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Path(Box::new(ValueDefinition::Lookup(Box::from("comp"))), Box::from("lte")),
+                            ValueDefinition::Value(Value::Command(LTE.clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     ">" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Path(Box::new(ValueDefinition::Lookup(Box::from("comp"))), Box::from("gt")),
+                            ValueDefinition::Value(Value::Command(GT.clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     ">=" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Path(Box::new(ValueDefinition::Lookup(Box::from("comp"))), Box::from("gte")),
+                            ValueDefinition::Value(Value::Command(GTE.clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "==" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Path(Box::new(ValueDefinition::Lookup(Box::from("comp"))), Box::from("eq")),
+                            ValueDefinition::Value(Value::Command(EQ.clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "!=" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Path(Box::new(ValueDefinition::Lookup(Box::from("comp"))), Box::from("neq")),
+                            ValueDefinition::Value(Value::Command(NEQ.clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
@@ -290,13 +281,13 @@ impl TermNode {
                 match op.as_ref() {
                     "+" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Path(Box::new(ValueDefinition::Lookup(Box::from("math"))), Box::from("add")),
+                            ValueDefinition::Value(Value::Command(ADD.clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "-" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Path(Box::new(ValueDefinition::Lookup(Box::from("math"))), Box::from("sub")),
+                            ValueDefinition::Value(Value::Command(SUB.clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
@@ -335,13 +326,13 @@ impl FactorNode {
                 match op.as_ref() {
                     "*" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Path(Box::new(ValueDefinition::Lookup(Box::from("math"))), Box::from("mul")),
+                            ValueDefinition::Value(Value::Command(MUL.clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "//" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Path(Box::new(ValueDefinition::Lookup(Box::from("math"))), Box::from("div")),
+                            ValueDefinition::Value(Value::Command(DIV.clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
@@ -386,7 +377,7 @@ impl UnaryNode {
                     "!" => {
                         Ok(ArgumentDefinition::unnamed(ValueDefinition::JobDefinition(
                             Job::new(vec![CallDefinition::new(
-                                ValueDefinition::Path(Box::new(ValueDefinition::Lookup(Box::from("comp"))), Box::from("not")),
+                                ValueDefinition::Value(Value::Command(NOT.clone())),
                                 vec![r.generate_argument()?])
                             ]))))
                     }

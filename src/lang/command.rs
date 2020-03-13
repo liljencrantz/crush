@@ -29,8 +29,8 @@ pub trait CrushCommand {
 
 #[derive(Clone)]
 pub struct SimpleCommand {
-    call: fn(context: ExecutionContext) -> CrushResult<()>,
-    can_block: bool,
+    pub call: fn(context: ExecutionContext) -> CrushResult<()>,
+    pub can_block: bool,
 }
 
 impl SimpleCommand {

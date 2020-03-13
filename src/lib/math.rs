@@ -35,7 +35,7 @@ fn $name(mut context: ExecutionContext) -> CrushResult<()> {
 
 macro_rules! combine_functions {
     ($name:ident, $( $type:ident => $func:ident), *) => {
-fn $name(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn $name(mut context: ExecutionContext) -> CrushResult<()> {
     if context.arguments.len() == 0 {
         return argument_error("Expected at least one argument");
     }

@@ -1,7 +1,11 @@
 Todo for MVP 1:
+Fix external command fallback
+Add support for variable literals literals
+Add support for := for variable declaration
+Add file command
+Running a directory is cd
 Make newline a separator again
 &&/|| => and/or
-Arbitrary precision integers?
 support adding methods to types
 Flesh out seq command with support for from and step
 Make argument parsing in list and dict commands more consistent
@@ -38,6 +42,7 @@ Add source field to CrushError
 Make error printing display source of error
 
 Future features:
+Arbitrary precision integers?
 make file globing testable via fakes
 implement file regexps
 make ls support regexps

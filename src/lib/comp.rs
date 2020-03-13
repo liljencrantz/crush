@@ -4,7 +4,7 @@ use crate::lang::{command::SimpleCommand, value::Value};
 use crate::lang::scope::Scope;
 use std::cmp::Ordering;
 
-fn gt(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn gt(mut context: ExecutionContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
         return argument_error("Expected exactly two arguments");
     }
@@ -16,7 +16,7 @@ fn gt(mut context: ExecutionContext) -> CrushResult<()> {
     }
 }
 
-fn lt(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn lt(mut context: ExecutionContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
         return argument_error("Expected exactly two arguments");
     }
@@ -28,7 +28,7 @@ fn lt(mut context: ExecutionContext) -> CrushResult<()> {
     }
 }
 
-fn lte(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn lte(mut context: ExecutionContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
         return argument_error("Expected exactly two arguments");
     }
@@ -40,7 +40,7 @@ fn lte(mut context: ExecutionContext) -> CrushResult<()> {
     }
 }
 
-fn gte(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn gte(mut context: ExecutionContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
         return argument_error("Expected exactly two arguments");
     }
@@ -52,7 +52,7 @@ fn gte(mut context: ExecutionContext) -> CrushResult<()> {
     }
 }
 
-fn eq(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn eq(mut context: ExecutionContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
         return argument_error("Expected exactly two arguments");
     }
@@ -61,7 +61,7 @@ fn eq(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Bool(l.eq(&r)))
 }
 
-fn neq(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn neq(mut context: ExecutionContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
         return argument_error("Expected exactly two arguments");
     }
@@ -70,7 +70,7 @@ fn neq(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Bool(!l.eq(&r)))
 }
 
-fn not(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn not(mut context: ExecutionContext) -> CrushResult<()> {
     if context.arguments.len() != 1 {
         return argument_error("Expected exactly one argument");
     }
