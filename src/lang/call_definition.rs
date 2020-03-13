@@ -51,6 +51,10 @@ impl CallDefinition {
         CallDefinition { command, arguments }
     }
 
+    pub fn arguments(&self) -> &Vec<ArgumentDefinition> {
+        &self.arguments
+    }
+
     /*
     pub fn spawn_stream(
         &self,

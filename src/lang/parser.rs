@@ -49,8 +49,5 @@ pub fn parse_name(s: &str) -> Option<Vec<Box<str>>> {
 }
 
 pub fn parse(s: &str) -> CrushResult<Vec<Job>> {
-//    println!("{:?}", parser2::JobListParser::new().parse(s));
-    let r = to_crush_error(parser2::JobListParser::new().parse(s))?.generate();
-//    println!("WAAAA {:?}", r);
-    r
-    }
+    to_crush_error(parser2::JobListParser::new().parse(s))?.generate()
+}

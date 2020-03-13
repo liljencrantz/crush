@@ -1,5 +1,4 @@
 Todo for MVP 1:
-Fix infinite loop on "val (true || false)"
 Make newline a separator again
 &&/|| => and/or
 Arbitrary precision integers?
@@ -165,3 +164,4 @@ Make lists and dicts streamable
 Figure out reading non-streams
 Skip threads for commands that we know can't block
 use command is b0rked
+Fix infinite loop on "val (true || false)"

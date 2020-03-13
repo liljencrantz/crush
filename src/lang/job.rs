@@ -42,7 +42,7 @@ impl Job {
 
     pub fn can_block(&self, arg: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
         if self.commands.len() == 1 {
-            self.commands[0].can_block(arg, env)
+            self.commands[0].can_block(self.commands[0].arguments(), env)
         } else {
             true
         }
@@ -58,7 +58,6 @@ impl Job {
         let mut calls = Vec::new();
 
         let mut input = first_input;
-
         let last_job_idx = self.commands.len() - 1;
         for call_def in &self.commands[..last_job_idx] {
             let (output, next_input) = channels();
