@@ -31,6 +31,7 @@ Expression: ExpressionNode = {
 
 Assignment: AssignmentNode = {
   <i: Item> "=" <e: Expression> => AssignmentNode::Assignment(i, Box::new(e)),
+  <i: Item> ":=" <e: Expression> => AssignmentNode::Declaration(i, Box::new(e)),
   <a: Logical> => AssignmentNode::Logical(a),
 }
 

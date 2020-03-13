@@ -1,7 +1,7 @@
 mod command_util;
 mod parse_util;
 mod file;
-mod var;
+pub mod var;
 mod proc;
 mod io;
 mod r#type;

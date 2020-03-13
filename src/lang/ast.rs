@@ -1,5 +1,5 @@
 use crate::lang::job::Job;
-use crate::lang::errors::{CrushResult, error, argument_error};
+use crate::lang::errors::{CrushResult, error, argument_error, parse_error};
 use crate::lang::call_definition::CallDefinition;
 use crate::lang::argument::ArgumentDefinition;
 use crate::lang::value::{ValueDefinition, Value};
@@ -21,6 +21,9 @@ static NOT: SimpleCommand = SimpleCommand { call:crate::lib::comp::not, can_bloc
 
 static AND: SimpleCommand = SimpleCommand { call:crate::lib::cond::and, can_block:true};
 static OR: SimpleCommand = SimpleCommand { call:crate::lib::cond::or, can_block:true};
+
+static LET: SimpleCommand = SimpleCommand { call:crate::lib::var::r#let, can_block:true};
+static SET: SimpleCommand = SimpleCommand { call:crate::lib::var::set, can_block:true};
 
 #[derive(Debug)]
 pub struct JobListNode {
@@ -110,6 +113,7 @@ impl ExpressionNode {
 #[derive(Debug)]
 pub enum AssignmentNode {
     Assignment(ItemNode, Box<ExpressionNode>),
+    Declaration(ItemNode, Box<ExpressionNode>),
     Logical(LogicalNode),
 }
 
@@ -125,6 +129,9 @@ impl AssignmentNode {
                     ItemNode::Path(_, _) => error("Invalid left side in assignment"),
                 }
             }
+            AssignmentNode::Declaration(target, value) => {
+                error("Variable declarations not supported as arguments")
+            }
             AssignmentNode::Logical(l) => {
                 l.generate_argument()
             }
@@ -138,7 +145,20 @@ impl AssignmentNode {
                 match target {
                     ItemNode::Label(t) => Ok(Some(
                         CallDefinition::new(
-                            ValueDefinition::Path(Box::new(ValueDefinition::Lookup(Box::from("var"))), Box::from("set")),
+                            ValueDefinition::Value(Value::Command(SET.clone())),
+                            vec![ArgumentDefinition::named(t, value.generate_argument()?.value)])
+                    )),
+                    ItemNode::Text(_) => error("Invalid left side in assignment"),
+                    ItemNode::Integer(_) => error("Invalid left side in assignment"),
+                    ItemNode::Get(_, _) => error("Invalid left side in assignment"),
+                    ItemNode::Path(_, _) => error("Invalid left side in assignment"),
+                }
+            }
+            AssignmentNode::Declaration(target, value) => {
+                match target {
+                    ItemNode::Label(t) => Ok(Some(
+                        CallDefinition::new(
+                            ValueDefinition::Value(Value::Command(LET.clone())),
                             vec![ArgumentDefinition::named(t, value.generate_argument()?.value)])
                     )),
                     ItemNode::Text(_) => error("Invalid left side in assignment"),
