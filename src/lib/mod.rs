@@ -10,7 +10,7 @@ pub mod math;
 pub mod comp;
 pub mod cond;
 mod stream;
-mod data;
+pub mod data;
 mod text;
 mod control;
 mod constants;

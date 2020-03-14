@@ -6,10 +6,10 @@ use crate::lang::value::{ValueDefinition, Value};
 use std::ops::Deref;
 use crate::lang::command::SimpleCommand;
 
-static ADD: SimpleCommand = SimpleCommand { call:crate::lib::math::add, can_block:true};
-static SUB: SimpleCommand = SimpleCommand { call:crate::lib::math::sub, can_block:true};
-static MUL: SimpleCommand = SimpleCommand { call:crate::lib::math::mul, can_block:true};
-static DIV: SimpleCommand = SimpleCommand { call:crate::lib::math::div, can_block:true};
+static ADD: SimpleCommand = SimpleCommand { call:crate::lib::math::add, can_block:false};
+static SUB: SimpleCommand = SimpleCommand { call:crate::lib::math::sub, can_block:false};
+static MUL: SimpleCommand = SimpleCommand { call:crate::lib::math::mul, can_block:false};
+static DIV: SimpleCommand = SimpleCommand { call:crate::lib::math::div, can_block:false};
 
 static LT: SimpleCommand = SimpleCommand { call:crate::lib::comp::lt, can_block:true};
 static LTE: SimpleCommand = SimpleCommand { call:crate::lib::comp::lte, can_block:true};
@@ -22,8 +22,10 @@ static NOT: SimpleCommand = SimpleCommand { call:crate::lib::comp::not, can_bloc
 static AND: SimpleCommand = SimpleCommand { call:crate::lib::cond::and, can_block:true};
 static OR: SimpleCommand = SimpleCommand { call:crate::lib::cond::or, can_block:true};
 
-static LET: SimpleCommand = SimpleCommand { call:crate::lib::var::r#let, can_block:true};
-static SET: SimpleCommand = SimpleCommand { call:crate::lib::var::set, can_block:true};
+static LET: SimpleCommand = SimpleCommand { call:crate::lib::var::r#let, can_block:false};
+static SET: SimpleCommand = SimpleCommand { call:crate::lib::var::set, can_block:false};
+
+static SET_ITEM: SimpleCommand = SimpleCommand { call:crate::lib::data::set_item, can_block:false};
 
 #[derive(Debug)]
 pub struct JobListNode {
@@ -158,7 +160,14 @@ impl AssignmentNode {
                     ItemNode::Text(_) => error("Invalid left side in assignment"),
                     ItemNode::Integer(_) => error("Invalid left side in assignment"),
                     ItemNode::Float(_) => error("Invalid left side in assignment"),
-                    ItemNode::Get(_, _) => error("Invalid left side in assignment"),
+                    ItemNode::Get(container, key) => Ok(Some(
+                        CallDefinition::new(
+                        ValueDefinition::Value(Value::Command(SET_ITEM.clone())),
+                        vec![
+                            ArgumentDefinition::named("container", container.generate_argument()?.unnamed_value()?),
+                            ArgumentDefinition::named("key",ValueDefinition::JobDefinition(key.generate()?)),
+                            ArgumentDefinition::named("value", value.generate_argument()?.unnamed_value()?),
+                        ]))),
                     ItemNode::Path(_, _) => error("Invalid left side in assignment"),
                 }
             }

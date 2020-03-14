@@ -50,9 +50,10 @@ impl Dict {
         entries.remove(key)
     }
 
-    pub fn insert(&self, key: Value, value: Value) {
+    pub fn insert(&self, key: Value, value: Value) -> CrushResult<()>{
         let mut entries = self.entries.lock().unwrap();
         entries.insert(key, value);
+        Ok(())
     }
 
     pub fn key_type(&self) -> ValueType {
