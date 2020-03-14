@@ -62,14 +62,20 @@ Unary: UnaryNode = {
 
 Item: ItemNode = {
     <l: Label> => ItemNode::Label(l),
+    <l: QuotedLabel> => ItemNode::QuotedLabel(l),
     <s: QuotedString> => ItemNode::Text(s),
-    <s:r"[0-9]+"> => ItemNode::Integer(i128::from_str(s).unwrap()),
+    <s:r"[0-9][0-9_]*"> => ItemNode::Integer(i128::from_str(s.replace("_", "").as_str()).unwrap()),
+    <s:r"[0-9][0-9_]*\.[0-9_]+"> => ItemNode::Float(f64::from_str(s.replace("_", "").as_str()).unwrap()),
     <i: Item> "[" <j: Job> "]" => ItemNode::Get(Box::new(i), Box::new(j)),
     <i: Item> "/" <l: Label> => ItemNode::Path(Box::new(i), l),
 }
 
 Label: Box<str> = {
    <l:r"[\._a-zA-Z][\._a-zA-Z0-9]*"> => Box::from(l),
+}
+
+QuotedLabel: Box<str> = {
+   <l:r#"'([^\\']|\\.)*'"#> => Box::from(l),
 }
 
 QuotedString: Box<str> = {

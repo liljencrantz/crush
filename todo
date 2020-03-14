@@ -1,8 +1,5 @@
 Todo for MVP 1:
 Fix external command fallback
-Add support for variable literals literals
-Add support for := for variable declaration
-Add file command
 Running a directory is cd
 Make newline a separator again
 &&/|| => and/or
@@ -170,3 +167,6 @@ Figure out reading non-streams
 Skip threads for commands that we know can't block
 use command is b0rked
 Fix infinite loop on "val (true || false)"
+Add support for := for variable declaration
+Float parsing
+Add support for variable literals

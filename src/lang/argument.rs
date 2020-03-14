@@ -1,12 +1,12 @@
 use crate::lang::value::Value;
 use crate::lang::{value::ValueDefinition, table::ColumnType};
-use crate::lang::errors::{CrushError, CrushResult};
+use crate::lang::errors::{CrushError, CrushResult, error};
 use crate::lang::scope::Scope;
 use crate::lang::printer::Printer;
 use crate::lang::job::JobJoinHandle;
 
 #[derive(Debug, Clone)]
-pub struct BaseArgument<C> {
+pub struct BaseArgument<C: Clone> {
     pub name: Option<Box<str>>,
     pub value: C,
 }
@@ -17,6 +17,7 @@ impl ArgumentDefinition {
     pub fn argument(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope, printer: &Printer) -> Result<Argument, CrushError> {
         Ok(Argument { name: self.name.clone(), value: self.value.compile(dependencies, env, printer)? })
     }
+
 }
 /*
 impl Clone for ArgumentDefinition {
@@ -33,7 +34,15 @@ impl Argument {
     }
 }
 
-impl<C> BaseArgument<C> {
+impl<C: Clone> BaseArgument<C> {
+    pub fn unnamed_value(&self) -> CrushResult<C> {
+        if self.name.is_some() {
+            error("Expected an unnamed argument")
+        } else {
+            Ok(self.value.clone())
+        }
+    }
+
     pub fn new(name: Option<Box<str>>, value: C) -> BaseArgument<C> {
         BaseArgument {
             name,

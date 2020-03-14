@@ -67,7 +67,7 @@ impl CommandNode {
             let arguments = self.expressions[1..].iter()
                 .map(|e| e.generate_argument())
                 .collect::<CrushResult<Vec<ArgumentDefinition>>>()?;
-            Ok(CallDefinition::new(cmd.value, arguments))
+            Ok(CallDefinition::new(cmd.unnamed_value()?, arguments))
         }
     }
 }
@@ -122,9 +122,11 @@ impl AssignmentNode {
         match self {
             AssignmentNode::Assignment(target, value) => {
                 match target {
-                    ItemNode::Label(t) => Ok(ArgumentDefinition::named(t.deref(), value.generate_argument()?.value)),
+                    ItemNode::Label(t) => Ok(ArgumentDefinition::named(t.deref(), value.generate_argument()?.unnamed_value()?)),
+                    ItemNode::QuotedLabel(t) => Ok(ArgumentDefinition::named(unescape(t).as_str(), value.generate_argument()?.unnamed_value()?)),
                     ItemNode::Text(_) => error("Invalid left side in assignment"),
                     ItemNode::Integer(_) => error("Invalid left side in assignment"),
+                    ItemNode::Float(_) => error("Invalid left side in assignment"),
                     ItemNode::Get(_, _) => error("Invalid left side in assignment"),
                     ItemNode::Path(_, _) => error("Invalid left side in assignment"),
                 }
@@ -146,10 +148,16 @@ impl AssignmentNode {
                     ItemNode::Label(t) => Ok(Some(
                         CallDefinition::new(
                             ValueDefinition::Value(Value::Command(SET.clone())),
-                            vec![ArgumentDefinition::named(t, value.generate_argument()?.value)])
+                            vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)])
+                    )),
+                    ItemNode::QuotedLabel(t) => Ok(Some(
+                        CallDefinition::new(
+                            ValueDefinition::Value(Value::Command(SET.clone())),
+                            vec![ArgumentDefinition::named(unescape(t).as_str(), value.generate_argument()?.unnamed_value()?)])
                     )),
                     ItemNode::Text(_) => error("Invalid left side in assignment"),
                     ItemNode::Integer(_) => error("Invalid left side in assignment"),
+                    ItemNode::Float(_) => error("Invalid left side in assignment"),
                     ItemNode::Get(_, _) => error("Invalid left side in assignment"),
                     ItemNode::Path(_, _) => error("Invalid left side in assignment"),
                 }
@@ -159,10 +167,16 @@ impl AssignmentNode {
                     ItemNode::Label(t) => Ok(Some(
                         CallDefinition::new(
                             ValueDefinition::Value(Value::Command(LET.clone())),
-                            vec![ArgumentDefinition::named(t, value.generate_argument()?.value)])
+                            vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)])
                     )),
-                    ItemNode::Text(_) => error("Invalid left side in assignment"),
+                    ItemNode::QuotedLabel(t) => Ok(Some(
+                        CallDefinition::new(
+                            ValueDefinition::Value(Value::Command(LET.clone())),
+                            vec![ArgumentDefinition::named(unescape(t).as_str(), value.generate_argument()?.unnamed_value()?)])
+                    )),
+                    _ => error("Invalid left side in assignment"),
                     ItemNode::Integer(_) => error("Invalid left side in assignment"),
+                    ItemNode::Float(_) => error("Invalid left side in assignment"),
                     ItemNode::Get(_, _) => error("Invalid left side in assignment"),
                     ItemNode::Path(_, _) => error("Invalid left side in assignment"),
                 }
@@ -414,8 +428,10 @@ impl UnaryNode {
 #[derive(Debug)]
 pub enum ItemNode {
     Label(Box<str>),
+    QuotedLabel(Box<str>),
     Text(Box<str>),
     Integer(i128),
+    Float(f64),
     Get(Box<ItemNode>, Box<JobNode>),
     Path(Box<ItemNode>, Box<str>),
 }
@@ -449,29 +465,16 @@ impl ItemNode {
 
     pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
         Ok(ArgumentDefinition::unnamed(match self {
-            ItemNode::Label(l) => ValueDefinition::Lookup(l.clone()),
+            ItemNode::Label(l) => ValueDefinition::Label(l.clone()),
+            ItemNode::QuotedLabel(t) => ValueDefinition::Label(unescape(t).into_boxed_str()),
             ItemNode::Text(t) => ValueDefinition::Value(Value::Text(unescape(t).into_boxed_str())),
             ItemNode::Integer(i) => ValueDefinition::Value(Value::Integer(i.clone())),
+            ItemNode::Float(f) => ValueDefinition::Value(Value::Float(f.clone())),
             ItemNode::Get(node, field) =>
                 ValueDefinition::Get(
-                    Box::new(node.generate_argument()?.value),
+                    Box::new(node.generate_argument()?.unnamed_value()?),
                     Box::new(ValueDefinition::JobDefinition(field.generate()?))),
             ItemNode::Path(node, label) => ValueDefinition::Path(Box::new(node.generate_argument()?.value), label.clone()),
         }))
     }
-    /*
-        pub fn path(&self) -> Option<Vec<Box<str>>> {
-            match self {
-                ItemNode::Label(l) => Some(vec![l.clone()]),
-                ItemNode::Text(t) => None,
-                ItemNode::Integer(i) => None,
-                ItemNode::Get(node, field) => None,
-                ItemNode::Path(node, label) => {
-                    v = node.path()?;
-                    v.push(label);
-                    Some(v)
-                },
-            }
-        }
-        */
 }

@@ -179,7 +179,7 @@ impl CallDefinition {
             }
 
             _ =>
-                if let ValueDefinition::Lookup(p) = &self.command {
+                if let ValueDefinition::Label(p) = &self.command {
                     if p.len() == 1 {
                         match resolve_external_command(p, env.clone()) {
                             None => error(format!("Unknown command name {}", self.command.to_string()).as_str()),

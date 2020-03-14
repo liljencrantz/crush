@@ -195,7 +195,7 @@ impl Scope {
                     drop(data);
                     p.set_on_data(name, value)
                 }
-                None => error(format!("Unknown variable ${{{}}}", name).as_str()),
+                None => error(format!("Unknown variable {}", name).as_str()),
             }
         } else {
             if data.is_readonly {

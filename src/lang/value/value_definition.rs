@@ -25,7 +25,7 @@ pub enum ValueDefinition {
     Value(Value),
     ClosureDefinition(Vec<Job>),
     JobDefinition(Job),
-    Lookup(Box<str>),
+    Label(Box<str>),
     Get(Box<ValueDefinition>, Box<ValueDefinition>),
     Path(Box<ValueDefinition>, Box<str>),
 }
@@ -68,7 +68,7 @@ impl ValueDefinition {
     pub fn compile_non_blocking(&self, env: &Scope) -> CrushResult<Value> {
         Ok(match self {
             ValueDefinition::Value(v) => v.clone(),
-            ValueDefinition::Lookup(s) =>
+            ValueDefinition::Label(s) =>
                 mandate(
                     env.get(s).or_else(|| file_get(s)),
                     format!("Unknown variable {}", self.to_string()).as_str())?,
@@ -96,7 +96,7 @@ impl ValueDefinition {
                 last_input.recv()?
             }
             ValueDefinition::ClosureDefinition(c) => Value::Closure(Closure::new(c.clone(), env)),
-            ValueDefinition::Lookup(s) =>
+            ValueDefinition::Label(s) =>
                 mandate(
                     env.get(s).or_else(|| file_get(s)),
                     format!("Unknown variable {}", self.to_string()).as_str())?,
@@ -159,7 +159,7 @@ impl ToString for ValueDefinition {
     fn to_string(&self) -> String {
         match &self {
             ValueDefinition::Value(v) => v.to_string(),
-            ValueDefinition::Lookup(v) => v.to_string(),
+            ValueDefinition::Label(v) => v.to_string(),
             ValueDefinition::ClosureDefinition(c) => "<closure>".to_string(),
             ValueDefinition::JobDefinition(_) => "<job>".to_string(),
             ValueDefinition::Get(v, l) => format!("{}[{}]", v.to_string(), l.to_string()),
