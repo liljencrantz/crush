@@ -54,6 +54,12 @@ pub fn this_list(this: Option<Value>) -> CrushResult<List> {
     }
 }
 
+pub fn this_dict(this: Option<Value>) -> CrushResult<Dict> {
+    match this {
+        Some(Value::Dict(l)) => Ok(l),
+        _ => argument_error("Expected a dict"),
+    }
+}
 
 pub fn single_argument_list(mut arg: Vec<Argument>) -> CrushResult<List> {
     match arg.len() {

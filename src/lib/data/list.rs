@@ -68,22 +68,13 @@ fn clear(context: ExecutionContext) -> CrushResult<()> {
     Ok(())
 }
 
-fn set(mut context: ExecutionContext) -> CrushResult<()> {
-    two_arguments(&context.arguments)?;
+fn setitem(mut context: ExecutionContext) -> CrushResult<()> {
     let mut list = this_list(context.this)?;
-    let mut idx = None;
-    let mut value = None;
+    let value = context.arguments.remove(1).value;
+    let key = context.arguments.remove(0).value;
 
-    for arg in context.arguments.drain(..) {
-        match (arg.name.as_deref(), arg.value) {
-            (Some("index"), Value::Integer(l)) => idx = Some(l),
-            (Some("value"), l) => value = Some(l),
-            _ => return argument_error("Unexpected argument"),
-        }
-    }
-
-    match (idx, value) {
-        (Some(i), Some(v)) => list.set(i as usize, v),
+    match key {
+        Value::Integer(i) => list.set(i as usize, value),
         _ => argument_error("Missing arguments"),
     }
 }
@@ -114,6 +105,7 @@ pub fn list_member(name: &str) -> CrushResult<Value> {
         "pop" => Ok(Value::Command(SimpleCommand::new(pop, false))),
         "peek" => Ok(Value::Command(SimpleCommand::new(peek, false))),
         "clear" => Ok(Value::Command(SimpleCommand::new(clear, false))),
+        "setitem" => Ok(Value::Command(SimpleCommand::new(setitem, false))),
         "remove" => Ok(Value::Command(SimpleCommand::new(remove, false))),
         "truncate" => Ok(Value::Command(SimpleCommand::new(truncate, false))),
         "clone" => Ok(Value::Command(SimpleCommand::new(clone, false))),
@@ -130,7 +122,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     env.declare("push", Value::Command(SimpleCommand::new(push, false)))?;
     env.declare("pop", Value::Command(SimpleCommand::new(pop, false)))?;
     env.declare("peek", Value::Command(SimpleCommand::new(peek, false)))?;
-    env.declare("set", Value::Command(SimpleCommand::new(set, false)))?;
+    env.declare("setitem", Value::Command(SimpleCommand::new(setitem, false)))?;
     env.declare("clear", Value::Command(SimpleCommand::new(clear, false)))?;
     env.declare("remove", Value::Command(SimpleCommand::new(remove, false)))?;
     env.declare("truncate", Value::Command(SimpleCommand::new(truncate, false)))?;

@@ -1,11 +1,11 @@
 use crate::lang::command::ExecutionContext;
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, argument_error, error};
 use crate::lang::{value::ValueType, dict::Dict, command::SimpleCommand};
 use crate::lang::table::Row;
 use crate::lang::value::Value;
 use crate::lang::table::ColumnType;
 use crate::lang::scope::Scope;
-use crate::lib::parse_util::single_argument_dict;
+use crate::lib::parse_util::{single_argument_dict, this_dict};
 
 fn new(mut context: ExecutionContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
@@ -25,67 +25,67 @@ fn new(mut context: ExecutionContext) -> CrushResult<()> {
     }
 }
 
-fn insert(mut context: ExecutionContext) -> CrushResult<()> {
-    let output = context.output.initialize(vec![])?;
-    if context.arguments.len() != 3 {
-        return argument_error("Expected three arguments");
-    }
-    let value = context.arguments.remove(2).value;
-    let key = context.arguments.remove(1).value;
-    match &context.arguments[0].value {
-        Value::Dict(dict) => {
-            if dict.key_type() == key.value_type() && dict.value_type() == value.value_type() {
-                dict.insert(key, value);
-                Ok(())
-            } else {
-                argument_error("Wrong key/value type")
-            }
-        }
-        _ => argument_error("Argument is not a dict"),
+fn setitem(mut context: ExecutionContext) -> CrushResult<()> {
+    let mut dict = this_dict(context.this)?;
+    let value = context.arguments.remove(1).value;
+    let key = context.arguments.remove(0).value;
+    if dict.key_type() == key.value_type() && dict.value_type() == value.value_type() {
+        dict.insert(key, value);
+        Ok(())
+    } else {
+        argument_error("Wrong key/value type")
     }
 }
 
-fn get(context: ExecutionContext) -> CrushResult<()> {
-    if context.arguments.len() != 2 {
-        return argument_error("Expected two arguments");
+fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
+    if context.arguments.len() == 0 {
+        return argument_error("Missing key")
     }
-    match &context.arguments[0].value {
-        Value::Dict(dict) => {
-            let output = context.output.initialize(
-                vec![ColumnType::named("value", dict.value_type())])?;
-            dict.get(&context.arguments[1].value).map(|c| output.send(Row::new(vec![c])));
-            Ok(())
-        }
-        _ => argument_error("Argument is not a list"),
-    }
+    let mut dict = this_dict(context.this)?;
+    let key = context.arguments.remove(0).value;
+    let output = context.output.initialize(
+        vec![ColumnType::named("value", dict.value_type())])?;
+    dict.get(&key).map(|c| output.send(Row::new(vec![c])));
+    Ok(())
 }
 
-fn remove(context: ExecutionContext) -> CrushResult<()> {
-    if context.arguments.len() != 2 {
-        return argument_error("Expected two arguments");
+fn remove(mut context: ExecutionContext) -> CrushResult<()> {
+    if context.arguments.len() == 0 {
+        return argument_error("Missing key")
     }
-    match &context.arguments[0].value {
-        Value::Dict(dict) => {
-            dict.remove(&context.arguments[1].value).map(|c| context.output.send(c));
-            Ok(())
-        }
-        _ => argument_error("Argument is not a dict"),
-    }
+    let mut dict = this_dict(context.this)?;
+    let key = context.arguments.remove(0).value;
+    let o = context.output;
+    dict.remove(&key).map(|c| o.send(c));
+    Ok(())
 }
 
 fn len(context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::Integer(single_argument_dict(context.arguments)?.len() as i128))
+    context.output.send(Value::Integer(this_dict(context.this)?.len() as i128))
 }
 
 fn empty(context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::Bool(single_argument_dict(context.arguments)?.len() == 0))
+    context.output.send(Value::Bool(this_dict(context.this)?.len() == 0))
+}
+
+pub fn dict_member(name: &str) -> CrushResult<Value> {
+    match name {
+        "len" => Ok(Value::Command(SimpleCommand::new(len, false))),
+        "setitem" => Ok(Value::Command(SimpleCommand::new(setitem, false))),
+        "getitem" => Ok(Value::Command(SimpleCommand::new(getitem, false))),
+        "empty" => Ok(Value::Command(SimpleCommand::new(empty, false))),
+//        "clear" => Ok(Value::Command(SimpleCommand::new(clear, false))),
+        "remove" => Ok(Value::Command(SimpleCommand::new(remove, false))),
+//        "clone" => Ok(Value::Command(SimpleCommand::new(clone, false))),
+        _ => error(format!("Dict does not provide a method {}", name).as_str())
+    }
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("dict")?;
     env.declare("new", Value::Command(SimpleCommand::new(new, false)))?;
-    env.declare("insert", Value::Command(SimpleCommand::new(insert, false)))?;
-    env.declare("get", Value::Command(SimpleCommand::new(get, false)))?;
+    env.declare("setitem", Value::Command(SimpleCommand::new(setitem, false)))?;
+    env.declare("getitem", Value::Command(SimpleCommand::new(getitem, false)))?;
     env.declare("remove", Value::Command(SimpleCommand::new(remove, false)))?;
     env.declare("len", Value::Command(SimpleCommand::new(len, false)))?;
     env.declare("empty", Value::Command(SimpleCommand::new(empty, false)))?;

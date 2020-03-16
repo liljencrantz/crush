@@ -20,6 +20,7 @@ use crate::lang::{job::Job, argument::ArgumentDefinition, command::CrushCommand}
 use crate::util::file::cwd;
 use crate::lang::list::List;
 use crate::lib::data::list::list_member;
+use crate::lib::data::dict::dict_member;
 
 #[derive(Clone)]
 #[derive(Debug)]
@@ -81,6 +82,7 @@ impl ValueDefinition {
                     Value::Struct(s) => mandate(s.get(l), "Missing value")?,
                     Value::Scope(subenv) => mandate(subenv.get(l), "Missing value")?,
                     Value::List(list) => list_member(l.as_ref())?,
+                    Value::Dict(dict) => dict_member(l.as_ref())?,
                     _ => return error(format!("Invalid path operation on type {}", v.value_type().to_string()).as_str()),
                 })
             }

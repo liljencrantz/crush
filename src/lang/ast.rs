@@ -25,8 +25,6 @@ static OR: SimpleCommand = SimpleCommand { call:crate::lib::cond::or, can_block:
 static LET: SimpleCommand = SimpleCommand { call:crate::lib::var::r#let, can_block:false};
 static SET: SimpleCommand = SimpleCommand { call:crate::lib::var::set, can_block:false};
 
-static SET_ITEM: SimpleCommand = SimpleCommand { call:crate::lib::data::set_item, can_block:false};
-
 #[derive(Debug)]
 pub struct JobListNode {
     pub jobs: Vec<JobNode>,
@@ -163,11 +161,12 @@ impl AssignmentNode {
                     ItemNode::Float(_) => error("Invalid left side in assignment"),
                     ItemNode::Get(container, key) => Ok(Some(
                         CallDefinition::new(
-                        ValueDefinition::Value(Value::Command(SET_ITEM.clone())),
+                        ValueDefinition::Path(
+                            Box::from(container.generate_argument()?.unnamed_value()?),
+                            Box::from("setitem")),
                         vec![
-                            ArgumentDefinition::named("container", container.generate_argument()?.unnamed_value()?),
-                            ArgumentDefinition::named("key",key.generate_argument()?.unnamed_value()?),
-                            ArgumentDefinition::named("value", value.generate_argument()?.unnamed_value()?),
+                            ArgumentDefinition::unnamed(key.generate_argument()?.unnamed_value()?),
+                            ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?),
                         ]))),
                     ItemNode::Path(_, _) => error("Invalid left side in assignment"),
                     ItemNode::Field(_) => error("Invalid left side in assignment"),
