@@ -59,11 +59,11 @@ fn trim(mut context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("text")?;
-    env.declare_str("upper", Value::Command(SimpleCommand::new(upper, false)))?;
-    env.declare_str("lower", Value::Command(SimpleCommand::new(lower, false)))?;
-    env.declare_str("format", Value::Command(SimpleCommand::new(format::format, false)))?;
-    env.declare_str("split", Value::Command(SimpleCommand::new(split, false)))?;
-    env.declare_str("trim", Value::Command(SimpleCommand::new(trim, false)))?;
+    env.declare("upper", Value::Command(SimpleCommand::new(upper, false)))?;
+    env.declare("lower", Value::Command(SimpleCommand::new(lower, false)))?;
+    env.declare("format", Value::Command(SimpleCommand::new(format::format, false)))?;
+    env.declare("split", Value::Command(SimpleCommand::new(split, false)))?;
+    env.declare("trim", Value::Command(SimpleCommand::new(trim, false)))?;
     env.readonly();
     Ok(())
 }

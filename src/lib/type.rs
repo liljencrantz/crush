@@ -55,33 +55,33 @@ fn r#table_stream(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("type")?;
 
-    env.declare_str("to", Value::Command(SimpleCommand::new(to, true)))?;
-    env.declare_str("of", Value::Command(SimpleCommand::new(of, false)))?;
+    env.declare("to", Value::Command(SimpleCommand::new(to, true)))?;
+    env.declare("of", Value::Command(SimpleCommand::new(of, false)))?;
 
-    env.declare_str("list", Value::Command(SimpleCommand::new(list, false)))?;
-    env.declare_str("dict", Value::Command(SimpleCommand::new(dict, false)))?;
-    env.declare_str("struct", Value::Command(SimpleCommand::new(r#struct, false)))?;
-    env.declare_str("table", Value::Command(SimpleCommand::new(table, false)))?;
-    env.declare_str("table_stream", Value::Command(SimpleCommand::new(table_stream, false)))?;
+    env.declare("list", Value::Command(SimpleCommand::new(list, false)))?;
+    env.declare("dict", Value::Command(SimpleCommand::new(dict, false)))?;
+    env.declare("struct", Value::Command(SimpleCommand::new(r#struct, false)))?;
+    env.declare("table", Value::Command(SimpleCommand::new(table, false)))?;
+    env.declare("table_stream", Value::Command(SimpleCommand::new(table_stream, false)))?;
 
-    env.declare_str("integer", Value::Type(ValueType::Integer))?;
-    env.declare_str("type", Value::Type(ValueType::Type))?;
-    env.declare_str("text", Value::Type(ValueType::Text))?;
-    env.declare_str("bool", Value::Type(ValueType::Bool))?;
-    env.declare_str("closure", Value::Type(ValueType::Closure))?;
-    env.declare_str("empty", Value::Type(ValueType::Empty))?;
-    env.declare_str("field", Value::Type(ValueType::Field))?;
-    env.declare_str("float", Value::Type(ValueType::Float))?;
-    env.declare_str("duration", Value::Type(ValueType::Duration))?;
-    env.declare_str("time", Value::Type(ValueType::Time))?;
-    env.declare_str("command", Value::Type(ValueType::Command))?;
-    env.declare_str("file", Value::Type(ValueType::File))?;
-    env.declare_str("glob", Value::Type(ValueType::Glob))?;
-    env.declare_str("regex", Value::Type(ValueType::Regex))?;
-    env.declare_str("env", Value::Type(ValueType::Scope))?;
-    env.declare_str("any", Value::Type(ValueType::Any))?;
-    env.declare_str("binary", Value::Type(ValueType::Binary))?;
-    env.declare_str("binary_stream", Value::Type(ValueType::BinaryStream))?;
+    env.declare("integer", Value::Type(ValueType::Integer))?;
+    env.declare("type", Value::Type(ValueType::Type))?;
+    env.declare("text", Value::Type(ValueType::Text))?;
+    env.declare("bool", Value::Type(ValueType::Bool))?;
+    env.declare("closure", Value::Type(ValueType::Closure))?;
+    env.declare("empty", Value::Type(ValueType::Empty))?;
+    env.declare("field", Value::Type(ValueType::Field))?;
+    env.declare("float", Value::Type(ValueType::Float))?;
+    env.declare("duration", Value::Type(ValueType::Duration))?;
+    env.declare("time", Value::Type(ValueType::Time))?;
+    env.declare("command", Value::Type(ValueType::Command))?;
+    env.declare("file", Value::Type(ValueType::File))?;
+    env.declare("glob", Value::Type(ValueType::Glob))?;
+    env.declare("regex", Value::Type(ValueType::Regex))?;
+    env.declare("env", Value::Type(ValueType::Scope))?;
+    env.declare("any", Value::Type(ValueType::Any))?;
+    env.declare("binary", Value::Type(ValueType::Binary))?;
+    env.declare("binary_stream", Value::Type(ValueType::BinaryStream))?;
 
     env.readonly();
     Ok(())

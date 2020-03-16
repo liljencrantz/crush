@@ -14,7 +14,7 @@ pub fn r#let(context: ExecutionContext) -> CrushResult<()> {
         }
     }
     for arg in context.arguments {
-        context.env.declare_str(arg.name.unwrap().as_ref(), arg.value)?;
+        context.env.declare(arg.name.unwrap().as_ref(), arg.value)?;
     }
     Ok(())
 }
@@ -28,7 +28,7 @@ pub fn set(context: ExecutionContext) -> CrushResult<()> {
         }
     }
     for arg in context.arguments {
-        context.env.set_str(arg.name.unwrap().as_ref(), arg.value)?;
+        context.env.set(arg.name.unwrap().as_ref(), arg.value)?;
     }
     Ok(())
 }
@@ -36,11 +36,11 @@ pub fn set(context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("var")?;
     root.r#use(&env);
-    env.declare_str("let", Value::Command(SimpleCommand::new(r#let, false)))?;
-    env.declare_str("set", Value::Command(SimpleCommand::new(set, false)))?;
-    env.declare_str("unset", Value::Command(SimpleCommand::new(unset::perform, false)))?;
-    env.declare_str("env", Value::Command(SimpleCommand::new(env::perform, false)))?;
-    env.declare_str("use", Value::Command(SimpleCommand::new(r#use::perform, false)))?;
+    env.declare("let", Value::Command(SimpleCommand::new(r#let, false)))?;
+    env.declare("set", Value::Command(SimpleCommand::new(set, false)))?;
+    env.declare("unset", Value::Command(SimpleCommand::new(unset::perform, false)))?;
+    env.declare("env", Value::Command(SimpleCommand::new(env::perform, false)))?;
+    env.declare("use", Value::Command(SimpleCommand::new(r#use::perform, false)))?;
     env.readonly();
     Ok(())
 }

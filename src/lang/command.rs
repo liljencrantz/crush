@@ -6,12 +6,14 @@ use crate::lang::scope::Scope;
 use crate::lang::printer::Printer;
 use crate::lang::job::Job;
 use crate::lang::stream_printer::spawn_print_thread;
+use crate::lang::value::Value;
 
 pub struct ExecutionContext {
     pub input: ValueReceiver,
     pub output: ValueSender,
     pub arguments: Vec<Argument>,
     pub env: Scope,
+    pub this: Option<Value>,
     pub printer: Printer,
 }
 
@@ -118,7 +120,11 @@ impl CrushCommand for Closure {
         let parent_env = self.env.clone();
         let env = parent_env.create_child(&context.env, false);
 
+        if let Some(this) = context.this {
+            env.redeclare("this", this);
+        }
         Closure::push_arguments_to_env(context.arguments, &env);
+
         match job_definitions.len() {
             0 => return error("Empty closures not supported"),
             1 => {
@@ -189,7 +195,7 @@ impl Closure {
     fn push_arguments_to_env(mut arguments: Vec<Argument>, env: &Scope) {
         for arg in arguments.drain(..) {
             if let Some(name) = &arg.name {
-                env.declare_str(name.as_ref(), arg.value);
+                env.redeclare(name.as_ref(), arg.value);
             }
         }
     }

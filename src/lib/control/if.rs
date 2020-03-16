@@ -10,6 +10,7 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
         output: context.output,
         arguments: vec![],
         env: context.env,
+        this: None,
         printer: context.printer,
     };
     match context.arguments.len() {

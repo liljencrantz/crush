@@ -36,7 +36,7 @@ item := label | item [ job ] | item '/' label
 
 */
 
-lalrpop_mod!(pub parser2, "/lang/lalrparser.rs");
+lalrpop_mod!(pub lalrparser, "/lang/lalrparser.rs");
 
 pub fn parse_name(s: &str) -> Option<Vec<Box<str>>> {
     let res = s.split('.').collect::<Vec<&str>>();
@@ -49,5 +49,5 @@ pub fn parse_name(s: &str) -> Option<Vec<Box<str>>> {
 }
 
 pub fn parse(s: &str) -> CrushResult<Vec<Job>> {
-    to_crush_error(parser2::JobListParser::new().parse(s))?.generate()
+    to_crush_error(lalrparser::JobListParser::new().parse(s))?.generate()
 }

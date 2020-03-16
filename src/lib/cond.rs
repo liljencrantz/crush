@@ -23,6 +23,7 @@ pub fn and(mut context: ExecutionContext) -> CrushResult<()> {
                     output: sender,
                     arguments: vec![],
                     env: context.env.clone(),
+                    this: None,
                     printer: context.printer.clone(),
                 };
                 c.invoke(cc)?;
@@ -60,6 +61,7 @@ pub fn or(mut context: ExecutionContext) -> CrushResult<()> {
                     output: sender,
                     arguments: vec![],
                     env: context.env.clone(),
+                    this: None,
                     printer: context.printer.clone(),
                 };
                 c.invoke(cc)?;
@@ -82,8 +84,8 @@ pub fn or(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("cond")?;
     root.r#use(&env);
-    env.declare_str("and", Value::ConditionCommand(ConditionCommand::new(and)))?;
-    env.declare_str("or", Value::ConditionCommand(ConditionCommand::new(or)))?;
+    env.declare("and", Value::ConditionCommand(ConditionCommand::new(and)))?;
+    env.declare("or", Value::ConditionCommand(ConditionCommand::new(or)))?;
     env.readonly();
     Ok(())
 }

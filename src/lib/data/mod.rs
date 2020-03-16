@@ -4,9 +4,9 @@ use crate::lang::{value::Value, command::SimpleCommand, r#struct::Struct};
 use crate::lang::command::ExecutionContext;
 use crate::lib::parse_util::three_arguments;
 
-mod list;
-mod dict;
-mod re;
+pub mod list;
+pub mod dict;
+pub mod re;
 
 pub fn set_item(mut context: ExecutionContext) -> CrushResult<()> {
     three_arguments(&context.arguments)?;
@@ -47,8 +47,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("data")?;
     root.r#use(&env);
 
-    env.declare_str("struct", Value::Command(SimpleCommand::new(r#struct, false)))?;
-    env.declare_str("materialize", Value::Command(SimpleCommand::new(materialize, true)))?;
+    env.declare("struct", Value::Command(SimpleCommand::new(r#struct, false)))?;
+    env.declare("materialize", Value::Command(SimpleCommand::new(materialize, true)))?;
 
     list::declare(&env)?;
     dict::declare(&env)?;

@@ -131,6 +131,7 @@ impl AssignmentNode {
                     ItemNode::Float(_) => error("Invalid left side in assignment"),
                     ItemNode::Get(_, _) => error("Invalid left side in assignment"),
                     ItemNode::Path(_, _) => error("Invalid left side in assignment"),
+                    ItemNode::Field(_) => error("Invalid left side in assignment"),
                 }
             }
             AssignmentNode::Declaration(target, value) => {
@@ -165,10 +166,11 @@ impl AssignmentNode {
                         ValueDefinition::Value(Value::Command(SET_ITEM.clone())),
                         vec![
                             ArgumentDefinition::named("container", container.generate_argument()?.unnamed_value()?),
-                            ArgumentDefinition::named("key",ValueDefinition::JobDefinition(key.generate()?)),
+                            ArgumentDefinition::named("key",key.generate_argument()?.unnamed_value()?),
                             ArgumentDefinition::named("value", value.generate_argument()?.unnamed_value()?),
                         ]))),
                     ItemNode::Path(_, _) => error("Invalid left side in assignment"),
+                    ItemNode::Field(_) => error("Invalid left side in assignment"),
                 }
             }
             AssignmentNode::Declaration(target, value) => {
@@ -437,11 +439,12 @@ impl UnaryNode {
 #[derive(Debug)]
 pub enum ItemNode {
     Label(Box<str>),
+    Field(Box<str>),
     QuotedLabel(Box<str>),
     Text(Box<str>),
     Integer(i128),
     Float(f64),
-    Get(Box<ItemNode>, Box<JobNode>),
+    Get(Box<ItemNode>, Box<ExpressionNode>),
     Path(Box<ItemNode>, Box<str>),
 }
 
@@ -482,8 +485,18 @@ impl ItemNode {
             ItemNode::Get(node, field) =>
                 ValueDefinition::Get(
                     Box::new(node.generate_argument()?.unnamed_value()?),
-                    Box::new(ValueDefinition::JobDefinition(field.generate()?))),
-            ItemNode::Path(node, label) => ValueDefinition::Path(Box::new(node.generate_argument()?.value), label.clone()),
+                    Box::new(field.generate_argument()?.unnamed_value()?)),
+            ItemNode::Path(node, label) => {
+                let parent = node.generate_argument()?;
+                match parent.unnamed_value()? {
+                    ValueDefinition::Value(Value::Field(mut f)) => {
+                        f.push(label.clone());
+                        ValueDefinition::Value(Value::Field(f))
+                    }
+                    value => ValueDefinition::Path(Box::new(value), label.clone())
+                }
+            },
+            ItemNode::Field(f) => ValueDefinition::Value(Value::Field(vec![f[1..].to_string().into_boxed_str()])),
         }))
     }
 }

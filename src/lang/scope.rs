@@ -135,65 +135,38 @@ impl Scope {
         let res = Scope {
             data: Arc::from(Mutex::new(ScopeData::new(None, None, false))),
         };
-        self.declare(&[Box::from(name)], Value::Scope(res.clone()))?;
+        self.declare(name, Value::Scope(res.clone()))?;
         Ok(res)
     }
 
-    pub fn declare_str(&self, name: &str, value: Value) -> CrushResult<()> {
-        let n = &name.split('.').map(|e: &str| Box::from(e)).collect::<Vec<Box<str>>>()[..];
-        return self.declare(n, value);
+    pub fn declare(&self, name: &str, value: Value) -> CrushResult<()> {
+        let mut data = self.data.lock().unwrap();
+        if data.is_readonly {
+            return error("Scope is read only");
+        }
+        if data.mapping.contains_key(name) {
+            return error(format!("Variable ${{{}}} already exists", name).as_str());
+        }
+        data.mapping.insert(name.to_string(), value);
+        Ok(())
     }
 
-    pub fn declare(&self, name: &[Box<str>], value: Value) -> CrushResult<()> {
-        if name.is_empty() {
-            return error("Empty variable name");
+    pub fn redeclare(&self, name: &str, value: Value) -> CrushResult<()> {
+        let mut data = self.data.lock().unwrap();
+        if data.is_readonly {
+            return error("Scope is read only");
         }
-        if name.len() == 1 {
-            let mut data = self.data.lock().unwrap();
-            if data.is_readonly {
-                return error("Scope is read only");
-            }
-            if data.mapping.contains_key(name[0].as_ref()) {
-                return error(format!("Variable ${{{}}} already exists", name[0]).as_str());
-            }
-            data.mapping.insert(name[0].to_string(), value);
-            Ok(())
-        } else {
-            match self.get(name[0].as_ref()) {
-                None => error("Not a namespace"),
-                Some(Value::Scope(env)) => env.declare(&name[1..name.len()], value),
-                _ => error("Unknown namespace"),
-            }
-        }
+        data.mapping.insert(name.to_string(), value);
+        Ok(())
     }
 
-    pub fn set_str(&self, name: &str, value: Value) -> CrushResult<()> {
-        let n = &name.split('.').map(|e: &str| Box::from(e)).collect::<Vec<Box<str>>>()[..];
-        return self.set(n, value);
-    }
-
-    pub fn set(&self, name: &[Box<str>], value: Value) -> CrushResult<()> {
-        if name.is_empty() {
-            return error("Empty variable name");
-        }
-        if name.len() == 1 {
-            self.set_on_data(name[0].as_ref(), value)
-        } else {
-            match self.get(name[0].as_ref()) {
-                None => error("Not a namespace"),
-                Some(Value::Scope(env)) => env.set(&name[1..name.len()], value),
-                _ => error("Unknown namespace"),
-            }
-        }
-    }
-
-    fn set_on_data(&self, name: &str, value: Value) -> CrushResult<()> {
+    pub fn set(&self, name: &str, value: Value) -> CrushResult<()> {
         let mut data = self.data.lock().unwrap();
         if !data.mapping.contains_key(name) {
             match data.parent_scope.clone() {
                 Some(p) => {
                     drop(data);
-                    p.set_on_data(name, value)
+                    p.set(name, value)
                 }
                 None => error(format!("Unknown variable {}", name).as_str()),
             }
@@ -252,7 +225,6 @@ impl Scope {
         match data.mapping.get(&name.to_string()) {
             Some(v) => Some(v.clone()),
             None => {
-
                 let uses = data.uses.clone();
                 drop(data);
                 for used in &uses {

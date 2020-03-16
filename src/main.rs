@@ -21,13 +21,6 @@ use std::path::Path;
 use std::fs;
 use crate::lang::parser::parse;
 
-lalrpop_mod!(pub parser2, "/lang/parser2.rs"); // synthesized by LALRPOP
-
-pub fn wee() {
-
-//    println!("WWWW {:?}", parser2::JobListParser::new().parse("[a] | (1) | foo = 3 + 3"));
-}
-
 fn crush_history_file() -> Box<str> {
     Box::from(
         home()
@@ -130,7 +123,6 @@ fn run() -> CrushResult<()> {
 }
 
 fn main() {
-    wee();
     match run() {
         Ok(_) => (),
         Err(e) => println!("Error during initialization: {}", e.message),

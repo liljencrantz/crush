@@ -9,7 +9,7 @@ mod csv;
 mod json;
 mod http;
 
-fn val(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn val(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(context.arguments.remove(0).value)
 }
 
@@ -27,13 +27,13 @@ fn cat(context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("io")?;
     root.r#use(&env);
-    env.declare_str("cat", Value::Command(SimpleCommand::new(cat, true)))?;
-    env.declare_str("http", Value::Command(SimpleCommand::new(http::perform, true)))?;
-    env.declare_str("lines", Value::Command(SimpleCommand::new(lines::perform, true)))?;
-    env.declare_str("csv", Value::Command(SimpleCommand::new(csv::perform, true)))?;
-    env.declare_str("json", Value::Command(SimpleCommand::new(json::perform, true)))?;
-    env.declare_str("echo", Value::Command(SimpleCommand::new(echo, false)))?;
-    env.declare_str("val", Value::Command(SimpleCommand::new(val, false)))?;
+    env.declare("cat", Value::Command(SimpleCommand::new(cat, true)))?;
+    env.declare("http", Value::Command(SimpleCommand::new(http::perform, true)))?;
+    env.declare("lines", Value::Command(SimpleCommand::new(lines::perform, true)))?;
+    env.declare("csv", Value::Command(SimpleCommand::new(csv::perform, true)))?;
+    env.declare("json", Value::Command(SimpleCommand::new(json::perform, true)))?;
+    env.declare("echo", Value::Command(SimpleCommand::new(echo, false)))?;
+    env.declare("val", Value::Command(SimpleCommand::new(val, false)))?;
     env.readonly();
 
     Ok(())

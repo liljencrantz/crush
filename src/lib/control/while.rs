@@ -28,6 +28,7 @@ pub fn run(mut config: Config) -> CrushResult<()> {
             output: sender,
             arguments: Vec::new(),
             env: config.env.clone(),
+            this: None,
             printer: config.printer.clone(),
         });
 
@@ -38,6 +39,7 @@ pub fn run(mut config: Config) -> CrushResult<()> {
                     output: spawn_print_thread(&config.printer),
                     arguments: Vec::new(),
                     env: env.clone(),
+                    this: None,
                     printer: config.printer.clone(),
                 });
                 if env.is_stopped() {

@@ -77,9 +77,9 @@ fn replace(mut context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("re")?;
-    env.declare_str("new", Value::Command(SimpleCommand::new(new, false)))?;
-    env.declare_str("match", Value::Command(SimpleCommand::new(r#match, false)))?;
-    env.declare_str("replace", Value::Command(SimpleCommand::new(replace, false)))?;
+    env.declare("new", Value::Command(SimpleCommand::new(new, false)))?;
+    env.declare("match", Value::Command(SimpleCommand::new(r#match, false)))?;
+    env.declare("replace", Value::Command(SimpleCommand::new(replace, false)))?;
     env.readonly();
     Ok(())
 }

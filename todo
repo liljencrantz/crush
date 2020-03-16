@@ -1,5 +1,10 @@
 Todo for MVP 1:
-Fix external command fallback
+Nice way to pass on all arguments of a closure to another command
+Nice way of introspecting all arguments of a closure
+Figure out how to make globs convenient again
+Figure out how to make external commands with subcommands convenient again
+Add ** or some other operator for recursive wildcard matches
+Re-add match operators =~ and !~ for regexp matching: fnurple | where {$row =~ re{^a.*b$}}
 Running a directory is cd
 Make newline a separator again
 &&/|| => and/or
@@ -170,3 +175,6 @@ Fix infinite loop on "val (true || false)"
 Add support for := for variable declaration
 Float parsing
 Add support for variable literals
+Fix external command fallback
+Make 'this' reliably handled in closures
+Make it possible to call methods with an expicitly set 'this', e.g list.pop this=some_list

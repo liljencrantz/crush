@@ -1,19 +1,20 @@
 mod command_util;
 mod parse_util;
-mod file;
+
+pub mod file;
 pub mod var;
-mod proc;
-mod io;
-mod r#type;
-mod time;
+pub mod proc;
+pub mod io;
+pub mod r#type;
+pub mod time;
 pub mod math;
 pub mod comp;
 pub mod cond;
-mod stream;
+pub mod stream;
 pub mod data;
-mod text;
-mod control;
-mod constants;
+pub mod text;
+pub mod control;
+pub mod constants;
 
 use crate::{
     lang::argument::Argument,

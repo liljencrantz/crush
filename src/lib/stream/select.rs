@@ -73,6 +73,7 @@ pub fn run(
                                 output: sender,
                                 arguments,
                                 env: env.clone(),
+                                this: None,
                                 printer: printer.clone(),
                             }
                         );
@@ -123,6 +124,7 @@ pub fn run(
                                     output: sender,
                                     arguments,
                                     env: env.clone(),
+                                    this: None,
                                     printer: printer.clone(),
                                 }
                             );

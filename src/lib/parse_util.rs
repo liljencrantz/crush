@@ -47,6 +47,14 @@ pub fn single_argument_type(mut arg: Vec<Argument>) -> CrushResult<ValueType> {
     }
 }
 
+pub fn this_list(this: Option<Value>) -> CrushResult<List> {
+    match this {
+        Some(Value::List(l)) => Ok(l),
+        _ => argument_error("Expected a list"),
+    }
+}
+
+
 pub fn single_argument_list(mut arg: Vec<Argument>) -> CrushResult<List> {
     match arg.len() {
         1 => {

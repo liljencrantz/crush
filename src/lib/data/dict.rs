@@ -83,12 +83,12 @@ fn empty(context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("dict")?;
-    env.declare_str("new", Value::Command(SimpleCommand::new(new, false)))?;
-    env.declare_str("insert", Value::Command(SimpleCommand::new(insert, false)))?;
-    env.declare_str("get", Value::Command(SimpleCommand::new(get, false)))?;
-    env.declare_str("remove", Value::Command(SimpleCommand::new(remove, false)))?;
-    env.declare_str("len", Value::Command(SimpleCommand::new(len, false)))?;
-    env.declare_str("empty", Value::Command(SimpleCommand::new(empty, false)))?;
+    env.declare("new", Value::Command(SimpleCommand::new(new, false)))?;
+    env.declare("insert", Value::Command(SimpleCommand::new(insert, false)))?;
+    env.declare("get", Value::Command(SimpleCommand::new(get, false)))?;
+    env.declare("remove", Value::Command(SimpleCommand::new(remove, false)))?;
+    env.declare("len", Value::Command(SimpleCommand::new(len, false)))?;
+    env.declare("empty", Value::Command(SimpleCommand::new(empty, false)))?;
     env.readonly();
     Ok(())
 }

@@ -51,15 +51,15 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             .collect();
         path.append(&mut dirs);
     });
-    env.declare_str("cmd_path", Value::List(path));
+    env.declare("cmd_path", Value::List(path));
 
-    env.declare_str("if", Value::ConditionCommand(ConditionCommand::new(r#if::perform)))?;
-    env.declare_str("while", Value::ConditionCommand(ConditionCommand::new(r#while::perform)))?;
-    env.declare_str("loop", Value::ConditionCommand(ConditionCommand::new(r#loop::perform)))?;
-    env.declare_str("for", Value::ConditionCommand(ConditionCommand::new(r#for::perform)))?;
-    env.declare_str("break", Value::Command(SimpleCommand::new(r#break, false)))?;
-    env.declare_str("continue", Value::Command(SimpleCommand::new(r#continue, false)))?;
-    env.declare_str("cmd", Value::Command(SimpleCommand::new(cmd, true)))?;
+    env.declare("if", Value::ConditionCommand(ConditionCommand::new(r#if::perform)))?;
+    env.declare("while", Value::ConditionCommand(ConditionCommand::new(r#while::perform)))?;
+    env.declare("loop", Value::ConditionCommand(ConditionCommand::new(r#loop::perform)))?;
+    env.declare("for", Value::ConditionCommand(ConditionCommand::new(r#for::perform)))?;
+    env.declare("break", Value::Command(SimpleCommand::new(r#break, false)))?;
+    env.declare("continue", Value::Command(SimpleCommand::new(r#continue, false)))?;
+    env.declare("cmd", Value::Command(SimpleCommand::new(cmd, true)))?;
     env.readonly();
 
     Ok(())

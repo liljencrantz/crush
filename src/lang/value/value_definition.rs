@@ -18,6 +18,8 @@ use crate::{
 use std::time::Duration;
 use crate::lang::{job::Job, argument::ArgumentDefinition, command::CrushCommand};
 use crate::util::file::cwd;
+use crate::lang::list::List;
+use crate::lib::data::list::list_member;
 
 #[derive(Clone)]
 #[derive(Debug)]
@@ -65,21 +67,22 @@ impl ValueDefinition {
         }
     }
 
-    pub fn compile_non_blocking(&self, env: &Scope) -> CrushResult<Value> {
+    pub fn compile_non_blocking(&self, env: &Scope) -> CrushResult<(Option<Value>, Value)> {
         Ok(match self {
-            ValueDefinition::Value(v) => v.clone(),
+            ValueDefinition::Value(v) => (None, v.clone()),
             ValueDefinition::Label(s) =>
-                mandate(
+                (None, mandate(
                     env.get(s).or_else(|| file_get(s)),
-                    format!("Unknown variable {}", self.to_string()).as_str())?,
+                    format!("Unknown variable {}", self.to_string()).as_str())?),
             ValueDefinition::Path(vd, l) => {
-                let v = vd.compile_non_blocking(env)?;
-                match v {
+                let (_, v) = vd.compile_non_blocking(env)?;
+                (Some(v.clone()), match v {
                     Value::File(s) => Value::File(s.join(l.as_ref()).into_boxed_path()),
                     Value::Struct(s) => mandate(s.get(l), "Missing value")?,
                     Value::Scope(subenv) => mandate(subenv.get(l), "Missing value")?,
+                    Value::List(list) => list_member(l.as_ref())?,
                     _ => return error(format!("Invalid path operation on type {}", v.value_type().to_string()).as_str()),
-                }
+                })
             }
             _ => return error("Value is not a command"),
         })
@@ -124,6 +127,7 @@ impl ValueDefinition {
                     Value::File(s) => Value::File(s.join(l.as_ref()).into_boxed_path()),
                     Value::Struct(s) => mandate(s.get(&l), "Missing value")?,
                     Value::Scope(subenv) => mandate(subenv.get(l), "Missing value")?,
+                    Value::List(list) => list_member(l.as_ref())?,
                     _ => return error("Invalid path operation"),
                 }
             }

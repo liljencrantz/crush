@@ -20,6 +20,7 @@ pub fn run(body: Closure, parent: Scope, printer: Printer) -> CrushResult<()> {
             output: spawn_print_thread(&printer),
             arguments: Vec::new(),
             env: env.clone(),
+            this: None,
             printer: printer.clone(),
         });
         if env.is_stopped() {

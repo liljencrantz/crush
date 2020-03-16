@@ -36,6 +36,7 @@ fn evaluate(condition: &Closure, row: &Row, input_type: &Vec<ColumnType>, env: &
         output: sender,
         arguments,
         env: env.clone(),
+        this: None,
         printer: printer.clone(),
     });
 
