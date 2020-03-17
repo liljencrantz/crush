@@ -29,7 +29,7 @@ pub enum ValueDefinition {
     ClosureDefinition(Vec<Job>),
     JobDefinition(Job),
     Label(Box<str>),
-    Get(Box<ValueDefinition>, Box<ValueDefinition>),
+    GetItem(Box<ValueDefinition>, Box<ValueDefinition>),
     Path(Box<ValueDefinition>, Box<str>),
 }
 
@@ -48,7 +48,7 @@ impl ValueDefinition {
     pub fn can_block(&self, arg: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
         match self {
             ValueDefinition::JobDefinition(j) => j.can_block(arg, env),
-            ValueDefinition::Get(inner1, inner2) => inner1.can_block(arg, env) || inner2.can_block(arg, env),
+            ValueDefinition::GetItem(inner1, inner2) => inner1.can_block(arg, env) || inner2.can_block(arg, env),
             _ => false,
         }
     }
@@ -63,7 +63,7 @@ impl ValueDefinition {
                 }
             }
             ValueDefinition::JobDefinition(j) => j.can_block(arg, env),
-            ValueDefinition::Get(inner1, inner2) => inner1.can_block(arg, env) || inner2.can_block(arg, env),
+            ValueDefinition::GetItem(inner1, inner2) => inner1.can_block(arg, env) || inner2.can_block(arg, env),
             _ => false,
         }
     }
@@ -105,8 +105,10 @@ impl ValueDefinition {
                 mandate(
                     env.get(s).or_else(|| file_get(s)),
                     format!("Unknown variable {}", self.to_string()).as_str())?,
-            ValueDefinition::Get(c, i) =>
+            ValueDefinition::GetItem(c, i) =>
                 match (c.compile(dependencies, env, printer), i.compile(dependencies, env, printer)) {
+                    (Ok(Value::File(s)), Ok(Value::Text(l))) =>
+                        Value::File(s.join(l.as_ref()).into_boxed_path()),
                     (Ok(Value::List(list)), Ok(Value::Integer(idx))) =>
                         list.get(idx as usize)?,
                     (Ok(Value::Dict(dict)), Ok(c)) =>
@@ -168,7 +170,7 @@ impl ToString for ValueDefinition {
             ValueDefinition::Label(v) => v.to_string(),
             ValueDefinition::ClosureDefinition(c) => "<closure>".to_string(),
             ValueDefinition::JobDefinition(_) => "<job>".to_string(),
-            ValueDefinition::Get(v, l) => format!("{}[{}]", v.to_string(), l.to_string()),
+            ValueDefinition::GetItem(v, l) => format!("{}[{}]", v.to_string(), l.to_string()),
             ValueDefinition::Path(v, l) => format!("{}/{}", v.to_string(), l),
         }
     }

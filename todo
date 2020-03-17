@@ -1,14 +1,27 @@
 Todo for MVP 1:
+Consistent naming in code: getitem and path
+Names should be mandatory and unique in structs, tables and table streams, auto-assign _0, _1, etc, and add numbers to dedup
+Structs and rows should be subscriptable via indices
+For single column tabular output, display it on screen it in many rows to save space
+For binary output, write it in hex and in cleartext, side by side
+Detect if binary output is in fact text, and display it as such
+Add 'type' method to all types
+Move the 'to' method to type instances
+Add methods to file type
+Add methods to text type
+Add methods to type type
+Support reassigning in structs
 Nice way to pass on all arguments of a closure to another command
 Nice way of introspecting all arguments of a closure
 Figure out how to make globs convenient again
+Run an executable by giving its path
 Figure out how to make external commands with subcommands convenient again
 Add ** or some other operator for recursive wildcard matches
 Re-add match operators =~ and !~ for regexp matching: fnurple | where {$row =~ re{^a.*b$}}
-Running a directory is cd
+Add ~ (replace) operator for regexps: "this is a string" ~ re{a.*g} "Sparta!" -> "this is Sparta!"
 Make newline a separator again
 &&/|| => and/or
-support adding methods to types
+support adding prototypes to structs
 Flesh out seq command with support for from and step
 Make argument parsing in list and dict commands more consistent
 Some kind of pattern matching syntax
@@ -178,3 +191,5 @@ Add support for variable literals
 Fix external command fallback
 Make 'this' reliably handled in closures
 Make it possible to call methods with an expicitly set 'this', e.g list.pop this=some_list
+Running a directory is cd
+Implement getitem for file

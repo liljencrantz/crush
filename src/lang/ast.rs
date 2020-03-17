@@ -482,7 +482,7 @@ impl ItemNode {
             ItemNode::Integer(i) => ValueDefinition::Value(Value::Integer(i.clone())),
             ItemNode::Float(f) => ValueDefinition::Value(Value::Float(f.clone())),
             ItemNode::Get(node, field) =>
-                ValueDefinition::Get(
+                ValueDefinition::GetItem(
                     Box::new(node.generate_argument()?.unnamed_value()?),
                     Box::new(field.generate_argument()?.unnamed_value()?)),
             ItemNode::Path(node, label) => {
