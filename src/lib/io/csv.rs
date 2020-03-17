@@ -45,7 +45,7 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> 
             }
             Some(name) => {
                 match (name.as_ref(), arg.value) {
-                    (_, Value::Type(s)) => columns.push(ColumnType::named(name, s)),
+                    (_, Value::Type(s)) => columns.push(ColumnType::new(name, s)),
 
                     ("head", Value::Integer(s)) => skip_head = s as usize,
 

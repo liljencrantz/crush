@@ -50,9 +50,7 @@ fn print_internal(printer: &Printer, stream: &mut impl Readable, indent: usize) 
             ValueType::Table(_) => has_table = true,
             _ => (),
         }
-        if val.name.is_some() {
-            has_name = true;
-        }
+        has_name = true;
     }
     loop {
         match stream.read() {
@@ -75,7 +73,7 @@ fn print_internal(printer: &Printer, stream: &mut impl Readable, indent: usize) 
 fn calculate_header_width(w: &mut Vec<usize>, types: &Vec<ColumnType>, has_name: bool) {
     if has_name {
         for (idx, val) in types.iter().enumerate() {
-            w[idx] = max(w[idx], val.len_or_0());
+            w[idx] = max(w[idx], val.name.len());
         }
     }
 }
@@ -96,9 +94,9 @@ fn print_header(printer: &Printer, w: &Vec<usize>, types: &Vec<ColumnType>, has_
         let last_idx = types.len() - 1;
         for (idx, val) in types.iter().enumerate() {
             let is_last = idx == last_idx;
-            header += val.val_or_empty();
+            header += val.name.as_ref();
             if !is_last {
-                header += &" ".repeat(w[idx] - val.len_or_0() + 1);
+                header += &" ".repeat(w[idx] - val.name.len() + 1);
             }
         }
         printer.line(header.as_str())
@@ -175,7 +173,7 @@ fn print_binary(printer: &Printer, binary: &mut dyn BinaryReader, indent: usize)
         if len == 0 {
             break;
         }
-        let msg = if line.ends_with('\n') { &line[0..line.len()-1]} else {line.as_str()};
+        let msg = if line.ends_with('\n') { &line[0..line.len() - 1] } else { line.as_str() };
         printer.line(msg);
     }
 }

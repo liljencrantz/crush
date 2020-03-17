@@ -82,10 +82,9 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
             let config = parse(input.types().clone(), context.arguments)?;
             let output_type= vec![
                 input.types()[config.column].clone(),
-                ColumnType {
-                    name: Some(config.name.clone()),
-                    cell_type: ValueType::TableStream(input.types().clone())
-                }
+                ColumnType::new(
+                    &config.name,
+                    ValueType::TableStream(input.types().clone()))
             ];
             let output = context.output.initialize(output_type)?;
             run(config, input.as_mut(), output)

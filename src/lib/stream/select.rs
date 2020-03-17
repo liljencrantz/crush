@@ -65,7 +65,7 @@ pub fn run(
                             .cells()
                             .iter()
                             .zip(&input_type)
-                            .map(|(cell, cell_type)| Argument::new(cell_type.name.clone(), cell.clone()))
+                            .map(|(cell, cell_type)| Argument::named(cell_type.name.as_ref(), cell.clone()))
                             .collect();
                         closure.invoke(
                             ExecutionContext {
@@ -84,11 +84,11 @@ pub fn run(
 
                 match location {
                     Location::Append(name) => {
-                        output_type.push(ColumnType::named(name.as_ref(), value.value_type()));
+                        output_type.push(ColumnType::new(name.as_ref(), value.value_type()));
                         first_result.push(value);
                     }
                     Location::Replace(idx) => {
-                        output_type.replace(*idx, ColumnType::new(output_type[*idx].name.clone(), value.value_type()));
+                        output_type.replace(*idx, ColumnType::new(output_type[*idx].name.as_ref(), value.value_type()));
                         first_result[*idx] = value;
                     }
                 }
@@ -115,7 +115,7 @@ pub fn run(
                                 .cells()
                                 .iter()
                                 .zip(&input_type)
-                                .map(|(cell, cell_type)| Argument::new(cell_type.name.clone(), cell.clone()))
+                                .map(|(cell, cell_type)| Argument::named(&cell_type.name, cell.clone()))
                                 .collect();
                             let (sender, receiver) = channels();
                             closure.invoke(

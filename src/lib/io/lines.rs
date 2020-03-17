@@ -45,7 +45,7 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Box<dyn 
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    let output = context.output.initialize(vec![ColumnType::named("line", ValueType::Text)])?;
+    let output = context.output.initialize(vec![ColumnType::new("line", ValueType::Text)])?;
     let file = parse(context.arguments, context.input)?;
     run(file, output)
 }

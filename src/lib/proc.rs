@@ -32,12 +32,12 @@ fn state_name(s: psutil::process::State) -> &'static str {
 
 fn ps(context: ExecutionContext) -> CrushResult<()> {
     let output = context.output.initialize(vec![
-        ColumnType::named("pid", ValueType::Integer),
-        ColumnType::named("ppid", ValueType::Integer),
-        ColumnType::named("status", ValueType::Text),
-        ColumnType::named("user", ValueType::Text),
-        ColumnType::named("cpu", ValueType::Duration),
-        ColumnType::named("name", ValueType::Text),
+        ColumnType::new("pid", ValueType::Integer),
+        ColumnType::new("ppid", ValueType::Integer),
+        ColumnType::new("status", ValueType::Text),
+        ColumnType::new("user", ValueType::Text),
+        ColumnType::new("cpu", ValueType::Duration),
+        ColumnType::new("name", ValueType::Text),
     ])?;
     let users = create_user_map();
 

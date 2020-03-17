@@ -112,8 +112,8 @@ impl DictReader {
     ) -> DictReader {
         DictReader {
             types: vec![
-                ColumnType::named("key", dict.key_type.clone()),
-                ColumnType::named("value", dict.value_type.clone())],
+                ColumnType::new("key", dict.key_type.clone()),
+                ColumnType::new("value", dict.value_type.clone())],
             list: dict.elements(),
             idx: 0usize,
         }

@@ -3,6 +3,7 @@ use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::Value, command::SimpleCommand, r#struct::Struct};
 use crate::lang::command::ExecutionContext;
 use crate::lib::parse_util::three_arguments;
+use crate::lang::argument::column_names;
 
 pub mod list;
 pub mod dict;
@@ -28,7 +29,6 @@ pub fn set_item(mut context: ExecutionContext) -> CrushResult<()> {
         (Some(Value::Dict(d)), Some(k), Some(v)) => d.insert(k, v),
         _ => argument_error("Missing arguments"),
     }
-
 }
 
 fn materialize(mut context: ExecutionContext) -> CrushResult<()> {
@@ -36,9 +36,13 @@ fn materialize(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn r#struct(mut context: ExecutionContext) -> CrushResult<()> {
-    let arr: Vec<(Box<str>, Value)> = context.arguments.drain(..)
-        .map(|v| (Box::from(v.name.unwrap()), v.value))
-        .collect::<Vec<(Box<str>, Value)>>();
+    let mut names = column_names(&context.arguments);
+
+    let arr: Vec<(Box<str>, Value)> =
+        names.drain(..)
+            .zip(context.arguments)
+            .map(|(name, arg)| (name, arg.value))
+            .collect::<Vec<(Box<str>, Value)>>();
     context.output.send(
         Value::Struct(Struct::new(arr)))
 }

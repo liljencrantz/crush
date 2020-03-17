@@ -4,6 +4,7 @@ use crate::lang::errors::{CrushError, CrushResult, error};
 use crate::lang::scope::Scope;
 use crate::lang::printer::Printer;
 use crate::lang::job::JobJoinHandle;
+use std::collections::HashSet;
 
 #[derive(Debug, Clone)]
 pub struct BaseArgument<C: Clone> {
@@ -29,9 +30,9 @@ impl Clone for ArgumentDefinition {
 pub type Argument = BaseArgument<Value>;
 
 impl Argument {
-    pub fn cell_type(&self) -> ColumnType {
+/*    pub fn cell_type(&self) -> ColumnType {
         ColumnType { name: self.name.clone(), cell_type: self.value.value_type() }
-    }
+    }*/
 }
 
 impl<C: Clone> BaseArgument<C> {
@@ -79,4 +80,34 @@ impl ArgumentVecCompiler for Vec<ArgumentDefinition> {
             .map(|a| a.argument(dependencies, env, printer))
             .collect::<CrushResult<Vec<Argument>>>()
     }
+}
+
+pub fn column_names(arguments: &Vec<Argument>) -> Vec<Box<str>> {
+    let mut taken = HashSet::new();
+    taken.insert(Box::from("_"));
+    let mut res = Vec::new();
+    let mut tmp = String::new();
+    for arg in arguments {
+        let mut name = match &arg.name {
+            None => "_",
+            Some(name) => name.as_ref(),
+        };
+        if taken.contains(&Box::from(name)) {
+            let mut idx = 1;
+            tmp.truncate(0);
+            tmp.push_str(name);
+            loop {
+                tmp.push_str(idx.to_string().as_str());
+                if !taken.contains(tmp.as_str()) {
+                    name = tmp.as_str();
+                    break;
+                }
+                tmp.truncate(name.len());
+            }
+        }
+        taken.insert(Box::from(name));
+        res.push(Box::from(name));
+    }
+
+    res
 }

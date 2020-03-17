@@ -143,7 +143,7 @@ impl ListReader {
            name: &str,
     ) -> ListReader {
         ListReader {
-            types: vec![ColumnType::named(name, list.element_type())],
+            types: vec![ColumnType::new(name, list.element_type())],
             list,
             idx: 0usize,
         }

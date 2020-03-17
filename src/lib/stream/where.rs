@@ -21,12 +21,7 @@ fn evaluate(condition: &Closure, row: &Row, input_type: &Vec<ColumnType>, env: &
     let arguments = row.clone().into_vec()
         .drain(..)
         .zip(input_type.iter())
-        .map(|(c, t)| {
-            match &t.name {
-                None => Argument::unnamed(c.clone()),
-                Some(name) => Argument::named(name.as_ref(), c),
-            }
-        })
+        .map(|(c, t)| Argument::named(t.name.as_ref(), c))
         .collect();
 
     let (sender, reciever) = channels();

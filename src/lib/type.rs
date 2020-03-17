@@ -3,6 +3,7 @@ use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::Value, command::SimpleCommand, value::ValueType};
 use crate::lang::scope::Scope;
 use crate::lib::parse_util::{single_argument_type, single_argument_list, two_arguments};
+use crate::lang::argument::column_names;
 
 fn to(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(context.input.recv()?.cast(single_argument_type(context.arguments)?)?)
@@ -29,10 +30,11 @@ fn dict(mut context: ExecutionContext) -> CrushResult<()> {
 
 fn parse_column_types(mut arguments: Vec<Argument>) -> CrushResult<Vec<ColumnType>> {
     let mut types = Vec::new();
+    let names = column_names(&arguments);
 
-    for arg in arguments.drain(..) {
+    for (idx, arg) in arguments.drain(..).enumerate() {
         if let Value::Type(t) = arg.value {
-            types.push(ColumnType::new(arg.name, t));
+            types.push(ColumnType::new(names[idx].as_ref(), t));
         } else {
             return argument_error(format!("Expected all parameters to be types, found {}", arg.value.value_type().to_string()).as_str())
         }

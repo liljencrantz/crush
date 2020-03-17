@@ -19,11 +19,11 @@ use crate::lang::stream::OutputStream;
 
 lazy_static! {
     static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
-        ColumnType::named("user", ValueType::Text),
-        ColumnType::named("size", ValueType::Integer),
-        ColumnType::named("modified", ValueType::Time),
-        ColumnType::named("type", ValueType::Text),
-        ColumnType::named("file", ValueType::File),
+        ColumnType::new("user", ValueType::Text),
+        ColumnType::new("size", ValueType::Integer),
+        ColumnType::new("modified", ValueType::Time),
+        ColumnType::new("type", ValueType::Text),
+        ColumnType::new("file", ValueType::File),
     ];
 }
 

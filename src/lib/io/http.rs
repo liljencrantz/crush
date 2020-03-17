@@ -81,8 +81,8 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     let header_map: &HeaderMap = b.headers();
     let headers = Table::new(
         vec![
-            ColumnType::named("name", ValueType::Text),
-            ColumnType::named("value", ValueType::Text),
+            ColumnType::new("name", ValueType::Text),
+            ColumnType::new("value", ValueType::Text),
         ],
         header_map
             .iter()

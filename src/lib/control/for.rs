@@ -29,12 +29,9 @@ pub fn run(mut config: Config, mut input: impl Readable) -> CrushResult<()> {
                             line.into_vec()
                                 .drain(..)
                                 .zip(input.types().iter())
-                                .map(|(c, t)| {
-                                    match &t.name {
-                                        None => Argument::unnamed(c),
-                                        Some(name) => Argument::named(name.as_ref(), c),
-                                    }
-                                })
+                                .map(|(c, t)|
+                                    Argument::named(&t.name, c)
+                                )
                                 .collect()
                         }
                         Some(var_name) => {

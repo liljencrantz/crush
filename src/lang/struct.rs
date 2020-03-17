@@ -13,7 +13,7 @@ impl Struct {
     pub fn new(mut vec: Vec<(Box<str>, Value)>) -> Struct {
         let types = vec
             .iter()
-            .map(|e| ColumnType::named(e.0.as_ref(), e.1.value_type()))
+            .map(|e| ColumnType::new(e.0.as_ref(), e.1.value_type()))
             .collect();
         let cells = vec
             .drain(..)
@@ -54,9 +54,8 @@ impl Struct {
 
     pub fn get(mut self, name: &str) -> Option<Value> {
         for (idx, t) in self.types.iter().enumerate() {
-            match &t.name {
-                None => {}
-                Some(n) => if n.as_ref() == name { return Some(mem::replace(&mut self.cells[idx], Value::Integer(0))); },
+            if t.name.as_ref() == name {
+                return Some(mem::replace(&mut self.cells[idx], Value::Integer(0)));
             }
         }
         None

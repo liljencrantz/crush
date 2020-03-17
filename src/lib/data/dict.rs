@@ -44,7 +44,7 @@ fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
     let mut dict = this_dict(context.this)?;
     let key = context.arguments.remove(0).value;
     let output = context.output.initialize(
-        vec![ColumnType::named("value", dict.value_type())])?;
+        vec![ColumnType::new("value", dict.value_type())])?;
     dict.get(&key).map(|c| output.send(Row::new(vec![c])));
     Ok(())
 }

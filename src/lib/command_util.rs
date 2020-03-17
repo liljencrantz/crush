@@ -11,7 +11,7 @@ use crate::lang::errors::{CrushError, CrushResult, error, argument_error};
 
 pub fn find_field_from_str(needle: &str, haystack: &Vec<ColumnType>) -> CrushResult<usize> {
     for (idx, field) in haystack.iter().enumerate() {
-        if field.name.as_ref().map(|v| v.as_ref().eq(needle)).unwrap_or(false) {
+        if field.name.as_ref() == needle {
             return Ok(idx);
         }
     }
@@ -19,7 +19,7 @@ pub fn find_field_from_str(needle: &str, haystack: &Vec<ColumnType>) -> CrushRes
     argument_error(format!(
                 "Unknown column {}, available columns are {}",
                 needle,
-                haystack.iter().map(|t| t.val_or_empty().to_string()).collect::<Vec<String>>().join(", "),
+                haystack.iter().map(|t| t.name.to_string()).collect::<Vec<String>>().join(", "),
             ).as_str())
 }
 
@@ -29,7 +29,7 @@ pub fn find_field(needle_vec: &Vec<Box<str>>, haystack: &Vec<ColumnType>) -> Cru
     } else {
         let needle = needle_vec[0].as_ref();
         for (idx, field) in haystack.iter().enumerate() {
-            if field.name.as_ref().map(|v| v.as_ref().eq(needle)).unwrap_or(false) {
+            if field.name.as_ref() == needle {
                 return Ok(idx);
             }
         }
@@ -37,7 +37,7 @@ pub fn find_field(needle_vec: &Vec<Box<str>>, haystack: &Vec<ColumnType>) -> Cru
         error(format!(
             "Unknown column {}, available columns are {}",
             needle,
-            haystack.iter().map(|t| t.val_or_empty().to_string()).collect::<Vec<String>>().join(", "),
+            haystack.iter().map(|t| t.name.to_string()).collect::<Vec<String>>().join(", "),
         ).as_str())
     }
 }

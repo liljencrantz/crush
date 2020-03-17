@@ -1,6 +1,5 @@
 Todo for MVP 1:
 Consistent naming in code: getitem and path
-Names should be mandatory and unique in structs, tables and table streams, auto-assign _0, _1, etc, and add numbers to dedup
 Structs and rows should be subscriptable via indices
 For single column tabular output, display it on screen it in many rows to save space
 For binary output, write it in hex and in cleartext, side by side
@@ -193,3 +192,4 @@ Make 'this' reliably handled in closures
 Make it possible to call methods with an expicitly set 'this', e.g list.pop this=some_list
 Running a directory is cd
 Implement getitem for file
+Names should be mandatory and unique in structs, tables and table streams, auto-assign _0, _1, etc, and add numbers to dedup
