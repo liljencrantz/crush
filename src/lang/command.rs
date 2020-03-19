@@ -170,7 +170,7 @@ impl CrushCommand for Closure {
 
     fn can_block(&self, arg: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
         if self.job_definitions.len() == 1 {
-            self.job_definitions[0].can_block(arg, env)
+            self.job_definitions[0].can_block(env)
         } else {
             true
         }

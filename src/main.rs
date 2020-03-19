@@ -13,7 +13,7 @@ use rustyline::Editor;
 use lib::declare;
 use crate::lang::errors::{CrushResult, to_crush_error};
 use std::error::Error;
-use crate::lang::printer::Printer;
+use crate::lang::printer::{Printer, printer, init, shutdown};
 use crate::lang::stream::empty_channel;
 use crate::lang::stream_printer::spawn_print_thread;
 use crate::util::file::home;
@@ -104,7 +104,8 @@ fn run_script(global_env: lang::scope::Scope, printer: &Printer, filename: &str)
 
 fn run() -> CrushResult<()> {
     let global_env = lang::scope::Scope::new();
-    let (printer, printer_handle) = Printer::new();
+    let printer_handle = init();
+    let printer = printer();
 
     declare(&global_env)?;
     let my_scope = global_env.create_child(&global_env, false);
@@ -118,6 +119,7 @@ fn run() -> CrushResult<()> {
 //    std::thread::sleep(Duration::from_secs(1));
 //    printer.shutdown();
     drop(printer);
+    shutdown();
     printer_handle.join();
     Ok(())
 }

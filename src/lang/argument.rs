@@ -16,7 +16,7 @@ pub type ArgumentDefinition = BaseArgument<ValueDefinition>;
 
 impl ArgumentDefinition {
     pub fn argument(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope, printer: &Printer) -> Result<Argument, CrushError> {
-        Ok(Argument { name: self.name.clone(), value: self.value.compile(dependencies, env, printer)? })
+        Ok(Argument { name: self.name.clone(), value: self.value.compile(dependencies, env, printer)?.1 })
     }
 
 }

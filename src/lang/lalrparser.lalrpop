@@ -25,8 +25,6 @@ Command: CommandNode = {
 
 Expression: ExpressionNode = {
   <a: Assignment> => ExpressionNode::Assignment(a),
-  "{" <l: NonEmptyJobList> "}" => ExpressionNode::Closure(l),
-  "(" <j:Job> ")" => ExpressionNode::Substitution(j),
 };
 
 Assignment: AssignmentNode = {
@@ -69,6 +67,8 @@ Item: ItemNode = {
     <s:r"[0-9][0-9_]*\.[0-9_]+"> => ItemNode::Float(f64::from_str(s.replace("_", "").as_str()).unwrap()),
     <i: Item> "[" <e: Expression> "]" => ItemNode::Get(Box::new(i), Box::new(e)),
     <i: Item> "/" <l: Label> => ItemNode::Path(Box::new(i), l),
+    "{" <l: NonEmptyJobList> "}" => ItemNode::Closure(l),
+    "(" <j:Job> ")" => ItemNode::Substitution(j),
 }
 
 Label: Box<str> = {

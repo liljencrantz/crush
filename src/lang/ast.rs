@@ -76,16 +76,12 @@ impl CommandNode {
 pub enum ExpressionNode {
     Assignment(AssignmentNode),
     //    ListLiteral(JobListNode),
-    Substitution(JobNode),
-    Closure(JobListNode),
 }
 
 impl ExpressionNode {
     pub fn generate_standalone(&self) -> CrushResult<Option<CallDefinition>> {
         match self {
             ExpressionNode::Assignment(a) => a.generate_standalone(),
-            ExpressionNode::Substitution(_) => Ok(None),
-            ExpressionNode::Closure(_) => Ok(None),
         }
     }
 
@@ -94,18 +90,6 @@ impl ExpressionNode {
             ExpressionNode::Assignment(a) => {
                 a.generate_argument()
             }
-            ExpressionNode::Substitution(s) =>
-                Ok(ArgumentDefinition::unnamed(
-                    ValueDefinition::JobDefinition(
-                        s.generate()?
-                    )
-                )),
-            ExpressionNode::Closure(c) =>
-                Ok(ArgumentDefinition::unnamed(
-                    ValueDefinition::ClosureDefinition(
-                        c.generate()?
-                    )
-                )),
         }
     }
 }
@@ -124,12 +108,7 @@ impl AssignmentNode {
                 match target {
                     ItemNode::Label(t) => Ok(ArgumentDefinition::named(t.deref(), value.generate_argument()?.unnamed_value()?)),
                     ItemNode::QuotedLabel(t) => Ok(ArgumentDefinition::named(unescape(t).as_str(), value.generate_argument()?.unnamed_value()?)),
-                    ItemNode::Text(_) => error("Invalid left side in assignment"),
-                    ItemNode::Integer(_) => error("Invalid left side in assignment"),
-                    ItemNode::Float(_) => error("Invalid left side in assignment"),
-                    ItemNode::Get(_, _) => error("Invalid left side in assignment"),
-                    ItemNode::Path(_, _) => error("Invalid left side in assignment"),
-                    ItemNode::Field(_) => error("Invalid left side in assignment"),
+                    _ => error("Invalid left side in named argument"),
                 }
             }
             AssignmentNode::Declaration(target, value) => {
@@ -156,9 +135,6 @@ impl AssignmentNode {
                             ValueDefinition::Value(Value::Command(SET.clone())),
                             vec![ArgumentDefinition::named(unescape(t).as_str(), value.generate_argument()?.unnamed_value()?)])
                     )),
-                    ItemNode::Text(_) => error("Invalid left side in assignment"),
-                    ItemNode::Integer(_) => error("Invalid left side in assignment"),
-                    ItemNode::Float(_) => error("Invalid left side in assignment"),
                     ItemNode::Get(container, key) => Ok(Some(
                         CallDefinition::new(
                         ValueDefinition::Path(
@@ -168,8 +144,11 @@ impl AssignmentNode {
                             ArgumentDefinition::unnamed(key.generate_argument()?.unnamed_value()?),
                             ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?),
                         ]))),
-                    ItemNode::Path(_, _) => error("Invalid left side in assignment"),
-                    ItemNode::Field(_) => error("Invalid left side in assignment"),
+
+                    ItemNode::Path(_, _) => unimplemented!(),
+                    ItemNode::Field(_) => unimplemented!(),
+
+                    _ => error("Invalid left side in assignment"),
                 }
             }
             AssignmentNode::Declaration(target, value) => {
@@ -445,6 +424,8 @@ pub enum ItemNode {
     Float(f64),
     Get(Box<ItemNode>, Box<ExpressionNode>),
     Path(Box<ItemNode>, Box<str>),
+    Substitution(JobNode),
+    Closure(JobListNode),
 }
 
 fn unescape(s: &str) -> String {
@@ -496,6 +477,10 @@ impl ItemNode {
                 }
             },
             ItemNode::Field(f) => ValueDefinition::Value(Value::Field(vec![f[1..].to_string().into_boxed_str()])),
+            ItemNode::Substitution(s) =>
+                    ValueDefinition::JobDefinition(s.generate()?),
+            ItemNode::Closure(c) =>
+                    ValueDefinition::ClosureDefinition(c.generate()?),
         }))
     }
 }

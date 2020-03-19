@@ -1,6 +1,6 @@
 use crate::lang::lexer::Lexer;
 use std::error::Error;
-use crate::lang::errors::Kind::{PARSE_ERROR, INVALID_ARGUMENT, GENERIC_ERROR, INVALID_DATA};
+use crate::lang::errors::Kind::{PARSE_ERROR, INVALID_ARGUMENT, GENERIC_ERROR, INVALID_DATA, BLOCK_ERROR};
 
 #[derive(Debug)]
 pub enum Kind {
@@ -8,6 +8,7 @@ pub enum Kind {
     INVALID_ARGUMENT,
     INVALID_DATA,
     GENERIC_ERROR,
+    BLOCK_ERROR,
 }
 
 #[derive(Debug)]
@@ -22,6 +23,13 @@ pub fn parse_error<T>(message: &str, _lexer: &Lexer) -> Result<T, CrushError> {
     return Err(CrushError {
         message: String::from(message),
         kind: PARSE_ERROR,
+    });
+}
+
+pub fn block_error<T>() -> Result<T, CrushError> {
+    return Err(CrushError {
+        message: String::from("Internal error: Tried to call blocking code in a thread that may not block"),
+        kind: BLOCK_ERROR,
     });
 }
 

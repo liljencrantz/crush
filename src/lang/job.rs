@@ -40,7 +40,7 @@ impl Job {
         Job { commands }
     }
 
-    pub fn can_block(&self, arg: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
+    pub fn can_block(&self, env: &Scope) -> bool {
         if self.commands.len() == 1 {
             self.commands[0].can_block(self.commands[0].arguments(), env)
         } else {
@@ -53,8 +53,7 @@ impl Job {
         env: &Scope,
         printer: &Printer,
         first_input: ValueReceiver,
-        last_output: ValueSender,
-    ) -> CrushResult<JobJoinHandle> {
+        last_output: ValueSender) -> CrushResult<JobJoinHandle> {
         let mut calls = Vec::new();
 
         let mut input = first_input;

@@ -1,7 +1,7 @@
 use crate::lang::{command::ExecutionContext, job::JobJoinHandle, command::SimpleCommand, command::Closure, value::ValueDefinition, value::ValueType};
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, value::Value};
 use crate::lang::scope::Scope;
-use crate::lang::errors::{error, CrushResult};
+use crate::lang::errors::{error, CrushResult, block_error};
 use crate::lang::printer::Printer;
 use crate::lang::stream::{ValueReceiver, ValueSender, InputStream};
 use crate::util::thread::{handle, build};
@@ -38,7 +38,7 @@ fn resolve_external_command(name: &str, env: Scope) -> Option<Box<Path>> {
     None
 }
 
-fn can_block(local_arguments: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
+fn arg_can_block(local_arguments: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
     for arg in local_arguments {
         if arg.value.can_block(local_arguments, env) {
             return true;
@@ -118,13 +118,13 @@ impl CallDefinition {
         let cmd = self.command.compile_non_blocking(env);
         match cmd {
             Ok((_, Value::Command(command))) =>
-                command.can_block(arg, env) || can_block(&self.arguments, env),
+                command.can_block(arg, env) || arg_can_block(&self.arguments, env),
 
             Ok((_, Value::ConditionCommand(command))) =>
-                command.can_block(arg, env) || can_block(&self.arguments, env),
+                command.can_block(arg, env) || arg_can_block(&self.arguments, env),
 
             Ok((_, Value::Closure(closure))) =>
-                closure.can_block(arg, env) || can_block(&self.arguments, env),
+                closure.can_block(arg, env) || arg_can_block(&self.arguments, env),
 
             _ => true,
         }
@@ -138,9 +138,8 @@ impl CallDefinition {
         local_arguments: Vec<ArgumentDefinition>,
         local_env: Scope,
         input: ValueReceiver,
-        output: ValueSender,
-    ) -> CrushResult<JobJoinHandle> {
-        if !action.can_block(&local_arguments, &local_env) && !can_block(&local_arguments, &local_env) {
+        output: ValueSender) -> CrushResult<JobJoinHandle> {
+        if !action.can_block(&local_arguments, &local_env) && !arg_can_block(&local_arguments, &local_env) {
             let mut deps: Vec<JobJoinHandle> = Vec::new();
             let context = CallDefinition::make_context(
                 &mut deps, local_printer,
@@ -167,55 +166,71 @@ impl CallDefinition {
         }
     }
 
+    fn invoke_value(
+        &self,
+        mut this: Option<Value>,
+        value: Value,
+        env: &Scope,
+        printer: &Printer,
+        input: ValueReceiver,
+        output: ValueSender) -> CrushResult<JobJoinHandle> {
+        let local_printer = printer.clone();
+        let mut local_arguments = self.arguments.clone();
+        let local_env = env.clone();
+        match value {
+            Value::Command(command) =>
+                self.invoke_command(command, this, local_printer, local_arguments, local_env, input, output),
+            Value::ConditionCommand(command) =>
+                self.invoke_command(command, this, local_printer, local_arguments, local_env, input, output),
+            Value::Closure(closure) =>
+                self.invoke_command(closure, this, local_printer, local_arguments, local_env, input, output),
+            Value::File(_) =>
+                if local_arguments.len() == 0 {
+                    self.invoke_command(
+                        SimpleCommand::new(crate::lib::file::cd, false),
+                        None, local_printer,
+                        vec![ArgumentDefinition::unnamed(ValueDefinition::Value(value))],
+                        local_env, input, output)
+                } else {
+                    error(format!("Not a command {}", self.command.to_string()).as_str())
+                }
+            _ =>
+                if local_arguments.len() == 0 {
+                    self.invoke_command(
+                        SimpleCommand::new(crate::lib::io::val, false),
+                        None, local_printer,
+                        vec![ArgumentDefinition::unnamed(ValueDefinition::Value(value))],
+                        local_env, input, output)
+                } else {
+                    error(format!("Not a command {}", self.command.to_string()).as_str())
+                }
+        }
+    }
+
     pub fn invoke(
         &self,
         env: &Scope,
         printer: &Printer,
         input: ValueReceiver,
-        output: ValueSender,
-    ) -> CrushResult<JobJoinHandle> {
-        let local_printer = printer.clone();
-        let mut local_arguments = self.arguments.clone();
-        let local_env = env.clone();
+        output: ValueSender) -> CrushResult<JobJoinHandle> {
         match self.command.compile_non_blocking(env) {
-            Ok((this, cmd)) =>
-                match cmd {
-                    Value::Command(command) =>
-                        self.invoke_command(command, this, local_printer, local_arguments, local_env, input, output),
-                    Value::ConditionCommand(command) =>
-                        self.invoke_command(command, this, local_printer, local_arguments, local_env, input, output),
-                    Value::Closure(closure) =>
-                        self.invoke_command(closure, this, local_printer, local_arguments, local_env, input, output),
-                    Value::File(_) =>
-                        if local_arguments.len() == 0 {
-                            self.invoke_command(
-                                SimpleCommand::new(crate::lib::file::cd, false),
-                                None, local_printer,
-                                vec![ArgumentDefinition::unnamed(ValueDefinition::Value(cmd))],
-                                local_env, input, output)
-                        } else {
-                            error(format!("Not a command {}", self.command.to_string()).as_str())
-                        }
-                    _ =>
-                        if local_arguments.len() == 0 {
-                            self.invoke_command(
-                                SimpleCommand::new(crate::lib::io::val, false),
-                                None, local_printer,
-                                vec![ArgumentDefinition::unnamed(ValueDefinition::Value(cmd))],
-                                local_env, input, output)
-                        } else {
-                            error(format!("Not a command {}", self.command.to_string()).as_str())
-                        }
-                }
+            Ok((this, value)) => {
+                self.invoke_value(this, value, env, printer, input, output)
+            }
             Err(err) => {
                 if let ValueDefinition::Label(p) = &self.command {
                     match resolve_external_command(p, env.clone()) {
                         None => error(format!("Unknown command name {}", self.command.to_string()).as_str()),
                         Some(path) => {
-                            local_arguments.insert(
+                            let mut cmd_arguments = self.arguments.clone();
+                            cmd_arguments.insert(
                                 0,
                                 ArgumentDefinition::unnamed(ValueDefinition::Value(Value::File(path))));
-                            self.invoke_command(SimpleCommand::new(crate::lib::cmd, true), None, local_printer, local_arguments, local_env, input, output)
+                            let cmd = CallDefinition {
+                                command: ValueDefinition::Value(Value::Command(SimpleCommand::new(crate::lib::cmd, true))),
+                                arguments: cmd_arguments,
+                            };
+                            cmd.invoke(env, printer, input, output)
                         }
                     }
                 } else {

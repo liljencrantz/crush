@@ -61,6 +61,10 @@ impl Struct {
         None
     }
 
+    pub fn idx(&self, idx: usize) -> Option<&Value> {
+        self.cells.get(idx)
+    }
+
     pub fn materialize(mut self) -> Struct {
         Struct {
             types: ColumnType::materialize(&self.types),

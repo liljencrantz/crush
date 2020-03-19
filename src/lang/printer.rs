@@ -20,37 +20,52 @@ pub struct Printer {
     sender: Sender<PrinterMessage>,
 }
 
-impl Printer {
+static mut global_printer: Option<Printer>= None;
 
-    pub fn new() -> (Printer, JoinHandle<()>) {
-        let (sender, receiver) = channel();
-        let handle = thread::Builder::new().name("printer".to_string()).spawn(move || {
-            loop {
-                match receiver.recv() {
-                    Ok(message) => {
-                        match message {
-                            Shutdown => break,
-                            Error(err) => println!("Error: {}", err),
-                            JobError(err) => println!("Error: {}", err.message),
-                            Line(line) => println!("{}", line),
-                            Lines(lines) => for line in lines {println!("{}", line)},
-                        }
-                    }
-                    Err(_) => break,
-                }
-            }
-        }).unwrap();
-        (Printer {
-            sender,
-        }, handle)
+pub fn printer() -> Printer {
+    unsafe { global_printer.clone() }.unwrap()
+}
+
+pub fn shutdown() {
+    unsafe {
+        global_printer = None;
     }
+}
+
+pub fn init() -> JoinHandle<()> {
+    let (sender, receiver) = channel();
+    let handle = thread::Builder::new().name("printer".to_string()).spawn(move || {
+        loop {
+            match receiver.recv() {
+                Ok(message) => {
+                    match message {
+                        Shutdown => break,
+                        Error(err) => println!("Error: {}", err),
+                        JobError(err) => println!("Error: {}", err.message),
+                        Line(line) => println!("{}", line),
+                        Lines(lines) => for line in lines {println!("{}", line)},
+                    }
+                }
+                Err(_) => break,
+            }
+        }
+    }).unwrap();
+    unsafe {
+        global_printer = Some(Printer {
+            sender,
+        });
+    }
+    handle
+}
+
+
+impl Printer {
 
     pub fn shutdown(self) {
         self.handle_error(to_crush_error(self.sender.send(PrinterMessage::Shutdown)));
     }
 
     pub fn line(&self, line: &str) {
-
         self.handle_error(to_crush_error(self.sender.send(PrinterMessage::Line(Box::from(line)))));
     }
 
