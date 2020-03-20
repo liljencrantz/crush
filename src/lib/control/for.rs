@@ -2,7 +2,6 @@ use crate::{
     lang::argument::Argument,
     lang::value::Value,
 };
-use crate::lang::printer::Printer;
 use crate::lang::scope::Scope;
 use crate::lang::{table::TableReader, list::ListReader, r#struct::Struct, dict::DictReader, command::CrushCommand};
 use crate::lang::errors::{argument_error, CrushResult};
@@ -14,7 +13,6 @@ use crate::lang::stream_printer::spawn_print_thread;
 pub struct Config {
     body: Closure,
     env: Scope,
-    printer: Printer,
     name: Option<Box<str>>,
 }
 
@@ -45,11 +43,10 @@ pub fn run(mut config: Config, mut input: impl Readable) -> CrushResult<()> {
                     };
                 config.body.invoke(ExecutionContext {
                     input: empty_channel(),
-                    output: spawn_print_thread(&config.printer),
+                    output: spawn_print_thread(),
                     arguments,
                     env: env.clone(),
                     this: None,
-                    printer: config.printer.clone(),
                 });
                 if env.is_stopped() {
                     break;
@@ -77,7 +74,6 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
                 run(Config {
                     body,
                     env: context.env,
-                    printer: context.printer,
                     name: name,
                 }, o)
             }
@@ -85,7 +81,6 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
                 run(Config {
                     body,
                     env: context.env,
-                    printer: context.printer,
                     name: name,
                 }, TableReader::new(r))
             }
@@ -93,7 +88,6 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
                 run(Config {
                     body,
                     env: context.env,
-                    printer: context.printer,
                     name: None,
                 }, ListReader::new(l, name))
             }
@@ -101,7 +95,6 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
                 run(Config {
                     body,
                     env: context.env,
-                    printer: context.printer,
                     name: name,
                 }, DictReader::new(l))
             }

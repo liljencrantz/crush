@@ -2,7 +2,6 @@ use crate::lang::value::Value;
 use crate::lang::{value::ValueDefinition, table::ColumnType};
 use crate::lang::errors::{CrushError, CrushResult, error};
 use crate::lang::scope::Scope;
-use crate::lang::printer::Printer;
 use crate::lang::job::JobJoinHandle;
 use std::collections::HashSet;
 
@@ -15,8 +14,8 @@ pub struct BaseArgument<C: Clone> {
 pub type ArgumentDefinition = BaseArgument<ValueDefinition>;
 
 impl ArgumentDefinition {
-    pub fn argument(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope, printer: &Printer) -> Result<Argument, CrushError> {
-        Ok(Argument { name: self.name.clone(), value: self.value.compile(dependencies, env, printer)?.1 })
+    pub fn argument(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope) -> Result<Argument, CrushError> {
+        Ok(Argument { name: self.name.clone(), value: self.value.compile(dependencies, env)?.1 })
     }
 
 }
@@ -71,13 +70,13 @@ impl<C: Clone> BaseArgument<C> {
 }
 
 pub trait ArgumentVecCompiler {
-    fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope, printer: &Printer) -> CrushResult<Vec<Argument>>;
+    fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope) -> CrushResult<Vec<Argument>>;
 }
 
 impl ArgumentVecCompiler for Vec<ArgumentDefinition> {
-    fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope, printer: &Printer) -> CrushResult<Vec<Argument>> {
+    fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope) -> CrushResult<Vec<Argument>> {
         self.iter()
-            .map(|a| a.argument(dependencies, env, printer))
+            .map(|a| a.argument(dependencies, env))
             .collect::<CrushResult<Vec<Argument>>>()
     }
 }

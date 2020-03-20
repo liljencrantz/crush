@@ -9,7 +9,7 @@ use crate::{
 };
 use crate::lang::command::ExecutionContext;
 use crate::lang::errors::{error, CrushResult, argument_error};
-use crate::lang::printer::Printer;
+use crate::lang::printer::printer;
 use crate::lang::stream::{Readable, empty_channel, channels, ValueSender};
 use crate::lang::{table::TableReader, table::ColumnType, argument::Argument};
 use crate::lang::command::Closure;
@@ -17,7 +17,7 @@ use crate::lang::stream_printer::spawn_print_thread;
 use crate::lang::scope::Scope;
 use crate::lang::command::CrushCommand;
 
-fn evaluate(condition: &Closure, row: &Row, input_type: &Vec<ColumnType>, env: &Scope, printer: &Printer) -> CrushResult<bool> {
+fn evaluate(condition: &Closure, row: &Row, input_type: &Vec<ColumnType>, env: &Scope) -> CrushResult<bool> {
     let arguments = row.clone().into_vec()
         .drain(..)
         .zip(input_type.iter())
@@ -32,7 +32,6 @@ fn evaluate(condition: &Closure, row: &Row, input_type: &Vec<ColumnType>, env: &
         arguments,
         env: env.clone(),
         this: None,
-        printer: printer.clone(),
     });
 
     match reciever.recv()? {
@@ -41,13 +40,13 @@ fn evaluate(condition: &Closure, row: &Row, input_type: &Vec<ColumnType>, env: &
     }
 }
 
-pub fn run(mut condition: &Closure, input: &mut dyn Readable, output: OutputStream, env: Scope, printer: Printer) -> CrushResult<()> {
+pub fn run(mut condition: &Closure, input: &mut dyn Readable, output: OutputStream, env: Scope) -> CrushResult<()> {
     loop {
         match input.read() {
             Ok(row) => {
-                match evaluate(condition, &row, input.types(), &env, &printer) {
+                match evaluate(condition, &row, input.types(), &env) {
                     Ok(val) => if val { if output.send(row).is_err() { break }},
-                    Err(e) => printer.job_error(e),
+                    Err(e) => printer().job_error(e),
                 }
             }
             Err(_) => break,
@@ -71,8 +70,7 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
             run(&parse(input.types(), context.arguments.as_mut())?,
                 input.as_mut(),
                 output,
-                context.env,
-                context.printer)
+                context.env)
         }
         None => error("Expected a stream"),
     }

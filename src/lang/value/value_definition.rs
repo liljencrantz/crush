@@ -4,7 +4,6 @@ use chrono::Local;
 use regex::Regex;
 
 use crate::{
-    lang::printer::Printer,
     util::glob::Glob,
     lang::errors::{error, mandate, CrushResult, argument_error, to_crush_error},
     lang::scope::Scope,
@@ -72,14 +71,14 @@ impl ValueDefinition {
 
     pub fn compile_non_blocking(&self, env: &Scope) -> CrushResult<(Option<Value>, Value)> {
         let mut v = Vec::new();
-        self.compile_internal(&mut v, env, &printer(), false)
+        self.compile_internal(&mut v, env, false)
     }
 
-    pub fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope, printer: &Printer) -> CrushResult<(Option<Value>, Value)> {
-        self.compile_internal(dependencies, env, printer, true)
+    pub fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope) -> CrushResult<(Option<Value>, Value)> {
+        self.compile_internal(dependencies, env, true)
     }
 
-    pub fn compile_internal(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope, printer: &Printer, can_block: bool) -> CrushResult<(Option<Value>, Value)> {
+    pub fn compile_internal(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope, can_block: bool) -> CrushResult<(Option<Value>, Value)> {
         Ok(match self {
             ValueDefinition::Value(v) => (None, v.clone()),
             ValueDefinition::JobDefinition(def) => {
@@ -88,7 +87,7 @@ impl ValueDefinition {
                 if !can_block {
                     return block_error();
                 }
-                let j = def.invoke(&env, printer, first_input, last_output)?;
+                let j = def.invoke(&env, first_input, last_output)?;
                 dependencies.push(j);
                 (None, last_input.recv()?)
             }
@@ -98,8 +97,8 @@ impl ValueDefinition {
                     env.get(s).or_else(|| file_get(s)),
                     format!("Unknown variable {}", self.to_string()).as_str())?),
             ValueDefinition::GetItem(c, i) => {
-                let this = c.compile_internal(dependencies, env, printer, can_block)?.1;
-                let v = match (this.clone(), i.compile_internal(dependencies, env, printer, can_block)?.1) {
+                let this = c.compile_internal(dependencies, env, can_block)?.1;
+                let v = match (this.clone(), i.compile_internal(dependencies, env, can_block)?.1) {
                     (Value::File(s), Value::Text(l)) =>
                         Value::File(s.join(l.as_ref()).into_boxed_path()),
                     (Value::List(list), Value::Integer(idx)) =>
@@ -128,7 +127,7 @@ impl ValueDefinition {
                 (Some(this), v)
             }
             ValueDefinition::Path(vd, l) => {
-                let v = vd.compile_internal(dependencies, env, printer, can_block)?.1;
+                let v = vd.compile_internal(dependencies, env, can_block)?.1;
                 let o = match v.clone() {
                     Value::File(s) => Value::File(s.join(l.as_ref()).into_boxed_path()),
                     Value::Struct(s) => mandate(s.get(&l), "Missing value")?,

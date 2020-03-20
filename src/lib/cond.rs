@@ -24,7 +24,6 @@ pub fn and(mut context: ExecutionContext) -> CrushResult<()> {
                     arguments: vec![],
                     env: context.env.clone(),
                     this: None,
-                    printer: context.printer.clone(),
                 };
                 c.invoke(cc)?;
                 match receiver.recv()? {
@@ -62,7 +61,6 @@ pub fn or(mut context: ExecutionContext) -> CrushResult<()> {
                     arguments: vec![],
                     env: context.env.clone(),
                     this: None,
-                    printer: context.printer.clone(),
                 };
                 c.invoke(cc)?;
                 match receiver.recv()? {

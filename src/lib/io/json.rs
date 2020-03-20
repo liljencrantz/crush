@@ -10,7 +10,6 @@ use crate::{
 };
 use std::io::BufReader;
 
-use crate::lang::printer::Printer;
 use crate::lang::{r#struct::Struct, list::List, table::Table, binary::BinaryReader};
 use crate::lang::errors::{CrushResult, to_crush_error, error};
 use crate::lang::stream::{ValueSender, ValueReceiver};
@@ -90,7 +89,7 @@ fn convert_json(json_value: &serde_json::Value) -> CrushResult<Value> {
     }
 }
 
-fn run(cfg: Config, output: ValueSender, printer: Printer) -> CrushResult<()> {
+fn run(cfg: Config, output: ValueSender) -> CrushResult<()> {
     let mut reader = BufReader::new(cfg.input);
     let v = to_crush_error(serde_json::from_reader(reader))?;
     let crush_value = convert_json(&v)?;
@@ -100,5 +99,5 @@ fn run(cfg: Config, output: ValueSender, printer: Printer) -> CrushResult<()> {
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     let cfg = parse(context.arguments, context.input)?;
-    run(cfg, context.output, context.printer)
+    run(cfg, context.output)
 }

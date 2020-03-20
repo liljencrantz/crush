@@ -21,7 +21,6 @@ use crate::{
     lang::scope::Scope,
     lang::command::SimpleCommand,
     lang::value::Value,
-    lang::printer::Printer,
     lang::errors::CrushResult,
     lang::stream::{ValueReceiver, ValueSender, InputStream}
 };

@@ -2,7 +2,6 @@ use crate::{
     lang::argument::Argument,
     lang::value::Value,
 };
-use crate::lang::printer::Printer;
 use crate::lang::scope::Scope;
 use crate::lang::{table::TableReader, list::ListReader, r#struct::Struct, dict::DictReader, command::CrushCommand};
 use crate::lang::errors::{argument_error, CrushResult, data_error};
@@ -15,7 +14,6 @@ pub struct Config {
     condition: Closure,
     body: Closure,
     env: Scope,
-    printer: Printer,
 }
 
 pub fn run(mut config: Config) -> CrushResult<()> {
@@ -29,18 +27,16 @@ pub fn run(mut config: Config) -> CrushResult<()> {
             arguments: Vec::new(),
             env: config.env.clone(),
             this: None,
-            printer: config.printer.clone(),
         });
 
         match receiver.recv()? {
             Value::Bool(true) => {
                 config.body.invoke(ExecutionContext {
                     input: empty_channel(),
-                    output: spawn_print_thread(&config.printer),
+                    output: spawn_print_thread(),
                     arguments: Vec::new(),
                     env: env.clone(),
                     this: None,
-                    printer: config.printer.clone(),
                 });
                 if env.is_stopped() {
                     break;
@@ -66,7 +62,6 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
                 body,
                 condition,
                 env: context.env,
-                printer: context.printer,
             }),
         _ => argument_error("While command expects two closures as arguments"),
     }

@@ -1,7 +1,7 @@
 use crate::lang::scope::Scope;
 use crate::lang::stream::{channels, ValueSender, ValueReceiver};
 use crate::lang::{call_definition::CallDefinition, argument::ArgumentDefinition};
-use crate::lang::printer::Printer;
+use crate::lang::printer::printer;
 use crate::lang::errors::{CrushError, CrushResult};
 use std::thread::JoinHandle;
 
@@ -11,18 +11,18 @@ pub enum JobJoinHandle {
 }
 
 impl JobJoinHandle {
-    pub fn join(self, printer: &Printer) {
+    pub fn join(self) {
         return match self {
             JobJoinHandle::Async(a) => match a.join() {
                 Ok(r) => match r {
                     Ok(_) => {}
-                    Err(e) => printer.job_error(e),
+                    Err(e) => printer().job_error(e),
                 },
-                Err(_) => printer.error("Unknown error while waiting for command to exit"),
+                Err(_) => printer().error("Unknown error while waiting for command to exit"),
             },
             JobJoinHandle::Many(v) => {
                 for j in v {
-                    j.join(printer);
+                    j.join();
                 }
             }
         };
@@ -51,7 +51,6 @@ impl Job {
     pub fn invoke(
         &self,
         env: &Scope,
-        printer: &Printer,
         first_input: ValueReceiver,
         last_output: ValueSender) -> CrushResult<JobJoinHandle> {
         let mut calls = Vec::new();
@@ -60,12 +59,12 @@ impl Job {
         let last_job_idx = self.commands.len() - 1;
         for call_def in &self.commands[..last_job_idx] {
             let (output, next_input) = channels();
-            let call = call_def.invoke(env, printer, input, output)?;
+            let call = call_def.invoke(env, input, output)?;
             input = next_input;
             calls.push(call);
         }
         let last_call_def = &self.commands[last_job_idx];
-        calls.push(last_call_def.invoke(env, printer, input, last_output)?);
+        calls.push(last_call_def.invoke(env, input, last_output)?);
 
         Ok(JobJoinHandle::Many(calls))
     }

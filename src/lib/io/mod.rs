@@ -15,7 +15,7 @@ pub fn val(mut context: ExecutionContext) -> CrushResult<()> {
 
 fn echo(mut context: ExecutionContext) -> CrushResult<()> {
     for arg in context.arguments.drain(..) {
-        print_value(&context.printer, arg.value);
+        print_value(arg.value);
     }
     Ok(())
 }

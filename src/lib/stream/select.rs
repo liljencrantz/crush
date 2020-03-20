@@ -17,7 +17,6 @@ use crate::lang::stream::{Readable, ValueSender, empty_channel, channels};
 use crate::lang::errors::error;
 use crate::lang::{r#struct::Struct, table::TableReader};
 use crate::lang::command::Closure;
-use crate::lang::printer::Printer;
 use crate::lang::scope::Scope;
 
 enum Location {
@@ -40,7 +39,6 @@ pub fn run(
     mut input: Box<dyn Readable>,
     sender: ValueSender,
     env: &Scope,
-    printer: &Printer,
 ) -> CrushResult<()> {
     let input_type = input.types().clone();
     let mut output_type = if config.copy {
@@ -74,7 +72,6 @@ pub fn run(
                                 arguments,
                                 env: env.clone(),
                                 this: None,
-                                printer: printer.clone(),
                             }
                         );
                         receiver.recv()?
@@ -125,7 +122,6 @@ pub fn run(
                                     arguments,
                                     env: env.clone(),
                                     this: None,
-                                    printer: printer.clone(),
                                 }
                             );
                             receiver.recv()?
@@ -154,7 +150,6 @@ fn perform_for(
     sender: ValueSender,
     mut arguments: Vec<Argument>,
     env: &Scope,
-    printer: &Printer,
 ) -> CrushResult<()> {
     let mut copy = false;
     let mut columns = Vec::new();
@@ -191,12 +186,12 @@ fn perform_for(
         }
     }
 
-    run(Config { columns, copy }, input, sender, env, printer)
+    run(Config { columns, copy }, input, sender, env)
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()?.readable() {
-        Some(r) => perform_for(r, context.output, context.arguments, &context.env, &context.printer),
+        Some(r) => perform_for(r, context.output, context.arguments, &context.env),
         _ => error("Expected a stream"),
     }
 }

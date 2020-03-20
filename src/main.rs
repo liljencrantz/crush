@@ -13,7 +13,7 @@ use rustyline::Editor;
 use lib::declare;
 use crate::lang::errors::{CrushResult, to_crush_error};
 use std::error::Error;
-use crate::lang::printer::{Printer, printer, init, shutdown};
+use crate::lang::printer::{printer, init, shutdown};
 use crate::lang::stream::empty_channel;
 use crate::lang::stream_printer::spawn_print_thread;
 use crate::util::file::home;
@@ -30,7 +30,7 @@ fn crush_history_file() -> Box<str> {
             .unwrap_or(".crush_history"))
 }
 
-fn run_interactive(global_env: lang::scope::Scope, printer: &Printer) -> CrushResult<()> {
+fn run_interactive(global_env: lang::scope::Scope) -> CrushResult<()> {
     let mut rl = Editor::<()>::new();
     rl.load_history(crush_history_file().as_ref());
     loop {
@@ -43,37 +43,37 @@ fn run_interactive(global_env: lang::scope::Scope, printer: &Printer) -> CrushRe
                     match parse(&cmd.as_str()) {//&mut Lexer::new(&cmd)) {
                         Ok(jobs) => {
                             for job_definition in jobs {
-                                let last_output = spawn_print_thread(&printer);
-                                match job_definition.invoke(&global_env, printer, empty_channel(), last_output) {
+                                let last_output = spawn_print_thread();
+                                match job_definition.invoke(&global_env, empty_channel(), last_output) {
                                     Ok(handle) => {
-                                        handle.join(printer);
+                                        handle.join();
                                     }
-                                    Err(e) => printer.job_error(e),
+                                    Err(e) => printer().job_error(e),
                                 }
                             }
                         }
                         Err(error) => {
-                            printer.job_error(error);
+                            printer().job_error(error);
                         }
                     }
                 }
             }
             Err(ReadlineError::Interrupted) => {
-                printer.line("^C");
+                printer().line("^C");
             }
             Err(ReadlineError::Eof) => {
-                printer.line("exit");
+                printer().line("exit");
                 break;
             }
             Err(err) => {
-                printer.line(err.description());
+                printer().line(err.description());
                 break;
             }
         }
         match rl.save_history(crush_history_file().as_ref()) {
             Ok(_) => {}
             Err(_) => {
-                printer.line("Error: Failed to save history.");
+                printer().line("Error: Failed to save history.");
             }
         }
     }
@@ -81,22 +81,22 @@ fn run_interactive(global_env: lang::scope::Scope, printer: &Printer) -> CrushRe
 }
 
 
-fn run_script(global_env: lang::scope::Scope, printer: &Printer, filename: &str) -> CrushResult<()> {
+fn run_script(global_env: lang::scope::Scope, filename: &str) -> CrushResult<()> {
     let cmd = to_crush_error(fs::read_to_string(filename))?;
     match parse(&cmd.as_str()) {//&mut Lexer::new(&cmd)) {
         Ok(jobs) => {
             for job_definition in jobs {
-                let last_output = spawn_print_thread(&printer);
-                match job_definition.invoke(&global_env, printer, empty_channel(), last_output) {
+                let last_output = spawn_print_thread();
+                match job_definition.invoke(&global_env, empty_channel(), last_output) {
                     Ok(handle) => {
-                        handle.join(printer);
+                        handle.join();
                     }
-                    Err(e) => printer.job_error(e),
+                    Err(e) => printer().job_error(e),
                 }
             }
         }
         Err(error) => {
-            printer.job_error(error);
+            printer().job_error(error);
         }
     }
     Ok(())
@@ -112,8 +112,8 @@ fn run() -> CrushResult<()> {
 
     let mut args = std::env::args().collect::<Vec<String>>();
     match args.len() {
-        1 => run_interactive(my_scope, &printer)?,
-        2 => run_script(my_scope, &printer, args[1].as_str())?,
+        1 => run_interactive(my_scope)?,
+        2 => run_script(my_scope, args[1].as_str())?,
         _ => {}
     }
 //    std::thread::sleep(Duration::from_secs(1));

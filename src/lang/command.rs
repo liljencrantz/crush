@@ -3,7 +3,6 @@ use std::fmt::Formatter;
 use crate::lang::stream::{ValueReceiver, ValueSender, InputStream, empty_channel};
 use crate::lang::{argument::Argument, argument::ArgumentDefinition};
 use crate::lang::scope::Scope;
-use crate::lang::printer::Printer;
 use crate::lang::job::Job;
 use crate::lang::stream_printer::spawn_print_thread;
 use crate::lang::value::Value;
@@ -14,19 +13,18 @@ pub struct ExecutionContext {
     pub arguments: Vec<Argument>,
     pub env: Scope,
     pub this: Option<Value>,
-    pub printer: Printer,
 }
 
 pub struct StreamExecutionContext {
     pub argument_stream: InputStream,
     pub output: ValueSender,
     pub env: Scope,
-    pub printer: Printer,
 }
 
 pub trait CrushCommand {
     fn invoke(&self, context: ExecutionContext) -> CrushResult<()>;
     fn can_block(&self, arguments: &Vec<ArgumentDefinition>, env: &Scope) -> bool;
+    fn name(&self) -> &str;
 }
 
 #[derive(Clone)]
@@ -46,6 +44,8 @@ impl CrushCommand for SimpleCommand {
         let c = self.call;
         c(context)
     }
+
+    fn name(&self) -> &str {"command"}
 
     fn can_block(&self, _arg: &Vec<ArgumentDefinition>, _env: &Scope) -> bool {
         self.can_block
@@ -83,6 +83,8 @@ impl CrushCommand for ConditionCommand {
         c(context)
     }
 
+    fn name(&self) -> &str {"conditional command"}
+
     fn can_block(&self, arguments: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
         for arg in arguments {
             if arg.value.can_block(arguments, env) {
@@ -115,6 +117,8 @@ pub struct Closure {
 }
 
 impl CrushCommand for Closure {
+    fn name(&self) -> &str {"closure"}
+
     fn invoke(&self, context: ExecutionContext) -> CrushResult<()> {
         let job_definitions = self.job_definitions.clone();
         let parent_env = self.env.clone();
@@ -131,8 +135,8 @@ impl CrushCommand for Closure {
                 if env.is_stopped() {
                     return Ok(());
                 }
-                let job = job_definitions[0].invoke(&env, &context.printer, context.input, context.output)?;
-                job.join(&context.printer);
+                let job = job_definitions[0].invoke(&env, context.input, context.output)?;
+                job.join();
                 if env.is_stopped() {
                     return Ok(());
                 }
@@ -142,24 +146,24 @@ impl CrushCommand for Closure {
                     return Ok(());
                 }
                 let first_job_definition = &job_definitions[0];
-                let last_output = spawn_print_thread(&context.printer);
-                let first_job = first_job_definition.invoke(&env, &context.printer, context.input, last_output)?;
-                first_job.join(&context.printer);
+                let last_output = spawn_print_thread();
+                let first_job = first_job_definition.invoke(&env, context.input, last_output)?;
+                first_job.join();
                 if env.is_stopped() {
                     return Ok(());
                 }
                 for job_definition in &job_definitions[1..job_definitions.len() - 1] {
-                    let last_output = spawn_print_thread(&context.printer);
-                    let job = job_definition.invoke(&env, &context.printer, empty_channel(), last_output)?;
-                    job.join(&context.printer);
+                    let last_output = spawn_print_thread();
+                    let job = job_definition.invoke(&env,  empty_channel(), last_output)?;
+                    job.join();
                     if env.is_stopped() {
                         return Ok(());
                     }
                 }
 
                 let last_job_definition = &job_definitions[job_definitions.len() - 1];
-                let last_job = last_job_definition.invoke(&env, &context.printer, empty_channel(), context.output)?;
-                last_job.join(&context.printer);
+                let last_job = last_job_definition.invoke(&env,  empty_channel(), context.output)?;
+                last_job.join();
                 if env.is_stopped() {
                     return Ok(());
                 }

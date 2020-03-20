@@ -2,7 +2,7 @@ use crate::lang::lexer::Lexer;
 use std::error::Error;
 use crate::lang::errors::Kind::{PARSE_ERROR, INVALID_ARGUMENT, GENERIC_ERROR, INVALID_DATA, BLOCK_ERROR};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Kind {
     PARSE_ERROR,
     INVALID_ARGUMENT,

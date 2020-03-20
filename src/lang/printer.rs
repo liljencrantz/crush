@@ -90,8 +90,8 @@ impl Printer {
 
     pub fn join(&self, h: JobJoinHandle) {
         let local_printer = self.clone();
-        handle(build("join".to_string()).spawn( move || {
-            h.join(&local_printer);
+        handle(build("join").spawn( move || {
+            h.join();
             Ok(())
         }));
     }

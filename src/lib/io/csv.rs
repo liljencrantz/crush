@@ -17,7 +17,7 @@ use std::{
 extern crate map_in_place;
 
 use map_in_place::MapVecInPlace;
-use crate::lang::printer::Printer;
+use crate::lang::printer::printer;
 use crate::lang::{table::ColumnType, binary::BinaryReader};
 use crate::lang::errors::CrushResult;
 use crate::lang::stream::ValueReceiver;
@@ -89,8 +89,7 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> 
     })
 }
 
-fn run(cfg: Config, output: OutputStream, printer: Printer) -> CrushResult<()> {
-    let printer_copy = printer.clone();
+fn run(cfg: Config, output: OutputStream) -> CrushResult<()> {
 
     let separator = cfg.separator.clone();
     let trim = cfg.trim.clone();
@@ -119,7 +118,7 @@ fn run(cfg: Config, output: OutputStream, printer: Printer) -> CrushResult<()> {
             .collect();
 
         if split.len() != columns.len() {
-            printer_copy.error("csv: Wrong number of columns in CSV file");
+            printer().error("csv: Wrong number of columns in CSV file");
         }
 
         if let Some(trim) = trim {
@@ -134,7 +133,7 @@ fn run(cfg: Config, output: OutputStream, printer: Printer) -> CrushResult<()> {
                 output.send(Row::new(cells));
             }
             Err(err) => {
-                printer_copy.job_error(err);
+                printer().job_error(err);
             }
         }
     }
@@ -145,5 +144,5 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     let cfg = parse(context.arguments, context.input)?;
     let output = context.output.initialize(
         cfg.columns.clone())?;
-    run(cfg, output, context.printer)
+    run(cfg, output)
 }
