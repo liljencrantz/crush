@@ -419,7 +419,7 @@ pub enum ItemNode {
     Label(Box<str>),
     Field(Box<str>),
     QuotedLabel(Box<str>),
-    Text(Box<str>),
+    String(Box<str>),
     Integer(i128),
     Float(f64),
     Get(Box<ItemNode>, Box<ExpressionNode>),
@@ -459,7 +459,7 @@ impl ItemNode {
         Ok(ArgumentDefinition::unnamed(match self {
             ItemNode::Label(l) => ValueDefinition::Label(l.clone()),
             ItemNode::QuotedLabel(t) => ValueDefinition::Label(unescape(t).into_boxed_str()),
-            ItemNode::Text(t) => ValueDefinition::Value(Value::String(unescape(t).into_boxed_str())),
+            ItemNode::String(t) => ValueDefinition::Value(Value::String(unescape(t).into_boxed_str())),
             ItemNode::Integer(i) => ValueDefinition::Value(Value::Integer(i.clone())),
             ItemNode::Float(f) => ValueDefinition::Value(Value::Float(f.clone())),
             ItemNode::Get(node, field) =>

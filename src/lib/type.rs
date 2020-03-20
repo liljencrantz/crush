@@ -68,7 +68,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     env.declare("integer", Value::Type(ValueType::Integer))?;
     env.declare("type", Value::Type(ValueType::Type))?;
-    env.declare("text", Value::Type(ValueType::String))?;
+    env.declare("string", Value::Type(ValueType::String))?;
     env.declare("bool", Value::Type(ValueType::Bool))?;
     env.declare("closure", Value::Type(ValueType::Closure))?;
     env.declare("empty", Value::Type(ValueType::Empty))?;

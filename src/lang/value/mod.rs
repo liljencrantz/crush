@@ -239,14 +239,6 @@ impl Value {
                 let s = g.to_string().as_str();
                 to_crush_error(Regex::new(s).map(|v| Value::Regex(Box::from(s), v)))
             }
-            /*
-                        (Cell::Field(s), CellType::File) => Ok(Cell::File(Box::from(Path::new(s.as_ref())))),
-                        (Cell::Field(s), CellType::Glob) => Ok(Cell::Glob(Glob::new(&s))),
-                        (Cell::Field(s), CellType::Integer) => to_job_error(s.parse::<i128>()).map(|v| Cell::Integer(v)),
-                        (Cell::Field(s), CellType::Text) => Ok(Cell::Text(s)),
-                        (Cell::Field(s), CellType::Op) => Ok(Cell::Op(s)),
-                        (Cell::Field(s), CellType::Regex) => to_job_error(Regex::new(s.as_ref()).map(|v| Cell::Regex(s, v))),
-            */
             (Value::Regex(s, _), ValueType::File) => Ok(Value::File(Box::from(Path::new(s.as_ref())))),
             (Value::Regex(s, _), ValueType::Glob) => Ok(Value::Glob(Glob::new(&s))),
             (Value::Regex(s, _), ValueType::Integer) => to_crush_error(s.parse::<i128>()).map(|v| Value::Integer(v)),
