@@ -118,7 +118,7 @@ pub fn single_argument_text(mut arg: Vec<Argument>) -> CrushResult<Box<str>> {
         1 => {
             let a = arg.remove(0);
             match (a.name, a.value) {
-                (None, Value::Text(t)) => Ok(t),
+                (None, Value::String(t)) => Ok(t),
                 _ => argument_error("Expected a text value"),
             }
         }

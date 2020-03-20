@@ -34,10 +34,10 @@ fn ps(context: ExecutionContext) -> CrushResult<()> {
     let output = context.output.initialize(vec![
         ColumnType::new("pid", ValueType::Integer),
         ColumnType::new("ppid", ValueType::Integer),
-        ColumnType::new("status", ValueType::Text),
-        ColumnType::new("user", ValueType::Text),
+        ColumnType::new("status", ValueType::String),
+        ColumnType::new("user", ValueType::String),
         ColumnType::new("cpu", ValueType::Duration),
-        ColumnType::new("name", ValueType::Text),
+        ColumnType::new("name", ValueType::String),
     ])?;
     let users = create_user_map();
 
@@ -45,10 +45,10 @@ fn ps(context: ExecutionContext) -> CrushResult<()> {
         output.send(Row::new(vec![
             Value::Integer(proc.pid as i128),
             Value::Integer(proc.ppid as i128),
-            Value::text(state_name(proc.state)),
+            Value::string(state_name(proc.state)),
             users.get_name(proc.uid as uid_t),
             Value::Duration(Duration::microseconds((proc.utime*1000000.0) as i64)),
-            Value::text(
+            Value::string(
                 proc.cmdline_vec().unwrap_or_else(|_| Some(vec!["<Illegal name>".to_string()]))
                     .unwrap_or_else(|| vec![format!("[{}]", proc.comm)])[0]
                     .as_ref()),
@@ -65,7 +65,7 @@ fn kill(context: ExecutionContext) -> CrushResult<()> {
         match (arg.name.as_deref(), arg.value) {
             (None, Value::Integer(pid)) => pids.push(Pid::from_raw(pid as i32)),
             (Some("pid"), Value::Integer(pid)) => pids.push(Pid::from_raw(pid as i32)),
-            (Some("signal"), Value::Text(sig)) => sig_to_send = to_crush_error(signal::Signal::from_str(sig.as_ref()))?,
+            (Some("signal"), Value::String(sig)) => sig_to_send = to_crush_error(signal::Signal::from_str(sig.as_ref()))?,
             _ => return argument_error("Unknown argument")
         }
     }

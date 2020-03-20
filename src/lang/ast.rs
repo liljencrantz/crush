@@ -459,7 +459,7 @@ impl ItemNode {
         Ok(ArgumentDefinition::unnamed(match self {
             ItemNode::Label(l) => ValueDefinition::Label(l.clone()),
             ItemNode::QuotedLabel(t) => ValueDefinition::Label(unescape(t).into_boxed_str()),
-            ItemNode::Text(t) => ValueDefinition::Value(Value::Text(unescape(t).into_boxed_str())),
+            ItemNode::Text(t) => ValueDefinition::Value(Value::String(unescape(t).into_boxed_str())),
             ItemNode::Integer(i) => ValueDefinition::Value(Value::Integer(i.clone())),
             ItemNode::Float(f) => ValueDefinition::Value(Value::Float(f.clone())),
             ItemNode::Get(node, field) =>

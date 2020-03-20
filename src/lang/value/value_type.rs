@@ -13,7 +13,7 @@ use crate::lang::parser::parse_name;
 #[derive(Debug)]
 #[derive(Hash)]
 pub enum ValueType {
-    Text,
+    String,
     Integer,
     Time,
     Duration,
@@ -48,7 +48,7 @@ impl ValueType {
 
     pub fn materialize(&self) -> ValueType {
         match self {
-            ValueType::Text|
+            ValueType::String |
             ValueType::Integer|
             ValueType::Time |
             ValueType::Duration |
@@ -87,7 +87,7 @@ impl ValueType {
 
     pub fn parse(&self, s: &str) -> CrushResult<Value> {
         match self {
-            ValueType::Text => Ok(Value::Text(Box::from(s))),
+            ValueType::String => Ok(Value::String(Box::from(s))),
             ValueType::Integer => match s.parse::<i128>() {
                 Ok(n) => Ok(Value::Integer(n)),
                 Err(e) => error(e.description()),
@@ -95,7 +95,7 @@ impl ValueType {
             ValueType::Field => Ok(Value::Field(mandate(parse_name(s), "Invalid field name")?)),
             ValueType::Glob => Ok(Value::Glob(Glob::new(s))),
             ValueType::Regex => Ok(Value::Regex(Box::from(s), to_crush_error(Regex::new(s))?)),
-            ValueType::File => Ok(Value::Text(Box::from(s))),
+            ValueType::File => Ok(Value::String(Box::from(s))),
             ValueType::Float => Ok(Value::Float(to_crush_error(s.parse::<f64>())?)),
             ValueType::Bool => Ok(Value::Bool(to_crush_error(s.parse::<bool>())?)),
             _ => error("Failed to parse cell"),
@@ -106,7 +106,7 @@ impl ValueType {
 impl ToString for ValueType {
     fn to_string(&self) -> String {
         match self {
-            ValueType::Text => "text".to_string(),
+            ValueType::String => "string".to_string(),
             ValueType::Integer => "integer".to_string(),
             ValueType::Time => "time".to_string(),
             ValueType::Duration => "duration".to_string(),
@@ -116,9 +116,9 @@ impl ToString for ValueType {
             ValueType::Command => "command".to_string(),
             ValueType::Closure => "closure".to_string(),
             ValueType::File => "file".to_string(),
-            ValueType::TableStream(o) => format!("output<{}>", o.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
-            ValueType::Table(r) => format!("rows<{}>", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
-            ValueType::Struct(r) => format!("row<{}>", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
+            ValueType::TableStream(o) => format!("table_stream<{}>", o.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
+            ValueType::Table(r) => format!("table<{}>", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
+            ValueType::Struct(r) => format!("struct<{}>", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
             ValueType::List(l) => format!("list<{}>", l.to_string()),
             ValueType::Dict(k, v) => format!("dict<{},{}>", k.to_string(), v.to_string()),
             ValueType::Scope => "env".to_string(),
@@ -126,7 +126,7 @@ impl ToString for ValueType {
             ValueType::Float => "float".to_string(),
             ValueType::Empty => "empty".to_string(),
             ValueType::Any => "any".to_string(),
-            ValueType::BinaryStream => "binary_reader".to_string(),
+            ValueType::BinaryStream => "binary_stream".to_string(),
             ValueType::Binary => "binary".to_string(),
             ValueType::Type => "type".to_string(),
         }

@@ -24,7 +24,7 @@ fn run(input: Box<dyn BinaryReader>, output: OutputStream) -> CrushResult<()> {
         if line.is_empty() {
             break;
         }
-        output.send(Row::new(vec![Value::Text(line[0..line.len() - 1].to_string().into_boxed_str())]));
+        output.send(Row::new(vec![Value::String(line[0..line.len() - 1].to_string().into_boxed_str())]));
         line.clear();
     }
     Ok(())
@@ -45,7 +45,7 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Box<dyn 
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    let output = context.output.initialize(vec![ColumnType::new("line", ValueType::Text)])?;
+    let output = context.output.initialize(vec![ColumnType::new("line", ValueType::String)])?;
     let file = parse(context.arguments, context.input)?;
     run(file, output)
 }

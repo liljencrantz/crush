@@ -12,7 +12,7 @@ pub mod comp;
 pub mod cond;
 pub mod stream;
 pub mod data;
-pub mod text;
+pub mod string;
 pub mod control;
 pub mod constants;
 
@@ -41,7 +41,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     proc::declare(root)?;
     io::declare(root)?;
     control::declare(root)?;
-    text::declare(root)?;
+    string::declare(root)?;
     constants::declare(root)?;
     root.readonly();
     return Ok(());

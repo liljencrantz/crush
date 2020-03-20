@@ -38,11 +38,11 @@ fn parse(mut arguments: Vec<Argument>) -> CrushResult<Config> {
 
     for arg in arguments.drain(..) {
         match (arg.name.as_deref(), arg.value) {
-            (None, Value::Text(t)) | (Some("url"), Value::Text(t)) => { url = Some(t); }
+            (None, Value::String(t)) | (Some("url"), Value::String(t)) => { url = Some(t); }
 //            (Some("cache"), Value::Bool(v)) => { cache = v; }
-            (Some("form"), Value::Text(t)) => { form = Some(t.to_string()); }
-            (Some("method"), Value::Text(t)) => { method = parse_method(t.as_ref())?; }
-            (Some("header"), Value::Text(t)) => {
+            (Some("form"), Value::String(t)) => { form = Some(t.to_string()); }
+            (Some("method"), Value::String(t)) => { method = parse_method(t.as_ref())?; }
+            (Some("header"), Value::String(t)) => {
                 let h = t.splitn(2, ':').collect::<Vec<&str>>();
                 match h.len() {
                     2 => { headers.push((h[0].to_string(), h[1].to_string()));}
@@ -81,12 +81,12 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     let header_map: &HeaderMap = b.headers();
     let headers = Table::new(
         vec![
-            ColumnType::new("name", ValueType::Text),
-            ColumnType::new("value", ValueType::Text),
+            ColumnType::new("name", ValueType::String),
+            ColumnType::new("value", ValueType::String),
         ],
         header_map
             .iter()
-            .map(|(n, v)| Row::new(vec![Value::text(n.as_str()), Value::text(v.to_str().unwrap())]))
+            .map(|(n, v)| Row::new(vec![Value::string(n.as_str()), Value::string(v.to_str().unwrap())]))
             .collect());
     context.output.send(
         Value::Struct(Struct::new(

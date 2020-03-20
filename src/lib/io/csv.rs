@@ -49,14 +49,14 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> 
 
                     ("head", Value::Integer(s)) => skip_head = s as usize,
 
-                    ("separator", Value::Text(s)) =>
+                    ("separator", Value::String(s)) =>
                         if s.len() == 1 {
                             separator = s.chars().next().unwrap();
                         } else {
                             return argument_error("Separator must be exactly one character long");
                         }
 
-                    ("trim", Value::Text(s)) =>
+                    ("trim", Value::String(s)) =>
                         if s.len() == 1 {
                             trim = Some(s.chars().next().unwrap());
                         } else {

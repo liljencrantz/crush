@@ -19,10 +19,10 @@ use crate::lang::stream::OutputStream;
 
 lazy_static! {
     static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
-        ColumnType::new("user", ValueType::Text),
+        ColumnType::new("user", ValueType::String),
         ColumnType::new("size", ValueType::Integer),
         ColumnType::new("modified", ValueType::Time),
-        ColumnType::new("type", ValueType::Text),
+        ColumnType::new("type", ValueType::String),
         ColumnType::new("file", ValueType::File),
     ];
 }
@@ -55,7 +55,7 @@ fn insert_entity(
         users.get_name(meta.uid()),
         Value::Integer(i128::from(meta.len())),
         Value::Time(modified_datetime),
-        Value::text(ftype),
+        Value::string(ftype),
         Value::File(f)]))?;
     Ok(())
 }
@@ -127,7 +127,7 @@ fn parse(output: OutputStream, arguments: Vec<Argument>, recursive: bool) -> Res
     }
     for arg in arguments {
         match &arg.value {
-            Value::Text(dir) =>
+            Value::String(dir) =>
                 dirs.push(Box::from(Path::new(dir.as_ref()))),
             Value::File(dir) =>
                 dirs.push(dir.clone()),

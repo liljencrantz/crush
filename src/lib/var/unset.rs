@@ -7,7 +7,7 @@ use crate::lang::errors::CrushResult;
 fn parse(arguments: Vec<Argument>) -> CrushResult<Vec<Box<str>>> {
     let mut vars = Vec::new();
     for arg in arguments.iter() {
-        if let Value::Text(s) = &arg.value {
+        if let Value::String(s) = &arg.value {
             if s.len() == 0 {
                 return argument_error("Illegal variable name");
             } else {

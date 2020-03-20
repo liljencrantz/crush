@@ -14,7 +14,7 @@ pub fn cd(context: ExecutionContext) -> CrushResult<()> {
         1 => {
             let dir = &context.arguments[0];
             match &dir.value {
-                Value::Text(val) => Ok(Box::from(Path::new(val.as_ref()))),
+                Value::String(val) => Ok(Box::from(Path::new(val.as_ref()))),
                 Value::File(val) => Ok(val.clone()),
                 Value::Glob(val) => val.glob_to_single_file(&cwd()?),
                 _ => error(format!("Wrong parameter type, expected text or file, found {}", &dir.value.value_type().to_string()).as_str())

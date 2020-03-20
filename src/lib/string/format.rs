@@ -1,7 +1,7 @@
 use crate::lang::{value::Value, argument::Argument};
 use crate::lang::errors::{argument_error, CrushResult, mandate};
 use crate::lang::command::ExecutionContext;
-use crate::lib::text::format::FormatState::{Normal, OpenBrace, Index, Name, CloseBrace};
+use crate::lib::string::format::FormatState::{Normal, OpenBrace, Index, Name, CloseBrace};
 
 enum FormatState {
     Normal,
@@ -100,8 +100,8 @@ pub fn format(mut context: ExecutionContext) -> CrushResult<()> {
     let format_arg = context.arguments.remove(0);
 
     match (format_arg.name.as_deref(), format_arg.value) {
-        (None, Value::Text(format)) =>
-            context.output.send(Value::Text(
+        (None, Value::String(format)) =>
+            context.output.send(Value::String(
                 do_format(
                     format.as_ref(),
                     context.arguments)?

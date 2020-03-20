@@ -63,6 +63,6 @@ pub trait UserMap {
 
 impl UserMap for HashMap<uid_t, User> {
     fn get_name(&self, uid: uid_t) -> Value {
-        Value::text(self.get(&uid).map(|u| u.name().to_str().unwrap_or("<illegal username>")).unwrap_or("<unknown user>"))
+        Value::string(self.get(&uid).map(|u| u.name().to_str().unwrap_or("<illegal username>")).unwrap_or("<unknown user>"))
     }
 }

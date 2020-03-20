@@ -17,8 +17,8 @@ fn parse(mut context: ExecutionContext) -> CrushResult<()> {
 
     for arg in context.arguments.drain(..) {
         match (arg.name.as_deref().unwrap_or(""), arg.value) {
-            ("format", Value::Text(s)) => fmt = Some(s),
-            ("time", Value::Text(s)) => tm = Some(s),
+            ("format", Value::String(s)) => fmt = Some(s),
+            ("time", Value::String(s)) => tm = Some(s),
             _ => return argument_error("Invalid argument"),
         }
     }
@@ -60,7 +60,7 @@ fn duration(mut context: ExecutionContext) -> CrushResult<()> {
         .collect::<Vec<Value>>();
     let duration = match &v[..] {
         [Value::Integer(s)] => Duration::seconds(*s as i64),
-        [Value::Time(t1), Value::Text(operator), Value::Time(t2)] => if operator.as_ref() == "-" {
+        [Value::Time(t1), Value::String(operator), Value::Time(t2)] => if operator.as_ref() == "-" {
             t1.signed_duration_since(t2.clone())
         } else {
             return argument_error("Illegal duration");
@@ -69,7 +69,7 @@ fn duration(mut context: ExecutionContext) -> CrushResult<()> {
             if v.len() % 2 == 0 {
                 let vec = v.chunks(2)
                     .map(|chunks| match (&chunks[0], &chunks[1]) {
-                        (Value::Integer(a), Value::Text(t)) => to_duration(*a as i64, t.as_ref()),
+                        (Value::Integer(a), Value::String(t)) => to_duration(*a as i64, t.as_ref()),
                         _ => argument_error("Unknown duration format"),
                     })
                     .collect::<CrushResult<Vec<Duration>>>()?;

@@ -176,7 +176,7 @@ fn perform_for(
                     _ => columns.push((Location::Append(Box::from(name)), Source::Closure(closure))),
                 }
             }
-            (None, Value::Text(name)) => {
+            (None, Value::String(name)) => {
                 match (copy, find_field_from_str(name.as_ref(), input_type)) {
                     (false, Ok(idx)) => columns.push((Location::Append(name), Source::Argument(idx))),
                     _ => return argument_error(format!("Unknown field {}", name.as_ref()).as_str()),

@@ -23,7 +23,7 @@ fn r#match(mut context: ExecutionContext) -> CrushResult<()> {
             (Some("re"), Value::Regex(s, r)) | (None, Value::Regex(s, r)) => {
                 re = Some(r);
             }
-            (Some("text"), Value::Text(t)) | (None, Value::Text(t)) => {
+            (Some("text"), Value::String(t)) | (None, Value::String(t)) => {
                 needle = Some(t);
             }
             _ => return argument_error("Invalid argument"),
@@ -49,10 +49,10 @@ fn replace(mut context: ExecutionContext) -> CrushResult<()> {
             (Some("re"), Value::Regex(s, r)) | (None, Value::Regex(s, r)) => {
                 re = Some(r);
             }
-            (Some("text"), Value::Text(t)) => {
+            (Some("text"), Value::String(t)) => {
                 text = Some(t);
             }
-            (Some("replacement"), Value::Text(t)) => {
+            (Some("replacement"), Value::String(t)) => {
                 replace = Some(t);
             }
             (Some("all"), Value::Bool(b)) => {
@@ -69,7 +69,7 @@ fn replace(mut context: ExecutionContext) -> CrushResult<()> {
             } else {
                 r.replace(t.as_ref(), n.as_ref())
             };
-            context.output.send(Value::Text(Box::from(txt.as_ref())))
+            context.output.send(Value::String(Box::from(txt.as_ref())))
         }
         _ => argument_error("Must specify both pattern and text"),
     }

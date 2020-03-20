@@ -29,7 +29,7 @@ pub fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> CrushResu
     let arg = &arguments[0];
     let name = arg.name.clone().unwrap_or(Box::from("group"));
     match &arg.value {
-        Value::Text(cell_name) =>
+        Value::String(cell_name) =>
             Ok(Config {
                 column: find_field_from_str(cell_name, &input_type)?,
                 input_type,

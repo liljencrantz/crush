@@ -8,14 +8,14 @@ use nix::sys::ptrace::cont;
 mod format;
 
 fn upper(mut context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::Text(
+    context.output.send(Value::String(
         single_argument_text(context.arguments)?
             .to_uppercase()
             .into_boxed_str()))
 }
 
 fn lower(mut context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::Text(
+    context.output.send(Value::String(
         single_argument_text(context.arguments)?
             .to_lowercase()
             .into_boxed_str()))
@@ -29,22 +29,22 @@ fn split(mut context: ExecutionContext) -> CrushResult<()> {
 
     for arg in context.arguments.drain(..) {
         match (arg.name.as_deref(), arg.value) {
-            (Some("separator"), Value::Text(t)) => {
+            (Some("separator"), Value::String(t)) => {
                 if t.len() != 1 {
                     return argument_error("Separator must be single character");
                 }
                 separator = Some(t.chars().next().unwrap());
             }
-            (Some("text"), Value::Text(t)) => text = Some(t),
+            (Some("text"), Value::String(t)) => text = Some(t),
             _ => return argument_error("Unknown argument"),
         }
     }
 
     match (separator, text) {
         (Some(s), Some(t)) => {
-            context.output.send(Value::List(List::new(ValueType::Text,
+            context.output.send(Value::List(List::new(ValueType::String,
                                                       t.split(s)
-                                                          .map(|s| Value::Text(Box::from(s)))
+                                                          .map(|s| Value::String(Box::from(s)))
                                                           .collect())))
         }
         _ => argument_error("Missing arguments")
@@ -52,13 +52,13 @@ fn split(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn trim(mut context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::Text(
+    context.output.send(Value::String(
         Box::from(single_argument_text(context.arguments)?
             .trim())))
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    let env = root.create_namespace("text")?;
+    let env = root.create_namespace("string")?;
     env.declare("upper", Value::Command(SimpleCommand::new(upper, false)))?;
     env.declare("lower", Value::Command(SimpleCommand::new(lower, false)))?;
     env.declare("format", Value::Command(SimpleCommand::new(format::format, false)))?;

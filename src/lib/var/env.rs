@@ -5,8 +5,8 @@ use std::collections::HashMap;
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     let output = context.output.initialize(vec![
-        ColumnType::new("name", ValueType::Text),
-        ColumnType::new("type", ValueType::Text),
+        ColumnType::new("name", ValueType::String),
+        ColumnType::new("type", ValueType::String),
     ])?;
 
     let mut vals : HashMap<String, ValueType> = HashMap::new();
@@ -17,8 +17,8 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
 
     for k in keys {
         output.send(Row::new(vec![
-            Value::Text(k.clone().into_boxed_str()),
-            Value::Text(vals[k].to_string().into_boxed_str())
+            Value::String(k.clone().into_boxed_str()),
+            Value::String(vals[k].to_string().into_boxed_str())
         ]));
     }
 

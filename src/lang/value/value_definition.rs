@@ -99,15 +99,15 @@ impl ValueDefinition {
             ValueDefinition::GetItem(c, i) => {
                 let this = c.compile_internal(dependencies, env, can_block)?.1;
                 let v = match (this.clone(), i.compile_internal(dependencies, env, can_block)?.1) {
-                    (Value::File(s), Value::Text(l)) =>
+                    (Value::File(s), Value::String(l)) =>
                         Value::File(s.join(l.as_ref()).into_boxed_path()),
                     (Value::List(list), Value::Integer(idx)) =>
                         list.get(idx as usize)?,
                     (Value::Dict(dict), c) =>
                         mandate(dict.get(&c), "Invalid subscript")?,
-                    (Value::Scope(env), Value::Text(name)) =>
+                    (Value::Scope(env), Value::String(name)) =>
                         mandate(env.get(name.as_ref()), "Invalid subscript")?,
-                    (Value::Struct(row), Value::Text(col)) =>
+                    (Value::Struct(row), Value::String(col)) =>
                         mandate(row.get(col.as_ref()), "Invalid subscript")?,
                     (Value::Struct(row), Value::Integer(idx)) =>
                         mandate(row.idx(idx as usize).map(|v| v.clone()), "Invalid subscript")?,
@@ -141,7 +141,7 @@ impl ValueDefinition {
     }
 
     pub fn text(s: &str) -> ValueDefinition {
-        ValueDefinition::Value(Value::Text(Box::from(s)))
+        ValueDefinition::Value(Value::String(Box::from(s)))
     }
 
     pub fn field(s: Vec<Box<str>>) -> ValueDefinition {

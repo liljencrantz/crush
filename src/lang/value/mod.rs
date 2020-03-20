@@ -31,7 +31,7 @@ pub use value_definition::ValueDefinition;
 
 #[derive(Debug)]
 pub enum Value {
-    Text(Box<str>),
+    String(Box<str>),
     Integer(i128),
     Time(DateTime<Local>),
     Duration(Duration),
@@ -64,7 +64,7 @@ fn hex(v: u8) -> String {
 impl Value {
     pub fn to_string(&self) -> String {
         return match self {
-            Value::Text(val) => val.to_string(),
+            Value::String(val) => val.to_string(),
             Value::Integer(val) => val.to_string(),
             Value::Time(val) => val.format("%Y-%m-%d %H:%M:%S %z").to_string(),
             Value::Field(val) => format!(r"%{}", val.join(".")),
@@ -102,8 +102,8 @@ impl Value {
         Value::TableStream(r)
     }
 
-    pub fn text(s: &str) -> Value {
-        Value::Text(Box::from(s))
+    pub fn string(s: &str) -> Value {
+        Value::String(Box::from(s))
     }
 
     pub fn readable(&self) -> Option<Box<Readable>> {
@@ -118,7 +118,7 @@ impl Value {
 
     pub fn value_type(&self) -> ValueType {
         return match self {
-            Value::Text(_) => ValueType::Text,
+            Value::String(_) => ValueType::String,
             Value::Integer(_) => ValueType::Integer,
             Value::Time(_) => ValueType::Time,
             Value::Field(_) => ValueType::Field,
@@ -146,7 +146,7 @@ impl Value {
 
     pub fn file_expand(&self, v: &mut Vec<Box<Path>>) -> CrushResult<()> {
         match self {
-            Value::Text(s) => v.push(Box::from(Path::new(s.as_ref()))),
+            Value::String(s) => v.push(Box::from(Path::new(s.as_ref()))),
             Value::File(p) => v.push(p.clone()),
             Value::Glob(pattern) => pattern.glob_files(&cwd()?, v)?,
             Value::TableStream(s) => {
@@ -207,16 +207,16 @@ impl Value {
         this monstrosity to a sane size.
         */
         match (self, new_type) {
-            (Value::Text(s), ValueType::File) => Ok(Value::File(Box::from(Path::new(s.as_ref())))),
-            (Value::Text(s), ValueType::Glob) => Ok(Value::Glob(Glob::new(&s))),
-            (Value::Text(s), ValueType::Integer) => to_crush_error(s.parse::<i128>()).map(|v| Value::Integer(v)),
-            (Value::Text(s), ValueType::Field) => Ok(Value::Field(vec![s])),
-            (Value::Text(s), ValueType::Regex) => to_crush_error(Regex::new(s.as_ref()).map(|v| Value::Regex(s, v))),
-            (Value::Text(s), ValueType::Binary) => Ok(Value::Binary(s.bytes().collect())),
-            (Value::Text(s), ValueType::Float) => Ok(Value::Float(to_crush_error(f64::from_str(&s))?)),
+            (Value::String(s), ValueType::File) => Ok(Value::File(Box::from(Path::new(s.as_ref())))),
+            (Value::String(s), ValueType::Glob) => Ok(Value::Glob(Glob::new(&s))),
+            (Value::String(s), ValueType::Integer) => to_crush_error(s.parse::<i128>()).map(|v| Value::Integer(v)),
+            (Value::String(s), ValueType::Field) => Ok(Value::Field(vec![s])),
+            (Value::String(s), ValueType::Regex) => to_crush_error(Regex::new(s.as_ref()).map(|v| Value::Regex(s, v))),
+            (Value::String(s), ValueType::Binary) => Ok(Value::Binary(s.bytes().collect())),
+            (Value::String(s), ValueType::Float) => Ok(Value::Float(to_crush_error(f64::from_str(&s))?)),
 
-            (Value::File(s), ValueType::Text) => match s.to_str() {
-                Some(s) => Ok(Value::Text(Box::from(s))),
+            (Value::File(s), ValueType::String) => match s.to_str() {
+                Some(s) => Ok(Value::String(Box::from(s))),
                 None => error("File name is not valid unicode")
             },
             (Value::File(s), ValueType::Glob) => match s.to_str() {
@@ -232,7 +232,7 @@ impl Value {
                 None => error("File name is not valid unicode")
             },
 
-            (Value::Glob(s), ValueType::Text) => Ok(Value::Text(s.to_string().clone().into_boxed_str())),
+            (Value::Glob(s), ValueType::String) => Ok(Value::String(s.to_string().clone().into_boxed_str())),
             (Value::Glob(s), ValueType::File) => Ok(Value::File(Box::from(Path::new(s.to_string().as_str())))),
             (Value::Glob(s), ValueType::Integer) => to_crush_error(s.to_string().parse::<i128>()).map(|v| Value::Integer(v)),
             (Value::Glob(g), ValueType::Regex) => {
@@ -250,9 +250,9 @@ impl Value {
             (Value::Regex(s, _), ValueType::File) => Ok(Value::File(Box::from(Path::new(s.as_ref())))),
             (Value::Regex(s, _), ValueType::Glob) => Ok(Value::Glob(Glob::new(&s))),
             (Value::Regex(s, _), ValueType::Integer) => to_crush_error(s.parse::<i128>()).map(|v| Value::Integer(v)),
-            (Value::Regex(s, _), ValueType::Text) => Ok(Value::Text(s)),
+            (Value::Regex(s, _), ValueType::String) => Ok(Value::String(s)),
 
-            (Value::Integer(i), ValueType::Text) => Ok(Value::Text(i.to_string().into_boxed_str())),
+            (Value::Integer(i), ValueType::String) => Ok(Value::String(i.to_string().into_boxed_str())),
             (Value::Integer(i), ValueType::File) => Ok(Value::File(Box::from(Path::new(i.to_string().as_str())))),
             (Value::Integer(i), ValueType::Glob) => Ok(Value::Glob(Glob::new(i.to_string().as_str()))),
             (Value::Integer(i), ValueType::Field) => Ok(Value::Field(vec![i.to_string().into_boxed_str()])),
@@ -262,17 +262,17 @@ impl Value {
             }
             (Value::Integer(i), ValueType::Float) => Ok(Value::Float(i as f64)),
 
-            (Value::Type(s), ValueType::Text) => Ok(Value::Text(Box::from(s.to_string()))),
+            (Value::Type(s), ValueType::String) => Ok(Value::String(Box::from(s.to_string()))),
 
             (Value::Float(i), ValueType::Integer) => Ok(Value::Integer(i as i128)),
-            (Value::Float(i), ValueType::Text) => Ok(Value::Text(i.to_string().into_boxed_str())),
+            (Value::Float(i), ValueType::String) => Ok(Value::String(i.to_string().into_boxed_str())),
 
-            (Value::Binary(s), ValueType::Text) => Ok(Value::Text(to_crush_error(String::from_utf8(s))?.into_boxed_str())),
+            (Value::Binary(s), ValueType::String) => Ok(Value::String(to_crush_error(String::from_utf8(s))?.into_boxed_str())),
 
-            (Value::BinaryStream(mut s), ValueType::Text) => {
+            (Value::BinaryStream(mut s), ValueType::String) => {
                 let mut v = Vec::new();
                 s.read_to_end(&mut v);
-                Ok(Value::Text(to_crush_error(String::from_utf8(v))?.into_boxed_str()))
+                Ok(Value::String(to_crush_error(String::from_utf8(v))?.into_boxed_str()))
             },
 
             (Value::TableStream(s), ValueType::List(t)) => {
@@ -300,7 +300,7 @@ impl Value {
 impl Clone for Value {
     fn clone(&self) -> Self {
         match self {
-            Value::Text(v) => Value::Text(v.clone()),
+            Value::String(v) => Value::String(v.clone()),
             Value::Integer(v) => Value::Integer(v.clone()),
             Value::Time(v) => Value::Time(v.clone()),
             Value::Field(v) => Value::Field(v.clone()),
@@ -333,7 +333,7 @@ impl std::hash::Hash for Value {
             panic!("Can't hash mutable cell types!");
         }
         match self {
-            Value::Text(v) => v.hash(state),
+            Value::String(v) => v.hash(state),
             Value::Integer(v) => v.hash(state),
             Value::Time(v) => v.hash(state),
             Value::Field(v) => v.hash(state),
@@ -365,9 +365,9 @@ fn file_result_compare(f1: &Path, f2: &Path) -> bool {
 impl std::cmp::PartialEq for Value {
     fn eq(&self, other: &Value) -> bool {
         return match (self, other) {
-            (Value::Text(val1), Value::Text(val2)) => val1 == val2,
-            (Value::Glob(glb), Value::Text(val)) => glb.matches(val),
-            (Value::Text(val), Value::Glob(glb)) => glb.matches(val),
+            (Value::String(val1), Value::String(val2)) => val1 == val2,
+            (Value::Glob(glb), Value::String(val)) => glb.matches(val),
+            (Value::String(val), Value::Glob(glb)) => glb.matches(val),
             (Value::Integer(val1), Value::Integer(val2)) => val1 == val2,
             (Value::Time(val1), Value::Time(val2)) => val1 == val2,
             (Value::Duration(val1), Value::Duration(val2)) => val1 == val2,
@@ -385,8 +385,8 @@ impl std::cmp::PartialEq for Value {
                 Some(o) => o == Ordering::Equal,
             },
             (Value::File(val1), Value::File(val2)) => file_result_compare(val1.as_ref(), val2.as_ref()),
-            (Value::Text(val1), Value::File(val2)) => file_result_compare(&Path::new(&val1.to_string()), val2.as_ref()),
-            (Value::File(val1), Value::Text(val2)) => file_result_compare(&Path::new(&val2.to_string()), val1.as_ref()),
+            (Value::String(val1), Value::File(val2)) => file_result_compare(&Path::new(&val1.to_string()), val2.as_ref()),
+            (Value::File(val1), Value::String(val2)) => file_result_compare(&Path::new(&val2.to_string()), val1.as_ref()),
             (Value::Bool(val1), Value::Bool(val2)) => val1 == val2,
             _ => false,
         };
@@ -406,7 +406,7 @@ impl std::cmp::PartialOrd for Value {
             return Some(t1.cmp(&t2));
         }
         return match (self, other) {
-            (Value::Text(val1), Value::Text(val2)) => Some(val1.cmp(val2)),
+            (Value::String(val1), Value::String(val2)) => Some(val1.cmp(val2)),
             (Value::Field(val1), Value::Field(val2)) => Some(val1.cmp(val2)),
             (Value::Glob(val1), Value::Glob(val2)) => Some(val1.cmp(val2)),
             (Value::Regex(val1, _), Value::Regex(val2, _)) => Some(val1.cmp(val2)),
@@ -434,12 +434,12 @@ mod tests {
 
     #[test]
     fn text_casts() {
-        assert_eq!(Value::Text(Box::from("112432")).cast(ValueType::Integer).is_err(), false);
-        assert_eq!(Value::text("1d").cast(ValueType::Integer).is_err(), true);
-        assert_eq!(Value::text("1d").cast(ValueType::Glob).is_err(), false);
-        assert_eq!(Value::text("1d").cast(ValueType::File).is_err(), false);
-        assert_eq!(Value::text("1d").cast(ValueType::Time).is_err(), true);
-        assert_eq!(Value::text("fad").cast(ValueType::Field).is_err(), false);
+        assert_eq!(Value::String(Box::from("112432")).cast(ValueType::Integer).is_err(), false);
+        assert_eq!(Value::string("1d").cast(ValueType::Integer).is_err(), true);
+        assert_eq!(Value::string("1d").cast(ValueType::Glob).is_err(), false);
+        assert_eq!(Value::string("1d").cast(ValueType::File).is_err(), false);
+        assert_eq!(Value::string("1d").cast(ValueType::Time).is_err(), true);
+        assert_eq!(Value::string("fad").cast(ValueType::Field).is_err(), false);
     }
 
     #[test]
