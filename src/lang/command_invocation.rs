@@ -170,15 +170,24 @@ fn invoke_value(
     match value {
         Value::Command(command) =>
             invoke_command(command, this, local_arguments, local_env, input, output),
-        Value::File(_) =>
+        Value::File(f) =>
             if local_arguments.len() == 0 {
-                invoke_command(
-                    Box::from(SimpleCommand::new(crate::lib::file::cd, false)),
-                    None,
-                    vec![ArgumentDefinition::unnamed(ValueDefinition::Value(value))],
-                    local_env, input, output)
+                let meta = f.metadata();
+                if meta.is_ok() && meta.unwrap().is_dir() {
+                    invoke_command(
+                        Box::from(SimpleCommand::new(crate::lib::file::cd, false)),
+                        None,
+                        vec![ArgumentDefinition::unnamed(ValueDefinition::Value(Value::File(f)))],
+                        local_env, input, output)
+                } else {
+                    invoke_command(
+                        Box::from(SimpleCommand::new(crate::lib::io::val, false)),
+                        None,
+                        vec![ArgumentDefinition::unnamed(ValueDefinition::Value(Value::File(f)))],
+                        local_env, input, output)
+                }
             } else {
-                error(format!("Not a command {}", value.to_string()).as_str())
+                error(format!("Not a command {}", f.to_str().unwrap_or("<invalid filename>")).as_str())
             }
         _ =>
             if local_arguments.len() == 0 {
