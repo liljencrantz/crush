@@ -26,7 +26,7 @@ use std::io::{Read};
 
 pub use value_type::ValueType;
 pub use value_definition::ValueDefinition;
-use crate::lang::command::CrushCommand;
+use crate::lang::command::{CrushCommand, SimpleCommand};
 
 pub enum Value {
     String(Box<str>),
@@ -84,18 +84,22 @@ impl ToString for Value {
 impl Value {
 
     pub fn field(&self, name: &str) -> Option<Value> {
-        match self {
-            Value::Struct(s) => s.clone().get(name),
-            Value::Scope(subenv) => subenv.get(name),
-            Value::List(list) =>
-                crate::lib::data::list::LIST_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.boxed())),
-            Value::Dict(dict) =>
-                crate::lib::data::dict::DICT_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.boxed())),
-            Value::String(s) =>
-                crate::lib::string::STRING_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.boxed())),
-            Value::File(s) =>
-                crate::lib::file::FILE_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.boxed())),
-            _ => return None,
+        if name == "type" {
+            Some(Value::Command(SimpleCommand::new(crate::lib::r#type::r#type, false).boxed()))
+        } else {
+            match self {
+                Value::Struct(s) => s.clone().get(name),
+                Value::Scope(subenv) => subenv.get(name),
+                Value::List(list) =>
+                    crate::lib::data::list::LIST_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.boxed())),
+                Value::Dict(dict) =>
+                    crate::lib::data::dict::DICT_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.boxed())),
+                Value::String(s) =>
+                    crate::lib::string::STRING_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.boxed())),
+                Value::File(s) =>
+                    crate::lib::file::FILE_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.boxed())),
+                _ => return None,
+            }
         }
     }
 

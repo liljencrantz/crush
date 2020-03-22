@@ -1,8 +1,8 @@
 use crate::lang::{command::ExecutionContext, table::ColumnType, argument::Argument};
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, argument_error, mandate};
 use crate::lang::{value::Value, command::SimpleCommand, value::ValueType};
 use crate::lang::scope::Scope;
-use crate::lib::parse_util::{two_arguments, single_argument_type};
+use crate::lib::parse_util::{two_arguments, single_argument_type, this_file};
 use crate::lang::argument::column_names;
 use crate::lang::command::CrushCommand;
 
@@ -10,8 +10,8 @@ fn to(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(context.input.recv()?.cast(single_argument_type(context.arguments)?)?)
 }
 
-fn of(mut context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::Type(context.input.recv()?.value_type()))
+pub fn r#type(mut context: ExecutionContext) -> CrushResult<()> {
+    context.output.send(Value::Type(mandate(context.this, "Missing this value")?.value_type()))
 }
 
 fn list(mut context: ExecutionContext) -> CrushResult<()> {
@@ -59,7 +59,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("type")?;
 
     env.declare("to", Value::Command(SimpleCommand::new(to, true).boxed()))?;
-    env.declare("of", Value::Command(SimpleCommand::new(of, false).boxed()))?;
+//    env.declare("of", Value::Command(SimpleCommand::new(of, false).boxed()))?;
 
     env.declare("list", Value::Command(SimpleCommand::new(list, false).boxed()))?;
     env.declare("dict", Value::Command(SimpleCommand::new(dict, false).boxed()))?;
