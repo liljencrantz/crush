@@ -30,7 +30,6 @@ pub use value_type::ValueType;
 pub use value_definition::ValueDefinition;
 use crate::lang::command::CrushCommand;
 
-//#[derive(Debug)]
 pub enum Value {
     String(Box<str>),
     Integer(i128),
@@ -69,21 +68,17 @@ impl Value {
             Value::Field(val) => format!(r"%{}", val.join(".")),
             Value::Glob(val) => format!("*{{{}}}", val.to_string()),
             Value::Regex(val, _) => format!("regex{{{}}}", val),
-            Value::Command(_) => "Command".to_string(),
             Value::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
-            Value::Table(_) => "<Rows>".to_string(),
-            Value::Struct(row) => row.to_string(),
-            Value::TableStream(_) => "<Output>".to_string(),
             Value::List(l) => l.to_string(),
             Value::Duration(d) => duration_format(d),
             Value::Scope(env) => env.to_string(),
             Value::Bool(v) => (if *v { "true" } else { "false" }).to_string(),
             Value::Dict(d) => d.to_string(),
             Value::Float(f) => f.to_string(),
-            Value::Empty() => "<empty>".to_string(),
-            Value::BinaryStream(_) => "<binary stream>".to_string(),
             Value::Binary(v) => v.iter().map(|u| hex(*u)).collect::<Vec<String>>().join(""),
             Value::Type(t) => t.to_string(),
+            Value::Struct(s) => s.to_string(),
+            _ => self.value_type().to_string(),
         };
     }
 
@@ -96,6 +91,8 @@ impl Value {
                 crate::lib::data::list::LIST_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.boxed())),
             Value::Dict(dict) =>
                 crate::lib::data::dict::DICT_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.boxed())),
+            Value::String(s) =>
+                crate::lib::string::STRING_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.boxed())),
             _ => return None,
         }
     }

@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use lazy_static::lazy_static;
 
 lazy_static! {
-pub static ref DICT_METHODS: HashMap<Box<str>, Box<CrushCommand + Sync>> = {
+    pub static ref DICT_METHODS: HashMap<Box<str>, Box<CrushCommand + Sync>> = {
         let mut res: HashMap<Box<str>, Box<CrushCommand + Sync>> = HashMap::new();
         res.insert(Box::from("len"), Box::from(SimpleCommand::new(len, false)));
         res.insert(Box::from("empty"), Box::from(SimpleCommand::new(empty, false)));
@@ -20,7 +20,7 @@ pub static ref DICT_METHODS: HashMap<Box<str>, Box<CrushCommand + Sync>> = {
         res.insert(Box::from("remove"), Box::from(SimpleCommand::new(remove, false)));
 //        res.insert(Box::from("clone"), Box::from(SimpleCommand::new(clone, false)));
         res
-};
+    };
 }
 
 fn new(mut context: ExecutionContext) -> CrushResult<()> {

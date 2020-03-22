@@ -2,8 +2,9 @@ Todo for MVP 1:
 Add 'type' method to all types
 New operators: += increment and friends
 Move the 'to' method to type instances
+Add methods to integer type
+Add methods to float type
 Add methods to file type
-Add methods to text type
 Add methods to type type
 Support reassigning in structs
 Nice way to pass on all arguments of a closure to another command
@@ -194,3 +195,4 @@ Implement getitem for file
 Names should be mandatory and unique in structs, tables and table streams, auto-assign _0, _1, etc, and add numbers to dedup
 Consistent naming in code: getitem and path
 Structs and rows should be subscriptable via indices
+Add methods to text type

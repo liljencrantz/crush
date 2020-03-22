@@ -62,6 +62,13 @@ pub fn this_dict(this: Option<Value>) -> CrushResult<Dict> {
     }
 }
 
+pub fn this_text(this: Option<Value>) -> CrushResult<Box<str>> {
+    match this {
+        Some(Value::String(s)) => Ok(s),
+        _ => argument_error("Expected a string"),
+    }
+}
+
 pub fn single_argument_list(mut arg: Vec<Argument>) -> CrushResult<List> {
     match arg.len() {
         1 => {
@@ -101,18 +108,6 @@ pub fn single_argument_dict(mut arg: Vec<Argument>) -> CrushResult<Dict> {
     }
 }
 
-pub fn single_argument_field(mut arg: Vec<Argument>) -> CrushResult<Vec<Box<str>>> {
-    match arg.len() {
-        1 => {
-            let a = arg.remove(0);
-            match (a.name, a.value) {
-                (None, Value::Field(t)) => Ok(t),
-                _ => argument_error("Expected a field value"),
-            }
-        }
-        _ => argument_error("Expected a single value"),
-    }
-}
 
 pub fn single_argument_text(mut arg: Vec<Argument>) -> CrushResult<Box<str>> {
     match arg.len() {
@@ -121,6 +116,19 @@ pub fn single_argument_text(mut arg: Vec<Argument>) -> CrushResult<Box<str>> {
             match (a.name, a.value) {
                 (None, Value::String(t)) => Ok(t),
                 _ => argument_error("Expected a text value"),
+            }
+        }
+        _ => argument_error("Expected a single value"),
+    }
+}
+
+pub fn single_argument_field(mut arg: Vec<Argument>) -> CrushResult<Vec<Box<str>>> {
+    match arg.len() {
+        1 => {
+            let a = arg.remove(0);
+            match (a.name, a.value) {
+                (None, Value::Field(t)) => Ok(t),
+                _ => argument_error("Expected a field value"),
             }
         }
         _ => argument_error("Expected a single value"),

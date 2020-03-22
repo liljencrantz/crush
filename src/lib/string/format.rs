@@ -2,6 +2,7 @@ use crate::lang::{value::Value, argument::Argument};
 use crate::lang::errors::{argument_error, CrushResult, mandate};
 use crate::lang::command::ExecutionContext;
 use crate::lib::string::format::FormatState::{Normal, OpenBrace, Index, Name, CloseBrace};
+use crate::lib::parse_util::this_text;
 
 enum FormatState {
     Normal,
@@ -16,11 +17,11 @@ fn format_argument(res: &mut String, arg: Option<&Argument>) -> CrushResult<()> 
     Ok(())
 }
 
-fn argument_by_name<'a>(name: &str, param: & 'a Vec<Argument>) -> Option<& 'a Argument> {
+fn argument_by_name<'a>(name: &str, param: &'a Vec<Argument>) -> Option<&'a Argument> {
     for a in param {
         if let Some(arg_name) = a.name.as_deref() {
             if name == arg_name {
-                return Some(a)
+                return Some(a);
             }
         }
     }
@@ -75,9 +76,8 @@ fn do_format(format: &str, param: Vec<Argument>) -> CrushResult<String> {
                         format_argument(&mut res, param.get(idx))?;
                         Normal
                     }
-                    '0'..='9' => Index(idx*10 + ch.to_digit(10).unwrap() as usize),
+                    '0'..='9' => Index(idx * 10 + ch.to_digit(10).unwrap() as usize),
                     _ => return argument_error("Invalid format string"),
-
                 }
 
             Name(name) =>
@@ -94,18 +94,10 @@ fn do_format(format: &str, param: Vec<Argument>) -> CrushResult<String> {
 }
 
 pub fn format(mut context: ExecutionContext) -> CrushResult<()> {
-    if context.arguments.len() < 1 {
-        return argument_error("Expected at least one argument");
-    }
-    let format_arg = context.arguments.remove(0);
-
-    match (format_arg.name.as_deref(), format_arg.value) {
-        (None, Value::String(format)) =>
-            context.output.send(Value::String(
-                do_format(
-                    format.as_ref(),
-                    context.arguments)?
-                    .into_boxed_str())),
-        _ => argument_error("Expected format string as first, unnamed argument"),
-    }
+    let format = this_text(context.this)?;
+    context.output.send(Value::String(
+        do_format(
+            &format,
+            context.arguments)?
+            .into_boxed_str()))
 }

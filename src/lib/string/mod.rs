@@ -1,60 +1,53 @@
 use crate::lang::scope::Scope;
 use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{command::ExecutionContext, value::ValueType, list::List};
-use crate::lib::parse_util::{single_argument, two_arguments, single_argument_field, single_argument_text};
+use crate::lib::parse_util::{single_argument, two_arguments, single_argument_field, single_argument_text, this_text};
 use crate::lang::{value::Value, command::SimpleCommand, argument::Argument};
 use nix::sys::ptrace::cont;
 use crate::lang::command::CrushCommand;
+use std::collections::HashMap;
+use lazy_static::lazy_static;
 
 mod format;
 
+lazy_static! {
+    pub static ref STRING_METHODS: HashMap<Box<str>, Box<CrushCommand + Sync>> = {
+        let mut res: HashMap<Box<str>, Box<CrushCommand + Sync>> = HashMap::new();
+        res.insert(Box::from("upper"), Box::from(SimpleCommand::new(upper, false)));
+        res.insert(Box::from("lower"), Box::from(SimpleCommand::new(lower, false)));
+        res.insert(Box::from("split"), Box::from(SimpleCommand::new(split, false)));
+        res.insert(Box::from("trim"), Box::from(SimpleCommand::new(trim, false)));
+        res.insert(Box::from("format"), Box::from(SimpleCommand::new(format::format, false)));
+        res
+    };
+}
+
 fn upper(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::String(
-        single_argument_text(context.arguments)?
+        this_text(context.this)?
             .to_uppercase()
             .into_boxed_str()))
 }
 
 fn lower(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::String(
-        single_argument_text(context.arguments)?
+        this_text(context.this)?
             .to_lowercase()
             .into_boxed_str()))
 }
 
 fn split(mut context: ExecutionContext) -> CrushResult<()> {
-    two_arguments(&context.arguments)?;
-
-    let mut separator = None;
-    let mut text = None;
-
-    for arg in context.arguments.drain(..) {
-        match (arg.name.as_deref(), arg.value) {
-            (Some("separator"), Value::String(t)) => {
-                if t.len() != 1 {
-                    return argument_error("Separator must be single character");
-                }
-                separator = Some(t.chars().next().unwrap());
-            }
-            (Some("text"), Value::String(t)) => text = Some(t),
-            _ => return argument_error("Unknown argument"),
-        }
-    }
-
-    match (separator, text) {
-        (Some(s), Some(t)) => {
-            context.output.send(Value::List(List::new(ValueType::String,
-                                                      t.split(s)
-                                                          .map(|s| Value::String(Box::from(s)))
-                                                          .collect())))
-        }
-        _ => argument_error("Missing arguments")
-    }
+    let this = this_text(context.this)?;
+    let separator = single_argument_text(context.arguments)?;
+    context.output.send(Value::List(List::new(ValueType::String,
+                                              this.split(separator.as_ref())
+                                                  .map(|s| Value::String(Box::from(s)))
+                                                  .collect())))
 }
 
 fn trim(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::String(
-        Box::from(single_argument_text(context.arguments)?
+        Box::from(this_text(context.this)?
             .trim())))
 }
 
