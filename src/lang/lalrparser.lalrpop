@@ -19,17 +19,13 @@ Job: JobNode = {
 };
 
 Command: CommandNode = {
-  <a:Expression> => CommandNode{expressions: vec![a]},
-  <mut c: Command> <a:Expression> => {c.expressions.push(a); c}
-};
-
-Expression: ExpressionNode = {
-  <a: Assignment> => ExpressionNode::Assignment(a),
+  <a:Assignment> => CommandNode{expressions: vec![a]},
+  <mut c: Command> <a:Assignment> => {c.expressions.push(a); c}
 };
 
 Assignment: AssignmentNode = {
-  <i: Item> "=" <e: Expression> => AssignmentNode::Assignment(i, Box::new(e)),
-  <i: Item> ":=" <e: Expression> => AssignmentNode::Declaration(i, Box::new(e)),
+  <i: Item> "=" <e: Assignment> => AssignmentNode::Assignment(i, Box::new(e)),
+  <i: Item> ":=" <e: Assignment> => AssignmentNode::Declaration(i, Box::new(e)),
   <a: Logical> => AssignmentNode::Logical(a),
 }
 
@@ -65,7 +61,7 @@ Item: ItemNode = {
     <s: QuotedString> => ItemNode::String(s),
     <s:r"[0-9][0-9_]*"> => ItemNode::Integer(i128::from_str(s.replace("_", "").as_str()).unwrap()),
     <s:r"[0-9][0-9_]*\.[0-9_]+"> => ItemNode::Float(f64::from_str(s.replace("_", "").as_str()).unwrap()),
-    <i: Item> "[" <e: Expression> "]" => ItemNode::Get(Box::new(i), Box::new(e)),
+    <i: Item> "[" <e: Assignment> "]" => ItemNode::Get(Box::new(i), Box::new(e)),
     <i: Item> "/" <l: Label> => ItemNode::Path(Box::new(i), l),
     "{" <l: NonEmptyJobList> "}" => ItemNode::Closure(l),
     "(" <j:Job> ")" => ItemNode::Substitution(j),

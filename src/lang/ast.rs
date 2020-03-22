@@ -49,7 +49,7 @@ impl JobNode {
 
 #[derive(Debug)]
 pub struct CommandNode {
-    pub expressions: Vec<ExpressionNode>,
+    pub expressions: Vec<AssignmentNode>,
 }
 
 impl CommandNode {
@@ -73,31 +73,9 @@ impl CommandNode {
 }
 
 #[derive(Debug)]
-pub enum ExpressionNode {
-    Assignment(AssignmentNode),
-    //    ListLiteral(JobListNode),
-}
-
-impl ExpressionNode {
-    pub fn generate_standalone(&self) -> CrushResult<Option<CallDefinition>> {
-        match self {
-            ExpressionNode::Assignment(a) => a.generate_standalone(),
-        }
-    }
-
-    pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
-        match self {
-            ExpressionNode::Assignment(a) => {
-                a.generate_argument()
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
 pub enum AssignmentNode {
-    Assignment(ItemNode, Box<ExpressionNode>),
-    Declaration(ItemNode, Box<ExpressionNode>),
+    Assignment(ItemNode, Box<AssignmentNode>),
+    Declaration(ItemNode, Box<AssignmentNode>),
     Logical(LogicalNode),
 }
 
@@ -422,7 +400,7 @@ pub enum ItemNode {
     String(Box<str>),
     Integer(i128),
     Float(f64),
-    Get(Box<ItemNode>, Box<ExpressionNode>),
+    Get(Box<ItemNode>, Box<AssignmentNode>),
     Path(Box<ItemNode>, Box<str>),
     Substitution(JobNode),
     Closure(JobListNode),
