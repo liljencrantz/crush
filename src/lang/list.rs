@@ -1,5 +1,5 @@
 use crate::lang::{value::ValueType, value::Value, table::ColumnType, table::Row};
-use crate::lang::errors::{CrushError, mandate, CrushResult, error};
+use crate::lang::errors::{mandate, CrushResult, error};
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;

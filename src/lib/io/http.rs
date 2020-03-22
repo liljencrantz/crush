@@ -2,8 +2,7 @@ use crate::lang::{argument::Argument, value::Value, r#struct::Struct, table::Tab
 use crate::lang::command::ExecutionContext;
 use crate::lang::errors::{argument_error, to_crush_error, CrushResult, demand};
 use reqwest::{StatusCode, Method};
-use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
-use std::str::FromStr;
+use reqwest::header::{HeaderMap};
 
 #[derive(Debug)]
 pub struct Config {

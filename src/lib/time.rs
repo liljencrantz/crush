@@ -1,9 +1,8 @@
 use crate::lang::command::{ExecutionContext, CrushCommand};
 use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
-use crate::lang::{value::Value, command::SimpleCommand, value::ValueType};
+use crate::lang::{value::Value, command::SimpleCommand};
 use crate::lang::scope::Scope;
-use chrono::{Local, Duration, DateTime, Datelike, Timelike};
-use crate::lib::parse_util::single_argument_text;
+use chrono::{Local, Duration, Datelike, Timelike};
 use time::{strptime, Tm};
 use std::cmp::max;
 

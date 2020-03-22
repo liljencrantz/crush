@@ -1,14 +1,14 @@
 use crate::lang::lexer::Lexer;
 use std::error::Error;
-use crate::lang::errors::Kind::{PARSE_ERROR, INVALID_ARGUMENT, GENERIC_ERROR, INVALID_DATA, BLOCK_ERROR};
+use crate::lang::errors::Kind::{ParseError, InvalidArgument, GenericError, InvalidData, BlockError};
 
 #[derive(Debug, PartialEq)]
 pub enum Kind {
-    PARSE_ERROR,
-    INVALID_ARGUMENT,
-    INVALID_DATA,
-    GENERIC_ERROR,
-    BLOCK_ERROR,
+    ParseError,
+    InvalidArgument,
+    InvalidData,
+    GenericError,
+    BlockError,
 }
 
 #[derive(Debug)]
@@ -22,35 +22,35 @@ pub type CrushResult<T> = Result<T, CrushError>;
 pub fn parse_error<T>(message: &str, _lexer: &Lexer) -> Result<T, CrushError> {
     return Err(CrushError {
         message: String::from(message),
-        kind: PARSE_ERROR,
+        kind: ParseError,
     });
 }
 
 pub fn block_error<T>() -> Result<T, CrushError> {
     return Err(CrushError {
         message: String::from("Internal error: Tried to call blocking code in a thread that may not block"),
-        kind: BLOCK_ERROR,
+        kind: BlockError,
     });
 }
 
 pub fn argument_error<T>(message: &str) -> Result<T, CrushError> {
     return Err(CrushError {
         message: String::from(message),
-        kind: INVALID_ARGUMENT,
+        kind: InvalidArgument,
     });
 }
 
 pub fn data_error<T>(message: &str) -> Result<T, CrushError> {
     return Err(CrushError {
         message: String::from(message),
-        kind: INVALID_DATA,
+        kind: InvalidData,
     });
 }
 
 pub fn error<T>(message: &str) -> Result<T, CrushError> {
     return Err(CrushError {
         message: String::from(message),
-        kind: GENERIC_ERROR,
+        kind: GenericError,
     });
 }
 

@@ -4,7 +4,6 @@ use crate::util::glob::Glob;
 use regex::Regex;
 use std::error::Error;
 use crate::lang::parser::parse_name;
-use std::collections::HashMap;
 use crate::lib::data::list::LIST_METHODS;
 use crate::lang::command::CrushCommand;
 
@@ -49,7 +48,7 @@ impl ValueType {
             .collect()
     }
 
-    pub fn method(&self, name: &str) -> Option<&'static Box<CrushCommand + Sync>> {
+    pub fn method(&self, name: &str) -> Option<&'static Box<dyn CrushCommand + Sync>> {
         LIST_METHODS.get(&Box::from(name))
     }
 

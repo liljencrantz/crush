@@ -1,5 +1,5 @@
 use crate::lang::value::Value;
-use crate::lang::{value::ValueDefinition, table::ColumnType};
+use crate::lang::{value::ValueDefinition};
 use crate::lang::errors::{CrushError, CrushResult, error};
 use crate::lang::scope::Scope;
 use crate::lang::job::JobJoinHandle;

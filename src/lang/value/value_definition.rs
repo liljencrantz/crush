@@ -1,24 +1,17 @@
-use std::path::Path;
-
-use chrono::Local;
 use regex::Regex;
 
 use crate::{
     util::glob::Glob,
-    lang::errors::{error, mandate, CrushResult, argument_error, to_crush_error},
+    lang::errors::{error, mandate, CrushResult},
     lang::scope::Scope,
     lang::value::Value,
     lang::job::JobJoinHandle,
     lang::command::Closure,
     lang::stream::channels,
     lang::stream::empty_channel,
-    lang::r#struct::Struct,
 };
-use std::time::Duration;
 use crate::lang::{job::Job, argument::ArgumentDefinition, command::CrushCommand};
 use crate::util::file::cwd;
-use crate::lang::list::List;
-use crate::lang::printer::printer;
 use crate::lang::errors::block_error;
 
 #[derive(Clone)]
@@ -55,7 +48,7 @@ impl ValueDefinition {
     pub fn can_block_when_called(&self, arg: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
         match self {
             ValueDefinition::ClosureDefinition(c) => {
-                if (c.len() == 1) {
+                if c.len() == 1 {
                     Closure::new(c.clone(), env).can_block(arg, env)
                 } else {
                     true

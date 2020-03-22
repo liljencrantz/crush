@@ -3,7 +3,6 @@ use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
 use crate::{
     lang::table::Row,
     lang::value::ValueType,
-    lang::stream::{OutputStream},
     lang::value::Value,
 };
 use psutil::process::State;

@@ -7,7 +7,7 @@ use users::User;
 use lazy_static::lazy_static;
 
 use crate::lang::{value::Value, table::ColumnType};
-use crate::lang::errors::{CrushError, CrushResult, error, argument_error};
+use crate::lang::errors::{CrushResult, error, argument_error};
 
 pub fn find_field_from_str(needle: &str, haystack: &Vec<ColumnType>) -> CrushResult<usize> {
     for (idx, field) in haystack.iter().enumerate() {

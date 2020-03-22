@@ -1,9 +1,8 @@
 use crate::lang::table::ColumnType;
 use crate::lang::value::Value;
-use crate::lang::{table::Row, table::Table};
+use crate::lang::{table::Row};
 use crossbeam::{Receiver, bounded, unbounded, Sender};
 use crate::lang::errors::{CrushError, error, CrushResult, to_crush_error};
-use crate::util::replace::Replace;
 
 pub struct ValueSender {
     sender: Sender<Value>,

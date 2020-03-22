@@ -25,7 +25,7 @@ pub trait CrushCommand {
     fn invoke(&self, context: ExecutionContext) -> CrushResult<()>;
     fn can_block(&self, arguments: &Vec<ArgumentDefinition>, env: &Scope) -> bool;
     fn name(&self) -> &str;
-    fn boxed(&self) -> Box<CrushCommand + Send>;
+    fn boxed(&self) -> Box<dyn CrushCommand + Send>;
 }
 
 #[derive(Clone)]
@@ -52,7 +52,7 @@ impl CrushCommand for SimpleCommand {
         self.can_block
     }
 
-    fn boxed(&self) -> Box<CrushCommand + Send> {
+    fn boxed(&self) -> Box<dyn CrushCommand + Send> {
         Box::from(self.clone())
     }
 }
@@ -99,7 +99,7 @@ impl CrushCommand for ConditionCommand {
         false
     }
 
-    fn boxed(&self) -> Box<CrushCommand + Send> {
+    fn boxed(&self) -> Box<dyn CrushCommand + Send> {
         Box::from(self.clone())
     }
 }
@@ -188,7 +188,7 @@ impl CrushCommand for Closure {
         }
     }
 
-    fn boxed(&self) -> Box<CrushCommand + Send> {
+    fn boxed(&self) -> Box<dyn CrushCommand + Send> {
         Box::from(self.clone())
     }
 }

@@ -10,21 +10,19 @@ use chrono::{DateTime, Local};
 use regex::Regex;
 
 use crate::{
-    lang::command::Closure,
     util::file::cwd,
     lang::table::Table,
-    lang::errors::{error, CrushError, to_crush_error},
+    lang::errors::{error, to_crush_error},
     util::glob::Glob,
 };
-use crate::lang::{list::List, command::SimpleCommand, command::ConditionCommand, dict::Dict, table::ColumnType, binary::BinaryReader, table::TableReader, list::ListReader, dict::DictReader, table::Row};
-use crate::lang::errors::{CrushResult, argument_error, mandate};
+use crate::lang::{list::List, dict::Dict, table::ColumnType, binary::BinaryReader, table::TableReader, list::ListReader, dict::DictReader};
+use crate::lang::errors::{CrushResult, argument_error};
 use chrono::Duration;
 use crate::util::time::duration_format;
 use crate::lang::scope::Scope;
 use crate::lang::r#struct::Struct;
 use crate::lang::stream::{streams, Readable, InputStream};
-use std::io::{Read, Error};
-use std::convert::TryFrom;
+use std::io::{Read};
 
 pub use value_type::ValueType;
 pub use value_definition::ValueDefinition;
@@ -124,7 +122,7 @@ impl Value {
         Value::String(Box::from(s))
     }
 
-    pub fn readable(&self) -> Option<Box<Readable>> {
+    pub fn readable(&self) -> Option<Box<dyn Readable>> {
         return match self {
             Value::TableStream(s) => Some(Box::from(s.clone())),
             Value::Table(r) => Some(Box::from(TableReader::new(r.clone()))),

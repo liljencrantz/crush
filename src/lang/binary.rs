@@ -1,12 +1,10 @@
 use crate::lang::errors::{CrushResult, to_crush_error};
-use std::sync::{Arc, Mutex};
-use std::cmp::{Ordering, min};
-use std::collections::{HashMap, VecDeque};
-use std::io::{Error, Read, Write, ErrorKind};
+use std::cmp::{min};
+use std::collections::{VecDeque};
+use std::io::{Error, Read, Write};
 use crossbeam::{Receiver, bounded, Sender};
 use std::fmt::{Debug, Formatter};
 use std::fs::File;
-use serde_json::to_vec;
 use std::path::Path;
 
 struct ChannelReader {
@@ -147,7 +145,7 @@ struct MultiReader {
 }
 
 impl BinaryReader for MultiReader {
-    fn clone(&self) -> Box<BinaryReader> {
+    fn clone(&self) -> Box<dyn BinaryReader> {
         let vec = self.inner.iter()
             .map(|r| r.as_ref().clone())
             .collect::<Vec<Box<dyn BinaryReader>>>();
@@ -183,7 +181,7 @@ struct VecReader {
 }
 
 impl BinaryReader for VecReader {
-    fn clone(&self) -> Box<BinaryReader> {
+    fn clone(&self) -> Box<dyn BinaryReader> {
         Box::new(VecReader { vec: self.vec.clone(), offset: 0 })
     }
 }

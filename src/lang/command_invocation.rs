@@ -1,11 +1,10 @@
-use crate::lang::{command::ExecutionContext, job::JobJoinHandle, command::SimpleCommand, command::Closure, value::ValueDefinition, value::ValueType};
+use crate::lang::{command::ExecutionContext, job::JobJoinHandle, command::SimpleCommand, value::ValueDefinition};
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, value::Value};
 use crate::lang::scope::Scope;
-use crate::lang::errors::{error, CrushResult, block_error, Kind};
+use crate::lang::errors::{error, CrushResult, Kind};
 use crate::lang::printer::printer;
-use crate::lang::stream::{ValueReceiver, ValueSender, InputStream};
+use crate::lang::stream::{ValueReceiver, ValueSender};
 use crate::util::thread::{handle, build};
-use std::ops::Deref;
 use crate::lang::command::CrushCommand;
 use std::path::Path;
 use crate::lang::argument::Argument;
@@ -127,7 +126,7 @@ impl CommandInvocation {
                 invoke_value(this, value, self.arguments.clone(), env,  input, output)
             }
             Err(err) => {
-                if err.kind == Kind::BLOCK_ERROR {
+                if err.kind == Kind::BlockError {
                     let mut cmd = self.command.clone();
                     let e = env.clone();
                     let arguments = self.arguments.clone();
