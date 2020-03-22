@@ -1,5 +1,6 @@
 Todo for MVP 1:
 Add 'type' method to all types
+New operators: += increment and friends
 Move the 'to' method to type instances
 Add methods to file type
 Add methods to text type

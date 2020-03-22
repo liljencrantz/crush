@@ -1,6 +1,6 @@
 use crate::lang::job::Job;
 use crate::lang::errors::{CrushResult, error, argument_error, parse_error};
-use crate::lang::call_definition::CallDefinition;
+use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::argument::ArgumentDefinition;
 use crate::lang::value::{ValueDefinition, Value};
 use std::ops::Deref;
@@ -43,7 +43,7 @@ pub struct JobNode {
 
 impl JobNode {
     pub fn generate(&self) -> CrushResult<Job> {
-        Ok(Job::new(self.commands.iter().map(|c| c.generate()).collect::<CrushResult<Vec<CallDefinition>>>()?))
+        Ok(Job::new(self.commands.iter().map(|c| c.generate()).collect::<CrushResult<Vec<CommandInvocation>>>()?))
     }
 }
 
@@ -53,7 +53,7 @@ pub struct CommandNode {
 }
 
 impl CommandNode {
-    pub fn generate(&self) -> CrushResult<CallDefinition> {
+    pub fn generate(&self) -> CrushResult<CommandInvocation> {
         let s = self.expressions[0].generate_standalone()?;
         if let Some(c) = s {
             if self.expressions.len() == 1 {
@@ -67,7 +67,7 @@ impl CommandNode {
             let arguments = self.expressions[1..].iter()
                 .map(|e| e.generate_argument())
                 .collect::<CrushResult<Vec<ArgumentDefinition>>>()?;
-            Ok(CallDefinition::new(cmd.unnamed_value()?, arguments))
+            Ok(CommandInvocation::new(cmd.unnamed_value()?, arguments))
         }
     }
 }
@@ -98,23 +98,23 @@ impl AssignmentNode {
         }
     }
 
-    pub fn generate_standalone(&self) -> CrushResult<Option<CallDefinition>> {
+    pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
         match self {
             AssignmentNode::Logical(e) => e.generate_standalone(),
             AssignmentNode::Assignment(target, value) => {
                 match target {
                     ItemNode::Label(t) => Ok(Some(
-                        CallDefinition::new(
+                        CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(SET.boxed())),
                             vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)])
                     )),
                     ItemNode::QuotedLabel(t) => Ok(Some(
-                        CallDefinition::new(
+                        CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(SET.boxed())),
                             vec![ArgumentDefinition::named(unescape(t).as_str(), value.generate_argument()?.unnamed_value()?)])
                     )),
                     ItemNode::Get(container, key) => Ok(Some(
-                        CallDefinition::new(
+                        CommandInvocation::new(
                         ValueDefinition::Path(
                             Box::from(container.generate_argument()?.unnamed_value()?),
                             Box::from("setitem")),
@@ -132,12 +132,12 @@ impl AssignmentNode {
             AssignmentNode::Declaration(target, value) => {
                 match target {
                     ItemNode::Label(t) => Ok(Some(
-                        CallDefinition::new(
+                        CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(LET.boxed())),
                             vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)])
                     )),
                     ItemNode::QuotedLabel(t) => Ok(Some(
-                        CallDefinition::new(
+                        CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(LET.boxed())),
                             vec![ArgumentDefinition::named(unescape(t).as_str(), value.generate_argument()?.unnamed_value()?)])
                     )),
@@ -159,18 +159,18 @@ pub enum LogicalNode {
 }
 
 impl LogicalNode {
-    pub fn generate_standalone(&self) -> CrushResult<Option<CallDefinition>> {
+    pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
         match self {
             LogicalNode::LogicalOperation(l, op, r) => {
                 match op.as_ref() {
                     "&&" => {
-                        Ok(Some(CallDefinition::new(
+                        Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(AND.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "||" => {
-                        Ok(Some(CallDefinition::new(
+                        Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(OR.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
@@ -205,42 +205,42 @@ pub enum ComparisonNode {
 }
 
 impl ComparisonNode {
-    pub fn generate_standalone(&self) -> CrushResult<Option<CallDefinition>> {
+    pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
         match self {
             ComparisonNode::Comparison(l, op, r) => {
                 match op.as_ref() {
                     "<" => {
-                        Ok(Some(CallDefinition::new(
+                        Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(LT.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "<=" => {
-                        Ok(Some(CallDefinition::new(
+                        Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(LTE.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     ">" => {
-                        Ok(Some(CallDefinition::new(
+                        Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(GT.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     ">=" => {
-                        Ok(Some(CallDefinition::new(
+                        Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(GTE.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "==" => {
-                        Ok(Some(CallDefinition::new(
+                        Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(EQ.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "!=" => {
-                        Ok(Some(CallDefinition::new(
+                        Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(NEQ.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
@@ -276,18 +276,18 @@ pub enum TermNode {
 }
 
 impl TermNode {
-    pub fn generate_standalone(&self) -> CrushResult<Option<CallDefinition>> {
+    pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
         match self {
             TermNode::Term(l, op, r) => {
                 match op.as_ref() {
                     "+" => {
-                        Ok(Some(CallDefinition::new(
+                        Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(ADD.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "-" => {
-                        Ok(Some(CallDefinition::new(
+                        Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(SUB.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
@@ -321,18 +321,18 @@ pub enum FactorNode {
 }
 
 impl FactorNode {
-    pub fn generate_standalone(&self) -> CrushResult<Option<CallDefinition>> {
+    pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
         match self {
             FactorNode::Factor(l, op, r) => {
                 match op.as_ref() {
                     "*" => {
-                        Ok(Some(CallDefinition::new(
+                        Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(MUL.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "//" => {
-                        Ok(Some(CallDefinition::new(
+                        Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(DIV.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
@@ -367,7 +367,7 @@ pub enum UnaryNode {
 }
 
 impl UnaryNode {
-    pub fn generate_standalone(&self) -> CrushResult<Option<CallDefinition>> {
+    pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
         Ok(None)
     }
 
@@ -377,7 +377,7 @@ impl UnaryNode {
                 match op.deref() {
                     "!" => {
                         Ok(ArgumentDefinition::unnamed(ValueDefinition::JobDefinition(
-                            Job::new(vec![CallDefinition::new(
+                            Job::new(vec![CommandInvocation::new(
                                 ValueDefinition::Value(Value::Command(NOT.boxed())),
                                 vec![r.generate_argument()?])
                             ]))))
@@ -429,7 +429,7 @@ fn unescape(s: &str) -> String {
 }
 
 impl ItemNode {
-    pub fn generate_standalone(&self) -> CrushResult<Option<CallDefinition>> {
+    pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
         Ok(None)
     }
 

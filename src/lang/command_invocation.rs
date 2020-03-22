@@ -11,13 +11,9 @@ use std::path::Path;
 use crate::lang::argument::Argument;
 
 #[derive(Clone)]
-pub struct CallDefinition {
+pub struct CommandInvocation {
     command: ValueDefinition,
     arguments: Vec<ArgumentDefinition>,
-}
-
-pub fn format_name(name: &Vec<Box<str>>) -> String {
-    name.join(".")
 }
 
 fn resolve_external_command(name: &str, env: Scope) -> Option<Box<Path>> {
@@ -47,9 +43,9 @@ fn arg_can_block(local_arguments: &Vec<ArgumentDefinition>, env: &Scope) -> bool
     false
 }
 
-impl CallDefinition {
-    pub fn new(command: ValueDefinition, arguments: Vec<ArgumentDefinition>) -> CallDefinition {
-        CallDefinition { command, arguments }
+impl CommandInvocation {
+    pub fn new(command: ValueDefinition, arguments: Vec<ArgumentDefinition>) -> CommandInvocation {
+        CommandInvocation { command, arguments }
     }
 
     pub fn arguments(&self) -> &Vec<ArgumentDefinition> {
@@ -207,7 +203,7 @@ fn invoke_command(
     output: ValueSender) -> CrushResult<JobJoinHandle> {
     if !action.can_block(&local_arguments, &local_env) && !arg_can_block(&local_arguments, &local_env) {
         let mut deps: Vec<JobJoinHandle> = Vec::new();
-        let context = CallDefinition::make_context(
+        let context = CommandInvocation::make_context(
             &mut deps,
             local_arguments,
             local_env,
@@ -219,7 +215,7 @@ fn invoke_command(
         Ok(handle(build(action.name()).spawn(
             move || {
                 let mut deps: Vec<JobJoinHandle> = Vec::new();
-                let context = CallDefinition::make_context(
+                let context = CommandInvocation::make_context(
                     &mut deps,
                     local_arguments,
                     local_env,
@@ -239,7 +235,7 @@ fn try_external_command(p: &str, mut arguments: Vec<ArgumentDefinition>, env: &S
             arguments.insert(
                 0,
                 ArgumentDefinition::unnamed(ValueDefinition::Value(Value::File(path))));
-            let cmd = CallDefinition {
+            let cmd = CommandInvocation {
                 command: ValueDefinition::Value(Value::Command(SimpleCommand::new(crate::lib::cmd, true).boxed())),
                 arguments,
             };
@@ -248,7 +244,7 @@ fn try_external_command(p: &str, mut arguments: Vec<ArgumentDefinition>, env: &S
     }
 }
 
-impl ToString for CallDefinition {
+impl ToString for CommandInvocation {
     fn to_string(&self) -> String {
         self.command.to_string()
     }

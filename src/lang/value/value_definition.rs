@@ -18,7 +18,6 @@ use std::time::Duration;
 use crate::lang::{job::Job, argument::ArgumentDefinition, command::CrushCommand};
 use crate::util::file::cwd;
 use crate::lang::list::List;
-use crate::lib::data::dict::dict_member;
 use crate::lang::printer::printer;
 use crate::lang::errors::block_error;
 
@@ -124,17 +123,10 @@ impl ValueDefinition {
                 };
                 (Some(this), v)
             }
-            ValueDefinition::Path(vd, l) => {
-                let v = vd.compile_internal(dependencies, env, can_block)?.1;
-                let o = match v.clone() {
-                    Value::File(s) => Value::File(s.join(l.as_ref()).into_boxed_path()),
-                    Value::Struct(s) => mandate(s.get(&l), "Missing value")?,
-                    Value::Scope(subenv) => mandate(subenv.get(l), "Missing value")?,
-//                    Value::List(list) => Value::Command(
-  //                      mandate(v.value_type().method(l.as_ref()), "Missing method")?.clone()),
-                    _ => return error("Invalid path operation"),
-                };
-                (Some(v), o)
+            ValueDefinition::Path(parent_def, entry) => {
+                let parent = parent_def.compile_internal(dependencies, env, can_block)?.1;
+                let val = mandate(parent.field(&entry), "Missing field")?;
+                (Some(parent), val)
             }
         })
     }

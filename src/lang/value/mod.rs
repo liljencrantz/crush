@@ -17,7 +17,7 @@ use crate::{
     util::glob::Glob,
 };
 use crate::lang::{list::List, command::SimpleCommand, command::ConditionCommand, dict::Dict, table::ColumnType, binary::BinaryReader, table::TableReader, list::ListReader, dict::DictReader, table::Row};
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, argument_error, mandate};
 use chrono::Duration;
 use crate::util::time::duration_format;
 use crate::lang::scope::Scope;
@@ -85,6 +85,19 @@ impl Value {
             Value::Binary(v) => v.iter().map(|u| hex(*u)).collect::<Vec<String>>().join(""),
             Value::Type(t) => t.to_string(),
         };
+    }
+
+    pub fn field(&self, name: &str) -> Option<Value> {
+        match self {
+            Value::File(s) => Some(Value::File(s.join(name).into_boxed_path())),
+            Value::Struct(s) => s.clone().get(name),
+            Value::Scope(subenv) => subenv.get(name),
+            Value::List(list) =>
+                crate::lib::data::list::LIST_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.boxed())),
+            Value::Dict(dict) =>
+                crate::lib::data::dict::DICT_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.boxed())),
+            _ => return None,
+        }
     }
 
     pub fn alignment(&self) -> Alignment {

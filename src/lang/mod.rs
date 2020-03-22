@@ -2,7 +2,7 @@
 pub mod value;
 pub mod table;
 pub mod argument;
-pub mod call_definition;
+pub mod command_invocation;
 pub mod list;
 pub mod dict;
 pub mod binary;

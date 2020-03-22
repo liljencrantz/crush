@@ -19,20 +19,8 @@ impl ArgumentDefinition {
     }
 
 }
-/*
-impl Clone for ArgumentDefinition {
-    fn clone(&self) -> Self {
-        ArgumentDefinition { name: self.name.clone(), value: self.value.clone() }
-    }
-}
-*/
-pub type Argument = BaseArgument<Value>;
 
-impl Argument {
-/*    pub fn cell_type(&self) -> ColumnType {
-        ColumnType { name: self.name.clone(), cell_type: self.value.value_type() }
-    }*/
-}
+pub type Argument = BaseArgument<Value>;
 
 impl<C: Clone> BaseArgument<C> {
     pub fn unnamed_value(&self) -> CrushResult<C> {

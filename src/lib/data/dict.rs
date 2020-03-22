@@ -6,6 +6,22 @@ use crate::lang::value::Value;
 use crate::lang::table::ColumnType;
 use crate::lang::scope::Scope;
 use crate::lib::parse_util::{single_argument_dict, this_dict};
+use std::collections::HashMap;
+use lazy_static::lazy_static;
+
+lazy_static! {
+pub static ref DICT_METHODS: HashMap<Box<str>, Box<CrushCommand + Sync>> = {
+        let mut res: HashMap<Box<str>, Box<CrushCommand + Sync>> = HashMap::new();
+        res.insert(Box::from("len"), Box::from(SimpleCommand::new(len, false)));
+        res.insert(Box::from("empty"), Box::from(SimpleCommand::new(empty, false)));
+//        res.insert(Box::from("clear"), Box::from(SimpleCommand::new(clear, false)));
+        res.insert(Box::from("setitem"), Box::from(SimpleCommand::new(setitem, false)));
+        res.insert(Box::from("getitem"), Box::from(SimpleCommand::new(getitem, false)));
+        res.insert(Box::from("remove"), Box::from(SimpleCommand::new(remove, false)));
+//        res.insert(Box::from("clone"), Box::from(SimpleCommand::new(clone, false)));
+        res
+};
+}
 
 fn new(mut context: ExecutionContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
@@ -66,20 +82,6 @@ fn len(context: ExecutionContext) -> CrushResult<()> {
 
 fn empty(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Bool(this_dict(context.this)?.len() == 0))
-}
-
-pub fn dict_member(name: &str) -> CrushResult<Value> {
-/*    match name {
-        "len" => Ok(Value::Command(SimpleCommand::new(len, false))),
-        "setitem" => Ok(Value::Command(SimpleCommand::new(setitem, false))),
-        "getitem" => Ok(Value::Command(SimpleCommand::new(getitem, false))),
-        "empty" => Ok(Value::Command(SimpleCommand::new(empty, false))),
-//        "clear" => Ok(Value::Command(SimpleCommand::new(clear, false))),
-        "remove" => Ok(Value::Command(SimpleCommand::new(remove, false))),
-//        "clone" => Ok(Value::Command(SimpleCommand::new(clone, false))),
-        _ => error(format!("Dict does not provide a method {}", name).as_str())
-    }*/
-    error(format!("Dict does not provide a method {}", name).as_str())
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {

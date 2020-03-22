@@ -1,6 +1,6 @@
 use crate::lang::scope::Scope;
 use crate::lang::stream::{channels, ValueSender, ValueReceiver};
-use crate::lang::{call_definition::CallDefinition, argument::ArgumentDefinition};
+use crate::lang::{command_invocation::CommandInvocation, argument::ArgumentDefinition};
 use crate::lang::printer::printer;
 use crate::lang::errors::{CrushError, CrushResult};
 use std::thread::JoinHandle;
@@ -31,11 +31,11 @@ impl JobJoinHandle {
 
 #[derive(Clone)]
 pub struct Job {
-    commands: Vec<CallDefinition>,
+    commands: Vec<CommandInvocation>,
 }
 
 impl Job {
-    pub fn new(commands: Vec<CallDefinition>) -> Job {
+    pub fn new(commands: Vec<CommandInvocation>) -> Job {
         Job { commands }
     }
 
