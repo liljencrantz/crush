@@ -28,6 +28,7 @@ pub enum ValueDefinition {
     JobDefinition(Job),
     Label(Box<str>),
     GetItem(Box<ValueDefinition>, Box<ValueDefinition>),
+    GetAttr(Box<ValueDefinition>, Box<str>),
     Path(Box<ValueDefinition>, Box<str>),
 }
 
@@ -123,9 +124,16 @@ impl ValueDefinition {
                 };
                 (Some(this), v)
             }
-            ValueDefinition::Path(parent_def, entry) => {
+
+            ValueDefinition::GetAttr(parent_def, entry) => {
                 let parent = parent_def.compile_internal(dependencies, env, can_block)?.1;
                 let val = mandate(parent.field(&entry), "Missing field")?;
+                (Some(parent), val)
+            }
+
+            ValueDefinition::Path(parent_def, entry) => {
+                let parent = parent_def.compile_internal(dependencies, env, can_block)?.1;
+                let val = mandate(parent.path(&entry), "Missing field")?;
                 (Some(parent), val)
             }
         })
@@ -164,6 +172,7 @@ impl ToString for ValueDefinition {
             ValueDefinition::ClosureDefinition(c) => "<closure>".to_string(),
             ValueDefinition::JobDefinition(_) => "<job>".to_string(),
             ValueDefinition::GetItem(v, l) => format!("{}[{}]", v.to_string(), l.to_string()),
+            ValueDefinition::GetAttr(v, l) => format!("{}:{}", v.to_string(), l),
             ValueDefinition::Path(v, l) => format!("{}/{}", v.to_string(), l),
         }
     }

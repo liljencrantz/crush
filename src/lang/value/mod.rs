@@ -87,7 +87,6 @@ impl Value {
 
     pub fn field(&self, name: &str) -> Option<Value> {
         match self {
-            Value::File(s) => Some(Value::File(s.join(name).into_boxed_path())),
             Value::Struct(s) => s.clone().get(name),
             Value::Scope(subenv) => subenv.get(name),
             Value::List(list) =>
@@ -96,6 +95,15 @@ impl Value {
                 crate::lib::data::dict::DICT_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.boxed())),
             Value::String(s) =>
                 crate::lib::string::STRING_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.boxed())),
+            Value::File(s) =>
+                crate::lib::file::FILE_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.boxed())),
+            _ => return None,
+        }
+    }
+
+    pub fn path(&self, name: &str) -> Option<Value> {
+        match self {
+            Value::File(s) => Some(Value::File(s.join(name).into_boxed_path())),
             _ => return None,
         }
     }
@@ -346,7 +354,8 @@ impl std::cmp::PartialOrd for Value {
         if t1 != t2 {
             return Some(t1.cmp(&t2));
         }
-        return match (self, other) {
+
+        match (self, other) {
             (Value::String(val1), Value::String(val2)) => Some(val1.cmp(val2)),
             (Value::Field(val1), Value::Field(val2)) => Some(val1.cmp(val2)),
             (Value::Glob(val1), Value::Glob(val2)) => Some(val1.cmp(val2)),
@@ -359,8 +368,17 @@ impl std::cmp::PartialOrd for Value {
             (Value::Struct(val1), Value::Struct(val2)) => val1.partial_cmp(val2),
             (Value::List(val1), Value::List(val2)) => val1.partial_cmp(val2),
             (Value::Bool(val1), Value::Bool(val2)) => Some(val1.cmp(val2)),
+            (Value::Float(val1), Value::Float(val2)) => val1.partial_cmp(val2),
+            (Value::Binary(val1), Value::Binary(val2)) => Some(val1.cmp(val2)),
+            (Value::Command(_), _) => None,
+            (Value::TableStream(_), _) => None,
+            (Value::Dict(_), _) => None,
+            (Value::Scope(_), _) => None,
+            (Value::Empty(), _) => None,
+            (Value::BinaryStream(_), _) => None,
+            (Value::Type(_), _) => None,
             _ => None,
-        };
+        }
     }
 }
 

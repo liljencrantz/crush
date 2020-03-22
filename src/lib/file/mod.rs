@@ -10,6 +10,14 @@ use std::collections::HashMap;
 mod find;
 mod stat;
 
+lazy_static! {
+    pub static ref FILE_METHODS: HashMap<Box<str>, Box<CrushCommand + Sync>> = {
+        let mut res: HashMap<Box<str>, Box<CrushCommand + Sync>> = HashMap::new();
+        res.insert(Box::from("stat"), Box::from(SimpleCommand::new(stat::perform, true)));
+        res
+    };
+}
+
 pub fn cd(context: ExecutionContext) -> CrushResult<()> {
     let dir = match context.arguments.len() {
         0 => home(),

@@ -6,6 +6,7 @@ use std::fs::metadata;
 use std::path::Path;
 use crate::lang::stream::ValueSender;
 use std::os::unix::fs::MetadataExt;
+use crate::lib::parse_util::this_file;
 
 fn parse(arguments: Vec<Argument>) -> CrushResult<Box<Path>> {
     let mut files: Vec<Box<Path>> = Vec::new();
@@ -37,6 +38,6 @@ fn run(file: Box<Path>, sender: ValueSender) -> CrushResult<()> {
     )
 }
 
-pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    run(parse(context.arguments)?, context.output)
+pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
+    run(this_file(context.this)?, context.output)
 }
