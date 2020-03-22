@@ -1,4 +1,5 @@
 Todo for MVP 1:
+Add dir command
 Add 'type' method to all types
 New operators: += increment and friends
 Move the 'to' method to type instances
@@ -6,7 +7,7 @@ Add methods to integer type
 Add methods to float type
 Add methods to file type
 Add methods to type type
-Support reassigning in structs
+Make structs mutable and protected by Arc + Mutax
 Nice way to pass on all arguments of a closure to another command
 Nice way of introspecting all arguments to a closure
 Figure out how to make globs convenient again
@@ -21,9 +22,9 @@ support adding prototypes to structs
 Flesh out seq command with support for from and step
 Make argument parsing in list and dict commands more consistent
 Some kind of pattern matching syntax
-Add list.insert command
-Add dict.clear command
-Add dict.clone command
+Add list/insert command
+Add dict/clear command
+Add dict/clone command
 Add reject command that removes specified columns
 Add avg command
 Add ceil, floor, pow, log, sin, cos, tan, etc to math lib
@@ -31,11 +32,10 @@ pseudo-tty for cmd command output
 pseudo-tty for cmd command input
 Remove the dot operator in favor of [] for fields. Use slash on commands?
 Add control.source command
-Add text.join command
-Add text.lpad command
-Add text.rpad command
-Add text.substr command
-Add text.trim command
+Add String/join command
+Add String/lpad command
+Add String/rpad command
+Add String/substr command
 Add readline command that reads one line of interactive text input from the user via the terminal
 Add system tests for type casting
 Add system tests for for loop

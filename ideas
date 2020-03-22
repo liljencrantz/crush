@@ -1,7 +1,16 @@
+Split directory path and namespace operations?
+
+'/' can be used for division and for directory path operations,
+and we use some other operator for member access. '.' has the
+issue that it is a common character in filenames. We could use
+'::' but it is long annoying. ':' is another option, but looks
+unintuitive to me. '->' is way too hard to type.
+
 Regex library:
 
 # Replace file column in-place using regex
-ls | select * file={regex.replace $file (regex.new "a(b*)c") "A\\1B"}
+ls | select '*' file={ regex{a(b*)c} ~ $file "A\\1B"}
+
 
 Modes:
 
@@ -27,21 +36,9 @@ Could be useful for showing a tree view of processes (ps), file trees (find, du)
 
 Idea: Change language to allow operators:
 
-* No more sigils for variables. true means true, etc.
-* text arguments need to be quoted, "foo"
 * glob literals start with **, so ***.txt is the glob *.txt
 * boolean flags supported using --foo, equivalent to foo=true
-* operator support for math symbols + - * /, foo + bar equivalent to (math.add foo bar)
-* operator support for comparison operators ! == != < > <= and >=, foo > bar equivalent to (comp.gt foo bar)
-* operator support for list/dict assignment foo[bar]=baz equivalent to data.set foo bar baz
-* javascript-style [], use / for role of .
 * External commands need to be adapted to not be annoying
-* Add methods to types, e.g. instead of calling list.push some_list some_value, you write some_list.push some_value
-* The files in the current directory are part of the current namespace. Do something clever to allow '.' to either be part of name or separator.
-* The slash operator on files works like the . operator
-* File literals use ``, e.g. `if` is a file named if. Also useful for touching non-existing files.
-* Slash at the start of an expression is the filesystem root
-* Directory are a different type than file, since it is basically a somewhat limited type of scope
 
 Example invocations:
     git/status
@@ -50,9 +47,8 @@ Example invocations:
     ls ***.txt
     cd foo
     cd ..
-    cd `My Documents`
-    [foo bar baz] # List literal
-    find /etc
+    cd 'My Documents'
+    find root/etc
     1 + 2 * 4 # 9
     math.sin(3)
     1 + 3.3 # 4.4

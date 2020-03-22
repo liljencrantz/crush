@@ -4,6 +4,8 @@ use crate::lang::{value::Value, command::SimpleCommand};
 use crate::lang::command::{ExecutionContext, CrushCommand};
 use crate::util::file::{home, cwd};
 use std::path::Path;
+use lazy_static::lazy_static;
+use std::collections::HashMap;
 
 mod find;
 mod stat;

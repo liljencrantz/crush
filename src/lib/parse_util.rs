@@ -69,6 +69,13 @@ pub fn this_text(this: Option<Value>) -> CrushResult<Box<str>> {
     }
 }
 
+pub fn this_file(this: Option<Value>) -> CrushResult<Box<Path>> {
+    match this {
+        Some(Value::File(s)) => Ok(s),
+        _ => argument_error("Expected a string"),
+    }
+}
+
 pub fn single_argument_list(mut arg: Vec<Argument>) -> CrushResult<List> {
     match arg.len() {
         1 => {

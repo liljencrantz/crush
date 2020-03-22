@@ -59,8 +59,8 @@ fn hex(v: u8) -> String {
     format!("{}{}", v>>4, v & 15)
 }
 
-impl Value {
-    pub fn to_string(&self) -> String {
+impl ToString for Value {
+    fn to_string(&self) -> String {
         return match self {
             Value::String(val) => val.to_string(),
             Value::Integer(val) => val.to_string(),
@@ -81,6 +81,9 @@ impl Value {
             _ => self.value_type().to_string(),
         };
     }
+}
+
+impl Value {
 
     pub fn field(&self, name: &str) -> Option<Value> {
         match self {
@@ -206,90 +209,35 @@ impl Value {
             return Ok(self);
         }
 
-        /*
-        This function is silly and overly large. Instead of mathcing on every source/destination pair, it should do
-        two matches, one to convert any cell to a string, and one to convert a string to any cell. That would shorten
-        this monstrosity to a sane size.
-        */
-        match (self, new_type) {
-            (Value::String(s), ValueType::File) => Ok(Value::File(Box::from(Path::new(s.as_ref())))),
-            (Value::String(s), ValueType::Glob) => Ok(Value::Glob(Glob::new(&s))),
-            (Value::String(s), ValueType::Integer) => to_crush_error(s.parse::<i128>()).map(|v| Value::Integer(v)),
-            (Value::String(s), ValueType::Field) => Ok(Value::Field(vec![s])),
-            (Value::String(s), ValueType::Regex) => to_crush_error(Regex::new(s.as_ref()).map(|v| Value::Regex(s, v))),
-            (Value::String(s), ValueType::Binary) => Ok(Value::Binary(s.bytes().collect())),
-            (Value::String(s), ValueType::Float) => Ok(Value::Float(to_crush_error(f64::from_str(&s))?)),
+        let str_val = self.to_string();
 
-            (Value::File(s), ValueType::String) => match s.to_str() {
-                Some(s) => Ok(Value::String(Box::from(s))),
-                None => error("File name is not valid unicode")
-            },
-            (Value::File(s), ValueType::Glob) => match s.to_str() {
-                Some(s) => Ok(Value::Glob(Glob::new(s))),
-                None => error("File name is not valid unicode")
-            },
-            (Value::File(s), ValueType::Integer) => match s.to_str() {
-                Some(s) => to_crush_error(s.parse::<i128>()).map(|v| Value::Integer(v)),
-                None => error("File name is not valid unicode")
-            },
-            (Value::File(s), ValueType::Regex) => match s.to_str() {
-                Some(s) => to_crush_error(Regex::new(s.as_ref()).map(|v| Value::Regex(Box::from(s), v))),
-                None => error("File name is not valid unicode")
-            },
-
-            (Value::Glob(s), ValueType::String) => Ok(Value::String(s.to_string().clone().into_boxed_str())),
-            (Value::Glob(s), ValueType::File) => Ok(Value::File(Box::from(Path::new(s.to_string().as_str())))),
-            (Value::Glob(s), ValueType::Integer) => to_crush_error(s.to_string().parse::<i128>()).map(|v| Value::Integer(v)),
-            (Value::Glob(g), ValueType::Regex) => {
-                let s = g.to_string().as_str();
-                to_crush_error(Regex::new(s).map(|v| Value::Regex(Box::from(s), v)))
-            }
-            (Value::Regex(s, _), ValueType::File) => Ok(Value::File(Box::from(Path::new(s.as_ref())))),
-            (Value::Regex(s, _), ValueType::Glob) => Ok(Value::Glob(Glob::new(&s))),
-            (Value::Regex(s, _), ValueType::Integer) => to_crush_error(s.parse::<i128>()).map(|v| Value::Integer(v)),
-            (Value::Regex(s, _), ValueType::String) => Ok(Value::String(s)),
-
-            (Value::Integer(i), ValueType::String) => Ok(Value::String(i.to_string().into_boxed_str())),
-            (Value::Integer(i), ValueType::File) => Ok(Value::File(Box::from(Path::new(i.to_string().as_str())))),
-            (Value::Integer(i), ValueType::Glob) => Ok(Value::Glob(Glob::new(i.to_string().as_str()))),
-            (Value::Integer(i), ValueType::Field) => Ok(Value::Field(vec![i.to_string().into_boxed_str()])),
-            (Value::Integer(i), ValueType::Regex) => {
-                let s = i.to_string();
-                to_crush_error(Regex::new(s.as_str()).map(|v| Value::Regex(s.into_boxed_str(), v)))
-            }
-            (Value::Integer(i), ValueType::Float) => Ok(Value::Float(i as f64)),
-
-            (Value::Type(s), ValueType::String) => Ok(Value::String(Box::from(s.to_string()))),
-
-            (Value::Float(i), ValueType::Integer) => Ok(Value::Integer(i as i128)),
-            (Value::Float(i), ValueType::String) => Ok(Value::String(i.to_string().into_boxed_str())),
-
-            (Value::Binary(s), ValueType::String) => Ok(Value::String(to_crush_error(String::from_utf8(s))?.into_boxed_str())),
-
-            (Value::BinaryStream(mut s), ValueType::String) => {
-                let mut v = Vec::new();
-                s.read_to_end(&mut v);
-                Ok(Value::String(to_crush_error(String::from_utf8(v))?.into_boxed_str()))
-            },
-
-            (Value::TableStream(s), ValueType::List(t)) => {
-                if s.types().len()!=1 {
-                    return error("Stream must have exactly one element to convert to list");
-                }
-                if s.types()[0].cell_type != t.as_ref().clone() {
-                    return error(format!("Incompatible stream type, {} vs {}", s.types()[0].cell_type.to_string(), t.to_string()).as_str());
-                }
-                let mut v = Vec::new();
-                loop {
-                    match s.recv() {
-                        Ok(r) => v.push(r.into_vec().remove(0)),
-                        Err(_) => break,
-                    }
-                }
-                Ok(Value::List(List::new(t.as_ref().clone(), v)))
-            }
-
-            _ => error("Unimplemented conversion"),
+        match new_type {
+            ValueType::File => Ok(Value::File(Box::from(Path::new(str_val.as_str())))),
+            ValueType::Glob => Ok(Value::Glob(Glob::new(str_val.as_str()))),
+            ValueType::Integer => to_crush_error(str_val.parse::<i128>()).map(|v| Value::Integer(v)),
+            ValueType::Field => Ok(Value::Field(vec![str_val.into_boxed_str()])),
+            ValueType::Regex => to_crush_error(Regex::new(str_val.as_str()).map(|v| Value::Regex(str_val.into_boxed_str(), v))),
+            ValueType::Binary => Ok(Value::Binary(str_val.bytes().collect())),
+            ValueType::Float => Ok(Value::Float(to_crush_error(f64::from_str(&str_val))?)),
+            ValueType::Bool => Ok(Value::Bool(match str_val.as_str() {
+                "true" => true,
+                "false" => false,
+                _ => return error("Can't cast to boolean")
+            })),
+            ValueType::String => Ok(Value::String(str_val.into_boxed_str())),
+            ValueType::Time => unimplemented!(),
+            ValueType::Duration => unimplemented!(),
+            ValueType::Command => unimplemented!(),
+            ValueType::TableStream(_) => unimplemented!(),
+            ValueType::Table(_) => unimplemented!(),
+            ValueType::Struct(_) => unimplemented!(),
+            ValueType::List(_) => unimplemented!(),
+            ValueType::Dict(_, _) => unimplemented!(),
+            ValueType::Scope => unimplemented!(),
+            ValueType::Empty => return error("Invalid cast"),
+            ValueType::Any => return error("Invalid cast"),
+            ValueType::BinaryStream => unimplemented!(),
+            ValueType::Type => unimplemented!(),
         }
     }
 }
