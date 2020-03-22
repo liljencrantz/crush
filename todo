@@ -1,19 +1,18 @@
 Todo for MVP 1:
 Add dir command
-Add 'type' method to all types
 New operators: += increment and friends
 Move the 'to' method to type instances
 Add methods to integer type
 Add methods to float type
-Add methods to file type
 Add methods to type type
+Unify types and the type-related namespaces. List.of in the List type, etc.
 Make structs mutable and protected by Arc + Mutax
 Nice way to pass on all arguments of a closure to another command
 Nice way of introspecting all arguments to a closure
 Figure out how to make globs convenient again
 Run an executable by giving its path
 Figure out how to make external commands with subcommands convenient again
-Add ** or some other operator for recursive wildcard matches
+Add ** for recursive wildcard matches
 Re-add match operators =~ and !~ for regexp matching: fnurple | where {$row =~ re{^a.*b$}}
 Add ~ (replace) operator for regexps: "this is a string" ~ re{a.*g} "Sparta!" -> "this is Sparta!"
 Make newline a separator again
@@ -196,3 +195,5 @@ Names should be mandatory and unique in structs, tables and table streams, auto-
 Consistent naming in code: getitem and path
 Structs and rows should be subscriptable via indices
 Add methods to text type
+Add 'type' method to all types
+Add methods to file type

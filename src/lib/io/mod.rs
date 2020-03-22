@@ -4,6 +4,8 @@ use crate::lang::{value::Value, command::SimpleCommand, command::ExecutionContex
 use crate::lang::stream_printer::print_value;
 use crate::lib::parse_util::argument_files;
 use crate::lang::command::CrushCommand;
+use crate::lang::list::List;
+use crate::lang::value::ValueType;
 
 mod lines;
 mod csv;
@@ -12,6 +14,16 @@ mod http;
 
 pub fn val(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(context.arguments.remove(0).value)
+}
+
+pub fn dir(mut context: ExecutionContext) -> CrushResult<()> {
+    context.output.send(
+        Value::List(List::new(ValueType::String,
+                              context.arguments.remove(0).value.fields()
+                                  .drain(..)
+                                  .map(|n| Value::String(n))
+                                  .collect()))
+    )
 }
 
 fn echo(mut context: ExecutionContext) -> CrushResult<()> {
@@ -35,6 +47,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     env.declare("json", Value::Command(SimpleCommand::new(json::perform, true).boxed()))?;
     env.declare("echo", Value::Command(SimpleCommand::new(echo, false).boxed()))?;
     env.declare("val", Value::Command(SimpleCommand::new(val, false).boxed()))?;
+    env.declare("dir", Value::Command(SimpleCommand::new(dir, false).boxed()))?;
     env.readonly();
 
     Ok(())

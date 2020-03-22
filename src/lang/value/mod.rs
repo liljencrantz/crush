@@ -22,11 +22,12 @@ use crate::util::time::duration_format;
 use crate::lang::scope::Scope;
 use crate::lang::r#struct::Struct;
 use crate::lang::stream::{streams, Readable, InputStream};
-use std::io::{Read};
+use std::io::Read;
 
 pub use value_type::ValueType;
 pub use value_definition::ValueDefinition;
 use crate::lang::command::{CrushCommand, SimpleCommand};
+use std::collections::HashMap;
 
 pub enum Value {
     String(Box<str>),
@@ -54,7 +55,7 @@ pub enum Value {
 
 fn hex(v: u8) -> String {
     let arr = vec!["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"];
-    format!("{}{}", v>>4, v & 15)
+    format!("{}{}", v >> 4, v & 15)
 }
 
 impl ToString for Value {
@@ -81,8 +82,11 @@ impl ToString for Value {
     }
 }
 
-impl Value {
+fn add_keys<T>(map: &HashMap<Box<str>, T>, res: &mut Vec<Box<str>>) {
+    res.append(&mut map.keys().map(|k| k.to_string().into_boxed_str()).collect());
+}
 
+impl Value {
     pub fn field(&self, name: &str) -> Option<Value> {
         if name == "type" {
             Some(Value::Command(SimpleCommand::new(crate::lib::r#type::r#type, false).boxed()))
@@ -101,6 +105,24 @@ impl Value {
                 _ => return None,
             }
         }
+    }
+
+    pub fn fields(&self) -> Vec<Box<str>> {
+        let mut res = vec![Box::from("type")];
+        match self {
+//                Value::Struct(s) => s.clone().get(name),
+//                Value::Scope(subenv) => subenv.get(name),
+            Value::List(list) =>
+                add_keys(&crate::lib::data::list::LIST_METHODS, &mut res),
+            Value::Dict(dict) =>
+                add_keys(&crate::lib::data::dict::DICT_METHODS, &mut res),
+            Value::String(s) =>
+                add_keys(&crate::lib::string::STRING_METHODS, &mut res),
+            Value::File(s) =>
+                add_keys(&crate::lib::file::FILE_METHODS, &mut res),
+            _ => {}
+        };
+        res
     }
 
     pub fn path(&self, name: &str) -> Option<Value> {
@@ -133,7 +155,7 @@ impl Value {
             Value::List(l) => Some(Box::from(ListReader::new(l.clone(), "value"))),
             Value::Dict(d) => Some(Box::from(DictReader::new(d.clone()))),
             _ => None,
-        }
+        };
     }
 
     pub fn value_type(&self) -> ValueType {
@@ -176,7 +198,7 @@ impl Value {
                                 if let Value::File(f) = row.into_vec().remove(0) {
                                     v.push(f);
                                 }
-                            },
+                            }
                             Err(_) => break,
                         }
                     }
@@ -199,7 +221,7 @@ impl Value {
                         Err(_) => break,
                     }
                 }
-                Value::Table(Table::new(ColumnType::materialize(output.types()), rows ))
+                Value::Table(Table::new(ColumnType::materialize(output.types()), rows))
             }
             Value::BinaryStream(mut s) => {
                 let mut vec = Vec::new();
