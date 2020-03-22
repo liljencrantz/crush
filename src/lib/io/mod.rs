@@ -3,6 +3,7 @@ use crate::lang::errors::CrushResult;
 use crate::lang::{value::Value, command::SimpleCommand, command::ExecutionContext, binary::BinaryReader};
 use crate::lang::stream_printer::print_value;
 use crate::lib::parse_util::argument_files;
+use crate::lang::command::CrushCommand;
 
 mod lines;
 mod csv;
@@ -27,13 +28,13 @@ fn cat(context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("io")?;
     root.r#use(&env);
-    env.declare("cat", Value::Command(SimpleCommand::new(cat, true)))?;
-    env.declare("http", Value::Command(SimpleCommand::new(http::perform, true)))?;
-    env.declare("lines", Value::Command(SimpleCommand::new(lines::perform, true)))?;
-    env.declare("csv", Value::Command(SimpleCommand::new(csv::perform, true)))?;
-    env.declare("json", Value::Command(SimpleCommand::new(json::perform, true)))?;
-    env.declare("echo", Value::Command(SimpleCommand::new(echo, false)))?;
-    env.declare("val", Value::Command(SimpleCommand::new(val, false)))?;
+    env.declare("cat", Value::Command(SimpleCommand::new(cat, true).boxed()))?;
+    env.declare("http", Value::Command(SimpleCommand::new(http::perform, true).boxed()))?;
+    env.declare("lines", Value::Command(SimpleCommand::new(lines::perform, true).boxed()))?;
+    env.declare("csv", Value::Command(SimpleCommand::new(csv::perform, true).boxed()))?;
+    env.declare("json", Value::Command(SimpleCommand::new(json::perform, true).boxed()))?;
+    env.declare("echo", Value::Command(SimpleCommand::new(echo, false).boxed()))?;
+    env.declare("val", Value::Command(SimpleCommand::new(val, false).boxed()))?;
     env.readonly();
 
     Ok(())

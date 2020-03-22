@@ -9,6 +9,7 @@ mod r#loop;
 mod r#for;
 
 use std::path::Path;
+use crate::lang::command::CrushCommand;
 
 pub fn r#break(context: ExecutionContext) -> CrushResult<()> {
     context.env.do_break();
@@ -53,13 +54,13 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     });
     env.declare("cmd_path", Value::List(path));
 
-    env.declare("if", Value::ConditionCommand(ConditionCommand::new(r#if::perform)))?;
-    env.declare("while", Value::ConditionCommand(ConditionCommand::new(r#while::perform)))?;
-    env.declare("loop", Value::ConditionCommand(ConditionCommand::new(r#loop::perform)))?;
-    env.declare("for", Value::ConditionCommand(ConditionCommand::new(r#for::perform)))?;
-    env.declare("break", Value::Command(SimpleCommand::new(r#break, false)))?;
-    env.declare("continue", Value::Command(SimpleCommand::new(r#continue, false)))?;
-    env.declare("cmd", Value::Command(SimpleCommand::new(cmd, true)))?;
+    env.declare("if", Value::Command(ConditionCommand::new(r#if::perform).boxed()))?;
+    env.declare("while", Value::Command(ConditionCommand::new(r#while::perform).boxed()))?;
+    env.declare("loop", Value::Command(ConditionCommand::new(r#loop::perform).boxed()))?;
+    env.declare("for", Value::Command(ConditionCommand::new(r#for::perform).boxed()))?;
+    env.declare("break", Value::Command(SimpleCommand::new(r#break, false).boxed()))?;
+    env.declare("continue", Value::Command(SimpleCommand::new(r#continue, false).boxed()))?;
+    env.declare("cmd", Value::Command(SimpleCommand::new(cmd, true).boxed()))?;
     env.readonly();
 
     Ok(())

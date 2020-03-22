@@ -30,7 +30,6 @@ impl JobJoinHandle {
 }
 
 #[derive(Clone)]
-#[derive(Debug)]
 pub struct Job {
     commands: Vec<CallDefinition>,
 }

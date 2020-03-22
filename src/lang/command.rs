@@ -25,6 +25,7 @@ pub trait CrushCommand {
     fn invoke(&self, context: ExecutionContext) -> CrushResult<()>;
     fn can_block(&self, arguments: &Vec<ArgumentDefinition>, env: &Scope) -> bool;
     fn name(&self) -> &str;
+    fn boxed(&self) -> Box<CrushCommand + Send>;
 }
 
 #[derive(Clone)]
@@ -49,6 +50,10 @@ impl CrushCommand for SimpleCommand {
 
     fn can_block(&self, _arg: &Vec<ArgumentDefinition>, _env: &Scope) -> bool {
         self.can_block
+    }
+
+    fn boxed(&self) -> Box<CrushCommand + Send> {
+        Box::from(self.clone())
     }
 }
 
@@ -93,6 +98,10 @@ impl CrushCommand for ConditionCommand {
         }
         false
     }
+
+    fn boxed(&self) -> Box<CrushCommand + Send> {
+        Box::from(self.clone())
+    }
 }
 
 impl std::cmp::PartialEq for ConditionCommand {
@@ -110,7 +119,6 @@ impl std::fmt::Debug for ConditionCommand {
 }
 
 #[derive(Clone)]
-#[derive(Debug)]
 pub struct Closure {
     job_definitions: Vec<Job>,
     env: Scope,
@@ -178,6 +186,10 @@ impl CrushCommand for Closure {
         } else {
             true
         }
+    }
+
+    fn boxed(&self) -> Box<CrushCommand + Send> {
+        Box::from(self.clone())
     }
 }
 

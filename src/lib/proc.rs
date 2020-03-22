@@ -1,4 +1,4 @@
-use crate::lang::command::ExecutionContext;
+use crate::lang::command::{ExecutionContext, CrushCommand};
 use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
 use crate::{
     lang::table::Row,
@@ -78,8 +78,8 @@ fn kill(context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("proc")?;
     root.r#use(&env);
-    env.declare("ps", Value::Command(SimpleCommand::new(ps, true)))?;
-    env.declare("kill", Value::Command(SimpleCommand::new(kill, false)))?;
+    env.declare("ps", Value::Command(SimpleCommand::new(ps, true).boxed()))?;
+    env.declare("kill", Value::Command(SimpleCommand::new(kill, false).boxed()))?;
     env.readonly();
     Ok(())
 }

@@ -1,4 +1,4 @@
-use crate::lang::command::ExecutionContext;
+use crate::lang::command::{ExecutionContext, CrushCommand};
 use crate::lang::errors::{CrushResult, argument_error, error};
 use crate::lang::{value::ValueType, dict::Dict, command::SimpleCommand};
 use crate::lang::table::Row;
@@ -69,7 +69,7 @@ fn empty(context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn dict_member(name: &str) -> CrushResult<Value> {
-    match name {
+/*    match name {
         "len" => Ok(Value::Command(SimpleCommand::new(len, false))),
         "setitem" => Ok(Value::Command(SimpleCommand::new(setitem, false))),
         "getitem" => Ok(Value::Command(SimpleCommand::new(getitem, false))),
@@ -78,17 +78,13 @@ pub fn dict_member(name: &str) -> CrushResult<Value> {
         "remove" => Ok(Value::Command(SimpleCommand::new(remove, false))),
 //        "clone" => Ok(Value::Command(SimpleCommand::new(clone, false))),
         _ => error(format!("Dict does not provide a method {}", name).as_str())
-    }
+    }*/
+    error(format!("Dict does not provide a method {}", name).as_str())
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("dict")?;
-    env.declare("new", Value::Command(SimpleCommand::new(new, false)))?;
-    env.declare("setitem", Value::Command(SimpleCommand::new(setitem, false)))?;
-    env.declare("getitem", Value::Command(SimpleCommand::new(getitem, false)))?;
-    env.declare("remove", Value::Command(SimpleCommand::new(remove, false)))?;
-    env.declare("len", Value::Command(SimpleCommand::new(len, false)))?;
-    env.declare("empty", Value::Command(SimpleCommand::new(empty, false)))?;
+    env.declare("new", Value::Command(SimpleCommand::new(new, false).boxed()))?;
     env.readonly();
     Ok(())
 }

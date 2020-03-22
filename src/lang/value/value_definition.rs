@@ -18,13 +18,11 @@ use std::time::Duration;
 use crate::lang::{job::Job, argument::ArgumentDefinition, command::CrushCommand};
 use crate::util::file::cwd;
 use crate::lang::list::List;
-use crate::lib::data::list::list_member;
 use crate::lib::data::dict::dict_member;
 use crate::lang::printer::printer;
 use crate::lang::errors::block_error;
 
 #[derive(Clone)]
-#[derive(Debug)]
 pub enum ValueDefinition {
     Value(Value),
     ClosureDefinition(Vec<Job>),
@@ -91,7 +89,7 @@ impl ValueDefinition {
                 dependencies.push(j);
                 (None, last_input.recv()?)
             }
-            ValueDefinition::ClosureDefinition(c) => (None, Value::Closure(Closure::new(c.clone(), env))),
+            ValueDefinition::ClosureDefinition(c) => (None, Value::Command(Box::from(Closure::new(c.clone(), env)))),
             ValueDefinition::Label(s) =>
                 (None, mandate(
                     env.get(s).or_else(|| file_get(s)),
@@ -132,7 +130,8 @@ impl ValueDefinition {
                     Value::File(s) => Value::File(s.join(l.as_ref()).into_boxed_path()),
                     Value::Struct(s) => mandate(s.get(&l), "Missing value")?,
                     Value::Scope(subenv) => mandate(subenv.get(l), "Missing value")?,
-                    Value::List(list) => list_member(l.as_ref())?,
+//                    Value::List(list) => Value::Command(
+  //                      mandate(v.value_type().method(l.as_ref()), "Missing method")?.clone()),
                     _ => return error("Invalid path operation"),
                 };
                 (Some(v), o)

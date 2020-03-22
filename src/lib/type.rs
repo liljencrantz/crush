@@ -4,6 +4,7 @@ use crate::lang::{value::Value, command::SimpleCommand, value::ValueType};
 use crate::lang::scope::Scope;
 use crate::lib::parse_util::{single_argument_type, single_argument_list, two_arguments};
 use crate::lang::argument::column_names;
+use crate::lang::command::CrushCommand;
 
 fn to(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(context.input.recv()?.cast(single_argument_type(context.arguments)?)?)
@@ -57,20 +58,19 @@ fn r#table_stream(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("type")?;
 
-    env.declare("to", Value::Command(SimpleCommand::new(to, true)))?;
-    env.declare("of", Value::Command(SimpleCommand::new(of, false)))?;
+    env.declare("to", Value::Command(SimpleCommand::new(to, true).boxed()))?;
+    env.declare("of", Value::Command(SimpleCommand::new(of, false).boxed()))?;
 
-    env.declare("list", Value::Command(SimpleCommand::new(list, false)))?;
-    env.declare("dict", Value::Command(SimpleCommand::new(dict, false)))?;
-    env.declare("struct", Value::Command(SimpleCommand::new(r#struct, false)))?;
-    env.declare("table", Value::Command(SimpleCommand::new(table, false)))?;
-    env.declare("table_stream", Value::Command(SimpleCommand::new(table_stream, false)))?;
+    env.declare("list", Value::Command(SimpleCommand::new(list, false).boxed()))?;
+    env.declare("dict", Value::Command(SimpleCommand::new(dict, false).boxed()))?;
+    env.declare("struct", Value::Command(SimpleCommand::new(r#struct, false).boxed()))?;
+    env.declare("table", Value::Command(SimpleCommand::new(table, false).boxed()))?;
+    env.declare("table_stream", Value::Command(SimpleCommand::new(table_stream, false).boxed()))?;
 
     env.declare("integer", Value::Type(ValueType::Integer))?;
     env.declare("type", Value::Type(ValueType::Type))?;
     env.declare("string", Value::Type(ValueType::String))?;
     env.declare("bool", Value::Type(ValueType::Bool))?;
-    env.declare("closure", Value::Type(ValueType::Closure))?;
     env.declare("empty", Value::Type(ValueType::Empty))?;
     env.declare("field", Value::Type(ValueType::Field))?;
     env.declare("float", Value::Type(ValueType::Float))?;

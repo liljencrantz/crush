@@ -11,7 +11,7 @@ use crate::lang::stream::{empty_channel, Readable};
 use crate::lang::stream_printer::spawn_print_thread;
 
 pub struct Config {
-    body: Closure,
+    body: Box<dyn CrushCommand>,
     env: Scope,
     name: Option<Box<str>>,
 }
@@ -65,7 +65,7 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
         return argument_error("Expected exactly two arguments");
     }
 
-    if let Value::Closure(body) = context.arguments.remove(1).value {
+    if let Value::Command(body) = context.arguments.remove(1).value {
         let iter = context.arguments.remove(0);
         let t = iter.value.value_type();
         let name = iter.name.clone();

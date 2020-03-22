@@ -4,6 +4,9 @@ use crate::util::glob::Glob;
 use regex::Regex;
 use std::error::Error;
 use crate::lang::parser::parse_name;
+use std::collections::HashMap;
+use crate::lib::data::list::LIST_METHODS;
+use crate::lang::command::CrushCommand;
 
 #[derive(Clone)]
 #[derive(PartialEq)]
@@ -21,7 +24,6 @@ pub enum ValueType {
     Glob,
     Regex,
     Command,
-    Closure,
     File,
     TableStream(Vec<ColumnType>),
     Table(Vec<ColumnType>),
@@ -38,12 +40,17 @@ pub enum ValueType {
     Type,
 }
 
+
 impl ValueType {
     fn materialize_vec(input: &Vec<ValueType>) -> Vec<ValueType> {
         input
             .iter()
             .map(|cell| cell.materialize())
             .collect()
+    }
+
+    pub fn method(&self, name: &str) -> Option<&'static Box<CrushCommand + Sync>> {
+        LIST_METHODS.get(&Box::from(name))
     }
 
     pub fn materialize(&self) -> ValueType {
@@ -56,7 +63,6 @@ impl ValueType {
             ValueType::Glob |
             ValueType::Regex |
             ValueType::Command |
-            ValueType::Closure |
             ValueType::File |
             ValueType::Scope |
             ValueType::Float |
@@ -76,7 +82,14 @@ impl ValueType {
 
         pub fn is_hashable(&self) -> bool {
         match self {
-            ValueType::Scope | ValueType::Closure | ValueType::List(_) | ValueType::Dict(_, _) | ValueType::TableStream(_) | ValueType::Table(_) => false,
+            ValueType::Scope |
+            ValueType::List(_) |
+            ValueType::Dict(_, _) |
+            ValueType::Command |
+            ValueType::BinaryStream |
+            ValueType::TableStream(_) |
+            ValueType::Struct(_) |
+            ValueType::Table(_) => false,
             _ => true,
         }
     }
@@ -114,7 +127,6 @@ impl ToString for ValueType {
             ValueType::Glob => "glob".to_string(),
             ValueType::Regex => "regex".to_string(),
             ValueType::Command => "command".to_string(),
-            ValueType::Closure => "closure".to_string(),
             ValueType::File => "file".to_string(),
             ValueType::TableStream(o) => format!("table_stream<{}>", o.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
             ValueType::Table(r) => format!("table<{}>", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),

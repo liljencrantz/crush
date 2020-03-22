@@ -10,7 +10,7 @@ use crate::lang::command::CrushCommand;
 use std::path::Path;
 use crate::lang::argument::Argument;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct CallDefinition {
     command: ValueDefinition,
     arguments: Vec<ArgumentDefinition>,
@@ -117,12 +117,6 @@ impl CallDefinition {
             Ok((_, Value::Command(command))) =>
                 command.can_block(arg, env) || arg_can_block(&self.arguments, env),
 
-            Ok((_, Value::ConditionCommand(command))) =>
-                command.can_block(arg, env) || arg_can_block(&self.arguments, env),
-
-            Ok((_, Value::Closure(closure))) =>
-                closure.can_block(arg, env) || arg_can_block(&self.arguments, env),
-
             _ => true,
         }
     }
@@ -181,14 +175,10 @@ fn invoke_value(
     match value {
         Value::Command(command) =>
             invoke_command(command, this, local_arguments, local_env, input, output),
-        Value::ConditionCommand(command) =>
-            invoke_command(command, this, local_arguments, local_env, input, output),
-        Value::Closure(closure) =>
-            invoke_command(closure, this,  local_arguments, local_env, input, output),
         Value::File(_) =>
             if local_arguments.len() == 0 {
                 invoke_command(
-                    SimpleCommand::new(crate::lib::file::cd, false),
+                    Box::from(SimpleCommand::new(crate::lib::file::cd, false)),
                     None,
                     vec![ArgumentDefinition::unnamed(ValueDefinition::Value(value))],
                     local_env, input, output)
@@ -198,7 +188,7 @@ fn invoke_value(
         _ =>
             if local_arguments.len() == 0 {
                 invoke_command(
-                    SimpleCommand::new(crate::lib::io::val, false),
+                    Box::from(SimpleCommand::new(crate::lib::io::val, false)),
                     None,
                     vec![ArgumentDefinition::unnamed(ValueDefinition::Value(value))],
                     local_env, input, output)
@@ -209,7 +199,7 @@ fn invoke_value(
 }
 
 fn invoke_command(
-    action: impl CrushCommand + Send + 'static,
+    action: Box<dyn CrushCommand + Send>,
     this: Option<Value>,
     local_arguments: Vec<ArgumentDefinition>,
     local_env: Scope,
@@ -250,7 +240,7 @@ fn try_external_command(p: &str, mut arguments: Vec<ArgumentDefinition>, env: &S
                 0,
                 ArgumentDefinition::unnamed(ValueDefinition::Value(Value::File(path))));
             let cmd = CallDefinition {
-                command: ValueDefinition::Value(Value::Command(SimpleCommand::new(crate::lib::cmd, true))),
+                command: ValueDefinition::Value(Value::Command(SimpleCommand::new(crate::lib::cmd, true).boxed())),
                 arguments,
             };
             cmd.invoke(env, input, output)

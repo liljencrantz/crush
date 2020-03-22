@@ -1,7 +1,7 @@
 use crate::lang::scope::Scope;
 use crate::lang::errors::{CrushResult, error, to_crush_error};
 use crate::lang::{value::Value, command::SimpleCommand};
-use crate::lang::command::ExecutionContext;
+use crate::lang::command::{ExecutionContext, CrushCommand};
 use crate::util::file::{home, cwd};
 use std::path::Path;
 
@@ -32,11 +32,11 @@ pub fn pwd(context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("file")?;
     root.r#use(&env);
-    env.declare("ls", Value::Command(SimpleCommand::new(find::perform_ls, true)))?;
-    env.declare("find", Value::Command(SimpleCommand::new(find::perform_find, true)))?;
-    env.declare("stat", Value::Command(SimpleCommand::new(stat::perform, true)))?;
-    env.declare("cd", Value::Command(SimpleCommand::new(cd, true)))?;
-    env.declare("pwd", Value::Command(SimpleCommand::new(pwd, false)))?;
+    env.declare("ls", Value::Command(SimpleCommand::new(find::perform_ls, true).boxed()))?;
+    env.declare("find", Value::Command(SimpleCommand::new(find::perform_find, true).boxed()))?;
+    env.declare("stat", Value::Command(SimpleCommand::new(stat::perform, true).boxed()))?;
+    env.declare("cd", Value::Command(SimpleCommand::new(cd, true).boxed()))?;
+    env.declare("pwd", Value::Command(SimpleCommand::new(pwd, false).boxed()))?;
     env.readonly();
     Ok(())
 }

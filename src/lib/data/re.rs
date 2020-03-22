@@ -4,6 +4,7 @@ use crate::lang::{value::Value, command::SimpleCommand, command::ExecutionContex
 use crate::lib::parse_util::single_argument_text;
 use regex::Regex;
 use std::error::Error;
+use crate::lang::command::CrushCommand;
 
 fn new(mut context: ExecutionContext) -> CrushResult<()> {
     let def = single_argument_text(context.arguments)?;
@@ -77,9 +78,9 @@ fn replace(mut context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("re")?;
-    env.declare("new", Value::Command(SimpleCommand::new(new, false)))?;
-    env.declare("match", Value::Command(SimpleCommand::new(r#match, false)))?;
-    env.declare("replace", Value::Command(SimpleCommand::new(replace, false)))?;
+    env.declare("new", Value::Command(SimpleCommand::new(new, false).boxed()))?;
+    env.declare("match", Value::Command(SimpleCommand::new(r#match, false).boxed()))?;
+    env.declare("replace", Value::Command(SimpleCommand::new(replace, false).boxed()))?;
     env.readonly();
     Ok(())
 }

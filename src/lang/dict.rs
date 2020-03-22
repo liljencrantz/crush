@@ -7,7 +7,6 @@ use std::collections::HashMap;
 use crate::lang::stream::Readable;
 use crate::util::replace::Replace;
 
-#[derive(Debug)]
 #[derive(Clone)]
 pub struct Dict {
     key_type: ValueType,

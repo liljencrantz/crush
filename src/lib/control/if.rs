@@ -14,7 +14,7 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
     };
     match context.arguments.len() {
         2 => match (context.arguments.remove(0).value, context.arguments.remove(0).value) {
-            (Value::Bool(b), Value::Closure(c)) => {
+            (Value::Bool(b), Value::Command(c)) => {
                 if b {
                     c.invoke(cc)
                 } else {
@@ -25,7 +25,7 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
             _ => error("Wrong argument types, expected boolean and closure"),
         }
         3 => match (context.arguments.remove(0).value, context.arguments.remove(0).value, context.arguments.remove(0).value) {
-            (Value::Bool(b), Value::Closure(c1), Value::Closure(c2)) => {
+            (Value::Bool(b), Value::Command(c1), Value::Command(c2)) => {
                 if b {
                     c1.invoke(cc)
                 } else {

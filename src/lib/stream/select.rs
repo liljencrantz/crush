@@ -25,7 +25,7 @@ enum Location {
 }
 
 enum Source {
-    Closure(Closure),
+    Closure(Box<dyn CrushCommand>),
     Argument(usize),
 }
 
@@ -170,7 +170,7 @@ fn perform_for(
     let input_type = input.types();
     for a in arguments {
         match (a.name.as_deref(), a.value) {
-            (Some(name), Value::Closure(closure)) => {
+            (Some(name), Value::Command(closure)) => {
                 match (copy, find_field_from_str(name, input_type)) {
                     (true, Ok(idx)) => columns.push((Location::Replace(idx), Source::Closure(closure))),
                     _ => columns.push((Location::Append(Box::from(name)), Source::Closure(closure))),

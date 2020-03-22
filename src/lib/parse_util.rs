@@ -1,6 +1,7 @@
 use crate::lang::{argument::Argument, value::Value, list::List, value::ValueType, dict::Dict, command::Closure};
 use crate::lang::errors::{CrushResult, argument_error};
 use std::path::Path;
+use crate::lang::command::CrushCommand;
 
 pub fn two_arguments(arguments: &Vec<Argument>) -> CrushResult<()> {
     if arguments.len() != 2 {
@@ -74,12 +75,12 @@ pub fn single_argument_list(mut arg: Vec<Argument>) -> CrushResult<List> {
     }
 }
 
-pub fn single_argument_closure(mut arg: Vec<Argument>) -> CrushResult<Closure> {
+pub fn single_argument_command(mut arg: Vec<Argument>) -> CrushResult<Box<dyn CrushCommand>> {
     match arg.len() {
         1 => {
             let a = arg.remove(0);
             match (a.name, a.value) {
-                (None, Value::Closure(t)) => Ok(t),
+                (None, Value::Command(t)) => Ok(t),
                 _ => argument_error("Expected a list value"),
             }
         }

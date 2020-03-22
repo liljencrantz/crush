@@ -4,7 +4,7 @@ use crate::lang::call_definition::CallDefinition;
 use crate::lang::argument::ArgumentDefinition;
 use crate::lang::value::{ValueDefinition, Value};
 use std::ops::Deref;
-use crate::lang::command::SimpleCommand;
+use crate::lang::command::{SimpleCommand, CrushCommand};
 
 static ADD: SimpleCommand = SimpleCommand { call:crate::lib::math::add, can_block:false};
 static SUB: SimpleCommand = SimpleCommand { call:crate::lib::math::sub, can_block:false};
@@ -127,12 +127,12 @@ impl AssignmentNode {
                 match target {
                     ItemNode::Label(t) => Ok(Some(
                         CallDefinition::new(
-                            ValueDefinition::Value(Value::Command(SET.clone())),
+                            ValueDefinition::Value(Value::Command(SET.boxed())),
                             vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)])
                     )),
                     ItemNode::QuotedLabel(t) => Ok(Some(
                         CallDefinition::new(
-                            ValueDefinition::Value(Value::Command(SET.clone())),
+                            ValueDefinition::Value(Value::Command(SET.boxed())),
                             vec![ArgumentDefinition::named(unescape(t).as_str(), value.generate_argument()?.unnamed_value()?)])
                     )),
                     ItemNode::Get(container, key) => Ok(Some(
@@ -155,12 +155,12 @@ impl AssignmentNode {
                 match target {
                     ItemNode::Label(t) => Ok(Some(
                         CallDefinition::new(
-                            ValueDefinition::Value(Value::Command(LET.clone())),
+                            ValueDefinition::Value(Value::Command(LET.boxed())),
                             vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)])
                     )),
                     ItemNode::QuotedLabel(t) => Ok(Some(
                         CallDefinition::new(
-                            ValueDefinition::Value(Value::Command(LET.clone())),
+                            ValueDefinition::Value(Value::Command(LET.boxed())),
                             vec![ArgumentDefinition::named(unescape(t).as_str(), value.generate_argument()?.unnamed_value()?)])
                     )),
                     _ => error("Invalid left side in assignment"),
@@ -187,13 +187,13 @@ impl LogicalNode {
                 match op.as_ref() {
                     "&&" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Value(Value::Command(AND.clone())),
+                            ValueDefinition::Value(Value::Command(AND.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "||" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Value(Value::Command(OR.clone())),
+                            ValueDefinition::Value(Value::Command(OR.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
@@ -233,37 +233,37 @@ impl ComparisonNode {
                 match op.as_ref() {
                     "<" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Value(Value::Command(LT.clone())),
+                            ValueDefinition::Value(Value::Command(LT.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "<=" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Value(Value::Command(LTE.clone())),
+                            ValueDefinition::Value(Value::Command(LTE.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     ">" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Value(Value::Command(GT.clone())),
+                            ValueDefinition::Value(Value::Command(GT.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     ">=" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Value(Value::Command(GTE.clone())),
+                            ValueDefinition::Value(Value::Command(GTE.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "==" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Value(Value::Command(EQ.clone())),
+                            ValueDefinition::Value(Value::Command(EQ.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "!=" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Value(Value::Command(NEQ.clone())),
+                            ValueDefinition::Value(Value::Command(NEQ.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
@@ -304,13 +304,13 @@ impl TermNode {
                 match op.as_ref() {
                     "+" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Value(Value::Command(ADD.clone())),
+                            ValueDefinition::Value(Value::Command(ADD.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "-" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Value(Value::Command(SUB.clone())),
+                            ValueDefinition::Value(Value::Command(SUB.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
@@ -349,13 +349,13 @@ impl FactorNode {
                 match op.as_ref() {
                     "*" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Value(Value::Command(MUL.clone())),
+                            ValueDefinition::Value(Value::Command(MUL.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "//" => {
                         Ok(Some(CallDefinition::new(
-                            ValueDefinition::Value(Value::Command(DIV.clone())),
+                            ValueDefinition::Value(Value::Command(DIV.boxed())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
@@ -400,7 +400,7 @@ impl UnaryNode {
                     "!" => {
                         Ok(ArgumentDefinition::unnamed(ValueDefinition::JobDefinition(
                             Job::new(vec![CallDefinition::new(
-                                ValueDefinition::Value(Value::Command(NOT.clone())),
+                                ValueDefinition::Value(Value::Command(NOT.boxed())),
                                 vec![r.generate_argument()?])
                             ]))))
                     }

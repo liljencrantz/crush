@@ -1,6 +1,6 @@
 use crate::lang::scope::Scope;
 use crate::lang::errors::{CrushResult, argument_error};
-use crate::lang::{value::Value, command::SimpleCommand};
+use crate::lang::{value::Value, command::SimpleCommand, command::CrushCommand};
 use crate::lang::command::ExecutionContext;
 
 mod unset;
@@ -36,11 +36,11 @@ pub fn set(context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("var")?;
     root.r#use(&env);
-    env.declare("let", Value::Command(SimpleCommand::new(r#let, false)))?;
-    env.declare("set", Value::Command(SimpleCommand::new(set, false)))?;
-    env.declare("unset", Value::Command(SimpleCommand::new(unset::perform, false)))?;
-    env.declare("env", Value::Command(SimpleCommand::new(env::perform, false)))?;
-    env.declare("use", Value::Command(SimpleCommand::new(r#use::perform, false)))?;
+    env.declare("let", Value::Command(SimpleCommand::new(r#let, false).boxed()))?;
+    env.declare("set", Value::Command(SimpleCommand::new(set, false).boxed()))?;
+    env.declare("unset", Value::Command(SimpleCommand::new(unset::perform, false).boxed()))?;
+    env.declare("env", Value::Command(SimpleCommand::new(env::perform, false).boxed()))?;
+    env.declare("use", Value::Command(SimpleCommand::new(r#use::perform, false).boxed()))?;
     env.readonly();
     Ok(())
 }

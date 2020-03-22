@@ -4,6 +4,7 @@ use crate::lang::{command::ExecutionContext, value::ValueType, list::List};
 use crate::lib::parse_util::{single_argument, two_arguments, single_argument_field, single_argument_text};
 use crate::lang::{value::Value, command::SimpleCommand, argument::Argument};
 use nix::sys::ptrace::cont;
+use crate::lang::command::CrushCommand;
 
 mod format;
 
@@ -59,11 +60,11 @@ fn trim(mut context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("string")?;
-    env.declare("upper", Value::Command(SimpleCommand::new(upper, false)))?;
-    env.declare("lower", Value::Command(SimpleCommand::new(lower, false)))?;
-    env.declare("format", Value::Command(SimpleCommand::new(format::format, false)))?;
-    env.declare("split", Value::Command(SimpleCommand::new(split, false)))?;
-    env.declare("trim", Value::Command(SimpleCommand::new(trim, false)))?;
+    env.declare("upper", Value::Command(SimpleCommand::new(upper, false).boxed()))?;
+    env.declare("lower", Value::Command(SimpleCommand::new(lower, false).boxed()))?;
+    env.declare("format", Value::Command(SimpleCommand::new(format::format, false).boxed()))?;
+    env.declare("split", Value::Command(SimpleCommand::new(split, false).boxed()))?;
+    env.declare("trim", Value::Command(SimpleCommand::new(trim, false).boxed()))?;
     env.readonly();
     Ok(())
 }

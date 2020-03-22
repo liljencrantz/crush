@@ -28,8 +28,9 @@ use std::convert::TryFrom;
 
 pub use value_type::ValueType;
 pub use value_definition::ValueDefinition;
+use crate::lang::command::CrushCommand;
 
-#[derive(Debug)]
+//#[derive(Debug)]
 pub enum Value {
     String(Box<str>),
     Integer(i128),
@@ -38,9 +39,7 @@ pub enum Value {
     Field(Vec<Box<str>>),
     Glob(Glob),
     Regex(Box<str>, Regex),
-    Command(SimpleCommand),
-    Closure(Closure),
-    ConditionCommand(ConditionCommand),
+    Command(Box<dyn CrushCommand + Send>),
     TableStream(InputStream),
     File(Box<Path>),
     Table(Table),
@@ -71,11 +70,9 @@ impl Value {
             Value::Glob(val) => format!("*{{{}}}", val.to_string()),
             Value::Regex(val, _) => format!("regex{{{}}}", val),
             Value::Command(_) => "Command".to_string(),
-            Value::ConditionCommand(_) => "Command".to_string(),
             Value::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
             Value::Table(_) => "<Rows>".to_string(),
             Value::Struct(row) => row.to_string(),
-            Value::Closure(c) => c.to_string(),
             Value::TableStream(_) => "<Output>".to_string(),
             Value::List(l) => l.to_string(),
             Value::Duration(d) => duration_format(d),
@@ -125,12 +122,10 @@ impl Value {
             Value::Glob(_) => ValueType::Glob,
             Value::Regex(_, _) => ValueType::Regex,
             Value::Command(_) => ValueType::Command,
-            Value::ConditionCommand(_) => ValueType::Command,
             Value::File(_) => ValueType::File,
             Value::TableStream(o) => ValueType::TableStream(o.types().clone()),
             Value::Table(r) => ValueType::Table(r.types().clone()),
             Value::Struct(r) => ValueType::Struct(r.types().clone()),
-            Value::Closure(_) => ValueType::Closure,
             Value::List(l) => l.list_type(),
             Value::Duration(_) => ValueType::Duration,
             Value::Scope(_) => ValueType::Scope,
@@ -298,12 +293,10 @@ impl Clone for Value {
             Value::Field(v) => Value::Field(v.clone()),
             Value::Glob(v) => Value::Glob(v.clone()),
             Value::Regex(v, r) => Value::Regex(v.clone(), r.clone()),
-            Value::Command(v) => Value::Command(v.clone()),
-            Value::ConditionCommand(v) => Value::ConditionCommand(v.clone()),
+            Value::Command(v) => Value::Command(v.boxed()),
             Value::File(v) => Value::File(v.clone()),
             Value::Table(r) => Value::Table(r.clone()),
             Value::Struct(r) => Value::Struct(r.clone()),
-            Value::Closure(c) => Value::Closure(c.clone()),
             Value::TableStream(s) => Value::TableStream(s.clone()),
             Value::List(l) => Value::List(l.clone()),
             Value::Duration(d) => Value::Duration(d.clone()),
@@ -332,13 +325,12 @@ impl std::hash::Hash for Value {
             Value::Glob(v) => v.hash(state),
             Value::Regex(v, _) => v.hash(state),
             Value::Command(_) => {}
-            Value::ConditionCommand(_) => {}
             Value::File(v) => v.hash(state),
             Value::Duration(d) => d.hash(state),
             Value::Bool(v) => v.hash(state),
             Value::Binary(v) => v.hash(state),
             Value::Struct(v) => v.hash(state),
-            Value::Scope(_) | Value::Dict(_) | Value::Table(_) | Value::Closure(_) |
+            Value::Scope(_) | Value::Dict(_) | Value::Table(_) |
             Value::List(_) | Value::TableStream(_) | Value::Float(_)
             | Value::BinaryStream(_) => panic!("Can't hash output"),
             Value::Empty() => {}
@@ -366,7 +358,6 @@ impl std::cmp::PartialEq for Value {
             (Value::Field(val1), Value::Field(val2)) => val1 == val2,
             (Value::Glob(val1), Value::Glob(val2)) => val1 == val2,
             (Value::Regex(val1, _), Value::Regex(val2, _)) => val1 == val2,
-            (Value::Command(val1), Value::Command(val2)) => val1 == val2,
             (Value::List(val1), Value::List(val2)) => val1 == val2,
             (Value::Table(val1), Value::Table(val2)) => match val1.partial_cmp(val2) {
                 None => false,
@@ -406,9 +397,6 @@ impl std::cmp::PartialOrd for Value {
             (Value::Time(val1), Value::Time(val2)) => Some(val1.cmp(val2)),
             (Value::File(val1), Value::File(val2)) => Some(val1.cmp(val2)),
             (Value::Duration(val1), Value::Duration(val2)) => Some(val1.cmp(val2)),
-            (Value::Command(_), Value::Command(_)) => None,
-            (Value::Closure(_), _) => None,
-            (Value::TableStream(_), _) => None,
             (Value::Table(val1), Value::Table(val2)) => val1.partial_cmp(val2),
             (Value::Struct(val1), Value::Struct(val2)) => val1.partial_cmp(val2),
             (Value::List(val1), Value::List(val2)) => val1.partial_cmp(val2),

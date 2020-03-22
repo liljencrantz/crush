@@ -5,7 +5,6 @@ use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;
 use crate::lang::stream::Readable;
 
-#[derive(Debug)]
 #[derive(Clone)]
 pub struct List {
     cell_type: ValueType,

@@ -1,4 +1,4 @@
-use crate::lang::command::ExecutionContext;
+use crate::lang::command::{ExecutionContext, CrushCommand};
 use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
 use crate::lang::{value::Value, command::SimpleCommand, value::ValueType};
 use crate::lang::scope::Scope;
@@ -88,9 +88,9 @@ fn duration(mut context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("time")?;
-    env.declare("now", Value::Command(SimpleCommand::new(now, false)))?;
-    env.declare("parse", Value::Command(SimpleCommand::new(parse, false)))?;
-    env.declare("duration", Value::Command(SimpleCommand::new(duration, false)))?;
+    env.declare("now", Value::Command(SimpleCommand::new(now, false).boxed()))?;
+    env.declare("parse", Value::Command(SimpleCommand::new(parse, false).boxed()))?;
+    env.declare("duration", Value::Command(SimpleCommand::new(duration, false).boxed()))?;
     env.readonly();
     Ok(())
 }

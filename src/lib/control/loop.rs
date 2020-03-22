@@ -9,9 +9,9 @@ use crate::lang::command::Closure;
 use crate::lang::command::ExecutionContext;
 use crate::lang::stream::{empty_channel, Readable, channels};
 use crate::lang::stream_printer::spawn_print_thread;
-use crate::lib::parse_util::single_argument_closure;
+use crate::lib::parse_util::single_argument_command;
 
-pub fn run(body: Closure, parent: Scope) -> CrushResult<()> {
+pub fn run(body: Box<dyn CrushCommand>, parent: Scope) -> CrushResult<()> {
     let env = parent.create_child(&parent, true);
     loop {
         body.invoke(ExecutionContext {
@@ -30,6 +30,6 @@ pub fn run(body: Closure, parent: Scope) -> CrushResult<()> {
 
 pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.initialize(vec![])?;
-    let body = single_argument_closure(context.arguments)?;
+    let body = single_argument_command(context.arguments)?;
     run(body, context.env)
 }

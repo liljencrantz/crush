@@ -1,4 +1,4 @@
-use crate::lang::command::ExecutionContext;
+use crate::lang::command::{ExecutionContext, CrushCommand};
 use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{command::SimpleCommand, value::Value};
 use crate::lang::scope::Scope;
@@ -83,13 +83,13 @@ pub fn not(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("comp")?;
     root.r#use(&env);
-    env.declare("gt", Value::Command(SimpleCommand::new(gt, false)))?;
-    env.declare("gte", Value::Command(SimpleCommand::new(gte, false)))?;
-    env.declare("lt", Value::Command(SimpleCommand::new(lt, false)))?;
-    env.declare("lte", Value::Command(SimpleCommand::new(lte, false)))?;
-    env.declare("eq", Value::Command(SimpleCommand::new(eq, false)))?;
-    env.declare("neq", Value::Command(SimpleCommand::new(neq, false)))?;
-    env.declare("not", Value::Command(SimpleCommand::new(not, false)))?;
+    env.declare("gt", Value::Command(SimpleCommand::new(gt, false).boxed()))?;
+    env.declare("gte", Value::Command(SimpleCommand::new(gte, false).boxed()))?;
+    env.declare("lt", Value::Command(SimpleCommand::new(lt, false).boxed()))?;
+    env.declare("lte", Value::Command(SimpleCommand::new(lte, false).boxed()))?;
+    env.declare("eq", Value::Command(SimpleCommand::new(eq, false).boxed()))?;
+    env.declare("neq", Value::Command(SimpleCommand::new(neq, false).boxed()))?;
+    env.declare("not", Value::Command(SimpleCommand::new(not, false).boxed()))?;
     env.readonly();
     Ok(())
 }

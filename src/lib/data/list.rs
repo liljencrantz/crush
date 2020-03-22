@@ -1,10 +1,29 @@
 use crate::lang::command::ExecutionContext;
 use crate::lang::errors::{CrushResult, argument_error, error};
-use crate::lang::{value::ValueType, list::List, command::SimpleCommand};
+use crate::lang::{value::ValueType, list::List, command::SimpleCommand, command::CrushCommand};
 use crate::lang::value::Value;
 use std::collections::HashSet;
+use std::collections::HashMap;
 use crate::lib::parse_util::{single_argument_list, single_argument_type, two_arguments, three_arguments, this_list, single_argument_integer};
 use crate::lang::scope::Scope;
+use lazy_static::lazy_static;
+
+lazy_static! {
+pub static ref LIST_METHODS: HashMap<Box<str>, Box<CrushCommand + Sync>> = {
+        let mut res: HashMap<Box<str>, Box<CrushCommand + Sync>> = HashMap::new();
+        res.insert(Box::from("len"), Box::from(SimpleCommand::new(len, false)));
+        res.insert(Box::from("empty"), Box::from(SimpleCommand::new(empty, false)));
+        res.insert(Box::from("push"), Box::from(SimpleCommand::new(push, false)));
+        res.insert(Box::from("pop"), Box::from(SimpleCommand::new(pop, false)));
+        res.insert(Box::from("peek"), Box::from(SimpleCommand::new(peek, false)));
+        res.insert(Box::from("clear"), Box::from(SimpleCommand::new(clear, false)));
+        res.insert(Box::from("setitem"), Box::from(SimpleCommand::new(setitem, false)));
+        res.insert(Box::from("remove"), Box::from(SimpleCommand::new(remove, false)));
+        res.insert(Box::from("truncate"), Box::from(SimpleCommand::new(truncate, false)));
+        res.insert(Box::from("clone"), Box::from(SimpleCommand::new(clone, false)));
+        res
+};
+}
 
 fn of(mut context: ExecutionContext) -> CrushResult<()> {
     if context.arguments.len() == 0 {
@@ -97,36 +116,10 @@ fn clone(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::List(this_list(context.this)?.copy()))
 }
 
-pub fn list_member(name: &str) -> CrushResult<Value> {
-    match name {
-        "len" => Ok(Value::Command(SimpleCommand::new(len, false))),
-        "empty" => Ok(Value::Command(SimpleCommand::new(empty, false))),
-        "push" => Ok(Value::Command(SimpleCommand::new(push, false))),
-        "pop" => Ok(Value::Command(SimpleCommand::new(pop, false))),
-        "peek" => Ok(Value::Command(SimpleCommand::new(peek, false))),
-        "clear" => Ok(Value::Command(SimpleCommand::new(clear, false))),
-        "setitem" => Ok(Value::Command(SimpleCommand::new(setitem, false))),
-        "remove" => Ok(Value::Command(SimpleCommand::new(remove, false))),
-        "truncate" => Ok(Value::Command(SimpleCommand::new(truncate, false))),
-        "clone" => Ok(Value::Command(SimpleCommand::new(clone, false))),
-        _ => error(format!("List does not provide a method {}", name).as_str())
-    }
-}
-
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("list")?;
-    env.declare("of", Value::Command(SimpleCommand::new(of, false)))?;
-    env.declare("new", Value::Command(SimpleCommand::new(new, false)))?;
-    env.declare("len", Value::Command(SimpleCommand::new(len, false)))?;
-    env.declare("empty", Value::Command(SimpleCommand::new(empty, false)))?;
-    env.declare("push", Value::Command(SimpleCommand::new(push, false)))?;
-    env.declare("pop", Value::Command(SimpleCommand::new(pop, false)))?;
-    env.declare("peek", Value::Command(SimpleCommand::new(peek, false)))?;
-    env.declare("setitem", Value::Command(SimpleCommand::new(setitem, false)))?;
-    env.declare("clear", Value::Command(SimpleCommand::new(clear, false)))?;
-    env.declare("remove", Value::Command(SimpleCommand::new(remove, false)))?;
-    env.declare("truncate", Value::Command(SimpleCommand::new(truncate, false)))?;
-    env.declare("clone", Value::Command(SimpleCommand::new(clone, false)))?;
+    env.declare("of", Value::Command(SimpleCommand::new(of, false).boxed()))?;
+    env.declare("new", Value::Command(SimpleCommand::new(new, false).boxed()))?;
     env.readonly();
     Ok(())
 }

@@ -17,7 +17,7 @@ use crate::lang::stream_printer::spawn_print_thread;
 use crate::lang::scope::Scope;
 use crate::lang::command::CrushCommand;
 
-fn evaluate(condition: &Closure, row: &Row, input_type: &Vec<ColumnType>, env: &Scope) -> CrushResult<bool> {
+fn evaluate(condition: Box<dyn CrushCommand>, row: &Row, input_type: &Vec<ColumnType>, env: &Scope) -> CrushResult<bool> {
     let arguments = row.clone().into_vec()
         .drain(..)
         .zip(input_type.iter())
@@ -40,11 +40,11 @@ fn evaluate(condition: &Closure, row: &Row, input_type: &Vec<ColumnType>, env: &
     }
 }
 
-pub fn run(mut condition: &Closure, input: &mut dyn Readable, output: OutputStream, env: Scope) -> CrushResult<()> {
+pub fn run(mut condition: Box<dyn CrushCommand>, input: &mut dyn Readable, output: OutputStream, env: Scope) -> CrushResult<()> {
     loop {
         match input.read() {
             Ok(row) => {
-                match evaluate(condition, &row, input.types(), &env) {
+                match evaluate(condition.boxed()    , &row, input.types(), &env) {
                     Ok(val) => if val { if output.send(row).is_err() { break }},
                     Err(e) => printer().job_error(e),
                 }
@@ -56,9 +56,9 @@ pub fn run(mut condition: &Closure, input: &mut dyn Readable, output: OutputStre
 }
 
 pub fn parse(_input_type: &Vec<ColumnType>,
-             arguments: &mut Vec<Argument>) -> CrushResult<Closure> {
+             arguments: &mut Vec<Argument>) -> CrushResult<Box<dyn CrushCommand>> {
     match arguments.remove(0).value {
-        Value::Closure(c) => Ok(c),
+        Value::Command(c) => Ok(c),
         _ => argument_error("Expected a closure"),
     }
 }
@@ -67,7 +67,7 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()?.readable() {
         Some(mut input) => {
             let output = context.output.initialize(input.types().clone())?;
-            run(&parse(input.types(), context.arguments.as_mut())?,
+            run(parse(input.types(), context.arguments.as_mut())?,
                 input.as_mut(),
                 output,
                 context.env)

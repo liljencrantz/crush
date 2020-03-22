@@ -1,4 +1,4 @@
-use crate::lang::command::ExecutionContext;
+use crate::lang::command::{ExecutionContext, CrushCommand};
 use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::scope::Scope;
 use crate::lang::{value::Value, command::SimpleCommand};
@@ -120,11 +120,11 @@ fn neg(mut context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("math")?;
-    env.declare("add", Value::Command(SimpleCommand::new(add, false)))?;
-    env.declare("sub", Value::Command(SimpleCommand::new(sub, false)))?;
-    env.declare("mul", Value::Command(SimpleCommand::new(mul, false)))?;
-    env.declare("div", Value::Command(SimpleCommand::new(div, false)))?;
-    env.declare("neg", Value::Command(SimpleCommand::new(neg, false)))?;
+    env.declare("add", Value::Command(SimpleCommand::new(add, false).boxed()))?;
+    env.declare("sub", Value::Command(SimpleCommand::new(sub, false).boxed()))?;
+    env.declare("mul", Value::Command(SimpleCommand::new(mul, false).boxed()))?;
+    env.declare("div", Value::Command(SimpleCommand::new(div, false).boxed()))?;
+    env.declare("neg", Value::Command(SimpleCommand::new(neg, false).boxed()))?;
     env.readonly();
     Ok(())
 }

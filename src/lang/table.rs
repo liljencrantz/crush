@@ -4,7 +4,7 @@ use crate::lang::stream::{Readable, InputStream};
 use crate::util::replace::Replace;
 use crate::lang::value::ValueType;
 
-#[derive(Debug, PartialEq, PartialOrd, Clone)]
+#[derive(PartialEq, PartialOrd, Clone)]
 pub struct Table {
     types: Vec<ColumnType>,
     rows: Vec<Row>,
@@ -65,7 +65,7 @@ impl Readable for TableReader {
     }
 }
 
-#[derive(PartialEq, PartialOrd, Debug, Eq, Hash, Clone)]
+#[derive(PartialEq, PartialOrd, Eq, Hash, Clone)]
 pub struct Row {
     cells: Vec<Value>,
 }

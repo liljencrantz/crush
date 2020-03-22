@@ -1,7 +1,7 @@
 use crate::lang::scope::Scope;
 use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::Value, command::SimpleCommand, r#struct::Struct};
-use crate::lang::command::ExecutionContext;
+use crate::lang::command::{ExecutionContext, CrushCommand};
 use crate::lib::parse_util::three_arguments;
 use crate::lang::argument::column_names;
 
@@ -51,8 +51,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("data")?;
     root.r#use(&env);
 
-    env.declare("struct", Value::Command(SimpleCommand::new(r#struct, false)))?;
-    env.declare("materialize", Value::Command(SimpleCommand::new(materialize, true)))?;
+    env.declare("struct", Value::Command(SimpleCommand::new(r#struct, false).boxed()))?;
+    env.declare("materialize", Value::Command(SimpleCommand::new(materialize, true).boxed()))?;
 
     list::declare(&env)?;
     dict::declare(&env)?;

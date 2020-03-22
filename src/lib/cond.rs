@@ -16,7 +16,7 @@ pub fn and(mut context: ExecutionContext) -> CrushResult<()> {
                     break;
                 }
             }
-            Value::Closure(c) => {
+            Value::Command(c) => {
                 let (sender, receiver) = channels();
                 let cc = ExecutionContext {
                     input: empty_channel(),
@@ -53,7 +53,7 @@ pub fn or(mut context: ExecutionContext) -> CrushResult<()> {
                 }
             }
 
-            Value::Closure(c) => {
+            Value::Command(c) => {
                 let (sender, receiver) = channels();
                 let cc = ExecutionContext {
                     input: empty_channel(),
@@ -82,8 +82,8 @@ pub fn or(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("cond")?;
     root.r#use(&env);
-    env.declare("and", Value::ConditionCommand(ConditionCommand::new(and)))?;
-    env.declare("or", Value::ConditionCommand(ConditionCommand::new(or)))?;
+    env.declare("and", Value::Command(ConditionCommand::new(and).boxed()))?;
+    env.declare("or", Value::Command(ConditionCommand::new(or).boxed()))?;
     env.readonly();
     Ok(())
 }

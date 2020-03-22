@@ -18,12 +18,10 @@ use std::collections::HashMap;
   time. This forces us to manually drop some variables.
 */
 #[derive(Clone)]
-#[derive(Debug)]
 pub struct Scope {
     data: Arc<Mutex<ScopeData>>,
 }
 
-#[derive(Debug)]
 struct ScopeData {
     /** This is the parent scope used to perform variable name resolution. If a variable lookup
      fails in the current scope, it proceeds to this scope. This is usually the scope in which this

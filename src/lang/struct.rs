@@ -3,7 +3,7 @@ use crate::lang::value::Value;
 use std::mem;
 use crate::lang::table::Row;
 
-#[derive(PartialEq, PartialOrd, Debug, Hash, Clone)]
+#[derive(PartialEq, PartialOrd, Hash, Clone)]
 pub struct Struct {
     types: Vec<ColumnType>,
     cells: Vec<Value>,

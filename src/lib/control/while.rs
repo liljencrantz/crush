@@ -11,8 +11,8 @@ use crate::lang::stream::{empty_channel, Readable, channels};
 use crate::lang::stream_printer::spawn_print_thread;
 
 pub struct Config {
-    condition: Closure,
-    body: Closure,
+    condition: Box<dyn CrushCommand>,
+    body: Box<dyn CrushCommand>,
     env: Scope,
 }
 
@@ -57,7 +57,7 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
     }
 
     match (context.arguments.remove(0).value, context.arguments.remove(0).value) {
-        (Value::Closure(condition), Value::Closure(body)) =>
+        (Value::Command(condition), Value::Command(body)) =>
             run(Config {
                 body,
                 condition,
