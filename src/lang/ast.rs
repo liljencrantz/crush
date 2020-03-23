@@ -71,7 +71,6 @@ impl CommandNode {
             }
         } else {
             let cmd = self.expressions[0].generate_argument()?;
-
             let arguments = self.expressions[1..].iter()
                 .map(|e| e.generate_argument())
                 .collect::<CrushResult<Vec<ArgumentDefinition>>>()?;
@@ -90,18 +89,14 @@ pub enum AssignmentNode {
 impl AssignmentNode {
     pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
         match self {
-            AssignmentNode::Assignment(target, value) => {
+            AssignmentNode::Assignment(target, value) =>
                 match target {
                     ItemNode::Label(t) => Ok(ArgumentDefinition::named(t.deref(), value.generate_argument()?.unnamed_value()?)),
                     _ => error("Invalid left side in named argument"),
-                }
-            }
-            AssignmentNode::Declaration(target, value) => {
-                error("Variable declarations not supported as arguments")
-            }
-            AssignmentNode::Logical(l) => {
-                l.generate_argument()
-            }
+                },
+            AssignmentNode::Declaration(target, value) =>
+                error("Variable declarations not supported as arguments"),
+            AssignmentNode::Logical(l) => l.generate_argument(),
         }
     }
 
@@ -164,39 +159,32 @@ pub enum LogicalNode {
 impl LogicalNode {
     pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
         match self {
-            LogicalNode::LogicalOperation(l, op, r) => {
+            LogicalNode::LogicalOperation(l, op, r) =>
                 match op.as_ref() {
-                    "&&" => {
+                    "&&" =>
                         Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(AND.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
-                        ))
-                    }
-                    "||" => {
+                        )),
+                    "||" =>
                         Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(OR.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
-                        ))
-                    }
+                        )),
                     _ => error("Unknown operator")
-                }
-            }
-            LogicalNode::Comparison(c) => {
-                c.generate_standalone()
-            }
+                },
+            LogicalNode::Comparison(c) => c.generate_standalone(),
         }
     }
 
     pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
         match self {
-            LogicalNode::LogicalOperation(l, op, r) => {
+            LogicalNode::LogicalOperation(l, op, r) =>
                 Ok(ArgumentDefinition::unnamed(ValueDefinition::JobDefinition(
                     Job::new(vec![self.generate_standalone()?.unwrap()])
-                )))
-            }
-            LogicalNode::Comparison(c) => {
-                c.generate_argument()
-            }
+                ))),
+            LogicalNode::Comparison(c) =>
+                c.generate_argument(),
         }
     }
 }
@@ -212,61 +200,51 @@ impl ComparisonNode {
         match self {
             ComparisonNode::Comparison(l, op, r) => {
                 match op.as_ref() {
-                    "<" => {
+                    "<" =>
                         Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(LT.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
-                        ))
-                    }
-                    "<=" => {
+                        )),
+                    "<=" =>
                         Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(LTE.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
-                        ))
-                    }
-                    ">" => {
+                        )),
+                    ">" =>
                         Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(GT.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
-                        ))
-                    }
-                    ">=" => {
+                        )),
+                    ">=" =>
                         Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(GTE.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
-                        ))
-                    }
-                    "==" => {
+                        )),
+                    "==" =>
                         Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(EQ.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
-                        ))
-                    }
-                    "!=" => {
+                        )),
+                    "!=" =>
                         Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(NEQ.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
-                        ))
-                    }
-                    _ => error("Unknown operator")
+                        )),
+                    _ => error("Unknown operator"),
                 }
             }
-            ComparisonNode::Term(t) => {
-                t.generate_standalone()
-            }
+            ComparisonNode::Term(t) =>
+                t.generate_standalone(),
         }
     }
 
     pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
         match self {
-            ComparisonNode::Comparison(l, op, r) => {
+            ComparisonNode::Comparison(l, op, r) =>
                 Ok(ArgumentDefinition::unnamed(ValueDefinition::JobDefinition(
                     Job::new(vec![self.generate_standalone()?.unwrap()])
-                )))
-            }
-            ComparisonNode::Term(t) => {
-                t.generate_argument()
-            }
+                ))),
+            ComparisonNode::Term(t) => t.generate_argument(),
         }
     }
 }
@@ -281,38 +259,31 @@ pub enum TermNode {
 impl TermNode {
     pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
         match self {
-            TermNode::Term(l, op, r) => {
+            TermNode::Term(l, op, r) =>
                 match op.as_ref() {
-                    "+" => {
+                    "+" =>
                         Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(ADD.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
-                        ))
-                    }
-                    "-" => {
+                        )),
+                    "-" =>
                         Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(SUB.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
-                        ))
-                    }
-                    _ => error("Unknown operator")
-                }
-            }
-            TermNode::Factor(f) =>
-                f.generate_standalone(),
+                        )),
+                    _ => error("Unknown operator"),
+                },
+            TermNode::Factor(f) => f.generate_standalone(),
         }
     }
 
     pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
         match self {
-            TermNode::Term(l, op, r) => {
+            TermNode::Term(l, op, r) =>
                 Ok(ArgumentDefinition::unnamed(ValueDefinition::JobDefinition(
                     Job::new(vec![self.generate_standalone()?.unwrap()])
-                )))
-            }
-            TermNode::Factor(f) => {
-                f.generate_argument()
-            }
+                ))),
+            TermNode::Factor(f) => f.generate_argument(),
         }
     }
 }
@@ -328,37 +299,31 @@ impl FactorNode {
         match self {
             FactorNode::Factor(l, op, r) => {
                 match op.as_ref() {
-                    "*" => {
+                    "*" =>
                         Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(MUL.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
-                        ))
-                    }
-                    "//" => {
+                        )),
+                    "//" =>
                         Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(DIV.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
-                        ))
-                    }
-                    _ => error(format!("Unknown operator {}", op).as_str())
+                        )),
+                    _ => error(format!("Unknown operator {}", op).as_str()),
                 }
             }
-            FactorNode::Unary(u) => {
-                u.generate_standalone()
-            }
+            FactorNode::Unary(u) => u.generate_standalone(),
         }
     }
 
     pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
         match self {
-            FactorNode::Factor(l, op, r) => {
+            FactorNode::Factor(l, op, r) =>
                 Ok(ArgumentDefinition::unnamed(ValueDefinition::JobDefinition(
                     Job::new(vec![self.generate_standalone()?.unwrap()])
-                )))
-            }
-            FactorNode::Unary(u) => {
-                u.generate_argument()
-            }
+                ))),
+            FactorNode::Unary(u) =>
+                u.generate_argument(),
         }
     }
 }
@@ -376,21 +341,17 @@ impl UnaryNode {
 
     pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
         match self {
-            UnaryNode::Unary(op, r) => {
+            UnaryNode::Unary(op, r) =>
                 match op.deref() {
-                    "!" => {
+                    "!" =>
                         Ok(ArgumentDefinition::unnamed(ValueDefinition::JobDefinition(
                             Job::new(vec![CommandInvocation::new(
                                 ValueDefinition::Value(Value::Command(NOT.as_ref().clone())),
                                 vec![r.generate_argument()?])
-                            ]))))
-                    }
+                            ])))),
                     _ => error("Unknown operator")
-                }
-            }
-            UnaryNode::Item(i) => {
-                i.generate_argument()
-            }
+                },
+            UnaryNode::Item(i) => i.generate_argument(),
         }
     }
 }
@@ -460,10 +421,8 @@ impl ItemNode {
             ItemNode::Path(node, label) =>
                 ValueDefinition::Path(Box::new(node.generate_argument()?.unnamed_value()?), label.clone()),
             ItemNode::Field(f) => ValueDefinition::Value(Value::Field(vec![f[1..].to_string().into_boxed_str()])),
-            ItemNode::Substitution(s) =>
-                    ValueDefinition::JobDefinition(s.generate()?),
-            ItemNode::Closure(c) =>
-                    ValueDefinition::ClosureDefinition(c.generate()?),
+            ItemNode::Substitution(s) => ValueDefinition::JobDefinition(s.generate()?),
+            ItemNode::Closure(c) => ValueDefinition::ClosureDefinition(c.generate()?),
             ItemNode::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g))),
         }))
     }
