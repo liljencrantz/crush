@@ -1,6 +1,4 @@
 Todo for MVP 1:
-Redo waiting on JobJoinHandles
-Redo empty streams
 Move the 'to' method to type instances
 Add methods to integer type
 Add methods to float type
@@ -14,25 +12,13 @@ Re-add match operators =~ and !~ for regexp matching: fnurple | where {$row =~ r
 Add ~ (replace) operator for regexps: "this is a string" ~ re{a.*g} "Sparta!" -> "this is Sparta!"
 Make newline a separator again
 &&/|| => and/or
-Flesh out seq command with support for from and step
-Make argument parsing in list and dict commands more consistent
-Add list:insert command
-Add dict:clear command
-Add dict:clone command
 Add reject command that removes specified columns from a table/stream
 Add avg command
-Add ceil, floor, pow, log, sin, cos, tan, etc to math lib
-Add control.source command
-Add String:join command
-Add String:lpad command
-Add String:rpad command
-Add String:substr command
 Add system tests for type casting
 Add system tests for for loop
 Add system tests for binary stream handling
 Add system tests for structs
 Add system tests for dealing with tables as streams
-Figure out how to make custom reduce commands
 Some missing comparisons on Value
 Missing some value serialisations and deserialisations
 Error source propagation
@@ -43,6 +29,19 @@ Add source field to CrushError
 Make error printing display source of error
 
 Future features:
+Add ceil, floor, pow, log, sin, cos, tan, etc to math lib
+Redo waiting on JobJoinHandles
+Redo empty streams
+Add control.source command
+Flesh out seq command with support for from and step
+Add list:insert command
+Add dict:clear command
+Add dict:clone command
+Add String:join command
+Add String:lpad command
+Add String:rpad command
+Add String:substr command
+Figure out how to make custom reduce commands
 Data enums + pattern matching syntax
 Add ** for recursive wildcard matches
 Add readline command that reads one line of interactive text input from the user via the terminal
@@ -199,3 +198,4 @@ Add dir command
 Remove the dot operator in favor of [] for fields. Use slash on commands?
 Figure out how to make globs convenient again
 Make structs mutable and protected by Arc + Mutex
+Make argument parsing in list and dict commands more consistent
