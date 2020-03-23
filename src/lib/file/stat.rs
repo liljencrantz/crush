@@ -1,4 +1,4 @@
-use crate::lang::command::ExecutionContext;
+use crate::lang::command::{ExecutionContext, This};
 use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
 use crate::lang::{argument::Argument, r#struct::Struct};
 use crate::lang::value::Value;
@@ -6,7 +6,6 @@ use std::fs::metadata;
 use std::path::Path;
 use crate::lang::stream::ValueSender;
 use std::os::unix::fs::MetadataExt;
-use crate::lib::parse_util::this_file;
 
 fn parse(arguments: Vec<Argument>) -> CrushResult<Box<Path>> {
     let mut files: Vec<Box<Path>> = Vec::new();
@@ -39,5 +38,5 @@ fn run(file: Box<Path>, sender: ValueSender) -> CrushResult<()> {
 }
 
 pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
-    run(this_file(context.this)?, context.output)
+    run(context.this.file()?, context.output)
 }

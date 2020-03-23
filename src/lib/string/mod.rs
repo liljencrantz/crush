@@ -1,10 +1,10 @@
 use crate::lang::scope::Scope;
 use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{command::ExecutionContext, value::ValueType, list::List};
-use crate::lib::parse_util::{single_argument, two_arguments, single_argument_field, single_argument_text, this_text};
+use crate::lib::parse_util::{single_argument, two_arguments, single_argument_field, single_argument_text};
 use crate::lang::{value::Value, command::SimpleCommand, argument::Argument};
 use nix::sys::ptrace::cont;
-use crate::lang::command::CrushCommand;
+use crate::lang::command::{CrushCommand, This};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
 
@@ -24,20 +24,20 @@ lazy_static! {
 
 fn upper(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::String(
-        this_text(context.this)?
+        context.this.text()?
             .to_uppercase()
             .into_boxed_str()))
 }
 
 fn lower(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::String(
-        this_text(context.this)?
+        context.this.text()?
             .to_lowercase()
             .into_boxed_str()))
 }
 
 fn split(mut context: ExecutionContext) -> CrushResult<()> {
-    let this = this_text(context.this)?;
+    let this = context.this.text()?;
     let separator = single_argument_text(context.arguments)?;
     context.output.send(Value::List(List::new(ValueType::String,
                                               this.split(separator.as_ref())
@@ -47,7 +47,7 @@ fn split(mut context: ExecutionContext) -> CrushResult<()> {
 
 fn trim(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::String(
-        Box::from(this_text(context.this)?
+        Box::from(context.this.text()?
             .trim())))
 }
 

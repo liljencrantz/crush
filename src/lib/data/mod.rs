@@ -1,10 +1,10 @@
 use crate::lang::scope::Scope;
 use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::Value, command::SimpleCommand, r#struct::Struct};
-use crate::lang::command::{ExecutionContext, CrushCommand};
-use crate::lib::parse_util::three_arguments;
+use crate::lang::command::{ExecutionContext, CrushCommand, This};
+use crate::lib::parse_util::{three_arguments};
 use crate::lang::argument::column_names;
-
+use crate::lang::command::ArgumentVector;
 pub mod list;
 pub mod dict;
 pub mod re;
@@ -45,6 +45,14 @@ fn r#struct(mut context: ExecutionContext) -> CrushResult<()> {
             .collect::<Vec<(Box<str>, Value)>>();
     context.output.send(
         Value::Struct(Struct::new(arr)))
+}
+
+pub fn setattr(mut context: ExecutionContext) -> CrushResult<()> {
+    let this = context.this.r#struct()?;
+    let name = context.arguments.string(0)?;
+    let value = context.arguments.value(1)?;
+    this.set(&name, value);
+    Ok(())
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {

@@ -1,6 +1,6 @@
 Todo for MVP 1:
-Add dir command
-New operators: += increment and friends
+Redo waiting on JobJoinHandles
+Redo empty streams
 Move the 'to' method to type instances
 Add methods to integer type
 Add methods to float type
@@ -9,39 +9,32 @@ Unify types and the type-related namespaces. List.of in the List type, etc.
 Make structs mutable and protected by Arc + Mutax
 Nice way to pass on all arguments of a closure to another command
 Nice way of introspecting all arguments to a closure
-Figure out how to make globs convenient again
 Run an executable by giving its path
 Figure out how to make external commands with subcommands convenient again
-Add ** for recursive wildcard matches
 Re-add match operators =~ and !~ for regexp matching: fnurple | where {$row =~ re{^a.*b$}}
 Add ~ (replace) operator for regexps: "this is a string" ~ re{a.*g} "Sparta!" -> "this is Sparta!"
 Make newline a separator again
 &&/|| => and/or
-support adding prototypes to structs
 Flesh out seq command with support for from and step
 Make argument parsing in list and dict commands more consistent
 Some kind of pattern matching syntax
-Add list/insert command
-Add dict/clear command
-Add dict/clone command
-Add reject command that removes specified columns
+Add list:insert command
+Add dict:clear command
+Add dict:clone command
+Add reject command that removes specified columns from a table/stream
 Add avg command
 Add ceil, floor, pow, log, sin, cos, tan, etc to math lib
-pseudo-tty for cmd command output
-pseudo-tty for cmd command input
-Remove the dot operator in favor of [] for fields. Use slash on commands?
 Add control.source command
-Add String/join command
-Add String/lpad command
-Add String/rpad command
-Add String/substr command
-Add readline command that reads one line of interactive text input from the user via the terminal
+Add String:join command
+Add String:lpad command
+Add String:rpad command
+Add String:substr command
 Add system tests for type casting
 Add system tests for for loop
 Add system tests for binary stream handling
 Add system tests for structs
 Add system tests for dealing with tables as streams
-Rethink aggr and figure out how to make custom reduce commands
+Figure out how to make custom reduce commands
 Some missing comparisons on Value
 Missing some value serialisations and deserialisations
 Error source propagation
@@ -52,6 +45,10 @@ Add source field to CrushError
 Make error printing display source of error
 
 Future features:
+Add ** for recursive wildcard matches
+Add readline command that reads one line of interactive text input from the user via the terminal
+support adding prototypes to structs
+New operators: += increment and friends
 For single column tabular output, display it on screen it in many rows to save space
 For binary output, write it in hex and in cleartext, side by side
 Detect if binary output is in fact text, and display it as such
@@ -68,6 +65,8 @@ avro.parse command that deserializes avro data
 toml.parse command that deserializes toml data
 Add history command with all previous interactive invocations, including invocation string, current status, and misc metadata.
 Add proc.jobs command
+pseudo-tty for cmd command output
+pseudo-tty for cmd command input
 
 Done:
 Fix all expects calls that aren't impossible, and propagate the errors
@@ -197,3 +196,6 @@ Structs and rows should be subscriptable via indices
 Add methods to text type
 Add 'type' method to all types
 Add methods to file type
+Add dir command
+Remove the dot operator in favor of [] for fields. Use slash on commands?
+Figure out how to make globs convenient again

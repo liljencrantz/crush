@@ -1,10 +1,10 @@
-use crate::lang::command::ExecutionContext;
+use crate::lang::command::{ExecutionContext, This};
 use crate::lang::errors::{CrushResult, argument_error, error};
 use crate::lang::{value::ValueType, list::List, command::SimpleCommand, command::CrushCommand};
 use crate::lang::value::Value;
 use std::collections::HashSet;
 use std::collections::HashMap;
-use crate::lib::parse_util::{single_argument_list, single_argument_type, two_arguments, three_arguments, this_list, single_argument_integer};
+use crate::lib::parse_util::{single_argument_list, single_argument_type, two_arguments, three_arguments, single_argument_integer};
 use crate::lang::scope::Scope;
 use lazy_static::lazy_static;
 
@@ -17,7 +17,7 @@ lazy_static! {
         res.insert(Box::from("pop"), Box::from(SimpleCommand::new(pop, false)));
         res.insert(Box::from("peek"), Box::from(SimpleCommand::new(peek, false)));
         res.insert(Box::from("clear"), Box::from(SimpleCommand::new(clear, false)));
-        res.insert(Box::from("setitem"), Box::from(SimpleCommand::new(setitem, false)));
+        res.insert(Box::from("__setitem__"), Box::from(SimpleCommand::new(setitem, false)));
         res.insert(Box::from("remove"), Box::from(SimpleCommand::new(remove, false)));
         res.insert(Box::from("truncate"), Box::from(SimpleCommand::new(truncate, false)));
         res.insert(Box::from("clone"), Box::from(SimpleCommand::new(clone, false)));
@@ -45,16 +45,16 @@ fn new(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::List(List::new(single_argument_type(context.arguments)?, vec![])))
 }
 
-fn len(context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::Integer(this_list(context.this)?.len() as i128))
+fn len(mut context: ExecutionContext) -> CrushResult<()> {
+    context.output.send(Value::Integer(context.this.list()?.len() as i128))
 }
 
 fn empty(context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::Bool(this_list(context.this)?.len() == 0))
+    context.output.send(Value::Bool(context.this.list()?.len() == 0))
 }
 
 fn push(mut context: ExecutionContext) -> CrushResult<()> {
-    let l = this_list(context.this)?;
+    let l = context.this.list()?;
     let mut new_elements: Vec<Value> = Vec::new();
     for el in context.arguments.drain(..) {
         if el.value.value_type() == l.element_type() || l.element_type() == ValueType::Any {
@@ -72,23 +72,23 @@ fn push(mut context: ExecutionContext) -> CrushResult<()> {
 
 fn pop(context: ExecutionContext) -> CrushResult<()> {
     let o = context.output;
-    this_list(context.this)?.pop().map(|c| o.send(c));
+    context.this.list()?.pop().map(|c| o.send(c));
     Ok(())
 }
 
 fn peek(context: ExecutionContext) -> CrushResult<()> {
     let o = context.output;
-    this_list(context.this)?.peek().map(|c| o.send(c));
+    context.this.list()?.peek().map(|c| o.send(c));
     Ok(())
 }
 
 fn clear(context: ExecutionContext) -> CrushResult<()> {
-    this_list(context.this)?.clear();
+    context.this.list()?.clear();
     Ok(())
 }
 
 fn setitem(mut context: ExecutionContext) -> CrushResult<()> {
-    let mut list = this_list(context.this)?;
+    let mut list = context.this.list()?;
     let value = context.arguments.remove(1).value;
     let key = context.arguments.remove(0).value;
 
@@ -99,21 +99,21 @@ fn setitem(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn remove(mut context: ExecutionContext) -> CrushResult<()> {
-    let mut list = this_list(context.this)?;
+    let mut list = context.this.list()?;
     let idx = single_argument_integer(context.arguments)?;
     list.remove(idx as usize);
     Ok(())
 }
 
 fn truncate(mut context: ExecutionContext) -> CrushResult<()> {
-    let mut list = this_list(context.this)?;
+    let mut list = context.this.list()?;
     let idx = single_argument_integer(context.arguments)?;
     list.truncate(idx as usize);
     Ok(())
 }
 
 fn clone(context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::List(this_list(context.this)?.copy()))
+    context.output.send(Value::List(context.this.list()?.copy()))
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {

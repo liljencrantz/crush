@@ -5,6 +5,7 @@ use crate::lang::argument::ArgumentDefinition;
 use crate::lang::value::{ValueDefinition, Value};
 use std::ops::Deref;
 use crate::lang::command::{SimpleCommand, CrushCommand};
+use crate::util::glob::Glob;
 
 static ADD: SimpleCommand = SimpleCommand { call:crate::lib::math::add, can_block:false};
 static SUB: SimpleCommand = SimpleCommand { call:crate::lib::math::sub, can_block:false};
@@ -117,14 +118,20 @@ impl AssignmentNode {
                         CommandInvocation::new(
                         ValueDefinition::GetAttr(
                             Box::from(container.generate_argument()?.unnamed_value()?),
-                            Box::from("setitem")),
+                            Box::from("__setitem__")),
                         vec![
                             ArgumentDefinition::unnamed(key.generate_argument()?.unnamed_value()?),
                             ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?),
                         ]))),
-
-                    ItemNode::Path(_, _) => unimplemented!(),
-                    ItemNode::Field(_) => unimplemented!(),
+                    ItemNode::GetAttr(container, attr) => Ok(Some(
+                        CommandInvocation::new(
+                            ValueDefinition::GetAttr(
+                                Box::from(container.generate_argument()?.unnamed_value()?),
+                                Box::from("__setattr__")),
+                            vec![
+                                ArgumentDefinition::unnamed(ValueDefinition::Value(Value::String(attr.to_string().into_boxed_str()))),
+                                ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?),
+                            ]))),
 
                     _ => error("Invalid left side in assignment"),
                 }
@@ -394,6 +401,7 @@ impl UnaryNode {
 
 #[derive(Debug)]
 pub enum ItemNode {
+    Glob(Box<str>),
     Label(Box<str>),
     Field(Box<str>),
     QuotedLabel(Box<str>),
@@ -462,6 +470,7 @@ impl ItemNode {
                     ValueDefinition::JobDefinition(s.generate()?),
             ItemNode::Closure(c) =>
                     ValueDefinition::ClosureDefinition(c.generate()?),
+            ItemNode::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g))),
         }))
     }
 }

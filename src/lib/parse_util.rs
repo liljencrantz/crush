@@ -48,34 +48,6 @@ pub fn single_argument_type(mut arg: Vec<Argument>) -> CrushResult<ValueType> {
     }
 }
 
-pub fn this_list(this: Option<Value>) -> CrushResult<List> {
-    match this {
-        Some(Value::List(l)) => Ok(l),
-        _ => argument_error("Expected a list"),
-    }
-}
-
-pub fn this_dict(this: Option<Value>) -> CrushResult<Dict> {
-    match this {
-        Some(Value::Dict(l)) => Ok(l),
-        _ => argument_error("Expected a dict"),
-    }
-}
-
-pub fn this_text(this: Option<Value>) -> CrushResult<Box<str>> {
-    match this {
-        Some(Value::String(s)) => Ok(s),
-        _ => argument_error("Expected a string"),
-    }
-}
-
-pub fn this_file(this: Option<Value>) -> CrushResult<Box<Path>> {
-    match this {
-        Some(Value::File(s)) => Ok(s),
-        _ => argument_error("Expected a string"),
-    }
-}
-
 pub fn single_argument_list(mut arg: Vec<Argument>) -> CrushResult<List> {
     match arg.len() {
         1 => {

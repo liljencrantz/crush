@@ -1,11 +1,11 @@
-use crate::lang::command::{ExecutionContext, CrushCommand};
+use crate::lang::command::{ExecutionContext, CrushCommand, This};
 use crate::lang::errors::{CrushResult, argument_error, error};
 use crate::lang::{value::ValueType, dict::Dict, command::SimpleCommand};
 use crate::lang::table::Row;
 use crate::lang::value::Value;
 use crate::lang::table::ColumnType;
 use crate::lang::scope::Scope;
-use crate::lib::parse_util::{single_argument_dict, this_dict};
+use crate::lib::parse_util::{single_argument_dict};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
 
@@ -15,8 +15,8 @@ lazy_static! {
         res.insert(Box::from("len"), Box::from(SimpleCommand::new(len, false)));
         res.insert(Box::from("empty"), Box::from(SimpleCommand::new(empty, false)));
 //        res.insert(Box::from("clear"), Box::from(SimpleCommand::new(clear, false)));
-        res.insert(Box::from("setitem"), Box::from(SimpleCommand::new(setitem, false)));
-        res.insert(Box::from("getitem"), Box::from(SimpleCommand::new(getitem, false)));
+        res.insert(Box::from("__setitem__"), Box::from(SimpleCommand::new(setitem, false)));
+        res.insert(Box::from("__getitem__"), Box::from(SimpleCommand::new(getitem, false)));
         res.insert(Box::from("remove"), Box::from(SimpleCommand::new(remove, false)));
 //        res.insert(Box::from("clone"), Box::from(SimpleCommand::new(clone, false)));
         res
@@ -42,7 +42,7 @@ fn new(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn setitem(mut context: ExecutionContext) -> CrushResult<()> {
-    let mut dict = this_dict(context.this)?;
+    let mut dict = context.this.dict()?;
     let value = context.arguments.remove(1).value;
     let key = context.arguments.remove(0).value;
     if dict.key_type() == key.value_type() && dict.value_type() == value.value_type() {
@@ -57,7 +57,7 @@ fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
     if context.arguments.len() == 0 {
         return argument_error("Missing key")
     }
-    let mut dict = this_dict(context.this)?;
+    let mut dict = context.this.dict()?;
     let key = context.arguments.remove(0).value;
     let output = context.output.initialize(
         vec![ColumnType::new("value", dict.value_type())])?;
@@ -69,7 +69,7 @@ fn remove(mut context: ExecutionContext) -> CrushResult<()> {
     if context.arguments.len() == 0 {
         return argument_error("Missing key")
     }
-    let mut dict = this_dict(context.this)?;
+    let mut dict = context.this.dict()?;
     let key = context.arguments.remove(0).value;
     let o = context.output;
     dict.remove(&key).map(|c| o.send(c));
@@ -77,11 +77,11 @@ fn remove(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn len(context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::Integer(this_dict(context.this)?.len() as i128))
+    context.output.send(Value::Integer(context.this.dict()?.len() as i128))
 }
 
 fn empty(context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::Bool(this_dict(context.this)?.len() == 0))
+    context.output.send(Value::Bool(context.this.dict()?.len() == 0))
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {

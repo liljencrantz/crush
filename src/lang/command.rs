@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult, error, argument_error, CrushError};
 use std::fmt::Formatter;
 use crate::lang::stream::{ValueReceiver, ValueSender, InputStream, empty_channel};
 use crate::lang::{argument::Argument, argument::ArgumentDefinition};
@@ -6,6 +6,37 @@ use crate::lang::scope::Scope;
 use crate::lang::job::Job;
 use crate::lang::stream_printer::spawn_print_thread;
 use crate::lang::value::Value;
+use crate::lang::list::List;
+use crate::lang::dict::Dict;
+use crate::lang::r#struct::Struct;
+use std::path::Path;
+use crate::util::replace::Replace;
+
+pub trait ArgumentVector {
+    fn string(&mut self, idx: usize) -> CrushResult<Box<str>>;
+    fn value(&mut self, idx: usize) -> CrushResult<Value>;
+}
+
+impl ArgumentVector for Vec<Argument> {
+    fn string(&mut self, idx: usize) -> CrushResult<Box<str>> {
+        if idx < self.len() {
+            match self.replace(idx, Argument::unnamed(Value::Bool(false))).value {
+                Value::String(s) => Ok(s),
+                _ => error("Invalid value"),
+            }
+        } else {
+            error("Index out of bounds")
+        }
+    }
+
+    fn value(&mut self, idx: usize) -> CrushResult<Value> {
+        if idx < self.len() {
+            Ok(self.replace(idx, Argument::unnamed(Value::Bool(false))).value)
+        } else {
+            error("Index out of bounds")
+        }
+    }
+}
 
 pub struct ExecutionContext {
     pub input: ValueReceiver,
@@ -13,6 +44,52 @@ pub struct ExecutionContext {
     pub arguments: Vec<Argument>,
     pub env: Scope,
     pub this: Option<Value>,
+}
+
+pub trait This {
+    fn list(self) -> CrushResult<List>;
+    fn dict(self) -> CrushResult<Dict>;
+    fn text(self) -> CrushResult<Box<str>>;
+    fn r#struct(self) -> CrushResult<Struct>;
+    fn file(self) -> CrushResult<Box<Path>>;
+}
+
+
+impl This for Option<Value> {
+    fn list(mut self) -> CrushResult<List> {
+        match self.take() {
+            Some(Value::List(l)) => Ok(l),
+            _ => argument_error("Expected a list"),
+        }
+    }
+
+    fn dict(mut self) -> CrushResult<Dict> {
+        match self.take() {
+            Some(Value::Dict(l)) => Ok(l),
+            _ => argument_error("Expected a dict"),
+        }
+    }
+
+    fn text(mut self) -> CrushResult<Box<str>> {
+        match self.take() {
+            Some(Value::String(s)) => Ok(s),
+            _ => argument_error("Expected a string"),
+        }
+    }
+
+    fn r#struct(mut self) -> CrushResult<Struct> {
+        match self.take() {
+            Some(Value::Struct(s)) => Ok(s),
+            _ => argument_error("Expected a struct"),
+        }
+    }
+
+    fn file(mut self) -> CrushResult<Box<Path>> {
+        match self.take() {
+            Some(Value::File(s)) => Ok(s),
+            _ => argument_error("Expected a file"),
+        }
+    }
 }
 
 pub struct StreamExecutionContext {

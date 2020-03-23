@@ -1,4 +1,4 @@
-use crate::lang::command::{ExecutionContext, CrushCommand};
+use crate::lang::command::{ExecutionContext, CrushCommand, This};
 use crate::{
     lib::command_util::find_field_from_str,
     lang::errors::argument_error,

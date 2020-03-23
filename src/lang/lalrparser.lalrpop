@@ -57,6 +57,7 @@ Unary: UnaryNode = {
 Item: ItemNode = {
     <l: Label> => ItemNode::Label(l),
     <f: Field> => ItemNode::Field(f),
+    <g: Glob> => ItemNode::Glob(g),
     <l: QuotedLabel> => ItemNode::QuotedLabel(l),
     <s: QuotedString> => ItemNode::String(s),
     <s:r"[0-9][0-9_]*"> => ItemNode::Integer(i128::from_str(s.replace("_", "").as_str()).unwrap()),
@@ -78,6 +79,10 @@ QuotedLabel: Box<str> = {
 
 Field: Box<str> = {
    <l:r"%[\._a-zA-Z][\._a-zA-Z0-9]*"> => Box::from(l),
+}
+
+Glob: Box<str> = {
+   <l:r"\*\*([^ \n]|\\.)*"> => Box::from(&l[2..]),
 }
 
 QuotedString: Box<str> = {

@@ -181,8 +181,8 @@ fn get_output_type(input_type: &Vec<ColumnType>, cfg: &Config) -> Result<Vec<Col
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Struct(s) => {
-            let cfg = parse(s.types(), context.arguments)?;
-            let output_type = get_output_type(s.types(), &cfg)?;
+            let cfg = parse(&s.types(), context.arguments)?;
+            let output_type = get_output_type(&s.types(), &cfg)?;
             let output = context.output.initialize(output_type)?;
             run(cfg, s, output)
         }

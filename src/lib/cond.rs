@@ -1,4 +1,4 @@
-use crate::lang::command::{ExecutionContext, CrushCommand};
+use crate::lang::command::{ExecutionContext, CrushCommand, This};
 use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{command::SimpleCommand, value::Value};
 use crate::lang::scope::Scope;

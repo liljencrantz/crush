@@ -120,13 +120,13 @@ impl ValueDefinition {
 
             ValueDefinition::GetAttr(parent_def, entry) => {
                 let parent = parent_def.compile_internal(dependencies, env, can_block)?.1;
-                let val = mandate(parent.field(&entry), "Missing field")?;
+                let val = mandate(parent.field(&entry), format!("Missing field {}", entry).as_str())?;
                 (Some(parent), val)
             }
 
             ValueDefinition::Path(parent_def, entry) => {
                 let parent = parent_def.compile_internal(dependencies, env, can_block)?.1;
-                let val = mandate(parent.path(&entry), "Missing field")?;
+                let val = mandate(parent.path(&entry), format!("Missing path entry {}", entry).as_str())?;
                 (Some(parent), val)
             }
         })
