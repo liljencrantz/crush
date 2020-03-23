@@ -12,12 +12,12 @@ use lazy_static::lazy_static;
 lazy_static! {
     pub static ref DICT_METHODS: HashMap<Box<str>, Box<CrushCommand + Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<CrushCommand + Send + Sync>> = HashMap::new();
-        res.insert(Box::from("len"), Box::from(CrushCommand::command(len, false)));
-        res.insert(Box::from("empty"), Box::from(CrushCommand::command(empty, false)));
+        res.insert(Box::from("len"), CrushCommand::command(len, false));
+        res.insert(Box::from("empty"), CrushCommand::command(empty, false));
 //        res.insert(Box::from("clear"), Box::from(CrushCommand::command(clear, false)));
-        res.insert(Box::from("__setitem__"), Box::from(CrushCommand::command(setitem, false)));
-        res.insert(Box::from("__getitem__"), Box::from(CrushCommand::command(getitem, false)));
-        res.insert(Box::from("remove"), Box::from(CrushCommand::command(remove, false)));
+        res.insert(Box::from("__setitem__"), CrushCommand::command(setitem, false));
+        res.insert(Box::from("__getitem__"), CrushCommand::command(getitem, false));
+        res.insert(Box::from("remove"), CrushCommand::command(remove, false));
 //        res.insert(Box::from("clone"), Box::from(CrushCommand::command(clone, false)));
         res
     };

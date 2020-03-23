@@ -58,7 +58,7 @@ Item: ItemNode = {
     <l: Label> => ItemNode::Label(l),
     <f: Field> => ItemNode::Field(f),
     <g: Glob> => ItemNode::Glob(g),
-    <l: QuotedLabel> => ItemNode::QuotedLabel(l),
+    <l: QuotedLabel> => ItemNode::Label(l),
     <s: QuotedString> => ItemNode::String(s),
     <s:r"[0-9][0-9_]*"> => ItemNode::Integer(i128::from_str(s.replace("_", "").as_str()).unwrap()),
     <s:r"[0-9][0-9_]*\.[0-9_]+"> => ItemNode::Float(f64::from_str(s.replace("_", "").as_str()).unwrap()),
@@ -74,7 +74,7 @@ Label: Box<str> = {
 }
 
 QuotedLabel: Box<str> = {
-   <l:r#"'([^\\']|\\.)*'"#> => Box::from(l),
+   <l:r#"'([^\\']|\\.)*'"#> => crate::lang::ast::unescape(l).into_boxed_str(),
 }
 
 Field: Box<str> = {

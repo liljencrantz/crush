@@ -13,11 +13,11 @@ mod format;
 lazy_static! {
     pub static ref STRING_METHODS: HashMap<Box<str>, Box<CrushCommand + Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<CrushCommand + Send + Sync>> = HashMap::new();
-        res.insert(Box::from("upper"), Box::from(CrushCommand::command(upper, false)));
-        res.insert(Box::from("lower"), Box::from(CrushCommand::command(lower, false)));
-        res.insert(Box::from("split"), Box::from(CrushCommand::command(split, false)));
-        res.insert(Box::from("trim"), Box::from(CrushCommand::command(trim, false)));
-        res.insert(Box::from("format"), Box::from(CrushCommand::command(format::format, false)));
+        res.insert(Box::from("upper"), CrushCommand::command(upper, false));
+        res.insert(Box::from("lower"), CrushCommand::command(lower, false));
+        res.insert(Box::from("split"), CrushCommand::command(split, false));
+        res.insert(Box::from("trim"), CrushCommand::command(trim, false));
+        res.insert(Box::from("format"), CrushCommand::command(format::format, false));
         res
     };
 }

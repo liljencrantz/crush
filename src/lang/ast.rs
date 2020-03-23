@@ -93,7 +93,6 @@ impl AssignmentNode {
             AssignmentNode::Assignment(target, value) => {
                 match target {
                     ItemNode::Label(t) => Ok(ArgumentDefinition::named(t.deref(), value.generate_argument()?.unnamed_value()?)),
-                    ItemNode::QuotedLabel(t) => Ok(ArgumentDefinition::named(unescape(t).as_str(), value.generate_argument()?.unnamed_value()?)),
                     _ => error("Invalid left side in named argument"),
                 }
             }
@@ -115,11 +114,6 @@ impl AssignmentNode {
                         CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(SET.as_ref().clone())),
                             vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)])
-                    )),
-                    ItemNode::QuotedLabel(t) => Ok(Some(
-                        CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(SET.as_ref().clone())),
-                            vec![ArgumentDefinition::named(unescape(t).as_str(), value.generate_argument()?.unnamed_value()?)])
                     )),
                     ItemNode::GetItem(container, key) => Ok(Some(
                         CommandInvocation::new(
@@ -149,11 +143,6 @@ impl AssignmentNode {
                         CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(LET.as_ref().clone())),
                             vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)])
-                    )),
-                    ItemNode::QuotedLabel(t) => Ok(Some(
-                        CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(LET.as_ref().clone())),
-                            vec![ArgumentDefinition::named(unescape(t).as_str(), value.generate_argument()?.unnamed_value()?)])
                     )),
                     _ => error("Invalid left side in assignment"),
                     ItemNode::Integer(_) => error("Invalid left side in assignment"),
@@ -411,7 +400,6 @@ pub enum ItemNode {
     Glob(Box<str>),
     Label(Box<str>),
     Field(Box<str>),
-    QuotedLabel(Box<str>),
     String(Box<str>),
     Integer(i128),
     Float(f64),
@@ -422,7 +410,7 @@ pub enum ItemNode {
     Closure(JobListNode),
 }
 
-fn unescape(s: &str) -> String {
+pub fn unescape(s: &str) -> String {
     let mut res = "".to_string();
     let mut was_backslash = false;
     for c in s[1..s.len() - 1].chars() {
@@ -452,7 +440,6 @@ impl ItemNode {
     pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
         Ok(ArgumentDefinition::unnamed(match self {
             ItemNode::Label(l) => ValueDefinition::Label(l.clone()),
-            ItemNode::QuotedLabel(t) => ValueDefinition::Label(unescape(t).into_boxed_str()),
             ItemNode::String(t) => ValueDefinition::Value(Value::String(unescape(t).into_boxed_str())),
             ItemNode::Integer(i) => ValueDefinition::Value(Value::Integer(i.clone())),
             ItemNode::Float(f) => ValueDefinition::Value(Value::Float(f.clone())),
