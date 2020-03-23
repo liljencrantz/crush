@@ -3,7 +3,7 @@ use crate::lang::value::{Value, ValueType};
 use std::mem;
 use crate::lang::table::Row;
 use std::sync::{Mutex, Arc};
-use crate::lang::{command::SimpleCommand, command::CrushCommand};
+use crate::lang::command::CrushCommand;
 
 use lazy_static::lazy_static;
 use std::collections::HashMap;
@@ -57,7 +57,7 @@ impl Struct {
     fn root() -> Struct {
         Struct::create(vec![
             (Box::from("__setattr__"),
-             Value::Command(SimpleCommand::new(crate::lib::data::setattr, false).boxed())),
+             Value::Command(CrushCommand::command(crate::lib::data::setattr, false))),
         ], None)
     }
 

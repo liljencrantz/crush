@@ -26,7 +26,7 @@ use std::io::Read;
 
 pub use value_type::ValueType;
 pub use value_definition::ValueDefinition;
-use crate::lang::command::{CrushCommand, SimpleCommand};
+use crate::lang::command::CrushCommand;
 use std::collections::HashMap;
 
 pub enum Value {
@@ -37,7 +37,7 @@ pub enum Value {
     Field(Vec<Box<str>>),
     Glob(Glob),
     Regex(Box<str>, Regex),
-    Command(Box<dyn CrushCommand + Send>),
+    Command(Box<dyn CrushCommand + Send + Sync>),
     TableStream(InputStream),
     File(Box<Path>),
     Table(Table),
@@ -48,7 +48,7 @@ pub enum Value {
     Bool(bool),
     Float(f64),
     Empty(),
-    BinaryStream(Box<dyn BinaryReader>),
+    BinaryStream(Box<dyn BinaryReader + Send + Sync>),
     Binary(Vec<u8>),
     Type(ValueType),
 }
@@ -89,19 +89,19 @@ fn add_keys<T>(map: &HashMap<Box<str>, T>, res: &mut Vec<Box<str>>) {
 impl Value {
     pub fn field(&self, name: &str) -> Option<Value> {
         if name == "type" {
-            Some(Value::Command(SimpleCommand::new(crate::lib::r#type::r#type, false).boxed()))
+            Some(Value::Command(CrushCommand::command(crate::lib::r#type::r#type, false)))
         } else {
             match self {
                 Value::Struct(s) => s.clone().get(name),
                 Value::Scope(subenv) => subenv.get(name),
                 Value::List(list) =>
-                    crate::lib::data::list::LIST_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.boxed())),
+                    crate::lib::data::list::LIST_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.as_ref().clone())),
                 Value::Dict(dict) =>
-                    crate::lib::data::dict::DICT_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.boxed())),
+                    crate::lib::data::dict::DICT_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.as_ref().clone())),
                 Value::String(s) =>
-                    crate::lib::string::STRING_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.boxed())),
+                    crate::lib::string::STRING_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.as_ref().clone())),
                 Value::File(s) =>
-                    crate::lib::file::FILE_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.boxed())),
+                    crate::lib::file::FILE_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.as_ref().clone())),
                 _ => return None,
             }
         }
@@ -283,7 +283,7 @@ impl Clone for Value {
             Value::Field(v) => Value::Field(v.clone()),
             Value::Glob(v) => Value::Glob(v.clone()),
             Value::Regex(v, r) => Value::Regex(v.clone(), r.clone()),
-            Value::Command(v) => Value::Command(v.boxed()),
+            Value::Command(v) => Value::Command(v.as_ref().clone()),
             Value::File(v) => Value::File(v.clone()),
             Value::Table(r) => Value::Table(r.clone()),
             Value::Struct(r) => Value::Struct(r.clone()),

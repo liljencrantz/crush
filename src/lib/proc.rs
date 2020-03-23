@@ -8,7 +8,7 @@ use crate::{
 use psutil::process::State;
 use crate::lib::command_util::{create_user_map, UserMap};
 use users::uid_t;
-use crate::lang::{table::ColumnType, command::SimpleCommand};
+use crate::lang::{table::ColumnType};
 use chrono::Duration;
 use crate::lang::scope::Scope;
 use nix::sys::signal;
@@ -77,8 +77,8 @@ fn kill(context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("proc")?;
     root.r#use(&env);
-    env.declare("ps", Value::Command(SimpleCommand::new(ps, true).boxed()))?;
-    env.declare("kill", Value::Command(SimpleCommand::new(kill, false).boxed()))?;
+    env.declare("ps", Value::Command(CrushCommand::command(ps, true)))?;
+    env.declare("kill", Value::Command(CrushCommand::command(kill, false)))?;
     env.readonly();
     Ok(())
 }

@@ -19,7 +19,7 @@ impl Debug for ChannelReader {
 }
 
 impl BinaryReader for ChannelReader {
-    fn clone(&self) -> Box<dyn BinaryReader> {
+    fn clone(&self) -> Box<dyn BinaryReader + Send + Sync> {
         Box::from(ChannelReader { receiver: self.receiver.clone(), buff: None })
     }
 }
@@ -75,8 +75,8 @@ impl std::io::Write for ChannelWriter {
     }
 }
 
-pub trait BinaryReader: Read + Debug + Send {
-    fn clone(&self) -> Box<dyn BinaryReader>;
+pub trait BinaryReader: Read + Debug + Send + Sync {
+    fn clone(&self) -> Box<dyn BinaryReader + Send + Sync>;
 }
 
 struct FileReader {
@@ -102,21 +102,21 @@ impl Read for FileReader {
 }
 
 impl BinaryReader for FileReader {
-    fn clone(&self) -> Box<dyn BinaryReader> {
+    fn clone(&self) -> Box<dyn BinaryReader + Send + Sync> {
         Box::from(FileReader { file: self.file.try_clone().unwrap() })
     }
 }
 
 impl dyn BinaryReader {
-    pub fn path(file: &Path) -> CrushResult<Box<dyn BinaryReader>> {
+    pub fn path(file: &Path) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
         return Ok(Box::from(FileReader::new(to_crush_error(File::open(file))?)));
     }
 
-    pub fn paths(mut files: Vec<Box<Path>>) -> CrushResult<Box<dyn BinaryReader>> {
+    pub fn paths(mut files: Vec<Box<Path>>) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
         if files.len() == 1 {
             Ok(Box::from(FileReader::new(to_crush_error(File::open(files.remove(0)))?)))
         } else {
-            let mut readers: Vec<Box<dyn BinaryReader>> = Vec::new();
+            let mut readers: Vec<Box<dyn BinaryReader + Send + Sync>> = Vec::new();
 
             for p in files.drain(..) {
                 let f = to_crush_error(File::open(p).map(|f| Box::from(FileReader::new(f))))?;
@@ -126,13 +126,13 @@ impl dyn BinaryReader {
         }
     }
 
-    pub fn vec(vec: &Vec<u8>) -> Box<dyn BinaryReader> {
+    pub fn vec(vec: &Vec<u8>) -> Box<dyn BinaryReader + Send + Sync> {
         return Box::from(VecReader { vec: vec.clone(), offset: 0 });
     }
 }
 
 
-pub fn binary_channel() -> CrushResult<(Box<dyn Write>, Box<dyn BinaryReader>)> {
+pub fn binary_channel() -> CrushResult<(Box<dyn Write>, Box<dyn BinaryReader + Send + Sync>)> {
     let (s, r) = bounded(32);
     Ok((
         Box::from(ChannelWriter { sender: s }),
@@ -141,14 +141,14 @@ pub fn binary_channel() -> CrushResult<(Box<dyn Write>, Box<dyn BinaryReader>)> 
 }
 
 struct MultiReader {
-    inner: VecDeque<Box<dyn BinaryReader>>,
+    inner: VecDeque<Box<dyn BinaryReader + Send + Sync>>,
 }
 
 impl BinaryReader for MultiReader {
-    fn clone(&self) -> Box<dyn BinaryReader> {
+    fn clone(&self) -> Box<dyn BinaryReader + Send + Sync> {
         let vec = self.inner.iter()
             .map(|r| r.as_ref().clone())
-            .collect::<Vec<Box<dyn BinaryReader>>>();
+            .collect::<Vec<Box<dyn BinaryReader + Send + Sync>>>();
         Box::from(MultiReader { inner: VecDeque::from(vec) })
     }
 }
@@ -181,7 +181,7 @@ struct VecReader {
 }
 
 impl BinaryReader for VecReader {
-    fn clone(&self) -> Box<dyn BinaryReader> {
+    fn clone(&self) -> Box<dyn BinaryReader + Send + Sync> {
         Box::new(VecReader { vec: self.vec.clone(), offset: 0 })
     }
 }

@@ -1,6 +1,6 @@
 use crate::lang::command::{ExecutionContext, CrushCommand};
 use crate::lang::errors::{CrushResult, argument_error};
-use crate::lang::{command::SimpleCommand, value::Value};
+use crate::lang::{value::Value};
 use crate::lang::scope::Scope;
 use std::cmp::Ordering;
 
@@ -83,13 +83,13 @@ pub fn not(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("comp")?;
     root.r#use(&env);
-    env.declare("gt", Value::Command(SimpleCommand::new(gt, false).boxed()))?;
-    env.declare("gte", Value::Command(SimpleCommand::new(gte, false).boxed()))?;
-    env.declare("lt", Value::Command(SimpleCommand::new(lt, false).boxed()))?;
-    env.declare("lte", Value::Command(SimpleCommand::new(lte, false).boxed()))?;
-    env.declare("eq", Value::Command(SimpleCommand::new(eq, false).boxed()))?;
-    env.declare("neq", Value::Command(SimpleCommand::new(neq, false).boxed()))?;
-    env.declare("not", Value::Command(SimpleCommand::new(not, false).boxed()))?;
+    env.declare("gt", Value::Command(CrushCommand::command(gt, false)))?;
+    env.declare("gte", Value::Command(CrushCommand::command(gte, false)))?;
+    env.declare("lt", Value::Command(CrushCommand::command(lt, false)))?;
+    env.declare("lte", Value::Command(CrushCommand::command(lte, false)))?;
+    env.declare("eq", Value::Command(CrushCommand::command(eq, false)))?;
+    env.declare("neq", Value::Command(CrushCommand::command(neq, false)))?;
+    env.declare("not", Value::Command(CrushCommand::command(not, false)))?;
     env.readonly();
     Ok(())
 }

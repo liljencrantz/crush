@@ -19,7 +19,6 @@ pub mod constants;
 use crate::{
     lang::argument::Argument,
     lang::scope::Scope,
-    lang::command::SimpleCommand,
     lang::value::Value,
     lang::errors::CrushResult,
     lang::stream::{ValueReceiver, ValueSender, InputStream}

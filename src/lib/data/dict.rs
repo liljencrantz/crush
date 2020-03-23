@@ -1,6 +1,6 @@
 use crate::lang::command::{ExecutionContext, CrushCommand, This};
 use crate::lang::errors::{CrushResult, argument_error, error};
-use crate::lang::{value::ValueType, dict::Dict, command::SimpleCommand};
+use crate::lang::{value::ValueType, dict::Dict};
 use crate::lang::table::Row;
 use crate::lang::value::Value;
 use crate::lang::table::ColumnType;
@@ -10,15 +10,15 @@ use std::collections::HashMap;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref DICT_METHODS: HashMap<Box<str>, Box<CrushCommand + Sync>> = {
-        let mut res: HashMap<Box<str>, Box<CrushCommand + Sync>> = HashMap::new();
-        res.insert(Box::from("len"), Box::from(SimpleCommand::new(len, false)));
-        res.insert(Box::from("empty"), Box::from(SimpleCommand::new(empty, false)));
-//        res.insert(Box::from("clear"), Box::from(SimpleCommand::new(clear, false)));
-        res.insert(Box::from("__setitem__"), Box::from(SimpleCommand::new(setitem, false)));
-        res.insert(Box::from("__getitem__"), Box::from(SimpleCommand::new(getitem, false)));
-        res.insert(Box::from("remove"), Box::from(SimpleCommand::new(remove, false)));
-//        res.insert(Box::from("clone"), Box::from(SimpleCommand::new(clone, false)));
+    pub static ref DICT_METHODS: HashMap<Box<str>, Box<CrushCommand + Sync + Send>> = {
+        let mut res: HashMap<Box<str>, Box<CrushCommand + Send + Sync>> = HashMap::new();
+        res.insert(Box::from("len"), Box::from(CrushCommand::command(len, false)));
+        res.insert(Box::from("empty"), Box::from(CrushCommand::command(empty, false)));
+//        res.insert(Box::from("clear"), Box::from(CrushCommand::command(clear, false)));
+        res.insert(Box::from("__setitem__"), Box::from(CrushCommand::command(setitem, false)));
+        res.insert(Box::from("__getitem__"), Box::from(CrushCommand::command(getitem, false)));
+        res.insert(Box::from("remove"), Box::from(CrushCommand::command(remove, false)));
+//        res.insert(Box::from("clone"), Box::from(CrushCommand::command(clone, false)));
         res
     };
 }
@@ -86,7 +86,7 @@ fn empty(context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("dict")?;
-    env.declare("new", Value::Command(SimpleCommand::new(new, false).boxed()))?;
+    env.declare("new", Value::Command(CrushCommand::command(new, false)))?;
     env.readonly();
     Ok(())
 }

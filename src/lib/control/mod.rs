@@ -1,6 +1,6 @@
 use crate::lang::scope::Scope;
 use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
-use crate::lang::{value::Value, command::SimpleCommand, list::List, value::ValueType, command::ConditionCommand, command::ExecutionContext, binary::BinaryReader};
+use crate::lang::{value::Value, list::List, value::ValueType, command::ExecutionContext, binary::BinaryReader};
 use std::env;
 
 mod r#if;
@@ -54,13 +54,13 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     });
     env.declare("cmd_path", Value::List(path));
 
-    env.declare("if", Value::Command(ConditionCommand::new(r#if::perform).boxed()))?;
-    env.declare("while", Value::Command(ConditionCommand::new(r#while::perform).boxed()))?;
-    env.declare("loop", Value::Command(ConditionCommand::new(r#loop::perform).boxed()))?;
-    env.declare("for", Value::Command(ConditionCommand::new(r#for::perform).boxed()))?;
-    env.declare("break", Value::Command(SimpleCommand::new(r#break, false).boxed()))?;
-    env.declare("continue", Value::Command(SimpleCommand::new(r#continue, false).boxed()))?;
-    env.declare("cmd", Value::Command(SimpleCommand::new(cmd, true).boxed()))?;
+    env.declare("if", Value::Command(CrushCommand::condition(r#if::perform)))?;
+    env.declare("while", Value::Command(CrushCommand::condition(r#while::perform)))?;
+    env.declare("loop", Value::Command(CrushCommand::condition(r#loop::perform)))?;
+    env.declare("for", Value::Command(CrushCommand::condition(r#for::perform)))?;
+    env.declare("break", Value::Command(CrushCommand::command(r#break, false)))?;
+    env.declare("continue", Value::Command(CrushCommand::command(r#continue, false)))?;
+    env.declare("cmd", Value::Command(CrushCommand::command(cmd, true)))?;
     env.readonly();
 
     Ok(())

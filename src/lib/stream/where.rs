@@ -12,12 +12,11 @@ use crate::lang::errors::{error, CrushResult, argument_error};
 use crate::lang::printer::printer;
 use crate::lang::stream::{Readable, empty_channel, channels, ValueSender};
 use crate::lang::{table::TableReader, table::ColumnType, argument::Argument};
-use crate::lang::command::Closure;
 use crate::lang::stream_printer::spawn_print_thread;
 use crate::lang::scope::Scope;
 use crate::lang::command::CrushCommand;
 
-fn evaluate(condition: Box<dyn CrushCommand>, row: &Row, input_type: &Vec<ColumnType>, env: &Scope) -> CrushResult<bool> {
+fn evaluate(condition: Box<dyn CrushCommand + Send + Sync>, row: &Row, input_type: &Vec<ColumnType>, env: &Scope) -> CrushResult<bool> {
     let arguments = row.clone().into_vec()
         .drain(..)
         .zip(input_type.iter())
@@ -40,11 +39,11 @@ fn evaluate(condition: Box<dyn CrushCommand>, row: &Row, input_type: &Vec<Column
     }
 }
 
-pub fn run(mut condition: Box<dyn CrushCommand>, input: &mut dyn Readable, output: OutputStream, env: Scope) -> CrushResult<()> {
+pub fn run(mut condition: Box<dyn CrushCommand + Send + Sync>, input: &mut dyn Readable, output: OutputStream, env: Scope) -> CrushResult<()> {
     loop {
         match input.read() {
             Ok(row) => {
-                match evaluate(condition.boxed()    , &row, input.types(), &env) {
+                match evaluate(condition.clone(), &row, input.types(), &env) {
                     Ok(val) => if val { if output.send(row).is_err() { break }},
                     Err(e) => printer().job_error(e),
                 }
@@ -56,7 +55,7 @@ pub fn run(mut condition: Box<dyn CrushCommand>, input: &mut dyn Readable, outpu
 }
 
 pub fn parse(_input_type: &Vec<ColumnType>,
-             arguments: &mut Vec<Argument>) -> CrushResult<Box<dyn CrushCommand>> {
+             arguments: &mut Vec<Argument>) -> CrushResult<Box<dyn CrushCommand + Send + Sync>> {
     match arguments.remove(0).value {
         Value::Command(c) => Ok(c),
         _ => argument_error("Expected a closure"),

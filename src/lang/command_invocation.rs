@@ -1,11 +1,11 @@
-use crate::lang::{command::ExecutionContext, job::JobJoinHandle, command::SimpleCommand, value::ValueDefinition};
+use crate::lang::{command::ExecutionContext, job::JobJoinHandle, command::CrushCommand, value::ValueDefinition};
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, value::Value};
 use crate::lang::scope::Scope;
 use crate::lang::errors::{error, CrushResult, Kind};
 use crate::lang::printer::printer;
 use crate::lang::stream::{ValueReceiver, ValueSender};
 use crate::util::thread::{handle, build};
-use crate::lang::command::{CrushCommand, This};
+use crate::lang::command::This;
 use std::path::Path;
 use crate::lang::argument::Argument;
 
@@ -175,13 +175,13 @@ fn invoke_value(
                 let meta = f.metadata();
                 if meta.is_ok() && meta.unwrap().is_dir() {
                     invoke_command(
-                        Box::from(SimpleCommand::new(crate::lib::file::cd, false)),
+                        CrushCommand::command(crate::lib::file::cd, false),
                         None,
                         vec![ArgumentDefinition::unnamed(ValueDefinition::Value(Value::File(f)))],
                         local_env, input, output)
                 } else {
                     invoke_command(
-                        Box::from(SimpleCommand::new(crate::lib::io::val, false)),
+                        CrushCommand::command(crate::lib::io::val, false),
                         None,
                         vec![ArgumentDefinition::unnamed(ValueDefinition::Value(Value::File(f)))],
                         local_env, input, output)
@@ -192,7 +192,7 @@ fn invoke_value(
         _ =>
             if local_arguments.len() == 0 {
                 invoke_command(
-                    Box::from(SimpleCommand::new(crate::lib::io::val, false)),
+                    CrushCommand::command(crate::lib::io::val, false),
                     None,
                     vec![ArgumentDefinition::unnamed(ValueDefinition::Value(value))],
                     local_env, input, output)
@@ -244,7 +244,7 @@ fn try_external_command(p: &str, mut arguments: Vec<ArgumentDefinition>, env: &S
                 0,
                 ArgumentDefinition::unnamed(ValueDefinition::Value(Value::File(path))));
             let cmd = CommandInvocation {
-                command: ValueDefinition::Value(Value::Command(SimpleCommand::new(crate::lib::cmd, true).boxed())),
+                command: ValueDefinition::Value(Value::Command(CrushCommand::command(crate::lib::cmd, true))),
                 arguments,
             };
             cmd.invoke(env, input, output)

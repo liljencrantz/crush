@@ -6,7 +6,6 @@ use crate::{
     lang::scope::Scope,
     lang::value::Value,
     lang::job::JobJoinHandle,
-    lang::command::Closure,
     lang::stream::channels,
     lang::stream::empty_channel,
 };
@@ -49,7 +48,7 @@ impl ValueDefinition {
         match self {
             ValueDefinition::ClosureDefinition(c) => {
                 if c.len() == 1 {
-                    Closure::new(c.clone(), env).can_block(arg, env)
+                    CrushCommand::closure(c.clone(), env).can_block(arg, env)
                 } else {
                     true
                 }
@@ -82,7 +81,7 @@ impl ValueDefinition {
                 dependencies.push(j);
                 (None, last_input.recv()?)
             }
-            ValueDefinition::ClosureDefinition(c) => (None, Value::Command(Box::from(Closure::new(c.clone(), env)))),
+            ValueDefinition::ClosureDefinition(c) => (None, Value::Command(CrushCommand::closure(c.clone(), env))),
             ValueDefinition::Label(s) =>
                 (None, mandate(
                     env.get(s).or_else(|| file_get(s)),

@@ -30,7 +30,7 @@ fn run(input: Box<dyn BinaryReader>, output: OutputStream) -> CrushResult<()> {
     Ok(())
 }
 
-fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Box<dyn BinaryReader>> {
+fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
     match arguments.len() {
         0 => {
             let v = input.recv()?;

@@ -1,9 +1,8 @@
 use crate::lang::command::{ExecutionContext, CrushCommand, This};
 use crate::lang::errors::{CrushResult, argument_error};
-use crate::lang::{command::SimpleCommand, value::Value};
+use crate::lang::{value::Value};
 use crate::lang::scope::Scope;
 use std::cmp::Ordering;
-use crate::lang::command::ConditionCommand;
 use crate::lang::stream::{empty_channel, channels};
 
 pub fn and(mut context: ExecutionContext) -> CrushResult<()> {
@@ -82,8 +81,8 @@ pub fn or(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("cond")?;
     root.r#use(&env);
-    env.declare("and", Value::Command(ConditionCommand::new(and).boxed()))?;
-    env.declare("or", Value::Command(ConditionCommand::new(or).boxed()))?;
+    env.declare("and", Value::Command(CrushCommand::condition(and)))?;
+    env.declare("or", Value::Command(CrushCommand::condition(or)))?;
     env.readonly();
     Ok(())
 }

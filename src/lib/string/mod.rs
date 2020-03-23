@@ -2,7 +2,7 @@ use crate::lang::scope::Scope;
 use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{command::ExecutionContext, value::ValueType, list::List};
 use crate::lib::parse_util::{single_argument, two_arguments, single_argument_field, single_argument_text};
-use crate::lang::{value::Value, command::SimpleCommand, argument::Argument};
+use crate::lang::{value::Value, argument::Argument};
 use nix::sys::ptrace::cont;
 use crate::lang::command::{CrushCommand, This};
 use std::collections::HashMap;
@@ -11,13 +11,13 @@ use lazy_static::lazy_static;
 mod format;
 
 lazy_static! {
-    pub static ref STRING_METHODS: HashMap<Box<str>, Box<CrushCommand + Sync>> = {
-        let mut res: HashMap<Box<str>, Box<CrushCommand + Sync>> = HashMap::new();
-        res.insert(Box::from("upper"), Box::from(SimpleCommand::new(upper, false)));
-        res.insert(Box::from("lower"), Box::from(SimpleCommand::new(lower, false)));
-        res.insert(Box::from("split"), Box::from(SimpleCommand::new(split, false)));
-        res.insert(Box::from("trim"), Box::from(SimpleCommand::new(trim, false)));
-        res.insert(Box::from("format"), Box::from(SimpleCommand::new(format::format, false)));
+    pub static ref STRING_METHODS: HashMap<Box<str>, Box<CrushCommand + Sync + Send>> = {
+        let mut res: HashMap<Box<str>, Box<CrushCommand + Send + Sync>> = HashMap::new();
+        res.insert(Box::from("upper"), Box::from(CrushCommand::command(upper, false)));
+        res.insert(Box::from("lower"), Box::from(CrushCommand::command(lower, false)));
+        res.insert(Box::from("split"), Box::from(CrushCommand::command(split, false)));
+        res.insert(Box::from("trim"), Box::from(CrushCommand::command(trim, false)));
+        res.insert(Box::from("format"), Box::from(CrushCommand::command(format::format, false)));
         res
     };
 }
@@ -53,11 +53,11 @@ fn trim(mut context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("string")?;
-    env.declare("upper", Value::Command(SimpleCommand::new(upper, false).boxed()))?;
-    env.declare("lower", Value::Command(SimpleCommand::new(lower, false).boxed()))?;
-    env.declare("format", Value::Command(SimpleCommand::new(format::format, false).boxed()))?;
-    env.declare("split", Value::Command(SimpleCommand::new(split, false).boxed()))?;
-    env.declare("trim", Value::Command(SimpleCommand::new(trim, false).boxed()))?;
+    env.declare("upper", Value::Command(CrushCommand::command(upper, false)))?;
+    env.declare("lower", Value::Command(CrushCommand::command(lower, false)))?;
+    env.declare("format", Value::Command(CrushCommand::command(format::format, false)))?;
+    env.declare("split", Value::Command(CrushCommand::command(split, false)))?;
+    env.declare("trim", Value::Command(CrushCommand::command(trim, false)))?;
     env.readonly();
     Ok(())
 }

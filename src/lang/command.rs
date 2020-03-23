@@ -102,20 +102,34 @@ pub trait CrushCommand {
     fn invoke(&self, context: ExecutionContext) -> CrushResult<()>;
     fn can_block(&self, arguments: &Vec<ArgumentDefinition>, env: &Scope) -> bool;
     fn name(&self) -> &str;
-    fn boxed(&self) -> Box<dyn CrushCommand + Send>;
+    fn clone(&self) -> Box<dyn CrushCommand + Send + Sync>;
+}
+
+
+impl dyn CrushCommand {
+    pub fn closure(job_definitions: Vec<Job>, env: &Scope) -> Box<dyn CrushCommand + Send + Sync> {
+        Box::from(Closure {
+            job_definitions,
+            env: env.clone(),
+        })
+    }
+
+    pub fn command(call: fn(context: ExecutionContext) -> CrushResult<()>, can_block: bool) -> Box<dyn CrushCommand + Send + Sync> {
+        Box::from(SimpleCommand { call, can_block })
+    }
+
+    pub fn condition(call: fn(context: ExecutionContext) -> CrushResult<()>) -> Box<dyn CrushCommand + Send + Sync> {
+        Box::from(ConditionCommand { call })
+    }
+
 }
 
 #[derive(Clone)]
-pub struct SimpleCommand {
+struct SimpleCommand {
     pub call: fn(context: ExecutionContext) -> CrushResult<()>,
     pub can_block: bool,
 }
 
-impl SimpleCommand {
-    pub fn new(call: fn(context: ExecutionContext) -> CrushResult<()>, can_block: bool) -> SimpleCommand {
-        return SimpleCommand { call, can_block };
-    }
-}
 
 impl CrushCommand for SimpleCommand {
     fn invoke(&self, context: ExecutionContext) -> CrushResult<()> {
@@ -129,8 +143,8 @@ impl CrushCommand for SimpleCommand {
         self.can_block
     }
 
-    fn boxed(&self) -> Box<dyn CrushCommand + Send> {
-        Box::from(self.clone())
+    fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {
+        Box::from(SimpleCommand {call: self.call, can_block: self.can_block})
     }
 }
 
@@ -149,14 +163,8 @@ impl std::fmt::Debug for SimpleCommand {
 }
 
 #[derive(Clone)]
-pub struct ConditionCommand {
+struct ConditionCommand {
     call: fn(context: ExecutionContext) -> CrushResult<()>,
-}
-
-impl ConditionCommand {
-    pub fn new(call: fn(context: ExecutionContext) -> CrushResult<()>) -> ConditionCommand {
-        return ConditionCommand { call };
-    }
 }
 
 impl CrushCommand for ConditionCommand {
@@ -176,8 +184,8 @@ impl CrushCommand for ConditionCommand {
         false
     }
 
-    fn boxed(&self) -> Box<dyn CrushCommand + Send> {
-        Box::from(self.clone())
+    fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {
+        Box::from(ConditionCommand{call: self.call})
     }
 }
 
@@ -189,14 +197,8 @@ impl std::cmp::PartialEq for ConditionCommand {
 
 impl std::cmp::Eq for ConditionCommand {}
 
-impl std::fmt::Debug for ConditionCommand {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Command")
-    }
-}
-
 #[derive(Clone)]
-pub struct Closure {
+struct Closure {
     job_definitions: Vec<Job>,
     env: Scope,
 }
@@ -265,18 +267,12 @@ impl CrushCommand for Closure {
         }
     }
 
-    fn boxed(&self) -> Box<dyn CrushCommand + Send> {
-        Box::from(self.clone())
+    fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {
+        Box::from(Closure {job_definitions: self.job_definitions.clone(), env: self.env.clone()})
     }
 }
 
 impl Closure {
-    pub fn new(job_definitions: Vec<Job>, env: &Scope) -> Closure {
-        Closure {
-            job_definitions,
-            env: env.clone(),
-        }
-    }
     /*
         pub fn spawn_stream(&self, context: StreamExecutionContext) -> CrushResult<()> {
             let job_definitions = self.job_definitions.clone();

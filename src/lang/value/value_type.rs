@@ -48,10 +48,6 @@ impl ValueType {
             .collect()
     }
 
-    pub fn method(&self, name: &str) -> Option<&'static Box<dyn CrushCommand + Sync>> {
-        LIST_METHODS.get(&Box::from(name))
-    }
-
     pub fn materialize(&self) -> ValueType {
         match self {
             ValueType::String |

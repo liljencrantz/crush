@@ -1,6 +1,6 @@
 use crate::lang::scope::Scope;
 use crate::lang::errors::CrushResult;
-use crate::lang::{value::Value, command::SimpleCommand};
+use crate::lang::{value::Value};
 use crate::lang::command::CrushCommand;
 
 mod head;
@@ -25,21 +25,21 @@ mod seq;
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("stream")?;
     root.r#use(&env);
-    env.declare("head", Value::Command(SimpleCommand::new(head::perform, true).boxed()))?;
-    env.declare("tail", Value::Command(SimpleCommand::new(tail::perform, true).boxed()))?;
-    env.declare("where", Value::Command(SimpleCommand::new(r#where::perform, true).boxed()))?;
-    env.declare("sort", Value::Command(SimpleCommand::new(sort::perform, true).boxed()))?;
-    env.declare("reverse", Value::Command(SimpleCommand::new(reverse::perform, true).boxed()))?;
-    env.declare("group", Value::Command(SimpleCommand::new(group::perform, true).boxed()))?;
-    env.declare("join", Value::Command(SimpleCommand::new(join::perform, true).boxed()))?;
-    env.declare("uniq", Value::Command(SimpleCommand::new(uniq::perform, true).boxed()))?;
-    //env.declare_str("aggr", Value::Command(SimpleCommand::new(aggr::perform)))?;
-    env.declare("count", Value::Command(SimpleCommand::new(count::perform, true).boxed()))?;
-    env.declare("sum", Value::Command(SimpleCommand::new(sum::perform, true).boxed()))?;
-    env.declare("select", Value::Command(SimpleCommand::new(select::perform, true).boxed()))?;
-    env.declare("enumerate", Value::Command(SimpleCommand::new(enumerate::perform, true).boxed()))?;
-    env.declare("zip", Value::Command(SimpleCommand::new(zip::perform, true).boxed()))?;
-    env.declare("seq", Value::Command(SimpleCommand::new(seq::perform, true).boxed()))?;
+    env.declare("head", Value::Command(CrushCommand::command(head::perform, true)))?;
+    env.declare("tail", Value::Command(CrushCommand::command(tail::perform, true)))?;
+    env.declare("where", Value::Command(CrushCommand::command(r#where::perform, true)))?;
+    env.declare("sort", Value::Command(CrushCommand::command(sort::perform, true)))?;
+    env.declare("reverse", Value::Command(CrushCommand::command(reverse::perform, true)))?;
+    env.declare("group", Value::Command(CrushCommand::command(group::perform, true)))?;
+    env.declare("join", Value::Command(CrushCommand::command(join::perform, true)))?;
+    env.declare("uniq", Value::Command(CrushCommand::command(uniq::perform, true)))?;
+    //env.declare_str("aggr", Value::Command(CrushCommand::command(aggr::perform)))?;
+    env.declare("count", Value::Command(CrushCommand::command(count::perform, true)))?;
+    env.declare("sum", Value::Command(CrushCommand::command(sum::perform, true)))?;
+    env.declare("select", Value::Command(CrushCommand::command(select::perform, true)))?;
+    env.declare("enumerate", Value::Command(CrushCommand::command(enumerate::perform, true)))?;
+    env.declare("zip", Value::Command(CrushCommand::command(zip::perform, true)))?;
+    env.declare("seq", Value::Command(CrushCommand::command(seq::perform, true)))?;
     env.readonly();
     Ok(())
 }

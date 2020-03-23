@@ -16,7 +16,6 @@ use crate::lib::command_util::find_field;
 use crate::lang::stream::{Readable, ValueSender, empty_channel, channels};
 use crate::lang::errors::error;
 use crate::lang::{r#struct::Struct, table::TableReader};
-use crate::lang::command::Closure;
 use crate::lang::scope::Scope;
 
 enum Location {

@@ -1,6 +1,6 @@
 use crate::lang::{command::ExecutionContext, table::ColumnType, argument::Argument};
 use crate::lang::errors::{CrushResult, argument_error, mandate};
-use crate::lang::{value::Value, command::SimpleCommand, value::ValueType};
+use crate::lang::{value::Value, value::ValueType};
 use crate::lang::scope::Scope;
 use crate::lib::parse_util::{two_arguments, single_argument_type};
 use crate::lang::argument::column_names;
@@ -58,14 +58,14 @@ fn r#table_stream(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("type")?;
 
-    env.declare("to", Value::Command(SimpleCommand::new(to, true).boxed()))?;
-//    env.declare("of", Value::Command(SimpleCommand::new(of, false).boxed()))?;
+    env.declare("to", Value::Command(CrushCommand::command(to, true)))?;
+//    env.declare("of", Value::Command(CrushCommand::command(of, false)))?;
 
-    env.declare("list", Value::Command(SimpleCommand::new(list, false).boxed()))?;
-    env.declare("dict", Value::Command(SimpleCommand::new(dict, false).boxed()))?;
-    env.declare("struct", Value::Command(SimpleCommand::new(r#struct, false).boxed()))?;
-    env.declare("table", Value::Command(SimpleCommand::new(table, false).boxed()))?;
-    env.declare("table_stream", Value::Command(SimpleCommand::new(table_stream, false).boxed()))?;
+    env.declare("list", Value::Command(CrushCommand::command(list, false)))?;
+    env.declare("dict", Value::Command(CrushCommand::command(dict, false)))?;
+    env.declare("struct", Value::Command(CrushCommand::command(r#struct, false)))?;
+    env.declare("table", Value::Command(CrushCommand::command(table, false)))?;
+    env.declare("table_stream", Value::Command(CrushCommand::command(table_stream, false)))?;
 
     env.declare("integer", Value::Type(ValueType::Integer))?;
     env.declare("type", Value::Type(ValueType::Type))?;

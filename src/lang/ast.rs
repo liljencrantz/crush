@@ -4,27 +4,34 @@ use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::argument::ArgumentDefinition;
 use crate::lang::value::{ValueDefinition, Value};
 use std::ops::Deref;
-use crate::lang::command::{SimpleCommand, CrushCommand};
+use crate::lang::command::CrushCommand;
 use crate::util::glob::Glob;
+use lazy_static::lazy_static;
+use crate::lib::math;
+use crate::lib::comp;
+use crate::lib::cond;
+use crate::lib::var;
 
-static ADD: SimpleCommand = SimpleCommand { call:crate::lib::math::add, can_block:false};
-static SUB: SimpleCommand = SimpleCommand { call:crate::lib::math::sub, can_block:false};
-static MUL: SimpleCommand = SimpleCommand { call:crate::lib::math::mul, can_block:false};
-static DIV: SimpleCommand = SimpleCommand { call:crate::lib::math::div, can_block:false};
+lazy_static! {
+    pub static ref ADD: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(math::add, false)};
+    pub static ref SUB: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(math::sub, false)};
+    pub static ref MUL: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(math::mul, false)};
+    pub static ref DIV: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(math::div, false)};
 
-static LT: SimpleCommand = SimpleCommand { call:crate::lib::comp::lt, can_block:true};
-static LTE: SimpleCommand = SimpleCommand { call:crate::lib::comp::lte, can_block:true};
-static GT: SimpleCommand = SimpleCommand { call:crate::lib::comp::gt, can_block:true};
-static GTE: SimpleCommand = SimpleCommand { call:crate::lib::comp::gte, can_block:true};
-static EQ: SimpleCommand = SimpleCommand { call:crate::lib::comp::eq, can_block:true};
-static NEQ: SimpleCommand = SimpleCommand { call:crate::lib::comp::neq, can_block:true};
-static NOT: SimpleCommand = SimpleCommand { call:crate::lib::comp::not, can_block:true};
+    pub static ref LT: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(comp::lt, false)};
+    pub static ref LTE: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(comp::lte, false)};
+    pub static ref GT: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(comp::gt, false)};
+    pub static ref GTE: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(comp::gte, false)};
+    pub static ref EQ: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(comp::eq, false)};
+    pub static ref NEQ: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(comp::neq, false)};
+    pub static ref NOT: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(comp::not, false)};
 
-static AND: SimpleCommand = SimpleCommand { call:crate::lib::cond::and, can_block:true};
-static OR: SimpleCommand = SimpleCommand { call:crate::lib::cond::or, can_block:true};
+    pub static ref AND: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(cond::and, false)};
+    pub static ref OR: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(cond::or, false)};
 
-static LET: SimpleCommand = SimpleCommand { call:crate::lib::var::r#let, can_block:false};
-static SET: SimpleCommand = SimpleCommand { call:crate::lib::var::set, can_block:false};
+    pub static ref LET: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(var::r#let, false)};
+    pub static ref SET: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(var::set, false)};
+}
 
 #[derive(Debug)]
 pub struct JobListNode {
@@ -106,12 +113,12 @@ impl AssignmentNode {
                 match target {
                     ItemNode::Label(t) => Ok(Some(
                         CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(SET.boxed())),
+                            ValueDefinition::Value(Value::Command(SET.as_ref().clone())),
                             vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)])
                     )),
                     ItemNode::QuotedLabel(t) => Ok(Some(
                         CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(SET.boxed())),
+                            ValueDefinition::Value(Value::Command(SET.as_ref().clone())),
                             vec![ArgumentDefinition::named(unescape(t).as_str(), value.generate_argument()?.unnamed_value()?)])
                     )),
                     ItemNode::GetItem(container, key) => Ok(Some(
@@ -140,12 +147,12 @@ impl AssignmentNode {
                 match target {
                     ItemNode::Label(t) => Ok(Some(
                         CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(LET.boxed())),
+                            ValueDefinition::Value(Value::Command(LET.as_ref().clone())),
                             vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)])
                     )),
                     ItemNode::QuotedLabel(t) => Ok(Some(
                         CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(LET.boxed())),
+                            ValueDefinition::Value(Value::Command(LET.as_ref().clone())),
                             vec![ArgumentDefinition::named(unescape(t).as_str(), value.generate_argument()?.unnamed_value()?)])
                     )),
                     _ => error("Invalid left side in assignment"),
@@ -172,13 +179,13 @@ impl LogicalNode {
                 match op.as_ref() {
                     "&&" => {
                         Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(AND.boxed())),
+                            ValueDefinition::Value(Value::Command(AND.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "||" => {
                         Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(OR.boxed())),
+                            ValueDefinition::Value(Value::Command(OR.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
@@ -218,37 +225,37 @@ impl ComparisonNode {
                 match op.as_ref() {
                     "<" => {
                         Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(LT.boxed())),
+                            ValueDefinition::Value(Value::Command(LT.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "<=" => {
                         Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(LTE.boxed())),
+                            ValueDefinition::Value(Value::Command(LTE.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     ">" => {
                         Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(GT.boxed())),
+                            ValueDefinition::Value(Value::Command(GT.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     ">=" => {
                         Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(GTE.boxed())),
+                            ValueDefinition::Value(Value::Command(GTE.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "==" => {
                         Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(EQ.boxed())),
+                            ValueDefinition::Value(Value::Command(EQ.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "!=" => {
                         Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(NEQ.boxed())),
+                            ValueDefinition::Value(Value::Command(NEQ.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
@@ -289,13 +296,13 @@ impl TermNode {
                 match op.as_ref() {
                     "+" => {
                         Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(ADD.boxed())),
+                            ValueDefinition::Value(Value::Command(ADD.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "-" => {
                         Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(SUB.boxed())),
+                            ValueDefinition::Value(Value::Command(SUB.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
@@ -334,13 +341,13 @@ impl FactorNode {
                 match op.as_ref() {
                     "*" => {
                         Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(MUL.boxed())),
+                            ValueDefinition::Value(Value::Command(MUL.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
                     "//" => {
                         Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(DIV.boxed())),
+                            ValueDefinition::Value(Value::Command(DIV.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         ))
                     }
@@ -385,7 +392,7 @@ impl UnaryNode {
                     "!" => {
                         Ok(ArgumentDefinition::unnamed(ValueDefinition::JobDefinition(
                             Job::new(vec![CommandInvocation::new(
-                                ValueDefinition::Value(Value::Command(NOT.boxed())),
+                                ValueDefinition::Value(Value::Command(NOT.as_ref().clone())),
                                 vec![r.generate_argument()?])
                             ]))))
                     }

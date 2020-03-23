@@ -1,6 +1,6 @@
 use crate::lang::command::{ExecutionContext, CrushCommand};
 use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
-use crate::lang::{value::Value, command::SimpleCommand};
+use crate::lang::{value::Value};
 use crate::lang::scope::Scope;
 use chrono::{Local, Duration, Datelike, Timelike};
 use time::{strptime, Tm};
@@ -87,9 +87,9 @@ fn duration(mut context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("time")?;
-    env.declare("now", Value::Command(SimpleCommand::new(now, false).boxed()))?;
-    env.declare("parse", Value::Command(SimpleCommand::new(parse, false).boxed()))?;
-    env.declare("duration", Value::Command(SimpleCommand::new(duration, false).boxed()))?;
+    env.declare("now", Value::Command(CrushCommand::command(now, false)))?;
+    env.declare("parse", Value::Command(CrushCommand::command(parse, false)))?;
+    env.declare("duration", Value::Command(CrushCommand::command(duration, false)))?;
     env.readonly();
     Ok(())
 }
