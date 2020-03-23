@@ -3,12 +3,11 @@ use crate::{
     lang::errors::argument_error,
     lang::stream::{OutputStream},
 };
-use crate::lang::command::ExecutionContext;
+use crate::lang::command::{ExecutionContext, ArgumentVector};
 use crate::lang::{argument::Argument, value::Value, table::Row, table::TableReader};
 use crate::lang::errors::{CrushResult, error};
 use crate::lib::command_util::find_field;
 use crate::lang::stream::Readable;
-use crate::lib::parse_util::single_argument_field;
 use crate::lang::table::ColumnType;
 
 pub struct Config {
@@ -16,7 +15,7 @@ pub struct Config {
 }
 
 fn parse(
-    arguments: Vec<Argument>,
+    mut arguments: Vec<Argument>,
     types: &Vec<ColumnType>) -> CrushResult<Config> {
     let sort_column_idx =
         match arguments.len() {
@@ -26,7 +25,7 @@ fn parse(
                 }
                 0
             }
-            1 => find_field(&single_argument_field(arguments)?, types)?,
+            1 => find_field(&arguments.field(0)?, types)?,
             _ => return argument_error("Too many arguments")
         };
     if !types[sort_column_idx].cell_type.is_comparable() {

@@ -2,12 +2,11 @@ use crate::lang::{command::ExecutionContext, table::ColumnType, argument::Argume
 use crate::lang::errors::{CrushResult, argument_error, mandate};
 use crate::lang::{value::Value, value::ValueType};
 use crate::lang::scope::Scope;
-use crate::lib::parse_util::{two_arguments, single_argument_type};
 use crate::lang::argument::column_names;
-use crate::lang::command::CrushCommand;
+use crate::lang::command::{CrushCommand, ArgumentVector};
 
 fn to(mut context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(context.input.recv()?.cast(single_argument_type(context.arguments)?)?)
+    context.output.send(context.input.recv()?.cast(context.arguments.r#type(0)?)?)
 }
 
 pub fn r#type(mut context: ExecutionContext) -> CrushResult<()> {
@@ -15,18 +14,15 @@ pub fn r#type(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn list(mut context: ExecutionContext) -> CrushResult<()> {
-    let l = single_argument_type(context.arguments)?;
+    let l = context.arguments.r#type(0)?;
     context.output.send(Value::Type(ValueType::List(Box::new(l))))
 }
 
 fn dict(mut context: ExecutionContext) -> CrushResult<()> {
-    two_arguments(&context.arguments)?;
-    match (context.arguments.remove(0).value, context.arguments.remove(0).value) {
-        (Value::Type(key_type), Value::Type(value_type)) => {
-            context.output.send(Value::Type(ValueType::Dict(Box::new(key_type), Box::new(value_type))))
-        }
-        _ => return argument_error("Expected two types as input")
-    }
+    context.arguments.check_len(2)?;
+    let key_type = context.arguments.r#type(0)?;
+    let value_type = context.arguments.r#type(1)?;
+    context.output.send(Value::Type(ValueType::Dict(Box::new(key_type), Box::new(value_type))))
 }
 
 fn parse_column_types(mut arguments: Vec<Argument>) -> CrushResult<Vec<ColumnType>> {

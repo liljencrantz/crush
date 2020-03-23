@@ -1,10 +1,9 @@
-use crate::lang::command::{ExecutionContext, This};
+use crate::lang::command::{ExecutionContext, This, ArgumentVector};
 use crate::lang::errors::{CrushResult, argument_error, error};
 use crate::lang::{value::ValueType, list::List, command::CrushCommand};
 use crate::lang::value::Value;
 use std::collections::HashSet;
 use std::collections::HashMap;
-use crate::lib::parse_util::{single_argument_list, single_argument_type, two_arguments, three_arguments, single_argument_integer};
 use crate::lang::scope::Scope;
 use lazy_static::lazy_static;
 
@@ -42,14 +41,17 @@ fn of(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn new(mut context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::List(List::new(single_argument_type(context.arguments)?, vec![])))
+    context.arguments.check_len(1)?;
+    context.output.send(Value::List(List::new(context.arguments.r#type(0)?, vec![])))
 }
 
 fn len(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
     context.output.send(Value::Integer(context.this.list()?.len() as i128))
 }
 
 fn empty(context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
     context.output.send(Value::Bool(context.this.list()?.len() == 0))
 }
 
@@ -71,48 +73,51 @@ fn push(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn pop(context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
     let o = context.output;
     context.this.list()?.pop().map(|c| o.send(c));
     Ok(())
 }
 
 fn peek(context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
     let o = context.output;
     context.this.list()?.peek().map(|c| o.send(c));
     Ok(())
 }
 
 fn clear(context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
     context.this.list()?.clear();
     Ok(())
 }
 
 fn setitem(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(2)?;
     let mut list = context.this.list()?;
-    let value = context.arguments.remove(1).value;
-    let key = context.arguments.remove(0).value;
-
-    match key {
-        Value::Integer(i) => list.set(i as usize, value),
-        _ => argument_error("Missing arguments"),
-    }
+    let key = context.arguments.integer(0)?;
+    let value = context.arguments.value(1)?;
+    list.set(key as usize, value)
 }
 
 fn remove(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(1)?;
     let mut list = context.this.list()?;
-    let idx = single_argument_integer(context.arguments)?;
+    let idx = context.arguments.integer(0)?;
     list.remove(idx as usize);
     Ok(())
 }
 
 fn truncate(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(1)?;
     let mut list = context.this.list()?;
-    let idx = single_argument_integer(context.arguments)?;
+    let idx = context.arguments.integer(0)?;
     list.truncate(idx as usize);
     Ok(())
 }
 
 fn clone(context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
     context.output.send(Value::List(context.this.list()?.copy()))
 }
 

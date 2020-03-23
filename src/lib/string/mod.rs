@@ -1,10 +1,9 @@
 use crate::lang::scope::Scope;
 use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{command::ExecutionContext, value::ValueType, list::List};
-use crate::lib::parse_util::{single_argument, two_arguments, single_argument_field, single_argument_text};
 use crate::lang::{value::Value, argument::Argument};
 use nix::sys::ptrace::cont;
-use crate::lang::command::{CrushCommand, This};
+use crate::lang::command::{CrushCommand, This, ArgumentVector};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
 
@@ -38,7 +37,7 @@ fn lower(mut context: ExecutionContext) -> CrushResult<()> {
 
 fn split(mut context: ExecutionContext) -> CrushResult<()> {
     let this = context.this.text()?;
-    let separator = single_argument_text(context.arguments)?;
+    let separator = context.arguments.string(0)?;
     context.output.send(Value::List(List::new(ValueType::String,
                                               this.split(separator.as_ref())
                                                   .map(|s| Value::String(Box::from(s)))

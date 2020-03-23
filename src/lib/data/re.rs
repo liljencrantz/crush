@@ -1,13 +1,12 @@
 use crate::lang::scope::Scope;
 use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::Value, command::ExecutionContext};
-use crate::lib::parse_util::single_argument_text;
 use regex::Regex;
 use std::error::Error;
-use crate::lang::command::CrushCommand;
+use crate::lang::command::{CrushCommand, ArgumentVector};
 
 fn new(mut context: ExecutionContext) -> CrushResult<()> {
-    let def = single_argument_text(context.arguments)?;
+    let def = context.arguments.string(0)?;
     let res = match Regex::new(def.as_ref()) {
         Ok(r) => Value::Regex(def, r),
         Err(e) => return argument_error(e.description()),

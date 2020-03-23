@@ -1,11 +1,10 @@
-use crate::lang::command::{ExecutionContext, CrushCommand, This};
+use crate::lang::command::{ExecutionContext, CrushCommand, This, ArgumentVector};
 use crate::lang::errors::{CrushResult, argument_error, error};
 use crate::lang::{value::ValueType, dict::Dict};
 use crate::lang::table::Row;
 use crate::lang::value::Value;
 use crate::lang::table::ColumnType;
 use crate::lang::scope::Scope;
-use crate::lib::parse_util::{single_argument_dict};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
 
@@ -24,27 +23,21 @@ lazy_static! {
 }
 
 fn new(mut context: ExecutionContext) -> CrushResult<()> {
-    if context.arguments.len() != 2 {
-        return argument_error("Expected 2 arguments to dict.create");
-    }
-    let first_type = context.arguments.remove(0).value;
-    let second_type = context.arguments.remove(0).value;
-
-    match (first_type, second_type) {
-        (Value::Type(key_type), Value::Type(value_type)) => {
-            if !key_type.is_hashable() {
-                return argument_error("Key type is not hashable");
-            }
-            context.output.send(Value::Dict(Dict::new(key_type, value_type)))
-        }
-        _ => argument_error("Invalid argument types"),
+    context.arguments.check_len(2)?;
+    let key_type = context.arguments.r#type(0)?;
+    let value_type = context.arguments.r#type(1)?;
+    if !key_type.is_hashable() {
+        argument_error("Key type is not hashable")
+    } else {
+        context.output.send(Value::Dict(Dict::new(key_type, value_type)))
     }
 }
 
 fn setitem(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(2)?;
     let mut dict = context.this.dict()?;
-    let value = context.arguments.remove(1).value;
-    let key = context.arguments.remove(0).value;
+    let value = context.arguments.value(1)?;
+    let key = context.arguments.value(0)?;
     if dict.key_type() == key.value_type() && dict.value_type() == value.value_type() {
         dict.insert(key, value);
         Ok(())
@@ -54,33 +47,30 @@ fn setitem(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
-    if context.arguments.len() == 0 {
-        return argument_error("Missing key")
-    }
+    context.arguments.check_len(1)?;
     let mut dict = context.this.dict()?;
-    let key = context.arguments.remove(0).value;
-    let output = context.output.initialize(
-        vec![ColumnType::new("value", dict.value_type())])?;
-    dict.get(&key).map(|c| output.send(Row::new(vec![c])));
+    let key = context.arguments.value(0)?;
+    let o = context.output;
+    dict.get(&key).map(|c| o.send(c));
     Ok(())
 }
 
 fn remove(mut context: ExecutionContext) -> CrushResult<()> {
-    if context.arguments.len() == 0 {
-        return argument_error("Missing key")
-    }
+    context.arguments.check_len(1)?;
     let mut dict = context.this.dict()?;
-    let key = context.arguments.remove(0).value;
+    let key = context.arguments.value(0)?;
     let o = context.output;
     dict.remove(&key).map(|c| o.send(c));
     Ok(())
 }
 
 fn len(context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
     context.output.send(Value::Integer(context.this.dict()?.len() as i128))
 }
 
 fn empty(context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
     context.output.send(Value::Bool(context.this.dict()?.len() == 0))
 }
 

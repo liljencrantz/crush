@@ -5,7 +5,7 @@ use crate::lang::{argument::Argument, argument::ArgumentDefinition};
 use crate::lang::scope::Scope;
 use crate::lang::job::Job;
 use crate::lang::stream_printer::spawn_print_thread;
-use crate::lang::value::Value;
+use crate::lang::value::{Value, ValueType};
 use crate::lang::list::List;
 use crate::lang::dict::Dict;
 use crate::lang::r#struct::Struct;
@@ -13,15 +13,72 @@ use std::path::Path;
 use crate::util::replace::Replace;
 
 pub trait ArgumentVector {
+    fn check_len(&self, len: usize) -> CrushResult<()>;
     fn string(&mut self, idx: usize) -> CrushResult<Box<str>>;
+    fn integer(&mut self, idx: usize) -> CrushResult<i128>;
+    fn field(&mut self, idx: usize) -> CrushResult<Vec<Box<str>>>;
+    fn command(&mut self, idx: usize) -> CrushResult<Box<dyn CrushCommand + Send + Sync>>;
+    fn r#type(&mut self, idx: usize) -> CrushResult<ValueType>;
     fn value(&mut self, idx: usize) -> CrushResult<Value>;
 }
 
 impl ArgumentVector for Vec<Argument> {
+    fn check_len(&self, len: usize) -> CrushResult<()> {
+        if self.len() == len {
+            Ok(())
+        } else {
+            argument_error(format!("Expected {} arguments, got {}", len, self.len()).as_str())
+        }
+    }
+
     fn string(&mut self, idx: usize) -> CrushResult<Box<str>> {
         if idx < self.len() {
             match self.replace(idx, Argument::unnamed(Value::Bool(false))).value {
                 Value::String(s) => Ok(s),
+                _ => error("Invalid value"),
+            }
+        } else {
+            error("Index out of bounds")
+        }
+    }
+
+    fn integer(&mut self, idx: usize) -> CrushResult<i128> {
+        if idx < self.len() {
+            match self.replace(idx, Argument::unnamed(Value::Bool(false))).value {
+                Value::Integer(s) => Ok(s),
+                _ => error("Invalid value"),
+            }
+        } else {
+            error("Index out of bounds")
+        }
+    }
+
+    fn field(&mut self, idx: usize) -> CrushResult<Vec<Box<str>>> {
+        if idx < self.len() {
+            match self.replace(idx, Argument::unnamed(Value::Bool(false))).value {
+                Value::Field(s) => Ok(s),
+                _ => error("Invalid value"),
+            }
+        } else {
+            error("Index out of bounds")
+        }
+    }
+
+    fn command(&mut self, idx: usize) -> CrushResult<Box<dyn CrushCommand + Send + Sync>> {
+        if idx < self.len() {
+            match self.replace(idx, Argument::unnamed(Value::Bool(false))).value {
+                Value::Command(s) => Ok(s),
+                _ => error("Invalid value"),
+            }
+        } else {
+            error("Index out of bounds")
+        }
+    }
+
+    fn r#type(&mut self, idx: usize) -> CrushResult<ValueType> {
+        if idx < self.len() {
+            match self.replace(idx, Argument::unnamed(Value::Bool(false))).value {
+                Value::Type(s) => Ok(s),
                 _ => error("Invalid value"),
             }
         } else {

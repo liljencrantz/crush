@@ -6,7 +6,6 @@ Add methods to integer type
 Add methods to float type
 Add methods to type type
 Unify types and the type-related namespaces. List.of in the List type, etc.
-Make structs mutable and protected by Arc + Mutax
 Nice way to pass on all arguments of a closure to another command
 Nice way of introspecting all arguments to a closure
 Run an executable by giving its path
@@ -17,7 +16,6 @@ Make newline a separator again
 &&/|| => and/or
 Flesh out seq command with support for from and step
 Make argument parsing in list and dict commands more consistent
-Some kind of pattern matching syntax
 Add list:insert command
 Add dict:clear command
 Add dict:clone command
@@ -45,6 +43,7 @@ Add source field to CrushError
 Make error printing display source of error
 
 Future features:
+Data enums + pattern matching syntax
 Add ** for recursive wildcard matches
 Add readline command that reads one line of interactive text input from the user via the terminal
 support adding prototypes to structs
@@ -199,3 +198,4 @@ Add methods to file type
 Add dir command
 Remove the dot operator in favor of [] for fields. Use slash on commands?
 Figure out how to make globs convenient again
+Make structs mutable and protected by Arc + Mutex
