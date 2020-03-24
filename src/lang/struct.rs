@@ -1,6 +1,5 @@
 use crate::lang::table::ColumnType;
-use crate::lang::value::{Value, ValueType};
-use std::mem;
+use crate::lang::value::{Value};
 use crate::lang::table::Row;
 use std::sync::{Mutex, Arc};
 use crate::lang::command::CrushCommand;
@@ -61,7 +60,7 @@ impl Struct {
         ], None)
     }
 
-    pub fn new(mut vec: Vec<(Box<str>, Value)>) -> Struct {
+    pub fn new(vec: Vec<(Box<str>, Value)>) -> Struct {
         Struct::create(vec, Some(root.clone()))
     }
 
@@ -82,7 +81,7 @@ impl Struct {
         }
     }
 
-    pub fn from_vec(mut values: Vec<Value>, mut types: Vec<ColumnType>) -> Struct {
+    pub fn from_vec(mut values: Vec<Value>, types: Vec<ColumnType>) -> Struct {
         let mut lookup = HashMap::new();
         let mut cells = Vec::new();
 
@@ -122,7 +121,7 @@ impl Struct {
         self.data.lock().unwrap().cells.clone()
     }
 
-    pub fn get(mut self, name: &str) -> Option<Value> {
+    pub fn get(&self, name: &str) -> Option<Value> {
         let data = self.data.lock().unwrap();
         match data.lookup.get(name) {
             None => {
@@ -137,7 +136,7 @@ impl Struct {
         }
     }
 
-    pub fn set(mut self, name: &str, value: Value) -> Option<Value> {
+    pub fn set(self, name: &str, value: Value) -> Option<Value> {
         let mut data = self.data.lock().unwrap();
         match data.lookup.get(name).cloned() {
             None => None,

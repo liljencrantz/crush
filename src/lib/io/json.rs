@@ -90,7 +90,7 @@ fn convert_json(json_value: &serde_json::Value) -> CrushResult<Value> {
 }
 
 fn run(cfg: Config, output: ValueSender) -> CrushResult<()> {
-    let mut reader = BufReader::new(cfg.input);
+    let reader = BufReader::new(cfg.input);
     let v = to_crush_error(serde_json::from_reader(reader))?;
     let crush_value = convert_json(&v)?;
     output.send(crush_value)?;

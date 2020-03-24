@@ -9,7 +9,7 @@ fn to(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(context.input.recv()?.cast(context.arguments.r#type(0)?)?)
 }
 
-pub fn r#type(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn r#type(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Type(mandate(context.this, "Missing this value")?.value_type()))
 }
 
@@ -39,15 +39,15 @@ fn parse_column_types(mut arguments: Vec<Argument>) -> CrushResult<Vec<ColumnTyp
     Ok(types)
 }
 
-fn r#struct(mut context: ExecutionContext) -> CrushResult<()> {
+fn r#struct(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Type(ValueType::Struct(parse_column_types(context.arguments)?)))
 }
 
-fn r#table(mut context: ExecutionContext) -> CrushResult<()> {
+fn r#table(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Type(ValueType::Table(parse_column_types(context.arguments)?)))
 }
 
-fn r#table_stream(mut context: ExecutionContext) -> CrushResult<()> {
+fn r#table_stream(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Type(ValueType::TableStream(parse_column_types(context.arguments)?)))
 }
 

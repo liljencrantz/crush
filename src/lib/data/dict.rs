@@ -10,7 +10,7 @@ use lazy_static::lazy_static;
 
 lazy_static! {
     pub static ref DICT_METHODS: HashMap<Box<str>, Box<CrushCommand + Sync + Send>> = {
-        let mut res: HashMap<Box<str>, Box<CrushCommand + Send + Sync>> = HashMap::new();
+        let mut res: HashMap<Box<str>, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
         res.insert(Box::from("len"), CrushCommand::command(len, false));
         res.insert(Box::from("empty"), CrushCommand::command(empty, false));
 //        res.insert(Box::from("clear"), Box::from(CrushCommand::command(clear, false)));

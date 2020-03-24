@@ -5,7 +5,6 @@ use crate::lang::errors::{error, CrushResult, Kind};
 use crate::lang::printer::printer;
 use crate::lang::stream::{ValueReceiver, ValueSender};
 use crate::util::thread::{handle, build};
-use crate::lang::command::This;
 use std::path::Path;
 use crate::lang::argument::Argument;
 

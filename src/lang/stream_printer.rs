@@ -25,7 +25,7 @@ pub fn spawn_print_thread() -> ValueSender {
     o
 }
 
-pub fn print_value(mut cell: Value) {
+pub fn print_value(cell: Value) {
     match cell {
         Value::TableStream(mut output) => print(&mut output),
         Value::Table(rows) => print(&mut TableReader::new(rows)),
@@ -104,7 +104,7 @@ fn print_header(w: &Vec<usize>, types: &Vec<ColumnType>, has_name: bool, indent:
 
 fn print_row(
     w: &Vec<usize>,
-    mut r: Row,
+    r: Row,
     indent: usize,
     rows: &mut Vec<Table>,
     outputs: &mut Vec<InputStream>,

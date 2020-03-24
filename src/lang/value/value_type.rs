@@ -4,7 +4,6 @@ use crate::util::glob::Glob;
 use regex::Regex;
 use std::error::Error;
 use crate::lang::parser::parse_name;
-use crate::lib::data::list::LIST_METHODS;
 use crate::lang::command::CrushCommand;
 
 #[derive(Clone)]

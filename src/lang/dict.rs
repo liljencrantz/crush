@@ -66,13 +66,13 @@ impl Dict {
     }
 
     pub fn elements(&self) ->  Vec<(Value, Value)> {
-        let mut entries = self.entries.lock().unwrap();
+        let entries = self.entries.lock().unwrap();
         entries.iter()
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect()
     }
 
-    pub fn materialize(mut self) ->  Dict {
+    pub fn materialize(self) ->  Dict {
         let mut entries = self.entries.lock().unwrap();
         let map = entries.drain().map(|(k, v)| (k.materialize(), v.materialize())).collect();
         Dict {

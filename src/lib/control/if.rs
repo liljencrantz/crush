@@ -1,4 +1,4 @@
-use crate::lang::command::{ExecutionContext, This};
+use crate::lang::command::{ExecutionContext};
 use crate::lang::errors::CrushResult;
 use crate::lang::errors::error;
 use crate::lang::value::Value;

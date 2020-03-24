@@ -1,8 +1,7 @@
-use crate::lang::command::{ExecutionContext, CrushCommand, This};
+use crate::lang::command::{ExecutionContext, CrushCommand};
 use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::Value};
 use crate::lang::scope::Scope;
-use std::cmp::Ordering;
 use crate::lang::stream::{empty_channel, channels};
 
 pub fn and(mut context: ExecutionContext) -> CrushResult<()> {

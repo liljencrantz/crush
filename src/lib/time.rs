@@ -3,7 +3,7 @@ use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
 use crate::lang::{value::Value};
 use crate::lang::scope::Scope;
 use chrono::{Local, Duration, Datelike, Timelike};
-use time::{strptime, Tm};
+use time::{strptime};
 use std::cmp::max;
 
 fn now(mut context: ExecutionContext) -> CrushResult<()> {

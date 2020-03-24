@@ -1,5 +1,5 @@
 use std::error::Error;
-use crate::lang::errors::Kind::{ParseError, InvalidArgument, GenericError, InvalidData, BlockError};
+use crate::lang::errors::Kind::*;
 
 #[derive(Debug, PartialEq)]
 pub enum Kind {

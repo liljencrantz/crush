@@ -1,11 +1,7 @@
-use crate::{
-    lang::argument::Argument,
-    lang::value::Value,
-};
+use crate::lang::value::Value;
 use crate::lang::scope::Scope;
-use crate::lang::{table::TableReader, list::ListReader, r#struct::Struct, dict::DictReader, command::CrushCommand};
+use crate::lang::command::CrushCommand;
 use crate::lang::errors::{argument_error, CrushResult, data_error};
-use crate::lang::command::This;
 use crate::lang::command::ExecutionContext;
 use crate::lang::stream::{empty_channel, Readable, channels};
 use crate::lang::stream_printer::spawn_print_thread;

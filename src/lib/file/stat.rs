@@ -37,6 +37,6 @@ fn run(file: Box<Path>, sender: ValueSender) -> CrushResult<()> {
     )
 }
 
-pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     run(context.this.file()?, context.output)
 }

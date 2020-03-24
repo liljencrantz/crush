@@ -180,7 +180,7 @@ impl LogicalNode {
 
     pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
         match self {
-            LogicalNode::LogicalOperation(l, op, r) =>
+            LogicalNode::LogicalOperation(_, _, _) =>
                 Ok(ArgumentDefinition::unnamed(ValueDefinition::JobDefinition(
                     Job::new(vec![self.generate_standalone()?.unwrap()])
                 ))),
@@ -253,7 +253,7 @@ impl ComparisonNode {
 
     pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
         match self {
-            ComparisonNode::Comparison(l, op, r) =>
+            ComparisonNode::Comparison(_, _, _) =>
                 Ok(ArgumentDefinition::unnamed(ValueDefinition::JobDefinition(
                     Job::new(vec![self.generate_standalone()?.unwrap()])
                 ))),
@@ -292,7 +292,7 @@ impl TermNode {
 
     pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
         match self {
-            TermNode::Term(l, op, r) =>
+            TermNode::Term(_, _, _) =>
                 Ok(ArgumentDefinition::unnamed(ValueDefinition::JobDefinition(
                     Job::new(vec![self.generate_standalone()?.unwrap()])
                 ))),
@@ -331,7 +331,7 @@ impl FactorNode {
 
     pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
         match self {
-            FactorNode::Factor(l, op, r) =>
+            FactorNode::Factor(_, _, _) =>
                 Ok(ArgumentDefinition::unnamed(ValueDefinition::JobDefinition(
                     Job::new(vec![self.generate_standalone()?.unwrap()])
                 ))),

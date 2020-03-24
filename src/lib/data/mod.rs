@@ -8,11 +8,11 @@ pub mod list;
 pub mod dict;
 pub mod re;
 
-fn materialize(mut context: ExecutionContext) -> CrushResult<()> {
+fn materialize(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(context.input.recv()?.materialize())
 }
 
-fn r#struct(mut context: ExecutionContext) -> CrushResult<()> {
+fn r#struct(context: ExecutionContext) -> CrushResult<()> {
     let mut names = column_names(&context.arguments);
 
     let arr: Vec<(Box<str>, Value)> =

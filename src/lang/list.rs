@@ -70,7 +70,7 @@ impl List {
     }
 
     pub fn peek(&self) -> Option<Value> {
-        let mut cells = self.cells.lock().unwrap();
+        let cells = self.cells.lock().unwrap();
         cells.get(cells.len()-1).map(|v| v.clone())
     }
 

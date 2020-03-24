@@ -45,7 +45,7 @@ fn new(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::List(List::new(context.arguments.r#type(0)?, vec![])))
 }
 
-fn len(mut context: ExecutionContext) -> CrushResult<()> {
+fn len(context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context.output.send(Value::Integer(context.this.list()?.len() as i128))
 }
@@ -94,7 +94,7 @@ fn clear(context: ExecutionContext) -> CrushResult<()> {
 
 fn setitem(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(2)?;
-    let mut list = context.this.list()?;
+    let list = context.this.list()?;
     let key = context.arguments.integer(0)?;
     let value = context.arguments.value(1)?;
     list.set(key as usize, value)
@@ -102,7 +102,7 @@ fn setitem(mut context: ExecutionContext) -> CrushResult<()> {
 
 fn remove(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
-    let mut list = context.this.list()?;
+    let list = context.this.list()?;
     let idx = context.arguments.integer(0)?;
     list.remove(idx as usize);
     Ok(())
@@ -110,7 +110,7 @@ fn remove(mut context: ExecutionContext) -> CrushResult<()> {
 
 fn truncate(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
-    let mut list = context.this.list()?;
+    let list = context.this.list()?;
     let idx = context.arguments.integer(0)?;
     list.truncate(idx as usize);
     Ok(())

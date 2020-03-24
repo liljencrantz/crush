@@ -8,8 +8,8 @@ use std::collections::HashMap;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref RE_METHODS: HashMap<Box<str>, Box<CrushCommand + Sync + Send>> = {
-        let mut res: HashMap<Box<str>, Box<CrushCommand + Send + Sync>> = HashMap::new();
+    pub static ref RE_METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
+        let mut res: HashMap<Box<str>, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
         res.insert(Box::from("match"), CrushCommand::command(r#match, false));
         res.insert(Box::from("not_match"), CrushCommand::command(not_match, false));
         res.insert(Box::from("replace"), CrushCommand::command(replace, false));

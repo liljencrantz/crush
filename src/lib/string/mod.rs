@@ -1,8 +1,7 @@
 use crate::lang::scope::Scope;
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::CrushResult;
 use crate::lang::{command::ExecutionContext, value::ValueType, list::List};
-use crate::lang::{value::Value, argument::Argument};
-use nix::sys::ptrace::cont;
+use crate::lang::value::Value;
 use crate::lang::command::{CrushCommand, This, ArgumentVector};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
@@ -10,8 +9,8 @@ use lazy_static::lazy_static;
 mod format;
 
 lazy_static! {
-    pub static ref STRING_METHODS: HashMap<Box<str>, Box<CrushCommand + Sync + Send>> = {
-        let mut res: HashMap<Box<str>, Box<CrushCommand + Send + Sync>> = HashMap::new();
+    pub static ref STRING_METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
+        let mut res: HashMap<Box<str>, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
         res.insert(Box::from("upper"), CrushCommand::command(upper, false));
         res.insert(Box::from("lower"), CrushCommand::command(lower, false));
         res.insert(Box::from("split"), CrushCommand::command(split, false));

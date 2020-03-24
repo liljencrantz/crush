@@ -1,5 +1,3 @@
-use std::cmp::Ordering;
-
 use crate::{
     lang::{
         value::Value,
@@ -7,7 +5,7 @@ use crate::{
     },
     lang::stream::{OutputStream}
 };
-use crate::lang::command::{ExecutionContext, This};
+use crate::lang::command::ExecutionContext;
 use crate::lang::errors::{error, CrushResult, argument_error};
 use crate::lang::printer::printer;
 use crate::lang::stream::{Readable, empty_channel, channels, ValueSender};

@@ -4,73 +4,68 @@ use crate::lang::ast::*;
 grammar;
 
 pub JobList: JobListNode = {
-  OptionalSeparator => JobListNode {jobs: Vec::new()},
-  <l:NonEmptyJobList> OptionalSeparator => l,
+  Separator? => JobListNode {jobs: Vec::new()},
+  <l:NonEmptyJobList> Separator? => l,
 };
-
-OptionalSeparator: () = {
-    => (),
-    Separator => (),
-}
 
 NonEmptyJobList: JobListNode = {
   <mut l:NonEmptyJobList> Separator <j:Job> =>  {l.jobs.push(j); l},
-  <j:Job> => JobListNode {jobs: vec![j]},
+  Job => JobListNode {jobs: vec![<>]},
 };
 
 Job: JobNode = {
-    <c:Command> => JobNode{commands: vec![c]},
-    <mut j:Job> "|" OptionalSeparator <c:Command> => {j.commands.push(c); j}
+    Command => JobNode{commands: vec![<>]},
+    <mut j:Job> "|" Separator? <c:Command> => {j.commands.push(c); j}
 };
 
 Command: CommandNode = {
-  <a:Assignment> => CommandNode{expressions: vec![a]},
+  Assignment => CommandNode{expressions: vec![<>]},
   <mut c: Command> <a:Assignment> => {c.expressions.push(a); c}
 };
 
 Assignment: AssignmentNode = {
   <i: Item> "=" <e: Assignment> => AssignmentNode::Assignment(i, Box::new(e)),
   <i: Item> ":=" <e: Assignment> => AssignmentNode::Declaration(i, Box::new(e)),
-  <a: Logical> => AssignmentNode::Logical(a),
+  Logical => AssignmentNode::Logical(<>),
 }
 
 Logical: LogicalNode = {
-    <c: Comparison> => LogicalNode::Comparison(c),
-    <l: Logical> <op: LogicalOperator> <c: Comparison> => LogicalNode::LogicalOperation(Box::new(l), Box::from(op), c),
+    Comparison => LogicalNode::Comparison(<>),
+    <l: Logical> <op: LogicalOperator> <c: Comparison> => LogicalNode::LogicalOperation(Box::from(l), Box::from(op), c),
 }
 
 Comparison: ComparisonNode = {
-    <t: Term> => ComparisonNode::Term(t),
-    <c: Comparison> <op: ComparisonOperator> <t: Term> => ComparisonNode::Comparison(Box::new(c), Box::from(op), t),
+    Term => ComparisonNode::Term(<>),
+    <c: Comparison> <op: ComparisonOperator> <t: Term> => ComparisonNode::Comparison(Box::from(c), Box::from(op), t),
 }
 
 Term: TermNode = {
-    <f: Factor> => TermNode::Factor(f),
-    <t: Term> <op: TermOperator> <f: Factor> => TermNode::Term(Box::new(t), Box::from(op), f),
+    Factor => TermNode::Factor(<>),
+    <t: Term> <op: TermOperator> <f: Factor> => TermNode::Term(Box::from(t), Box::from(op), f),
 }
 
 Factor: FactorNode = {
-    <u: Unary> => FactorNode::Unary(u),
-    <f: Factor> <op: FactorOperator> <u: Unary> => FactorNode::Factor(Box::new(f), Box::from(op), u),
+    Unary => FactorNode::Unary(<>),
+    <f: Factor> <op: FactorOperator> <u: Unary> => FactorNode::Factor(Box::from(f), Box::from(op), u),
 }
 
 Unary: UnaryNode = {
-    <i: Item> => UnaryNode::Item(i),
-    <op: UnaryOperator> <u: Unary> => UnaryNode::Unary(Box::from(op), Box::new(u)),
+    Item => UnaryNode::Item(<>),
+    <op: UnaryOperator> <u: Unary> => UnaryNode::Unary(Box::from(op), Box::from(u)),
 }
 
 Item: ItemNode = {
-    <l: Label> => ItemNode::Label(Box::from(l)),
+    Label => ItemNode::Label(Box::from(<>)),
     <l: Regex> => ItemNode::Regex(Box::from(&l[3..l.len()-1])),
-    <f: Field> => ItemNode::Field(Box::from(f)),
+    Field => ItemNode::Field(Box::from(<>)),
     <g: Glob> => ItemNode::Glob(Box::from(&g[2..])),
-    <l: QuotedLabel> => ItemNode::Label(Box::from(l)),
-    <s: QuotedString> => ItemNode::String(Box::from(s)),
-    <s:Integer> => ItemNode::Integer(i128::from_str(s.replace("_", "").as_str()).unwrap()),
-    <s:Float> => ItemNode::Float(f64::from_str(s.replace("_", "").as_str()).unwrap()),
-    <i: Item> "[" <e: Assignment> "]" => ItemNode::GetItem(Box::new(i), Box::new(e)),
-    <i: Item> ":" <l: Label> => ItemNode::GetAttr(Box::new(i), Box::from(l)),
-    <i: Item> "/" <l: Label> => ItemNode::Path(Box::new(i), Box::from(l)),
+    QuotedLabel => ItemNode::Label(Box::from(<>)),
+    QuotedString => ItemNode::String(Box::from(<>)),
+    Integer => ItemNode::Integer(i128::from_str(<>.replace("_", "").as_str()).unwrap()),
+    Float => ItemNode::Float(f64::from_str(<>.replace("_", "").as_str()).unwrap()),
+    <i: Item> "[" <e: Assignment> "]" => ItemNode::GetItem(Box::new(i), Box::from(e)),
+    <i: Item> ":" <l: Label> => ItemNode::GetAttr(Box::from(i), Box::from(l)),
+    <i: Item> "/" <l: Label> => ItemNode::Path(Box::from(i), Box::from(l)),
     "{" <l: NonEmptyJobList> "}" => ItemNode::Closure(l),
     "(" <j:Job> ")" => ItemNode::Substitution(j),
 }
@@ -78,8 +73,8 @@ Item: ItemNode = {
 match {
     r"(and|or)" => LogicalOperator,
 } else {
-    r"( |\t)+" => { },
-    r"#[^\n]*" => { },
+    r"( |\t)+" => {},
+    r"#[^\n]*" => {},
     r"(>|<|>=|<=|==|!=|=~|!~)" => ComparisonOperator,
     "!" => UnaryOperator,
     r"(\*|//)" => FactorOperator,
