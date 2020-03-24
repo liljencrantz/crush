@@ -160,20 +160,16 @@ pub enum LogicalNode {
 impl LogicalNode {
     pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
         match self {
-            LogicalNode::LogicalOperation(l, op, r) =>
-                match op.as_ref() {
-                    "and" =>
-                        Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(AND.as_ref().clone())),
-                            vec![l.generate_argument()?, r.generate_argument()?])
-                        )),
-                    "or" =>
-                        Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(OR.as_ref().clone())),
-                            vec![l.generate_argument()?, r.generate_argument()?])
-                        )),
-                    _ => error("Unknown operator")
-                },
+            LogicalNode::LogicalOperation(l, op, r) => {
+                let cmd = match op.as_ref() {
+                    "and" => AND.as_ref(),
+                    "or" => OR.as_ref(),
+                    _ => return error("Unknown operator")
+                };
+                Ok(Some(CommandInvocation::new(
+                    ValueDefinition::Value(Value::Command(cmd.clone())),
+                    vec![l.generate_argument()?, r.generate_argument()?])))
+            }
             LogicalNode::Comparison(c) => c.generate_standalone(),
         }
     }
@@ -193,6 +189,7 @@ impl LogicalNode {
 #[derive(Debug)]
 pub enum ComparisonNode {
     Comparison(Box<ComparisonNode>, Box<str>, TermNode),
+    Replace(Box<ComparisonNode>, Box<str>, TermNode, TermNode),
     Term(TermNode),
 }
 
@@ -246,6 +243,20 @@ impl ComparisonNode {
                     _ => error("Unknown operator"),
                 }
             }
+            ComparisonNode::Replace(r, op, t1, t2) => {
+                let cmd = match op.as_ref() {
+                    "~" => "replace",
+                    "~~" => "replace_all",
+                    _ => return error("Unknown operator")
+                };
+
+                Ok(Some(
+                    CommandInvocation::new(
+                        ValueDefinition::GetAttr(Box::from(r.generate_argument()?.unnamed_value()?), cmd.to_string().into_boxed_str()),
+                        vec![t1.generate_argument()?, t2.generate_argument()?])
+                ))
+            }
+
             ComparisonNode::Term(t) =>
                 t.generate_standalone(),
         }
@@ -253,10 +264,11 @@ impl ComparisonNode {
 
     pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
         match self {
-            ComparisonNode::Comparison(_, _, _) =>
+            ComparisonNode::Comparison(_, _, _) | ComparisonNode::Replace(_, _, _, _)=>
                 Ok(ArgumentDefinition::unnamed(ValueDefinition::JobDefinition(
                     Job::new(vec![self.generate_standalone()?.unwrap()])
                 ))),
+
             ComparisonNode::Term(t) => t.generate_argument(),
         }
     }
@@ -272,20 +284,17 @@ pub enum TermNode {
 impl TermNode {
     pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
         match self {
-            TermNode::Term(l, op, r) =>
-                match op.as_ref() {
-                    "+" =>
-                        Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(ADD.as_ref().clone())),
-                            vec![l.generate_argument()?, r.generate_argument()?])
-                        )),
-                    "-" =>
-                        Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(SUB.as_ref().clone())),
-                            vec![l.generate_argument()?, r.generate_argument()?])
-                        )),
-                    _ => error("Unknown operator"),
-                },
+            TermNode::Term(l, op, r) => {
+                let cmd = match op.as_ref() {
+                    "+" => ADD.as_ref(),
+                    "-" =>SUB.as_ref(),
+                    _ => return error("Unknown operator"),
+                };
+                Ok(Some(CommandInvocation::new(
+                    ValueDefinition::Value(Value::Command(cmd.clone())),
+                    vec![l.generate_argument()?, r.generate_argument()?])
+                ))
+            }
             TermNode::Factor(f) => f.generate_standalone(),
         }
     }
@@ -311,19 +320,15 @@ impl FactorNode {
     pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
         match self {
             FactorNode::Factor(l, op, r) => {
-                match op.as_ref() {
-                    "*" =>
-                        Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(MUL.as_ref().clone())),
-                            vec![l.generate_argument()?, r.generate_argument()?])
-                        )),
-                    "//" =>
-                        Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(DIV.as_ref().clone())),
-                            vec![l.generate_argument()?, r.generate_argument()?])
-                        )),
-                    _ => error(format!("Unknown operator {}", op).as_str()),
-                }
+                let cmd = match op.as_ref() {
+                    "*" => MUL.as_ref(),
+                    "//" =>DIV.as_ref(),
+                    _ => return error(format!("Unknown operator {}", op).as_str()),
+                };
+                Ok(Some(CommandInvocation::new(
+                    ValueDefinition::Value(Value::Command(cmd.clone())),
+                    vec![l.generate_argument()?, r.generate_argument()?])
+                ))
             }
             FactorNode::Unary(u) => u.generate_standalone(),
         }

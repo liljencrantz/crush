@@ -1,5 +1,5 @@
 Todo for MVP 1:
-Move the 'to' method to type instances
+Replace type:to function with as operator
 Add methods to integer type
 Add methods to float type
 Add methods to type type

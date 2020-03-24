@@ -55,7 +55,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("type")?;
 
     env.declare("to", Value::Command(CrushCommand::command(to, true)))?;
-//    env.declare("of", Value::Command(CrushCommand::command(of, false)))?;
 
     env.declare("list", Value::Command(CrushCommand::command(list, false)))?;
     env.declare("dict", Value::Command(CrushCommand::command(dict, false)))?;

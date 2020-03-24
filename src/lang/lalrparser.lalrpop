@@ -37,6 +37,7 @@ Logical: LogicalNode = {
 Comparison: ComparisonNode = {
     Term => ComparisonNode::Term(<>),
     <c: Comparison> <op: ComparisonOperator> <t: Term> => ComparisonNode::Comparison(Box::from(c), Box::from(op), t),
+    <c: Comparison> <op: ReplaceOperator> <t1: Term> <t2: Term> => ComparisonNode::Replace(Box::from(c), Box::from(op), t1, t2)
 }
 
 Term: TermNode = {
@@ -78,6 +79,7 @@ match {
     r"(>|<|>=|<=|==|!=|=~|!~)" => ComparisonOperator,
     "!" => UnaryOperator,
     r"(\*|//)" => FactorOperator,
+    r"(~~|~)" => ReplaceOperator,
     r"(\+|-)" => TermOperator,
     r#""([^\\"]|\\.)*""# => QuotedString,
     r"\*\*([^ \n]|\\.)*" => Glob,

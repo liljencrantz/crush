@@ -1,5 +1,5 @@
 use crate::lang::scope::Scope;
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, argument_error, error};
 use crate::lang::{value::Value, command::ExecutionContext};
 use regex::Regex;
 use std::error::Error;
@@ -13,6 +13,7 @@ lazy_static! {
         res.insert(Box::from("match"), CrushCommand::command(r#match, false));
         res.insert(Box::from("not_match"), CrushCommand::command(not_match, false));
         res.insert(Box::from("replace"), CrushCommand::command(replace, false));
+        res.insert(Box::from("replace_all"), CrushCommand::command(replace_all, false));
         res
     };
 }
@@ -42,18 +43,25 @@ fn replace(mut context: ExecutionContext) -> CrushResult<()> {
     let re = context.this.re()?.1;
     let mut text = None;
     let mut replace = None;
-    let mut all = false;
 
     for arg in context.arguments.drain(..) {
         match (arg.name.as_deref(), arg.value) {
+            (None, Value::String(t)) => {
+                if text.is_none() {
+                    text = Some(t);
+                } else {
+                    if replace.is_none() {
+                        replace = Some(t);
+                    } else {
+                        return error("Too many arguments");
+                    }
+                }
+            }
             (Some("text"), Value::String(t)) => {
                 text = Some(t);
             }
             (Some("replacement"), Value::String(t)) => {
                 replace = Some(t);
-            }
-            (Some("all"), Value::Bool(b)) => {
-                all = b;
             }
             _ => return argument_error("Invalid argument"),
         }
@@ -61,12 +69,43 @@ fn replace(mut context: ExecutionContext) -> CrushResult<()> {
 
     match (text, replace) {
         (Some(t), Some(n)) => {
-            let txt = if all {
-                re.replace_all(t.as_ref(), n.as_ref())
-            } else {
-                re.replace(t.as_ref(), n.as_ref())
-            };
-            context.output.send(Value::String(Box::from(txt.as_ref())))
+            context.output.send(Value::String(Box::from(re.replace(&t, n.as_ref()).as_ref())))
+        }
+        _ => argument_error("Must specify both pattern and text"),
+    }
+}
+
+fn replace_all(mut context: ExecutionContext) -> CrushResult<()> {
+    let re = context.this.re()?.1;
+    let mut text = None;
+    let mut replace = None;
+
+    for arg in context.arguments.drain(..) {
+        match (arg.name.as_deref(), arg.value) {
+            (None, Value::String(t)) => {
+                if text.is_none() {
+                    text = Some(t);
+                } else {
+                    if replace.is_none() {
+                        replace = Some(t);
+                    } else {
+                        return error("Too many arguments");
+                    }
+                }
+            }
+            (Some("text"), Value::String(t)) => {
+                text = Some(t);
+            }
+            (Some("replacement"), Value::String(t)) => {
+                replace = Some(t);
+            }
+            _ => return argument_error("Invalid argument"),
+        }
+    }
+
+    match (text, replace) {
+        (Some(t), Some(n)) => {
+            context.output.send(Value::String(Box::from(re.replace_all(&t, n.as_ref()).as_ref())))
         }
         _ => argument_error("Must specify both pattern and text"),
     }
