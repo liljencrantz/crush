@@ -51,7 +51,7 @@ impl ValueType {
     pub fn materialize(&self) -> ValueType {
         match self {
             ValueType::String |
-            ValueType::Integer|
+            ValueType::Integer |
             ValueType::Time |
             ValueType::Duration |
             ValueType::Field |
@@ -75,7 +75,7 @@ impl ValueType {
         }
     }
 
-        pub fn is_hashable(&self) -> bool {
+    pub fn is_hashable(&self) -> bool {
         match self {
             ValueType::Scope |
             ValueType::List(_) |

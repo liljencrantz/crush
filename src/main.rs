@@ -4,8 +4,6 @@ mod lang;
 mod lib;
 mod util;
 
-use crate::lang::lexer::Lexer;
-
 extern crate rustyline;
 
 use rustyline::error::ReadlineError;
@@ -13,7 +11,7 @@ use rustyline::Editor;
 use lib::declare;
 use crate::lang::errors::{CrushResult, to_crush_error};
 use std::error::Error;
-use crate::lang::printer::{printer, init, shutdown};
+use crate::lang::printer::{printer, printer_thread};
 use crate::lang::stream::empty_channel;
 use crate::lang::stream_printer::spawn_print_thread;
 use crate::util::file::home;
@@ -48,12 +46,12 @@ fn run_interactive(global_env: lang::scope::Scope) -> CrushResult<()> {
                                     Ok(handle) => {
                                         handle.join();
                                     }
-                                    Err(e) => printer().job_error(e),
+                                    Err(e) => printer().crush_error(e),
                                 }
                             }
                         }
                         Err(error) => {
-                            printer().job_error(error);
+                            printer().crush_error(error);
                         }
                     }
                 }
@@ -91,12 +89,12 @@ fn run_script(global_env: lang::scope::Scope, filename: &str) -> CrushResult<()>
                     Ok(handle) => {
                         handle.join();
                     }
-                    Err(e) => printer().job_error(e),
+                    Err(e) => printer().crush_error(e),
                 }
             }
         }
         Err(error) => {
-            printer().job_error(error);
+            printer().crush_error(error);
         }
     }
     Ok(())
@@ -104,9 +102,7 @@ fn run_script(global_env: lang::scope::Scope, filename: &str) -> CrushResult<()>
 
 fn run() -> CrushResult<()> {
     let global_env = lang::scope::Scope::new();
-    let printer_handle = init();
-    let printer = printer();
-
+    let t = printer_thread();
     declare(&global_env)?;
     let my_scope = global_env.create_child(&global_env, false);
 
@@ -116,11 +112,8 @@ fn run() -> CrushResult<()> {
         2 => run_script(my_scope, args[1].as_str())?,
         _ => {}
     }
-//    std::thread::sleep(Duration::from_secs(1));
-//    printer.shutdown();
-    drop(printer);
-    shutdown();
-    printer_handle.join();
+    printer().shutdown();
+    t.join();
     Ok(())
 }
 

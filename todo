@@ -1,18 +1,15 @@
 Todo for MVP 1:
-Re-add regexp literals
 Move the 'to' method to type instances
 Add methods to integer type
 Add methods to float type
 Add methods to type type
+Add methods to glob type
+Add methods to table type
 Unify types and the type-related namespaces. List:of in the List type, etc.
 Nice way to pass on all arguments of a closure to another command
 Nice way of introspecting all arguments to a closure
-Run an executable by giving its path
 Figure out how to make external commands with subcommands convenient again
 Add ~ (replace) operator for regexps: "this is a string" ~ re{a.*g} "Sparta!" -> "this is Sparta!"
-Make newline a separator again
-&&/|| => and/or
-Add reject command that removes specified columns from a table/stream
 Add avg command
 Add system tests for type casting
 Add system tests for for loop
@@ -29,6 +26,8 @@ Add source field to CrushError
 Make error printing display source of error
 
 Future features:
+Run an executable by giving its path
+Add reject command that removes specified columns from a table/stream
 Add ceil, floor, pow, log, sin, cos, tan, etc to math lib
 Redo waiting on JobJoinHandles
 Redo empty streams
@@ -201,3 +200,6 @@ Make structs mutable and protected by Arc + Mutex
 Make argument parsing in list and dict commands more consistent
 Add methods for regexp type
 Re-add match operators =~ and !~ for regexp matching: fnurple | where {$row =~ re{^a.*b$}}
+Re-add regexp literals
+Make newline a separator again
+&&/|| => and/or

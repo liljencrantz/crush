@@ -1,4 +1,3 @@
-use crate::lang::lexer::Lexer;
 use std::error::Error;
 use crate::lang::errors::Kind::{ParseError, InvalidArgument, GenericError, InvalidData, BlockError};
 
@@ -18,13 +17,6 @@ pub struct CrushError {
 }
 
 pub type CrushResult<T> = Result<T, CrushError>;
-
-pub fn parse_error<T>(message: &str, _lexer: &Lexer) -> Result<T, CrushError> {
-    return Err(CrushError {
-        message: String::from(message),
-        kind: ParseError,
-    });
-}
 
 pub fn block_error<T>() -> Result<T, CrushError> {
     return Err(CrushError {

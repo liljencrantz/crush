@@ -1,2 +1,5 @@
-json example_data/din*.json | sort %name
-json example_data/din*.json | where {regex.match (regex.create 'Tri.*') $name}
+json **example_data/din*.json |
+    sort %name
+
+json **example_data/din*.json |
+    where {re"Tri.*" =~ name}

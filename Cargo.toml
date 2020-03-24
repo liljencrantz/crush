@@ -4,11 +4,13 @@ version = "0.1.0"
 authors = ["axel <liljencrantz@gmail.com>"]
 edition = "2018"
 
-[build-dependencies] # <-- We added this and everything after!
-lalrpop = "0.17.0"
+
+[build-dependencies.lalrpop]
+version = "0.18.1"
+features = ["lexer"]
 
 [dependencies]
-lalrpop-util = "0.17.0"
+lalrpop-util = "0.18.1"
 chrono = "0.4"
 regex = "1"
 lazy_static = "1.4.0"

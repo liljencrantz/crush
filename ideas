@@ -1,25 +1,14 @@
-Split directory path and namespace operations?
-
-'/' can be used for division and for directory path operations,
-and we use some other operator for member access. '.' has the
-issue that it is a common character in filenames. We could use
-'::' but it is long annoying. ':' is another option, but looks
-unintuitive to me. '->' is way too hard to type.
-
-Regex library:
+Regex replacement:
 
 # Replace file column in-place using regex
-ls | select '*' file={ regex{a(b*)c} ~ $file "A\\1B"}
-
+ls | select '*' file={ re{a(b*)c} ~ $file "A\\1B"}
 
 Modes:
 
-regex{.*} # Regex
-(regex.new ".*")
-*{*.txt}  # Glob
-{ls}      # Closure
-(ls)      # Command substitution
-
+re".*"   # Regex
+***.txt  # Glob
+{ls}     # Closure
+(ls)     # Command substitution
 
 Aggregating streams:
 
@@ -34,9 +23,8 @@ Could be useful for showing a tree view of processes (ps), file trees (find, du)
 * Should this be represented by a special type of tree-struct or just use regular structs with members of the same type? The latter can't represent cycles.
 * What additional primitives are needed to efficiently manipulate tree data?
 
-Idea: Change language to allow operators:
+Smoothing out the rough edges:
 
-* glob literals start with **, so ***.txt is the glob *.txt
 * boolean flags supported using --foo, equivalent to foo=true
 * External commands need to be adapted to not be annoying
 

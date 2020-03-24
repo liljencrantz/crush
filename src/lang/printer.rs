@@ -1,10 +1,12 @@
-use std::sync::mpsc::{channel, Sender};
+use crossbeam::Sender;
+use crossbeam::Receiver;
+use crossbeam::bounded;
 use std::thread;
 use crate::lang::errors::{CrushError, CrushResult, to_crush_error};
 
 enum PrinterMessage {
     Shutdown,
-    JobError(CrushError),
+    CrushError(CrushError),
     Error(Box<str>),
     Line(Box<str>),
     Lines(Vec<Box<str>>),
@@ -14,34 +16,39 @@ use crate::lang::printer::PrinterMessage::*;
 use crate::lang::job::JobJoinHandle;
 use crate::util::thread::{handle, build};
 use std::thread::JoinHandle;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref SND_RECV: StaticData = {
+        let (sender, receiver) = bounded(128);
+        StaticData { sender, receiver }
+    };
+}
 
 #[derive(Clone)]
 pub struct Printer {
     sender: Sender<PrinterMessage>,
 }
 
-static mut global_printer: Option<Printer>= None;
+struct StaticData {
+    sender: Sender<PrinterMessage>,
+    receiver: Receiver<PrinterMessage>,
+}
 
 pub fn printer() -> Printer {
-    unsafe { global_printer.clone() }.unwrap()
+    Printer {sender: SND_RECV.sender.clone()}
 }
 
-pub fn shutdown() {
-    unsafe {
-        global_printer = None;
-    }
-}
-
-pub fn init() -> JoinHandle<()> {
-    let (sender, receiver) = channel();
-    let handle = thread::Builder::new().name("printer".to_string()).spawn(move || {
-        loop {
-            match receiver.recv() {
+pub fn printer_thread() -> JoinHandle<()> {
+    thread::Builder::new().name("printer".to_string()).spawn(move || {
+        let mut open = true;
+        while open || !SND_RECV.receiver.is_empty() {
+            match SND_RECV.receiver.recv() {
                 Ok(message) => {
                     match message {
-                        Shutdown => break,
+                        Shutdown => open = false,
                         Error(err) => println!("Error: {}", err),
-                        JobError(err) => println!("Error: {}", err.message),
+                        CrushError(err) => println!("Error: {}", err.message),
                         Line(line) => println!("{}", line),
                         Lines(lines) => for line in lines {println!("{}", line)},
                     }
@@ -49,15 +56,8 @@ pub fn init() -> JoinHandle<()> {
                 Err(_) => break,
             }
         }
-    }).unwrap();
-    unsafe {
-        global_printer = Some(Printer {
-            sender,
-        });
-    }
-    handle
+    }).unwrap()
 }
-
 
 impl Printer {
 
@@ -75,13 +75,13 @@ impl Printer {
 
     pub fn handle_error<T>(&self, result: CrushResult<T>) {
         match result {
-            Err(e) => self.job_error(e),
+            Err(e) => self.crush_error(e),
             _ => {}
         }
     }
 
-    pub fn job_error(&self, err: CrushError) {
-        self.sender.send(PrinterMessage::JobError(err));
+    pub fn crush_error(&self, err: CrushError) {
+        self.sender.send(PrinterMessage::CrushError(err));
     }
 
     pub fn error(&self, err: &str) {

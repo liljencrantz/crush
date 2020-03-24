@@ -16,7 +16,7 @@ impl JobJoinHandle {
             JobJoinHandle::Async(a) => match a.join() {
                 Ok(r) => match r {
                     Ok(_) => {}
-                    Err(e) => printer().job_error(e),
+                    Err(e) => printer().crush_error(e),
                 },
                 Err(_) => printer().error("Unknown error while waiting for command to exit"),
             },

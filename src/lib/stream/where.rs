@@ -45,7 +45,7 @@ pub fn run(mut condition: Box<dyn CrushCommand + Send + Sync>, input: &mut dyn R
             Ok(row) => {
                 match evaluate(condition.clone(), &row, input.types(), &env) {
                     Ok(val) => if val { if output.send(row).is_err() { break }},
-                    Err(e) => printer().job_error(e),
+                    Err(e) => printer().crush_error(e),
                 }
             }
             Err(_) => break,

@@ -162,12 +162,12 @@ impl LogicalNode {
         match self {
             LogicalNode::LogicalOperation(l, op, r) =>
                 match op.as_ref() {
-                    "&&" =>
+                    "and" =>
                         Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(AND.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         )),
-                    "||" =>
+                    "or" =>
                         Ok(Some(CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(OR.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])

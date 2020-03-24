@@ -4,18 +4,23 @@ use crate::lang::ast::*;
 grammar;
 
 pub JobList: JobListNode = {
-  => JobListNode {jobs: Vec::new()},
-  <l:NonEmptyJobList> => l,
+  OptionalSeparator => JobListNode {jobs: Vec::new()},
+  <l:NonEmptyJobList> OptionalSeparator => l,
 };
 
+OptionalSeparator: () = {
+    => (),
+    Separator => (),
+}
+
 NonEmptyJobList: JobListNode = {
-  <mut l:NonEmptyJobList> ";" <j:Job> =>  {l.jobs.push(j); l},
+  <mut l:NonEmptyJobList> Separator <j:Job> =>  {l.jobs.push(j); l},
   <j:Job> => JobListNode {jobs: vec![j]},
 };
 
 Job: JobNode = {
     <c:Command> => JobNode{commands: vec![c]},
-    <mut j:Job> "|" <c:Command> => {j.commands.push(c); j}
+    <mut j:Job> "|" OptionalSeparator <c:Command> => {j.commands.push(c); j}
 };
 
 Command: CommandNode = {
@@ -31,85 +36,62 @@ Assignment: AssignmentNode = {
 
 Logical: LogicalNode = {
     <c: Comparison> => LogicalNode::Comparison(c),
-    <l: Logical> <op: LogicalOperator> <c: Comparison> => LogicalNode::LogicalOperation(Box::new(l), op, c),
+    <l: Logical> <op: LogicalOperator> <c: Comparison> => LogicalNode::LogicalOperation(Box::new(l), Box::from(op), c),
 }
 
 Comparison: ComparisonNode = {
     <t: Term> => ComparisonNode::Term(t),
-    <c: Comparison> <op: ComparisonOperator> <t: Term> => ComparisonNode::Comparison(Box::new(c), op, t),
+    <c: Comparison> <op: ComparisonOperator> <t: Term> => ComparisonNode::Comparison(Box::new(c), Box::from(op), t),
 }
 
 Term: TermNode = {
     <f: Factor> => TermNode::Factor(f),
-    <t: Term> <op: TermOperator> <f: Factor> => TermNode::Term(Box::new(t), op, f),
+    <t: Term> <op: TermOperator> <f: Factor> => TermNode::Term(Box::new(t), Box::from(op), f),
 }
 
 Factor: FactorNode = {
     <u: Unary> => FactorNode::Unary(u),
-    <f: Factor> <op: FactorOperator> <u: Unary> => FactorNode::Factor(Box::new(f), op, u),
+    <f: Factor> <op: FactorOperator> <u: Unary> => FactorNode::Factor(Box::new(f), Box::from(op), u),
 }
 
 Unary: UnaryNode = {
     <i: Item> => UnaryNode::Item(i),
-    <op: UnaryOperator> <u: Unary> => UnaryNode::Unary(op, Box::new(u)),
+    <op: UnaryOperator> <u: Unary> => UnaryNode::Unary(Box::from(op), Box::new(u)),
 }
 
 Item: ItemNode = {
-    <l: Label> => ItemNode::Label(l),
-    <l: Regex> => ItemNode::Regex(l),
-    <f: Field> => ItemNode::Field(f),
-    <g: Glob> => ItemNode::Glob(g),
-    <l: QuotedLabel> => ItemNode::Label(l),
-    <s: QuotedString> => ItemNode::String(s),
-    <s:r"[0-9][0-9_]*"> => ItemNode::Integer(i128::from_str(s.replace("_", "").as_str()).unwrap()),
-    <s:r"[0-9][0-9_]*\.[0-9_]+"> => ItemNode::Float(f64::from_str(s.replace("_", "").as_str()).unwrap()),
+    <l: Label> => ItemNode::Label(Box::from(l)),
+    <l: Regex> => ItemNode::Regex(Box::from(&l[3..l.len()-1])),
+    <f: Field> => ItemNode::Field(Box::from(f)),
+    <g: Glob> => ItemNode::Glob(Box::from(&g[2..])),
+    <l: QuotedLabel> => ItemNode::Label(Box::from(l)),
+    <s: QuotedString> => ItemNode::String(Box::from(s)),
+    <s:Integer> => ItemNode::Integer(i128::from_str(s.replace("_", "").as_str()).unwrap()),
+    <s:Float> => ItemNode::Float(f64::from_str(s.replace("_", "").as_str()).unwrap()),
     <i: Item> "[" <e: Assignment> "]" => ItemNode::GetItem(Box::new(i), Box::new(e)),
-    <i: Item> ":" <l: Label> => ItemNode::GetAttr(Box::new(i), l),
-    <i: Item> "/" <l: Label> => ItemNode::Path(Box::new(i), l),
+    <i: Item> ":" <l: Label> => ItemNode::GetAttr(Box::new(i), Box::from(l)),
+    <i: Item> "/" <l: Label> => ItemNode::Path(Box::new(i), Box::from(l)),
     "{" <l: NonEmptyJobList> "}" => ItemNode::Closure(l),
     "(" <j:Job> ")" => ItemNode::Substitution(j),
 }
 
-Label: Box<str> = {
-   <l:r"[\._a-zA-Z][\._a-zA-Z0-9]*"> => Box::from(l),
-}
-
-Regex: Box<str> = {
-   <l:r#"re"([^"]|\\.)*""#> => Box::from(&l[3..l.len()-1]),
-}
-
-QuotedLabel: Box<str> = {
-   <l:r#"'([^\\']|\\.)*'"#> => crate::lang::ast::unescape(l).into_boxed_str(),
-}
-
-Field: Box<str> = {
-   <l:r"%[\._a-zA-Z][\._a-zA-Z0-9]*"> => Box::from(l),
-}
-
-Glob: Box<str> = {
-   <l:r"\*\*([^ \n]|\\.)*"> => Box::from(&l[2..]),
-}
-
-QuotedString: Box<str> = {
-   <l:r#""([^\\"]|\\.)*""#> => Box::from(l),
-}
-
-LogicalOperator: Box<str> = {
-   <l:r"(&&|\|\|)"> => Box::from(l),
-}
-
-TermOperator: Box<str> = {
-   <l:r"(\+|-)"> => Box::from(l),
-}
-
-FactorOperator: Box<str> = {
-   <l:r"(\*|//)"> => Box::from(l),
-}
-
-UnaryOperator: Box<str> = {
-   <l:r"!"> => Box::from(l),
-}
-
-ComparisonOperator: Box<str> = {
-   <l:r"(>|<|>=|<=|==|!=|=~|!~)"> => Box::from(l),
+match {
+    r"(and|or)" => LogicalOperator,
+} else {
+    r"( |\t)+" => { },
+    r"#[^\n]*" => { },
+    r"(>|<|>=|<=|==|!=|=~|!~)" => ComparisonOperator,
+    "!" => UnaryOperator,
+    r"(\*|//)" => FactorOperator,
+    r"(\+|-)" => TermOperator,
+    r#""([^\\"]|\\.)*""# => QuotedString,
+    r"\*\*([^ \n]|\\.)*" => Glob,
+    r"%[\._a-zA-Z][\._a-zA-Z0-9]*" => Field,
+    r#"'([^\\']|\\.)*'"# => QuotedLabel,
+    r#"re"([^"]|\\.)*""# => Regex,
+    r"[\._a-zA-Z][\._a-zA-Z0-9]*" => Label,
+    r"(;|\n)( |\t|;|\n|#[^\n]*)*" => Separator,
+    r"[0-9][0-9_]*" => Integer,
+    r"[0-9][0-9_]*\.[0-9_]+" => Float,
+    _
 }

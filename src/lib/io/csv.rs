@@ -132,7 +132,7 @@ fn run(cfg: Config, output: OutputStream) -> CrushResult<()> {
                 output.send(Row::new(cells));
             }
             Err(err) => {
-                printer().job_error(err);
+                printer().crush_error(err);
             }
         }
     }
