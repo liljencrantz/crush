@@ -3,7 +3,19 @@ use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::Value, command::ExecutionContext};
 use regex::Regex;
 use std::error::Error;
-use crate::lang::command::{CrushCommand, ArgumentVector};
+use crate::lang::command::{CrushCommand, ArgumentVector, This};
+use std::collections::HashMap;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    pub static ref RE_METHODS: HashMap<Box<str>, Box<CrushCommand + Sync + Send>> = {
+        let mut res: HashMap<Box<str>, Box<CrushCommand + Send + Sync>> = HashMap::new();
+        res.insert(Box::from("match"), CrushCommand::command(r#match, false));
+        res.insert(Box::from("not_match"), CrushCommand::command(not_match, false));
+        res.insert(Box::from("replace"), CrushCommand::command(replace, false));
+        res
+    };
+}
 
 fn new(mut context: ExecutionContext) -> CrushResult<()> {
     let def = context.arguments.string(0)?;
@@ -15,40 +27,25 @@ fn new(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn r#match(mut context: ExecutionContext) -> CrushResult<()> {
-    let mut re = None;
-    let mut needle = None;
+    let re = context.this.re()?.1;
+    let needle = context.arguments.string(0)?;
+     context.output.send(Value::Bool(re.is_match(&needle)))
+}
 
-    for arg in context.arguments.drain(..) {
-        match (arg.name.as_deref(), arg.value) {
-            (Some("re"), Value::Regex(s, r)) | (None, Value::Regex(s, r)) => {
-                re = Some(r);
-            }
-            (Some("text"), Value::String(t)) | (None, Value::String(t)) => {
-                needle = Some(t);
-            }
-            _ => return argument_error("Invalid argument"),
-        }
-    }
-
-    match (re, needle) {
-        (Some(r), Some(t)) => {
-            context.output.send(Value::Bool(r.is_match(t.as_ref())))
-        }
-        _ => argument_error("Must specify both pattern and text"),
-    }
+fn not_match(mut context: ExecutionContext) -> CrushResult<()> {
+    let re = context.this.re()?.1;
+    let needle = context.arguments.string(0)?;
+    context.output.send(Value::Bool(!re.is_match(&needle)))
 }
 
 fn replace(mut context: ExecutionContext) -> CrushResult<()> {
-    let mut re = None;
+    let re = context.this.re()?.1;
     let mut text = None;
     let mut replace = None;
     let mut all = false;
 
     for arg in context.arguments.drain(..) {
         match (arg.name.as_deref(), arg.value) {
-            (Some("re"), Value::Regex(s, r)) | (None, Value::Regex(s, r)) => {
-                re = Some(r);
-            }
             (Some("text"), Value::String(t)) => {
                 text = Some(t);
             }
@@ -62,12 +59,12 @@ fn replace(mut context: ExecutionContext) -> CrushResult<()> {
         }
     }
 
-    match (re, text, replace) {
-        (Some(r), Some(t), Some(n)) => {
+    match (text, replace) {
+        (Some(t), Some(n)) => {
             let txt = if all {
-                r.replace_all(t.as_ref(), n.as_ref())
+                re.replace_all(t.as_ref(), n.as_ref())
             } else {
-                r.replace(t.as_ref(), n.as_ref())
+                re.replace(t.as_ref(), n.as_ref())
             };
             context.output.send(Value::String(Box::from(txt.as_ref())))
         }
@@ -78,8 +75,6 @@ fn replace(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("re")?;
     env.declare("new", Value::Command(CrushCommand::command(new, false)))?;
-    env.declare("match", Value::Command(CrushCommand::command(r#match, false)))?;
-    env.declare("replace", Value::Command(CrushCommand::command(replace, false)))?;
     env.readonly();
     Ok(())
 }

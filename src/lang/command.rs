@@ -11,6 +11,7 @@ use crate::lang::dict::Dict;
 use crate::lang::r#struct::Struct;
 use std::path::Path;
 use crate::util::replace::Replace;
+use regex::Regex;
 
 pub trait ArgumentVector {
     fn check_len(&self, len: usize) -> CrushResult<()>;
@@ -109,6 +110,7 @@ pub trait This {
     fn text(self) -> CrushResult<Box<str>>;
     fn r#struct(self) -> CrushResult<Struct>;
     fn file(self) -> CrushResult<Box<Path>>;
+    fn re(self) -> CrushResult<(Box<str>, Regex)>;
 }
 
 
@@ -144,6 +146,13 @@ impl This for Option<Value> {
     fn file(mut self) -> CrushResult<Box<Path>> {
         match self.take() {
             Some(Value::File(s)) => Ok(s),
+            _ => argument_error("Expected a file"),
+        }
+    }
+
+    fn re(mut self) -> CrushResult<(Box<str>, Regex)> {
+        match self.take() {
+            Some(Value::Regex(s, b)) => Ok((s,b)),
             _ => argument_error("Expected a file"),
         }
     }

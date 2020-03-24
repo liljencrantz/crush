@@ -1,14 +1,14 @@
 Todo for MVP 1:
+Re-add regexp literals
 Move the 'to' method to type instances
 Add methods to integer type
 Add methods to float type
 Add methods to type type
-Unify types and the type-related namespaces. List.of in the List type, etc.
+Unify types and the type-related namespaces. List:of in the List type, etc.
 Nice way to pass on all arguments of a closure to another command
 Nice way of introspecting all arguments to a closure
 Run an executable by giving its path
 Figure out how to make external commands with subcommands convenient again
-Re-add match operators =~ and !~ for regexp matching: fnurple | where {$row =~ re{^a.*b$}}
 Add ~ (replace) operator for regexps: "this is a string" ~ re{a.*g} "Sparta!" -> "this is Sparta!"
 Make newline a separator again
 &&/|| => and/or
@@ -199,3 +199,5 @@ Remove the dot operator in favor of [] for fields. Use slash on commands?
 Figure out how to make globs convenient again
 Make structs mutable and protected by Arc + Mutex
 Make argument parsing in list and dict commands more consistent
+Add methods for regexp type
+Re-add match operators =~ and !~ for regexp matching: fnurple | where {$row =~ re{^a.*b$}}

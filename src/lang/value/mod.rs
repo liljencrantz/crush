@@ -66,7 +66,7 @@ impl ToString for Value {
             Value::Time(val) => val.format("%Y-%m-%d %H:%M:%S %z").to_string(),
             Value::Field(val) => format!(r"%{}", val.join(".")),
             Value::Glob(val) => format!("*{{{}}}", val.to_string()),
-            Value::Regex(val, _) => format!("regex{{{}}}", val),
+            Value::Regex(val, _) => format!(r#"re"{}""#, val),
             Value::File(val) => val.to_str().unwrap_or("<Broken file>").to_string(),
             Value::List(l) => l.to_string(),
             Value::Duration(d) => duration_format(d),
@@ -102,6 +102,8 @@ impl Value {
                     crate::lib::string::STRING_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.as_ref().clone())),
                 Value::File(s) =>
                     crate::lib::file::FILE_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.as_ref().clone())),
+                Value::Regex(s, b) =>
+                    crate::lib::data::re::RE_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.as_ref().clone())),
                 _ => return None,
             }
         }

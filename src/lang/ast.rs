@@ -1,5 +1,5 @@
 use crate::lang::job::Job;
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult, error, to_crush_error};
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::argument::ArgumentDefinition;
 use crate::lang::value::{ValueDefinition, Value};
@@ -11,6 +11,7 @@ use crate::lib::math;
 use crate::lib::comp;
 use crate::lib::cond;
 use crate::lib::var;
+use regex::Regex;
 
 lazy_static! {
     pub static ref ADD: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(math::add, false)};
@@ -230,6 +231,18 @@ impl ComparisonNode {
                             ValueDefinition::Value(Value::Command(NEQ.as_ref().clone())),
                             vec![l.generate_argument()?, r.generate_argument()?])
                         )),
+                    "=~" =>
+                        Ok(Some(
+                            CommandInvocation::new(
+                                ValueDefinition::GetAttr(Box::from(l.generate_argument()?.unnamed_value()?), "match".to_string().into_boxed_str()),
+                                vec![r.generate_argument()?])
+                        )),
+                    "!~" =>
+                        Ok(Some(
+                            CommandInvocation::new(
+                                ValueDefinition::GetAttr(Box::from(l.generate_argument()?.unnamed_value()?), "not_match".to_string().into_boxed_str()),
+                                vec![r.generate_argument()?])
+                        )),
                     _ => error("Unknown operator"),
                 }
             }
@@ -360,6 +373,7 @@ impl UnaryNode {
 pub enum ItemNode {
     Glob(Box<str>),
     Label(Box<str>),
+    Regex(Box<str>),
     Field(Box<str>),
     String(Box<str>),
     Integer(i128),
@@ -401,6 +415,7 @@ impl ItemNode {
     pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
         Ok(ArgumentDefinition::unnamed(match self {
             ItemNode::Label(l) => ValueDefinition::Label(l.clone()),
+            ItemNode::Regex(l) => ValueDefinition::Value(Value::Regex(l.clone(), to_crush_error(Regex::new(l.clone().as_ref()))?)),
             ItemNode::String(t) => ValueDefinition::Value(Value::String(unescape(t).into_boxed_str())),
             ItemNode::Integer(i) => ValueDefinition::Value(Value::Integer(i.clone())),
             ItemNode::Float(f) => ValueDefinition::Value(Value::Float(f.clone())),

@@ -56,6 +56,7 @@ Unary: UnaryNode = {
 
 Item: ItemNode = {
     <l: Label> => ItemNode::Label(l),
+    <l: Regex> => ItemNode::Regex(l),
     <f: Field> => ItemNode::Field(f),
     <g: Glob> => ItemNode::Glob(g),
     <l: QuotedLabel> => ItemNode::Label(l),
@@ -71,6 +72,10 @@ Item: ItemNode = {
 
 Label: Box<str> = {
    <l:r"[\._a-zA-Z][\._a-zA-Z0-9]*"> => Box::from(l),
+}
+
+Regex: Box<str> = {
+   <l:r#"re"([^"]|\\.)*""#> => Box::from(&l[3..l.len()-1]),
 }
 
 QuotedLabel: Box<str> = {
@@ -106,5 +111,5 @@ UnaryOperator: Box<str> = {
 }
 
 ComparisonOperator: Box<str> = {
-   <l:r"(>|<|>=|<=|==|!=)"> => Box::from(l),
+   <l:r"(>|<|>=|<=|==|!=|=~|!~)"> => Box::from(l),
 }
