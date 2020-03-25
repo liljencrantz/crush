@@ -38,5 +38,21 @@ Example invocations:
     cd 'My Documents'
     find root/etc
     1 + 2 * 4 # 9
-    math.sin(3)
+    math:sin 3
     1 + 3.3 # 4.4
+
+Custom types:
+
+Point := (struct)
+
+Point:len={
+    ||
+    math.sqrt this:x*this:x + this:y*this:y + this:z*this:z
+}
+
+Point:__add__={
+
+}
+
+p := (new Point x=1 y=2 z=3)
+p:len

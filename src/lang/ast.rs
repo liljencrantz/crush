@@ -4,7 +4,7 @@ use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::argument::ArgumentDefinition;
 use crate::lang::value::{ValueDefinition, Value};
 use std::ops::Deref;
-use crate::lang::command::CrushCommand;
+use crate::lang::command::{CrushCommand, Parameter};
 use crate::util::glob::Glob;
 use lazy_static::lazy_static;
 use crate::lib::math;
@@ -34,7 +34,6 @@ lazy_static! {
     pub static ref SET: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(var::set, false)};
 }
 
-#[derive(Debug)]
 pub struct JobListNode {
     pub jobs: Vec<JobNode>,
 }
@@ -45,7 +44,6 @@ impl JobListNode {
     }
 }
 
-#[derive(Debug)]
 pub struct JobNode {
     pub commands: Vec<CommandNode>,
 }
@@ -56,7 +54,6 @@ impl JobNode {
     }
 }
 
-#[derive(Debug)]
 pub struct CommandNode {
     pub expressions: Vec<AssignmentNode>,
 }
@@ -80,7 +77,6 @@ impl CommandNode {
     }
 }
 
-#[derive(Debug)]
 pub enum AssignmentNode {
     Assignment(ItemNode, Box<AssignmentNode>),
     Declaration(ItemNode, Box<AssignmentNode>),
@@ -113,13 +109,13 @@ impl AssignmentNode {
                     )),
                     ItemNode::GetItem(container, key) => Ok(Some(
                         CommandInvocation::new(
-                        ValueDefinition::GetAttr(
-                            Box::from(container.generate_argument()?.unnamed_value()?),
-                            Box::from("__setitem__")),
-                        vec![
-                            ArgumentDefinition::unnamed(key.generate_argument()?.unnamed_value()?),
-                            ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?),
-                        ]))),
+                            ValueDefinition::GetAttr(
+                                Box::from(container.generate_argument()?.unnamed_value()?),
+                                Box::from("__setitem__")),
+                            vec![
+                                ArgumentDefinition::unnamed(key.generate_argument()?.unnamed_value()?),
+                                ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?),
+                            ]))),
                     ItemNode::GetAttr(container, attr) => Ok(Some(
                         CommandInvocation::new(
                             ValueDefinition::GetAttr(
@@ -151,7 +147,6 @@ impl AssignmentNode {
     }
 }
 
-#[derive(Debug)]
 pub enum LogicalNode {
     LogicalOperation(Box<LogicalNode>, Box<str>, ComparisonNode),
     Comparison(ComparisonNode),
@@ -186,7 +181,6 @@ impl LogicalNode {
     }
 }
 
-#[derive(Debug)]
 pub enum ComparisonNode {
     Comparison(Box<ComparisonNode>, Box<str>, TermNode),
     Replace(Box<ComparisonNode>, Box<str>, TermNode, TermNode),
@@ -264,7 +258,7 @@ impl ComparisonNode {
 
     pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
         match self {
-            ComparisonNode::Comparison(_, _, _) | ComparisonNode::Replace(_, _, _, _)=>
+            ComparisonNode::Comparison(_, _, _) | ComparisonNode::Replace(_, _, _, _) =>
                 Ok(ArgumentDefinition::unnamed(ValueDefinition::JobDefinition(
                     Job::new(vec![self.generate_standalone()?.unwrap()])
                 ))),
@@ -274,8 +268,6 @@ impl ComparisonNode {
     }
 }
 
-
-#[derive(Debug)]
 pub enum TermNode {
     Term(Box<TermNode>, Box<str>, FactorNode),
     Factor(FactorNode),
@@ -287,7 +279,7 @@ impl TermNode {
             TermNode::Term(l, op, r) => {
                 let cmd = match op.as_ref() {
                     "+" => ADD.as_ref(),
-                    "-" =>SUB.as_ref(),
+                    "-" => SUB.as_ref(),
                     _ => return error("Unknown operator"),
                 };
                 Ok(Some(CommandInvocation::new(
@@ -310,7 +302,6 @@ impl TermNode {
     }
 }
 
-#[derive(Debug)]
 pub enum FactorNode {
     Factor(Box<FactorNode>, Box<str>, UnaryNode),
     Unary(UnaryNode),
@@ -322,7 +313,7 @@ impl FactorNode {
             FactorNode::Factor(l, op, r) => {
                 let cmd = match op.as_ref() {
                     "*" => MUL.as_ref(),
-                    "//" =>DIV.as_ref(),
+                    "//" => DIV.as_ref(),
                     _ => return error(format!("Unknown operator {}", op).as_str()),
                 };
                 Ok(Some(CommandInvocation::new(
@@ -346,7 +337,6 @@ impl FactorNode {
     }
 }
 
-#[derive(Debug)]
 pub enum UnaryNode {
     Unary(Box<str>, Box<UnaryNode>),
     Item(ItemNode),
@@ -374,7 +364,6 @@ impl UnaryNode {
     }
 }
 
-#[derive(Debug)]
 pub enum ItemNode {
     Glob(Box<str>),
     Label(Box<str>),
@@ -387,7 +376,7 @@ pub enum ItemNode {
     GetAttr(Box<ItemNode>, Box<str>),
     Path(Box<ItemNode>, Box<str>),
     Substitution(JobNode),
-    Closure(JobListNode),
+    Closure(Option<Vec<ParameterNode>>, JobListNode),
 }
 
 pub fn unescape(s: &str) -> String {
@@ -437,13 +426,48 @@ impl ItemNode {
                     }
                     value => ValueDefinition::GetAttr(Box::new(value), label.clone())
                 }
-            },
+            }
             ItemNode::Path(node, label) =>
                 ValueDefinition::Path(Box::new(node.generate_argument()?.unnamed_value()?), label.clone()),
             ItemNode::Field(f) => ValueDefinition::Value(Value::Field(vec![f[1..].to_string().into_boxed_str()])),
             ItemNode::Substitution(s) => ValueDefinition::JobDefinition(s.generate()?),
-            ItemNode::Closure(c) => ValueDefinition::ClosureDefinition(c.generate()?),
+            ItemNode::Closure(s, c) => {
+                let param = s.as_ref().map(|v| v.iter()
+                    .map(|p| p.generate())
+                    .collect::<CrushResult<Vec<Parameter>>>());
+                let p = match param {
+                    None => None,
+                    Some(Ok(p)) => Some(p),
+                    Some(Err(e)) => return Err(e),
+                };
+                ValueDefinition::ClosureDefinition(p, c.generate()?)
+            }
             ItemNode::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g))),
         }))
+    }
+}
+
+pub enum ParameterNode {
+    Parameter(Box<str>, ValueDefinition, Option<LogicalNode>),
+    Named(Box<str>),
+    Unnamed(Box<str>),
+}
+
+impl ParameterNode {
+    pub fn generate(&self) -> CrushResult<Parameter> {
+        match self {
+            ParameterNode::Parameter(name, value_type, default) =>
+                Ok(
+                    Parameter::Parameter(
+                        name.clone(),
+                        value_type.clone(),
+                        default.as_ref()
+                            .map(|d| d.generate_argument()).transpose()?
+                            .map(|a| a.unnamed_value()).transpose()?,
+                    )
+                ),
+            ParameterNode::Named(s) => Ok(Parameter::Named(s.clone())),
+            ParameterNode::Unnamed(s) => Ok(Parameter::Unnamed(s.clone())),
+        }
     }
 }

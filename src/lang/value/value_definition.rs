@@ -12,11 +12,12 @@ use crate::{
 use crate::lang::{job::Job, argument::ArgumentDefinition, command::CrushCommand};
 use crate::util::file::cwd;
 use crate::lang::errors::block_error;
+use crate::lang::command::Parameter;
 
 #[derive(Clone)]
 pub enum ValueDefinition {
     Value(Value),
-    ClosureDefinition(Vec<Job>),
+    ClosureDefinition(Option<Vec<Parameter>>, Vec<Job>),
     JobDefinition(Job),
     Label(Box<str>),
     GetItem(Box<ValueDefinition>, Box<ValueDefinition>),
@@ -46,9 +47,9 @@ impl ValueDefinition {
 
     pub fn can_block_when_called(&self, arg: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
         match self {
-            ValueDefinition::ClosureDefinition(c) => {
+            ValueDefinition::ClosureDefinition(p, c) => {
                 if c.len() == 1 {
-                    CrushCommand::closure(c.clone(), env).can_block(arg, env)
+                    CrushCommand::closure(p.clone(), c.clone(), env).can_block(arg, env)
                 } else {
                     true
                 }
@@ -81,7 +82,7 @@ impl ValueDefinition {
                 dependencies.push(j);
                 (None, last_input.recv()?)
             }
-            ValueDefinition::ClosureDefinition(c) => (None, Value::Command(CrushCommand::closure(c.clone(), env))),
+            ValueDefinition::ClosureDefinition(p, c) => (None, Value::Command(CrushCommand::closure(p.clone(), c.clone(), env))),
             ValueDefinition::Label(s) =>
                 (None, mandate(
                     env.get(s).or_else(|| file_get(s)),
@@ -161,7 +162,7 @@ impl ToString for ValueDefinition {
         match &self {
             ValueDefinition::Value(v) => v.to_string(),
             ValueDefinition::Label(v) => v.to_string(),
-            ValueDefinition::ClosureDefinition(c) => "<closure>".to_string(),
+            ValueDefinition::ClosureDefinition(s, c) => "<closure>".to_string(),
             ValueDefinition::JobDefinition(_) => "<job>".to_string(),
             ValueDefinition::GetItem(v, l) => format!("{}[{}]", v.to_string(), l.to_string()),
             ValueDefinition::GetAttr(v, l) => format!("{}:{}", v.to_string(), l),

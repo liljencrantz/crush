@@ -47,6 +47,10 @@ impl ValueType {
             .collect()
     }
 
+    pub fn is(&self, value: &Value) -> bool {
+        (*self == ValueType::Any) || (*self == value.value_type())
+    }
+
     pub fn materialize(&self) -> ValueType {
         match self {
             ValueType::String |

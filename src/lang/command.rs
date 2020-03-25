@@ -5,13 +5,14 @@ use crate::lang::{argument::Argument, argument::ArgumentDefinition};
 use crate::lang::scope::Scope;
 use crate::lang::job::Job;
 use crate::lang::stream_printer::spawn_print_thread;
-use crate::lang::value::{Value, ValueType};
+use crate::lang::value::{Value, ValueType, ValueDefinition};
 use crate::lang::list::List;
 use crate::lang::dict::Dict;
 use crate::lang::r#struct::Struct;
 use std::path::Path;
 use crate::util::replace::Replace;
 use regex::Regex;
+use std::collections::HashMap;
 
 pub trait ArgumentVector {
     fn check_len(&self, len: usize) -> CrushResult<()>;
@@ -173,8 +174,9 @@ pub trait CrushCommand {
 
 
 impl dyn CrushCommand {
-    pub fn closure(job_definitions: Vec<Job>, env: &Scope) -> Box<dyn CrushCommand + Send + Sync> {
+    pub fn closure(signature: Option<Vec<Parameter>>, job_definitions: Vec<Job>, env: &Scope) -> Box<dyn CrushCommand + Send + Sync> {
         Box::from(Closure {
+            signature,
             job_definitions,
             env: env.clone(),
         })
@@ -266,6 +268,7 @@ impl std::cmp::Eq for ConditionCommand {}
 #[derive(Clone)]
 struct Closure {
     job_definitions: Vec<Job>,
+    signature: Option<Vec<Parameter>>,
     env: Scope,
 }
 
@@ -280,7 +283,7 @@ impl CrushCommand for Closure {
         if let Some(this) = context.this {
             env.redeclare("this", this);
         }
-        Closure::push_arguments_to_env(context.arguments, &env);
+        Closure::push_arguments_to_env(&self.signature, context.arguments, &env)?;
 
         match job_definitions.len() {
             0 => return error("Empty closures not supported"),
@@ -334,7 +337,11 @@ impl CrushCommand for Closure {
     }
 
     fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {
-        Box::from(Closure {job_definitions: self.job_definitions.clone(), env: self.env.clone()})
+        Box::from(Closure {
+            signature: self.signature.clone(),
+            job_definitions: self.job_definitions.clone(),
+            env: self.env.clone(),
+        })
     }
 }
 
@@ -347,12 +354,88 @@ impl Closure {
         }
     */
 
-    fn push_arguments_to_env(mut arguments: Vec<Argument>, env: &Scope) {
-        for arg in arguments.drain(..) {
-            if let Some(name) = &arg.name {
-                env.redeclare(name.as_ref(), arg.value);
+    fn push_arguments_to_env(signature: &Option<Vec<Parameter>>, mut arguments: Vec<Argument>, env: &Scope) -> CrushResult<()> {
+        if let Some(signature) = signature {
+            let mut named = HashMap::new();
+            let mut unnamed = Vec::new();
+            for arg in arguments.drain(..) {
+                if let Some(name) = &arg.name {
+                    named.insert(name.clone(), arg.value);
+                } else {
+                    unnamed.push(arg.value);
+                }
+            }
+            let mut unnamed_name = None;
+            let mut named_name = None;
+
+            for param in signature {
+                match param {
+                    Parameter::Parameter(name, value_type, default) => {
+                        if let (_, Value::Type(value_type)) = value_type.compile_non_blocking(env)? {
+                            if named.contains_key(name.as_ref()) {
+                                let value = named.remove(name.as_ref()).unwrap();
+                                if !value_type.is(&value) {
+                                    return argument_error("Wrong parameter type");
+                                }
+                                env.redeclare(name.as_ref(), value);
+                            } else {
+                                if let Some(default) = default {
+                                    env.redeclare(name.as_ref(), default.compile_non_blocking(env)?.1);
+                                } else {
+                                    return argument_error("Missing variable!!!")
+                                }
+                            }
+                        } else {
+                            return argument_error("Not a type");
+                        }
+                    },
+                    Parameter::Named(name) => {
+                        if named_name.is_some() {
+                            return argument_error("Multiple named argument maps specified");
+                        }
+                        named_name = Some(name);
+                    },
+                    Parameter::Unnamed(name) => {
+                        if unnamed_name.is_some() {
+                            return argument_error("Multiple named argument maps specified");
+                        }
+                        unnamed_name = Some(name);
+                    },
+                }
+            }
+
+            if let Some(unnamed_name) = unnamed_name {
+                env.redeclare(
+                    unnamed_name.as_ref(),
+                    Value::List(List::new(ValueType::Any, unnamed)));
+            } else {
+                if !unnamed.is_empty() {
+                    return argument_error("No target for unnamed arguments");
+                }
+            }
+
+            if let Some(named_name) = named_name {
+                let d = Dict::new(ValueType::String, ValueType::Any);
+                for (k, v) in named {
+                    d.insert(Value::String(k), v)?;
+                }
+                env.redeclare(named_name.as_ref(), Value::Dict(d));
+            } else {
+                if !named.is_empty() {
+                    return argument_error("No target for extra named arguments");
+                }
+            }
+
+        } else {
+            for arg in arguments.drain(..) {
+                if let Some(name) = &arg.name {
+                    env.redeclare(name.as_ref(), arg.value);
+                } else {
+                    return argument_error("No target for unnamed arguments");
+                }
             }
         }
+        Ok(())
     }
 }
 
@@ -360,4 +443,11 @@ impl ToString for Closure {
     fn to_string(&self) -> String {
         self.job_definitions.iter().map(|j| j.to_string()).collect::<Vec<String>>().join("; ")
     }
+}
+
+#[derive(Clone)]
+pub enum Parameter {
+    Parameter(Box<str>, ValueDefinition, Option<ValueDefinition>),
+    Named(Box<str>),
+    Unnamed(Box<str>),
 }

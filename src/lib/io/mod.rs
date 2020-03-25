@@ -3,7 +3,7 @@ use crate::lang::errors::CrushResult;
 use crate::lang::{value::Value, command::ExecutionContext, binary::BinaryReader};
 use crate::lang::stream_printer::print_value;
 use crate::lib::parse_util::argument_files;
-use crate::lang::command::CrushCommand;
+use crate::lang::command::{CrushCommand, ArgumentVector};
 use crate::lang::list::List;
 use crate::lang::value::ValueType;
 
@@ -13,13 +13,15 @@ mod json;
 mod http;
 
 pub fn val(mut context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(context.arguments.remove(0).value)
+    context.arguments.check_len(1)?;
+    context.output.send(context.arguments.value(0)?)
 }
 
 pub fn dir(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(1)?;
     context.output.send(
         Value::List(List::new(ValueType::String,
-                              context.arguments.remove(0).value.fields()
+                              context.arguments.value(0)?.fields()
                                   .drain(..)
                                   .map(|n| Value::String(n))
                                   .collect()))

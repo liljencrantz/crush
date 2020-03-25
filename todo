@@ -9,7 +9,6 @@ Unify types and the type-related namespaces. List:of in the List type, etc.
 Nice way to pass on all arguments of a closure to another command
 Nice way of introspecting all arguments to a closure
 Figure out how to make external commands with subcommands convenient again
-Add ~ (replace) operator for regexps: "this is a string" ~ re{a.*g} "Sparta!" -> "this is Sparta!"
 Add avg command
 Add system tests for type casting
 Add system tests for for loop
@@ -203,3 +202,4 @@ Re-add match operators =~ and !~ for regexp matching: fnurple | where {$row =~ r
 Re-add regexp literals
 Make newline a separator again
 &&/|| => and/or
+Add ~ (replace) operator for regexps: "this is a string" ~ re{a.*g} "Sparta!" -> "this is Sparta!"

@@ -1,5 +1,7 @@
 use std::str::FromStr;
 use crate::lang::ast::*;
+use crate::lang::command::Parameter;
+use crate::lang::value::{ValueDefinition, Value, ValueType};
 
 grammar;
 
@@ -55,6 +57,29 @@ Unary: UnaryNode = {
     <op: UnaryOperator> <u: Unary> => UnaryNode::Unary(Box::from(op), Box::from(u)),
 }
 
+Signature: Option<Vec<ParameterNode>> = {
+    => None,
+    "|" "|" => Some(vec![]),
+    "|" <s: ParameterList> "|" => Some(s),
+}
+
+ParameterList: Vec<ParameterNode> = {
+    Parameter => vec![<>],
+    <mut l: ParameterList> Separator? <p: Parameter> => {l.push(p); l},
+}
+
+Parameter: ParameterNode = {
+    <l: Label> <d: Default> => ParameterNode::Parameter(Box::from(l), ValueDefinition::Value(Value::Type(ValueType::Any)), d),
+    <n: Label> ":" <t: Label> <d: Default> => ParameterNode::Parameter(Box::from(n), ValueDefinition::Label(Box::from(t)), d),
+    UnaryOperator <l: Label> => ParameterNode::Unnamed(Box::from(l)),
+    "!!" <l: Label> => ParameterNode::Named(Box::from(l)),
+}
+
+Default: Option<LogicalNode> = {
+    => None,
+    "=" <l: Logical> => Some(l),
+}
+
 Item: ItemNode = {
     Label => ItemNode::Label(Box::from(<>)),
     <l: Regex> => ItemNode::Regex(Box::from(&l[3..l.len()-1])),
@@ -67,12 +92,13 @@ Item: ItemNode = {
     <i: Item> "[" <e: Assignment> "]" => ItemNode::GetItem(Box::new(i), Box::from(e)),
     <i: Item> ":" <l: Label> => ItemNode::GetAttr(Box::from(i), Box::from(l)),
     <i: Item> "/" <l: Label> => ItemNode::Path(Box::from(i), Box::from(l)),
-    "{" <l: NonEmptyJobList> "}" => ItemNode::Closure(l),
+    "{" <s: Signature> <l: NonEmptyJobList> "}" => ItemNode::Closure(s, l),
     "(" <j:Job> ")" => ItemNode::Substitution(j),
 }
 
 match {
     r"(and|or)" => LogicalOperator,
+    r"as" => CastOperator,
 } else {
     r"( |\t)+" => {},
     r"#[^\n]*" => {},
