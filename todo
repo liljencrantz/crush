@@ -1,7 +1,5 @@
 Todo for MVP 1:
 Fix bug: "crush> (glob:new "*.txt") =~ foo.txt" does not spit out an error!
-Use @ and @@ for args/kwargs, both in signatures and in argument lists
-Use % for wildcards, something else for fields. Maybe ^?
 negation operator. named 'neg'?
 rename not operator from ! to 'not'?
 Add methods to type type
@@ -13,7 +11,7 @@ Add system tests for for loop
 Add system tests for binary stream handling
 Add system tests for structs
 Add system tests for dealing with tables as streams
-Some missing comparisons on Value
+Add missing comparisons on Value
 Missing some value serialisations and deserialisations
 Error source propagation
 help command
@@ -208,3 +206,5 @@ Add methods to integer type
 Add methods to float type
 Unify types and the type-related namespaces. List:of in the List type, etc.
 Replace type:to function with 'as' operator
+Use @ and @@ for args/kwargs, both in signatures and in argument lists
+Use % for wildcards, something else for fields. Maybe ^?

@@ -21,8 +21,8 @@ impl Glob {
         Glob{ pattern: pattern.to_string() }
     }
 
-    pub fn to_string(&self) -> &String {
-        &self.pattern
+    pub fn to_string(&self) -> String {
+        self.pattern.clone()
     }
 
     pub fn matches(&self, v: &str) -> bool {
@@ -102,7 +102,7 @@ fn glob_match(glob: &mut Chars, value: &mut Peekable<Chars>) -> bool {
     match (glob.next(), value.peek()) {
         (None, None) => return true,
         (None, Some(_)) => return false,
-        (Some('*'), _) => {
+        (Some('%'), _) => {
             let mut i = value.clone();
             loop {
                 match i.peek() {
@@ -150,9 +150,9 @@ mod tests {
 
     #[test]
     fn test_that_basic_wildcards_work() {
-        assert!(Glob::new("*.txt").matches("foo.txt"));
-        assert!(!Glob::new("*.txt").matches("foo.txb"));
-        assert!(!Glob::new("*.txt").matches("footxt"));
+        assert!(Glob::new("%.txt").matches("foo.txt"));
+        assert!(!Glob::new("%.txt").matches("foo.txb"));
+        assert!(!Glob::new("%.txt").matches("footxt"));
     }
 
     #[test]
@@ -165,21 +165,21 @@ mod tests {
 
     #[test]
     fn test_that_wildcards_work_at_the_end() {
-        assert!(Glob::new("*").matches("aaa"));
-        assert!(Glob::new("aaa*").matches("aaa"));
-        assert!(Glob::new("aaa*").matches("aaaa"));
-        assert!(Glob::new("aaa*").matches("aaab"));
-        assert!(Glob::new("aaa*?").matches("aaab"));
-        assert!(Glob::new("aaa*?").matches("aaaab"));
-        assert!(Glob::new("*a*").matches("aaaa"));
-        assert!(!Glob::new("*a*").matches("bbb"));
+        assert!(Glob::new("%").matches("aaa"));
+        assert!(Glob::new("aaa%").matches("aaa"));
+        assert!(Glob::new("aaa%").matches("aaaa"));
+        assert!(Glob::new("aaa%").matches("aaab"));
+        assert!(Glob::new("aaa%?").matches("aaab"));
+        assert!(Glob::new("aaa%?").matches("aaaab"));
+        assert!(Glob::new("%a%").matches("aaaa"));
+        assert!(!Glob::new("%a%").matches("bbb"));
     }
 
     #[test]
     fn test_that_multiple_wildcards_work() {
-        assert!(Glob::new("a*b*c").matches("abc"));
-        assert!(Glob::new("a*b*c?").matches("aabcc"));
-        assert!(!Glob::new("a*b*c?").matches("acb"));
+        assert!(Glob::new("a%b%c").matches("abc"));
+        assert!(Glob::new("a%b%c?").matches("aabcc"));
+        assert!(!Glob::new("a%b%c?").matches("acb"));
     }
 
 //    #[test]
