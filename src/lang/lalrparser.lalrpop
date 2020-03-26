@@ -21,42 +21,42 @@ Job: JobNode = {
 };
 
 Command: CommandNode = {
-  Assignment => CommandNode{expressions: vec![<>]},
-  <mut c: Command> <a:Assignment> => {c.expressions.push(a); c}
+  Assignment => CommandNode{expressions: vec![*<>]},
+  <mut c: Command> <a:Assignment> => {c.expressions.push(*a); c}
 };
 
-Assignment: AssignmentNode = {
-  <i: Item> "=" <e: Assignment> => AssignmentNode::Assignment(i, Box::new(e)),
-  <i: Item> ":=" <e: Assignment> => AssignmentNode::Declaration(i, Box::new(e)),
-  Logical => AssignmentNode::Logical(<>),
+Assignment: Box<Node> = {
+  Logical,
+  <i: Item> "=" <e: Assignment> => Box::from(Node::Assignment(i, e)),
+  <i: Item> ":=" <e: Assignment> => Box::from(Node::Declaration(i, e)),
 }
 
-Logical: LogicalNode = {
-    Comparison => LogicalNode::Comparison(<>),
-    <l: Logical> <op: LogicalOperator> <c: Comparison> => LogicalNode::LogicalOperation(Box::from(l), Box::from(op), c),
+Logical: Box<Node> = {
+    Comparison,
+    <l: Logical> <op: LogicalOperator> <c: Comparison> => Box::from(Node::LogicalOperation(l, Box::from(op), c)),
 }
 
-Comparison: ComparisonNode = {
-    Term => ComparisonNode::Term(<>),
-    <c: Comparison> <op: ComparisonOperator> <t: Term> => ComparisonNode::Comparison(Box::from(c), Box::from(op), t),
-    <c: Comparison> <op: ReplaceOperator> <t1: Term> <t2: Term> => ComparisonNode::Replace(Box::from(c), Box::from(op), t1, t2)
+Comparison: Box<Node> = {
+    Term,
+    <c: Comparison> <op: ComparisonOperator> <t: Term> => Box::from(Node::Comparison(c, Box::from(op), t)),
+    <c: Comparison> <op: ReplaceOperator> <t1: Term> <t2: Term> => Box::from(Node::Replace(c, Box::from(op), t1, t2))
 }
 
-Term: TermNode = {
-    Factor => TermNode::Factor(<>),
-    <t: Term> <op: TermOperator> <f: Factor> => TermNode::Term(Box::from(t), Box::from(op), f),
+Term: Box<Node> = {
+    Factor,
+    <t: Term> <op: TermOperator> <f: Factor> => Box::from(Node::Term(t, Box::from(op), f)),
 }
 
-Factor: FactorNode = {
-    Unary => FactorNode::Unary(<>),
-    <f: Factor> <op: FactorOperator> <u: Unary> => FactorNode::Factor(Box::from(f), Box::from(op), u),
+Factor: Box<Node> = {
+    Unary,
+    <f: Factor> <op: FactorOperator> <u: Unary> => Box::from(Node::Factor(f, Box::from(op), u)),
 }
 
-Unary: UnaryNode = {
-    Item => UnaryNode::Item(<>),
-    "!" <u: Unary> => UnaryNode::Unary(Box::from("!"), Box::from(u)),
-    "@" <u: Unary> => UnaryNode::Unary(Box::from("@"), Box::from(u)),
-    "@@" <u: Unary> => UnaryNode::Unary(Box::from("@@"), Box::from(u)),
+Unary: Box<Node> = {
+    Item,
+    "!" <u: Unary> => Box::from(Node::Unary(Box::from("!"), u)),
+    "@" <u: Unary> => Box::from(Node::Unary(Box::from("@"), u)),
+    "@@" <u: Unary> => Box::from(Node::Unary(Box::from("@@"), u)),
 }
 
 Signature: Option<Vec<ParameterNode>> = {
@@ -77,25 +77,25 @@ Parameter: ParameterNode = {
     "@@" <l: Label> => ParameterNode::Named(Box::from(l)),
 }
 
-Default: Option<LogicalNode> = {
+Default: Option<Node> = {
     => None,
-    "=" <l: Logical> => Some(l),
+    "=" <l: Logical> => Some(*l),
 }
 
-Item: ItemNode = {
-    Label => ItemNode::Label(Box::from(<>)),
-    <l: Regex> => ItemNode::Regex(Box::from(&l[3..l.len()-1])),
-    Field => ItemNode::Field(Box::from(<>)),
-    <g: Glob> => ItemNode::Glob(Box::from(&g[2..])),
-    QuotedLabel => ItemNode::Label(Box::from(<>)),
-    QuotedString => ItemNode::String(Box::from(<>)),
-    Integer => ItemNode::Integer(i128::from_str(<>.replace("_", "").as_str()).unwrap()),
-    Float => ItemNode::Float(f64::from_str(<>.replace("_", "").as_str()).unwrap()),
-    <i: Item> "[" <e: Assignment> "]" => ItemNode::GetItem(Box::new(i), Box::from(e)),
-    <i: Item> ":" <l: Label> => ItemNode::GetAttr(Box::from(i), Box::from(l)),
-    <i: Item> "/" <l: Label> => ItemNode::Path(Box::from(i), Box::from(l)),
-    "{" <s: Signature> <l: NonEmptyJobList> "}" => ItemNode::Closure(s, l),
-    "(" <j:Job> ")" => ItemNode::Substitution(j),
+Item: Box<Node> = {
+    Label => Box::from(Node::Label(Box::from(<>))),
+    <l: Regex> => Box::from(Node::Regex(Box::from(&l[3..l.len()-1]))),
+    Field => Box::from(Node::Field(Box::from(<>))),
+    <g: Glob> => Box::from(Node::Glob(Box::from(&g[2..]))),
+    QuotedLabel => Box::from(Node::Label(Box::from(<>))),
+    QuotedString => Box::from(Node::String(Box::from(<>))),
+    Integer => Box::from(Node::Integer(i128::from_str(<>.replace("_", "").as_str()).unwrap())),
+    Float => Box::from(Node::Float(f64::from_str(<>.replace("_", "").as_str()).unwrap())),
+    <i: Item> "[" <e: Assignment> "]" => Box::from(Node::GetItem(i, e)),
+    <i: Item> ":" <l: Label> => Box::from(Node::GetAttr(i, Box::from(l))),
+    <i: Item> "/" <l: Label> => Box::from(Node::Path(i, Box::from(l))),
+    "{" <s: Signature> <l: NonEmptyJobList> "}" => Box::from(Node::Closure(s, l)),
+    "(" <j:Job> ")" => Box::from(Node::Substitution(j)),
 }
 
 match {

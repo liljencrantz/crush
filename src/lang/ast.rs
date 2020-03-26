@@ -49,7 +49,7 @@ impl JobNode {
 }
 
 pub struct CommandNode {
-    pub expressions: Vec<AssignmentNode>,
+    pub expressions: Vec<Node>,
 }
 
 impl CommandNode {
@@ -72,37 +72,106 @@ impl CommandNode {
 }
 
 
-pub enum AssignmentNode {
-    Assignment(ItemNode, Box<AssignmentNode>),
-    Declaration(ItemNode, Box<AssignmentNode>),
-    Logical(LogicalNode),
+pub enum Node {
+    Assignment(Box<Node>, Box<Node>),
+    Declaration(Box<Node>, Box<Node>),
+    LogicalOperation(Box<Node>, Box<str>, Box<Node>),
+    Comparison(Box<Node>, Box<str>, Box<Node>),
+    Replace(Box<Node>, Box<str>, Box<Node>, Box<Node>),
+    Term(Box<Node>, Box<str>, Box<Node>),
+    Factor(Box<Node>, Box<str>, Box<Node>),
+    Unary(Box<str>, Box<Node>),
+    Glob(Box<str>),
+    Label(Box<str>),
+    Regex(Box<str>),
+    Field(Box<str>),
+    String(Box<str>),
+    Integer(i128),
+    Float(f64),
+    GetItem(Box<Node>, Box<Node>),
+    GetAttr(Box<Node>, Box<str>),
+    Path(Box<Node>, Box<str>),
+    Substitution(JobNode),
+    Closure(Option<Vec<ParameterNode>>, JobListNode),
 }
 
-impl AssignmentNode {
+impl Node {
     pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
+        Ok(ArgumentDefinition::unnamed(
         match self {
-            AssignmentNode::Assignment(target, value) =>
-                match target {
-                    ItemNode::Label(t) => Ok(ArgumentDefinition::named(t.deref(), value.generate_argument()?.unnamed_value()?)),
+            Node::Assignment(target, value) =>
+                return match target.as_ref() {
+                    Node::Label(t) => Ok(ArgumentDefinition::named(t.deref(), value.generate_argument()?.unnamed_value()?)),
                     _ => error("Invalid left side in named argument"),
                 },
-            AssignmentNode::Declaration(target, value) =>
-                error("Variable declarations not supported as arguments"),
-            AssignmentNode::Logical(l) => l.generate_argument(),
-        }
+
+            Node::Declaration(target, value) =>
+                return error("Variable declarations not supported as arguments"),
+
+            Node::LogicalOperation(_, _, _) | Node::Comparison(_, _, _) | Node::Replace(_, _, _, _) |
+            Node::Term(_, _, _) | Node::Factor(_, _, _) =>
+                ValueDefinition::JobDefinition(
+                    Job::new(vec![self.generate_standalone()?.unwrap()])
+                ),
+            Node::Unary(op, r) =>
+                match op.deref() {
+                    "!" =>
+                        ValueDefinition::JobDefinition(
+                            Job::new(vec![CommandInvocation::new(
+                                ValueDefinition::Value(Value::Command(NOT.as_ref().clone())),
+                                vec![r.generate_argument()?])
+                            ])),
+                    _ => return error("Unknown operator"),
+                },
+            Node::Label(l) => ValueDefinition::Label(l.clone()),
+            Node::Regex(l) => ValueDefinition::Value(Value::Regex(l.clone(), to_crush_error(Regex::new(l.clone().as_ref()))?)),
+            Node::String(t) => ValueDefinition::Value(Value::String(unescape(t).into_boxed_str())),
+            Node::Integer(i) => ValueDefinition::Value(Value::Integer(i.clone())),
+            Node::Float(f) => ValueDefinition::Value(Value::Float(f.clone())),
+            Node::GetItem(node, field) =>
+                ValueDefinition::GetItem(
+                    Box::new(node.generate_argument()?.unnamed_value()?),
+                    Box::new(field.generate_argument()?.unnamed_value()?)),
+            Node::GetAttr(node, label) => {
+                let parent = node.generate_argument()?;
+                match parent.unnamed_value()? {
+                    ValueDefinition::Value(Value::Field(mut f)) => {
+                        f.push(label.clone());
+                        ValueDefinition::Value(Value::Field(f))
+                    }
+                    value => ValueDefinition::GetAttr(Box::new(value), label.clone())
+                }
+            }
+            Node::Path(node, label) =>
+                ValueDefinition::Path(Box::new(node.generate_argument()?.unnamed_value()?), label.clone()),
+            Node::Field(f) => ValueDefinition::Value(Value::Field(vec![f[1..].to_string().into_boxed_str()])),
+            Node::Substitution(s) => ValueDefinition::JobDefinition(s.generate()?),
+            Node::Closure(s, c) => {
+                let param = s.as_ref().map(|v| v.iter()
+                    .map(|p| p.generate())
+                    .collect::<CrushResult<Vec<Parameter>>>());
+                let p = match param {
+                    None => None,
+                    Some(Ok(p)) => Some(p),
+                    Some(Err(e)) => return Err(e),
+                };
+                ValueDefinition::ClosureDefinition(p, c.generate()?)
+            }
+            Node::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g))),
+
+        }))
     }
 
     pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
         match self {
-            AssignmentNode::Logical(e) => e.generate_standalone(),
-            AssignmentNode::Assignment(target, value) => {
-                match target {
-                    ItemNode::Label(t) => Ok(Some(
+            Node::Assignment(target, value) => {
+                match target.as_ref() {
+                    Node::Label(t) => Ok(Some(
                         CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(SET.as_ref().clone())),
                             vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)])
                     )),
-                    ItemNode::GetItem(container, key) => Ok(Some(
+                    Node::GetItem(container, key) => Ok(Some(
                         CommandInvocation::new(
                             ValueDefinition::GetAttr(
                                 Box::from(container.generate_argument()?.unnamed_value()?),
@@ -111,7 +180,7 @@ impl AssignmentNode {
                                 ArgumentDefinition::unnamed(key.generate_argument()?.unnamed_value()?),
                                 ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?),
                             ]))),
-                    ItemNode::GetAttr(container, attr) => Ok(Some(
+                    Node::GetAttr(container, attr) => Ok(Some(
                         CommandInvocation::new(
                             ValueDefinition::GetAttr(
                                 Box::from(container.generate_argument()?.unnamed_value()?),
@@ -124,33 +193,17 @@ impl AssignmentNode {
                     _ => error("Invalid left side in assignment"),
                 }
             }
-            AssignmentNode::Declaration(target, value) => {
-                match target {
-                    ItemNode::Label(t) => Ok(Some(
+            Node::Declaration(target, value) => {
+                match target.as_ref() {
+                    Node::Label(t) => Ok(Some(
                         CommandInvocation::new(
                             ValueDefinition::Value(Value::Command(LET.as_ref().clone())),
                             vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)])
                     )),
-                    _ => error("Invalid left side in assignment"),
-                    ItemNode::Integer(_) => error("Invalid left side in assignment"),
-                    ItemNode::Float(_) => error("Invalid left side in assignment"),
-                    ItemNode::GetItem(_, _) => error("Invalid left side in assignment"),
-                    ItemNode::Path(_, _) => error("Invalid left side in assignment"),
+                    _ => error("Invalid left side in declaration"),
                 }
             }
-        }
-    }
-}
-
-pub enum LogicalNode {
-    LogicalOperation(Box<LogicalNode>, Box<str>, ComparisonNode),
-    Comparison(ComparisonNode),
-}
-
-impl LogicalNode {
-    pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
-        match self {
-            LogicalNode::LogicalOperation(l, op, r) => {
+            Node::LogicalOperation(l, op, r) => {
                 let cmd = match op.as_ref() {
                     "and" => AND.as_ref(),
                     "or" => OR.as_ref(),
@@ -160,32 +213,7 @@ impl LogicalNode {
                     ValueDefinition::Value(Value::Command(cmd.clone())),
                     vec![l.generate_argument()?, r.generate_argument()?])))
             }
-            LogicalNode::Comparison(c) => c.generate_standalone(),
-        }
-    }
-
-    pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
-        match self {
-            LogicalNode::LogicalOperation(_, _, _) =>
-                Ok(ArgumentDefinition::unnamed(ValueDefinition::JobDefinition(
-                    Job::new(vec![self.generate_standalone()?.unwrap()])
-                ))),
-            LogicalNode::Comparison(c) =>
-                c.generate_argument(),
-        }
-    }
-}
-
-pub enum ComparisonNode {
-    Comparison(Box<ComparisonNode>, Box<str>, TermNode),
-    Replace(Box<ComparisonNode>, Box<str>, TermNode, TermNode),
-    Term(TermNode),
-}
-
-impl ComparisonNode {
-    pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
-        match self {
-            ComparisonNode::Comparison(l, op, r) => {
+            Node::Comparison(l, op, r) => {
                 match op.as_ref() {
                     "<" =>
                         Ok(Some(CommandInvocation::new(
@@ -232,7 +260,7 @@ impl ComparisonNode {
                     _ => error("Unknown operator"),
                 }
             }
-            ComparisonNode::Replace(r, op, t1, t2) => {
+            Node::Replace(r, op, t1, t2) => {
                 let cmd = match op.as_ref() {
                     "~" => "replace",
                     "~~" => "replace_all",
@@ -245,33 +273,7 @@ impl ComparisonNode {
                         vec![t1.generate_argument()?, t2.generate_argument()?])
                 ))
             }
-
-            ComparisonNode::Term(t) =>
-                t.generate_standalone(),
-        }
-    }
-
-    pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
-        match self {
-            ComparisonNode::Comparison(_, _, _) | ComparisonNode::Replace(_, _, _, _) =>
-                Ok(ArgumentDefinition::unnamed(ValueDefinition::JobDefinition(
-                    Job::new(vec![self.generate_standalone()?.unwrap()])
-                ))),
-
-            ComparisonNode::Term(t) => t.generate_argument(),
-        }
-    }
-}
-
-pub enum TermNode {
-    Term(Box<TermNode>, Box<str>, FactorNode),
-    Factor(FactorNode),
-}
-
-impl TermNode {
-    pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
-        match self {
-            TermNode::Term(l, op, r) => {
+            Node::Term(l, op, r) => {
                 let method = match op.as_ref() {
                     "+" => "__add__",
                     "-" => "__sub__",
@@ -283,30 +285,7 @@ impl TermNode {
                         vec![r.generate_argument()?])
                 ))
             }
-            TermNode::Factor(f) => f.generate_standalone(),
-        }
-    }
-
-    pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
-        match self {
-            TermNode::Term(_, _, _) =>
-                Ok(ArgumentDefinition::unnamed(ValueDefinition::JobDefinition(
-                    Job::new(vec![self.generate_standalone()?.unwrap()])
-                ))),
-            TermNode::Factor(f) => f.generate_argument(),
-        }
-    }
-}
-
-pub enum FactorNode {
-    Factor(Box<FactorNode>, Box<str>, UnaryNode),
-    Unary(UnaryNode),
-}
-
-impl FactorNode {
-    pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
-        match self {
-            FactorNode::Factor(l, op, r) => {
+            Node::Factor(l, op, r) => {
                 let method = match op.as_ref() {
                     "*" => "__mul__",
                     "//" => "__div__",
@@ -318,63 +297,16 @@ impl FactorNode {
                         vec![r.generate_argument()?])
                 ))
             }
-            FactorNode::Unary(u) => u.generate_standalone(),
-        }
-    }
 
-    pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
-        match self {
-            FactorNode::Factor(_, _, _) =>
-                Ok(ArgumentDefinition::unnamed(ValueDefinition::JobDefinition(
-                    Job::new(vec![self.generate_standalone()?.unwrap()])
-                ))),
-            FactorNode::Unary(u) =>
-                u.generate_argument(),
+            Node::Unary(_, _) | Node::Glob(_) | Node::Label(_) |
+            Node::Regex(_) | Node::Field(_) | Node::String(_) |
+            Node::Integer(_) | Node::Float(_) | Node::GetItem(_, _) |
+            Node::GetAttr(_, _) | Node::Path(_, _) | Node::Substitution(_) |
+            Node::Closure(_, _) => Ok(None),
         }
     }
 }
 
-pub enum UnaryNode {
-    Unary(Box<str>, Box<UnaryNode>),
-    Item(ItemNode),
-}
-
-impl UnaryNode {
-    pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
-        Ok(None)
-    }
-
-    pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
-        match self {
-            UnaryNode::Unary(op, r) =>
-                match op.deref() {
-                    "!" =>
-                        Ok(ArgumentDefinition::unnamed(ValueDefinition::JobDefinition(
-                            Job::new(vec![CommandInvocation::new(
-                                ValueDefinition::Value(Value::Command(NOT.as_ref().clone())),
-                                vec![r.generate_argument()?])
-                            ])))),
-                    _ => error("Unknown operator")
-                },
-            UnaryNode::Item(i) => i.generate_argument(),
-        }
-    }
-}
-
-pub enum ItemNode {
-    Glob(Box<str>),
-    Label(Box<str>),
-    Regex(Box<str>),
-    Field(Box<str>),
-    String(Box<str>),
-    Integer(i128),
-    Float(f64),
-    GetItem(Box<ItemNode>, Box<AssignmentNode>),
-    GetAttr(Box<ItemNode>, Box<str>),
-    Path(Box<ItemNode>, Box<str>),
-    Substitution(JobNode),
-    Closure(Option<Vec<ParameterNode>>, JobListNode),
-}
 
 pub fn unescape(s: &str) -> String {
     let mut res = "".to_string();
@@ -398,54 +330,9 @@ pub fn unescape(s: &str) -> String {
     res
 }
 
-impl ItemNode {
-    pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
-        Ok(None)
-    }
-
-    pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
-        Ok(ArgumentDefinition::unnamed(match self {
-            ItemNode::Label(l) => ValueDefinition::Label(l.clone()),
-            ItemNode::Regex(l) => ValueDefinition::Value(Value::Regex(l.clone(), to_crush_error(Regex::new(l.clone().as_ref()))?)),
-            ItemNode::String(t) => ValueDefinition::Value(Value::String(unescape(t).into_boxed_str())),
-            ItemNode::Integer(i) => ValueDefinition::Value(Value::Integer(i.clone())),
-            ItemNode::Float(f) => ValueDefinition::Value(Value::Float(f.clone())),
-            ItemNode::GetItem(node, field) =>
-                ValueDefinition::GetItem(
-                    Box::new(node.generate_argument()?.unnamed_value()?),
-                    Box::new(field.generate_argument()?.unnamed_value()?)),
-            ItemNode::GetAttr(node, label) => {
-                let parent = node.generate_argument()?;
-                match parent.unnamed_value()? {
-                    ValueDefinition::Value(Value::Field(mut f)) => {
-                        f.push(label.clone());
-                        ValueDefinition::Value(Value::Field(f))
-                    }
-                    value => ValueDefinition::GetAttr(Box::new(value), label.clone())
-                }
-            }
-            ItemNode::Path(node, label) =>
-                ValueDefinition::Path(Box::new(node.generate_argument()?.unnamed_value()?), label.clone()),
-            ItemNode::Field(f) => ValueDefinition::Value(Value::Field(vec![f[1..].to_string().into_boxed_str()])),
-            ItemNode::Substitution(s) => ValueDefinition::JobDefinition(s.generate()?),
-            ItemNode::Closure(s, c) => {
-                let param = s.as_ref().map(|v| v.iter()
-                    .map(|p| p.generate())
-                    .collect::<CrushResult<Vec<Parameter>>>());
-                let p = match param {
-                    None => None,
-                    Some(Ok(p)) => Some(p),
-                    Some(Err(e)) => return Err(e),
-                };
-                ValueDefinition::ClosureDefinition(p, c.generate()?)
-            }
-            ItemNode::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g))),
-        }))
-    }
-}
 
 pub enum ParameterNode {
-    Parameter(Box<str>, ValueDefinition, Option<LogicalNode>),
+    Parameter(Box<str>, ValueDefinition, Option<Node>),
     Named(Box<str>),
     Unnamed(Box<str>),
 }
