@@ -19,6 +19,7 @@ lazy_static! {
         res.insert(Box::from("__mul__"), CrushCommand::command(mul, false));
         res.insert(Box::from("__div__"), CrushCommand::command(div, false));
         res.insert(Box::from("new"), CrushCommand::command(new, false));
+        res.insert(Box::from("__neg__"), CrushCommand::command(neg, false));
         res
     };
 }
@@ -62,4 +63,9 @@ fn new(mut context: ExecutionContext) -> CrushResult<()> {
     } else {
         argument_error("Unknown duration format")
     }
+}
+
+fn neg(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
+    context.output.send(Value::Duration(-context.this.duration()?))
 }

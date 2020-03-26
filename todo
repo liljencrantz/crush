@@ -1,5 +1,5 @@
 Todo for MVP 1:
-Fix bug: "crush> (glob:new "*.txt") =~ foo.txt" does not spit out an error!
+Fix bug: "crush> (glob:new "%.txt") =~ foo.txt" does not spit out an error!
 negation operator. named 'neg'?
 rename not operator from ! to 'not'?
 Add methods to type type

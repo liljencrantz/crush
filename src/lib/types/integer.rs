@@ -17,6 +17,7 @@ lazy_static! {
         res.insert(Box::from("__sub__"), CrushCommand::command(sub, false));
         res.insert(Box::from("__mul__"), CrushCommand::command(mul, false));
         res.insert(Box::from("__div__"), CrushCommand::command(div, false));
+        res.insert(Box::from("__neg__"), CrushCommand::command(neg, false));
         res
     };
 }
@@ -25,3 +26,8 @@ binary_op!(add, integer, Integer, Integer, |a, b| a+b, Float, Float, |a, b| a as
 binary_op!(sub, integer, Integer, Integer, |a, b| a-b, Float, Float, |a, b| a as f64-b);
 binary_op!(mul, integer, Integer, Integer, |a, b| a*b, Float, Float, |a, b| a as f64*b);
 binary_op!(div, integer, Integer, Integer, |a, b| a/b, Float, Float, |a, b| a as f64/b);
+
+fn neg(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
+    context.output.send(Value::Integer(-context.this.integer()?))
+}

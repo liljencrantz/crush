@@ -54,7 +54,8 @@ Factor: Box<Node> = {
 
 Unary: Box<Node> = {
     Cast,
-    "!" <u: Unary> => Box::from(Node::Unary(Box::from("!"), u)),
+    NotOperator <u: Unary> => Box::from(Node::Unary(Box::from("not"), u)),
+    NegationOperator <u: Unary> => Box::from(Node::Unary(Box::from("neg"), u)),
     "@" <u: Unary> => Box::from(Node::Unary(Box::from("@"), u)),
     "@@" <u: Unary> => Box::from(Node::Unary(Box::from("@@"), u)),
 }
@@ -105,7 +106,9 @@ Item: Box<Node> = {
 
 match {
     r"(and|or)" => LogicalOperator,
-    r"as" => CastOperator,
+    "as" => CastOperator,
+    "neg" => NegationOperator,
+    "not" => NotOperator,
 } else {
     r"( |\t)+" => {},
     r"#[^\n]*" => {},

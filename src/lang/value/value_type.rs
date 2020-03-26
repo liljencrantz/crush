@@ -65,6 +65,8 @@ impl ValueType {
                 &types::glob::METHODS,
             ValueType::Integer =>
                 &types::integer::METHODS,
+            ValueType::Float =>
+                &types::float::METHODS,
             ValueType::Duration =>
                 &types::duration::METHODS,
             ValueType::Time =>
