@@ -52,15 +52,23 @@ impl ValueType {
     pub fn fields(&self) -> Option<&HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>>> {
         Some(match self {
             ValueType::List(_) =>
-                &types::list::LIST_METHODS,
+                &types::list::METHODS,
             ValueType::Dict(_, _) =>
-                &types::dict::DICT_METHODS,
+                &types::dict::METHODS,
             ValueType::String =>
-                &types::string::STRING_METHODS,
+                &types::string::METHODS,
             ValueType::File =>
-                &types::file::FILE_METHODS,
+                &types::file::METHODS,
             ValueType::Regex =>
-                &types::re::RE_METHODS,
+                &types::re::METHODS,
+            ValueType::Glob =>
+                &types::glob::METHODS,
+            ValueType::Integer =>
+                &types::integer::METHODS,
+            ValueType::Duration =>
+                &types::duration::METHODS,
+            ValueType::Time =>
+                &types::time::METHODS,
             _ => return None,
         })
     }
@@ -150,7 +158,7 @@ impl ToString for ValueType {
             ValueType::Struct(r) => format!("struct<{}>", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
             ValueType::List(l) => format!("list<{}>", l.to_string()),
             ValueType::Dict(k, v) => format!("dict<{},{}>", k.to_string(), v.to_string()),
-            ValueType::Scope => "env".to_string(),
+            ValueType::Scope => "scope".to_string(),
             ValueType::Bool => "bool".to_string(),
             ValueType::Float => "float".to_string(),
             ValueType::Empty => "empty".to_string(),

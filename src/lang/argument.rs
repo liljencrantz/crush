@@ -17,7 +17,6 @@ impl ArgumentDefinition {
     pub fn argument(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope) -> Result<Argument, CrushError> {
         Ok(Argument { name: self.name.clone(), value: self.value.compile(dependencies, env)?.1 })
     }
-
 }
 
 pub type Argument = BaseArgument<Value>;
@@ -58,14 +57,24 @@ impl<C: Clone> BaseArgument<C> {
 }
 
 pub trait ArgumentVecCompiler {
-    fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope) -> CrushResult<Vec<Argument>>;
+    fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope) -> CrushResult<(Vec<Argument>, Option<Value>)>;
 }
 
 impl ArgumentVecCompiler for Vec<ArgumentDefinition> {
-    fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope) -> CrushResult<Vec<Argument>> {
-        self.iter()
-            .map(|a| a.argument(dependencies, env))
-            .collect::<CrushResult<Vec<Argument>>>()
+    fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope) -> CrushResult<(Vec<Argument>, Option<Value>)> {
+        let mut this = None;
+        let mut res = Vec::new();
+        for a in self {
+            match a.argument(dependencies, env) {
+                Ok(arg) => match arg.name.as_deref() {
+                    Some("this") => this = Some(arg.value),
+                    _ => res.push(arg),
+                },
+                Err(e) => return Err(e),
+            };
+
+        }
+        Ok((res, this))
     }
 }
 

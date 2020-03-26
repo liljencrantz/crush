@@ -9,8 +9,9 @@ use std::collections::HashMap;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref DICT_METHODS: HashMap<Box<str>, Box<CrushCommand + Sync + Send>> = {
+    pub static ref METHODS: HashMap<Box<str>, Box<CrushCommand + Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
+        res.insert(Box::from("new"), CrushCommand::command(new, false));
         res.insert(Box::from("len"), CrushCommand::command(len, false));
         res.insert(Box::from("empty"), CrushCommand::command(empty, false));
 //        res.insert(Box::from("clear"), Box::from(CrushCommand::command(clear, false)));
@@ -23,13 +24,16 @@ lazy_static! {
 }
 
 fn new(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(2)?;
-    let key_type = context.arguments.r#type(0)?;
-    let value_type = context.arguments.r#type(1)?;
-    if !key_type.is_hashable() {
-        argument_error("Key type is not hashable")
+    context.arguments.check_len(0)?;
+    let t = context.this.r#type()?;
+    if let ValueType::Dict(key_type, value_type) = t {
+        if !key_type.is_hashable() {
+            argument_error("Key type is not hashable")
+        } else {
+            context.output.send(Value::Dict(Dict::new(*key_type, *value_type)))
+        }
     } else {
-        context.output.send(Value::Dict(Dict::new(key_type, value_type)))
+        argument_error("Expected a dict type as this value")
     }
 }
 
@@ -72,11 +76,4 @@ fn len(context: ExecutionContext) -> CrushResult<()> {
 fn empty(context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context.output.send(Value::Bool(context.this.dict()?.len() == 0))
-}
-
-pub fn declare(root: &Scope) -> CrushResult<()> {
-    let env = root.create_namespace("dict")?;
-    env.declare("new", Value::Command(CrushCommand::command(new, false)))?;
-    env.readonly();
-    Ok(())
 }

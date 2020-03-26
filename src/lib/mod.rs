@@ -5,9 +5,10 @@ pub mod traversal;
 pub mod var;
 pub mod proc;
 pub mod input;
-pub mod r#type;
-pub mod time;
-pub mod math;
+
+#[macro_use]
+pub mod binary_op;
+
 pub mod comp;
 pub mod cond;
 pub mod stream;
@@ -27,9 +28,6 @@ use std::thread::JoinHandle;
 pub use control::cmd;
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    r#type::declare(root)?;
-    time::declare(root)?;
-    math::declare(root)?;
     comp::declare(root)?;
     cond::declare(root)?;
     traversal::declare(root)?;

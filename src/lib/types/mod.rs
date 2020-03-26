@@ -1,22 +1,28 @@
 use crate::lang::scope::Scope;
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, argument_error, mandate};
 use crate::lang::{value::Value, r#struct::Struct};
 use crate::lang::command::{ExecutionContext, CrushCommand, This};
-use crate::lang::argument::column_names;
+use crate::lang::argument::{column_names, Argument};
 use crate::lang::command::ArgumentVector;
 use crate::lang::value::ValueType;
+use crate::lang::table::ColumnType;
 
 pub mod list;
 pub mod dict;
 pub mod re;
+pub mod glob;
 pub mod string;
 pub mod file;
+pub mod integer;
+pub mod float;
+pub mod duration;
+pub mod time;
 
 fn materialize(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(context.input.recv()?.materialize())
 }
 
-fn r#struct(context: ExecutionContext) -> CrushResult<()> {
+fn struct_of(context: ExecutionContext) -> CrushResult<()> {
     let mut names = column_names(&context.arguments);
 
     let arr: Vec<(Box<str>, Value)> =
@@ -36,20 +42,78 @@ pub fn setattr(mut context: ExecutionContext) -> CrushResult<()> {
     Ok(())
 }
 
+
+fn dict(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(2)?;
+    let key_type = context.arguments.r#type(0)?;
+    let value_type = context.arguments.r#type(1)?;
+    context.output.send(Value::Type(ValueType::Dict(Box::new(key_type), Box::new(value_type))))
+}
+
+fn parse_column_types(mut arguments: Vec<Argument>) -> CrushResult<Vec<ColumnType>> {
+    let mut types = Vec::new();
+    let names = column_names(&arguments);
+
+    for (idx, arg) in arguments.drain(..).enumerate() {
+        if let Value::Type(t) = arg.value {
+            types.push(ColumnType::new(names[idx].as_ref(), t));
+        } else {
+            return argument_error(format!("Expected all parameters to be types, found {}", arg.value.value_type().to_string()).as_str())
+        }
+    }
+    Ok(types)
+}
+
+fn r#struct(context: ExecutionContext) -> CrushResult<()> {
+    context.output.send(Value::Type(ValueType::Struct(parse_column_types(context.arguments)?)))
+}
+
+fn r#table(context: ExecutionContext) -> CrushResult<()> {
+    context.output.send(Value::Type(ValueType::Table(parse_column_types(context.arguments)?)))
+}
+
+fn r#table_stream(context: ExecutionContext) -> CrushResult<()> {
+    context.output.send(Value::Type(ValueType::TableStream(parse_column_types(context.arguments)?)))
+}
+
+fn r#as(mut context: ExecutionContext) -> CrushResult<()> {
+    context.output.send(context.input.recv()?.cast(context.arguments.r#type(0)?)?)
+}
+
+pub fn r#type(context: ExecutionContext) -> CrushResult<()> {
+    context.output.send(Value::Type(mandate(context.this, "Missing this value")?.value_type()))
+}
+
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("data")?;
     root.r#use(&env);
 
-    env.declare("struct", Value::Command(CrushCommand::command(r#struct, false)))?;
+    env.declare("struct_of", Value::Command(CrushCommand::command(struct_of, false)))?;
     env.declare("materialize", Value::Command(CrushCommand::command(materialize, true)))?;
 
     env.declare("type", Value::Type(ValueType::Type))?;
     env.declare("any", Value::Type(ValueType::Any))?;
+    env.declare("bool", Value::Type(ValueType::Bool))?;
+    env.declare("command", Value::Type(ValueType::Command))?;
+    env.declare("scope", Value::Type(ValueType::Scope))?;
+    env.declare("binary", Value::Type(ValueType::Binary))?;
+    env.declare("binary_stream", Value::Type(ValueType::BinaryStream))?;
+    env.declare("field", Value::Type(ValueType::Field))?;
+    env.declare("empty", Value::Type(ValueType::Empty))?;
+    env.declare("float", Value::Type(ValueType::Float))?;
+    env.declare("integer", Value::Type(ValueType::Integer))?;
+    env.declare("list", Value::Type(ValueType::List(Box::from(ValueType::Any))))?;
+    env.declare("string", Value::Type(ValueType::String))?;
+    env.declare("glob", Value::Type(ValueType::Glob))?;
+    env.declare("re", Value::Type(ValueType::Regex))?;
+    env.declare("duration", Value::Type(ValueType::Duration))?;
+    env.declare("time", Value::Type(ValueType::Time))?;
 
-    string::declare(&env)?;
-    list::declare(&env)?;
-    dict::declare(&env)?;
-    re::declare(&env)?;
+    env.declare("table", Value::Command(CrushCommand::command(table, false)))?;
+    env.declare("table_stream", Value::Command(CrushCommand::command(table_stream, false)))?;
+    env.declare("dict", Value::Command(CrushCommand::command(dict, false)))?;
+    env.declare("struct", Value::Command(CrushCommand::command(r#struct, false)))?;
+
     env.readonly();
 
     Ok(())

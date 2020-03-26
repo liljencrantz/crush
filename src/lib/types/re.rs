@@ -9,7 +9,7 @@ use lazy_static::lazy_static;
 use crate::lang::value::ValueType;
 
 lazy_static! {
-    pub static ref RE_METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
+    pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
         res.insert(Box::from("match"), CrushCommand::command(r#match, false));
         res.insert(Box::from("not_match"), CrushCommand::command(not_match, false));
@@ -111,8 +111,4 @@ fn replace_all(mut context: ExecutionContext) -> CrushResult<()> {
         }
         _ => argument_error("Must specify both pattern and text"),
     }
-}
-
-pub fn declare(root: &Scope) -> CrushResult<()> {
-    root.declare("re", Value::Type(ValueType::Regex))
 }

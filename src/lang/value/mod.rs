@@ -89,7 +89,7 @@ fn add_keys<T>(map: &HashMap<Box<str>, T>, res: &mut Vec<Box<str>>) {
 impl Value {
     pub fn field(&self, name: &str) -> Option<Value> {
         if name == "type" {
-            Some(Value::Command(CrushCommand::command(crate::lib::r#type::r#type, false)))
+            Some(Value::Command(CrushCommand::command(crate::lib::types::r#type, false)))
         } else {
             match self {
                 Value::Struct(s) => s.clone().get(name),

@@ -86,14 +86,11 @@ impl CommandInvocation {
         input: ValueReceiver,
         output: ValueSender,
     ) -> CrushResult<ExecutionContext> {
-        let arguments = local_arguments
+        let (arguments, arg_this) = local_arguments
             .compile(deps, &local_env)?;
 
-        let arg_this = arguments.iter()
-            .filter(|a| a.name.as_ref().map(|e| e.as_ref() == "this").unwrap_or(false))
-            .collect::<Vec<&Argument>>();
-        if !arg_this.is_empty() {
-            this = Some(arg_this.last().unwrap().value.clone());
+        if arg_this.is_some() {
+            this = arg_this;
         }
 
         Ok(ExecutionContext {

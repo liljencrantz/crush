@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, error, argument_error};
+use crate::lang::errors::{CrushResult, error, argument_error, CrushError};
 use std::fmt::Formatter;
 use crate::lang::stream::{ValueReceiver, ValueSender, InputStream, empty_channel};
 use crate::lang::{argument::Argument, argument::ArgumentDefinition};
@@ -13,6 +13,8 @@ use std::path::Path;
 use crate::util::replace::Replace;
 use regex::Regex;
 use std::collections::HashMap;
+use crate::util::glob::Glob;
+use chrono::{Duration, Local, DateTime};
 
 pub trait ArgumentVector {
     fn check_len(&self, len: usize) -> CrushResult<()>;
@@ -22,6 +24,7 @@ pub trait ArgumentVector {
     fn command(&mut self, idx: usize) -> CrushResult<Box<dyn CrushCommand + Send + Sync>>;
     fn r#type(&mut self, idx: usize) -> CrushResult<ValueType>;
     fn value(&mut self, idx: usize) -> CrushResult<Value>;
+    fn glob(&mut self, idx: usize) -> CrushResult<Glob>;
 }
 
 impl ArgumentVector for Vec<Argument> {
@@ -95,6 +98,17 @@ impl ArgumentVector for Vec<Argument> {
             error("Index out of bounds")
         }
     }
+
+    fn glob(&mut self, idx: usize) -> CrushResult<Glob> {
+        if idx < self.len() {
+            match self.replace(idx, Argument::unnamed(Value::Bool(false))).value {
+                Value::Glob(s) => Ok(s),
+                _ => error("Invalid value"),
+            }
+        } else {
+            error("Index out of bounds")
+        }
+    }
 }
 
 pub struct ExecutionContext {
@@ -112,6 +126,12 @@ pub trait This {
     fn r#struct(self) -> CrushResult<Struct>;
     fn file(self) -> CrushResult<Box<Path>>;
     fn re(self) -> CrushResult<(Box<str>, Regex)>;
+    fn glob(self) -> CrushResult<Glob>;
+    fn integer(self) -> CrushResult<i128>;
+    fn float(self) -> CrushResult<f64>;
+    fn r#type(self) -> CrushResult<ValueType>;
+    fn duration(self) -> CrushResult<Duration>;
+    fn time(self) -> CrushResult<DateTime<Local>>;
 }
 
 
@@ -154,7 +174,49 @@ impl This for Option<Value> {
     fn re(mut self) -> CrushResult<(Box<str>, Regex)> {
         match self.take() {
             Some(Value::Regex(s, b)) => Ok((s,b)),
-            _ => argument_error("Expected a file"),
+            _ => argument_error("Expected a regular expression"),
+        }
+    }
+
+    fn glob(mut self) -> CrushResult<Glob> {
+        match self.take() {
+            Some(Value::Glob(s)) => Ok(s),
+            _ => argument_error("Expected a glob"),
+        }
+    }
+
+    fn integer(mut self) -> CrushResult<i128> {
+        match self.take() {
+            Some(Value::Integer(s)) => Ok(s),
+            _ => argument_error("Expected an integer"),
+        }
+    }
+
+    fn float(mut self) -> CrushResult<f64> {
+        match self.take() {
+            Some(Value::Float(s)) => Ok(s),
+            _ => argument_error("Expected a float"),
+        }
+    }
+
+    fn r#type(mut self) -> CrushResult<ValueType> {
+        match self.take() {
+            Some(Value::Type(s)) => Ok(s),
+            _ => argument_error("Expected a type"),
+        }
+    }
+
+    fn duration(mut self) -> CrushResult<Duration> {
+        match self.take() {
+            Some(Value::Duration(s)) => Ok(s),
+            _ => argument_error("Expected a duration"),
+        }
+    }
+
+    fn time(mut self) -> CrushResult<DateTime<Local>> {
+        match self.take() {
+            Some(Value::Time(s)) => Ok(s),
+            _ => argument_error("Expected a time"),
         }
     }
 }

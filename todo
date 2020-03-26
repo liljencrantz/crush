@@ -1,13 +1,12 @@
 Todo for MVP 1:
-Use % for wildcards, something else for fields. Maybe $?
-Replace type:to function with as operator
-Add methods to integer type
-Add methods to float type
+Fix bug: "crush> (glob:new "*.txt") =~ foo.txt" does not spit out an error!
+Use @ and @@ for args/kwargs, both in signatures and in argument lists
+Use % for wildcards, something else for fields. Maybe ^?
+negation operator. named 'neg'?
+rename not operator from ! to 'not'?
+Replace type:to function with 'as' operator
 Add methods to type type
-Add methods to glob type
 Add methods to table type
-Unify types and the type-related namespaces. List:of in the List type, etc.
-Nice way to pass on all arguments of a closure to another command
 Figure out how to make external commands with subcommands convenient again
 Add avg command
 Add system tests for type casting
@@ -25,6 +24,7 @@ Add source field to CrushError
 Make error printing display source of error
 
 Future features:
+Make integers overflow to arbitrary precision math
 Run an executable by giving its path
 Add reject command that removes specified columns from a table/stream
 Add ceil, floor, pow, log, sin, cos, tan, etc to math lib
@@ -204,3 +204,7 @@ Make newline a separator again
 &&/|| => and/or
 Add ~ (replace) operator for regexps: "this is a string" ~ re{a.*g} "Sparta!" -> "this is Sparta!"
 Optional signatures for closures
+Add methods to glob type
+Add methods to integer type
+Add methods to float type
+Unify types and the type-related namespaces. List:of in the List type, etc.

@@ -86,7 +86,7 @@ as a single element of the `file` type.
 In crush, braces (`{}`) re used to create a closure. To create a version of the `ls` command that only shows you
 file names, simply write
 
-lss := {ls | select %file}
+lss := {|@args @@kwargs| ls @args @@kwargs | select %file}
 
 Rich type system
 

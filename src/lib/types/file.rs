@@ -10,7 +10,7 @@ use lazy_static::lazy_static;
 use std::collections::HashMap;
 
 lazy_static! {
-    pub static ref FILE_METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
+    pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
         res.insert(Box::from("stat"), CrushCommand::command(stat, true));
         res

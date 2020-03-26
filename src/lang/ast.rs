@@ -7,18 +7,12 @@ use std::ops::Deref;
 use crate::lang::command::{CrushCommand, Parameter};
 use crate::util::glob::Glob;
 use lazy_static::lazy_static;
-use crate::lib::math;
 use crate::lib::comp;
 use crate::lib::cond;
 use crate::lib::var;
 use regex::Regex;
 
 lazy_static! {
-    pub static ref ADD: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(math::add, false)};
-    pub static ref SUB: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(math::sub, false)};
-    pub static ref MUL: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(math::mul, false)};
-    pub static ref DIV: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(math::div, false)};
-
     pub static ref LT: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(comp::lt, false)};
     pub static ref LTE: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(comp::lte, false)};
     pub static ref GT: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(comp::gt, false)};
@@ -76,6 +70,7 @@ impl CommandNode {
         }
     }
 }
+
 
 pub enum AssignmentNode {
     Assignment(ItemNode, Box<AssignmentNode>),
@@ -277,14 +272,15 @@ impl TermNode {
     pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
         match self {
             TermNode::Term(l, op, r) => {
-                let cmd = match op.as_ref() {
-                    "+" => ADD.as_ref(),
-                    "-" => SUB.as_ref(),
+                let method = match op.as_ref() {
+                    "+" => "__add__",
+                    "-" => "__sub__",
                     _ => return error("Unknown operator"),
                 };
-                Ok(Some(CommandInvocation::new(
-                    ValueDefinition::Value(Value::Command(cmd.clone())),
-                    vec![l.generate_argument()?, r.generate_argument()?])
+                Ok(Some(
+                    CommandInvocation::new(
+                        ValueDefinition::GetAttr(Box::from(l.generate_argument()?.unnamed_value()?), method.to_string().into_boxed_str()),
+                        vec![r.generate_argument()?])
                 ))
             }
             TermNode::Factor(f) => f.generate_standalone(),
@@ -311,14 +307,15 @@ impl FactorNode {
     pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
         match self {
             FactorNode::Factor(l, op, r) => {
-                let cmd = match op.as_ref() {
-                    "*" => MUL.as_ref(),
-                    "//" => DIV.as_ref(),
-                    _ => return error(format!("Unknown operator {}", op).as_str()),
+                let method = match op.as_ref() {
+                    "*" => "__mul__",
+                    "//" => "__div__",
+                    _ => return error("Unknown operator"),
                 };
-                Ok(Some(CommandInvocation::new(
-                    ValueDefinition::Value(Value::Command(cmd.clone())),
-                    vec![l.generate_argument()?, r.generate_argument()?])
+                Ok(Some(
+                    CommandInvocation::new(
+                        ValueDefinition::GetAttr(Box::from(l.generate_argument()?.unnamed_value()?), method.to_string().into_boxed_str()),
+                        vec![r.generate_argument()?])
                 ))
             }
             FactorNode::Unary(u) => u.generate_standalone(),

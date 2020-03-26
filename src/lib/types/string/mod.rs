@@ -9,7 +9,7 @@ use lazy_static::lazy_static;
 mod format;
 
 lazy_static! {
-    pub static ref STRING_METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
+    pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
         res.insert(Box::from("upper"), CrushCommand::command(upper, false));
         res.insert(Box::from("lower"), CrushCommand::command(lower, false));
@@ -21,6 +21,7 @@ lazy_static! {
 }
 
 fn upper(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0);
     context.output.send(Value::String(
         context.this.text()?
             .to_uppercase()
@@ -28,6 +29,7 @@ fn upper(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn lower(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0);
     context.output.send(Value::String(
         context.this.text()?
             .to_lowercase()
@@ -35,6 +37,7 @@ fn lower(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn split(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(1);
     let this = context.this.text()?;
     let separator = context.arguments.string(0)?;
     context.output.send(Value::List(List::new(ValueType::String,
@@ -44,11 +47,8 @@ fn split(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn trim(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0);
     context.output.send(Value::String(
         Box::from(context.this.text()?
             .trim())))
-}
-
-pub fn declare(root: &Scope) -> CrushResult<()> {
-    root.declare("string", Value::Type(ValueType::String))
 }

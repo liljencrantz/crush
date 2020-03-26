@@ -8,7 +8,7 @@ use crate::lang::scope::Scope;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref LIST_METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
+    pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<CrushCommand + Send + Sync>> = HashMap::new();
         res.insert(Box::from("len"), CrushCommand::command(len, false));
         res.insert(Box::from("empty"), CrushCommand::command(empty, false));
@@ -127,8 +127,4 @@ fn truncate(mut context: ExecutionContext) -> CrushResult<()> {
 fn clone(context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context.output.send(Value::List(context.this.list()?.copy()))
-}
-
-pub fn declare(root: &Scope) -> CrushResult<()> {
-    root.declare("list", Value::Type(ValueType::List(Box::from(ValueType::Any))))
 }

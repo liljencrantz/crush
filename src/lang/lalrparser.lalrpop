@@ -54,7 +54,9 @@ Factor: FactorNode = {
 
 Unary: UnaryNode = {
     Item => UnaryNode::Item(<>),
-    <op: UnaryOperator> <u: Unary> => UnaryNode::Unary(Box::from(op), Box::from(u)),
+    "!" <u: Unary> => UnaryNode::Unary(Box::from("!"), Box::from(u)),
+    "@" <u: Unary> => UnaryNode::Unary(Box::from("@"), Box::from(u)),
+    "@@" <u: Unary> => UnaryNode::Unary(Box::from("@@"), Box::from(u)),
 }
 
 Signature: Option<Vec<ParameterNode>> = {
@@ -71,8 +73,8 @@ ParameterList: Vec<ParameterNode> = {
 Parameter: ParameterNode = {
     <l: Label> <d: Default> => ParameterNode::Parameter(Box::from(l), ValueDefinition::Value(Value::Type(ValueType::Any)), d),
     <n: Label> ":" <t: Label> <d: Default> => ParameterNode::Parameter(Box::from(n), ValueDefinition::Label(Box::from(t)), d),
-    UnaryOperator <l: Label> => ParameterNode::Unnamed(Box::from(l)),
-    "!!" <l: Label> => ParameterNode::Named(Box::from(l)),
+    "@" <l: Label> => ParameterNode::Unnamed(Box::from(l)),
+    "@@" <l: Label> => ParameterNode::Named(Box::from(l)),
 }
 
 Default: Option<LogicalNode> = {
@@ -103,7 +105,6 @@ match {
     r"( |\t)+" => {},
     r"#[^\n]*" => {},
     r"(>|<|>=|<=|==|!=|=~|!~)" => ComparisonOperator,
-    "!" => UnaryOperator,
     r"(\*|//)" => FactorOperator,
     r"(~~|~)" => ReplaceOperator,
     r"(\+|-)" => TermOperator,
