@@ -6,6 +6,7 @@ use std::error::Error;
 use crate::lang::command::{CrushCommand, ArgumentVector, This};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
+use crate::lang::value::ValueType;
 
 lazy_static! {
     pub static ref RE_METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
@@ -14,6 +15,7 @@ lazy_static! {
         res.insert(Box::from("not_match"), CrushCommand::command(not_match, false));
         res.insert(Box::from("replace"), CrushCommand::command(replace, false));
         res.insert(Box::from("replace_all"), CrushCommand::command(replace_all, false));
+        res.insert(Box::from("new"), CrushCommand::command(new, false));
         res
     };
 }
@@ -112,8 +114,5 @@ fn replace_all(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    let env = root.create_namespace("re")?;
-    env.declare("new", Value::Command(CrushCommand::command(new, false)))?;
-    env.readonly();
-    Ok(())
+    root.declare("re", Value::Type(ValueType::Regex))
 }

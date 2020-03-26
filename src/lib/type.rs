@@ -13,11 +13,6 @@ pub fn r#type(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Type(mandate(context.this, "Missing this value")?.value_type()))
 }
 
-fn list(mut context: ExecutionContext) -> CrushResult<()> {
-    let l = context.arguments.r#type(0)?;
-    context.output.send(Value::Type(ValueType::List(Box::new(l))))
-}
-
 fn dict(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(2)?;
     let key_type = context.arguments.r#type(0)?;
@@ -56,15 +51,12 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     env.declare("to", Value::Command(CrushCommand::command(to, true)))?;
 
-    env.declare("list", Value::Command(CrushCommand::command(list, false)))?;
     env.declare("dict", Value::Command(CrushCommand::command(dict, false)))?;
     env.declare("struct", Value::Command(CrushCommand::command(r#struct, false)))?;
     env.declare("table", Value::Command(CrushCommand::command(table, false)))?;
     env.declare("table_stream", Value::Command(CrushCommand::command(table_stream, false)))?;
 
     env.declare("integer", Value::Type(ValueType::Integer))?;
-    env.declare("type", Value::Type(ValueType::Type))?;
-    env.declare("string", Value::Type(ValueType::String))?;
     env.declare("bool", Value::Type(ValueType::Bool))?;
     env.declare("empty", Value::Type(ValueType::Empty))?;
     env.declare("field", Value::Type(ValueType::Field))?;
@@ -72,11 +64,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     env.declare("duration", Value::Type(ValueType::Duration))?;
     env.declare("time", Value::Type(ValueType::Time))?;
     env.declare("command", Value::Type(ValueType::Command))?;
-    env.declare("file", Value::Type(ValueType::File))?;
     env.declare("glob", Value::Type(ValueType::Glob))?;
     env.declare("regex", Value::Type(ValueType::Regex))?;
     env.declare("env", Value::Type(ValueType::Scope))?;
-    env.declare("any", Value::Type(ValueType::Any))?;
     env.declare("binary", Value::Type(ValueType::Binary))?;
     env.declare("binary_stream", Value::Type(ValueType::BinaryStream))?;
 

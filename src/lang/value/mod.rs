@@ -94,17 +94,16 @@ impl Value {
             match self {
                 Value::Struct(s) => s.clone().get(name),
                 Value::Scope(subenv) => subenv.get(name),
-                Value::List(list) =>
-                    crate::lib::data::list::LIST_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.as_ref().clone())),
-                Value::Dict(dict) =>
-                    crate::lib::data::dict::DICT_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.as_ref().clone())),
-                Value::String(s) =>
-                    crate::lib::string::STRING_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.as_ref().clone())),
-                Value::File(s) =>
-                    crate::lib::file::FILE_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.as_ref().clone())),
-                Value::Regex(s, b) =>
-                    crate::lib::data::re::RE_METHODS.get(&Box::from(name)).map(|m| Value::Command(m.as_ref().clone())),
-                _ => return None,
+                Value::Type(t) => match t.fields() {
+                    Some(map) =>
+                        map.get(&Box::from(name)).map(|m| Value::Command(m.as_ref().clone())),
+                    None => None
+                }
+                _ => match self.value_type().fields() {
+                    Some(map) =>
+                        map.get(&Box::from(name)).map(|m| Value::Command(m.as_ref().clone())),
+                    None => None
+                }
             }
         }
     }
@@ -112,18 +111,19 @@ impl Value {
     pub fn fields(&self) -> Vec<Box<str>> {
         let mut res = vec![Box::from("type")];
         match self {
-//                Value::Struct(s) => s.clone().get(name),
-//                Value::Scope(subenv) => subenv.get(name),
-            Value::List(list) =>
-                add_keys(&crate::lib::data::list::LIST_METHODS, &mut res),
-            Value::Dict(dict) =>
-                add_keys(&crate::lib::data::dict::DICT_METHODS, &mut res),
-            Value::String(s) =>
-                add_keys(&crate::lib::string::STRING_METHODS, &mut res),
-            Value::File(s) =>
-                add_keys(&crate::lib::file::FILE_METHODS, &mut res),
-            _ => {}
-        };
+//            Value::Struct(s) => s.clone().get(name),
+//            Value::Scope(subenv) => subenv.get(name),
+            Value::Type(t) => match t.fields() {
+                Some(map) =>
+                    add_keys(map, &mut res),
+                None => {},
+            }
+            _ => match self.value_type().fields() {
+                Some(map) =>
+                    add_keys(map, &mut res),
+                None => {},
+            }
+        }
         res
     }
 

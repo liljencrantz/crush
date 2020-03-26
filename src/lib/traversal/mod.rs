@@ -4,19 +4,10 @@ use crate::lang::{value::Value};
 use crate::lang::command::{ExecutionContext, CrushCommand};
 use crate::util::file::{home, cwd};
 use std::path::Path;
-use lazy_static::lazy_static;
-use std::collections::HashMap;
 
 mod find;
 mod stat;
 
-lazy_static! {
-    pub static ref FILE_METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
-        let mut res: HashMap<Box<str>, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
-        res.insert(Box::from("stat"), CrushCommand::command(stat::perform, true));
-        res
-    };
-}
 
 pub fn cd(context: ExecutionContext) -> CrushResult<()> {
     let dir = match context.arguments.len() {
@@ -40,11 +31,10 @@ pub fn pwd(context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    let env = root.create_namespace("file")?;
+    let env = root.create_namespace("traversal")?;
     root.r#use(&env);
     env.declare("ls", Value::Command(CrushCommand::command(find::perform_ls, true)))?;
     env.declare("find", Value::Command(CrushCommand::command(find::perform_find, true)))?;
-    env.declare("stat", Value::Command(CrushCommand::command(stat::perform, true)))?;
     env.declare("cd", Value::Command(CrushCommand::command(cd, true)))?;
     env.declare("pwd", Value::Command(CrushCommand::command(pwd, false)))?;
     env.readonly();

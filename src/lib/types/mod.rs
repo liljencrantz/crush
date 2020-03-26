@@ -4,9 +4,13 @@ use crate::lang::{value::Value, r#struct::Struct};
 use crate::lang::command::{ExecutionContext, CrushCommand, This};
 use crate::lang::argument::column_names;
 use crate::lang::command::ArgumentVector;
+use crate::lang::value::ValueType;
+
 pub mod list;
 pub mod dict;
 pub mod re;
+pub mod string;
+pub mod file;
 
 fn materialize(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(context.input.recv()?.materialize())
@@ -39,6 +43,10 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     env.declare("struct", Value::Command(CrushCommand::command(r#struct, false)))?;
     env.declare("materialize", Value::Command(CrushCommand::command(materialize, true)))?;
 
+    env.declare("type", Value::Type(ValueType::Type))?;
+    env.declare("any", Value::Type(ValueType::Any))?;
+
+    string::declare(&env)?;
     list::declare(&env)?;
     dict::declare(&env)?;
     re::declare(&env)?;

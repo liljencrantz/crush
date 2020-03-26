@@ -174,13 +174,13 @@ fn invoke_value(
                 let meta = f.metadata();
                 if meta.is_ok() && meta.unwrap().is_dir() {
                     invoke_command(
-                        CrushCommand::command(crate::lib::file::cd, false),
+                        CrushCommand::command(crate::lib::traversal::cd, false),
                         None,
                         vec![ArgumentDefinition::unnamed(ValueDefinition::Value(Value::File(f)))],
                         local_env, input, output)
                 } else {
                     invoke_command(
-                        CrushCommand::command(crate::lib::io::val, false),
+                        CrushCommand::command(crate::lib::input::val, false),
                         None,
                         vec![ArgumentDefinition::unnamed(ValueDefinition::Value(Value::File(f)))],
                         local_env, input, output)
@@ -191,7 +191,7 @@ fn invoke_value(
         _ =>
             if local_arguments.len() == 0 {
                 invoke_command(
-                    CrushCommand::command(crate::lib::io::val, false),
+                    CrushCommand::command(crate::lib::input::val, false),
                     None,
                     vec![ArgumentDefinition::unnamed(ValueDefinition::Value(value))],
                     local_env, input, output)

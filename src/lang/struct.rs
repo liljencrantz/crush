@@ -56,7 +56,7 @@ impl Struct {
     fn root() -> Struct {
         Struct::create(vec![
             (Box::from("__setattr__"),
-             Value::Command(CrushCommand::command(crate::lib::data::setattr, false))),
+             Value::Command(CrushCommand::command(crate::lib::types::setattr, false))),
         ], None)
     }
 

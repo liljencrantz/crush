@@ -29,10 +29,10 @@ Smoothing out the rough edges:
 * External commands need to be adapted to not be annoying
 
 Example invocations:
-    git/status
-    git/commit --a m="This is a commit message"
-    git/add .
-    ls ***.txt
+    git:status
+    git:commit --a m="This is a commit message"
+    git:add .
+    ls %.txt
     cd foo
     cd ..
     cd 'My Documents'

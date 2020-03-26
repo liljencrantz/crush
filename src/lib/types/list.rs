@@ -8,7 +8,7 @@ use crate::lang::scope::Scope;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref LIST_METHODS: HashMap<Box<str>, Box<CrushCommand + Sync + Send>> = {
+    pub static ref LIST_METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<CrushCommand + Send + Sync>> = HashMap::new();
         res.insert(Box::from("len"), CrushCommand::command(len, false));
         res.insert(Box::from("empty"), CrushCommand::command(empty, false));
@@ -20,8 +20,16 @@ lazy_static! {
         res.insert(Box::from("remove"), CrushCommand::command(remove, false));
         res.insert(Box::from("truncate"), CrushCommand::command(truncate, false));
         res.insert(Box::from("clone"), CrushCommand::command(clone, false));
+        res.insert(Box::from("of"), CrushCommand::command(of, false));
+        res.insert(Box::from("new"), CrushCommand::command(new, false));
+        res.insert(Box::from("fnurp"), CrushCommand::command(fnurp, false));
         res
     };
+}
+
+fn fnurp(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(1)?;
+    context.output.send(Value::Type(ValueType::List(Box::new(context.arguments.r#type(0)?))))
 }
 
 fn of(mut context: ExecutionContext) -> CrushResult<()> {
@@ -122,9 +130,5 @@ fn clone(context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    let env = root.create_namespace("list")?;
-    env.declare("of", Value::Command(CrushCommand::command(of, false)))?;
-    env.declare("new", Value::Command(CrushCommand::command(new, false)))?;
-    env.readonly();
-    Ok(())
+    root.declare("list", Value::Type(ValueType::List(Box::from(ValueType::Any))))
 }

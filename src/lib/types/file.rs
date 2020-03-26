@@ -1,4 +1,4 @@
-use crate::lang::command::{ExecutionContext, This};
+use crate::lang::command::{ExecutionContext, This, CrushCommand};
 use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
 use crate::lang::{argument::Argument, r#struct::Struct};
 use crate::lang::value::Value;
@@ -6,6 +6,16 @@ use std::fs::metadata;
 use std::path::Path;
 use crate::lang::stream::ValueSender;
 use std::os::unix::fs::MetadataExt;
+use lazy_static::lazy_static;
+use std::collections::HashMap;
+
+lazy_static! {
+    pub static ref FILE_METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
+        let mut res: HashMap<Box<str>, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
+        res.insert(Box::from("stat"), CrushCommand::command(stat, true));
+        res
+    };
+}
 
 fn parse(arguments: Vec<Argument>) -> CrushResult<Box<Path>> {
     let mut files: Vec<Box<Path>> = Vec::new();
@@ -37,6 +47,6 @@ fn run(file: Box<Path>, sender: ValueSender) -> CrushResult<()> {
     )
 }
 
-pub fn perform(context: ExecutionContext) -> CrushResult<()> {
+pub fn stat(context: ExecutionContext) -> CrushResult<()> {
     run(context.this.file()?, context.output)
 }

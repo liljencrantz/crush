@@ -1,18 +1,17 @@
 mod command_util;
 mod parse_util;
 
-pub mod file;
+pub mod traversal;
 pub mod var;
 pub mod proc;
-pub mod io;
+pub mod input;
 pub mod r#type;
 pub mod time;
 pub mod math;
 pub mod comp;
 pub mod cond;
 pub mod stream;
-pub mod data;
-pub mod string;
+pub mod types;
 pub mod control;
 pub mod constants;
 
@@ -33,14 +32,13 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     math::declare(root)?;
     comp::declare(root)?;
     cond::declare(root)?;
-    file::declare(root)?;
+    traversal::declare(root)?;
     var::declare(root)?;
     stream::declare(root)?;
-    data::declare(root)?;
+    types::declare(root)?;
     proc::declare(root)?;
-    io::declare(root)?;
+    input::declare(root)?;
     control::declare(root)?;
-    string::declare(root)?;
     constants::declare(root)?;
     root.readonly();
     return Ok(());

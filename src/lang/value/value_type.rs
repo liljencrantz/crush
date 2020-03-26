@@ -5,6 +5,8 @@ use regex::Regex;
 use std::error::Error;
 use crate::lang::parser::parse_name;
 use crate::lang::command::CrushCommand;
+use std::collections::HashMap;
+use crate::lib::types;
 
 #[derive(Clone)]
 #[derive(PartialEq)]
@@ -46,6 +48,23 @@ impl ValueType {
             .map(|cell| cell.materialize())
             .collect()
     }
+
+    pub fn fields(&self) -> Option<&HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>>> {
+        Some(match self {
+            ValueType::List(_) =>
+                &types::list::LIST_METHODS,
+            ValueType::Dict(_, _) =>
+                &types::dict::DICT_METHODS,
+            ValueType::String =>
+                &types::string::STRING_METHODS,
+            ValueType::File =>
+                &types::file::FILE_METHODS,
+            ValueType::Regex =>
+                &types::re::RE_METHODS,
+            _ => return None,
+        })
+    }
+
 
     pub fn is(&self, value: &Value) -> bool {
         (*self == ValueType::Any) || (*self == value.value_type())
