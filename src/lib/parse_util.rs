@@ -2,6 +2,7 @@ use crate::lang::{argument::Argument, value::Value};
 use crate::lang::errors::{CrushResult, argument_error};
 use std::path::Path;
 use crate::lang::command::CrushCommand;
+use crate::lang::argument::ArgumentType;
 
 pub fn argument_files(mut arguments: Vec<Argument>) -> CrushResult<Vec<Box<Path>>> {
     let mut files = Vec::new();
@@ -16,7 +17,7 @@ pub fn optional_argument_integer(mut arg: Vec<Argument>) -> CrushResult<Option<i
         0 => Ok(None),
         1 => {
             let a = arg.remove(0);
-            match (a.name, a.value) {
+            match (a.argument_type, a.value) {
                 (None, Value::Integer(i)) => Ok(Some(i)),
                 _ => argument_error("Expected a text value"),
             }

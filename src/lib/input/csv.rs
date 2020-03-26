@@ -38,7 +38,7 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> 
     let mut files = Vec::new();
 
     for arg in arguments {
-        match &arg.name {
+        match &arg.argument_type {
             None => {
                 files.push(arg);
             }

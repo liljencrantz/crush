@@ -125,6 +125,10 @@ impl Node {
                                 ValueDefinition::Value(Value::Command(NOT.as_ref().clone())),
                                 vec![r.generate_argument()?])
                             ])),
+                    "@" =>
+                        return Ok(ArgumentDefinition::list(r.generate_argument()?.unnamed_value()?)),
+                    "@@" =>
+                        return Ok(ArgumentDefinition::dict(r.generate_argument()?.unnamed_value()?)),
                     _ => return error("Unknown operator"),
                 },
             Node::Cast(value, target_type) =>

@@ -158,7 +158,7 @@ fn perform_for(
     }
 
     if let Value::Glob(g) = &arguments[0].value {
-        if arguments[0].name.is_none() && g.to_string() == "*" {
+        if arguments[0].argument_type.is_none() && g.to_string() == "*" {
             copy = true;
             arguments.remove(0);
         } else {
@@ -168,7 +168,7 @@ fn perform_for(
 
     let input_type = input.types();
     for a in arguments {
-        match (a.name.as_deref(), a.value) {
+        match (a.argument_type.as_deref(), a.value) {
             (Some(name), Value::Command(closure)) => {
                 match (copy, find_field_from_str(name, input_type)) {
                     (true, Ok(idx)) => columns.push((Location::Replace(idx), Source::Closure(closure))),

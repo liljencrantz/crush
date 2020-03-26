@@ -47,7 +47,7 @@ fn replace(mut context: ExecutionContext) -> CrushResult<()> {
     let mut replace = None;
 
     for arg in context.arguments.drain(..) {
-        match (arg.name.as_deref(), arg.value) {
+        match (arg.argument_type.as_deref(), arg.value) {
             (None, Value::String(t)) => {
                 if text.is_none() {
                     text = Some(t);
@@ -83,7 +83,7 @@ fn replace_all(mut context: ExecutionContext) -> CrushResult<()> {
     let mut replace = None;
 
     for arg in context.arguments.drain(..) {
-        match (arg.name.as_deref(), arg.value) {
+        match (arg.argument_type.as_deref(), arg.value) {
             (None, Value::String(t)) => {
                 if text.is_none() {
                     text = Some(t);

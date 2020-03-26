@@ -36,7 +36,7 @@ fn parse(mut context: ExecutionContext) -> CrushResult<()> {
     let mut fmt: Option<Box<str>> = None;
 
     for arg in context.arguments.drain(..) {
-        match (arg.name.as_deref().unwrap_or(""), arg.value) {
+        match (arg.argument_type.as_deref().unwrap_or(""), arg.value) {
             ("format", Value::String(s)) => fmt = Some(s),
             ("time", Value::String(s)) => tm = Some(s),
             _ => return argument_error("Invalid argument"),

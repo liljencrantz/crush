@@ -36,7 +36,7 @@ fn parse(mut arguments: Vec<Argument>) -> CrushResult<Config> {
     let mut method = Method::GET;
 
     for arg in arguments.drain(..) {
-        match (arg.name.as_deref(), arg.value) {
+        match (arg.argument_type.as_deref(), arg.value) {
             (None, Value::String(t)) | (Some("url"), Value::String(t)) => { url = Some(t); }
 //            (Some("cache"), Value::Bool(v)) => { cache = v; }
             (Some("form"), Value::String(t)) => { form = Some(t.to_string()); }

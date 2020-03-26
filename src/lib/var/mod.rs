@@ -8,13 +8,8 @@ mod env;
 mod r#use;
 
 pub fn r#let(context: ExecutionContext) -> CrushResult<()> {
-    for arg in context.arguments.iter() {
-        if arg.val_or_empty().is_empty() {
-            return argument_error("Missing variable name");
-        }
-    }
     for arg in context.arguments {
-        context.env.declare(arg.name.unwrap().as_ref(), arg.value)?;
+        context.env.declare(arg.argument_type.unwrap().as_ref(), arg.value)?;
     }
     Ok(())
 }
@@ -22,13 +17,8 @@ pub fn r#let(context: ExecutionContext) -> CrushResult<()> {
 pub fn set(context: ExecutionContext) -> CrushResult<()> {
     context.output.initialize(vec![]);
 
-    for arg in context.arguments.iter() {
-        if arg.val_or_empty().is_empty() {
-            return argument_error("Missing variable name");
-        }
-    }
     for arg in context.arguments {
-        context.env.set(arg.name.unwrap().as_ref(), arg.value)?;
+        context.env.set(arg.argument_type.unwrap().as_ref(), arg.value)?;
     }
     Ok(())
 }

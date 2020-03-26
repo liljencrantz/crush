@@ -15,6 +15,7 @@ use regex::Regex;
 use std::collections::HashMap;
 use crate::util::glob::Glob;
 use chrono::{Duration, Local, DateTime};
+use crate::lang::argument::ArgumentType;
 
 pub trait ArgumentVector {
     fn check_len(&self, len: usize) -> CrushResult<()>;
@@ -173,7 +174,7 @@ impl This for Option<Value> {
 
     fn re(mut self) -> CrushResult<(Box<str>, Regex)> {
         match self.take() {
-            Some(Value::Regex(s, b)) => Ok((s,b)),
+            Some(Value::Regex(s, b)) => Ok((s, b)),
             _ => argument_error("Expected a regular expression"),
         }
     }
@@ -251,7 +252,6 @@ impl dyn CrushCommand {
     pub fn condition(call: fn(context: ExecutionContext) -> CrushResult<()>) -> Box<dyn CrushCommand + Send + Sync> {
         Box::from(ConditionCommand { call })
     }
-
 }
 
 #[derive(Clone)]
@@ -267,14 +267,14 @@ impl CrushCommand for SimpleCommand {
         c(context)
     }
 
-    fn name(&self) -> &str {"command"}
+    fn name(&self) -> &str { "command" }
 
     fn can_block(&self, _arg: &Vec<ArgumentDefinition>, _env: &Scope) -> bool {
         self.can_block
     }
 
     fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {
-        Box::from(SimpleCommand {call: self.call, can_block: self.can_block})
+        Box::from(SimpleCommand { call: self.call, can_block: self.can_block })
     }
 }
 
@@ -303,7 +303,7 @@ impl CrushCommand for ConditionCommand {
         c(context)
     }
 
-    fn name(&self) -> &str {"conditional command"}
+    fn name(&self) -> &str { "conditional command" }
 
     fn can_block(&self, arguments: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
         for arg in arguments {
@@ -315,7 +315,7 @@ impl CrushCommand for ConditionCommand {
     }
 
     fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {
-        Box::from(ConditionCommand{call: self.call})
+        Box::from(ConditionCommand { call: self.call })
     }
 }
 
@@ -335,7 +335,7 @@ struct Closure {
 }
 
 impl CrushCommand for Closure {
-    fn name(&self) -> &str {"closure"}
+    fn name(&self) -> &str { "closure" }
 
     fn invoke(&self, context: ExecutionContext) -> CrushResult<()> {
         let job_definitions = self.job_definitions.clone();
@@ -372,7 +372,7 @@ impl CrushCommand for Closure {
                 }
                 for job_definition in &job_definitions[1..job_definitions.len() - 1] {
                     let last_output = spawn_print_thread();
-                    let job = job_definition.invoke(&env,  empty_channel(), last_output)?;
+                    let job = job_definition.invoke(&env, empty_channel(), last_output)?;
                     job.join();
                     if env.is_stopped() {
                         return Ok(());
@@ -380,7 +380,7 @@ impl CrushCommand for Closure {
                 }
 
                 let last_job_definition = &job_definitions[job_definitions.len() - 1];
-                let last_job = last_job_definition.invoke(&env,  empty_channel(), context.output)?;
+                let last_job = last_job_definition.invoke(&env, empty_channel(), context.output)?;
                 last_job.join();
                 if env.is_stopped() {
                     return Ok(());
@@ -416,16 +416,20 @@ impl Closure {
         }
     */
 
-    fn push_arguments_to_env(signature: &Option<Vec<Parameter>>, mut arguments: Vec<Argument>, env: &Scope) -> CrushResult<()> {
+    fn push_arguments_to_env(
+        signature: &Option<Vec<Parameter>>,
+        mut arguments: Vec<Argument>,
+        env: &Scope) -> CrushResult<()> {
         if let Some(signature) = signature {
             let mut named = HashMap::new();
             let mut unnamed = Vec::new();
             for arg in arguments.drain(..) {
-                if let Some(name) = &arg.name {
-                    named.insert(name.clone(), arg.value);
-                } else {
-                    unnamed.push(arg.value);
-                }
+                match arg.argument_type {
+                    Some(name) => {
+                        named.insert(name.clone(), arg.value);
+                    }
+                    None => unnamed.push(arg.value),
+                };
             }
             let mut unnamed_name = None;
             let mut named_name = None;
@@ -444,33 +448,32 @@ impl Closure {
                                 if let Some(default) = default {
                                     env.redeclare(name.as_ref(), default.compile_non_blocking(env)?.1);
                                 } else {
-                                    return argument_error("Missing variable!!!")
+                                    return argument_error("Missing variable!!!");
                                 }
                             }
                         } else {
                             return argument_error("Not a type");
                         }
-                    },
+                    }
                     Parameter::Named(name) => {
                         if named_name.is_some() {
                             return argument_error("Multiple named argument maps specified");
                         }
                         named_name = Some(name);
-                    },
+                    }
                     Parameter::Unnamed(name) => {
                         if unnamed_name.is_some() {
                             return argument_error("Multiple named argument maps specified");
                         }
                         unnamed_name = Some(name);
-                    },
+                    }
                 }
             }
 
             if let Some(unnamed_name) = unnamed_name {
                 env.redeclare(
                     unnamed_name.as_ref(),
-                    Value::List(List::new(ValueType::Any, unnamed)));
-            } else {
+                    Value::List(List::new(ValueType::Any, unnamed))); } else {
                 if !unnamed.is_empty() {
                     return argument_error("No target for unnamed arguments");
                 }
@@ -487,13 +490,15 @@ impl Closure {
                     return argument_error("No target for extra named arguments");
                 }
             }
-
         } else {
             for arg in arguments.drain(..) {
-                if let Some(name) = &arg.name {
-                    env.redeclare(name.as_ref(), arg.value);
-                } else {
-                    return argument_error("No target for unnamed arguments");
+                match arg.argument_type {
+                    Some(name) => {
+                        env.redeclare(name.as_ref(), arg.value);
+                    },
+                    None => {
+                        return argument_error("No target for unnamed arguments");
+                    },
                 }
             }
         }

@@ -6,8 +6,8 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     context.output.initialize(vec![]);
 
     for arg in context.arguments.iter() {
-        match (arg.name.as_deref(), &arg.value) {
-            (None, Value::Scope(e)) => context.env.r#use(e),
+        match (arg.argument_type.is_none(), &arg.value) {
+            (true, Value::Scope(e)) => context.env.r#use(e),
             _ => return argument_error("Expected all arguments to be scopes"),
         }
     }

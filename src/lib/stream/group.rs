@@ -27,7 +27,7 @@ pub fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> CrushResu
         return argument_error("No comparison key specified");
     }
     let arg = &arguments[0];
-    let name = arg.name.clone().unwrap_or(Box::from("group"));
+    let name = arg.argument_type.clone().unwrap_or(Box::from("group"));
     match &arg.value {
         Value::String(cell_name) =>
             Ok(Config {

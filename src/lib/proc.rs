@@ -61,7 +61,7 @@ fn kill(context: ExecutionContext) -> CrushResult<()> {
     let mut sig_to_send = signal::SIGTERM;
 
     for arg in context.arguments {
-        match (arg.name.as_deref(), arg.value) {
+        match (arg.argument_type.as_deref(), arg.value) {
             (None, Value::Integer(pid)) => pids.push(Pid::from_raw(pid as i32)),
             (Some("pid"), Value::Integer(pid)) => pids.push(Pid::from_raw(pid as i32)),
             (Some("signal"), Value::String(sig)) => sig_to_send = to_crush_error(signal::Signal::from_str(sig.as_ref()))?,

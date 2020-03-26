@@ -1,59 +1,122 @@
 use crate::lang::value::Value;
 use crate::lang::{value::ValueDefinition};
-use crate::lang::errors::{CrushError, CrushResult, error};
+use crate::lang::errors::{CrushError, CrushResult, error, argument_error};
 use crate::lang::scope::Scope;
 use crate::lang::job::JobJoinHandle;
 use std::collections::HashSet;
 
 #[derive(Debug, Clone)]
-pub struct BaseArgument<C: Clone> {
-    pub name: Option<Box<str>>,
-    pub value: C,
+pub enum ArgumentType {
+    Some(Box<str>),
+    None,
+    ArgumentList,
+    ArgumentDict,
 }
 
-pub type ArgumentDefinition = BaseArgument<ValueDefinition>;
+impl ArgumentType {
+    pub fn is_some(&self) -> bool {
+        if let ArgumentType::Some(v) = self {
+            true
+        } else {
+            false
+        }
+    }
 
-impl ArgumentDefinition {
-    pub fn argument(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope) -> Result<Argument, CrushError> {
-        Ok(Argument { name: self.name.clone(), value: self.value.compile(dependencies, env)?.1 })
+    pub fn is_none(&self) -> bool {
+        if let ArgumentType::None = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn as_name(&self) -> CrushResult<&str> {
+        if let ArgumentType::Some(v) = self {
+            Ok(v.as_ref())
+        } else {
+            argument_error("Expected a named argument")
+        }
+    }
+
+    pub fn is_this(&self) -> bool {
+        if let ArgumentType::Some(v) = self {
+            v.as_ref() == "this"
+        } else {
+            false
+        }
     }
 }
 
-pub type Argument = BaseArgument<Value>;
+#[derive(Debug, Clone)]
+pub struct BaseArgument<A: Clone, C: Clone> {
+    pub argument_type: A,
+    pub value: C,
+}
 
-impl<C: Clone> BaseArgument<C> {
-    pub fn unnamed_value(&self) -> CrushResult<C> {
-        if self.name.is_some() {
+pub type ArgumentDefinition = BaseArgument<ArgumentType, ValueDefinition>;
+
+impl ArgumentDefinition {
+    pub fn named(name: &str, value: ValueDefinition) -> ArgumentDefinition {
+        ArgumentDefinition {
+            argument_type: ArgumentType::Some(Box::from(name)),
+            value,
+        }
+    }
+
+    pub fn unnamed(value: ValueDefinition) -> ArgumentDefinition {
+        ArgumentDefinition {
+            argument_type: ArgumentType::None,
+            value,
+        }
+    }
+
+    pub fn list(value: ValueDefinition) -> ArgumentDefinition {
+        BaseArgument {
+            argument_type: ArgumentType::ArgumentList,
+            value,
+        }
+    }
+
+    pub fn dict(value: ValueDefinition) -> ArgumentDefinition {
+        BaseArgument {
+            argument_type: ArgumentType::ArgumentDict,
+            value,
+        }
+    }
+
+    pub fn unnamed_value(&self) -> CrushResult<ValueDefinition> {
+        if self.argument_type.is_some() {
             error("Expected an unnamed argument")
         } else {
             Ok(self.value.clone())
         }
     }
+}
 
-    pub fn new(name: Option<Box<str>>, value: C) -> BaseArgument<C> {
-        BaseArgument {
-            name,
+pub type Argument = BaseArgument<Option<Box<str>>, Value>;
+
+impl Argument {
+    pub fn new(name: Option<Box<str>>, value: Value) -> Argument {
+        Argument {
+            argument_type: name,
             value,
         }
     }
 
-    pub fn named(name: &str, value: C) -> BaseArgument<C> {
-        BaseArgument {
-            name: Some(Box::from(name)),
+    pub fn unnamed(value: Value) -> Argument {
+        Argument {
+            argument_type: None,
             value,
         }
     }
 
-    pub fn unnamed(value: C) -> BaseArgument<C> {
+    pub fn named(name: &str, value: Value) -> Argument {
         BaseArgument {
-            name: None,
+            argument_type: Some(Box::from(name)),
             value,
         }
     }
 
-    pub fn val_or_empty(&self) -> &str {
-        self.name.as_ref().map(|v| v.as_ref()).unwrap_or("")
-    }
 }
 
 pub trait ArgumentVecCompiler {
@@ -65,14 +128,45 @@ impl ArgumentVecCompiler for Vec<ArgumentDefinition> {
         let mut this = None;
         let mut res = Vec::new();
         for a in self {
-            match a.argument(dependencies, env) {
-                Ok(arg) => match arg.name.as_deref() {
-                    Some("this") => this = Some(arg.value),
-                    _ => res.push(arg),
-                },
-                Err(e) => return Err(e),
-            };
+            if a.argument_type.is_this() {
+                this = Some(a.value.compile(dependencies, env)?.1);
+            } else {
+                match &a.argument_type {
+                    ArgumentType::Some(name) =>
+                        res.push(Argument::named(&name, a.value.compile(dependencies, env)?.1)),
 
+                    ArgumentType::None =>
+                        res.push(Argument::unnamed(a.value.compile(dependencies, env)?.1)),
+
+                    ArgumentType::ArgumentList => {
+                        match a.value.compile(dependencies, env)?.1 {
+                            Value::List(l) => {
+                                let mut copy = l.dump();
+                                for v in copy.drain(..) {
+                                    res.push(Argument::unnamed(v));
+                                }
+                            }
+                            _ => return argument_error("Argument list must be of type list"),
+                        }
+                    }
+
+                    ArgumentType::ArgumentDict => {
+                        match a.value.compile(dependencies, env)?.1 {
+                            Value::Dict(d) => {
+                                let mut copy = d.elements();
+                                for (key, value) in copy.drain(..) {
+                                    if let Value::String(name) = key {
+                                        res.push(Argument::named(&name, value));
+                                    } else {
+                                        return argument_error("Argument dict must have string keys");
+                                    }
+                                }
+                            }
+                            _ => return argument_error("Argument list must be of type list"),
+                        }
+                    }
+                }
+            }
         }
         Ok((res, this))
     }
@@ -84,7 +178,7 @@ pub fn column_names(arguments: &Vec<Argument>) -> Vec<Box<str>> {
     let mut res = Vec::new();
     let mut tmp = String::new();
     for arg in arguments {
-        let mut name = match &arg.name {
+        let mut name = match &arg.argument_type {
             None => "_",
             Some(name) => name.as_ref(),
         };

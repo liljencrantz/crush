@@ -68,8 +68,8 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
     if let Value::Command(body) = context.arguments.remove(1).value {
         let iter = context.arguments.remove(0);
         let t = iter.value.value_type();
-        let name = iter.name.clone();
-        match (iter.name.as_deref(), iter.value) {
+        let name = iter.argument_type.clone();
+        match (iter.argument_type.as_deref(), iter.value) {
             (_, Value::TableStream(o)) => {
                 run(Config {
                     body,

@@ -19,7 +19,7 @@ pub struct Config {
 pub fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> CrushResult<Config> {
     match arguments.len() {
         0 => Ok(Config { column: None }),
-        1 => match (&arguments[0].name, &arguments[0].value) {
+        1 => match (&arguments[0].argument_type, &arguments[0].value) {
             (None, Value::Field(f)) => Ok(Config { column: Some(find_field(f, input_type)?) }),
             _ => argument_error("Expected field name")
         }

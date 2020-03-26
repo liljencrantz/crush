@@ -4,7 +4,6 @@ Use @ and @@ for args/kwargs, both in signatures and in argument lists
 Use % for wildcards, something else for fields. Maybe ^?
 negation operator. named 'neg'?
 rename not operator from ! to 'not'?
-Replace type:to function with 'as' operator
 Add methods to type type
 Add methods to table type
 Figure out how to make external commands with subcommands convenient again
@@ -208,3 +207,4 @@ Add methods to glob type
 Add methods to integer type
 Add methods to float type
 Unify types and the type-related namespaces. List:of in the List type, etc.
+Replace type:to function with 'as' operator
