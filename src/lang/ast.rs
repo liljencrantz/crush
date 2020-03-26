@@ -141,8 +141,8 @@ impl Node {
                 Node::Float(f) => ValueDefinition::Value(Value::Float(f.clone())),
                 Node::GetItem(node, field) =>
                     ValueDefinition::GetItem(
-                        Box::new(node.generate_argument()?.unnamed_value()?),
-                        Box::new(field.generate_argument()?.unnamed_value()?)),
+                        Box::from(node.generate_argument()?.unnamed_value()?),
+                        Box::from(field.generate_argument()?.unnamed_value()?)),
                 Node::GetAttr(node, label) => {
                     let parent = node.generate_argument()?;
                     match parent.unnamed_value()? {
@@ -176,40 +176,31 @@ impl Node {
         match self {
             Node::Assignment(target, value) => {
                 match target.as_ref() {
-                    Node::Label(t) => Ok(Some(
-                        CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(SET.as_ref().clone())),
-                            vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)])
-                    )),
-                    Node::GetItem(container, key) => Ok(Some(
-                        CommandInvocation::new(
-                            ValueDefinition::GetAttr(
-                                Box::from(container.generate_argument()?.unnamed_value()?),
-                                Box::from("__setitem__")),
-                            vec![
-                                ArgumentDefinition::unnamed(key.generate_argument()?.unnamed_value()?),
-                                ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?),
-                            ]))),
-                    Node::GetAttr(container, attr) => Ok(Some(
-                        CommandInvocation::new(
-                            ValueDefinition::GetAttr(
-                                Box::from(container.generate_argument()?.unnamed_value()?),
-                                Box::from("__setattr__")),
-                            vec![
-                                ArgumentDefinition::unnamed(ValueDefinition::Value(Value::String(attr.to_string().into_boxed_str()))),
-                                ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?),
-                            ]))),
+                    Node::Label(t) =>
+                        Node::function_invocation(
+                            SET.as_ref().clone(),
+                            vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)]),
+
+                    Node::GetItem(container, key) =>
+                        container.method_invocation("__setitem__", vec![
+                            ArgumentDefinition::unnamed(key.generate_argument()?.unnamed_value()?),
+                            ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?)]),
+
+                    Node::GetAttr(container, attr) =>
+                        container.method_invocation("__setattr__", vec![
+                            ArgumentDefinition::unnamed(ValueDefinition::Value(Value::String(attr.to_string().into_boxed_str()))),
+                            ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?),
+                        ]),
 
                     _ => error("Invalid left side in assignment"),
                 }
             }
             Node::Declaration(target, value) => {
                 match target.as_ref() {
-                    Node::Label(t) => Ok(Some(
-                        CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(LET.as_ref().clone())),
-                            vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)])
-                    )),
+                    Node::Label(t) =>
+                        Node::function_invocation(
+                            LET.as_ref().clone(),
+                            vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)]),
                     _ => error("Invalid left side in declaration"),
                 }
             }
@@ -219,9 +210,7 @@ impl Node {
                     "or" => OR.as_ref(),
                     _ => return error("Unknown operator")
                 };
-                Ok(Some(CommandInvocation::new(
-                    ValueDefinition::Value(Value::Command(cmd.clone())),
-                    vec![l.generate_argument()?, r.generate_argument()?])))
+                Node::function_invocation(cmd.clone(), vec![l.generate_argument()?, r.generate_argument()?])
             }
             Node::Comparison(l, op, r) => {
                 let cmd = match op.as_ref() {
@@ -232,36 +221,20 @@ impl Node {
                     "==" => EQ.as_ref(),
                     "!=" => NEQ.as_ref(),
                     "=~" =>
-                        return Ok(Some(
-                            CommandInvocation::new(
-                                ValueDefinition::GetAttr(Box::from(l.generate_argument()?.unnamed_value()?), "match".to_string().into_boxed_str()),
-                                vec![r.generate_argument()?])
-                        )),
+                        return l.method_invocation("match", vec![r.generate_argument()?]),
                     "!~" =>
-                        return Ok(Some(
-                            CommandInvocation::new(
-                                ValueDefinition::GetAttr(Box::from(l.generate_argument()?.unnamed_value()?), "not_match".to_string().into_boxed_str()),
-                                vec![r.generate_argument()?])
-                        )),
+                        return l.method_invocation("not_match", vec![r.generate_argument()?]),
                     _ => return error("Unknown operator"),
                 };
-                Ok(Some(CommandInvocation::new(
-                    ValueDefinition::Value(Value::Command(cmd.clone())),
-                    vec![l.generate_argument()?, r.generate_argument()?])
-                ))
+                Node::function_invocation(cmd.clone(), vec![l.generate_argument()?, r.generate_argument()?])
             }
             Node::Replace(r, op, t1, t2) => {
-                let cmd = match op.as_ref() {
+                let method = match op.as_ref() {
                     "~" => "replace",
                     "~~" => "replace_all",
                     _ => return error("Unknown operator")
                 };
-
-                Ok(Some(
-                    CommandInvocation::new(
-                        ValueDefinition::GetAttr(Box::from(r.generate_argument()?.unnamed_value()?), cmd.to_string().into_boxed_str()),
-                        vec![t1.generate_argument()?, t2.generate_argument()?])
-                ))
+                r.method_invocation(method, vec![t1.generate_argument()?, t2.generate_argument()?])
             }
             Node::Term(l, op, r) => {
                 let method = match op.as_ref() {
@@ -269,11 +242,7 @@ impl Node {
                     "-" => "__sub__",
                     _ => return error("Unknown operator"),
                 };
-                Ok(Some(
-                    CommandInvocation::new(
-                        ValueDefinition::GetAttr(Box::from(l.generate_argument()?.unnamed_value()?), method.to_string().into_boxed_str()),
-                        vec![r.generate_argument()?])
-                ))
+                l.method_invocation(method, vec![r.generate_argument()?])
             }
             Node::Factor(l, op, r) => {
                 let method = match op.as_ref() {
@@ -281,27 +250,15 @@ impl Node {
                     "//" => "__div__",
                     _ => return error("Unknown operator"),
                 };
-                Ok(Some(
-                    CommandInvocation::new(
-                        ValueDefinition::GetAttr(Box::from(l.generate_argument()?.unnamed_value()?), method.to_string().into_boxed_str()),
-                        vec![r.generate_argument()?])
-                ))
+                l.method_invocation(method, vec![r.generate_argument()?])
             }
 
             Node::Unary(op, r) =>
                 match op.deref() {
-                    "neg" =>
-                        Ok(Some(
-                                CommandInvocation::new(
-                                    ValueDefinition::GetAttr(Box::from(r.generate_argument()?.unnamed_value()?), "__neg__".to_string().into_boxed_str()),
-                                    vec![]))),
+                    "neg" => r.method_invocation("__neg__", vec![]),
                     "not" =>
-                        Ok(Some(
-                            CommandInvocation::new(
-                                ValueDefinition::Value(Value::Command(NOT.as_ref().clone())),
-                                vec![r.generate_argument()?]))),
-                    "@" | "@@" =>
-                        Ok(None),
+                        Node::function_invocation(NOT.as_ref().clone(), vec![r.generate_argument()?]),
+                    "@" | "@@" => Ok(None),
                     _ => return error("Unknown operator"),
                 },
 
@@ -309,6 +266,21 @@ impl Node {
             Node::Integer(_) | Node::Float(_) | Node::GetItem(_, _) | Node::GetAttr(_, _) | Node::Path(_, _) | Node::Substitution(_) |
             Node::Closure(_, _) => Ok(None),
         }
+    }
+
+    fn function_invocation(function: Box<dyn CrushCommand + Send + Sync>, arguments: Vec<ArgumentDefinition>) -> CrushResult<Option<CommandInvocation>> {
+        Ok(Some(
+            CommandInvocation::new(
+                ValueDefinition::Value(Value::Command(function)),
+                arguments)))
+    }
+
+    fn method_invocation(&self, name: &str, arguments: Vec<ArgumentDefinition>) -> CrushResult<Option<CommandInvocation>> {
+        Ok(Some(
+            CommandInvocation::new(
+                ValueDefinition::GetAttr(Box::from(self.generate_argument()?.unnamed_value()?), name.to_string().into_boxed_str()),
+                arguments)
+        ))
     }
 }
 
