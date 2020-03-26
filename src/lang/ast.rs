@@ -118,20 +118,10 @@ impl Node {
                     ),
                 Node::Unary(op, r) =>
                     match op.deref() {
-                        "neg" =>
+                        "neg" | "not" =>
                             ValueDefinition::JobDefinition(
-                                Job::new(vec![
-                                    CommandInvocation::new(
-                                        ValueDefinition::GetAttr(Box::from(r.generate_argument()?.unnamed_value()?), "__neg__".to_string().into_boxed_str()),
-                                        vec![])
-                                ]))
-                        ,
-                        "not" =>
-                            ValueDefinition::JobDefinition(
-                                Job::new(vec![CommandInvocation::new(
-                                    ValueDefinition::Value(Value::Command(NOT.as_ref().clone())),
-                                    vec![r.generate_argument()?])
-                                ])),
+                                Job::new(vec![self.generate_standalone()?.unwrap()])
+                            ),
                         "@" =>
                             return Ok(ArgumentDefinition::list(r.generate_argument()?.unnamed_value()?)),
                         "@@" =>
@@ -234,51 +224,31 @@ impl Node {
                     vec![l.generate_argument()?, r.generate_argument()?])))
             }
             Node::Comparison(l, op, r) => {
-                match op.as_ref() {
-                    "<" =>
-                        Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(LT.as_ref().clone())),
-                            vec![l.generate_argument()?, r.generate_argument()?])
-                        )),
-                    "<=" =>
-                        Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(LTE.as_ref().clone())),
-                            vec![l.generate_argument()?, r.generate_argument()?])
-                        )),
-                    ">" =>
-                        Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(GT.as_ref().clone())),
-                            vec![l.generate_argument()?, r.generate_argument()?])
-                        )),
-                    ">=" =>
-                        Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(GTE.as_ref().clone())),
-                            vec![l.generate_argument()?, r.generate_argument()?])
-                        )),
-                    "==" =>
-                        Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(EQ.as_ref().clone())),
-                            vec![l.generate_argument()?, r.generate_argument()?])
-                        )),
-                    "!=" =>
-                        Ok(Some(CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(NEQ.as_ref().clone())),
-                            vec![l.generate_argument()?, r.generate_argument()?])
-                        )),
+                let cmd = match op.as_ref() {
+                    "<" => LT.as_ref(),
+                    "<=" => LTE.as_ref(),
+                    ">" => GT.as_ref(),
+                    ">=" => GTE.as_ref(),
+                    "==" => EQ.as_ref(),
+                    "!=" => NEQ.as_ref(),
                     "=~" =>
-                        Ok(Some(
+                        return Ok(Some(
                             CommandInvocation::new(
                                 ValueDefinition::GetAttr(Box::from(l.generate_argument()?.unnamed_value()?), "match".to_string().into_boxed_str()),
                                 vec![r.generate_argument()?])
                         )),
                     "!~" =>
-                        Ok(Some(
+                        return Ok(Some(
                             CommandInvocation::new(
                                 ValueDefinition::GetAttr(Box::from(l.generate_argument()?.unnamed_value()?), "not_match".to_string().into_boxed_str()),
                                 vec![r.generate_argument()?])
                         )),
-                    _ => error("Unknown operator"),
-                }
+                    _ => return error("Unknown operator"),
+                };
+                Ok(Some(CommandInvocation::new(
+                    ValueDefinition::Value(Value::Command(cmd.clone())),
+                    vec![l.generate_argument()?, r.generate_argument()?])
+                ))
             }
             Node::Replace(r, op, t1, t2) => {
                 let cmd = match op.as_ref() {
