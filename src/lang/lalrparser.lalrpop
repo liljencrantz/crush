@@ -53,10 +53,15 @@ Factor: Box<Node> = {
 }
 
 Unary: Box<Node> = {
-    Item,
+    Cast,
     "!" <u: Unary> => Box::from(Node::Unary(Box::from("!"), u)),
     "@" <u: Unary> => Box::from(Node::Unary(Box::from("@"), u)),
     "@@" <u: Unary> => Box::from(Node::Unary(Box::from("@@"), u)),
+}
+
+Cast: Box<Node> = {
+    Item,
+    <i: Item> CastOperator <t: Item> => Box::from(Node::Cast(i, t)),
 }
 
 Signature: Option<Vec<ParameterNode>> = {

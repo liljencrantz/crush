@@ -10,6 +10,7 @@ use lazy_static::lazy_static;
 use crate::lib::comp;
 use crate::lib::cond;
 use crate::lib::var;
+use crate::lib::types;
 use regex::Regex;
 
 lazy_static! {
@@ -26,6 +27,8 @@ lazy_static! {
 
     pub static ref LET: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(var::r#let, false)};
     pub static ref SET: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(var::set, false)};
+
+    pub static ref AS: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(types::r#as, false)};
 }
 
 pub struct JobListNode {
@@ -81,6 +84,7 @@ pub enum Node {
     Term(Box<Node>, Box<str>, Box<Node>),
     Factor(Box<Node>, Box<str>, Box<Node>),
     Unary(Box<str>, Box<Node>),
+    Cast(Box<Node>, Box<Node>),
     Glob(Box<str>),
     Label(Box<str>),
     Regex(Box<str>),
@@ -123,6 +127,12 @@ impl Node {
                             ])),
                     _ => return error("Unknown operator"),
                 },
+            Node::Cast(value, target_type) =>
+                ValueDefinition::JobDefinition(
+                    Job::new(vec![CommandInvocation::new(
+                        ValueDefinition::Value(Value::Command(AS.as_ref().clone())),
+                        vec![value.generate_argument()?, target_type.generate_argument()?])
+                    ])),
             Node::Label(l) => ValueDefinition::Label(l.clone()),
             Node::Regex(l) => ValueDefinition::Value(Value::Regex(l.clone(), to_crush_error(Regex::new(l.clone().as_ref()))?)),
             Node::String(t) => ValueDefinition::Value(Value::String(unescape(t).into_boxed_str())),
@@ -298,7 +308,7 @@ impl Node {
                 ))
             }
 
-            Node::Unary(_, _) | Node::Glob(_) | Node::Label(_) |
+            Node::Unary(_, _) | Node::Cast(_, _) | Node::Glob(_) | Node::Label(_) |
             Node::Regex(_) | Node::Field(_) | Node::String(_) |
             Node::Integer(_) | Node::Float(_) | Node::GetItem(_, _) |
             Node::GetAttr(_, _) | Node::Path(_, _) | Node::Substitution(_) |
