@@ -46,7 +46,7 @@ fn parse(mut context: ExecutionContext) -> CrushResult<()> {
     match (tm, fmt) {
         (Some(t), Some(f)) => {
             let tm = to_crush_error(strptime(t.as_ref(), f.as_ref()))?;
-            let mut dt = Local::now()
+            let dt = Local::now()
                 .with_year(tm.tm_year + 1900).unwrap()
                 .with_month0(tm.tm_mon as u32).unwrap()
                 .with_day(max(tm.tm_mday as u32, 1)).unwrap()

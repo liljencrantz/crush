@@ -37,7 +37,7 @@ fn evaluate(condition: Box<dyn CrushCommand + Send + Sync>, row: &Row, input_typ
     }
 }
 
-pub fn run(mut condition: Box<dyn CrushCommand + Send + Sync>, input: &mut dyn Readable, output: OutputStream, env: Scope) -> CrushResult<()> {
+pub fn run(condition: Box<dyn CrushCommand + Send + Sync>, input: &mut dyn Readable, output: OutputStream, env: Scope) -> CrushResult<()> {
     loop {
         match input.read() {
             Ok(row) => {

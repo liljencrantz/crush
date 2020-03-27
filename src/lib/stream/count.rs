@@ -1,14 +1,6 @@
 use crate::lang::command::ExecutionContext;
 use crate::lang::errors::{CrushResult, error};
-use crate::{
-    lang::{
-        table::Row,
-        value::ValueType,
-        value::Value,
-        table::ColumnType,
-        table::TableReader,
-    }
-};
+use crate::lang::value::Value;
 use crate::lang::stream::Readable;
 
 fn count_rows(mut s: impl Readable) -> Value {

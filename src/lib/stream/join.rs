@@ -106,7 +106,7 @@ fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Confi
     };
 }
 
-fn combine(mut l: Row, mut r: Row, cfg: &Config) -> Row {
+fn combine(mut l: Row, r: Row, cfg: &Config) -> Row {
     for (idx, c) in r.into_vec().drain(..).enumerate() {
         if idx != cfg.right_column_idx {
             l.push(c);
@@ -143,7 +143,7 @@ fn do_join(cfg: &Config, l: &mut dyn Readable, r: &mut dyn Readable, output: &Ou
 
 pub fn run(
     config: Config,
-    mut row: Struct,
+    row: Struct,
     output: OutputStream,
 ) -> CrushResult<()> {
     let mut v = row.into_vec();

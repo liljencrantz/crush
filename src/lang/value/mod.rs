@@ -227,7 +227,7 @@ impl Value {
             }
             Value::BinaryStream(mut s) => {
                 let mut vec = Vec::new();
-                std::io::copy(s.as_mut(), &mut vec);
+                std::io::copy(s.as_mut(), &mut vec).unwrap();
                 Value::Binary(vec)
             }
             Value::Table(r) => Value::Table(r.materialize()),

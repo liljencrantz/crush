@@ -1,10 +1,9 @@
 use crate::lang::command::{ExecutionContext, This, ArgumentVector};
-use crate::lang::errors::{CrushResult, argument_error, error};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::ValueType, list::List, command::CrushCommand};
 use crate::lang::value::Value;
 use std::collections::HashSet;
 use std::collections::HashMap;
-use crate::lang::scope::Scope;
 use lazy_static::lazy_static;
 
 lazy_static! {

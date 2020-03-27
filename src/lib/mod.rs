@@ -16,16 +16,7 @@ pub mod types;
 pub mod control;
 pub mod constants;
 
-use crate::{
-    lang::argument::Argument,
-    lang::scope::Scope,
-    lang::value::Value,
-    lang::errors::CrushResult,
-    lang::stream::{ValueReceiver, ValueSender, InputStream}
-};
-use std::thread::JoinHandle;
-
-pub use control::cmd;
+use crate::{lang::scope::Scope, lang::errors::CrushResult};
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     comp::declare(root)?;

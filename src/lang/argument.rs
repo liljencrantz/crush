@@ -1,6 +1,6 @@
 use crate::lang::value::Value;
 use crate::lang::{value::ValueDefinition};
-use crate::lang::errors::{CrushError, CrushResult, error, argument_error};
+use crate::lang::errors::{CrushResult, error, argument_error};
 use crate::lang::scope::Scope;
 use crate::lang::job::JobJoinHandle;
 use std::collections::HashSet;
@@ -15,7 +15,7 @@ pub enum ArgumentType {
 
 impl ArgumentType {
     pub fn is_some(&self) -> bool {
-        if let ArgumentType::Some(v) = self {
+        if let ArgumentType::Some(_) = self {
             true
         } else {
             false
@@ -173,6 +173,7 @@ pub fn column_names(arguments: &Vec<Argument>) -> Vec<Box<str>> {
             tmp.push_str(name);
             loop {
                 tmp.push_str(idx.to_string().as_str());
+                idx += 1;
                 if !taken.contains(tmp.as_str()) {
                     name = tmp.as_str();
                     break;

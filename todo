@@ -1,4 +1,6 @@
 Todo for MVP 1:
+Remove parse_util
+Remove command_util
 Figure out how to make external commands with subcommands convenient again
 Add avg command
 Add system tests for type casting
@@ -14,6 +16,7 @@ Deal with different error kinds differently
 Add command-field to CrushError
 Add source field to CrushError
 Make error printing display source of error
+Flesh out readme file
 
 Future features:
 Make integers overflow to arbitrary precision math

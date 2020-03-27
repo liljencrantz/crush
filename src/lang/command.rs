@@ -1,6 +1,6 @@
-use crate::lang::errors::{CrushResult, error, argument_error, CrushError};
+use crate::lang::errors::{CrushResult, error, argument_error};
 use std::fmt::Formatter;
-use crate::lang::stream::{ValueReceiver, ValueSender, InputStream, empty_channel};
+use crate::lang::stream::{ValueReceiver, ValueSender,  empty_channel};
 use crate::lang::{argument::Argument, argument::ArgumentDefinition};
 use crate::lang::scope::Scope;
 use crate::lang::job::Job;
@@ -15,7 +15,6 @@ use regex::Regex;
 use std::collections::HashMap;
 use crate::util::glob::Glob;
 use chrono::{Duration, Local, DateTime};
-use crate::lang::argument::ArgumentType;
 
 pub trait ArgumentVector {
     fn check_len(&self, len: usize) -> CrushResult<()>;
@@ -391,11 +390,7 @@ impl CrushCommand for Closure {
     }
 
     fn can_block(&self, arg: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
-        if self.job_definitions.len() == 1 {
-            self.job_definitions[0].can_block(env)
-        } else {
-            true
-        }
+        true
     }
 
     fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {
@@ -433,11 +428,12 @@ impl Closure {
             }
             let mut unnamed_name = None;
             let mut named_name = None;
+            let mut v = Vec::new();
 
             for param in signature {
                 match param {
                     Parameter::Parameter(name, value_type, default) => {
-                        if let (_, Value::Type(value_type)) = value_type.compile_non_blocking(env)? {
+                        if let (_, Value::Type(value_type)) = value_type.compile(&mut v, env)? {
                             if named.contains_key(name.as_ref()) {
                                 let value = named.remove(name.as_ref()).unwrap();
                                 if !value_type.is(&value) {
@@ -446,7 +442,7 @@ impl Closure {
                                 env.redeclare(name.as_ref(), value)?;
                             } else {
                                 if let Some(default) = default {
-                                    env.redeclare(name.as_ref(), default.compile_non_blocking(env)?.1)?;
+                                    env.redeclare(name.as_ref(), default.compile(&mut v, env)?.1)?;
                                 } else {
                                     return argument_error("Missing variable!!!");
                                 }

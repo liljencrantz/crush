@@ -161,7 +161,7 @@ fn print_body(w: &Vec<usize>, data: Vec<Row>, indent: usize) {
     }
 }
 
-fn print_binary(binary: &mut dyn BinaryReader, indent: usize) {
+fn print_binary(binary: &mut dyn BinaryReader, _indent: usize) {
     let mut reader = BufReader::new(binary);
 
     let mut line = String::new();

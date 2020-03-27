@@ -20,7 +20,7 @@ lazy_static! {
     };
 }
 
-fn upper(mut context: ExecutionContext) -> CrushResult<()> {
+fn upper(context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context.output.send(Value::String(
         context.this.text()?
@@ -28,7 +28,7 @@ fn upper(mut context: ExecutionContext) -> CrushResult<()> {
             .into_boxed_str()))
 }
 
-fn lower(mut context: ExecutionContext) -> CrushResult<()> {
+fn lower(context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context.output.send(Value::String(
         context.this.text()?
@@ -46,7 +46,7 @@ fn split(mut context: ExecutionContext) -> CrushResult<()> {
                                                   .collect())))
 }
 
-fn trim(mut context: ExecutionContext) -> CrushResult<()> {
+fn trim(context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context.output.send(Value::String(
         Box::from(context.this.text()?

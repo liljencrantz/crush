@@ -77,8 +77,8 @@ ParameterList: Vec<ParameterNode> = {
 }
 
 Parameter: ParameterNode = {
-    <l: Label> <d: Default> => ParameterNode::Parameter(Box::from(l), ValueDefinition::Value(Value::Type(ValueType::Any)), d),
-    <n: Label> ":" <t: Label> <d: Default> => ParameterNode::Parameter(Box::from(n), ValueDefinition::Label(Box::from(t)), d),
+    <l: Label> <d: Default> => ParameterNode::Parameter(Box::from(l), None, d),
+    <n: Label> ":" <t: Item> <d: Default> => ParameterNode::Parameter(Box::from(n), Some(t), d),
     "@" <l: Label> => ParameterNode::Unnamed(Box::from(l)),
     "@@" <l: Label> => ParameterNode::Named(Box::from(l)),
 }

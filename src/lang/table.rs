@@ -100,10 +100,6 @@ impl Row {
             cells: self.cells.drain(..).map(|c| c.materialize()).collect(),
         }
     }
-
-    pub fn replace(&mut self, idx: usize, value: Value) -> Value {
-        self.cells.replace(idx, value)
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]

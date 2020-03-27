@@ -1,10 +1,7 @@
 use crate::lang::command::{ExecutionContext, CrushCommand, This, ArgumentVector};
-use crate::lang::errors::{CrushResult, argument_error, error};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::ValueType, dict::Dict};
-use crate::lang::table::Row;
 use crate::lang::value::Value;
-use crate::lang::table::ColumnType;
-use crate::lang::scope::Scope;
 use std::collections::HashMap;
 use lazy_static::lazy_static;
 
@@ -23,7 +20,7 @@ lazy_static! {
     };
 }
 
-fn new(mut context: ExecutionContext) -> CrushResult<()> {
+fn new(context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     let t = context.this.r#type()?;
     if let ValueType::Dict(key_type, value_type) = t {
@@ -39,7 +36,7 @@ fn new(mut context: ExecutionContext) -> CrushResult<()> {
 
 fn setitem(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(2)?;
-    let mut dict = context.this.dict()?;
+    let dict = context.this.dict()?;
     let value = context.arguments.value(1)?;
     let key = context.arguments.value(0)?;
     if dict.key_type() == key.value_type() && dict.value_type() == value.value_type() {
@@ -51,7 +48,7 @@ fn setitem(mut context: ExecutionContext) -> CrushResult<()> {
 
 fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
-    let mut dict = context.this.dict()?;
+    let dict = context.this.dict()?;
     let key = context.arguments.value(0)?;
     let o = context.output;
     dict.get(&key).map(|c| o.send(c));
@@ -60,7 +57,7 @@ fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
 
 fn remove(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
-    let mut dict = context.this.dict()?;
+    let dict = context.this.dict()?;
     let key = context.arguments.value(0)?;
     let o = context.output;
     dict.remove(&key).map(|c| o.send(c));

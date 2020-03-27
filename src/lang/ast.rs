@@ -2,7 +2,7 @@ use crate::lang::job::Job;
 use crate::lang::errors::{CrushResult, error, to_crush_error};
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::argument::ArgumentDefinition;
-use crate::lang::value::{ValueDefinition, Value};
+use crate::lang::value::{ValueDefinition, Value, ValueType};
 use std::ops::Deref;
 use crate::lang::command::{CrushCommand, Parameter};
 use crate::util::glob::Glob;
@@ -108,7 +108,7 @@ impl Node {
                         _ => error("Invalid left side in named argument"),
                     },
 
-                Node::Declaration(target, value) =>
+                Node::Declaration(_target, value) =>
                     return error("Variable declarations not supported as arguments"),
 
                 Node::LogicalOperation(_, _, _) | Node::Comparison(_, _, _) | Node::Replace(_, _, _, _) |
@@ -309,7 +309,7 @@ pub fn unescape(s: &str) -> String {
 
 
 pub enum ParameterNode {
-    Parameter(Box<str>, ValueDefinition, Option<Node>),
+    Parameter(Box<str>, Option<Box<Node>>, Option<Node>),
     Named(Box<str>),
     Unnamed(Box<str>),
 }
@@ -321,7 +321,9 @@ impl ParameterNode {
                 Ok(
                     Parameter::Parameter(
                         name.clone(),
-                        value_type.clone(),
+                        value_type.as_ref().map(|t| t.generate_argument()?.unnamed_value()).unwrap_or(
+                            Ok(ValueDefinition::Value(Value::Type(ValueType::Any)))
+                        )?,
                         default.as_ref()
                             .map(|d| d.generate_argument()).transpose()?
                             .map(|a| a.unnamed_value()).transpose()?,

@@ -108,10 +108,6 @@ impl BinaryReader for FileReader {
 }
 
 impl dyn BinaryReader {
-    pub fn path(file: &Path) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
-        return Ok(Box::from(FileReader::new(to_crush_error(File::open(file))?)));
-    }
-
     pub fn paths(mut files: Vec<Box<Path>>) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
         if files.len() == 1 {
             Ok(Box::from(FileReader::new(to_crush_error(File::open(files.remove(0)))?)))

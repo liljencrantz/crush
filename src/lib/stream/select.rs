@@ -12,10 +12,8 @@ use crate::{
     lang::table::ColumnType,
     lang::errors::CrushResult,
 };
-use crate::lib::command_util::find_field;
 use crate::lang::stream::{Readable, ValueSender, empty_channel, channels};
 use crate::lang::errors::error;
-use crate::lang::{r#struct::Struct, table::TableReader};
 use crate::lang::scope::Scope;
 
 enum Location {
@@ -98,7 +96,7 @@ pub fn run(
 
     loop {
         match input.read() {
-            Ok(mut row) => {
+            Ok(row) => {
                 let mut next_result = Vec::new();
 
                 if config.copy {
@@ -128,7 +126,7 @@ pub fn run(
                         Source::Argument(idx) => row.cells()[*idx].clone(),
                     };
                     match location {
-                        Location::Append(name) => {
+                        Location::Append(_) => {
                             next_result.push(value);
                         }
                         Location::Replace(idx) => {

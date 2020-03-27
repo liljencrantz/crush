@@ -11,7 +11,7 @@ use crate::{
     },
     lang::stream::{OutputStream, unlimited_streams},
 };
-use crate::lang::{table::ColumnType, table::TableReader};
+use crate::lang::{table::ColumnType};
 use crate::lang::errors::{CrushResult, error};
 use crate::lib::command_util::find_field;
 use crate::lang::stream::{Readable};

@@ -1,0 +1,3 @@
+ggg := {|a : (dict integer integer)| echo a}
+hhh := ((dict integer integer):new)
+ggg a=hhh

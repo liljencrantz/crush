@@ -7,7 +7,7 @@ use crate::{
         table::Row,
     },
 };
-use crate::lang::{value::Value, table::ColumnType, table::TableReader};
+use crate::lang::{value::Value, table::ColumnType};
 use crate::lang::errors::{CrushResult, error};
 use crate::lib::command_util::find_field;
 use crate::lang::stream::{Readable, OutputStream};

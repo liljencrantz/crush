@@ -9,12 +9,10 @@ enum PrinterMessage {
     CrushError(CrushError),
     Error(Box<str>),
     Line(Box<str>),
-    Lines(Vec<Box<str>>),
+//    Lines(Vec<Box<str>>),
 }
 
 use crate::lang::printer::PrinterMessage::*;
-use crate::lang::job::JobJoinHandle;
-use crate::util::thread::{handle, build};
 use std::thread::JoinHandle;
 use lazy_static::lazy_static;
 
@@ -50,7 +48,7 @@ pub fn printer_thread() -> JoinHandle<()> {
                         Error(err) => println!("Error: {}", err),
                         CrushError(err) => println!("Error: {}", err.message),
                         Line(line) => println!("{}", line),
-                        Lines(lines) => for line in lines {println!("{}", line)},
+//                        Lines(lines) => for line in lines {println!("{}", line)},
                     }
                 }
                 Err(_) => break,
@@ -68,11 +66,11 @@ impl Printer {
     pub fn line(&self, line: &str) {
         self.handle_error(to_crush_error(self.sender.send(PrinterMessage::Line(Box::from(line)))));
     }
-
+/*
     pub fn lines(&self, lines: Vec<Box<str>>) {
         self.handle_error(to_crush_error(self.sender.send(PrinterMessage::Lines(lines))));
     }
-
+*/
     pub fn handle_error<T>(&self, result: CrushResult<T>) {
         match result {
             Err(e) => self.crush_error(e),

@@ -6,7 +6,6 @@ use crate::lang::printer::printer;
 use crate::lang::stream::{ValueReceiver, ValueSender};
 use crate::util::thread::{handle, build};
 use std::path::Path;
-use crate::lang::argument::Argument;
 
 #[derive(Clone)]
 pub struct CommandInvocation {
@@ -123,7 +122,7 @@ impl CommandInvocation {
             }
             Err(err) => {
                 if err.kind == Kind::BlockError {
-                    let mut cmd = self.command.clone();
+                    let cmd = self.command.clone();
                     let e = env.clone();
                     let arguments = self.arguments.clone();
                     Ok(handle(build(self.command.to_string().as_str()).spawn(
@@ -156,9 +155,9 @@ impl CommandInvocation {
 }
 
 fn invoke_value(
-    mut this: Option<Value>,
+    this: Option<Value>,
     value: Value,
-    mut local_arguments: Vec<ArgumentDefinition>,
+    local_arguments: Vec<ArgumentDefinition>,
     env: &Scope,
     input: ValueReceiver,
     output: ValueSender) -> CrushResult<JobJoinHandle> {
@@ -244,7 +243,7 @@ fn try_external_command(p: &str, mut arguments: Vec<ArgumentDefinition>, env: &S
                 0,
                 ArgumentDefinition::unnamed(ValueDefinition::Value(Value::File(path))));
             let cmd = CommandInvocation {
-                command: ValueDefinition::Value(Value::Command(CrushCommand::command(crate::lib::cmd, true))),
+                command: ValueDefinition::Value(Value::Command(CrushCommand::command(crate::lib::control::cmd, true))),
                 arguments,
             };
             cmd.invoke(env, input, output)

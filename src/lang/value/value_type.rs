@@ -42,13 +42,6 @@ pub enum ValueType {
 
 
 impl ValueType {
-    fn materialize_vec(input: &Vec<ValueType>) -> Vec<ValueType> {
-        input
-            .iter()
-            .map(|cell| cell.materialize())
-            .collect()
-    }
-
     pub fn fields(&self) -> Option<&HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>>> {
         Some(match self {
             ValueType::List(_) =>

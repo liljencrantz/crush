@@ -1,5 +1,4 @@
-use crate::lang::scope::Scope;
-use crate::lang::errors::{CrushResult, argument_error, error};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::Value, command::ExecutionContext};
 use crate::lang::command::{CrushCommand, ArgumentVector, This};
 use std::collections::HashMap;

@@ -1,7 +1,6 @@
 use crate::lang::command::ExecutionContext;
 use crate::lang::errors::CrushResult;
 use crate::lang::errors::error;
-use crate::lang::value::Value;
 use crate::lang::stream::{ValueSender};
 use crate::lang::stream::Readable;
 
@@ -12,7 +11,7 @@ pub fn run(input1: &mut dyn Readable, input2: &mut dyn Readable, sender: ValueSe
     let output = sender.initialize(output_type)?;
     loop {
         match (input1.read(), input2.read()) {
-            (Ok(mut row1), Ok(mut row2)) => {
+            (Ok(mut row1), Ok(row2)) => {
                 row1.append(&mut row2.into_vec());
                 output.send(row1)?;
             }

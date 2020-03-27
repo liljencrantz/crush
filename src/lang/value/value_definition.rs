@@ -1,7 +1,4 @@
-use regex::Regex;
-
 use crate::{
-    util::glob::Glob,
     lang::errors::{error, mandate, CrushResult},
     lang::scope::Scope,
     lang::value::Value,
@@ -115,10 +112,6 @@ impl ValueDefinition {
                 (Some(parent), val)
             }
         })
-    }
-
-    pub fn regex(s: &str, r: Regex) -> ValueDefinition {
-        ValueDefinition::Value(Value::Regex(Box::from(s), r))
     }
 }
 

@@ -1,8 +1,5 @@
-use crate::lang::scope::Scope;
-use crate::lang::errors::{CrushResult, argument_error, error};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::Value, command::ExecutionContext};
-use regex::Regex;
-use std::error::Error;
 use crate::lang::command::{CrushCommand, ArgumentVector, This};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
