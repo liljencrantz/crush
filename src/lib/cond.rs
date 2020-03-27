@@ -79,7 +79,6 @@ pub fn or(mut context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("cond")?;
-    root.r#use(&env);
     env.declare("and", Value::Command(CrushCommand::condition(and)))?;
     env.declare("or", Value::Command(CrushCommand::condition(or)))?;
     env.readonly();

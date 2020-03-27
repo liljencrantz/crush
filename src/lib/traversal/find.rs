@@ -109,7 +109,7 @@ pub fn run(mut config: Config) -> CrushResult<()> {
             break;
         }
         let dir = q.pop_front().unwrap();
-        run_for_single_directory_or_file(dir, &users, config.recursive, &mut q, &mut config.output)?;
+        let _ = run_for_single_directory_or_file(dir, &users, config.recursive, &mut q, &mut config.output);
     }
     return Ok(());
 }

@@ -18,45 +18,49 @@ pub fn duration_format(d: &Duration) -> String {
 
     let mut res = "".to_string();
 
+    if d < &Duration::seconds(0) {
+        res.push_str("-");
+    }
+
     let years = remaining_nanos / MICROS_IN_YEAR;
     if years != 0 {
         remaining_nanos -= years * MICROS_IN_YEAR;
-        res.push_str(format!("{}y", years).as_str());
+        res.push_str(format!("{}y", years.abs()).as_str());
     }
 
     let days = remaining_nanos / MICROS_IN_DAY;
     if days != 0 || !res.is_empty() {
         remaining_nanos -= days * MICROS_IN_DAY;
-        res.push_str(format!("{}d", days).as_str());
+        res.push_str(format!("{}d", days.abs()).as_str());
     }
 
     let hours = remaining_nanos / MICROS_IN_HOUR;
     if hours != 0 || !res.is_empty() {
         remaining_nanos -= hours * MICROS_IN_HOUR;
-        res.push_str(format!("{}:", hours).as_str());
+        res.push_str(format!("{}:", hours.abs()).as_str());
     }
 
     let minutes = remaining_nanos / MICROS_IN_MINUTE;
     if minutes != 0 || !res.is_empty() {
         remaining_nanos -= minutes * MICROS_IN_MINUTE;
         if res.is_empty() {
-            res.push_str(format!("{}:", minutes).as_str());
+            res.push_str(format!("{}:", minutes.abs()).as_str());
         } else {
-            res.push_str(format!("{:02}:", minutes).as_str());
+            res.push_str(format!("{:02}:", minutes.abs()).as_str());
         }
     }
 
     let seconds = remaining_nanos / MICROS_IN_SECOND;
     remaining_nanos -= seconds * MICROS_IN_SECOND;
     if res.is_empty() {
-        res.push_str(format!("{}", seconds).as_str());
+        res.push_str(format!("{}", seconds.abs()).as_str());
     } else {
-        res.push_str(format!("{:02}", seconds).as_str());
+        res.push_str(format!("{:02}", seconds.abs()).as_str());
     }
 
     if res.len() < 4 {
         if remaining_nanos != 0 {
-            res.push_str(format!(".{:09}", remaining_nanos).trim_end_matches('0'))
+            res.push_str(format!(".{:09}", remaining_nanos.abs()).trim_end_matches('0'))
         }
     }
     res

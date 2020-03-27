@@ -29,7 +29,7 @@ Listing files in the current directory works the same as in any other shell.
 
 But ls output is a table of rows, so we use SQL-like commands to sort, filter and group lines.
 
-    crush> ls | sort %size
+    crush> ls | sort ^size
     user         size  modified                  type      file
     liljencrantz    31 2019-10-03 13:43:12 +0200 file      .gitignore
     liljencrantz    75 2020-03-07 17:09:15 +0100 file      build.rs
@@ -88,7 +88,7 @@ as a single element of the `file` type.
 In crush, braces (`{}`) re used to create a closure. To create a version of the `ls` command that only shows you
 file names, simply write
 
-lss := {|@args @@kwargs| ls @args @@kwargs | select %file}
+    lss := {|@args @@kwargs| ls @args @@kwargs | select %file}
 
 ### Rich type system
 
@@ -96,15 +96,18 @@ Crush does not have user defined types, but it does have a rich set of built in 
 
 * lists of any type,
 * dicts of any type,
-* text,
+* strings,
 * regular expressions,
 * globs,
 * files,
 * booleans,
 * integer numbers,
+* floating point numbers,
 * structs, which contain any number of named fields of any type,
 * tables, which are essentially a list where each element is the same type of struct,
-* streams, which are like tables but can only be traversed once
+* table streams, which are like tables but can only be traversed once
+* binary data,
+* binary streams, which are like binary data but can only be traversed once
 * types, and
 * commands, which are either closures or built in commands.
 
@@ -113,20 +116,20 @@ Crush does not have user defined types, but it does have a rich set of built in 
 
 If you assign the output of the find command to a variable like so:
 
-    crush> let all_the_files=(find /)
+    crush> all_the_files := (find root)
 
 What will really be stored in the `all_the_files` variable is simply a stream. A small number
 of lines of output will be eagerly evaluated, before the thread executing the find command
 will start blocking. If the stream is consumed, for example by writing
 
-    crush> echo $all_the_files
+    crush> all_the_files
 
 then all hell will break loose on your screen as tens of thousands of lines are printed to
 your screen.
 
-Another option would be to use the head command
+Another option would be to pipe the output via the head command
 
-    crush> val $all_the_files | head 1
+    crush> all_the_files | head 1
 
 Which will consume one line of output from the stream. This command can be re-executed until
 the stream is empty.
@@ -137,7 +140,7 @@ Crush features many commands to operate om arbitrary streams of data using a SQL
 These commands use field-specifiers like %foo to specify columns in the data stream that they
 operate on:
 
-echo $some_data | where {comp.eq $color green) | group %shoe_size | aggr green_shoes_of_size={count}
+echo some_data | where {color == "green") | group ^shoe_size | aggr green_shoes_of_size={count}
 
 Unlike in SQL, these commands all operate on input streams, meaning they can be combined in
 any order, and the input source can be file/http resources in a variety of formats or output of
