@@ -13,7 +13,7 @@ use crate::lang::errors::{CrushResult, to_crush_error};
 use std::error::Error;
 use crate::lang::printer::{printer, printer_thread};
 use crate::lang::stream::empty_channel;
-use crate::lang::stream_printer::spawn_print_thread;
+use crate::lang::pretty_printer::spawn_print_thread;
 use crate::util::file::home;
 use std::path::Path;
 use std::fs;
@@ -106,7 +106,7 @@ fn run() -> CrushResult<()> {
     declare(&global_env)?;
     let my_scope = global_env.create_child(&global_env, false);
 
-    let mut args = std::env::args().collect::<Vec<String>>();
+    let args = std::env::args().collect::<Vec<String>>();
     match args.len() {
         1 => run_interactive(my_scope)?,
         2 => run_script(my_scope, args[1].as_str())?,

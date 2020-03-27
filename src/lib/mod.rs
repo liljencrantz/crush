@@ -1,6 +1,3 @@
-mod command_util;
-mod parse_util;
-
 pub mod traversal;
 pub mod var;
 pub mod proc;

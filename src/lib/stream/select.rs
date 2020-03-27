@@ -1,13 +1,11 @@
-use crate::lang::command::{ExecutionContext, CrushCommand, This};
+use crate::lang::command::{ExecutionContext, CrushCommand};
 use crate::{
-    lib::command_util::find_field_from_str,
     lang::errors::argument_error,
     lang::{
         argument::Argument,
         table::Row,
         value::Value,
     },
-    lang::stream::OutputStream,
     util::replace::Replace,
     lang::table::ColumnType,
     lang::errors::CrushResult,
@@ -15,6 +13,7 @@ use crate::{
 use crate::lang::stream::{Readable, ValueSender, empty_channel, channels};
 use crate::lang::errors::error;
 use crate::lang::scope::Scope;
+use crate::lang::table::ColumnVec;
 
 enum Location {
     Replace(usize),
@@ -168,13 +167,13 @@ fn perform_for(
     for a in arguments {
         match (a.argument_type.as_deref(), a.value) {
             (Some(name), Value::Command(closure)) => {
-                match (copy, find_field_from_str(name, input_type)) {
+                match (copy, input_type.find_str(name)) {
                     (true, Ok(idx)) => columns.push((Location::Replace(idx), Source::Closure(closure))),
                     _ => columns.push((Location::Append(Box::from(name)), Source::Closure(closure))),
                 }
             }
             (None, Value::String(name)) => {
-                match (copy, find_field_from_str(name.as_ref(), input_type)) {
+                match (copy, input_type.find_str(name.as_ref())) {
                     (false, Ok(idx)) => columns.push((Location::Append(name), Source::Argument(idx))),
                     _ => return argument_error(format!("Unknown field {}", name.as_ref()).as_str()),
                 }

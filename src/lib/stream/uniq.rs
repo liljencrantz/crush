@@ -9,8 +9,8 @@ use crate::{
 };
 use crate::lang::{value::Value, table::ColumnType};
 use crate::lang::errors::{CrushResult, error};
-use crate::lib::command_util::find_field;
 use crate::lang::stream::{Readable, OutputStream};
+use crate::lang::table::ColumnVec;
 
 pub struct Config {
     column: Option<usize>,
@@ -20,7 +20,7 @@ pub fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> CrushRes
     match arguments.len() {
         0 => Ok(Config { column: None }),
         1 => match (&arguments[0].argument_type, &arguments[0].value) {
-            (None, Value::Field(f)) => Ok(Config { column: Some(find_field(f, input_type)?) }),
+            (None, Value::Field(f)) => Ok(Config { column: Some(input_type.find(f)?) }),
             _ => argument_error("Expected field name")
         }
         _ => argument_error("Expected zero or one argument"),

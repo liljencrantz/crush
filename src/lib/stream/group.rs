@@ -1,7 +1,6 @@
 use crate::lang::command::ExecutionContext;
 use std::collections::HashMap;
 use crate::{
-    lib::command_util::find_field_from_str,
     lang::errors::{argument_error},
     lang::{
         argument::Argument,
@@ -13,8 +12,8 @@ use crate::{
 };
 use crate::lang::{table::ColumnType};
 use crate::lang::errors::{CrushResult, error};
-use crate::lib::command_util::find_field;
 use crate::lang::stream::{Readable};
+use crate::lang::table::ColumnVec;
 
 pub struct Config {
     input_type: Vec<ColumnType>,
@@ -31,13 +30,13 @@ pub fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> CrushResu
     match &arg.value {
         Value::String(cell_name) =>
             Ok(Config {
-                column: find_field_from_str(cell_name, &input_type)?,
+                column: input_type.find_str(cell_name)?,
                 input_type,
                 name,
             }),
         Value::Field(cell_name) =>
             Ok(Config {
-                column: find_field(cell_name, &input_type)?,
+                column: input_type.find(cell_name)?,
                 input_type,
                 name,
             }),

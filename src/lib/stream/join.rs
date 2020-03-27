@@ -14,10 +14,9 @@ use crate::{
     lang::stream::OutputStream,
     util::replace::Replace,
     lang::errors::argument_error,
-    lib::command_util::find_field_from_str,
 };
-use crate::lib::command_util::find_field;
 use crate::lang::r#struct::Struct;
+use crate::lang::table::ColumnVec;
 
 pub struct Config {
     left_table_idx: usize,
@@ -48,8 +47,8 @@ pub fn guess_tables(input_type: &Vec<ColumnType>) -> Result<(usize, usize, &Vec<
 }
 
 fn scan_table(table: &str, column: &str, input_type: &Vec<ColumnType>) -> Result<(usize, usize), CrushError> {
-    let table_idx = find_field_from_str(&table.to_string(), input_type)?;
-    let column_idx = find_field_from_str(&column.to_string(), get_sub_type(&input_type[table_idx].cell_type)?)?;
+    let table_idx = input_type.find_str(&table.to_string())?;
+    let column_idx = get_sub_type(&input_type[table_idx].cell_type)?.find_str(&column.to_string())?;
     Ok((table_idx, column_idx))
 }
 
@@ -67,8 +66,8 @@ fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Confi
                     Config {
                         left_table_idx,
                         right_table_idx,
-                        left_column_idx: find_field(&l, left_types)?,
-                        right_column_idx: find_field(&r, right_types)?,
+                        left_column_idx: left_types.find(&l)?,
+                        right_column_idx: right_types.find(&r)?,
                     }
                 }
                 (2, 2) => {

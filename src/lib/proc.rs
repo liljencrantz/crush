@@ -5,8 +5,8 @@ use crate::{
     lang::value::ValueType,
     lang::value::Value,
 };
+use crate::util::user_map::{create_user_map, UserMap};
 use psutil::process::State;
-use crate::lib::command_util::{create_user_map, UserMap};
 use users::uid_t;
 use crate::lang::{table::ColumnType};
 use chrono::Duration;

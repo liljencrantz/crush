@@ -1,5 +1,5 @@
 use crate::lang::{value::Value, r#struct::Struct};
-use crate::lang::errors::{CrushError, error};
+use crate::lang::errors::{CrushError, error, CrushResult, argument_error};
 use crate::lang::stream::{Readable};
 use crate::util::replace::Replace;
 use crate::lang::value::ValueType;
@@ -126,5 +126,44 @@ impl ColumnType {
 
     pub fn format_value(&self, v: &Value) -> String {
         format!("{}: {}", self.name, v.to_string())
+    }
+}
+
+pub trait ColumnVec {
+    fn find_str(&self, needle: &str) -> CrushResult<usize>;
+    fn find(&self, needle: &Vec<Box<str>>) -> CrushResult<usize>;
+}
+
+impl ColumnVec for Vec<ColumnType> {
+    fn find_str(&self, needle: &str) -> CrushResult<usize> {
+        for (idx, field) in self.iter().enumerate() {
+            if field.name.as_ref() == needle {
+                return Ok(idx);
+            }
+        }
+        argument_error(format!(
+            "Unknown column {}, available columns are {}",
+            needle,
+            self.iter().map(|t| t.name.to_string()).collect::<Vec<String>>().join(", "),
+        ).as_str())
+    }
+
+    fn find(&self, needle_vec: &Vec<Box<str>>) -> CrushResult<usize> {
+        if needle_vec.len() != 1 {
+            argument_error("Expected direct field")
+        } else {
+            let needle = needle_vec[0].as_ref();
+            for (idx, field) in self.iter().enumerate() {
+                if field.name.as_ref() == needle {
+                    return Ok(idx);
+                }
+            }
+
+            error(format!(
+                "Unknown column {}, available columns are {}",
+                needle,
+                self.iter().map(|t| t.name.to_string()).collect::<Vec<String>>().join(", "),
+            ).as_str())
+        }
     }
 }

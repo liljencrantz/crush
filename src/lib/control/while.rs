@@ -3,8 +3,8 @@ use crate::lang::scope::Scope;
 use crate::lang::command::CrushCommand;
 use crate::lang::errors::{argument_error, CrushResult, data_error};
 use crate::lang::command::ExecutionContext;
-use crate::lang::stream::{empty_channel, Readable, channels};
-use crate::lang::stream_printer::spawn_print_thread;
+use crate::lang::stream::{empty_channel, channels};
+use crate::lang::pretty_printer::spawn_print_thread;
 
 pub struct Config {
     condition: Box<dyn CrushCommand>,

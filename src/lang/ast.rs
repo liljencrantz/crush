@@ -12,6 +12,7 @@ use crate::lib::cond;
 use crate::lib::var;
 use crate::lib::types;
 use regex::Regex;
+use std::path::Path;
 
 lazy_static! {
     pub static ref LT: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command(comp::lt, false)};
@@ -89,6 +90,7 @@ pub enum Node {
     Regex(Box<str>),
     Field(Box<str>),
     String(Box<str>),
+    File(Box<Path>),
     Integer(i128),
     Float(f64),
     GetItem(Box<Node>, Box<Node>),
@@ -108,7 +110,7 @@ impl Node {
                         _ => error("Invalid left side in named argument"),
                     },
 
-                Node::Declaration(_target, value) =>
+                Node::Declaration(_target, _value) =>
                     return error("Variable declarations not supported as arguments"),
 
                 Node::LogicalOperation(_, _, _) | Node::Comparison(_, _, _) | Node::Replace(_, _, _, _) |
@@ -169,6 +171,7 @@ impl Node {
                     ValueDefinition::ClosureDefinition(p, c.generate()?)
                 }
                 Node::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g))),
+                Node::File(f) => ValueDefinition::Value(Value::File(f.clone())),
             }))
     }
 
@@ -264,7 +267,7 @@ impl Node {
 
             Node::Cast(_, _) | Node::Glob(_) | Node::Label(_) | Node::Regex(_) | Node::Field(_) | Node::String(_) |
             Node::Integer(_) | Node::Float(_) | Node::GetItem(_, _) | Node::GetAttr(_, _) | Node::Path(_, _) | Node::Substitution(_) |
-            Node::Closure(_, _) => Ok(None),
+            Node::Closure(_, _) | Node::File(_)=> Ok(None),
         }
     }
 
@@ -281,6 +284,27 @@ impl Node {
                 ValueDefinition::GetAttr(Box::from(self.generate_argument()?.unnamed_value()?), name.to_string().into_boxed_str()),
                 arguments)
         ))
+    }
+
+    pub fn parse_label(s: &str) -> Box<Node> {
+        if s.contains('%') || s.contains('?') {
+            Box::from(Node::Glob(Box::from(s)))
+        } else {
+            if s.contains('/'){
+                if s.starts_with('/') {
+                    Box::from(Node::File(Box::from(Path::new(s))))
+                } else {
+                    let parts = s.split('/').collect::<Vec<&str>>();
+                    let mut res = Node::Label(Box::from(parts[0]));
+                    for part in &parts[1..] {
+                        res = Node::Path(Box::from(res), Box::from(part.clone()))
+                    }
+                    Box::from(res)
+                }
+            } else {
+                Box::from(Node::Label(Box::from(s)))
+            }
+        }
     }
 }
 

@@ -1,7 +1,5 @@
 use std::str::FromStr;
 use crate::lang::ast::*;
-use crate::lang::command::Parameter;
-use crate::lang::value::{ValueDefinition, Value, ValueType};
 
 grammar;
 
@@ -89,17 +87,15 @@ Default: Option<Node> = {
 }
 
 Item: Box<Node> = {
-    Label => Box::from(Node::Label(Box::from(<>))),
+    Label => Node::parse_label(<>),
     <l: Regex> => Box::from(Node::Regex(Box::from(&l[3..l.len()-1]))),
     Field => Box::from(Node::Field(Box::from(<>))),
-    <g: Glob> => Box::from(Node::Glob(Box::from(g))),
     QuotedLabel => Box::from(Node::Label(Box::from(<>))),
     QuotedString => Box::from(Node::String(Box::from(<>))),
     Integer => Box::from(Node::Integer(i128::from_str(<>.replace("_", "").as_str()).unwrap())),
     Float => Box::from(Node::Float(f64::from_str(<>.replace("_", "").as_str()).unwrap())),
     <i: Item> "[" <e: Assignment> "]" => Box::from(Node::GetItem(i, e)),
     <i: Item> ":" <l: Label> => Box::from(Node::GetAttr(i, Box::from(l))),
-    <i: Item> "/" <l: Label> => Box::from(Node::Path(i, Box::from(l))),
     "{" <s: Signature> <l: NonEmptyJobList> "}" => Box::from(Node::Closure(s, l)),
     "(" <j:Job> ")" => Box::from(Node::Substitution(j)),
 }
@@ -117,11 +113,10 @@ match {
     r"(~~|~)" => ReplaceOperator,
     r"(\+|-)" => TermOperator,
     r#""([^\\"]|\\.)*""# => QuotedString,
-    r"[\._a-zA-Z0-9]*(%|\?)[\._a-zA-Z0-9%?]*" => Glob,
-    r"\^[\._a-zA-Z][\._a-zA-Z0-9]*" => Field,
+    r"([\._a-zA-Z%\?][\._0-9a-zA-Z%\?]*(/[\._0-9a-zA-Z%\?]+)*|/[\._0-9a-zA-Z%\?]+(/[\._0-9a-zA-Z%\?]+)*|/)" => Label,
+     r"\^[\._a-zA-Z][\._a-zA-Z0-9]*" => Field,
     r#"'([^\\']|\\.)*'"# => QuotedLabel,
     r#"re"([^"]|\\.)*""# => Regex,
-    r"[\._a-zA-Z][\._a-zA-Z0-9]*" => Label,
     r"(;|\n)( |\t|;|\n|#[^\n]*)*" => Separator,
     r"[0-9][0-9_]*" => Integer,
     r"[0-9][0-9_]*\.[0-9_]+" => Float,

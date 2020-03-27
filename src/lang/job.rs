@@ -14,7 +14,7 @@ impl JobJoinHandle {
     pub fn join(self) {
         return match self {
             JobJoinHandle::Async(a) => match a.join() {
-                Ok(r) => {},
+                Ok(_) => {},
                 Err(_) => printer().error("Unknown error while waiting for command to exit"),
             },
             JobJoinHandle::Many(v) => {

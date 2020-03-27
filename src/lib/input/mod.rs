@@ -1,8 +1,7 @@
 use crate::lang::scope::Scope;
 use crate::lang::errors::CrushResult;
 use crate::lang::{value::Value, command::ExecutionContext, binary::BinaryReader};
-use crate::lang::stream_printer::print_value;
-use crate::lib::parse_util::argument_files;
+use crate::lang::pretty_printer::print_value;
 use crate::lang::command::{CrushCommand, ArgumentVector};
 use crate::lang::list::List;
 use crate::lang::value::ValueType;
@@ -35,8 +34,8 @@ fn echo(mut context: ExecutionContext) -> CrushResult<()> {
     Ok(())
 }
 
-fn cat(context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::BinaryStream(BinaryReader::paths(argument_files(context.arguments)?)?))
+fn cat(mut context: ExecutionContext) -> CrushResult<()> {
+    context.output.send(Value::BinaryStream(BinaryReader::paths(context.arguments.files()?)?))
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {

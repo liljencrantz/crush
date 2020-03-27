@@ -10,7 +10,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     env.declare("true", Value::Bool(true))?;
     env.declare("false", Value::Bool(false))?;
     env.declare("global", Value::Scope(root.clone()))?;
-    env.declare("root", Value::File(Box::from(Path::new("/"))))?;
     env.declare("home", Value::File(home()?))?;
     env.readonly();
     Ok(())

@@ -1,15 +1,9 @@
-use crate::lang::scope::Scope;
-use crate::lang::errors::{CrushResult, argument_error, error, to_crush_error};
+use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
 use crate::lang::{value::Value, command::ExecutionContext};
-use regex::Regex;
-use std::error::Error;
 use crate::lang::command::{CrushCommand, ArgumentVector, This};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
-use crate::lang::value::ValueType;
-use crate::util::glob::Glob;
-use crate::lib::binary_op;
-use chrono::{Duration, Local, Datelike, Timelike};
+use chrono::{Local, Datelike, Timelike};
 use time::strptime;
 use std::cmp::max;
 

@@ -30,7 +30,7 @@ fn parse_method(m: &str) -> CrushResult<Method> {
 
 fn parse(mut arguments: Vec<Argument>) -> CrushResult<Config> {
     let mut url = None;
-    let mut cache = false;
+    let cache = false;
     let mut headers= Vec::new();
     let mut form = None;
     let mut method = Method::GET;

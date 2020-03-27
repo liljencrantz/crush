@@ -8,9 +8,8 @@ use crate::{
 use crate::lang::command::ExecutionContext;
 use crate::lang::errors::{error, CrushResult, argument_error};
 use crate::lang::printer::printer;
-use crate::lang::stream::{Readable, empty_channel, channels, ValueSender};
-use crate::lang::{table::TableReader, table::ColumnType, argument::Argument};
-use crate::lang::stream_printer::spawn_print_thread;
+use crate::lang::stream::{Readable, empty_channel, channels};
+use crate::lang::{table::ColumnType, argument::Argument};
 use crate::lang::scope::Scope;
 use crate::lang::command::CrushCommand;
 

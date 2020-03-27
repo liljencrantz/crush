@@ -1,10 +1,9 @@
 use std::collections::VecDeque;
 
 use crate::lang::table::Row;
-use crate::lang::command::ExecutionContext;
+use crate::lang::command::{ExecutionContext, ArgumentVector};
 use crate::lang::errors::{CrushResult, error};
 use crate::lang::stream::{Readable, ValueSender};
-use crate::lib::parse_util::{optional_argument_integer};
 
 pub fn run(
     lines: i128,
@@ -32,8 +31,8 @@ pub fn run(
     return Ok(());
 }
 
-pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    let lines = optional_argument_integer(context.arguments)?.unwrap_or(10);
+pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
+    let lines = context.arguments.optional_integer()?.unwrap_or(10);
     match context.input.recv()?.readable() {
         Some(mut input) => run(lines, input.as_mut(), context.output),
         None => error("Expected a stream"),

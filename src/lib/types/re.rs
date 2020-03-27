@@ -1,4 +1,3 @@
-use crate::lang::scope::Scope;
 use crate::lang::errors::{CrushResult, argument_error, error};
 use crate::lang::{value::Value, command::ExecutionContext};
 use regex::Regex;
@@ -6,7 +5,6 @@ use std::error::Error;
 use crate::lang::command::{CrushCommand, ArgumentVector, This};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
-use crate::lang::value::ValueType;
 
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {

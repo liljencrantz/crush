@@ -1,4 +1,3 @@
-use crate::lang::scope::Scope;
 use crate::lang::errors::CrushResult;
 use crate::lang::{command::ExecutionContext, value::ValueType, list::List};
 use crate::lang::value::Value;

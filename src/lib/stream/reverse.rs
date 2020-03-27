@@ -1,10 +1,6 @@
-use crate::{
-    lang::table::Row,
-    lang::stream::{OutputStream},
-};
+use crate::lang::table::Row;
 use crate::lang::command::ExecutionContext;
 use crate::lang::errors::{CrushResult, error};
-use crate::lang::{value::Value, table::TableReader};
 use crate::lang::stream::{Readable, ValueSender};
 
 pub fn run(

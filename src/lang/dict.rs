@@ -85,18 +85,19 @@ impl Dict {
 
 impl std::hash::Hash for Dict {
     fn hash<H: Hasher>(&self, state: &mut H) {
+        unimplemented!()
     }
 }
 
 impl std::cmp::PartialEq for Dict {
     fn eq(&self, other: &Dict) -> bool {
-        false
+        unimplemented!()
     }
 }
 
 impl std::cmp::PartialOrd for Dict {
-    fn partial_cmp(&self, other: &Dict) -> Option<Ordering> {
-        None
+    fn partial_cmp(&self, _other: &Dict) -> Option<Ordering> {
+        unimplemented!()
     }
 }
 

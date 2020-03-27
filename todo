@@ -1,6 +1,9 @@
 Todo for MVP 1:
-Remove parse_util
-Remove command_util
+spawn_print_thread should not spawn new threads
+empty_channel should not create new empty channels
+Comparison, hashing unimplemented for dict
+Comparison, hashing unimplemented for struct
+Comparison, hashing unimplemented for list
 Figure out how to make external commands with subcommands convenient again
 Add avg command
 Add system tests for type casting
@@ -208,3 +211,7 @@ Use @ and @@ for args/kwargs, both in signatures and in argument lists
 Use % for wildcards, something else for fields. Maybe ^?
 negation operator. named 'neg'?
 rename not operator from ! to 'not'?
+Remove parse_util
+Remove command_util
+redo labels. Allow /%? in labels, but if they're there, change the type?
+Remove 'root' constant

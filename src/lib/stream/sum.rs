@@ -7,8 +7,8 @@ use crate::{
     }
 };
 use crate::lang::{table::ColumnType, argument::Argument};
-use crate::lib::command_util::find_field_from_str;
 use crate::lang::stream::{Readable};
+use crate::lang::table::ColumnVec;
 
 pub fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> CrushResult<usize> {
     match arguments.len() {
@@ -21,7 +21,7 @@ pub fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> CrushRe
             if let Value::Field(f) = &arguments[0].value {
                 match f.len() {
                     1 => {
-                        Ok(find_field_from_str(f[0].as_ref(), input_type)?)
+                        Ok(input_type.find_str(f[0].as_ref())?)
                     }
                     _ => {
                         error("Path contains too many elements")

@@ -12,6 +12,6 @@ pub mod r#struct;
 pub mod scope;
 pub mod stream;
 pub mod printer;
-pub mod stream_printer;
+pub mod pretty_printer;
 pub mod errors;
 pub mod ast;

@@ -1,14 +1,12 @@
 use crate::{
-    lib::command_util::find_field_from_str,
     lang::errors::argument_error,
     lang::stream::{OutputStream},
 };
 use crate::lang::command::{ExecutionContext, ArgumentVector};
-use crate::lang::{argument::Argument, value::Value, table::Row, table::TableReader};
+use crate::lang::{argument::Argument, table::Row};
 use crate::lang::errors::{CrushResult, error};
-use crate::lib::command_util::find_field;
 use crate::lang::stream::Readable;
-use crate::lang::table::ColumnType;
+use crate::lang::table::{ColumnType, ColumnVec};
 
 pub struct Config {
     sort_column_idx: usize,
@@ -25,7 +23,7 @@ fn parse(
                 }
                 0
             }
-            1 => find_field(&arguments.field(0)?, types)?,
+            1 => types.find(&arguments.field(0)?)?,
             _ => return argument_error("Too many arguments")
         };
     if !types[sort_column_idx].cell_type.is_comparable() {

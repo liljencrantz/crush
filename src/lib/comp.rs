@@ -1,15 +1,13 @@
-use crate::lang::command::{ExecutionContext, CrushCommand};
+use crate::lang::command::{ExecutionContext, CrushCommand, ArgumentVector};
 use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::Value};
 use crate::lang::scope::Scope;
 use std::cmp::Ordering;
 
 pub fn gt(mut context: ExecutionContext) -> CrushResult<()> {
-    if context.arguments.len() != 2 {
-        return argument_error("Expected exactly two arguments");
-    }
-    let l = context.arguments.remove(0).value;
-    let r = context.arguments.remove(0).value;
+    context.arguments.check_len(2);
+    let l = context.arguments.value(0)?;
+    let r = context.arguments.value(1)?;
     match l.partial_cmp(&r) {
         Some(ordering) => context.output.send(Value::Bool(ordering == Ordering::Greater)),
         None => return argument_error("Uncomparable values"),
@@ -17,11 +15,9 @@ pub fn gt(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn lt(mut context: ExecutionContext) -> CrushResult<()> {
-    if context.arguments.len() != 2 {
-        return argument_error("Expected exactly two arguments");
-    }
-    let l = context.arguments.remove(0).value;
-    let r = context.arguments.remove(0).value;
+    context.arguments.check_len(2);
+    let l = context.arguments.value(0)?;
+    let r = context.arguments.value(1)?;
     match l.partial_cmp(&r) {
         Some(ordering) => context.output.send(Value::Bool(ordering == Ordering::Less)),
         None => return argument_error("Uncomparable values"),
@@ -29,11 +25,9 @@ pub fn lt(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn lte(mut context: ExecutionContext) -> CrushResult<()> {
-    if context.arguments.len() != 2 {
-        return argument_error("Expected exactly two arguments");
-    }
-    let l = context.arguments.remove(0).value;
-    let r = context.arguments.remove(0).value;
+    context.arguments.check_len(2);
+    let l = context.arguments.value(0)?;
+    let r = context.arguments.value(1)?;
     match l.partial_cmp(&r) {
         Some(ordering) => context.output.send(Value::Bool(ordering != Ordering::Greater)),
         None => return argument_error("Uncomparable values"),
@@ -41,11 +35,9 @@ pub fn lte(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn gte(mut context: ExecutionContext) -> CrushResult<()> {
-    if context.arguments.len() != 2 {
-        return argument_error("Expected exactly two arguments");
-    }
-    let l = context.arguments.remove(0).value;
-    let r = context.arguments.remove(0).value;
+    context.arguments.check_len(2);
+    let l = context.arguments.value(0)?;
+    let r = context.arguments.value(1)?;
     match l.partial_cmp(&r) {
         Some(ordering) => context.output.send(Value::Bool(ordering != Ordering::Less)),
         None => return argument_error("Uncomparable values"),
@@ -53,28 +45,22 @@ pub fn gte(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn eq(mut context: ExecutionContext) -> CrushResult<()> {
-    if context.arguments.len() != 2 {
-        return argument_error("Expected exactly two arguments");
-    }
-    let l = context.arguments.remove(0).value;
-    let r = context.arguments.remove(0).value;
+    context.arguments.check_len(2);
+    let l = context.arguments.value(0)?;
+    let r = context.arguments.value(1)?;
     context.output.send(Value::Bool(l.eq(&r)))
 }
 
 pub fn neq(mut context: ExecutionContext) -> CrushResult<()> {
-    if context.arguments.len() != 2 {
-        return argument_error("Expected exactly two arguments");
-    }
-    let l = context.arguments.remove(0).value;
-    let r = context.arguments.remove(0).value;
+    context.arguments.check_len(2);
+    let l = context.arguments.value(0)?;
+    let r = context.arguments.value(1)?;
     context.output.send(Value::Bool(!l.eq(&r)))
 }
 
 pub fn not(mut context: ExecutionContext) -> CrushResult<()> {
-    if context.arguments.len() != 1 {
-        return argument_error("Expected exactly one argument");
-    }
-    match context.arguments.remove(0).value {
+    context.arguments.check_len(1);
+    match context.arguments.value(0)? {
         Value::Bool(b) => context.output.send(Value::Bool(!b)),
         _ => argument_error("Expected a boolean argument")
     }

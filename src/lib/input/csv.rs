@@ -1,4 +1,4 @@
-use crate::lang::command::ExecutionContext;
+use crate::lang::command::{ExecutionContext, ArgumentVector};
 use crate::{
     lang::{
         argument::Argument,
@@ -20,7 +20,6 @@ use crate::lang::printer::printer;
 use crate::lang::{table::ColumnType, binary::BinaryReader};
 use crate::lang::errors::{CrushResult, to_crush_error};
 use crate::lang::stream::ValueReceiver;
-use crate::lib::parse_util::argument_files;
 
 pub struct Config {
     separator: char,
@@ -76,7 +75,7 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> 
                 _ => argument_error("Expected either a file to read or binary pipe input"),
             }
         }
-        _ => BinaryReader::paths(argument_files(files)?),
+        _ => BinaryReader::paths(files.files()?),
     }?;
 
     Ok(Config {

@@ -22,7 +22,6 @@ use crate::util::time::duration_format;
 use crate::lang::scope::Scope;
 use crate::lang::r#struct::Struct;
 use crate::lang::stream::{streams, Readable, InputStream};
-use std::io::Read;
 
 pub use value_type::ValueType;
 pub use value_definition::ValueDefinition;
@@ -55,7 +54,7 @@ pub enum Value {
 
 fn hex(v: u8) -> String {
     let arr = vec!["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"];
-    format!("{}{}", v >> 4, v & 15)
+    format!("{}{}", arr[(v >> 4) as usize], arr[(v & 15) as usize])
 }
 
 impl ToString for Value {
@@ -94,16 +93,15 @@ impl Value {
             match self {
                 Value::Struct(s) => s.clone().get(name),
                 Value::Scope(subenv) => subenv.get(name),
-                Value::Type(t) => match t.fields() {
-                    Some(map) =>
-                        map.get(&Box::from(name)).map(|m| Value::Command(m.as_ref().clone())),
-                    None => None
-                }
-                _ => match self.value_type().fields() {
-                    Some(map) =>
-                        map.get(&Box::from(name)).map(|m| Value::Command(m.as_ref().clone())),
-                    None => None
-                }
+                Value::Type(t) =>
+                    t.fields()
+                        .get(&Box::from(name))
+                        .map(|m| Value::Command(m.as_ref().clone())),
+                _ =>
+                    self.value_type()
+                        .fields()
+                        .get(&Box::from(name))
+                        .map(|m| Value::Command(m.as_ref().clone())),
             }
         }
     }
@@ -113,16 +111,8 @@ impl Value {
         match self {
 //            Value::Struct(s) => s.clone().get(name),
 //            Value::Scope(subenv) => subenv.get(name),
-            Value::Type(t) => match t.fields() {
-                Some(map) =>
-                    add_keys(map, &mut res),
-                None => {},
-            }
-            _ => match self.value_type().fields() {
-                Some(map) =>
-                    add_keys(map, &mut res),
-                None => {},
-            }
+            Value::Type(t) => add_keys(t.fields(), &mut res),
+            _ => add_keys(self.value_type().fields(), &mut res),
         }
         res
     }

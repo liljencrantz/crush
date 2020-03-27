@@ -1,4 +1,4 @@
-use crate::lang::command::ExecutionContext;
+use crate::lang::command::{ExecutionContext, ArgumentVector};
 use crate::{
     lang::{
         argument::Argument,
@@ -14,21 +14,20 @@ use crate::lang::{r#struct::Struct, list::List, table::Table, binary::BinaryRead
 use crate::lang::errors::{CrushResult, to_crush_error, error};
 use crate::lang::stream::{ValueSender, ValueReceiver};
 use std::collections::HashSet;
-use crate::lib::parse_util::argument_files;
 use crate::lang::errors::Kind::InvalidData;
 
 pub struct Config {
     input: Box<dyn BinaryReader>,
 }
 
-fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> {
+fn parse(mut arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> {
     let reader = match arguments.len() {
         0 => match input.recv()? {
             Value::BinaryStream(b) => Ok(b),
             Value::Binary(b) => Ok(BinaryReader::vec(&b)),
             _ => argument_error("Expected either a file to read or binary pipe input"),
         },
-        _ => BinaryReader::paths(argument_files(arguments)?),
+        _ => BinaryReader::paths(arguments.files()?),
     };
     Ok(Config {
         input: reader?,

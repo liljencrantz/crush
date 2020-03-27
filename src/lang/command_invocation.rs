@@ -1,7 +1,7 @@
 use crate::lang::{command::ExecutionContext, job::JobJoinHandle, command::CrushCommand, value::ValueDefinition};
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, value::Value};
 use crate::lang::scope::Scope;
-use crate::lang::errors::{error, CrushResult, Kind};
+use crate::lang::errors::{error, CrushResult, Kind, mandate};
 use crate::lang::printer::printer;
 use crate::lang::stream::{ValueReceiver, ValueSender};
 use crate::util::thread::{handle, build};
@@ -118,7 +118,7 @@ impl CommandInvocation {
         output: ValueSender) -> CrushResult<JobJoinHandle> {
         match self.command.compile_non_blocking(env) {
             Ok((this, value)) => {
-                invoke_value(this, value, self.arguments.clone(), env,  input, output)
+                invoke_value(this, value, self.arguments.clone(), env, input, output)
             }
             Err(err) => {
                 if err.kind == Kind::BlockError {
@@ -161,7 +161,6 @@ fn invoke_value(
     env: &Scope,
     input: ValueReceiver,
     output: ValueSender) -> CrushResult<JobJoinHandle> {
-    let local_printer = printer.clone();
     let local_env = env.clone();
     match value {
         Value::Command(command) =>
@@ -185,6 +184,16 @@ fn invoke_value(
             } else {
                 error(format!("Not a command {}", f.to_str().unwrap_or("<invalid filename>")).as_str())
             }
+        Value::Type(t) => {
+            let call = mandate(
+                t.fields().get(&Box::from("__call__")),
+                format!("Type {} does not have a member __call__", t.to_string()).as_str())?;
+            invoke_command(
+                call.as_ref().clone(),
+                this,
+                local_arguments,
+                local_env, input, output)
+        }
         _ =>
             if local_arguments.len() == 0 {
                 invoke_command(

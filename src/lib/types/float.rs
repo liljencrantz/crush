@@ -3,9 +3,6 @@ use crate::lang::{value::Value, command::ExecutionContext};
 use crate::lang::command::{CrushCommand, ArgumentVector, This};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
-use crate::lang::value::ValueType;
-use crate::util::glob::Glob;
-use crate::lib::binary_op;
 
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {

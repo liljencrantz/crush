@@ -1,4 +1,4 @@
-use crate::lang::command::ExecutionContext;
+use crate::lang::command::{ExecutionContext, ArgumentVector};
 use std::io::{BufReader, BufRead};
 use crate::{
     lang::errors::argument_error,
@@ -14,7 +14,6 @@ use crate::{
 use crate::lang::stream::ValueReceiver;
 use crate::lang::errors::{CrushResult, to_crush_error};
 use crate::lang::binary::BinaryReader;
-use crate::lib::parse_util::argument_files;
 
 fn run(input: Box<dyn BinaryReader>, output: OutputStream) -> CrushResult<()> {
     let mut reader = BufReader::new(input);
@@ -30,7 +29,7 @@ fn run(input: Box<dyn BinaryReader>, output: OutputStream) -> CrushResult<()> {
     Ok(())
 }
 
-fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
+fn parse(mut arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
     match arguments.len() {
         0 => {
             let v = input.recv()?;
@@ -40,7 +39,7 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Box<dyn 
                 _ => argument_error("Expected either a file to read or binary pipe input"),
             }
         }
-        _ => BinaryReader::paths(argument_files(arguments)?),
+        _ => BinaryReader::paths(arguments.files()?),
     }
 }
 

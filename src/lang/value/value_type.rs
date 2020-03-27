@@ -7,6 +7,7 @@ use crate::lang::parser::parse_name;
 use crate::lang::command::CrushCommand;
 use std::collections::HashMap;
 use crate::lib::types;
+use lazy_static::lazy_static;
 
 #[derive(Clone)]
 #[derive(PartialEq)]
@@ -40,10 +41,16 @@ pub enum ValueType {
     Type,
 }
 
+lazy_static! {
+    pub static ref EMPTY_METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
+        let mut res: HashMap<Box<str>, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
+        res
+    };
+}
 
 impl ValueType {
-    pub fn fields(&self) -> Option<&HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>>> {
-        Some(match self {
+    pub fn fields(&self) -> &HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> {
+        match self {
             ValueType::List(_) =>
                 &types::list::METHODS,
             ValueType::Dict(_, _) =>
@@ -64,8 +71,8 @@ impl ValueType {
                 &types::duration::METHODS,
             ValueType::Time =>
                 &types::time::METHODS,
-            _ => return None,
-        })
+            _ => &EMPTY_METHODS,
+        }
     }
 
 

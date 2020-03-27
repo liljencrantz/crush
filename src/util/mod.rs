@@ -1,3 +1,4 @@
+pub mod user_map;
 pub mod file;
 pub mod thread;
 pub mod time;

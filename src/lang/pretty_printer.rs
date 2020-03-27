@@ -19,7 +19,7 @@ pub fn spawn_print_thread() -> ValueSender {
         .spawn(move || {
             match i.recv() {
                 Ok(val) => print_value( val),
-                Err(e) => {}
+                Err(_) => {}
             }
         });
     o

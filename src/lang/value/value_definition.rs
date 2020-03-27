@@ -108,7 +108,7 @@ impl ValueDefinition {
 
             ValueDefinition::Path(parent_def, entry) => {
                 let parent = parent_def.compile_internal(dependencies, env, can_block)?.1;
-                let val = mandate(parent.path(&entry), format!("Missing path entry {}", entry).as_str())?;
+                let val = mandate(parent.path(&entry), format!("Missing path entry {} in {}", entry, parent_def.to_string()).as_str())?;
                 (Some(parent), val)
             }
         })
@@ -120,7 +120,7 @@ impl ToString for ValueDefinition {
         match &self {
             ValueDefinition::Value(v) => v.to_string(),
             ValueDefinition::Label(v) => v.to_string(),
-            ValueDefinition::ClosureDefinition(s, c) => "<closure>".to_string(),
+            ValueDefinition::ClosureDefinition(_, _) => "<closure>".to_string(),
             ValueDefinition::JobDefinition(_) => "<job>".to_string(),
             ValueDefinition::GetItem(v, l) => format!("{}[{}]", v.to_string(), l.to_string()),
             ValueDefinition::GetAttr(v, l) => format!("{}:{}", v.to_string(), l),

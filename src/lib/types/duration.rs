@@ -3,8 +3,6 @@ use crate::lang::{value::Value, command::ExecutionContext};
 use crate::lang::command::{CrushCommand, ArgumentVector, This};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
-use crate::lang::value::ValueType;
-use crate::lib::binary_op;
 use chrono::Duration;
 
 lazy_static! {

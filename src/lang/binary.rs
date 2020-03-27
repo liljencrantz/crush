@@ -38,7 +38,7 @@ impl std::io::Read for ChannelReader {
                         }
                     }
 
-                    Err(e) => {
+                    Err(_) => {
                         Ok(0)
                     }
                 }
