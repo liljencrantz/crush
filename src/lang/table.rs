@@ -117,7 +117,7 @@ impl ColumnType {
     }
 
     pub fn to_string(&self) -> String {
-        format!("{}={}", self.name, self.cell_type.to_string())
+        format!("{}=({})", self.name, self.cell_type.to_string())
     }
 
     pub fn new(name: &str, cell_type: ValueType) -> ColumnType {

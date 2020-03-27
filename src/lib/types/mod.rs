@@ -43,12 +43,6 @@ pub fn setattr(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 
-fn dict(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(2)?;
-    let key_type = context.arguments.r#type(0)?;
-    let value_type = context.arguments.r#type(1)?;
-    context.output.send(Value::Type(ValueType::Dict(Box::new(key_type), Box::new(value_type))))
-}
 
 fn parse_column_types(mut arguments: Vec<Argument>) -> CrushResult<Vec<ColumnType>> {
     let mut types = Vec::new();
@@ -102,16 +96,16 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     env.declare("empty", Value::Type(ValueType::Empty))?;
     env.declare("float", Value::Type(ValueType::Float))?;
     env.declare("integer", Value::Type(ValueType::Integer))?;
-    env.declare("list", Value::Type(ValueType::List(Box::from(ValueType::Any))))?;
+    env.declare("list", Value::Type(ValueType::List(Box::from(ValueType::Empty))))?;
     env.declare("string", Value::Type(ValueType::String))?;
     env.declare("glob", Value::Type(ValueType::Glob))?;
     env.declare("re", Value::Type(ValueType::Regex))?;
     env.declare("duration", Value::Type(ValueType::Duration))?;
     env.declare("time", Value::Type(ValueType::Time))?;
+    env.declare("dict", Value::Type(ValueType::Dict(Box::from(ValueType::Empty), Box::from(ValueType::Empty))))?;
 
     env.declare("table", Value::Command(CrushCommand::command(table, false)))?;
     env.declare("table_stream", Value::Command(CrushCommand::command(table_stream, false)))?;
-    env.declare("dict", Value::Command(CrushCommand::command(dict, false)))?;
     env.declare("struct", Value::Command(CrushCommand::command(r#struct, false)))?;
 
     env.readonly();

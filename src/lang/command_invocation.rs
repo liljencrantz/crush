@@ -186,8 +186,8 @@ fn invoke_value(
             }
         Value::Type(t) => {
             let call = mandate(
-                t.fields().get(&Box::from("__call__")),
-                format!("Type {} does not have a member __call__", t.to_string()).as_str())?;
+                t.fields().get(&Box::from("__call_type__")),
+                format!("Type {} does not have a member __call_type__", t.to_string()).as_str())?;
             invoke_command(
                 call.as_ref().clone(),
                 this,

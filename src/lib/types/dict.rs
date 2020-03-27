@@ -16,8 +16,16 @@ lazy_static! {
         res.insert(Box::from("__getitem__"), CrushCommand::command(getitem, false));
         res.insert(Box::from("remove"), CrushCommand::command(remove, false));
 //        res.insert(Box::from("clone"), Box::from(CrushCommand::command(clone, false)));
+        res.insert(Box::from("__call_type__"), CrushCommand::command(call_type, false));
         res
     };
+}
+
+fn call_type(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(2)?;
+    let key_type = context.arguments.r#type(0)?;
+    let value_type = context.arguments.r#type(1)?;
+    context.output.send(Value::Type(ValueType::Dict(Box::new(key_type), Box::new(value_type))))
 }
 
 fn new(context: ExecutionContext) -> CrushResult<()> {

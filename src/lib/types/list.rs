@@ -21,12 +21,12 @@ lazy_static! {
         res.insert(Box::from("clone"), CrushCommand::command(clone, false));
         res.insert(Box::from("of"), CrushCommand::command(of, false));
         res.insert(Box::from("new"), CrushCommand::command(new, false));
-        res.insert(Box::from("fnurp"), CrushCommand::command(fnurp, false));
+        res.insert(Box::from("__call_type__"), CrushCommand::command(call_type, false));
         res
     };
 }
 
-fn fnurp(mut context: ExecutionContext) -> CrushResult<()> {
+fn call_type(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     context.output.send(Value::Type(ValueType::List(Box::new(context.arguments.r#type(0)?))))
 }
@@ -48,8 +48,11 @@ fn of(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn new(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(1)?;
-    context.output.send(Value::List(List::new(context.arguments.r#type(0)?, vec![])))
+    context.arguments.check_len(0)?;
+    match context.this.r#type()? {
+        ValueType::List(t) => context.output.send(Value::List(List::new(*t, vec![]))),
+        _ => argument_error("Expected this to be a list type"),
+    }
 }
 
 fn len(context: ExecutionContext) -> CrushResult<()> {

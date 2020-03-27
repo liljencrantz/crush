@@ -9,13 +9,7 @@ use std::collections::HashMap;
 use crate::lib::types;
 use lazy_static::lazy_static;
 
-#[derive(Clone)]
-#[derive(PartialEq)]
-#[derive(Eq)]
-#[derive(PartialOrd)]
-#[derive(Ord)]
-#[derive(Debug)]
-#[derive(Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum ValueType {
     String,
     Integer,
@@ -155,11 +149,11 @@ impl ToString for ValueType {
             ValueType::Regex => "regex".to_string(),
             ValueType::Command => "command".to_string(),
             ValueType::File => "file".to_string(),
-            ValueType::TableStream(o) => format!("table_stream<{}>", o.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
-            ValueType::Table(r) => format!("table<{}>", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
-            ValueType::Struct(r) => format!("struct<{}>", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",")),
-            ValueType::List(l) => format!("list<{}>", l.to_string()),
-            ValueType::Dict(k, v) => format!("dict<{},{}>", k.to_string(), v.to_string()),
+            ValueType::TableStream(o) => format!("table_stream {}", o.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(" ")),
+            ValueType::Table(r) => format!("table {}", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(" ")),
+            ValueType::Struct(r) => format!("struct {}", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(" ")),
+            ValueType::List(l) => format!("list {}", l.to_string()),
+            ValueType::Dict(k, v) => format!("dict {} {}", k.to_string(), v.to_string()),
             ValueType::Scope => "scope".to_string(),
             ValueType::Bool => "bool".to_string(),
             ValueType::Float => "float".to_string(),
