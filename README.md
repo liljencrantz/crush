@@ -9,7 +9,7 @@ sacrificing the usefulness of a traditional shell.
 How to invoke commands, pass arguments and set up pipelines are unchanged, as is the central
 concept of a current working directory .
 
-Trivial invocations, like `ls` or `find ..` work identically, but from there on, most things
+Trivial invocations, like `ls` or `find .. | count` work identically, but from there on, most things
 are different.
 
 ## What does Crush do differently
@@ -46,6 +46,8 @@ But ls output is a table of rows, so we use SQL-like commands to sort, filter an
     liljencrantz 4096 2020-03-14 17:34:39 +0100 directory src
     liljencrantz 4096 2020-03-14 19:44:54 +0100 directory .git
 
+Because crush output is a stream of rows with columns, sorting by an arbitrary column is trivial.
+
 ### Operators for comparison, logical operations and arithmetical operations
 
     crush> 5+6
@@ -74,7 +76,7 @@ as a single element of the `file` type.
 
 ### Variables of any type
 
-    crush> some_number := 4
+    crush> some_number := 4      # The := operator declares a new variable
     crush> some_number * 5
     20
     crush> some_text := "hello"
@@ -88,12 +90,12 @@ file names, simply write
 
 lss := {|@args @@kwargs| ls @args @@kwargs | select %file}
 
-Rich type system
+### Rich type system
 
 Crush does not have user defined types, but it does have a rich set of built in types, including
 
-* Mutable and immutable lists of any type,
-* Mutable and immutable dicts of any type,
+* lists of any type,
+* dicts of any type,
 * text,
 * regular expressions,
 * globs,
@@ -103,15 +105,11 @@ Crush does not have user defined types, but it does have a rich set of built in 
 * structs, which contain any number of named fields of any type,
 * tables, which are essentially a list where each element is the same type of struct,
 * streams, which are like tables but can only be traversed once
-* types,
+* types, and
 * commands, which are either closures or built in commands.
 
 
-Expressive language with static scoping rules and true closures:
-
-DEMO CODE GOES HERE
-
-Semi-lazy stream evaluation:
+### Semi-lazy stream evaluation:
 
 If you assign the output of the find command to a variable like so:
 
@@ -133,7 +131,7 @@ Another option would be to use the head command
 Which will consume one line of output from the stream. This command can be re-executed until
 the stream is empty.
 
-SQL-like syntax for any type of input
+### SQL-like syntax for any type of input
 
 Crush features many commands to operate om arbitrary streams of data using a SQL-like syntax.
 These commands use field-specifiers like %foo to specify columns in the data stream that they
@@ -144,29 +142,3 @@ echo $some_data | where {comp.eq $color green) | group %shoe_size | aggr green_s
 Unlike in SQL, these commands all operate on input streams, meaning they can be combined in
 any order, and the input source can be file/http resources in a variety of formats or output of
 commands like ps, find.
-
-Modes
-
-Just like in most command line shells, the default type of any data entered is text.
-The following code will call the echo command with two arguments, the strings Hello and world.
-
-crush> echo Hello world
-
-Like most other scripting languages, crush uses the $-sigil to perform variable expansion:
-
-    crush> let greeting="Hello, world!"
-    crush> echo $greeting
-
-But crush takes this a step longer by adding a variety of additional modes
-
-Regular expression mode:
-
-    crush> echo re{ab*c} 
-
-The output of a regular expression mode literal is a regular expression object. This object can
-be used for matching in any command that does matching, e.g. the where command.
-
-Closures mode:
-
-    crush> let greet={val Hello} 
-
