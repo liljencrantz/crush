@@ -5,7 +5,7 @@ use crate::lang::scope::Scope;
 use std::cmp::Ordering;
 
 pub fn gt(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(2);
+    context.arguments.check_len(2)?;
     let l = context.arguments.value(0)?;
     let r = context.arguments.value(1)?;
     match l.partial_cmp(&r) {
@@ -15,7 +15,7 @@ pub fn gt(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn lt(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(2);
+    context.arguments.check_len(2)?;
     let l = context.arguments.value(0)?;
     let r = context.arguments.value(1)?;
     match l.partial_cmp(&r) {
@@ -25,7 +25,7 @@ pub fn lt(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn lte(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(2);
+    context.arguments.check_len(2)?;
     let l = context.arguments.value(0)?;
     let r = context.arguments.value(1)?;
     match l.partial_cmp(&r) {
@@ -35,7 +35,7 @@ pub fn lte(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn gte(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(2);
+    context.arguments.check_len(2)?;
     let l = context.arguments.value(0)?;
     let r = context.arguments.value(1)?;
     match l.partial_cmp(&r) {
@@ -45,21 +45,21 @@ pub fn gte(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn eq(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(2);
+    context.arguments.check_len(2)?;
     let l = context.arguments.value(0)?;
     let r = context.arguments.value(1)?;
     context.output.send(Value::Bool(l.eq(&r)))
 }
 
 pub fn neq(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(2);
+    context.arguments.check_len(2)?;
     let l = context.arguments.value(0)?;
     let r = context.arguments.value(1)?;
     context.output.send(Value::Bool(!l.eq(&r)))
 }
 
 pub fn not(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(1);
+    context.arguments.check_len(1)?;
     match context.arguments.value(0)? {
         Value::Bool(b) => context.output.send(Value::Bool(!b)),
         _ => argument_error("Expected a boolean argument")

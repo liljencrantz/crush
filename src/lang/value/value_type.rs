@@ -37,8 +37,7 @@ pub enum ValueType {
 
 lazy_static! {
     pub static ref EMPTY_METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
-        let mut res: HashMap<Box<str>, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
-        res
+        HashMap::new()
     };
 }
 
@@ -65,6 +64,10 @@ impl ValueType {
                 &types::duration::METHODS,
             ValueType::Time =>
                 &types::time::METHODS,
+            ValueType::Table(_) =>
+                &types::table::METHODS,
+            ValueType::TableStream(_) =>
+                &types::table_stream::METHODS,
             _ => &EMPTY_METHODS,
         }
     }

@@ -1,7 +1,6 @@
 use crate::lang::value::Value;
 use crate::lang::scope::Scope;
 use crate::lang::errors::CrushResult;
-use std::path::Path;
 use crate::util::file::home;
 
 pub fn declare(root: &Scope) -> CrushResult<()> {

@@ -7,6 +7,8 @@ use crate::lang::command::ArgumentVector;
 use crate::lang::value::ValueType;
 use crate::lang::table::ColumnType;
 
+pub mod table;
+pub mod table_stream;
 pub mod list;
 pub mod dict;
 pub mod re;
@@ -42,9 +44,7 @@ pub fn setattr(mut context: ExecutionContext) -> CrushResult<()> {
     Ok(())
 }
 
-
-
-fn parse_column_types(mut arguments: Vec<Argument>) -> CrushResult<Vec<ColumnType>> {
+pub fn parse_column_types(mut arguments: Vec<Argument>) -> CrushResult<Vec<ColumnType>> {
     let mut types = Vec::new();
     let names = column_names(&arguments);
 
@@ -58,7 +58,7 @@ fn parse_column_types(mut arguments: Vec<Argument>) -> CrushResult<Vec<ColumnTyp
     Ok(types)
 }
 
-fn r#struct(context: ExecutionContext) -> CrushResult<()> {
+pub fn struct_call_type(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Type(ValueType::Struct(parse_column_types(context.arguments)?)))
 }
 
@@ -104,9 +104,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     env.declare("time", Value::Type(ValueType::Time))?;
     env.declare("dict", Value::Type(ValueType::Dict(Box::from(ValueType::Empty), Box::from(ValueType::Empty))))?;
 
-    env.declare("table", Value::Command(CrushCommand::command(table, false)))?;
-    env.declare("table_stream", Value::Command(CrushCommand::command(table_stream, false)))?;
-    env.declare("struct", Value::Command(CrushCommand::command(r#struct, false)))?;
+    env.declare("table", Value::Type(ValueType::Table(vec![])))?;
+    env.declare("table_stream", Value::Type(ValueType::TableStream(vec![])))?;
+    env.declare("struct", Value::Type(ValueType::Struct(vec![])))?;
 
     env.readonly();
 

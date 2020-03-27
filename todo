@@ -1,6 +1,5 @@
 Todo for MVP 1:
-spawn_print_thread should not spawn new threads
-empty_channel should not create new empty channels
+fix struct type
 Comparison, hashing unimplemented for dict
 Comparison, hashing unimplemented for struct
 Comparison, hashing unimplemented for list
@@ -22,6 +21,8 @@ Make error printing display source of error
 Flesh out readme file
 
 Future features:
+spawn_print_thread should not spawn new threads
+empty_channel should not create new empty channels
 Make integers overflow to arbitrary precision math
 Run an executable by giving its path
 Add reject command that removes specified columns from a table/stream

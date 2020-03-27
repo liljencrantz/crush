@@ -47,7 +47,7 @@ fn of(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::List(lst))
 }
 
-fn new(mut context: ExecutionContext) -> CrushResult<()> {
+fn new(context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     match context.this.r#type()? {
         ValueType::List(t) => context.output.send(Value::List(List::new(*t, vec![]))),

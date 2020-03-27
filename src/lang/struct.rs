@@ -1,5 +1,5 @@
 use crate::lang::table::ColumnType;
-use crate::lang::value::{Value};
+use crate::lang::value::Value;
 use crate::lang::table::Row;
 use std::sync::{Mutex, Arc};
 use crate::lang::command::CrushCommand;
@@ -55,8 +55,8 @@ impl PartialOrd for Struct {
 impl Struct {
     fn root() -> Struct {
         Struct::create(vec![
-            (Box::from("__setattr__"),
-             Value::Command(CrushCommand::command(crate::lib::types::setattr, false))),
+            (Box::from("__setattr__"), Value::Command(CrushCommand::command(crate::lib::types::setattr, false))),
+            (Box::from("__call_type__"), Value::Command(CrushCommand::command(crate::lib::types::struct_call_type, false))),
         ], None)
     }
 
@@ -131,7 +131,7 @@ impl Struct {
                     None => None,
                     Some(parent) => parent.get(name),
                 }
-            },
+            }
             Some(idx) => Some(data.cells[*idx].clone()),
         }
     }
