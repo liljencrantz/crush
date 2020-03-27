@@ -12,7 +12,7 @@ pub struct Config {
     env: Scope,
 }
 
-pub fn run(mut config: Config) -> CrushResult<()> {
+pub fn run(config: Config) -> CrushResult<()> {
     let env = config.env.create_child(&config.env, true);
     loop {
         let (sender, receiver) = channels();
@@ -23,7 +23,7 @@ pub fn run(mut config: Config) -> CrushResult<()> {
             arguments: Vec::new(),
             env: config.env.clone(),
             this: None,
-        });
+        })?;
 
         match receiver.recv()? {
             Value::Bool(true) => {
@@ -33,7 +33,7 @@ pub fn run(mut config: Config) -> CrushResult<()> {
                     arguments: Vec::new(),
                     env: env.clone(),
                     this: None,
-                });
+                })?;
                 if env.is_stopped() {
                     break;
                 }

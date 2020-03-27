@@ -7,17 +7,14 @@ use std::thread::JoinHandle;
 
 pub enum JobJoinHandle {
     Many(Vec<JobJoinHandle>),
-    Async(JoinHandle<CrushResult<()>>),
+    Async(JoinHandle<()>),
 }
 
 impl JobJoinHandle {
     pub fn join(self) {
         return match self {
             JobJoinHandle::Async(a) => match a.join() {
-                Ok(r) => match r {
-                    Ok(_) => {}
-                    Err(e) => printer().crush_error(e),
-                },
+                Ok(r) => {},
                 Err(_) => printer().error("Unknown error while waiting for command to exit"),
             },
             JobJoinHandle::Many(v) => {

@@ -9,7 +9,7 @@ use lazy_static::lazy_static;
 
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
-        let mut res: HashMap<Box<str>, Box<CrushCommand + Send + Sync>> = HashMap::new();
+        let mut res: HashMap<Box<str>, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
         res.insert(Box::from("len"), CrushCommand::command(len, false));
         res.insert(Box::from("empty"), CrushCommand::command(empty, false));
         res.insert(Box::from("push"), CrushCommand::command(push, false));
@@ -76,8 +76,7 @@ fn push(mut context: ExecutionContext) -> CrushResult<()> {
     if !new_elements.is_empty() {
         l.append(&mut new_elements);
     }
-    context.output.send(Value::List(l));
-    Ok(())
+    context.output.send(Value::List(l))
 }
 
 fn pop(context: ExecutionContext) -> CrushResult<()> {

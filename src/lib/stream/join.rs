@@ -132,7 +132,7 @@ fn do_join(cfg: &Config, l: &mut dyn Readable, r: &mut dyn Readable, output: &Ou
                 l_data
                     .remove(&r_row.cells()[cfg.right_column_idx])
                     .map(|l_row| {
-                        output.send(combine(l_row, r_row, cfg));
+                        let _ = output.send(combine(l_row, r_row, cfg));
                     });
             }
             Err(_) => break,

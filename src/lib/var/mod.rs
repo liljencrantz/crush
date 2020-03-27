@@ -15,8 +15,6 @@ pub fn r#let(context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn set(context: ExecutionContext) -> CrushResult<()> {
-    context.output.initialize(vec![]);
-
     for arg in context.arguments {
         context.env.set(arg.argument_type.unwrap().as_ref(), arg.value)?;
     }

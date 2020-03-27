@@ -72,7 +72,7 @@ pub fn run(
                                 env: env.clone(),
                                 this: None,
                             }
-                        );
+                        )?;
                         receiver.recv()?
                     },
                     Source::Argument(idx) => row.cells()[*idx].clone(),
@@ -122,7 +122,7 @@ pub fn run(
                                     env: env.clone(),
                                     this: None,
                                 }
-                            );
+                            )?;
                             receiver.recv()?
                         },
                         Source::Argument(idx) => row.cells()[*idx].clone(),

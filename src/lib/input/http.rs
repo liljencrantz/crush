@@ -87,7 +87,7 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
             .iter()
             .map(|(n, v)| Row::new(vec![Value::string(n.as_str()), Value::string(v.to_str().unwrap())]))
             .collect());
-    context.output.send(
+    let _ = context.output.send(
         Value::Struct(Struct::new(
             vec![
                 (Box::from("status"), Value::Integer(status.as_u16() as i128)),

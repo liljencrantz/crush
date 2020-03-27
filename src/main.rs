@@ -30,7 +30,7 @@ fn crush_history_file() -> Box<str> {
 
 fn run_interactive(global_env: lang::scope::Scope) -> CrushResult<()> {
     let mut rl = Editor::<()>::new();
-    rl.load_history(crush_history_file().as_ref());
+    let _ = rl.load_history(crush_history_file().as_ref());
     loop {
         let readline = rl.readline("crush> ");
 
@@ -113,7 +113,7 @@ fn run() -> CrushResult<()> {
         _ => {}
     }
     printer().shutdown();
-    t.join();
+    let _ = t.join();
     Ok(())
 }
 

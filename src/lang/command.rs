@@ -221,13 +221,13 @@ impl This for Option<Value> {
         }
     }
 }
-
+/*
 pub struct StreamExecutionContext {
     pub argument_stream: InputStream,
     pub output: ValueSender,
     pub env: Scope,
 }
-
+*/
 pub trait CrushCommand {
     fn invoke(&self, context: ExecutionContext) -> CrushResult<()>;
     fn can_block(&self, arguments: &Vec<ArgumentDefinition>, env: &Scope) -> bool;
@@ -343,7 +343,7 @@ impl CrushCommand for Closure {
         let env = parent_env.create_child(&context.env, false);
 
         if let Some(this) = context.this {
-            env.redeclare("this", this);
+            env.redeclare("this", this)?;
         }
         Closure::push_arguments_to_env(&self.signature, context.arguments, &env)?;
 
@@ -443,10 +443,10 @@ impl Closure {
                                 if !value_type.is(&value) {
                                     return argument_error("Wrong parameter type");
                                 }
-                                env.redeclare(name.as_ref(), value);
+                                env.redeclare(name.as_ref(), value)?;
                             } else {
                                 if let Some(default) = default {
-                                    env.redeclare(name.as_ref(), default.compile_non_blocking(env)?.1);
+                                    env.redeclare(name.as_ref(), default.compile_non_blocking(env)?.1)?;
                                 } else {
                                     return argument_error("Missing variable!!!");
                                 }
@@ -473,7 +473,7 @@ impl Closure {
             if let Some(unnamed_name) = unnamed_name {
                 env.redeclare(
                     unnamed_name.as_ref(),
-                    Value::List(List::new(ValueType::Any, unnamed))); } else {
+                    Value::List(List::new(ValueType::Any, unnamed)))?; } else {
                 if !unnamed.is_empty() {
                     return argument_error("No target for unnamed arguments");
                 }
@@ -484,7 +484,7 @@ impl Closure {
                 for (k, v) in named {
                     d.insert(Value::String(k), v)?;
                 }
-                env.redeclare(named_name.as_ref(), Value::Dict(d));
+                env.redeclare(named_name.as_ref(), Value::Dict(d))?;
             } else {
                 if !named.is_empty() {
                     return argument_error("No target for extra named arguments");
@@ -494,7 +494,7 @@ impl Closure {
             for arg in arguments.drain(..) {
                 match arg.argument_type {
                     Some(name) => {
-                        env.redeclare(name.as_ref(), arg.value);
+                        env.redeclare(name.as_ref(), arg.value)?;
                     },
                     None => {
                         return argument_error("No target for unnamed arguments");

@@ -69,7 +69,7 @@ fn kill(context: ExecutionContext) -> CrushResult<()> {
         }
     }
     for pid in pids {
-        signal::kill(pid, sig_to_send);
+        to_crush_error(signal::kill(pid, sig_to_send))?;
     }
     Ok(())
 }

@@ -29,7 +29,7 @@ fn evaluate(condition: Box<dyn CrushCommand + Send + Sync>, row: &Row, input_typ
         arguments,
         env: env.clone(),
         this: None,
-    });
+    })?;
 
     match reciever.recv()? {
         Value::Bool(b) => Ok(b),

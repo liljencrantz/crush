@@ -11,7 +11,7 @@ use std::cmp::Ordering;
 use crate::util::replace::Replace;
 
 lazy_static! {
-    pub static ref root: Struct = {
+    pub static ref ROOT: Struct = {
         Struct::root()
     };
 }
@@ -61,7 +61,7 @@ impl Struct {
     }
 
     pub fn new(vec: Vec<(Box<str>, Value)>) -> Struct {
-        Struct::create(vec, Some(root.clone()))
+        Struct::create(vec, Some(ROOT.clone()))
     }
 
     fn create(mut vec: Vec<(Box<str>, Value)>, parent: Option<Struct>) -> Struct {
@@ -93,7 +93,7 @@ impl Struct {
             });
         Struct {
             data: Arc::new(Mutex::new(StructData {
-                parent: Some(root.clone()),
+                parent: Some(ROOT.clone()),
                 lookup,
                 cells,
             }))

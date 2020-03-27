@@ -14,7 +14,7 @@ use std::io::{BufReader, BufRead};
 
 pub fn spawn_print_thread() -> ValueSender {
     let (o, i) = channels();
-    thread::Builder::new()
+    let _ = thread::Builder::new()
         .name("output-formater".to_string())
         .spawn(move || {
             match i.recv() {

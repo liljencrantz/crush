@@ -81,18 +81,10 @@ impl Printer {
     }
 
     pub fn crush_error(&self, err: CrushError) {
-        self.sender.send(PrinterMessage::CrushError(err));
+        let _ = self.sender.send(PrinterMessage::CrushError(err));
     }
 
     pub fn error(&self, err: &str) {
-        self.sender.send(PrinterMessage::Error(Box::from(err)));
-    }
-
-    pub fn join(&self, h: JobJoinHandle) {
-        let local_printer = self.clone();
-        handle(build("join").spawn( move || {
-            h.join();
-            Ok(())
-        }));
+        let _ = self.sender.send(PrinterMessage::Error(Box::from(err)));
     }
 }

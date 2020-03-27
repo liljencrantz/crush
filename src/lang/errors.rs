@@ -3,7 +3,7 @@ use crate::lang::errors::Kind::*;
 
 #[derive(Debug, PartialEq)]
 pub enum Kind {
-    ParseError,
+//    ParseError,
     InvalidArgument,
     InvalidData,
     GenericError,

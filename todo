@@ -1,9 +1,4 @@
 Todo for MVP 1:
-Fix bug: "crush> (glob:new "%.txt") =~ foo.txt" does not spit out an error!
-negation operator. named 'neg'?
-rename not operator from ! to 'not'?
-Add methods to type type
-Add methods to table type
 Figure out how to make external commands with subcommands convenient again
 Add avg command
 Add system tests for type casting
@@ -208,3 +203,5 @@ Unify types and the type-related namespaces. List:of in the List type, etc.
 Replace type:to function with 'as' operator
 Use @ and @@ for args/kwargs, both in signatures and in argument lists
 Use % for wildcards, something else for fields. Maybe ^?
+negation operator. named 'neg'?
+rename not operator from ! to 'not'?

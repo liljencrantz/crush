@@ -9,6 +9,7 @@ use crate::lang::command::{This};
 use crate::lang::command::ExecutionContext;
 use crate::lang::stream::{empty_channel, Readable};
 use crate::lang::stream_printer::spawn_print_thread;
+use crate::lang::printer::printer;
 
 pub struct Config {
     body: Box<dyn CrushCommand>,
@@ -16,11 +17,11 @@ pub struct Config {
     name: Option<Box<str>>,
 }
 
-pub fn run(mut config: Config, mut input: impl Readable) -> CrushResult<()> {
+pub fn run(config: Config, mut input: impl Readable) -> CrushResult<()> {
     let env = config.env.create_child(&config.env, true);
     loop {
         match input.read() {
-            Ok(mut line) => {
+            Ok(line) => {
                 let arguments =
                     match &config.name {
                         None => {
@@ -47,7 +48,7 @@ pub fn run(mut config: Config, mut input: impl Readable) -> CrushResult<()> {
                     arguments,
                     env: env.clone(),
                     this: None,
-                });
+                })?;
                 if env.is_stopped() {
                     break;
                 }

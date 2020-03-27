@@ -1,13 +1,9 @@
-use crate::lang::scope::Scope;
-use crate::lang::errors::{CrushResult, argument_error, error};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::Value, command::ExecutionContext};
-use regex::Regex;
-use std::error::Error;
 use crate::lang::command::{CrushCommand, ArgumentVector, This};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
 use crate::lang::value::ValueType;
-use crate::util::glob::Glob;
 use crate::lib::binary_op;
 use chrono::Duration;
 
@@ -65,7 +61,7 @@ fn new(mut context: ExecutionContext) -> CrushResult<()> {
     }
 }
 
-fn neg(mut context: ExecutionContext) -> CrushResult<()> {
+fn neg(context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context.output.send(Value::Duration(-context.this.duration()?))
 }

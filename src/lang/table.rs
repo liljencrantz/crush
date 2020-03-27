@@ -29,10 +29,6 @@ impl Table {
     pub fn rows(&self) -> &Vec<Row> {
         &self.rows
     }
-
-    pub fn reader(self) -> TableReader {
-        TableReader::new(self)
-    }
 }
 
 pub struct TableReader {

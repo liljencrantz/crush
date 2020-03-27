@@ -21,7 +21,7 @@ lazy_static! {
 }
 
 fn upper(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(0);
+    context.arguments.check_len(0)?;
     context.output.send(Value::String(
         context.this.text()?
             .to_uppercase()
@@ -29,7 +29,7 @@ fn upper(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn lower(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(0);
+    context.arguments.check_len(0)?;
     context.output.send(Value::String(
         context.this.text()?
             .to_lowercase()
@@ -37,7 +37,7 @@ fn lower(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn split(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(1);
+    context.arguments.check_len(1)?;
     let this = context.this.text()?;
     let separator = context.arguments.string(0)?;
     context.output.send(Value::List(List::new(ValueType::String,
@@ -47,7 +47,7 @@ fn split(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn trim(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(0);
+    context.arguments.check_len(0)?;
     context.output.send(Value::String(
         Box::from(context.this.text()?
             .trim())))

@@ -27,7 +27,7 @@ binary_op!(sub, integer, Integer, Integer, |a, b| a-b, Float, Float, |a, b| a as
 binary_op!(mul, integer, Integer, Integer, |a, b| a*b, Float, Float, |a, b| a as f64*b);
 binary_op!(div, integer, Integer, Integer, |a, b| a/b, Float, Float, |a, b| a as f64/b);
 
-fn neg(mut context: ExecutionContext) -> CrushResult<()> {
+fn neg(context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context.output.send(Value::Float(-context.this.float()?))
 }

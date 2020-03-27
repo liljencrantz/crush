@@ -45,21 +45,6 @@ impl ValueDefinition {
         }
     }
 
-    pub fn can_block_when_called(&self, arg: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
-        match self {
-            ValueDefinition::ClosureDefinition(p, c) => {
-                if c.len() == 1 {
-                    CrushCommand::closure(p.clone(), c.clone(), env).can_block(arg, env)
-                } else {
-                    true
-                }
-            }
-            ValueDefinition::JobDefinition(j) => j.can_block(env),
-            ValueDefinition::GetItem(inner1, inner2) => inner1.can_block(arg, env) || inner2.can_block(arg, env),
-            _ => false,
-        }
-    }
-
     pub fn compile_non_blocking(&self, env: &Scope) -> CrushResult<(Option<Value>, Value)> {
         let mut v = Vec::new();
         self.compile_internal(&mut v, env, false)
@@ -130,26 +115,6 @@ impl ValueDefinition {
                 (Some(parent), val)
             }
         })
-    }
-
-    pub fn text(s: &str) -> ValueDefinition {
-        ValueDefinition::Value(Value::String(Box::from(s)))
-    }
-
-    pub fn field(s: Vec<Box<str>>) -> ValueDefinition {
-        ValueDefinition::Value(Value::Field(s))
-    }
-
-    pub fn glob(s: &str) -> ValueDefinition {
-        ValueDefinition::Value(Value::Glob(Glob::new(s)))
-    }
-
-    pub fn integer(i: i128) -> ValueDefinition {
-        ValueDefinition::Value(Value::Integer(i))
-    }
-
-    pub fn float(f: f64) -> ValueDefinition {
-        ValueDefinition::Value(Value::Float(f))
     }
 
     pub fn regex(s: &str, r: Regex) -> ValueDefinition {

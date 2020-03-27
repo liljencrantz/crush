@@ -16,7 +16,7 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     keys.sort();
 
     for k in keys {
-        output.send(Row::new(vec![
+        let _ = output.send(Row::new(vec![
             Value::String(k.clone().into_boxed_str()),
             Value::String(vals[k].to_string().into_boxed_str())
         ]));

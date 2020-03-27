@@ -62,11 +62,11 @@ pub fn run(
                         let (output_stream, input_stream) = unlimited_streams(config.input_type.clone());
                         let out_row = Row::new(vec![key.clone(), Value::TableStream(input_stream)]);
                         output.send(out_row)?;
-                        output_stream.send(row);
+                        let _ = output_stream.send(row);
                         groups.insert(key, output_stream);
                     }
                     Some(output_stream) => {
-                        output_stream.send(row);
+                        let _ = output_stream.send(row);
                     }
                 }
             }

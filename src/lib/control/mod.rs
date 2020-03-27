@@ -45,14 +45,14 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.r#use(&env);
 
     let path = List::new(ValueType::File, vec![]);
-    env::var("PATH").map(|v| {
+    to_crush_error(env::var("PATH").map(|v| {
         let mut dirs: Vec<Value> = v
             .split(':')
             .map(|s| Value::File(Box::from(Path::new(s))))
             .collect();
         path.append(&mut dirs);
-    });
-    env.declare("cmd_path", Value::List(path));
+    }))?;
+    env.declare("cmd_path", Value::List(path))?;
 
     env.declare("if", Value::Command(CrushCommand::condition(r#if::perform)))?;
     env.declare("while", Value::Command(CrushCommand::condition(r#while::perform)))?;

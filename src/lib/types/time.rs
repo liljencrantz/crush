@@ -27,7 +27,7 @@ lazy_static! {
 binary_op!(add, time, Duration, Time, |a, b| a+b);
 binary_op!(sub, time, Duration, Time, |a, b| a-b, Time, Duration, |a, b| a-b);
 
-fn now(mut context: ExecutionContext) -> CrushResult<()> {
+fn now(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Time(Local::now()))
 }
 

@@ -17,17 +17,6 @@ lazy_static! {
     };
 }
 
-fn parse(arguments: Vec<Argument>) -> CrushResult<Box<Path>> {
-    let mut files: Vec<Box<Path>> = Vec::new();
-    for arg in &arguments {
-        arg.value.file_expand(&mut files)?;
-    }
-    if files.len() != 1 {
-        return argument_error("Expected exactly one file");
-    }
-    Ok(files.remove(0))
-}
-
 fn run(file: Box<Path>, sender: ValueSender) -> CrushResult<()> {
     let metadata = to_crush_error(metadata(file))?;
     sender.send(

@@ -19,7 +19,7 @@ pub fn run(body: Box<dyn CrushCommand>, parent: Scope) -> CrushResult<()> {
             arguments: Vec::new(),
             env: env.clone(),
             this: None,
-        });
+        })?;
         if env.is_stopped() {
             break;
         }

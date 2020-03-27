@@ -131,16 +131,17 @@ impl CommandInvocation {
                             let mut dep = Vec::new();
                             match cmd.compile(&mut dep, &e) {
                                 Ok((this, value)) => {
-                                    invoke_value(this, value, arguments, &e, input, output);
+                                    printer().handle_error(invoke_value(this, value, arguments, &e, input, output));
                                 }
 
                                 Err(err) => {
                                     if let ValueDefinition::Label(p) = &cmd {
-                                        try_external_command(&p, arguments, &e, input, output);
+                                        printer().handle_error(try_external_command(&p, arguments, &e, input, output));
+                                    } else {
+                                        printer().handle_error::<()>(Err(err));
                                     }
                                 }
                             }
-                            Ok(())
                         })))
                 } else {
                     if let ValueDefinition::Label(p) = &self.command {
@@ -224,9 +225,12 @@ fn invoke_command(
                     local_arguments,
                     local_env,
                     this,
-                    input, output)?;
-                action.invoke(context)?;
-                Ok(())
+                    input, output);
+                if let Ok(ctx) = context {
+                    printer().handle_error(action.invoke(ctx));
+                } else {
+                    printer().handle_error(context);
+                }
             })))
     }
 }

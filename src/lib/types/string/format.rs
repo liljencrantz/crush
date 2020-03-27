@@ -92,7 +92,7 @@ fn do_format(format: &str, param: Vec<Argument>) -> CrushResult<String> {
     Ok(res)
 }
 
-pub fn format(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn format(context: ExecutionContext) -> CrushResult<()> {
     let format = context.this.text()?;
     context.output.send(Value::String(
         do_format(

@@ -22,7 +22,6 @@ fn parse(arguments: Vec<Argument>) -> CrushResult<Vec<Box<str>>> {
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     let vars = parse(context.arguments)?;
-    context.output.initialize(vec![]);
     for s in vars {
         context.env.remove_str(s.as_ref());
     }

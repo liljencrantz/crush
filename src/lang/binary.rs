@@ -46,11 +46,11 @@ impl std::io::Read for ChannelReader {
             Some(src) => {
                 if dst.len() >= src.len() {
                     let res = src.len();
-                    dst.write(src);
+                    dst.write(src)?;
                     self.buff = None;
                     Ok(res)
                 } else {
-                    dst.write(src);
+                    dst.write(src)?;
                     self.buff = Some(Box::from(&src[dst.len()..]));
                     Ok(dst.len())
                 }
@@ -66,7 +66,7 @@ struct ChannelWriter {
 impl std::io::Write for ChannelWriter {
     fn write(&mut self, buf: &[u8]) -> Result<usize, Error> {
         let boxed_slice: Box<[u8]> = buf.into();
-        self.sender.send(boxed_slice);
+        let _ = self.sender.send(boxed_slice);
         Ok(buf.len())
     }
 

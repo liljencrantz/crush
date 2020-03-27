@@ -120,7 +120,7 @@ pub fn unlimited_streams(signature: Vec<ColumnType>) -> (OutputStream, InputStre
 
 pub fn empty_channel() -> ValueReceiver {
     let (o, i) = channels();
-    o.send(Value::empty_table_stream());
+    let _ = o.send(Value::empty_table_stream());
     i
 }
 

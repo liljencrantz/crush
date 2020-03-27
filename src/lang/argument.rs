@@ -22,21 +22,6 @@ impl ArgumentType {
         }
     }
 
-    pub fn is_none(&self) -> bool {
-        if let ArgumentType::None = self {
-            true
-        } else {
-            false
-        }
-    }
-
-    pub fn as_name(&self) -> CrushResult<&str> {
-        if let ArgumentType::Some(v) = self {
-            Ok(v.as_ref())
-        } else {
-            argument_error("Expected a named argument")
-        }
-    }
 
     pub fn is_this(&self) -> bool {
         if let ArgumentType::Some(v) = self {

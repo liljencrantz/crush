@@ -40,7 +40,7 @@ pub fn run(
                     Ok(row) => {
                         if !seen.contains(&row) {
                             seen.insert(row.clone());
-                            output.send(row);
+                            let _ = output.send(row);
                         }
                     }
                     Err(_) => break,
@@ -54,7 +54,7 @@ pub fn run(
                     Ok(row) => {
                         if !seen.contains(&row.cells()[idx]) {
                             seen.insert(row.cells()[idx].clone());
-                            output.send(row);
+                            let _ = output.send(row);
                         }
                     }
                     Err(_) => break,

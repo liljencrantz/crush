@@ -18,7 +18,7 @@ extern crate map_in_place;
 use map_in_place::MapVecInPlace;
 use crate::lang::printer::printer;
 use crate::lang::{table::ColumnType, binary::BinaryReader};
-use crate::lang::errors::CrushResult;
+use crate::lang::errors::{CrushResult, to_crush_error};
 use crate::lang::stream::ValueReceiver;
 use crate::lib::parse_util::argument_files;
 
@@ -100,7 +100,7 @@ fn run(cfg: Config, output: OutputStream) -> CrushResult<()> {
     let mut skipped = 0usize;
     loop {
         line.clear();
-        reader.read_line(&mut line);
+        to_crush_error(reader.read_line(&mut line))?;
         if line.is_empty() {
             break;
         }
@@ -129,7 +129,7 @@ fn run(cfg: Config, output: OutputStream) -> CrushResult<()> {
             .map({ |(s, t)| t.cell_type.parse(*s) })
             .collect::<Result<Vec<Value>, CrushError>>() {
             Ok(cells) => {
-                output.send(Row::new(cells));
+                let _ = output.send(Row::new(cells));
             }
             Err(err) => {
                 printer().crush_error(err);

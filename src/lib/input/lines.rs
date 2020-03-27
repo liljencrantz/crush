@@ -12,7 +12,7 @@ use crate::{
     lang::stream::OutputStream,
 };
 use crate::lang::stream::ValueReceiver;
-use crate::lang::errors::CrushResult;
+use crate::lang::errors::{CrushResult, to_crush_error};
 use crate::lang::binary::BinaryReader;
 use crate::lib::parse_util::argument_files;
 
@@ -20,11 +20,11 @@ fn run(input: Box<dyn BinaryReader>, output: OutputStream) -> CrushResult<()> {
     let mut reader = BufReader::new(input);
     let mut line = String::new();
     loop {
-        reader.read_line(&mut line);
+        to_crush_error(reader.read_line(&mut line))?;
         if line.is_empty() {
             break;
         }
-        output.send(Row::new(vec![Value::String(line[0..line.len() - 1].to_string().into_boxed_str())]));
+        let _ = output.send(Row::new(vec![Value::String(line[0..line.len() - 1].to_string().into_boxed_str())]));
         line.clear();
     }
     Ok(())
