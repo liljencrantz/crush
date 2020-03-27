@@ -123,7 +123,7 @@ will start blocking. If the stream is consumed, for example by writing
 
     crush> echo $all_the_files
 
-then all hell will break lose on your screen as tens of thousands of lines are printed to
+then all hell will break loose on your screen as tens of thousands of lines are printed to
 your screen.
 
 Another option would be to use the head command
