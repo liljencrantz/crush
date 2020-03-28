@@ -22,7 +22,8 @@ impl Dict {
         Dict {
             key_type,
             value_type,
-            entries: Arc::new(Mutex::new(HashMap::new())) }
+            entries: Arc::new(Mutex::new(HashMap::new())),
+        }
     }
 
     pub fn to_string(&self) -> String {
@@ -49,7 +50,7 @@ impl Dict {
         entries.remove(key)
     }
 
-    pub fn insert(&self, key: Value, value: Value) -> CrushResult<()>{
+    pub fn insert(&self, key: Value, value: Value) -> CrushResult<()> {
         let mut entries = self.entries.lock().unwrap();
         entries.insert(key, value);
         Ok(())
@@ -65,39 +66,57 @@ impl Dict {
         ValueType::Dict(Box::from(self.key_type.clone()), Box::from(self.value_type.clone()))
     }
 
-    pub fn elements(&self) ->  Vec<(Value, Value)> {
+    pub fn elements(&self) -> Vec<(Value, Value)> {
         let entries = self.entries.lock().unwrap();
         entries.iter()
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect()
     }
 
-    pub fn materialize(self) ->  Dict {
+    pub fn materialize(self) -> Dict {
         let mut entries = self.entries.lock().unwrap();
         let map = entries.drain().map(|(k, v)| (k.materialize(), v.materialize())).collect();
         Dict {
             key_type: self.key_type.materialize(),
             value_type: self.value_type.materialize(),
-            entries: Arc::new(Mutex::new(map))
+            entries: Arc::new(Mutex::new(map)),
         }
     }
 }
 
 impl std::hash::Hash for Dict {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        unimplemented!()
+        let entries = self.entries.lock().unwrap().clone();
+        for (k, v) in entries.iter() {
+            k.hash(state);
+            v.hash(state);
+        }
     }
 }
 
 impl std::cmp::PartialEq for Dict {
     fn eq(&self, other: &Dict) -> bool {
-        unimplemented!()
+        let us = self.entries.lock().unwrap().clone();
+        let them = other.entries.lock().unwrap().clone();
+        if us.len() != them.len() {
+            return false;
+        }
+        for (k, v) in us.iter() {
+            let them_value = them.get(k);
+            match them_value {
+                None => return false,
+                Some(v2) => if !v.eq(v2) {
+                    return false;
+                },
+            }
+        }
+        true
     }
 }
 
 impl std::cmp::PartialOrd for Dict {
     fn partial_cmp(&self, _other: &Dict) -> Option<Ordering> {
-        unimplemented!()
+        None
     }
 }
 

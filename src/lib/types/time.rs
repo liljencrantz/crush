@@ -7,7 +7,6 @@ use chrono::{Local, Datelike, Timelike};
 use time::strptime;
 use std::cmp::max;
 use crate::lang::command::CrushCommand;
-use crate::lang::help::Help;
 
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {

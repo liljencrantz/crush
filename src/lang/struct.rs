@@ -42,7 +42,25 @@ impl Hash for Struct {
 
 impl PartialEq for Struct {
     fn eq(&self, other: &Self) -> bool {
-        unimplemented!()
+        let us = self.data.lock().unwrap().clone();
+        let them = other.data.lock().unwrap().clone();
+        if us.cells.len() != them.cells.len() {
+            return false;
+        }
+        for (v1, v2) in us.cells.iter().zip(them.cells.iter()) {
+            if !v1.eq(v2) {
+                return false;
+            }
+        }
+        for (name, idx) in us.lookup.iter() {
+            match them.lookup.get(name) {
+                None => return false,
+                Some(idx2) => if !idx.eq(idx2) {
+                    return false;
+                },
+            }
+        }
+        true
     }
 }
 

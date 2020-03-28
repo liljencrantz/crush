@@ -1,7 +1,7 @@
 use crate::lang::value::Value;
 use crate::lang::scope::Scope;
 use crate::lang::command::CrushCommand;
-use crate::lang::errors::{argument_error, CrushResult, data_error};
+use crate::lang::errors::{CrushResult, data_error};
 use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use crate::lang::stream::{empty_channel, channels};
 use crate::lang::pretty_printer::spawn_print_thread;

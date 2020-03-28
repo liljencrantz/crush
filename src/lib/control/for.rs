@@ -8,7 +8,6 @@ use crate::lang::errors::{argument_error, CrushResult};
 use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use crate::lang::stream::{empty_channel, Readable};
 use crate::lang::pretty_printer::spawn_print_thread;
-use crate::util::replace::Replace;
 
 pub struct Config {
     body: Box<dyn CrushCommand>,

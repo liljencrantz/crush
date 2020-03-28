@@ -68,7 +68,6 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
                 ValueType::Duration => context.output.send(sum_duration(input, column)?),
                 _ => argument_error("")
             }
-
         }
         _ => error("Expected a stream"),
     }

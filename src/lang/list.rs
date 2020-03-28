@@ -112,7 +112,7 @@ impl ToString for List {
 
 impl std::hash::Hash for List {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        let cells = self.cells.lock().unwrap();
+        let cells = self.cells.lock().unwrap().clone();
         for c in cells.iter() {
             c.hash(state);
         }
@@ -121,13 +121,35 @@ impl std::hash::Hash for List {
 
 impl std::cmp::PartialEq for List {
     fn eq(&self, other: &List) -> bool {
-        false
+        let us = self.cells.lock().unwrap().clone();
+        let them = other.cells.lock().unwrap().clone();
+        if us.len() != them.len() {
+            return false;
+        }
+        for (v1, v2) in us.iter().zip(them.iter()) {
+            if !v1.eq(v2) {
+                return false;
+            }
+        }
+        true
     }
 }
 
 impl std::cmp::PartialOrd for List {
     fn partial_cmp(&self, other: &List) -> Option<Ordering> {
-        None
+        let us = self.cells.lock().unwrap().clone();
+        let them = other.cells.lock().unwrap().clone();
+        for (v1, v2) in us.iter().zip(them.iter()) {
+            let d = v1.partial_cmp(v2);
+            match d.clone() {
+                Some(Ordering::Equal) => {},
+                _ => return d,
+            }
+        }
+        if us.len() != them.len() {
+            return us.len().partial_cmp(&them.len());
+        }
+        Some(Ordering::Equal)
     }
 }
 
