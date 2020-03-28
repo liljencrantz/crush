@@ -1,4 +1,4 @@
-use crate::lang::command::{ExecutionContext, This, CrushCommand};
+use crate::lang::execution_context::{ExecutionContext, This};
 use crate::lang::errors::{CrushResult, to_crush_error};
 use crate::lang::r#struct::Struct;
 use crate::lang::value::Value;
@@ -8,6 +8,7 @@ use crate::lang::stream::ValueSender;
 use std::os::unix::fs::MetadataExt;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
+use crate::lang::command::CrushCommand;
 
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {

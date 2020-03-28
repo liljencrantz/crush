@@ -1,9 +1,10 @@
 use crate::lang::scope::Scope;
 use crate::lang::errors::{CrushResult, argument_error, mandate};
 use crate::lang::{value::Value, r#struct::Struct};
-use crate::lang::command::{ExecutionContext, CrushCommand, This};
+use crate::lang::command::CrushCommand;
+use crate::lang::execution_context::{ExecutionContext, This};
 use crate::lang::argument::{column_names, Argument};
-use crate::lang::command::ArgumentVector;
+use crate::lang::execution_context::ArgumentVector;
 use crate::lang::value::ValueType;
 use crate::lang::table::ColumnType;
 

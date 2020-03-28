@@ -1,6 +1,6 @@
 use crate::lang::scope::Scope;
 use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
-use crate::lang::{value::Value, list::List, value::ValueType, command::ExecutionContext, binary::BinaryReader};
+use crate::lang::{value::Value, list::List, value::ValueType, execution_context::ExecutionContext, binary::BinaryReader};
 use std::env;
 
 mod r#if;
@@ -84,7 +84,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     "#;
     let FOR_HELP = r#"for [name=]iterable:(table_stream|table|dict|list) body:command
 
-    "#;
+    Execute body once for every element in iterable."#;
 
     env.declare("if", Value::Command(CrushCommand::condition(r#if::perform, if_help)))?;
     env.declare("while", Value::Command(CrushCommand::condition(r#while::perform, while_help)))?;

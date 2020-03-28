@@ -1,4 +1,4 @@
-use crate::lang::command::{ExecutionContext, CrushCommand};
+use crate::lang::command::CrushCommand;
 use crate::{
     lang::errors::argument_error,
     lang::{
@@ -14,6 +14,7 @@ use crate::lang::stream::{Readable, ValueSender, empty_channel, channels};
 use crate::lang::errors::error;
 use crate::lang::scope::Scope;
 use crate::lang::table::ColumnVec;
+use crate::lang::execution_context::ExecutionContext;
 
 enum Location {
     Replace(usize),

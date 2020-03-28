@@ -1,8 +1,8 @@
 use crate::lang::scope::Scope;
 use crate::lang::command::CrushCommand;
 use crate::lang::errors::CrushResult;
-use crate::lang::command::{ArgumentVector};
-use crate::lang::command::ExecutionContext;
+use crate::lang::execution_context::ArgumentVector;
+use crate::lang::execution_context::ExecutionContext;
 use crate::lang::stream::empty_channel;
 use crate::lang::pretty_printer::spawn_print_thread;
 

@@ -5,7 +5,7 @@ use crate::{
 use crate::lang::scope::Scope;
 use crate::lang::{table::TableReader, list::ListReader, r#struct::Struct, dict::DictReader, command::CrushCommand};
 use crate::lang::errors::{argument_error, CrushResult};
-use crate::lang::command::{ExecutionContext, ArgumentVector};
+use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use crate::lang::stream::{empty_channel, Readable};
 use crate::lang::pretty_printer::spawn_print_thread;
 use crate::util::replace::Replace;

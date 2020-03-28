@@ -1,6 +1,6 @@
 use crate::lang::errors::{CrushResult, argument_error, error};
 use crate::lang::argument::{Argument, ArgumentDefinition};
-use crate::lang::command::{Parameter, CrushCommand, ExecutionContext};
+use crate::lang::command::{Parameter, CrushCommand};
 use crate::lang::scope::Scope;
 use std::collections::HashMap;
 use crate::lang::value::{Value, ValueType};
@@ -9,6 +9,7 @@ use crate::lang::dict::Dict;
 use crate::lang::job::Job;
 use crate::lang::pretty_printer::spawn_print_thread;
 use crate::lang::stream::empty_channel;
+use crate::lang::execution_context::ExecutionContext;
 
 #[derive(Clone)]
 pub struct Closure {

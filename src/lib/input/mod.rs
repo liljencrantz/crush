@@ -1,8 +1,8 @@
 use crate::lang::scope::Scope;
 use crate::lang::errors::CrushResult;
-use crate::lang::{value::Value, command::ExecutionContext, binary::BinaryReader};
+use crate::lang::{value::Value, execution_context::ExecutionContext, execution_context::ArgumentVector, binary::BinaryReader};
 use crate::lang::pretty_printer::print_value;
-use crate::lang::command::{CrushCommand, ArgumentVector};
+use crate::lang::command::CrushCommand;
 use crate::lang::list::List;
 use crate::lang::value::ValueType;
 

@@ -1,8 +1,9 @@
 use crate::lang::errors::{CrushResult, argument_error};
-use crate::lang::{value::Value, command::ExecutionContext};
-use crate::lang::command::{CrushCommand, ArgumentVector, This};
+use crate::lang::{value::Value, execution_context::ExecutionContext};
+use crate::lang::execution_context::{ArgumentVector, This};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
+use crate::lang::command::CrushCommand;
 
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
