@@ -27,7 +27,7 @@ pub fn dir(mut context: ExecutionContext) -> CrushResult<()> {
     )
 }
 
-fn echo(mut context: ExecutionContext) -> CrushResult<()> {
+    fn echo(mut context: ExecutionContext) -> CrushResult<()> {
     for arg in context.arguments.drain(..) {
         print_value(arg.value);
     }
@@ -80,7 +80,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "val value:any",
         "Return value",
     Some(r#"    This command is useful if you want to e.g. pass a command as input in
-                a pipeline instead of executing it."#))))?;
+    a pipeline instead of executing it. It is different from the echo command
+    in that val returns the value, and echo prints it to screen."#))))?;
     env.declare("dir", Value::Command(CrushCommand::command(
         dir, false,
         "dir value:any", "List members of value", None)))?;

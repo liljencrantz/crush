@@ -92,17 +92,23 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     env.declare("for", Value::Command(CrushCommand::condition(
         r#for::perform,
         "for [name=]iterable:(table_stream|table|dict|list) body:command",
-    "Execute body once for every element in iterable.",
-    Some(r#"    Example:
+        "Execute body once for every element in iterable.",
+        Some(r#"    Example:
 
     for (seq) {
         echo ("Lap {}":format value)
     }"#))))?;
 
 
-    env.declare("break", Value::Command(CrushCommand::command_undocumented(r#break, false)))?;
-    env.declare("continue", Value::Command(CrushCommand::command_undocumented(r#continue, false)))?;
-    env.declare("cmd", Value::Command(CrushCommand::command_undocumented(cmd, true)))?;
+    env.declare("break", Value::Command(CrushCommand::command(
+        r#break, false,
+        "break", "Stop execution of a loop", None)))?;
+    env.declare("continue", Value::Command(CrushCommand::command(
+        r#continue, false,
+        "continue", "Skip execution of the current iteration of a loop", None)))?;
+    env.declare("cmd", Value::Command(CrushCommand::command(
+        cmd, true,
+        "cmd external_command:(file|string) @arguments:any", "Execute external commands", None)))?;
     env.readonly();
 
     Ok(())
