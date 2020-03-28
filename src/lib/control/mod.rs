@@ -54,42 +54,52 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     }))?;
     env.declare("cmd_path", Value::List(path))?;
 
-    let if_help = r#"if condition:bool if-clause:command [else-clause:command]
-
-    Conditionally execute a command once.
-
-    If the condition is true, the if-clause is executed. Otherwise, the else-clause
+    env.declare("if", Value::Command(CrushCommand::condition(
+        r#if::perform,
+        "if condition:bool if-clause:command [else-clause:command]",
+        "Conditionally execute a command once.",
+        Some(r#"    If the condition is true, the if-clause is executed. Otherwise, the else-clause
     (if specified) is executed.
 
     Example:
 
-    if (./some_file:stat):is_file {echo "It's a file!"} {echo "It's not a file!"}"#;
+    if (./some_file:stat):is_file {echo "It's a file!"} {echo "It's not a file!"}"#))))?;
 
-    let while_help = r#"while condition:command body:command
-
-    Repeatedly execute the body for as long the condition is met, or until the
-    break command is called.
-
-    In every pass of the loop, the condition is executed. If it returns false,
+    env.declare("while", Value::Command(CrushCommand::condition(
+        r#while::perform,
+        "while condition:command body:command",
+        "Repeatedly execute the body for as long the condition is met",
+        Some(r#"    In every pass of the loop, the condition is executed. If it returns false,
     the loop terminates. If it returns true, the body is executed and the loop
     continues.
 
     Example:
 
-    while {not (./some_file:stat):is_file} {echo "hello"}"#;
+    while {not (./some_file:stat):is_file} {echo "hello"}"#))))?;
 
-    let loop_help = r#"loop body:command
+    env.declare("loop", Value::Command(CrushCommand::condition(
+        r#loop::perform,
+        "loop body:command",
+        "Repeatedly execute the body until the break command is called.",
+        Some(r#"    Example:
+    loop {
+        if (i_am_tired) {
+            break
+        }
+        echo "Working"
+    }"#))))?;
 
-    Repeatedly execute the body until the break command is called.
-    "#;
-    let for_help = r#"for [name=]iterable:(table_stream|table|dict|list) body:command
+    env.declare("for", Value::Command(CrushCommand::condition(
+        r#for::perform,
+        "for [name=]iterable:(table_stream|table|dict|list) body:command",
+    "Execute body once for every element in iterable.",
+    Some(r#"    Example:
 
-    Execute body once for every element in iterable."#;
+    for (seq) {
+        echo ("Lap {}":format value)
+    }"#))))?;
 
-    env.declare("if", Value::Command(CrushCommand::condition(r#if::perform, if_help)))?;
-    env.declare("while", Value::Command(CrushCommand::condition(r#while::perform, while_help)))?;
-    env.declare("loop", Value::Command(CrushCommand::condition(r#loop::perform, loop_help)))?;
-    env.declare("for", Value::Command(CrushCommand::condition(r#for::perform, for_help)))?;
+
     env.declare("break", Value::Command(CrushCommand::command_undocumented(r#break, false)))?;
     env.declare("continue", Value::Command(CrushCommand::command_undocumented(r#continue, false)))?;
     env.declare("cmd", Value::Command(CrushCommand::command_undocumented(cmd, true)))?;

@@ -23,9 +23,19 @@ pub trait CrushCommand {
     fn can_block(&self, arguments: &Vec<ArgumentDefinition>, env: &Scope) -> bool;
     fn name(&self) -> &str;
     fn clone(&self) -> Box<dyn CrushCommand + Send + Sync>;
-    fn help(&self) -> &str;
+    fn signature(&self) -> &str;
+    fn short_help(&self) -> &str;
+    fn long_help(&self) -> Option<&str>;
 }
 
+#[derive(Clone)]
+struct SimpleCommand {
+    call: fn(context: ExecutionContext) -> CrushResult<()>,
+    can_block: bool,
+    signature: &'static str,
+    short_help: &'static str,
+    long_help: Option<&'static str>,
+}
 
 impl dyn CrushCommand {
     pub fn closure(
@@ -44,32 +54,28 @@ impl dyn CrushCommand {
         call: fn(context: ExecutionContext) -> CrushResult<()>,
         can_block: bool,
     ) -> Box<dyn CrushCommand + Send + Sync> {
-        Box::from(SimpleCommand { call, can_block, help: "FDSAFASD" })
+        Box::from(SimpleCommand { call, can_block, signature: "", short_help: "", long_help: None })
     }
 
     pub fn command(
         call: fn(context: ExecutionContext) -> CrushResult<()>,
         can_block: bool,
-        help: &'static str,
+        signature: &'static str,
+        short_help: &'static str,
+        long_help: Option<&'static str>,
     ) -> Box<dyn CrushCommand + Send + Sync> {
-        Box::from(SimpleCommand { call, can_block, help })
+        Box::from(SimpleCommand { call, can_block, signature, short_help, long_help })
     }
 
     pub fn condition(
         call: fn(context: ExecutionContext) -> CrushResult<()>,
-        help: &'static str,
+        signature: &'static str,
+        short_help: &'static str,
+        long_help: Option<&'static str>,
     ) -> Box<dyn CrushCommand + Send + Sync> {
-        Box::from(ConditionCommand { call, help })
+        Box::from(ConditionCommand { call, signature, short_help, long_help })
     }
 }
-
-#[derive(Clone)]
-struct SimpleCommand {
-    call: fn(context: ExecutionContext) -> CrushResult<()>,
-    can_block: bool,
-    help: &'static str,
-}
-
 
 impl CrushCommand for SimpleCommand {
     fn invoke(&self, context: ExecutionContext) -> CrushResult<()> {
@@ -84,11 +90,25 @@ impl CrushCommand for SimpleCommand {
     }
 
     fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {
-        Box::from(SimpleCommand { call: self.call, can_block: self.can_block, help: self.help })
+        Box::from(SimpleCommand {
+            call: self.call,
+            can_block: self.can_block,
+            signature: self.signature,
+            short_help: self.short_help,
+            long_help: self.long_help,
+        })
     }
 
-    fn help(&self) -> &str {
-        self.help
+    fn signature(&self) -> &str {
+        self.signature
+    }
+
+    fn short_help(&self) -> &str {
+        self.short_help
+    }
+
+    fn long_help(&self) -> Option<&str> {
+        self.long_help
     }
 }
 
@@ -109,7 +129,9 @@ impl std::fmt::Debug for SimpleCommand {
 #[derive(Clone)]
 struct ConditionCommand {
     call: fn(context: ExecutionContext) -> CrushResult<()>,
-    help: &'static str,
+    signature: &'static str,
+    short_help: &'static str,
+    long_help: Option<&'static str>,
 }
 
 impl CrushCommand for ConditionCommand {
@@ -130,11 +152,24 @@ impl CrushCommand for ConditionCommand {
     }
 
     fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {
-        Box::from(ConditionCommand { call: self.call, help: self.help })
+        Box::from(ConditionCommand {
+            call: self.call,
+            signature: self.signature,
+            short_help: self.short_help,
+            long_help: self.long_help,
+        })
     }
 
-    fn help(&self) -> &str {
-        self.help
+    fn signature(&self) -> &str {
+        self.signature
+    }
+
+    fn short_help(&self) -> &str {
+        self.short_help
+    }
+
+    fn long_help(&self) -> Option<&str> {
+        self.long_help
     }
 }
 

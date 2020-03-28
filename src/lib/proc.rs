@@ -80,11 +80,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("proc")?;
     root.r#use(&env);
 
-    let ps_help = r#"ps
-
-    Return a table stream containing information on all running processes on the system.
-
-    ps accepts no arguments. Each row contains the following columns:
+    env.declare("ps", Value::Command(CrushCommand::command(
+        ps, false,
+        "ps", "Return a table stream containing information on all running processes on the system.", Some(r#"    ps accepts no arguments. Each row contains the following columns:
 
     * pid:integer the process id of the process
 
@@ -105,23 +103,19 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     * cpu:duration the amount of CPU time this process has used since its creation
 
-    * name:string the process name"#;
-
-    let kill_help = r#"kill [signal=signal:string] [pid=pid:integer...] @pid:integer
-
-    Send a signal to a set of processes
-
-    Kill accepts the following arguments:
+    * name:string the process name"#))))?;
+    env.declare("kill", Value::Command(CrushCommand::command(
+        kill, false,
+        "kill [signal=signal:string] [pid=pid:integer...] @pid:integer",
+        "Send a signal to a set of processes",
+        Some(r"    Kill accepts the following arguments:
 
     * signal:string the name of the signal to send. If unspecified, the kill signal is sent.
       The set of existing signals is platform dependent, but common signals include
       SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGTRAP, SIGABRT, SIGBUS, SIGFPE, SIGKILL,
       SIGUSR1, SIGSEGV, SIGUSR2, SIGPIPE, SIGALRM, SIGTERM, SIGCHLD, SIGCONT and SIGWINCH.
 
-    * pid:integer the process ids of all process to signal."#;
-
-    env.declare("ps", Value::Command(CrushCommand::command(ps, false, ps_help)))?;
-    env.declare("kill", Value::Command(CrushCommand::command(kill, false, kill_help)))?;
+    * pid:integer the process ids of all process to signal."))))?;
     env.readonly();
     Ok(())
 }

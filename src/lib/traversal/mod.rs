@@ -37,7 +37,11 @@ pub fn help(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     let v = context.arguments.value(0)?;
     match v {
-        Value::Command(cmd) => printer().line(cmd.help()),
+        Value::Command(cmd) => printer().line(
+            match cmd.long_help() {
+                None => format!("{}\n\n    {}", cmd.signature(), cmd.short_help()),
+                Some(long_help) => format!("{}\n\n    {}\n\n{}", cmd.signature(), cmd.short_help(), long_help),
+            }.as_str()),
         Value::Type(t) => printer().line(t.help()),
         v => printer().line(v.value_type().help()),
     }

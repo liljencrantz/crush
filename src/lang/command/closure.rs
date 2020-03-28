@@ -86,8 +86,16 @@ impl CrushCommand for Closure {
         })
     }
 
-    fn help(&self) -> &str {
-        "weee"
+    fn signature(&self) -> &str {
+        "SIG"
+    }
+
+    fn short_help(&self) -> &str {
+        "SHERT"
+    }
+
+    fn long_help(&self) -> Option<&str> {
+        None
     }
 }
 
