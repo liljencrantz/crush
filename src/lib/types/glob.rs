@@ -9,9 +9,11 @@ use crate::lang::command::CrushCommand;
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
-        res.insert(Box::from("match"), CrushCommand::command(r#match, false));
-        res.insert(Box::from("not_match"), CrushCommand::command(not_match, false));
-        res.insert(Box::from("new"), CrushCommand::command(new, false));
+        res.insert(Box::from("match"), CrushCommand::command_undocumented(r#match, false));
+        res.insert(Box::from("not_match"), CrushCommand::command_undocumented(not_match, false));
+        res.insert(Box::from("new"), CrushCommand::command(new, false, r#"glob:new pattern:string
+
+    Return a new glob"#));
         res
     };
 }

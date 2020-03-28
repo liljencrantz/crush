@@ -69,13 +69,13 @@ pub fn not(mut context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("comp")?;
-    env.declare("gt", Value::Command(CrushCommand::command(gt, false)))?;
-    env.declare("gte", Value::Command(CrushCommand::command(gte, false)))?;
-    env.declare("lt", Value::Command(CrushCommand::command(lt, false)))?;
-    env.declare("lte", Value::Command(CrushCommand::command(lte, false)))?;
-    env.declare("eq", Value::Command(CrushCommand::command(eq, false)))?;
-    env.declare("neq", Value::Command(CrushCommand::command(neq, false)))?;
-    env.declare("not", Value::Command(CrushCommand::command(not, false)))?;
+    env.declare("gt", Value::Command(CrushCommand::command_undocumented(gt, false)))?;
+    env.declare("gte", Value::Command(CrushCommand::command_undocumented(gte, false)))?;
+    env.declare("lt", Value::Command(CrushCommand::command_undocumented(lt, false)))?;
+    env.declare("lte", Value::Command(CrushCommand::command_undocumented(lte, false)))?;
+    env.declare("eq", Value::Command(CrushCommand::command_undocumented(eq, false)))?;
+    env.declare("neq", Value::Command(CrushCommand::command_undocumented(neq, false)))?;
+    env.declare("not", Value::Command(CrushCommand::command_undocumented(not, false)))?;
     env.readonly();
     Ok(())
 }

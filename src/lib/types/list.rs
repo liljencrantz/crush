@@ -9,19 +9,19 @@ use lazy_static::lazy_static;
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
-        res.insert(Box::from("len"), CrushCommand::command(len, false));
-        res.insert(Box::from("empty"), CrushCommand::command(empty, false));
-        res.insert(Box::from("push"), CrushCommand::command(push, false));
-        res.insert(Box::from("pop"), CrushCommand::command(pop, false));
-        res.insert(Box::from("peek"), CrushCommand::command(peek, false));
-        res.insert(Box::from("clear"), CrushCommand::command(clear, false));
-        res.insert(Box::from("__setitem__"), CrushCommand::command(setitem, false));
-        res.insert(Box::from("remove"), CrushCommand::command(remove, false));
-        res.insert(Box::from("truncate"), CrushCommand::command(truncate, false));
-        res.insert(Box::from("clone"), CrushCommand::command(clone, false));
-        res.insert(Box::from("of"), CrushCommand::command(of, false));
-        res.insert(Box::from("new"), CrushCommand::command(new, false));
-        res.insert(Box::from("__call_type__"), CrushCommand::command(call_type, false));
+        res.insert(Box::from("len"), CrushCommand::command_undocumented(len, false));
+        res.insert(Box::from("empty"), CrushCommand::command_undocumented(empty, false));
+        res.insert(Box::from("push"), CrushCommand::command_undocumented(push, false));
+        res.insert(Box::from("pop"), CrushCommand::command_undocumented(pop, false));
+        res.insert(Box::from("peek"), CrushCommand::command_undocumented(peek, false));
+        res.insert(Box::from("clear"), CrushCommand::command_undocumented(clear, false));
+        res.insert(Box::from("__setitem__"), CrushCommand::command_undocumented(setitem, false));
+        res.insert(Box::from("remove"), CrushCommand::command_undocumented(remove, false));
+        res.insert(Box::from("truncate"), CrushCommand::command_undocumented(truncate, false));
+        res.insert(Box::from("clone"), CrushCommand::command_undocumented(clone, false));
+        res.insert(Box::from("of"), CrushCommand::command_undocumented(of, false));
+        res.insert(Box::from("new"), CrushCommand::command_undocumented(new, false));
+        res.insert(Box::from("__call_type__"), CrushCommand::command_undocumented(call_type, false));
         res
     };
 }

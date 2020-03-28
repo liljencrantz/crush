@@ -78,21 +78,21 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     while {not (./some_file:stat):is_file} {echo "hello"}"#;
 
-    let LOOP_HELP = r#"loop body:command
+    let loop_help = r#"loop body:command
 
     Repeatedly execute the body until the break command is called.
     "#;
-    let FOR_HELP = r#"for [name=]iterable:(table_stream|table|dict|list) body:command
+    let for_help = r#"for [name=]iterable:(table_stream|table|dict|list) body:command
 
     Execute body once for every element in iterable."#;
 
     env.declare("if", Value::Command(CrushCommand::condition(r#if::perform, if_help)))?;
     env.declare("while", Value::Command(CrushCommand::condition(r#while::perform, while_help)))?;
-    env.declare("loop", Value::Command(CrushCommand::condition(r#loop::perform, LOOP_HELP)))?;
-    env.declare("for", Value::Command(CrushCommand::condition(r#for::perform, FOR_HELP)))?;
-    env.declare("break", Value::Command(CrushCommand::command(r#break, false)))?;
-    env.declare("continue", Value::Command(CrushCommand::command(r#continue, false)))?;
-    env.declare("cmd", Value::Command(CrushCommand::command(cmd, true)))?;
+    env.declare("loop", Value::Command(CrushCommand::condition(r#loop::perform, loop_help)))?;
+    env.declare("for", Value::Command(CrushCommand::condition(r#for::perform, for_help)))?;
+    env.declare("break", Value::Command(CrushCommand::command_undocumented(r#break, false)))?;
+    env.declare("continue", Value::Command(CrushCommand::command_undocumented(r#continue, false)))?;
+    env.declare("cmd", Value::Command(CrushCommand::command_undocumented(cmd, true)))?;
     env.readonly();
 
     Ok(())

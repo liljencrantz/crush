@@ -13,7 +13,19 @@ use crate::lang::command::CrushCommand;
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
-        res.insert(Box::from("stat"), CrushCommand::command(stat, true));
+        res.insert(Box::from("stat"), CrushCommand::command(stat, true, r#"file:stat
+
+    Return a struct with information about a file.
+
+    The return value contains the following fields:
+
+    * is_directory:bool is the file is a directory
+    * is_file:bool is the file a regular file
+    * is_symlink:bool is the file a symbolic link
+    * inode:integer the inode number of the file
+    * nlink:integer the number of hardlinks to the file
+    * mode:integer the permission bits for the file
+    * len: integer the size of the file"#));
         res
     };
 }

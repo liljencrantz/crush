@@ -55,8 +55,8 @@ impl PartialOrd for Struct {
 impl Struct {
     fn root() -> Struct {
         Struct::create(vec![
-            (Box::from("__setattr__"), Value::Command(CrushCommand::command(crate::lib::types::setattr, false))),
-            (Box::from("__call_type__"), Value::Command(CrushCommand::command(crate::lib::types::struct_call_type, false))),
+            (Box::from("__setattr__"), Value::Command(CrushCommand::command_undocumented(crate::lib::types::setattr, false))),
+            (Box::from("__call_type__"), Value::Command(CrushCommand::command_undocumented(crate::lib::types::struct_call_type, false))),
         ], None)
     }
 

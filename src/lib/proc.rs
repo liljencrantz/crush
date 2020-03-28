@@ -14,7 +14,7 @@ use crate::lang::scope::Scope;
 use nix::sys::signal;
 use nix::unistd::Pid;
 use std::str::FromStr;
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 
 fn state_name(s: psutil::process::State) -> &'static str {
     match s {
@@ -31,6 +31,7 @@ fn state_name(s: psutil::process::State) -> &'static str {
 }
 
 fn ps(context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
     let output = context.output.initialize(vec![
         ColumnType::new("pid", ValueType::Integer),
         ColumnType::new("ppid", ValueType::Integer),
@@ -78,8 +79,49 @@ fn kill(context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("proc")?;
     root.r#use(&env);
-    env.declare("ps", Value::Command(CrushCommand::command(ps, true)))?;
-    env.declare("kill", Value::Command(CrushCommand::command(kill, false)))?;
+
+    let ps_help = r#"ps
+
+    Return a table stream containing information on all running processes on the system.
+
+    ps accepts no arguments. Each row contains the following columns:
+
+    * pid:integer the process id of the process
+
+    * ppid:integer the process id of the parent of the process
+
+    * status:string one of the following states:
+      - Running
+      - Sleeping
+      - Waiting
+      - Stopped
+      - Traces
+      - Paging
+      - Dead
+      - Zombie
+      - Idle
+
+    * user:string the username of the process owner
+
+    * cpu:duration the amount of CPU time this process has used since its creation
+
+    * name:string the process name"#;
+
+    let kill_help = r#"kill [signal=signal:string] [pid=pid:integer...] @pid:integer
+
+    Send a signal to a set of processes
+
+    Kill accepts the following arguments:
+
+    * signal:string the name of the signal to send. If unspecified, the kill signal is sent.
+      The set of existing signals is platform dependent, but common signals include
+      SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGTRAP, SIGABRT, SIGBUS, SIGFPE, SIGKILL,
+      SIGUSR1, SIGSEGV, SIGUSR2, SIGPIPE, SIGALRM, SIGTERM, SIGCHLD, SIGCONT and SIGWINCH.
+
+    * pid:integer the process ids of all process to signal."#;
+
+    env.declare("ps", Value::Command(CrushCommand::command(ps, false, ps_help)))?;
+    env.declare("kill", Value::Command(CrushCommand::command(kill, false, kill_help)))?;
     env.readonly();
     Ok(())
 }

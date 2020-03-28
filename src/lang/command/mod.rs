@@ -28,7 +28,11 @@ pub trait CrushCommand {
 
 
 impl dyn CrushCommand {
-    pub fn closure(signature: Option<Vec<Parameter>>, job_definitions: Vec<Job>, env: &Scope) -> Box<dyn CrushCommand + Send + Sync> {
+    pub fn closure(
+        signature: Option<Vec<Parameter>>,
+        job_definitions: Vec<Job>,
+        env: &Scope,
+    ) -> Box<dyn CrushCommand + Send + Sync> {
         Box::from(Closure {
             signature,
             job_definitions,
@@ -36,15 +40,25 @@ impl dyn CrushCommand {
         })
     }
 
-    pub fn command(call: fn(context: ExecutionContext) -> CrushResult<()>, can_block: bool) -> Box<dyn CrushCommand + Send + Sync> {
-        Box::from(SimpleCommand {
-            call,
-            can_block,
-            help: "FDSAFASD",
-        })
+    pub fn command_undocumented(
+        call: fn(context: ExecutionContext) -> CrushResult<()>,
+        can_block: bool,
+    ) -> Box<dyn CrushCommand + Send + Sync> {
+        Box::from(SimpleCommand { call, can_block, help: "FDSAFASD" })
     }
 
-    pub fn condition(call: fn(context: ExecutionContext) -> CrushResult<()>, help: &'static str) -> Box<dyn CrushCommand + Send + Sync> {
+    pub fn command(
+        call: fn(context: ExecutionContext) -> CrushResult<()>,
+        can_block: bool,
+        help: &'static str,
+    ) -> Box<dyn CrushCommand + Send + Sync> {
+        Box::from(SimpleCommand { call, can_block, help })
+    }
+
+    pub fn condition(
+        call: fn(context: ExecutionContext) -> CrushResult<()>,
+        help: &'static str,
+    ) -> Box<dyn CrushCommand + Send + Sync> {
         Box::from(ConditionCommand { call, help })
     }
 }

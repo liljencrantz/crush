@@ -9,7 +9,7 @@ use crate::lib::types::parse_column_types;
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
-        res.insert(Box::from("__call_type__"), CrushCommand::command(call_type, false));
+        res.insert(Box::from("__call_type__"), CrushCommand::command_undocumented(call_type, false));
         res
     };
 }

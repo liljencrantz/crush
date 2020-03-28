@@ -41,14 +41,14 @@ fn cat(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("io")?;
     root.r#use(&env);
-    env.declare("cat", Value::Command(CrushCommand::command(cat, true)))?;
-    env.declare("http", Value::Command(CrushCommand::command(http::perform, true)))?;
-    env.declare("lines", Value::Command(CrushCommand::command(lines::perform, true)))?;
-    env.declare("csv", Value::Command(CrushCommand::command(csv::perform, true)))?;
-    env.declare("json", Value::Command(CrushCommand::command(json::perform, true)))?;
-    env.declare("echo", Value::Command(CrushCommand::command(echo, false)))?;
-    env.declare("val", Value::Command(CrushCommand::command(val, false)))?;
-    env.declare("dir", Value::Command(CrushCommand::command(dir, false)))?;
+    env.declare("cat", Value::Command(CrushCommand::command_undocumented(cat, true)))?;
+    env.declare("http", Value::Command(CrushCommand::command_undocumented(http::perform, true)))?;
+    env.declare("lines", Value::Command(CrushCommand::command_undocumented(lines::perform, true)))?;
+    env.declare("csv", Value::Command(CrushCommand::command_undocumented(csv::perform, true)))?;
+    env.declare("json", Value::Command(CrushCommand::command_undocumented(json::perform, true)))?;
+    env.declare("echo", Value::Command(CrushCommand::command_undocumented(echo, false)))?;
+    env.declare("val", Value::Command(CrushCommand::command_undocumented(val, false)))?;
+    env.declare("dir", Value::Command(CrushCommand::command_undocumented(dir, false)))?;
     env.readonly();
 
     Ok(())

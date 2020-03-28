@@ -9,15 +9,15 @@ use lazy_static::lazy_static;
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
-        res.insert(Box::from("new"), CrushCommand::command(new, false));
-        res.insert(Box::from("len"), CrushCommand::command(len, false));
-        res.insert(Box::from("empty"), CrushCommand::command(empty, false));
-//        res.insert(Box::from("clear"), Box::from(CrushCommand::command(clear, false)));
-        res.insert(Box::from("__setitem__"), CrushCommand::command(setitem, false));
-        res.insert(Box::from("__getitem__"), CrushCommand::command(getitem, false));
-        res.insert(Box::from("remove"), CrushCommand::command(remove, false));
-//        res.insert(Box::from("clone"), Box::from(CrushCommand::command(clone, false)));
-        res.insert(Box::from("__call_type__"), CrushCommand::command(call_type, false));
+        res.insert(Box::from("new"), CrushCommand::command_undocumented(new, false));
+        res.insert(Box::from("len"), CrushCommand::command_undocumented(len, false));
+        res.insert(Box::from("empty"), CrushCommand::command_undocumented(empty, false));
+//        res.insert(Box::from("clear"), Box::from(CrushCommand::command_undocumented(clear, false)));
+        res.insert(Box::from("__setitem__"), CrushCommand::command_undocumented(setitem, false));
+        res.insert(Box::from("__getitem__"), CrushCommand::command_undocumented(getitem, false));
+        res.insert(Box::from("remove"), CrushCommand::command_undocumented(remove, false));
+//        res.insert(Box::from("clone"), Box::from(CrushCommand::command_undocumented(clone, false)));
+        res.insert(Box::from("__call_type__"), CrushCommand::command_undocumented(call_type, false));
         res
     };
 }

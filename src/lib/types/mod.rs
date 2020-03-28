@@ -80,12 +80,13 @@ pub fn r#type(context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    let env = root.create_namespace("data")?;
+    let env = root.create_namespace("types")?;
     root.r#use(&env);
 
-    env.declare("struct_of", Value::Command(CrushCommand::command(struct_of, false)))?;
-    env.declare("materialize", Value::Command(CrushCommand::command(materialize, true)))?;
+    env.declare("struct_of", Value::Command(CrushCommand::command_undocumented(struct_of, false)))?;
+    env.declare("materialize", Value::Command(CrushCommand::command_undocumented(materialize, true)))?;
 
+    env.declare("file", Value::Type(ValueType::File))?;
     env.declare("type", Value::Type(ValueType::Type))?;
     env.declare("any", Value::Type(ValueType::Any))?;
     env.declare("bool", Value::Type(ValueType::Bool))?;

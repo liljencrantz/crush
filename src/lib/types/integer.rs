@@ -8,11 +8,11 @@ use crate::lang::command::CrushCommand;
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
-        res.insert(Box::from("__add__"), CrushCommand::command(add, false));
-        res.insert(Box::from("__sub__"), CrushCommand::command(sub, false));
-        res.insert(Box::from("__mul__"), CrushCommand::command(mul, false));
-        res.insert(Box::from("__div__"), CrushCommand::command(div, false));
-        res.insert(Box::from("__neg__"), CrushCommand::command(neg, false));
+        res.insert(Box::from("__add__"), CrushCommand::command_undocumented(add, false));
+        res.insert(Box::from("__sub__"), CrushCommand::command_undocumented(sub, false));
+        res.insert(Box::from("__mul__"), CrushCommand::command_undocumented(mul, false));
+        res.insert(Box::from("__div__"), CrushCommand::command_undocumented(div, false));
+        res.insert(Box::from("__neg__"), CrushCommand::command_undocumented(neg, false));
         res
     };
 }

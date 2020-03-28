@@ -1,4 +1,5 @@
 Todo for MVP 1:
+kwargs should not be a dict, because arguments can be repeated and order matters!
 fix struct type
 Add exists-method on file
 Allow empty closures

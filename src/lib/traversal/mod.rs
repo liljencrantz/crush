@@ -47,11 +47,11 @@ pub fn help(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("traversal")?;
     root.r#use(&env);
-    env.declare("ls", Value::Command(CrushCommand::command(find::perform_ls, true)))?;
-    env.declare("find", Value::Command(CrushCommand::command(find::perform_find, true)))?;
-    env.declare("cd", Value::Command(CrushCommand::command(cd, true)))?;
-    env.declare("pwd", Value::Command(CrushCommand::command(pwd, false)))?;
-    env.declare("help", Value::Command(CrushCommand::command(help, false)))?;
+    env.declare("ls", Value::Command(CrushCommand::command_undocumented(find::perform_ls, true)))?;
+    env.declare("find", Value::Command(CrushCommand::command_undocumented(find::perform_find, true)))?;
+    env.declare("cd", Value::Command(CrushCommand::command_undocumented(cd, true)))?;
+    env.declare("pwd", Value::Command(CrushCommand::command_undocumented(pwd, false)))?;
+    env.declare("help", Value::Command(CrushCommand::command_undocumented(help, false)))?;
     env.readonly();
     Ok(())
 }
