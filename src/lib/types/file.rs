@@ -14,10 +14,10 @@ lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
         res.insert(Box::from("stat"), CrushCommand::command(
-        stat, true,
-         "file:stat",
-        "Return a struct with information about a file.",
-        Some(r#"The return value contains the following fields:
+            stat, true,
+            "file:stat",
+            "Return a struct with information about a file.",
+            Some(r#"    The return value contains the following fields:
 
     * is_directory:bool is the file is a directory
     * is_file:bool is the file a regular file
@@ -26,13 +26,20 @@ lazy_static! {
     * nlink:integer the number of hardlinks to the file
     * mode:integer the permission bits for the file
     * len: integer the size of the file"#)));
+
+        res.insert(Box::from("exists"), CrushCommand::command(
+            exists, true,
+            "file:exists",
+            "Return true if this file exists",
+            None));
         res
     };
 }
 
-fn run(file: Box<Path>, sender: ValueSender) -> CrushResult<()> {
+pub fn stat(context: ExecutionContext) -> CrushResult<()> {
+    let file = context.this.file()?;
     let metadata = to_crush_error(metadata(file))?;
-    sender.send(
+    context.output.send(
         Value::Struct(
             Struct::new(
                 vec![
@@ -49,6 +56,6 @@ fn run(file: Box<Path>, sender: ValueSender) -> CrushResult<()> {
     )
 }
 
-pub fn stat(context: ExecutionContext) -> CrushResult<()> {
-    run(context.this.file()?, context.output)
+pub fn exists(context: ExecutionContext) -> CrushResult<()> {
+    context.output.send(Value::Bool(context.this.file()?.exists()))
 }

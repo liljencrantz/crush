@@ -1,12 +1,10 @@
 Todo for MVP 1:
 kwargs should not be a dict, because arguments can be repeated and order matters!
 fix struct type
-Add exists-method on file
 Allow empty closures
 Either implement call_type for all types or check for its existence and don't execute types unless it exists
 Comparison, hashing unimplemented for dict
 Comparison, hashing unimplemented for struct
-Comparison, hashing unimplemented for list
 Figure out how to make external commands with subcommands convenient again
 Add avg command
 Add system tests for type casting
@@ -221,3 +219,5 @@ Remove parse_util
 Remove command_util
 redo labels. Allow /%? in labels, but if they're there, change the type?
 Remove 'root' constant
+Add exists-method on file
+Comparison, hashing unimplemented for list
