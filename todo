@@ -1,17 +1,15 @@
 Todo for MVP 1:
 Kwargs should not be a dict, because arguments can be repeated and order matters!
 Fix struct type
-Allow empty closures
 Either implement call_type for all types or check for its existence and don't execute types unless it exists
-Comparison, hashing unimplemented for dict
-Comparison, hashing unimplemented for struct
+Comparison unimplemented for dict
+Comparison unimplemented for struct
 Figure out how to make external commands with subcommands convenient again
 Add system tests for type casting
 Add system tests for for loop
 Add system tests for binary stream handling
 Add system tests for structs
 Add system tests for dealing with tables as streams
-Missing some value serialisations and deserialisations
 Error source propagation
 Deal with different error kinds differently
 Add command-field to CrushError
@@ -20,6 +18,8 @@ Make error printing display source of error
 Flesh out readme file
 
 Future features:
+Allow empty closures
+Missing some value serialisations and deserialisations
 Allow while-loop without body
 spawn_print_thread should not spawn new threads
 empty_channel should not create new empty channels
