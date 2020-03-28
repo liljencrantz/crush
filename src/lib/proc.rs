@@ -81,7 +81,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.r#use(&env);
 
     env.declare("ps", Value::Command(CrushCommand::command(
-        ps, false,
+        ps, true,
         "ps", "Return a table stream containing information on all running processes on the system.", Some(r#"    ps accepts no arguments. Each row contains the following columns:
 
     * pid:integer the process id of the process

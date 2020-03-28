@@ -14,8 +14,15 @@ lazy_static! {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
         res.insert(Box::from("__add__"), CrushCommand::command_undocumented(add, false));
         res.insert(Box::from("__sub__"), CrushCommand::command_undocumented(sub, false));
-        res.insert(Box::from("now"), CrushCommand::command_undocumented(now, false));
-        res.insert(Box::from("parse"), CrushCommand::command_undocumented(parse, false));
+        res.insert(Box::from("now"), CrushCommand::command(
+            now, false,
+            "time:now", "The current point in time", None));
+        res.insert(Box::from("parse"), CrushCommand::command(
+            parse, false,
+            "time:parse format=format:string time=time:string",
+            "Parse a time string using a strptime-style pattern string",
+            None
+            ));
         res
     };
 }

@@ -1,7 +1,7 @@
 use crate::lang::scope::Scope;
 use crate::lang::errors::{CrushResult, error, to_crush_error};
 use crate::lang::{value::Value};
-use crate::lang::command::{CrushCommand};
+use crate::lang::command::CrushCommand;
 use crate::util::file::{home, cwd};
 use std::path::Path;
 use crate::lang::printer::printer;
@@ -11,7 +11,6 @@ use crate::lang::help::Help;
 
 mod find;
 mod stat;
-
 
 pub fn cd(context: ExecutionContext) -> CrushResult<()> {
     let dir = match context.arguments.len() {
@@ -57,11 +56,29 @@ pub fn help(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("traversal")?;
     root.r#use(&env);
-    env.declare("ls", Value::Command(CrushCommand::command_undocumented(find::perform_ls, true)))?;
-    env.declare("find", Value::Command(CrushCommand::command_undocumented(find::perform_find, true)))?;
-    env.declare("cd", Value::Command(CrushCommand::command_undocumented(cd, true)))?;
-    env.declare("pwd", Value::Command(CrushCommand::command_undocumented(pwd, false)))?;
-    env.declare("help", Value::Command(CrushCommand::command_undocumented(help, false)))?;
+    env.declare("ls", Value::Command(CrushCommand::command(
+        find::perform_ls, true,
+        "ls @file:file", "Non-recursively list files", None)))?;
+    env.declare("find", Value::Command(CrushCommand::command(
+        find::perform_find, true,
+        "find @file:file",
+        "Recursively list files", None)))?;
+    env.declare("cd", Value::Command(CrushCommand::command(
+        cd, true,
+        "cd directory:(file,string,glob)",
+        "Change to the specified working directory", None)))?;
+    env.declare("pwd", Value::Command(CrushCommand::command(
+        pwd, false,
+        "pwd", "Return the current working directory", None)))?;
+    env.declare("help", Value::Command(CrushCommand::command(
+        help, false,
+        "help topic:any",
+        "Show help about the specified thing",
+        Some(r#"    Examples:
+
+    help ls
+    help integer
+    help help"#))))?;
     env.readonly();
     Ok(())
 }
