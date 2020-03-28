@@ -12,11 +12,31 @@ mod format;
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
-        res.insert(Box::from("upper"), CrushCommand::command_undocumented(upper, false));
-        res.insert(Box::from("lower"), CrushCommand::command_undocumented(lower, false));
-        res.insert(Box::from("split"), CrushCommand::command_undocumented(split, false));
-        res.insert(Box::from("trim"), CrushCommand::command_undocumented(trim, false));
-        res.insert(Box::from("format"), CrushCommand::command_undocumented(format::format, false));
+        res.insert(Box::from("upper"), CrushCommand::command(
+            upper, false,
+            "string:upper",
+            "Returns an identical string but in upper case",
+            None));
+        res.insert(Box::from("lower"), CrushCommand::command(
+            lower, false,
+            "string:lower",
+            "Returns an identical string but in lower case",
+            None));
+        res.insert(Box::from("split"), CrushCommand::command(
+            split, false,
+            "string:split separator:string",
+            "Splits a string using the specifiec separator",
+            None));
+        res.insert(Box::from("trim"), CrushCommand::command(
+            trim, false,
+            "string:trim",
+            "Returns a string with all whitespace trimmed from both ends",
+            None));
+        res.insert(Box::from("format"), CrushCommand::command(
+            format::format, false,
+            "string:format pattern:string [parameters:any]...",
+            "Format arguments into a string",
+            None));
         res
     };
 }
