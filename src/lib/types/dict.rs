@@ -10,15 +10,44 @@ use crate::lang::help::Help;
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
-        res.insert(Box::from("new"), CrushCommand::command_undocumented(new, false));
-        res.insert(Box::from("len"), CrushCommand::command_undocumented(len, false));
-        res.insert(Box::from("empty"), CrushCommand::command_undocumented(empty, false));
+        res.insert(Box::from("new"), CrushCommand::command(
+            new, false,
+            "dict:new",
+            "Construct a new dict",
+            Some(r#"    Examples:
+    my_dict := ((dict string integer):new)"#)));
+        res.insert(Box::from("len"), CrushCommand::command(
+            len, false,
+            "dict:len",
+            "The number of mappings in the dict",
+            None));
+        res.insert(Box::from("empty"), CrushCommand::command(
+            empty, false,
+            "dict:empty",
+            "True if there are no mappings in the dict",
+            None));
 //        res.insert(Box::from("clear"), Box::from(CrushCommand::command_undocumented(clear, false)));
-        res.insert(Box::from("__setitem__"), CrushCommand::command_undocumented(setitem, false));
-        res.insert(Box::from("__getitem__"), CrushCommand::command_undocumented(getitem, false));
-        res.insert(Box::from("remove"), CrushCommand::command_undocumented(remove, false));
+        res.insert(Box::from("__setitem__"), CrushCommand::command(
+            setitem, false,
+            "dict[key] = value",
+            "Create a new mapping or replace an existing one",
+            None));
+        res.insert(Box::from("__getitem__"), CrushCommand::command(
+            getitem, false,
+            "dict[key]",
+            "Return the value the specified key is mapped to",
+            None));
+        res.insert(Box::from("remove"), CrushCommand::command(
+            remove, false,
+            "dict:remove key",
+            "Remove a mapping from the dict",
+            None));
 //        res.insert(Box::from("clone"), Box::from(CrushCommand::command_undocumented(clone, false)));
-        res.insert(Box::from("__call_type__"), CrushCommand::command_undocumented(call_type, false));
+        res.insert(Box::from("__call_type__"), CrushCommand::command(
+            call_type, false,
+            "dict key_type:type value_type:type",
+            "Returns a dict type with the specifiec key and value types",
+            None));
         res
     };
 }
