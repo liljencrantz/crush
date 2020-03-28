@@ -58,7 +58,7 @@ sum_function!(sum_int, i128, 0, Integer);
 sum_function!(sum_float, f64, 0.0, Float);
 sum_function!(sum_duration, Duration, Duration::seconds(0), Duration);
 
-pub fn perform(context: ExecutionContext) -> CrushResult<()> {
+pub fn sum(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()?.readable() {
         Some(input) => {
             let column = parse(input.types(), &context.arguments)?;
@@ -66,6 +66,47 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
                 ValueType::Integer => context.output.send(sum_int(input, column)?),
                 ValueType::Float => context.output.send(sum_float(input, column)?),
                 ValueType::Duration => context.output.send(sum_duration(input, column)?),
+                _ => argument_error("")
+            }
+        }
+        _ => error("Expected a stream"),
+    }
+}
+
+macro_rules! avg_function {
+    ($name:ident, $var_type:ident, $var_initializer:expr, $value_type:ident, $count_type:ident) => {
+fn $name(mut s: Box<dyn Readable>, column: usize) -> CrushResult<Value> {
+    let mut res: $var_type = $var_initializer;
+    let mut count: i128 = 0;
+    loop {
+        match s.read() {
+            Ok(row) => {
+                count += 1;
+                match row.cells()[column] {
+                    Value::$value_type(i) => res = res + i,
+                    _ => return error("Invalid cell value, expected an integer")
+                }
+            }
+            Err(_) => break,
+        }
+    }
+    Ok(Value::$value_type(res / (count as $count_type)))
+}
+    }
+}
+
+avg_function!(avg_int, i128, 0, Integer, i128);
+avg_function!(avg_float, f64, 0.0, Float, f64);
+avg_function!(avg_duration, Duration, Duration::seconds(0), Duration, i32);
+
+pub fn avg(context: ExecutionContext) -> CrushResult<()> {
+    match context.input.recv()?.readable() {
+        Some(input) => {
+            let column = parse(input.types(), &context.arguments)?;
+            match input.types()[column].cell_type {
+                ValueType::Integer => context.output.send(avg_int(input, column)?),
+                ValueType::Float => context.output.send(avg_float(input, column)?),
+                ValueType::Duration => context.output.send(avg_duration(input, column)?),
                 _ => argument_error("")
             }
         }

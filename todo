@@ -15,7 +15,6 @@ Add system tests for dealing with tables as streams
 Add missing comparisons on Value
 Missing some value serialisations and deserialisations
 Error source propagation
-help command
 Deal with different error kinds differently
 Add command-field to CrushError
 Add source field to CrushError
@@ -221,3 +220,4 @@ redo labels. Allow /%? in labels, but if they're there, change the type?
 Remove 'root' constant
 Add exists-method on file
 Comparison, hashing unimplemented for list
+help command

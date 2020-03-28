@@ -19,7 +19,7 @@ mod zip;
 //mod aggr;
 
 mod count;
-mod sum;
+mod sum_avg;
 mod seq;
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
@@ -60,9 +60,14 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "count",
         "Count the number of rows in the input", example!("ps | count"))))?;
     env.declare("sum", Value::Command(CrushCommand::command(
-        sum::perform, true,
+        sum_avg::sum, true,
         "sum column:field",
-        "Calculate the sum the specifiec column across all rows",
+        "Calculate the sum for the specific column across all rows",
+        example!("ps | sum ^cpu"))))?;
+    env.declare("avg", Value::Command(CrushCommand::command(
+        sum_avg::avg, true,
+        "avg column:field",
+        "Calculate the average of the specific column across all rows",
         example!("ps | sum ^cpu"))))?;
     env.declare("select", Value::Command(CrushCommand::command(
         select::perform, true,
