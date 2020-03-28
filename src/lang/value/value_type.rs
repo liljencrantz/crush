@@ -8,6 +8,7 @@ use crate::lang::command::CrushCommand;
 use std::collections::HashMap;
 use crate::lib::types;
 use lazy_static::lazy_static;
+use crate::lang::help::Help;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum ValueType {
@@ -36,13 +37,13 @@ pub enum ValueType {
 }
 
 lazy_static! {
-    pub static ref EMPTY_METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
+    pub static ref EMPTY_METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
         HashMap::new()
     };
 }
 
 impl ValueType {
-    pub fn fields(&self) -> &HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> {
+    pub fn fields(&self) -> &HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> {
         match self {
             ValueType::List(_) =>
                 &types::list::METHODS,
@@ -138,9 +139,47 @@ impl ValueType {
             _ => error("Failed to parse cell"),
         }
     }
+}
 
-    pub fn help(&self) -> &str {
-        "ok..."
+impl Help for ValueType {
+    fn signature(&self) -> String {
+        format!("type {}", self.to_string())
+    }
+
+    fn short_help(&self) -> String {
+        match self {
+            ValueType::String => "Textual data, stored as an immutable sequence of unicode code points.",
+            ValueType::Integer => "A numeric type representing an integer number.",
+            ValueType::Time => "A point in time with nanosecond precision",
+            ValueType::Duration => "A difference between two points in time",
+            ValueType::Field => "A field is used to represent a path into a datastructure",
+            ValueType::Glob => "A pattern containing wildcards",
+            ValueType::Regex => "An advanced pattern that can be used for matching and replacing",
+            ValueType::Command => "A piece fo code that can be called",
+            ValueType::File => "Any type of file",
+            ValueType::TableStream(_) => "A stream of table rows",
+            ValueType::Table(_) => "A table of rows",
+            ValueType::Struct(_) => "A mapping from name to value",
+            ValueType::List(_) => "A list of items, usually of the same type",
+            ValueType::Dict(_, _) => "A mapping from one set of values to another",
+            ValueType::Scope => "A scope in the Crush namespace",
+            ValueType::Bool => "True or false",
+            ValueType::Float => "A numeric type representing any number with floating point precision",
+            ValueType::Empty => "Nothing",
+            ValueType::Any => "Any type",
+            ValueType::BinaryStream => "A stream of binary data",
+            ValueType::Binary => "Binary data",
+            ValueType::Type => "A type",
+        }.to_string()
+    }
+
+    fn long_help(&self) -> Option<String> {
+        let mut lines = Vec::new();
+
+        for (k, v) in self.fields().iter() {
+            lines.push(format!("    * {} {}", k, v.help().short_help()));
+        }
+        Some(lines.join("\n"))
     }
 }
 

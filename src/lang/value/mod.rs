@@ -27,6 +27,7 @@ pub use value_type::ValueType;
 pub use value_definition::ValueDefinition;
 use crate::lang::command::CrushCommand;
 use std::collections::HashMap;
+use crate::lang::help::Help;
 
 pub enum Value {
     String(Box<str>),
@@ -36,7 +37,7 @@ pub enum Value {
     Field(Vec<Box<str>>),
     Glob(Glob),
     Regex(Box<str>, Regex),
-    Command(Box<dyn CrushCommand + Send + Sync>),
+    Command(Box<dyn CrushCommand +  Send + Sync>),
     TableStream(InputStream),
     File(Box<Path>),
     Table(Table),

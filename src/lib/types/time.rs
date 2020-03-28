@@ -7,10 +7,11 @@ use chrono::{Local, Datelike, Timelike};
 use time::strptime;
 use std::cmp::max;
 use crate::lang::command::CrushCommand;
+use crate::lang::help::Help;
 
 lazy_static! {
-    pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
-        let mut res: HashMap<Box<str>, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
+    pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
+        let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
         res.insert(Box::from("__add__"), CrushCommand::command_undocumented(add, false));
         res.insert(Box::from("__sub__"), CrushCommand::command_undocumented(sub, false));
         res.insert(Box::from("now"), CrushCommand::command_undocumented(now, false));

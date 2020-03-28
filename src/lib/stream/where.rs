@@ -12,8 +12,9 @@ use crate::lang::stream::{Readable, empty_channel, channels};
 use crate::lang::{table::ColumnType, argument::Argument};
 use crate::lang::scope::Scope;
 use crate::lang::command::CrushCommand;
+use crate::lang::help::Help;
 
-fn evaluate(condition: Box<dyn CrushCommand + Send + Sync>, row: &Row, input_type: &Vec<ColumnType>, env: &Scope) -> CrushResult<bool> {
+fn evaluate(condition: Box<dyn CrushCommand +  Send + Sync>, row: &Row, input_type: &Vec<ColumnType>, env: &Scope) -> CrushResult<bool> {
     let arguments = row.clone().into_vec()
         .drain(..)
         .zip(input_type.iter())
@@ -36,7 +37,7 @@ fn evaluate(condition: Box<dyn CrushCommand + Send + Sync>, row: &Row, input_typ
     }
 }
 
-pub fn run(condition: Box<dyn CrushCommand + Send + Sync>, input: &mut dyn Readable, output: OutputStream, env: Scope) -> CrushResult<()> {
+pub fn run(condition: Box<dyn CrushCommand +  Send + Sync>, input: &mut dyn Readable, output: OutputStream, env: Scope) -> CrushResult<()> {
     loop {
         match input.read() {
             Ok(row) => {
@@ -52,7 +53,7 @@ pub fn run(condition: Box<dyn CrushCommand + Send + Sync>, input: &mut dyn Reada
 }
 
 pub fn parse(_input_type: &Vec<ColumnType>,
-             arguments: &mut Vec<Argument>) -> CrushResult<Box<dyn CrushCommand + Send + Sync>> {
+             arguments: &mut Vec<Argument>) -> CrushResult<Box<dyn CrushCommand +  Send + Sync>> {
     match arguments.remove(0).value {
         Value::Command(c) => Ok(c),
         _ => argument_error("Expected a closure"),

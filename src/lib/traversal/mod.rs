@@ -7,6 +7,7 @@ use std::path::Path;
 use crate::lang::printer::printer;
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::execution_context::ArgumentVector;
+use crate::lang::help::Help;
 
 mod find;
 mod stat;
@@ -33,17 +34,22 @@ pub fn pwd(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::File(cwd()?))
 }
 
+fn halp(o: &dyn Help) {
+    printer().line(
+        match o.long_help() {
+            None => format!("{}\n\n    {}", o.signature(), o.short_help()),
+            Some(long_help) => format!("{}\n\n    {}\n\n{}", o.signature(), o.short_help(), long_help),
+        }.as_str());
+}
+
 pub fn help(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     let v = context.arguments.value(0)?;
     match v {
-        Value::Command(cmd) => printer().line(
-            match cmd.long_help() {
-                None => format!("{}\n\n    {}", cmd.signature(), cmd.short_help()),
-                Some(long_help) => format!("{}\n\n    {}\n\n{}", cmd.signature(), cmd.short_help(), long_help),
-            }.as_str()),
-        Value::Type(t) => printer().line(t.help()),
-        v => printer().line(v.value_type().help()),
+        Value::Command(cmd) =>
+            halp(cmd.help()),
+        Value::Type(t) => halp(&t),
+        v => halp(&v.value_type()),
     }
     Ok(())
 }

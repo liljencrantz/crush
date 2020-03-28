@@ -6,6 +6,7 @@ use crate::lang::printer::printer;
 use crate::lang::stream::{ValueReceiver, ValueSender};
 use crate::util::thread::{handle, build};
 use std::path::Path;
+use crate::lang::help::Help;
 
 #[derive(Clone)]
 pub struct CommandInvocation {
@@ -208,7 +209,7 @@ fn invoke_value(
 }
 
 fn invoke_command(
-    action: Box<dyn CrushCommand + Send>,
+    action: Box<dyn CrushCommand + Sync + Send>,
     this: Option<Value>,
     local_arguments: Vec<ArgumentDefinition>,
     local_env: Scope,

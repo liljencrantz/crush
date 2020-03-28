@@ -5,12 +5,13 @@ use crate::lang::execution_context::{This, ArgumentVector};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
 use crate::lang::command::CrushCommand;
+use crate::lang::help::Help;
 
 mod format;
 
 lazy_static! {
-    pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
-        let mut res: HashMap<Box<str>, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
+    pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
+        let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
         res.insert(Box::from("upper"), CrushCommand::command_undocumented(upper, false));
         res.insert(Box::from("lower"), CrushCommand::command_undocumented(lower, false));
         res.insert(Box::from("split"), CrushCommand::command_undocumented(split, false));

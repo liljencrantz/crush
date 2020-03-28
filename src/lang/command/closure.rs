@@ -10,6 +10,7 @@ use crate::lang::job::Job;
 use crate::lang::pretty_printer::spawn_print_thread;
 use crate::lang::stream::empty_channel;
 use crate::lang::execution_context::ExecutionContext;
+use crate::lang::help::Help;
 
 #[derive(Clone)]
 pub struct Closure {
@@ -78,7 +79,7 @@ impl CrushCommand for Closure {
         true
     }
 
-    fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {
+    fn clone(&self) -> Box<dyn CrushCommand +  Send + Sync> {
         Box::from(Closure {
             signature: self.signature.clone(),
             job_definitions: self.job_definitions.clone(),
@@ -86,15 +87,21 @@ impl CrushCommand for Closure {
         })
     }
 
-    fn signature(&self) -> &str {
-        "SIG"
+    fn help(&self) -> &Help {
+        self
+    }
+}
+
+impl Help for Closure {
+    fn signature(&self) -> String {
+        "SIG".to_string()
     }
 
-    fn short_help(&self) -> &str {
-        "SHERT"
+    fn short_help(&self) -> String {
+        "SHERT".to_string()
     }
 
-    fn long_help(&self) -> Option<&str> {
+    fn long_help(&self) -> Option<String> {
         None
     }
 }

@@ -15,4 +15,5 @@ pub mod printer;
 pub mod pretty_printer;
 pub mod errors;
 pub mod ast;
+pub mod help;
 pub mod execution_context;

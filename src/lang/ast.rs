@@ -13,23 +13,24 @@ use crate::lib::var;
 use crate::lib::types;
 use regex::Regex;
 use std::path::Path;
+use crate::lang::help::Help;
 
 lazy_static! {
-    pub static ref LT: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command_undocumented(comp::lt, false)};
-    pub static ref LTE: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command_undocumented(comp::lte, false)};
-    pub static ref GT: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command_undocumented(comp::gt, false)};
-    pub static ref GTE: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command_undocumented(comp::gte, false)};
-    pub static ref EQ: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command_undocumented(comp::eq, false)};
-    pub static ref NEQ: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command_undocumented(comp::neq, false)};
-    pub static ref NOT: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command_undocumented(comp::not, false)};
+    pub static ref LT: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(comp::lt, false)};
+    pub static ref LTE: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(comp::lte, false)};
+    pub static ref GT: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(comp::gt, false)};
+    pub static ref GTE: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(comp::gte, false)};
+    pub static ref EQ: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(comp::eq, false)};
+    pub static ref NEQ: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(comp::neq, false)};
+    pub static ref NOT: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(comp::not, false)};
 
-    pub static ref AND: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command_undocumented(cond::and, false)};
-    pub static ref OR: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command_undocumented(cond::or, false)};
+    pub static ref AND: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(cond::and, false)};
+    pub static ref OR: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(cond::or, false)};
 
-    pub static ref LET: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command_undocumented(var::r#let, false)};
-    pub static ref SET: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command_undocumented(var::set, false)};
+    pub static ref LET: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(var::r#let, false)};
+    pub static ref SET: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(var::set, false)};
 
-    pub static ref AS: Box<dyn CrushCommand + Send + Sync> = {CrushCommand::command_undocumented(types::r#as, false)};
+    pub static ref AS: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(types::r#as, false)};
 }
 
 pub struct JobListNode {
@@ -271,7 +272,7 @@ impl Node {
         }
     }
 
-    fn function_invocation(function: Box<dyn CrushCommand + Send + Sync>, arguments: Vec<ArgumentDefinition>) -> CrushResult<Option<CommandInvocation>> {
+    fn function_invocation(function: Box<dyn CrushCommand +  Send + Sync>, arguments: Vec<ArgumentDefinition>) -> CrushResult<Option<CommandInvocation>> {
         Ok(Some(
             CommandInvocation::new(
                 ValueDefinition::Value(Value::Command(function)),

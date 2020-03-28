@@ -17,15 +17,14 @@ use crate::util::glob::Glob;
 use chrono::{Duration, Local, DateTime};
 use closure::Closure;
 use crate::lang::execution_context::ExecutionContext;
+use crate::lang::help::Help;
 
-pub trait CrushCommand {
+pub trait CrushCommand : Help {
     fn invoke(&self, context: ExecutionContext) -> CrushResult<()>;
     fn can_block(&self, arguments: &Vec<ArgumentDefinition>, env: &Scope) -> bool;
     fn name(&self) -> &str;
-    fn clone(&self) -> Box<dyn CrushCommand + Send + Sync>;
-    fn signature(&self) -> &str;
-    fn short_help(&self) -> &str;
-    fn long_help(&self) -> Option<&str>;
+    fn clone(&self) -> Box<dyn CrushCommand +  Send + Sync>;
+    fn help(&self) -> &Help;
 }
 
 #[derive(Clone)]
@@ -42,7 +41,7 @@ impl dyn CrushCommand {
         signature: Option<Vec<Parameter>>,
         job_definitions: Vec<Job>,
         env: &Scope,
-    ) -> Box<dyn CrushCommand + Send + Sync> {
+    ) -> Box<dyn CrushCommand +  Send + Sync> {
         Box::from(Closure {
             signature,
             job_definitions,
@@ -53,7 +52,7 @@ impl dyn CrushCommand {
     pub fn command_undocumented(
         call: fn(context: ExecutionContext) -> CrushResult<()>,
         can_block: bool,
-    ) -> Box<dyn CrushCommand + Send + Sync> {
+    ) -> Box<dyn CrushCommand +  Send + Sync> {
         Box::from(SimpleCommand { call, can_block, signature: "", short_help: "", long_help: None })
     }
 
@@ -63,7 +62,7 @@ impl dyn CrushCommand {
         signature: &'static str,
         short_help: &'static str,
         long_help: Option<&'static str>,
-    ) -> Box<dyn CrushCommand + Send + Sync> {
+    ) -> Box<dyn CrushCommand +  Send + Sync> {
         Box::from(SimpleCommand { call, can_block, signature, short_help, long_help })
     }
 
@@ -72,7 +71,7 @@ impl dyn CrushCommand {
         signature: &'static str,
         short_help: &'static str,
         long_help: Option<&'static str>,
-    ) -> Box<dyn CrushCommand + Send + Sync> {
+    ) -> Box<dyn CrushCommand +  Send + Sync> {
         Box::from(ConditionCommand { call, signature, short_help, long_help })
     }
 }
@@ -89,7 +88,7 @@ impl CrushCommand for SimpleCommand {
         self.can_block
     }
 
-    fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {
+    fn clone(&self) -> Box<dyn CrushCommand +  Send + Sync> {
         Box::from(SimpleCommand {
             call: self.call,
             can_block: self.can_block,
@@ -99,16 +98,22 @@ impl CrushCommand for SimpleCommand {
         })
     }
 
-    fn signature(&self) -> &str {
-        self.signature
+    fn help(&self) -> &Help {
+        self
+    }
+}
+
+impl Help for SimpleCommand {
+    fn signature(&self) -> String {
+        self.signature.to_string()
     }
 
-    fn short_help(&self) -> &str {
-        self.short_help
+    fn short_help(&self) -> String {
+        self.short_help.to_string()
     }
 
-    fn long_help(&self) -> Option<&str> {
-        self.long_help
+    fn long_help(&self) -> Option<String> {
+        self.long_help.map(|s| s.to_string())
     }
 }
 
@@ -151,7 +156,7 @@ impl CrushCommand for ConditionCommand {
         false
     }
 
-    fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {
+    fn clone(&self) -> Box<dyn CrushCommand +  Send + Sync> {
         Box::from(ConditionCommand {
             call: self.call,
             signature: self.signature,
@@ -160,16 +165,22 @@ impl CrushCommand for ConditionCommand {
         })
     }
 
-    fn signature(&self) -> &str {
-        self.signature
+    fn help(&self) -> &Help {
+        self
+    }
+}
+
+impl Help for ConditionCommand {
+    fn signature(&self) -> String {
+        self.signature.to_string()
     }
 
-    fn short_help(&self) -> &str {
-        self.short_help
+    fn short_help(&self) -> String {
+        self.short_help.to_string()
     }
 
-    fn long_help(&self) -> Option<&str> {
-        self.long_help
+    fn long_help(&self) -> Option<String> {
+        self.long_help.map(|s| s.to_string())
     }
 }
 

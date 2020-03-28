@@ -12,13 +12,14 @@ use crate::lang::dict::Dict;
 use crate::lang::r#struct::Struct;
 use regex::Regex;
 use chrono::{DateTime, Local, Duration};
+use crate::lang::help::Help;
 
 pub trait ArgumentVector {
     fn check_len(&self, len: usize) -> CrushResult<()>;
     fn string(&mut self, idx: usize) -> CrushResult<Box<str>>;
     fn integer(&mut self, idx: usize) -> CrushResult<i128>;
     fn field(&mut self, idx: usize) -> CrushResult<Vec<Box<str>>>;
-    fn command(&mut self, idx: usize) -> CrushResult<Box<dyn CrushCommand + Send + Sync>>;
+    fn command(&mut self, idx: usize) -> CrushResult<Box<dyn CrushCommand +  Send + Sync>>;
     fn r#type(&mut self, idx: usize) -> CrushResult<ValueType>;
     fn value(&mut self, idx: usize) -> CrushResult<Value>;
     fn glob(&mut self, idx: usize) -> CrushResult<Glob>;
@@ -68,7 +69,7 @@ impl ArgumentVector for Vec<Argument> {
         }
     }
 
-    fn command(&mut self, idx: usize) -> CrushResult<Box<dyn CrushCommand + Send + Sync>> {
+    fn command(&mut self, idx: usize) -> CrushResult<Box<dyn CrushCommand +  Send + Sync>> {
         if idx < self.len() {
             match self.replace(idx, Argument::unnamed(Value::Bool(false))).value {
                 Value::Command(s) => Ok(s),

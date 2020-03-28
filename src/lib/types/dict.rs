@@ -5,10 +5,11 @@ use crate::lang::{value::ValueType, dict::Dict};
 use crate::lang::value::Value;
 use std::collections::HashMap;
 use lazy_static::lazy_static;
+use crate::lang::help::Help;
 
 lazy_static! {
-    pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> = {
-        let mut res: HashMap<Box<str>, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
+    pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
+        let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
         res.insert(Box::from("new"), CrushCommand::command_undocumented(new, false));
         res.insert(Box::from("len"), CrushCommand::command_undocumented(len, false));
         res.insert(Box::from("empty"), CrushCommand::command_undocumented(empty, false));
