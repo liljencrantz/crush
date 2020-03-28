@@ -1,20 +1,11 @@
 mod closure;
 
-use crate::lang::errors::{CrushResult, error, argument_error};
+use crate::lang::errors::{CrushResult};
 use std::fmt::Formatter;
-use crate::lang::stream::{ValueReceiver, ValueSender};
-use crate::lang::{argument::Argument, argument::ArgumentDefinition};
+use crate::lang::{argument::ArgumentDefinition};
 use crate::lang::scope::Scope;
 use crate::lang::job::Job;
-use crate::lang::value::{Value, ValueType, ValueDefinition};
-use crate::lang::list::List;
-use crate::lang::dict::Dict;
-use crate::lang::r#struct::Struct;
-use std::path::Path;
-use crate::util::replace::Replace;
-use regex::Regex;
-use crate::util::glob::Glob;
-use chrono::{Duration, Local, DateTime};
+use crate::lang::value::{ValueDefinition};
 use closure::Closure;
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::help::Help;
@@ -24,7 +15,7 @@ pub trait CrushCommand : Help {
     fn can_block(&self, arguments: &Vec<ArgumentDefinition>, env: &Scope) -> bool;
     fn name(&self) -> &str;
     fn clone(&self) -> Box<dyn CrushCommand +  Send + Sync>;
-    fn help(&self) -> &Help;
+    fn help(&self) -> &dyn Help;
 }
 
 #[derive(Clone)]
@@ -98,7 +89,7 @@ impl CrushCommand for SimpleCommand {
         })
     }
 
-    fn help(&self) -> &Help {
+    fn help(&self) -> &dyn Help {
         self
     }
 }
@@ -165,7 +156,7 @@ impl CrushCommand for ConditionCommand {
         })
     }
 
-    fn help(&self) -> &Help {
+    fn help(&self) -> &dyn Help {
         self
     }
 }

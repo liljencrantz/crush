@@ -4,7 +4,6 @@ use crate::lang::execution_context::{ArgumentVector, This};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
 use crate::lang::command::CrushCommand;
-use crate::lang::help::Help;
 
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {

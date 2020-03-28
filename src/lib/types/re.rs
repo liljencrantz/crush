@@ -6,16 +6,23 @@ use crate::lang::command::CrushCommand;
 use crate::lang::execution_context::{ArgumentVector, This};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
-use crate::lang::help::Help;
 
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
-        res.insert(Box::from("match"), CrushCommand::command_undocumented(r#match, false));
-        res.insert(Box::from("not_match"), CrushCommand::command_undocumented(not_match, false));
-        res.insert(Box::from("replace"), CrushCommand::command_undocumented(replace, false));
-        res.insert(Box::from("replace_all"), CrushCommand::command_undocumented(replace_all, false));
-        res.insert(Box::from("new"), CrushCommand::command_undocumented(new, false));
+        res.insert(Box::from("match"), CrushCommand::command(r#match, false,
+            "re:match input:string", "True if the input matches the pattern", None));
+        res.insert(Box::from("not_match"), CrushCommand::command(not_match, false,
+            "re:not_match input:string", "True if the input does not match the pattern", None));
+        res.insert(Box::from("replace"), CrushCommand::command(
+            replace, false,
+            "re ~ input replacement", "Replace the first match of the regex in the input with the replacement", None));
+        res.insert(Box::from("replace_all"), CrushCommand::command(
+            replace_all, false,
+            "re ~ input replacement", "Replace all matches of the regex in the input with the replacement", None));
+        res.insert(Box::from("new"), CrushCommand::command(
+            new, false,
+            "re:new pattern:string", "Create a new regular expression instance", None));
         res
     };
 }

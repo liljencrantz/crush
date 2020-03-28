@@ -13,7 +13,6 @@ use crate::lib::var;
 use crate::lib::types;
 use regex::Regex;
 use std::path::Path;
-use crate::lang::help::Help;
 
 lazy_static! {
     pub static ref LT: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(comp::lt, false)};

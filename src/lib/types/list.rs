@@ -5,24 +5,62 @@ use crate::lang::value::Value;
 use std::collections::HashSet;
 use std::collections::HashMap;
 use lazy_static::lazy_static;
-use crate::lang::help::Help;
 
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
-        res.insert(Box::from("len"), CrushCommand::command_undocumented(len, false));
-        res.insert(Box::from("empty"), CrushCommand::command_undocumented(empty, false));
-        res.insert(Box::from("push"), CrushCommand::command_undocumented(push, false));
-        res.insert(Box::from("pop"), CrushCommand::command_undocumented(pop, false));
-        res.insert(Box::from("peek"), CrushCommand::command_undocumented(peek, false));
-        res.insert(Box::from("clear"), CrushCommand::command_undocumented(clear, false));
-        res.insert(Box::from("__setitem__"), CrushCommand::command_undocumented(setitem, false));
-        res.insert(Box::from("remove"), CrushCommand::command_undocumented(remove, false));
-        res.insert(Box::from("truncate"), CrushCommand::command_undocumented(truncate, false));
-        res.insert(Box::from("clone"), CrushCommand::command_undocumented(clone, false));
-        res.insert(Box::from("of"), CrushCommand::command_undocumented(of, false));
-        res.insert(Box::from("new"), CrushCommand::command_undocumented(new, false));
-        res.insert(Box::from("__call_type__"), CrushCommand::command_undocumented(call_type, false));
+        res.insert(Box::from("len"), CrushCommand::command(
+            len, false,
+            "list:len",
+            "The number of elements in the list",
+            None));
+        res.insert(Box::from("empty"), CrushCommand::command(
+            empty, false,
+            "list:empty",
+            "True if there are no elements in the list",
+            None));
+        res.insert(Box::from("push"), CrushCommand::command(
+            push, false,
+            "list:push", "Push an element to the end of the list", None));
+        res.insert(Box::from("pop"), CrushCommand::command(
+            pop, false,
+            "list:pop", "Remove the last element from the list", None));
+        res.insert(Box::from("peek"), CrushCommand::command(
+            peek, false,
+            "list:peek", "Return the last element from the list", None));
+        res.insert(Box::from("clear"), CrushCommand::command(
+            clear, false,
+            "list:clear", "Remove all elments from the list", None));
+        res.insert(Box::from("__setitem__"), CrushCommand::command(
+            setitem, false,
+            "list[idx:integer] = value:any", "Assign a new value to the element at the specified index", None));
+        res.insert(Box::from("remove"), CrushCommand::command(
+            remove, false,
+            "list:remove idx:integer", "Remove the element at the specified index", None));
+        res.insert(Box::from("truncate"), CrushCommand::command(
+            truncate, false,
+            "list:truncate idx:integer", "Remove all elements past the specified index", None));
+        res.insert(Box::from("clone"), CrushCommand::command(
+            clone, false,
+            "list:clone", "Create a duplicate of the list", None));
+        res.insert(Box::from("of"), CrushCommand::command(
+            of, false,
+            "list:of element:any...",
+            "Create a new list containing the supplied elements",
+            None));
+        res.insert(Box::from("new"), CrushCommand::command(
+        new, false,
+        "list:new", "Create a new list with the specified element type",
+        Some(r#"    Example:
+
+    l := ((list string):new)"#)));
+        res.insert(Box::from("__call_type__"), CrushCommand::command(
+            call_type, false,
+            "list element_type:type", "Return a list type for the specified element type",
+            Some(r#"    Example:
+
+    # This command returns the type 'list of integers':
+    list integer"#)));
         res
     };
 }

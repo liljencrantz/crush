@@ -12,7 +12,6 @@ use crate::lang::stream::{Readable, empty_channel, channels};
 use crate::lang::{table::ColumnType, argument::Argument};
 use crate::lang::scope::Scope;
 use crate::lang::command::CrushCommand;
-use crate::lang::help::Help;
 
 fn evaluate(condition: Box<dyn CrushCommand +  Send + Sync>, row: &Row, input_type: &Vec<ColumnType>, env: &Scope) -> CrushResult<bool> {
     let arguments = row.clone().into_vec()

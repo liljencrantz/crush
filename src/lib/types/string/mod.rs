@@ -5,7 +5,6 @@ use crate::lang::execution_context::{This, ArgumentVector};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
 use crate::lang::command::CrushCommand;
-use crate::lang::help::Help;
 
 mod format;
 

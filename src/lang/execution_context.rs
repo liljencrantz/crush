@@ -12,7 +12,6 @@ use crate::lang::dict::Dict;
 use crate::lang::r#struct::Struct;
 use regex::Regex;
 use chrono::{DateTime, Local, Duration};
-use crate::lang::help::Help;
 
 pub trait ArgumentVector {
     fn check_len(&self, len: usize) -> CrushResult<()>;

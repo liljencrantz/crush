@@ -63,14 +63,6 @@ pub fn struct_call_type(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Type(ValueType::Struct(parse_column_types(context.arguments)?)))
 }
 
-fn r#table(context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::Type(ValueType::Table(parse_column_types(context.arguments)?)))
-}
-
-fn r#table_stream(context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::Type(ValueType::TableStream(parse_column_types(context.arguments)?)))
-}
-
 pub fn r#as(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(context.arguments.value(0)?.cast(context.arguments.r#type(1)?)?)
 }

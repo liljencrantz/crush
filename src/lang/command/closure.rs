@@ -87,7 +87,7 @@ impl CrushCommand for Closure {
         })
     }
 
-    fn help(&self) -> &Help {
+    fn help(&self) -> &dyn Help {
         self
     }
 }

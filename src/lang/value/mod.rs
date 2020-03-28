@@ -27,7 +27,6 @@ pub use value_type::ValueType;
 pub use value_definition::ValueDefinition;
 use crate::lang::command::CrushCommand;
 use std::collections::HashMap;
-use crate::lang::help::Help;
 
 pub enum Value {
     String(Box<str>),

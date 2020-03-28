@@ -6,7 +6,6 @@ use crate::lang::printer::printer;
 use crate::lang::stream::{ValueReceiver, ValueSender};
 use crate::util::thread::{handle, build};
 use std::path::Path;
-use crate::lang::help::Help;
 
 #[derive(Clone)]
 pub struct CommandInvocation {
