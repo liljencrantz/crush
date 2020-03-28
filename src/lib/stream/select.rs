@@ -156,7 +156,7 @@ fn perform_for(
     }
 
     if let Value::Glob(g) = &arguments[0].value {
-        if arguments[0].argument_type.is_none() && g.to_string() == "*" {
+        if arguments[0].argument_type.is_none() && g.to_string() == "%" {
             copy = true;
             arguments.remove(0);
         } else {
@@ -173,10 +173,13 @@ fn perform_for(
                     _ => columns.push((Location::Append(Box::from(name)), Source::Closure(closure))),
                 }
             }
-            (None, Value::String(name)) => {
-                match (copy, input_type.find_str(name.as_ref())) {
-                    (false, Ok(idx)) => columns.push((Location::Append(name), Source::Argument(idx))),
-                    _ => return argument_error(format!("Unknown field {}", name.as_ref()).as_str()),
+            (None, Value::Field(name)) => {
+                if name.len() != 1 {
+                    return argument_error("Invalid field");
+                }
+                match (copy, input_type.find_str(name[0].as_ref())) {
+                    (false, Ok(idx)) => columns.push((Location::Append(name[0].clone()), Source::Argument(idx))),
+                    _ => return argument_error(format!("Unknown field {}", name[0].as_ref()).as_str()),
                 }
             }
             _ => return argument_error("Invalid argument"),

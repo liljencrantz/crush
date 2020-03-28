@@ -5,3 +5,4 @@ pub trait Help {
     fn short_help(&self) -> String;
     fn long_help(&self) -> Option<String>;
 }
+
