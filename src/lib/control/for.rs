@@ -5,9 +5,10 @@ use crate::{
 use crate::lang::scope::Scope;
 use crate::lang::{table::TableReader, list::ListReader, r#struct::Struct, dict::DictReader, command::CrushCommand};
 use crate::lang::errors::{argument_error, CrushResult};
-use crate::lang::command::ExecutionContext;
+use crate::lang::command::{ExecutionContext, ArgumentVector};
 use crate::lang::stream::{empty_channel, Readable};
 use crate::lang::pretty_printer::spawn_print_thread;
+use crate::util::replace::Replace;
 
 pub struct Config {
     body: Box<dyn CrushCommand>,
@@ -59,47 +60,23 @@ pub fn run(config: Config, mut input: impl Readable) -> CrushResult<()> {
 
 pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.initialize(vec![])?;
+    context.arguments.check_len(2)?;
 
-    if context.arguments.len() != 2 {
-        return argument_error("Expected exactly two arguments");
-    }
+    let body = context.arguments.command(1)?;
+    let iter = context.arguments.remove(0);
+    let env = context.env;
+    let t = iter.value.value_type();
+    let name = iter.argument_type.clone();
 
-    if let Value::Command(body) = context.arguments.remove(1).value {
-        let iter = context.arguments.remove(0);
-        let t = iter.value.value_type();
-        let name = iter.argument_type.clone();
-        match (iter.argument_type.as_deref(), iter.value) {
-            (_, Value::TableStream(o)) => {
-                run(Config {
-                    body,
-                    env: context.env,
-                    name: name,
-                }, o)
-            }
-            (_, Value::Table(r)) => {
-                run(Config {
-                    body,
-                    env: context.env,
-                    name: name,
-                }, TableReader::new(r))
-            }
-            (Some(name), Value::List(l)) => {
-                run(Config {
-                    body,
-                    env: context.env,
-                    name: None,
-                }, ListReader::new(l, name))
-            }
-            (_, Value::Dict(l)) => {
-                run(Config {
-                    body,
-                    env: context.env,
-                    name: name,
-                }, DictReader::new(l))
-            }
-            _ => argument_error(format!("Can not iterate over value of type {}", t.to_string()).as_str()),
-        }
-    } else {
-        argument_error("Body must be a closure")
+    match (iter.argument_type.as_deref(), iter.value) {
+        (_, Value::TableStream(o)) =>
+            run(Config { body, env, name, }, o),
+        (_, Value::Table(r)) =>
+            run(Config { body, env, name, }, TableReader::new(r)),
+        (Some(name), Value::List(l)) =>
+            run(Config { body, env, name: None, }, ListReader::new(l, name)),
+        (_, Value::Dict(l)) =>
+            run(Config { body, env, name }, DictReader::new(l)),
+        _ => argument_error(format!("Can not iterate over value of type {}", t.to_string()).as_str()),
     }
 }

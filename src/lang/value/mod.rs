@@ -91,7 +91,7 @@ impl Value {
             Some(Value::Command(CrushCommand::command(crate::lib::types::r#type, false)))
         } else {
             match self {
-                Value::Struct(s) => s.clone().get(name),
+                Value::Struct(s) => s.get(name),
                 Value::Scope(subenv) => subenv.get(name),
                 Value::Type(t) =>
                     t.fields()

@@ -257,6 +257,7 @@ pub trait CrushCommand {
     fn can_block(&self, arguments: &Vec<ArgumentDefinition>, env: &Scope) -> bool;
     fn name(&self) -> &str;
     fn clone(&self) -> Box<dyn CrushCommand + Send + Sync>;
+    fn help(&self) -> &str;
 }
 
 
@@ -270,18 +271,23 @@ impl dyn CrushCommand {
     }
 
     pub fn command(call: fn(context: ExecutionContext) -> CrushResult<()>, can_block: bool) -> Box<dyn CrushCommand + Send + Sync> {
-        Box::from(SimpleCommand { call, can_block })
+        Box::from(SimpleCommand {
+            call,
+            can_block,
+            help: "FDSAFASD",
+        })
     }
 
-    pub fn condition(call: fn(context: ExecutionContext) -> CrushResult<()>) -> Box<dyn CrushCommand + Send + Sync> {
-        Box::from(ConditionCommand { call })
+    pub fn condition(call: fn(context: ExecutionContext) -> CrushResult<()>, help: &'static str) -> Box<dyn CrushCommand + Send + Sync> {
+        Box::from(ConditionCommand { call, help })
     }
 }
 
 #[derive(Clone)]
 struct SimpleCommand {
-    pub call: fn(context: ExecutionContext) -> CrushResult<()>,
-    pub can_block: bool,
+    call: fn(context: ExecutionContext) -> CrushResult<()>,
+    can_block: bool,
+    help: &'static str,
 }
 
 
@@ -298,7 +304,11 @@ impl CrushCommand for SimpleCommand {
     }
 
     fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {
-        Box::from(SimpleCommand { call: self.call, can_block: self.can_block })
+        Box::from(SimpleCommand { call: self.call, can_block: self.can_block, help: self.help })
+    }
+
+    fn help(&self) -> &str {
+        self.help
     }
 }
 
@@ -319,6 +329,7 @@ impl std::fmt::Debug for SimpleCommand {
 #[derive(Clone)]
 struct ConditionCommand {
     call: fn(context: ExecutionContext) -> CrushResult<()>,
+    help: &'static str,
 }
 
 impl CrushCommand for ConditionCommand {
@@ -339,7 +350,11 @@ impl CrushCommand for ConditionCommand {
     }
 
     fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {
-        Box::from(ConditionCommand { call: self.call })
+        Box::from(ConditionCommand { call: self.call, help: self.help })
+    }
+
+    fn help(&self) -> &str {
+        self.help
     }
 }
 

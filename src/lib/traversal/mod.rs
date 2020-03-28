@@ -1,9 +1,10 @@
 use crate::lang::scope::Scope;
 use crate::lang::errors::{CrushResult, error, to_crush_error};
 use crate::lang::{value::Value};
-use crate::lang::command::{ExecutionContext, CrushCommand};
+use crate::lang::command::{ExecutionContext, CrushCommand, ArgumentVector};
 use crate::util::file::{home, cwd};
 use std::path::Path;
+use crate::lang::printer::printer;
 
 mod find;
 mod stat;
@@ -30,6 +31,17 @@ pub fn pwd(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::File(cwd()?))
 }
 
+pub fn help(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(1)?;
+    let v = context.arguments.value(0)?;
+    match v {
+        Value::Command(cmd) => printer().line(cmd.help()),
+        Value::Type(t) => printer().line(t.help()),
+        v => printer().line(v.value_type().help()),
+    }
+    Ok(())
+}
+
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("traversal")?;
     root.r#use(&env);
@@ -37,6 +49,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     env.declare("find", Value::Command(CrushCommand::command(find::perform_find, true)))?;
     env.declare("cd", Value::Command(CrushCommand::command(cd, true)))?;
     env.declare("pwd", Value::Command(CrushCommand::command(pwd, false)))?;
+    env.declare("help", Value::Command(CrushCommand::command(help, false)))?;
     env.readonly();
     Ok(())
 }

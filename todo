@@ -1,5 +1,8 @@
 Todo for MVP 1:
 fix struct type
+Add exists-method on file
+Allow empty closures
+Either implement call_type for all types or check for its existence and don't execute types unless it exists
 Comparison, hashing unimplemented for dict
 Comparison, hashing unimplemented for struct
 Comparison, hashing unimplemented for list
@@ -21,6 +24,7 @@ Make error printing display source of error
 Flesh out readme file
 
 Future features:
+Allow while-loop without body
 spawn_print_thread should not spawn new threads
 empty_channel should not create new empty channels
 Make integers overflow to arbitrary precision math

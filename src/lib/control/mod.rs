@@ -54,10 +54,42 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     }))?;
     env.declare("cmd_path", Value::List(path))?;
 
-    env.declare("if", Value::Command(CrushCommand::condition(r#if::perform)))?;
-    env.declare("while", Value::Command(CrushCommand::condition(r#while::perform)))?;
-    env.declare("loop", Value::Command(CrushCommand::condition(r#loop::perform)))?;
-    env.declare("for", Value::Command(CrushCommand::condition(r#for::perform)))?;
+    let if_help = r#"if condition:bool if-clause:command [else-clause:command]
+
+    Conditionally execute a command once.
+
+    If the condition is true, the if-clause is executed. Otherwise, the else-clause
+    (if specified) is executed.
+
+    Example:
+
+    if (./some_file:stat):is_file {echo "It's a file!"} {echo "It's not a file!"}"#;
+
+    let while_help = r#"while condition:command body:command
+
+    Repeatedly execute the body for as long the condition is met, or until the
+    break command is called.
+
+    In every pass of the loop, the condition is executed. If it returns false,
+    the loop terminates. If it returns true, the body is executed and the loop
+    continues.
+
+    Example:
+
+    while {not (./some_file:stat):is_file} {echo "hello"}"#;
+
+    let LOOP_HELP = r#"loop body:command
+
+    Repeatedly execute the body until the break command is called.
+    "#;
+    let FOR_HELP = r#"for [name=]iterable:(table_stream|table|dict|list) body:command
+
+    "#;
+
+    env.declare("if", Value::Command(CrushCommand::condition(r#if::perform, if_help)))?;
+    env.declare("while", Value::Command(CrushCommand::condition(r#while::perform, while_help)))?;
+    env.declare("loop", Value::Command(CrushCommand::condition(r#loop::perform, LOOP_HELP)))?;
+    env.declare("for", Value::Command(CrushCommand::condition(r#for::perform, FOR_HELP)))?;
     env.declare("break", Value::Command(CrushCommand::command(r#break, false)))?;
     env.declare("continue", Value::Command(CrushCommand::command(r#continue, false)))?;
     env.declare("cmd", Value::Command(CrushCommand::command(cmd, true)))?;

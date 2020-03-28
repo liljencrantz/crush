@@ -76,7 +76,7 @@ ParameterList: Vec<ParameterNode> = {
 
 Parameter: ParameterNode = {
     <l: Label> <d: Default> => ParameterNode::Parameter(Box::from(l), None, d),
-    <n: Label> ":" <t: Item> <d: Default> => ParameterNode::Parameter(Box::from(n), Some(t), d),
+    <n: Label> Colon <t: Item> <d: Default> => ParameterNode::Parameter(Box::from(n), Some(t), d),
     "@" <l: Label> => ParameterNode::Unnamed(Box::from(l)),
     "@@" <l: Label> => ParameterNode::Named(Box::from(l)),
 }
@@ -90,14 +90,19 @@ Item: Box<Node> = {
     Label => Node::parse_label(<>),
     <l: Regex> => Box::from(Node::Regex(Box::from(&l[3..l.len()-1]))),
     Field => Box::from(Node::Field(Box::from(<>))),
-    QuotedLabel => Box::from(Node::Label(Box::from(<>))),
+    <l:QuotedLabel> => Box::from(Node::Label(Box::from(&l[1..l.len()-1]))),
     QuotedString => Box::from(Node::String(Box::from(<>))),
     Integer => Box::from(Node::Integer(i128::from_str(<>.replace("_", "").as_str()).unwrap())),
     Float => Box::from(Node::Float(f64::from_str(<>.replace("_", "").as_str()).unwrap())),
     <i: Item> "[" <e: Assignment> "]" => Box::from(Node::GetItem(i, e)),
-    <i: Item> ":" <l: Label> => Box::from(Node::GetAttr(i, Box::from(l))),
+    <i: Item> Colon <l: AnyLabel> => Box::from(Node::GetAttr(i, l)),
     "{" <s: Signature> <l: NonEmptyJobList> "}" => Box::from(Node::Closure(s, l)),
     "(" <j:Job> ")" => Box::from(Node::Substitution(j)),
+}
+
+AnyLabel: Box<str> = {
+    Label => Box::from(<>),
+    <l: QuotedLabel> => Box::from(&l[1..l.len()-1]),
 }
 
 match {
@@ -106,6 +111,7 @@ match {
     "neg" => NegationOperator,
     "not" => NotOperator,
 } else {
+    ":" => Colon,
     r"( |\t)+" => {},
     r"#[^\n]*" => {},
     r"(>|<|>=|<=|==|!=|=~|!~)" => ComparisonOperator,

@@ -17,7 +17,6 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
                 if b {
                     c.invoke(cc)
                 } else {
-                    cc.output.initialize(vec![])?;
                     Ok(())
                 }
             }

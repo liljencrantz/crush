@@ -1,6 +1,6 @@
 use crate::lang::value::Value;
 use crate::lang::scope::Scope;
-use crate::lang::command::CrushCommand;
+use crate::lang::command::{CrushCommand, ArgumentVector};
 use crate::lang::errors::{argument_error, CrushResult, data_error};
 use crate::lang::command::ExecutionContext;
 use crate::lang::stream::{empty_channel, channels};
@@ -39,7 +39,7 @@ pub fn run(config: Config) -> CrushResult<()> {
                 }
             }
             Value::Bool(false) => break,
-            _ => return data_error("While loop condition must be of boolean type"),
+            _ => return data_error("While loop condition must output value of boolean type"),
         }
     }
     Ok(())
@@ -47,18 +47,9 @@ pub fn run(config: Config) -> CrushResult<()> {
 
 pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.initialize(vec![])?;
+    context.arguments.check_len(2)?;
 
-    if context.arguments.len() != 2 {
-        return argument_error("Expected exactly two arguments");
-    }
-
-    match (context.arguments.remove(0).value, context.arguments.remove(0).value) {
-        (Value::Command(condition), Value::Command(body)) =>
-            run(Config {
-                body,
-                condition,
-                env: context.env,
-            }),
-        _ => argument_error("While command expects two closures as arguments"),
-    }
+    let condition = context.arguments.command(0)?;
+    let body = context.arguments.command(1)?;
+    run(Config { body, condition, env: context.env, })
 }

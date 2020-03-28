@@ -25,6 +25,7 @@ pub fn run(body: Box<dyn CrushCommand>, parent: Scope) -> CrushResult<()> {
 
 pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.initialize(vec![])?;
+    context.arguments.check_len(1)?;
     let body = context.arguments.command(0)?;
     run(body, context.env)
 }

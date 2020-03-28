@@ -84,6 +84,10 @@ impl CrushCommand for Closure {
             env: self.env.clone(),
         })
     }
+
+    fn help(&self) -> &str {
+        "weee"
+    }
 }
 
 impl Closure {

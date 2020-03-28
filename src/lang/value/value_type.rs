@@ -138,6 +138,10 @@ impl ValueType {
             _ => error("Failed to parse cell"),
         }
     }
+
+    pub fn help(&self) -> &str {
+        "ok..."
+    }
 }
 
 impl ToString for ValueType {
