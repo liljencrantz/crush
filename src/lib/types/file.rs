@@ -3,8 +3,6 @@ use crate::lang::errors::{CrushResult, to_crush_error};
 use crate::lang::r#struct::Struct;
 use crate::lang::value::Value;
 use std::fs::metadata;
-use std::path::Path;
-use crate::lang::stream::ValueSender;
 use std::os::unix::fs::MetadataExt;
 use lazy_static::lazy_static;
 use std::collections::HashMap;

@@ -10,7 +10,6 @@ use crate::lang::execution_context::ArgumentVector;
 use crate::lang::help::Help;
 
 mod find;
-mod stat;
 
 pub fn cd(context: ExecutionContext) -> CrushResult<()> {
     let dir = match context.arguments.len() {

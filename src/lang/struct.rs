@@ -66,7 +66,7 @@ impl PartialEq for Struct {
 
 impl PartialOrd for Struct {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        unimplemented!()
+        None
     }
 }
 

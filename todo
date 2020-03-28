@@ -1,18 +1,16 @@
 Todo for MVP 1:
-kwargs should not be a dict, because arguments can be repeated and order matters!
-fix struct type
+Kwargs should not be a dict, because arguments can be repeated and order matters!
+Fix struct type
 Allow empty closures
 Either implement call_type for all types or check for its existence and don't execute types unless it exists
 Comparison, hashing unimplemented for dict
 Comparison, hashing unimplemented for struct
 Figure out how to make external commands with subcommands convenient again
-Add avg command
 Add system tests for type casting
 Add system tests for for loop
 Add system tests for binary stream handling
 Add system tests for structs
 Add system tests for dealing with tables as streams
-Add missing comparisons on Value
 Missing some value serialisations and deserialisations
 Error source propagation
 Deal with different error kinds differently
@@ -221,3 +219,5 @@ Remove 'root' constant
 Add exists-method on file
 Comparison, hashing unimplemented for list
 help command
+Add avg command
+Add missing comparisons on Value
