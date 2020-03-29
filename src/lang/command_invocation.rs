@@ -6,6 +6,7 @@ use crate::lang::printer::printer;
 use crate::lang::stream::{ValueReceiver, ValueSender};
 use crate::util::thread::{handle, build};
 use std::path::Path;
+use crate::lang::value::ValueType;
 
 #[derive(Clone)]
 pub struct CommandInvocation {
@@ -185,14 +186,20 @@ fn invoke_value(
                 error(format!("Not a command {}", f.to_str().unwrap_or("<invalid filename>")).as_str())
             }
         Value::Type(t) => {
-            let call = mandate(
-                t.fields().get(&Box::from("__call_type__")),
-                format!("Type {} does not have a member __call_type__", t.to_string()).as_str())?;
-            invoke_command(
-                call.as_ref().clone(),
-                this,
-                local_arguments,
-                local_env, input, output)
+            match t.fields().get(&Box::from("__call_type__")) {
+                None =>
+                    invoke_command(
+                        CrushCommand::command_undocumented(crate::lib::input::val, false),
+                        None,
+                        vec![ArgumentDefinition::unnamed(ValueDefinition::Value(Value::Type(t)))],
+                        local_env, input, output),
+                Some(call) =>
+                    invoke_command(
+                        call.as_ref().clone(),
+                        this,
+                        local_arguments,
+                        local_env, input, output),
+            }
         }
         _ =>
             if local_arguments.len() == 0 {

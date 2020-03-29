@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, argument_error, error};
+use crate::lang::errors::{CrushResult, argument_error, error, CrushError};
 use crate::lang::argument::Argument;
 use crate::lang::value::{Value, ValueType};
 use crate::util::replace::Replace;
@@ -12,18 +12,40 @@ use crate::lang::dict::Dict;
 use crate::lang::r#struct::Struct;
 use regex::Regex;
 use chrono::{DateTime, Local, Duration};
+use crate::lang::table::Table;
 
 pub trait ArgumentVector {
     fn check_len(&self, len: usize) -> CrushResult<()>;
     fn string(&mut self, idx: usize) -> CrushResult<Box<str>>;
     fn integer(&mut self, idx: usize) -> CrushResult<i128>;
     fn field(&mut self, idx: usize) -> CrushResult<Vec<Box<str>>>;
-    fn command(&mut self, idx: usize) -> CrushResult<Box<dyn CrushCommand +  Send + Sync>>;
+    fn command(&mut self, idx: usize) -> CrushResult<Box<dyn CrushCommand + Send + Sync>>;
     fn r#type(&mut self, idx: usize) -> CrushResult<ValueType>;
     fn value(&mut self, idx: usize) -> CrushResult<Value>;
     fn glob(&mut self, idx: usize) -> CrushResult<Glob>;
     fn files(&mut self) -> CrushResult<Vec<Box<Path>>>;
     fn optional_integer(&mut self) -> CrushResult<Option<i128>>;
+}
+
+
+macro_rules! argument_getter {
+    ($name:ident, $return_type:ty, $value_type:ident, $description:literal) => {
+
+    fn $name(&mut self, idx: usize) -> CrushResult<$return_type> {
+        if idx < self.len() {
+            match self.replace(idx, Argument::unnamed(Value::Bool(false))).value {
+                Value::$value_type(s) => Ok(s),
+                v => argument_error(
+                    format!(
+                        concat!("Invalid value, expected a ", $description, ", found a {}"),
+                        v.value_type().to_string()).as_str()),
+            }
+        } else {
+            error("Index out of bounds")
+        }
+    }
+
+    }
 }
 
 impl ArgumentVector for Vec<Argument> {
@@ -35,79 +57,12 @@ impl ArgumentVector for Vec<Argument> {
         }
     }
 
-    fn string(&mut self, idx: usize) -> CrushResult<Box<str>> {
-        if idx < self.len() {
-            match self.replace(idx, Argument::unnamed(Value::Bool(false))).value {
-                Value::String(s) => Ok(s),
-                _ => error("Invalid value"),
-            }
-        } else {
-            error("Index out of bounds")
-        }
-    }
-
-    fn integer(&mut self, idx: usize) -> CrushResult<i128> {
-        if idx < self.len() {
-            match self.replace(idx, Argument::unnamed(Value::Bool(false))).value {
-                Value::Integer(s) => Ok(s),
-                _ => error("Invalid value"),
-            }
-        } else {
-            error("Index out of bounds")
-        }
-    }
-
-    fn field(&mut self, idx: usize) -> CrushResult<Vec<Box<str>>> {
-        if idx < self.len() {
-            match self.replace(idx, Argument::unnamed(Value::Bool(false))).value {
-                Value::Field(s) => Ok(s),
-                _ => error("Invalid value"),
-            }
-        } else {
-            error("Index out of bounds")
-        }
-    }
-
-    fn command(&mut self, idx: usize) -> CrushResult<Box<dyn CrushCommand +  Send + Sync>> {
-        if idx < self.len() {
-            match self.replace(idx, Argument::unnamed(Value::Bool(false))).value {
-                Value::Command(s) => Ok(s),
-                _ => error("Invalid value"),
-            }
-        } else {
-            error("Index out of bounds")
-        }
-    }
-
-    fn r#type(&mut self, idx: usize) -> CrushResult<ValueType> {
-        if idx < self.len() {
-            match self.replace(idx, Argument::unnamed(Value::Bool(false))).value {
-                Value::Type(s) => Ok(s),
-                _ => error("Invalid value"),
-            }
-        } else {
-            error("Index out of bounds")
-        }
-    }
-
-    fn value(&mut self, idx: usize) -> CrushResult<Value> {
-        if idx < self.len() {
-            Ok(self.replace(idx, Argument::unnamed(Value::Bool(false))).value)
-        } else {
-            error("Index out of bounds")
-        }
-    }
-
-    fn glob(&mut self, idx: usize) -> CrushResult<Glob> {
-        if idx < self.len() {
-            match self.replace(idx, Argument::unnamed(Value::Bool(false))).value {
-                Value::Glob(s) => Ok(s),
-                _ => error("Invalid value"),
-            }
-        } else {
-            error("Index out of bounds")
-        }
-    }
+    argument_getter!(string, Box<str>, String, "string");
+    argument_getter!(integer, i128, Integer, "integer");
+    argument_getter!(field, Vec<Box<str>>, Field, "field");
+    argument_getter!(command, Box<dyn CrushCommand + Send + Sync>, Command, "command");
+    argument_getter!(r#type, ValueType, Type, "type");
+    argument_getter!(glob, Glob, Glob, "glob");
 
     fn files(&mut self) -> CrushResult<Vec<Box<Path>>> {
         let mut files = Vec::new();
@@ -130,6 +85,14 @@ impl ArgumentVector for Vec<Argument> {
             _ => argument_error("Expected a single value"),
         }
     }
+
+    fn value(&mut self, idx: usize) -> CrushResult<Value> {
+        if idx < self.len() {
+            Ok(self.replace(idx, Argument::unnamed(Value::Bool(false))).value)
+        } else {
+            error("Index out of bounds")
+        }
+    }
 }
 
 pub struct ExecutionContext {
@@ -143,7 +106,7 @@ pub struct ExecutionContext {
 pub trait This {
     fn list(self) -> CrushResult<List>;
     fn dict(self) -> CrushResult<Dict>;
-    fn text(self) -> CrushResult<Box<str>>;
+    fn string(self) -> CrushResult<Box<str>>;
     fn r#struct(self) -> CrushResult<Struct>;
     fn file(self) -> CrushResult<Box<Path>>;
     fn re(self) -> CrushResult<(Box<str>, Regex)>;
@@ -153,44 +116,38 @@ pub trait This {
     fn r#type(self) -> CrushResult<ValueType>;
     fn duration(self) -> CrushResult<Duration>;
     fn time(self) -> CrushResult<DateTime<Local>>;
+    fn table(self) -> CrushResult<Table>;
+    fn binary(self) -> CrushResult<Vec<u8>>;
 }
 
+macro_rules! this_method {
+    ($name:ident, $return_type:ty, $value_type:ident, $description:literal) => {
+
+    fn $name(mut self) -> CrushResult<$return_type> {
+        match self.take() {
+            Some(Value::$value_type(l)) => Ok(l),
+            None => argument_error(concat!("Expected this to be a ", $description, ", got nothing")),
+            Some(v) => argument_error(format!(concat!("Expected this to be a ", $description, ", but it is a {}"), v.value_type().to_string()).as_str()),
+        }
+    }
+
+    }
+}
 
 impl This for Option<Value> {
-    fn list(mut self) -> CrushResult<List> {
-        match self.take() {
-            Some(Value::List(l)) => Ok(l),
-            _ => argument_error("Expected a list"),
-        }
-    }
-
-    fn dict(mut self) -> CrushResult<Dict> {
-        match self.take() {
-            Some(Value::Dict(l)) => Ok(l),
-            _ => argument_error("Expected a dict"),
-        }
-    }
-
-    fn text(mut self) -> CrushResult<Box<str>> {
-        match self.take() {
-            Some(Value::String(s)) => Ok(s),
-            _ => argument_error("Expected a string"),
-        }
-    }
-
-    fn r#struct(mut self) -> CrushResult<Struct> {
-        match self.take() {
-            Some(Value::Struct(s)) => Ok(s),
-            _ => argument_error("Expected a struct"),
-        }
-    }
-
-    fn file(mut self) -> CrushResult<Box<Path>> {
-        match self.take() {
-            Some(Value::File(s)) => Ok(s),
-            _ => argument_error("Expected a file"),
-        }
-    }
+    this_method!(list, List, List, "list");
+    this_method!(dict, Dict, Dict, "dict");
+    this_method!(string, Box<str>, String, "string");
+    this_method!(r#struct, Struct, Struct, "struct");
+    this_method!(file, Box<Path>, File, "file");
+    this_method!(table, Table, Table, "table");
+    this_method!(binary, Vec<u8>, Binary, "binary");
+    this_method!(glob, Glob, Glob, "glob");
+    this_method!(integer, i128, Integer, "integer");
+    this_method!(float, f64, Float, "float");
+    this_method!(r#type, ValueType, Type, "type");
+    this_method!(duration, Duration, Duration, "duration");
+    this_method!(time, DateTime<Local>, Time, "time");
 
     fn re(mut self) -> CrushResult<(Box<str>, Regex)> {
         match self.take() {
@@ -198,49 +155,8 @@ impl This for Option<Value> {
             _ => argument_error("Expected a regular expression"),
         }
     }
-
-    fn glob(mut self) -> CrushResult<Glob> {
-        match self.take() {
-            Some(Value::Glob(s)) => Ok(s),
-            _ => argument_error("Expected a glob"),
-        }
-    }
-
-    fn integer(mut self) -> CrushResult<i128> {
-        match self.take() {
-            Some(Value::Integer(s)) => Ok(s),
-            _ => argument_error("Expected an integer"),
-        }
-    }
-
-    fn float(mut self) -> CrushResult<f64> {
-        match self.take() {
-            Some(Value::Float(s)) => Ok(s),
-            _ => argument_error("Expected a float"),
-        }
-    }
-
-    fn r#type(mut self) -> CrushResult<ValueType> {
-        match self.take() {
-            Some(Value::Type(s)) => Ok(s),
-            _ => argument_error("Expected a type"),
-        }
-    }
-
-    fn duration(mut self) -> CrushResult<Duration> {
-        match self.take() {
-            Some(Value::Duration(s)) => Ok(s),
-            _ => argument_error("Expected a duration"),
-        }
-    }
-
-    fn time(mut self) -> CrushResult<DateTime<Local>> {
-        match self.take() {
-            Some(Value::Time(s)) => Ok(s),
-            _ => argument_error("Expected a time"),
-        }
-    }
 }
+
 /*
 pub struct StreamExecutionContext {
     pub argument_stream: InputStream,
