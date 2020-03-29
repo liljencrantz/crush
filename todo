@@ -12,6 +12,7 @@ Make error printing display source of error
 Flesh out readme file
 
 Future features:
+Binary values can be big. Make them shared behind an Arc.
 In closures without a signature, put unnamed variables in the variable 'unnamed'
 Figure out how to make external commands with subcommands convenient again
 Kwargs should maybe not be a dict? How should repeated arguments be handled? We should at least preserve order...

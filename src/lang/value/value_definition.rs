@@ -69,6 +69,7 @@ impl ValueDefinition {
                 (None, mandate(
                     env.get(s).or_else(|| file_get(s)),
                     format!("Unknown variable {}", self.to_string()).as_str())?),
+
             ValueDefinition::GetItem(c, i) => {
                 let this = c.compile_internal(dependencies, env, can_block)?.1;
                 let v = match (this.clone(), i.compile_internal(dependencies, env, can_block)?.1) {

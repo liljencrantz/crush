@@ -61,6 +61,11 @@ lazy_static! {
 
     # This command returns the type 'list of integers':
     list integer"#)));
+        res.insert(Box::from("__getitem__"), CrushCommand::command(
+            getitem, true,
+            "name[idx:index]",
+            "Return a file or subdirectory in the specified base directory",
+            None));
         res
     };
 }
@@ -167,4 +172,11 @@ fn truncate(mut context: ExecutionContext) -> CrushResult<()> {
 fn clone(context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context.output.send(Value::List(context.this.list()?.copy()))
+}
+
+fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(1)?;
+    let list = context.this.list()?;
+    let idx = context.arguments.integer(0)?;
+    context.output.send(list.get(idx as usize)?)
 }

@@ -92,7 +92,15 @@ impl Value {
         } else {
             match self {
                 Value::Struct(s) => s.get(name),
-                Value::Scope(subenv) => subenv.get(name),
+                Value::Scope(subenv) =>
+                    subenv
+                        .get(name)
+                        .or_else(|| {
+                            self.value_type()
+                                .fields()
+                                .get(&Box::from(name))
+                                .map(|m| Value::Command(m.as_ref().clone()))
+                        }),
                 Value::Type(t) =>
                     t.fields()
                         .get(&Box::from(name))

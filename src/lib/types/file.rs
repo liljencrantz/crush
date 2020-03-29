@@ -1,4 +1,4 @@
-use crate::lang::execution_context::{ExecutionContext, This};
+use crate::lang::execution_context::{ExecutionContext, This, ArgumentVector};
 use crate::lang::errors::{CrushResult, to_crush_error};
 use crate::lang::r#struct::Struct;
 use crate::lang::value::Value;
@@ -30,6 +30,11 @@ lazy_static! {
             "file:exists",
             "Return true if this file exists",
             None));
+        res.insert(Box::from("__getitem__"), CrushCommand::command(
+            getitem, true,
+            "file[name:string]",
+            "Return a file or subdirectory in the specified base directory",
+            None));
         res
     };
 }
@@ -56,4 +61,11 @@ pub fn stat(context: ExecutionContext) -> CrushResult<()> {
 
 pub fn exists(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Bool(context.this.file()?.exists()))
+}
+
+pub fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
+    let base_directory = context.this.file()?;
+    context.arguments.check_len(1)?;
+    let sub = context.arguments.string(0)?;
+    context.output.send(Value::File(base_directory.join(sub.as_ref()).into_boxed_path()))
 }

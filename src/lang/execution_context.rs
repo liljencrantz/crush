@@ -118,6 +118,7 @@ pub trait This {
     fn time(self) -> CrushResult<DateTime<Local>>;
     fn table(self) -> CrushResult<Table>;
     fn binary(self) -> CrushResult<Vec<u8>>;
+    fn scope(self) -> CrushResult<Scope>;
 }
 
 macro_rules! this_method {
@@ -148,6 +149,7 @@ impl This for Option<Value> {
     this_method!(r#type, ValueType, Type, "type");
     this_method!(duration, Duration, Duration, "duration");
     this_method!(time, DateTime<Local>, Time, "time");
+    this_method!(scope, Scope, Scope, "scope");
 
     fn re(mut self) -> CrushResult<(Box<str>, Regex)> {
         match self.take() {

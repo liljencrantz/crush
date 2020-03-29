@@ -8,26 +8,18 @@ use crate::lang::command::CrushCommand;
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
-        res.insert(Box::from("len"), CrushCommand::command(
-            len, false,
-            "binary:len",
-            "The number of bytes in the binary",
-            None));
         res.insert(Box::from("__getitem__"), CrushCommand::command(
-            getitem, false,
-            "binary[idx:integer]", "Returns the byte at the specified offset", None));
+        getitem, false,
+            "scope[name:string]",
+            "Return the specified member",
+            None));
         res
     };
 }
 
-fn len(context: ExecutionContext) -> CrushResult<()> {
-    let val = context.this.binary()?;
-    context.output.send(Value::Integer(val.len() as i128))
-}
-
 fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
-    let val = context.this.binary()?;
+    let val = context.this.scope()?;
     context.arguments.check_len(1)?;
-    let idx = context.arguments.integer(0)?;
-    context.output.send(Value::Integer(mandate(val.get(idx as usize), "Index out of bounds")?.clone() as i128))
+    let name = context.arguments.string(0)?;
+    context.output.send(mandate(val.get(name.as_ref()), "Unknown member")?)
 }
