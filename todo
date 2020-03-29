@@ -26,7 +26,6 @@ empty_channel should not create new empty channels
 Make integers overflow to arbitrary precision math
 Run an executable by giving its path
 Add reject command that removes specified columns from a table/stream
-Add ceil, floor, pow, log, sin, cos, tan, etc to math lib
 Redo waiting on JobJoinHandles
 Redo empty streams
 Add control.source command
@@ -224,3 +223,4 @@ Add missing comparisons on Value
 Either implement call_type for all types or check for its existence and don't execute types unless it exists
 Fix struct type
 Flesh out readme file
+Add ceil, floor, pow, log, sin, cos, tan, etc to math lib
