@@ -1,6 +1,6 @@
 Todo for MVP 1:
 Len method to binary and table type
-Kwargs should not be a dict, because arguments can be repeated and order matters!
+Kwargs should maybe not be a dict? How should repeated arguments be handled? We should at least preserve order...
 Fix struct type
 Either implement call_type for all types or check for its existence and don't execute types unless it exists
 Figure out how to make external commands with subcommands convenient again

@@ -18,9 +18,9 @@ nearly everything beyond that is different.
 
 ## What does Crush do so differently, then?
 
-### Some examples
+### Scratching the surface
 
-Let's start with a trivial command. Listing files in the current
+Let's start with two trivial commands; listing files in the current
 directory, and checking how many files are in the current directory:
 
     crush> ls
@@ -32,9 +32,12 @@ directory, and checking how many files are in the current directory:
     crush> ls | count
     14
 
-This looks familiar. But apperances are deceiving. The  `ls` output
-is actually a table of rows, and crush provides you with SQL-like
-commands to sort, filter, aggregate and group lines.
+This all looks familiar. But appearances are deceiving. The  `ls` 
+command being called is a crush builtin, and the output is not
+sent over a unix pipe but over a Rush channel. It is not seen
+understood by the command as a series of bytes, but as
+a table of rows, and crush provides you with SQL-like
+commands to sort, filter, aggregate and group rows of data.
 
     crush> ls | sort ^size
     user         size  modified                  type      file
@@ -61,7 +64,7 @@ to data from any source, such as json files, http requests, etc.
 
 ### Operators for comparison, logical operations and arithmetical operations
 
-Crush allows you to perform mathematical calulations on integer and floating
+Crush allows you to perform mathematical calculations on integer and floating
 point numbers directly in the shell, using the same mathematical operators
 used in almost any other programming language.
 
@@ -71,7 +74,7 @@ used in almost any other programming language.
     7
 
 The only exception is that the `/` operator is used for constructing files and
-paths, so division is done using the `//` operator
+paths (more on that later), so division is done using the `//` operator
 
     crush> 4.2//3
     1.4000000000000001
@@ -127,7 +130,7 @@ current working directory as a single element of the `file` type.
 
 ### Variables of any type
 
-Variables must be declared (using the `:=` operator) before first usage.
+Variables must be declared (using the `:=` operator) before use.
 
     crush> some_number := 4      # The := operator declares a new variable
     crush> some_number * 5
@@ -373,14 +376,14 @@ and dictionaries
 
 ### Materilised data
 
-The output of many commands is a table stream, i.e. a streaming datastructure consisting
+The output of many commands is a table stream, i.e. a streaming data structure consisting
 of rows with identical structure. Some commands, like `cat` instead output a binary stream.
 
 These streams can not be rewound and can only be consumed once. This is sometimes vital,
-as it means that one can work on datasets larger than your computers memory, and even
-infinite datasets.
+as it means that one can work on data sets larger than your computers memory, and even
+infinite data sets.
 
-But sometimes, streaming datases are inconvenient, especially if one wants to use the same
+But sometimes, streaming data sets are inconvenient, especially if one wants to use the same
 dataset twice.
 
     crush> files := (ls)
@@ -401,8 +404,8 @@ dataset twice.
     liljencrantz   711 2019-10-03 14:19:46 +0200 file      crush.iml
     crush> files
 
-Enter the materialize command, which takes any value and recurively converts
-all subvalues into an equivalent but fully in-memory form.
+Enter the materialize command, which takes any value and recursively converts
+all sub values into an equivalent but fully in-memory form.
 
     crush> materialized_files := (ls|materialize)
     crush> materialized_files
@@ -435,3 +438,32 @@ all subvalues into an equivalent but fully in-memory form.
     liljencrantz  8382 2020-03-29 00:54:13 +0100 file      todo
     liljencrantz    75 2020-03-07 17:09:15 +0100 file      build.rs
     liljencrantz   711 2019-10-03 14:19:46 +0200 file      crush.iml
+
+### Flow control
+
+Of course Crush has an `if` command, as well as `for`, `while` and `loop` loops,
+that can be controlled using `break` and `continue`.
+
+### Future work
+
+There are plenty of ideas waiting to be tried out. Pattern matching, error handling
+and custom types are among the most obvious. Time will tell.
+
+## Building and installing crush
+
+Crush should work on any modern Unix system. Install rust,
+ 
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+clone this repository,
+
+    git clone https://github.com/liljencrantz/crush.git
+
+ 
+and run
+
+    cd crush; cargo build
+
+and you should have a working binary to try out.
+
+Have fun!
