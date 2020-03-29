@@ -9,14 +9,12 @@ Deal with different error kinds differently
 Add command-field to CrushError
 Add source field to CrushError
 Make error printing display source of error
-Flesh out readme file
 
 Future features:
 Binary values can be big. Make them shared behind an Arc.
 In closures without a signature, put unnamed variables in the variable 'unnamed'
 Figure out how to make external commands with subcommands convenient again
 Kwargs should maybe not be a dict? How should repeated arguments be handled? We should at least preserve order...
-Fix struct type
 Len method to binary and table type
 Comparison unimplemented for dict
 Comparison unimplemented for struct
@@ -224,3 +222,5 @@ help command
 Add avg command
 Add missing comparisons on Value
 Either implement call_type for all types or check for its existence and don't execute types unless it exists
+Fix struct type
+Flesh out readme file

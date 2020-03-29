@@ -12,6 +12,7 @@ pub mod stream;
 pub mod types;
 pub mod control;
 pub mod constants;
+pub mod math;
 
 use crate::{lang::scope::Scope, lang::errors::CrushResult};
 
@@ -26,6 +27,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     input::declare(root)?;
     control::declare(root)?;
     constants::declare(root)?;
+    math::declare(root)?;
     root.readonly();
     return Ok(());
 }

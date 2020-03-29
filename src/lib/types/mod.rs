@@ -7,7 +7,6 @@ use crate::lang::argument::{column_names, Argument};
 use crate::lang::execution_context::ArgumentVector;
 use crate::lang::value::ValueType;
 use crate::lang::table::ColumnType;
-use crate::lang::stream::empty_channel;
 use crate::lang::pretty_printer::spawn_print_thread;
 
 pub mod r#type;
@@ -37,14 +36,15 @@ fn new(mut context: ExecutionContext) -> CrushResult<()> {
     let o = context.output;
     context.output = spawn_print_thread();
     context.this = Some(Value::Struct(res.clone()));
+    println!("WOO WEE WOO __init__ is {}", init.clone().map(|v| v.to_string()).unwrap_or("None".to_string()));
     match init {
-        Some(Value::Command(c)) => { c.invoke(context) }
-        _ => Ok(())
+        Some(Value::Command(c)) => { c.invoke(context)?; }
+        _ => {}
     };
     o.send(Value::Struct(res))
 }
 
-fn data(mut context: ExecutionContext) -> CrushResult<()> {
+fn data(context: ExecutionContext) -> CrushResult<()> {
     let mut names = column_names(&context.arguments);
     let arr: Vec<(Box<str>, Value)> =
         names.drain(..)
@@ -126,17 +126,17 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         this:y = y
     }
 
-    Point:len={
+    Point:len = {
         ||
         math.sqrt this:x*this:x + this:y*this:y
     }
 
-    Point:__add__={
+    Point:__add__ = {
         | other |
         Point:new x=(this:x + other:x) y=(this:y + other:y)
     }
 
-    p := (Point:new x=1 y=2)
+    p := (Point:new x=1.0 y=2.0)
     p:len"#))))?;
     env.declare("materialize", Value::Command(CrushCommand::command(
         materialize, true,

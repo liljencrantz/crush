@@ -302,7 +302,7 @@ operate on:
 
 Unlike in SQL, these commands all operate on input streams, meaning they can be combined in
 any order, and the input source can be file/http resources in a variety of formats or output of
-commands like ps, find.
+commands like `ps`, `find`.
 
 ### Globs
 
@@ -500,37 +500,46 @@ Further thought needs to go in to making external commands fit better with the C
 You can create custom types in Crush, by using the class command:
 
     Point := (class)
+
     Point:__init__ = {
         | x:float y:float |
         this:x = x
         this:y = y
     }
 
-    Point:len={
+    Point:len = {
         ||
-        math.sqrt this:x*this:x + this:y*this:y
+        math:sqrt this:x*this:x + this:y*this:y
     }
 
-    Point:__add__={
+    Point:__add__ = {
         | other |
         Point:new x=(this:x + other:x) y=(this:y + other:y)        
     }
 
-    p := (Point:new x=1 y=2)
+    p := (Point:new x=1.0 y=2.0)
     p:len
 
-## Similarity to powershell
+Crush supports single inheritance (by passing in the parent to the class command).
+The class command will create a new struct, that contains a method named `new`. When
+called, `new` will create a new instance of the class. If the `__init__` method
+is defined, `new` will call it, and pass on any parameters to it.
 
-Crush shares the majority of its design goals with Powershell. I consider Powershell
+Add methods by adding them to the class, add member variables by adding them to
+the instance (`this`) in `__init__`.
+
+## Similarity to PowerShell
+
+Crush shares the majority of its design goals with PowerShell. I consider PowerShell
 one of the coolest and most interesting innovations to ever come out of Microsoft.
-That said, I've found using Powershell in practice to often feel clunky and annoying,
-especially for interactive use. I also feel like tying a shell to COM objects is a poor
+That said, I've found using PowerShell in practice to often feel clunky and annoying,
+especially for interactive use. I also feel that tying a shell to COM objects is a poor
 fit.
 
 I wanted to do something similar but with a more streamlined syntax, and with what I
-felt was a more appropriate type system.
+felt was a more suitable type system.
 
-## Similarity to nushell
+## Similarity to Nushell
 
 On the surface, Crush looks identical to nushell, but less polished. Crush lacks
 syntax highlighting, tab completion and has a worse screen rendering. But that is

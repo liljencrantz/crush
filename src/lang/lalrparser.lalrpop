@@ -5,11 +5,15 @@ grammar;
 
 pub JobList: JobListNode = {
   Separator? => JobListNode {jobs: Vec::new()},
-  <l:NonEmptyJobList> Separator? => l,
+  <l:NonEmptyJobList> => l,
 };
 
 NonEmptyJobList: JobListNode = {
-  <mut l:NonEmptyJobList> Separator <j:Job> =>  {l.jobs.push(j); l},
+  <j: NonEmptyJobListWithoutSeparator> Separator? => j,
+};
+
+NonEmptyJobListWithoutSeparator: JobListNode = {
+  <mut l:NonEmptyJobListWithoutSeparator> Separator <j:Job> =>  {l.jobs.push(j); l},
   Job => JobListNode {jobs: vec![<>]},
 };
 

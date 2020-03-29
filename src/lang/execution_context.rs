@@ -18,6 +18,7 @@ pub trait ArgumentVector {
     fn check_len(&self, len: usize) -> CrushResult<()>;
     fn string(&mut self, idx: usize) -> CrushResult<Box<str>>;
     fn integer(&mut self, idx: usize) -> CrushResult<i128>;
+    fn float(&mut self, idx: usize) -> CrushResult<f64>;
     fn field(&mut self, idx: usize) -> CrushResult<Vec<Box<str>>>;
     fn command(&mut self, idx: usize) -> CrushResult<Box<dyn CrushCommand + Send + Sync>>;
     fn r#type(&mut self, idx: usize) -> CrushResult<ValueType>;
@@ -60,6 +61,7 @@ impl ArgumentVector for Vec<Argument> {
 
     argument_getter!(string, Box<str>, String, "string");
     argument_getter!(integer, i128, Integer, "integer");
+    argument_getter!(float, f64, Float, "float");
     argument_getter!(field, Vec<Box<str>>, Field, "field");
     argument_getter!(command, Box<dyn CrushCommand + Send + Sync>, Command, "command");
     argument_getter!(r#type, ValueType, Type, "type");
