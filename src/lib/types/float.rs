@@ -17,10 +17,10 @@ lazy_static! {
     };
 }
 
-binary_op!(add, integer, Integer, Integer, |a, b| a+b, Float, Float, |a, b| a as f64+b);
-binary_op!(sub, integer, Integer, Integer, |a, b| a-b, Float, Float, |a, b| a as f64-b);
-binary_op!(mul, integer, Integer, Integer, |a, b| a*b, Float, Float, |a, b| a as f64*b);
-binary_op!(div, integer, Integer, Integer, |a, b| a/b, Float, Float, |a, b| a as f64/b);
+binary_op!(add, float, Integer, Float, |a, b| a+(b as f64), Float, Float, |a, b| a+b);
+binary_op!(sub, float, Integer, Float, |a, b| a-(b as f64), Float, Float, |a, b| a-b);
+binary_op!(mul, float, Integer, Float, |a, b| a*(b as f64), Float, Float, |a, b| a*b);
+binary_op!(div, float, Integer, Float, |a, b| a/(b as f64), Float, Float, |a, b| a/b);
 
 fn neg(context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;

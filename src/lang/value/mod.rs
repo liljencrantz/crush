@@ -250,7 +250,7 @@ impl Value {
             })),
             ValueType::String => Ok(Value::String(str_val.into_boxed_str())),
             ValueType::Time => unimplemented!(),
-            ValueType::Duration => Ok(Value::Duration(Duration::seconds(to_crush_error(f64::from_str(&str_val))?))),
+            ValueType::Duration => Ok(Value::Duration(Duration::seconds(to_crush_error(i64::from_str(&str_val))?))),
             ValueType::Command => unimplemented!(),
             ValueType::TableStream(_) => unimplemented!(),
             ValueType::Table(_) => unimplemented!(),

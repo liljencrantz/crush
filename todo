@@ -1,9 +1,8 @@
 Todo for MVP 1:
+Len method to binary and table type
 Kwargs should not be a dict, because arguments can be repeated and order matters!
 Fix struct type
 Either implement call_type for all types or check for its existence and don't execute types unless it exists
-Comparison unimplemented for dict
-Comparison unimplemented for struct
 Figure out how to make external commands with subcommands convenient again
 Add system tests for type casting
 Add system tests for for loop
@@ -18,6 +17,8 @@ Make error printing display source of error
 Flesh out readme file
 
 Future features:
+Comparison unimplemented for dict
+Comparison unimplemented for struct
 Allow empty closures
 Missing some value serialisations and deserialisations
 Allow while-loop without body
