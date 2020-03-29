@@ -69,6 +69,8 @@ impl ValueType {
                 &types::table::METHODS,
             ValueType::TableStream(_) =>
                 &types::table_stream::METHODS,
+            ValueType::Binary =>
+                &types::binary::METHODS,
             _ => &EMPTY_METHODS,
         }
     }

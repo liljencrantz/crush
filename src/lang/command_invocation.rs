@@ -1,12 +1,11 @@
 use crate::lang::{execution_context::ExecutionContext, job::JobJoinHandle, command::CrushCommand, value::ValueDefinition};
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, value::Value};
 use crate::lang::scope::Scope;
-use crate::lang::errors::{error, CrushResult, Kind, mandate};
+use crate::lang::errors::{error, CrushResult, Kind};
 use crate::lang::printer::printer;
 use crate::lang::stream::{ValueReceiver, ValueSender};
 use crate::util::thread::{handle, build};
 use std::path::Path;
-use crate::lang::value::ValueType;
 
 #[derive(Clone)]
 pub struct CommandInvocation {

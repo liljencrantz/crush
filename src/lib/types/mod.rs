@@ -20,6 +20,7 @@ pub mod integer;
 pub mod float;
 pub mod duration;
 pub mod time;
+pub mod binary;
 
 fn materialize(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(context.input.recv()?.materialize())

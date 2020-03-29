@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, argument_error, error, CrushError};
+use crate::lang::errors::{CrushResult, argument_error, error};
 use crate::lang::argument::Argument;
 use crate::lang::value::{Value, ValueType};
 use crate::util::replace::Replace;
