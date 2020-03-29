@@ -1,4 +1,5 @@
 Todo for MVP 1:
+In closures without a signature, put unnamed variables in the variable 'unnamed'
 Either implement call_type for all types or check for its existence and don't execute types unless it exists
 Figure out how to make external commands with subcommands convenient again
 Add system tests for type casting

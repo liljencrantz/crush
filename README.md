@@ -2,13 +2,13 @@
 
 Crush is an attempt to make a traditional command line shell
 that is also a modern programming language. It has the features
-one would expect from a convenient programming language like
+one would expect from a modern programming language like
 a type system, closures and lexical scoping, but with a syntax
 geared toward both batch and interactive shell usage.
 
 ## What features of a traditional shell does Crush retain?
 
-The basic structure of the language.
+The basic structure of the Crush language resemb
 
 How to invoke commands, pass arguments and set up pipelines are
 unchanged, as is the central concept of a current working directory .
@@ -88,8 +88,9 @@ are false.
     
 The `and` and `or` operators are used to combine logical expressions:
     
-    crush> false and true
+    crush> false or true
     false
+    crush> if (some_file:exists) and ((some_file:stat):is_file) {echo "yay"}
     
 Crush also has operators related to patterns and matching.
 `=~` and `!~` are used to check if a pattern matches an input:
@@ -143,9 +144,12 @@ Once declared, a variable can be reassigned to using the `=` operator.
     30
 
 Like in any sane programming language, variables can be of any type
-supported by the type system. 
+supported by the type system. There is no implicit type conversion.
+Do note that some mathematical operators are defined between types,
+so multiplying an integer with a floating point number results in a
+floating point number, for example.
 
-    crush> some_text := "hello"
+    crush> some_text := "5"
     crush> some_text * some_number
     Error: Can not process arguments of specified type
 
@@ -376,6 +380,21 @@ and dictionaries
         * empty True if there are no mappings in the dict
         * new Construct a new dict    
 
+### Time
+
+Crush has two data types for dealing with time, `time` and `duration`.
+
+    crush> start := (time:now)
+    crush> something_that_takes_a_lot_of_time
+    crush> end := (time:now)
+    crush> echo ("We spent {} on the thing" end - start)
+    4:06
+
+The mathematical operators that make sense are defined for `time` and `duration`.
+Subtracting one `time` from another results in a `duration`. Adding two `duration`
+results in a `duration`. Multiplying or dividing a `duration` by a `integer`
+results in a `duration`.
+
 ### Materialized data
 
 The output of many commands is a table stream, i.e. a streaming data structure consisting
@@ -469,14 +488,40 @@ commands work:
     	modified:   todo
     
     no changes added to commit (use "git add" and/or "git commit -a")
-    
+    crush> git "commit" "-a" "-m" "Furher updates to Readme file"
+    [master e100014] Furher updates to Readme file
+     2 files changed, 33 insertions(+), 4 deletions(-)
+
 
 Further thought needs to go in to making external commands fit better with the Crush design.
+
+### Similarity to powershell
+
+Crush shares the majority of its design goals with Powershell. I consider Powershell
+one of the coolest and most interesting innovations to ever come out of Microsoft.
+That said, I've found using Powershell in practice to often feel clunky and annoying,
+especially for interactive use. I also feel like tying a shell to COM objects is a poor
+fit.
+
+I wanted to do something similar but with a more streamlined syntax, and with what I
+felt was a more appropriate type system.
+
+### Similarity to nushell
+
+On the surface, Crush looks identical to nushell, but less polished. Crush lacks
+syntax highlighting, tab completion and has a worse screen rendering. But that is
+because the focus of Crush right now is to create a well defined, powerful and
+convenient language that supports things like arithmetic operations, closures,
+loops and flow control while remaining useful for interactive use.
 
 ### Future work
 
 There are plenty of ideas waiting to be tried out. Pattern matching, error handling
-and custom types are among the most obvious. Time will tell.
+and custom types are among the most obvious.
+
+## About the codebase
+
+I am teaching myself rust by writing Crush. I still have plenty to learn. :-)
 
 ## Building and installing crush
 
