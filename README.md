@@ -294,6 +294,8 @@ operate on:
 
     ps | where {user == "root") | group ^status | aggr proc_per_status={count}
 
+(Note that the `aggr` command is currently broken.)
+
 Unlike in SQL, these commands all operate on input streams, meaning they can be combined in
 any order, and the input source can be file/http resources in a variety of formats or output of
 commands like ps, find.
@@ -374,7 +376,7 @@ and dictionaries
         * empty True if there are no mappings in the dict
         * new Construct a new dict    
 
-### Materilised data
+### Materialized data
 
 The output of many commands is a table stream, i.e. a streaming data structure consisting
 of rows with identical structure. Some commands, like `cat` instead output a binary stream.
@@ -443,6 +445,33 @@ all sub values into an equivalent but fully in-memory form.
 
 Of course Crush has an `if` command, as well as `for`, `while` and `loop` loops,
 that can be controlled using `break` and `continue`.
+
+### Calling external commands
+
+Obviously, one needs to sometimes call out to external commands. Currently, the functionality
+for doing so in Crush is extrenely primitive. If an internal command of a given name does not
+exist, Crush looks for external commands, and if one is found, it is used. But Crush
+does not hand over the tty or emulate a tty, so interactive terminal programs do not work,
+and commands that prettify their output with escape sequences may fail.
+
+This part of crush should be considered a proof of concept, but still, most non-interactive
+commands work:
+
+    crush> git "status"
+    On branch master
+    Your branch is up to date with 'origin/master'.
+    
+    Changes not staged for commit:
+      (use "git add <file>..." to update what will be committed)
+      (use "git checkout -- <file>..." to discard changes in working directory)
+    
+    	modified:   README.md
+    	modified:   todo
+    
+    no changes added to commit (use "git add" and/or "git commit -a")
+    
+
+Further thought needs to go in to making external commands fit better with the Crush design.
 
 ### Future work
 

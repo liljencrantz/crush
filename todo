@@ -1,7 +1,4 @@
 Todo for MVP 1:
-Len method to binary and table type
-Kwargs should maybe not be a dict? How should repeated arguments be handled? We should at least preserve order...
-Fix struct type
 Either implement call_type for all types or check for its existence and don't execute types unless it exists
 Figure out how to make external commands with subcommands convenient again
 Add system tests for type casting
@@ -17,6 +14,9 @@ Make error printing display source of error
 Flesh out readme file
 
 Future features:
+Kwargs should maybe not be a dict? How should repeated arguments be handled? We should at least preserve order...
+Fix struct type
+Len method to binary and table type
 Comparison unimplemented for dict
 Comparison unimplemented for struct
 Allow empty closures
