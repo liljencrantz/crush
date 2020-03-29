@@ -23,6 +23,7 @@ pub trait ArgumentVector {
     fn r#type(&mut self, idx: usize) -> CrushResult<ValueType>;
     fn value(&mut self, idx: usize) -> CrushResult<Value>;
     fn glob(&mut self, idx: usize) -> CrushResult<Glob>;
+    fn r#struct(&mut self, idx: usize) -> CrushResult<Struct>;
     fn files(&mut self) -> CrushResult<Vec<Box<Path>>>;
     fn optional_integer(&mut self) -> CrushResult<Option<i128>>;
 }
@@ -63,6 +64,7 @@ impl ArgumentVector for Vec<Argument> {
     argument_getter!(command, Box<dyn CrushCommand + Send + Sync>, Command, "command");
     argument_getter!(r#type, ValueType, Type, "type");
     argument_getter!(glob, Glob, Glob, "glob");
+    argument_getter!(r#struct, Struct, Struct, "struct");
 
     fn files(&mut self) -> CrushResult<Vec<Box<Path>>> {
         let mut files = Vec::new();

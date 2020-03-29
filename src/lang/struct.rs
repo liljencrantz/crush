@@ -5,7 +5,7 @@ use std::sync::{Mutex, Arc};
 use crate::lang::command::CrushCommand;
 
 use lazy_static::lazy_static;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::cmp::Ordering;
 use crate::util::replace::Replace;
@@ -74,7 +74,6 @@ impl Struct {
     fn root() -> Struct {
         Struct::create(vec![
             (Box::from("__setattr__"), Value::Command(CrushCommand::command_undocumented(crate::lib::types::setattr, false))),
-            (Box::from("__call_type__"), Value::Command(CrushCommand::command_undocumented(crate::lib::types::struct_call_type, false))),
         ], None)
     }
 
@@ -82,7 +81,7 @@ impl Struct {
         Struct::create(vec, Some(ROOT.clone()))
     }
 
-    fn create(mut vec: Vec<(Box<str>, Value)>, parent: Option<Struct>) -> Struct {
+    pub fn create(mut vec: Vec<(Box<str>, Value)>, parent: Option<Struct>) -> Struct {
         let mut lookup = HashMap::new();
         let mut cells = Vec::new();
         vec.drain(..)
@@ -154,10 +153,29 @@ impl Struct {
         }
     }
 
+    pub fn keys(&self) -> Vec<Box<str>> {
+        let mut fields = HashSet::new();
+        self.fill_keys(&mut fields);
+        fields.drain().collect()
+    }
+
+    fn fill_keys(&self, dest: &mut HashSet<Box<str>>) {
+        let data = self.data.lock().unwrap();
+        data.lookup.keys().for_each(|name| { dest.insert(name.clone());});
+        let parent = data.parent.clone();
+        drop(data);
+        parent.map(|p| p.fill_keys(dest));
+    }
+
     pub fn set(self, name: &str, value: Value) -> Option<Value> {
         let mut data = self.data.lock().unwrap();
         match data.lookup.get(name).cloned() {
-            None => None,
+            None => {
+                let idx = data.lookup.len();
+                data.lookup.insert(Box::from(name), idx);
+                data.cells.push(value);
+                None
+            },
             Some(idx) => Some(data.cells.replace(idx, value)),
         }
     }

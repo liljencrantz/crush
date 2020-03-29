@@ -15,6 +15,7 @@ use crate::lang::errors::{CrushResult, to_crush_error, error};
 use crate::lang::stream::{ValueSender, ValueReceiver};
 use std::collections::HashSet;
 use crate::lang::errors::Kind::InvalidData;
+use crate::lang::table::ColumnType;
 
 pub struct Config {
     input: Box<dyn BinaryReader>,
@@ -53,21 +54,31 @@ fn convert_json(json_value: &serde_json::Value) -> CrushResult<Value> {
                 .map(|v| convert_json(v))
                 .collect::<CrushResult<Vec<Value>>>()?;
             let types: HashSet<ValueType> = lst.iter().map(|v| v.value_type()).collect();
+            let struct_types: HashSet<Vec<ColumnType>> =
+                lst.iter()
+                    .flat_map(|v| match v {
+                        Value::Struct(r) => vec![r.types()],
+                        _ => vec![]
+                    })
+                    .collect();
+
             match types.len() {
                 0 => Ok(Value::Empty()),
                 1 => {
                     let list_type = types.iter().next().unwrap();
-                    if let ValueType::Struct(r) = list_type {
-                        let row_list = lst
-                            .drain(..)
-                            .map(|v| match v {
-                                Value::Struct(r) => Ok(r.into_row()),
-                                _ => error("Impossible!")
-                            })
-                            .collect::<CrushResult<Vec<Row>>>()?;
-                        Ok(Value::Table(Table::new(r.clone(), row_list)))
-                    } else {
-                        Ok(Value::List(List::new(list_type.clone(), lst)))
+                    match (list_type, struct_types.len()) {
+                        (ValueType::Struct, 1) => {
+                            let row_list = lst
+                                .drain(..)
+                                .map(|v| match v {
+                                    Value::Struct(r) => Ok(r.into_row()),
+                                    _ => error("Impossible!")
+                                })
+                                .collect::<CrushResult<Vec<Row>>>()?;
+                            Ok(Value::Table(Table::new(struct_types.iter().next().unwrap().clone(), row_list)))
+                        }
+                        _ => Ok(Value::List(List::new(list_type.clone(), lst)))
+
                     }
                 }
                 _ => Ok(Value::List(List::new(ValueType::Any, lst))),

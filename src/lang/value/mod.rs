@@ -117,9 +117,13 @@ impl Value {
     pub fn fields(&self) -> Vec<Box<str>> {
         let mut res = vec![Box::from("type")];
         match self {
-//            Value::Struct(s) => s.clone().get(name),
+            Value::Struct(s) => {
+                res.append(&mut s.keys())
+            },
 //            Value::Scope(subenv) => subenv.get(name),
-            Value::Type(t) => add_keys(t.fields(), &mut res),
+            Value::Type(t) => {
+                add_keys(t.fields(), &mut res)
+            },
             _ => add_keys(self.value_type().fields(), &mut res),
         }
         res
@@ -170,7 +174,7 @@ impl Value {
             Value::File(_) => ValueType::File,
             Value::TableStream(o) => ValueType::TableStream(o.types().clone()),
             Value::Table(r) => ValueType::Table(r.types().clone()),
-            Value::Struct(r) => ValueType::Struct(r.types().clone()),
+            Value::Struct(_) => ValueType::Struct,
             Value::List(l) => l.list_type(),
             Value::Duration(_) => ValueType::Duration,
             Value::Scope(_) => ValueType::Scope,
@@ -262,7 +266,7 @@ impl Value {
             ValueType::Command => unimplemented!(),
             ValueType::TableStream(_) => unimplemented!(),
             ValueType::Table(_) => unimplemented!(),
-            ValueType::Struct(_) => unimplemented!(),
+            ValueType::Struct => unimplemented!(),
             ValueType::List(_) => unimplemented!(),
             ValueType::Dict(_, _) => unimplemented!(),
             ValueType::Scope => error("Invalid cast"),

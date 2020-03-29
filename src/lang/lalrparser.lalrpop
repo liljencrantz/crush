@@ -65,8 +65,8 @@ Cast: Box<Node> = {
 
 Signature: Option<Vec<ParameterNode>> = {
     => None,
-    "|" "|" => Some(vec![]),
-    "|" <s: ParameterList> "|" => Some(s),
+    "|" "|" Separator? => Some(vec![]),
+    "|" <s: ParameterList> "|" Separator? => Some(s),
 }
 
 ParameterList: Vec<ParameterNode> = {
@@ -96,7 +96,7 @@ Item: Box<Node> = {
     Float => Box::from(Node::Float(f64::from_str(<>.replace("_", "").as_str()).unwrap())),
     <i: Item> "[" <e: Assignment> "]" => Box::from(Node::GetItem(i, e)),
     <i: Item> Colon <l: AnyLabel> => Box::from(Node::GetAttr(i, l)),
-    "{" <s: Signature> <l: NonEmptyJobList> "}" => Box::from(Node::Closure(s, l)),
+    "{" Separator? <s: Signature> <l: NonEmptyJobList> "}" => Box::from(Node::Closure(s, l)),
     "(" <j:Job> ")" => Box::from(Node::Substitution(j)),
 }
 

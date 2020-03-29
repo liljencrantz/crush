@@ -7,7 +7,10 @@ use crate::lang::argument::{column_names, Argument};
 use crate::lang::execution_context::ArgumentVector;
 use crate::lang::value::ValueType;
 use crate::lang::table::ColumnType;
+use crate::lang::stream::empty_channel;
+use crate::lang::pretty_printer::spawn_print_thread;
 
+pub mod r#type;
 pub mod table;
 pub mod table_stream;
 pub mod list;
@@ -27,9 +30,22 @@ fn materialize(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(context.input.recv()?.materialize())
 }
 
-fn struct_of(context: ExecutionContext) -> CrushResult<()> {
-    let mut names = column_names(&context.arguments);
+fn new(mut context: ExecutionContext) -> CrushResult<()> {
+    let parent = context.this.clone().r#struct()?;
+    let res = Struct::create(vec![], Some(parent));
+    let init = res.get("__init__");
+    let o = context.output;
+    context.output = spawn_print_thread();
+    context.this = Some(Value::Struct(res.clone()));
+    match init {
+        Some(Value::Command(c)) => { c.invoke(context) }
+        _ => Ok(())
+    };
+    o.send(Value::Struct(res))
+}
 
+fn data(mut context: ExecutionContext) -> CrushResult<()> {
+    let mut names = column_names(&context.arguments);
     let arr: Vec<(Box<str>, Value)> =
         names.drain(..)
             .zip(context.arguments)
@@ -37,6 +53,24 @@ fn struct_of(context: ExecutionContext) -> CrushResult<()> {
             .collect::<Vec<(Box<str>, Value)>>();
     context.output.send(
         Value::Struct(Struct::new(arr)))
+}
+
+
+fn class(mut context: ExecutionContext) -> CrushResult<()> {
+    let mut parent = crate::lang::r#struct::ROOT.clone();
+
+    if context.arguments.len() == 1 {
+        parent = context.arguments.r#struct(0)?;
+    }
+
+    let res = Struct::create(
+        vec![
+            (Box::from("new"), Value::Command(CrushCommand::command_undocumented(new, true))),
+        ],
+        Some(parent),
+    );
+
+    context.output.send(Value::Struct(res))
 }
 
 pub fn setattr(mut context: ExecutionContext) -> CrushResult<()> {
@@ -55,14 +89,10 @@ pub fn parse_column_types(mut arguments: Vec<Argument>) -> CrushResult<Vec<Colum
         if let Value::Type(t) = arg.value {
             types.push(ColumnType::new(names[idx].as_ref(), t));
         } else {
-            return argument_error(format!("Expected all parameters to be types, found {}", arg.value.value_type().to_string()).as_str())
+            return argument_error(format!("Expected all parameters to be types, found {}", arg.value.value_type().to_string()).as_str());
         }
     }
     Ok(types)
-}
-
-pub fn struct_call_type(context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::Type(ValueType::Struct(parse_column_types(context.arguments)?)))
 }
 
 pub fn r#as(mut context: ExecutionContext) -> CrushResult<()> {
@@ -77,8 +107,42 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("types")?;
     root.r#use(&env);
 
-    env.declare("struct_of", Value::Command(CrushCommand::command_undocumented(struct_of, false)))?;
-    env.declare("materialize", Value::Command(CrushCommand::command_undocumented(materialize, true)))?;
+    env.declare("data", Value::Command(CrushCommand::command(
+        data, false,
+        "data <name>=value:any...",
+        "Construct a struct with the specified members",
+        None)))?;
+
+    env.declare("class", Value::Command(CrushCommand::command(
+        class, false,
+        "class [parent:type]",
+        "Create an empty new class",
+        Some(r#"    Example:
+
+    Point := (class)
+    Point:__init__ = {
+        | x:float y:float |
+        this:x = x
+        this:y = y
+    }
+
+    Point:len={
+        ||
+        math.sqrt this:x*this:x + this:y*this:y
+    }
+
+    Point:__add__={
+        | other |
+        Point:new x=(this:x + other:x) y=(this:y + other:y)
+    }
+
+    p := (Point:new x=1 y=2)
+    p:len"#))))?;
+    env.declare("materialize", Value::Command(CrushCommand::command(
+        materialize, true,
+        "materialize",
+        "Recursively convert all streams in input to materialized version",
+        example!("ls | materialize"))))?;
 
     env.declare("file", Value::Type(ValueType::File))?;
     env.declare("type", Value::Type(ValueType::Type))?;
@@ -102,7 +166,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     env.declare("table", Value::Type(ValueType::Table(vec![])))?;
     env.declare("table_stream", Value::Type(ValueType::TableStream(vec![])))?;
-    env.declare("struct", Value::Type(ValueType::Struct(vec![])))?;
+    env.declare("struct", Value::Type(ValueType::Struct))?;
 
     env.readonly();
 

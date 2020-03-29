@@ -495,7 +495,31 @@ commands work:
 
 Further thought needs to go in to making external commands fit better with the Crush design.
 
-### Similarity to powershell
+### Creating custom types
+
+You can create custom types in Crush, by using the class command:
+
+    Point := (class)
+    Point:__init__ = {
+        | x:float y:float |
+        this:x = x
+        this:y = y
+    }
+
+    Point:len={
+        ||
+        math.sqrt this:x*this:x + this:y*this:y
+    }
+
+    Point:__add__={
+        | other |
+        Point:new x=(this:x + other:x) y=(this:y + other:y)        
+    }
+
+    p := (Point:new x=1 y=2)
+    p:len
+
+## Similarity to powershell
 
 Crush shares the majority of its design goals with Powershell. I consider Powershell
 one of the coolest and most interesting innovations to ever come out of Microsoft.
@@ -506,7 +530,7 @@ fit.
 I wanted to do something similar but with a more streamlined syntax, and with what I
 felt was a more appropriate type system.
 
-### Similarity to nushell
+## Similarity to nushell
 
 On the surface, Crush looks identical to nushell, but less polished. Crush lacks
 syntax highlighting, tab completion and has a worse screen rendering. But that is

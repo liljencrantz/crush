@@ -23,7 +23,7 @@ pub enum ValueType {
     File,
     TableStream(Vec<ColumnType>),
     Table(Vec<ColumnType>),
-    Struct(Vec<ColumnType>),
+    Struct,
     List(Box<ValueType>),
     Dict(Box<ValueType>, Box<ValueType>),
     Scope,
@@ -84,26 +84,15 @@ impl ValueType {
 
     pub fn materialize(&self) -> ValueType {
         match self {
-            ValueType::String |
-            ValueType::Integer |
-            ValueType::Time |
-            ValueType::Duration |
-            ValueType::Field |
-            ValueType::Glob |
-            ValueType::Regex |
-            ValueType::Command |
-            ValueType::File |
-            ValueType::Scope |
-            ValueType::Float |
-            ValueType::Empty |
-            ValueType::Any |
-            ValueType::Binary |
-            ValueType::Type |
-            ValueType::Bool => self.clone(),
+            ValueType::String | ValueType::Integer | ValueType::Time |
+            ValueType::Duration | ValueType::Field | ValueType::Glob |
+            ValueType::Regex | ValueType::Command | ValueType::File |
+            ValueType::Scope | ValueType::Float | ValueType::Empty |
+            ValueType::Any | ValueType::Binary | ValueType::Type |
+            ValueType::Struct | ValueType::Bool => self.clone(),
             ValueType::BinaryStream => ValueType::Binary,
             ValueType::TableStream(o) => ValueType::Table(ColumnType::materialize(o)),
             ValueType::Table(r) => ValueType::Table(ColumnType::materialize(r)),
-            ValueType::Struct(r) => ValueType::Struct(ColumnType::materialize(r)),
             ValueType::List(l) => ValueType::List(Box::from(l.materialize())),
             ValueType::Dict(k, v) => ValueType::Dict(Box::from(k.materialize()), Box::from(v.materialize())),
         }
@@ -117,7 +106,7 @@ impl ValueType {
             ValueType::Command |
             ValueType::BinaryStream |
             ValueType::TableStream(_) |
-            ValueType::Struct(_) |
+            ValueType::Struct |
             ValueType::Table(_) => false,
             _ => true,
         }
@@ -163,7 +152,7 @@ impl Help for ValueType {
             ValueType::File => "Any type of file",
             ValueType::TableStream(_) => "A stream of table rows",
             ValueType::Table(_) => "A table of rows",
-            ValueType::Struct(_) => "A mapping from name to value",
+            ValueType::Struct => "A mapping from name to value",
             ValueType::List(_) => "A mutable list of items, usually of the same type",
             ValueType::Dict(_, _) => "A mutable mapping from one set of values to another",
             ValueType::Scope => "A scope in the Crush namespace",
@@ -201,7 +190,7 @@ impl ToString for ValueType {
             ValueType::File => "file".to_string(),
             ValueType::TableStream(o) => format!("table_stream {}", o.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(" ")),
             ValueType::Table(r) => format!("table {}", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(" ")),
-            ValueType::Struct(r) => format!("struct {}", r.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(" ")),
+            ValueType::Struct => "struct".to_string(),
             ValueType::List(l) => format!("list {}", l.to_string()),
             ValueType::Dict(k, v) => format!("dict {} {}", k.to_string(), v.to_string()),
             ValueType::Scope => "scope".to_string(),
