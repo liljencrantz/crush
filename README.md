@@ -231,13 +231,35 @@ former displays a help messages, the latter lists the content of a value.
     crush> dir list
     [type, truncate, remove, clone, of, __call_type__, __setitem__, pop, push, empty, len, peek, new, clear]
 
-### Namespaces, members and methods
-
-TODO
-
 ### The content of your current working directory lives in your namespace
 
-TODO
+All the files in the current working directory are part of the local namespace.
+This means that e.g. `.` is a file object that points to the current working directory.
+The `/` operator is used in Crush to join two file directory element together.
+
+This means that for the most part, using files in Crush is extremely simple and convenient.
+
+    crush> cd .. # This does what you'd think
+    crush> cd /  # As does this
+
+The right hand side of the / operator is a label, not a value, so `./foo` refers to
+a file named foo i the current working directory, and is unrelated to the contents
+of any variable named `foo`.
+
+### Namespaces, members and methods
+
+Members are accessed using the `:` operator. Most other languages tend to use `.`, but
+that is a very common character in file names, so Crush needed to find something else.
+
+Most types have several useful methods. Files have `exists` and `stat`, which do what
+you'd expect.
+
+    crush> .:exists
+    true
+    crush> .:stat
+    {is_directory: true, is_file: false, is_symlink: false, inode: 50856186, nlink: 8, mode: 16877, len: 4096}
+    crush> (.:stat):is_file
+    false
 
 ### Semi-lazy stream evaluation:
 
@@ -295,10 +317,121 @@ matching and replacement:
 
 ### Lists and dicts
 
-TODO
+Crush has built in lists
+
+    crush> l := (list.of 1 2 3)
+    crush> l
+    [1, 2, 3]
+    crush> l:peek
+    3
+    crush> l:pop
+    3
+    crush> l:len
+    2
+    crush> l[1]
+    2
+    crush> l[1] = 7
+    crush> l
+    [1, 7]
+    crush> help l
+    type list integer
+    
+        A mutable list of items, usually of the same type
+    
+        * clear Remove all elments from the list
+        * peek Return the last element from the list
+        * push Push an element to the end of the list
+        * remove Remove the element at the specified index
+        * clone Create a duplicate of the list
+        * __setitem__ Assign a new value to the element at the specified index
+        * truncate Remove all elements past the specified index
+        * __call_type__ Return a list type for the specified element type
+        * of Create a new list containing the supplied elements
+        * empty True if there are no elements in the list
+        * len The number of elements in the list
+        * pop Remove the last element from the list
+        * new Create a new list with the specified element type
+
+and dictionaries
+
+    crush> d := ((dict string integer):new)
+    crush> d["foo"] = 42
+    crush> d["foo"]
+    42
+    crush> help d
+    type dict string integer
+    
+        A mutable mapping from one set of values to another
+    
+        * __getitem__ Return the value the specified key is mapped to
+        * remove Remove a mapping from the dict
+        * __call_type__ Returns a dict type with the specifiec key and value types
+        * __setitem__ Create a new mapping or replace an existing one
+        * len The number of mappings in the dict
+        * empty True if there are no mappings in the dict
+        * new Construct a new dict    
 
 ### Materilised data
 
-TODO
+The output of many commands is a table stream, i.e. a streaming datastructure consisting
+of rows with identical structure. Some commands, like `cat` instead output a binary stream.
 
+These streams can not be rewound and can only be consumed once. This is sometimes vital,
+as it means that one can work on datasets larger than your computers memory, and even
+infinite datasets.
 
+But sometimes, streaming datases are inconvenient, especially if one wants to use the same
+dataset twice.
+
+    crush> files := (ls)
+    crush> files
+    user         size  modified                  type      file
+    liljencrantz  1307 2020-03-26 01:08:45 +0100 file      ideas
+    liljencrantz  4096 2019-11-22 21:56:30 +0100 directory target
+    liljencrantz  4096 2020-03-27 09:18:25 +0100 directory tests
+    liljencrantz 95328 2020-03-24 17:20:00 +0100 file      Cargo.lock
+    liljencrantz  4096 2020-02-15 00:12:18 +0100 directory example_data
+    liljencrantz    31 2019-10-03 13:43:12 +0200 file      .gitignore
+    liljencrantz 13355 2020-03-29 03:05:16 +0200 file      README.md
+    liljencrantz  4096 2020-03-27 11:35:25 +0100 directory src
+    liljencrantz   479 2020-03-24 17:20:00 +0100 file      Cargo.toml
+    liljencrantz  4096 2020-03-29 01:29:52 +0100 directory .git
+    liljencrantz  8382 2020-03-29 00:54:13 +0100 file      todo
+    liljencrantz    75 2020-03-07 17:09:15 +0100 file      build.rs
+    liljencrantz   711 2019-10-03 14:19:46 +0200 file      crush.iml
+    crush> files
+
+Enter the materialize command, which takes any value and recurively converts
+all subvalues into an equivalent but fully in-memory form.
+
+    crush> materialized_files := (ls|materialize)
+    crush> materialized_files
+    user         size  modified                  type      file
+    liljencrantz  1307 2020-03-26 01:08:45 +0100 file      ideas
+    liljencrantz  4096 2019-11-22 21:56:30 +0100 directory target
+    liljencrantz  4096 2020-03-27 09:18:25 +0100 directory tests
+    liljencrantz 95328 2020-03-24 17:20:00 +0100 file      Cargo.lock
+    liljencrantz  4096 2020-02-15 00:12:18 +0100 directory example_data
+    liljencrantz    31 2019-10-03 13:43:12 +0200 file      .gitignore
+    liljencrantz 14420 2020-03-29 03:06:02 +0200 file      README.md
+    liljencrantz  4096 2020-03-27 11:35:25 +0100 directory src
+    liljencrantz   479 2020-03-24 17:20:00 +0100 file      Cargo.toml
+    liljencrantz  4096 2020-03-29 01:29:52 +0100 directory .git
+    liljencrantz  8382 2020-03-29 00:54:13 +0100 file      todo
+    liljencrantz    75 2020-03-07 17:09:15 +0100 file      build.rs
+    liljencrantz   711 2019-10-03 14:19:46 +0200 file      crush.iml
+    crush> materialized_files
+    user         size  modified                  type      file
+    liljencrantz  1307 2020-03-26 01:08:45 +0100 file      ideas
+    liljencrantz  4096 2019-11-22 21:56:30 +0100 directory target
+    liljencrantz  4096 2020-03-27 09:18:25 +0100 directory tests
+    liljencrantz 95328 2020-03-24 17:20:00 +0100 file      Cargo.lock
+    liljencrantz  4096 2020-02-15 00:12:18 +0100 directory example_data
+    liljencrantz    31 2019-10-03 13:43:12 +0200 file      .gitignore
+    liljencrantz 14420 2020-03-29 03:06:02 +0200 file      README.md
+    liljencrantz  4096 2020-03-27 11:35:25 +0100 directory src
+    liljencrantz   479 2020-03-24 17:20:00 +0100 file      Cargo.toml
+    liljencrantz  4096 2020-03-29 01:29:52 +0100 directory .git
+    liljencrantz  8382 2020-03-29 00:54:13 +0100 file      todo
+    liljencrantz    75 2020-03-07 17:09:15 +0100 file      build.rs
+    liljencrantz   711 2019-10-03 14:19:46 +0200 file      crush.iml
