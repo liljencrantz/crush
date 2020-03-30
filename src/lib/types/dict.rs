@@ -84,8 +84,7 @@ fn setitem(mut context: ExecutionContext) -> CrushResult<()> {
     let value = context.arguments.value(1)?;
     let key = context.arguments.value(0)?;
     if dict.key_type() == key.value_type() && dict.value_type() == value.value_type() {
-        dict.insert(key, value);
-        Ok(())
+        dict.insert(key, value)
     } else {
         argument_error("Wrong key/value type")
     }

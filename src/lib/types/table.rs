@@ -30,7 +30,7 @@ fn len(context: ExecutionContext) -> CrushResult<()> {
 
 fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
     let o = context.this.table()?;
-    context.arguments.check_len(1);
+    context.arguments.check_len(1)?;
     let idx = context.arguments.integer(0)?;
     context.output.send(Value::Struct(
         mandate(o.rows().get(idx as usize), "Index out of range")?

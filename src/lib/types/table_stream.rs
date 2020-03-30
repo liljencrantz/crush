@@ -24,7 +24,7 @@ fn call_type(context: ExecutionContext) -> CrushResult<()> {
 
 fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
     let o = context.this.table_stream()?;
-    context.arguments.check_len(1);
+    context.arguments.check_len(1)?;
     let idx = context.arguments.integer(0)?;
     context.output.send(
         Value::Struct(o.get(idx)?.into_struct(o.types())))

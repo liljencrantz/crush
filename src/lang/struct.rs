@@ -83,8 +83,7 @@ pub fn set(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn get(mut context: ExecutionContext) -> CrushResult<()> {
     let this = context.this.r#struct()?;
     let name = context.arguments.string(0)?;
-    context.output.send(mandate(this.get(&name), format!("Unknown field {}", name).as_str())?);
-    Ok(())
+    context.output.send(mandate(this.get(&name), format!("Unknown field {}", name).as_str())?)
 }
 
 impl Struct {

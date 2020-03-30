@@ -9,7 +9,6 @@ use crate::lang::value::ValueType;
 use crate::lang::table::ColumnType;
 use crate::lang::pretty_printer::spawn_print_thread;
 
-pub mod r#type;
 pub mod table;
 pub mod table_stream;
 pub mod list;
@@ -90,7 +89,7 @@ pub fn r#as(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn r#typeof(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(1);
+    context.arguments.check_len(1)?;
     context.output.send(Value::Type(context.arguments.value(0)?.value_type()))
 }
 
@@ -153,7 +152,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     env.declare("re", Value::Type(ValueType::Regex))?;
     env.declare("duration", Value::Type(ValueType::Duration))?;
     env.declare("time", Value::Type(ValueType::Time))?;
-    env.declare("dict", Value::Type(ValueType::Dict(Box::from(ValueType::Empty), Box::from(ValueType::Empty))))?;
+    env.declare("dict", Value::Type(ValueType::Dict(
+        Box::from(ValueType::Empty),
+        Box::from(ValueType::Empty))))?;
 
     env.declare("table", Value::Type(ValueType::Table(vec![])))?;
     env.declare("table_stream", Value::Type(ValueType::TableStream(vec![])))?;
