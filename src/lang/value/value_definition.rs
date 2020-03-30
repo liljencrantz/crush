@@ -17,7 +17,6 @@ pub enum ValueDefinition {
     ClosureDefinition(Option<Vec<Parameter>>, Vec<Job>),
     JobDefinition(Job),
     Label(Box<str>),
-    GetItem(Box<ValueDefinition>, Box<ValueDefinition>),
     GetAttr(Box<ValueDefinition>, Box<str>),
     Path(Box<ValueDefinition>, Box<str>),
 }
@@ -37,7 +36,7 @@ impl ValueDefinition {
     pub fn can_block(&self, arg: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
         match self {
             ValueDefinition::JobDefinition(j) => j.can_block(env),
-            ValueDefinition::GetItem(inner1, inner2) => inner1.can_block(arg, env) || inner2.can_block(arg, env),
+            ValueDefinition::GetAttr(inner1, inner2) => true,
             _ => false,
         }
     }
@@ -70,40 +69,11 @@ impl ValueDefinition {
                     env.get(s).or_else(|| file_get(s)),
                     format!("Unknown variable {}", self.to_string()).as_str())?),
 
-            ValueDefinition::GetItem(c, i) => {
-                let this = c.compile_internal(dependencies, env, can_block)?.1;
-                let v = match (this.clone(), i.compile_internal(dependencies, env, can_block)?.1) {
-                    (Value::File(s), Value::String(l)) =>
-                        Value::File(s.join(l.as_ref()).into_boxed_path()),
-                    (Value::List(list), Value::Integer(idx)) =>
-                        list.get(idx as usize)?,
-                    (Value::Dict(dict), c) =>
-                        mandate(dict.get(&c), "Invalid subscript")?,
-                    (Value::Scope(env), Value::String(name)) =>
-                        mandate(env.get(name.as_ref()), "Invalid subscript")?,
-                    (Value::Struct(row), Value::String(col)) =>
-                        mandate(row.get(col.as_ref()), "Invalid subscript")?,
-                    (Value::Struct(row), Value::Integer(idx)) =>
-                        mandate(row.idx(idx as usize).map(|v| v.clone()), "Invalid subscript")?,
-                    (Value::Table(o), Value::Integer(idx)) =>
-                        Value::Struct(
-                            mandate(o.rows().get(idx as usize), "Index out of range")?
-                                .clone()
-                                .into_struct(o.types())),
-                    (Value::TableStream(o), Value::Integer(idx)) =>
-                        Value::Struct(o.get(idx)?.into_struct(o.types())),
-                    (parent, key) =>
-                        return error(format!(
-                            "Value of type {} can't be subscripted by key of type {}",
-                            parent.value_type().to_string(),
-                        key.value_type().to_string()).as_str()),
-                };
-                (Some(this), v)
-            }
-
             ValueDefinition::GetAttr(parent_def, entry) => {
                 let parent = parent_def.compile_internal(dependencies, env, can_block)?.1;
-                let val = mandate(parent.field(&entry), format!("Missing field {}", entry).as_str())?;
+                let val = mandate(
+                    parent.field(&entry),
+                    format!("Missing field {} in value of type {}", entry, parent.value_type().to_string()).as_str())?;
                 (Some(parent), val)
             }
 
@@ -123,7 +93,6 @@ impl ToString for ValueDefinition {
             ValueDefinition::Label(v) => v.to_string(),
             ValueDefinition::ClosureDefinition(_, _) => "<closure>".to_string(),
             ValueDefinition::JobDefinition(_) => "<job>".to_string(),
-            ValueDefinition::GetItem(v, l) => format!("{}[{}]", v.to_string(), l.to_string()),
             ValueDefinition::GetAttr(v, l) => format!("{}:{}", v.to_string(), l),
             ValueDefinition::Path(v, l) => format!("{}/{}", v.to_string(), l),
         }

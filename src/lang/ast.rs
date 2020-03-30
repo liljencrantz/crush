@@ -114,7 +114,7 @@ impl Node {
                     return error("Variable declarations not supported as arguments"),
 
                 Node::LogicalOperation(_, _, _) | Node::Comparison(_, _, _) | Node::Replace(_, _, _, _) |
-                Node::Term(_, _, _) | Node::Factor(_, _, _) =>
+                Node::GetItem(_, _) | Node::Term(_, _, _) | Node::Factor(_, _, _) =>
                     ValueDefinition::JobDefinition(
                         Job::new(vec![self.generate_standalone()?.unwrap()])
                     ),
@@ -141,10 +141,6 @@ impl Node {
                 Node::String(t) => ValueDefinition::Value(Value::String(unescape(t).into_boxed_str())),
                 Node::Integer(i) => ValueDefinition::Value(Value::Integer(i.clone())),
                 Node::Float(f) => ValueDefinition::Value(Value::Float(f.clone())),
-                Node::GetItem(node, field) =>
-                    ValueDefinition::GetItem(
-                        Box::from(node.generate_argument()?.unnamed_value()?),
-                        Box::from(field.generate_argument()?.unnamed_value()?)),
                 Node::GetAttr(node, label) => {
                     let parent = node.generate_argument()?;
                     match parent.unnamed_value()? {
@@ -255,7 +251,9 @@ impl Node {
                 };
                 l.method_invocation(method, vec![r.generate_argument()?])
             }
-
+            Node::GetItem(val, key) => {
+                val.method_invocation("__getitem__", vec![key.generate_argument()?])
+            }
             Node::Unary(op, r) =>
                 match op.deref() {
                     "neg" => r.method_invocation("__neg__", vec![]),
@@ -266,7 +264,7 @@ impl Node {
                 },
 
             Node::Cast(_, _) | Node::Glob(_) | Node::Label(_) | Node::Regex(_) | Node::Field(_) | Node::String(_) |
-            Node::Integer(_) | Node::Float(_) | Node::GetItem(_, _) | Node::GetAttr(_, _) | Node::Path(_, _) | Node::Substitution(_) |
+            Node::Integer(_) | Node::Float(_) | Node::GetAttr(_, _) | Node::Path(_, _) | Node::Substitution(_) |
             Node::Closure(_, _) | Node::File(_)=> Ok(None),
         }
     }

@@ -9,6 +9,8 @@ use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::cmp::Ordering;
 use crate::util::replace::Replace;
+use crate::lang::errors::{CrushResult, mandate, argument_error};
+use crate::lang::execution_context::{ExecutionContext, This, ArgumentVector};
 
 lazy_static! {
     pub static ref ROOT: Struct = {
@@ -70,10 +72,27 @@ impl PartialOrd for Struct {
     }
 }
 
+pub fn set(mut context: ExecutionContext) -> CrushResult<()> {
+    let this = context.this.r#struct()?;
+    let value = context.arguments.value(1)?;
+    let name = context.arguments.string(0)?;
+    this.set(&name, value);
+    Ok(())
+}
+
+pub fn get(mut context: ExecutionContext) -> CrushResult<()> {
+    let this = context.this.r#struct()?;
+    let name = context.arguments.string(0)?;
+    context.output.send(mandate(this.get(&name), format!("Unknown field {}", name).as_str())?);
+    Ok(())
+}
+
 impl Struct {
     fn root() -> Struct {
         Struct::create(vec![
-            (Box::from("__setattr__"), Value::Command(CrushCommand::command_undocumented(crate::lib::types::setattr, false))),
+            (Box::from("__setattr__"), Value::Command(CrushCommand::command_undocumented(set, false))),
+            (Box::from("__getitem__"), Value::Command(CrushCommand::command_undocumented(get, false))),
+            (Box::from("__setitem__"), Value::Command(CrushCommand::command_undocumented(set, false))),
         ], None)
     }
 
@@ -161,7 +180,7 @@ impl Struct {
 
     fn fill_keys(&self, dest: &mut HashSet<Box<str>>) {
         let data = self.data.lock().unwrap();
-        data.lookup.keys().for_each(|name| { dest.insert(name.clone());});
+        data.lookup.keys().for_each(|name| { dest.insert(name.clone()); });
         let parent = data.parent.clone();
         drop(data);
         parent.map(|p| p.fill_keys(dest));
@@ -175,14 +194,9 @@ impl Struct {
                 data.lookup.insert(Box::from(name), idx);
                 data.cells.push(value);
                 None
-            },
+            }
             Some(idx) => Some(data.cells.replace(idx, value)),
         }
-    }
-
-    pub fn idx(&self, idx: usize) -> Option<Value> {
-        let data = self.data.lock().unwrap();
-        data.cells.get(idx).map(|v| v.clone())
     }
 
     pub fn materialize(&self) -> Struct {

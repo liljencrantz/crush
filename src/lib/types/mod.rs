@@ -73,14 +73,6 @@ fn class(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Struct(res))
 }
 
-pub fn setattr(mut context: ExecutionContext) -> CrushResult<()> {
-    let this = context.this.r#struct()?;
-    let name = context.arguments.string(0)?;
-    let value = context.arguments.value(1)?;
-    this.set(&name, value);
-    Ok(())
-}
-
 pub fn parse_column_types(mut arguments: Vec<Argument>) -> CrushResult<Vec<ColumnType>> {
     let mut types = Vec::new();
     let names = column_names(&arguments);

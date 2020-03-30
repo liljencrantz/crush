@@ -5,7 +5,7 @@ use crate::util::replace::Replace;
 use crate::lang::command::CrushCommand;
 use std::path::Path;
 use crate::util::glob::Glob;
-use crate::lang::stream::{ValueSender, ValueReceiver};
+use crate::lang::stream::{ValueSender, ValueReceiver, InputStream};
 use crate::lang::scope::Scope;
 use crate::lang::list::List;
 use crate::lang::dict::Dict;
@@ -121,6 +121,7 @@ pub trait This {
     fn duration(self) -> CrushResult<Duration>;
     fn time(self) -> CrushResult<DateTime<Local>>;
     fn table(self) -> CrushResult<Table>;
+    fn table_stream(self) -> CrushResult<InputStream>;
     fn binary(self) -> CrushResult<Vec<u8>>;
     fn scope(self) -> CrushResult<Scope>;
 }
@@ -154,6 +155,7 @@ impl This for Option<Value> {
     this_method!(duration, Duration, Duration, "duration");
     this_method!(time, DateTime<Local>, Time, "time");
     this_method!(scope, Scope, Scope, "scope");
+    this_method!(table_stream, InputStream, TableStream, "table_stream");
 
     fn re(mut self) -> CrushResult<(Box<str>, Regex)> {
         match self.take() {

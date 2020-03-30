@@ -1,4 +1,5 @@
 Todo for MVP 1:
+Complate the getitem migration
 Add system tests for type casting
 Add system tests for for loop
 Add system tests for binary stream handling
