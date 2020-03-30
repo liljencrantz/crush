@@ -1,16 +1,15 @@
-Todo for MVP 1:
+Todo:
+Fix broken system tests
 Add system tests for type casting
 Add system tests for for loop
 Add system tests for binary stream handling
 Add system tests for structs
 Add system tests for dealing with tables as streams
+Make parse error reporting more helpful
 Error source propagation
-Deal with different error kinds differently
 Add command-field to CrushError
 Add source field to CrushError
 Make error printing display source of error
-
-Future features:
 Binary values can be big. Make them shared behind an Arc.
 In closures without a signature, put unnamed variables in the variable 'unnamed'
 Figure out how to make external commands with subcommands convenient again
@@ -61,169 +60,3 @@ Add history command with all previous interactive invocations, including invocat
 Add proc.jobs command
 pseudo-tty for cmd command output
 pseudo-tty for cmd command input
-
-Done:
-Fix all expects calls that aren't impossible, and propagate the errors
-Display errors
-Propagate runtime errors
-one command per file
-make filter actually useful
-implement globs
-make filter support globs
-proper lexer and parser
-implement file globs
-make ls support globs
-implement sort command
-basic keyboard handling
-implement find command
-implement variables
-implement set command
-implement cell type File
-make ls/find output File cells instead of strings
-make nice presentation of File cells
-implement Stream<Row> cell type
-implement command substitution
-implement group command
-one command per thread
-implement count command
-implement head command
-implement tail command
-Implement matching operators, =~ and !~
-make filter support globs
-implement select command
-implement enumerate command
-implement single row cell type
-implement regexps
-make filter support regexps
-implement csv command
-implement cast command for cell type conversion
-Implement ps command
-implement unset command
-Rename filter to where
-implement reverse command
-List cell types
-List literals
-List subscripting
-Implement for command for {ls} `{echo $file}
-Switch over to new list syntax
-implement sum command
-Start putting commands into namespaces
-fields and variables should support dot notation
-add support for using namespace objects as actual namespaces
-Implement list.push
-Implement list.pop
-Implement boolean cell type
-Implement boolean literals. Perhaps use ?{true} and ?{false}... Pretty ugly.
-Implement namespace cell type
-Implement dict cell type
-implement env command
-Missing type check on list literals, e.g. let foo=[1 horse]
-Add map/rows/output subscripting
-Add checks so we don't try to hash on unhashable types in either dict or join
-Add type checks in where command
-add and/or to where command
-take-command for reading N (defaults to 1) lines from an output in a variable variable
-Implement zip command to combine two streams
-Implement if command if {stat foo.txt is_file} {} else {}
-Any cell can be the output of a command
-Rename cell -> value
-Rename output -> stream
-Rename row -> struct
-Think through input/output types of join
-Add uniq command
-Implement http command
-Binary blob type
-The bin command interprets files as a single binary blob.
-Head takes on the role of take command
-type.of command that outputs type of input
-Create new type Type
-Add a command for picking a single field off a struct, e.g. struct foo=bar | field %foo
-Redo the select command to use closures
-Rename JobError -> CrushError
-Add default use clauses
-Move for/if to control namespace
-Move cat/lines/json/csv to io namespace
-Move struct/val/materializ/list/dict to data namespace
-Materialized binary
-Add proc.kill command
-Rethink join syntax
-Add math.neg command
-The for command should not be limited to streams, and it should be possible to name the entire row, e.g. for i=(ls) {val $i},
-Support for iterating over dicts with the for command
-Add control.break/control.continue commands
-Flesh out time/duration modes with add/subtract support
-Add text.upper command
-Add text.lower command
-Add text.format command
-Add control.cmd command
-Fall back to cmd if a command does not exist internally
-Add Kind to CrushError
-Stop the scope deadlocks
-Add var.use command
-Add regex.new command
-Add regex.match command
-Add regex.replace command
-Add byte <-> text conversions
-Add list.clear command
-Add list.remove command
-Make echo always send to printer and accepts multiple arguments
-Add val command that always pipes single argument to stream
-Add loop command
-Replace dot with / in command names?
-Add text.split command
-Make lists and dicts streamable
-Figure out reading non-streams
-Skip threads for commands that we know can't block
-use command is b0rked
-Fix infinite loop on "val (true || false)"
-Add support for := for variable declaration
-Float parsing
-Add support for variable literals
-Fix external command fallback
-Make 'this' reliably handled in closures
-Make it possible to call methods with an expicitly set 'this', e.g list.pop this=some_list
-Running a directory is cd
-Implement getitem for file
-Names should be mandatory and unique in structs, tables and table streams, auto-assign _0, _1, etc, and add numbers to dedup
-Consistent naming in code: getitem and path
-Structs and rows should be subscriptable via indices
-Add methods to text type
-Add 'type' method to all types
-Add methods to file type
-Add dir command
-Remove the dot operator in favor of [] for fields. Use slash on commands?
-Figure out how to make globs convenient again
-Make structs mutable and protected by Arc + Mutex
-Make argument parsing in list and dict commands more consistent
-Add methods for regexp type
-Re-add match operators =~ and !~ for regexp matching: fnurple | where {$row =~ re{^a.*b$}}
-Re-add regexp literals
-Make newline a separator again
-&&/|| => and/or
-Add ~ (replace) operator for regexps: "this is a string" ~ re{a.*g} "Sparta!" -> "this is Sparta!"
-Optional signatures for closures
-Add methods to glob type
-Add methods to integer type
-Add methods to float type
-Unify types and the type-related namespaces. List:of in the List type, etc.
-Replace type:to function with 'as' operator
-Use @ and @@ for args/kwargs, both in signatures and in argument lists
-Use % for wildcards, something else for fields. Maybe ^?
-negation operator. named 'neg'?
-rename not operator from ! to 'not'?
-Remove parse_util
-Remove command_util
-redo labels. Allow /%? in labels, but if they're there, change the type?
-Remove 'root' constant
-Add exists-method on file
-Comparison, hashing unimplemented for list
-help command
-Add avg command
-Add missing comparisons on Value
-Either implement call_type for all types or check for its existence and don't execute types unless it exists
-Fix struct type
-Flesh out readme file
-Add ceil, floor, pow, log, sin, cos, tan, etc to math lib
-Complate the getitem migration
-Remove the type member, add a typeof command instead (because data structs should only have data fields)
-data structs should not have setitem. They should in fact have no fields other than the data ones and no parent.
