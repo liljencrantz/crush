@@ -13,6 +13,16 @@ lazy_static! {
         res.insert(Box::from("__mul__"), CrushCommand::command_undocumented(mul, false));
         res.insert(Box::from("__div__"), CrushCommand::command_undocumented(div, false));
         res.insert(Box::from("__neg__"), CrushCommand::command_undocumented(neg, false));
+        res.insert(Box::from("is_finite"), CrushCommand::command(
+            is_infinite, false,
+            "float:is_infinite",
+            "True if this float is positive or negative infinity",
+            None));
+        res.insert(Box::from("is_nan"), CrushCommand::command(
+            is_nan, false,
+            "float:is_nan",
+            "True if this float is NaN",
+            None));
         res
     };
 }
@@ -25,4 +35,14 @@ binary_op!(div, float, Integer, Float, |a, b| a/(b as f64), Float, Float, |a, b|
 fn neg(context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context.output.send(Value::Float(-context.this.float()?))
+}
+
+fn is_nan(context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
+    context.output.send(Value::Bool(context.this.float()?.is_nan()))
+}
+
+fn is_infinite(context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
+    context.output.send(Value::Bool(context.this.float()?.is_infinite()))
 }

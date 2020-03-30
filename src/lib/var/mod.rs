@@ -39,9 +39,23 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("var")?;
     env.declare("let", Value::Command(CrushCommand::command_undocumented(r#let, false)))?;
     env.declare("set", Value::Command(CrushCommand::command_undocumented(set, false)))?;
-    env.declare("unset", Value::Command(CrushCommand::command_undocumented(unset, false)))?;
-    env.declare("env", Value::Command(CrushCommand::command_undocumented(env::perform, false)))?;
-    env.declare("use", Value::Command(CrushCommand::command_undocumented(r#use::perform, false)))?;
+    env.declare("unset", Value::Command(CrushCommand::command(
+        unset, false,
+        "scope name:string",
+        "Removes a variable from the namespace",
+        None)))?;
+    env.declare("env", Value::Command(CrushCommand::command(
+        env::perform, false,
+        "env", "Returns a table containing the current namespace",
+        Some(r#"    The columns of the table are the name, and the type of the value."#))))?;
+    env.declare("use", Value::Command(CrushCommand::command(
+        r#use::perform, false,
+        "use scope:scope",
+        "Puts the specified scope into the list of scopes to search in by default during scope lookups",
+        Some(r#"    Example:
+
+    use math
+    sqrt 1.0"#))))?;
     env.readonly();
     Ok(())
 }

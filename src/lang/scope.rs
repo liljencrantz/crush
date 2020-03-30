@@ -179,7 +179,7 @@ impl Scope {
     }
 
     pub fn remove_str(&self, name: &str) -> Option<Value> {
-        let n = &name.split('.').map(|e: &str| Box::from(e)).collect::<Vec<Box<str>>>()[..];
+        let n = &name.split(':').map(|e: &str| Box::from(e)).collect::<Vec<Box<str>>>()[..];
         return self.remove(n);
     }
 
