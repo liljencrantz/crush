@@ -31,12 +31,11 @@ fn materialize(context: ExecutionContext) -> CrushResult<()> {
 
 fn new(mut context: ExecutionContext) -> CrushResult<()> {
     let parent = context.this.clone().r#struct()?;
-    let res = Struct::create(vec![], Some(parent));
+    let res = Struct::new(vec![], Some(parent));
     let init = res.get("__init__");
     let o = context.output;
     context.output = spawn_print_thread();
     context.this = Some(Value::Struct(res.clone()));
-    println!("WOO WEE WOO __init__ is {}", init.clone().map(|v| v.to_string()).unwrap_or("None".to_string()));
     match init {
         Some(Value::Command(c)) => { c.invoke(context)?; }
         _ => {}
@@ -52,9 +51,8 @@ fn data(context: ExecutionContext) -> CrushResult<()> {
             .map(|(name, arg)| (name, arg.value))
             .collect::<Vec<(Box<str>, Value)>>();
     context.output.send(
-        Value::Struct(Struct::new(arr)))
+        Value::Struct(Struct::new(arr, None)))
 }
-
 
 fn class(mut context: ExecutionContext) -> CrushResult<()> {
     let mut parent = crate::lang::r#struct::ROOT.clone();
@@ -63,7 +61,7 @@ fn class(mut context: ExecutionContext) -> CrushResult<()> {
         parent = context.arguments.r#struct(0)?;
     }
 
-    let res = Struct::create(
+    let res = Struct::new(
         vec![
             (Box::from("new"), Value::Command(CrushCommand::command_undocumented(new, true))),
         ],
@@ -91,8 +89,9 @@ pub fn r#as(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(context.arguments.value(0)?.cast(context.arguments.r#type(1)?)?)
 }
 
-pub fn r#type(context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::Type(mandate(context.this, "Missing this value")?.value_type()))
+pub fn r#typeof(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(1);
+    context.output.send(Value::Type(context.arguments.value(0)?.value_type()))
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
@@ -113,7 +112,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     Point := (class)
     Point:__init__ = {
-        | x:float y:float |
+        |x:float y:float|
         this:x = x
         this:y = y
     }
@@ -124,7 +123,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     }
 
     Point:__add__ = {
-        | other |
+        |other|
         Point:new x=(this:x + other:x) y=(this:y + other:y)
     }
 

@@ -58,6 +58,7 @@ Unary: Box<Node> = {
     Cast,
     NotOperator <u: Unary> => Box::from(Node::Unary(Box::from("not"), u)),
     NegationOperator <u: Unary> => Box::from(Node::Unary(Box::from("neg"), u)),
+    TypeOfOperator <u: Unary> => Box::from(Node::Unary(Box::from("typeof"), u)),
     "@" <u: Unary> => Box::from(Node::Unary(Box::from("@"), u)),
     "@@" <u: Unary> => Box::from(Node::Unary(Box::from("@@"), u)),
 }
@@ -112,6 +113,7 @@ AnyLabel: Box<str> = {
 match {
     r"(and|or)" => LogicalOperator,
     "as" => CastOperator,
+    "typeof" => TypeOfOperator,
     "neg" => NegationOperator,
     "not" => NotOperator,
 } else {

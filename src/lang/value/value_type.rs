@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use crate::lib::types;
 use lazy_static::lazy_static;
 use crate::lang::help::Help;
+use std::cmp::max;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum ValueType {
@@ -169,10 +170,21 @@ impl Help for ValueType {
     fn long_help(&self) -> Option<String> {
         let mut lines = Vec::new();
 
-        for (k, v) in self.fields().iter() {
-            lines.push(format!("    * {} {}", k, v.help().short_help()));
-        }
+        let mut keys: Vec<_> = self.fields().into_iter().collect();
+        keys.sort_by(|x,y| x.0.cmp(&y.0));
+
+        long_help_methods(&keys, &mut lines);
         Some(lines.join("\n"))
+    }
+}
+
+fn long_help_methods(fields: &Vec<(&Box<str>, &Box<dyn CrushCommand +  Sync + Send>)>, lines: &mut Vec<String>) {
+    let mut max_len = 0;
+    for (k, _) in fields {
+        max_len = max(max_len, k.len());
+    }
+    for (k, v) in fields {
+        lines.push(format!("    * {}  {}{}", k, " ".repeat(max_len - k.len()), v.help().short_help()));
     }
 }
 

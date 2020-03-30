@@ -30,6 +30,7 @@ lazy_static! {
     pub static ref SET: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(var::set, false)};
 
     pub static ref AS: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(types::r#as, false)};
+    pub static ref TYPEOF: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(types::r#typeof, false)};
 }
 
 pub struct JobListNode {
@@ -120,7 +121,7 @@ impl Node {
                     ),
                 Node::Unary(op, r) =>
                     match op.deref() {
-                        "neg" | "not" =>
+                        "neg" | "not" | "typeof" =>
                             ValueDefinition::JobDefinition(
                                 Job::new(vec![self.generate_standalone()?.unwrap()])
                             ),
@@ -259,6 +260,8 @@ impl Node {
                     "neg" => r.method_invocation("__neg__", vec![]),
                     "not" =>
                         Node::function_invocation(NOT.as_ref().clone(), vec![r.generate_argument()?]),
+                    "typeof" =>
+                        Node::function_invocation(TYPEOF.as_ref().clone(), vec![r.generate_argument()?]),
                     "@" | "@@" => Ok(None),
                     _ => return error("Unknown operator"),
                 },

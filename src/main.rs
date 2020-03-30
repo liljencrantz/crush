@@ -29,6 +29,8 @@ fn crush_history_file() -> Box<str> {
 }
 
 fn run_interactive(global_env: lang::scope::Scope) -> CrushResult<()> {
+    printer().line("Welcome to Crush");
+    printer().line(r#"Type "help" for... help."#);
     let mut rl = Editor::<()>::new();
     let _ = rl.load_history(crush_history_file().as_ref());
     loop {

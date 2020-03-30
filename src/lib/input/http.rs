@@ -2,7 +2,7 @@ use crate::lang::{argument::Argument, value::Value, r#struct::Struct, table::Tab
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::errors::{argument_error, to_crush_error, CrushResult, demand};
 use reqwest::{StatusCode, Method};
-use reqwest::header::{HeaderMap};
+use reqwest::header::HeaderMap;
 
 #[derive(Debug)]
 pub struct Config {
@@ -31,7 +31,7 @@ fn parse_method(m: &str) -> CrushResult<Method> {
 fn parse(mut arguments: Vec<Argument>) -> CrushResult<Config> {
     let mut url = None;
     let cache = false;
-    let mut headers= Vec::new();
+    let mut headers = Vec::new();
     let mut form = None;
     let mut method = Method::GET;
 
@@ -44,8 +44,8 @@ fn parse(mut arguments: Vec<Argument>) -> CrushResult<Config> {
             (Some("header"), Value::String(t)) => {
                 let h = t.splitn(2, ':').collect::<Vec<&str>>();
                 match h.len() {
-                    2 => { headers.push((h[0].to_string(), h[1].to_string()));}
-                    _ => { return argument_error("Bad header format") }
+                    2 => { headers.push((h[0].to_string(), h[1].to_string())); }
+                    _ => { return argument_error("Bad header format"); }
                 }
             }
             _ => { return argument_error("Unknown argument"); }
@@ -93,7 +93,8 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
                 (Box::from("status"), Value::Integer(status.as_u16() as i128)),
                 (Box::from("headers"), Value::Table(headers)),
                 (Box::from("body"), Value::BinaryStream(input))
-            ]
+            ],
+            None,
         )));
     to_crush_error(b.copy_to(output.as_mut()))?;
     Ok(())

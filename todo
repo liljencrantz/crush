@@ -1,5 +1,4 @@
 Todo for MVP 1:
-Complate the getitem migration
 Add system tests for type casting
 Add system tests for for loop
 Add system tests for binary stream handling
@@ -225,3 +224,6 @@ Either implement call_type for all types or check for its existence and don't ex
 Fix struct type
 Flesh out readme file
 Add ceil, floor, pow, log, sin, cos, tan, etc to math lib
+Complate the getitem migration
+Remove the type member, add a typeof command instead (because data structs should only have data fields)
+data structs should not have setitem. They should in fact have no fields other than the data ones and no parent.

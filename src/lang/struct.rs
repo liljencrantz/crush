@@ -89,18 +89,14 @@ pub fn get(mut context: ExecutionContext) -> CrushResult<()> {
 
 impl Struct {
     fn root() -> Struct {
-        Struct::create(vec![
+        Struct::new(vec![
             (Box::from("__setattr__"), Value::Command(CrushCommand::command_undocumented(set, false))),
             (Box::from("__getitem__"), Value::Command(CrushCommand::command_undocumented(get, false))),
             (Box::from("__setitem__"), Value::Command(CrushCommand::command_undocumented(set, false))),
         ], None)
     }
 
-    pub fn new(vec: Vec<(Box<str>, Value)>) -> Struct {
-        Struct::create(vec, Some(ROOT.clone()))
-    }
-
-    pub fn create(mut vec: Vec<(Box<str>, Value)>, parent: Option<Struct>) -> Struct {
+    pub fn new(mut vec: Vec<(Box<str>, Value)>, parent: Option<Struct>) -> Struct {
         let mut lookup = HashMap::new();
         let mut cells = Vec::new();
         vec.drain(..)

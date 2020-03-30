@@ -36,7 +36,7 @@ pub enum Value {
     Field(Vec<Box<str>>),
     Glob(Glob),
     Regex(Box<str>, Regex),
-    Command(Box<dyn CrushCommand +  Send + Sync>),
+    Command(Box<dyn CrushCommand + Send + Sync>),
     TableStream(InputStream),
     File(Box<Path>),
     Table(Table),
@@ -87,45 +87,43 @@ fn add_keys<T>(map: &HashMap<Box<str>, T>, res: &mut Vec<Box<str>>) {
 
 impl Value {
     pub fn field(&self, name: &str) -> Option<Value> {
-        if name == "type" {
-            Some(Value::Command(CrushCommand::command_undocumented(crate::lib::types::r#type, false)))
-        } else {
-            match self {
-                Value::Struct(s) => s.get(name),
-                Value::Scope(subenv) =>
-                    subenv
-                        .get(name)
-                        .or_else(|| {
-                            self.value_type()
-                                .fields()
-                                .get(&Box::from(name))
-                                .map(|m| Value::Command(m.as_ref().clone()))
-                        }),
-                Value::Type(t) =>
-                    t.fields()
-                        .get(&Box::from(name))
-                        .map(|m| Value::Command(m.as_ref().clone())),
-                _ =>
-                    self.value_type()
-                        .fields()
-                        .get(&Box::from(name))
-                        .map(|m| Value::Command(m.as_ref().clone())),
-            }
+        match self {
+            Value::Struct(s) => s.get(name),
+            Value::Scope(subenv) =>
+                subenv
+                    .get(name)
+                    .or_else(|| {
+                        self.value_type()
+                            .fields()
+                            .get(&Box::from(name))
+                            .map(|m| Value::Command(m.as_ref().clone()))
+                    }),
+            Value::Type(t) =>
+                t.fields()
+                    .get(&Box::from(name))
+                    .map(|m| Value::Command(m.as_ref().clone())),
+            _ =>
+                self.value_type()
+                    .fields()
+                    .get(&Box::from(name))
+                    .map(|m| Value::Command(m.as_ref().clone())),
         }
     }
 
     pub fn fields(&self) -> Vec<Box<str>> {
-        let mut res = vec![Box::from("type")];
+        let mut res = Vec::new();
         match self {
             Value::Struct(s) => {
                 res.append(&mut s.keys())
-            },
+            }
 //            Value::Scope(subenv) => subenv.get(name),
             Value::Type(t) => {
                 add_keys(t.fields(), &mut res)
-            },
+            }
             _ => add_keys(self.value_type().fields(), &mut res),
         }
+        res.sort_by(|x,y| x.cmp(y));
+
         res
     }
 
@@ -261,19 +259,19 @@ impl Value {
                 _ => return error("Can't cast to boolean")
             })),
             ValueType::String => Ok(Value::String(str_val.into_boxed_str())),
-            ValueType::Time => unimplemented!(),
+            ValueType::Time => error("invalid cast"),
             ValueType::Duration => Ok(Value::Duration(Duration::seconds(to_crush_error(i64::from_str(&str_val))?))),
-            ValueType::Command => unimplemented!(),
-            ValueType::TableStream(_) => unimplemented!(),
-            ValueType::Table(_) => unimplemented!(),
-            ValueType::Struct => unimplemented!(),
-            ValueType::List(_) => unimplemented!(),
-            ValueType::Dict(_, _) => unimplemented!(),
+            ValueType::Command => error("invalid cast"),
+            ValueType::TableStream(_) => error("invalid cast"),
+            ValueType::Table(_) => error("invalid cast"),
+            ValueType::Struct => error("invalid cast"),
+            ValueType::List(_) => error("invalid cast"),
+            ValueType::Dict(_, _) => error("invalid cast"),
             ValueType::Scope => error("Invalid cast"),
             ValueType::Empty => error("Invalid cast"),
             ValueType::Any => error("Invalid cast"),
-            ValueType::BinaryStream => unimplemented!(),
-            ValueType::Type => unimplemented!(),
+            ValueType::BinaryStream => error("invalid cast"),
+            ValueType::Type => error("invalid cast"),
         }
     }
 }
@@ -408,7 +406,7 @@ mod tests {
 
     #[test]
     fn text_casts() {
-        assert_eq!(Value::String(Box::from("112432")).cast(ValueType::Integer).is_err(), false);
+        assert_eq!(Value::string("112432").cast(ValueType::Integer).is_err(), false);
         assert_eq!(Value::string("1d").cast(ValueType::Integer).is_err(), true);
         assert_eq!(Value::string("1d").cast(ValueType::Glob).is_err(), false);
         assert_eq!(Value::string("1d").cast(ValueType::File).is_err(), false);

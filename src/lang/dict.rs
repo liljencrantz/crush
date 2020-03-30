@@ -39,6 +39,19 @@ impl Dict {
         entries.len()
     }
 
+    pub fn clear(&self) {
+        let mut entries = self.entries.lock().unwrap();
+        entries.clear()
+    }
+
+    pub fn copy(&self) -> Dict {
+        let entries = self.entries.lock().unwrap();
+        Dict {
+            key_type: self.key_type.clone(),
+            value_type: self.value_type.clone(),
+            entries: Arc::new(Mutex::new(entries.clone())),
+        }
+    }
 
     pub fn get(&self, key: &Value) -> Option<Value> {
         let entries = self.entries.lock().unwrap();

@@ -25,7 +25,9 @@ lazy_static! {
             "dict:empty",
             "True if there are no mappings in the dict",
             None));
-//        res.insert(Box::from("clear"), Box::from(CrushCommand::command_undocumented(clear, false)));
+        res.insert(Box::from("clear"), Box::from(CrushCommand::command(
+            clear, false,
+            "dict:clear", "Remove all mappings from this dict", None)));
         res.insert(Box::from("__setitem__"), CrushCommand::command(
             setitem, false,
             "dict[key] = value",
@@ -41,7 +43,11 @@ lazy_static! {
             "dict:remove key",
             "Remove a mapping from the dict",
             None));
-//        res.insert(Box::from("clone"), Box::from(CrushCommand::command_undocumented(clone, false)));
+        res.insert(Box::from("clone"), Box::from(CrushCommand::command(
+            clone, false,
+            "dict:clone",
+            "Create a new dict with the same st of mappings as this one",
+            None)));
         res.insert(Box::from("__call_type__"), CrushCommand::command(
             call_type, false,
             "dict key_type:type value_type:type",
@@ -78,7 +84,8 @@ fn setitem(mut context: ExecutionContext) -> CrushResult<()> {
     let value = context.arguments.value(1)?;
     let key = context.arguments.value(0)?;
     if dict.key_type() == key.value_type() && dict.value_type() == value.value_type() {
-        dict.insert(key, value)
+        dict.insert(key, value);
+        Ok(())
     } else {
         argument_error("Wrong key/value type")
     }
@@ -105,6 +112,19 @@ fn remove(mut context: ExecutionContext) -> CrushResult<()> {
 fn len(context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context.output.send(Value::Integer(context.this.dict()?.len() as i128))
+}
+
+fn clear(context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
+    let d = context.this.dict()?;
+    d.clear();
+    context.output.send(Value::Dict(d))
+}
+
+fn clone(context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
+    let d = context.this.dict()?;
+    context.output.send(Value::Dict(d.copy()))
 }
 
 fn empty(context: ExecutionContext) -> CrushResult<()> {

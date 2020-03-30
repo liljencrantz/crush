@@ -1,5 +1,5 @@
 use crate::lang::scope::Scope;
-use crate::lang::errors::{CrushResult, error, to_crush_error};
+use crate::lang::errors::{CrushResult, error, to_crush_error, argument_error};
 use crate::lang::{value::Value};
 use crate::lang::command::CrushCommand;
 use crate::util::file::{home, cwd};
@@ -41,15 +41,37 @@ fn halp(o: &dyn Help) {
 }
 
 pub fn help(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(1)?;
-    let v = context.arguments.value(0)?;
-    match v {
-        Value::Command(cmd) =>
-            halp(cmd.help()),
-        Value::Type(t) => halp(&t),
-        v => halp(&v.value_type()),
+    match context.arguments.len() {
+        0 => {
+            printer().line(r#"
+Welcome to Crush!
+
+If this is your first time using Crush, congratulations on just entering your
+first command! If you haven't already, you might want to check out the Readme
+for an introduction at https://github.com/liljencrantz/crush/.
+
+Call the help command with the name of any value, including a command or a
+type in order to get help about it. For example, you might want to run the
+commands "help help", "help string", "help if" or "help where".
+
+To get a list of everything in your namespace, write "var:env". To list the
+members of a value, write "dir <value>".
+"#);
+            Ok(())
+        }
+        1 => {
+            let v = context.arguments.value(0)?;
+            match v {
+                Value::Command(cmd) =>
+                    halp(cmd.help()),
+                Value::Type(t) => halp(&t),
+                v => halp(&v.value_type()),
+            }
+            Ok(())
+        }
+        _ => argument_error("The help command expects at most one argument")
     }
-    Ok(())
+
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {

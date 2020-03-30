@@ -202,8 +202,7 @@ command to only show one column from the output.
 
 ### Types
 
-Work is being done to allow user defined types. Built in types
-include
+Crush comes with a variaty of types:
 
 * lists of any type,
 * dicts of any type,
@@ -221,6 +220,8 @@ include
 * binary streams, which are like binary data but can only be traversed once
 * types, and
 * commands, which are either closures or built in commands.
+
+Additionally, Crush allows you to define your own new types using the class command.
 
 ### Exploring the shell
 
@@ -306,8 +307,15 @@ commands like `ps`, `find`.
 
 ### Globs
 
-The `*` operator is used for multiplication, so Crush uses `%` as the wldcard operator. `?` is
-still used for single character wildcards.
+The `*` operator is used for multiplication, so Crush uses `%` as the wildcard operator
+instead. `?` is still used for single character wildcards.
+
+    crush> ls %.txt
+    user         size  modified                  type file
+    liljencrantz 21303 2020-03-30 13:40:37 +0200 file /home/liljencrantz/src/crush/README.md
+    crush> ls ????????
+    user         size modified                  type file
+    liljencrantz   75 2020-03-07 17:09:15 +0100 file /home/liljencrantz/src/crush/build.rs
 
 Wildcards are not automatically expanded, they are passed in to commands as glob objects,
 and the command chooses what to match the glob against.
@@ -344,22 +352,23 @@ Crush has built in lists
     [1, 7]
     crush> help l
     type list integer
-    
+
         A mutable list of items, usually of the same type
-    
-        * clear Remove all elments from the list
-        * peek Return the last element from the list
-        * push Push an element to the end of the list
-        * remove Remove the element at the specified index
-        * clone Create a duplicate of the list
-        * __setitem__ Assign a new value to the element at the specified index
-        * truncate Remove all elements past the specified index
-        * __call_type__ Return a list type for the specified element type
-        * of Create a new list containing the supplied elements
-        * empty True if there are no elements in the list
-        * len The number of elements in the list
-        * pop Remove the last element from the list
-        * new Create a new list with the specified element type
+
+        * __call_type__  Return a list type for the specified element type
+        * __getitem__    Return a file or subdirectory in the specified base directory
+        * __setitem__    Assign a new value to the element at the specified index
+        * clear          Remove all elments from the list
+        * clone          Create a duplicate of the list
+        * empty          True if there are no elements in the list
+        * len            The number of elements in the list
+        * new            Create a new list with the specified element type
+        * of             Create a new list containing the supplied elements
+        * peek           Return the last element from the list
+        * pop            Remove the last element from the list
+        * push           Push an element to the end of the list
+        * remove         Remove the element at the specified index
+        * truncate       Remove all elements past the specified index
 
 and dictionaries
 
@@ -369,16 +378,18 @@ and dictionaries
     42
     crush> help d
     type dict string integer
-    
+
         A mutable mapping from one set of values to another
-    
-        * __getitem__ Return the value the specified key is mapped to
-        * remove Remove a mapping from the dict
-        * __call_type__ Returns a dict type with the specifiec key and value types
-        * __setitem__ Create a new mapping or replace an existing one
-        * len The number of mappings in the dict
-        * empty True if there are no mappings in the dict
-        * new Construct a new dict    
+
+        * __call_type__  Returns a dict type with the specifiec key and value types
+        * __getitem__    Return the value the specified key is mapped to
+        * __setitem__    Create a new mapping or replace an existing one
+        * clear          Remove all mappings from this dict
+        * clone          Create a new dict with the same st of mappings as this one
+        * empty          True if there are no mappings in the dict
+        * len            The number of mappings in the dict
+        * new            Construct a new dict
+        * remove         Remove a mapping from the dict
 
 ### Time
 
@@ -425,6 +436,8 @@ dataset twice.
     liljencrantz   711 2019-10-03 14:19:46 +0200 file      crush.iml
     crush> files
 
+Notice how there is no output the second time `files` is displayed.
+
 Enter the materialize command, which takes any value and recursively converts
 all sub values into an equivalent but fully in-memory form.
 
@@ -459,6 +472,9 @@ all sub values into an equivalent but fully in-memory form.
     liljencrantz  8382 2020-03-29 00:54:13 +0100 file      todo
     liljencrantz    75 2020-03-07 17:09:15 +0100 file      build.rs
     liljencrantz   711 2019-10-03 14:19:46 +0200 file      crush.iml
+
+When the `table_stream` is materialized into a `table`, it can be displayed multiple
+times.
 
 ### Flow control
 
@@ -502,7 +518,7 @@ You can create custom types in Crush, by using the class command:
     Point := (class)
 
     Point:__init__ = {
-        | x:float y:float |
+        |x:float y:float|
         this:x = x
         this:y = y
     }
@@ -513,7 +529,7 @@ You can create custom types in Crush, by using the class command:
     }
 
     Point:__add__ = {
-        | other |
+        |other|
         Point:new x=(this:x + other:x) y=(this:y + other:y)        
     }
 
@@ -565,7 +581,6 @@ Crush should work on any modern Unix system. Install rust,
 clone this repository,
 
     git clone https://github.com/liljencrantz/crush.git
-
  
 and run
 

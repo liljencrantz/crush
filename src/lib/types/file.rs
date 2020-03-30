@@ -53,7 +53,8 @@ pub fn stat(context: ExecutionContext) -> CrushResult<()> {
                     (Box::from("nlink"), Value::Integer(metadata.nlink() as i128)),
                     (Box::from("mode"), Value::Integer(metadata.mode() as i128)),
                     (Box::from("len"), Value::Integer(metadata.len() as i128)),
-                ]
+                ],
+                None,
             )
         )
     )
