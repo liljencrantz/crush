@@ -243,6 +243,12 @@ impl Value {
             return Ok(self);
         }
 
+        match (&self, &new_type) {
+            (Value::Integer(i), ValueType::Bool) =>
+                return Ok(Value::Bool(if *i == 0 { false } else { true })),
+            _ => {}
+        }
+
         let str_val = self.to_string();
 
         match new_type {
