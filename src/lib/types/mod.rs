@@ -1,5 +1,5 @@
 use crate::lang::scope::Scope;
-use crate::lang::errors::{CrushResult, argument_error, mandate};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::Value, r#struct::Struct};
 use crate::lang::command::CrushCommand;
 use crate::lang::execution_context::{ExecutionContext, This};

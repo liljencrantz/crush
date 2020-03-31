@@ -77,8 +77,7 @@ impl CommandNode {
 
 
 pub enum Node {
-    Assignment(Box<Node>, Box<Node>),
-    Declaration(Box<Node>, Box<Node>),
+    Assignment(Box<Node>, Box<str>, Box<Node>),
     LogicalOperation(Box<Node>, Box<str>, Box<Node>),
     Comparison(Box<Node>, Box<str>, Box<Node>),
     Replace(Box<Node>, Box<str>, Box<Node>, Box<Node>),
@@ -105,14 +104,16 @@ impl Node {
     pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
         Ok(ArgumentDefinition::unnamed(
             match self {
-                Node::Assignment(target, value) =>
-                    return match target.as_ref() {
-                        Node::Label(t) => Ok(ArgumentDefinition::named(t.deref(), value.generate_argument()?.unnamed_value()?)),
-                        _ => error("Invalid left side in named argument"),
-                    },
-
-                Node::Declaration(_target, _value) =>
-                    return error("Variable declarations not supported as arguments"),
+                Node::Assignment(target, op, value) =>
+                    match op.deref() {
+                        "=" =>
+                            return match target.as_ref() {
+                                Node::Label(t) => Ok(ArgumentDefinition::named(t.deref(), value.generate_argument()?.unnamed_value()?)),
+                                _ => error("Invalid left side in named argument"),
+                            },
+                        _ =>
+                            return error("Invalid assignment operator"),
+                    }
 
                 Node::LogicalOperation(_, _, _) | Node::Comparison(_, _, _) | Node::Replace(_, _, _, _) |
                 Node::GetItem(_, _) | Node::Term(_, _, _) | Node::Factor(_, _, _) =>
@@ -174,36 +175,42 @@ impl Node {
 
     pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
         match self {
-            Node::Assignment(target, value) => {
-                match target.as_ref() {
-                    Node::Label(t) =>
-                        Node::function_invocation(
-                            SET.as_ref().clone(),
-                            vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)]),
+            Node::Assignment(target, op, value) => {
+                match op.deref() {
+                    "=" => {
+                        match target.as_ref() {
+                            Node::Label(t) =>
+                                Node::function_invocation(
+                                    SET.as_ref().clone(),
+                                    vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)]),
 
-                    Node::GetItem(container, key) =>
-                        container.method_invocation("__setitem__", vec![
-                            ArgumentDefinition::unnamed(key.generate_argument()?.unnamed_value()?),
-                            ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?)]),
+                            Node::GetItem(container, key) =>
+                                container.method_invocation("__setitem__", vec![
+                                    ArgumentDefinition::unnamed(key.generate_argument()?.unnamed_value()?),
+                                    ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?)]),
 
-                    Node::GetAttr(container, attr) =>
-                        container.method_invocation("__setattr__", vec![
-                            ArgumentDefinition::unnamed(ValueDefinition::Value(Value::String(attr.to_string().into_boxed_str()))),
-                            ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?),
-                        ]),
+                            Node::GetAttr(container, attr) =>
+                                container.method_invocation("__setattr__", vec![
+                                    ArgumentDefinition::unnamed(ValueDefinition::Value(Value::String(attr.to_string().into_boxed_str()))),
+                                    ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?),
+                                ]),
 
-                    _ => error("Invalid left side in assignment"),
+                            _ => error("Invalid left side in assignment"),
+                        }
+                    }
+                    ":=" => {
+                        match target.as_ref() {
+                            Node::Label(t) =>
+                                Node::function_invocation(
+                                    LET.as_ref().clone(),
+                                    vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)]),
+                            _ => error("Invalid left side in declaration"),
+                        }
+                    }
+                    _ => error("Unknown assignment operator"),
                 }
             }
-            Node::Declaration(target, value) => {
-                match target.as_ref() {
-                    Node::Label(t) =>
-                        Node::function_invocation(
-                            LET.as_ref().clone(),
-                            vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)]),
-                    _ => error("Invalid left side in declaration"),
-                }
-            }
+
             Node::LogicalOperation(l, op, r) => {
                 let cmd = match op.as_ref() {
                     "and" => AND.as_ref(),
@@ -268,11 +275,11 @@ impl Node {
 
             Node::Cast(_, _) | Node::Glob(_) | Node::Label(_) | Node::Regex(_) | Node::Field(_) | Node::String(_) |
             Node::Integer(_) | Node::Float(_) | Node::GetAttr(_, _) | Node::Path(_, _) | Node::Substitution(_) |
-            Node::Closure(_, _) | Node::File(_)=> Ok(None),
+            Node::Closure(_, _) | Node::File(_) => Ok(None),
         }
     }
 
-    fn function_invocation(function: Box<dyn CrushCommand +  Send + Sync>, arguments: Vec<ArgumentDefinition>) -> CrushResult<Option<CommandInvocation>> {
+    fn function_invocation(function: Box<dyn CrushCommand + Send + Sync>, arguments: Vec<ArgumentDefinition>) -> CrushResult<Option<CommandInvocation>> {
         Ok(Some(
             CommandInvocation::new(
                 ValueDefinition::Value(Value::Command(function)),
@@ -291,7 +298,7 @@ impl Node {
         if s.contains('%') || s.contains('?') {
             Box::from(Node::Glob(Box::from(s)))
         } else {
-            if s.contains('/'){
+            if s.contains('/') {
                 if s.starts_with('/') {
                     Box::from(Node::File(Box::from(Path::new(s))))
                 } else {
@@ -308,7 +315,6 @@ impl Node {
         }
     }
 }
-
 
 pub fn unescape(s: &str) -> String {
     let mut res = "".to_string();
@@ -331,7 +337,6 @@ pub fn unescape(s: &str) -> String {
     }
     res
 }
-
 
 pub enum ParameterNode {
     Parameter(Box<str>, Option<Box<Node>>, Option<Node>),

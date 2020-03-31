@@ -9,7 +9,7 @@ use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::cmp::Ordering;
 use crate::util::replace::Replace;
-use crate::lang::errors::{CrushResult, mandate, argument_error};
+use crate::lang::errors::{CrushResult, mandate};
 use crate::lang::execution_context::{ExecutionContext, This, ArgumentVector};
 
 lazy_static! {

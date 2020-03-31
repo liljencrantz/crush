@@ -374,7 +374,7 @@ impl std::cmp::PartialOrd for Value {
         let t1 = self.value_type();
         let t2 = other.value_type();
         if t1 != t2 {
-            return Some(t1.cmp(&t2));
+            return None;
         }
 
         match (self, other) {

@@ -1,5 +1,5 @@
 use crate::{
-    lang::errors::{error, mandate, CrushResult},
+    lang::errors::{CrushResult},
     lang::scope::Scope,
     lang::value::Value,
     lang::job::JobJoinHandle,
@@ -8,7 +8,7 @@ use crate::{
 };
 use crate::lang::{job::Job, argument::ArgumentDefinition, command::CrushCommand};
 use crate::util::file::cwd;
-use crate::lang::errors::block_error;
+use crate::lang::errors::{block_error, mandate};
 use crate::lang::command::Parameter;
 
 #[derive(Clone)]
@@ -33,10 +33,10 @@ fn file_get(f: &str) -> Option<Value> {
 }
 
 impl ValueDefinition {
-    pub fn can_block(&self, arg: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
+    pub fn can_block(&self, _arg: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
         match self {
             ValueDefinition::JobDefinition(j) => j.can_block(env),
-            ValueDefinition::GetAttr(inner1, inner2) => true,
+            ValueDefinition::GetAttr(_inner1, _inner2) => true,
             _ => false,
         }
     }

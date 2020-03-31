@@ -4,17 +4,17 @@ use crate::lang::ast::*;
 grammar;
 
 pub JobList: JobListNode = {
-  Separator? => JobListNode {jobs: Vec::new()},
-  <l:NonEmptyJobList> => l,
+    Separator? => JobListNode {jobs: Vec::new()},
+    <l:NonEmptyJobList> => l,
 };
 
 NonEmptyJobList: JobListNode = {
-  <j: NonEmptyJobListWithoutSeparator> Separator? => j,
+    <j: NonEmptyJobListWithoutSeparator> Separator? => j,
 };
 
 NonEmptyJobListWithoutSeparator: JobListNode = {
-  <mut l:NonEmptyJobListWithoutSeparator> Separator <j:Job> =>  {l.jobs.push(j); l},
-  Job => JobListNode {jobs: vec![<>]},
+    <mut l:NonEmptyJobListWithoutSeparator> Separator <j:Job> =>  {l.jobs.push(j); l},
+    Job => JobListNode {jobs: vec![<>]},
 };
 
 Job: JobNode = {
@@ -23,14 +23,13 @@ Job: JobNode = {
 };
 
 Command: CommandNode = {
-  Assignment => CommandNode{expressions: vec![*<>]},
-  <mut c: Command> <a:Assignment> => {c.expressions.push(*a); c}
+    Assignment => CommandNode{expressions: vec![*<>]},
+    <mut c: Command> <a:Assignment> => {c.expressions.push(*a); c}
 };
 
 Assignment: Box<Node> = {
-  Logical,
-  <i: Item> "=" <e: Assignment> => Box::from(Node::Assignment(i, e)),
-  <i: Item> ":=" <e: Assignment> => Box::from(Node::Declaration(i, e)),
+    Logical,
+    <i: Item> <op: AssignmentOperator> <e: Assignment> => Box::from(Node::Assignment(i, Box::from(op), e)),
 }
 
 Logical: Box<Node> = {
@@ -56,9 +55,7 @@ Factor: Box<Node> = {
 
 Unary: Box<Node> = {
     Cast,
-    NotOperator <u: Unary> => Box::from(Node::Unary(Box::from("not"), u)),
-    NegationOperator <u: Unary> => Box::from(Node::Unary(Box::from("neg"), u)),
-    TypeOfOperator <u: Unary> => Box::from(Node::Unary(Box::from("typeof"), u)),
+    <op: UnaryOperator> <u: Unary> => Box::from(Node::Unary(Box::from(op), u)),
     "@" <u: Unary> => Box::from(Node::Unary(Box::from("@"), u)),
     "@@" <u: Unary> => Box::from(Node::Unary(Box::from("@@"), u)),
 }
@@ -113,10 +110,9 @@ AnyLabel: Box<str> = {
 match {
     r"(and|or)" => LogicalOperator,
     "as" => CastOperator,
-    "typeof" => TypeOfOperator,
-    "neg" => NegationOperator,
-    "not" => NotOperator,
+    r"(typeof|neg|not)" => UnaryOperator,
 } else {
+    r"(=|:=)" => AssignmentOperator,
     ":" => Colon,
     r"( |\t)+" => {},
     r"#[^\n]*" => {},
@@ -126,7 +122,7 @@ match {
     r"(\+|-)" => TermOperator,
     r#""([^\\"]|\\.)*""# => QuotedString,
     r"([\._a-zA-Z%\?][\._0-9a-zA-Z%\?]*(/[\._0-9a-zA-Z%\?]+)*|/[\._0-9a-zA-Z%\?]+(/[\._0-9a-zA-Z%\?]+)*|/)" => Label,
-     r"\^[\._a-zA-Z][\._a-zA-Z0-9]*" => Field,
+    r"\^[\._a-zA-Z][\._a-zA-Z0-9]*" => Field,
     r#"'([^\\']|\\.)*'"# => QuotedLabel,
     r#"re"([^"]|\\.)*""# => Regex,
     r"(;|\n)( |\t|;|\n|#[^\n]*)*" => Separator,
