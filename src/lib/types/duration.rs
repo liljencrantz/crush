@@ -9,10 +9,26 @@ use crate::lang::command::CrushCommand;
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
-        res.insert(Box::from("__add__"), CrushCommand::command_undocumented(add, false));
-        res.insert(Box::from("__sub__"), CrushCommand::command_undocumented(sub, false));
-        res.insert(Box::from("__mul__"), CrushCommand::command_undocumented(mul, false));
-        res.insert(Box::from("__div__"), CrushCommand::command_undocumented(div, false));
+        res.insert(Box::from("__add__"), CrushCommand::command(
+            add, false,
+            "duration + (delta:duration | time:time)",
+            "Add the specified delta or time to this duration",
+            None));
+        res.insert(Box::from("__sub__"), CrushCommand::command(
+            sub, false,
+            "duration - delta:duration",
+            "Remove the specified delta from this duration",
+            None));
+        res.insert(Box::from("__mul__"), CrushCommand::command(
+            mul, false,
+            "duration * factor:integer",
+            "Multiply this duration by the specified factor",
+            None));
+        res.insert(Box::from("__div__"), CrushCommand::command(
+            div, false,
+            "duration / divisor:integer",
+            "Divide this duration by the specified divisor",
+            None));
         res.insert(Box::from("new"), CrushCommand::command(
             new, false,
             "duration:new [count:integer timeunit:string]...",

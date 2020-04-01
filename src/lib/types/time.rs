@@ -11,8 +11,16 @@ use crate::lang::command::CrushCommand;
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
-        res.insert(Box::from("__add__"), CrushCommand::command_undocumented(add, false));
-        res.insert(Box::from("__sub__"), CrushCommand::command_undocumented(sub, false));
+        res.insert(Box::from("__add__"), CrushCommand::command(
+            add, false,
+            "time + delta:duration",
+            "Add the specified delta to this time",
+            None));
+        res.insert(Box::from("__sub__"), CrushCommand::command(sub,
+            sub, false,
+            "time - delta:duration",
+            "Remove the specified delta from this time",
+            None));
         res.insert(Box::from("now"), CrushCommand::command(
             now, false,
             "time:now", "The current point in time", None));

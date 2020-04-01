@@ -37,8 +37,12 @@ pub fn unset(context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("var")?;
-    env.declare("let", Value::Command(CrushCommand::command_undocumented(r#let, false)))?;
-    env.declare("set", Value::Command(CrushCommand::command_undocumented(set, false)))?;
+    env.declare("let", Value::Command(CrushCommand::command(
+        r#let, false,
+        "name := value", "Declare a new variable", None)))?;
+    env.declare("set", Value::Command(CrushCommand::command(
+        set, false,
+        "name = value", "Assign a new value to an already existing variable", None)))?;
     env.declare("unset", Value::Command(CrushCommand::command(
         unset, false,
         "scope name:string",
