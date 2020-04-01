@@ -3,8 +3,7 @@ use crate::lang::scope::Scope;
 use crate::lang::command::CrushCommand;
 use crate::lang::errors::{CrushResult, data_error};
 use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
-use crate::lang::stream::{empty_channel, channels};
-use crate::lang::pretty_printer::spawn_print_thread;
+use crate::lang::stream::{empty_channel, channels, black_hole};
 
 pub struct Config {
     condition: Box<dyn CrushCommand>,
@@ -29,7 +28,7 @@ pub fn run(config: Config) -> CrushResult<()> {
             Value::Bool(true) => {
                 config.body.invoke(ExecutionContext {
                     input: empty_channel(),
-                    output: spawn_print_thread(),
+                    output: black_hole(),
                     arguments: Vec::new(),
                     env: env.clone(),
                     this: None,

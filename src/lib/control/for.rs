@@ -6,8 +6,7 @@ use crate::lang::scope::Scope;
 use crate::lang::{table::TableReader, list::ListReader, r#struct::Struct, dict::DictReader, command::CrushCommand};
 use crate::lang::errors::{argument_error, CrushResult};
 use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
-use crate::lang::stream::{empty_channel, Readable};
-use crate::lang::pretty_printer::spawn_print_thread;
+use crate::lang::stream::{empty_channel, Readable, black_hole};
 
 pub struct Config {
     body: Box<dyn CrushCommand>,
@@ -42,7 +41,7 @@ pub fn run(config: Config, mut input: impl Readable) -> CrushResult<()> {
                     };
                 config.body.invoke(ExecutionContext {
                     input: empty_channel(),
-                    output: spawn_print_thread(),
+                    output: black_hole(),
                     arguments,
                     env: env.clone(),
                     this: None,

@@ -27,7 +27,7 @@ pub fn dir(mut context: ExecutionContext) -> CrushResult<()> {
     )
 }
 
-    fn echo(mut context: ExecutionContext) -> CrushResult<()> {
+fn echo(mut context: ExecutionContext) -> CrushResult<()> {
     for arg in context.arguments.drain(..) {
         print_value(arg.value);
     }

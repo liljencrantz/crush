@@ -33,11 +33,11 @@ impl dyn CrushCommand {
         job_definitions: Vec<Job>,
         env: &Scope,
     ) -> Box<dyn CrushCommand +  Send + Sync> {
-        Box::from(Closure {
+        Box::from(Closure::new(
             signature,
             job_definitions,
-            env: env.clone(),
-        })
+            env.clone(),
+        ))
     }
 
     pub fn command_undocumented(

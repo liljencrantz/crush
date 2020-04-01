@@ -45,7 +45,18 @@ impl CommandInvocation {
         CommandInvocation { command, arguments }
     }
 
-    pub fn arguments(&self) -> &Vec<ArgumentDefinition> {
+    pub fn as_string(&self) -> Option<String> {
+        if self.arguments.len() != 0 {
+            return None;
+        }
+
+        match &self.command {
+            ValueDefinition::Value(Value::String(s)) => Some(s.to_string()),
+            _ => None
+        }
+    }
+
+        pub fn arguments(&self) -> &Vec<ArgumentDefinition> {
         &self.arguments
     }
 
@@ -228,7 +239,7 @@ fn invoke_command(
             local_env,
             this,
             input, output)?;
-        action.invoke(context)?;
+        printer().handle_error(action.invoke(context));
         Ok(JobJoinHandle::Many(deps))
     } else {
         Ok(handle(build(action.name()).spawn(

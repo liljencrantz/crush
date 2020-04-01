@@ -27,6 +27,7 @@ pub use value_type::ValueType;
 pub use value_definition::ValueDefinition;
 use crate::lang::command::CrushCommand;
 use std::collections::HashMap;
+use crate::lang::pretty_printer::format_buffer;
 
 pub enum Value {
     String(Box<str>),
@@ -73,10 +74,10 @@ impl ToString for Value {
             Value::Bool(v) => (if *v { "true" } else { "false" }).to_string(),
             Value::Dict(d) => d.to_string(),
             Value::Float(f) => f.to_string(),
-            Value::Binary(v) => v.iter().map(|u| hex(*u)).collect::<Vec<String>>().join(""),
+            Value::Binary(v) => format_buffer(v, true),
             Value::Type(t) => t.to_string(),
             Value::Struct(s) => s.to_string(),
-            _ => self.value_type().to_string(),
+            _ => format!("<{}>", self.value_type().to_string()),
         };
     }
 }

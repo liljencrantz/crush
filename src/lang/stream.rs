@@ -2,16 +2,31 @@ use crate::lang::table::ColumnType;
 use crate::lang::value::Value;
 use crate::lang::{table::Row};
 use crossbeam::{Receiver, bounded, unbounded, Sender};
-use crate::lang::errors::{CrushError, error, CrushResult, to_crush_error};
+use crate::lang::errors::{CrushError, error, CrushResult, to_crush_error, send_error};
+use lazy_static::lazy_static;
 
+lazy_static! {
+    static ref BLACK_HOLE: ValueSender = {
+        let (o, i) = channels();
+        o
+    };
+}
+
+pub fn black_hole() -> ValueSender {
+    (*BLACK_HOLE).clone()
+}
+
+#[derive(Clone)]
 pub struct ValueSender {
     sender: Sender<Value>,
 }
 
 impl ValueSender {
     pub fn send(self, cell: Value) -> CrushResult<()> {
-        to_crush_error(self.sender.send(cell))?;
-        Ok(())
+        match self.sender.send(cell) {
+            Ok(_) => Ok(()),
+            Err(_) => send_error(),
+        }
     }
 
     pub fn initialize(self, signature: Vec<ColumnType>) -> CrushResult<OutputStream> {
@@ -21,7 +36,7 @@ impl ValueSender {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ValueReceiver {
     receiver: Receiver<Value>,
 }

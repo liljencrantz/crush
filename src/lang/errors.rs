@@ -8,6 +8,7 @@ pub enum Kind {
     InvalidData,
     GenericError,
     BlockError,
+    SendError,
 }
 
 #[derive(Debug)]
@@ -22,6 +23,13 @@ pub fn block_error<T>() -> Result<T, CrushError> {
     return Err(CrushError {
         message: String::from("Internal error: Tried to call blocking code in a thread that may not block"),
         kind: BlockError,
+    });
+}
+
+pub fn send_error<T>() -> Result<T, CrushError> {
+    return Err(CrushError {
+        message: String::from("Tried to send data to a command that is no longer listening. This is almost normal behaviour and can be safely ignored."),
+        kind: SendError,
     });
 }
 

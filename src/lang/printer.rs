@@ -73,7 +73,12 @@ impl Printer {
 */
     pub fn handle_error<T>(&self, result: CrushResult<T>) {
         match result {
-            Err(e) => self.crush_error(e),
+            Err(e) => {
+                match e.kind {
+                    SendError => {},
+                    _ => self.crush_error(e)
+                }
+            },
             _ => {}
         }
     }

@@ -3,15 +3,14 @@ use crate::lang::command::CrushCommand;
 use crate::lang::errors::CrushResult;
 use crate::lang::execution_context::ArgumentVector;
 use crate::lang::execution_context::ExecutionContext;
-use crate::lang::stream::empty_channel;
-use crate::lang::pretty_printer::spawn_print_thread;
+use crate::lang::stream::{empty_channel, black_hole};
 
 pub fn run(body: Box<dyn CrushCommand>, parent: Scope) -> CrushResult<()> {
     let env = parent.create_child(&parent, true);
     loop {
         body.invoke(ExecutionContext {
             input: empty_channel(),
-            output: spawn_print_thread(),
+            output: black_hole(),
             arguments: Vec::new(),
             env: env.clone(),
             this: None,

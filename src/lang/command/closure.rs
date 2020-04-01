@@ -7,16 +7,17 @@ use crate::lang::value::{Value, ValueType};
 use crate::lang::list::List;
 use crate::lang::dict::Dict;
 use crate::lang::job::Job;
-use crate::lang::pretty_printer::spawn_print_thread;
-use crate::lang::stream::empty_channel;
+use crate::lang::stream::{empty_channel, black_hole};
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::help::Help;
 
 #[derive(Clone)]
 pub struct Closure {
-    pub job_definitions: Vec<Job>,
-    pub signature: Option<Vec<Parameter>>,
-    pub env: Scope,
+    job_definitions: Vec<Job>,
+    signature: Option<Vec<Parameter>>,
+    env: Scope,
+    short_help: String,
+    long_help: String,
 }
 
 impl CrushCommand for Closure {
@@ -32,44 +33,18 @@ impl CrushCommand for Closure {
         }
         Closure::push_arguments_to_env(&self.signature, context.arguments, &env)?;
 
-        match job_definitions.len() {
-            0 => return error("Empty closures not supported"),
-            1 => {
-                if env.is_stopped() {
-                    return Ok(());
-                }
-                let job = job_definitions[0].invoke(&env, context.input, context.output)?;
-                job.join();
-                if env.is_stopped() {
-                    return Ok(());
-                }
-            }
-            _ => {
-                if env.is_stopped() {
-                    return Ok(());
-                }
-                let first_job_definition = &job_definitions[0];
-                let last_output = spawn_print_thread();
-                let first_job = first_job_definition.invoke(&env, context.input, last_output)?;
-                first_job.join();
-                if env.is_stopped() {
-                    return Ok(());
-                }
-                for job_definition in &job_definitions[1..job_definitions.len() - 1] {
-                    let last_output = spawn_print_thread();
-                    let job = job_definition.invoke(&env, empty_channel(), last_output)?;
-                    job.join();
-                    if env.is_stopped() {
-                        return Ok(());
-                    }
-                }
-
-                let last_job_definition = &job_definitions[job_definitions.len() - 1];
-                let last_job = last_job_definition.invoke(&env, empty_channel(), context.output)?;
-                last_job.join();
-                if env.is_stopped() {
-                    return Ok(());
-                }
+        if env.is_stopped() {
+            return Ok(());
+        }
+        for (idx, job_definition) in job_definitions.iter().enumerate() {
+            let first = idx == 0;
+            let last = idx == job_definitions.len() - 1;
+            let input = if first { context.input.clone() } else { empty_channel() };
+            let output = if last { context.output.clone() } else { black_hole() };
+            let job = job_definition.invoke(&env, input, output)?;
+            job.join();
+            if env.is_stopped() {
+                return Ok(());
             }
         }
         Ok(())
@@ -79,11 +54,13 @@ impl CrushCommand for Closure {
         true
     }
 
-    fn clone(&self) -> Box<dyn CrushCommand +  Send + Sync> {
+    fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {
         Box::from(Closure {
             signature: self.signature.clone(),
             job_definitions: self.job_definitions.clone(),
             env: self.env.clone(),
+            short_help: self.short_help.clone(),
+            long_help: self.long_help.clone(),
         })
     }
 
@@ -98,11 +75,26 @@ impl Help for Closure {
     }
 
     fn short_help(&self) -> String {
-        "SHERT".to_string()
+        self.short_help.clone()
     }
 
     fn long_help(&self) -> Option<String> {
-        None
+        Some(self.long_help.clone())
+    }
+}
+
+fn extract_help(jobs: &mut Vec<Job>) -> String {
+    if jobs.len() == 0 {
+        return "".to_string();
+    }
+
+    let j = &jobs[0];
+    match j.as_string() {
+        Some(help) => {
+            jobs.remove(0);
+            help
+        }
+        _ => "".to_string()
     }
 }
 
@@ -114,6 +106,24 @@ impl Closure {
             Ok(())
         }
     */
+
+    pub fn new(
+        signature: Option<Vec<Parameter>>,
+        mut job_definitions: Vec<Job>,
+        env: Scope,
+    ) -> Closure {
+        let short_help = extract_help(&mut job_definitions);
+        let long_help = extract_help(&mut job_definitions);
+
+        Closure {
+            job_definitions,
+            signature,
+            env,
+            short_help,
+            long_help,
+        }
+    }
+
 
     fn push_arguments_to_env(
         signature: &Option<Vec<Parameter>>,
@@ -173,7 +183,8 @@ impl Closure {
             if let Some(unnamed_name) = unnamed_name {
                 env.redeclare(
                     unnamed_name.as_ref(),
-                    Value::List(List::new(ValueType::Any, unnamed)))?; } else {
+                    Value::List(List::new(ValueType::Any, unnamed)))?;
+            } else {
                 if !unnamed.is_empty() {
                     return argument_error("No target for unnamed arguments");
                 }
@@ -195,10 +206,10 @@ impl Closure {
                 match arg.argument_type {
                     Some(name) => {
                         env.redeclare(name.as_ref(), arg.value)?;
-                    },
+                    }
                     None => {
                         return argument_error("No target for unnamed arguments");
-                    },
+                    }
                 }
             }
         }

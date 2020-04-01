@@ -20,12 +20,20 @@ Example invocations:
     git:status
     git:commit --a m="This is a commit message"
     git:add .
-    ls %.txt
-    cd foo
-    cd ..
-    cd 'My Documents'
-    find root/etc
-    1 + 2 * 4 # 9
-    math:sin 3
-    1 + 3.3 # 4.4
 
+Figure out how to best print binary_stream and binary outputs to screen:
+
+* Truncate if larger than a specific size. 100 kB, for now, configurable later.
+* Detect if content is binary or text. We want to allow a small number of control cahracters so that ansi colors,
+  etc don't mess things up. Maybe if 90 % of all characters are in the printable range, print as-is, otherwise
+  switch to hex mode?
+
+Writing libraries in crush:
+
+Import command, etc.
+
+Crush configuration:
+
+* One idea would be the standard configuration-is-code thing with reading specific files during startup.
+* Another idea would be to have a config variable that you can query and assign to at runtime,
+  and that is responsible for sharing config in real time across instances.

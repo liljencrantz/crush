@@ -7,7 +7,7 @@ use crate::lang::argument::{column_names, Argument};
 use crate::lang::execution_context::ArgumentVector;
 use crate::lang::value::ValueType;
 use crate::lang::table::ColumnType;
-use crate::lang::pretty_printer::spawn_print_thread;
+use crate::lang::stream::black_hole;
 
 pub mod table;
 pub mod table_stream;
@@ -33,7 +33,7 @@ fn new(mut context: ExecutionContext) -> CrushResult<()> {
     let res = Struct::new(vec![], Some(parent));
     let init = res.get("__init__");
     let o = context.output;
-    context.output = spawn_print_thread();
+    context.output = black_hole();
     context.this = Some(Value::Struct(res.clone()));
     match init {
         Some(Value::Command(c)) => { c.invoke(context)?; }

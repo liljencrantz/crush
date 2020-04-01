@@ -64,6 +64,14 @@ impl Job {
 
         Ok(JobJoinHandle::Many(calls))
     }
+
+    pub fn as_string(&self) -> Option<String> {
+        if self.commands.len() != 1 {
+            return None;
+        }
+
+        self.commands[0].as_string()
+    }
 }
 
 impl ToString for Job {

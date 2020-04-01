@@ -1,4 +1,5 @@
 Todo:
+Add help support for closures
 Fix broken system tests
 Add system tests for type casting
 Add system tests for for loop
