@@ -8,7 +8,8 @@ geared toward both batch and interactive shell usage.
 
 ## What features of a traditional shell does Crush retain?
 
-The basic structure of the Crush language resemb
+The basic structure of the Crush language resembles a regular shell
+like bash.
 
 How to invoke commands, pass arguments and set up pipelines are
 unchanged, as is the central concept of a current working directory .
@@ -153,11 +154,47 @@ floating point number, for example.
     crush> some_text * some_number
     Error: Can not process arguments of specified type
 
+### Named and unnamed arguments
+
+Crush does not have any conventions around arguments with and without leading hyphens
+meaning different things. Instead, Crush supports named and unnamed arguments at the
+language level.
+
+The `http` command is an example of a command that expects named arguments:
+
+    crush> help http
+    http url:string [form=formdata:string] [method=method:string] [header=header:string]...
+    
+        Make a http request
+    
+        Headers should be on the form "key:value".
+    
+            Examples:
+    
+        http "https://example.com/" header=("Authorization: Bearer {}":format token)
+
+
+The duration:new command accepts any even numbered unnamed arguments:
+
+    crush> help duration:new
+    duration:new [count:integer timeunit:string]...
+    
+        Create a new duration
+    
+        * timeunit:string is one of nanosecond/nanoseconds, microsecond/microseconds,
+          millisecond/milliseconds, second/seconds, minute/minutes, hour/hours,
+          day/days, week/weeks, month/months, year/years
+    
+        Example:
+    
+        # A complicated way of specifying a 23 hour duration
+        duration:new 1 "days" -3600 "seconds"
+    
 ### Subshells
 
 Sometimes you want to use the output of one command as an *argument* to
-another command. This is different from using the output as the *input*,
-and is done using `()`:
+another command, just like a subshell in e.g. bash. This is different
+from using the output as the *input*, and is done using `()`:
 
     crush> echo (pwd)
 
@@ -202,10 +239,10 @@ command to only show one column from the output.
 
 ### Types
 
-Crush comes with a variaty of types:
+Crush comes with a variety of types:
 
 * lists of any type,
-* dicts of any type,
+* dicts of any pair of types type, (Some types can not be used as keys!)
 * strings,
 * regular expressions,
 * globs,
@@ -221,7 +258,7 @@ Crush comes with a variaty of types:
 * types, and
 * commands, which are either closures or built in commands.
 
-Additionally, Crush allows you to define your own new types using the class command.
+Crush allows you to create your own struct types using the `class` and `data` commands.
 
 ### Exploring the shell
 
@@ -436,10 +473,11 @@ dataset twice.
     liljencrantz   711 2019-10-03 14:19:46 +0200 file      crush.iml
     crush> files
 
-Notice how there is no output the second time `files` is displayed.
+Notice how there is no output the second time `files` is displayed,
+because the table_stream has already been consumed.
 
 Enter the materialize command, which takes any value and recursively converts
-all sub values into an equivalent but fully in-memory form.
+all transient components into an equivalent but fully in-memory form.
 
     crush> materialized_files := (ls|materialize)
     crush> materialized_files
@@ -481,10 +519,34 @@ times.
 Of course Crush has an `if` command, as well as `for`, `while` and `loop` loops,
 that can be controlled using `break` and `continue`.
 
+    crush> help if
+    if condition:bool if-clause:command [else-clause:command]
+    
+        Conditionally execute a command once.
+    
+        If the condition is true, the if-clause is executed. Otherwise, the else-clause
+        (if specified) is executed.
+    
+        Example:
+    
+        if (./some_file:stat):is_file {echo "It's a file!"} {echo "It's not a file!"}
+
+
+    for [name=]iterable:(table_stream|table|dict|list) body:command
+    
+        Execute body once for every element in iterable.
+    
+        Example:
+    
+        for (seq) {
+            echo ("Lap {}":format value)
+        }
+
+
 ### Calling external commands
 
 Obviously, one needs to sometimes call out to external commands. Currently, the functionality
-for doing so in Crush is extrenely primitive. If an internal command of a given name does not
+for doing so in Crush is extremely primitive. If an internal command of a given name does not
 exist, Crush looks for external commands, and if one is found, it is used. But Crush
 does not hand over the tty or emulate a tty, so interactive terminal programs do not work,
 and commands that prettify their output with escape sequences may fail.
@@ -565,8 +627,9 @@ loops and flow control while remaining useful for interactive use.
 
 ### Future work
 
-There are plenty of ideas waiting to be tried out. Pattern matching, error handling
-and custom types are among the most obvious.
+There are plenty of langage ideas waiting to be tried out. Pattern matching
+and error handling are among the most obvious. Also, the error handling
+in crush itself is currently very rudimentary.
 
 ## About the codebase
 
