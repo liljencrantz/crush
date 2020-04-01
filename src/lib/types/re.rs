@@ -11,9 +11,9 @@ lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
         res.insert(Box::from("match"), CrushCommand::command(r#match, false,
-            "re:match input:string", "True if the input matches the pattern", None));
+            "re =~ input:string", "True if the input matches the pattern", None));
         res.insert(Box::from("not_match"), CrushCommand::command(not_match, false,
-            "re:not_match input:string", "True if the input does not match the pattern", None));
+            "re !~ input:string", "True if the input does not match the pattern", None));
         res.insert(Box::from("replace"), CrushCommand::command(
             replace, false,
             "re ~ input replacement", "Replace the first match of the regex in the input with the replacement", None));
