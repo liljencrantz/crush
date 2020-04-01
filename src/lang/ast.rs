@@ -102,7 +102,7 @@ pub enum Node {
 
 fn propose_name(name: &str, v: ValueDefinition) -> ValueDefinition {
     match v {
-        ValueDefinition::ClosureDefinition(n, p, j) =>
+        ValueDefinition::ClosureDefinition(_, p, j) =>
             ValueDefinition::ClosureDefinition(Some(Box::from(name)), p, j),
         o => o
     }

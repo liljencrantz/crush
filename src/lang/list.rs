@@ -1,5 +1,5 @@
 use crate::lang::{value::ValueType, value::Value, table::ColumnType, table::Row};
-use crate::lang::errors::{mandate, CrushResult, error};
+use crate::lang::errors::{mandate, CrushResult, error, argument_error};
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;
@@ -25,8 +25,8 @@ impl List {
     }
 
     pub fn set(&self, idx: usize, value: Value) -> CrushResult<()> {
-        if self.cell_type != value.value_type() && self.cell_type != ValueType::Any {
-            return error("Invalid element type");
+        if !self.cell_type.is(&value) {
+            return argument_error("Invalid argument type");
         }
         let mut cells = self.cells.lock().unwrap();
         if idx >= cells.len() {
@@ -38,9 +38,15 @@ impl List {
         Ok(())
     }
 
-    pub fn append(&self, new_cells: &mut Vec<Value>) {
+    pub fn append(&self, new_cells: &mut Vec<Value>) -> CrushResult<()> {
         let mut cells = self.cells.lock().unwrap();
+        for v in new_cells.iter() {
+            if !self.cell_type.is(v) {
+                return argument_error("Invalid argument type");
+            }
+        }
         cells.append(new_cells);
+        Ok(())
     }
 
     pub fn dump(&self) -> Vec<Value> {
@@ -59,9 +65,25 @@ impl List {
         cells.clear();
     }
 
-    pub fn remove(&self, idx: usize) {
+    pub fn remove(&self, idx: usize) -> CrushResult<()> {
         let mut cells = self.cells.lock().unwrap();
+        if idx >= cells.len() {
+            return argument_error("Index out of bounds");
+        }
         cells.remove(idx);
+        Ok(())
+    }
+
+    pub fn insert(&self, idx: usize, value: Value) -> CrushResult<()>{
+        let mut cells = self.cells.lock().unwrap();
+        if !self.cell_type.is(&value) {
+            return argument_error("Invalid argument type");
+        }
+        if idx > cells.len() {
+            return argument_error("Index out of bounds");
+        }
+        cells.insert(idx, value);
+        Ok(())
     }
 
     pub fn truncate(&self, idx: usize) {

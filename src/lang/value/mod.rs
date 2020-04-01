@@ -53,11 +53,6 @@ pub enum Value {
     Type(ValueType),
 }
 
-fn hex(v: u8) -> String {
-    let arr = vec!["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"];
-    format!("{}{}", arr[(v >> 4) as usize], arr[(v & 15) as usize])
-}
-
 impl ToString for Value {
     fn to_string(&self) -> String {
         return match self {

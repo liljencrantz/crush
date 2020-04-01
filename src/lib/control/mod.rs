@@ -10,6 +10,7 @@ mod r#for;
 
 use std::path::Path;
 use crate::lang::command::CrushCommand;
+use crate::lang::printer::printer;
 
 pub fn r#break(context: ExecutionContext) -> CrushResult<()> {
     context.env.do_break();
@@ -50,7 +51,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             .split(':')
             .map(|s| Value::File(Box::from(Path::new(s))))
             .collect();
-        path.append(&mut dirs);
+        printer().handle_error(path.append(&mut dirs));
     }))?;
     env.declare("cmd_path", Value::List(path))?;
 

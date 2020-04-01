@@ -199,7 +199,11 @@ impl ToString for Parameter {
             Parameter::Parameter(
                 name,
                 value_type,
-                default) => format!("{}:{}", name, value_type.to_string()),
+                default) => format!(
+                "{}:{}{}",
+                name,
+                value_type.to_string(),
+                default.as_ref().map(|d| format!("={}", d.to_string())).unwrap_or("".to_string())),
             Parameter::Named(n) => format!("@@{}", n),
             Parameter::Unnamed(n) => format!("@{}", n),
         }

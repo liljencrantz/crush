@@ -37,6 +37,9 @@ lazy_static! {
         res.insert(Box::from("remove"), CrushCommand::command(
             remove, false,
             "list:remove idx:integer", "Remove the element at the specified index", None));
+        res.insert(Box::from("insert"), CrushCommand::command(
+            insert, false,
+            "list:insert idx:integer value:any", "Insert a new element at the specified index", None));
         res.insert(Box::from("truncate"), CrushCommand::command(
             truncate, false,
             "list:truncate idx:integer", "Remove all elements past the specified index", None));
@@ -120,7 +123,7 @@ fn push(mut context: ExecutionContext) -> CrushResult<()> {
         }
     }
     if !new_elements.is_empty() {
-        l.append(&mut new_elements);
+        l.append(&mut new_elements)?;
     }
     context.output.send(Value::List(l))
 }
@@ -157,8 +160,15 @@ fn remove(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     let list = context.this.list()?;
     let idx = context.arguments.integer(0)?;
-    list.remove(idx as usize);
-    Ok(())
+    list.remove(idx as usize)
+}
+
+fn insert(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(2)?;
+    let list = context.this.list()?;
+    let idx = context.arguments.integer(0)?;
+    let value = context.arguments.value(1)?;
+    list.insert(idx as usize, value)
 }
 
 fn truncate(mut context: ExecutionContext) -> CrushResult<()> {

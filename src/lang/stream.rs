@@ -7,7 +7,7 @@ use lazy_static::lazy_static;
 
 lazy_static! {
     static ref BLACK_HOLE: ValueSender = {
-        let (o, i) = channels();
+        let (o, _) = channels();
         o
     };
 }
