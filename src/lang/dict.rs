@@ -1,5 +1,5 @@
 use crate::lang::{value::ValueType, value::Value, table::ColumnType, table::Row};
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult, error, argument_error};
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;
@@ -65,6 +65,12 @@ impl Dict {
 
     pub fn insert(&self, key: Value, value: Value) -> CrushResult<()> {
         let mut entries = self.entries.lock().unwrap();
+        if !self.key_type.is(&key) {
+            return argument_error("Invalid key type");
+        }
+        if !self.value_type.is(&value) {
+            return argument_error("Invalid value type");
+        }
         entries.insert(key, value);
         Ok(())
     }
@@ -72,6 +78,7 @@ impl Dict {
     pub fn key_type(&self) -> ValueType {
         self.key_type.clone()
     }
+
     pub fn value_type(&self) -> ValueType {
         self.value_type.clone()
     }

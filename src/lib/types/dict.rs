@@ -53,6 +53,17 @@ lazy_static! {
             "dict key_type:type value_type:type",
             "Returns a dict type with the specifiec key and value types",
             None));
+        res.insert(Box::from("key_type"), CrushCommand::command(
+            key_type, false,
+            "dict:key_type",
+            "Return the type of the keys in this dict",
+            None));
+        res.insert(Box::from("value_type"), CrushCommand::command(
+            value_type, false,
+            "dict:value_type",
+            "Return the type of the values in this dict",
+            None));
+
         res
     };
 }
@@ -83,11 +94,7 @@ fn setitem(mut context: ExecutionContext) -> CrushResult<()> {
     let dict = context.this.dict()?;
     let value = context.arguments.value(1)?;
     let key = context.arguments.value(0)?;
-    if dict.key_type() == key.value_type() && dict.value_type() == value.value_type() {
-        dict.insert(key, value)
-    } else {
-        argument_error("Wrong key/value type")
-    }
+    dict.insert(key, value)
 }
 
 fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
@@ -129,4 +136,14 @@ fn clone(context: ExecutionContext) -> CrushResult<()> {
 fn empty(context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context.output.send(Value::Bool(context.this.dict()?.len() == 0))
+}
+
+fn key_type(context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
+    context.output.send(Value::Type(context.this.dict()?.key_type()))
+}
+
+fn value_type(context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
+    context.output.send(Value::Type(context.this.dict()?.value_type()))
 }

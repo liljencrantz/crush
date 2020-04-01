@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, argument_error, error};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::argument::{Argument, ArgumentDefinition};
 use crate::lang::command::{Parameter, CrushCommand};
 use crate::lang::scope::Scope;

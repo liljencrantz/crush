@@ -10,7 +10,7 @@ use crate::lang::table::Row;
 use crate::lang::binary::BinaryReader;
 use crate::lang::table::TableReader;
 use std::cmp::max;
-use std::io::{BufReader, BufRead, Read, Error};
+use std::io::{BufReader, Read};
 
 pub fn spawn_print_thread() -> ValueSender {
     let (o, i) = channels();
