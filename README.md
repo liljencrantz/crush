@@ -334,7 +334,7 @@ Crush features many commands to operate om arbitrary streams of data using a SQL
 These commands use field-specifiers like ^foo to specify columns in the data stream that they
 operate on:
 
-    ps | where {user == "root") | group ^status | aggr proc_per_status={count}
+    ps | where {user == "root"} | group ^status | aggr proc_per_status={count}
 
 (Note that the `aggr` command is currently broken.)
 
