@@ -16,7 +16,7 @@ lazy_static! {
             "time + delta:duration",
             "Add the specified delta to this time",
             None));
-        res.insert(Box::from("__sub__"), CrushCommand::command(sub,
+        res.insert(Box::from("__sub__"), CrushCommand::command(
             sub, false,
             "time - delta:duration",
             "Remove the specified delta from this time",

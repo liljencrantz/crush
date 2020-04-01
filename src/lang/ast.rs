@@ -100,6 +100,10 @@ pub enum Node {
     Closure(Option<Vec<ParameterNode>>, JobListNode),
 }
 
+fn propose_name(name: &str, v: ValueDefinition) -> ValueDefinition {
+    v
+}
+
 impl Node {
     pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
         Ok(ArgumentDefinition::unnamed(
@@ -182,7 +186,7 @@ impl Node {
                             Node::Label(t) =>
                                 Node::function_invocation(
                                     SET.as_ref().clone(),
-                                    vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)]),
+                                    vec![ArgumentDefinition::named(t, propose_name(&t, value.generate_argument()?.unnamed_value()?))]),
 
                             Node::GetItem(container, key) =>
                                 container.method_invocation("__setitem__", vec![
