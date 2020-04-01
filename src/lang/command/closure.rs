@@ -13,6 +13,7 @@ use crate::lang::help::Help;
 
 #[derive(Clone)]
 pub struct Closure {
+    name: Option<Box<str>>,
     job_definitions: Vec<Job>,
     signature: Option<Vec<Parameter>>,
     env: Scope,
@@ -56,6 +57,7 @@ impl CrushCommand for Closure {
 
     fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {
         Box::from(Closure {
+            name: self.name.clone(),
             signature: self.signature.clone(),
             job_definitions: self.job_definitions.clone(),
             env: self.env.clone(),
@@ -71,13 +73,17 @@ impl CrushCommand for Closure {
 
 impl Help for Closure {
     fn signature(&self) -> String {
-        self.signature.as_ref()
-            .map(|s| s
-                .iter()
-                .map(|p| p.to_string())
-                .collect::<Vec<_>>()
-                .join(" "))
-            .unwrap_or("".to_string())
+        format!(
+            "{} {}",
+            self.name.as_ref().unwrap_or(&Box::from("<unnamed>")).to_string(),
+            self.signature.as_ref()
+                .map(|s| s
+                    .iter()
+                    .map(|p| p.to_string())
+                    .collect::<Vec<_>>()
+                    .join(" "))
+                .unwrap_or("".to_string()),
+        )
     }
 
     fn short_help(&self) -> String {
@@ -114,6 +120,7 @@ impl Closure {
     */
 
     pub fn new(
+        name: Option<Box<str>>,
         signature: Option<Vec<Parameter>>,
         mut job_definitions: Vec<Job>,
         env: Scope,
@@ -122,6 +129,7 @@ impl Closure {
         let long_help = extract_help(&mut job_definitions);
 
         Closure {
+            name,
             job_definitions,
             signature,
             env,

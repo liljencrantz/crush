@@ -29,11 +29,13 @@ struct SimpleCommand {
 
 impl dyn CrushCommand {
     pub fn closure(
+        name: Option<Box<str>>,
         signature: Option<Vec<Parameter>>,
         job_definitions: Vec<Job>,
         env: &Scope,
     ) -> Box<dyn CrushCommand +  Send + Sync> {
         Box::from(Closure::new(
+            name,
             signature,
             job_definitions,
             env.clone(),

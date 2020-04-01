@@ -2,7 +2,7 @@ use crossbeam::Sender;
 use crossbeam::Receiver;
 use crossbeam::bounded;
 use std::thread;
-use crate::lang::errors::{CrushError, CrushResult, to_crush_error};
+use crate::lang::errors::{CrushError, CrushResult, to_crush_error, Kind};
 
 enum PrinterMessage {
     Shutdown,
@@ -34,7 +34,7 @@ struct StaticData {
 }
 
 pub fn printer() -> Printer {
-    Printer {sender: SND_RECV.sender.clone()}
+    Printer { sender: SND_RECV.sender.clone() }
 }
 
 pub fn printer_thread() -> JoinHandle<()> {
@@ -58,7 +58,6 @@ pub fn printer_thread() -> JoinHandle<()> {
 }
 
 impl Printer {
-
     pub fn shutdown(self) {
         self.handle_error(to_crush_error(self.sender.send(PrinterMessage::Shutdown)));
     }
@@ -66,19 +65,19 @@ impl Printer {
     pub fn line(&self, line: &str) {
         self.handle_error(to_crush_error(self.sender.send(PrinterMessage::Line(Box::from(line)))));
     }
-/*
-    pub fn lines(&self, lines: Vec<Box<str>>) {
-        self.handle_error(to_crush_error(self.sender.send(PrinterMessage::Lines(lines))));
-    }
-*/
+    /*
+        pub fn lines(&self, lines: Vec<Box<str>>) {
+            self.handle_error(to_crush_error(self.sender.send(PrinterMessage::Lines(lines))));
+        }
+    */
     pub fn handle_error<T>(&self, result: CrushResult<T>) {
         match result {
             Err(e) => {
                 match e.kind {
-                    SendError => {},
-                    _ => self.crush_error(e)
+                    Kind::SendError => {}
+                    _ => self.crush_error(e),
                 }
-            },
+            }
             _ => {}
         }
     }

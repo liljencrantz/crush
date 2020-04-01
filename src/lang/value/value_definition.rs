@@ -14,7 +14,7 @@ use crate::lang::command::Parameter;
 #[derive(Clone)]
 pub enum ValueDefinition {
     Value(Value),
-    ClosureDefinition(Option<Vec<Parameter>>, Vec<Job>),
+    ClosureDefinition(Option<Box<str>>, Option<Vec<Parameter>>, Vec<Job>),
     JobDefinition(Job),
     Label(Box<str>),
     GetAttr(Box<ValueDefinition>, Box<str>),
@@ -63,7 +63,8 @@ impl ValueDefinition {
                 dependencies.push(j);
                 (None, last_input.recv()?)
             }
-            ValueDefinition::ClosureDefinition(p, c) => (None, Value::Command(CrushCommand::closure(p.clone(), c.clone(), env))),
+            ValueDefinition::ClosureDefinition(name, p, c) =>
+                (None, Value::Command(CrushCommand::closure(name.clone(), p.clone(), c.clone(), env))),
             ValueDefinition::Label(s) =>
                 (None, mandate(
                     env.get(s).or_else(|| file_get(s)),
@@ -91,7 +92,7 @@ impl ToString for ValueDefinition {
         match &self {
             ValueDefinition::Value(v) => v.to_string(),
             ValueDefinition::Label(v) => v.to_string(),
-            ValueDefinition::ClosureDefinition(_, _) => "<closure>".to_string(),
+            ValueDefinition::ClosureDefinition(_, _, _) => "<closure>".to_string(),
             ValueDefinition::JobDefinition(_) => "<job>".to_string(),
             ValueDefinition::GetAttr(v, l) => format!("{}:{}", v.to_string(), l),
             ValueDefinition::Path(v, l) => format!("{}/{}", v.to_string(), l),

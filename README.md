@@ -90,7 +90,7 @@ are false.
 The `and` and `or` operators are used to combine logical expressions:
     
     crush> false or true
-    false
+    true
     crush> if (some_file:exists) and ((some_file:stat):is_file) {echo "yay"}
     
 Crush also has operators related to patterns and matching.

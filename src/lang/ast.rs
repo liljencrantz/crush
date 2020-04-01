@@ -101,7 +101,11 @@ pub enum Node {
 }
 
 fn propose_name(name: &str, v: ValueDefinition) -> ValueDefinition {
-    v
+    match v {
+        ValueDefinition::ClosureDefinition(n, p, j) =>
+            ValueDefinition::ClosureDefinition(Some(Box::from(name)), p, j),
+        o => o
+    }
 }
 
 impl Node {
@@ -112,7 +116,7 @@ impl Node {
                     match op.deref() {
                         "=" =>
                             return match target.as_ref() {
-                                Node::Label(t) => Ok(ArgumentDefinition::named(t.deref(), value.generate_argument()?.unnamed_value()?)),
+                                Node::Label(t) => Ok(ArgumentDefinition::named(t.deref(), propose_name( &t, value.generate_argument()?.unnamed_value()?))),
                                 _ => error("Invalid left side in named argument"),
                             },
                         _ =>
@@ -170,7 +174,7 @@ impl Node {
                         Some(Ok(p)) => Some(p),
                         Some(Err(e)) => return Err(e),
                     };
-                    ValueDefinition::ClosureDefinition(p, c.generate()?)
+                    ValueDefinition::ClosureDefinition(None, p, c.generate()?)
                 }
                 Node::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g))),
                 Node::File(f) => ValueDefinition::Value(Value::File(f.clone())),
@@ -207,7 +211,7 @@ impl Node {
                             Node::Label(t) =>
                                 Node::function_invocation(
                                     LET.as_ref().clone(),
-                                    vec![ArgumentDefinition::named(t, value.generate_argument()?.unnamed_value()?)]),
+                                    vec![ArgumentDefinition::named(t, propose_name(&t,value.generate_argument()?.unnamed_value()?))]),
                             _ => error("Invalid left side in declaration"),
                         }
                     }
