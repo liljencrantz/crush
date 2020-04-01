@@ -10,7 +10,7 @@ use users::User;
 
 use lazy_static::lazy_static;
 
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use crate::util::user_map::{create_user_map, UserMap};
 use crate::lang::{argument::Argument, value::Value, value::ValueType, table::ColumnType, table::Row};
 use crate::util::file::cwd;
@@ -120,24 +120,12 @@ pub struct Config {
     output: OutputStream,
 }
 
-fn parse(output: OutputStream, arguments: Vec<Argument>, recursive: bool) -> Result<Config, CrushError> {
-    let mut dirs: Vec<Box<Path>> = Vec::new();
+fn parse(output: OutputStream, mut arguments: Vec<Argument>, recursive: bool) -> Result<Config, CrushError> {
     if arguments.is_empty() {
-        dirs.push(Box::from(Path::new(".")));
+        Ok(Config { dirs: vec![Box::from(Path::new("."))], recursive, output })
+    } else {
+    Ok(Config { dirs: arguments.files()?, recursive, output })
     }
-    for arg in arguments {
-        match &arg.value {
-            Value::String(dir) =>
-                dirs.push(Box::from(Path::new(dir.as_ref()))),
-            Value::File(dir) =>
-                dirs.push(dir.clone()),
-            Value::Glob(dir) => dir.glob_files(&cwd()?, &mut dirs)?,
-            _ => {
-                return error("Invalid argument type to ls, expected string or glob");
-            }
-        }
-    }
-    Ok(Config { dirs, recursive, output })
 }
 
 pub fn perform_ls(context: ExecutionContext) -> CrushResult<()> {

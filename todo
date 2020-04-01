@@ -43,8 +43,6 @@ New operators: += increment and friends
 For single column tabular output, display it on screen it in many rows to save space
 Arbitrary precision integers?
 make file globing testable via fakes
-implement file regexps
-make ls support regexps
 Add package command to create a new namespace
 Make names mandatory and unique for struct fields
 Add support for %<INTEGER> for offset based field identifiers

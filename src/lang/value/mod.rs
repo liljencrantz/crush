@@ -28,6 +28,7 @@ pub use value_definition::ValueDefinition;
 use crate::lang::command::CrushCommand;
 use std::collections::HashMap;
 use crate::lang::pretty_printer::format_buffer;
+use crate::util::regex::RegexFileMatcher;
 
 pub enum Value {
     String(Box<str>),
@@ -187,6 +188,7 @@ impl Value {
             Value::String(s) => v.push(Box::from(Path::new(s.as_ref()))),
             Value::File(p) => v.push(p.clone()),
             Value::Glob(pattern) => pattern.glob_files(&cwd()?, v)?,
+            Value::Regex(def, re) => re.match_files(&cwd()?, v),
             Value::TableStream(s) => {
                 let t = s.types();
                 if t.len() == 1 && t[0].cell_type == ValueType::File {
