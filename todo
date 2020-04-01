@@ -1,5 +1,4 @@
 Todo:
-Add help support for closures
 Fix broken system tests
 Add system tests for type casting
 Add system tests for for loop
@@ -31,21 +30,17 @@ Redo empty streams
 Add control.source command
 Flesh out seq command with support for from and step
 Add list:insert command
-Add dict:clear command
-Add dict:clone command
 Add String:join command
 Add String:lpad command
 Add String:rpad command
 Add String:substr command
 Figure out how to make custom reduce commands
 Data enums + pattern matching syntax
-Add ** for recursive wildcard matches
+Add %% for recursive wildcard matches
 Add readline command that reads one line of interactive text input from the user via the terminal
 support adding prototypes to structs
 New operators: += increment and friends
 For single column tabular output, display it on screen it in many rows to save space
-For binary output, write it in hex and in cleartext, side by side
-Detect if binary output is in fact text, and display it as such
 Arbitrary precision integers?
 make file globing testable via fakes
 implement file regexps
