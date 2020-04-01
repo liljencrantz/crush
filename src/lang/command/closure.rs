@@ -71,7 +71,13 @@ impl CrushCommand for Closure {
 
 impl Help for Closure {
     fn signature(&self) -> String {
-        "SIG".to_string()
+        self.signature.as_ref()
+            .map(|s| s
+                .iter()
+                .map(|p| p.to_string())
+                .collect::<Vec<_>>()
+                .join(" "))
+            .unwrap_or("".to_string())
     }
 
     fn short_help(&self) -> String {

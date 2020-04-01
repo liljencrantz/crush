@@ -190,3 +190,16 @@ pub enum Parameter {
     Named(Box<str>),
     Unnamed(Box<str>),
 }
+
+impl ToString for Parameter {
+    fn to_string(&self) -> String {
+        match self {
+            Parameter::Parameter(
+                name,
+                value_type,
+                default) => format!("{}:{}", name, value_type.to_string()),
+            Parameter::Named(n) => format!("@@{}", n),
+            Parameter::Unnamed(n) => format!("@{}", n),
+        }
+    }
+}

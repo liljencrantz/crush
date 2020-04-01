@@ -29,7 +29,8 @@ Command: CommandNode = {
 
 Assignment: Box<Node> = {
     Logical,
-    <i: Item> <op: AssignmentOperator> <e: Assignment> => Box::from(Node::Assignment(i, Box::from(op), e)),
+    <i: Item> "=" <e: Assignment> => Box::from(Node::Assignment(i, Box::from("="), e)),
+    <i: Item> ":=" <e: Assignment> => Box::from(Node::Assignment(i, Box::from(":="), e)),
 }
 
 Logical: Box<Node> = {
@@ -112,7 +113,6 @@ match {
     "as" => CastOperator,
     r"(typeof|neg|not)" => UnaryOperator,
 } else {
-    r"(=|:=)" => AssignmentOperator,
     ":" => Colon,
     r"( |\t)+" => {},
     r"#[^\n]*" => {},
