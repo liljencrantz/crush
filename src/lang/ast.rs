@@ -181,43 +181,46 @@ impl Node {
             }))
     }
 
-    pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
-        match self {
-            Node::Assignment(target, op, value) => {
-                match op.deref() {
-                    "=" => {
-                        match target.as_ref() {
-                            Node::Label(t) =>
-                                Node::function_invocation(
-                                    SET.as_ref().clone(),
-                                    vec![ArgumentDefinition::named(t, propose_name(&t, value.generate_argument()?.unnamed_value()?))]),
+    fn generate_standalone_assignment(target: &Box<Node>, op: &Box<str>, value: &Box<Node>) -> CrushResult<Option<CommandInvocation>> {
+        match op.deref() {
+            "=" => {
+                match target.as_ref() {
+                    Node::Label(t) =>
+                        Node::function_invocation(
+                            SET.as_ref().clone(),
+                            vec![ArgumentDefinition::named(t, propose_name(&t, value.generate_argument()?.unnamed_value()?))]),
 
-                            Node::GetItem(container, key) =>
-                                container.method_invocation("__setitem__", vec![
-                                    ArgumentDefinition::unnamed(key.generate_argument()?.unnamed_value()?),
-                                    ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?)]),
+                    Node::GetItem(container, key) =>
+                        container.method_invocation("__setitem__", vec![
+                            ArgumentDefinition::unnamed(key.generate_argument()?.unnamed_value()?),
+                            ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?)]),
 
-                            Node::GetAttr(container, attr) =>
-                                container.method_invocation("__setattr__", vec![
-                                    ArgumentDefinition::unnamed(ValueDefinition::Value(Value::String(attr.to_string().into_boxed_str()))),
-                                    ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?),
-                                ]),
+                    Node::GetAttr(container, attr) =>
+                        container.method_invocation("__setattr__", vec![
+                            ArgumentDefinition::unnamed(ValueDefinition::Value(Value::String(attr.to_string().into_boxed_str()))),
+                            ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?),
+                        ]),
 
-                            _ => error("Invalid left side in assignment"),
-                        }
-                    }
-                    ":=" => {
-                        match target.as_ref() {
-                            Node::Label(t) =>
-                                Node::function_invocation(
-                                    LET.as_ref().clone(),
-                                    vec![ArgumentDefinition::named(t, propose_name(&t,value.generate_argument()?.unnamed_value()?))]),
-                            _ => error("Invalid left side in declaration"),
-                        }
-                    }
-                    _ => error("Unknown assignment operator"),
+                    _ => error("Invalid left side in assignment"),
                 }
             }
+            ":=" => {
+                match target.as_ref() {
+                    Node::Label(t) =>
+                        Node::function_invocation(
+                            LET.as_ref().clone(),
+                            vec![ArgumentDefinition::named(t, propose_name(&t,value.generate_argument()?.unnamed_value()?))]),
+                    _ => error("Invalid left side in declaration"),
+                }
+            }
+            _ => error("Unknown assignment operator"),
+        }
+    }
+
+    pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
+        match self {
+            Node::Assignment(target, op, value) =>
+                Node::generate_standalone_assignment(target, op, value),
 
             Node::LogicalOperation(l, op, r) => {
                 let cmd = match op.as_ref() {
@@ -227,6 +230,7 @@ impl Node {
                 };
                 Node::function_invocation(cmd.clone(), vec![l.generate_argument()?, r.generate_argument()?])
             }
+
             Node::Comparison(l, op, r) => {
                 let cmd = match op.as_ref() {
                     "<" => LT.as_ref(),
@@ -236,21 +240,23 @@ impl Node {
                     "==" => EQ.as_ref(),
                     "!=" => NEQ.as_ref(),
                     "=~" =>
-                        return l.method_invocation("match", vec![r.generate_argument()?]),
+                        return r.method_invocation("match", vec![l.generate_argument()?]),
                     "!~" =>
-                        return l.method_invocation("not_match", vec![r.generate_argument()?]),
+                        return r.method_invocation("not_match", vec![l.generate_argument()?]),
                     _ => return error("Unknown operator"),
                 };
                 Node::function_invocation(cmd.clone(), vec![l.generate_argument()?, r.generate_argument()?])
             }
-            Node::Replace(r, op, t1, t2) => {
+
+            Node::Replace(v1, op, v2, v3) => {
                 let method = match op.as_ref() {
                     "~" => "replace",
                     "~~" => "replace_all",
                     _ => return error("Unknown operator")
                 };
-                r.method_invocation(method, vec![t1.generate_argument()?, t2.generate_argument()?])
+                v2.method_invocation(method, vec![v1.generate_argument()?, v3.generate_argument()?])
             }
+
             Node::Term(l, op, r) => {
                 let method = match op.as_ref() {
                     "+" => "__add__",
@@ -259,6 +265,7 @@ impl Node {
                 };
                 l.method_invocation(method, vec![r.generate_argument()?])
             }
+
             Node::Factor(l, op, r) => {
                 let method = match op.as_ref() {
                     "*" => "__mul__",
@@ -267,9 +274,10 @@ impl Node {
                 };
                 l.method_invocation(method, vec![r.generate_argument()?])
             }
-            Node::GetItem(val, key) => {
-                val.method_invocation("__getitem__", vec![key.generate_argument()?])
-            }
+
+            Node::GetItem(val, key) =>
+                val.method_invocation("__getitem__", vec![key.generate_argument()?]),
+
             Node::Unary(op, r) =>
                 match op.deref() {
                     "neg" => r.method_invocation("__neg__", vec![]),
