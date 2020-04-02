@@ -13,7 +13,6 @@ use lazy_static::lazy_static;
 use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use crate::util::user_map::{create_user_map, UserMap};
 use crate::lang::{argument::Argument, value::Value, value::ValueType, table::ColumnType, table::Row};
-use crate::util::file::cwd;
 use crate::lang::errors::{error, CrushError, CrushResult, to_crush_error};
 use crate::lang::stream::OutputStream;
 

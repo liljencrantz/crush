@@ -188,7 +188,7 @@ impl Value {
             Value::String(s) => v.push(Box::from(Path::new(s.as_ref()))),
             Value::File(p) => v.push(p.clone()),
             Value::Glob(pattern) => pattern.glob_files(&cwd()?, v)?,
-            Value::Regex(def, re) => re.match_files(&cwd()?, v),
+            Value::Regex(_, re) => re.match_files(&cwd()?, v),
             Value::TableStream(s) => {
                 let t = s.types();
                 if t.len() == 1 && t[0].cell_type == ValueType::File {
