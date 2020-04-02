@@ -1,4 +1,8 @@
 Todo:
+Replace Scope type with a struct?
+Add a range type
+Figure out how to support options like --foo and -b in external commands in a nice way
+Make it so e.g. cargo:build works
 Fix broken system tests
 Add system tests for type casting
 Add system tests for for loop

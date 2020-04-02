@@ -78,7 +78,7 @@ fn replace(mut context: ExecutionContext) -> CrushResult<()> {
 
     match (text, replace) {
         (Some(t), Some(n)) => {
-            context.output.send(Value::String(Box::from(re.replace(&t, n.as_ref()).as_ref())))
+            context.output.send(Value::string(re.replace(&t, n.as_ref()).as_ref()))
         }
         _ => argument_error("Must specify both pattern and text"),
     }
@@ -114,7 +114,7 @@ fn replace_all(mut context: ExecutionContext) -> CrushResult<()> {
 
     match (text, replace) {
         (Some(t), Some(n)) => {
-            context.output.send(Value::String(Box::from(re.replace_all(&t, n.as_ref()).as_ref())))
+            context.output.send(Value::string(re.replace_all(&t, n.as_ref()).as_ref()))
         }
         _ => argument_error("Must specify both pattern and text"),
     }

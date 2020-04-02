@@ -148,17 +148,17 @@ impl Value {
     }
 
     pub fn readable(&self) -> Option<Box<dyn Readable>> {
-        return match self {
+        match self {
             Value::TableStream(s) => Some(Box::from(s.clone())),
             Value::Table(r) => Some(Box::from(TableReader::new(r.clone()))),
             Value::List(l) => Some(Box::from(ListReader::new(l.clone(), "value"))),
             Value::Dict(d) => Some(Box::from(DictReader::new(d.clone()))),
             _ => None,
-        };
+        }
     }
 
     pub fn value_type(&self) -> ValueType {
-        return match self {
+        match self {
             Value::String(_) => ValueType::String,
             Value::Integer(_) => ValueType::Integer,
             Value::Time(_) => ValueType::Time,
@@ -180,7 +180,7 @@ impl Value {
             Value::BinaryStream(_) => ValueType::BinaryStream,
             Value::Binary(_) => ValueType::Binary,
             Value::Type(_) => ValueType::Type,
-        };
+        }
     }
 
     pub fn file_expand(&self, v: &mut Vec<Box<Path>>) -> CrushResult<()> {

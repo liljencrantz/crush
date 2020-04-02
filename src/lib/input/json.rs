@@ -48,7 +48,7 @@ fn convert_json(json_value: &serde_json::Value) -> CrushResult<Value> {
                 Ok(Value::Float(f.as_f64().ok_or(CrushError { kind: InvalidData, message: "Not a valid number".to_string() })?))
             }
         }
-        serde_json::Value::String(s) => Ok(Value::String(Box::from(s.clone()))),
+        serde_json::Value::String(s) => Ok(Value::string(s.as_str())),
         serde_json::Value::Array(arr) => {
             let mut lst = arr.iter()
                 .map(|v| convert_json(v))

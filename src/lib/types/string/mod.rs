@@ -62,7 +62,7 @@ fn split(mut context: ExecutionContext) -> CrushResult<()> {
     let separator = context.arguments.string(0)?;
     context.output.send(Value::List(List::new(ValueType::String,
                                               this.split(separator.as_ref())
-                                                  .map(|s| Value::String(Box::from(s)))
+                                                  .map(|s| Value::string(s))
                                                   .collect())))
 }
 
