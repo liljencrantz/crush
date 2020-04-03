@@ -7,7 +7,7 @@ use std::os::unix::fs::MetadataExt;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use crate::lang::command::CrushCommand;
-use crate::lang::serialize::{serialize, deserialize};
+use crate::lang::serialization::{serialize, deserialize};
 
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {

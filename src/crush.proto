@@ -1,5 +1,5 @@
 syntax = "proto3";
-package lang.serialization;
+package lang.serialization.model;
 
 message SerializedValue {
     uint64 root = 1;

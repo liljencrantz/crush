@@ -17,11 +17,5 @@ pub mod errors;
 pub mod ast;
 pub mod help;
 pub mod execution_context;
-pub mod serialize;
-
 pub mod serialization;
-/*
-pub mod serialization {
-    include!(concat!(env!("OUT_DIR"), "/lang.serialization.rs"));
-}
-*/
+
