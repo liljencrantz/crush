@@ -10,9 +10,9 @@ message Element {
     oneof element {
         string string = 2;
         int64 small_integer = 3;
-        Dict dict = 4;
+        string large_integer = 4;
         Struct struct = 5;
-        string file = 6;
+        bytes file = 6;
         double float = 7;
         Command command = 8;
         Closure closure = 9;
@@ -25,21 +25,19 @@ message Element {
         bool bool = 16;
         bool empty = 17;
         Type type = 18;
-        Time time = 19;
+        int64 time = 19;
         Table table = 20;
         List list = 21;
         ColumnType column_type = 22;
         Row row = 23;
         Member member = 24;
+        Dict dict = 25;
     }
 }
 
 message Duration {
     int64 secs = 1;
     int32 nanos = 2;
-}
-
-message Time {
 }
 
 message Closure {

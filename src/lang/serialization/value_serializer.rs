@@ -1,36 +1,81 @@
 use crate::lang::list::List;
 use crate::lang::serialization::{Serializable, DeserializationState, SerializationState};
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult, error, to_crush_error};
 use crate::lang::serialization::model::{Element, element};
 use crate::lang::serialization::model;
 use crate::lang::value::{ValueType, Value};
 use crate::util::identity_arc::Identity;
-use chrono::Duration;
+use chrono::{Duration, DateTime, Local};
 use crate::lang::table::Table;
 use std::convert::TryFrom;
+use bytes::Buf;
+use std::os::unix::ffi::OsStringExt;
+use std::path::PathBuf;
+use crate::util::glob::Glob;
+use regex::Regex;
+use std::ffi::OsStr;
+use std::os::unix::ffi::OsStrExt;
+use chrono::offset::TimeZone;
+
+fn serialize_simple(value: &Value, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
+    let mut node = Element::default();
+    node.element = Some(match value {
+        Value::String(s) => element::Element::String(s.to_string()),
+        Value::Glob(s) => element::Element::Glob(s.to_string()),
+        Value::Regex(s, _) => element::Element::Regex(s.to_string()),
+        Value::File(b) => element::Element::File(b.as_os_str().to_os_string().into_vec()),
+        Value::Binary(b) => element::Element::Binary(b.clone()),
+        Value::Float(f) => element::Element::Float(*f),
+        Value::Bool(b) => element::Element::Bool(*b),
+        Value::Empty() => element::Element::Empty(false),
+        Value::Time(d) => element::Element::Time(d.timestamp_nanos()),
+        _ => return error("Expected simple value"),
+    });
+    let idx = elements.len();
+    state.values.insert(value.clone(), idx);
+    elements.push(node);
+    Ok(idx)
+}
 
 impl Serializable<Value> for Value {
     fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<Value> {
         match elements[id].element.as_ref().unwrap() {
-            element::Element::String(s) => {
-                Ok(Value::string(s.as_str()))
-            }
+            element::Element::String(s) => Ok(Value::string(s.as_str())),
+            element::Element::File(f) => Ok(Value::File(
+                PathBuf::from(OsStr::from_bytes(&f[..])).into_boxed_path())),
+            element::Element::Float(v) => Ok(Value::Float(*v)),
+            element::Element::Binary(v) => Ok(Value::Binary(v.clone())),
+            element::Element::Glob(v) => Ok(Value::Glob(Glob::new(v))),
+            element::Element::Regex(v) => Ok(Value::Regex(
+                v.clone().into_boxed_str(),
+                to_crush_error(Regex::new(v))?,
+            )),
+            element::Element::Bool(v) => Ok(Value::Bool(*v)),
+            element::Element::Empty(_) => Ok(Value::Empty()),
 
-            element::Element::SmallInteger(i) => {
-                Ok(Value::Integer(*i as i128))
-            }
+            element::Element::SmallInteger(_) | element::Element::LargeInteger(_) =>
+                Ok(Value::Integer(i128::deserialize(id, elements, state)?)),
 
-            element::Element::Duration(d) => {
-                let dd = Duration::seconds(d.secs) + Duration::nanoseconds(d.nanos as i64);
-                Ok(Value::Duration(dd))
-            }
+            element::Element::Duration(d) =>
+                Ok(Value::Duration(
+                    Duration::seconds(d.secs) + Duration::nanoseconds(d.nanos as i64))),
+
+            element::Element::Time(t) => Ok(Value::Time(Local.timestamp_nanos(*t))),
 
             element::Element::List(l) => Ok(Value::List(List::deserialize(id, elements, state)?)),
-
             element::Element::Type(_) => Ok(Value::Type(ValueType::deserialize(id, elements, state)?)),
-
             element::Element::Table(_) => Ok(Value::Table(Table::deserialize(id, elements, state)?)),
-            _ => unimplemented!(),
+
+            element::Element::Struct(_) => unimplemented!(),
+            element::Element::Command(_) => unimplemented!(),
+            element::Element::Closure(_) => unimplemented!(),
+            element::Element::Field(_) => unimplemented!(),
+            element::Element::Scope(_) => unimplemented!(),
+            element::Element::Dict(_) => unimplemented!(),
+
+            element::Element::ColumnType(_) |
+            element::Element::Row(_) |
+            element::Element::Member(_) => error("Not a value"),
         }
     }
 
@@ -42,29 +87,13 @@ impl Serializable<Value> for Value {
         }
 
         match self {
-            Value::String(s) => {
-                let mut node = Element::default();
-                node.element = Some(element::Element::String(s.to_string()));
-                let idx = elements.len();
-                state.values.insert(self.clone(), idx);
-                elements.push(node);
-                Ok(idx)
-            }
-            Value::Integer(s) => {
-                let mut node = Element::default();
-                match i64::try_from(*s) {
-                    Ok(v) => {
-                        node.element = Some(element::Element::SmallInteger(v));
-                        let idx = elements.len();
-                        state.values.insert(self.clone(), idx);
-                        elements.push(node);
-                        Ok(idx)
-                    }
-                    Err(_) => {
-                        unimplemented!();
-                    }
-                }
-            }
+            Value::String(_) | Value::Glob(_) | Value::Regex(_, _) | Value::File(_) |
+            Value::Binary(_) | Value::Float(_) | Value::Bool(_) | Value::Empty() |
+            Value::Time(_) =>
+                serialize_simple(self, elements, state),
+
+            Value::Integer(s) => s.serialize(elements, state),
+
             Value::Duration(d) => {
                 let mut node = Element::default();
                 let mut dd = model::Duration::default();
@@ -80,8 +109,13 @@ impl Serializable<Value> for Value {
             Value::Type(t) => t.serialize(elements, state),
             Value::List(l) => l.serialize(elements, state),
             Value::Table(t) => t.serialize(elements, state),
-
-            _ => unimplemented!(),
+            Value::Field(_) => unimplemented!(),
+            Value::Command(_) => unimplemented!(),
+            Value::Struct(_) => unimplemented!(),
+            Value::Dict(_) => unimplemented!(),
+            Value::Scope(_) => unimplemented!(),
+            Value::TableStream(_) |
+            Value::BinaryStream(_) => error("Can't serialize streams"),
         }
     }
 }
