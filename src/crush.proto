@@ -60,7 +60,7 @@ message Scope {
 }
 
 message Type {
-    enum SimpleType {
+    enum SimpleTypeKind {
         STRING = 0;
         INTEGER = 1;
         FILE = 2;
@@ -80,7 +80,7 @@ message Type {
         ANY = 16;
     }
     oneof type {
-        SimpleType simple_type = 1;
+        SimpleTypeKind simple_type = 1;
         ListType list_type = 2;
         DictType dict_type = 3;
         TableType table_type = 4;
