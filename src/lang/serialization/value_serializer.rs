@@ -16,6 +16,7 @@ use regex::Regex;
 use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt;
 use chrono::offset::TimeZone;
+use crate::lang::dict::Dict;
 
 fn serialize_simple(value: &Value, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
     let mut node = Element::default();
@@ -71,7 +72,7 @@ impl Serializable<Value> for Value {
             element::Element::Closure(_) => unimplemented!(),
             element::Element::Field(_) => unimplemented!(),
             element::Element::Scope(_) => unimplemented!(),
-            element::Element::Dict(_) => unimplemented!(),
+            element::Element::Dict(d) => Ok(Value::Dict(Dict::deserialize(id, elements, state)?)),
 
             element::Element::ColumnType(_) |
             element::Element::Row(_) |
@@ -112,7 +113,7 @@ impl Serializable<Value> for Value {
             Value::Field(_) => unimplemented!(),
             Value::Command(_) => unimplemented!(),
             Value::Struct(_) => unimplemented!(),
-            Value::Dict(_) => unimplemented!(),
+            Value::Dict(d) => d.serialize(elements, state),
             Value::Scope(_) => unimplemented!(),
             Value::TableStream(_) |
             Value::BinaryStream(_) => error("Can't serialize streams"),

@@ -17,7 +17,6 @@ impl<T> Identity for Arc<T> {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;

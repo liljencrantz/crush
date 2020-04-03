@@ -86,8 +86,7 @@ pub fn to(mut context: ExecutionContext) -> CrushResult<()> {
     let file = context.this.file()?;
     context.arguments.check_len(1)?;
     let value = context.arguments.value(0)?;
-    serialize(&value, &file)?;
-    context.output.send(value)
+    serialize(&value, &file)
 }
 
 pub fn from(mut context: ExecutionContext) -> CrushResult<()> {

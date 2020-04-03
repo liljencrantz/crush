@@ -1,4 +1,5 @@
 Todo:
+Materializing a value should not destroy the original
 Serialisation/deserialisation format
 Replace Scope type with a struct?
 Add a range type

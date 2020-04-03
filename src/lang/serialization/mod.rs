@@ -12,11 +12,14 @@ use model::Element;
 use model::element;
 use chrono::Duration;
 use crate::lang::list::List;
+use crate::lang::r#struct::Struct;
 use std::ops::Deref;
 use crate::lang::table::{Table, ColumnType, Row};
+use crate::lang::dict::Dict;
 
 mod integer_serializer;
 mod list_serializer;
+mod dict_serializer;
 mod value_type_serializer;
 mod value_serializer;
 mod table_serializer;
@@ -37,6 +40,8 @@ pub struct DeserializationState {
     pub values: HashMap<usize, Value>,
     pub lists: HashMap<usize, List>,
     pub types: HashMap<usize, ValueType>,
+    pub dicts: HashMap<usize, Dict>,
+    pub structs: HashMap<usize, Struct>,
 }
 
 pub fn serialize(value: &Value, destination: &Path) -> CrushResult<()> {
@@ -71,6 +76,8 @@ pub fn deserialize(source: &Path) -> CrushResult<Value> {
         values: HashMap::new(),
         types: HashMap::new(),
         lists: HashMap::new(),
+        dicts: HashMap::new(),
+        structs: HashMap::new(),
     };
 
     let mut res = SerializedValue::decode(&mut Cursor::new(buf)).unwrap();

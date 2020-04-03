@@ -8,7 +8,7 @@ use crate::util::identity_arc::Identity;
 
 impl Serializable<List> for List {
     fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<List> {
-        if state.values.contains_key(&id) {
+        if state.lists.contains_key(&id) {
             Ok(state.lists[&id].clone())
         } else {
             if let element::Element::List(l) = elements[id].element.as_ref().unwrap(){

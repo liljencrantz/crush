@@ -6,12 +6,19 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use crate::lang::stream::Readable;
 use crate::util::replace::Replace;
+use crate::util::identity_arc::Identity;
 
 #[derive(Clone)]
 pub struct Dict {
     key_type: ValueType,
     value_type: ValueType,
     entries: Arc<Mutex<HashMap<Value, Value>>>,
+}
+
+impl Identity for Dict {
+    fn id(&self) -> u64 {
+        self.entries.id()
+    }
 }
 
 impl Dict {
