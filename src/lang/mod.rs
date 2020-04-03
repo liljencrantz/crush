@@ -19,8 +19,9 @@ pub mod help;
 pub mod execution_context;
 pub mod serialize;
 
-//pub mod serialization;
-
+pub mod serialization;
+/*
 pub mod serialization {
-    include!(concat!(env!("OUT_DIR"), "/serialization"));
+    include!(concat!(env!("OUT_DIR"), "/lang.serialization.rs"));
 }
+*/

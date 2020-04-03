@@ -8,31 +8,34 @@ use prost::Message;
 use std::convert::TryFrom;
 use crate::util::identity_arc::Identity;
 use crate::lang::serialization;
-use crate::lang::serialization::SerializedValue;
-use crate::lang::serialization::SerializationNode;
-use crate::lang::serialization::serialization_node;
+use crate::lang::serialization::{SerializedValue};
+use crate::lang::serialization::Element;
+use crate::lang::serialization::element;
 use crate::lang::serialization::r#type::SimpleTypeKind;
 use crate::lang::serialization::r#type::Type::SimpleType;
 use chrono::Duration;
 use crate::lang::list::List;
 use std::ops::Deref;
+use crate::lang::table::{Table, ColumnType, Row};
 
 pub struct SerializationState {
     pub with_id: HashMap<u64, usize>,
-    pub hashable: HashMap<Value, usize>,
+    pub values: HashMap<Value, usize>,
 }
 
 pub struct DeserializationState {
-    pub deserialized: HashMap<usize, Value>,
+    pub values: HashMap<usize, Value>,
+    pub lists: HashMap<usize, List>,
+    pub types: HashMap<usize, ValueType>,
 }
 
 pub fn serialize(value: &Value, destination: &Path) -> CrushResult<()> {
     let mut res = SerializedValue::default();
     let mut state = SerializationState {
         with_id: HashMap::new(),
-        hashable: HashMap::new(),
+        values: HashMap::new(),
     };
-    res.root = value.clone().materialize().serialize(&mut res.nodes, &mut state)? as u64;
+    res.root = value. clone().materialize().serialize(&mut res.elements, &mut state)? as u64;
 
     let mut buf = Vec::new();
     buf.reserve(res.encoded_len());
@@ -55,24 +58,26 @@ pub fn deserialize(source: &Path) -> CrushResult<Value> {
     file_buffer.read_to_end(&mut buf);
 
     let mut state = DeserializationState {
-        deserialized: HashMap::new(),
+        values: HashMap::new(),
+        types: HashMap::new(),
+        lists: HashMap::new(),
     };
 
     let mut res = SerializedValue::decode(&mut Cursor::new(buf)).unwrap();
 
     println!("AAA {:?}", res);
 
-    Ok(*Value::deserialize(res.root as usize, &res.nodes, &mut state)?)
+    Ok(Value::deserialize(res.root as usize, &res.elements, &mut state)?)
 }
 
-pub trait Serializable {
-    fn deserialize(id: usize, nodes: &Vec<SerializationNode>, state: &mut DeserializationState) -> CrushResult<Box<Self>>;
-    fn serialize(&self, nodes: &mut Vec<SerializationNode>, state: &mut SerializationState) -> CrushResult<usize>;
+pub trait Serializable<T> {
+    fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<T>;
+    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize>;
 }
 
-impl Serializable for ValueType {
-    fn deserialize(id: usize, nodes: &Vec<SerializationNode>, state: &mut DeserializationState) -> CrushResult<Box<ValueType>> {
-        if let serialization_node::Value::Type(outer_type) = nodes[id].value.as_ref().unwrap() {
+impl Serializable<ValueType> for ValueType {
+    fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<ValueType> {
+        if let element::Element::Type(outer_type) = elements[id].element.as_ref().unwrap() {
             match outer_type.r#type {
                 Some(SimpleType(simple_type)) => {
                     let vt = match simple_type {
@@ -95,7 +100,7 @@ impl Serializable for ValueType {
                         16 => ValueType::Any,
                         _ => return error("Unrecognised type")
                     };
-                    Ok(Box::from(vt))
+                    Ok(vt)
                 }
                 _ => unimplemented!(),
             }
@@ -104,7 +109,7 @@ impl Serializable for ValueType {
         }
     }
 
-    fn serialize(&self, nodes: &mut Vec<SerializationNode>, state: &mut SerializationState) -> CrushResult<usize> {
+    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
         let tt = match self {
             ValueType::String => SimpleTypeKind::String,
             ValueType::Integer => SimpleTypeKind::Integer,
@@ -130,82 +135,69 @@ impl Serializable for ValueType {
             ValueType::BinaryStream => return error("Can't serialize streams"),
         };
 
-        let mut node = serialization::SerializationNode::default();
+        let mut node = serialization::Element::default();
         let mut ttt = serialization::Type::default();
         ttt.r#type = Some(SimpleType(tt as i32));
-        node.value = Some(serialization_node::Value::Type(ttt));
-        let idx = nodes.len();
-        nodes.push(node);
+        node.element = Some(element::Element::Type(ttt));
+        let idx = elements.len();
+        elements.push(node);
         Ok(idx)
     }
 }
 
 
-impl Serializable for Value {
-    fn deserialize(id: usize, nodes: &Vec<SerializationNode>, state: &mut DeserializationState) -> CrushResult<Box<Value>> {
-        match nodes[id].value.as_ref().unwrap() {
-            serialization_node::Value::String(s) => {
-                Ok(Box::from(Value::string(s.as_str())))
+impl Serializable<Value> for Value {
+    fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<Value> {
+        match elements[id].element.as_ref().unwrap() {
+            element::Element::String(s) => {
+                Ok(Value::string(s.as_str()))
             }
-            serialization_node::Value::SmallInteger(i) => {
-                Ok(Box::from(Value::Integer(*i as i128)))
+
+            element::Element::SmallInteger(i) => {
+                Ok(Value::Integer(*i as i128))
             }
-            serialization_node::Value::Duration(d) => {
+
+            element::Element::Duration(d) => {
                 let dd = Duration::seconds(d.secs) + Duration::nanoseconds(d.nanos as i64);
-                Ok(Box::from(Value::Duration(dd)))
-            }
-            serialization_node::Value::List(l) => {
-                if state.deserialized.contains_key(&id) {
-                    Ok(Box::from(state.deserialized[&id].clone()))
-                } else {
-                    let element_type_value = Value::deserialize(l.element_type as usize, nodes, state)?;
-                    if let Value::Type(element_type) = *element_type_value {
-                        let list = List::new(element_type, vec![]);
-                        let res = Value::List(list.clone());
-                        state.deserialized.insert(id, res.clone());
-
-                        for el_id in &l.elements {
-                            list.append(&mut vec![*Value::deserialize(*el_id as usize, nodes, state)?])?;
-                        }
-
-                        Ok(Box::from(res))
-                    } else {
-                        error("Deserialization error")
-                    }
-                }
+                Ok(Value::Duration(dd))
             }
 
-            serialization_node::Value::Type(_) => {
-                Ok(Box::from(Value::Type(*ValueType::deserialize(id, nodes, state)?)))
-            }
+            element::Element::List(l) =>
+                Ok(Value::List(List::deserialize(id, elements, state)?)),
+
+            element::Element::Type(_) =>
+                Ok(Value::Type(ValueType::deserialize(id, elements, state)?)),
+
+            element::Element::Table(_) =>
+                Ok(Value::Table(Table::deserialize(id, elements, state)?)),
             _ => unimplemented!(),
         }
     }
 
-    fn serialize(&self, nodes: &mut Vec<SerializationNode>, state: &mut SerializationState) -> CrushResult<usize> {
+    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
         if self.value_type().is_hashable() {
-            if state.hashable.contains_key(self) {
-                return Ok(state.hashable[self]);
+            if state.values.contains_key(self) {
+                return Ok(state.values[self]);
             }
         }
 
         match self {
             Value::String(s) => {
-                let mut node = SerializationNode::default();
-                node.value = Some(serialization_node::Value::String(s.to_string()));
-                let idx = nodes.len();
-                state.hashable.insert(self.clone(), idx);
-                nodes.push(node);
+                let mut node = Element::default();
+                node.element = Some(element::Element::String(s.to_string()));
+                let idx = elements.len();
+                state.values.insert(self.clone(), idx);
+                elements.push(node);
                 Ok(idx)
             }
             Value::Integer(s) => {
-                let mut node = SerializationNode::default();
+                let mut node = Element::default();
                 match i64::try_from(*s) {
                     Ok(v) => {
-                        node.value = Some(serialization_node::Value::SmallInteger(v));
-                        let idx = nodes.len();
-                        state.hashable.insert(self.clone(), idx);
-                        nodes.push(node);
+                        node.element = Some(element::Element::SmallInteger(v));
+                        let idx = elements.len();
+                        state.values.insert(self.clone(), idx);
+                        elements.push(node);
                         Ok(idx)
                     }
                     Err(_) => {
@@ -214,53 +206,147 @@ impl Serializable for Value {
                 }
             }
             Value::Duration(d) => {
-                let mut node = SerializationNode::default();
+                let mut node = Element::default();
                 let mut dd = serialization::Duration::default();
                 dd.secs = d.num_seconds();
                 dd.nanos = 0;
-                node.value = Some(serialization_node::Value::Duration(dd));
-                let idx = nodes.len();
-                state.hashable.insert(self.clone(), idx);
-                nodes.push(node);
+                node.element = Some(element::Element::Duration(dd));
+                let idx = elements.len();
+                state.values.insert(self.clone(), idx);
+                elements.push(node);
                 Ok(idx)
             }
-            Value::Type(t) => {
-                t.serialize(nodes, state)
-            }
-            Value::List(l) => {
-                let id = l.id();
-                if !state.with_id.contains_key(&id) {
-                    let idx = nodes.len();
-                    nodes.push(serialization::SerializationNode::default());
-                    state.with_id.insert(id, idx);
 
-                    let type_idx = Value::Type(l.element_type()).serialize(nodes, state)?;
-
-                    let mut res = Vec::new();
-                    let data = l.dump();
-                    res.reserve(data.len());
-                    let mut ll = serialization::List::default();
-                    ll.elements = res;
-                    for el in data {
-                        ll.elements.push(el.serialize(nodes, state)? as u64)
-                    }
-                    ll.element_type = type_idx as u64;
-                    let mut node = serialization::SerializationNode::default();
-                    node.value = Some(serialization_node::Value::List(ll));
-                    nodes[idx] = node;
-                }
-                Ok(state.with_id[&id])
-            }
-
-            Value::Table(t) => {
-                let idx = nodes.len();
-                nodes.push(serialization::SerializationNode::default());
-                let mut stable = serialization::Table::default();
-                nodes[idx].value = Some(serialization_node::Value::Table(stable));
-                Ok(idx)
-            }
+            Value::Type(t) => t.serialize(elements, state),
+            Value::List(l) => l.serialize(elements, state),
+            Value::Table(t) => t.serialize(elements, state),
 
             _ => unimplemented!(),
         }
+    }
+}
+
+impl Serializable<ColumnType> for ColumnType {
+    fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<ColumnType> {
+        if let element::Element::ColumnType(t) = elements[id].element.as_ref().unwrap(){
+            Ok(ColumnType::new(
+                t.name.as_str(),
+                ValueType::deserialize(t.r#type as usize, elements, state)?))
+        } else {
+            error("Expected a table")
+        }
+    }
+
+    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
+        let idx = elements.len();
+        elements.push(serialization::Element::default());
+        let mut stype = serialization::ColumnType::default();
+        stype.name = self.name.to_string();
+        stype.r#type = self.cell_type.serialize(elements, state)? as u64;
+        elements[idx].element = Some(element::Element::ColumnType(stype));
+        Ok(idx)
+    }
+}
+
+impl Serializable<Row> for Row {
+    fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<Row> {
+        if let element::Element::Row(r) = elements[id].element.as_ref().unwrap(){
+            let mut cells = Vec::new();
+            for c in &r.cells {
+                cells.push(Value::deserialize(*c as usize, elements, state)?);
+            }
+            Ok(Row::new(cells))
+        } else {
+            error("Expected a table")
+        }
+    }
+
+    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
+        let idx = elements.len();
+        elements.push(serialization::Element::default());
+        let mut srow = serialization::Row::default();
+        for r in self.cells() {
+            srow.cells.push(r.serialize(elements, state)? as u64);
+        }
+        elements[idx].element = Some(element::Element::Row(srow));
+        Ok(idx)
+    }
+}
+
+impl Serializable<Table> for Table {
+    fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<Table> {
+        if let element::Element::Table(lt) = elements[id].element.as_ref().unwrap(){
+            let mut column_types = Vec::new();
+            let mut rows = Vec::new();
+            for ct in &lt.column_types {
+                column_types.push(ColumnType::deserialize(*ct as usize, elements, state)?);
+            }
+            for r in &lt.rows {
+                rows.push(Row::deserialize(*r as usize, elements, state)?);
+            }
+            Ok(Table::new(column_types, rows))
+        } else {
+            error("Expected a table")
+        }
+    }
+
+    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
+        let idx = elements.len();
+        elements.push(serialization::Element::default());
+        let mut stable = serialization::Table::default();
+        for t in self.types() {
+            stable.column_types.push(t.serialize(elements, state)? as u64);
+        }
+        for r in self.rows() {
+            stable.rows.push(r.serialize(elements, state)? as u64);
+        }
+        elements[idx].element = Some(element::Element::Table(stable));
+        Ok(idx)
+    }
+}
+
+impl Serializable<List> for List {
+    fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<List> {
+        if state.values.contains_key(&id) {
+            Ok(state.lists[&id].clone())
+        } else {
+            if let element::Element::List(l) = elements[id].element.as_ref().unwrap(){
+                let element_type = ValueType::deserialize(l.element_type as usize, elements, state)?;
+                let list = List::new(element_type, vec![]);
+                state.lists.insert(id, list.clone());
+
+                for el_id in &l.elements {
+                    list.append(&mut vec![Value::deserialize(*el_id as usize, elements, state)?])?;
+                }
+                Ok(list)
+            } else {
+                error("Expected a list")
+            }
+        }
+    }
+
+    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
+        let id = self.id();
+        if !state.with_id.contains_key(&id) {
+            let idx = elements.len();
+            elements.push(serialization::Element::default());
+            state.with_id.insert(id, idx);
+
+            let type_idx = Value::Type(self.element_type()).serialize(elements, state)?;
+
+            let mut res = Vec::new();
+            let data = self.dump();
+            res.reserve(data.len());
+            let mut ll = serialization::List::default();
+            ll.elements = res;
+            for el in data {
+                ll.elements.push(el.serialize(elements, state)? as u64)
+            }
+            ll.element_type = type_idx as u64;
+            let mut node = serialization::Element::default();
+            node.element = Some(element::Element::List(ll));
+            elements[idx] = node;
+        }
+        Ok(state.with_id[&id])
     }
 }

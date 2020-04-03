@@ -3,11 +3,11 @@ package lang.serialization;
 
 message SerializedValue {
     uint64 root = 1;
-    repeated SerializationNode nodes = 2;
+    repeated Element elements = 2;
 }
 
-message SerializationNode {
-    oneof value {
+message Element {
+    oneof element {
         string string = 2;
         int64 small_integer = 3;
         Dict dict = 4;
@@ -28,6 +28,9 @@ message SerializationNode {
         Time time = 19;
         Table table = 20;
         List list = 21;
+        ColumnType column_type = 22;
+        Row row = 23;
+        Member member = 24;
     }
 }
 
@@ -47,8 +50,8 @@ message Field {
 }
 
 message Table {
-    repeated ColumnType column_types = 1;
-    repeated Row rows = 2;
+    repeated uint64 column_types = 1;
+    repeated uint64 rows = 2;
 }
 
 message Row {
@@ -56,7 +59,7 @@ message Row {
 }
 
 message Scope {
-    repeated Member members = 2;
+    repeated uint64 members = 2;
 }
 
 message Type {
@@ -88,7 +91,7 @@ message Type {
 }
 
 message TableType {
-    repeated ColumnType column_types = 1;
+    repeated uint64 column_types = 1;
 }
 
 message ColumnType {
@@ -118,7 +121,7 @@ message Dict {
 
 message Struct {
     uint64 parent = 1;
-    repeated Member members = 2;
+    repeated uint64 members = 2;
 }
 
 message Member {
