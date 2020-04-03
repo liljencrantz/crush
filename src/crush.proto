@@ -1,0 +1,131 @@
+syntax = "proto3";
+package lang.serialization;
+
+message SerializedValue {
+    uint64 root = 1;
+    repeated SerializationNode nodes = 2;
+}
+
+message SerializationNode {
+    oneof value {
+        string string = 2;
+        int64 small_integer = 3;
+        Dict dict = 4;
+        Struct struct = 5;
+        string file = 6;
+        double float = 7;
+        Command command = 8;
+        Closure closure = 9;
+        bytes binary = 10;
+        Duration duration = 11;
+        Field field = 12;
+        string glob = 13;
+        string regex = 14;
+        Scope scope = 15;
+        bool bool = 16;
+        bool empty = 17;
+        Type type = 18;
+        Time time = 19;
+        Table table = 20;
+        List list = 21;
+    }
+}
+
+message Duration {
+    int64 secs = 1;
+    int32 nanos = 2;
+}
+
+message Time {
+}
+
+message Closure {
+}
+
+message Field {
+    repeated string elements = 1;
+}
+
+message Table {
+    repeated ColumnType column_types = 1;
+    repeated Row rows = 2;
+}
+
+message Row {
+    repeated uint64 cells = 1;
+}
+
+message Scope {
+    repeated Member members = 2;
+}
+
+message Type {
+    enum SimpleType {
+        STRING = 0;
+        INTEGER = 1;
+        FILE = 2;
+        FLOAT = 3;
+        COMMAND = 4;
+        BINARY = 5;
+        DURATION = 6;
+        FIELD = 7;
+        GLOB = 8;
+        REGEX = 9;
+        SCOPE = 10;
+        BOOL = 11;
+        EMPTY = 12;
+        TYPE = 13;
+        TIME = 14;
+        STRUCT = 15;
+        ANY = 16;
+    }
+    oneof type {
+        SimpleType simple_type = 1;
+        ListType list_type = 2;
+        DictType dict_type = 3;
+        TableType table_type = 4;
+    }
+}
+
+message TableType {
+    repeated ColumnType column_types = 1;
+}
+
+message ColumnType {
+    string name = 1;
+    uint64 type = 2;
+}
+
+message ListType {
+    uint64 element_type = 1;
+}
+
+message DictType {
+    uint64 key_type = 1;
+    uint64 value_type = 2;
+}
+
+message List {
+    uint64 element_type = 1;
+    repeated uint64 elements = 2;
+}
+
+message Dict {
+    uint64 key_type = 1;
+    uint64 value_type = 2;
+    repeated uint64 elements = 3;
+}
+
+message Struct {
+    uint64 parent = 1;
+    repeated Member members = 2;
+}
+
+message Member {
+    string name = 1;
+    uint64 value = 2;
+}
+
+message Command {
+    string name = 1;
+}

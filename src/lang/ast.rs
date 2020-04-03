@@ -148,7 +148,7 @@ impl Node {
                         ])),
                 Node::Label(l) => ValueDefinition::Label(l.clone()),
                 Node::Regex(l) => ValueDefinition::Value(Value::Regex(l.clone(), to_crush_error(Regex::new(l.clone().as_ref()))?)),
-                Node::String(t) => ValueDefinition::Value(Value::String(unescape(t).into_boxed_str())),
+                Node::String(t) => ValueDefinition::Value(Value::string(unescape(t).as_str())),
                 Node::Integer(i) => ValueDefinition::Value(Value::Integer(i.clone())),
                 Node::Float(f) => ValueDefinition::Value(Value::Float(f.clone())),
                 Node::GetAttr(node, label) => {
@@ -197,7 +197,7 @@ impl Node {
 
                     Node::GetAttr(container, attr) =>
                         container.method_invocation("__setattr__", vec![
-                            ArgumentDefinition::unnamed(ValueDefinition::Value(Value::String(attr.to_string().into_boxed_str()))),
+                            ArgumentDefinition::unnamed(ValueDefinition::Value(Value::string(&attr.to_string()))),
                             ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?),
                         ]),
 

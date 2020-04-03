@@ -207,7 +207,7 @@ impl Closure {
             if let Some(named_name) = named_name {
                 let d = Dict::new(ValueType::String, ValueType::Any);
                 for (k, v) in named {
-                    d.insert(Value::String(k), v)?;
+                    d.insert(Value::string(&k), v)?;
                 }
                 env.redeclare(named_name.as_ref(), Value::Dict(d))?;
             } else {

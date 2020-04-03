@@ -5,6 +5,9 @@ authors = ["axel <liljencrantz@gmail.com>"]
 edition = "2018"
 
 
+[build-dependencies.prost-build]
+version = "0.6.1"
+
 [build-dependencies.lalrpop]
 version = "0.18.1"
 features = ["lexer"]
@@ -24,3 +27,5 @@ reqwest = { version = "0.10", features = ["blocking"] }
 crossbeam = "0.7"
 time = "0.1.40"
 nix = "0.17.0"
+prost = "0.6"
+bytes = "0.5.4"

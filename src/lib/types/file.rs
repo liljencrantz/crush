@@ -7,6 +7,7 @@ use std::os::unix::fs::MetadataExt;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use crate::lang::command::CrushCommand;
+use crate::lang::serialize::{serialize, deserialize};
 
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
@@ -34,6 +35,16 @@ lazy_static! {
             getitem, true,
             "file[name:string]",
             "Return a file or subdirectory in the specified base directory",
+            None));
+        res.insert(Box::from("to"), CrushCommand::command(
+            to, true,
+            "file:to value:value",
+            "Write the specified value to the specified file in native Crush format",
+            None));
+        res.insert(Box::from("from"), CrushCommand::command(
+            from, true,
+            "file:from",
+            "Read a value from file specified file in native Crush format",
             None));
         res
     };
@@ -69,4 +80,18 @@ pub fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     let sub = context.arguments.string(0)?;
     context.output.send(Value::File(base_directory.join(sub.as_ref()).into_boxed_path()))
+}
+
+pub fn to(mut context: ExecutionContext) -> CrushResult<()> {
+    let file = context.this.file()?;
+    context.arguments.check_len(1)?;
+    let value = context.arguments.value(0)?;
+    serialize(&value, &file)?;
+    context.output.send(value)
+}
+
+pub fn from(mut context: ExecutionContext) -> CrushResult<()> {
+    let file = context.this.file()?;
+    context.arguments.check_len(0)?;
+    context.output.send(deserialize(&file)?)
 }

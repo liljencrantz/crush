@@ -1,4 +1,5 @@
 Todo:
+Serialisation/deserialisation format
 Replace Scope type with a struct?
 Add a range type
 Figure out how to support options like --foo and -b in external commands in a nice way

@@ -5,3 +5,4 @@ pub mod time;
 pub mod glob;
 pub mod replace;
 pub mod regex;
+pub mod identity_arc;

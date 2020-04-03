@@ -4,11 +4,18 @@ use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;
 use crate::lang::stream::Readable;
+use crate::util::identity_arc::Identity;
 
 #[derive(Clone)]
 pub struct List {
     cell_type: ValueType,
     cells: Arc<Mutex<Vec<Value>>>,
+}
+
+impl Identity for List {
+    fn id(&self) -> u64 {
+        self.cells.id()
+    }
 }
 
 impl List {

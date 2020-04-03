@@ -30,3 +30,16 @@ Crush configuration:
 * One idea would be the standard configuration-is-code thing with reading specific files during startup.
 * Another idea would be to have a config variable that you can query and assign to at runtime,
   and that is responsible for sharing config in real time across instances.
+
+Serialisation format
+
+All materialized values have a unique ID
+Serialisation procedure
+
+First materialize the value.
+Walk the tree of everything to be serialised, and put it into a HashMap<Id, Value>.
+
+File format.
+
+Protobuf based.
+
