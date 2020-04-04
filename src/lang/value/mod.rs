@@ -29,11 +29,6 @@ use crate::lang::command::CrushCommand;
 use std::collections::HashMap;
 use crate::lang::pretty_printer::format_buffer;
 use crate::util::regex::RegexFileMatcher;
-use std::sync::atomic::AtomicU64;
-use std::mem::transmute;
-use crate::util::identity_arc::Identity;
-use std::convert::{Infallible, TryFrom};
-
 
 pub enum Value {
     String(Box<str>),
@@ -127,13 +122,6 @@ impl Value {
         res.sort_by(|x, y| x.cmp(y));
 
         res
-    }
-
-    pub fn as_string(&self) -> CrushResult<Box<str>> {
-        match self {
-            Value::String(s) => Ok(s.clone()),
-            _ => error("Expected a string"),
-        }
     }
 
     pub fn path(&self, name: &str) -> Option<Value> {

@@ -1,11 +1,10 @@
 use crate::lang::serialization::{Serializable, DeserializationState, SerializationState};
 use crate::lang::serialization::model::{Element, element};
-use crate::lang::errors::{CrushError, CrushResult, error, to_crush_error};
+use crate::lang::errors::{CrushResult, error};
 use crate::lang::value::Value;
-use std::convert::TryFrom;
 
 impl Serializable<String> for String {
-    fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<String> {
+    fn deserialize(id: usize, elements: &Vec<Element>, _state: &mut DeserializationState) -> CrushResult<String> {
         match elements[id].element.as_ref().unwrap() {
             element::Element::String(s) => Ok(s.clone()),
             _ => error("Expected string"),

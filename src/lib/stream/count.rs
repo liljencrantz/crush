@@ -1,5 +1,5 @@
 use crate::lang::execution_context::ExecutionContext;
-use crate::lang::errors::{CrushResult, error, mandate, argument_error};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::value::Value;
 use crate::lang::stream::Readable;
 

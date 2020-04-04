@@ -1,10 +1,8 @@
-use crate::lang::list::List;
 use crate::lang::serialization::{Serializable, DeserializationState, SerializationState};
 use crate::lang::errors::{CrushResult, error};
 use crate::lang::serialization::model::{Element, element};
 use crate::lang::serialization::model;
 use crate::lang::value::{ValueType, Value};
-use crate::util::identity_arc::Identity;
 use crate::lang::table::{ColumnType, Row, Table};
 
 impl Serializable<ColumnType> for ColumnType {

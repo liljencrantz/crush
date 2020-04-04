@@ -3,7 +3,7 @@ use super::{Serializable, DeserializationState, SerializationState};
 use super::super::errors::{CrushResult, error};
 use super::model::{Element, element};
 use super::model;
-use super::super::value::{ValueType, Value};
+use super::super::value::{Value};
 use crate::util::identity_arc::Identity;
 
 impl Serializable<Struct> for Struct {

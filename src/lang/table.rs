@@ -123,10 +123,6 @@ impl ColumnType {
     pub fn new(name: &str, cell_type: ValueType) -> ColumnType {
         ColumnType { name: Box::from(name), cell_type }
     }
-
-    pub fn format_value(&self, v: &Value) -> String {
-        format!("{}: {}", self.name, v.to_string())
-    }
 }
 
 pub trait ColumnVec {

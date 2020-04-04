@@ -21,7 +21,7 @@ impl Serializable<Dict> for Dict {
                     dict.insert(
                         Value::deserialize(pair[0] as usize, elements, state)?,
                         Value::deserialize(pair[1] as usize, elements, state)?,
-                    );
+                    )?;
                 }
                 Ok(dict)
             } else {

@@ -1,20 +1,14 @@
 use crate::lang::value::{Value, ValueType};
-use std::collections::{HashSet, HashMap};
+use std::collections::HashMap;
 use std::path::Path;
 use std::fs::File;
-use crate::lang::errors::{CrushResult, to_crush_error, error, CrushError};
-use std::io::{Write, Seek, Read, Cursor};
+use crate::lang::errors::{CrushResult, to_crush_error};
+use std::io::{Write, Read, Cursor};
 use prost::Message;
-use std::convert::TryFrom;
-use crate::util::identity_arc::Identity;
 use model::SerializedValue;
 use model::Element;
-use model::element;
-use chrono::Duration;
 use crate::lang::list::List;
 use crate::lang::r#struct::Struct;
-use std::ops::Deref;
-use crate::lang::table::{Table, ColumnType, Row};
 use crate::lang::dict::Dict;
 
 mod struct_serializer;
@@ -72,7 +66,7 @@ pub fn deserialize(source: &Path) -> CrushResult<Value> {
     let mut buf = Vec::new();
     let mut file_buffer = to_crush_error(File::open(source))?;
     buf.reserve(to_crush_error(source.metadata())?.len() as usize);
-    file_buffer.read_to_end(&mut buf);
+    to_crush_error(file_buffer.read_to_end(&mut buf))?;
 
     let mut state = DeserializationState {
         values: HashMap::new(),
@@ -82,9 +76,9 @@ pub fn deserialize(source: &Path) -> CrushResult<Value> {
         structs: HashMap::new(),
     };
 
-    let mut res = SerializedValue::decode(&mut Cursor::new(buf)).unwrap();
+    let res = SerializedValue::decode(&mut Cursor::new(buf)).unwrap();
 
-    println!("AAA {:?}", res);
+//    println!("AAA {:?}", res);
 
     Ok(Value::deserialize(res.root as usize, &res.elements, &mut state)?)
 }
