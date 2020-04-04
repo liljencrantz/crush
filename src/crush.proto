@@ -79,12 +79,14 @@ message Type {
         TIME = 14;
         STRUCT = 15;
         ANY = 16;
+        BINARY_STREAM = 17;
     }
     oneof type {
         SimpleTypeKind simple_type = 1;
         ListType list_type = 2;
         DictType dict_type = 3;
         TableType table_type = 4;
+        TableType table_stream_type = 5;
     }
 }
 
@@ -118,12 +120,15 @@ message Dict {
 }
 
 message Struct {
-    uint64 parent = 1;
-    repeated uint64 members = 2;
+    oneof parent {
+        bool has_parent = 1;
+        uint64 parent_value = 2;
+    }
+    repeated uint64 members = 3;
 }
 
 message Member {
-    string name = 1;
+    uint64 name = 1;
     uint64 value = 2;
 }
 

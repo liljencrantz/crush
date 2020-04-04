@@ -11,6 +11,7 @@ use std::cmp::Ordering;
 use crate::util::replace::Replace;
 use crate::lang::errors::{CrushResult, mandate};
 use crate::lang::execution_context::{ExecutionContext, This, ArgumentVector};
+use crate::util::identity_arc::Identity;
 
 lazy_static! {
     pub static ref ROOT: Struct = {
@@ -28,6 +29,12 @@ struct StructData {
 #[derive(Clone)]
 pub struct Struct {
     data: Arc<Mutex<StructData>>,
+}
+
+impl Identity for Struct {
+    fn id(&self) -> u64 {
+        self.data.id()
+    }
 }
 
 impl Hash for Struct {
@@ -131,7 +138,7 @@ impl Struct {
         }
     }
 
-    pub fn types(&self) -> Vec<ColumnType> {
+    pub fn local_signature(&self) -> Vec<ColumnType> {
         let mut res = Vec::new();
         let data = self.data.lock().unwrap();
         let mut reverse_lookup = HashMap::new();
@@ -142,6 +149,16 @@ impl Struct {
             res.push(ColumnType::new(reverse_lookup.get(&idx).unwrap(), value.value_type()));
         }
         res
+    }
+
+    pub fn local_elements(&self) -> Vec<(Box<str>, Value)> {
+        let mut reverse_lookup = HashMap::new();
+        let data = self.data.lock().unwrap();
+        for (key, value) in &data.lookup {
+            reverse_lookup.insert(value.clone(), key);
+        }
+        data.cells.iter().enumerate()
+            .map(|(idx,v)| (reverse_lookup[&idx].to_string().into_boxed_str(), v.clone())).collect()
     }
 
     pub fn into_row(&self) -> Row {
@@ -208,13 +225,15 @@ impl Struct {
 
 impl ToString for Struct {
     fn to_string(&self) -> String {
-        let t = self.types();
+        let elements = self.local_elements();
         let data = self.data.lock().unwrap();
-        format!("{{{}}}",
-                data.cells
+        let parent = data.parent.clone();
+        drop(data);
+        format!("data{} {}",
+                parent.map(|p| format!(" parent=({})", p.to_string())).unwrap_or("".to_string()),
+                elements
                     .iter()
-                    .zip(t)
-                    .map(|(c, t)| t.format_value(c))
+                    .map(|(c, t)| format!("{}=({})", c, t.to_string()))
                     .collect::<Vec<String>>()
                     .join(", "))
     }

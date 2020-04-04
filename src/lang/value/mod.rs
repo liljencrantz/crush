@@ -129,6 +129,13 @@ impl Value {
         res
     }
 
+    pub fn as_string(&self) -> CrushResult<Box<str>> {
+        match self {
+            Value::String(s) => Ok(s.clone()),
+            _ => error("Expected a string"),
+        }
+    }
+
     pub fn path(&self, name: &str) -> Option<Value> {
         match self {
             Value::File(s) => Some(Value::File(s.join(name).into_boxed_path())),

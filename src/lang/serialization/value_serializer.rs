@@ -1,4 +1,5 @@
 use crate::lang::list::List;
+use crate::lang::r#struct::Struct;
 use crate::lang::serialization::{Serializable, DeserializationState, SerializationState};
 use crate::lang::errors::{CrushResult, error, to_crush_error};
 use crate::lang::serialization::model::{Element, element};
@@ -19,22 +20,22 @@ use chrono::offset::TimeZone;
 use crate::lang::dict::Dict;
 
 fn serialize_simple(value: &Value, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
-    let mut node = Element::default();
-    node.element = Some(match value {
-        Value::String(s) => element::Element::String(s.to_string()),
-        Value::Glob(s) => element::Element::Glob(s.to_string()),
-        Value::Regex(s, _) => element::Element::Regex(s.to_string()),
-        Value::File(b) => element::Element::File(b.as_os_str().to_os_string().into_vec()),
-        Value::Binary(b) => element::Element::Binary(b.clone()),
-        Value::Float(f) => element::Element::Float(*f),
-        Value::Bool(b) => element::Element::Bool(*b),
-        Value::Empty() => element::Element::Empty(false),
-        Value::Time(d) => element::Element::Time(d.timestamp_nanos()),
-        _ => return error("Expected simple value"),
-    });
     let idx = elements.len();
     state.values.insert(value.clone(), idx);
-    elements.push(node);
+    elements.push(Element {
+        element: Some(match value {
+            Value::String(s) => element::Element::String(s.to_string()),
+            Value::Glob(s) => element::Element::Glob(s.to_string()),
+            Value::Regex(s, _) => element::Element::Regex(s.to_string()),
+            Value::File(b) => element::Element::File(b.as_os_str().to_os_string().into_vec()),
+            Value::Binary(b) => element::Element::Binary(b.clone()),
+            Value::Float(f) => element::Element::Float(*f),
+            Value::Bool(b) => element::Element::Bool(*b),
+            Value::Empty() => element::Element::Empty(false),
+            Value::Time(d) => element::Element::Time(d.timestamp_nanos()),
+            _ => return error("Expected simple value"),
+        }),
+    });
     Ok(idx)
 }
 
@@ -67,7 +68,7 @@ impl Serializable<Value> for Value {
             element::Element::Type(_) => Ok(Value::Type(ValueType::deserialize(id, elements, state)?)),
             element::Element::Table(_) => Ok(Value::Table(Table::deserialize(id, elements, state)?)),
 
-            element::Element::Struct(_) => unimplemented!(),
+            element::Element::Struct(_) => Ok(Value::Struct(Struct::deserialize(id, elements, state)?)),
             element::Element::Command(_) => unimplemented!(),
             element::Element::Closure(_) => unimplemented!(),
             element::Element::Field(_) => unimplemented!(),
@@ -112,7 +113,7 @@ impl Serializable<Value> for Value {
             Value::Table(t) => t.serialize(elements, state),
             Value::Field(_) => unimplemented!(),
             Value::Command(_) => unimplemented!(),
-            Value::Struct(_) => unimplemented!(),
+            Value::Struct(s) => s.serialize(elements, state),
             Value::Dict(d) => d.serialize(elements, state),
             Value::Scope(_) => unimplemented!(),
             Value::TableStream(_) |

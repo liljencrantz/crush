@@ -85,4 +85,3 @@ impl Serializable<Table> for Table {
         Ok(idx)
     }
 }
-

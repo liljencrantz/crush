@@ -37,18 +37,15 @@ impl Serializable<Dict> for Dict {
             elements.push(model::Element::default());
             state.with_id.insert(id, idx);
 
-            let key_idx = Value::Type(self.key_type()).serialize(elements, state)?;
-            let value_idx = Value::Type(self.value_type()).serialize(elements, state)?;
-
-            let data = self.elements();
-            let mut dd = model::Dict::default();
-            dd.elements.reserve(data.len()*2);
-            for (key, value) in data {
+            let mut dd = model::Dict {
+                key_type: Value::Type(self.key_type()).serialize(elements, state)? as u64,
+                value_type: Value::Type(self.value_type()).serialize(elements, state)? as u64,
+                elements: Vec::with_capacity(self.len()*2),
+            };
+            for (key, value) in self.elements() {
                 dd.elements.push(key.serialize(elements, state)? as u64);
                 dd.elements.push(value.serialize(elements, state)? as u64);
             }
-            dd.key_type = key_idx as u64;
-            dd.value_type = value_idx as u64;
             elements[idx].element = Some(element::Element::Dict(dd));
         }
         Ok(state.with_id[&id])

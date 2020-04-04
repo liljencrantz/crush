@@ -64,16 +64,18 @@ impl Serializable<ValueType> for ValueType {
             ValueType::List(_) => unimplemented!(),
             ValueType::Dict(_, _) => unimplemented!(),
             ValueType::Table(_) => unimplemented!(),
-            ValueType::TableStream(_) => return error("Can't serialize streams"),
-            ValueType::BinaryStream => return error("Can't serialize streams"),
+            ValueType::TableStream(_) => unimplemented!(),
+            ValueType::BinaryStream => unimplemented!(),
         };
 
-        let mut node = model::Element::default();
-        let mut ttt = model::Type::default();
-        ttt.r#type = Some(SimpleType(tt as i32));
-        node.element = Some(element::Element::Type(ttt));
         let idx = elements.len();
-        elements.push(node);
+        elements.push(model::Element {
+            element: Some(element::Element::Type(
+                model::Type {
+                    r#type: Some(SimpleType(tt as i32))
+                }
+            )),
+        });
         Ok(idx)
     }
 }

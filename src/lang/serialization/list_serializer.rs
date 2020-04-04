@@ -34,19 +34,15 @@ impl Serializable<List> for List {
             state.with_id.insert(id, idx);
 
             let type_idx = Value::Type(self.element_type()).serialize(elements, state)?;
-
-            let mut res = Vec::new();
-            let data = self.dump();
-            res.reserve(data.len());
             let mut ll = model::List::default();
-            ll.elements = res;
-            for el in data {
+            ll.elements.reserve(self.len());
+            for el in self.dump() {
                 ll.elements.push(el.serialize(elements, state)? as u64)
             }
             ll.element_type = type_idx as u64;
-            let mut node = model::Element::default();
-            node.element = Some(element::Element::List(ll));
-            elements[idx] = node;
+            elements[idx] = model::Element {
+                element: Some(element::Element::List(ll)),
+            };
         }
         Ok(state.with_id[&id])
     }

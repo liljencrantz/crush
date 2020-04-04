@@ -57,7 +57,7 @@ fn convert_json(json_value: &serde_json::Value) -> CrushResult<Value> {
             let struct_types: HashSet<Vec<ColumnType>> =
                 lst.iter()
                     .flat_map(|v| match v {
-                        Value::Struct(r) => vec![r.types()],
+                        Value::Struct(r) => vec![r.local_signature()],
                         _ => vec![]
                     })
                     .collect();

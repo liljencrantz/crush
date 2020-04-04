@@ -17,20 +17,22 @@ use std::ops::Deref;
 use crate::lang::table::{Table, ColumnType, Row};
 use crate::lang::dict::Dict;
 
+mod struct_serializer;
 mod integer_serializer;
+mod string_serializer;
 mod list_serializer;
 mod dict_serializer;
 mod value_type_serializer;
 mod value_serializer;
 mod table_serializer;
 
-//mod model;
+mod model;
 
-
+/*
 pub mod model {
     include!(concat!(env!("OUT_DIR"), "/lang.serialization.model.rs"));
 }
-
+*/
 pub struct SerializationState {
     pub with_id: HashMap<u64, usize>,
     pub values: HashMap<Value, usize>,
