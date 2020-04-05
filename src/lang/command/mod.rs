@@ -1,15 +1,18 @@
 mod closure;
 
-use crate::lang::errors::{CrushResult};
+use crate::lang::errors::{CrushResult, error};
 use std::fmt::Formatter;
 use crate::lang::{argument::ArgumentDefinition};
 use crate::lang::scope::Scope;
 use crate::lang::job::Job;
-use crate::lang::value::{ValueDefinition};
+use crate::lang::value::{ValueDefinition, Value};
 use closure::Closure;
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::help::Help;
 use std::collections::HashMap;
+use crate::lang::serialization::{Serializable, SerializationState, DeserializationState};
+use crate::lang::serialization::model::{Element, element, Strings};
+use map_in_place::MapVecInPlace;
 
 pub trait CrushCommand : Help {
     fn invoke(&self, context: ExecutionContext) -> CrushResult<()>;
@@ -17,6 +20,7 @@ pub trait CrushCommand : Help {
     fn name(&self) -> &str;
     fn clone(&self) -> Box<dyn CrushCommand +  Send + Sync>;
     fn help(&self) -> &dyn Help;
+    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize>;
 }
 
 pub trait TypeMap {
@@ -100,9 +104,31 @@ impl dyn CrushCommand {
         signature: &'static str,
         short_help: &'static str,
         long_help: Option<&'static str>,
-    ) -> Box<dyn CrushCommand +  Send + Sync> {
+    ) -> Box<dyn CrushCommand + Send + Sync> {
         Box::from(ConditionCommand { call, full_name, signature, short_help, long_help })
     }
+
+    pub fn deserialize(
+        id: usize,
+        elements: &Vec<Element>,
+        state: &mut DeserializationState,
+    ) -> CrushResult<Box<dyn CrushCommand + Send + Sync>> {
+        match elements[id].element.as_ref().unwrap() {
+            element::Element::Command(strings) => {
+                let val = state.env.global_value(
+                    strings.elements
+                        .iter()
+                        .map(|e| e.clone().into_boxed_str())
+                        .collect())?;
+                match val {
+                    Value::Command(c) => Ok(c),
+                    _ => error("Expected a command"),
+                }
+            },
+            _ => error("Expected a command"),
+        }
+    }
+
 }
 
 impl CrushCommand for SimpleCommand {
@@ -130,6 +156,16 @@ impl CrushCommand for SimpleCommand {
 
     fn help(&self) -> &dyn Help {
         self
+    }
+
+    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
+        let idx = elements.len();
+        elements.push(Element {
+            element: Some(element::Element::Command(
+                Strings{ elements: self.full_name.iter().map(|e| e.to_string()).collect()}
+            )),
+        });
+        Ok(idx)
     }
 }
 
@@ -190,6 +226,16 @@ impl CrushCommand for ConditionCommand {
 
     fn help(&self) -> &dyn Help {
         self
+    }
+
+    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
+        let idx = elements.len();
+        elements.push(Element {
+            element: Some(element::Element::Command(
+                Strings{ elements: self.full_name.iter().map(|e| e.to_string()).collect()}
+            )),
+        });
+        Ok(idx)
     }
 }
 

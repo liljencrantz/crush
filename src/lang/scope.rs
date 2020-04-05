@@ -27,11 +27,13 @@ struct ScopeData {
     /** This is the parent scope used to perform variable name resolution. If a variable lookup
      fails in the current scope, it proceeds to this scope. This is usually the scope in which this
      scope was *created*.
+
+     Not that when scopes are used as namespaces, they do not use this scope.
      */
     pub parent_scope: Option<Scope>,
     /** This is the scope in which the current scope was called. Since a closure can be called
      from inside any scope, it need not be the same as the parent scope. This scope is the one used
-     for break/continue loop control. */
+     for break/continue loop control, and it is also the scope that builds up the namespace hierarchy. */
     pub calling_scope: Option<Scope>,
 
     /** This is a list of scopes that are imported into the current scope. Anything directly inside
@@ -148,7 +150,7 @@ impl Scope {
 
     pub fn create_namespace(&self, name: &str) -> CrushResult<Scope> {
         let res = Scope {
-            data: Arc::from(Mutex::new(ScopeData::named(None, None, false, name))),
+            data: Arc::from(Mutex::new(ScopeData::named(None, Some(self.clone()), false, name))),
         };
         self.declare(name, Value::Scope(res.clone()))?;
         Ok(res)
@@ -185,7 +187,7 @@ impl Scope {
         let data = self.data.lock().unwrap();
         match data.name.clone() {
             None => error("Tried to get full path of anonymous scope"),
-            Some(name) => match data.parent_scope.clone() {
+            Some(name) => match data.calling_scope.clone() {
                 None => Ok(vec![name]),
                 Some(parent) => {
                     drop(data);

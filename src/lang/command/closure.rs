@@ -10,6 +10,8 @@ use crate::lang::job::Job;
 use crate::lang::stream::{empty_channel, black_hole};
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::help::Help;
+use crate::lang::serialization::SerializationState;
+use crate::lang::serialization::model::{Element, element};
 
 #[derive(Clone)]
 pub struct Closure {
@@ -68,6 +70,10 @@ impl CrushCommand for Closure {
 
     fn help(&self) -> &dyn Help {
         self
+    }
+
+    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
+        unimplemented!();
     }
 }
 

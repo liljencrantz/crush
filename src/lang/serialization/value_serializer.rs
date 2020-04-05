@@ -1,5 +1,6 @@
 use crate::lang::list::List;
 use crate::lang::r#struct::Struct;
+use crate::lang::command::CrushCommand;
 use crate::lang::serialization::{Serializable, DeserializationState, SerializationState};
 use crate::lang::errors::{CrushResult, error, to_crush_error};
 use crate::lang::serialization::model::{Element, element};
@@ -64,7 +65,7 @@ impl Serializable<Value> for Value {
             element::Element::Type(_) => Ok(Value::Type(ValueType::deserialize(id, elements, state)?)),
             element::Element::Table(_) => Ok(Value::Table(Table::deserialize(id, elements, state)?)),
             element::Element::Struct(_) => Ok(Value::Struct(Struct::deserialize(id, elements, state)?)),
-            element::Element::Command(_) => unimplemented!(),
+            element::Element::Command(_) => Ok(Value::Command(CrushCommand::deserialize(id, elements, state)?)),
             element::Element::Closure(_) => unimplemented!(),
             element::Element::Field(_) => unimplemented!(),
             element::Element::Scope(_) => unimplemented!(),
@@ -106,7 +107,7 @@ impl Serializable<Value> for Value {
             Value::List(l) => l.serialize(elements, state),
             Value::Table(t) => t.serialize(elements, state),
             Value::Field(_) => unimplemented!(),
-            Value::Command(_) => unimplemented!(),
+            Value::Command(c) => c.serialize(elements, state),
             Value::Struct(s) => s.serialize(elements, state),
             Value::Dict(d) => d.serialize(elements, state),
             Value::Scope(_) => unimplemented!(),

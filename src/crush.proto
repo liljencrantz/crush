@@ -14,11 +14,11 @@ message Element {
         Struct struct = 5;
         bytes file = 6;
         double float = 7;
-        Command command = 8;
+        Dict dict = 8;
         Closure closure = 9;
         bytes binary = 10;
         Duration duration = 11;
-        Field field = 12;
+        Strings field = 12;
         string glob = 13;
         string regex = 14;
         Scope scope = 15;
@@ -31,7 +31,7 @@ message Element {
         ColumnType column_type = 22;
         Row row = 23;
         Member member = 24;
-        Dict dict = 25;
+        Strings command = 26;
     }
 }
 
@@ -43,7 +43,7 @@ message Duration {
 message Closure {
 }
 
-message Field {
+message Strings {
     repeated string elements = 1;
 }
 
@@ -132,6 +132,3 @@ message Member {
     uint64 value = 2;
 }
 
-message Command {
-    string name = 1;
-}

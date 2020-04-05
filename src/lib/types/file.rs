@@ -97,5 +97,5 @@ pub fn to(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn from(context: ExecutionContext) -> CrushResult<()> {
     let file = context.this.file()?;
     context.arguments.check_len(0)?;
-    context.output.send(deserialize(&file)?)
+    context.output.send(deserialize(&file, &context.env )?)
 }

@@ -10,6 +10,7 @@ use model::Element;
 use crate::lang::list::List;
 use crate::lang::r#struct::Struct;
 use crate::lang::dict::Dict;
+use crate::lang::scope::Scope;
 
 mod struct_serializer;
 mod integer_serializer;
@@ -20,19 +21,18 @@ mod value_type_serializer;
 mod value_serializer;
 mod table_serializer;
 
-mod model;
+//pub mod model;
 
-/*
 pub mod model {
     include!(concat!(env!("OUT_DIR"), "/lang.serialization.model.rs"));
 }
-*/
 pub struct SerializationState {
     pub with_id: HashMap<u64, usize>,
     pub values: HashMap<Value, usize>,
 }
 
 pub struct DeserializationState {
+    pub env: Scope,
     pub values: HashMap<usize, Value>,
     pub lists: HashMap<usize, List>,
     pub types: HashMap<usize, ValueType>,
@@ -62,7 +62,7 @@ pub fn serialize(value: &Value, destination: &Path) -> CrushResult<()> {
     Ok(())
 }
 
-pub fn deserialize(source: &Path) -> CrushResult<Value> {
+pub fn deserialize(source: &Path, env: &Scope) -> CrushResult<Value> {
     let mut buf = Vec::new();
     let mut file_buffer = to_crush_error(File::open(source))?;
     buf.reserve(to_crush_error(source.metadata())?.len() as usize);
@@ -74,6 +74,7 @@ pub fn deserialize(source: &Path) -> CrushResult<Value> {
         lists: HashMap::new(),
         dicts: HashMap::new(),
         structs: HashMap::new(),
+        env: env.clone(),
     };
 
     let res = SerializedValue::decode(&mut Cursor::new(buf)).unwrap();
