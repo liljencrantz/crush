@@ -25,14 +25,14 @@ mod seq;
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("stream")?;
     root.r#use(&env);
-    env.declare("head", Value::Command(CrushCommand::command(
-        head::perform, true,
-        "head [lines:integer]", "Return the first lines of the input. Defaults to 10.", None)))?;
-    env.declare("tail", Value::Command(CrushCommand::command(
-        tail::perform, true,
-        "tail [lines:integer]", "Return the last lines of the input. Defaults to 10.", None)))?;
-    env.declare("where", Value::Command(CrushCommand::command(
-        r#where::perform, true,
+    env.declare_command(
+        "head",head::perform, true,
+        "head [lines:integer]", "Return the first lines of the input. Defaults to 10.", None)?;
+    env.declare_command(
+        "tail",tail::perform, true,
+        "tail [lines:integer]", "Return the last lines of the input. Defaults to 10.", None)?;
+    env.declare_command(
+        "where",r#where::perform, true,
         "where condition:command",
         "Filter out rows from input based on condition",
         Some(r#"    The columns of the row are exported to the environment using the
@@ -40,52 +40,56 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     Example:
 
-    ps | where {$status != "Sleeping"}"#))))?;
-    env.declare("sort", Value::Command(CrushCommand::command(
-        sort::perform, true,
-        "sort column:field", "Sort input based on column", example!("ps | sort ^cpu"))))?;
-    env.declare("reverse", Value::Command(CrushCommand::command(
-        reverse::perform, true,
-        "reverse", "Reverses the order of the rows in the input", None)))?;
-    env.declare("group", Value::Command(CrushCommand::command_undocumented(group::perform, true)))?;
-    env.declare("join", Value::Command(CrushCommand::command_undocumented(join::perform, true)))?;
-    env.declare("uniq", Value::Command(CrushCommand::command(
-        uniq::perform, true,
+    ps | where {$status != "Sleeping"}"#))?;
+    env.declare_command(
+        "sort",sort::perform, true,
+        "sort column:field", "Sort input based on column", example!("ps | sort ^cpu"))?;
+    env.declare_command(
+        "reverse",reverse::perform, true,
+        "reverse", "Reverses the order of the rows in the input", None)?;
+    env.declare_command(
+        "group",group::perform, true,
+        "group group=field|string", "Group input by the specified column", None)?;
+    env.declare_command(
+        "join", join::perform, true,
+    "join left:field right:field", "Join two streams together on the specified keys", None)?;
+    env.declare_command(
+        "uniq", uniq::perform, true,
         "uniq column:field",
         "Only output the first row if multiple rows has the same value for the specified column",
-        example!("ps | uniq ^user"))))?;
+        example!("ps | uniq ^user"))?;
     //env.declare_str("aggr", Value::Command(CrushCommand::command_undocumented(aggr::perform)))?;
-    env.declare("count", Value::Command(CrushCommand::command(
-        count::perform, true,
+    env.declare_command(
+        "count",count::perform, true,
         "count",
-        "Count the number of rows in the input", example!("ps | count"))))?;
-    env.declare("sum", Value::Command(CrushCommand::command(
-        sum_avg::sum, true,
+        "Count the number of rows in the input", example!("ps | count"))?;
+    env.declare_command(
+        "sum", sum_avg::sum, true,
         "sum column:field",
         "Calculate the sum for the specific column across all rows",
-        example!("ps | sum ^cpu"))))?;
-    env.declare("avg", Value::Command(CrushCommand::command(
-        sum_avg::avg, true,
+        example!("ps | sum ^cpu"))?;
+    env.declare_command(
+        "avg",sum_avg::avg, true,
         "avg column:field",
         "Calculate the average of the specific column across all rows",
-        example!("ps | sum ^cpu"))))?;
-    env.declare("select", Value::Command(CrushCommand::command(
-        select::perform, true,
+        example!("ps | sum ^cpu"))?;
+    env.declare_command(
+        "select",select::perform, true,
         "select copy_fields:field... [%] new_field=definition:command",
         "Pass on some old fields and calculate new ones for each line of input",
-        example!(r#"ls | select ^user path={"{}/{}":format (pwd) file}"#))))?;
-    env.declare("enumerate", Value::Command(CrushCommand::command(
-        enumerate::perform, true,
-        "enumerate", "Prepend a column containing the row number to each row of the input", None)))?;
-    env.declare("zip", Value::Command(CrushCommand::command(
-        zip::perform, true,
+        example!(r#"ls | select ^user path={"{}/{}":format (pwd) file}"#))?;
+    env.declare_command(
+        "enumerate",enumerate::perform, true,
+        "enumerate", "Prepend a column containing the row number to each row of the input", None)?;
+    env.declare_command(
+        "zip",zip::perform, true,
         "zip stream1:(table_stream|table|list|dict) stream2:(table_stream|table|list|dict)",
-        "combine to streams of data into one", None)))?;
-    env.declare("seq", Value::Command(CrushCommand::command(
-        seq::perform, true,
+        "combine to streams of data into one", None)?;
+    env.declare_command(
+        "seq", seq::perform, true,
         "seq lines:integer",
         "Return a stream of numbers",
-        None)))?;
+        None)?;
     env.readonly();
     Ok(())
 }

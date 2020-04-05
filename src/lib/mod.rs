@@ -6,6 +6,9 @@ pub mod input;
 #[macro_use]
 pub mod binary_op;
 
+#[macro_use]
+pub mod declare;
+
 pub mod comp;
 pub mod cond;
 pub mod stream;

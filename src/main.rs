@@ -18,6 +18,7 @@ use crate::util::file::home;
 use std::path::Path;
 use std::fs;
 use crate::lang::parser::parse;
+use crate::lang::scope::Scope;
 
 fn crush_history_file() -> Box<str> {
     Box::from(
@@ -28,7 +29,7 @@ fn crush_history_file() -> Box<str> {
             .unwrap_or(".crush_history"))
 }
 
-fn run_interactive(global_env: lang::scope::Scope) -> CrushResult<()> {
+fn run_interactive(global_env: Scope) -> CrushResult<()> {
     printer().line("Welcome to Crush");
     printer().line(r#"Type "help" for... help."#);
     let mut rl = Editor::<()>::new();
@@ -40,7 +41,7 @@ fn run_interactive(global_env: lang::scope::Scope) -> CrushResult<()> {
             Ok(cmd) => {
                 if !cmd.is_empty() {
                     rl.add_history_entry(cmd.as_str());
-                    match parse(&cmd.as_str()) {//&mut Lexer::new(&cmd)) {
+                    match parse(&cmd.as_str(), &global_env) {//&mut Lexer::new(&cmd)) {
                         Ok(jobs) => {
                             for job_definition in jobs {
                                 let last_output = spawn_print_thread();
@@ -81,9 +82,9 @@ fn run_interactive(global_env: lang::scope::Scope) -> CrushResult<()> {
 }
 
 
-fn run_script(global_env: lang::scope::Scope, filename: &str) -> CrushResult<()> {
+fn run_script(global_env: Scope, filename: &str) -> CrushResult<()> {
     let cmd = to_crush_error(fs::read_to_string(filename))?;
-    match parse(&cmd.as_str()) {//&mut Lexer::new(&cmd)) {
+    match parse(&cmd.as_str(), &global_env) {//&mut Lexer::new(&cmd)) {
         Ok(jobs) => {
             for job_definition in jobs {
                 let last_output = spawn_print_thread();

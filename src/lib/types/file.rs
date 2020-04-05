@@ -8,11 +8,16 @@ use lazy_static::lazy_static;
 use std::collections::HashMap;
 use crate::lang::command::CrushCommand;
 use crate::lang::serialization::{serialize, deserialize};
+use crate::lang::command::TypeMap;
+
+fn full(name: &'static str) -> Vec<&'static str> {
+    vec!["global", "types", "file", name]
+}
 
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
-        res.insert(Box::from("stat"), CrushCommand::command(
+        res.declare(full("stat"),
             stat, true,
             "file:stat",
             "Return a struct with information about a file.",
@@ -24,28 +29,28 @@ lazy_static! {
     * inode:integer the inode number of the file
     * nlink:integer the number of hardlinks to the file
     * mode:integer the permission bits for the file
-    * len: integer the size of the file"#)));
+    * len: integer the size of the file"#));
 
-        res.insert(Box::from("exists"), CrushCommand::command(
+        res.declare(full("exists"),
             exists, true,
             "file:exists",
             "Return true if this file exists",
-            None));
-        res.insert(Box::from("__getitem__"), CrushCommand::command(
+            None);
+        res.declare(full("__getitem__"),
             getitem, true,
             "file[name:string]",
             "Return a file or subdirectory in the specified base directory",
-            None));
-        res.insert(Box::from("to"), CrushCommand::command(
+            None);
+        res.declare(full("to"),
             to, true,
             "file:to value:value",
             "Write the specified value to the specified file in native Crush format",
-            None));
-        res.insert(Box::from("from"), CrushCommand::command(
+            None);
+        res.declare(full("from"),
             from, true,
             "file:from",
             "Read a value from file specified file in native Crush format",
-            None));
+            None);
         res
     };
 }

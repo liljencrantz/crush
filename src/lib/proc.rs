@@ -80,8 +80,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("proc")?;
     root.r#use(&env);
 
-    env.declare("ps", Value::Command(CrushCommand::command(
-        ps, true,
+    env.declare_command(
+        "ps", ps, true,
         "ps", "Return a table stream containing information on all running processes on the system.", Some(r#"    ps accepts no arguments. Each row contains the following columns:
 
     * pid:integer the process id of the process
@@ -103,9 +103,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     * cpu:duration the amount of CPU time this process has used since its creation
 
-    * name:string the process name"#))))?;
-    env.declare("kill", Value::Command(CrushCommand::command(
-        kill, false,
+    * name:string the process name"#))?;
+    env.declare_command(
+        "kill", kill, false,
         "kill [signal=signal:string] [pid=pid:integer...] @pid:integer",
         "Send a signal to a set of processes",
         Some(r"    Kill accepts the following arguments:
@@ -115,7 +115,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
       SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGTRAP, SIGABRT, SIGBUS, SIGFPE, SIGKILL,
       SIGUSR1, SIGSEGV, SIGUSR2, SIGPIPE, SIGALRM, SIGTERM, SIGCHLD, SIGCONT and SIGWINCH.
 
-    * pid:integer the process ids of all process to signal."))))?;
+    * pid:integer the process ids of all process to signal."))?;
     env.readonly();
     Ok(())
 }

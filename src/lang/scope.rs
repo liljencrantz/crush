@@ -2,6 +2,8 @@ use crate::lang::errors::{error, CrushResult};
 use std::sync::{Arc, Mutex};
 use crate::lang::{value::Value, value::ValueType};
 use std::collections::HashMap;
+use crate::lang::execution_context::ExecutionContext;
+use crate::lang::command::CrushCommand;
 
 /**
   This is where we store variables, including functions.
@@ -36,7 +38,7 @@ struct ScopeData {
     pub uses: Vec<Scope>,
 
     /** The actual data of this scope. */
-    pub mapping: HashMap<String, Value>,
+    pub mapping: HashMap<Box<str>, Value>,
 
     /** True if this scope is a loop. Required to implement the break/continue commands.*/
     pub is_loop: bool,
@@ -48,10 +50,12 @@ struct ScopeData {
     /** True if this scope can not be further modified. Note that mutable variables in it, e.g.
     lists can still be modified. */
     pub is_readonly: bool,
+
+    pub name: Option<Box<str>>,
 }
 
 impl ScopeData {
-    fn new(parent_scope: Option<Scope>, calling_scope: Option<Scope>, is_loop: bool) -> ScopeData {
+    fn anonymous(parent_scope: Option<Scope>, calling_scope: Option<Scope>, is_loop: bool) -> ScopeData {
         return ScopeData {
             parent_scope,
             calling_scope,
@@ -60,6 +64,20 @@ impl ScopeData {
             mapping: HashMap::new(),
             is_stopped: false,
             is_readonly: false,
+            name: None,
+        };
+    }
+
+    fn named(parent_scope: Option<Scope>, calling_scope: Option<Scope>, is_loop: bool, name: &str) -> ScopeData {
+        return ScopeData {
+            parent_scope,
+            calling_scope,
+            is_loop,
+            uses: Vec::new(),
+            mapping: HashMap::new(),
+            is_stopped: false,
+            is_readonly: false,
+            name: Some(Box::from(name)),
         };
     }
 }
@@ -67,13 +85,13 @@ impl ScopeData {
 impl Scope {
     pub fn new() -> Scope {
         Scope {
-            data: Arc::from(Mutex::new(ScopeData::new(None, None, false))),
+            data: Arc::from(Mutex::new(ScopeData::named(None, None, false, "global"))),
         }
     }
 
     pub fn create_child(&self, caller: &Scope, is_loop: bool) -> Scope {
         Scope {
-            data: Arc::from(Mutex::new(ScopeData::new(
+            data: Arc::from(Mutex::new(ScopeData::anonymous(
                 Some(self.clone()),
                 Some(caller.clone()),
                 is_loop))),
@@ -129,10 +147,99 @@ impl Scope {
 
     pub fn create_namespace(&self, name: &str) -> CrushResult<Scope> {
         let res = Scope {
-            data: Arc::from(Mutex::new(ScopeData::new(None, None, false))),
+            data: Arc::from(Mutex::new(ScopeData::named(None, None, false, name))),
         };
         self.declare(name, Value::Scope(res.clone()))?;
         Ok(res)
+    }
+
+    pub fn declare_command(
+        &self, name: &str,
+        call: fn(context: ExecutionContext) -> CrushResult<()>,
+        can_block: bool,
+        signature: &'static str,
+        short_help: &'static str,
+        long_help: Option<&'static str>,
+    ) -> CrushResult<()> {
+        let mut full_name = self.full_path()?;
+        full_name.push(Box::from(name));
+        let command = CrushCommand::command2(call, can_block, full_name, signature, short_help, long_help);
+        self.declare(name, Value::Command(command))
+    }
+
+    fn full_path(&self) -> CrushResult<Vec<Box<str>>> {
+        let data = self.data.lock().unwrap();
+        match data.name.clone() {
+            None => error("Tried to get full path of anonymous scope"),
+            Some(name) => match data.parent_scope.clone() {
+                None => Ok(vec![name]),
+                Some(parent) => {
+                    drop(data);
+                    let mut full_path = parent.full_path()?;
+                    full_path.push(name);
+                    Ok(full_path)
+                }
+            },
+        }
+    }
+
+    pub fn global_static_cmd(&self, full_path: Vec<&str>) -> CrushResult<Box<dyn CrushCommand + Sync + Send>> {
+        self.global_cmd(full_path.iter().map(|p| Box::from(p.clone())).collect())
+    }
+
+    pub fn global_cmd(&self, full_path: Vec<Box<str>>) -> CrushResult<Box<dyn CrushCommand + Sync + Send>> {
+        let data = self.data.lock().unwrap();
+        match data.parent_scope.clone() {
+            Some(parent) => {
+                drop(data);
+                parent.global_cmd(full_path)
+            }
+            None => {
+                drop(data);
+                self.cmd_path(&full_path[..])
+            }
+        }
+    }
+
+    fn cmd_path(&self, path: &[Box<str>]) -> CrushResult<Box<dyn CrushCommand + Sync + Send>> {
+        if path.is_empty() {
+            error("Invalid path for command")
+        } else {
+            let data = self.data.lock().unwrap();
+            match data.name.clone() {
+                None => error("Anonymous scope!"),
+                Some(name) => {
+                    if name != path[0] {
+                        error("Invalid scope for command")
+                    } else {
+                        match path.len() {
+                            2 => {
+                                match data.mapping.get(&path[1]) {
+                                    Some(Value::Command(c)) => Ok((*c).clone()),
+                                    _ => error(format!(
+                                        "Could not find command {} in scope {}",
+                                    path[1],
+                                    path[0]).as_str()),
+                                }
+                            }
+                            _ => {
+                                let s = data.mapping.get(&path[1]).map(|v| v.clone());
+                                drop(data);
+                                match s {
+                                    Some(Value::Scope(s)) => {
+                                        s.cmd_path(&path[1..])
+                                    },
+                                    _ => error(format!(
+                                        "Could not find scope {} in scope {}",
+                                        path[1],
+                                        path[0]).as_str()),
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     pub fn declare(&self, name: &str, value: Value) -> CrushResult<()> {
@@ -143,7 +250,7 @@ impl Scope {
         if data.mapping.contains_key(name) {
             return error(format!("Variable ${{{}}} already exists", name).as_str());
         }
-        data.mapping.insert(name.to_string(), value);
+        data.mapping.insert(Box::from(name), value);
         Ok(())
     }
 
@@ -152,7 +259,7 @@ impl Scope {
         if data.is_readonly {
             return error("Scope is read only");
         }
-        data.mapping.insert(name.to_string(), value);
+        data.mapping.insert(Box::from(name), value);
         Ok(())
     }
 
@@ -172,7 +279,7 @@ impl Scope {
             } else if data.mapping[name].value_type() != value.value_type() {
                 error(format!("Type mismatch when reassigning variable ${{{}}}. Use `unset ${{{}}}` to remove old variable.", name, name).as_str())
             } else {
-                data.mapping.insert(name.to_string(), value);
+                data.mapping.insert(Box::from(name), value);
                 Ok(())
             }
         }
@@ -218,7 +325,7 @@ impl Scope {
 
     pub fn get(&self, name: &str) -> Option<Value> {
         let data = self.data.lock().unwrap();
-        match data.mapping.get(&name.to_string()) {
+        match data.mapping.get(&Box::from(name)) {
             Some(v) => Some(v.clone()),
             None => {
                 let uses = data.uses.clone();
@@ -260,7 +367,7 @@ impl Scope {
 
         let data = self.data.lock().unwrap();
         for (k, v) in data.mapping.iter() {
-            map.insert(k.clone(), v.value_type());
+            map.insert(k.to_string(), v.value_type());
         }
     }
 

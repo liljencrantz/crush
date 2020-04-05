@@ -6,23 +6,28 @@ use crate::lang::command::CrushCommand;
 use crate::lang::execution_context::{ArgumentVector, This};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
+use crate::lang::command::TypeMap;
+
+fn full(name: &'static str) -> Vec<&'static str> {
+    vec!["global", "types", "re", name]
+}
 
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
-        res.insert(Box::from("match"), CrushCommand::command(r#match, false,
-            "re =~ input:string", "True if the input matches the pattern", None));
-        res.insert(Box::from("not_match"), CrushCommand::command(not_match, false,
-            "re !~ input:string", "True if the input does not match the pattern", None));
-        res.insert(Box::from("replace"), CrushCommand::command(
+        res.declare(full("match"), r#match, false,
+            "re =~ input:string", "True if the input matches the pattern", None);
+        res.declare(full("not_match"), not_match, false,
+            "re !~ input:string", "True if the input does not match the pattern", None);
+        res.declare(full("replace"),
             replace, false,
-            "re ~ input replacement", "Replace the first match of the regex in the input with the replacement", None));
-        res.insert(Box::from("replace_all"), CrushCommand::command(
+            "re ~ input replacement", "Replace the first match of the regex in the input with the replacement", None);
+        res.declare(full("replace_all"),
             replace_all, false,
-            "re ~ input replacement", "Replace all matches of the regex in the input with the replacement", None));
-        res.insert(Box::from("new"), CrushCommand::command(
+            "re ~ input replacement", "Replace all matches of the regex in the input with the replacement", None);
+        res.declare(full("new"),
             new, false,
-            "re:new pattern:string", "Create a new regular expression instance", None));
+            "re:new pattern:string", "Create a new regular expression instance", None);
         res
     };
 }

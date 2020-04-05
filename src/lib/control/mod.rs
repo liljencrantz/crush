@@ -101,15 +101,15 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     }"#))))?;
 
 
-    env.declare("break", Value::Command(CrushCommand::command(
-        r#break, false,
-        "break", "Stop execution of a loop", None)))?;
-    env.declare("continue", Value::Command(CrushCommand::command(
-        r#continue, false,
-        "continue", "Skip execution of the current iteration of a loop", None)))?;
-    env.declare("cmd", Value::Command(CrushCommand::command(
-        cmd, true,
-        "cmd external_command:(file|string) @arguments:any", "Execute external commands", None)))?;
+    env.declare_command(
+        "break",r#break, false,
+        "break", "Stop execution of a loop", None)?;
+    env.declare_command(
+        "continue",r#continue, false,
+        "continue", "Skip execution of the current iteration of a loop", None)?;
+    env.declare_command(
+        "cmd",cmd, true,
+        "cmd external_command:(file|string) @arguments:any", "Execute external commands", None)?;
     env.readonly();
 
     Ok(())

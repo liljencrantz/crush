@@ -7,29 +7,31 @@ use chrono::{Local, Datelike, Timelike};
 use time::strptime;
 use std::cmp::max;
 use crate::lang::command::CrushCommand;
+use crate::lang::command::TypeMap;
+
+fn full(name: &'static str) -> Vec<&'static str> {
+    vec!["global", "types", "time", name]
+}
 
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
-        res.insert(Box::from("__add__"), CrushCommand::command(
+        res.declare(full("__add__"),
             add, false,
             "time + delta:duration",
             "Add the specified delta to this time",
-            None));
-        res.insert(Box::from("__sub__"), CrushCommand::command(
-            sub, false,
-            "time - delta:duration",
-            "Remove the specified delta from this time",
-            None));
-        res.insert(Box::from("now"), CrushCommand::command(
-            now, false,
-            "time:now", "The current point in time", None));
-        res.insert(Box::from("parse"), CrushCommand::command(
+            None);
+        res.declare(
+            full("__sub__"), sub, false,
+            "time - delta:duration", "Remove the specified delta from this time", None);
+        res.declare(
+            full("now"), now, false,"time:now", "The current point in time", None);
+        res.declare(full("parse"),
             parse, false,
             "time:parse format=format:string time=time:string",
             "Parse a time string using a strptime-style pattern string",
             None
-            ));
+            );
         res
     };
 }

@@ -7,39 +7,17 @@ use std::ops::Deref;
 use crate::lang::command::{CrushCommand, Parameter};
 use crate::util::glob::Glob;
 use lazy_static::lazy_static;
-use crate::lib::comp;
-use crate::lib::cond;
-use crate::lib::var;
-use crate::lib::types;
 use regex::Regex;
 use std::path::Path;
-
-lazy_static! {
-    pub static ref LT: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(comp::lt, false)};
-    pub static ref LTE: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(comp::lte, false)};
-    pub static ref GT: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(comp::gt, false)};
-    pub static ref GTE: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(comp::gte, false)};
-    pub static ref EQ: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(comp::eq, false)};
-    pub static ref NEQ: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(comp::neq, false)};
-    pub static ref NOT: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(comp::not, false)};
-
-    pub static ref AND: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(cond::and, false)};
-    pub static ref OR: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(cond::or, false)};
-
-    pub static ref LET: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(var::r#let, false)};
-    pub static ref SET: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(var::set, false)};
-
-    pub static ref AS: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(types::r#as, false)};
-    pub static ref TYPEOF: Box<dyn CrushCommand +  Send + Sync> = {CrushCommand::command_undocumented(types::r#typeof, false)};
-}
+use crate::lang::scope::Scope;
 
 pub struct JobListNode {
     pub jobs: Vec<JobNode>,
 }
 
 impl JobListNode {
-    pub fn generate(&self) -> CrushResult<Vec<Job>> {
-        self.jobs.iter().map(|j| j.generate()).collect()
+    pub fn generate(&self, env: &Scope) -> CrushResult<Vec<Job>> {
+        self.jobs.iter().map(|j| j.generate(env)).collect()
     }
 }
 
@@ -48,8 +26,8 @@ pub struct JobNode {
 }
 
 impl JobNode {
-    pub fn generate(&self) -> CrushResult<Job> {
-        Ok(Job::new(self.commands.iter().map(|c| c.generate()).collect::<CrushResult<Vec<CommandInvocation>>>()?))
+    pub fn generate(&self, env: &Scope) -> CrushResult<Job> {
+        Ok(Job::new(self.commands.iter().map(|c| c.generate(env)).collect::<CrushResult<Vec<CommandInvocation>>>()?))
     }
 }
 
@@ -58,23 +36,22 @@ pub struct CommandNode {
 }
 
 impl CommandNode {
-    pub fn generate(&self) -> CrushResult<CommandInvocation> {
-        if let Some(c) = self.expressions[0].generate_standalone()? {
+    pub fn generate(&self, env: &Scope) -> CrushResult<CommandInvocation> {
+        if let Some(c) = self.expressions[0].generate_standalone(env)? {
             if self.expressions.len() == 1 {
                 Ok(c)
             } else {
                 error("Stray arguments")
             }
         } else {
-            let cmd = self.expressions[0].generate_argument()?;
+            let cmd = self.expressions[0].generate_argument(env)?;
             let arguments = self.expressions[1..].iter()
-                .map(|e| e.generate_argument())
+                .map(|e| e.generate_argument(env))
                 .collect::<CrushResult<Vec<ArgumentDefinition>>>()?;
             Ok(CommandInvocation::new(cmd.unnamed_value()?, arguments))
         }
     }
 }
-
 
 pub enum Node {
     Assignment(Box<Node>, Box<str>, Box<Node>),
@@ -109,14 +86,14 @@ fn propose_name(name: &str, v: ValueDefinition) -> ValueDefinition {
 }
 
 impl Node {
-    pub fn generate_argument(&self) -> CrushResult<ArgumentDefinition> {
+    pub fn generate_argument(&self, env: &Scope) -> CrushResult<ArgumentDefinition> {
         Ok(ArgumentDefinition::unnamed(
             match self {
                 Node::Assignment(target, op, value) =>
                     match op.deref() {
                         "=" =>
                             return match target.as_ref() {
-                                Node::Label(t) => Ok(ArgumentDefinition::named(t.deref(), propose_name( &t, value.generate_argument()?.unnamed_value()?))),
+                                Node::Label(t) => Ok(ArgumentDefinition::named(t.deref(), propose_name(&t, value.generate_argument(env)?.unnamed_value()?))),
                                 _ => error("Invalid left side in named argument"),
                             },
                         _ =>
@@ -126,25 +103,27 @@ impl Node {
                 Node::LogicalOperation(_, _, _) | Node::Comparison(_, _, _) | Node::Replace(_, _, _, _) |
                 Node::GetItem(_, _) | Node::Term(_, _, _) | Node::Factor(_, _, _) =>
                     ValueDefinition::JobDefinition(
-                        Job::new(vec![self.generate_standalone()?.unwrap()])
+                        Job::new(vec![self.generate_standalone(env)?.unwrap()])
                     ),
                 Node::Unary(op, r) =>
                     match op.deref() {
                         "neg" | "not" | "typeof" =>
                             ValueDefinition::JobDefinition(
-                                Job::new(vec![self.generate_standalone()?.unwrap()])
+                                Job::new(vec![self.generate_standalone(env)?.unwrap()])
                             ),
                         "@" =>
-                            return Ok(ArgumentDefinition::list(r.generate_argument()?.unnamed_value()?)),
+                            return Ok(ArgumentDefinition::list(r.generate_argument(env)?.unnamed_value()?)),
                         "@@" =>
-                            return Ok(ArgumentDefinition::dict(r.generate_argument()?.unnamed_value()?)),
+                            return Ok(ArgumentDefinition::dict(r.generate_argument(env)?.unnamed_value()?)),
                         _ => return error("Unknown operator"),
                     },
                 Node::Cast(value, target_type) =>
                     ValueDefinition::JobDefinition(
                         Job::new(vec![CommandInvocation::new(
-                            ValueDefinition::Value(Value::Command(AS.as_ref().clone())),
-                            vec![value.generate_argument()?, target_type.generate_argument()?])
+                            ValueDefinition::Value(
+                                Value::Command(
+                                    env.global_static_cmd(vec!["global", "types", "as"])?)),
+                            vec![value.generate_argument(env)?, target_type.generate_argument(env)?])
                         ])),
                 Node::Label(l) => ValueDefinition::Label(l.clone()),
                 Node::Regex(l) => ValueDefinition::Value(Value::Regex(l.clone(), to_crush_error(Regex::new(l.clone().as_ref()))?)),
@@ -152,7 +131,7 @@ impl Node {
                 Node::Integer(i) => ValueDefinition::Value(Value::Integer(i.clone())),
                 Node::Float(f) => ValueDefinition::Value(Value::Float(f.clone())),
                 Node::GetAttr(node, label) => {
-                    let parent = node.generate_argument()?;
+                    let parent = node.generate_argument(env)?;
                     match parent.unnamed_value()? {
                         ValueDefinition::Value(Value::Field(mut f)) => {
                             f.push(label.clone());
@@ -162,44 +141,46 @@ impl Node {
                     }
                 }
                 Node::Path(node, label) =>
-                    ValueDefinition::Path(Box::new(node.generate_argument()?.unnamed_value()?), label.clone()),
+                    ValueDefinition::Path(Box::new(node.generate_argument(env)?.unnamed_value()?), label.clone()),
                 Node::Field(f) => ValueDefinition::Value(Value::Field(vec![f[1..].to_string().into_boxed_str()])),
-                Node::Substitution(s) => ValueDefinition::JobDefinition(s.generate()?),
+                Node::Substitution(s) => ValueDefinition::JobDefinition(s.generate(env)?),
                 Node::Closure(s, c) => {
                     let param = s.as_ref().map(|v| v.iter()
-                        .map(|p| p.generate())
+                        .map(|p| p.generate(env))
                         .collect::<CrushResult<Vec<Parameter>>>());
                     let p = match param {
                         None => None,
                         Some(Ok(p)) => Some(p),
                         Some(Err(e)) => return Err(e),
                     };
-                    ValueDefinition::ClosureDefinition(None, p, c.generate()?)
+                    ValueDefinition::ClosureDefinition(None, p, c.generate(env)?)
                 }
                 Node::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g))),
                 Node::File(f) => ValueDefinition::Value(Value::File(f.clone())),
             }))
     }
 
-    fn generate_standalone_assignment(target: &Box<Node>, op: &Box<str>, value: &Box<Node>) -> CrushResult<Option<CommandInvocation>> {
+    fn generate_standalone_assignment(target: &Box<Node>, op: &Box<str>, value: &Box<Node>, env: &Scope) -> CrushResult<Option<CommandInvocation>> {
         match op.deref() {
             "=" => {
                 match target.as_ref() {
                     Node::Label(t) =>
                         Node::function_invocation(
-                            SET.as_ref().clone(),
-                            vec![ArgumentDefinition::named(t, propose_name(&t, value.generate_argument()?.unnamed_value()?))]),
+                            env.global_static_cmd(vec!["global", "var", "set"])?,
+                            vec![ArgumentDefinition::named(t, propose_name(&t, value.generate_argument(env)?.unnamed_value()?))]),
 
                     Node::GetItem(container, key) =>
                         container.method_invocation("__setitem__", vec![
-                            ArgumentDefinition::unnamed(key.generate_argument()?.unnamed_value()?),
-                            ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?)]),
+                            ArgumentDefinition::unnamed(key.generate_argument(env)?.unnamed_value()?),
+                            ArgumentDefinition::unnamed(value.generate_argument(env)?.unnamed_value()?)],
+                                                    env),
 
                     Node::GetAttr(container, attr) =>
                         container.method_invocation("__setattr__", vec![
                             ArgumentDefinition::unnamed(ValueDefinition::Value(Value::string(&attr.to_string()))),
-                            ArgumentDefinition::unnamed(value.generate_argument()?.unnamed_value()?),
-                        ]),
+                            ArgumentDefinition::unnamed(value.generate_argument(env)?.unnamed_value()?),
+                        ],
+                                                    env),
 
                     _ => error("Invalid left side in assignment"),
                 }
@@ -208,8 +189,8 @@ impl Node {
                 match target.as_ref() {
                     Node::Label(t) =>
                         Node::function_invocation(
-                            LET.as_ref().clone(),
-                            vec![ArgumentDefinition::named(t, propose_name(&t,value.generate_argument()?.unnamed_value()?))]),
+                            env.global_static_cmd(vec!["global", "var", "let"])?,
+                            vec![ArgumentDefinition::named(t, propose_name(&t, value.generate_argument(env)?.unnamed_value()?))]),
                     _ => error("Invalid left side in declaration"),
                 }
             }
@@ -217,35 +198,35 @@ impl Node {
         }
     }
 
-    pub fn generate_standalone(&self) -> CrushResult<Option<CommandInvocation>> {
+    pub fn generate_standalone(&self, env: &Scope) -> CrushResult<Option<CommandInvocation>> {
         match self {
             Node::Assignment(target, op, value) =>
-                Node::generate_standalone_assignment(target, op, value),
+                Node::generate_standalone_assignment(target, op, value, env),
 
             Node::LogicalOperation(l, op, r) => {
-                let cmd = match op.as_ref() {
-                    "and" => AND.as_ref(),
-                    "or" => OR.as_ref(),
+                let cmd = env.global_static_cmd(match op.as_ref() {
+                    "and" => vec!["global", "cond", "and"],
+                    "or" => vec!["global", "cond", "or"],
                     _ => return error("Unknown operator")
-                };
-                Node::function_invocation(cmd.clone(), vec![l.generate_argument()?, r.generate_argument()?])
+                })?;
+                Node::function_invocation(cmd, vec![l.generate_argument(env)?, r.generate_argument(env)?])
             }
 
             Node::Comparison(l, op, r) => {
-                let cmd = match op.as_ref() {
-                    "<" => LT.as_ref(),
-                    "<=" => LTE.as_ref(),
-                    ">" => GT.as_ref(),
-                    ">=" => GTE.as_ref(),
-                    "==" => EQ.as_ref(),
-                    "!=" => NEQ.as_ref(),
+                let cmd = env.global_static_cmd(match op.as_ref() {
+                    "<" => vec!["global", "comp", "lt"],
+                    "<=" => vec!["global", "comp", "lte"],
+                    ">" => vec!["global", "comp", "gt"],
+                    ">=" => vec!["global", "comp", "gte"],
+                    "==" => vec!["global", "comp", "eq"],
+                    "!=" => vec!["global", "comp", "neq"],
                     "=~" =>
-                        return r.method_invocation("match", vec![l.generate_argument()?]),
+                        return r.method_invocation("match", vec![l.generate_argument(env)?], env),
                     "!~" =>
-                        return r.method_invocation("not_match", vec![l.generate_argument()?]),
+                        return r.method_invocation("not_match", vec![l.generate_argument(env)?], env),
                     _ => return error("Unknown operator"),
-                };
-                Node::function_invocation(cmd.clone(), vec![l.generate_argument()?, r.generate_argument()?])
+                })?;
+                Node::function_invocation(cmd.clone(), vec![l.generate_argument(env)?, r.generate_argument(env)?])
             }
 
             Node::Replace(v1, op, v2, v3) => {
@@ -254,7 +235,7 @@ impl Node {
                     "~~" => "replace_all",
                     _ => return error("Unknown operator")
                 };
-                v2.method_invocation(method, vec![v1.generate_argument()?, v3.generate_argument()?])
+                v2.method_invocation(method, vec![v1.generate_argument(env)?, v3.generate_argument(env)?], env)
             }
 
             Node::Term(l, op, r) => {
@@ -263,7 +244,7 @@ impl Node {
                     "-" => "__sub__",
                     _ => return error("Unknown operator"),
                 };
-                l.method_invocation(method, vec![r.generate_argument()?])
+                l.method_invocation(method, vec![r.generate_argument(env)?], env)
             }
 
             Node::Factor(l, op, r) => {
@@ -272,19 +253,23 @@ impl Node {
                     "//" => "__div__",
                     _ => return error("Unknown operator"),
                 };
-                l.method_invocation(method, vec![r.generate_argument()?])
+                l.method_invocation(method, vec![r.generate_argument(env)?], env)
             }
 
             Node::GetItem(val, key) =>
-                val.method_invocation("__getitem__", vec![key.generate_argument()?]),
+                val.method_invocation("__getitem__", vec![key.generate_argument(env)?], env),
 
             Node::Unary(op, r) =>
                 match op.deref() {
-                    "neg" => r.method_invocation("__neg__", vec![]),
+                    "neg" => r.method_invocation("__neg__", vec![], env),
                     "not" =>
-                        Node::function_invocation(NOT.as_ref().clone(), vec![r.generate_argument()?]),
+                        Node::function_invocation(
+                            env.global_static_cmd(vec!["global", "comp", "gt"])?,
+                            vec![r.generate_argument(env)?]),
                     "typeof" =>
-                        Node::function_invocation(TYPEOF.as_ref().clone(), vec![r.generate_argument()?]),
+                        Node::function_invocation(
+                            env.global_static_cmd(vec!["global", "types", "typeof"])?,
+                            vec![r.generate_argument(env)?]),
                     "@" | "@@" => Ok(None),
                     _ => return error("Unknown operator"),
                 },
@@ -302,10 +287,10 @@ impl Node {
                 arguments)))
     }
 
-    fn method_invocation(&self, name: &str, arguments: Vec<ArgumentDefinition>) -> CrushResult<Option<CommandInvocation>> {
+    fn method_invocation(&self, name: &str, arguments: Vec<ArgumentDefinition>, env: &Scope) -> CrushResult<Option<CommandInvocation>> {
         Ok(Some(
             CommandInvocation::new(
-                ValueDefinition::GetAttr(Box::from(self.generate_argument()?.unnamed_value()?), name.to_string().into_boxed_str()),
+                ValueDefinition::GetAttr(Box::from(self.generate_argument(env)?.unnamed_value()?), name.to_string().into_boxed_str()),
                 arguments)
         ))
     }
@@ -361,17 +346,17 @@ pub enum ParameterNode {
 }
 
 impl ParameterNode {
-    pub fn generate(&self) -> CrushResult<Parameter> {
+    pub fn generate(&self, env: &Scope) -> CrushResult<Parameter> {
         match self {
             ParameterNode::Parameter(name, value_type, default) =>
                 Ok(
                     Parameter::Parameter(
                         name.clone(),
-                        value_type.as_ref().map(|t| t.generate_argument()?.unnamed_value()).unwrap_or(
+                        value_type.as_ref().map(|t| t.generate_argument(env)?.unnamed_value()).unwrap_or(
                             Ok(ValueDefinition::Value(Value::Type(ValueType::Any)))
                         )?,
                         default.as_ref()
-                            .map(|d| d.generate_argument()).transpose()?
+                            .map(|d| d.generate_argument(env)).transpose()?
                             .map(|a| a.unnamed_value()).transpose()?,
                     )
                 ),

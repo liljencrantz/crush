@@ -4,23 +4,37 @@ use crate::lang::execution_context::{ArgumentVector, This};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
 use crate::lang::command::CrushCommand;
+use crate::lang::command::TypeMap;
+
+fn full(name: &'static str) -> Vec<&'static str> {
+    vec!["global", "types", "integer", name]
+}
 
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
-        res.insert(Box::from("__add__"), CrushCommand::command(
+        res.declare(full("__add__"),
             add, false,
             "integer + term:(integer|float)",
-            "Add the specified term to this number",
-            None));
-        res.insert(Box::from("__sub__"), CrushCommand::command(
+            "Add this number by the specified term",
+            None);
+        res.declare(full("__sub__"),
             sub, false,
             "integer - term:(integer|float)",
             "Subtract the specified term from this number",
-            None));
-        res.insert(Box::from("__mul__"), CrushCommand::command_undocumented(mul, false));
-        res.insert(Box::from("__div__"), CrushCommand::command_undocumented(div, false));
-        res.insert(Box::from("__neg__"), CrushCommand::command_undocumented(neg, false));
+            None);
+        res.declare(full("__mul__"),
+            mul, false,
+            "integer * factor:(integer|float)", "Multiply this number with the specified factor",
+            None);
+        res.declare(
+            full("__div__"), div, false,
+            "integer / factor:(integer|float)", "Divide this number by the specified factor",
+            None);
+        res.declare(
+            full("__neg__"), neg, false,
+            "neg integer", "Negate this integer",
+            None);
         res
     };
 }

@@ -1,4 +1,4 @@
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use crate::lang::errors::CrushResult;
 use std::collections::HashMap;
 use crate::{
@@ -53,9 +53,8 @@ fn scan_table(table: &str, column: &str, input_type: &Vec<ColumnType>) -> Result
 }
 
 fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Config, CrushError> {
-    if arguments.len() != 2 {
-        return argument_error("Expected exactly 2 aguments");
-    }
+    arguments.check_len(2)?;
+
     return match (&arguments[0].value, &arguments[1].value) {
         (Value::Field(l), Value::Field(r)) => {
 

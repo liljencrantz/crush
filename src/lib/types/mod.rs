@@ -97,14 +97,23 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("types")?;
     root.r#use(&env);
 
-    env.declare("data", Value::Command(CrushCommand::command(
-        data, false,
-        "data <name>=value:any...",
-        "Construct a struct with the specified members",
-        None)))?;
+    env.declare_command("data", data, false,
+                        "data <name>=value:any...",
+                        "Construct a struct with the specified members",
+                        None)?;
 
-    env.declare("class", Value::Command(CrushCommand::command(
-        class, false,
+    env.declare_command("as", r#as, false,
+                        "value:any as type:type",
+                        "Convert the vale to the specified type",
+                        None)?;
+
+    env.declare_command("typeof", r#typeof, false,
+                        "typeof value:any",
+                        "Return the type of the specified value",
+                        None)?;
+
+    env.declare_command(
+        "class", class, false,
         "class [parent:type]",
         "Create an empty new class",
         Some(r#"    Example:
@@ -127,12 +136,20 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     }
 
     p := (Point:new x=1.0 y=2.0)
-    p:len"#))))?;
-    env.declare("materialize", Value::Command(CrushCommand::command(
-        materialize, true,
+    p:len"#))?;
+    env.declare_command(
+        "materialize", materialize, true,
         "materialize",
-        "Recursively convert all streams in input to materialized version",
-        example!("ls | materialize"))))?;
+        "Recursively convert all streams in input to materialized form",
+        Some(r#"    The purpose of materializing a value is so that it can be used many times.
+
+    Note that materializing a value is an inherently destructive operation.
+    Original values of mutable types such as lists and streams are emptied by
+    the operation.
+
+    Example:
+
+    ls | materialize"#))?;
 
     env.declare("file", Value::Type(ValueType::File))?;
     env.declare("type", Value::Type(ValueType::Type))?;

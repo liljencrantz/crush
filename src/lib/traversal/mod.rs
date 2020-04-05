@@ -71,35 +71,34 @@ members of a value, write "dir <value>".
         }
         _ => argument_error("The help command expects at most one argument")
     }
-
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("traversal")?;
     root.r#use(&env);
-    env.declare("ls", Value::Command(CrushCommand::command(
-        find::perform_ls, true,
-        "ls @file:file", "Non-recursively list files", None)))?;
-    env.declare("find", Value::Command(CrushCommand::command(
-        find::perform_find, true,
+    env.declare_command(
+        "ls", find::perform_ls, true,
+        "ls @file:file", "Non-recursively list files", None)?;
+    env.declare_command(
+        "find", find::perform_find, true,
         "find @file:file",
-        "Recursively list files", None)))?;
-    env.declare("cd", Value::Command(CrushCommand::command(
-        cd, true,
+        "Recursively list files", None)?;
+    env.declare_command(
+        "cd", cd, true,
         "cd directory:(file,string,glob)",
-        "Change to the specified working directory", None)))?;
-    env.declare("pwd", Value::Command(CrushCommand::command(
-        pwd, false,
-        "pwd", "Return the current working directory", None)))?;
-    env.declare("help", Value::Command(CrushCommand::command(
-        help, false,
+        "Change to the specified working directory", None)?;
+    env.declare_command(
+        "pwd", pwd, false,
+        "pwd", "Return the current working directory", None)?;
+    env.declare_command(
+        "help", help, false,
         "help topic:any",
         "Show help about the specified thing",
         Some(r#"    Examples:
 
     help ls
     help integer
-    help help"#))))?;
+    help help"#))?;
     env.readonly();
     Ok(())
 }

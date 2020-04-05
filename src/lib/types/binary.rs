@@ -4,18 +4,23 @@ use crate::lang::execution_context::{ArgumentVector, This};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
 use crate::lang::command::CrushCommand;
+use crate::lang::command::TypeMap;
+
+fn full(name: &'static str) -> Vec<&'static str> {
+    vec!["global", "types", "binary", name]
+}
 
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
-        res.insert(Box::from("len"), CrushCommand::command(
+        res.declare(full("len"),
             len, false,
             "binary:len",
             "The number of bytes in the binary",
-            None));
-        res.insert(Box::from("__getitem__"), CrushCommand::command(
+            None);
+        res.declare(full("__getitem__"),
             getitem, false,
-            "binary[idx:integer]", "Returns the byte at the specified offset", None));
+            "binary[idx:integer]", "Returns the byte at the specified offset", None);
         res
     };
 }

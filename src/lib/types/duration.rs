@@ -5,31 +5,36 @@ use std::collections::HashMap;
 use lazy_static::lazy_static;
 use chrono::Duration;
 use crate::lang::command::CrushCommand;
+use crate::lang::command::TypeMap;
+
+fn full(name: &'static str) -> Vec<&'static str> {
+    vec!["global", "types", "duration", name]
+}
 
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
-        res.insert(Box::from("__add__"), CrushCommand::command(
+        res.declare(full("__add__"),
             add, false,
             "duration + (delta:duration | time:time)",
             "Add the specified delta or time to this duration",
-            None));
-        res.insert(Box::from("__sub__"), CrushCommand::command(
+            None);
+        res.declare(full("__sub__"),
             sub, false,
             "duration - delta:duration",
             "Remove the specified delta from this duration",
-            None));
-        res.insert(Box::from("__mul__"), CrushCommand::command(
+            None);
+        res.declare(full("__mul__"),
             mul, false,
             "duration * factor:integer",
             "Multiply this duration by the specified factor",
-            None));
-        res.insert(Box::from("__div__"), CrushCommand::command(
+            None);
+        res.declare(full("__div__"),
             div, false,
             "duration / divisor:integer",
             "Divide this duration by the specified divisor",
-            None));
-        res.insert(Box::from("new"), CrushCommand::command(
+            None);
+        res.declare(full("new"),
             new, false,
             "duration:new [count:integer timeunit:string]...",
             "Create a new duration",
@@ -40,8 +45,10 @@ lazy_static! {
     Example:
 
     # A complicated way of specifying a 23 hour duration
-    duration:new 1 "days" -3600 "seconds""#)));
-        res.insert(Box::from("__neg__"), CrushCommand::command_undocumented(neg, false));
+    duration:new 1 "days" -3600 "seconds""#));
+        res.declare(
+            full("__neg__"), neg, false,
+            "neg duration", "Negate this duration", None);
         res
     };
 }

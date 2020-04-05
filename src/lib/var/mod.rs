@@ -37,29 +37,29 @@ pub fn unset(context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("var")?;
-    env.declare("let", Value::Command(CrushCommand::command(
-        r#let, false,
-        "name := value", "Declare a new variable", None)))?;
-    env.declare("set", Value::Command(CrushCommand::command(
-        set, false,
-        "name = value", "Assign a new value to an already existing variable", None)))?;
-    env.declare("unset", Value::Command(CrushCommand::command(
-        unset, false,
+    env.declare_command(
+        "let", r#let, false,
+        "name := value", "Declare a new variable", None)?;
+    env.declare_command(
+        "set", set, false,
+        "name = value", "Assign a new value to an already existing variable", None)?;
+    env.declare_command(
+        "unset", unset, false,
         "scope name:string",
         "Removes a variable from the namespace",
-        None)))?;
-    env.declare("env", Value::Command(CrushCommand::command(
-        env::perform, false,
+        None)?;
+    env.declare_command(
+        "env", env::perform, false,
         "env", "Returns a table containing the current namespace",
-        Some(r#"    The columns of the table are the name, and the type of the value."#))))?;
-    env.declare("use", Value::Command(CrushCommand::command(
-        r#use::perform, false,
+        Some(r#"    The columns of the table are the name, and the type of the value."#))?;
+    env.declare_command(
+        "use", r#use::perform, false,
         "use scope:scope",
         "Puts the specified scope into the list of scopes to search in by default during scope lookups",
         Some(r#"    Example:
 
     use math
-    sqrt 1.0"#))))?;
+    sqrt 1.0"#))?;
     env.readonly();
     Ok(())
 }

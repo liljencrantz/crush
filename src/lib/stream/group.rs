@@ -1,4 +1,4 @@
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use std::collections::HashMap;
 use crate::{
     lang::errors::{argument_error},
@@ -22,9 +22,7 @@ pub struct Config {
 }
 
 pub fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> CrushResult<Config> {
-    if arguments.len() != 1 {
-        return argument_error("No comparison key specified");
-    }
+    arguments.check_len(1)?;
     let arg = &arguments[0];
     let name = arg.argument_type.clone().unwrap_or(Box::from("group"));
     match &arg.value {

@@ -6,14 +6,25 @@ use lazy_static::lazy_static;
 use crate::lang::value::ValueType;
 use crate::lib::types::parse_column_types;
 use crate::lang::execution_context::{This, ArgumentVector};
+use crate::lang::command::TypeMap;
+
+fn full(name: &'static str) -> Vec<&'static str> {
+    vec!["global", "types", "table_stream", name]
+}
 
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
-        res.insert(Box::from("__call_type__"), CrushCommand::command_undocumented(call_type, false));
-        res.insert(Box::from("__getitem__"), CrushCommand::command(
+        res.declare(
+            full("__call_type__"), call_type, false,
+            "table_stream column_name=type:type...",
+            "Return the table_stream type with the specified column signature",
+            None);
+        res.declare(
+            full("__getitem__"),
             getitem, false,
-            "table_stream[idx:integer]", "Returns the specified row of the table stream", None));
+            "table_stream[idx:integer]", "Returns the specified row of the table stream",
+            None);
         res
     };
 }

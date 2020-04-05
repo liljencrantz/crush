@@ -5,70 +5,75 @@ use crate::lang::value::Value;
 use std::collections::HashSet;
 use std::collections::HashMap;
 use lazy_static::lazy_static;
+use crate::lang::command::TypeMap;
+
+fn full(name: &'static str) -> Vec<&'static str> {
+    vec!["global", "types", "list", name]
+}
 
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
-        res.insert(Box::from("len"), CrushCommand::command(
+        res.declare(full("len"),
             len, false,
             "list:len",
             "The number of elements in the list",
-            None));
-        res.insert(Box::from("empty"), CrushCommand::command(
+            None);
+        res.declare(full("empty"),
             empty, false,
             "list:empty",
             "True if there are no elements in the list",
-            None));
-        res.insert(Box::from("push"), CrushCommand::command(
+            None);
+        res.declare(full("push"),
             push, false,
-            "list:push", "Push an element to the end of the list", None));
-        res.insert(Box::from("pop"), CrushCommand::command(
+            "list:push", "Push an element to the end of the list", None);
+        res.declare(full("pop"),
             pop, false,
-            "list:pop", "Remove the last element from the list", None));
-        res.insert(Box::from("peek"), CrushCommand::command(
+            "list:pop", "Remove the last element from the list", None);
+        res.declare(full("peek"),
             peek, false,
-            "list:peek", "Return the last element from the list", None));
-        res.insert(Box::from("clear"), CrushCommand::command(
+            "list:peek", "Return the last element from the list", None);
+        res.declare(full("clear"),
             clear, false,
-            "list:clear", "Remove all elments from the list", None));
-        res.insert(Box::from("__setitem__"), CrushCommand::command(
+            "list:clear", "Remove all elments from the list", None);
+        res.declare(full("__setitem__"),
             setitem, false,
-            "list[idx:integer] = value:any", "Assign a new value to the element at the specified index", None));
-        res.insert(Box::from("remove"), CrushCommand::command(
+            "list[idx:integer] = value:any", "Assign a new value to the element at the specified index", None);
+        res.declare(full("remove"),
             remove, false,
-            "list:remove idx:integer", "Remove the element at the specified index", None));
-        res.insert(Box::from("insert"), CrushCommand::command(
+            "list:remove idx:integer", "Remove the element at the specified index", None);
+        res.declare(full("insert"),
             insert, false,
-            "list:insert idx:integer value:any", "Insert a new element at the specified index", None));
-        res.insert(Box::from("truncate"), CrushCommand::command(
+            "list:insert idx:integer value:any", "Insert a new element at the specified index", None);
+        res.declare(full("truncate"),
             truncate, false,
-            "list:truncate idx:integer", "Remove all elements past the specified index", None));
-        res.insert(Box::from("clone"), CrushCommand::command(
+            "list:truncate idx:integer", "Remove all elements past the specified index", None);
+        res.declare(full("clone"),
             clone, false,
-            "list:clone", "Create a duplicate of the list", None));
-        res.insert(Box::from("of"), CrushCommand::command(
+            "list:clone", "Create a duplicate of the list", None);
+        res.declare(full("of"),
             of, false,
             "list:of element:any...",
             "Create a new list containing the supplied elements",
-            None));
-        res.insert(Box::from("new"), CrushCommand::command(
+            None);
+        res.declare(full("new"),
         new, false,
         "list:new", "Create a new list with the specified element type",
         Some(r#"    Example:
 
-    l := ((list string):new)"#)));
-        res.insert(Box::from("__call_type__"), CrushCommand::command(
+    l := ((list string):new)"#));
+        res.declare(full("__call_type__"),
             call_type, false,
             "list element_type:type", "Return a list type for the specified element type",
             Some(r#"    Example:
 
     # This command returns the type 'list of integers':
-    list integer"#)));
-        res.insert(Box::from("__getitem__"), CrushCommand::command(
+    list integer"#));
+        res.declare(full("__getitem__"),
             getitem, true,
             "name[idx:index]",
             "Return a file or subdirectory in the specified base directory",
-            None));
+            None);
         res
     };
 }

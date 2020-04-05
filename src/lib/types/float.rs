@@ -4,25 +4,48 @@ use crate::lang::execution_context::{ArgumentVector, This};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
 use crate::lang::command::CrushCommand;
+use crate::lang::command::TypeMap;
+
+fn full(name: &'static str) -> Vec<&'static str> {
+    vec!["global", "types", "float", name]
+}
 
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
-        res.insert(Box::from("__add__"), CrushCommand::command_undocumented(add, false));
-        res.insert(Box::from("__sub__"), CrushCommand::command_undocumented(sub, false));
-        res.insert(Box::from("__mul__"), CrushCommand::command_undocumented(mul, false));
-        res.insert(Box::from("__div__"), CrushCommand::command_undocumented(div, false));
-        res.insert(Box::from("__neg__"), CrushCommand::command_undocumented(neg, false));
-        res.insert(Box::from("is_finite"), CrushCommand::command(
+        res.declare(
+            full("__add__"), add, false,
+            "float + term:(integer|float)",
+            "Add this number and the specified term",
+            None);
+        res.declare(
+            full("__sub__"), sub, false,
+            "float - term:(integer|float)",
+            "Subtract the specified term from this number",
+            None);
+        res.declare(
+            full("__mul__"), mul, false,
+            "float * factor:(integer|float)",
+            "Multiply this number by the specified factor",
+            None);
+        res.declare(
+            full("__div__"), div, false,
+            "integer / factor:(integer|float)",
+            "Divide this number by the specified factor",
+            None);
+        res.declare(
+            full("__neg__"), neg, false,
+            "neg float", "Negate this integer", None);
+        res.declare(full("is_finite"),
             is_infinite, false,
             "float:is_infinite",
             "True if this float is positive or negative infinity",
-            None));
-        res.insert(Box::from("is_nan"), CrushCommand::command(
+            None);
+        res.declare(full("is_nan"),
             is_nan, false,
             "float:is_nan",
             "True if this float is NaN",
-            None));
+            None);
         res
     };
 }
