@@ -60,12 +60,7 @@ fn class(mut context: ExecutionContext) -> CrushResult<()> {
         parent = context.arguments.r#struct(0)?;
     }
 
-    let res = Struct::new(
-        vec![
-            (Box::from("new"), Value::Command(CrushCommand::command_undocumented(new, true))),
-        ],
-        Some(parent),
-    );
+    let res = Struct::new(vec![], Some(parent));
 
     context.output.send(Value::Struct(res))
 }
@@ -113,23 +108,29 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     let root =
         Struct::new(vec![
-            (Box::from("__setattr__"), Value::Command(CrushCommand::command2(
+            (Box::from("__setattr__"), Value::Command(CrushCommand::command(
                 class_set, false,
-                vec![Box::from("global"), Box::from("types"), Box::from("__setattr__")],
+                vec![Box::from("global"), Box::from("types"), Box::from("root"), Box::from("__setattr__")],
                 "root:__setitem__ name:string value:any",
                 "Modify the specified field to hold the specified value",
                 None))),
-            (Box::from("__getitem__"), Value::Command(CrushCommand::command2(
+            (Box::from("__getitem__"), Value::Command(CrushCommand::command(
                 class_get, false,
-                vec![Box::from("global"), Box::from("types"), Box::from("__getitem__")],
+                vec![Box::from("global"), Box::from("types"), Box::from("root"), Box::from("__getitem__")],
                 "root:__getitem__ name:string",
                 "Return the value of the specified field",
                 None))),
-            (Box::from("__setitem__"), Value::Command(CrushCommand::command2(
+            (Box::from("__setitem__"), Value::Command(CrushCommand::command(
                 class_get, false,
-                vec![Box::from("global"), Box::from("types"), Box::from("__setitem__")],
+                vec![Box::from("global"), Box::from("types"), Box::from("root"), Box::from("__setitem__")],
                 "root:__setitem__ name:string value:any",
                 "Modify the specified field to hold the specified value",
+                None))),
+            (Box::from("new"), Value::Command(CrushCommand::command(
+                new, true,
+                vec![Box::from("global"), Box::from("types"), Box::from("root"), Box::from("new")],
+                "root:new @unnamed @@named",
+                "Create a new instance of the specified type",
                 None))),
         ], None);
 
@@ -171,7 +172,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     Point:len = {
         ||
-        math.sqrt this:x*this:x + this:y*this:y
+        math:sqrt this:x*this:x + this:y*this:y
     }
 
     Point:__add__ = {

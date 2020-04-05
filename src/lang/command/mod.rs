@@ -42,7 +42,7 @@ impl TypeMap for HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> {
         long_help: Option<&'static str>,
     ) {
         self.insert(Box::from(path[path.len() - 1]),
-                    CrushCommand::command2(
+                    CrushCommand::command(
                         call, can_block, path.iter().map(|e| e.to_string().into_boxed_str()).collect(),
                         signature, short_help, long_help),
         );
@@ -82,26 +82,8 @@ impl dyn CrushCommand {
             env.clone(),
         ))
     }
-    pub fn command_undocumented(
-        call: fn(context: ExecutionContext) -> CrushResult<()>,
-        can_block: bool,
-//        full_name: Vec<Box<str>>,
-    ) -> Box<dyn CrushCommand +  Send + Sync> {
-        Box::from(SimpleCommand { call, can_block, signature: "", short_help: "", long_help: None, /*full_name*/ full_name: vec![] })
-    }
 
     pub fn command(
-        call: fn(context: ExecutionContext) -> CrushResult<()>,
-        can_block: bool,
-//        full_name: Vec<Box<str>>,
-        signature: &'static str,
-        short_help: &'static str,
-        long_help: Option<&'static str>,
-    ) -> Box<dyn CrushCommand +  Send + Sync> {
-        Box::from(SimpleCommand { call, can_block, full_name: vec![], signature, short_help, long_help })
-    }
-
-    pub fn command2(
         call: fn(context: ExecutionContext) -> CrushResult<()>,
         can_block: bool,
         full_name: Vec<Box<str>>,
@@ -114,12 +96,12 @@ impl dyn CrushCommand {
 
     pub fn condition(
         call: fn(context: ExecutionContext) -> CrushResult<()>,
-//        full_name: Vec<Box<str>>,
+        full_name: Vec<Box<str>>,
         signature: &'static str,
         short_help: &'static str,
         long_help: Option<&'static str>,
     ) -> Box<dyn CrushCommand +  Send + Sync> {
-        Box::from(ConditionCommand { call, full_name: vec![], signature, short_help, long_help })
+        Box::from(ConditionCommand { call, full_name, signature, short_help, long_help })
     }
 }
 

@@ -81,7 +81,7 @@ pub fn or(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("cond")?;
 
-    env.declare("__and__", Value::Command(CrushCommand::condition(
+    env.declare_condition_command("__and__",
         and,
         "and condition:(bool|command)... -> boolean",
         "True if all arguments are true",
@@ -90,9 +90,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     will return false. If all conditions are true, and returns true.
 
     Do note that and is a short circuiting command, meaning that if one of the conditions
-    is found to be false, and will not evaluate any remaining closures."#))))?;
+    is found to be false, and will not evaluate any remaining closures."#))?;
 
-    env.declare("__or__", Value::Command(CrushCommand::condition(
+    env.declare_condition_command("__or__",
         or,
         "or condition:(bool|command)... -> boolean",
         "True if any argument is true",
@@ -101,7 +101,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     will return true. If all conditions are false, or returns false.
 
     Do note that or is a short circuiting command, meaning that if one of the conditions
-    is found to be true, or will not evaluate any remaining closures."#))))?;
+    is found to be true, or will not evaluate any remaining closures."#))?;
 
     env.readonly();
     Ok(())

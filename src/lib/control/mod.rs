@@ -55,7 +55,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     }))?;
     env.declare("cmd_path", Value::List(path))?;
 
-    env.declare("if", Value::Command(CrushCommand::condition(
+    env.declare_condition_command("if",
         r#if::perform,
         "if condition:bool if-clause:command [else-clause:command]",
         "Conditionally execute a command once.",
@@ -64,9 +64,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     Example:
 
-    if (./some_file:stat):is_file {echo "It's a file!"} {echo "It's not a file!"}"#))))?;
+    if (./some_file:stat):is_file {echo "It's a file!"} {echo "It's not a file!"}"#))?;
 
-    env.declare("while", Value::Command(CrushCommand::condition(
+    env.declare_condition_command("while",
         r#while::perform,
         "while condition:command body:command",
         "Repeatedly execute the body for as long the condition is met",
@@ -76,9 +76,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     Example:
 
-    while {not (./some_file:stat):is_file} {echo "hello"}"#))))?;
+    while {not (./some_file:stat):is_file} {echo "hello"}"#))?;
 
-    env.declare("loop", Value::Command(CrushCommand::condition(
+    env.declare_condition_command("loop",
         r#loop::perform,
         "loop body:command",
         "Repeatedly execute the body until the break command is called.",
@@ -88,9 +88,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             break
         }
         echo "Working"
-    }"#))))?;
+    }"#))?;
 
-    env.declare("for", Value::Command(CrushCommand::condition(
+    env.declare_condition_command("for",
         r#for::perform,
         "for [name=]iterable:(table_stream|table|dict|list) body:command",
         "Execute body once for every element in iterable.",
@@ -98,7 +98,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     for (seq) {
         echo ("Lap {}":format value)
-    }"#))))?;
+    }"#))?;
 
 
     env.declare_command(

@@ -164,7 +164,20 @@ impl Scope {
     ) -> CrushResult<()> {
         let mut full_name = self.full_path()?;
         full_name.push(Box::from(name));
-        let command = CrushCommand::command2(call, can_block, full_name, signature, short_help, long_help);
+        let command = CrushCommand::command(call, can_block, full_name, signature, short_help, long_help);
+        self.declare(name, Value::Command(command))
+    }
+
+    pub fn declare_condition_command(
+        &self, name: &str,
+        call: fn(context: ExecutionContext) -> CrushResult<()>,
+        signature: &'static str,
+        short_help: &'static str,
+        long_help: Option<&'static str>,
+    ) -> CrushResult<()> {
+        let mut full_name = self.full_path()?;
+        full_name.push(Box::from(name));
+        let command = CrushCommand::condition(call, full_name, signature, short_help, long_help);
         self.declare(name, Value::Command(command))
     }
 
