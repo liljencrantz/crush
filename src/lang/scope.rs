@@ -4,6 +4,7 @@ use crate::lang::{value::Value, value::ValueType};
 use std::collections::HashMap;
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::command::CrushCommand;
+use crate::lang::r#struct::Struct;
 
 /**
   This is where we store variables, including functions.
@@ -183,16 +184,27 @@ impl Scope {
         }
     }
 
-    pub fn global_static_cmd(&self, full_path: Vec<&str>) -> CrushResult<Box<dyn CrushCommand + Sync + Send>> {
-        self.global_cmd(full_path.iter().map(|p| Box::from(p.clone())).collect())
+    pub fn root_object(&self) -> Struct {
+        match self.global_value(vec![Box::from("global"),Box::from("types"),Box::from("root"),]) {
+            Ok(Value::Struct(s)) => s,
+            _ => panic!("Root missing!"),
+        }
     }
 
-    pub fn global_cmd(&self, full_path: Vec<Box<str>>) -> CrushResult<Box<dyn CrushCommand + Sync + Send>> {
+    pub fn global_static_cmd(&self, full_path: Vec<&str>) -> CrushResult<Box<dyn CrushCommand + Sync + Send>> {
+        match self.global_value(full_path.iter().map(|p| Box::from(p.clone())).collect()) {
+            Ok(Value::Command(cmd)) => Ok(cmd),
+            Err(e) => Err(e),
+            _ => error("Expected a command"),
+        }
+    }
+
+    pub fn global_value(&self, full_path: Vec<Box<str>>) -> CrushResult<Value> {
         let data = self.data.lock().unwrap();
         match data.parent_scope.clone() {
             Some(parent) => {
                 drop(data);
-                parent.global_cmd(full_path)
+                parent.global_value(full_path)
             }
             None => {
                 drop(data);
@@ -201,7 +213,7 @@ impl Scope {
         }
     }
 
-    fn cmd_path(&self, path: &[Box<str>]) -> CrushResult<Box<dyn CrushCommand + Sync + Send>> {
+    fn cmd_path(&self, path: &[Box<str>]) -> CrushResult<Value> {
         if path.is_empty() {
             error("Invalid path for command")
         } else {
@@ -215,7 +227,7 @@ impl Scope {
                         match path.len() {
                             2 => {
                                 match data.mapping.get(&path[1]) {
-                                    Some(Value::Command(c)) => Ok((*c).clone()),
+                                    Some(v) => Ok(v.clone()),
                                     _ => error(format!(
                                         "Could not find command {} in scope {}",
                                     path[1],

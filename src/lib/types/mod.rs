@@ -1,5 +1,5 @@
 use crate::lang::scope::Scope;
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, argument_error, mandate};
 use crate::lang::{value::Value, r#struct::Struct};
 use crate::lang::command::CrushCommand;
 use crate::lang::execution_context::{ExecutionContext, This};
@@ -54,7 +54,7 @@ fn data(context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn class(mut context: ExecutionContext) -> CrushResult<()> {
-    let mut parent = crate::lang::r#struct::ROOT.clone();
+    let mut parent = context.env.root_object();
 
     if context.arguments.len() == 1 {
         parent = context.arguments.r#struct(0)?;
@@ -93,9 +93,53 @@ pub fn r#typeof(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Type(context.arguments.value(0)?.value_type()))
 }
 
+fn class_set(mut context: ExecutionContext) -> CrushResult<()> {
+    let this = context.this.r#struct()?;
+    let value = context.arguments.value(1)?;
+    let name = context.arguments.string(0)?;
+    this.set(&name, value);
+    Ok(())
+}
+
+fn class_get(mut context: ExecutionContext) -> CrushResult<()> {
+    let this = context.this.r#struct()?;
+    let name = context.arguments.string(0)?;
+    context.output.send(mandate(this.get(&name), format!("Unknown field {}", name).as_str())?)
+}
+
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("types")?;
     root.r#use(&env);
+
+    let root =
+        Struct::new(vec![
+            (Box::from("__setattr__"), Value::Command(CrushCommand::command2(
+                class_set, false,
+                vec![Box::from("global"), Box::from("types"), Box::from("__setattr__")],
+                "root:__setitem__ name:string value:any",
+                "Modify the specified field to hold the specified value",
+                None))),
+            (Box::from("__getitem__"), Value::Command(CrushCommand::command2(
+                class_get, false,
+                vec![Box::from("global"), Box::from("types"), Box::from("__getitem__")],
+                "root:__getitem__ name:string",
+                "Return the value of the specified field",
+                None))),
+            (Box::from("__setitem__"), Value::Command(CrushCommand::command2(
+                class_get, false,
+                vec![Box::from("global"), Box::from("types"), Box::from("__setitem__")],
+                "root:__setitem__ name:string value:any",
+                "Modify the specified field to hold the specified value",
+                None))),
+        ], None);
+
+    env.declare("root", Value::Struct(root))?;
+
+
+    env.declare_command("class_get", class_get, false,
+                        "root:__getitem__ name:string",
+                        "Return the value of the specified field",
+                        None)?;
 
     env.declare_command("data", data, false,
                         "data <name>=value:any...",

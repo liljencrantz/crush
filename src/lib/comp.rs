@@ -5,7 +5,6 @@ use crate::lang::{value::Value};
 use crate::lang::scope::Scope;
 use std::cmp::Ordering;
 
-
 macro_rules! cmp {
     ($name:ident, $op:expr) => {
 pub fn $name(mut context: ExecutionContext) -> CrushResult<()> {
@@ -51,13 +50,13 @@ pub fn not(mut context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("comp")?;
-    env.declare("gt", Value::Command(CrushCommand::command_undocumented(gt, false)))?;
-    env.declare("gte", Value::Command(CrushCommand::command_undocumented(gte, false)))?;
-    env.declare("lt", Value::Command(CrushCommand::command_undocumented(lt, false)))?;
-    env.declare("lte", Value::Command(CrushCommand::command_undocumented(lte, false)))?;
-    env.declare("eq", Value::Command(CrushCommand::command_undocumented(eq, false)))?;
-    env.declare("neq", Value::Command(CrushCommand::command_undocumented(neq, false)))?;
-    env.declare("not", Value::Command(CrushCommand::command_undocumented(not, false)))?;
+    env.declare_command("gt", gt, false, "any > any", "True if left side is greater than right side", None)?;
+    env.declare_command("gte", gte, false, "any >= any", "True if left side is greater than or equal to right side", None)?;
+    env.declare_command("lt", lt, false, "any < any", "True if left side is less than right side", None)?;
+    env.declare_command("lte", lte, false, "any <= any", "True if left side is less than or equal to right side", None)?;
+    env.declare_command("eq", eq, false, "any == any", "True if left side is equal to right side", None)?;
+    env.declare_command("neq", neq, false, "any != any", "True if left side is not equal to right side", None)?;
+    env.declare_command("not", not, false, "not boolean", "Negates a boolean", None)?;
     env.readonly();
     Ok(())
 }

@@ -3,8 +3,6 @@ use crate::lang::value::Value;
 use crate::lang::table::Row;
 use std::sync::{Mutex, Arc};
 use crate::lang::command::CrushCommand;
-
-use lazy_static::lazy_static;
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::cmp::Ordering;
@@ -12,12 +10,7 @@ use crate::util::replace::Replace;
 use crate::lang::errors::{CrushResult, mandate};
 use crate::lang::execution_context::{ExecutionContext, This, ArgumentVector};
 use crate::util::identity_arc::Identity;
-
-lazy_static! {
-    pub static ref ROOT: Struct = {
-        Struct::root()
-    };
-}
+use crate::lang::scope::Scope;
 
 #[derive(Clone)]
 struct StructData {
@@ -79,29 +72,7 @@ impl PartialOrd for Struct {
     }
 }
 
-pub fn set(mut context: ExecutionContext) -> CrushResult<()> {
-    let this = context.this.r#struct()?;
-    let value = context.arguments.value(1)?;
-    let name = context.arguments.string(0)?;
-    this.set(&name, value);
-    Ok(())
-}
-
-pub fn get(mut context: ExecutionContext) -> CrushResult<()> {
-    let this = context.this.r#struct()?;
-    let name = context.arguments.string(0)?;
-    context.output.send(mandate(this.get(&name), format!("Unknown field {}", name).as_str())?)
-}
-
 impl Struct {
-    fn root() -> Struct {
-        Struct::new(vec![
-            (Box::from("__setattr__"), Value::Command(CrushCommand::command_undocumented(set, false))),
-            (Box::from("__getitem__"), Value::Command(CrushCommand::command_undocumented(get, false))),
-            (Box::from("__setitem__"), Value::Command(CrushCommand::command_undocumented(set, false))),
-        ], None)
-    }
-
     pub fn new(mut vec: Vec<(Box<str>, Value)>, parent: Option<Struct>) -> Struct {
         let mut lookup = HashMap::new();
         let mut cells = Vec::new();
@@ -131,7 +102,7 @@ impl Struct {
             });
         Struct {
             data: Arc::new(Mutex::new(StructData {
-                parent: Some(ROOT.clone()),
+                parent: None,
                 lookup,
                 cells,
             }))
