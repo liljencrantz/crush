@@ -1,7 +1,6 @@
 Todo:
-Materializing a value should not destroy the original
-Serialisation/deserialisation format
-Replace Scope type with a struct?
+Add background job support
+New command: which
 Add a range type
 Figure out how to support options like --foo and -b in external commands in a nice way
 Make it so e.g. cargo:build works
@@ -57,6 +56,6 @@ pbuf.parse command that takes a protobuf definition and uses it to deserialize p
 avro.parse command that deserializes avro data
 toml.parse command that deserializes toml data
 Add history command with all previous interactive invocations, including invocation string, current status, and misc metadata.
-Add proc.jobs command
+Add proc:jobs command
 pseudo-tty for cmd command output
 pseudo-tty for cmd command input
