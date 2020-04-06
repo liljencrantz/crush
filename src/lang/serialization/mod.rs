@@ -26,6 +26,7 @@ mod table_serializer;
 pub mod model {
     include!(concat!(env!("OUT_DIR"), "/lang.serialization.model.rs"));
 }
+
 pub struct SerializationState {
     pub with_id: HashMap<u64, usize>,
     pub values: HashMap<Value, usize>,

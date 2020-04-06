@@ -41,6 +41,65 @@ message Duration {
 }
 
 message Closure {
+    oneof name {
+        bool has_name = 1;
+        uint64 name_value = 2;
+    }
+    repeated Job job_definitions = 3;
+    oneof signature {
+        bool has_signature = 4;
+        Signature signature_value = 5;
+    }
+    Scope env = 6;
+    string short_help = 7;
+    oneof long_help {
+        bool has_long_help = 8;
+        string long_help_value = 9;
+    }
+}
+
+message Signature {
+    repeated Parameter paremeter = 1;
+}
+
+message Parameter {
+    oneof paremeter{
+        NormalParameter normal = 1;
+        string named = 2;
+        string unnamed = 3;
+    }
+}
+
+message NormalParameter {
+    string name = 1;
+    ValueDefinition type = 2;
+    oneof default {
+        bool has_default = 3;
+        ValueDefinition default_value = 4;
+    }
+}
+
+message ValueDefinition {
+    oneof value_definition {
+        Element value = 1;
+        // Fixme Closure definition
+        Job job = 3;
+        string label = 4;
+        //...
+    }
+}
+
+message Job {
+    repeated CommandInvocation commands = 1;
+}
+
+message CommandInvocation {
+    ValueDefinition command = 1;
+    repeated ArgumentDefinition arguments = 2;
+}
+
+message ArgumentDefinition {
+    //...
 }
 
 message Strings {
