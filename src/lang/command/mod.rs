@@ -10,9 +10,8 @@ use closure::Closure;
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::help::Help;
 use std::collections::HashMap;
-use crate::lang::serialization::{Serializable, SerializationState, DeserializationState};
+use crate::lang::serialization::{SerializationState, DeserializationState};
 use crate::lang::serialization::model::{Element, element, Strings};
-use map_in_place::MapVecInPlace;
 
 pub trait CrushCommand : Help {
     fn invoke(&self, context: ExecutionContext) -> CrushResult<()>;
@@ -158,7 +157,7 @@ impl CrushCommand for SimpleCommand {
         self
     }
 
-    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
+    fn serialize(&self, elements: &mut Vec<Element>, _state: &mut SerializationState) -> CrushResult<usize> {
         let idx = elements.len();
         elements.push(Element {
             element: Some(element::Element::Command(
@@ -228,7 +227,7 @@ impl CrushCommand for ConditionCommand {
         self
     }
 
-    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
+    fn serialize(&self, elements: &mut Vec<Element>, _state: &mut SerializationState) -> CrushResult<usize> {
         let idx = elements.len();
         elements.push(Element {
             element: Some(element::Element::Command(

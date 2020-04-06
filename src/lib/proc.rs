@@ -1,4 +1,3 @@
-use crate::lang::command::CrushCommand;
 use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
 use crate::{
     lang::table::Row,

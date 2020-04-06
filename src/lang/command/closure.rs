@@ -11,7 +11,7 @@ use crate::lang::stream::{empty_channel, black_hole};
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::help::Help;
 use crate::lang::serialization::SerializationState;
-use crate::lang::serialization::model::{Element, element};
+use crate::lang::serialization::model::Element;
 
 #[derive(Clone)]
 pub struct Closure {
@@ -72,7 +72,7 @@ impl CrushCommand for Closure {
         self
     }
 
-    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
+    fn serialize(&self, _elements: &mut Vec<Element>, _state: &mut SerializationState) -> CrushResult<usize> {
         unimplemented!();
     }
 }

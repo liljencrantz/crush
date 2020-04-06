@@ -1,7 +1,6 @@
 use crate::lang::scope::Scope;
 use crate::lang::errors::{CrushResult, error, to_crush_error, argument_error};
 use crate::lang::{value::Value};
-use crate::lang::command::CrushCommand;
 use crate::util::file::{home, cwd};
 use std::path::Path;
 use crate::lang::printer::printer;

@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, mandate, CrushError};
+use crate::lang::errors::{CrushResult, mandate};
 use crate::lang::{value::Value, execution_context::ExecutionContext};
 use crate::lang::command::CrushCommand;
 use std::collections::HashMap;

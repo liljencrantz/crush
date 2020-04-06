@@ -6,7 +6,6 @@ use crate::lang::value::{ValueDefinition, Value, ValueType};
 use std::ops::Deref;
 use crate::lang::command::{CrushCommand, Parameter};
 use crate::util::glob::Glob;
-use lazy_static::lazy_static;
 use regex::Regex;
 use std::path::Path;
 use crate::lang::scope::Scope;

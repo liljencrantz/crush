@@ -13,9 +13,6 @@ use std::{
     io::prelude::*,
 };
 
-extern crate map_in_place;
-
-use map_in_place::MapVecInPlace;
 use crate::lang::printer::printer;
 use crate::lang::{table::ColumnType, binary::BinaryReader};
 use crate::lang::errors::{CrushResult, to_crush_error};
@@ -120,7 +117,7 @@ fn run(cfg: Config, output: OutputStream) -> CrushResult<()> {
         }
 
         if let Some(trim) = trim {
-            split = split.map(|s| s.trim_matches(trim));
+            split = split.iter().map(|s| s.trim_matches(trim)).collect();
         }
 
         match split.iter()

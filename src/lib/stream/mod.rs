@@ -1,7 +1,5 @@
 use crate::lang::scope::Scope;
 use crate::lang::errors::CrushResult;
-use crate::lang::{value::Value};
-use crate::lang::command::CrushCommand;
 
 mod head;
 mod tail;

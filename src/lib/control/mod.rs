@@ -9,7 +9,6 @@ mod r#loop;
 mod r#for;
 
 use std::path::Path;
-use crate::lang::command::CrushCommand;
 use crate::lang::printer::printer;
 
 pub fn r#break(context: ExecutionContext) -> CrushResult<()> {
