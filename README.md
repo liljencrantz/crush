@@ -1,28 +1,25 @@
 # Crush
 
-Crush is an attempt to make a traditional command line shell
-that is also a modern programming language. It has the features
-one would expect from a modern programming language like
-a type system, closures and lexical scoping, but with a syntax
-geared toward both batch and interactive shell usage.
+Crush is an attempt to make a traditional command line shell that is also a
+modern programming language. It has the features one would expect from a modern
+programming language like a type system, closures and lexical scoping, but with
+a syntax geared toward both batch and interactive shell usage.
 
 ## What features of a traditional shell does Crush retain?
 
-The basic structure of the Crush language resembles a regular shell
-like bash.
+The basic structure of the Crush language resembles a regular shell like bash.
 
-How to invoke commands, pass arguments and set up pipelines are
-unchanged, as is the central concept of a current working directory .
-This means that trivial invocations, like `ls` or `find .. | count`
-look the same, but under the hood they are quite different, and
-nearly everything beyond that is different.
+How to invoke commands, pass arguments and set up pipelines are unchanged, as is
+the central concept of a current working directory. This means that trivial
+invocations, like `ls` or `find .. | count` look the same, but under the hood
+they are quite different, and nearly everything beyond that is different.
 
 ## What does Crush do so differently, then?
 
 ### Scratching the surface
 
-Let's start with two trivial commands; listing files in the current
-directory, and checking how many files are in the current directory:
+Let's start with two trivial commands; listing files in the current directory,
+and checking how many files are in the current directory:
 
     crush> ls
     user         size modified                  type      file
@@ -33,12 +30,11 @@ directory, and checking how many files are in the current directory:
     crush> ls | count
     14
 
-This all looks familiar. But appearances are deceiving. The  `ls` 
-command being called is a crush builtin, and the output is not
-sent over a unix pipe but over a Rush channel. It is not seen
-understood by the command as a series of bytes, but as
-a table of rows, and crush provides you with SQL-like
-commands to sort, filter, aggregate and group rows of data.
+This all looks familiar. But appearances are deceiving. The `ls` command being
+called is a Crush builtin, and the output is not sent over a unix pipe but over
+a Rush channel. It is not understood by the command as a series of bytes, but as
+a table of rows, and Crush provides you with SQL-like commands to sort, filter,
+aggregate and group rows of data.
 
     crush> ls | sort ^size
     user         size  modified                  type      file
@@ -57,17 +53,17 @@ commands to sort, filter, aggregate and group rows of data.
     liljencrantz 4096 2020-03-14 17:34:39 +0100 directory src
     liljencrantz 4096 2020-03-14 19:44:54 +0100 directory .git
 
-Because crush output is a stream of rows with columns, actions like sorting
-by an arbitrary column or filtering data based on arbitrary logical
-expressions operating on these columns is easy, and because the components
-used to do this are generic and reusable, you can trivially do the same
-to data from any source, such as json files, http requests, etc.
+Because Crush output is a stream of rows with columns, actions like sorting by
+an arbitrary column or filtering data based on arbitrary logical expressions
+operating on these columns is easy, and because the components used to do this
+are generic and reusable, you can trivially do the same to data from any source,
+such as json files, http requests, etc.
 
 ### Operators for comparison, logical operations and arithmetical operations
 
 Crush allows you to perform mathematical calculations on integer and floating
-point numbers directly in the shell, using the same mathematical operators
-used in almost any other programming language.
+point numbers directly in the shell, using the same mathematical operators used
+in almost any other programming language.
 
     crush> 5+6
     11
@@ -75,7 +71,7 @@ used in almost any other programming language.
     7
 
 The only exception is that the `/` operator is used for constructing files and
-paths (more on that later), so division is done using the `//` operator
+paths (more on that later), so division is done using the `//` operator.
 
     crush> 4.2//3
     1.4000000000000001
@@ -93,8 +89,8 @@ The `and` and `or` operators are used to combine logical expressions:
     true
     crush> if (some_file:exists) and ((some_file:stat):is_file) {echo "yay"}
     
-Crush also has operators related to patterns and matching.
-`=~` and `!~` are used to check if a pattern matches an input:
+Crush also has operators related to patterns and matching. `=~` and `!~` are
+used to check if a pattern matches an input:
 
     # The % character is the wildcard operator in globs
     crush> %.txt =~ foo.txt
@@ -103,8 +99,8 @@ Crush also has operators related to patterns and matching.
     crush> re"ab+c" =~ "abbbbbc"
     true
 
-Regexps also support replacement using the `~` (replace once) and
-`~~` (replace all) operators, which are trinary operators:
+Regexps also support replacement using the `~` (replace once) and `~~` (replace
+all) operators, which are trinary operators:
 
     crush> re"a+" ~ "baalaa" "a"
     balaa
@@ -114,10 +110,10 @@ Regexps also support replacement using the `~` (replace once) and
 
 ### Type system
 
-As already mentioned, many crush commands operate on streams of tabular data. The
-individual cells in this table stream can be any of a variety of types, including
-strings, integers, floating point numbers, lists, binary data or another table
-stream.
+As already mentioned, many Crush commands operate on streams of tabular data.
+The individual cells in this table stream can be any of a variety of types,
+including strings, integers, floating point numbers, lists, binary data or
+another table stream.
 
     crush> ps | head 5
     pid ppid status   user cpu  name
@@ -144,11 +140,10 @@ Once declared, a variable can be reassigned to using the `=` operator.
     crush> some_number * 5
     30
 
-Like in any sane programming language, variables can be of any type
-supported by the type system. There is no implicit type conversion.
-Do note that some mathematical operators are defined between types,
-so multiplying an integer with a floating point number results in a
-floating point number, for example.
+Like in any sane programming language, variables can be of any type supported by
+the type system. There is no implicit type conversion. Do note that some
+mathematical operators are defined between types, so multiplying an integer
+with a floating point number results in a floating point number, for example.
 
     crush> some_text := "5"
     crush> some_text * some_number
@@ -156,9 +151,9 @@ floating point number, for example.
 
 ### Named and unnamed arguments
 
-Crush does not have any conventions around arguments with and without leading hyphens
-meaning different things. Instead, Crush supports named and unnamed arguments at the
-language level.
+Crush does not have any conventions around arguments with and without leading
+hyphens meaning different things. Instead, Crush supports named and unnamed
+arguments at the language level.
 
 The `http` command is an example of a command that expects named arguments:
 
@@ -174,7 +169,7 @@ The `http` command is an example of a command that expects named arguments:
         http "https://example.com/" header=("Authorization: Bearer {}":format token)
 
 
-The duration:new command accepts any even numbered unnamed arguments:
+The `duration:new` command accepts any even numbered unnamed arguments:
 
     crush> help duration:new
     duration:new [count:integer timeunit:string]...
@@ -192,35 +187,34 @@ The duration:new command accepts any even numbered unnamed arguments:
     
 ### Subshells
 
-Sometimes you want to use the output of one command as an *argument* to
-another command, just like a subshell in e.g. bash. This is different
-from using the output as the *input*, and is done using `()`:
+Sometimes you want to use the output of one command as an *argument* to another
+command, just like a subshell in e.g. bash. This is different from using the
+output as the *input*, and is done using `()`:
 
     crush> echo (pwd)
 
 ### Closures
 
-In crush, braces (`{}`) are used to create a closure. Assigning a closure
-to a variable is how you create a function.
+In Crush, braces (`{}`) are used to create a closure. Assigning a closure to a
+variable is how you create a function.
 
     crush> print_greeting := {echo "Hello"}
     crush> print_greeting
     Hello
 
-Any named arguments passed when calling a closure and added to the local
-scope of the invocation:
+Any named arguments passed when calling a closure and added to the local scope
+of the invocation:
 
     crush> print_a := {echo a}
     crush> print_a a="Greetings"
     Greetings
 
-For added type safety, you can declare what parameters a closure expects
-at the start of a closure.
+For added type safety, you can declare what parameters a closure expects at the
+start of a closure.
 
-The following closure requires the caller to supply
-the argument `a`, and allows the caller to specify the argument `b`, which must
-by of type integer. If the caller does not specify it, it falls back to a
-default value of 7.
+The following closure requires the caller to supply the argument `a`, and allows
+the caller to specify the argument `b`, which must by of type integer. If the
+caller does not specify it, it falls back to a default value of 7.
 
     crush> print_things := {|a b: integer = 7|}
 
@@ -230,10 +224,10 @@ arguments not mentioned elsewhere in the parameter list.
 
     crush> print_everything := {|@unnamed @@named| echo "Named" named "Unnamed" unnamed}
 
-The `@` and `@@` operators are also used during command invocation to perform the
-mirrored operation. The following code creates an `lss` function that calls the `ls`
-command and passes on any arguments to it, and pipes the output through the `select`
-command to only show one column from the output.
+The `@` and `@@` operators are also used during command invocation to perform
+the mirrored operation. The following code creates an `lss` function that calls
+the `ls` command and passes on any arguments to it, and pipes the output through
+the `select` command to only show one column from the output.
 
     lss := {|@args @@kwargs| ls @args @@kwargs | select %file}
 
@@ -251,14 +245,15 @@ Crush comes with a variety of types:
 * integer numbers,
 * floating point numbers,
 * structs, which contain any number of named fields of any type,
-* tables, which are essentially a list where each element is the same type of struct,
-* table streams, which are like tables but can only be traversed once
+* tables, which are essentially lists where each element is the same type of struct,
+* table streams, which are like tables but can only be traversed once,
 * binary data,
-* binary streams, which are like binary data but can only be traversed once
+* binary streams, which are like binary data but can only be traversed once,
 * types, and
 * commands, which are either closures or built in commands.
 
-Crush allows you to create your own struct types using the `class` and `data` commands.
+Crush allows you to create your own struct types using the `class` and `data`
+commands.
 
 ### Exploring the shell
 
@@ -279,25 +274,28 @@ former displays a help messages, the latter lists the content of a value.
 ### The content of your current working directory lives in your namespace
 
 All the files in the current working directory are part of the local namespace.
-This means that e.g. `.` is a file object that points to the current working directory.
-The `/` operator is used in Crush to join two file directory element together.
+This means that e.g. `.` is a file object that points to the current working
+directory. The `/` operator is used in Crush to join two file directory element
+together.
 
-This means that for the most part, using files in Crush is extremely simple and convenient.
+This means that for the most part, using files in Crush is extremely simple and
+convenient.
 
     crush> cd .. # This does what you'd think
     crush> cd /  # As does this
 
-The right hand side of the / operator is a label, not a value, so `./foo` refers to
-a file named foo i the current working directory, and is unrelated to the contents
-of any variable named `foo`.
+The right hand side of the / operator is a label, not a value, so `./foo` refers
+to a file named foo i the current working directory, and is unrelated to the
+contents of any variable named `foo`.
 
 ### Namespaces, members and methods
 
-Members are accessed using the `:` operator. Most other languages tend to use `.`, but
-that is a very common character in file names, so Crush needed to find something else.
+Members are accessed using the `:` operator. Most other languages tend to use
+`.`, but that is a very common character in file names, so Crush needed to find
+something else.
 
-Most types have several useful methods. Files have `exists` and `stat`, which do what
-you'd expect.
+Most types have several useful methods. Files have `exists` and `stat`, which do
+what you'd expect.
 
     crush> .:exists
     true
@@ -312,40 +310,41 @@ If you assign the output of the find command to a variable like so:
 
     crush> all_the_files := (find /)
 
-What will really be stored in the `all_the_files` variable is simply a stream. A small number
-of lines of output will be eagerly evaluated, before the thread executing the find command
-will start blocking. If the stream is consumed, for example by writing
+What will really be stored in the `all_the_files` variable is simply a stream. A
+small number of lines of output will be eagerly evaluated, before the thread
+executing the find command will start blocking. If the stream is consumed, for
+example by writing
 
     crush> all_the_files
 
-then all hell will break loose on your screen as tens of thousands of lines are printed to
-your screen.
+then all hell will break loose on your screen as tens of thousands of lines are
+printed to your screen.
 
 Another option would be to pipe the output via the head command
 
     crush> all_the_files | head 1
 
-Which will consume one line of output from the stream. This command can be re-executed until
-the stream is empty.
+Which will consume one line of output from the stream. This command can be
+re-executed until the stream is empty.
 
 ### More SQL-like data stream operations
 
-Crush features many commands to operate om arbitrary streams of data using a SQL-like syntax.
-These commands use field-specifiers like ^foo to specify columns in the data stream that they
-operate on:
+Crush features many commands to operate om arbitrary streams of data using a
+SQL-like syntax. These commands use field-specifiers like ^foo to specify
+columns in the data stream that they operate on:
 
     ps | where {user == "root"} | group ^status | aggr proc_per_status={count}
 
 (Note that the `aggr` command is currently broken.)
 
-Unlike in SQL, these commands all operate on input streams, meaning they can be combined in
-any order, and the input source can be file/http resources in a variety of formats or output of
-commands like `ps`, `find`.
+Unlike in SQL, these commands all operate on input streams, meaning they can be
+combined in any order, and the input source can be file/http resources in a
+variety of formats or output of commands like `ps`, `find`.
 
 ### Globs
 
-The `*` operator is used for multiplication, so Crush uses `%` as the wildcard operator
-instead. `?` is still used for single character wildcards.
+The `*` operator is used for multiplication, so Crush uses `%` as the wildcard
+operator instead. `?` is still used for single character wildcards.
 
     crush> ls %.txt
     user         size  modified                  type file
@@ -354,8 +353,8 @@ instead. `?` is still used for single character wildcards.
     user         size modified                  type file
     liljencrantz   75 2020-03-07 17:09:15 +0100 file /home/liljencrantz/src/crush/build.rs
 
-Wildcards are not automatically expanded, they are passed in to commands as glob objects,
-and the command chooses what to match the glob against.
+Wildcards are not automatically expanded, they are passed in to commands as glob
+objects, and the command chooses what to match the glob against.
 
 ### Regular expressions
 
@@ -371,7 +370,7 @@ matching and replacement:
 
 ### Lists and dicts
 
-Crush has built in lists
+Crush has built-in lists:
 
     crush> l := (list.of 1 2 3)
     crush> l
@@ -407,7 +406,7 @@ Crush has built in lists
         * remove         Remove the element at the specified index
         * truncate       Remove all elements past the specified index
 
-and dictionaries
+and dictionaries:
 
     crush> d := ((dict string integer):new)
     crush> d["foo"] = 42
@@ -430,7 +429,7 @@ and dictionaries
 
 ### Time
 
-Crush has two data types for dealing with time, `time` and `duration`.
+Crush has two data types for dealing with time: `time` and `duration`.
 
     crush> start := (time:now)
     crush> something_that_takes_a_lot_of_time
@@ -438,22 +437,23 @@ Crush has two data types for dealing with time, `time` and `duration`.
     crush> echo ("We spent {} on the thing" end - start)
     4:06
 
-The mathematical operators that make sense are defined for `time` and `duration`.
-Subtracting one `time` from another results in a `duration`. Adding two `duration`
-results in a `duration`. Multiplying or dividing a `duration` by a `integer`
-results in a `duration`.
+The mathematical operators that make sense are defined for `time` and
+`duration`. Subtracting one `time` from another results in a `duration`. Adding
+two `duration` results in a `duration`. Multiplying or dividing a `duration` by
+a `integer` results in a `duration`.
 
 ### Materialized data
 
-The output of many commands is a table stream, i.e. a streaming data structure consisting
-of rows with identical structure. Some commands, like `cat` instead output a binary stream.
+The output of many commands is a table stream, i.e. a streaming data structure
+consisting of rows with identical structure. Some commands, like `cat` instead
+output a binary stream.
 
-These streams can not be rewound and can only be consumed once. This is sometimes vital,
-as it means that one can work on data sets larger than your computers memory, and even
-infinite data sets.
+These streams can not be rewound and can only be consumed once. This is
+sometimes vital, as it means that one can work on data sets larger than your
+computers memory, and even infinite data sets.
 
-But sometimes, streaming data sets are inconvenient, especially if one wants to use the same
-dataset twice.
+But sometimes, streaming data sets are inconvenient, especially if one wants to
+use the same dataset twice.
 
     crush> files := (ls)
     crush> files
@@ -473,8 +473,8 @@ dataset twice.
     liljencrantz   711 2019-10-03 14:19:46 +0200 file      crush.iml
     crush> files
 
-Notice how there is no output the second time `files` is displayed,
-because the table_stream has already been consumed.
+Notice how there is no output the second time `files` is displayed, because the
+table_stream has already been consumed.
 
 Enter the materialize command, which takes any value and recursively converts
 all transient components into an equivalent but fully in-memory form.
@@ -511,8 +511,8 @@ all transient components into an equivalent but fully in-memory form.
     liljencrantz    75 2020-03-07 17:09:15 +0100 file      build.rs
     liljencrantz   711 2019-10-03 14:19:46 +0200 file      crush.iml
 
-When the `table_stream` is materialized into a `table`, it can be displayed multiple
-times.
+When the `table_stream` is materialized into a `table`, it can be displayed
+multiple times.
 
 ### Flow control
 
@@ -545,14 +545,15 @@ that can be controlled using `break` and `continue`.
 
 ### Calling external commands
 
-Obviously, one needs to sometimes call out to external commands. Currently, the functionality
-for doing so in Crush is extremely primitive. If an internal command of a given name does not
-exist, Crush looks for external commands, and if one is found, it is used. But Crush
-does not hand over the tty or emulate a tty, so interactive terminal programs do not work,
-and commands that prettify their output with escape sequences may fail.
+Obviously, one needs to sometimes call out to external commands. Currently, the
+functionality for doing so in Crush is extremely primitive. If an internal
+command of a given name does not exist, Crush looks for external commands, and
+if one is found, it is used. But Crush does not hand over the tty or emulate a
+tty, so interactive terminal programs do not work, and commands that prettify
+their output with escape sequences may fail.
 
-This part of crush should be considered a proof of concept, but still, most non-interactive
-commands work:
+This part of Crush should be considered a proof of concept, but still, most
+non-interactive commands work:
 
     crush> git "status"
     On branch master
@@ -571,7 +572,8 @@ commands work:
      2 files changed, 33 insertions(+), 4 deletions(-)
 
 
-Further thought needs to go in to making external commands fit better with the Crush design.
+Further thought needs to go in to making external commands fit better with the
+Crush design.
 
 ### Creating custom types
 
@@ -598,44 +600,45 @@ You can create custom types in Crush, by using the class command:
     p := (Point:new x=1.0 y=2.0)
     p:len
 
-Crush supports single inheritance (by passing in the parent to the class command).
-The class command will create a new struct, that contains a method named `new`. When
-called, `new` will create a new instance of the class. If the `__init__` method
-is defined, `new` will call it, and pass on any parameters to it.
+Crush supports single inheritance (by passing in the parent to the class
+command). The class command will create a new struct, that contains a method
+named `new`. When called, `new` will create a new instance of the class. If the
+`__init__` method is defined, `new` will call it, and pass on any parameters to
+it.
 
 Add methods by adding them to the class, add member variables by adding them to
 the instance (`this`) in `__init__`.
 
 ## Similarity to PowerShell
 
-Crush shares the majority of its design goals with PowerShell. I consider PowerShell
-one of the coolest and most interesting innovations to ever come out of Microsoft.
-That said, I've found using PowerShell in practice to often feel clunky and annoying,
-especially for interactive use. I also feel that tying a shell to COM objects is a poor
-fit.
+Crush shares the majority of its design goals with PowerShell. I consider
+PowerShell one of the coolest and most interesting innovations to ever come out
+of Microsoft. That said, I've found using PowerShell in practice to often feel
+clunky and annoying, especially for interactive use. I also feel that tying a
+shell to COM objects is a poor fit.
 
-I wanted to do something similar but with a more streamlined syntax, and with what I
-felt was a more suitable type system.
+I wanted to do something similar but with a more streamlined syntax, and with
+what I felt was a more suitable type system.
 
 ## Similarity to Nushell
 
 On the surface, Crush looks identical to nushell, but less polished. Crush lacks
-syntax highlighting, tab completion and has a worse screen rendering. But that is
-because the focus of Crush right now is to create a well defined, powerful and
-convenient language that supports things like arithmetic operations, closures,
-loops and flow control while remaining useful for interactive use.
+syntax highlighting, tab completion and has a worse screen rendering. But that
+is because the focus of Crush right now is to create a well defined, powerful
+and convenient language that supports things like arithmetic operations,
+closures, loops and flow control while remaining useful for interactive use.
 
 ### Future work
 
-There are plenty of langage ideas waiting to be tried out. Pattern matching
-and error handling are among the most obvious. Also, the error handling
-in crush itself is currently very rudimentary.
+There are plenty of langage ideas waiting to be tried out. Pattern matching and
+error handling are among the most obvious. Also, the error handling in Crush
+itself is currently very rudimentary.
 
 ## About the codebase
 
 I am teaching myself rust by writing Crush. I still have plenty to learn. :-)
 
-## Building and installing crush
+## Building and installing Crush
 
 Crush should work on any modern Unix system. Install rust,
  
