@@ -1,9 +1,8 @@
 use crate::lang::value::Value;
 use crate::lang::{value::ValueDefinition};
 use crate::lang::errors::{CrushResult, error, argument_error};
-use crate::lang::scope::Scope;
-use crate::lang::job::JobJoinHandle;
 use std::collections::HashSet;
+use crate::lang::execution_context::CompileContext;
 
 #[derive(Debug, Clone)]
 pub enum ArgumentType {
@@ -105,26 +104,26 @@ impl Argument {
 }
 
 pub trait ArgumentVecCompiler {
-    fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope) -> CrushResult<(Vec<Argument>, Option<Value>)>;
+    fn compile(&self, context: &mut CompileContext) -> CrushResult<(Vec<Argument>, Option<Value>)>;
 }
 
 impl ArgumentVecCompiler for Vec<ArgumentDefinition> {
-    fn compile(&self, dependencies: &mut Vec<JobJoinHandle>, env: &Scope) -> CrushResult<(Vec<Argument>, Option<Value>)> {
+    fn compile(&self, context: &mut CompileContext) -> CrushResult<(Vec<Argument>, Option<Value>)> {
         let mut this = None;
         let mut res = Vec::new();
         for a in self {
             if a.argument_type.is_this() {
-                this = Some(a.value.compile(dependencies, env)?.1);
+                this = Some(a.value.compile(context)?.1);
             } else {
                 match &a.argument_type {
                     ArgumentType::Some(name) =>
-                        res.push(Argument::named(&name, a.value.compile(dependencies, env)?.1)),
+                        res.push(Argument::named(&name, a.value.compile(context)?.1)),
 
                     ArgumentType::None =>
-                        res.push(Argument::unnamed(a.value.compile(dependencies, env)?.1)),
+                        res.push(Argument::unnamed(a.value.compile(context)?.1)),
 
                     ArgumentType::ArgumentList => {
-                        match a.value.compile(dependencies, env)?.1 {
+                        match a.value.compile(context)?.1 {
                             Value::List(l) => {
                                 let mut copy = l.dump();
                                 for v in copy.drain(..) {
@@ -136,7 +135,7 @@ impl ArgumentVecCompiler for Vec<ArgumentDefinition> {
                     }
 
                     ArgumentType::ArgumentDict => {
-                        match a.value.compile(dependencies, env)?.1 {
+                        match a.value.compile(context)?.1 {
                             Value::Dict(d) => {
                                 let mut copy = d.elements();
                                 for (key, value) in copy.drain(..) {

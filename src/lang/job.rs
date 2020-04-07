@@ -1,9 +1,9 @@
-use crate::lang::scope::Scope;
-use crate::lang::stream::{channels, ValueSender, ValueReceiver};
+use crate::lang::stream::{channels};
 use crate::lang::{command_invocation::CommandInvocation};
-use crate::lang::printer::printer;
 use crate::lang::errors::{ CrushResult};
 use std::thread::JoinHandle;
+use crate::lang::execution_context::{JobContext, CompileContext};
+use crate::lang::printer::Printer;
 
 pub enum JobJoinHandle {
     Many(Vec<JobJoinHandle>),
@@ -11,15 +11,15 @@ pub enum JobJoinHandle {
 }
 
 impl JobJoinHandle {
-    pub fn join(self) {
+    pub fn join(self, printer: &Printer) {
         return match self {
             JobJoinHandle::Async(a) => match a.join() {
                 Ok(_) => {},
-                Err(_) => printer().error("Unknown error while waiting for command to exit"),
+                Err(_) => printer.error("Unknown error while waiting for command to exit"),
             },
             JobJoinHandle::Many(v) => {
                 for j in v {
-                    j.join();
+                    j.join(printer);
                 }
             }
         };
@@ -36,31 +36,27 @@ impl Job {
         Job { commands }
     }
 
-    pub fn can_block(&self, env: &Scope) -> bool {
+    pub fn can_block(&self, context: &mut CompileContext) -> bool {
         if self.commands.len() == 1 {
-            self.commands[0].can_block(self.commands[0].arguments(), env)
+            self.commands[0].can_block(self.commands[0].arguments(), context)
         } else {
             true
         }
     }
 
-    pub fn invoke(
-        &self,
-        env: &Scope,
-        first_input: ValueReceiver,
-        last_output: ValueSender) -> CrushResult<JobJoinHandle> {
+    pub fn invoke(&self, context: JobContext) -> CrushResult<JobJoinHandle> {
         let mut calls = Vec::new();
 
-        let mut input = first_input;
+        let mut input = context.input.clone();
         let last_job_idx = self.commands.len() - 1;
         for call_def in &self.commands[..last_job_idx] {
             let (output, next_input) = channels();
-            let call = call_def.invoke(env, input, output)?;
+            let call = call_def.invoke(context.with_io(input, output))?;
             input = next_input;
             calls.push(call);
         }
         let last_call_def = &self.commands[last_job_idx];
-        calls.push(last_call_def.invoke(env, input, last_output)?);
+        calls.push(last_call_def.invoke(context.with_io(input, context.output.clone()))?);
 
         Ok(JobJoinHandle::Many(calls))
     }

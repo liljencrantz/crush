@@ -1,39 +1,42 @@
 use crate::lang::value::Value;
-use crate::lang::scope::Scope;
-use crate::lang::command::CrushCommand;
 use crate::lang::errors::{CrushResult, data_error};
 use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use crate::lang::stream::{empty_channel, channels, black_hole};
 
-pub struct Config {
-    condition: Box<dyn CrushCommand>,
-    body: Box<dyn CrushCommand>,
-    env: Scope,
-}
+pub fn r#while(mut context: ExecutionContext) -> CrushResult<()> {
+    context.output.initialize(vec![])?;
+    context.arguments.check_len(2)?;
 
-pub fn run(config: Config) -> CrushResult<()> {
-    let env = config.env.create_child(&config.env, true);
+    let condition = context.arguments.command(0)?;
+    let body = context.arguments.command(1)?;
     loop {
         let (sender, receiver) = channels();
 
-        config.condition.invoke(ExecutionContext {
+        let cond_env= context.env.create_child(&context.env, true);
+        condition.invoke(ExecutionContext {
             input: empty_channel(),
             output: sender,
             arguments: Vec::new(),
-            env: config.env.clone(),
+            env: cond_env.clone(),
             this: None,
+            printer: context.printer.clone(),
         })?;
+        if cond_env.is_stopped() {
+            break;
+        }
 
         match receiver.recv()? {
             Value::Bool(true) => {
-                config.body.invoke(ExecutionContext {
+                let body_env = context.env.create_child(&context.env, true);
+                body.invoke(ExecutionContext {
                     input: empty_channel(),
                     output: black_hole(),
                     arguments: Vec::new(),
-                    env: env.clone(),
+                    env: body_env.clone(),
                     this: None,
+                    printer: context.printer.clone(),
                 })?;
-                if env.is_stopped() {
+                if body_env.is_stopped() {
                     break;
                 }
             }
@@ -42,13 +45,4 @@ pub fn run(config: Config) -> CrushResult<()> {
         }
     }
     Ok(())
-}
-
-pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
-    context.output.initialize(vec![])?;
-    context.arguments.check_len(2)?;
-
-    let condition = context.arguments.command(0)?;
-    let body = context.arguments.command(1)?;
-    run(Config { body, condition, env: context.env })
 }

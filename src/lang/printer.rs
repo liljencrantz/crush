@@ -1,11 +1,9 @@
 use crossbeam::Sender;
-use crossbeam::Receiver;
 use crossbeam::bounded;
 use std::thread;
 use crate::lang::errors::{CrushError, CrushResult, to_crush_error, Kind};
 
 enum PrinterMessage {
-    Shutdown,
     CrushError(CrushError),
     Error(Box<str>),
     Line(Box<str>),
@@ -14,37 +12,21 @@ enum PrinterMessage {
 
 use crate::lang::printer::PrinterMessage::*;
 use std::thread::JoinHandle;
-use lazy_static::lazy_static;
-
-lazy_static! {
-    static ref SND_RECV: StaticData = {
-        let (sender, receiver) = bounded(128);
-        StaticData { sender, receiver }
-    };
-}
 
 #[derive(Clone)]
 pub struct Printer {
     sender: Sender<PrinterMessage>,
 }
 
-struct StaticData {
-    sender: Sender<PrinterMessage>,
-    receiver: Receiver<PrinterMessage>,
-}
+pub fn init() -> (Printer, JoinHandle<()>) {
+    let (sender, receiver) = bounded(128);
 
-pub fn printer() -> Printer {
-    Printer { sender: SND_RECV.sender.clone() }
-}
-
-pub fn printer_thread() -> JoinHandle<()> {
+    (Printer { sender: sender.clone() },
     thread::Builder::new().name("printer".to_string()).spawn(move || {
-        let mut open = true;
-        while open || !SND_RECV.receiver.is_empty() {
-            match SND_RECV.receiver.recv() {
+        loop {
+            match receiver.recv() {
                 Ok(message) => {
                     match message {
-                        Shutdown => open = false,
                         Error(err) => println!("Error: {}", err),
                         CrushError(err) => println!("Error: {}", err.message),
                         Line(line) => println!("{}", line),
@@ -54,13 +36,11 @@ pub fn printer_thread() -> JoinHandle<()> {
                 Err(_) => break,
             }
         }
-    }).unwrap()
+    }).unwrap())
+
 }
 
 impl Printer {
-    pub fn shutdown(self) {
-        self.handle_error(to_crush_error(self.sender.send(PrinterMessage::Shutdown)));
-    }
 
     pub fn line(&self, line: &str) {
         self.handle_error(to_crush_error(self.sender.send(PrinterMessage::Line(Box::from(line)))));

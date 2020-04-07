@@ -3,10 +3,10 @@ use crate::lang::errors::{CrushResult, error, to_crush_error, argument_error};
 use crate::lang::{value::Value};
 use crate::util::file::{home, cwd};
 use std::path::Path;
-use crate::lang::printer::printer;
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::execution_context::ArgumentVector;
 use crate::lang::help::Help;
+use crate::lang::printer::Printer;
 
 mod find;
 
@@ -31,8 +31,8 @@ pub fn pwd(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::File(cwd()?))
 }
 
-fn halp(o: &dyn Help) {
-    printer().line(
+fn halp(o: &dyn Help, printer: &Printer) {
+    printer.line(
         match o.long_help() {
             None => format!("{}\n\n    {}", o.signature(), o.short_help()),
             Some(long_help) => format!("{}\n\n    {}\n\n{}", o.signature(), o.short_help(), long_help),
@@ -42,7 +42,7 @@ fn halp(o: &dyn Help) {
 pub fn help(mut context: ExecutionContext) -> CrushResult<()> {
     match context.arguments.len() {
         0 => {
-            printer().line(r#"
+            context.printer.line(r#"
 Welcome to Crush!
 
 If this is your first time using Crush, congratulations on just entering your
@@ -62,9 +62,9 @@ members of a value, write "dir <value>".
             let v = context.arguments.value(0)?;
             match v {
                 Value::Command(cmd) =>
-                    halp(cmd.help()),
-                Value::Type(t) => halp(&t),
-                v => halp(&v.value_type()),
+                    halp(cmd.help(), &context.printer),
+                Value::Type(t) => halp(&t, &context.printer),
+                v => halp(&v.value_type(), &context.printer),
             }
             Ok(())
         }

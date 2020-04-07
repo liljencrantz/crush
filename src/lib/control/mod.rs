@@ -9,8 +9,6 @@ mod r#loop;
 mod r#for;
 
 use std::path::Path;
-use crate::lang::printer::printer;
-
 pub fn r#break(context: ExecutionContext) -> CrushResult<()> {
     context.env.do_break();
     Ok(())
@@ -50,7 +48,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             .split(':')
             .map(|s| Value::File(Box::from(Path::new(s))))
             .collect();
-        printer().handle_error(path.append(&mut dirs));
+        let _ = path.append(&mut dirs);
     }))?;
     env.declare("cmd_path", Value::List(path))?;
 
@@ -66,10 +64,10 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     if (./some_file:stat):is_file {echo "It's a file!"} {echo "It's not a file!"}"#))?;
 
     env.declare_condition_command("while",
-        r#while::perform,
-        "while condition:command body:command",
-        "Repeatedly execute the body for as long the condition is met",
-        Some(r#"    In every pass of the loop, the condition is executed. If it returns false,
+                                  r#while::r#while,
+                                  "while condition:command body:command",
+                                  "Repeatedly execute the body for as long the condition is met",
+                                  Some(r#"    In every pass of the loop, the condition is executed. If it returns false,
     the loop terminates. If it returns true, the body is executed and the loop
     continues.
 
@@ -78,10 +76,10 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     while {not (./some_file:stat):is_file} {echo "hello"}"#))?;
 
     env.declare_condition_command("loop",
-        r#loop::perform,
-        "loop body:command",
-        "Repeatedly execute the body until the break command is called.",
-        Some(r#"    Example:
+                                  r#loop::r#loop,
+                                  "loop body:command",
+                                  "Repeatedly execute the body until the break command is called.",
+                                  Some(r#"    Example:
     loop {
         if (i_am_tired) {
             break

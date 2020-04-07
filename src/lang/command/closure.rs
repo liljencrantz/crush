@@ -8,7 +8,7 @@ use crate::lang::list::List;
 use crate::lang::dict::Dict;
 use crate::lang::job::Job;
 use crate::lang::stream::{empty_channel, black_hole};
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::{ExecutionContext, CompileContext, JobContext};
 use crate::lang::help::Help;
 use crate::lang::serialization::SerializationState;
 use crate::lang::serialization::model::Element;
@@ -31,10 +31,14 @@ impl CrushCommand for Closure {
         let parent_env = self.env.clone();
         let env = parent_env.create_child(&context.env, false);
 
+        let mut cc = context.compile_context().with_scope(&env);
         if let Some(this) = context.this {
             env.redeclare("this", this)?;
         }
-        Closure::push_arguments_to_env(&self.signature, context.arguments, &env)?;
+        Closure::push_arguments_to_env(
+            &self.signature,
+            context.arguments,
+            &mut cc)?;
 
         if env.is_stopped() {
             return Ok(());
@@ -44,8 +48,8 @@ impl CrushCommand for Closure {
             let last = idx == job_definitions.len() - 1;
             let input = if first { context.input.clone() } else { empty_channel() };
             let output = if last { context.output.clone() } else { black_hole() };
-            let job = job_definition.invoke(&env, input, output)?;
-            job.join();
+            let job = job_definition.invoke(JobContext::new(input, output, env.clone(), context.printer.clone()))?;
+            job.join(&context.printer);
             if env.is_stopped() {
                 return Ok(());
             }
@@ -53,7 +57,7 @@ impl CrushCommand for Closure {
         Ok(())
     }
 
-    fn can_block(&self, _arg: &Vec<ArgumentDefinition>, _env: &Scope) -> bool {
+    fn can_block(&self, _arg: &Vec<ArgumentDefinition>, _context: &mut CompileContext) -> bool {
         true
     }
 
@@ -148,7 +152,7 @@ impl Closure {
     fn push_arguments_to_env(
         signature: &Option<Vec<Parameter>>,
         mut arguments: Vec<Argument>,
-        env: &Scope) -> CrushResult<()> {
+        context: &mut CompileContext) -> CrushResult<()> {
         if let Some(signature) = signature {
             let mut named = HashMap::new();
             let mut unnamed = Vec::new();
@@ -162,21 +166,21 @@ impl Closure {
             }
             let mut unnamed_name = None;
             let mut named_name = None;
-            let mut v = Vec::new();
 
             for param in signature {
                 match param {
                     Parameter::Parameter(name, value_type, default) => {
-                        if let (_, Value::Type(value_type)) = value_type.compile(&mut v, env)? {
+                        if let (_, Value::Type(value_type)) = value_type.compile(context)? {
                             if named.contains_key(name.as_ref()) {
                                 let value = named.remove(name.as_ref()).unwrap();
                                 if !value_type.is(&value) {
                                     return argument_error("Wrong parameter type");
                                 }
-                                env.redeclare(name.as_ref(), value)?;
+                                context.env.redeclare(name.as_ref(), value)?;
                             } else {
                                 if let Some(default) = default {
-                                    env.redeclare(name.as_ref(), default.compile(&mut v, env)?.1)?;
+                                    let env = context.env.clone();
+                                    env.redeclare(name.as_ref(), default.compile(context)?.1)?;
                                 } else {
                                     return argument_error("Missing variable!!!");
                                 }
@@ -201,7 +205,7 @@ impl Closure {
             }
 
             if let Some(unnamed_name) = unnamed_name {
-                env.redeclare(
+                context.env.redeclare(
                     unnamed_name.as_ref(),
                     Value::List(List::new(ValueType::Any, unnamed)))?;
             } else {
@@ -215,7 +219,7 @@ impl Closure {
                 for (k, v) in named {
                     d.insert(Value::string(&k), v)?;
                 }
-                env.redeclare(named_name.as_ref(), Value::Dict(d))?;
+                context.env.redeclare(named_name.as_ref(), Value::Dict(d))?;
             } else {
                 if !named.is_empty() {
                     return argument_error("No target for extra named arguments");
@@ -225,7 +229,7 @@ impl Closure {
             for arg in arguments.drain(..) {
                 match arg.argument_type {
                     Some(name) => {
-                        env.redeclare(name.as_ref(), arg.value)?;
+                        context.env.redeclare(name.as_ref(), arg.value)?;
                     }
                     None => {
                         return argument_error("No target for unnamed arguments");

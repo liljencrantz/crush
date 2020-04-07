@@ -10,9 +10,8 @@ use crate::{
     lang::table::ColumnType,
     lang::errors::CrushResult,
 };
-use crate::lang::stream::{Readable, ValueSender, empty_channel, channels};
+use crate::lang::stream::{Readable, empty_channel, channels};
 use crate::lang::errors::error;
-use crate::lang::scope::Scope;
 use crate::lang::table::ColumnVec;
 use crate::lang::execution_context::ExecutionContext;
 
@@ -34,8 +33,7 @@ pub struct Config {
 pub fn run(
     config: Config,
     mut input: Box<dyn Readable>,
-    sender: ValueSender,
-    env: &Scope,
+    context: ExecutionContext,
 ) -> CrushResult<()> {
     let input_type = input.types().clone();
     let mut output_type = if config.copy {
@@ -67,8 +65,9 @@ pub fn run(
                                 input: empty_channel(),
                                 output: sender,
                                 arguments,
-                                env: env.clone(),
+                                env: context.env.clone(),
                                 this: None,
+                                printer: context.printer.clone(),
                             }
                         )?;
                         receiver.recv()?
@@ -91,7 +90,7 @@ pub fn run(
         Err(_) => return Ok(()),
     }
 
-    let output = sender.initialize(output_type)?;
+    let output = context.output.initialize(output_type)?;
     output.send(Row::new(first_result))?;
 
     loop {
@@ -117,8 +116,9 @@ pub fn run(
                                     input: empty_channel(),
                                     output: sender,
                                     arguments,
-                                    env: env.clone(),
+                                    env: context.env.clone(),
                                     this: None,
+                                    printer: context.printer.clone(),
                                 }
                             )?;
                             receiver.recv()?
@@ -144,29 +144,27 @@ pub fn run(
 
 fn perform_for(
     input: Box<dyn Readable>,
-    sender: ValueSender,
-    mut arguments: Vec<Argument>,
-    env: &Scope,
+    mut context: ExecutionContext,
 ) -> CrushResult<()> {
     let mut copy = false;
     let mut columns = Vec::new();
 
-    if arguments.len() == 0 {
+    if context.arguments.len() == 0 {
         return argument_error("No columns selected");
     }
 
-    if let Value::Glob(g) = &arguments[0].value {
-        if arguments[0].argument_type.is_none() && g.to_string() == "%" {
+    if let Value::Glob(g) = &context.arguments[0].value {
+        if context.arguments[0].argument_type.is_none() && g.to_string() == "%" {
             copy = true;
-            arguments.remove(0);
+            context.arguments.remove(0);
         } else {
             return argument_error("Invalid argument");
         }
     }
 
     let input_type = input.types();
-    for a in arguments {
-        match (a.argument_type.as_deref(), a.value) {
+    for a in &context.arguments {
+        match (a.argument_type.as_deref(), a.value.clone()) {
             (Some(name), Value::Command(closure)) => {
                 match (copy, input_type.find_str(name)) {
                     (true, Ok(idx)) => columns.push((Location::Replace(idx), Source::Closure(closure))),
@@ -186,12 +184,12 @@ fn perform_for(
         }
     }
 
-    run(Config { columns, copy }, input, sender, env)
+    run(Config { columns, copy }, input, context)
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    match context.input.recv()?.readable() {
-        Some(r) => perform_for(r, context.output, context.arguments, &context.env),
+    match context.input.clone().recv()?.readable() {
+        Some(r) => perform_for(r, context),
         _ => error("Expected a stream"),
     }
 }

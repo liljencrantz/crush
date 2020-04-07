@@ -1,26 +1,22 @@
-use crate::{
-    lang::argument::Argument,
-    lang::value::Value,
-};
-use crate::lang::scope::Scope;
+use crate::lang::argument::Argument;
+use crate::lang::value::Value;
 use crate::lang::{table::TableReader, list::ListReader, r#struct::Struct, dict::DictReader, command::CrushCommand};
 use crate::lang::errors::{argument_error, CrushResult};
 use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use crate::lang::stream::{empty_channel, Readable, black_hole};
 
-pub struct Config {
+pub fn run(
+    context: ExecutionContext,
     body: Box<dyn CrushCommand>,
-    env: Scope,
     name: Option<Box<str>>,
-}
-
-pub fn run(config: Config, mut input: impl Readable) -> CrushResult<()> {
-    let env = config.env.create_child(&config.env, true);
+    mut input: impl Readable,
+) -> CrushResult<()> {
     loop {
         match input.read() {
             Ok(line) => {
+                let env = context.env.create_child(&context.env, true);
                 let arguments =
-                    match &config.name {
+                    match &name {
                         None => {
                             line.into_vec()
                                 .drain(..)
@@ -39,12 +35,13 @@ pub fn run(config: Config, mut input: impl Readable) -> CrushResult<()> {
                                 )))]
                         }
                     };
-                config.body.invoke(ExecutionContext {
+                body.invoke(ExecutionContext {
                     input: empty_channel(),
                     output: black_hole(),
                     arguments,
                     env: env.clone(),
                     this: None,
+                    printer: context.printer.clone(),
                 })?;
                 if env.is_stopped() {
                     break;
@@ -57,24 +54,23 @@ pub fn run(config: Config, mut input: impl Readable) -> CrushResult<()> {
 }
 
 pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
-    context.output.initialize(vec![])?;
+    context.output.clone().initialize(vec![])?;
     context.arguments.check_len(2)?;
 
     let body = context.arguments.command(1)?;
     let iter = context.arguments.remove(0);
-    let env = context.env;
     let t = iter.value.value_type();
     let name = iter.argument_type.clone();
 
     match (iter.argument_type.as_deref(), iter.value) {
         (_, Value::TableStream(o)) =>
-            run(Config { body, env, name, }, o),
+            run(context, body, name, o),
         (_, Value::Table(r)) =>
-            run(Config { body, env, name, }, TableReader::new(r)),
+            run(context, body, name, TableReader::new(r)),
         (Some(name), Value::List(l)) =>
-            run(Config { body, env, name: None, }, ListReader::new(l, name)),
+            run(context, body, None, ListReader::new(l, name)),
         (_, Value::Dict(l)) =>
-            run(Config { body, env, name }, DictReader::new(l)),
+            run(context, body, name, DictReader::new(l)),
         _ => argument_error(format!("Can not iterate over value of type {}", t.to_string()).as_str()),
     }
 }

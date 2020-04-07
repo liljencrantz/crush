@@ -16,19 +16,20 @@ use crate::lang::stream::{ValueSender, ValueReceiver};
 use std::collections::HashSet;
 use crate::lang::errors::Kind::InvalidData;
 use crate::lang::table::ColumnType;
+use crate::lang::printer::Printer;
 
 pub struct Config {
     input: Box<dyn BinaryReader>,
 }
 
-fn parse(mut arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> {
+fn parse(mut arguments: Vec<Argument>, input: ValueReceiver, printer: &Printer) -> CrushResult<Config> {
     let reader = match arguments.len() {
         0 => match input.recv()? {
             Value::BinaryStream(b) => Ok(b),
             Value::Binary(b) => Ok(BinaryReader::vec(&b)),
             _ => argument_error("Expected either a file to read or binary pipe input"),
         },
-        _ => BinaryReader::paths(arguments.files()?),
+        _ => BinaryReader::paths(arguments.files(printer)?),
     };
     Ok(Config {
         input: reader?,
@@ -110,6 +111,6 @@ fn run(cfg: Config, output: ValueSender) -> CrushResult<()> {
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    let cfg = parse(context.arguments, context.input)?;
+    let cfg = parse(context.arguments, context.input, &context.printer)?;
     run(cfg, context.output)
 }

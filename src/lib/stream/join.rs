@@ -146,12 +146,10 @@ pub fn run(
 ) -> CrushResult<()> {
     let mut v = row.into_vec();
     match (v.replace(config.left_table_idx, Value::Integer(0)).readable(), v.replace(config.right_table_idx, Value::Integer(0)).readable()) {
-        (Some(mut l), Some(mut r)) => {
-            do_join(&config, l.as_mut(), r.as_mut(), &output)?;
-        }
+        (Some(mut l), Some(mut r)) =>
+            do_join(&config, l.as_mut(), r.as_mut(), &output),
         _ => panic!("Wrong row format"),
     }
-    Ok(())
 }
 
 fn get_output_type(input_type: &Vec<ColumnType>, cfg: &Config) -> Result<Vec<ColumnType>, CrushError> {

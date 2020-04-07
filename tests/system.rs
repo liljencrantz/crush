@@ -13,7 +13,8 @@ fn run_all_tests() {
                 .output()
                 .expect("failed to execute process");
             let output_name = name.clone() + ".output";
-            let expected_output = fs::read_to_string(output_name.as_str()).expect("failed to read output file");
+            let expected_output = fs::read_to_string(output_name.as_str())
+                .expect(format!("failed to read output file {}", output_name).as_str());
             assert_eq!(String::from_utf8_lossy(&output.stdout), expected_output, "\n\nError while running file {}", name.as_str());
         }
     }

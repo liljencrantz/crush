@@ -7,7 +7,7 @@ use crate::lang::scope::Scope;
 use crate::lang::job::Job;
 use crate::lang::value::{ValueDefinition, Value};
 use closure::Closure;
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::{ExecutionContext, CompileContext};
 use crate::lang::help::Help;
 use std::collections::HashMap;
 use crate::lang::serialization::{SerializationState, DeserializationState};
@@ -15,7 +15,7 @@ use crate::lang::serialization::model::{Element, element, Strings};
 
 pub trait CrushCommand : Help {
     fn invoke(&self, context: ExecutionContext) -> CrushResult<()>;
-    fn can_block(&self, arguments: &Vec<ArgumentDefinition>, env: &Scope) -> bool;
+    fn can_block(&self, arguments: &Vec<ArgumentDefinition>, context: &mut CompileContext) -> bool;
     fn name(&self) -> &str;
     fn clone(&self) -> Box<dyn CrushCommand +  Send + Sync>;
     fn help(&self) -> &dyn Help;
@@ -138,7 +138,7 @@ impl CrushCommand for SimpleCommand {
 
     fn name(&self) -> &str { "command" }
 
-    fn can_block(&self, _arg: &Vec<ArgumentDefinition>, _env: &Scope) -> bool {
+    fn can_block(&self, _arg: &Vec<ArgumentDefinition>, _context: &mut CompileContext) -> bool {
         self.can_block
     }
 
@@ -204,9 +204,9 @@ impl CrushCommand for ConditionCommand {
 
     fn name(&self) -> &str { "conditional command" }
 
-    fn can_block(&self, arguments: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
+    fn can_block(&self, arguments: &Vec<ArgumentDefinition>, context: &mut CompileContext) -> bool {
         for arg in arguments {
-            if arg.value.can_block(arguments, env) {
+            if arg.value.can_block(arguments, context) {
                 return true;
             }
         }

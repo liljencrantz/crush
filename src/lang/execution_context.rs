@@ -13,6 +13,8 @@ use crate::lang::r#struct::Struct;
 use regex::Regex;
 use chrono::{DateTime, Local, Duration};
 use crate::lang::table::Table;
+use crate::lang::printer::Printer;
+use crate::lang::job::JobJoinHandle;
 
 pub trait ArgumentVector {
     fn check_len(&self, len: usize) -> CrushResult<()>;
@@ -26,7 +28,7 @@ pub trait ArgumentVector {
     fn glob(&mut self, idx: usize) -> CrushResult<Glob>;
     fn r#struct(&mut self, idx: usize) -> CrushResult<Struct>;
     fn bool(&mut self, idx: usize) -> CrushResult<bool>;
-    fn files(&mut self) -> CrushResult<Vec<Box<Path>>>;
+    fn files(&mut self, printer: &Printer) -> CrushResult<Vec<Box<Path>>>;
     fn optional_integer(&mut self) -> CrushResult<Option<i128>>;
 }
 
@@ -70,10 +72,10 @@ impl ArgumentVector for Vec<Argument> {
     argument_getter!(r#struct, Struct, Struct, "struct");
     argument_getter!(bool, bool, Bool, "bool");
 
-    fn files(&mut self) -> CrushResult<Vec<Box<Path>>> {
+    fn files(&mut self, printer: &Printer) -> CrushResult<Vec<Box<Path>>> {
         let mut files = Vec::new();
         for a in self.drain(..) {
-            a.value.file_expand(&mut files)?;
+            a.value.file_expand(&mut files, printer)?;
         }
         Ok(files)
     }
@@ -101,12 +103,113 @@ impl ArgumentVector for Vec<Argument> {
     }
 }
 
+pub struct CompileContext {
+    pub dependencies: Vec<JobJoinHandle>,
+    pub env: Scope,
+    pub printer: Printer,
+}
+
+impl CompileContext {
+    pub fn new(
+        env: Scope,
+        printer: Printer,
+    ) -> CompileContext {
+        CompileContext {
+            dependencies: Vec::new(),
+            env,
+            printer,
+        }
+    }
+
+    pub fn job_context(
+        &self,
+        input: ValueReceiver,
+        output: ValueSender,
+    ) -> JobContext {
+        JobContext::new(input, output, self.env.clone(), self.printer.clone())
+    }
+
+    pub fn with_scope(
+        &self,
+        env: &Scope) -> CompileContext {
+        CompileContext {
+            dependencies: vec![],
+            env: env.clone(),
+            printer: self.printer.clone(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct JobContext {
+    pub input: ValueReceiver,
+    pub output: ValueSender,
+    pub env: Scope,
+    pub printer: Printer,
+}
+
+impl JobContext {
+    pub fn new(
+        input: ValueReceiver,
+        output: ValueSender,
+        env: Scope,
+        printer: Printer,
+    ) -> JobContext {
+        JobContext {
+            input,
+            output,
+            env,
+            printer,
+        }
+    }
+
+    pub fn with_io(
+        &self,
+        input: ValueReceiver,
+        output: ValueSender) -> JobContext {
+        JobContext {
+            input,
+            output,
+            env: self.env.clone(),
+            printer: self.printer.clone(),
+        }
+    }
+
+    pub fn compile_context(&self) -> CompileContext {
+        CompileContext::new(self.env.clone(), self.printer.clone())
+    }
+
+    pub fn execution_context(
+        &self,
+        arguments: Vec<Argument>,
+        this: Option<Value>,
+    ) -> ExecutionContext {
+        ExecutionContext {
+            arguments,
+            this,
+            input: self.input.clone(),
+            output: self.output.clone(),
+            printer: self.printer.clone(),
+            env: self.env.clone(),
+        }
+    }
+}
+
 pub struct ExecutionContext {
     pub input: ValueReceiver,
     pub output: ValueSender,
     pub arguments: Vec<Argument>,
     pub env: Scope,
     pub this: Option<Value>,
+    pub printer: Printer,
+}
+
+impl ExecutionContext {
+
+    pub fn compile_context(&self) -> CompileContext {
+        CompileContext::new(self.env.clone(), self.printer.clone())
+    }
+
 }
 
 pub trait This {

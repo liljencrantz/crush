@@ -1,1 +1,1 @@
-find example_data/tree | select "file" | sort %file
+find example_data/tree | select ^file | sort ^file

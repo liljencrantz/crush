@@ -2,10 +2,9 @@ use crate::lang::{execution_context::ExecutionContext, job::JobJoinHandle, comma
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, value::Value};
 use crate::lang::scope::Scope;
 use crate::lang::errors::{error, CrushResult, Kind};
-use crate::lang::printer::printer;
-use crate::lang::stream::{ValueReceiver, ValueSender};
 use crate::util::thread::{handle, build};
 use std::path::Path;
+use crate::lang::execution_context::{JobContext, CompileContext};
 
 #[derive(Clone)]
 pub struct CommandInvocation {
@@ -13,7 +12,7 @@ pub struct CommandInvocation {
     arguments: Vec<ArgumentDefinition>,
 }
 
-fn resolve_external_command(name: &str, env: Scope) -> Option<Box<Path>> {
+fn resolve_external_command(name: &str, env: &Scope) -> Option<Box<Path>> {
     if let Value::List(path) = env.get("cmd_path")? {
         let path_vec = path.dump();
         for val in path_vec {
@@ -31,9 +30,9 @@ fn resolve_external_command(name: &str, env: Scope) -> Option<Box<Path>> {
     None
 }
 
-fn arg_can_block(local_arguments: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
+fn arg_can_block(local_arguments: &Vec<ArgumentDefinition>, context: &mut CompileContext) -> bool {
     for arg in local_arguments {
-        if arg.value.can_block(local_arguments, env) {
+        if arg.value.can_block(local_arguments, context) {
             return true;
         }
     }
@@ -56,7 +55,7 @@ impl CommandInvocation {
         }
     }
 
-        pub fn arguments(&self) -> &Vec<ArgumentDefinition> {
+    pub fn arguments(&self) -> &Vec<ArgumentDefinition> {
         &self.arguments
     }
 
@@ -88,74 +87,58 @@ impl CommandInvocation {
         }
     }
 */
-    fn make_context(
-        deps: &mut Vec<JobJoinHandle>,
+    fn execution_context(
         local_arguments: Vec<ArgumentDefinition>,
-        local_env: Scope,
         mut this: Option<Value>,
-        input: ValueReceiver,
-        output: ValueSender,
+        job_context: JobContext,
     ) -> CrushResult<ExecutionContext> {
-        let (arguments, arg_this) = local_arguments
-            .compile(deps, &local_env)?;
+        let (arguments, arg_this) =
+            local_arguments.compile(&mut job_context.compile_context())?;
 
         if arg_this.is_some() {
             this = arg_this;
         }
 
-        Ok(ExecutionContext {
-            input,
-            output,
-            arguments,
-            env: local_env,
-            this,
-        })
+        Ok(job_context.execution_context(arguments, this))
     }
 
-    pub fn can_block(&self, arg: &Vec<ArgumentDefinition>, env: &Scope) -> bool {
-        let cmd = self.command.compile_non_blocking(env);
+    pub fn can_block(&self, arg: &Vec<ArgumentDefinition>, context: &mut CompileContext) -> bool {
+        let cmd = self.command.compile_internal(context, false);
         match cmd {
             Ok((_, Value::Command(command))) =>
-                command.can_block(arg, env) || arg_can_block(&self.arguments, env),
-
+                command.can_block(arg, context) || arg_can_block(&self.arguments, context),
             _ => true,
         }
     }
 
-    pub fn invoke(
-        &self,
-        env: &Scope,
-        input: ValueReceiver,
-        output: ValueSender) -> CrushResult<JobJoinHandle> {
-        match self.command.compile_non_blocking(env) {
+    pub fn invoke(&self, context: JobContext) -> CrushResult<JobJoinHandle> {
+        match self.command.compile_internal(&mut context.compile_context(), false) {
             Ok((this, value)) => {
-                invoke_value(this, value, self.arguments.clone(), env, input, output)
+                invoke_value(this, value, self.arguments.clone(), context)
             }
             Err(err) => {
                 if err.kind == Kind::BlockError {
                     let cmd = self.command.clone();
-                    let e = env.clone();
                     let arguments = self.arguments.clone();
                     Ok(handle(build(self.command.to_string().as_str()).spawn(
                         move || {
-                            let mut dep = Vec::new();
-                            match cmd.compile(&mut dep, &e) {
+                            match cmd.compile(&mut context.compile_context()) {
                                 Ok((this, value)) => {
-                                    printer().handle_error(invoke_value(this, value, arguments, &e, input, output));
+                                    context.printer.handle_error(invoke_value(this, value, arguments, context.clone()));
                                 }
 
                                 Err(err) => {
                                     if let ValueDefinition::Label(p) = &cmd {
-                                        printer().handle_error(try_external_command(&p, arguments, &e, input, output));
+                                        context.printer.handle_error(try_external_command(&p, arguments, context.clone()));
                                     } else {
-                                        printer().handle_error::<()>(Err(err));
+                                        context.printer.handle_error::<()>(Err(err));
                                     }
                                 }
                             }
                         })))
                 } else {
                     if let ValueDefinition::Label(p) = &self.command {
-                        try_external_command(&p, self.arguments.clone(), env, input, output)
+                        try_external_command(&p, self.arguments.clone(), context)
                     } else {
                         Err(err)
                     }
@@ -169,28 +152,25 @@ fn invoke_value(
     this: Option<Value>,
     value: Value,
     local_arguments: Vec<ArgumentDefinition>,
-    env: &Scope,
-    input: ValueReceiver,
-    output: ValueSender) -> CrushResult<JobJoinHandle> {
-    let local_env = env.clone();
+    context: JobContext) -> CrushResult<JobJoinHandle> {
     match value {
         Value::Command(command) =>
-            invoke_command(command, this, local_arguments, local_env, input, output),
+            invoke_command(command, this, local_arguments, context),
         Value::File(f) =>
             if local_arguments.len() == 0 {
                 let meta = f.metadata();
                 if meta.is_ok() && meta.unwrap().is_dir() {
                     invoke_command(
-                        env.global_static_cmd(vec!["global", "traversal", "cd"])?,
+                        context.env.global_static_cmd(vec!["global", "traversal", "cd"])?,
                         None,
                         vec![ArgumentDefinition::unnamed(ValueDefinition::Value(Value::File(f)))],
-                        local_env, input, output)
+                        context)
                 } else {
                     invoke_command(
-                        env.global_static_cmd(vec!["global", "input", "val"])?,
+                        context.env.global_static_cmd(vec!["global", "input", "val"])?,
                         None,
                         vec![ArgumentDefinition::unnamed(ValueDefinition::Value(Value::File(f)))],
-                        local_env, input, output)
+                        context)
                 }
             } else {
                 error(format!("Not a command {}", f.to_str().unwrap_or("<invalid filename>")).as_str())
@@ -199,25 +179,25 @@ fn invoke_value(
             match t.fields().get(&Box::from("__call_type__")) {
                 None =>
                     invoke_command(
-                        env.global_static_cmd(vec!["global", "input", "val"])?,
+                        context.env.global_static_cmd(vec!["global", "input", "val"])?,
                         None,
                         vec![ArgumentDefinition::unnamed(ValueDefinition::Value(Value::Type(t)))],
-                        local_env, input, output),
+                        context),
                 Some(call) =>
                     invoke_command(
                         call.as_ref().clone(),
                         this,
                         local_arguments,
-                        local_env, input, output),
+                        context),
             }
         }
         _ =>
             if local_arguments.len() == 0 {
                 invoke_command(
-                    env.global_static_cmd(vec!["global", "input", "val"])?,
+                    context.env.global_static_cmd(vec!["global", "input", "val"])?,
                     None,
                     vec![ArgumentDefinition::unnamed(ValueDefinition::Value(value))],
-                    local_env, input, output)
+                    context)
             } else {
                 error(format!("Not a command {}", value.to_string()).as_str())
             }
@@ -228,41 +208,36 @@ fn invoke_command(
     action: Box<dyn CrushCommand + Sync + Send>,
     this: Option<Value>,
     local_arguments: Vec<ArgumentDefinition>,
-    local_env: Scope,
-    input: ValueReceiver,
-    output: ValueSender) -> CrushResult<JobJoinHandle> {
-    if !action.can_block(&local_arguments, &local_env) && !arg_can_block(&local_arguments, &local_env) {
-        let mut deps: Vec<JobJoinHandle> = Vec::new();
-        let context = CommandInvocation::make_context(
-            &mut deps,
+    context: JobContext) -> CrushResult<JobJoinHandle> {
+    if !action.can_block(&local_arguments, &mut context.compile_context()) && !arg_can_block(&local_arguments, &mut context.compile_context()) {
+        let new_context = CommandInvocation::execution_context(
             local_arguments,
-            local_env,
             this,
-            input, output)?;
-        printer().handle_error(action.invoke(context));
-        Ok(JobJoinHandle::Many(deps))
+            context.clone())?;
+        context.printer.handle_error(action.invoke(new_context));
+        Ok(JobJoinHandle::Many(vec![]))
     } else {
         Ok(handle(build(action.name()).spawn(
             move || {
-                let mut deps: Vec<JobJoinHandle> = Vec::new();
-                let context = CommandInvocation::make_context(
-                    &mut deps,
+                let res = CommandInvocation::execution_context(
                     local_arguments,
-                    local_env,
                     this,
-                    input, output);
-                if let Ok(ctx) = context {
-                    printer().handle_error(action.invoke(ctx));
+                    context.clone());
+                if let Ok(ctx) = res {
+                    let p = ctx.printer.clone();
+                    p.handle_error(action.invoke(ctx));
                 } else {
-                    printer().handle_error(context);
+                    context.printer.handle_error(res);
                 }
             })))
     }
 }
 
-fn try_external_command(p: &str, mut arguments: Vec<ArgumentDefinition>, env: &Scope, input: ValueReceiver,
-                        output: ValueSender) -> CrushResult<JobJoinHandle> {
-    match resolve_external_command(p, env.clone()) {
+fn try_external_command(
+    p: &str,
+    mut arguments: Vec<ArgumentDefinition>,
+    context: JobContext) -> CrushResult<JobJoinHandle> {
+    match resolve_external_command(p, &context.env) {
         None => error(format!("Unknown command name {}", p).as_str()),
         Some(path) => {
             arguments.insert(
@@ -270,10 +245,10 @@ fn try_external_command(p: &str, mut arguments: Vec<ArgumentDefinition>, env: &S
                 ArgumentDefinition::unnamed(ValueDefinition::Value(Value::File(path))));
             let cmd = CommandInvocation {
                 command: ValueDefinition::Value(Value::Command(
-                    env.global_static_cmd(vec!["global", "control", "cmd"])?)),
+                    context.env.global_static_cmd(vec!["global", "control", "cmd"])?)),
                 arguments,
             };
-            cmd.invoke(env, input, output)
+            cmd.invoke(context)
         }
     }
 }

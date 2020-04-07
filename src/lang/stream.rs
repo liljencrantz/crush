@@ -42,7 +42,7 @@ pub struct ValueReceiver {
 }
 
 impl ValueReceiver {
-    pub fn recv(self) -> CrushResult<Value> {
+    pub fn recv(&self) -> CrushResult<Value> {
         to_crush_error(self.receiver.recv())
     }
 }

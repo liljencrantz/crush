@@ -12,7 +12,7 @@ use lazy_static::lazy_static;
 
 use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use crate::util::user_map::{create_user_map, UserMap};
-use crate::lang::{argument::Argument, value::Value, value::ValueType, table::ColumnType, table::Row};
+use crate::lang::{value::Value, value::ValueType, table::ColumnType, table::Row};
 use crate::lang::errors::{error, CrushError, CrushResult, to_crush_error};
 use crate::lang::stream::OutputStream;
 
@@ -119,22 +119,21 @@ pub struct Config {
     output: OutputStream,
 }
 
-fn parse(output: OutputStream, mut arguments: Vec<Argument>, recursive: bool) -> Result<Config, CrushError> {
-    if arguments.is_empty() {
+fn parse(mut context: ExecutionContext, recursive: bool) -> Result<Config, CrushError> {
+    let output = context.output.initialize(OUTPUT_TYPE.clone())?;
+    if context.arguments.is_empty() {
         Ok(Config { dirs: vec![Box::from(Path::new("."))], recursive, output })
     } else {
-    Ok(Config { dirs: arguments.files()?, recursive, output })
+        Ok(Config { dirs: context.arguments.files(&context.printer)?, recursive, output })
     }
 }
 
 pub fn perform_ls(context: ExecutionContext) -> CrushResult<()> {
-    let output = context.output.initialize(OUTPUT_TYPE.clone())?;
-    let cfg = parse(output, context.arguments, false)?;
+    let cfg = parse(context, false)?;
     run(cfg)
 }
 
 pub fn perform_find(context: ExecutionContext) -> CrushResult<()> {
-    let output = context.output.initialize(OUTPUT_TYPE.clone())?;
-    let cfg = parse(output, context.arguments, true)?;
+    let cfg = parse(context, true)?;
     run(cfg)
 }

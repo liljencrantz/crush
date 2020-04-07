@@ -3,7 +3,6 @@ use std::io::{BufReader, BufRead};
 use crate::{
     lang::errors::argument_error,
     lang::{
-        argument::Argument,
         table::Row,
         table::ColumnType,
         value::ValueType,
@@ -11,7 +10,6 @@ use crate::{
     },
     lang::stream::OutputStream,
 };
-use crate::lang::stream::ValueReceiver;
 use crate::lang::errors::{CrushResult, to_crush_error};
 use crate::lang::binary::BinaryReader;
 
@@ -29,22 +27,19 @@ fn run(input: Box<dyn BinaryReader>, output: OutputStream) -> CrushResult<()> {
     Ok(())
 }
 
-fn parse(mut arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
-    match arguments.len() {
+
+pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
+    let output = context.output.initialize(vec![ColumnType::new("line", ValueType::String)])?;
+    let file = match context.arguments.len() {
         0 => {
-            let v = input.recv()?;
+            let v = context.input.recv()?;
             match v {
                 Value::BinaryStream(b) => Ok(b),
                 Value::Binary(b) => Ok(BinaryReader::vec(&b)),
                 _ => argument_error("Expected either a file to read or binary pipe input"),
             }
         }
-        _ => BinaryReader::paths(arguments.files()?),
-    }
-}
-
-pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    let output = context.output.initialize(vec![ColumnType::new("line", ValueType::String)])?;
-    let file = parse(context.arguments, context.input)?;
+        _ => BinaryReader::paths(context.arguments.files(&context.printer)?),
+    }?;
     run(file, output)
 }

@@ -13,10 +13,10 @@ use std::{
     io::prelude::*,
 };
 
-use crate::lang::printer::printer;
 use crate::lang::{table::ColumnType, binary::BinaryReader};
-use crate::lang::errors::{CrushResult, to_crush_error};
+use crate::lang::errors::{CrushResult, to_crush_error, error};
 use crate::lang::stream::ValueReceiver;
+use crate::lang::printer::Printer;
 
 pub struct Config {
     separator: char,
@@ -26,7 +26,7 @@ pub struct Config {
     input: Box<dyn BinaryReader>,
 }
 
-fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> {
+fn parse(arguments: Vec<Argument>, input: ValueReceiver, printer: &Printer) -> CrushResult<Config> {
     let mut separator = ',';
     let mut columns = Vec::new();
     let mut skip_head = 0;
@@ -72,7 +72,7 @@ fn parse(arguments: Vec<Argument>, input: ValueReceiver) -> CrushResult<Config> 
                 _ => argument_error("Expected either a file to read or binary pipe input"),
             }
         }
-        _ => BinaryReader::paths(files.files()?),
+        _ => BinaryReader::paths(files.files(printer)?),
     }?;
 
     Ok(Config {
@@ -113,7 +113,7 @@ fn run(cfg: Config, output: OutputStream) -> CrushResult<()> {
             .collect();
 
         if split.len() != columns.len() {
-            printer().error("csv: Wrong number of columns in CSV file");
+            return error("csv: Wrong number of columns in CSV file");
         }
 
         if let Some(trim) = trim {
@@ -128,7 +128,7 @@ fn run(cfg: Config, output: OutputStream) -> CrushResult<()> {
                 let _ = output.send(Row::new(cells));
             }
             Err(err) => {
-                printer().crush_error(err);
+                return Err(err);
             }
         }
     }
@@ -136,7 +136,7 @@ fn run(cfg: Config, output: OutputStream) -> CrushResult<()> {
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    let cfg = parse(context.arguments, context.input)?;
+    let cfg = parse(context.arguments, context.input, &context.printer)?;
     let output = context.output.initialize(
         cfg.columns.clone())?;
     run(cfg, output)

@@ -22,7 +22,7 @@ mod tests {
         for j in 0..10 {
             println!("{}", j);
             let mut d = HashMap::new();
-            for _ in 0..1_000_000 {
+            for _ in 0..10_000 {
                 let arc: Arc<String> = Arc::from("hello".to_string().repeat(10));
                 let id = arc.id();
                 println!("{}", id);

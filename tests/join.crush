@@ -1,4 +1,4 @@
-home:=(csv example_data/home.csv name=type:string country=type:string)
-age:=(csv example_data/age.csv name=type:string age=type:integer)
+home:=(csv example_data/home.csv name=string country=string)
+age:=(csv example_data/age.csv name=string age=integer)
 
-struct l=home r=age | join %l.name %r.name | sort %name
+data l=home r=age | join ^l:name ^r:name | sort ^name
