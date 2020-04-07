@@ -1,4 +1,5 @@
 Todo:
+Handle stderr on external commands
 Maybe rethink unnamed arguments and closure signatures
 Add background job support
 New command: which
@@ -15,17 +16,15 @@ Error source propagation
 Add command-field to CrushError
 Add source field to CrushError
 Make error printing display source of error
-Binary values can be big. Make them shared behind an Arc.
+Binary values can be big. Make them shared behind an Arc. Same with table. Maybe even String?
 In closures without a signature, put unnamed variables in the variable 'unnamed'
 Figure out how to make external commands with subcommands convenient again
 Kwargs should maybe not be a dict? How should repeated arguments be handled? We should at least preserve order...
-Len method to binary and table type
 Comparison unimplemented for dict
 Comparison unimplemented for struct
 Allow empty closures
 Missing some value serialisations and deserialisations
 Allow while-loop without body
-spawn_print_thread should not spawn new threads
 empty_channel should not create new empty channels
 Make integers overflow to arbitrary precision math
 Run an executable by giving its path
@@ -34,7 +33,6 @@ Redo waiting on JobJoinHandles
 Redo empty streams
 Add control.source command
 Flesh out seq command with support for from and step
-Add list:insert command
 Add String:join command
 Add String:lpad command
 Add String:rpad command
@@ -49,8 +47,6 @@ For single column tabular output, display it on screen it in many rows to save s
 Arbitrary precision integers?
 make file globing testable via fakes
 Add package command to create a new namespace
-Make names mandatory and unique for struct fields
-Add support for %<INTEGER> for offset based field identifiers
 Make it possible to use the pipe operator with the for command
 pbuf.parse command that takes a protobuf definition and uses it to deserialize protobuf data
 avro.parse command that deserializes avro data
