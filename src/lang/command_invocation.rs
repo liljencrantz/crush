@@ -5,6 +5,7 @@ use crate::lang::errors::{error, CrushResult, Kind};
 use crate::util::thread::{handle, build};
 use std::path::Path;
 use crate::lang::execution_context::{JobContext, CompileContext};
+use std::ops::Deref;
 
 #[derive(Clone)]
 pub struct CommandInvocation {
@@ -122,26 +123,18 @@ impl CommandInvocation {
                     let arguments = self.arguments.clone();
                     Ok(handle(build(self.command.to_string().as_str()).spawn(
                         move || {
-                            match cmd.compile(&mut context.compile_context()) {
-                                Ok((this, value)) => {
-                                    context.printer.handle_error(invoke_value(this, value, arguments, context.clone()));
-                                }
+                            match cmd.clone().compile(&mut context.compile_context()) {
+                                Ok((this, value)) =>
+                                    context.printer.handle_error(
+                                        invoke_value(this, value, arguments, context.clone())),
 
-                                Err(err) => {
-                                    if let ValueDefinition::Label(p) = &cmd {
-                                        context.printer.handle_error(try_external_command(&p, arguments, context.clone()));
-                                    } else {
-                                        context.printer.handle_error::<()>(Err(err));
-                                    }
-                                }
+                                Err(err) =>
+                                    context.printer.handle_error(
+                                        try_external_command(cmd, arguments, context.clone())),
                             }
                         })))
                 } else {
-                    if let ValueDefinition::Label(p) = &self.command {
-                        try_external_command(&p, self.arguments.clone(), context)
-                    } else {
-                        Err(err)
-                    }
+                    try_external_command(self.command.clone(), self.arguments.clone(), context)
                 }
             }
         }
@@ -234,21 +227,36 @@ fn invoke_command(
 }
 
 fn try_external_command(
-    p: &str,
+    def: ValueDefinition,
     mut arguments: Vec<ArgumentDefinition>,
     context: JobContext) -> CrushResult<JobJoinHandle> {
-    match resolve_external_command(p, &context.env) {
-        None => error(format!("Unknown command name {}", p).as_str()),
+    let (cmd, sub) = match def {
+        ValueDefinition::Label(str) => (str, None),
+        ValueDefinition::GetAttr(parent, sub) =>
+            match parent.deref() {
+                ValueDefinition::Label(str) => (str.to_string().into_boxed_str(), Some(sub)),
+                _ => return error("Not a command"),
+            }
+        _ => return error("Not a command"),
+    };
+
+    match resolve_external_command(&cmd, &context.env) {
+        None => error(format!("Unknown command name {}", cmd).as_str()),
         Some(path) => {
             arguments.insert(
                 0,
                 ArgumentDefinition::unnamed(ValueDefinition::Value(Value::File(path))));
-            let cmd = CommandInvocation {
+            if let Some(subcmd) = sub {
+                arguments.insert(
+                    1,
+                    ArgumentDefinition::unnamed(ValueDefinition::Value(Value::string(subcmd.as_ref()))));
+            }
+            let call = CommandInvocation {
                 command: ValueDefinition::Value(Value::Command(
                     context.env.global_static_cmd(vec!["global", "control", "cmd"])?)),
                 arguments,
             };
-            cmd.invoke(context)
+            call.invoke(context)
         }
     }
 }
