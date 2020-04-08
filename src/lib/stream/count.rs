@@ -11,7 +11,7 @@ fn count_rows(mut s: Box<dyn Readable>) -> Value {
             Err(_) => break,
         }
     }
-    return Value::Integer(res);
+    Value::Integer(res)
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {

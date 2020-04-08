@@ -123,7 +123,7 @@ impl dyn BinaryReader {
     }
 
     pub fn vec(vec: &Vec<u8>) -> Box<dyn BinaryReader + Send + Sync> {
-        return Box::from(VecReader { vec: vec.clone(), offset: 0 });
+        Box::from(VecReader { vec: vec.clone(), offset: 0 })
     }
 }
 

@@ -70,7 +70,7 @@ pub fn run(
             Err(_) => break,
         }
     }
-    return Ok(());
+    Ok(())
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {

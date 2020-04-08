@@ -12,7 +12,7 @@ pub enum JobJoinHandle {
 
 impl JobJoinHandle {
     pub fn join(self, printer: &Printer) {
-        return match self {
+        match self {
             JobJoinHandle::Async(a) => match a.join() {
                 Ok(_) => {},
                 Err(_) => printer.error("Unknown error while waiting for command to exit"),
@@ -22,7 +22,7 @@ impl JobJoinHandle {
                     j.join(printer);
                 }
             }
-        };
+        }
     }
 }
 

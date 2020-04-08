@@ -83,7 +83,7 @@ fn is_text(buff: &[u8]) -> bool {
             c += 1;
         }
     }
-    return (c as f64) / (buff.len() as f64) > 0.8;
+    (c as f64) / (buff.len() as f64) > 0.8
 }
 
 impl PrettyPrinter {

@@ -62,7 +62,7 @@ pub fn run(
             }
         }
     }
-    return Ok(());
+    Ok(())
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
