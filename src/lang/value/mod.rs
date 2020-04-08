@@ -245,6 +245,8 @@ impl Value {
         match (&self, &new_type) {
             (Value::Integer(i), ValueType::Bool) =>
                 return Ok(Value::Bool(if *i == 0 { false } else { true })),
+            (Value::Float(f), ValueType::Integer) =>
+                return Ok(Value::Integer(*f as i128)),
             _ => {}
         }
 
