@@ -51,13 +51,13 @@ fn parse(mut arguments: Vec<Argument>) -> CrushResult<Config> {
             _ => { return argument_error("Unknown argument"); }
         }
     }
-    return Ok(Config {
+    Ok(Config {
         url: demand(url, "url")?.to_string(),
         method,
         headers,
         cache,
         body: form,
-    });
+    })
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {

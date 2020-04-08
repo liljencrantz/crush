@@ -49,7 +49,7 @@ pub fn run(condition: Box<dyn CrushCommand + Send + Sync>, input: &mut dyn Reada
             Err(_) => break,
         }
     }
-    return Ok(());
+    Ok(())
 }
 
 pub fn parse(_input_type: &Vec<ColumnType>,

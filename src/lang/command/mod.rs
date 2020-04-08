@@ -184,7 +184,7 @@ impl Help for SimpleCommand {
 
 impl std::cmp::PartialEq for SimpleCommand {
     fn eq(&self, _other: &SimpleCommand) -> bool {
-        return false;
+        false
     }
 }
 
@@ -254,7 +254,7 @@ impl Help for ConditionCommand {
 
 impl std::cmp::PartialEq for ConditionCommand {
     fn eq(&self, _other: &ConditionCommand) -> bool {
-        return false;
+        false
     }
 }
 

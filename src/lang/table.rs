@@ -53,7 +53,7 @@ impl Readable for TableReader {
             return error("EOF");
         }
         self.idx += 1;
-        return Ok(self.rows.rows.replace(self.idx - 1, Row::new(vec![Value::Integer(0)])));
+        Ok(self.rows.rows.replace(self.idx - 1, Row::new(vec![Value::Integer(0)])))
     }
 
     fn types(&self) -> &Vec<ColumnType> {

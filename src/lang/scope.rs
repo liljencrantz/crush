@@ -59,7 +59,7 @@ struct ScopeData {
 
 impl ScopeData {
     fn anonymous(parent_scope: Option<Scope>, calling_scope: Option<Scope>, is_loop: bool) -> ScopeData {
-        return ScopeData {
+        ScopeData {
             parent_scope,
             calling_scope,
             is_loop,
@@ -68,11 +68,11 @@ impl ScopeData {
             is_stopped: false,
             is_readonly: false,
             name: None,
-        };
+        }
     }
 
     fn named(parent_scope: Option<Scope>, calling_scope: Option<Scope>, is_loop: bool, name: &str) -> ScopeData {
-        return ScopeData {
+        ScopeData {
             parent_scope,
             calling_scope,
             is_loop,
@@ -81,7 +81,7 @@ impl ScopeData {
             is_stopped: false,
             is_readonly: false,
             name: Some(Box::from(name)),
-        };
+        }
     }
 }
 
@@ -314,7 +314,7 @@ impl Scope {
 
     pub fn remove_str(&self, name: &str) -> Option<Value> {
         let n = &name.split(':').map(|e: &str| Box::from(e)).collect::<Vec<Box<str>>>()[..];
-        return self.remove(n);
+        self.remove(n)
     }
 
     pub fn remove(&self, name: &[Box<str>]) -> Option<Value> {

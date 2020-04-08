@@ -20,38 +20,38 @@ pub struct CrushError {
 pub type CrushResult<T> = Result<T, CrushError>;
 
 pub fn block_error<T>() -> Result<T, CrushError> {
-    return Err(CrushError {
+    Err(CrushError {
         message: String::from("Internal error: Tried to call blocking code in a thread that may not block"),
         kind: BlockError,
-    });
+    })
 }
 
 pub fn send_error<T>() -> Result<T, CrushError> {
-    return Err(CrushError {
+    Err(CrushError {
         message: String::from("Tried to send data to a command that is no longer listening. This is almost normal behaviour and can be safely ignored."),
         kind: SendError,
-    });
+    })
 }
 
 pub fn argument_error<T>(message: &str) -> Result<T, CrushError> {
-    return Err(CrushError {
+    Err(CrushError {
         message: String::from(message),
         kind: InvalidArgument,
-    });
+    })
 }
 
 pub fn data_error<T>(message: &str) -> Result<T, CrushError> {
-    return Err(CrushError {
+    Err(CrushError {
         message: String::from(message),
         kind: InvalidData,
-    });
+    })
 }
 
 pub fn error<T>(message: &str) -> Result<T, CrushError> {
-    return Err(CrushError {
+    Err(CrushError {
         message: String::from(message),
         kind: GenericError,
-    });
+    })
 }
 
 pub fn to_crush_error<T, E: Error>(result: Result<T, E>) -> Result<T, CrushError> {

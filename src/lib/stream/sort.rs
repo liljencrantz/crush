@@ -50,7 +50,7 @@ pub fn run(config: Config, input: &mut dyn Readable, output: OutputStream) -> Cr
         output.send(row)?;
     }
 
-    return Ok(());
+    Ok(())
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
