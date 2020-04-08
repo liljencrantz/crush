@@ -9,9 +9,7 @@ use crate::lang::execution_context::ExecutionContext;
 use crate::lang::errors::{error, CrushResult, argument_error};
 use crate::lang::stream::{Readable, empty_channel, channels, black_hole};
 use crate::lang::{table::ColumnType, argument::Argument};
-use crate::lang::scope::Scope;
 use crate::lang::command::CrushCommand;
-use crate::lang::printer::Printer;
 
 fn evaluate(
     condition: Box<dyn CrushCommand + Send + Sync>,
@@ -26,7 +24,7 @@ fn evaluate(
 
     let (sender, reciever) = channels();
 
-    condition.invoke(base_context.clone().with_args(arguments, None).with_sender(sender));
+    condition.invoke(base_context.clone().with_args(arguments, None).with_sender(sender))?;
 
     match reciever.recv()? {
         Value::Bool(b) => Ok(b),

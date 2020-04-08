@@ -1,6 +1,5 @@
 use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use crate::lang::errors::CrushResult;
-use crate::lang::errors::error;
 use crate::lang::value::Value;
 
 fn execute_or_send(value: Value, context: ExecutionContext) -> CrushResult<()> {
