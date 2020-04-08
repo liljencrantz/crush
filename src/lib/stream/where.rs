@@ -7,13 +7,17 @@ use crate::{
 };
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::errors::{error, CrushResult, argument_error};
-use crate::lang::stream::{Readable, empty_channel, channels};
+use crate::lang::stream::{Readable, empty_channel, channels, black_hole};
 use crate::lang::{table::ColumnType, argument::Argument};
 use crate::lang::scope::Scope;
 use crate::lang::command::CrushCommand;
 use crate::lang::printer::Printer;
 
-fn evaluate(condition: Box<dyn CrushCommand + Send + Sync>, row: &Row, input_type: &Vec<ColumnType>, env: &Scope, printer: &Printer) -> CrushResult<bool> {
+fn evaluate(
+    condition: Box<dyn CrushCommand + Send + Sync>,
+    row: &Row,
+    input_type: &Vec<ColumnType>,
+    base_context: &ExecutionContext) -> CrushResult<bool> {
     let arguments = row.clone().into_vec()
         .drain(..)
         .zip(input_type.iter())
@@ -22,14 +26,7 @@ fn evaluate(condition: Box<dyn CrushCommand + Send + Sync>, row: &Row, input_typ
 
     let (sender, reciever) = channels();
 
-    condition.invoke(ExecutionContext {
-        input: empty_channel(),
-        output: sender,
-        arguments,
-        env: env.clone(),
-        this: None,
-        printer: printer.clone(),
-    })?;
+    condition.invoke(base_context.clone().with_args(arguments, None).with_sender(sender));
 
     match reciever.recv()? {
         Value::Bool(b) => Ok(b),
@@ -37,13 +34,14 @@ fn evaluate(condition: Box<dyn CrushCommand + Send + Sync>, row: &Row, input_typ
     }
 }
 
-pub fn run(condition: Box<dyn CrushCommand + Send + Sync>, input: &mut dyn Readable, output: OutputStream, env: Scope, printer: &Printer) -> CrushResult<()> {
+pub fn run(condition: Box<dyn CrushCommand + Send + Sync>, input: &mut dyn Readable, output: OutputStream, base_context: &ExecutionContext) -> CrushResult<()> {
+
     loop {
         match input.read() {
             Ok(row) => {
-                match evaluate(condition.clone(), &row, input.types(), &env, printer) {
+                match evaluate(condition.clone(), &row, input.types(), &base_context) {
                     Ok(val) => if val { if output.send(row).is_err() { break; } },
-                    Err(e) => printer.crush_error(e),
+                    Err(e) => base_context.printer.crush_error(e),
                 }
             }
             Err(_) => break,
@@ -63,12 +61,19 @@ pub fn parse(_input_type: &Vec<ColumnType>,
 pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()?.readable() {
         Some(mut input) => {
+            let base_context = ExecutionContext {
+                input: empty_channel(),
+                output: black_hole(),
+                arguments: vec![],
+                env: context.env.clone(),
+                this: None,
+                printer: context.printer.clone(),
+            };
             let output = context.output.initialize(input.types().clone())?;
             run(parse(input.types(), context.arguments.as_mut())?,
                 input.as_mut(),
                 output,
-                context.env,
-                &context.printer)
+                &base_context)
         }
         None => error("Expected a stream"),
     }

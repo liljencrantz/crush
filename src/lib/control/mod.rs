@@ -9,6 +9,7 @@ mod r#loop;
 mod r#for;
 
 use std::path::Path;
+
 pub fn r#break(context: ExecutionContext) -> CrushResult<()> {
     context.env.do_break();
     Ok(())
@@ -52,8 +53,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     }))?;
     env.declare("cmd_path", Value::List(path))?;
 
-    env.declare_condition_command("if",
-        r#if::perform,
+    env.declare_condition_command(
+        "if",
+        r#if::r#if,
         "if condition:bool if-clause:command [else-clause:command]",
         "Conditionally execute a command once.",
         Some(r#"    If the condition is true, the if-clause is executed. Otherwise, the else-clause
@@ -61,25 +63,31 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     Example:
 
-    if (./some_file:stat):is_file {echo "It's a file!"} {echo "It's not a file!"}"#))?;
+    if a > 10 {echo "big"} {echo "small"}"#))?;
 
-    env.declare_condition_command("while",
-                                  r#while::r#while,
-                                  "while condition:command body:command",
-                                  "Repeatedly execute the body for as long the condition is met",
-                                  Some(r#"    In every pass of the loop, the condition is executed. If it returns false,
+    env.declare_condition_command(
+        "while",
+        r#while::r#while,
+        "while condition:command [body:command]",
+        "Repeatedly execute the body for as long the condition is met",
+        Some(r#"    In every pass of the loop, the condition is executed. If it returns false,
     the loop terminates. If it returns true, the body is executed and the loop
     continues.
 
     Example:
 
-    while {not (./some_file:stat):is_file} {echo "hello"}"#))?;
+    while {not (./some_file:stat):is_file} {echo "hello"}
 
-    env.declare_condition_command("loop",
-                                  r#loop::r#loop,
-                                  "loop body:command",
-                                  "Repeatedly execute the body until the break command is called.",
-                                  Some(r#"    Example:
+    The loop body is optional. If not specified, the condition is executed until it returns false.
+    This effectively means that the condition becomes the body, and the loop break check comes at
+    the end of the loop."#))?;
+
+    env.declare_condition_command(
+        "loop",
+        r#loop::r#loop,
+        "loop body:command",
+        "Repeatedly execute the body until the break command is called.",
+        Some(r#"    Example:
     loop {
         if (i_am_tired) {
             break
@@ -87,8 +95,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         echo "Working"
     }"#))?;
 
-    env.declare_condition_command("for",
-        r#for::perform,
+    env.declare_condition_command(
+        "for",
+        r#for::r#for,
         "for [name=]iterable:(table_stream|table|dict|list) body:command",
         "Execute body once for every element in iterable.",
         Some(r#"    Example:
@@ -99,13 +108,13 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
 
     env.declare_command(
-        "break",r#break, false,
+        "break", r#break, false,
         "break", "Stop execution of a loop", None)?;
     env.declare_command(
-        "continue",r#continue, false,
+        "continue", r#continue, false,
         "continue", "Skip execution of the current iteration of a loop", None)?;
     env.declare_command(
-        "cmd",cmd, true,
+        "cmd", cmd, true,
         "cmd external_command:(file|string) @arguments:any", "Execute external commands", None)?;
     env.readonly();
 

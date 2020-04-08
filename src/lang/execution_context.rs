@@ -17,6 +17,7 @@ use crate::lang::printer::Printer;
 use crate::lang::job::JobJoinHandle;
 
 pub trait ArgumentVector {
+    fn check_len_range(&self, min_len: usize, max_len: usize) -> CrushResult<()>;
     fn check_len(&self, len: usize) -> CrushResult<()>;
     fn string(&mut self, idx: usize) -> CrushResult<Box<str>>;
     fn integer(&mut self, idx: usize) -> CrushResult<i128>;
@@ -29,7 +30,9 @@ pub trait ArgumentVector {
     fn r#struct(&mut self, idx: usize) -> CrushResult<Struct>;
     fn bool(&mut self, idx: usize) -> CrushResult<bool>;
     fn files(&mut self, printer: &Printer) -> CrushResult<Vec<Box<Path>>>;
-    fn optional_integer(&mut self) -> CrushResult<Option<i128>>;
+    fn optional_integer(&mut self, idx: usize) -> CrushResult<Option<i128>>;
+    fn optional_command(&mut self, idx: usize) -> CrushResult<Option<Box<dyn CrushCommand + Send + Sync>>>;
+    fn optional_value(&mut self, idx: usize) -> CrushResult<Option<Value>>;
 }
 
 
@@ -62,6 +65,18 @@ impl ArgumentVector for Vec<Argument> {
         }
     }
 
+    fn check_len_range(&self, min_len: usize, max_len: usize) -> CrushResult<()> {
+        if self.len() < min_len {
+            argument_error(format!("Expected at least {} arguments, got {}", min_len, self.len()).as_str())
+        } else {
+            if self.len() > max_len {
+                argument_error(format!("Expected at most {} arguments, got {}", max_len, self.len()).as_str())
+            } else {
+                Ok(())
+            }
+        }
+    }
+
     argument_getter!(string, Box<str>, String, "string");
     argument_getter!(integer, i128, Integer, "integer");
     argument_getter!(float, f64, Float, "float");
@@ -80,17 +95,27 @@ impl ArgumentVector for Vec<Argument> {
         Ok(files)
     }
 
-    fn optional_integer(&mut self) -> CrushResult<Option<i128>> {
-        match self.len() {
+    fn optional_integer(&mut self, idx: usize) -> CrushResult<Option<i128>> {
+        match self.len() - idx {
             0 => Ok(None),
-            1 => {
-                let a = self.remove(0);
-                match (a.argument_type, a.value) {
-                    (None, Value::Integer(i)) => Ok(Some(i)),
-                    _ => argument_error("Expected a text value"),
-                }
-            }
-            _ => argument_error("Expected a single value"),
+            1 => Ok(Some(self.integer(idx)?)),
+            _ => argument_error("Wrong number of arguments"),
+        }
+    }
+
+    fn optional_command(&mut self, idx: usize) -> CrushResult<Option<Box<dyn CrushCommand + Send + Sync>>> {
+        match self.len() - idx {
+            0 => Ok(None),
+            1 => Ok(Some(self.command(idx)?)),
+            _ => argument_error("Wrong number of arguments"),
+        }
+    }
+
+    fn optional_value(&mut self, idx: usize) -> CrushResult<Option<Value>> {
+        match self.len() - idx {
+            0 => Ok(None),
+            1 => Ok(Some(self.value(idx)?)),
+            _ => argument_error("Wrong number of arguments"),
         }
     }
 
@@ -195,6 +220,7 @@ impl JobContext {
     }
 }
 
+#[derive(Clone)]
 pub struct ExecutionContext {
     pub input: ValueReceiver,
     pub output: ValueSender,
@@ -205,11 +231,38 @@ pub struct ExecutionContext {
 }
 
 impl ExecutionContext {
-
     pub fn compile_context(&self) -> CompileContext {
         CompileContext::new(self.env.clone(), self.printer.clone())
     }
 
+    pub fn with_args(
+        self,
+        arguments: Vec<Argument>,
+        this: Option<Value>,
+    ) -> ExecutionContext {
+        ExecutionContext {
+            input: self.input,
+            output: self.output,
+            env: self.env,
+            printer: self.printer,
+            arguments,
+            this,
+        }
+    }
+
+    pub fn with_sender(
+        self,
+        sender: ValueSender,
+    ) -> ExecutionContext {
+        ExecutionContext {
+            input: self.input,
+            output: sender,
+            env: self.env,
+            printer: self.printer,
+            arguments: self.arguments,
+            this: self.this,
+        }
+    }
 }
 
 pub trait This {

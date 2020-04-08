@@ -113,7 +113,9 @@ fn extract_help(jobs: &mut Vec<Job>) -> String {
     let j = &jobs[0];
     match j.as_string() {
         Some(help) => {
-            jobs.remove(0);
+            if jobs.len() > 1 {
+                jobs.remove(0);
+            }
             help
         }
         _ => "".to_string()

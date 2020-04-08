@@ -1,4 +1,6 @@
 Todo:
+if branches should not need to be commands
+Value for := and = should maybe implicitly be a subshell?
 Handle stderr on external commands
 Maybe rethink unnamed arguments and closure signatures
 Add background job support

@@ -163,7 +163,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "Create an empty new class",
         Some(r#"    Example:
 
-    Point := (class)
+    Point := class
+
     Point:__init__ = {
         |x:float y:float|
         this:x = x
@@ -177,7 +178,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     Point:__add__ = {
         |other|
-        Point:new x=(this:x + other:x) y=(this:y + other:y)
+        Point:new x=this:x+other:x y=this:y+other:y
     }
 
     p := (Point:new x=1.0 y=2.0)

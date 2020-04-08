@@ -32,7 +32,7 @@ pub fn run(
 }
 
 pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
-    let lines = context.arguments.optional_integer()?.unwrap_or(10);
+    let lines = context.arguments.optional_integer(0)?.unwrap_or(10);
     match context.input.recv()?.readable() {
         Some(mut input) => run(lines, input.as_mut(), context.output),
         None => error("Expected a stream"),

@@ -5,14 +5,14 @@ use crate::lang::stream::{empty_channel, channels, black_hole};
 
 pub fn r#while(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.initialize(vec![])?;
-    context.arguments.check_len(2)?;
+    context.arguments.check_len_range(1, 2)?;
 
     let condition = context.arguments.command(0)?;
-    let body = context.arguments.command(1)?;
+    let maybe_body = context.arguments.optional_command(1)?;
     loop {
         let (sender, receiver) = channels();
 
-        let cond_env= context.env.create_child(&context.env, true);
+        let cond_env = context.env.create_child(&context.env, true);
         condition.invoke(ExecutionContext {
             input: empty_channel(),
             output: sender,
@@ -27,17 +27,22 @@ pub fn r#while(mut context: ExecutionContext) -> CrushResult<()> {
 
         match receiver.recv()? {
             Value::Bool(true) => {
-                let body_env = context.env.create_child(&context.env, true);
-                body.invoke(ExecutionContext {
-                    input: empty_channel(),
-                    output: black_hole(),
-                    arguments: Vec::new(),
-                    env: body_env.clone(),
-                    this: None,
-                    printer: context.printer.clone(),
-                })?;
-                if body_env.is_stopped() {
-                    break;
+                match &maybe_body {
+                    Some(body) => {
+                        let body_env = context.env.create_child(&context.env, true);
+                        body.invoke(ExecutionContext {
+                            input: empty_channel(),
+                            output: black_hole(),
+                            arguments: Vec::new(),
+                            env: body_env.clone(),
+                            this: None,
+                            printer: context.printer.clone(),
+                        })?;
+                        if body_env.is_stopped() {
+                            break;
+                        }
+                    }
+                    None => {}
                 }
             }
             Value::Bool(false) => break,

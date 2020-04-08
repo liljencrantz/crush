@@ -128,7 +128,7 @@ impl CommandInvocation {
                                     context.printer.handle_error(
                                         invoke_value(this, value, arguments, context.clone())),
 
-                                Err(err) =>
+                                _ =>
                                     context.printer.handle_error(
                                         try_external_command(cmd, arguments, context.clone())),
                             }

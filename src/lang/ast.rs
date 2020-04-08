@@ -80,7 +80,15 @@ fn propose_name(name: &str, v: ValueDefinition) -> ValueDefinition {
     match v {
         ValueDefinition::ClosureDefinition(_, p, j) =>
             ValueDefinition::ClosureDefinition(Some(Box::from(name)), p, j),
-        o => o
+        ValueDefinition::JobDefinition(d) => ValueDefinition::JobDefinition(d),
+        o => {
+            let j = Job::new(vec![
+                CommandInvocation::new(
+                    o,
+                    vec![])
+            ]);
+            ValueDefinition::JobDefinition(j)
+        }
     }
 }
 
@@ -92,7 +100,9 @@ impl Node {
                     match op.deref() {
                         "=" =>
                             return match target.as_ref() {
-                                Node::Label(t) => Ok(ArgumentDefinition::named(t.deref(), propose_name(&t, value.generate_argument(env)?.unnamed_value()?))),
+                                Node::Label(t) => Ok(ArgumentDefinition::named(
+                                    t.deref(),
+                                    propose_name(&t, value.generate_argument(env)?.unnamed_value()?))),
                                 _ => error("Invalid left side in named argument"),
                             },
                         _ =>
@@ -166,7 +176,11 @@ impl Node {
                     Node::Label(t) =>
                         Node::function_invocation(
                             env.global_static_cmd(vec!["global", "var", "set"])?,
-                            vec![ArgumentDefinition::named(t, propose_name(&t, value.generate_argument(env)?.unnamed_value()?))]),
+                            vec![ArgumentDefinition::named(
+                                t,
+                                propose_name(
+                                    &t,
+                                    value.generate_argument(env)?.unnamed_value()?))]),
 
                     Node::GetItem(container, key) =>
                         container.method_invocation("__setitem__", vec![
@@ -189,7 +203,11 @@ impl Node {
                     Node::Label(t) =>
                         Node::function_invocation(
                             env.global_static_cmd(vec!["global", "var", "let"])?,
-                            vec![ArgumentDefinition::named(t, propose_name(&t, value.generate_argument(env)?.unnamed_value()?))]),
+                            vec![ArgumentDefinition::named(
+                                t,
+                                propose_name(
+                                    &t,
+                                    value.generate_argument(env)?.unnamed_value()?))]),
                     _ => error("Invalid left side in declaration"),
                 }
             }
@@ -219,10 +237,8 @@ impl Node {
                     ">=" => vec!["global", "comp", "gte"],
                     "==" => vec!["global", "comp", "eq"],
                     "!=" => vec!["global", "comp", "neq"],
-                    "=~" =>
-                        return r.method_invocation("match", vec![l.generate_argument(env)?], env),
-                    "!~" =>
-                        return r.method_invocation("not_match", vec![l.generate_argument(env)?], env),
+                    "=~" => return r.method_invocation("match", vec![l.generate_argument(env)?], env),
+                    "!~" => return r.method_invocation("not_match", vec![l.generate_argument(env)?], env),
                     _ => return error("Unknown operator"),
                 })?;
                 Node::function_invocation(cmd.clone(), vec![l.generate_argument(env)?, r.generate_argument(env)?])

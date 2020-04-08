@@ -53,7 +53,7 @@ pub fn run(
     Ok(())
 }
 
-pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn r#for(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.clone().initialize(vec![])?;
     context.arguments.check_len(2)?;
 

@@ -19,7 +19,7 @@ lazy_static! {
             "dict:new",
             "Construct a new dict",
             Some(r#"    Examples:
-    my_dict := ((dict string integer):new)"#));
+    my_dict := (dict string integer):new"#));
         res.declare(full("len"),
             len, false,
             "dict:len",
