@@ -29,5 +29,5 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     constants::declare(root)?;
     math::declare(root)?;
     root.readonly();
-    return Ok(());
+    Ok(())
 }

@@ -28,7 +28,7 @@ pub fn run(
             }
         }
     }
-    return Ok(());
+    Ok(())
 }
 
 pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {

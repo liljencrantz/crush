@@ -286,7 +286,7 @@ impl Node {
                             env.global_static_cmd(vec!["global", "types", "typeof"])?,
                             vec![r.generate_argument(env)?]),
                     "@" | "@@" => Ok(None),
-                    _ => return error("Unknown operator"),
+                    _ => error("Unknown operator"),
                 },
 
             Node::Cast(_, _) | Node::Glob(_) | Node::Label(_) | Node::Regex(_) | Node::Field(_) | Node::String(_) |

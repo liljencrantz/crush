@@ -18,7 +18,7 @@ pub fn run(input1: &mut dyn Readable, input2: &mut dyn Readable, sender: ValueSe
             _ => break,
         }
     }
-    return Ok(());
+    Ok(())
 }
 
 pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {

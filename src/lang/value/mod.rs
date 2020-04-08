@@ -57,7 +57,7 @@ pub enum Value {
 
 impl ToString for Value {
     fn to_string(&self) -> String {
-        return match self {
+        match self {
             Value::String(val) => val.to_string(),
             Value::Integer(val) => val.to_string(),
             Value::Time(val) => val.format("%Y-%m-%d %H:%M:%S %z").to_string(),
@@ -75,7 +75,7 @@ impl ToString for Value {
             Value::Type(t) => t.to_string(),
             Value::Struct(s) => s.to_string(),
             _ => format!("<{}>", self.value_type().to_string()),
-        };
+        }
     }
 }
 
@@ -128,15 +128,15 @@ impl Value {
     pub fn path(&self, name: &str) -> Option<Value> {
         match self {
             Value::File(s) => Some(Value::File(s.join(name).into_boxed_path())),
-            _ => return None,
+            _ => None,
         }
     }
 
     pub fn alignment(&self) -> Alignment {
-        return match self {
+        match self {
             Value::Time(_) | Value::Duration(_) | Value::Integer(_) => Alignment::Right,
             _ => Alignment::Left,
-        };
+        }
     }
 
     pub fn empty_table_stream() -> Value {
@@ -347,7 +347,7 @@ fn file_result_compare(f1: &Path, f2: &Path) -> bool {
 
 impl std::cmp::PartialEq for Value {
     fn eq(&self, other: &Value) -> bool {
-        return match (self, other) {
+        match (self, other) {
             (Value::String(val1), Value::String(val2)) => val1 == val2,
             (Value::Integer(val1), Value::Integer(val2)) => val1 == val2,
             (Value::Time(val1), Value::Time(val2)) => val1 == val2,
@@ -367,7 +367,7 @@ impl std::cmp::PartialEq for Value {
             (Value::Float(val1), Value::Float(val2)) => val1 == val2,
             (Value::Binary(val1), Value::Binary(val2)) => val1 == val2,
             _ => false,
-        };
+        }
     }
 }
 

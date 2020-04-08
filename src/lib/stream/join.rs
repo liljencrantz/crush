@@ -55,7 +55,7 @@ fn scan_table(table: &str, column: &str, input_type: &Vec<ColumnType>) -> Result
 fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Config, CrushError> {
     arguments.check_len(2)?;
 
-    return match (&arguments[0].value, &arguments[1].value) {
+    match (&arguments[0].value, &arguments[1].value) {
         (Value::Field(l), Value::Field(r)) => {
 
             let config = match (l.len(), r.len()) {
@@ -101,7 +101,7 @@ fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Confi
             Ok(config)
         }
         _ => argument_error("Expected arguments like %table1.col == %table2.col"),
-    };
+    }
 }
 
 fn combine(mut l: Row, r: Row, cfg: &Config) -> Row {
@@ -110,7 +110,7 @@ fn combine(mut l: Row, r: Row, cfg: &Config) -> Row {
             l.push(c);
         }
     }
-    return l;
+    l
 }
 
 fn do_join(cfg: &Config, l: &mut dyn Readable, r: &mut dyn Readable, output: &OutputStream) -> CrushResult<()> {
