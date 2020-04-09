@@ -31,6 +31,7 @@ pub trait ArgumentVector {
     fn bool(&mut self, idx: usize) -> CrushResult<bool>;
     fn files(&mut self, printer: &Printer) -> CrushResult<Vec<Box<Path>>>;
     fn optional_integer(&mut self, idx: usize) -> CrushResult<Option<i128>>;
+    fn optional_string(&mut self, idx: usize) -> CrushResult<Option<Box<str>>>;
     fn optional_command(&mut self, idx: usize) -> CrushResult<Option<Box<dyn CrushCommand + Send + Sync>>>;
     fn optional_value(&mut self, idx: usize) -> CrushResult<Option<Value>>;
 }
@@ -99,6 +100,14 @@ impl ArgumentVector for Vec<Argument> {
         match self.len() - idx {
             0 => Ok(None),
             1 => Ok(Some(self.integer(idx)?)),
+            _ => argument_error("Wrong number of arguments"),
+        }
+    }
+
+    fn optional_string(&mut self, idx: usize) -> CrushResult<Option<Box<str>>> {
+        match self.len() - idx {
+            0 => Ok(None),
+            1 => Ok(Some(self.string(idx)?)),
             _ => argument_error("Wrong number of arguments"),
         }
     }

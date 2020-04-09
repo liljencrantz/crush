@@ -1,4 +1,4 @@
-use crate::lang::errors::CrushResult;
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{execution_context::ExecutionContext, value::ValueType, list::List};
 use crate::lang::value::Value;
 use crate::lang::execution_context::{This, ArgumentVector};
@@ -42,6 +42,16 @@ lazy_static! {
             "string:format pattern:string [parameters:any]...",
             "Format arguments into a string",
             None);
+        res.declare(full("lpad"),
+            lpad, false,
+            "string:lpad length [padding:string]",
+            "Returns a string truncated or left-padded to be the exact specified length",
+            None);
+        res.declare(full("rpad"),
+            rpad, false,
+            "string:rpad length [padding:string]",
+            "Returns a string truncated or right-padded to be the exact specified length",
+            None);
         res
     };
 }
@@ -77,4 +87,40 @@ fn trim(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::String(
         Box::from(context.this.string()?
             .trim())))
+}
+
+fn lpad(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len_range(1, 2)?;
+    let s = context.this.string()?;
+    let len = context.arguments.integer(0)? as usize;
+    let pad_char = context.arguments.optional_string(1)?.unwrap_or(Box::from(" "));
+    if pad_char.len() != 1 {
+        return argument_error("Padding string must be exactly one character long");
+    }
+    if len <= s.len() {
+        context.output.send(Value::string(
+            &s[0..len]))
+    } else {
+        let mut res = pad_char.repeat(len - s.len());
+        res += s.as_ref();
+        context.output.send(Value::string(res.as_str()))
+    }
+}
+
+fn rpad(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len_range(1, 2)?;
+    let s = context.this.string()?;
+    let len = context.arguments.integer(0)? as usize;
+    let pad_char = context.arguments.optional_string(1)?.unwrap_or(Box::from(" "));
+    if pad_char.len() != 1 {
+        return argument_error("Padding string must be exactly one character long");
+    }
+    if len <= s.len() {
+        context.output.send(Value::string(
+            &s[0..len]))
+    } else {
+        let mut res = s.to_string();
+        res  += pad_char.repeat(len - s.len()).as_str();
+        context.output.send(Value::string(res.as_str()))
+    }
 }

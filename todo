@@ -14,10 +14,7 @@ Add source field to CrushError
 Make error printing display source of error
 Binary values can be big. Make them shared behind an Arc. Same with table. Maybe even String?
 In closures without a signature, put unnamed variables in the variable 'unnamed'
-Figure out how to make external commands with subcommands convenient again
 Kwargs should maybe not be a dict? How should repeated arguments be handled? We should at least preserve order...
-Comparison unimplemented for dict
-Comparison unimplemented for struct
 Allow empty closures
 Missing some value serialisations and deserialisations
 empty_channel should not create new empty channels
@@ -49,3 +46,4 @@ Add history command with all previous interactive invocations, including invocat
 Add proc:jobs command
 pseudo-tty for cmd command output
 pseudo-tty for cmd command input
+Support __str__ method

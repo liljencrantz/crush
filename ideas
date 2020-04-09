@@ -30,4 +30,3 @@ Crush configuration:
 * One idea would be the standard configuration-is-code thing with reading specific files during startup.
 * Another idea would be to have a config variable that you can query and assign to at runtime,
   and that is responsible for sharing config in real time across instances.
-

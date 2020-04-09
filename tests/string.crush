@@ -1,0 +1,4 @@
+"abc":lpad 2
+"abc":lpad 5 "A"
+"abc":rpad 2
+"abc":rpad 5 "A"
