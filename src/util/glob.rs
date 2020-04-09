@@ -51,7 +51,7 @@ impl Glob {
         let without_trailing_slashes = original_glob.trim_end_matches('/');
         if without_trailing_slashes.starts_with('/') {
             let without_leading_slashes = without_trailing_slashes.trim_start_matches('/');
-            Glob::glob_files_internal(without_leading_slashes, Path::new("/"), only_directories, "/", out, lister)
+                Glob::glob_files_internal(without_leading_slashes, Path::new("/"), only_directories, "/", out, lister)
         } else {
             Glob::glob_files_internal(without_trailing_slashes, cwd, only_directories, "", out, lister)
         }

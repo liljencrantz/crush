@@ -1,6 +1,6 @@
 mod closure;
 
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult, error, CrushError};
 use std::fmt::Formatter;
 use crate::lang::{argument::ArgumentDefinition};
 use crate::lang::scope::Scope;
@@ -12,6 +12,7 @@ use crate::lang::help::Help;
 use std::collections::HashMap;
 use crate::lang::serialization::{SerializationState, DeserializationState};
 use crate::lang::serialization::model::{Element, element, Strings};
+use crate::lang::argument::ArgumentType;
 
 pub trait CrushCommand : Help {
     fn invoke(&self, context: ExecutionContext) -> CrushResult<()>;
@@ -20,6 +21,7 @@ pub trait CrushCommand : Help {
     fn clone(&self) -> Box<dyn CrushCommand +  Send + Sync>;
     fn help(&self) -> &dyn Help;
     fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize>;
+    fn bind(&self, this: Value) -> Box<dyn CrushCommand +  Send + Sync>;
 }
 
 pub trait TypeMap {
@@ -52,7 +54,6 @@ impl TypeMap for HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> {
     }
 }
 
-#[derive(Clone)]
 struct SimpleCommand {
     call: fn(context: ExecutionContext) -> CrushResult<()>,
     can_block: bool,
@@ -62,7 +63,6 @@ struct SimpleCommand {
     long_help: Option<&'static str>,
 }
 
-#[derive(Clone)]
 struct ConditionCommand {
     call: fn(context: ExecutionContext) -> CrushResult<()>,
     full_name: Vec<Box<str>>,
@@ -166,6 +166,13 @@ impl CrushCommand for SimpleCommand {
         });
         Ok(idx)
     }
+
+    fn bind(&self, this: Value) -> Box<dyn CrushCommand +  Send + Sync> {
+        Box::from(BoundCommand {
+            command: self.clone(),
+            this,
+        })
+    }
 }
 
 impl Help for SimpleCommand {
@@ -236,6 +243,13 @@ impl CrushCommand for ConditionCommand {
         });
         Ok(idx)
     }
+
+    fn bind(&self, this: Value) -> Box<dyn CrushCommand +  Send + Sync> {
+        Box::from(BoundCommand {
+            command: self.clone(),
+            this,
+        })
+    }
 }
 
 impl Help for ConditionCommand {
@@ -282,5 +296,66 @@ impl ToString for Parameter {
             Parameter::Named(n) => format!("@@{}", n),
             Parameter::Unnamed(n) => format!("@{}", n),
         }
+    }
+
+}
+
+pub struct BoundCommand {
+    command: Box<dyn CrushCommand +  Send + Sync>,
+    this: Value,
+}
+
+impl CrushCommand for BoundCommand {
+    fn invoke(&self, mut context: ExecutionContext) -> CrushResult<()> {
+        context.this = Some(self.this.clone());
+        self.command.invoke(context)
+    }
+
+    fn can_block(&self, arguments: &Vec<ArgumentDefinition>, context: &mut CompileContext) -> bool {
+        self.command.can_block(arguments, context)
+    }
+
+    fn name(&self) -> &str {
+        self.command.name()
+    }
+
+    fn clone(&self) -> Box<dyn CrushCommand +  Send + Sync> {
+        Box::from(
+            BoundCommand {
+                command: self.command.clone(),
+                this: self.this.clone(),
+            }
+        )
+    }
+
+    fn help(&self) -> &Help {
+        self.command.help()
+    }
+
+    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
+        unimplemented!()
+    }
+
+    fn bind(&self, this: Value) -> Box<dyn CrushCommand +  Send + Sync> {
+        Box::from(
+            BoundCommand {
+                command: self.command.clone(),
+                this: this.clone(),
+            }
+        )
+    }
+}
+
+impl Help for BoundCommand {
+    fn signature(&self) -> String {
+        self.command.signature()
+    }
+
+    fn short_help(&self) -> String {
+        self.command.short_help()
+    }
+
+    fn long_help(&self) -> Option<String> {
+        self.command.long_help()
     }
 }

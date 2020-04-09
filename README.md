@@ -87,7 +87,7 @@ The `and` and `or` operators are used to combine logical expressions:
     
     crush> false or true
     true
-    crush> if (some_file:exists) and ((some_file:stat):is_file) {echo "yay"}
+    crush> if some_file:exists and (some_file:stat):is_file {echo "yay"}
     
 Crush also has operators related to patterns and matching. `=~` and `!~` are
 used to check if a pattern matches an input:

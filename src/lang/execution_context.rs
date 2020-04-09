@@ -290,7 +290,7 @@ macro_rules! this_method {
     fn $name(mut self) -> CrushResult<$return_type> {
         match self.take() {
             Some(Value::$value_type(l)) => Ok(l),
-            None => argument_error(concat!("Expected this to be a ", $description, ", got nothing")),
+            None => panic!(),//argument_error(concat!("Expected this to be a ", $description, ", got nothing")),
             Some(v) => argument_error(format!(concat!("Expected this to be a ", $description, ", but it is a {}"), v.value_type().to_string()).as_str()),
         }
     }

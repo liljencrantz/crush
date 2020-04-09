@@ -84,6 +84,13 @@ fn add_keys<T>(map: &HashMap<Box<str>, T>, res: &mut Vec<Box<str>>) {
 }
 
 impl Value {
+    pub fn bind(self, this: Value) -> Value {
+        match self {
+            Value::Command(cmd) => Value::Command(cmd.bind(this)),
+            v => v,
+        }
+    }
+
     pub fn field(&self, name: &str) -> Option<Value> {
         match self {
             Value::Struct(s) => s.get(name),

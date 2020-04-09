@@ -38,8 +38,14 @@ impl ValueDefinition {
         }
     }
 
-    pub fn compile(&self, context: &mut CompileContext) -> CrushResult<(Option<Value>, Value)> {
+    pub fn compile_unbound(&self, context: &mut CompileContext) -> CrushResult<(Option<Value>, Value)> {
         self.compile_internal(context, true)
+    }
+
+    pub fn compile_bound(&self, context: &mut CompileContext) -> CrushResult<Value> {
+        let (t,v) = self.compile_internal(context, true)?;
+
+        Ok(t.map(|tt| v.clone().bind(tt)).unwrap_or(v))
     }
 
     pub fn compile_internal(&self, context: &mut CompileContext, can_block: bool) -> CrushResult<(Option<Value>, Value)> {

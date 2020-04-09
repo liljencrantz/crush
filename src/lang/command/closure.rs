@@ -1,6 +1,6 @@
 use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::argument::{Argument, ArgumentDefinition};
-use crate::lang::command::{Parameter, CrushCommand};
+use crate::lang::command::{Parameter, CrushCommand, BoundCommand};
 use crate::lang::scope::Scope;
 use std::collections::HashMap;
 use crate::lang::value::{Value, ValueType};
@@ -13,7 +13,6 @@ use crate::lang::help::Help;
 use crate::lang::serialization::SerializationState;
 use crate::lang::serialization::model::Element;
 
-#[derive(Clone)]
 pub struct Closure {
     name: Option<Box<str>>,
     job_definitions: Vec<Job>,
@@ -78,6 +77,13 @@ impl CrushCommand for Closure {
 
     fn serialize(&self, _elements: &mut Vec<Element>, _state: &mut SerializationState) -> CrushResult<usize> {
         unimplemented!();
+    }
+
+    fn bind(&self, this: Value) -> Box<dyn CrushCommand +  Send + Sync> {
+        Box::from(BoundCommand {
+            command: self.clone(),
+            this,
+        })
     }
 }
 
@@ -172,7 +178,7 @@ impl Closure {
             for param in signature {
                 match param {
                     Parameter::Parameter(name, value_type, default) => {
-                        if let (_, Value::Type(value_type)) = value_type.compile(context)? {
+                        if let Value::Type(value_type) = value_type.compile_bound(context)? {
                             if named.contains_key(name.as_ref()) {
                                 let value = named.remove(name.as_ref()).unwrap();
                                 if !value_type.is(&value) {
@@ -182,7 +188,7 @@ impl Closure {
                             } else {
                                 if let Some(default) = default {
                                     let env = context.env.clone();
-                                    env.redeclare(name.as_ref(), default.compile(context)?.1)?;
+                                    env.redeclare(name.as_ref(), default.compile_bound(context)?)?;
                                 } else {
                                     return argument_error("Missing variable!!!");
                                 }

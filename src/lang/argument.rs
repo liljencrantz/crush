@@ -113,17 +113,17 @@ impl ArgumentVecCompiler for Vec<ArgumentDefinition> {
         let mut res = Vec::new();
         for a in self {
             if a.argument_type.is_this() {
-                this = Some(a.value.compile(context)?.1);
+                this = Some(a.value.compile_bound(context)?);
             } else {
                 match &a.argument_type {
                     ArgumentType::Some(name) =>
-                        res.push(Argument::named(&name, a.value.compile(context)?.1)),
+                        res.push(Argument::named(&name, a.value.compile_bound(context)?)),
 
                     ArgumentType::None =>
-                        res.push(Argument::unnamed(a.value.compile(context)?.1)),
+                        res.push(Argument::unnamed(a.value.compile_bound(context)?)),
 
                     ArgumentType::ArgumentList => {
-                        match a.value.compile(context)?.1 {
+                        match a.value.compile_bound(context)? {
                             Value::List(l) => {
                                 let mut copy = l.dump();
                                 for v in copy.drain(..) {
@@ -135,7 +135,7 @@ impl ArgumentVecCompiler for Vec<ArgumentDefinition> {
                     }
 
                     ArgumentType::ArgumentDict => {
-                        match a.value.compile(context)?.1 {
+                        match a.value.compile_bound(context)? {
                             Value::Dict(d) => {
                                 let mut copy = d.elements();
                                 for (key, value) in copy.drain(..) {

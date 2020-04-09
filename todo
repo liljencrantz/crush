@@ -1,4 +1,5 @@
 Todo:
+taking a method must create anew value that preserves the this-reference
 Handle stderr on external commands
 Maybe rethink unnamed arguments and closure signatures
 Add background job support
@@ -20,12 +21,10 @@ Comparison unimplemented for dict
 Comparison unimplemented for struct
 Allow empty closures
 Missing some value serialisations and deserialisations
-Allow while-loop without body
 empty_channel should not create new empty channels
 Make integers overflow to arbitrary precision math
 Run an executable by giving its path
 Add reject command that removes specified columns from a table/stream
-Redo waiting on JobJoinHandles
 Redo empty streams
 Add control.source command
 Flesh out seq command with support for from and step

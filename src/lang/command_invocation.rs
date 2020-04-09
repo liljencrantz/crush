@@ -123,7 +123,7 @@ impl CommandInvocation {
                     let arguments = self.arguments.clone();
                     Ok(handle(build(self.command.to_string().as_str()).spawn(
                         move || {
-                            match cmd.clone().compile(&mut context.compile_context()) {
+                            match cmd.clone().compile_unbound(&mut context.compile_context()) {
                                 Ok((this, value)) =>
                                     context.printer.handle_error(
                                         invoke_value(this, value, arguments, context.clone())),
