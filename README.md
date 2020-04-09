@@ -153,7 +153,7 @@ with a floating point number results in a floating point number, for example.
 
 Crush does not have any conventions around arguments with and without leading
 hyphens meaning different things. Instead, Crush supports named and unnamed
-arguments at the language level.
+arguments at the language level, similar to e.g. Python.
 
 The `http` command is an example of a command that expects named arguments:
 
@@ -184,7 +184,7 @@ The `duration:new` command accepts any even numbered unnamed arguments:
     
         # A complicated way of specifying a 23 hour duration
         duration:new 1 "days" -3600 "seconds"
-    
+
 ### Subshells
 
 Sometimes you want to use the output of one command as an *argument* to another

@@ -156,7 +156,6 @@ impl Closure {
         }
     }
 
-
     fn push_arguments_to_env(
         signature: &Option<Vec<Parameter>>,
         mut arguments: Vec<Argument>,
@@ -186,11 +185,15 @@ impl Closure {
                                 }
                                 context.env.redeclare(name.as_ref(), value)?;
                             } else {
-                                if let Some(default) = default {
-                                    let env = context.env.clone();
-                                    env.redeclare(name.as_ref(), default.compile_bound(context)?)?;
+                                if unnamed.len() > 0 {
+                                    context.env.redeclare(name.as_ref(), unnamed.remove(0))?;
                                 } else {
-                                    return argument_error("Missing variable!!!");
+                                    if let Some(default) = default {
+                                        let env = context.env.clone();
+                                        env.redeclare(name.as_ref(), default.compile_bound(context)?)?;
+                                    } else {
+                                        return argument_error("Missing variable!!!");
+                                    }
                                 }
                             }
                         } else {

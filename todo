@@ -42,9 +42,9 @@ Arbitrary precision integers?
 make file globing testable via fakes
 Add package command to create a new namespace
 Make it possible to use the pipe operator with the for command
-pbuf.parse command that takes a protobuf definition and uses it to deserialize protobuf data
-avro.parse command that deserializes avro data
-toml.parse command that deserializes toml data
+pbuf:parse command that takes a protobuf definition and uses it to deserialize protobuf data
+avro:parse command that deserializes avro data
+toml:parse command that deserializes toml data
 Add history command with all previous interactive invocations, including invocation string, current status, and misc metadata.
 Add proc:jobs command
 pseudo-tty for cmd command output
