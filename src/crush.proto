@@ -32,12 +32,18 @@ message Element {
         Row row = 23;
         Member member = 24;
         Strings command = 26;
+        BoundCommand bound_command = 27;
     }
 }
 
 message Duration {
     int64 secs = 1;
     int32 nanos = 2;
+}
+
+message BoundCommand {
+    uint64 this = 1;
+    uint64 command = 2;
 }
 
 message Closure {

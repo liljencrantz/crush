@@ -223,14 +223,14 @@ impl Scope {
             }
             None => {
                 drop(data);
-                self.cmd_path(&full_path[..])
+                self.get_recursive(&full_path[..])
             }
         }
     }
 
-    fn cmd_path(&self, path: &[Box<str>]) -> CrushResult<Value> {
+    fn get_recursive(&self, path: &[Box<str>]) -> CrushResult<Value> {
         if path.is_empty() {
-            error("Invalid path for command")
+            error("Invalid path")
         } else {
             let data = self.data.lock().unwrap();
             match data.name.clone() {
@@ -253,9 +253,10 @@ impl Scope {
                                 let s = data.mapping.get(&path[1]).map(|v| v.clone());
                                 drop(data);
                                 match s {
-                                    Some(Value::Scope(s)) => {
-                                        s.cmd_path(&path[1..])
-                                    },
+                                    Some(Value::Scope(s)) =>
+                                        s.get_recursive(&path[1..]),
+                                    Some(v) =>
+                                        v.get_recursive(&path[1..]),
                                     _ => error(format!(
                                         "Could not find scope {} in scope {}",
                                         path[1],

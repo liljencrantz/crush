@@ -65,8 +65,11 @@ impl Serializable<Value> for Value {
             element::Element::Type(_) => Ok(Value::Type(ValueType::deserialize(id, elements, state)?)),
             element::Element::Table(_) => Ok(Value::Table(Table::deserialize(id, elements, state)?)),
             element::Element::Struct(_) => Ok(Value::Struct(Struct::deserialize(id, elements, state)?)),
-            element::Element::Command(_) => Ok(Value::Command(CrushCommand::deserialize(id, elements, state)?)),
-            element::Element::Closure(_) => unimplemented!(),
+
+            element::Element::Command(_) | element::Element::BoundCommand(_) |
+            element::Element::Closure(_) =>
+                Ok(Value::Command(CrushCommand::deserialize(id, elements, state)?)),
+
             element::Element::Field(_) => unimplemented!(),
             element::Element::Scope(_) => unimplemented!(),
             element::Element::Dict(_) => Ok(Value::Dict(Dict::deserialize(id, elements, state)?)),

@@ -16,7 +16,7 @@ use crate::{
     util::glob::Glob,
 };
 use crate::lang::{list::List, dict::Dict, table::ColumnType, binary::BinaryReader, table::TableReader, list::ListReader, dict::DictReader};
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, argument_error, mandate};
 use chrono::Duration;
 use crate::util::time::duration_format;
 use crate::lang::scope::Scope;
@@ -130,6 +130,16 @@ impl Value {
         res.sort_by(|x, y| x.cmp(y));
 
         res
+    }
+
+    pub fn get_recursive(&self, path: &[Box<str>]) -> CrushResult<Value> {
+        match path.len() {
+            0 =>
+                error("Invalid path"),
+            1 => Ok(self.clone()),
+            2 => mandate(self.field(&path[1]), "Invalid path"),
+            _ => mandate(self.field(&path[1]), "Invalid path")?.get_recursive(&path[1..]),
+        }
     }
 
     pub fn path(&self, name: &str) -> Option<Value> {
