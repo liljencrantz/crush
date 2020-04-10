@@ -26,7 +26,7 @@ use crate::lang::printer::Printer;
 fn crush_history_file() -> Box<str> {
     Box::from(
         home()
-            .unwrap_or(Box::from(Path::new(".")))
+            .unwrap_or_else(|_| Box::from(Path::new(".")))
             .join(Path::new(".crush_history"))
             .to_str()
             .unwrap_or(".crush_history"))

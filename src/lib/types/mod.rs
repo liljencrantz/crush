@@ -31,14 +31,14 @@ fn materialize(context: ExecutionContext) -> CrushResult<()> {
 fn new(mut context: ExecutionContext) -> CrushResult<()> {
     let parent = context.this.clone().r#struct()?;
     let res = Struct::new(vec![], Some(parent));
-    let init = res.get("__init__");
     let o = context.output;
-    context.output = black_hole();
-    context.this = Some(Value::Struct(res.clone()));
-    match init {
-        Some(Value::Command(c)) => { c.invoke(context)?; }
-        _ => {}
-    };
+
+    // Call constructor if one exists
+    if let Some(Value::Command(c)) = res.get("__init__") {
+        context.output = black_hole();
+        context.this = Some(Value::Struct(res.clone()));
+        c.invoke(context)?;
+    }
     o.send(Value::Struct(res))
 }
 
@@ -54,11 +54,12 @@ fn data(context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn class(mut context: ExecutionContext) -> CrushResult<()> {
-    let mut parent = context.env.root_object();
-
-    if context.arguments.len() == 1 {
-        parent = context.arguments.r#struct(0)?;
-    }
+    context.arguments.check_len_range(0, 1)?;
+    let parent = if !context.arguments.is_empty() {
+        context.arguments.r#struct(0)?
+    } else {
+        context.env.root_object()
+    };
 
     let res = Struct::new(vec![], Some(parent));
 

@@ -43,9 +43,14 @@ lazy_static! {
             None);
         res.declare(full("to"),
             to, true,
-            "file:to value:value",
-            "Write the specified value to the specified file in native Crush format",
-            None);
+            "file:to [value:value]",
+            "Write a value to the specified file in native Crush format",
+            Some(r#"    The value can either be specified as an argument or it can be read from a pipe.
+    Use the file:from method to deserialize the value.
+
+    Example:
+
+    ls | ./some_file:to"#));
         res.declare(full("from"),
             from, true,
             "file:from",
@@ -89,8 +94,8 @@ pub fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
 
 pub fn to(mut context: ExecutionContext) -> CrushResult<()> {
     let file = context.this.file()?;
-    context.arguments.check_len(1)?;
-    let value = context.arguments.value(0)?;
+    context.arguments.check_len_range(0, 1)?;
+    let value = if context.arguments.is_empty() {context.input.recv()?} else {context.arguments.value(0)?};
     serialize(&value, &file)
 }
 

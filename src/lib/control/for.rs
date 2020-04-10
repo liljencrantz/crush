@@ -11,43 +11,38 @@ pub fn run(
     name: Option<Box<str>>,
     mut input: impl Readable,
 ) -> CrushResult<()> {
-    loop {
-        match input.read() {
-            Ok(line) => {
-                let env = context.env.create_child(&context.env, true);
-                let arguments =
-                    match &name {
-                        None => {
-                            line.into_vec()
-                                .drain(..)
-                                .zip(input.types().iter())
-                                .map(|(c, t)|
-                                    Argument::named(&t.name, c)
-                                )
-                                .collect()
-                        }
-                        Some(var_name) => {
-                            vec![Argument::new(
-                                Some(var_name.clone()),
-                                Value::Struct(Struct::from_vec(
-                                    line.into_vec(),
-                                    input.types().clone(),
-                                )))]
-                        }
-                    };
-                body.invoke(ExecutionContext {
-                    input: empty_channel(),
-                    output: black_hole(),
-                    arguments,
-                    env: env.clone(),
-                    this: None,
-                    printer: context.printer.clone(),
-                })?;
-                if env.is_stopped() {
-                    break;
+    while let Ok(line) = input.read() {
+        let env = context.env.create_child(&context.env, true);
+        let arguments =
+            match &name {
+                None => {
+                    line.into_vec()
+                        .drain(..)
+                        .zip(input.types().iter())
+                        .map(|(c, t)|
+                            Argument::named(&t.name, c)
+                        )
+                        .collect()
                 }
-            }
-            Err(_) => break,
+                Some(var_name) => {
+                    vec![Argument::new(
+                        Some(var_name.clone()),
+                        Value::Struct(Struct::from_vec(
+                            line.into_vec(),
+                            input.types().clone(),
+                        )))]
+                }
+            };
+        body.invoke(ExecutionContext {
+            input: empty_channel(),
+            output: black_hole(),
+            arguments,
+            env: env.clone(),
+            this: None,
+            printer: context.printer.clone(),
+        })?;
+        if env.is_stopped() {
+            break;
         }
     }
     Ok(())

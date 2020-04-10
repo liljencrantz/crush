@@ -16,13 +16,15 @@ pub struct Glob {
     pattern: String,
 }
 
+impl ToString for Glob {
+    fn to_string(&self) -> String {
+        self.pattern.clone()
+    }
+}
+
 impl Glob {
     pub fn new(pattern: &str) -> Glob {
-        Glob{ pattern: pattern.to_string() }
-    }
-
-    pub fn to_string(&self) -> String {
-        self.pattern.clone()
+        Glob { pattern: pattern.to_string() }
     }
 
     pub fn matches(&self, v: &str) -> bool {
@@ -30,7 +32,7 @@ impl Glob {
     }
 
     pub fn glob_files(&self, cwd: &Path, out: &mut Vec<Box<Path>>) -> CrushResult<()> {
-        to_crush_error(Glob::glob_files_testable(self.pattern.as_str(), cwd, out, |p| read_dir(p)))
+        to_crush_error(Glob::glob_files_testable(self.pattern.as_str(), cwd, out,|p| read_dir(p)))
     }
 
     pub fn glob_to_single_file(&self, cwd: &Path) -> CrushResult<Box<Path>> {
@@ -51,7 +53,7 @@ impl Glob {
         let without_trailing_slashes = original_glob.trim_end_matches('/');
         if without_trailing_slashes.starts_with('/') {
             let without_leading_slashes = without_trailing_slashes.trim_start_matches('/');
-                Glob::glob_files_internal(without_leading_slashes, Path::new("/"), only_directories, "/", out, lister)
+            Glob::glob_files_internal(without_leading_slashes, Path::new("/"), only_directories, "/", out, lister)
         } else {
             Glob::glob_files_internal(without_trailing_slashes, cwd, only_directories, "", out, lister)
         }
@@ -95,7 +97,6 @@ impl Glob {
         }
         Ok(())
     }
-
 }
 
 fn glob_match(glob: &mut Chars, value: &mut Peekable<Chars>) -> bool {

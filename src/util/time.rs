@@ -8,7 +8,7 @@ pub fn duration_format(d: &Duration) -> String {
     const MICROS_IN_YEAR: i128 = MICROS_IN_DAY * 365;
     let mut remaining_nanos = d.num_nanoseconds()
         .map(|v| v as i128)
-        .unwrap_or(
+        .unwrap_or_else(||
         d.num_microseconds()
             .map(|v| v as i128 * 1000)
             .unwrap_or(

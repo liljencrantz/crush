@@ -21,7 +21,7 @@ pub fn r#continue(context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn cmd(mut context: ExecutionContext) -> CrushResult<()> {
-    if context.arguments.len() == 0 {
+    if context.arguments.is_empty() {
         return argument_error("No command given");
     }
     match context.arguments.remove(0).value {

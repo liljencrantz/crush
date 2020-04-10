@@ -6,7 +6,7 @@ New command: which
 Add a range type
 Figure out how to support options like --foo and -b in external commands in a nice way
 Add system tests for binary stream handling
-Add system tests for structs
+Add system tests for serialization
 Make parse error reporting more helpful
 Error source propagation
 Add command-field to CrushError
