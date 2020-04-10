@@ -2,3 +2,9 @@
 "abc":lpad 5 "A"
 "abc":rpad 2
 "abc":rpad 5 "A"
+"\n\n\n\t abc \n\t":trim
+"abcABC":upper
+"abcABC":lower
+"a b c d":split " "
+"Hello, {}!":format "world"
+"Hello, {name}!":format name="world"

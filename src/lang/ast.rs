@@ -343,6 +343,7 @@ pub fn unescape(s: &str) -> String {
                 't' => res += "\t",
                 _ => res += &c.to_string(),
             }
+            was_backslash = false;
         } else {
             if c == '\\' {
                 was_backslash = true;
