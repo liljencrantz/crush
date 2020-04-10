@@ -5,11 +5,8 @@ use crate::lang::stream::Readable;
 
 fn count_rows(mut s: Box<dyn Readable>) -> Value {
     let mut res: i128 = 0;
-    loop {
-        match s.read() {
-            Ok(_) => res += 1,
-            Err(_) => break,
-        }
+    while let Ok(_) = s.read() {
+        res += 1;
     }
     Value::Integer(res)
 }
@@ -22,7 +19,7 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
         v =>
             match v.readable() {
                 Some(readable) => context.output.send(count_rows(readable)),
-                None =>  argument_error("Expected a stream")
+                None => argument_error("Expected a stream")
             }
     }
 }

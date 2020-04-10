@@ -84,9 +84,7 @@ fn call_type(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn of(mut context: ExecutionContext) -> CrushResult<()> {
-    if context.arguments.len() == 0 {
-        return argument_error("Expected at least one element");
-    }
+    context.arguments.check_len_min(1)?;
 
     let types = context.arguments.iter().map(|a| a.value.value_type()).collect::<HashSet<ValueType>>();
     let lst = List::new(

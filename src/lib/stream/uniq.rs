@@ -35,29 +35,19 @@ pub fn run(
     match config.column {
         None => {
             let mut seen: HashSet<Row> = HashSet::new();
-            loop {
-                match input.read() {
-                    Ok(row) => {
-                        if !seen.contains(&row) {
-                            seen.insert(row.clone());
-                            let _ = output.send(row);
-                        }
-                    }
-                    Err(_) => break,
+            while let Ok(row) = input.read() {
+                if !seen.contains(&row) {
+                    seen.insert(row.clone());
+                    let _ = output.send(row);
                 }
             }
         }
         Some(idx) => {
             let mut seen: HashSet<Value> = HashSet::new();
-            loop {
-                match input.read() {
-                    Ok(row) => {
-                        if !seen.contains(&row.cells()[idx]) {
-                            seen.insert(row.cells()[idx].clone());
-                            let _ = output.send(row);
-                        }
-                    }
-                    Err(_) => break,
+            while let Ok(row) = input.read() {
+                if !seen.contains(&row.cells()[idx]) {
+                    seen.insert(row.cells()[idx].clone());
+                    let _ = output.send(row);
                 }
             }
         }

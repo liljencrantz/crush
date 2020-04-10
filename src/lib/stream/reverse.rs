@@ -9,21 +9,11 @@ pub fn run(
 ) -> CrushResult<()> {
     let output = sender.initialize(input.types().clone())?;
     let mut q: Vec<Row> = Vec::new();
-    loop {
-        match input.read() {
-            Ok(row) => {
-                q.push(row);
-            }
-            Err(_) => {
-                loop {
-                    if q.is_empty() {
-                        break;
-                    }
-                    output.send(q.pop().unwrap())?;
-                }
-                break;
-            }
-        }
+    while let Ok(row) = input.read() {
+        q.push(row);
+    }
+    while !q.is_empty() {
+        output.send(q.pop().unwrap())?;
     }
     Ok(())
 }

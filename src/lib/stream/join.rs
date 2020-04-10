@@ -1,22 +1,18 @@
 use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use crate::lang::errors::CrushResult;
 use std::collections::HashMap;
-use crate::{
-    lang::stream::Readable,
-    lang::errors::CrushError,
-    lang::{
-        argument::Argument,
-        table::Row,
-        table::ColumnType,
-        value::ValueType,
-        value::Value,
-    },
-    lang::stream::OutputStream,
-    util::replace::Replace,
-    lang::errors::argument_error,
-};
+use crate::lang::stream::Readable;
+use crate::lang::errors::CrushError;
+use crate::lang::table::Row;
+use crate::lang::table::ColumnType;
+use crate::lang::value::ValueType;
+use crate::lang::value::Value;
+use crate::lang::stream::OutputStream;
+use crate::util::replace::Replace;
+use crate::lang::errors::argument_error;
 use crate::lang::r#struct::Struct;
 use crate::lang::table::ColumnVec;
+use crate::lang::argument::Argument;
 
 pub struct Config {
     left_table_idx: usize,
@@ -57,7 +53,6 @@ fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Confi
 
     match (&arguments[0].value, &arguments[1].value) {
         (Value::Field(l), Value::Field(r)) => {
-
             let config = match (l.len(), r.len()) {
                 (1, 1) => {
                     let (left_table_idx, right_table_idx, left_types, right_types) = guess_tables(&input_type)?;
@@ -96,9 +91,10 @@ fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Confi
                 return argument_error("Cannot join two columns of different types");
             }
             if !r_type.is_hashable() {
-                return argument_error("Cannot join on this column type. (It is either mutable or not comparable)");
+                argument_error("Cannot join on this column type. (It is either mutable or not comparable)")
+            } else {
+                Ok(config)
             }
-            Ok(config)
         }
         _ => argument_error("Expected arguments like %table1.col == %table2.col"),
     }
@@ -115,26 +111,15 @@ fn combine(mut l: Row, r: Row, cfg: &Config) -> Row {
 
 fn do_join(cfg: &Config, l: &mut dyn Readable, r: &mut dyn Readable, output: &OutputStream) -> CrushResult<()> {
     let mut l_data: HashMap<Value, Row> = HashMap::new();
-    loop {
-        match l.read() {
-            Ok(row) => {
-                l_data.insert(row.cells()[cfg.left_column_idx].clone(), row);
-            }
-            Err(_) => break,
-        }
+    while let Ok(row) = l.read() {
+        l_data.insert(row.cells()[cfg.left_column_idx].clone(), row);
     }
 
-    loop {
-        match r.read() {
-            Ok(r_row) => {
-                l_data
-                    .remove(&r_row.cells()[cfg.right_column_idx])
-                    .map(|l_row| {
-                        let _ = output.send(combine(l_row, r_row, cfg));
-                    });
-            }
-            Err(_) => break,
-        }
+    while let Ok(r_row) = r.read() {
+        l_data.remove(&r_row.cells()[cfg.right_column_idx])
+            .map(|l_row| {
+                let _ = output.send(combine(l_row, r_row, cfg));
+            });
     }
     Ok(())
 }
@@ -152,7 +137,7 @@ pub fn run(
     }
 }
 
-fn get_output_type(input_type: &Vec<ColumnType>, cfg: &Config) -> Result<Vec<ColumnType>, CrushError> {
+fn get_output_type(input_type: &[ColumnType], cfg: &Config) -> Result<Vec<ColumnType>, CrushError> {
     let tables: Vec<Option<&Vec<ColumnType>>> = input_type.iter().map(|t| {
         match &t.cell_type {
             ValueType::TableStream(sub_types) | ValueType::Table(sub_types) => Some(sub_types),
@@ -160,7 +145,7 @@ fn get_output_type(input_type: &Vec<ColumnType>, cfg: &Config) -> Result<Vec<Col
         }
     }).collect();
 
-    return match (tables[cfg.left_table_idx], tables[cfg.right_table_idx]) {
+    match (tables[cfg.left_table_idx], tables[cfg.right_table_idx]) {
         (Some(v1), Some(v2)) => {
             let mut res = v1.clone();
             for (idx, c) in v2.iter().enumerate() {
@@ -171,7 +156,7 @@ fn get_output_type(input_type: &Vec<ColumnType>, cfg: &Config) -> Result<Vec<Col
             Ok(res)
         }
         _ => argument_error("Impossible error?"),
-    };
+    }
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {

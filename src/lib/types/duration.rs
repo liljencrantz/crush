@@ -86,7 +86,7 @@ fn new(mut context: ExecutionContext) -> CrushResult<()> {
         let mut res = Duration::seconds(0);
         vec.iter()
             .for_each(|d| {
-                res = res + d.clone();
+                res = res + *d;
             });
         context.output.send(Value::Duration(res))
     } else {

@@ -16,7 +16,7 @@ fn format_argument(res: &mut String, arg: Option<&Argument>) -> CrushResult<()> 
     Ok(())
 }
 
-fn argument_by_name<'a>(name: &str, param: &'a Vec<Argument>) -> Option<&'a Argument> {
+fn argument_by_name<'a>(name: &str, param: &'a [Argument]) -> Option<&'a Argument> {
     for a in param {
         if let Some(arg_name) = a.argument_type.as_deref() {
             if name == arg_name {

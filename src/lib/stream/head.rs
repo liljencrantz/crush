@@ -9,17 +9,12 @@ pub fn run(
 ) -> CrushResult<()> {
     let output = sender.initialize(input.types().clone())?;
     let mut count = 0;
-    loop {
-        match input.read() {
-            Ok(row) => {
-                if count >= lines {
-                    break;
-                }
-                output.send(row)?;
-                count += 1;
-            }
-            Err(_) => break,
+    while let Ok(row) = input.read() {
+        if count >= lines {
+            break;
         }
+        output.send(row)?;
+        count += 1;
     }
     Ok(())
 }

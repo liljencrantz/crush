@@ -1,6 +1,6 @@
 use crate::{
     lang::errors::argument_error,
-    lang::stream::{OutputStream},
+    lang::stream::OutputStream,
 };
 use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use crate::lang::{argument::Argument, table::Row};
@@ -19,7 +19,7 @@ fn parse(
         match arguments.len() {
             0 => {
                 if types.len() != 1 {
-                    return argument_error("No sort key specified")
+                    return argument_error("No sort key specified");
                 }
                 0
             }
@@ -29,16 +29,13 @@ fn parse(
     if !types[sort_column_idx].cell_type.is_comparable() {
         return argument_error("Bad comparison key");
     }
-    Ok(Config { sort_column_idx})
+    Ok(Config { sort_column_idx })
 }
 
 pub fn run(config: Config, input: &mut dyn Readable, output: OutputStream) -> CrushResult<()> {
     let mut res: Vec<Row> = Vec::new();
-    loop {
-        match input.read() {
-            Ok(row) => res.push(row),
-            Err(_) => break,
-        }
+    while let Ok(row) = input.read() {
+        res.push(row);
     }
 
     res.sort_by(|a, b|

@@ -10,16 +10,11 @@ pub fn run(input: &mut dyn Readable, sender: ValueSender) -> CrushResult<()> {
     let output = sender.initialize(output_type)?;
 
     let mut line: i128 = 0;
-    loop {
-        match input.read() {
-            Ok(row) => {
-                let mut out = vec![Value::Integer(line)];
-                out.extend(row.into_vec());
-                output.send(Row::new(out))?;
-                line += 1;
-            }
-            Err(_) => break,
-        }
+    while let Ok(row) = input.read() {
+        let mut out = vec![Value::Integer(line)];
+        out.extend(row.into_vec());
+        output.send(Row::new(out))?;
+        line += 1;
     }
     Ok(())
 }

@@ -17,8 +17,9 @@ use crate::lang::printer::Printer;
 use crate::lang::job::JobJoinHandle;
 
 pub trait ArgumentVector {
-    fn check_len_range(&self, min_len: usize, max_len: usize) -> CrushResult<()>;
     fn check_len(&self, len: usize) -> CrushResult<()>;
+    fn check_len_range(&self, min_len: usize, max_len: usize) -> CrushResult<()>;
+    fn check_len_min(&self, min_len: usize) -> CrushResult<()>;
     fn string(&mut self, idx: usize) -> CrushResult<Box<str>>;
     fn integer(&mut self, idx: usize) -> CrushResult<i128>;
     fn float(&mut self, idx: usize) -> CrushResult<f64>;
@@ -66,15 +67,21 @@ impl ArgumentVector for Vec<Argument> {
         }
     }
 
+    fn check_len_min(&self, min_len: usize) -> CrushResult<()> {
+        if self.len() >= min_len {
+            Ok(())
+        } else {
+            argument_error(format!("Expected at least {} arguments, got {}", min_len, self.len()).as_str())
+        }
+    }
+
     fn check_len_range(&self, min_len: usize, max_len: usize) -> CrushResult<()> {
         if self.len() < min_len {
             argument_error(format!("Expected at least {} arguments, got {}", min_len, self.len()).as_str())
+        } else if self.len() > max_len {
+            argument_error(format!("Expected at most {} arguments, got {}", max_len, self.len()).as_str())
         } else {
-            if self.len() > max_len {
-                argument_error(format!("Expected at most {} arguments, got {}", max_len, self.len()).as_str())
-            } else {
-                Ok(())
-            }
+            Ok(())
         }
     }
 

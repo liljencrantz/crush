@@ -21,27 +21,25 @@ pub struct Printer {
 pub fn init() -> (Printer, JoinHandle<()>) {
     let (sender, receiver) = bounded(128);
 
-    (Printer { sender: sender.clone() },
-    thread::Builder::new().name("printer".to_string()).spawn(move || {
-        loop {
-            match receiver.recv() {
-                Ok(message) => {
-                    match message {
-                        Error(err) => println!("Error: {}", err),
-                        CrushError(err) => println!("Error: {}", err.message),
-                        Line(line) => println!("{}", line),
+    (Printer { sender: sender },
+     thread::Builder::new().name("printer".to_string()).spawn(move || {
+         loop {
+             match receiver.recv() {
+                 Ok(message) => {
+                     match message {
+                         Error(err) => eprintln!("Error: {}", err),
+                         CrushError(err) => eprintln!("Error: {}", err.message),
+                         Line(line) => println!("{}", line),
 //                        Lines(lines) => for line in lines {println!("{}", line)},
-                    }
-                }
-                Err(_) => break,
-            }
-        }
-    }).unwrap())
-
+                     }
+                 }
+                 Err(_) => break,
+             }
+         }
+     }).unwrap())
 }
 
 impl Printer {
-
     pub fn line(&self, line: &str) {
         self.handle_error(to_crush_error(self.sender.send(PrinterMessage::Line(Box::from(line)))));
     }
@@ -51,14 +49,11 @@ impl Printer {
         }
     */
     pub fn handle_error<T>(&self, result: CrushResult<T>) {
-        match result {
-            Err(e) => {
-                match e.kind {
-                    Kind::SendError => {}
-                    _ => self.crush_error(e),
-                }
+        if let Err(e) = result {
+            match e.kind{
+                Kind::SendError => {},
+                _ => self.crush_error(e),
             }
-            _ => {}
         }
     }
 

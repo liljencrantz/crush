@@ -50,7 +50,6 @@ pub fn run(
                 first_result.append(&mut row.cells().clone());
             }
             for (location, source) in &config.columns {
-
                 let value = match source {
                     Source::Closure(closure) => {
                         let (sender, receiver) = channels();
@@ -71,7 +70,7 @@ pub fn run(
                             }
                         )?;
                         receiver.recv()?
-                    },
+                    }
                     Source::Argument(idx) => row.cells()[*idx].clone(),
                 };
 
@@ -93,51 +92,46 @@ pub fn run(
     let output = context.output.initialize(output_type)?;
     output.send(Row::new(first_result))?;
 
-    loop {
-        match input.read() {
-            Ok(row) => {
-                let mut next_result = Vec::new();
+    while let Ok(row) = input.read() {
+        let mut next_result = Vec::new();
 
-                if config.copy {
-                    next_result.append(&mut row.cells().clone());
-                }
-                for (location, source) in &config.columns {
-                    let value = match source {
-                        Source::Closure(closure) => {
-                            let arguments: Vec<Argument> = row
-                                .cells()
-                                .iter()
-                                .zip(&input_type)
-                                .map(|(cell, cell_type)| Argument::named(&cell_type.name, cell.clone()))
-                                .collect();
-                            let (sender, receiver) = channels();
-                            closure.invoke(
-                                ExecutionContext {
-                                    input: empty_channel(),
-                                    output: sender,
-                                    arguments,
-                                    env: context.env.clone(),
-                                    this: None,
-                                    printer: context.printer.clone(),
-                                }
-                            )?;
-                            receiver.recv()?
-                        },
-                        Source::Argument(idx) => row.cells()[*idx].clone(),
-                    };
-                    match location {
-                        Location::Append(_) => {
-                            next_result.push(value);
-                        }
-                        Location::Replace(idx) => {
-                            next_result[*idx] = value;
-                        }
-                    }
-                }
-                output.send(Row::new(next_result))?;
-            }
-            Err(_) => break,
+        if config.copy {
+            next_result.append(&mut row.cells().clone());
         }
+        for (location, source) in &config.columns {
+            let value = match source {
+                Source::Closure(closure) => {
+                    let arguments: Vec<Argument> = row
+                        .cells()
+                        .iter()
+                        .zip(&input_type)
+                        .map(|(cell, cell_type)| Argument::named(&cell_type.name, cell.clone()))
+                        .collect();
+                    let (sender, receiver) = channels();
+                    closure.invoke(
+                        ExecutionContext {
+                            input: empty_channel(),
+                            output: sender,
+                            arguments,
+                            env: context.env.clone(),
+                            this: None,
+                            printer: context.printer.clone(),
+                        }
+                    )?;
+                    receiver.recv()?
+                }
+                Source::Argument(idx) => row.cells()[*idx].clone(),
+            };
+            match location {
+                Location::Append(_) => {
+                    next_result.push(value);
+                }
+                Location::Replace(idx) => {
+                    next_result[*idx] = value;
+                }
+            }
+        }
+        output.send(Row::new(next_result))?;
     }
     Ok(())
 }
@@ -154,7 +148,7 @@ fn perform_for(
     }
 
     if let Value::Glob(g) = &context.arguments[0].value {
-        if context.arguments[0].argument_type.is_none() && g.to_string() == "%" {
+        if context.arguments[0].argument_type.is_none() && &g.to_string() == "%" {
             copy = true;
             context.arguments.remove(0);
         } else {

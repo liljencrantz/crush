@@ -216,12 +216,7 @@ impl CrushCommand for ConditionCommand {
     fn name(&self) -> &str { "conditional command" }
 
     fn can_block(&self, arguments: &Vec<ArgumentDefinition>, context: &mut CompileContext) -> bool {
-        for arg in arguments {
-            if arg.value.can_block(arguments, context) {
-                return true;
-            }
-        }
-        false
+        arguments.iter().any(|arg| arg.value.can_block(arguments, env))
     }
 
     fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {

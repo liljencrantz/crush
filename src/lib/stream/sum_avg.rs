@@ -11,7 +11,7 @@ use crate::lang::stream::Readable;
 use crate::lang::table::ColumnVec;
 use chrono::Duration;
 
-pub fn parse(input_type: &Vec<ColumnType>, arguments: &Vec<Argument>) -> CrushResult<usize> {
+pub fn parse(input_type: &Vec<ColumnType>, arguments: &[Argument]) -> CrushResult<usize> {
     match arguments.len() {
         0 => if input_type.len() == 1 && input_type[0].cell_type == ValueType::Integer {
             Ok(0)
@@ -40,14 +40,11 @@ macro_rules! sum_function {
     ($name:ident, $var_type:ident, $var_initializer:expr, $value_type:ident) => {
 fn $name(mut s: Box<dyn Readable>, column: usize) -> CrushResult<Value> {
     let mut res: $var_type = $var_initializer;
-    loop {
-        match s.read() {
-            Ok(row) => match row.cells()[column] {
+    while let Ok(row) = s.read() {
+match row.cells()[column] {
                 Value::$value_type(i) => res = res + i,
                 _ => return error("Invalid cell value, expected an integer")
-            },
-            Err(_) => break,
-        }
+            }
     }
     Ok(Value::$value_type(res))
 }

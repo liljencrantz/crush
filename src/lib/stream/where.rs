@@ -33,16 +33,10 @@ fn evaluate(
 }
 
 pub fn run(condition: Box<dyn CrushCommand + Send + Sync>, input: &mut dyn Readable, output: OutputStream, base_context: &ExecutionContext) -> CrushResult<()> {
-
-    loop {
-        match input.read() {
-            Ok(row) => {
-                match evaluate(condition.clone(), &row, input.types(), &base_context) {
-                    Ok(val) => if val { if output.send(row).is_err() { break; } },
-                    Err(e) => base_context.printer.crush_error(e),
-                }
-            }
-            Err(_) => break,
+    while let Ok(row) = input.read() {
+        match evaluate(condition.clone(), &row, input.types(), &base_context) {
+            Ok(val) => if val { if output.send(row).is_err() { break; } },
+            Err(e) => base_context.printer.crush_error(e),
         }
     }
     Ok(())

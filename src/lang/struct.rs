@@ -162,7 +162,9 @@ impl Struct {
         data.lookup.keys().for_each(|name| { dest.insert(name.clone()); });
         let parent = data.parent.clone();
         drop(data);
-        parent.map(|p| p.fill_keys(dest));
+        if let Some(p) = parent {
+            p.fill_keys(dest);
+        }
     }
 
     pub fn set(self, name: &str, value: Value) -> Option<Value> {
@@ -197,7 +199,7 @@ impl ToString for Struct {
         let parent = data.parent.clone();
         drop(data);
         format!("data{} {}",
-                parent.map(|p| format!(" parent=({})", p.to_string())).unwrap_or("".to_string()),
+                parent.map(|p| format!(" parent=({})", p.to_string())).unwrap_or_else(|| "".to_string()),
                 elements
                     .iter()
                     .map(|(c, t)| format!("{}=({})", c, t.to_string()))

@@ -71,12 +71,8 @@ fn replace(mut context: ExecutionContext) -> CrushResult<()> {
                     }
                 }
             }
-            (Some("text"), Value::String(t)) => {
-                text = Some(t);
-            }
-            (Some("replacement"), Value::String(t)) => {
-                replace = Some(t);
-            }
+            (Some("text"), Value::String(t)) => text = Some(t),
+            (Some("replacement"), Value::String(t)) => replace = Some(t),
             _ => return argument_error("Invalid argument"),
         }
     }
@@ -107,12 +103,8 @@ fn replace_all(mut context: ExecutionContext) -> CrushResult<()> {
                     }
                 }
             }
-            (Some("text"), Value::String(t)) => {
-                text = Some(t);
-            }
-            (Some("replacement"), Value::String(t)) => {
-                replace = Some(t);
-            }
+            (Some("text"), Value::String(t)) => text = Some(t),
+            (Some("replacement"), Value::String(t)) => replace = Some(t),
             _ => return argument_error("Invalid argument"),
         }
     }

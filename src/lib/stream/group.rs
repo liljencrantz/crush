@@ -1,7 +1,7 @@
 use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use std::collections::HashMap;
 use crate::{
-    lang::errors::{argument_error},
+    lang::errors::argument_error,
     lang::{
         argument::Argument,
         table::Row,
@@ -12,7 +12,7 @@ use crate::{
 };
 use crate::lang::{table::ColumnType};
 use crate::lang::errors::{CrushResult, error};
-use crate::lang::stream::{Readable};
+use crate::lang::stream::Readable;
 use crate::lang::table::ColumnVec;
 
 pub struct Config {
@@ -49,25 +49,20 @@ pub fn run(
 ) -> CrushResult<()> {
     let mut groups: HashMap<Value, OutputStream> = HashMap::new();
 
-    loop {
-        match input.read() {
-            Ok(row) => {
-                let key = row.cells()[config.column].clone();
-                let val = groups.get(&key);
-                match val {
-                    None => {
-                        let (output_stream, input_stream) = unlimited_streams(config.input_type.clone());
-                        let out_row = Row::new(vec![key.clone(), Value::TableStream(input_stream)]);
-                        output.send(out_row)?;
-                        let _ = output_stream.send(row);
-                        groups.insert(key, output_stream);
-                    }
-                    Some(output_stream) => {
-                        let _ = output_stream.send(row);
-                    }
-                }
+    while let Ok(row) = input.read() {
+        let key = row.cells()[config.column].clone();
+        let val = groups.get(&key);
+        match val {
+            None => {
+                let (output_stream, input_stream) = unlimited_streams(config.input_type.clone());
+                let out_row = Row::new(vec![key.clone(), Value::TableStream(input_stream)]);
+                output.send(out_row)?;
+                let _ = output_stream.send(row);
+                groups.insert(key, output_stream);
             }
-            Err(_) => break,
+            Some(output_stream) => {
+                let _ = output_stream.send(row);
+            }
         }
     }
     Ok(())
@@ -77,7 +72,7 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()?.readable() {
         Some(mut input) => {
             let config = parse(input.types().clone(), context.arguments)?;
-            let output_type= vec![
+            let output_type = vec![
                 input.types()[config.column].clone(),
                 ColumnType::new(
                     &config.name,

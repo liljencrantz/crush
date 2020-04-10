@@ -11,20 +11,19 @@ use crate::lang::table::TableReader;
 use std::cmp::max;
 use std::io::{BufReader, Read};
 use crate::lang::printer::Printer;
+use crate::lang::errors::to_crush_error;
 
 pub fn create_pretty_printer(printer: Printer) -> ValueSender {
     let (o, i) = channels();
-    let _ = thread::Builder::new()
+    let printer_clone = printer.clone();
+    printer_clone.handle_error(to_crush_error(thread::Builder::new()
         .name("output-formater".to_string())
         .spawn(move || {
             let pp = PrettyPrinter { printer };
-            loop {
-                match i.recv() {
-                    Ok(val) => pp.print_value(val),
-                    Err(_) => break,
-                }
+            while let Ok(val) = i.recv() {
+                pp.print_value(val);
             }
-        });
+        })));
     o
 }
 
@@ -137,7 +136,7 @@ impl PrettyPrinter {
         }
     }
 
-    fn calculate_header_width(&self, w: &mut Vec<usize>, types: &Vec<ColumnType>, has_name: bool) {
+    fn calculate_header_width(&self, w: &mut [usize], types: &[ColumnType], has_name: bool) {
         if has_name {
             for (idx, val) in types.iter().enumerate() {
                 w[idx] = max(w[idx], val.name.len());
@@ -145,7 +144,7 @@ impl PrettyPrinter {
         }
     }
 
-    fn calculate_body_width(&self, w: &mut Vec<usize>, data: &Vec<Row>, col_count: usize) {
+    fn calculate_body_width(&self, w: &mut [usize], data: &[Row], col_count: usize) {
         for r in data {
             assert_eq!(col_count, r.cells().len());
             for (idx, c) in r.cells().iter().enumerate() {
@@ -155,7 +154,7 @@ impl PrettyPrinter {
         }
     }
 
-    fn print_header(&self, w: &Vec<usize>, types: &Vec<ColumnType>, has_name: bool, indent: usize) {
+    fn print_header(&self, w: &[usize], types: &[ColumnType], has_name: bool, indent: usize) {
         if has_name {
             let mut header = " ".repeat(indent * 4);
             let last_idx = types.len() - 1;
@@ -172,7 +171,7 @@ impl PrettyPrinter {
 
     fn print_row(
         &self,
-        w: &Vec<usize>,
+        w: &[usize],
         r: Row,
         indent: usize,
         rows: &mut Vec<Table>,
@@ -213,7 +212,7 @@ impl PrettyPrinter {
     }
 
     fn print_body(
-        &self, w: &Vec<usize>, data: Vec<Row>, indent: usize) {
+        &self, w: &[usize], data: Vec<Row>, indent: usize) {
         for r in data.into_iter() {
             let mut rows = Vec::new();
             let mut outputs = Vec::new();

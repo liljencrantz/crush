@@ -12,21 +12,14 @@ pub fn run(
 ) -> CrushResult<()> {
     let output = sender.initialize(input.types().clone())?;
     let mut q: VecDeque<Row> = VecDeque::new();
-    loop {
-        match input.read() {
-            Ok(row) => {
-                if q.len() >= lines as usize {
-                    q.pop_front();
-                }
-                q.push_back(row);
-            }
-            Err(_) => {
-                for row in q.drain(..) {
-                    output.send(row)?;
-                }
-                break;
-            }
+    while let Ok(row) = input.read() {
+        if q.len() >= lines as usize {
+            q.pop_front();
         }
+        q.push_back(row);
+    }
+    for row in q.drain(..) {
+        output.send(row)?;
     }
     Ok(())
 }

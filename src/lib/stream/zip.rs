@@ -1,7 +1,7 @@
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::errors::CrushResult;
 use crate::lang::errors::error;
-use crate::lang::stream::{ValueSender};
+use crate::lang::stream::ValueSender;
 use crate::lang::stream::Readable;
 
 pub fn run(input1: &mut dyn Readable, input2: &mut dyn Readable, sender: ValueSender) -> CrushResult<()> {
@@ -9,14 +9,9 @@ pub fn run(input1: &mut dyn Readable, input2: &mut dyn Readable, sender: ValueSe
     output_type.append(&mut input1.types().clone());
     output_type.append(&mut input2.types().clone());
     let output = sender.initialize(output_type)?;
-    loop {
-        match (input1.read(), input2.read()) {
-            (Ok(mut row1), Ok(row2)) => {
-                row1.append(&mut row2.into_vec());
-                output.send(row1)?;
-            }
-            _ => break,
-        }
+    while let (Ok(mut row1), Ok(row2)) = (input1.read(), input2.read()) {
+        row1.append(&mut row2.into_vec());
+        output.send(row1)?;
     }
     Ok(())
 }

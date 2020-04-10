@@ -93,7 +93,7 @@ fn lpad(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len_range(1, 2)?;
     let s = context.this.string()?;
     let len = context.arguments.integer(0)? as usize;
-    let pad_char = context.arguments.optional_string(1)?.unwrap_or(Box::from(" "));
+    let pad_char = context.arguments.optional_string(1)?.unwrap_or_else(|| Box::from(" "));
     if pad_char.len() != 1 {
         return argument_error("Padding string must be exactly one character long");
     }
@@ -111,7 +111,7 @@ fn rpad(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len_range(1, 2)?;
     let s = context.this.string()?;
     let len = context.arguments.integer(0)? as usize;
-    let pad_char = context.arguments.optional_string(1)?.unwrap_or(Box::from(" "));
+    let pad_char = context.arguments.optional_string(1)?.unwrap_or_else(|| Box::from(" "));
     if pad_char.len() != 1 {
         return argument_error("Padding string must be exactly one character long");
     }

@@ -137,8 +137,8 @@ impl Node {
                 Node::Label(l) => ValueDefinition::Label(l.clone()),
                 Node::Regex(l) => ValueDefinition::Value(Value::Regex(l.clone(), to_crush_error(Regex::new(l.clone().as_ref()))?)),
                 Node::String(t) => ValueDefinition::Value(Value::string(unescape(t).as_str())),
-                Node::Integer(i) => ValueDefinition::Value(Value::Integer(i.clone())),
-                Node::Float(f) => ValueDefinition::Value(Value::Float(f.clone())),
+                Node::Integer(i) => ValueDefinition::Value(Value::Integer(*i)),
+                Node::Float(f) => ValueDefinition::Value(Value::Float(*f)),
                 Node::GetAttr(node, label) => {
                     let parent = node.generate_argument(env)?;
                     match parent.unnamed_value()? {
@@ -169,7 +169,7 @@ impl Node {
             }))
     }
 
-    fn generate_standalone_assignment(target: &Box<Node>, op: &Box<str>, value: &Box<Node>, env: &Scope) -> CrushResult<Option<CommandInvocation>> {
+    fn generate_standalone_assignment(target: &Box<Node>, op: &Box<str>, value: &Node, env: &Scope) -> CrushResult<Option<CommandInvocation>> {
         match op.deref() {
             "=" => {
                 match target.as_ref() {
@@ -313,21 +313,19 @@ impl Node {
     pub fn parse_label(s: &str) -> Box<Node> {
         if s.contains('%') || s.contains('?') {
             Box::from(Node::Glob(Box::from(s)))
-        } else {
-            if s.contains('/') {
-                if s.starts_with('/') {
-                    Box::from(Node::File(Box::from(Path::new(s))))
-                } else {
-                    let parts = s.split('/').collect::<Vec<&str>>();
-                    let mut res = Node::Label(Box::from(parts[0]));
-                    for part in &parts[1..] {
-                        res = Node::Path(Box::from(res), Box::from(part.clone()))
-                    }
-                    Box::from(res)
-                }
+        } else if s.contains('/') {
+            if s.starts_with('/') {
+                Box::from(Node::File(Box::from(Path::new(s))))
             } else {
-                Box::from(Node::Label(Box::from(s)))
+                let parts = s.split('/').collect::<Vec<&str>>();
+                let mut res = Node::Label(Box::from(parts[0]));
+                for part in &parts[1..] {
+                    res = Node::Path(Box::from(res), Box::from(part.clone()))
+                }
+                Box::from(res)
             }
+        } else {
+            Box::from(Node::Label(Box::from(s)))
         }
     }
 }

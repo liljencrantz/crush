@@ -34,5 +34,5 @@ fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
     let val = context.this.binary()?;
     context.arguments.check_len(1)?;
     let idx = context.arguments.integer(0)?;
-    context.output.send(Value::Integer(mandate(val.get(idx as usize), "Index out of bounds")?.clone() as i128))
+    context.output.send(Value::Integer(*mandate(val.get(idx as usize), "Index out of bounds")? as i128))
 }

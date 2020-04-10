@@ -1,9 +1,13 @@
 [package]
 name = "crush"
 version = "0.1.0"
-authors = ["axel <liljencrantz@gmail.com>"]
+authors = ["Axel Liljencrantz <liljencrantz@gmail.com>"]
 edition = "2018"
-
+license-file = "LICENSE"
+description = "A command line shell that is also a powerful and modern programming language"
+readme = "README.md"
+repository = "https://github.com/liljencrantz/crush"
+license = "MIT"
 
 [build-dependencies.prost-build]
 version = "0.6.1"

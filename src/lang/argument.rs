@@ -14,11 +14,7 @@ pub enum ArgumentType {
 
 impl ArgumentType {
     pub fn is_some(&self) -> bool {
-        if let ArgumentType::Some(_) = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, ArgumentType::Some(_))
     }
 
 

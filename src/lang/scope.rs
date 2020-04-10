@@ -200,7 +200,7 @@ impl Scope {
     }
 
     pub fn root_object(&self) -> Struct {
-        match self.global_value(vec![Box::from("global"),Box::from("types"),Box::from("root"),]) {
+        match self.global_value(vec![Box::from("global"), Box::from("types"), Box::from("root"), ]) {
             Ok(Value::Struct(s)) => s,
             _ => panic!("Root missing!"),
         }
@@ -245,8 +245,8 @@ impl Scope {
                                     Some(v) => Ok(v.clone()),
                                     _ => error(format!(
                                         "Could not find command {} in scope {}",
-                                    path[1],
-                                    path[0]).as_str()),
+                                        path[1],
+                                        path[0]).as_str()),
                                 }
                             }
                             _ => {
@@ -399,12 +399,13 @@ impl Scope {
         }
     }
 
-
     pub fn readonly(&self) {
         self.data.lock().unwrap().is_readonly = true;
     }
+}
 
-    pub fn to_string(&self) -> String {
+impl ToString for Scope {
+    fn to_string(&self) -> String {
         let mut map = HashMap::new();
         self.dump(&mut map);
         map.iter().map(|(k, _v)| k.clone()).collect::<Vec<String>>().join(", ")
