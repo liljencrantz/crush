@@ -3,13 +3,37 @@ use crate::lang::errors::CrushResult;
 use crate::lang::{value::Value};
 use crate::lang::scope::Scope;
 use crate::lang::execution_context::ArgumentVector;
+use crate::lang::errors::argument_error;
 
 macro_rules! math_fun {
     ($name:ident, $op:expr) => {
 fn $name(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
-    let x: f64 = context.arguments.float(0)?;
+    let x = match context.arguments.value(0)? {
+        Value::Float(f) => f,
+        Value::Integer(i) => i as f64,
+        v => return argument_error(format!("Expected a number, got a {}", v.value_type().to_string()).as_str()),
+    };
     context.output.send(Value::Float($op(x)))
+}
+    }
+}
+
+macro_rules! math_fun2 {
+    ($name:ident, $op:expr) => {
+fn $name(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(2)?;
+    let x = match context.arguments.value(0)? {
+        Value::Float(f) => f,
+        Value::Integer(i) => i as f64,
+        v => return argument_error(format!("Expected a number, got a {}", v.value_type().to_string()).as_str()),
+    };
+    let y = match context.arguments.value(1)? {
+        Value::Float(f) => f,
+        Value::Integer(i) => i as f64,
+        v => return argument_error(format!("Expected a number, got a {}", v.value_type().to_string()).as_str()),
+    };
+    context.output.send(Value::Float($op(x, y)))
 }
     }
 }
@@ -24,20 +48,8 @@ math_fun!(atan, |x:f64| x.atan());
 math_fun!(ceil, |x:f64| x.ceil());
 math_fun!(floor, |x:f64| x.floor());
 math_fun!(ln, |x:f64| x.ln());
-
-fn pow(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(2)?;
-    let x: f64 = context.arguments.float(0)?;
-    let y: f64 = context.arguments.float(1)?;
-    context.output.send(Value::Float(x.powf(y)))
-}
-
-fn log(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(2)?;
-    let x: f64 = context.arguments.float(0)?;
-    let y: f64 = context.arguments.float(1)?;
-    context.output.send(Value::Float(x.log(y)))
-}
+math_fun2!(pow, |x:f64, y:f64| x.powf(y));
+math_fun2!(log, |x:f64, y:f64| x.log(y));
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let env = root.create_namespace("math")?;
@@ -101,6 +113,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "math:ceil number:float",
         "The smallest integer larger than number",
         None)?;
+    env.declare("pi", Value::Float(std::f64::consts::PI))?;
+    env.declare("tau", Value::Float(std::f64::consts::PI * 2.0))?;
+    env.declare("e", Value::Float(std::f64::consts::E))?;
 
     env.readonly();
     Ok(())
