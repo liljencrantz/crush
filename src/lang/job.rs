@@ -44,6 +44,10 @@ impl Job {
         }
     }
 
+    pub fn commands(&self) -> &[CommandInvocation] {
+        &self.commands
+    }
+
     pub fn invoke(&self, context: JobContext) -> CrushResult<JobJoinHandle> {
         let mut calls = Vec::new();
 

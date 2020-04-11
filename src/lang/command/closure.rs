@@ -1,17 +1,19 @@
-use crate::lang::errors::{CrushResult, argument_error};
-use crate::lang::argument::{Argument, ArgumentDefinition};
+use crate::lang::errors::{CrushResult, argument_error, error, mandate};
+use crate::lang::argument::{Argument, ArgumentDefinition, ArgumentType};
 use crate::lang::command::{Parameter, CrushCommand, BoundCommand};
 use crate::lang::scope::Scope;
 use std::collections::HashMap;
-use crate::lang::value::{Value, ValueType};
+use crate::lang::value::{Value, ValueType, ValueDefinition};
 use crate::lang::list::List;
 use crate::lang::dict::Dict;
 use crate::lang::job::Job;
 use crate::lang::stream::{empty_channel, black_hole};
 use crate::lang::execution_context::{ExecutionContext, CompileContext, JobContext};
 use crate::lang::help::Help;
-use crate::lang::serialization::SerializationState;
-use crate::lang::serialization::model::Element;
+use crate::lang::serialization::{SerializationState, Serializable, DeserializationState};
+use crate::lang::serialization::model::{Element, element};
+use crate::lang::serialization::model;
+use crate::lang::command_invocation::CommandInvocation;
 
 pub struct Closure {
     name: Option<Box<str>>,
@@ -56,7 +58,7 @@ impl CrushCommand for Closure {
         Ok(())
     }
 
-    fn can_block(&self, _arg: &Vec<ArgumentDefinition>, _context: &mut CompileContext) -> bool {
+    fn can_block(&self, _arg: &[ArgumentDefinition], _context: &mut CompileContext) -> bool {
         true
     }
 
@@ -75,16 +77,190 @@ impl CrushCommand for Closure {
         self
     }
 
-    fn serialize(&self, _elements: &mut Vec<Element>, _state: &mut SerializationState) -> CrushResult<usize> {
-        unimplemented!();
+    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
+        let mut serialized: model::Closure = model::Closure::default();
+        serialized.name = Some(
+            match &self.name {
+                None => model::closure::Name::HasName(false),
+                Some(name) => model::closure::Name::NameValue(Value::string(name).serialize(elements, state)? as u64),
+            }
+        );
+
+        serialized.short_help = self.short_help.clone();
+        serialized.long_help = self.long_help.clone();
+
+        for j in &self.job_definitions {
+            serialized.job_definitions.push(serialize_job(j, elements, state)?)
+        }
+
+        let idx = elements.len();
+        elements.push(model::Element {
+            element: Some(model::element::Element::Closure(serialized))
+        });
+        Ok(idx)
     }
 
-    fn bind(&self, this: Value) -> Box<dyn CrushCommand +  Send + Sync> {
+    fn bind(&self, this: Value) -> Box<dyn CrushCommand + Send + Sync> {
         Box::from(BoundCommand {
             command: self.clone(),
             this,
         })
     }
+}
+
+fn serialize_job(
+    job: &Job,
+    elements: &mut Vec<Element>,
+    state: &mut SerializationState) -> CrushResult<model::Job> {
+    let mut s: model::Job = model::Job::default();
+    for c in job.commands() {
+        s.commands.push(serialize_command(c, elements, state)?);
+    }
+    Ok(s)
+}
+
+fn deserialize_job(s: &model::Job, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<Job> {
+    Ok(Job::new(s.commands.iter().map(|c| deserialize_command(c, elements, state)).collect::<CrushResult<Vec<_>>>()?))
+}
+
+fn serialize_command(
+    cmd: &CommandInvocation,
+    elements: &mut Vec<Element>,
+    state: &mut SerializationState) -> CrushResult<model::CommandInvocation> {
+    let mut s: model::CommandInvocation = model::CommandInvocation::default();
+    s.command = Some(serialize_value_definition(cmd.command(), elements, state)?);
+    s.arguments = cmd.arguments().iter().map(|a| serialize_argument(a, elements, state)).collect::<CrushResult<Vec<_>>>()?;
+    Ok(s)
+}
+
+fn deserialize_command(s: &model::CommandInvocation, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<CommandInvocation> {
+//    Ok(Job::new(s.commands.iter().map(|c| deserialize_command(c, elements, state)).collect()?))
+    if let Some(command) = &s.command {
+        Ok(CommandInvocation::new(
+            deserialize_value_definition(command, elements, state)?,
+            s.arguments.iter()
+                .map(|a| deserialize_argument(a, elements, state))
+                .collect::<CrushResult<Vec<_>>>()?,
+        ))
+    } else {
+        error("Invalid job")
+    }
+}
+
+fn deserialize_argument(
+    s: &model::ArgumentDefinition,
+    elements: &Vec<Element>,
+    state: &mut DeserializationState,
+) -> CrushResult<ArgumentDefinition> {
+    Ok(
+        ArgumentDefinition {
+            value: deserialize_value_definition(mandate(s.value.as_ref(), "Missing argument value")?, elements, state)?,
+            argument_type:
+            match mandate(s.argument_type.as_ref(), "Missing argument type")? {
+                model::argument_definition::ArgumentType::Some(s) => ArgumentType::Some(s.clone().into_boxed_str()),
+                model::argument_definition::ArgumentType::None(_) => ArgumentType::None,
+                model::argument_definition::ArgumentType::ArgumentList(_) => ArgumentType::ArgumentList,
+                model::argument_definition::ArgumentType::ArgumentDict(_) => ArgumentType::ArgumentDict,
+            },
+        }
+    )
+}
+
+fn serialize_argument(
+    a: &ArgumentDefinition,
+    elements: &mut Vec<Element>,
+    state: &mut SerializationState,
+) -> CrushResult<model::ArgumentDefinition> {
+    Ok(model::ArgumentDefinition {
+        value: Some(serialize_value_definition(&a.value, elements, state)?),
+        argument_type: Some(serialize_argument_type(&a.argument_type)),
+    })
+}
+
+fn serialize_argument_type(a: &ArgumentType) -> model::argument_definition::ArgumentType {
+    match a {
+        ArgumentType::Some(s) => model::argument_definition::ArgumentType::Some(s.to_string()),
+        ArgumentType::None => model::argument_definition::ArgumentType::None(false),
+        ArgumentType::ArgumentList => model::argument_definition::ArgumentType::ArgumentList(false),
+        ArgumentType::ArgumentDict => model::argument_definition::ArgumentType::ArgumentDict(false),
+    }
+}
+
+fn serialize_value_definition(
+    v: &ValueDefinition,
+    elements: &mut Vec<Element>,
+    state: &mut SerializationState,
+) -> CrushResult<model::ValueDefinition> {
+    Ok(model::ValueDefinition {
+        value_definition: Some(
+            match v {
+                ValueDefinition::Value(v) =>
+                    model::value_definition::ValueDefinition::Value(
+                        v.serialize(elements, state)? as u64),
+                ValueDefinition::ClosureDefinition(name, parameters, jobs) =>
+                    model::value_definition::ValueDefinition::ClosureDefinition(
+                        model::ClosureDefinition {
+                            job_definitions: jobs.iter()
+                                .map(|j| serialize_job(j, elements, state))
+                                .collect::<CrushResult<Vec<_>>>()?,
+                            name: None,
+                            signature: None,
+                        }
+                    ),
+                ValueDefinition::JobDefinition(j) =>
+                    model::value_definition::ValueDefinition::Job(
+                        serialize_job(j, elements, state)?),
+
+                ValueDefinition::JobDefinition(j) =>
+                    model::value_definition::ValueDefinition::Job(
+                        serialize_job(j, elements, state)?),
+                ValueDefinition::Label(l) =>
+                    model::value_definition::ValueDefinition::Label(l.to_string()),
+                ValueDefinition::GetAttr(parent, element) =>
+                    model::value_definition::ValueDefinition::GetAttr(
+                        Box::from(model::Attr {
+                            parent: Some(Box::from(serialize_value_definition(parent, elements, state)?)),
+                            element: element.to_string(),
+                        })
+                    ),
+                ValueDefinition::Path(parent, element) =>
+                    model::value_definition::ValueDefinition::Path(
+                        Box::from(model::Attr {
+                            parent: Some(Box::from(serialize_value_definition(parent, elements, state)?)),
+                            element: element.to_string(),
+                        })
+                    ),
+            }
+        )
+    })
+}
+
+fn deserialize_value_definition(s: &model::ValueDefinition, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<ValueDefinition> {
+    Ok(match mandate(s.value_definition.as_ref(), "Invalid value definition")? {
+        model::value_definition::ValueDefinition::Value(idx) =>
+            ValueDefinition::Value(Value::deserialize(*idx as usize, elements, state)?),
+        model::value_definition::ValueDefinition::ClosureDefinition(c) =>
+            ValueDefinition::ClosureDefinition(
+                None,
+                None,
+                c.job_definitions.iter()
+                .map(|j| deserialize_job(j, elements, state))
+                .collect::<CrushResult<Vec<_>>>()?),
+        model::value_definition::ValueDefinition::Job(j) =>
+            ValueDefinition::JobDefinition(Job::new(j.commands.iter()
+                .map(|c| deserialize_command(c, elements, state))
+                .collect::<CrushResult<Vec<_>>>()?)),
+        model::value_definition::ValueDefinition::Label(s) =>
+            ValueDefinition::Label(s.clone().into_boxed_str()),
+        model::value_definition::ValueDefinition::GetAttr(a) =>
+            ValueDefinition::GetAttr(
+                Box::from(deserialize_value_definition(mandate(a.parent.as_ref(), "Invalid value definition")?, elements, state)?),
+                a.element.clone().into_boxed_str()),
+        model::value_definition::ValueDefinition::Path(a) =>
+            ValueDefinition::Path(
+                Box::from(deserialize_value_definition(mandate(a.parent.as_ref(), "Invalid value definition")?, elements, state)?),
+                a.element.clone().into_boxed_str()),
+    })
 }
 
 impl Help for Closure {
@@ -250,7 +426,30 @@ impl Closure {
         }
         Ok(())
     }
+
+    pub fn deserialize(
+        id: usize,
+        elements: &Vec<Element>,
+        state: &mut DeserializationState,
+    ) -> CrushResult<Box<dyn CrushCommand + Send + Sync>> {
+        match elements[id].element.as_ref().unwrap() {
+            element::Element::Closure(s) => {
+                Ok(Box::from(Closure {
+                    name: None,
+                    job_definitions: s.job_definitions.iter()
+                        .map(|j| deserialize_job(j, elements, state))
+                        .collect::<CrushResult<Vec<_>>>()?,
+                    signature: None,
+                    env: state.env.clone(),
+                    short_help: "".to_string(),
+                    long_help: "".to_string(),
+                }))
+            }
+            _ => error("Expected a closure"),
+        }
+    }
 }
+
 
 impl ToString for Closure {
     fn to_string(&self) -> String {

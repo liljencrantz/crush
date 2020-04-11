@@ -58,9 +58,18 @@ message Closure {
     }
     Scope env = 6;
     string short_help = 7;
-    oneof long_help {
-        bool has_long_help = 8;
-        string long_help_value = 9;
+    string long_help = 8;
+}
+
+message ClosureDefinition {
+    oneof name {
+        bool has_name = 1;
+        uint64 name_value = 2;
+    }
+    repeated Job job_definitions = 3;
+    oneof signature {
+        bool has_signature = 4;
+        Signature signature_value = 5;
     }
 }
 
@@ -69,7 +78,7 @@ message Signature {
 }
 
 message Parameter {
-    oneof paremeter{
+    oneof paremeter {
         NormalParameter normal = 1;
         string named = 2;
         string unnamed = 3;
@@ -87,12 +96,18 @@ message NormalParameter {
 
 message ValueDefinition {
     oneof value_definition {
-        Element value = 1;
-        // Fixme Closure definition
+        uint64 value = 1;
+        ClosureDefinition closure_definition = 2;
         Job job = 3;
         string label = 4;
-        //...
+        Attr get_attr = 5;
+        Attr path = 6;
     }
+}
+
+message Attr {
+    ValueDefinition parent = 1;
+    string element = 2;
 }
 
 message Job {
@@ -105,7 +120,13 @@ message CommandInvocation {
 }
 
 message ArgumentDefinition {
-    //...
+    oneof argument_type {
+        string some = 1;
+        bool none = 2;
+        bool argument_list = 3;
+        bool argument_dict = 4;
+    }
+    ValueDefinition value = 5;
 }
 
 message Strings {

@@ -16,7 +16,7 @@ use crate::lang::serialization::model;
 
 pub trait CrushCommand: Help {
     fn invoke(&self, context: ExecutionContext) -> CrushResult<()>;
-    fn can_block(&self, arguments: &Vec<ArgumentDefinition>, context: &mut CompileContext) -> bool;
+    fn can_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool;
     fn name(&self) -> &str;
     fn clone(&self) -> Box<dyn CrushCommand + Send + Sync>;
     fn help(&self) -> &dyn Help;
@@ -129,6 +129,9 @@ impl dyn CrushCommand {
                 let command = CrushCommand::deserialize(bound_command.command as usize, elements, state)?;
                 Ok(command.bind(this))
             }
+            element::Element::Closure(_) => {
+                Closure::deserialize(id, elements, state)
+            }
             _ => error("Expected a command"),
         }
     }
@@ -142,7 +145,7 @@ impl CrushCommand for SimpleCommand {
 
     fn name(&self) -> &str { "command" }
 
-    fn can_block(&self, _arg: &Vec<ArgumentDefinition>, _context: &mut CompileContext) -> bool {
+    fn can_block(&self, _arg: &[ArgumentDefinition], _context: &mut CompileContext) -> bool {
         self.can_block
     }
 
@@ -215,7 +218,7 @@ impl CrushCommand for ConditionCommand {
 
     fn name(&self) -> &str { "conditional command" }
 
-    fn can_block(&self, arguments: &Vec<ArgumentDefinition>, context: &mut CompileContext) -> bool {
+    fn can_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool {
         arguments.iter().any(|arg| arg.value.can_block(arguments, context))
     }
 
@@ -309,7 +312,7 @@ impl CrushCommand for BoundCommand {
         self.command.invoke(context)
     }
 
-    fn can_block(&self, arguments: &Vec<ArgumentDefinition>, context: &mut CompileContext) -> bool {
+    fn can_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool {
         self.command.can_block(arguments, context)
     }
 

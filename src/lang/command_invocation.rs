@@ -56,8 +56,12 @@ impl CommandInvocation {
         }
     }
 
-    pub fn arguments(&self) -> &Vec<ArgumentDefinition> {
+    pub fn arguments(&self) -> &[ArgumentDefinition] {
         &self.arguments
+    }
+
+    pub fn command(&self) -> &ValueDefinition {
+        &self.command
     }
 
     /*
@@ -103,7 +107,7 @@ impl CommandInvocation {
         Ok(job_context.execution_context(arguments, this))
     }
 
-    pub fn can_block(&self, arg: &Vec<ArgumentDefinition>, context: &mut CompileContext) -> bool {
+    pub fn can_block(&self, arg: &[ArgumentDefinition], context: &mut CompileContext) -> bool {
         let cmd = self.command.compile_internal(context, false);
         match cmd {
             Ok((_, Value::Command(command))) =>

@@ -30,7 +30,7 @@ fn file_get(f: &str) -> Option<Value> {
 }
 
 impl ValueDefinition {
-    pub fn can_block(&self, _arg: &Vec<ArgumentDefinition>, context: &mut CompileContext) -> bool {
+    pub fn can_block(&self, _arg: &[ArgumentDefinition], context: &mut CompileContext) -> bool {
         match self {
             ValueDefinition::JobDefinition(j) => j.can_block(context),
             ValueDefinition::GetAttr(_inner1, _inner2) => true,
