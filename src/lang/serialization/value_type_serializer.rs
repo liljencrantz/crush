@@ -1,17 +1,18 @@
 use crate::lang::serialization::{Serializable, DeserializationState, SerializationState};
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult, error, mandate};
 use crate::lang::serialization::model::{Element, element};
 use crate::lang::serialization::model;
 use crate::lang::value::ValueType;
 use model::r#type::SimpleTypeKind;
 use model::r#type::Type::SimpleType;
+use crate::lang::table::ColumnType;
 
 impl Serializable<ValueType> for ValueType {
-    fn deserialize(id: usize, elements: &Vec<Element>, _state: &mut DeserializationState) -> CrushResult<ValueType> {
+    fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<ValueType> {
         if let element::Element::Type(outer_type) = elements[id].element.as_ref().unwrap() {
-            match outer_type.r#type {
-                Some(SimpleType(simple_type)) => {
-                    let vt = match simple_type {
+            match mandate(outer_type.r#type.as_ref(), "Missing type")? {
+                SimpleType(simple_type) => {
+                    Ok(match simple_type {
                         0 => ValueType::String,
                         1 => ValueType::Integer,
                         2 => ValueType::File,
@@ -30,17 +31,36 @@ impl Serializable<ValueType> for ValueType {
                         15 => ValueType::Struct,
                         16 => ValueType::Any,
                         _ => return error("Unrecognised type")
-                    };
-                    Ok(vt)
+                    })
                 }
-                _ => unimplemented!(),
+                model::r#type::Type::ListType(l) => {
+                    Ok(ValueType::List(Box::from(ValueType::deserialize(l.element_type as usize, elements, state)?)))
+                }
+                model::r#type::Type::DictType(d) => {
+                    Ok(ValueType::Dict(
+                        Box::from(ValueType::deserialize(d.key_type as usize, elements, state)?),
+                        Box::from(ValueType::deserialize(d.value_type as usize, elements, state)?),
+                    ))
+                }
+                model::r#type::Type::TableType(tt) => {
+                    Ok(ValueType::Table(
+                        tt.column_types.iter()
+                            .map(|t| ColumnType::deserialize(*t as usize, elements, state))
+                            .collect::<CrushResult<Vec<_>>>()?))
+                }
+                model::r#type::Type::TableStreamType(tt) => {
+                    Ok(ValueType::TableStream(
+                        tt.column_types.iter()
+                            .map(|t| ColumnType::deserialize(*t as usize, elements, state))
+                            .collect::<CrushResult<Vec<_>>>()?))
+                }
             }
         } else {
             error("Invalid type")
         }
     }
 
-    fn serialize(&self, elements: &mut Vec<Element>, _state: &mut SerializationState) -> CrushResult<usize> {
+    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
         let tt = match self {
             ValueType::String => SimpleTypeKind::String,
             ValueType::Integer => SimpleTypeKind::Integer,
@@ -59,11 +79,61 @@ impl Serializable<ValueType> for ValueType {
             ValueType::Any => SimpleTypeKind::Any,
             ValueType::Binary => SimpleTypeKind::Binary,
             ValueType::Type => SimpleTypeKind::Type,
-            ValueType::List(_) => unimplemented!(),
-            ValueType::Dict(_, _) => unimplemented!(),
-            ValueType::Table(_) => unimplemented!(),
-            ValueType::TableStream(_) => unimplemented!(),
-            ValueType::BinaryStream => unimplemented!(),
+            ValueType::List(t) => {
+                let l = model::ListType { element_type: t.serialize(elements, state)? as u64 };
+                let idx = elements.len();
+                elements.push(model::Element {
+                    element: Some(element::Element::Type(
+                        model::Type {
+                            r#type: Some(model::r#type::Type::ListType(l))
+                        }
+                    )),
+                });
+                return Ok(idx);
+            }
+            ValueType::Dict(t1, t2) => {
+                let d = model::DictType { key_type: t1.serialize(elements, state)? as u64, value_type: t2.serialize(elements, state)? as u64 };
+                let idx = elements.len();
+                elements.push(model::Element {
+                    element: Some(element::Element::Type(
+                        model::Type {
+                            r#type: Some(model::r#type::Type::DictType(d))
+                        }
+                    )),
+                });
+                return Ok(idx);
+            }
+            ValueType::Table(col) => {
+                let d = model::TableType { column_types: col.iter()
+                    .map(|t| t.serialize(elements, state)
+                        .map(|c| c as u64))
+                    .collect::<CrushResult<Vec<_>>>()?};
+                let idx = elements.len();
+                elements.push(model::Element {
+                    element: Some(element::Element::Type(
+                        model::Type {
+                            r#type: Some(model::r#type::Type::TableType(d))
+                        }
+                    )),
+                });
+                return Ok(idx);
+            }
+            ValueType::TableStream(col) => {
+                let d = model::TableType { column_types: col.iter()
+                    .map(|t| t.serialize(elements, state)
+                        .map(|c| c as u64))
+                    .collect::<CrushResult<Vec<_>>>()?};
+                let idx = elements.len();
+                elements.push(model::Element {
+                    element: Some(element::Element::Type(
+                        model::Type {
+                            r#type: Some(model::r#type::Type::TableStreamType(d))
+                        }
+                    )),
+                });
+                return Ok(idx);
+            }
+            ValueType::BinaryStream => SimpleTypeKind::BinaryStream,
         };
 
         let idx = elements.len();

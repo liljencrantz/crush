@@ -15,7 +15,6 @@ use crate::lang::serialization::model::{Element, element};
 use crate::lang::serialization::model;
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::serialization::model::closure::Name;
-use crate::lang::serialization::model::parameter::Paremeter;
 
 pub struct Closure {
     name: Option<Box<str>>,
@@ -117,19 +116,7 @@ impl<'a> ClosureSerializer<'a> {
             serialized.job_definitions.push(self.job(j)?)
         }
 
-        let signature = closure.signature.as_ref().map(|s|
-            s.iter()
-                .map(|p| self.signature(p))
-                .collect::<CrushResult<Vec<_>>>()
-        );
-
-        if let Some(s) = signature {
-            serialized.signature = Some(
-                model::closure::Signature::SignatureValue(
-                    model::Signature { paremeter: s? }));
-        } else {
-            serialized.signature = Some(model::closure::Signature::HasSignature(false));
-        }
+        serialized.signature = self.signature(&closure.signature)?;
 
         let idx = self.elements.len();
         self.elements.push(model::Element {
@@ -138,7 +125,31 @@ impl<'a> ClosureSerializer<'a> {
         Ok(idx)
     }
 
-    fn signature(&mut self, param: &Parameter) -> CrushResult<model::Parameter> {
+    fn signature(&mut self, signature: &Option<Vec<Parameter>>) -> CrushResult<Option<model::closure::Signature>> {
+        Ok(Some(if let Some(s) = signature {
+            model::closure::Signature::SignatureValue(self.signature2(s)?)
+        } else {
+            model::closure::Signature::HasSignature(false)
+        }))
+    }
+
+    fn signature_definition(&mut self, signature: &Option<Vec<Parameter>>) -> CrushResult<Option<model::closure_definition::Signature>> {
+        Ok(Some(if let Some(s) = signature {
+            model::closure_definition::Signature::SignatureValue(self.signature2(s)?)
+        } else {
+            model::closure_definition::Signature::HasSignature(false)
+        }))
+    }
+
+    fn signature2(&mut self, signature: &Vec<Parameter>) -> CrushResult<model::Signature> {
+        Ok(model::Signature {
+            paremeter: signature.iter()
+                .map(|p| self.parameter(p))
+                .collect::<CrushResult<Vec<_>>>()?
+        })
+    }
+
+    fn parameter(&mut self, param: &Parameter) -> CrushResult<model::Parameter> {
         Ok(
             model::Parameter {
                 paremeter: Some(
@@ -209,8 +220,11 @@ impl<'a> ClosureSerializer<'a> {
                                 job_definitions: jobs.iter()
                                     .map(|j| self.job(j))
                                     .collect::<CrushResult<Vec<_>>>()?,
-                                name: None,
-                                signature: None,
+                                name: Some(match name {
+                                    None => model::closure_definition::Name::HasName(false),
+                                    Some(name) => model::closure_definition::Name::NameValue(Value::string(name).serialize(self.elements, self.state)? as u64),
+                                }),
+                                signature: self.signature_definition(parameters)?,
                             }
                         ),
                     ValueDefinition::JobDefinition(j) =>
@@ -288,13 +302,13 @@ impl<'a> ClosureDeserializer<'a> {
             None => error("Missing parameter"),
             Some(model::parameter::Paremeter::Normal(param)) =>
                 Ok(Parameter::Parameter(
-                param.name.clone().into_boxed_str(),
-                self.value_definition(mandate(param.r#type.as_ref(), "Invalid parameter")?)?,
-                match &param.default {
-                    None | Some(model::normal_parameter::Default::HasDefault(_)) => None,
-                    Some(model::normal_parameter::Default::DefaultValue(def)) =>
-                        Some(self.value_definition(def)?)
-                })),
+                    param.name.clone().into_boxed_str(),
+                    self.value_definition(mandate(param.r#type.as_ref(), "Invalid parameter")?)?,
+                    match &param.default {
+                        None | Some(model::normal_parameter::Default::HasDefault(_)) => None,
+                        Some(model::normal_parameter::Default::DefaultValue(def)) =>
+                            Some(self.value_definition(def)?)
+                    })),
             Some(model::parameter::Paremeter::Named(param)) => Ok(Parameter::Named(param.clone().into_boxed_str())),
             Some(model::parameter::Paremeter::Unnamed(param)) => Ok(Parameter::Unnamed(param.clone().into_boxed_str())),
         }
@@ -354,8 +368,19 @@ impl<'a> ClosureDeserializer<'a> {
                 ValueDefinition::Value(Value::deserialize(*idx as usize, self.elements, self.state)?),
             model::value_definition::ValueDefinition::ClosureDefinition(c) =>
                 ValueDefinition::ClosureDefinition(
-                    None,
-                    None,
+                    match c.name {
+                        None | Some(model::closure_definition::Name::HasName(_)) => None,
+                        Some(model::closure_definition::Name::NameValue(id)) =>
+                            Some(String::deserialize(
+                                id as usize,
+                                self.elements,
+                                self.state)?.into_boxed_str())
+                    },
+                    match &c.signature {
+                        None | Some(model::closure_definition::Signature::HasSignature(_)) => None,
+                        Some(model::closure_definition::Signature::SignatureValue(sig)) =>
+                            self.signature(sig)?
+                    },
                     c.job_definitions.iter()
                         .map(|j| self.job(j))
                         .collect::<CrushResult<Vec<_>>>()?),
