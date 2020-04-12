@@ -21,11 +21,12 @@ mod value_type_serializer;
 mod value_serializer;
 mod table_serializer;
 
-pub mod model;
-/*pub mod model {
-    include!(concat!(env!("OUT_DIR"), "/lang.serialization.model.rs"));
+//pub mod model;
+
+pub mod model {
+    include!(concat!(env!("OUT_DIR"), "/model.rs"));
 }
-*/
+
 pub struct SerializationState {
     pub with_id: HashMap<u64, usize>,
     pub values: HashMap<Value, usize>,
@@ -79,7 +80,7 @@ pub fn deserialize(source: &Path, env: &Scope) -> CrushResult<Value> {
 
     let res = SerializedValue::decode(&mut Cursor::new(buf)).unwrap();
 
-    println!("AAA {:?}", res);
+//    println!("AAA {:?}", res);
 
     Ok(Value::deserialize(res.root as usize, &res.elements, &mut state)?)
 }
