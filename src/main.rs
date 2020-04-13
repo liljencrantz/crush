@@ -111,7 +111,7 @@ fn run_script(global_env: Scope, filename: &str, printer: Printer) -> CrushResul
 }
 
 fn run() -> CrushResult<()> {
-    let global_env = lang::scope::Scope::new();
+    let global_env = lang::scope::Scope::create_root();
     let (printer, print_handle) = printer::init();
     declare(&global_env)?;
     let my_scope = global_env.create_child(&global_env, false);

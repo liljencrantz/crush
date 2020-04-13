@@ -1,8 +1,5 @@
 Todo:
 callable type versions, like table_stream, are confusing.
-Serialize builtin scopes
-Serialize user defined scopes
-Use serialized scopes in closures
 Write comprehensive serialization tests
 Handle stderr on external commands
 Maybe rethink unnamed arguments and closure signatures

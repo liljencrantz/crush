@@ -125,7 +125,7 @@ impl Struct {
             reverse_lookup.insert(value.clone(), key);
         }
         data.cells.iter().enumerate()
-            .map(|(idx,v)| (reverse_lookup[&idx].to_string().into_boxed_str(), v.clone())).collect()
+            .map(|(idx, v)| (reverse_lookup[&idx].to_string().into_boxed_str(), v.clone())).collect()
     }
 
     pub fn into_row(&self) -> Row {
@@ -167,7 +167,7 @@ impl Struct {
         }
     }
 
-    pub fn set(self, name: &str, value: Value) -> Option<Value> {
+    pub fn set(&self, name: &str, value: Value) -> Option<Value> {
         let mut data = self.data.lock().unwrap();
         match data.lookup.get(name).cloned() {
             None => {
@@ -189,6 +189,10 @@ impl Struct {
                 cells: data.cells.iter().map(|value| value.clone().materialize()).collect(),
             }))
         }
+    }
+
+    pub fn set_parent(&self, parent: Option<Struct>) {
+        self.data.lock().unwrap().parent = parent;
     }
 }
 

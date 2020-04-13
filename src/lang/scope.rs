@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::command::CrushCommand;
 use crate::lang::r#struct::Struct;
+use crate::util::identity_arc::Identity;
 
 /**
   This is where we store variables, including functions.
@@ -23,7 +24,8 @@ pub struct Scope {
     data: Arc<Mutex<ScopeData>>,
 }
 
-struct ScopeData {
+#[derive(Clone)]
+pub struct ScopeData {
     /** This is the parent scope used to perform variable name resolution. If a variable lookup
      fails in the current scope, it proceeds to this scope. This is usually the scope in which this
      scope was *created*.
@@ -58,7 +60,7 @@ struct ScopeData {
 }
 
 impl ScopeData {
-    fn anonymous(parent_scope: Option<Scope>, calling_scope: Option<Scope>, is_loop: bool) -> ScopeData {
+    fn new(parent_scope: Option<Scope>, calling_scope: Option<Scope>, is_loop: bool, name: Option<Box<str>>) -> ScopeData {
         ScopeData {
             parent_scope,
             calling_scope,
@@ -67,37 +69,45 @@ impl ScopeData {
             mapping: HashMap::new(),
             is_stopped: false,
             is_readonly: false,
-            name: None,
-        }
-    }
-
-    fn named(parent_scope: Option<Scope>, calling_scope: Option<Scope>, is_loop: bool, name: &str) -> ScopeData {
-        ScopeData {
-            parent_scope,
-            calling_scope,
-            is_loop,
-            uses: Vec::new(),
-            mapping: HashMap::new(),
-            is_stopped: false,
-            is_readonly: false,
-            name: Some(Box::from(name)),
+            name,
         }
     }
 }
 
 impl Scope {
-    pub fn new() -> Scope {
+    pub fn create_root() -> Scope {
         Scope {
-            data: Arc::from(Mutex::new(ScopeData::named(None, None, false, "global"))),
+            data: Arc::from(Mutex::new(ScopeData::new(None, None, false, Some(Box::from("global"))))),
+        }
+    }
+
+    pub fn create(
+        name: Option<Box<str>>,
+        is_loop:bool,
+        is_stopped:bool,
+        is_readonly: bool,
+    ) -> Scope {
+        Scope {
+            data: Arc::from(Mutex::new(ScopeData{
+                parent_scope: None,
+                calling_scope: None,
+                uses: vec![],
+                mapping: HashMap::new(),
+                is_loop,
+                is_stopped,
+                is_readonly,
+                name
+            })),
         }
     }
 
     pub fn create_child(&self, caller: &Scope, is_loop: bool) -> Scope {
         Scope {
-            data: Arc::from(Mutex::new(ScopeData::anonymous(
+            data: Arc::from(Mutex::new(ScopeData::new(
                 Some(self.clone()),
                 Some(caller.clone()),
-                is_loop))),
+                is_loop,
+                None))),
         }
     }
 
@@ -150,7 +160,7 @@ impl Scope {
 
     pub fn create_namespace(&self, name: &str) -> CrushResult<Scope> {
         let res = Scope {
-            data: Arc::from(Mutex::new(ScopeData::named(None, Some(self.clone()), false, name))),
+            data: Arc::from(Mutex::new(ScopeData::new(None, Some(self.clone()), false, Some(Box::from(name))))),
         };
         self.declare(name, Value::Scope(res.clone()))?;
         Ok(res)
@@ -183,7 +193,7 @@ impl Scope {
         self.declare(name, Value::Command(command))
     }
 
-    fn full_path(&self) -> CrushResult<Vec<Box<str>>> {
+    pub fn full_path(&self) -> CrushResult<Vec<Box<str>>> {
         let data = self.data.lock().unwrap();
         match data.name.clone() {
             None => error("Tried to get full path of anonymous scope"),
@@ -240,6 +250,7 @@ impl Scope {
                         error("Invalid scope for command")
                     } else {
                         match path.len() {
+                            1 => Ok(Value::Scope(self.clone())),
                             2 => {
                                 match data.mapping.get(&path[1]) {
                                     Some(v) => Ok(v.clone()),
@@ -402,6 +413,18 @@ impl Scope {
     pub fn readonly(&self) {
         self.data.lock().unwrap().is_readonly = true;
     }
+
+    pub fn export(&self) -> ScopeData {
+        self.data.lock().unwrap().clone()
+    }
+
+    pub fn set_parent(&self, parent: Option<Scope>) {
+        self.data.lock().unwrap().parent_scope = parent;
+    }
+
+    pub fn set_calling(&self, calling: Option<Scope>) {
+        self.data.lock().unwrap().calling_scope = calling;
+    }
 }
 
 impl ToString for Scope {
@@ -409,5 +432,11 @@ impl ToString for Scope {
         let mut map = HashMap::new();
         self.dump(&mut map);
         map.iter().map(|(k, _v)| k.clone()).collect::<Vec<String>>().join(", ")
+    }
+}
+
+impl Identity for Scope {
+    fn id(&self) -> u64 {
+        self.data.id()
     }
 }

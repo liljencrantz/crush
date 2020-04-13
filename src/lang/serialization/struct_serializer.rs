@@ -13,23 +13,26 @@ impl Serializable<Struct> for Struct {
         } else {
             match elements[id].element.as_ref().unwrap() {
                 element::Element::Struct(s) => {
+                    let res = Struct::new(vec![], None);
+                    state.structs.insert(id, res.clone());
                     let parent = match s.parent {
                         None | Some(model::r#struct::Parent::HasParent(_)) => None,
                         Some(model::r#struct::Parent::ParentValue(parent_id)) => Some(Struct::deserialize(parent_id as usize, elements, state)?),
                     };
 
-                    let mut members = Vec::new();
+                    res.set_parent(parent);
+
                     for member_idx in  &s.members {
                         match elements[*member_idx as usize].element.as_ref().unwrap() {
                             element::Element::Member(smember) => {
                                 let name = String::deserialize(smember.name as usize, elements, state)?;
                                 let value = Value::deserialize(smember.value as usize, elements, state)?;
-                                members.push((name.into_boxed_str(), value));
+                                res.set(&name, value);
                             }
                             _ => return error("Expected a member"),
                         }
                     }
-                    Ok(Struct::new(members, parent))
+                    Ok(res)
                 },
                 _ => error("Expected struct"),
             }

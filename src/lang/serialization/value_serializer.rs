@@ -16,6 +16,7 @@ use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt;
 use chrono::offset::TimeZone;
 use crate::lang::dict::Dict;
+use crate::lang::scope::Scope;
 
 fn serialize_simple(value: &Value, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
     let idx = elements.len();
@@ -71,7 +72,8 @@ impl Serializable<Value> for Value {
                 Ok(Value::Command(CrushCommand::deserialize(id, elements, state)?)),
 
             element::Element::Field(_) => unimplemented!(),
-            element::Element::Scope(_) => unimplemented!(),
+            element::Element::UserScope(_) | element::Element::InternalScope(_) =>
+                Ok(Value::Scope(Scope::deserialize(id, elements, state)?)),
             element::Element::Dict(_) => Ok(Value::Dict(Dict::deserialize(id, elements, state)?)),
 
             element::Element::ColumnType(_) |
@@ -113,7 +115,7 @@ impl Serializable<Value> for Value {
             Value::Command(c) => c.serialize(elements, state),
             Value::Struct(s) => s.serialize(elements, state),
             Value::Dict(d) => d.serialize(elements, state),
-            Value::Scope(_) => unimplemented!(),
+            Value::Scope(s) => s.serialize(elements, state),
             Value::TableStream(_) | Value::BinaryStream(_) => error("Can't serialize streams"),
         }
     }

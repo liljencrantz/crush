@@ -118,6 +118,8 @@ impl<'a> ClosureSerializer<'a> {
 
         serialized.signature = self.signature(&closure.signature)?;
 
+        serialized.env = closure.env.serialize(self.elements, self.state)? as u64;
+
         let idx = self.elements.len();
         self.elements.push(model::Element {
             element: Some(model::element::Element::Closure(serialized)),
@@ -268,6 +270,7 @@ impl<'a> ClosureDeserializer<'a> {
     ) -> CrushResult<Box<dyn CrushCommand + Send + Sync>> {
         match self.elements[id].element.as_ref().unwrap() {
             element::Element::Closure(s) => {
+                let env = Scope::deserialize(s.env as usize, self.elements, self.state)?;
                 Ok(Box::from(Closure {
                     name: match s.name {
                         None | Some(Name::HasName(_)) => None,
@@ -282,7 +285,7 @@ impl<'a> ClosureDeserializer<'a> {
                         Some(model::closure::Signature::SignatureValue(sig)) =>
                             self.signature(sig)?
                     },
-                    env: self.state.env.clone(),
+                    env,
                     short_help: s.short_help.clone(),
                     long_help: s.long_help.clone(),
                 }))

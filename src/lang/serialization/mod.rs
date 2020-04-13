@@ -12,6 +12,7 @@ use crate::lang::r#struct::Struct;
 use crate::lang::dict::Dict;
 use crate::lang::scope::Scope;
 
+mod scope_serializer;
 mod struct_serializer;
 mod integer_serializer;
 mod string_serializer;
@@ -21,12 +22,11 @@ mod value_type_serializer;
 mod value_serializer;
 mod table_serializer;
 
-pub mod model;
-/*
+//pub mod model;
 pub mod model {
     include!(concat!(env!("OUT_DIR"), "/model.rs"));
 }
-*/
+
 pub struct SerializationState {
     pub with_id: HashMap<u64, usize>,
     pub values: HashMap<Value, usize>,
@@ -39,6 +39,7 @@ pub struct DeserializationState {
     pub types: HashMap<usize, ValueType>,
     pub dicts: HashMap<usize, Dict>,
     pub structs: HashMap<usize, Struct>,
+    pub scopes: HashMap<usize, Scope>,
 }
 
 pub fn serialize(value: &Value, destination: &Path) -> CrushResult<()> {
@@ -75,6 +76,7 @@ pub fn deserialize(source: &Path, env: &Scope) -> CrushResult<Value> {
         lists: HashMap::new(),
         dicts: HashMap::new(),
         structs: HashMap::new(),
+        scopes: HashMap::new(),
         env: env.clone(),
     };
 
@@ -89,4 +91,3 @@ pub trait Serializable<T> {
     fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<T>;
     fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize>;
 }
-

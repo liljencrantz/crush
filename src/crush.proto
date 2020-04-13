@@ -21,7 +21,7 @@ message Element {
         Strings field = 12;
         string glob = 13;
         string regex = 14;
-        Scope scope = 15;
+        Scope user_scope = 15;
         bool bool = 16;
         bool empty = 17;
         Type type = 18;
@@ -33,6 +33,7 @@ message Element {
         Member member = 24;
         Strings command = 26;
         BoundCommand bound_command = 27;
+        Strings internal_scope = 28;
     }
 }
 
@@ -56,7 +57,7 @@ message Closure {
         bool has_signature = 4;
         Signature signature_value = 5;
     }
-    Scope env = 6;
+    uint64 env = 6;
     string short_help = 7;
     string long_help = 8;
 }
@@ -143,7 +144,23 @@ message Row {
 }
 
 message Scope {
-    repeated uint64 members = 2;
+    oneof parent {
+        bool has_parent = 2;
+        uint64 parent_value = 3;
+    }
+    oneof calling {
+        bool has_calling = 4;
+        uint64 calling_value = 5;
+    }
+    repeated uint64 uses = 6;
+    repeated uint64 members = 7;
+    bool is_loop = 8;
+    bool is_stopped = 9;
+    bool is_readonly = 10;
+    oneof name {
+        bool has_name = 11;
+        uint64 name_value = 12;
+    }
 }
 
 message Type {
