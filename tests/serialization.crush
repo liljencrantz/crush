@@ -4,9 +4,10 @@ find example_data/tree|select ^file ^type | ./.test_file:to
 # And read it back out again
 ./.test_file:from
 
+# Serialize a closure
 a := 4
 b := 7.5
-fff := {|c:integer d| echo a*b*c; for (seq 3) d }
+fff := {|c:integer=1 d| echo a*b*c; for (seq 3) d }
 
 ./.test_file:to fff
 

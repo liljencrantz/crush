@@ -1,7 +1,7 @@
 Aggregating streams:
 
-find . | group %size | aggr group={count}
-find . | group %user | aggr group={sum %size}
+find . | group ^size | aggr group={count}
+find . | group ^user | aggr group={sum ^size}
 
 Graph/Tree data:
 

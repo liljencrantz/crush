@@ -28,9 +28,30 @@ pub fn cmd(mut context: ExecutionContext) -> CrushResult<()> {
         Value::File(f) => {
             let mut cmd = std::process::Command::new(f.as_os_str());
             for a in context.arguments.drain(..) {
-                cmd.arg(a.value.to_string());
+                match a.argument_type {
+                    None => {
+                        cmd.arg(a.value.to_string());
+                    }
+                    Some(name) => {
+                        if name.len() == 1 {
+                            cmd.arg(format!("-{}", name));
+                        } else {
+                            cmd.arg(format!("--{}", name));
+                        }
+                        match a.value {
+                            Value::Bool(true) => {},
+                            _ => {
+                                cmd.arg(a.value.to_string());
+                            }
+                        }
+                    }
+                }
             }
             let output = to_crush_error(cmd.output())?;
+            let errors = String::from_utf8_lossy(&output.stderr);
+            for e in errors.split('\n') {
+                context.printer.error(e);
+            }
             context.output.send(
                 Value::BinaryStream(
                     BinaryReader::vec(&output.stdout)))
