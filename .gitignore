@@ -1,5 +1,5 @@
 /target
 **/*.rs.bk
-.idea
+.*
 *.iml
 src/lang/serialization/model.rs

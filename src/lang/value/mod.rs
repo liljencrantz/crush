@@ -328,6 +328,20 @@ impl Clone for Value {
     }
 }
 
+fn integer_decode(val: f64) -> (u64, i16, i8) {
+    let bits: u64 = unsafe { std::mem::transmute(val) };
+    let sign: i8 = if bits >> 63 == 0 { 1 } else { -1 };
+    let mut exponent: i16 = ((bits >> 52) & 0x7ff) as i16;
+    let mantissa = if exponent == 0 {
+        (bits & 0xfffffffffffff) << 1
+    } else {
+        (bits & 0xfffffffffffff) | 0x10000000000000
+    };
+
+    exponent -= 1023 + 52;
+    (mantissa, exponent, sign)
+}
+
 impl std::hash::Hash for Value {
     fn hash<H: Hasher>(&self, state: &mut H) {
         if !self.value_type().is_hashable() {
@@ -347,8 +361,14 @@ impl std::hash::Hash for Value {
             Value::Binary(v) => v.hash(state),
             Value::Struct(v) => v.hash(state),
             Value::Scope(_) | Value::Dict(_) | Value::Table(_) |
-            Value::List(_) | Value::TableStream(_) | Value::Float(_)
+            Value::List(_) | Value::TableStream(_)
             | Value::BinaryStream(_) => panic!("Can't hash output"),
+            Value::Float(v) => {
+                let (m, x, s) = integer_decode(*v);
+                m.hash(state);
+                x.hash(state);
+                s.hash(state);
+            },
             Value::Empty() => {}
             Value::Type(v) => v.to_string().hash(state),
         }

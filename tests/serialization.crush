@@ -1,0 +1,14 @@
+rm ./.test_file
+# Pipe output of find into a file
+find example_data/tree|select ^file ^type | ./.test_file:to
+# And read it back out again
+./.test_file:from
+
+a := 4
+b := 7.5
+fff := {|c:integer d| echo a*b*c; for (seq 3) d }
+
+./.test_file:to fff
+
+var:unset "a" "b" "fff"
+(./.test_file:from) c=3 {echo 1}

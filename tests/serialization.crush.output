@@ -1,0 +1,10 @@
+
+file                    type
+example_data/tree/a     file
+example_data/tree/sub   directory
+example_data/tree/sub/b file
+example_data/tree/sub/c file
+90
+1
+1
+1
