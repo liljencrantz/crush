@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::Value, execution_context::ExecutionContext};
 use crate::lang::command::CrushCommand;
 use std::collections::HashMap;
@@ -30,7 +30,18 @@ lazy_static! {
 }
 
 fn call_type(context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::Type(ValueType::TableStream(parse_column_types(context.arguments)?)))
+    match context.this.r#type()? {
+        ValueType::TableStream(c) => {
+            if c.is_empty() {
+                context.output.send(Value::Type(ValueType::TableStream(parse_column_types(context.arguments)?)))
+            } else if context.arguments.is_empty() {
+                context.output.send(Value::Type(ValueType::TableStream(c)))
+            } else {
+                argument_error("Tried to set columns on a table_stream type that already has columns")
+            }
+        },
+        _ => argument_error("Invalid this, expected type table_stream")
+    }
 }
 
 fn getitem(mut context: ExecutionContext) -> CrushResult<()> {

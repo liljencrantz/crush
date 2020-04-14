@@ -73,10 +73,26 @@ lazy_static! {
 }
 
 fn call_type(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(2)?;
-    let key_type = context.arguments.r#type(0)?;
-    let value_type = context.arguments.r#type(1)?;
-    context.output.send(Value::Type(ValueType::Dict(Box::new(key_type), Box::new(value_type))))
+    match context.this.r#type()? {
+        ValueType::Dict(t1, t2) => {
+            match (*t1, *t2) {
+                (ValueType::Empty, ValueType::Empty) => {
+                    context.arguments.check_len(2)?;
+                    let key_type = context.arguments.r#type(0)?;
+                    let value_type = context.arguments.r#type(1)?;
+                    context.output.send(Value::Type(ValueType::Dict(Box::new(key_type), Box::new(value_type))))
+                }
+                (t1, t2) => {
+                    if context.arguments.is_empty() {
+                        context.output.send(Value::Type(ValueType::Dict(Box::from(t1), Box::from(t2))))
+                    } else {
+                        argument_error("Tried to set subtype on a dict that already has a subtype")
+                    }
+                }
+            }
+        }
+        _ => argument_error("Invalid this, expected type dict"),
+    }
 }
 
 fn new(context: ExecutionContext) -> CrushResult<()> {

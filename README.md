@@ -185,6 +185,10 @@ The `duration:new` command accepts any even numbered unnamed arguments:
         # A complicated way of specifying a 23 hour duration
         duration:new 1 "days" -3600 "seconds"
 
+It is quite common to want to pass boolean arguments to commands, which is why
+Crush has a special shorthand syntax for it. Passing in `--foo` is equivalent
+to passing in `foo=true`.
+
 ### Subshells
 
 Sometimes you want to use the output of one command as an *argument* to another
@@ -546,34 +550,35 @@ that can be controlled using `break` and `continue`.
 ### Calling external commands
 
 Obviously, one needs to sometimes call out to external commands. Currently, the
-functionality for doing so in Crush is extremely primitive. If an internal
+functionality for doing so in Crush is somewhat primitive. If an internal
 command of a given name does not exist, Crush looks for external commands, and
 if one is found, it is used. But Crush does not hand over the tty or emulate a
 tty, so interactive terminal programs do not work, and commands that prettify
 their output with escape sequences may fail.
 
 This part of Crush should be considered a proof of concept, but still, most
-non-interactive commands work:
+non-interactive commands work as expected:
 
-    crush> git "status"
-    On branch master
-    Your branch is up to date with 'origin/master'.
+    crush> whoami
+    liljencrantz
     
-    Changes not staged for commit:
-      (use "git add <file>..." to update what will be committed)
-      (use "git checkout -- <file>..." to discard changes in working directory)
-    
-    	modified:   README.md
-    	modified:   todo
-    
-    no changes added to commit (use "git add" and/or "git commit -a")
-    crush> git "commit" "-a" "-m" "Furher updates to Readme file"
-    [master e100014] Furher updates to Readme file
-     2 files changed, 33 insertions(+), 4 deletions(-)
+Crush features several shortcuts to make working with external commands easier.
 
+* Firstly, subcommands like `git status` are mapped into method calls like
+`git:status`. That way you do not have to quote the subcommand name, e.g.
+`git "status"`.
+* Secondly, named arguments are transparently translated into options. Single
+  character argument names are turned into options with a single hyphen, and
+  multi-character argument names are turned into GNU style long options with
+  two hyphens, e.g. `git:commit m="hello"` is converted into 
+  `git commit -m "hello"` and `git:commit message="hello"` is converted into
+  `git commit --message "hello"`.
+* Thirdly, named arguments with a value of boolean true are simply turned into
+  options without a value, so for example `git:commit --a --append` (or 
+  `git:commit a=true append=true`) is converted into `git commit -a --append`.
 
-Further thought needs to go in to making external commands fit better with the
-Crush design.
+Further work is required when it comes to job control, terminal emulation and various
+other integration points.
 
 ### Creating custom types
 

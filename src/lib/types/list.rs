@@ -79,8 +79,24 @@ lazy_static! {
 }
 
 fn call_type(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(1)?;
-    context.output.send(Value::Type(ValueType::List(Box::new(context.arguments.r#type(0)?))))
+    match context.this.r#type()? {
+        ValueType::List(c) => {
+            match *c {
+                ValueType::Empty => {
+                    context.arguments.check_len(1)?;
+                    context.output.send(Value::Type(ValueType::List(Box::new(context.arguments.r#type(0)?))))
+                }
+                c => {
+                    if context.arguments.is_empty() {
+                        context.output.send(Value::Type(ValueType::List(Box::from(c))))
+                    } else {
+                        argument_error(format!("Tried to set subtype on a list that already has the subtype {}", c.to_string()).as_str())
+                    }
+                }
+            }
+        }
+        _ => argument_error("Invalid this, expected type list"),
+    }
 }
 
 fn of(mut context: ExecutionContext) -> CrushResult<()> {

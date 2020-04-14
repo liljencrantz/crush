@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, mandate};
+use crate::lang::errors::{CrushResult, mandate, argument_error};
 use crate::lang::{value::Value, execution_context::ExecutionContext};
 use crate::lang::command::CrushCommand;
 use std::collections::HashMap;
@@ -30,7 +30,18 @@ lazy_static! {
 }
 
 fn call_type(context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::Type(ValueType::Table(parse_column_types(context.arguments)?)))
+    match context.this.r#type()? {
+        ValueType::Table(c) => {
+            if c.is_empty() {
+                context.output.send(Value::Type(ValueType::Table(parse_column_types(context.arguments)?)))
+            } else if context.arguments.is_empty() {
+                context.output.send(Value::Type(ValueType::Table(c)))
+            } else {
+                argument_error("Tried to set columns on a table type that already has columns")
+            }
+        },
+        _ => argument_error("Invalid this, expected type table")
+    }
 }
 
 fn len(context: ExecutionContext) -> CrushResult<()> {

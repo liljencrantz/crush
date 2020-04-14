@@ -1,13 +1,8 @@
 Todo:
-callable type versions, like table_stream, are confusing.
-Handle stderr on external commands
-Maybe rethink unnamed arguments and closure signatures
 Add background job support
 New command: which
 Add a range type
-Figure out how to support options like --foo and -b in external commands in a nice way
 Add system tests for binary stream handling
-Add system tests for serialization
 Make parse error reporting more helpful
 Error source propagation
 Add command-field to CrushError
@@ -22,7 +17,6 @@ empty_channel should not create new empty channels
 Make integers overflow to arbitrary precision math
 Run an executable by giving its path
 Add reject command that removes specified columns from a table/stream
-Redo empty streams
 Add control.source command
 Flesh out seq command with support for from and step
 Add String:join command
