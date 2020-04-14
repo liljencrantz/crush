@@ -12,6 +12,7 @@ enum PrinterMessage {
 
 use crate::lang::printer::PrinterMessage::*;
 use std::thread::JoinHandle;
+use termion::terminal_size;
 
 #[derive(Clone)]
 pub struct Printer {
@@ -63,5 +64,20 @@ impl Printer {
 
     pub fn error(&self, err: &str) {
         let _ = self.sender.send(PrinterMessage::Error(Box::from(err)));
+    }
+
+    pub fn width(&self) -> usize {
+        match terminal_size() {
+            Ok(s) =>
+                s.0 as usize,
+            Err(_) => 80,
+        }
+    }
+
+    pub fn height(&self) -> usize {
+        match terminal_size() {
+            Ok(s) => s.1 as usize,
+            Err(_) => 30,
+        }
     }
 }

@@ -8,10 +8,11 @@ use crate::lang::table::ColumnType;
 use crate::lang::table::Row;
 use crate::lang::binary::BinaryReader;
 use crate::lang::table::TableReader;
-use std::cmp::max;
+use std::cmp::{max, min};
 use std::io::{BufReader, Read};
 use crate::lang::printer::Printer;
 use crate::lang::errors::to_crush_error;
+use std::borrow::Borrow;
 
 pub fn create_pretty_printer(printer: Printer) -> ValueSender {
     let (o, i) = channels();
@@ -125,7 +126,7 @@ impl PrettyPrinter {
                 }
                 Err(_) => break,
             }
-            if data.len() == 49 || has_table {
+            if data.len() == self.printer.height()-1 || has_table {
                 self.print_partial(data, stream.types(), has_name, indent);
                 data = Vec::new();
                 data.drain(..);
@@ -263,12 +264,53 @@ impl PrettyPrinter {
     }
 
     fn print_partial(&self, data: Vec<Row>, types: &Vec<ColumnType>, has_name: bool, indent: usize) {
-        let mut w = vec![0; types.len()];
+        if types.len() == 1 {
+            self.print_single_column_table(data, types, has_name, indent)
+        } else {
+            let mut w = vec![0; types.len()];
 
-        self.calculate_header_width(&mut w, types, has_name);
-        self.calculate_body_width(&mut w, &data, types.len());
+            self.calculate_header_width(&mut w, types, has_name);
+            self.calculate_body_width(&mut w, &data, types.len());
 
-        self.print_header(&w, types, has_name, indent);
-        self.print_body(&w, data, indent)
+            self.print_header(&w, types, has_name, indent);
+            self.print_body(&w, data, indent)
+        }
+    }
+
+    fn print_single_column_table(&self, data: Vec<Row>, types: &Vec<ColumnType>, has_name: bool, indent: usize) {
+        self.printer.line(&types[0].name);
+        let max_width = self.printer.width();
+        let mut columns = 1;
+        let mut widths = vec![];
+        let mut items_per_column;
+        let data = data.iter().map(|s| s.cells()[0].to_string()).collect::<Vec<_>>();
+
+        for cols in (2..11).rev() {
+            items_per_column = (data.len() - 1) / cols + 1;
+            let ww = data.chunks(items_per_column)
+                .map(|el| el.iter()
+                    .map(|v| v.len())
+                    .max()
+                    .unwrap())
+                .collect::<Vec<usize>>();
+            let tot_width: usize = ww.iter().sum::<usize>() + ww.len() - 1;
+            if tot_width <= max_width {
+                columns = cols;
+                widths = ww;
+                break;
+            }
+        }
+
+        let lines = (data.len()-1)/columns + 1;
+        for start_idx in (0..lines) {
+            let mut line = "".to_string();
+            for (off, idx) in (start_idx..data.len()).step_by(lines).enumerate() {
+                line += &data[idx];
+                if off+1 < widths.len() {
+                    line += &" ".repeat(widths[off] - data[idx].len() + 1);
+                }
+            }
+            self.printer.line(&line);
+        }
     }
 }
