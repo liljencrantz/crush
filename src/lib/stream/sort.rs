@@ -14,7 +14,7 @@ pub struct Config {
 
 fn parse(
     mut arguments: Vec<Argument>,
-    types: &Vec<ColumnType>) -> CrushResult<Config> {
+    types: &[ColumnType]) -> CrushResult<Config> {
     let sort_column_idx =
         match arguments.len() {
             0 => {
@@ -53,7 +53,7 @@ pub fn run(config: Config, input: &mut dyn Readable, output: OutputStream) -> Cr
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()?.readable() {
         Some(mut input) => {
-            let output = context.output.initialize(input.types().clone())?;
+            let output = context.output.initialize(input.types().to_vec())?;
             let config = parse(context.arguments, input.types())?;
             run(config, input.as_mut(), output)
         }

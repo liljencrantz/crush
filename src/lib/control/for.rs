@@ -29,7 +29,7 @@ pub fn run(
                         Some(var_name.clone()),
                         Value::Struct(Struct::from_vec(
                             line.into_vec(),
-                            input.types().clone(),
+                            input.types().to_vec(),
                         )))]
                 }
             };

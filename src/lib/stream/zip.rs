@@ -6,8 +6,8 @@ use crate::lang::stream::Readable;
 
 pub fn run(input1: &mut dyn Readable, input2: &mut dyn Readable, sender: ValueSender) -> CrushResult<()> {
     let mut output_type = Vec::new();
-    output_type.append(&mut input1.types().clone());
-    output_type.append(&mut input2.types().clone());
+    output_type.append(&mut input1.types().to_vec());
+    output_type.append(&mut input2.types().to_vec());
     let output = sender.initialize(output_type)?;
     while let (Ok(mut row1), Ok(row2)) = (input1.read(), input2.read()) {
         row1.append(&mut row2.into_vec());

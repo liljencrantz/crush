@@ -11,7 +11,6 @@ use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use lib::declare;
 use crate::lang::errors::{CrushResult, to_crush_error};
-use std::error::Error;
 use crate::lang::printer;
 use crate::lang::stream::empty_channel;
 use crate::lang::pretty_printer::create_pretty_printer;
@@ -73,7 +72,7 @@ fn run_interactive(global_env: Scope, printer: Printer) -> CrushResult<()> {
                 break;
             }
             Err(err) => {
-                printer.line(err.description());
+                printer.handle_error::<()>(to_crush_error(Err(err)));
                 break;
             }
         }

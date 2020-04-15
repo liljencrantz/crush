@@ -16,7 +16,7 @@ pub struct Config {
     column: Option<usize>,
 }
 
-pub fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> CrushResult<Config> {
+pub fn parse(input_type: &[ColumnType], arguments: Vec<Argument>) -> CrushResult<Config> {
     match arguments.len() {
         0 => Ok(Config { column: None }),
         1 => match (&arguments[0].argument_type, &arguments[0].value) {
@@ -59,7 +59,7 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()?.readable() {
         Some(mut input) => {
             let config = parse(input.types(), context.arguments)?;
-            let output = context.output.initialize(input.types().clone())?;
+            let output = context.output.initialize(input.types().to_vec())?;
             run(config, input.as_mut(), output)
         }
         _ => error("Expected a stream"),

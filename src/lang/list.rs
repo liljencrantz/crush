@@ -206,7 +206,7 @@ impl Readable for ListReader {
         Ok(Row::new(vec![self.list.get(self.idx - 1)?]))
     }
 
-    fn types(&self) -> &Vec<ColumnType> {
+    fn types(&self) -> &[ColumnType] {
         &self.types
     }
 }

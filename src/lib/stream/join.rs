@@ -21,14 +21,14 @@ pub struct Config {
     right_column_idx: usize,
 }
 
-pub fn get_sub_type(cell_type: &ValueType) -> Result<&Vec<ColumnType>, CrushError> {
+pub fn get_sub_type(cell_type: &ValueType) -> Result<&[ColumnType], CrushError> {
     match cell_type {
         ValueType::TableStream(sub_types) | ValueType::Table(sub_types) => Ok(sub_types),
         _ => argument_error("Expected a table column"),
     }
 }
 
-pub fn guess_tables(input_type: &Vec<ColumnType>) -> Result<(usize, usize, &Vec<ColumnType>, &Vec<ColumnType>), CrushError> {
+pub fn guess_tables(input_type: &[ColumnType]) -> Result<(usize, usize, &[ColumnType], &[ColumnType]), CrushError> {
     let tables: Vec<(usize, &Vec<ColumnType>)> = input_type.iter().enumerate().flat_map(|(idx, t)| {
         match &t.cell_type {
             ValueType::TableStream(sub_types) | ValueType::Table(sub_types) => Some((idx, sub_types)),
@@ -42,13 +42,13 @@ pub fn guess_tables(input_type: &Vec<ColumnType>) -> Result<(usize, usize, &Vec<
     }
 }
 
-fn scan_table(table: &str, column: &str, input_type: &Vec<ColumnType>) -> Result<(usize, usize), CrushError> {
+fn scan_table(table: &str, column: &str, input_type: &[ColumnType]) -> Result<(usize, usize), CrushError> {
     let table_idx = input_type.find_str(&table.to_string())?;
     let column_idx = get_sub_type(&input_type[table_idx].cell_type)?.find_str(&column.to_string())?;
     Ok((table_idx, column_idx))
 }
 
-fn parse(input_type: &Vec<ColumnType>, arguments: Vec<Argument>) -> Result<Config, CrushError> {
+fn parse(input_type: &[ColumnType], arguments: Vec<Argument>) -> Result<Config, CrushError> {
     arguments.check_len(2)?;
 
     match (&arguments[0].value, &arguments[1].value) {

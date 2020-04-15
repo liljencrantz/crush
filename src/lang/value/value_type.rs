@@ -2,7 +2,6 @@ use crate::lang::errors::{error, mandate, CrushResult, to_crush_error};
 use crate::lang::{value::Value, table::ColumnType};
 use crate::util::glob::Glob;
 use regex::Regex;
-use std::error::Error;
 use crate::lang::parser::parse_name;
 use crate::lang::command::CrushCommand;
 use std::collections::HashMap;
@@ -122,7 +121,7 @@ impl ValueType {
             ValueType::String => Ok(Value::string(s)),
             ValueType::Integer => match s.parse::<i128>() {
                 Ok(n) => Ok(Value::Integer(n)),
-                Err(e) => error(e.description()),
+                Err(e) => error(e.to_string().as_str()),
             }
             ValueType::Field => Ok(Value::Field(mandate(parse_name(s), "Invalid field name")?)),
             ValueType::Glob => Ok(Value::Glob(Glob::new(s))),

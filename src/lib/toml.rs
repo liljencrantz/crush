@@ -139,11 +139,11 @@ fn to_toml(value: Value) -> CrushResult<toml::Value> {
         Value::List(l) =>
             Ok(toml::Value::Array(
                 l.dump().drain(..)
-                    .map(|e| to_toml(e))
+                    .map(to_toml)
                     .collect::<CrushResult<Vec<_>>>()?)),
 
         Value::Table(t) => {
-            let types = t.types().clone();
+            let types = t.types().to_vec();
             let structs = t.rows()
                 .iter()
                 .map(|r| r.clone().into_struct(&types))

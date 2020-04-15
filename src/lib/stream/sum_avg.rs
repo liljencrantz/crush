@@ -11,7 +11,7 @@ use crate::lang::stream::Readable;
 use crate::lang::table::ColumnVec;
 use chrono::Duration;
 
-pub fn parse(input_type: &Vec<ColumnType>, arguments: &[Argument]) -> CrushResult<usize> {
+pub fn parse(input_type: &[ColumnType], arguments: &[Argument]) -> CrushResult<usize> {
     match arguments.len() {
         0 => if input_type.len() == 1 && input_type[0].cell_type == ValueType::Integer {
             Ok(0)

@@ -51,7 +51,7 @@ pub fn cmd(mut context: ExecutionContext) -> CrushResult<()> {
             let errors = String::from_utf8_lossy(&output.stderr);
             for e in errors.split('\n') {
                 let err = e.trim();
-                if err.len() != 0 {
+                if !err.is_empty() {
                     context.printer.error(err);
                 }
             }

@@ -1,11 +1,10 @@
-use std::error::Error;
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult, error, to_crush_error};
 use std::path::Path;
 
 pub fn cwd() -> CrushResult<Box<Path>> {
     match std::env::current_dir() {
         Ok(d) => Ok(d.into_boxed_path()),
-        Err(e) => error(e.description()),
+        Err(e) => to_crush_error(Err(e)),
     }
 }
 

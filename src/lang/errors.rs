@@ -57,7 +57,7 @@ pub fn error<T>(message: &str) -> Result<T, CrushError> {
 pub fn to_crush_error<T, E: Error>(result: Result<T, E>) -> Result<T, CrushError> {
     match result {
         Ok(v) => Ok(v),
-        Err(e) => error(e.description()),
+        Err(e) => error(e.to_string().as_str()),
     }
 }
 

@@ -16,12 +16,11 @@ use crate::lang::stream::Readable;
 use crate::lang::table::ColumnVec;
 
 pub struct Config {
-    input_type: Vec<ColumnType>,
     name: Box<str>,
     column: usize,
 }
 
-pub fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> CrushResult<Config> {
+pub fn parse(input_type: &[ColumnType], arguments: Vec<Argument>) -> CrushResult<Config> {
     arguments.check_len(1)?;
     let arg = &arguments[0];
     let name = arg.argument_type.clone().unwrap_or(Box::from("group"));
@@ -29,13 +28,11 @@ pub fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> CrushResu
         Value::String(cell_name) =>
             Ok(Config {
                 column: input_type.find_str(cell_name)?,
-                input_type,
                 name,
             }),
         Value::Field(cell_name) =>
             Ok(Config {
                 column: input_type.find(cell_name)?,
-                input_type,
                 name,
             }),
         _ => argument_error("Bad comparison key"),
@@ -44,6 +41,7 @@ pub fn parse(input_type: Vec<ColumnType>, arguments: Vec<Argument>) -> CrushResu
 
 pub fn run(
     config: Config,
+    input_type: &[ColumnType],
     input: &mut dyn Readable,
     output: OutputStream,
 ) -> CrushResult<()> {
@@ -54,7 +52,7 @@ pub fn run(
         let val = groups.get(&key);
         match val {
             None => {
-                let (output_stream, input_stream) = unlimited_streams(config.input_type.clone());
+                let (output_stream, input_stream) = unlimited_streams(input_type.to_vec());
                 let out_row = Row::new(vec![key.clone(), Value::TableStream(input_stream)]);
                 output.send(out_row)?;
                 let _ = output_stream.send(row);
@@ -71,15 +69,15 @@ pub fn run(
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()?.readable() {
         Some(mut input) => {
-            let config = parse(input.types().clone(), context.arguments)?;
+            let config = parse(input.types(), context.arguments)?;
             let output_type = vec![
                 input.types()[config.column].clone(),
                 ColumnType::new(
                     &config.name,
-                    ValueType::TableStream(input.types().clone()))
+                    ValueType::TableStream(input.types().to_vec()))
             ];
             let output = context.output.initialize(output_type)?;
-            run(config, input.as_mut(), output)
+            run(config, &input.types().to_vec(), input.as_mut(), output)
         }
         None => error("Expected a stream"),
     }

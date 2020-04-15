@@ -19,7 +19,7 @@ pub struct Config {
 
 
 
-pub fn parse(input_type: &Vec<ColumnType>, argument: Vec<Argument>) -> CrushResult<Config> {
+pub fn parse(input_type: &[ColumnType], argument: Vec<Argument>) -> CrushResult<Config> {
     let mut table=None;
     let mut aggregations = Vec::new();
     let mut next_idx = input_type.len();
@@ -91,7 +91,7 @@ pub fn parse(input_type: &Vec<ColumnType>, argument: Vec<Argument>) -> CrushResu
 
 /*
 
-pub fn guess_table(input_type: &Vec<ColumnType>) -> JobResult<usize> {
+pub fn guess_table(input_type: &[ColumnType]) -> JobResult<usize> {
     let tables: Vec<usize> = input_type
         .iter()
         .enumerate()
@@ -191,7 +191,7 @@ fn create_aggregator(
     name: &str,
     idx: usize,
     c: &Closure,
-    input_type: &Vec<ColumnType>,
+    input_type: &[ColumnType],
     uninitialized_inputs: &mut Vec<ValueReceiver>,
     outputs: &mut Vec<OutputStream>,
     env: &Env,

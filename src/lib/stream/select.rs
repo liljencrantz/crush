@@ -35,7 +35,7 @@ pub fn run(
     mut input: Box<dyn Readable>,
     context: ExecutionContext,
 ) -> CrushResult<()> {
-    let input_type = input.types().clone();
+    let input_type = input.types().to_vec();
     let mut output_type = if config.copy {
         input_type.clone()
     } else {

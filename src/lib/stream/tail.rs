@@ -10,7 +10,7 @@ pub fn run(
     input: &mut dyn Readable,
     sender: ValueSender,
 ) -> CrushResult<()> {
-    let output = sender.initialize(input.types().clone())?;
+    let output = sender.initialize(input.types().to_vec())?;
     let mut q: VecDeque<Row> = VecDeque::new();
     while let Ok(row) = input.read() {
         if q.len() >= lines as usize {

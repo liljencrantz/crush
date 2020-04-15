@@ -1,7 +1,6 @@
 use crate::lang::errors::{CrushResult, argument_error, error};
 use crate::lang::{value::Value, execution_context::ExecutionContext};
 use regex::Regex;
-use std::error::Error;
 use crate::lang::command::CrushCommand;
 use crate::lang::execution_context::{ArgumentVector, This};
 use std::collections::HashMap;
@@ -36,7 +35,7 @@ fn new(mut context: ExecutionContext) -> CrushResult<()> {
     let def = context.arguments.string(0)?;
     let res = match Regex::new(def.as_ref()) {
         Ok(r) => Value::Regex(def, r),
-        Err(e) => return argument_error(e.description()),
+        Err(e) => return argument_error(e.to_string().as_str()),
     };
     context.output.send(res)
 }

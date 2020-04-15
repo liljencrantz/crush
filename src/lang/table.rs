@@ -22,7 +22,7 @@ impl Table {
         }
     }
 
-    pub fn types(&self) -> &Vec<ColumnType> {
+    pub fn types(&self) -> &[ColumnType] {
         &self.types
     }
 
@@ -41,7 +41,7 @@ impl TableReader {
     pub fn new(rows: Table) -> TableReader {
         TableReader {
             idx: 0,
-            row_type: rows.types().clone(),
+            row_type: rows.types().to_vec(),
             rows,
         }
     }
@@ -56,7 +56,7 @@ impl Readable for TableReader {
         Ok(self.rows.rows.replace(self.idx - 1, Row::new(vec![Value::Integer(0)])))
     }
 
-    fn types(&self) -> &Vec<ColumnType> {
+    fn types(&self) -> &[ColumnType] {
         &self.row_type
     }
 }
@@ -75,8 +75,8 @@ impl Row {
         &self.cells
     }
 
-    pub fn into_struct(self, types: &Vec<ColumnType>) -> Struct {
-        Struct::from_vec(self.cells, types.clone())
+    pub fn into_struct(self, types: &[ColumnType]) -> Struct {
+        Struct::from_vec(self.cells, types.to_vec())
     }
 
     pub fn into_vec(self) -> Vec<Value> {
@@ -109,7 +109,7 @@ pub struct ColumnType {
 }
 
 impl ColumnType {
-    pub fn materialize(input: &Vec<ColumnType>) -> Vec<ColumnType> {
+    pub fn materialize(input: &[ColumnType]) -> Vec<ColumnType> {
         input
             .iter()
             .map(|col| ColumnType { name: col.name.clone(), cell_type: col.cell_type.materialize() })
@@ -130,7 +130,7 @@ pub trait ColumnVec {
     fn find(&self, needle: &Vec<Box<str>>) -> CrushResult<usize>;
 }
 
-impl ColumnVec for Vec<ColumnType> {
+impl ColumnVec for &[ColumnType] {
     fn find_str(&self, needle: &str) -> CrushResult<usize> {
         for (idx, field) in self.iter().enumerate() {
             if field.name.as_ref() == needle {

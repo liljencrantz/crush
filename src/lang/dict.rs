@@ -176,7 +176,7 @@ impl Readable for DictReader {
         Ok(Row::new(vec![a, b]))
     }
 
-    fn types(&self) -> &Vec<ColumnType> {
+    fn types(&self) -> &[ColumnType] {
         &self.types
     }
 }

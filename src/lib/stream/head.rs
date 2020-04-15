@@ -7,7 +7,7 @@ pub fn run(
     input: &mut dyn Readable,
     sender: ValueSender,
 ) -> CrushResult<()> {
-    let output = sender.initialize(input.types().clone())?;
+    let output = sender.initialize(input.types().to_vec())?;
     let mut count = 0;
     while let Ok(row) = input.read() {
         if count >= lines {

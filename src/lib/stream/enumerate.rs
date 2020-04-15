@@ -6,7 +6,7 @@ use crate::lang::table::ColumnType;
 
 pub fn run(input: &mut dyn Readable, sender: ValueSender) -> CrushResult<()> {
     let mut output_type = vec![ColumnType::new("idx", ValueType::Integer)];
-    output_type.extend(input.types().clone());
+    output_type.extend(input.types().to_vec());
     let output = sender.initialize(output_type)?;
 
     let mut line: i128 = 0;

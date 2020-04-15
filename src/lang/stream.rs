@@ -92,7 +92,7 @@ impl InputStream {
         self.validate(to_crush_error(self.receiver.recv()))
     }
 
-    pub fn types(&self) -> &Vec<ColumnType> {
+    pub fn types(&self) -> &[ColumnType] {
         &self.types
     }
 
@@ -141,7 +141,7 @@ pub fn empty_channel() -> ValueReceiver {
 
 pub trait Readable {
     fn read(&mut self) -> CrushResult<Row>;
-    fn types(&self) -> &Vec<ColumnType>;
+    fn types(&self) -> &[ColumnType];
 }
 
 impl Readable for InputStream {
@@ -152,7 +152,7 @@ impl Readable for InputStream {
         }
     }
 
-    fn types(&self) -> &Vec<ColumnType> {
+    fn types(&self) -> &[ColumnType] {
         self.types()
     }
 }

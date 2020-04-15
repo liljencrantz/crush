@@ -256,7 +256,7 @@ impl PrettyPrinter {
         self.printer.line(format_buffer(&buff[0..used], complete).as_str());
     }
 
-    fn print_partial(&self, data: Vec<Row>, types: &Vec<ColumnType>, indent: usize, has_table: bool) {
+    fn print_partial(&self, data: Vec<Row>, types: &[ColumnType], indent: usize, has_table: bool) {
         if types.len() == 1 && indent == 0 && !has_table{
             self.print_single_column_table(data, types)
         } else {
@@ -270,7 +270,7 @@ impl PrettyPrinter {
         }
     }
 
-    fn print_single_column_table(&self, data: Vec<Row>, types: &Vec<ColumnType>) {
+    fn print_single_column_table(&self, data: Vec<Row>, types: &[ColumnType]) {
         self.printer.line(&types[0].name);
         let max_width = self.printer.width();
         let mut columns = 1;

@@ -14,7 +14,7 @@ use crate::lang::command::CrushCommand;
 fn evaluate(
     condition: Box<dyn CrushCommand + Send + Sync>,
     row: &Row,
-    input_type: &Vec<ColumnType>,
+    input_type: &[ColumnType],
     base_context: &ExecutionContext) -> CrushResult<bool> {
     let arguments = row.clone().into_vec()
         .drain(..)
@@ -42,7 +42,7 @@ pub fn run(condition: Box<dyn CrushCommand + Send + Sync>, input: &mut dyn Reada
     Ok(())
 }
 
-pub fn parse(_input_type: &Vec<ColumnType>,
+pub fn parse(_input_type: &[ColumnType],
              arguments: &mut Vec<Argument>) -> CrushResult<Box<dyn CrushCommand + Send + Sync>> {
     match arguments.remove(0).value {
         Value::Command(c) => Ok(c),
@@ -61,7 +61,7 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
                 this: None,
                 printer: context.printer.clone(),
             };
-            let output = context.output.initialize(input.types().clone())?;
+            let output = context.output.initialize(input.types().to_vec())?;
             run(parse(input.types(), context.arguments.as_mut())?,
                 input.as_mut(),
                 output,

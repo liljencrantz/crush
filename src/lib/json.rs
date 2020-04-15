@@ -54,7 +54,7 @@ fn writer(mut arguments: Vec<Argument>, output: ValueSender, printer: &Printer) 
 fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
     match json_value {
         serde_json::Value::Null => Ok(Value::Empty()),
-        serde_json::Value::Bool(b) => Ok(Value::Bool(b.clone())),
+        serde_json::Value::Bool(b) => Ok(Value::Bool(*b)),
         serde_json::Value::Number(f) => {
             if f.is_u64() {
                 Ok(Value::Integer(f.as_u64().expect("") as i128))
@@ -130,11 +130,11 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
         Value::List(l) =>
             Ok(serde_json::Value::Array(
                 l.dump().drain(..)
-                    .map(|e| to_json(e))
+                    .map(to_json)
                     .collect::<CrushResult<Vec<_>>>()?)),
 
         Value::Table(t) => {
-            let types = t.types().clone();
+            let types = t.types().to_vec();
             let structs = t.rows()
                 .iter()
                 .map(|r| r.clone().into_struct(&types))
