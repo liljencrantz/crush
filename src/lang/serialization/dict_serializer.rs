@@ -5,27 +5,29 @@ use super::model;
 use super::super::value::{ValueType, Value};
 use crate::util::identity_arc::Identity;
 use crate::lang::dict::Dict;
+use std::collections::hash_map::Entry;
 
 impl Serializable<Dict> for Dict {
     fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<Dict> {
-        if state.dicts.contains_key(&id) {
-            Ok(state.dicts[&id].clone())
-        } else {
-            if let element::Element::Dict(d) = elements[id].element.as_ref().unwrap(){
-                let key_type = ValueType::deserialize(d.key_type as usize, elements, state)?;
-                let value_type = ValueType::deserialize(d.value_type as usize, elements, state)?;
-                let dict = Dict::new(key_type, value_type);
-                state.dicts.insert(id, dict.clone());
+        match state.dicts.entry(id) {
+            Entry::Occupied(o) => Ok(o.get().clone()),
+            Entry::Vacant(_) => {
+                if let element::Element::Dict(d) = elements[id].element.as_ref().unwrap() {
+                    let key_type = ValueType::deserialize(d.key_type as usize, elements, state)?;
+                    let value_type = ValueType::deserialize(d.value_type as usize, elements, state)?;
+                    let dict = Dict::new(key_type, value_type);
+                    state.dicts.insert(id, dict.clone());
 
-                for pair in d.elements[..].chunks(2) {
-                    dict.insert(
-                        Value::deserialize(pair[0] as usize, elements, state)?,
-                        Value::deserialize(pair[1] as usize, elements, state)?,
-                    )?;
+                    for pair in d.elements[..].chunks(2) {
+                        dict.insert(
+                            Value::deserialize(pair[0] as usize, elements, state)?,
+                            Value::deserialize(pair[1] as usize, elements, state)?,
+                        )?;
+                    }
+                    Ok(dict)
+                } else {
+                    error("Expected a dict")
                 }
-                Ok(dict)
-            } else {
-                error("Expected a dict")
             }
         }
     }
@@ -40,7 +42,7 @@ impl Serializable<Dict> for Dict {
             let mut dd = model::Dict {
                 key_type: Value::Type(self.key_type()).serialize(elements, state)? as u64,
                 value_type: Value::Type(self.value_type()).serialize(elements, state)? as u64,
-                elements: Vec::with_capacity(self.len()*2),
+                elements: Vec::with_capacity(self.len() * 2),
             };
             for (key, value) in self.elements() {
                 dd.elements.push(key.serialize(elements, state)? as u64);

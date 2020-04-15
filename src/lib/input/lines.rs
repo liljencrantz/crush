@@ -1,7 +1,6 @@
-use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
+use crate::lang::execution_context::ExecutionContext;
 use std::io::{BufReader, BufRead};
 use crate::{
-    lang::errors::argument_error,
     lang::{
         table::Row,
         table::ColumnType,
@@ -32,16 +31,5 @@ fn run(input: Box<dyn BinaryReader>, output: OutputStream, printer: &Printer) ->
 
 pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
     let output = context.output.initialize(vec![ColumnType::new("line", ValueType::String)])?;
-    let file = match context.arguments.len() {
-        0 => {
-            let v = context.input.recv()?;
-            match v {
-                Value::BinaryStream(b) => Ok(b),
-                Value::Binary(b) => Ok(BinaryReader::vec(&b)),
-                _ => argument_error("Expected either a file to read or binary pipe input"),
-            }
-        }
-        _ => BinaryReader::paths(context.arguments.files(&context.printer)?),
-    }?;
-    run(file, output, &context.printer)
+    run(context.reader()?, output, &context.printer)
 }

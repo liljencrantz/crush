@@ -15,7 +15,7 @@ impl Serializable<i128> for i128 {
 
     fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
         let idx = elements.len();
-        state.values.insert(Value::Integer(self.clone()), idx);
+        state.values.insert(Value::Integer(*self), idx);
         elements.push(Element {
             element: Some(match i64::try_from(*self) {
                 Ok(v) => element::Element::SmallInteger(v),

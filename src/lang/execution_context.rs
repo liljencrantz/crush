@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, argument_error, error};
+use crate::lang::errors::{CrushResult, argument_error, error, to_crush_error};
 use crate::lang::argument::Argument;
 use crate::lang::value::{Value, ValueType};
 use crate::util::replace::Replace;
@@ -15,6 +15,9 @@ use chrono::{DateTime, Local, Duration};
 use crate::lang::table::Table;
 use crate::lang::printer::Printer;
 use crate::lang::job::JobJoinHandle;
+use crate::lang::binary::{BinaryReader, binary_channel};
+use std::io::Write;
+use std::fs::File;
 
 pub trait ArgumentVector {
     fn check_len(&self, len: usize) -> CrushResult<()>;
@@ -279,6 +282,37 @@ impl ExecutionContext {
             this: self.this,
         }
     }
+
+
+    pub fn reader(&mut self) -> CrushResult<Box<dyn BinaryReader>> {
+        match self.arguments.len() {
+            0 => match self.input.recv()? {
+                Value::BinaryStream(b) => Ok(b),
+                Value::Binary(b) => Ok(BinaryReader::vec(&b)),
+                _ => argument_error("Expected either a file to read or binary pipe input"),
+            },
+            _ => Ok(BinaryReader::paths(self.arguments.files(&self.printer)?)?),
+        }
+    }
+
+    pub fn writer(&mut self) -> CrushResult<Box<dyn Write>> {
+        match self.arguments.len() {
+            0 => {
+                let (w,r) = binary_channel();
+                self.output.send(Value::BinaryStream(r))?;
+                Ok(w)
+            }
+            1 => {
+                let files = self.arguments.files(&self.printer)?;
+                if files.len() != 1 {
+                    return argument_error("Expected exactly one desitnation file");
+                }
+                Ok(Box::from(to_crush_error(File::create(files[0].clone()))?))
+            },
+            _ => argument_error("Too many arguments"),
+        }
+    }
+
 }
 
 pub trait This {

@@ -13,15 +13,12 @@ In closures without a signature, put unnamed variables in the variable 'unnamed'
 Kwargs should maybe not be a dict? How should repeated arguments be handled? We should at least preserve order...
 Allow empty closures
 Missing some value serialisations and deserialisations
-empty_channel should not create new empty channels
 Make integers overflow to arbitrary precision math
 Run an executable by giving its path
 Add reject command that removes specified columns from a table/stream
 Add control.source command
 Flesh out seq command with support for from and step
 Add String:join command
-Add String:lpad command
-Add String:rpad command
 Add String:substr command
 Figure out how to make custom reduce commands
 Data enums + pattern matching syntax
@@ -34,9 +31,8 @@ Arbitrary precision integers?
 make file globing testable via fakes
 Add package command to create a new namespace
 Make it possible to use the pipe operator with the for command
-pbuf:parse command that takes a protobuf definition and uses it to deserialize protobuf data
-avro:parse command that deserializes avro data
-toml:parse command that deserializes toml data
+pbuf:from command that takes a protobuf definition and uses it to deserialize protobuf data
+avro:from command that deserializes avro data
 Add history command with all previous interactive invocations, including invocation string, current status, and misc metadata.
 Add proc:jobs command
 pseudo-tty for cmd command output

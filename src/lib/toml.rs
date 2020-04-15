@@ -1,54 +1,20 @@
-use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
+use crate::lang::execution_context::ExecutionContext;
 use crate::{
     lang::{
-        argument::Argument,
         table::Row,
         value::ValueType,
         value::Value,
     },
-    lang::errors::{CrushError, argument_error},
+    lang::errors::CrushError,
 };
 use std::io::{BufReader, Read, Write};
 
-use crate::lang::{r#struct::Struct, list::List, table::Table, binary::BinaryReader};
+use crate::lang::{r#struct::Struct, list::List, table::Table};
 use crate::lang::errors::{CrushResult, to_crush_error, error, mandate};
-use crate::lang::stream::{ValueSender, ValueReceiver};
 use std::collections::HashSet;
 use crate::lang::table::ColumnType;
-use crate::lang::printer::Printer;
-use crate::lang::binary::binary_channel;
-use std::fs::File;
 use std::convert::TryFrom;
 use crate::lang::scope::Scope;
-
-fn reader(mut arguments: Vec<Argument>, input: ValueReceiver, printer: &Printer) -> CrushResult<Box<dyn BinaryReader>> {
-    match arguments.len() {
-        0 => match input.recv()? {
-            Value::BinaryStream(b) => Ok(b),
-            Value::Binary(b) => Ok(BinaryReader::vec(&b)),
-            _ => argument_error("Expected either a file to read or binary pipe input"),
-        },
-        _ => Ok(BinaryReader::paths(arguments.files(printer)?)?),
-    }
-}
-
-fn writer(mut arguments: Vec<Argument>, output: ValueSender, printer: &Printer) -> CrushResult<Box<dyn Write>> {
-    match arguments.len() {
-        0 => {
-            let (w,r) = binary_channel();
-            output.send(Value::BinaryStream(r))?;
-            Ok(w)
-        }
-        1 => {
-            let files = arguments.files(printer)?;
-            if files.len() != 1 {
-                return argument_error("Expected exactly one desitnation file");
-            }
-            Ok(Box::from(to_crush_error(File::create(files[0].clone()))?))
-        },
-        _ => argument_error("Too many arguments"),
-    }
-}
 
 fn from_toml(toml_value: &toml::Value) -> CrushResult<Value> {
     match toml_value {
@@ -114,8 +80,8 @@ fn from_toml(toml_value: &toml::Value) -> CrushResult<Value> {
     }
 }
 
-fn from(context: ExecutionContext) -> CrushResult<()> {
-    let mut reader = BufReader::new(reader(context.arguments, context.input, &context.printer)?);
+fn from(mut context: ExecutionContext) -> CrushResult<()> {
+    let mut reader = BufReader::new(context.reader()?);
     let mut v = Vec::new();
 
     to_crush_error(reader.read_to_end(&mut v))?;
@@ -181,8 +147,8 @@ fn to_toml(value: Value) -> CrushResult<toml::Value> {
     }
 }
 
-fn to(context: ExecutionContext) -> CrushResult<()> {
-    let mut writer = writer(context.arguments, context.output, &context.printer)?;
+fn to(mut context: ExecutionContext) -> CrushResult<()> {
+    let mut writer = context.writer()?;
     let value = context.input.recv()?;
     let toml_value = to_toml(value)?;
     to_crush_error(writer.write(toml_value.to_string().as_bytes()))?;

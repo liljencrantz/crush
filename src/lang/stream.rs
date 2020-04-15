@@ -22,14 +22,14 @@ pub struct ValueSender {
 }
 
 impl ValueSender {
-    pub fn send(self, cell: Value) -> CrushResult<()> {
+    pub fn send(&self, cell: Value) -> CrushResult<()> {
         match self.sender.send(cell) {
             Ok(_) => Ok(()),
             Err(_) => send_error(),
         }
     }
 
-    pub fn initialize(self, signature: Vec<ColumnType>) -> CrushResult<OutputStream> {
+    pub fn initialize(&self, signature: Vec<ColumnType>) -> CrushResult<OutputStream> {
         let (output, input) = streams(signature);
         self.send(Value::TableStream(input))?;
         Ok(output)

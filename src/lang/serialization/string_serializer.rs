@@ -2,6 +2,7 @@ use crate::lang::serialization::{Serializable, DeserializationState, Serializati
 use crate::lang::serialization::model::{Element, element};
 use crate::lang::errors::{CrushResult, error};
 use crate::lang::value::Value;
+use std::collections::hash_map::Entry;
 
 impl Serializable<String> for String {
     fn deserialize(id: usize, elements: &Vec<Element>, _state: &mut DeserializationState) -> CrushResult<String> {
@@ -12,13 +13,14 @@ impl Serializable<String> for String {
     }
 
     fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
-        if state.values.contains_key(&Value::string(&self)) {
-            return Ok(state.values[&Value::string(&self)])
+        match state.values.entry(Value::string(&self)) {
+            Entry::Occupied(o) => Ok(*o.get()),
+            Entry::Vacant(v) => {
+                let idx = elements.len();
+                v.insert(idx);
+                elements.push(Element { element: Some(element::Element::String(self.clone())) });
+                Ok(idx)
+            },
         }
-
-        let idx = elements.len();
-        state.values.insert(Value::string(&self), idx);
-        elements.push(Element { element: Some(element::Element::String(self.clone())) });
-        Ok(idx)
     }
 }

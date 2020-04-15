@@ -47,7 +47,7 @@ fn ps(context: ExecutionContext) -> CrushResult<()> {
             Value::Integer(proc.ppid as i128),
             Value::string(state_name(proc.state)),
             users.get_name(proc.uid as uid_t),
-            Value::Duration(Duration::microseconds((proc.utime*1000000.0) as i64)),
+            Value::Duration(Duration::microseconds((proc.utime*1_000_000.0) as i64)),
             Value::string(
                 proc.cmdline_vec().unwrap_or_else(|_| Some(vec!["<Illegal name>".to_string()]))
                     .unwrap_or_else(|| vec![format!("[{}]", proc.comm)])[0]
@@ -81,7 +81,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     env.declare_command(
         "ps", ps, true,
-        "ps", "Return a table stream containing information on all running processes on the system.", Some(r#"    ps accepts no arguments. Each row contains the following columns:
+        "ps", "Return a table stream containing information on all running processes on the system.",
+        Some(r#"    ps accepts no arguments. Each row contains the following columns:
 
     * pid:integer the process id of the process
 
@@ -103,6 +104,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     * cpu:duration the amount of CPU time this process has used since its creation
 
     * name:string the process name"#))?;
+
     env.declare_command(
         "kill", kill, false,
         "kill [signal=signal:string] [pid=pid:integer...] @pid:integer",
@@ -115,6 +117,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
       SIGUSR1, SIGSEGV, SIGUSR2, SIGPIPE, SIGALRM, SIGTERM, SIGCHLD, SIGCONT and SIGWINCH.
 
     * pid:integer the process ids of all process to signal."))?;
+
     env.readonly();
     Ok(())
 }

@@ -83,10 +83,8 @@ impl Serializable<Value> for Value {
     }
 
     fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
-        if self.value_type().is_hashable() {
-            if state.values.contains_key(self) {
-                return Ok(state.values[self]);
-            }
+        if self.value_type().is_hashable() && state.values.contains_key(self) {
+            return Ok(state.values[self]);
         }
 
         match self {

@@ -1,55 +1,21 @@
-use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
+use crate::lang::execution_context::ExecutionContext;
 use crate::{
     lang::{
-        argument::Argument,
         table::Row,
         value::ValueType,
         value::Value,
     },
-    lang::errors::{CrushError, argument_error},
+    lang::errors::CrushError,
 };
 use std::io::{BufReader, Write};
 
-use crate::lang::{r#struct::Struct, list::List, table::Table, binary::BinaryReader};
+use crate::lang::{r#struct::Struct, list::List, table::Table};
 use crate::lang::errors::{CrushResult, to_crush_error, error, mandate};
-use crate::lang::stream::{ValueSender, ValueReceiver};
 use std::collections::HashSet;
 use crate::lang::errors::Kind::InvalidData;
 use crate::lang::table::ColumnType;
-use crate::lang::printer::Printer;
 use crate::lang::scope::Scope;
-use std::fs::File;
-use crate::lang::binary::binary_channel;
 use std::convert::TryFrom;
-
-fn reader(mut arguments: Vec<Argument>, input: ValueReceiver, printer: &Printer) -> CrushResult<Box<dyn BinaryReader>> {
-    match arguments.len() {
-        0 => match input.recv()? {
-            Value::BinaryStream(b) => Ok(b),
-            Value::Binary(b) => Ok(BinaryReader::vec(&b)),
-            _ => argument_error("Expected either a file to read or binary pipe input"),
-        },
-        _ => Ok(BinaryReader::paths(arguments.files(printer)?)?),
-    }
-}
-
-fn writer(mut arguments: Vec<Argument>, output: ValueSender, printer: &Printer) -> CrushResult<Box<dyn Write>> {
-    match arguments.len() {
-        0 => {
-            let (w,r) = binary_channel();
-            output.send(Value::BinaryStream(r))?;
-            Ok(w)
-        }
-        1 => {
-            let files = arguments.files(printer)?;
-            if files.len() != 1 {
-                return argument_error("Expected exactly one desitnation file");
-            }
-            Ok(Box::from(to_crush_error(File::create(files[0].clone()))?))
-        },
-        _ => argument_error("Too many arguments"),
-    }
-}
 
 fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
     match json_value {
@@ -172,15 +138,15 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
     }
 }
 
-pub fn from(context: ExecutionContext) -> CrushResult<()> {
-    let reader = BufReader::new(reader(context.arguments, context.input, &context.printer)?);
+pub fn from(mut context: ExecutionContext) -> CrushResult<()> {
+    let reader = BufReader::new(context.reader()?);
     let v = to_crush_error(serde_json::from_reader(reader))?;
     let crush_value = from_json(&v)?;
     context.output.send(crush_value)
 }
 
-fn to(context: ExecutionContext) -> CrushResult<()> {
-    let mut writer = writer(context.arguments, context.output, &context.printer)?;
+fn to(mut context: ExecutionContext) -> CrushResult<()> {
+    let mut writer = context.writer()?;
     let value = context.input.recv()?;
     let json_value = to_json(value)?;
     to_crush_error(writer.write(json_value.to_string().as_bytes()))?;

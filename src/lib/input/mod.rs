@@ -50,7 +50,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
         Examples:
 
-    http "https://example.com/" header=("Authorization: Bearer {}":format token)"#))?;
+    http "https://example.com/" header="Authorization: Bearer {}":format token"#))?;
     env.declare_command(
         "lines",lines::perform, true,
         "lines @files:(file|glob)", "Read specified files as a table with one line of text per row", None)?;

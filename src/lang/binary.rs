@@ -46,11 +46,11 @@ impl std::io::Read for ChannelReader {
             Some(src) => {
                 if dst.len() >= src.len() {
                     let res = src.len();
-                    dst.write(src)?;
+                    dst.write_all(src)?;
                     self.buff = None;
                     Ok(res)
                 } else {
-                    dst.write(src)?;
+                    dst.write_all(src)?;
                     self.buff = Some(Box::from(&src[dst.len()..]));
                     Ok(dst.len())
                 }
