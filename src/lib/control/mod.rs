@@ -50,7 +50,10 @@ pub fn cmd(mut context: ExecutionContext) -> CrushResult<()> {
             let output = to_crush_error(cmd.output())?;
             let errors = String::from_utf8_lossy(&output.stderr);
             for e in errors.split('\n') {
-                context.printer.error(e);
+                let err = e.trim();
+                if err.len() != 0 {
+                    context.printer.error(err);
+                }
             }
             context.output.send(
                 Value::BinaryStream(
