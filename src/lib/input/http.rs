@@ -62,7 +62,7 @@ fn parse(mut arguments: Vec<Argument>) -> CrushResult<Config> {
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     let cfg = parse(context.arguments)?;
-    let (mut output, input) = binary_channel()?;
+    let (mut output, input) = binary_channel();
     let client = reqwest::blocking::Client::new();
     let mut request = client.request(cfg.method, cfg.url.as_str());
 

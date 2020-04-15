@@ -128,12 +128,12 @@ impl dyn BinaryReader {
 }
 
 
-pub fn binary_channel() -> CrushResult<(Box<dyn Write>, Box<dyn BinaryReader + Send + Sync>)> {
+pub fn binary_channel() -> (Box<dyn Write>, Box<dyn BinaryReader + Send + Sync>) {
     let (s, r) = bounded(32);
-    Ok((
+    (
         Box::from(ChannelWriter { sender: s }),
         Box::from(ChannelReader { receiver: r, buff: None })
-    ))
+    )
 }
 
 struct MultiReader {

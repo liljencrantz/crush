@@ -1,12 +1,10 @@
 use crate::lang::serialization::{Serializable, DeserializationState, SerializationState};
 use crate::lang::serialization::model::{Element, element};
 use crate::lang::serialization::model;
-use crate::lang::errors::{CrushResult, error, to_crush_error, CrushError};
+use crate::lang::errors::{CrushResult, error};
 use crate::lang::value::Value;
-use std::convert::TryFrom;
 use crate::lang::scope::Scope;
 use crate::util::identity_arc::Identity;
-use crate::lang::serialization::model::scope::Name;
 
 impl Serializable<Scope> for Scope {
     fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<Scope> {

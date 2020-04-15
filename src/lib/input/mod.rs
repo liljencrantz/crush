@@ -7,8 +7,6 @@ use crate::lang::pretty_printer::PrettyPrinter;
 
 mod lines;
 mod csv;
-mod json;
-mod toml;
 mod http;
 
 pub fn val(mut context: ExecutionContext) -> CrushResult<()> {
@@ -62,25 +60,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "Parse specified files as CSV files", Some(r#"    Examples:
 
     csv separator="," head=1 name=string age=integer nick=string"#))?;
-    env.declare_command(
-        "json",json::perform, true,
-        "json [file:file]", "Parse json", Some(
-            r#"    Input can either be a binary stream or a file.
-
-    Examples:
-
-    json some_file.json
-
-    (http "https://jsonplaceholder.typicode.com/todos/3"):body | json"#))?;
-
-    env.declare_command(
-        "toml",toml::from, true,
-        "toml [file:file]", "Parse toml", Some(
-            r#"    Input can either be a binary stream or a file.
-
-    Examples:
-
-    toml Cargo.toml"#))?;
 
     env.declare_command(
         "echo",echo, false,

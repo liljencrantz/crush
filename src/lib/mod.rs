@@ -13,6 +13,8 @@ pub mod types;
 pub mod control;
 pub mod constants;
 pub mod math;
+mod toml;
+mod json;
 
 use crate::{lang::scope::Scope, lang::errors::CrushResult};
 
@@ -28,6 +30,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     control::declare(root)?;
     constants::declare(root)?;
     math::declare(root)?;
+    toml::declare(root)?;
+    json::declare(root)?;
     root.readonly();
     Ok(())
 }

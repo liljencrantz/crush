@@ -8,11 +8,10 @@ use crate::lang::table::ColumnType;
 use crate::lang::table::Row;
 use crate::lang::binary::BinaryReader;
 use crate::lang::table::TableReader;
-use std::cmp::{max, min};
+use std::cmp::{max};
 use std::io::{BufReader, Read};
 use crate::lang::printer::Printer;
 use crate::lang::errors::to_crush_error;
-use std::borrow::Borrow;
 
 pub fn create_pretty_printer(printer: Printer) -> ValueSender {
     let (o, i) = channels();
@@ -296,7 +295,7 @@ impl PrettyPrinter {
         }
 
         let lines = (data.len() - 1) / columns + 1;
-        for start_idx in (0..lines) {
+        for start_idx in 0..lines {
             let mut line = "".to_string();
             for (off, idx) in (start_idx..data.len()).step_by(lines).enumerate() {
                 line += &data[idx];

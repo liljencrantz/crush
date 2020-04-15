@@ -12,8 +12,9 @@ use crate::{
 };
 use crate::lang::errors::{CrushResult, to_crush_error};
 use crate::lang::binary::BinaryReader;
+use crate::lang::printer::Printer;
 
-fn run(input: Box<dyn BinaryReader>, output: OutputStream) -> CrushResult<()> {
+fn run(input: Box<dyn BinaryReader>, output: OutputStream, printer: &Printer) -> CrushResult<()> {
     let mut reader = BufReader::new(input);
     let mut line = String::new();
     loop {
@@ -21,7 +22,8 @@ fn run(input: Box<dyn BinaryReader>, output: OutputStream) -> CrushResult<()> {
         if line.is_empty() {
             break;
         }
-        let _ = output.send(Row::new(vec![Value::String(line[0..line.len() - 1].to_string().into_boxed_str())]));
+        let s = if line.ends_with('\n') {&line[0..line.len()-1]} else {&line[..]};
+        printer.handle_error(output.send(Row::new(vec![Value::string(s)])));
         line.clear();
     }
     Ok(())
@@ -41,5 +43,5 @@ pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
         }
         _ => BinaryReader::paths(context.arguments.files(&context.printer)?),
     }?;
-    run(file, output)
+    run(file, output, &context.printer)
 }

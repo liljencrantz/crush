@@ -256,7 +256,7 @@ Crush comes with a variety of types:
 * types, and
 * commands, which are either closures or built in commands.
 
-Crush allows you to create your own struct types using the `class` and `data`
+Crush allows you to create your own types using the `class` and `data`
 commands.
 
 ### Exploring the shell
