@@ -108,7 +108,6 @@ impl PrettyPrinter {
 
     fn print_internal(&self, stream: &mut impl Readable, indent: usize) {
         let mut data: Vec<Row> = Vec::new();
-        let mut has_name = false;
         let mut has_table = false;
 
         for val in stream.types().iter() {
@@ -117,7 +116,6 @@ impl PrettyPrinter {
                 ValueType::Table(_) => has_table = true,
                 _ => (),
             }
-            has_name = true;
         }
         loop {
             match stream.read() {
@@ -126,22 +124,20 @@ impl PrettyPrinter {
                 }
                 Err(_) => break,
             }
-            if data.len() == self.printer.height()-1 || has_table {
-                self.print_partial(data, stream.types(), has_name, indent);
+            if data.len() == self.printer.height() - 1 || has_table {
+                self.print_partial(data, stream.types(), indent, has_table);
                 data = Vec::new();
                 data.drain(..);
             }
         }
         if !data.is_empty() {
-            self.print_partial(data, stream.types(), has_name, indent);
+            self.print_partial(data, stream.types(), indent, has_table);
         }
     }
 
-    fn calculate_header_width(&self, w: &mut [usize], types: &[ColumnType], has_name: bool) {
-        if has_name {
-            for (idx, val) in types.iter().enumerate() {
-                w[idx] = max(w[idx], val.name.len());
-            }
+    fn calculate_header_width(&self, w: &mut [usize], types: &[ColumnType]) {
+        for (idx, val) in types.iter().enumerate() {
+            w[idx] = max(w[idx], val.name.len());
         }
     }
 
@@ -155,19 +151,17 @@ impl PrettyPrinter {
         }
     }
 
-    fn print_header(&self, w: &[usize], types: &[ColumnType], has_name: bool, indent: usize) {
-        if has_name {
-            let mut header = " ".repeat(indent * 4);
-            let last_idx = types.len() - 1;
-            for (idx, val) in types.iter().enumerate() {
-                let is_last = idx == last_idx;
-                header += val.name.as_ref();
-                if !is_last {
-                    header += &" ".repeat(w[idx] - val.name.len() + 1);
-                }
+    fn print_header(&self, w: &[usize], types: &[ColumnType], indent: usize) {
+        let mut header = " ".repeat(indent * 4);
+        let last_idx = types.len() - 1;
+        for (idx, val) in types.iter().enumerate() {
+            let is_last = idx == last_idx;
+            header += val.name.as_ref();
+            if !is_last {
+                header += &" ".repeat(w[idx] - val.name.len() + 1);
             }
-            self.printer.line(header.as_str())
         }
+        self.printer.line(header.as_str())
     }
 
     fn print_row(
@@ -263,21 +257,21 @@ impl PrettyPrinter {
         self.printer.line(format_buffer(&buff[0..used], complete).as_str());
     }
 
-    fn print_partial(&self, data: Vec<Row>, types: &Vec<ColumnType>, has_name: bool, indent: usize) {
-        if types.len() == 1 {
-            self.print_single_column_table(data, types, has_name, indent)
+    fn print_partial(&self, data: Vec<Row>, types: &Vec<ColumnType>, indent: usize, has_table: bool) {
+        if types.len() == 1 && indent == 0 && !has_table{
+            self.print_single_column_table(data, types)
         } else {
             let mut w = vec![0; types.len()];
 
-            self.calculate_header_width(&mut w, types, has_name);
+            self.calculate_header_width(&mut w, types);
             self.calculate_body_width(&mut w, &data, types.len());
 
-            self.print_header(&w, types, has_name, indent);
+            self.print_header(&w, types, indent);
             self.print_body(&w, data, indent)
         }
     }
 
-    fn print_single_column_table(&self, data: Vec<Row>, types: &Vec<ColumnType>, has_name: bool, indent: usize) {
+    fn print_single_column_table(&self, data: Vec<Row>, types: &Vec<ColumnType>) {
         self.printer.line(&types[0].name);
         let max_width = self.printer.width();
         let mut columns = 1;
@@ -285,7 +279,7 @@ impl PrettyPrinter {
         let mut items_per_column;
         let data = data.iter().map(|s| s.cells()[0].to_string()).collect::<Vec<_>>();
 
-        for cols in (2..11).rev() {
+        for cols in (2..50).rev() {
             items_per_column = (data.len() - 1) / cols + 1;
             let ww = data.chunks(items_per_column)
                 .map(|el| el.iter()
@@ -301,12 +295,12 @@ impl PrettyPrinter {
             }
         }
 
-        let lines = (data.len()-1)/columns + 1;
+        let lines = (data.len() - 1) / columns + 1;
         for start_idx in (0..lines) {
             let mut line = "".to_string();
             for (off, idx) in (start_idx..data.len()).step_by(lines).enumerate() {
                 line += &data[idx];
-                if off+1 < widths.len() {
+                if off + 1 < widths.len() {
                     line += &" ".repeat(widths[off] - data[idx].len() + 1);
                 }
             }
