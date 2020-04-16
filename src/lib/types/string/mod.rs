@@ -52,6 +52,56 @@ lazy_static! {
             "string:rpad length [padding:string]",
             "Returns a string truncated or right-padded to be the exact specified length",
             None);
+        res.declare(full("ends_with"),
+            ends_with, false,
+            "string:ends_with suffix:string",
+            "True if this string ends with suffix",
+            None);
+        res.declare(full("starts_with"),
+            starts_with, false,
+            "string:starts_with prefix:string",
+            "True if this string starts with prefix",
+            None);
+        res.declare(full("is_alphanumeric"),
+            is_alphanumeric, false,
+            "string:is_alphanumeric",
+            "True if every character of this string is alphabetic or numeric (assuming radix 10)",
+            None);
+        res.declare(full("is_alphabetic"),
+            is_alphabetic, false,
+            "string:is_alphabetic",
+            "True if every character of this string is alphabetic",
+            None);
+        res.declare(full("is_ascii"),
+            is_ascii, false,
+            "string:is_ascii",
+            "True if every character of this string is part of the ascii character set",
+            None);
+        res.declare(full("is_lowercase"),
+            is_lowercase, false,
+            "string:is_lowercase",
+            "True if every character of this string is lower case",
+            None);
+        res.declare(full("is_uppercase"),
+            is_uppercase, false,
+            "string:is_uppercase",
+            "True if every character of this string is upper case",
+            None);
+        res.declare(full("is_whitespace"),
+            is_whitespace, false,
+            "string:is_whitespace",
+            "True if every character of this string is a whitespace character",
+            None);
+        res.declare(full("is_control"),
+            is_control, false,
+            "string:is_control",
+            "True if every character of this string is a control character",
+            None);
+        res.declare(full("is_digit"),
+            is_digit, false,
+            "string:is_digit [radix:integer]",
+            "True if every character of this string is a digit in the specified radix (default is 10)",
+            None);
         res
     };
 }
@@ -76,10 +126,11 @@ fn split(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     let this = context.this.string()?;
     let separator = context.arguments.string(0)?;
-    context.output.send(Value::List(List::new(ValueType::String,
-                                              this.split(separator.as_ref())
-                                                  .map(|s| Value::string(s))
-                                                  .collect())))
+    context.output.send(Value::List(List::new(
+        ValueType::String,
+        this.split(separator.as_ref())
+            .map(|s| Value::string(s))
+            .collect())))
 }
 
 fn trim(context: ExecutionContext) -> CrushResult<()> {
@@ -120,7 +171,46 @@ fn rpad(mut context: ExecutionContext) -> CrushResult<()> {
             &s[0..len]))
     } else {
         let mut res = s.to_string();
-        res  += pad_char.repeat(len - s.len()).as_str();
+        res += pad_char.repeat(len - s.len()).as_str();
         context.output.send(Value::string(res.as_str()))
     }
+}
+
+fn ends_with(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(1)?;
+    let s = context.this.string()?;
+    let suff = context.arguments.string(0)?;
+    context.output.send(Value::Bool(s.ends_with(suff.as_ref())))
+}
+
+fn starts_with(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(1)?;
+    let s = context.this.string()?;
+    let pre = context.arguments.string(0)?;
+    context.output.send(Value::Bool(s.starts_with(pre.as_ref())))
+}
+
+macro_rules! per_char_method {
+    ($name:ident, $test:expr) => {
+fn $name(context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
+    let s = context.this.string()?;
+    context.output.send(Value::Bool(s.chars().all($test)))
+}
+    }
+}
+
+per_char_method!(is_alphanumeric, |ch| ch.is_alphanumeric());
+per_char_method!(is_alphabetic, |ch| ch.is_alphabetic());
+per_char_method!(is_ascii, |ch| ch.is_ascii());
+per_char_method!(is_lowercase, |ch| ch.is_lowercase());
+per_char_method!(is_uppercase, |ch| ch.is_uppercase());
+per_char_method!(is_whitespace, |ch| ch.is_whitespace());
+per_char_method!(is_control, |ch| ch.is_control());
+
+fn is_digit(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len_range(0, 1)?;
+    let s = context.this.string()?;
+    let radix = context.arguments.optional_integer(0)?.unwrap_or(10i128) as u32;
+    context.output.send(Value::Bool(s.chars().all(|ch| ch.is_digit(radix))))
 }

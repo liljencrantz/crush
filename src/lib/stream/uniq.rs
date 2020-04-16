@@ -1,44 +1,35 @@
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use std::collections::HashSet;
-use crate::{
-    lang::errors::argument_error,
-    lang::{
-        argument::Argument,
-        table::Row,
-    },
-};
+use crate::lang::argument::Argument;
+use crate::lang::table::Row;
 use crate::lang::{value::Value, table::ColumnType};
 use crate::lang::errors::{CrushResult, error};
 use crate::lang::stream::{Readable, OutputStream};
 use crate::lang::table::ColumnVec;
+use crate::lang::printer::Printer;
 
-pub struct Config {
-    column: Option<usize>,
-}
-
-pub fn parse(input_type: &[ColumnType], arguments: Vec<Argument>) -> CrushResult<Config> {
-    match arguments.len() {
-        0 => Ok(Config { column: None }),
-        1 => match (&arguments[0].argument_type, &arguments[0].value) {
-            (None, Value::Field(f)) => Ok(Config { column: Some(input_type.find(f)?) }),
-            _ => argument_error("Expected field name")
-        }
-        _ => argument_error("Expected zero or one argument"),
+pub fn parse(input_type: &[ColumnType], mut arguments: Vec<Argument>) -> CrushResult<Option<usize>> {
+    arguments.check_len_range(0, 1)?;
+    if let Some(f) = arguments.optional_field(0)? {
+        Ok(Some(input_type.find(&f)?))
+    } else {
+        Ok(None)
     }
 }
 
 pub fn run(
-    config: Config,
+    idx: Option<usize>,
     input: &mut dyn Readable,
     output: OutputStream,
+    printer: &Printer,
 ) -> CrushResult<()> {
-    match config.column {
+    match idx {
         None => {
             let mut seen: HashSet<Row> = HashSet::new();
             while let Ok(row) = input.read() {
                 if !seen.contains(&row) {
                     seen.insert(row.clone());
-                    let _ = output.send(row);
+                    printer.handle_error(output.send(row));
                 }
             }
         }
@@ -47,7 +38,7 @@ pub fn run(
             while let Ok(row) = input.read() {
                 if !seen.contains(&row.cells()[idx]) {
                     seen.insert(row.cells()[idx].clone());
-                    let _ = output.send(row);
+                    printer.handle_error(output.send(row));
                 }
             }
         }
@@ -55,13 +46,13 @@ pub fn run(
     Ok(())
 }
 
-pub fn perform(context: ExecutionContext) -> CrushResult<()> {
+pub fn uniq(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()?.readable() {
         Some(mut input) => {
-            let config = parse(input.types(), context.arguments)?;
+            let idx = parse(input.types(), context.arguments)?;
             let output = context.output.initialize(input.types().to_vec())?;
-            run(config, input.as_mut(), output)
+            run(idx, input.as_mut(), output, &context.printer)
         }
-        _ => error("Expected a stream"),
+        _ => error("Expected input to be a stream"),
     }
 }

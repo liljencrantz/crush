@@ -40,7 +40,7 @@ fn insert_entity(
         file
     };
     let file_type = meta.file_type();
-    let ftype = if file_type.is_dir() {
+    let type_str = if file_type.is_dir() {
         "directory"
     } else if file_type.is_symlink() {
         "symlink"
@@ -52,7 +52,7 @@ fn insert_entity(
         users.get_name(meta.uid()),
         Value::Integer(i128::from(meta.len())),
         Value::Time(modified_datetime),
-        Value::string(ftype),
+        Value::string(type_str),
         Value::File(f)]))?;
     Ok(())
 }
@@ -72,10 +72,8 @@ fn run_for_single_directory_or_file(
                 entry.path().into_boxed_path(),
                 &users,
                 output)?;
-            if recursive && entry.path().is_dir() {
-                if !(entry.file_name().eq(".") || entry.file_name().eq("..")) {
-                    q.push_back(entry.path().into_boxed_path());
-                }
+            if recursive && entry.path().is_dir() && (!(entry.file_name().eq(".") || entry.file_name().eq(".."))) {
+                q.push_back(entry.path().into_boxed_path());
             }
         }
     } else {

@@ -18,7 +18,7 @@ pub fn run(
     Ok(())
 }
 
-pub fn perform(context: ExecutionContext) -> CrushResult<()> {
+pub fn reverse(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()?.readable() {
         Some(mut input) => run(input.as_mut(), context.output),
         None => error("Expected a stream"),

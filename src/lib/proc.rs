@@ -14,6 +14,18 @@ use nix::sys::signal;
 use nix::unistd::Pid;
 use std::str::FromStr;
 use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref PS_OUTPUT_TYPE: Vec<ColumnType> = vec![
+        ColumnType::new("pid", ValueType::Integer),
+        ColumnType::new("ppid", ValueType::Integer),
+        ColumnType::new("status", ValueType::String),
+        ColumnType::new("user", ValueType::String),
+        ColumnType::new("cpu", ValueType::Duration),
+        ColumnType::new("name", ValueType::String),
+    ];
+}
 
 fn state_name(s: psutil::process::State) -> &'static str {
     match s {
@@ -31,14 +43,7 @@ fn state_name(s: psutil::process::State) -> &'static str {
 
 fn ps(context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    let output = context.output.initialize(vec![
-        ColumnType::new("pid", ValueType::Integer),
-        ColumnType::new("ppid", ValueType::Integer),
-        ColumnType::new("status", ValueType::String),
-        ColumnType::new("user", ValueType::String),
-        ColumnType::new("cpu", ValueType::Duration),
-        ColumnType::new("name", ValueType::String),
-    ])?;
+    let output = context.output.initialize(PS_OUTPUT_TYPE.clone())?;
     let users = create_user_map();
 
     for proc in &psutil::process::all().unwrap() {

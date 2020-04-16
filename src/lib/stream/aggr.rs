@@ -17,8 +17,6 @@ pub struct Config {
     aggregations: Vec<Aggregation>,
 }
 
-
-
 pub fn parse(input_type: &[ColumnType], argument: Vec<Argument>) -> CrushResult<Config> {
     let mut table=None;
     let mut aggregations = Vec::new();

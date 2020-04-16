@@ -20,6 +20,7 @@ pub fn run(
 }
 
 pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len_range(0, 1)?;
     let lines = context.arguments.optional_integer(0)?.unwrap_or(10);
     match context.input.recv()?.readable() {
         Some(mut r) => run(lines, r.as_mut(), context.output),

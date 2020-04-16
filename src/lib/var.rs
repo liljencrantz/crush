@@ -1,10 +1,9 @@
 use crate::lang::scope::Scope;
 use crate::lang::errors::{CrushResult, argument_error, mandate};
-use crate::lang::value::Value;
+use crate::lang::value::{Value, ValueType};
 use crate::lang::execution_context::ExecutionContext;
-
-mod env;
-mod r#use;
+use crate::lang::table::{ColumnType, Row};
+use std::collections::HashMap;
 
 pub fn r#let(context: ExecutionContext) -> CrushResult<()> {
     for arg in context.arguments {
@@ -35,31 +34,63 @@ pub fn unset(context: ExecutionContext) -> CrushResult<()> {
     Ok(())
 }
 
+pub fn r#use(context: ExecutionContext) -> CrushResult<()> {
+    for arg in context.arguments.iter() {
+        match (arg.argument_type.is_none(), &arg.value) {
+            (true, Value::Scope(e)) => context.env.r#use(e),
+            _ => return argument_error("Expected all arguments to be scopes"),
+        }
+    }
+    Ok(())
+}
+
+pub fn env(context: ExecutionContext) -> CrushResult<()> {
+    let output = context.output.initialize(vec![
+        ColumnType::new("name", ValueType::String),
+        ColumnType::new("type", ValueType::String),
+    ])?;
+
+    let mut values: HashMap<String, ValueType> = HashMap::new();
+    context.env.dump(&mut values);
+
+    let mut keys = values.keys().collect::<Vec<&String>>();
+    keys.sort();
+
+    for k in keys {
+        context.printer.handle_error(output.send(Row::new(vec![
+            Value::String(k.clone().into_boxed_str()),
+            Value::String(values[k].to_string().into_boxed_str())
+        ])));
+    }
+
+    Ok(())
+}
+
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    let env = root.create_namespace("var")?;
-    env.declare_command(
+    let ns = root.create_namespace("var")?;
+    ns.declare_command(
         "let", r#let, false,
         "name := value", "Declare a new variable", None)?;
-    env.declare_command(
+    ns.declare_command(
         "set", set, false,
         "name = value", "Assign a new value to an already existing variable", None)?;
-    env.declare_command(
+    ns.declare_command(
         "unset", unset, false,
         "scope name:string",
         "Removes a variable from the namespace",
         None)?;
-    env.declare_command(
-        "env", env::perform, false,
+    ns.declare_command(
+        "env", env, false,
         "env", "Returns a table containing the current namespace",
         Some(r#"    The columns of the table are the name, and the type of the value."#))?;
-    env.declare_command(
-        "use", r#use::perform, false,
+    ns.declare_command(
+        "use", r#use, false,
         "use scope:scope",
         "Puts the specified scope into the list of scopes to search in by default during scope lookups",
         Some(r#"    Example:
 
     use math
     sqrt 1.0"#))?;
-    env.readonly();
+    ns.readonly();
     Ok(())
 }

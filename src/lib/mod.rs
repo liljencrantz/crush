@@ -15,6 +15,7 @@ pub mod constants;
 pub mod math;
 mod toml;
 mod json;
+mod user;
 
 use crate::{lang::scope::Scope, lang::errors::CrushResult};
 
@@ -32,6 +33,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     math::declare(root)?;
     toml::declare(root)?;
     json::declare(root)?;
+    user::declare(root)?;
     root.readonly();
     Ok(())
 }

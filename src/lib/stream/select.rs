@@ -181,7 +181,7 @@ fn perform_for(
     run(Config { columns, copy }, input, context)
 }
 
-pub fn perform(context: ExecutionContext) -> CrushResult<()> {
+pub fn select(context: ExecutionContext) -> CrushResult<()> {
     match context.input.clone().recv()?.readable() {
         Some(r) => perform_for(r, context),
         _ => error("Expected a stream"),

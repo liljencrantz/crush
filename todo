@@ -1,4 +1,6 @@
 Todo:
+Rethink join syntax, and refactor code
+Fix aggregation
 Show useful help for namespaces, e.g. help math
 Add background job support
 New command: which

@@ -1,10 +1,8 @@
-use crate::lang::execution_context::ExecutionContext;
-use crate::lang::errors::CrushResult;
-use crate::lang::errors::error;
-use crate::lang::stream::ValueSender;
-use crate::lang::stream::Readable;
+use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
+use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::stream::{ValueSender, Readable};
 
-pub fn run(input1: &mut dyn Readable, input2: &mut dyn Readable, sender: ValueSender) -> CrushResult<()> {
+fn run(input1: &mut dyn Readable, input2: &mut dyn Readable, sender: ValueSender) -> CrushResult<()> {
     let mut output_type = Vec::new();
     output_type.append(&mut input1.types().to_vec());
     output_type.append(&mut input2.types().to_vec());
@@ -16,13 +14,11 @@ pub fn run(input1: &mut dyn Readable, input2: &mut dyn Readable, sender: ValueSe
     Ok(())
 }
 
-pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
-    if context.arguments.len() != 2 {
-        return error("Expected exactly two arguments");
-    }
-    match (context.arguments.remove(0).value.readable(), context.arguments.remove(0).value.readable()) {
+pub fn zip(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(2)?;
+    match (context.arguments.value(0)?.readable(), context.arguments.value(1)?.readable()) {
         (Some(mut o1), Some(mut o2)) =>
             run(o1.as_mut(), o2.as_mut(), context.output),
-        _ => return error("Expected two datasets"),
+        _ => argument_error("Expected two datasets"),
     }
 }

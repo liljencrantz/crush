@@ -207,24 +207,23 @@ impl Value {
             Value::File(p) => v.push(p.clone()),
             Value::Glob(pattern) => pattern.glob_files(&cwd()?, v)?,
             Value::Regex(_, re) => re.match_files(&cwd()?, v, printer),
-            Value::TableStream(s) => {
-                let t = s.types();
-                if t.len() == 1 && t[0].cell_type == ValueType::File {
-                    loop {
-                        match s.recv() {
-                            Ok(row) => {
+            val => {
+                match val.readable() {
+                    None => return error("Expected a file name"),
+                    Some(mut s) => {
+                        let t = s.types();
+                        if t.len() == 1 && t[0].cell_type == ValueType::File {
+                            while let Ok(row) = s.read() {
                                 if let Value::File(f) = row.into_vec().remove(0) {
                                     v.push(f);
                                 }
                             }
-                            Err(_) => break,
+                        } else {
+                            return argument_error("Table stream must contain one column of type file");
                         }
-                    }
-                } else {
-                    return argument_error("Table stream must contain one column of type file");
+                    },
                 }
-            }
-            _ => return error("Expected a file name"),
+            },
         }
         Ok(())
     }
@@ -233,11 +232,8 @@ impl Value {
         match self {
             Value::TableStream(output) => {
                 let mut rows = Vec::new();
-                loop {
-                    match output.recv() {
-                        Ok(r) => rows.push(r.materialize()),
-                        Err(_) => break,
-                    }
+                while let Ok(r) = output.recv() {
+                    rows.push(r.materialize());
                 }
                 Value::Table(Table::new(ColumnType::materialize(output.types()), rows))
             }
@@ -261,7 +257,7 @@ impl Value {
 
         match (&self, &new_type) {
             (Value::Integer(i), ValueType::Bool) =>
-                return Ok(Value::Bool(if *i == 0 { false } else { true })),
+                return Ok(Value::Bool(*i != 0)),
             (Value::Float(f), ValueType::Integer) =>
                 return Ok(Value::Integer(*f as i128)),
             _ => {}
@@ -272,7 +268,7 @@ impl Value {
         match new_type {
             ValueType::File => Ok(Value::File(Box::from(Path::new(str_val.as_str())))),
             ValueType::Glob => Ok(Value::Glob(Glob::new(str_val.as_str()))),
-            ValueType::Integer => to_crush_error(str_val.parse::<i128>()).map(|v| Value::Integer(v)),
+            ValueType::Integer => to_crush_error(str_val.parse::<i128>()).map(Value::Integer),
             ValueType::Field => Ok(Value::Field(vec![str_val.into_boxed_str()])),
             ValueType::Regex => to_crush_error(Regex::new(str_val.as_str()).map(|v| Value::Regex(str_val.into_boxed_str(), v))),
             ValueType::Binary => Ok(Value::Binary(str_val.bytes().collect())),
@@ -304,8 +300,8 @@ impl Clone for Value {
     fn clone(&self) -> Self {
         match self {
             Value::String(v) => Value::String(v.clone()),
-            Value::Integer(v) => Value::Integer(v.clone()),
-            Value::Time(v) => Value::Time(v.clone()),
+            Value::Integer(v) => Value::Integer(*v),
+            Value::Time(v) => Value::Time(*v),
             Value::Field(v) => Value::Field(v.clone()),
             Value::Glob(v) => Value::Glob(v.clone()),
             Value::Regex(v, r) => Value::Regex(v.clone(), r.clone()),
@@ -315,11 +311,11 @@ impl Clone for Value {
             Value::Struct(r) => Value::Struct(r.clone()),
             Value::TableStream(s) => Value::TableStream(s.clone()),
             Value::List(l) => Value::List(l.clone()),
-            Value::Duration(d) => Value::Duration(d.clone()),
+            Value::Duration(d) => Value::Duration(*d),
             Value::Scope(e) => Value::Scope(e.clone()),
-            Value::Bool(v) => Value::Bool(v.clone()),
+            Value::Bool(v) => Value::Bool(*v),
             Value::Dict(d) => Value::Dict(d.clone()),
-            Value::Float(f) => Value::Float(f.clone()),
+            Value::Float(f) => Value::Float(*f),
             Value::Empty() => Value::Empty(),
             Value::BinaryStream(v) => Value::BinaryStream(v.as_ref().clone()),
             Value::Binary(v) => Value::Binary(v.clone()),
@@ -333,9 +329,9 @@ fn integer_decode(val: f64) -> (u64, i16, i8) {
     let sign: i8 = if bits >> 63 == 0 { 1 } else { -1 };
     let mut exponent: i16 = ((bits >> 52) & 0x7ff) as i16;
     let mantissa = if exponent == 0 {
-        (bits & 0xfffffffffffff) << 1
+        (bits & 0xf_ffff_ffff_ffff) << 1
     } else {
-        (bits & 0xfffffffffffff) | 0x10000000000000
+        (bits & 0xf_ffff_ffff_ffff) | 0x10_0000_0000_0000
     };
 
     exponent -= 1023 + 52;
@@ -368,7 +364,7 @@ impl std::hash::Hash for Value {
                 m.hash(state);
                 x.hash(state);
                 s.hash(state);
-            },
+            }
             Value::Empty() => {}
             Value::Type(v) => v.to_string().hash(state),
         }

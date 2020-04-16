@@ -10,13 +10,14 @@ use crate::lang::{table::ColumnType, argument::Argument};
 use crate::lang::stream::Readable;
 use crate::lang::table::ColumnVec;
 use chrono::Duration;
+use float_ord::FloatOrd;
 
 pub fn parse(input_type: &[ColumnType], arguments: &[Argument]) -> CrushResult<usize> {
     match arguments.len() {
-        0 => if input_type.len() == 1 && input_type[0].cell_type == ValueType::Integer {
+        0 => if input_type.len() == 1 {
             Ok(0)
         } else {
-            error("Unexpected input format, expected a single column of integers")
+            error("Specify which column to operate on")
         },
         1 => {
             if let Value::Field(f) = &arguments[0].value {
@@ -32,7 +33,7 @@ pub fn parse(input_type: &[ColumnType], arguments: &[Argument]) -> CrushResult<u
                 error("Unexpected cell type, expected field")
             }
         }
-        _ => error("Expected exactly one argument, a field defintition")
+        _ => error("Expected exactly one argument, a field definition")
     }
 }
 
@@ -43,7 +44,7 @@ fn $name(mut s: Box<dyn Readable>, column: usize) -> CrushResult<Value> {
     while let Ok(row) = s.read() {
 match row.cells()[column] {
                 Value::$value_type(i) => res = res + i,
-                _ => return error("Invalid cell value, expected an integer")
+                _ => return error("Invalid cell value")
             }
     }
     Ok(Value::$value_type(res))
@@ -59,11 +60,11 @@ pub fn sum(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()?.readable() {
         Some(input) => {
             let column = parse(input.types(), &context.arguments)?;
-            match input.types()[column].cell_type {
+            match &input.types()[column].cell_type {
                 ValueType::Integer => context.output.send(sum_int(input, column)?),
                 ValueType::Float => context.output.send(sum_float(input, column)?),
                 ValueType::Duration => context.output.send(sum_duration(input, column)?),
-                _ => argument_error("")
+                t => argument_error(format!("Can't calculate sum of elements of type {}", t.to_string()).as_str())
             }
         }
         _ => error("Expected a stream"),
@@ -81,7 +82,7 @@ fn $name(mut s: Box<dyn Readable>, column: usize) -> CrushResult<Value> {
                 count += 1;
                 match row.cells()[column] {
                     Value::$value_type(i) => res = res + i,
-                    _ => return error("Invalid cell value, expected an integer")
+                    _ => return error("Invalid cell value")
                 }
             }
             Err(_) => break,
@@ -100,11 +101,71 @@ pub fn avg(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()?.readable() {
         Some(input) => {
             let column = parse(input.types(), &context.arguments)?;
-            match input.types()[column].cell_type {
+            match &input.types()[column].cell_type {
                 ValueType::Integer => context.output.send(avg_int(input, column)?),
                 ValueType::Float => context.output.send(avg_float(input, column)?),
                 ValueType::Duration => context.output.send(avg_duration(input, column)?),
-                _ => argument_error("")
+                t => argument_error(format!("Can't calculate average of elements of type {}", t.to_string()).as_str())
+            }
+        }
+        _ => error("Expected a stream"),
+    }
+}
+
+macro_rules! aggr_function {
+    ($name:ident, $value_type:ident, $op:expr) => {
+fn $name(mut s: Box<dyn Readable>, column: usize) -> CrushResult<Value> {
+    let mut res = match s.read()?.cells()[column] {
+            Value::$value_type(i) => i,
+            _ => return error("Invalid cell value, expected an integer")
+    };
+    while let Ok(row) = s.read() {
+        match row.cells()[column] {
+            Value::$value_type(i) => res = $op(res, i),
+            _ => return error("Invalid cell value, expected an integer")
+        }
+    }
+    Ok(Value::$value_type(res))
+}
+    }
+}
+
+aggr_function!(min_int, Integer, |a, b| std::cmp::min(a,b));
+aggr_function!(min_float, Float, |a, b| std::cmp::min(FloatOrd(a),FloatOrd(b)).0);
+aggr_function!(min_duration, Duration, |a, b| std::cmp::min(a,b));
+aggr_function!(min_time, Time, |a, b| std::cmp::min(a,b));
+
+aggr_function!(max_int, Integer, |a, b| std::cmp::max(a,b));
+aggr_function!(max_float, Float, |a, b| std::cmp::max(FloatOrd(a),FloatOrd(b)).0);
+aggr_function!(max_duration, Duration, |a, b| std::cmp::max(a,b));
+aggr_function!(max_time, Time, |a, b| std::cmp::max(a,b));
+
+pub fn min(context: ExecutionContext) -> CrushResult<()> {
+    match context.input.recv()?.readable() {
+        Some(input) => {
+            let column = parse(input.types(), &context.arguments)?;
+            match &input.types()[column].cell_type {
+                ValueType::Integer => context.output.send(min_int(input, column)?),
+                ValueType::Float => context.output.send(min_float(input, column)?),
+                ValueType::Duration => context.output.send(min_duration(input, column)?),
+                ValueType::Time => context.output.send(min_time(input, column)?),
+                t => argument_error(format!("Can't pick min of elements of type {}", t.to_string()).as_str())
+            }
+        }
+        _ => error("Expected a stream"),
+    }
+}
+
+pub fn max(context: ExecutionContext) -> CrushResult<()> {
+    match context.input.recv()?.readable() {
+        Some(input) => {
+            let column = parse(input.types(), &context.arguments)?;
+            match &input.types()[column].cell_type {
+                ValueType::Integer => context.output.send(max_int(input, column)?),
+                ValueType::Float => context.output.send(max_float(input, column)?),
+                ValueType::Duration => context.output.send(max_duration(input, column)?),
+                ValueType::Time => context.output.send(max_time(input, column)?),
+                t => argument_error(format!("Can't pick max of elements of type {}", t.to_string()).as_str())
             }
         }
         _ => error("Expected a stream"),

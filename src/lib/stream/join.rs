@@ -13,6 +13,7 @@ use crate::lang::errors::argument_error;
 use crate::lang::r#struct::Struct;
 use crate::lang::table::ColumnVec;
 use crate::lang::argument::Argument;
+use crate::lang::printer::Printer;
 
 pub struct Config {
     left_table_idx: usize,
@@ -109,7 +110,7 @@ fn combine(mut l: Row, r: Row, cfg: &Config) -> Row {
     l
 }
 
-fn do_join(cfg: &Config, l: &mut dyn Readable, r: &mut dyn Readable, output: &OutputStream) -> CrushResult<()> {
+fn do_join(cfg: &Config, l: &mut dyn Readable, r: &mut dyn Readable, output: &OutputStream, printer: &Printer) -> CrushResult<()> {
     let mut l_data: HashMap<Value, Row> = HashMap::new();
     while let Ok(row) = l.read() {
         l_data.insert(row.cells()[cfg.left_column_idx].clone(), row);
@@ -118,7 +119,7 @@ fn do_join(cfg: &Config, l: &mut dyn Readable, r: &mut dyn Readable, output: &Ou
     while let Ok(r_row) = r.read() {
         l_data.remove(&r_row.cells()[cfg.right_column_idx])
             .map(|l_row| {
-                let _ = output.send(combine(l_row, r_row, cfg));
+                printer.handle_error(output.send(combine(l_row, r_row, cfg)));
             });
     }
     Ok(())
@@ -128,11 +129,12 @@ pub fn run(
     config: Config,
     row: Struct,
     output: OutputStream,
+    printer: &Printer,
 ) -> CrushResult<()> {
     let mut v = row.into_vec();
     match (v.replace(config.left_table_idx, Value::Integer(0)).readable(), v.replace(config.right_table_idx, Value::Integer(0)).readable()) {
         (Some(mut l), Some(mut r)) =>
-            do_join(&config, l.as_mut(), r.as_mut(), &output),
+            do_join(&config, l.as_mut(), r.as_mut(), &output, printer),
         _ => panic!("Wrong row format"),
     }
 }
@@ -165,7 +167,7 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
             let cfg = parse(&s.local_signature(), context.arguments)?;
             let output_type = get_output_type(&s.local_signature(), &cfg)?;
             let output = context.output.initialize(output_type)?;
-            run(cfg, s, output)
+            run(cfg, s, output, &context.printer)
         }
         _ => argument_error("Expected a struct"),
     }

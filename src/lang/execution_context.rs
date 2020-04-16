@@ -34,9 +34,11 @@ pub trait ArgumentVector {
     fn r#struct(&mut self, idx: usize) -> CrushResult<Struct>;
     fn bool(&mut self, idx: usize) -> CrushResult<bool>;
     fn files(&mut self, printer: &Printer) -> CrushResult<Vec<Box<Path>>>;
+    fn optional_bool(&mut self, idx: usize) -> CrushResult<Option<bool>>;
     fn optional_integer(&mut self, idx: usize) -> CrushResult<Option<i128>>;
     fn optional_string(&mut self, idx: usize) -> CrushResult<Option<Box<str>>>;
     fn optional_command(&mut self, idx: usize) -> CrushResult<Option<Box<dyn CrushCommand + Send + Sync>>>;
+    fn optional_field(&mut self, idx: usize) -> CrushResult<Option<Vec<Box<str>>>>;
     fn optional_value(&mut self, idx: usize) -> CrushResult<Option<Value>>;
 }
 
@@ -61,20 +63,26 @@ macro_rules! argument_getter {
     }
 }
 
+macro_rules! optional_argument_getter {
+    ($name:ident, $return_type:ty, $method:ident) => {
+
+    fn $name(&mut self, idx: usize) -> CrushResult<Option<$return_type>> {
+        match self.len() - idx {
+            0 => Ok(None),
+            1 => Ok(Some(self.$method(idx)?)),
+            _ => argument_error("Wrong number of arguments"),
+        }
+    }
+
+    }
+}
+
 impl ArgumentVector for Vec<Argument> {
     fn check_len(&self, len: usize) -> CrushResult<()> {
         if self.len() == len {
             Ok(())
         } else {
             argument_error(format!("Expected {} arguments, got {}", len, self.len()).as_str())
-        }
-    }
-
-    fn check_len_min(&self, min_len: usize) -> CrushResult<()> {
-        if self.len() >= min_len {
-            Ok(())
-        } else {
-            argument_error(format!("Expected at least {} arguments, got {}", min_len, self.len()).as_str())
         }
     }
 
@@ -88,6 +96,14 @@ impl ArgumentVector for Vec<Argument> {
         }
     }
 
+    fn check_len_min(&self, min_len: usize) -> CrushResult<()> {
+        if self.len() >= min_len {
+            Ok(())
+        } else {
+            argument_error(format!("Expected at least {} arguments, got {}", min_len, self.len()).as_str())
+        }
+    }
+
     argument_getter!(string, Box<str>, String, "string");
     argument_getter!(integer, i128, Integer, "integer");
     argument_getter!(float, f64, Float, "float");
@@ -98,45 +114,6 @@ impl ArgumentVector for Vec<Argument> {
     argument_getter!(r#struct, Struct, Struct, "struct");
     argument_getter!(bool, bool, Bool, "bool");
 
-    fn files(&mut self, printer: &Printer) -> CrushResult<Vec<Box<Path>>> {
-        let mut files = Vec::new();
-        for a in self.drain(..) {
-            a.value.file_expand(&mut files, printer)?;
-        }
-        Ok(files)
-    }
-
-    fn optional_integer(&mut self, idx: usize) -> CrushResult<Option<i128>> {
-        match self.len() - idx {
-            0 => Ok(None),
-            1 => Ok(Some(self.integer(idx)?)),
-            _ => argument_error("Wrong number of arguments"),
-        }
-    }
-
-    fn optional_string(&mut self, idx: usize) -> CrushResult<Option<Box<str>>> {
-        match self.len() - idx {
-            0 => Ok(None),
-            1 => Ok(Some(self.string(idx)?)),
-            _ => argument_error("Wrong number of arguments"),
-        }
-    }
-
-    fn optional_command(&mut self, idx: usize) -> CrushResult<Option<Box<dyn CrushCommand + Send + Sync>>> {
-        match self.len() - idx {
-            0 => Ok(None),
-            1 => Ok(Some(self.command(idx)?)),
-            _ => argument_error("Wrong number of arguments"),
-        }
-    }
-
-    fn optional_value(&mut self, idx: usize) -> CrushResult<Option<Value>> {
-        match self.len() - idx {
-            0 => Ok(None),
-            1 => Ok(Some(self.value(idx)?)),
-            _ => argument_error("Wrong number of arguments"),
-        }
-    }
 
     fn value(&mut self, idx: usize) -> CrushResult<Value> {
         if idx < self.len() {
@@ -145,6 +122,21 @@ impl ArgumentVector for Vec<Argument> {
             error("Index out of bounds")
         }
     }
+
+    fn files(&mut self, printer: &Printer) -> CrushResult<Vec<Box<Path>>> {
+        let mut files = Vec::new();
+        for a in self.drain(..) {
+            a.value.file_expand(&mut files, printer)?;
+        }
+        Ok(files)
+    }
+
+    optional_argument_getter!(optional_bool, bool, bool);
+    optional_argument_getter!(optional_integer, i128, integer);
+    optional_argument_getter!(optional_string, Box<str>, string);
+    optional_argument_getter!(optional_field, Vec<Box<str>>, field);
+    optional_argument_getter!(optional_command, Box<dyn CrushCommand + Send + Sync>, command);
+    optional_argument_getter!(optional_value, Value, value);
 }
 
 pub struct CompileContext {
@@ -282,7 +274,6 @@ impl ExecutionContext {
             this: self.this,
         }
     }
-
 
     pub fn reader(&mut self) -> CrushResult<Box<dyn BinaryReader>> {
         match self.arguments.len() {

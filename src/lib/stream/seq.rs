@@ -10,7 +10,7 @@ use crate::{
 use crate::lang::table::ColumnType;
 
 pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
-    let c  = context.arguments.integer(0)?;
+    let c  = context.arguments.optional_integer(0)?.unwrap_or(i128::max_value());
     let output = context.output.initialize(vec![
         ColumnType::new("value", ValueType::Integer)])?;
 

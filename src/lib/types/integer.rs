@@ -32,6 +32,14 @@ lazy_static! {
             "integer / factor:(integer|float)", "Divide this number by the specified factor",
             None);
         res.declare(
+            full("mod"), r#mod, false,
+            "integer:mod factor:integer", "Least positive residue after integer division",
+            None);
+        res.declare(
+            full("rem"), rem, false,
+            "integer:rem factor:integer", "Remainder after integer division",
+            None);
+        res.declare(
             full("__neg__"), neg, false,
             "neg integer", "Negate this integer",
             None);
@@ -43,6 +51,8 @@ binary_op!(add, integer, Integer, Integer, |a, b| a+b, Float, Float, |a, b| a as
 binary_op!(sub, integer, Integer, Integer, |a, b| a-b, Float, Float, |a, b| a as f64-b);
 binary_op!(mul, integer, Integer, Integer, |a, b| a*b, Float, Float, |a, b| a as f64*b);
 binary_op!(div, integer, Integer, Integer, |a, b| a/b, Float, Float, |a, b| a as f64/b);
+binary_op!(rem, integer, Integer, Integer, |a, b| a % b);
+binary_op!(r#mod, integer, Integer, Integer, |a, b| (a % b + b) % b);
 
 fn neg(context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;

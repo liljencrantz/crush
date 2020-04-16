@@ -50,7 +50,7 @@ pub fn parse(_input_type: &[ColumnType],
     }
 }
 
-pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn r#where(mut context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()?.readable() {
         Some(mut input) => {
             let base_context = ExecutionContext {
