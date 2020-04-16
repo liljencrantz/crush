@@ -80,7 +80,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "avg",sum_avg::avg, true,
         "avg column:field",
         "Calculate the average of the specific column across all rows",
-        example!("ps | sum ^cpu"))?;
+        example!("ps | avg ^cpu"))?;
     env.declare_command(
         "select", select::select, true,
         "select copy_fields:field... [%] new_field=definition:command",

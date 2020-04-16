@@ -126,8 +126,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "Execute body once for every element in iterable.",
         Some(r#"    Example:
 
-    for (seq) {
-        echo ("Lap {}":format value)
+    for (seq 10) {
+        echo ("Lap #{}":format value)
     }"#))?;
 
 
@@ -136,10 +136,14 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "break", "Stop execution of a loop", None)?;
     env.declare_command(
         "continue", r#continue, false,
-        "continue", "Skip execution of the current iteration of a loop", None)?;
+        "continue",
+        "Skip execution of the current iteration of a loop",
+        None)?;
     env.declare_command(
         "cmd", cmd, true,
-        "cmd external_command:(file|string) @arguments:any", "Execute external commands", None)?;
+        "cmd external_command:(file|string) @arguments:any",
+        "Execute external commands",
+        None)?;
     env.readonly();
 
     Ok(())

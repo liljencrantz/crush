@@ -64,7 +64,7 @@ members of a value, write "dir <value>".
                 Value::Command(cmd) =>
                     halp(cmd.help(), &context.printer),
                 Value::Type(t) => halp(&t, &context.printer),
-                v => halp(&v.value_type(), &context.printer),
+                v => halp(&v, &context.printer),
             }
             Ok(())
         }

@@ -1,12 +1,10 @@
 Todo:
 Rethink join syntax, and refactor code
 Fix aggregation
-Show useful help for namespaces, e.g. help math
 Add background job support
 New command: which
 Add a range type
 Add system tests for binary stream handling
-Make parse error reporting more helpful
 Error source propagation
 Add command-field to CrushError
 Add source field to CrushError

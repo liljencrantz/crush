@@ -30,6 +30,7 @@ use std::collections::HashMap;
 use crate::lang::pretty_printer::format_buffer;
 use crate::util::regex::RegexFileMatcher;
 use crate::lang::printer::Printer;
+use crate::lang::help::Help;
 
 pub enum Value {
     String(Box<str>),
@@ -439,6 +440,32 @@ impl std::cmp::PartialOrd for Value {
 }
 
 impl std::cmp::Eq for Value {}
+
+impl Help for Value {
+    fn signature(&self) -> String {
+        match self {
+            Value::Scope(s) => s.signature(),
+            Value::Command(s) => s.signature(),
+            v => v.value_type().signature(),
+        }
+    }
+
+    fn short_help(&self) -> String {
+        match self {
+            Value::Scope(s) => s.short_help(),
+            Value::Command(s) => s.short_help(),
+            v => v.value_type().short_help(),
+        }
+    }
+
+    fn long_help(&self) -> Option<String> {
+        match self {
+            Value::Scope(s) => s.long_help(),
+            Value::Command(s) => s.long_help(),
+            v => v.value_type().long_help(),
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {

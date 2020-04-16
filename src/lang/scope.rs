@@ -6,6 +6,8 @@ use crate::lang::execution_context::ExecutionContext;
 use crate::lang::command::CrushCommand;
 use crate::lang::r#struct::Struct;
 use crate::util::identity_arc::Identity;
+use crate::lang::help::Help;
+use std::cmp::max;
 
 /**
   This is where we store variables, including functions.
@@ -438,5 +440,38 @@ impl ToString for Scope {
 impl Identity for Scope {
     fn id(&self) -> u64 {
         self.data.id()
+    }
+}
+
+impl Help for Scope {
+    fn signature(&self) -> String {
+        self.full_path()
+            .map(|p| p.join(":"))
+            .unwrap_or_else(|e| "<Anonymous scope>".to_string())
+    }
+
+    fn short_help(&self) -> String {
+        "A namespace".to_string()
+    }
+
+    fn long_help(&self) -> Option<String> {
+        let mut lines = Vec::new();
+
+        let data = self.data.lock().unwrap();
+        let mut keys: Vec<_> = data.mapping.iter().collect();
+        keys.sort_by(|x,y| x.0.cmp(&y.0));
+
+        long_help_methods(&mut keys, &mut lines);
+        Some(lines.join("\n"))
+    }
+}
+
+fn long_help_methods(fields: &mut Vec<(&Box<str>, &Value)>, lines: &mut Vec<String>) {
+    let mut max_len = 0;
+    for (k, _) in fields.iter() {
+        max_len = max(max_len, k.len());
+    }
+    for (k, v) in fields.drain(..) {
+        lines.push(format!("    * {}  {}{}", k, " ".repeat(max_len - k.len()), v.short_help()));
     }
 }
