@@ -55,7 +55,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     env.declare_command("lte", lte, false, "any <= any", "True if left side is less than or equal to right side", None)?;
     env.declare_command("eq", eq, false, "any == any", "True if left side is equal to right side", None)?;
     env.declare_command("neq", neq, false, "any != any", "True if left side is not equal to right side", None)?;
-    env.declare_command("not", not, false, "not boolean", "Negates a boolean", None)?;
+    env.declare_command("not", not, false, "not boolean", "Negates a boolean value", None)?;
     env.readonly();
     Ok(())
 }

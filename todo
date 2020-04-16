@@ -1,4 +1,5 @@
 Todo:
+Show useful help for namespaces, e.g. help math
 Add background job support
 New command: which
 Add a range type
