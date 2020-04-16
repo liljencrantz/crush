@@ -8,7 +8,7 @@ use crate::util::identity_arc::Identity;
 use std::collections::hash_map::Entry;
 
 impl Serializable<List> for List {
-    fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<List> {
+    fn deserialize(id: usize, elements: &[Element], state: &mut DeserializationState) -> CrushResult<List> {
         match state.lists.entry(id) {
             Entry::Occupied(o) => Ok(o.get().clone()),
             Entry::Vacant(_) => {

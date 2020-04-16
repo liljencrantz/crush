@@ -8,7 +8,7 @@ use model::r#type::Type::SimpleType;
 use crate::lang::table::ColumnType;
 
 impl Serializable<ValueType> for ValueType {
-    fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<ValueType> {
+    fn deserialize(id: usize, elements: &[Element], state: &mut DeserializationState) -> CrushResult<ValueType> {
         if let element::Element::Type(outer_type) = elements[id].element.as_ref().unwrap() {
             match mandate(outer_type.r#type.as_ref(), "Missing type")? {
                 SimpleType(simple_type) => {

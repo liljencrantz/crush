@@ -26,8 +26,6 @@ pub struct Closure {
 }
 
 impl CrushCommand for Closure {
-    fn name(&self) -> &str { "closure" }
-
     fn invoke(&self, context: ExecutionContext) -> CrushResult<()> {
         let job_definitions = self.job_definitions.clone();
         let parent_env = self.env.clone();
@@ -62,6 +60,8 @@ impl CrushCommand for Closure {
     fn can_block(&self, _arg: &[ArgumentDefinition], _context: &mut CompileContext) -> bool {
         true
     }
+
+    fn name(&self) -> &str { "closure" }
 
     fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {
         Box::from(Closure {
@@ -143,7 +143,7 @@ impl<'a> ClosureSerializer<'a> {
         }))
     }
 
-    fn signature2(&mut self, signature: &Vec<Parameter>) -> CrushResult<model::Signature> {
+    fn signature2(&mut self, signature: &[Parameter]) -> CrushResult<model::Signature> {
         Ok(model::Signature {
             paremeter: signature.iter()
                 .map(|p| self.parameter(p))
@@ -255,12 +255,12 @@ impl<'a> ClosureSerializer<'a> {
 }
 
 struct ClosureDeserializer<'a> {
-    elements: &'a Vec<Element>,
+    elements: &'a [Element],
     state: &'a mut DeserializationState,
 }
 
 impl<'a> ClosureDeserializer<'a> {
-    fn new(elements: &'a Vec<Element>, state: &'a mut DeserializationState) -> ClosureDeserializer<'a> {
+    fn new(elements: &'a [Element], state: &'a mut DeserializationState) -> ClosureDeserializer<'a> {
         ClosureDeserializer { elements, state }
     }
 
@@ -416,7 +416,7 @@ impl Help for Closure {
                     .map(|p| p.to_string())
                     .collect::<Vec<_>>()
                     .join(" "))
-                .unwrap_or("".to_string()),
+                .unwrap_or_else(|| "".to_string()),
         )
     }
 
@@ -430,7 +430,7 @@ impl Help for Closure {
 }
 
 fn extract_help(jobs: &mut Vec<Job>) -> String {
-    if jobs.len() == 0 {
+    if jobs.is_empty() {
         return "".to_string();
     }
 
@@ -503,17 +503,13 @@ impl Closure {
                                     return argument_error("Wrong parameter type");
                                 }
                                 context.env.redeclare(name.as_ref(), value)?;
+                            } else if !unnamed.is_empty() {
+                                context.env.redeclare(name.as_ref(), unnamed.remove(0))?;
+                            } else if let Some(default) = default {
+                                let env = context.env.clone();
+                                env.redeclare(name.as_ref(), default.compile_bound(context)?)?;
                             } else {
-                                if unnamed.len() > 0 {
-                                    context.env.redeclare(name.as_ref(), unnamed.remove(0))?;
-                                } else {
-                                    if let Some(default) = default {
-                                        let env = context.env.clone();
-                                        env.redeclare(name.as_ref(), default.compile_bound(context)?)?;
-                                    } else {
-                                        return argument_error("Missing variable!!!");
-                                    }
-                                }
+                                return argument_error("Missing variable!!!");
                             }
                         } else {
                             return argument_error("Not a type");
@@ -538,11 +534,10 @@ impl Closure {
                 context.env.redeclare(
                     unnamed_name.as_ref(),
                     Value::List(List::new(ValueType::Any, unnamed)))?;
-            } else {
-                if !unnamed.is_empty() {
-                    return argument_error("No target for unnamed arguments");
-                }
+            } else if !unnamed.is_empty() {
+                return argument_error("No target for unnamed arguments");
             }
+
 
             if let Some(named_name) = named_name {
                 let d = Dict::new(ValueType::String, ValueType::Any);
@@ -550,10 +545,8 @@ impl Closure {
                     d.insert(Value::string(&k), v)?;
                 }
                 context.env.redeclare(named_name.as_ref(), Value::Dict(d))?;
-            } else {
-                if !named.is_empty() {
-                    return argument_error("No target for extra named arguments");
-                }
+            } else if !named.is_empty() {
+                return argument_error("No target for extra named arguments");
             }
         } else {
             for arg in arguments.drain(..) {
@@ -572,7 +565,7 @@ impl Closure {
 
     pub fn deserialize(
         id: usize,
-        elements: &Vec<Element>,
+        elements: &[Element],
         state: &mut DeserializationState,
     ) -> CrushResult<Box<dyn CrushCommand + Send + Sync>> {
         ClosureDeserializer::new(elements, state).closure(id)

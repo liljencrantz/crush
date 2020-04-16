@@ -109,7 +109,7 @@ impl dyn CrushCommand {
 
     pub fn deserialize(
         id: usize,
-        elements: &Vec<Element>,
+        elements: &[Element],
         state: &mut DeserializationState,
     ) -> CrushResult<Box<dyn CrushCommand + Send + Sync>> {
         match elements[id].element.as_ref().unwrap() {

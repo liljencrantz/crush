@@ -8,7 +8,7 @@ use crate::lang::dict::Dict;
 use std::collections::hash_map::Entry;
 
 impl Serializable<Dict> for Dict {
-    fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<Dict> {
+    fn deserialize(id: usize, elements: &[Element], state: &mut DeserializationState) -> CrushResult<Dict> {
         match state.dicts.entry(id) {
             Entry::Occupied(o) => Ok(o.get().clone()),
             Entry::Vacant(_) => {
@@ -34,22 +34,27 @@ impl Serializable<Dict> for Dict {
 
     fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
         let id = self.id();
-        if !state.with_id.contains_key(&id) {
-            let idx = elements.len();
-            elements.push(model::Element::default());
-            state.with_id.insert(id, idx);
+        match state.with_id.entry(id) {
+            Entry::Occupied(o) => Ok(*o.get()),
+            Entry::Vacant(v) => {
 
-            let mut dd = model::Dict {
-                key_type: Value::Type(self.key_type()).serialize(elements, state)? as u64,
-                value_type: Value::Type(self.value_type()).serialize(elements, state)? as u64,
-                elements: Vec::with_capacity(self.len() * 2),
-            };
-            for (key, value) in self.elements() {
-                dd.elements.push(key.serialize(elements, state)? as u64);
-                dd.elements.push(value.serialize(elements, state)? as u64);
-            }
-            elements[idx].element = Some(element::Element::Dict(dd));
+                let idx = elements.len();
+                elements.push(model::Element::default());
+                v.insert(idx);
+
+                let mut dd = model::Dict {
+                    key_type: Value::Type(self.key_type()).serialize(elements, state)? as u64,
+                    value_type: Value::Type(self.value_type()).serialize(elements, state)? as u64,
+                    elements: Vec::with_capacity(self.len() * 2),
+                };
+                for (key, value) in self.elements() {
+                    dd.elements.push(key.serialize(elements, state)? as u64);
+                    dd.elements.push(value.serialize(elements, state)? as u64);
+                }
+                elements[idx].element = Some(element::Element::Dict(dd));
+
+                Ok(idx)
+            },
         }
-        Ok(state.with_id[&id])
     }
 }

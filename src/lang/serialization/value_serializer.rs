@@ -39,7 +39,7 @@ fn serialize_simple(value: &Value, elements: &mut Vec<Element>, state: &mut Seri
 }
 
 impl Serializable<Value> for Value {
-    fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<Value> {
+    fn deserialize(id: usize, elements: &[Element], state: &mut DeserializationState) -> CrushResult<Value> {
         match elements[id].element.as_ref().unwrap() {
             element::Element::String(s) => Ok(Value::string(s.as_str())),
             element::Element::File(f) => Ok(Value::File(

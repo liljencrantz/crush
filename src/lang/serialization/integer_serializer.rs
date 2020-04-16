@@ -5,7 +5,7 @@ use crate::lang::value::Value;
 use std::convert::TryFrom;
 
 impl Serializable<i128> for i128 {
-    fn deserialize(id: usize, elements: &Vec<Element>, _state: &mut DeserializationState) -> CrushResult<i128> {
+    fn deserialize(id: usize, elements: &[Element], _state: &mut DeserializationState) -> CrushResult<i128> {
         match elements[id].element.as_ref().unwrap() {
             element::Element::SmallInteger(i) => Ok(*i as i128),
             element::Element::LargeInteger(s) => Ok(to_crush_error(s.parse())?),

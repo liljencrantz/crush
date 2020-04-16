@@ -6,7 +6,7 @@ use crate::lang::value::{ValueType, Value};
 use crate::lang::table::{ColumnType, Row, Table};
 
 impl Serializable<ColumnType> for ColumnType {
-    fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<ColumnType> {
+    fn deserialize(id: usize, elements: &[Element], state: &mut DeserializationState) -> CrushResult<ColumnType> {
         if let element::Element::ColumnType(t) = elements[id].element.as_ref().unwrap(){
             Ok(ColumnType::new(
                 t.name.as_str(),
@@ -28,7 +28,7 @@ impl Serializable<ColumnType> for ColumnType {
 }
 
 impl Serializable<Row> for Row {
-    fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<Row> {
+    fn deserialize(id: usize, elements: &[Element], state: &mut DeserializationState) -> CrushResult<Row> {
         if let element::Element::Row(r) = elements[id].element.as_ref().unwrap(){
             let mut cells = Vec::new();
             for c in &r.cells {
@@ -53,7 +53,7 @@ impl Serializable<Row> for Row {
 }
 
 impl Serializable<Table> for Table {
-    fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<Table> {
+    fn deserialize(id: usize, elements: &[Element], state: &mut DeserializationState) -> CrushResult<Table> {
         if let element::Element::Table(lt) = elements[id].element.as_ref().unwrap(){
             let mut column_types = Vec::new();
             let mut rows = Vec::new();

@@ -5,7 +5,7 @@ use crate::lang::value::Value;
 use std::collections::hash_map::Entry;
 
 impl Serializable<String> for String {
-    fn deserialize(id: usize, elements: &Vec<Element>, _state: &mut DeserializationState) -> CrushResult<String> {
+    fn deserialize(id: usize, elements: &[Element], _state: &mut DeserializationState) -> CrushResult<String> {
         match elements[id].element.as_ref().unwrap() {
             element::Element::String(s) => Ok(s.clone()),
             _ => error("Expected string"),

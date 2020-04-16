@@ -88,6 +88,6 @@ pub fn deserialize(source: &Path, env: &Scope) -> CrushResult<Value> {
 }
 
 pub trait Serializable<T> {
-    fn deserialize(id: usize, elements: &Vec<Element>, state: &mut DeserializationState) -> CrushResult<T>;
+    fn deserialize(id: usize, elements: &[Element], state: &mut DeserializationState) -> CrushResult<T>;
     fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize>;
 }
