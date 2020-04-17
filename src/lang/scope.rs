@@ -447,7 +447,7 @@ impl Help for Scope {
     fn signature(&self) -> String {
         self.full_path()
             .map(|p| p.join(":"))
-            .unwrap_or_else(|e| "<Anonymous scope>".to_string())
+            .unwrap_or_else(|_| "<Anonymous scope>".to_string())
     }
 
     fn short_help(&self) -> String {

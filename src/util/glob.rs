@@ -13,26 +13,78 @@ use crate::lang::errors::{to_crush_error, argument_error, CrushResult};
 #[derive(PartialOrd)]
 #[derive(Ord)]
 pub struct Glob {
-    pattern: String,
+    original: String,
+    pattern: Vec<Tile>,
+}
+
+#[derive(Clone)]
+#[derive(PartialEq)]
+#[derive(Eq)]
+#[derive(Debug)]
+#[derive(Hash)]
+#[derive(PartialOrd)]
+#[derive(Ord)]
+enum Tile {
+    Char(char),
+    Single,
+    Any,
+    Recursive
 }
 
 impl ToString for Glob {
     fn to_string(&self) -> String {
-        self.pattern.clone()
+        self.original.clone()
     }
 }
 
+fn compile(s: &str) -> Vec<Tile> {
+    let mut res = Vec::new();
+    let mut was_any = false;
+    for c in s.chars() {
+        if was_any {
+            match c {
+                '%' => res.push(Tile::Recursive),
+                '?' => {
+                    res.push(Tile::Any);
+                    res.push(Tile::Single);
+                }
+                c => {
+                    res.push(Tile::Any);
+                    res.push(Tile::Char(c));
+                }
+            }
+            was_any = false;
+        } else {
+            match c {
+                '%' => was_any = true,
+                '?' => {
+                    res.push(Tile::Single);
+                }
+                c => {
+                    res.push(Tile::Char(c));
+                }
+            }
+        }
+    }
+    if was_any {
+        res.push(Tile::Any);
+    }
+//    println!("AAAA {} -> {:?}", s, res);
+    res
+}
+
+
 impl Glob {
-    pub fn new(pattern: &str) -> Glob {
-        Glob { pattern: pattern.to_string() }
+    pub fn new(def: &str) -> Glob {
+        Glob { original: def.to_string(), pattern: compile(def) }
     }
 
     pub fn matches(&self, v: &str) -> bool {
-        glob_match(&mut self.pattern.chars(), &mut v.chars().peekable())
+        glob_match(&self.pattern, &mut v.chars().peekable())
     }
 
     pub fn glob_files(&self, cwd: &Path, out: &mut Vec<Box<Path>>) -> CrushResult<()> {
-        to_crush_error(Glob::glob_files_testable(self.pattern.as_str(), cwd, out,|p| read_dir(p)))
+        to_crush_error(Glob::glob_files_testable(&self.pattern, cwd, out, |p| read_dir(p)))
     }
 
     pub fn glob_to_single_file(&self, cwd: &Path) -> CrushResult<Box<Path>> {
@@ -44,15 +96,22 @@ impl Glob {
         }
     }
 
-    fn glob(pattern: &str, v: &str) -> bool {
-        glob_match(&mut pattern.chars(), &mut v.chars().peekable())
+    fn glob(pattern: &[Tile], v: &str) -> bool {
+        glob_match(pattern, &mut v.chars().peekable())
     }
 
-    fn glob_files_testable(original_glob: &str, cwd: &Path, out: &mut Vec<Box<Path>>, lister: fn(&Path) -> io::Result<ReadDir>) -> io::Result<()> {
-        let only_directories = original_glob.ends_with('/');
-        let without_trailing_slashes = original_glob.trim_end_matches('/');
-        if without_trailing_slashes.starts_with('/') {
-            let without_leading_slashes = without_trailing_slashes.trim_start_matches('/');
+    fn glob_files_testable(original_glob: &[Tile], cwd: &Path, out: &mut Vec<Box<Path>>, lister: fn(&Path) -> io::Result<ReadDir>) -> io::Result<()> {
+        let only_directories = original_glob.ends_with(&[Tile::Char('/')]);
+        let mut without_trailing_slashes = original_glob;
+
+        while without_trailing_slashes.ends_with(&[Tile::Char('/')]) {
+            without_trailing_slashes = &without_trailing_slashes[0..without_trailing_slashes.len()-1];
+        }
+        if without_trailing_slashes.starts_with(&[Tile::Char('/')]) {
+            let mut without_leading_slashes = without_trailing_slashes;
+            while without_leading_slashes.starts_with(&[Tile::Char('/')]) {
+                without_leading_slashes = &without_leading_slashes[1..];
+            }
             Glob::glob_files_internal(without_leading_slashes, Path::new("/"), only_directories, "/", out, lister)
         } else {
             Glob::glob_files_internal(without_trailing_slashes, cwd, only_directories, "", out, lister)
@@ -60,13 +119,13 @@ impl Glob {
     }
 
     fn glob_files_internal(
-        relative_glob: &str,
+        relative_glob: &[Tile],
         dir: &Path,
         only_directories: bool,
         prefix: &str,
         out: &mut Vec<Box<Path>>,
         lister: fn(&Path) -> io::Result<ReadDir>) -> io::Result<()> {
-        let is_last_section = !relative_glob.contains('/');
+        let is_last_section = !relative_glob.contains(&Tile::Char('/'));
         if is_last_section {
             for entry in lister(dir)? {
                 let ee = entry?;
@@ -80,9 +139,9 @@ impl Glob {
                 }
             }
         } else {
-            let slash_idx = relative_glob.find('/').expect("impossible");
-            let current_glob = &relative_glob[0..slash_idx];
-            let next_glob = &relative_glob[slash_idx + 1..];
+            let mut split = relative_glob.splitn(2, |t| t == &Tile::Char('/'));
+            let current_glob = split.next().unwrap();
+            let next_glob = split.next().unwrap();
             for entry in read_dir(dir)? {
                 let ee = entry?;
                 match ee.file_name().to_str() {
@@ -99,22 +158,22 @@ impl Glob {
     }
 }
 
-fn glob_match(glob: &mut Chars, value: &mut Peekable<Chars>) -> bool {
-    match (glob.next(), value.peek()) {
+fn glob_match(glob: &[Tile], value: &mut Peekable<Chars>) -> bool {
+    match (glob.first(), value.peek()) {
         (None, None) => return true,
         (None, Some(_)) => return false,
-        (Some('%'), _) => {
+        (Some(Tile::Recursive), _) | (Some(Tile::Any), _) => {
             let mut i = value.clone();
             loop {
                 match i.peek() {
                     Some(_) => {
-                        if glob_match(&mut glob.clone(), &mut i.clone()) {
+                        if glob_match(&glob[1..], &mut i.clone()) {
                             return true;
                         }
                         i.next();
                     }
                     None => {
-                        if glob_match(&mut glob.clone(), &mut i.clone()) {
+                        if glob_match(&glob[1..], &mut i.clone()) {
                             return true;
                         }
                         break;
@@ -122,14 +181,14 @@ fn glob_match(glob: &mut Chars, value: &mut Peekable<Chars>) -> bool {
                 }
             }
         }
-        (Some('?'), Some(_)) => {
+        (Some(Tile::Single), Some(_)) => {
             value.next();
-            return glob_match(glob, value);
+            return glob_match(&glob[1..], value);
         }
-        (Some(g), Some(v)) => {
-            if g == *v {
+        (Some(Tile::Char(g)), Some(v)) => {
+            if *g == *v {
                 value.next();
-                return glob_match(glob, value);
+                return glob_match(&glob[1..], value);
             }
         }
         (Some(_), None) => {}
