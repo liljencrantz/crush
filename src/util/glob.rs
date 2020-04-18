@@ -261,19 +261,19 @@ mod tests {
     #[test]
     fn test_glob_files() {
         let mut out = Vec::new();
-        glob_files(&compile("%%"), &PathBuf::from("example_data/tree"), &mut out);
+        let _ = glob_files(&compile("%%"), &PathBuf::from("example_data/tree"), &mut out);
         assert_eq!(out.len(), 4);
         out.clear();
-        glob_files(&compile("%%/"), &PathBuf::from("example_data/tree"), &mut out);
+        let _ = glob_files(&compile("%%/"), &PathBuf::from("example_data/tree"), &mut out);
         assert_eq!(out.len(), 1);
         out.clear();
-        glob_files(&compile("%%/%"), &PathBuf::from("example_data/tree"), &mut out);
+        let _ = glob_files(&compile("%%/%"), &PathBuf::from("example_data/tree"), &mut out);
         assert_eq!(out.len(), 3);
         out.clear();
-        glob_files(&compile("?%%/?"), &PathBuf::from("example_data/tree"), &mut out);
+        let _ = glob_files(&compile("?%%/?"), &PathBuf::from("example_data/tree"), &mut out);
         assert_eq!(out.len(), 2);
         out.clear();
-        glob_files(&compile("%%b"), &PathBuf::from("example_data/tree"), &mut out);
+        let _ = glob_files(&compile("%%b"), &PathBuf::from("example_data/tree"), &mut out);
         assert_eq!(out.len(), 2);
     }
 }

@@ -111,7 +111,7 @@ AnyLabel: Box<str> = {
 
 match {
     r"(and|or)" => LogicalOperator,
-    "as" => CastOperator,
+    "to" => CastOperator,
     r"(typeof|neg|not)" => UnaryOperator,
 } else {
     ":" => Colon,

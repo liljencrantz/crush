@@ -50,7 +50,7 @@ fn not_match(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Bool(!g.matches(&needle)))
 }
 
-fn files(mut context: ExecutionContext) -> CrushResult<()> {
+fn files(context: ExecutionContext) -> CrushResult<()> {
     let g = context.this.glob()?;
     let mut files = Vec::new();
     g.glob_files(&cwd()?, &mut files)?;
