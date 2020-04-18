@@ -2,7 +2,6 @@ Todo:
 Rethink join syntax, and refactor code
 Fix aggregation
 Add background job support
-New command: which
 Add a range type
 Add system tests for binary stream handling
 Error source propagation
@@ -17,13 +16,12 @@ Missing some value serialisations and deserialisations
 Make integers overflow to arbitrary precision math
 Run an executable by giving its path
 Add reject command that removes specified columns from a table/stream
-Add control.source command
+Add control:source command
 Flesh out seq command with support for from and step
 Add String:join command
 Add String:substr command
 Figure out how to make custom reduce commands
 Data enums + pattern matching syntax
-Add %% for recursive wildcard matches
 Add readline command that reads one line of interactive text input from the user via the terminal
 support adding prototypes to structs
 New operators: += increment and friends

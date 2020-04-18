@@ -226,7 +226,6 @@ fn glob_match(pattern: &[Tile], value: &str) -> GlobResult {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

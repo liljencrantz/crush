@@ -122,7 +122,7 @@ match {
     r"(~~|~)" => ReplaceOperator,
     r"(\+|-)" => TermOperator,
     r#""([^\\"]|\\.)*""# => QuotedString,
-    r"([\._a-zA-Z%\?][\._0-9a-zA-Z%\?]*(/[\._0-9a-zA-Z%\?]+)*|/[\._0-9a-zA-Z%\?]+(/[\._0-9a-zA-Z%\?]+)*|/)" => Label,
+    r"([\._a-zA-Z%\?][\._0-9a-zA-Z%\?]*(/[\._0-9a-zA-Z%\?]+)*/?|/[\._0-9a-zA-Z%\?]+(/[\._0-9a-zA-Z%\?]+)*/?|/)" => Label,
     r"--[_0-9a-zA-Z]+" => Flag,
     r"\^[\._a-zA-Z][\._a-zA-Z0-9]*" => Field,
     r#"'([^\\']|\\.)*'"# => QuotedLabel,

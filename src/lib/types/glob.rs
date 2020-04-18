@@ -17,18 +17,18 @@ fn full(name: &'static str) -> Vec<&'static str> {
 lazy_static! {
     pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
         let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
-        res.declare(full("match"),
-            r#match, false,
-            "glob:match input:string", "True if the input matches the pattern", None);
-        res.declare(full("files"),
-            r#files, false,
-            "glob:files", "Perform file matching of this glob", None);
-        res.declare(full("not_match"),
-            not_match, false,
-            "glob:not_match input:string", "True if the input does not match the pattern", None);
         res.declare(full("new"),
             new, false,
             "glob:new pattern:string", "Return a new glob", None);
+        res.declare(full("match"),
+            r#match, false,
+            "glob:match input:string", "True if the input matches the pattern", None);
+        res.declare(full("not_match"),
+            not_match, false,
+            "glob:not_match input:string", "True if the input does not match the pattern", None);
+        res.declare(full("files"),
+            r#files, false,
+            "glob:files", "Perform file matching of this glob", None);
         res
     };
 }
@@ -44,6 +44,12 @@ fn r#match(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Bool(g.matches(&needle)))
 }
 
+fn not_match(mut context: ExecutionContext) -> CrushResult<()> {
+    let g = context.this.glob()?;
+    let needle = context.arguments.string(0)?;
+    context.output.send(Value::Bool(!g.matches(&needle)))
+}
+
 fn files(mut context: ExecutionContext) -> CrushResult<()> {
     let g = context.this.glob()?;
     let mut files = Vec::new();
@@ -51,10 +57,4 @@ fn files(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::List(
         List::new(ValueType::File, files.drain(..).map(|f| Value::File(f)).collect())
     ))
-}
-
-fn not_match(mut context: ExecutionContext) -> CrushResult<()> {
-    let g = context.this.glob()?;
-    let needle = context.arguments.string(0)?;
-    context.output.send(Value::Bool(!g.matches(&needle)))
 }
