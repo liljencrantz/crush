@@ -3,7 +3,7 @@ mod value_type;
 
 use std::cmp::Ordering;
 use std::hash::Hasher;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use chrono::{DateTime, Local};
@@ -206,7 +206,7 @@ impl Value {
         match self {
             Value::String(s) => v.push(Box::from(Path::new(s.as_ref()))),
             Value::File(p) => v.push(p.clone()),
-            Value::Glob(pattern) => pattern.glob_files(&cwd()?, v)?,
+            Value::Glob(pattern) => pattern.glob_files(&PathBuf::from("."), v)?,
             Value::Regex(_, re) => re.match_files(&cwd()?, v, printer),
             val => {
                 match val.readable() {

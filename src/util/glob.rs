@@ -1,9 +1,8 @@
-use std::str::Chars;
-use std::iter::Peekable;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::io;
-use std::fs::{read_dir, ReadDir};
+use std::fs::read_dir;
 use crate::lang::errors::{to_crush_error, argument_error, CrushResult};
+use std::collections::VecDeque;
 
 #[derive(Clone)]
 #[derive(PartialEq)]
@@ -28,7 +27,13 @@ enum Tile {
     Char(char),
     Single,
     Any,
-    Recursive
+    Recursive,
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+struct GlobResult {
+    matches: bool,
+    prefix: bool,
 }
 
 impl ToString for Glob {
@@ -69,7 +74,6 @@ fn compile(s: &str) -> Vec<Tile> {
     if was_any {
         res.push(Tile::Any);
     }
-//    println!("AAAA {} -> {:?}", s, res);
     res
 }
 
@@ -80,11 +84,11 @@ impl Glob {
     }
 
     pub fn matches(&self, v: &str) -> bool {
-        glob_match(&self.pattern, &mut v.chars().peekable())
+        glob_match(&self.pattern, v).matches
     }
 
     pub fn glob_files(&self, cwd: &Path, out: &mut Vec<Box<Path>>) -> CrushResult<()> {
-        to_crush_error(Glob::glob_files_testable(&self.pattern, cwd, out, |p| read_dir(p)))
+        to_crush_error(glob_files(&self.pattern, cwd, out))
     }
 
     pub fn glob_to_single_file(&self, cwd: &Path) -> CrushResult<Box<Path>> {
@@ -95,105 +99,131 @@ impl Glob {
             _ => argument_error("Glob expanded to wrong number of files"),
         }
     }
-
-    fn glob(pattern: &[Tile], v: &str) -> bool {
-        glob_match(pattern, &mut v.chars().peekable())
-    }
-
-    fn glob_files_testable(original_glob: &[Tile], cwd: &Path, out: &mut Vec<Box<Path>>, lister: fn(&Path) -> io::Result<ReadDir>) -> io::Result<()> {
-        let only_directories = original_glob.ends_with(&[Tile::Char('/')]);
-        let mut without_trailing_slashes = original_glob;
-
-        while without_trailing_slashes.ends_with(&[Tile::Char('/')]) {
-            without_trailing_slashes = &without_trailing_slashes[0..without_trailing_slashes.len()-1];
-        }
-        if without_trailing_slashes.starts_with(&[Tile::Char('/')]) {
-            let mut without_leading_slashes = without_trailing_slashes;
-            while without_leading_slashes.starts_with(&[Tile::Char('/')]) {
-                without_leading_slashes = &without_leading_slashes[1..];
-            }
-            Glob::glob_files_internal(without_leading_slashes, Path::new("/"), only_directories, "/", out, lister)
-        } else {
-            Glob::glob_files_internal(without_trailing_slashes, cwd, only_directories, "", out, lister)
-        }
-    }
-
-    fn glob_files_internal(
-        relative_glob: &[Tile],
-        dir: &Path,
-        only_directories: bool,
-        prefix: &str,
-        out: &mut Vec<Box<Path>>,
-        lister: fn(&Path) -> io::Result<ReadDir>) -> io::Result<()> {
-        let is_last_section = !relative_glob.contains(&Tile::Char('/'));
-        if is_last_section {
-            for entry in lister(dir)? {
-                let ee = entry?;
-                match ee.file_name().to_str() {
-                    Some(name) => {
-                        if Glob::glob(relative_glob, name) && (!only_directories || ee.path().is_dir()) {
-                            out.push(ee.path().into_boxed_path());
-                        }
-                    }
-                    None => return Err(io::Error::new(io::ErrorKind::Other, "Invalid file name")),
-                }
-            }
-        } else {
-            let mut split = relative_glob.splitn(2, |t| t == &Tile::Char('/'));
-            let current_glob = split.next().unwrap();
-            let next_glob = split.next().unwrap();
-            for entry in read_dir(dir)? {
-                let ee = entry?;
-                match ee.file_name().to_str() {
-                    Some(name) => {
-                        if Glob::glob(current_glob, name) && (ee.path().is_dir()) {
-                            Glob::glob_files_internal(next_glob, ee.path().as_path(), only_directories, format!("{}{}/", prefix, name).as_str(), out, lister)?;
-                        }
-                    }
-                    None => return Err(io::Error::new(io::ErrorKind::Other, "Invalid file name")),
-                }
-            }
-        }
-        Ok(())
-    }
 }
 
-fn glob_match(glob: &[Tile], value: &mut Peekable<Chars>) -> bool {
-    match (glob.first(), value.peek()) {
-        (None, None) => return true,
-        (None, Some(_)) => return false,
-        (Some(Tile::Recursive), _) | (Some(Tile::Any), _) => {
-            let mut i = value.clone();
-            loop {
-                match i.peek() {
-                    Some(_) => {
-                        if glob_match(&glob[1..], &mut i.clone()) {
-                            return true;
-                        }
-                        i.next();
+fn glob_files(
+    pattern: &[Tile],
+    cwd: &Path,
+    out: &mut Vec<Box<Path>>
+) -> io::Result<()> {
+    if pattern.is_empty() {
+        return Ok(());
+    }
+
+    let mut queue = VecDeque::new();
+
+    queue.push_back(if matches!(pattern[0], Tile::Char('/')) {
+        ("/".to_string(), PathBuf::from("/"))
+    } else {
+        ("".to_string(), cwd.to_path_buf())
+    });
+
+    while !queue.is_empty() {
+        let (s, next_dir) = queue.pop_front().unwrap();
+        for entry in read_dir(&next_dir)? {
+            let entry = entry?;
+            match entry.file_name().to_str() {
+                Some(name) => {
+                    let mut ss = format!("{}{}", s, name);
+                    let res = glob_match(pattern, &ss);
+                    if res.matches {
+                        out.push(PathBuf::from(&ss).into_boxed_path())
                     }
-                    None => {
-                        if glob_match(&glob[1..], &mut i.clone()) {
-                            return true;
+                    if res.prefix && entry.metadata()?.is_dir() {
+                        if !res.matches {
+                            let with_trailing_slash = format!("{}/", ss);
+                            if glob_match(pattern, &with_trailing_slash).matches {
+                                out.push(PathBuf::from(&with_trailing_slash).into_boxed_path())
+                            }
                         }
-                        break;
+                        ss.push('/');
+                        queue.push_back((ss, entry.path()));
                     }
+                }
+                None => return Err(io::Error::new(io::ErrorKind::Other, "Invalid file name")),
+            }
+        }
+    }
+    Ok(())
+}
+
+fn glob_match(pattern: &[Tile], value: &str) -> GlobResult {
+    let tile = pattern.first();
+    match &tile {
+        Some(Tile::Recursive) => {
+            match value.chars().next() {
+                Some(_) => {
+                    let r = glob_match(&pattern[1..], value);
+                    if r.matches {
+                        GlobResult { matches: true, prefix: true }
+                    } else {
+                        glob_match(pattern, &value[1..])
+                    }
+                }
+                None => {
+                    GlobResult { matches: pattern.len() == 1, prefix: true }
                 }
             }
         }
-        (Some(Tile::Single), Some(_)) => {
-            value.next();
-            return glob_match(&glob[1..], value);
-        }
-        (Some(Tile::Char(g)), Some(v)) => {
-            if *g == *v {
-                value.next();
-                return glob_match(&glob[1..], value);
+
+        Some(Tile::Any) => {
+            match value.chars().next() {
+                Some('/') =>
+                    glob_match(&pattern[1..], &value),
+                Some(_) => {
+                    let r = glob_match(&pattern[1..], value);
+                    if r.matches {
+                        r
+                    } else {
+                        glob_match(pattern, &value[1..])
+                    }
+                }
+                None => {
+                    GlobResult { matches: pattern.len() == 1, prefix: true }
+                }
             }
         }
-        (Some(_), None) => {}
+
+        None => {
+            match value.chars().next() {
+                None => GlobResult { matches: true, prefix: false },
+                Some(_) => GlobResult { matches: false, prefix: false },
+            }
+        }
+
+        Some(Tile::Single) =>
+            match value.chars().next() {
+                Some('/') => {
+                    GlobResult { matches: false, prefix: false }
+                }
+                Some(_) => {
+                    glob_match(&pattern[1..], &value[1..])
+                }
+                None => {
+                    GlobResult { matches: false, prefix: false }
+                }
+            }
+
+        Some(Tile::Char('/')) =>
+            match value.chars().next() {
+                Some('/') => {
+                    glob_match(&pattern[1..], &value[1..])
+                }
+                Some(_) => GlobResult { matches: false, prefix: false },
+                None => GlobResult { matches: false, prefix: true },
+            }
+
+        Some(Tile::Char(g)) =>
+            match value.chars().next() {
+                Some(v) => if *g == v {
+                    glob_match(&pattern[1..], &value[1..])
+                } else {
+                    GlobResult { matches: false, prefix: false }
+                }
+
+                None => GlobResult { matches: false, prefix: false }
+            }
     }
-    false
 }
 
 
@@ -202,75 +232,49 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_that_globs_match_themselves() {
-        assert!(Glob::new("foo.txt").matches("foo.txt"));
-        assert!(Glob::new("").matches(""));
-        assert!(!Glob::new("foo").matches("bar"));
+    fn test_glob_match() {
+        assert_eq!(glob_match(&compile("%%"), "a"), GlobResult { matches: true, prefix: true });
+        assert_eq!(glob_match(&compile("%%"), "a/b/c/d"), GlobResult { matches: true, prefix: true });
+        assert_eq!(glob_match(&compile("%%"), "a/b/c/d/"), GlobResult { matches: true, prefix: true });
+        assert_eq!(glob_match(&compile("%%/"), "a/"), GlobResult { matches: true, prefix: true });
+        assert_eq!(glob_match(&compile("%%/"), "a/b/c/d/"), GlobResult { matches: true, prefix: true });
+        assert_eq!(glob_match(&compile("%%/"), "a"), GlobResult { matches: false, prefix: true });
+        assert_eq!(glob_match(&compile("%%/"), "a/b/c/d"), GlobResult { matches: false, prefix: true });
+        assert_eq!(glob_match(&compile("%%a"), "aaa"), GlobResult { matches: true, prefix: true });
+        assert_eq!(glob_match(&compile("%%a/"), "aaa/"), GlobResult { matches: true, prefix: true });
+        assert_eq!(glob_match(&compile("%%a"), "aaa/"), GlobResult { matches: false, prefix: true });
+        assert_eq!(glob_match(&compile("aaa/%"), "aaa"), GlobResult { matches: false, prefix: true });
+        assert_eq!(glob_match(&compile("a/%/c"), "a/bbbb"), GlobResult { matches: false, prefix: true });
+        assert_eq!(glob_match(&compile("?"), "a"), GlobResult { matches: true, prefix: false });
+        assert_eq!(glob_match(&compile("a/"), "a"), GlobResult { matches: false, prefix: true });
+        assert_eq!(glob_match(&compile("?/"), "a"), GlobResult { matches: false, prefix: true });
+        assert_eq!(glob_match(&compile("a/?/c"), "a/b"), GlobResult { matches: false, prefix: true });
+        assert_eq!(glob_match(&compile("a/?/c"), "a/bb"), GlobResult { matches: false, prefix: false });
+        assert_eq!(glob_match(&compile("%%a"), "bbb"), GlobResult { matches: false, prefix: true });
+        assert_eq!(glob_match(&compile("%"), "a/b"), GlobResult { matches: false, prefix: false });
+        assert_eq!(glob_match(&compile("%%c"), "a/b"), GlobResult { matches: false, prefix: true });
+        assert_eq!(glob_match(&compile("a/%/c"), "a/b/c"), GlobResult { matches: true, prefix: false });
+        assert_eq!(glob_match(&compile("a/b%/c"), "a/b/c"), GlobResult { matches: true, prefix: false });
+        assert_eq!(glob_match(&compile("a/%b/c"), "a/d/c"), GlobResult { matches: false, prefix: false });
+        assert_eq!(glob_match(&compile("a/%/c/"), "a/b/c/"), GlobResult { matches: true, prefix: false });
     }
 
     #[test]
-    fn test_that_basic_wildcards_work() {
-        assert!(Glob::new("%.txt").matches("foo.txt"));
-        assert!(!Glob::new("%.txt").matches("foo.txb"));
-        assert!(!Glob::new("%.txt").matches("footxt"));
+    fn test_glob_files() {
+        let mut out = Vec::new();
+        glob_files(&compile("%%"), &PathBuf::from("example_data/tree"), &mut out);
+        assert_eq!(out.len(), 4);
+        out.clear();
+        glob_files(&compile("%%/"), &PathBuf::from("example_data/tree"), &mut out);
+        assert_eq!(out.len(), 1);
+        out.clear();
+        glob_files(&compile("%%/%"), &PathBuf::from("example_data/tree"), &mut out);
+        assert_eq!(out.len(), 3);
+        out.clear();
+        glob_files(&compile("?%%/?"), &PathBuf::from("example_data/tree"), &mut out);
+        assert_eq!(out.len(), 2);
+        out.clear();
+        glob_files(&compile("%%b"), &PathBuf::from("example_data/tree"), &mut out);
+        assert_eq!(out.len(), 2);
     }
-
-    #[test]
-    fn test_that_single_character_wildcards_work() {
-        assert!(Glob::new("??.txt").matches("aa.txt"));
-        assert!(!Glob::new("??.txt").matches("aaa.txt"));
-        assert!(Glob::new("???").matches("aaa"));
-        assert!(Glob::new("?").matches("a"));
-    }
-
-    #[test]
-    fn test_that_wildcards_work_at_the_end() {
-        assert!(Glob::new("%").matches("aaa"));
-        assert!(Glob::new("aaa%").matches("aaa"));
-        assert!(Glob::new("aaa%").matches("aaaa"));
-        assert!(Glob::new("aaa%").matches("aaab"));
-        assert!(Glob::new("aaa%?").matches("aaab"));
-        assert!(Glob::new("aaa%?").matches("aaaab"));
-        assert!(Glob::new("%a%").matches("aaaa"));
-        assert!(!Glob::new("%a%").matches("bbb"));
-    }
-
-    #[test]
-    fn test_that_multiple_wildcards_work() {
-        assert!(Glob::new("a%b%c").matches("abc"));
-        assert!(Glob::new("a%b%c?").matches("aabcc"));
-        assert!(!Glob::new("a%b%c?").matches("acb"));
-    }
-
-//    #[test]
-//    fn test_file_glob() -> io::Result<()> {
-//        let mut out: Vec<String> = Vec::new();
-//        glob_files("C*", Path::new("."), &mut out)?;
-//        assert_eq!(out, vec!["Cargo.lock", "Cargo.toml"]);
-//        return Ok(());
-//    }
-//
-//    #[test]
-//    fn test_subdirectory_glob() -> io::Result<()> {
-//        let mut out: Vec<String> = Vec::new();
-//        glob_files("s*/m*.rs", Path::new("."), &mut out)?;
-//        assert_eq!(out, vec!["src/main.rs"]);
-//        return Ok(());
-//    }
-//
-//    #[test]
-//    fn test_absolute_subdirectory_with_trailing_slash_glob() -> io::Result<()> {
-//        let mut out: Vec<String> = Vec::new();
-//        glob_files("/home/*/", Path::new("."), &mut out)?;
-//        assert_eq!(out, vec!["/home/liljencrantz/"]);
-//        return Ok(());
-//    }
-//
-//    #[test]
-//    fn test_absolute_subdirectory_glob() -> io::Result<()> {
-//        let mut out: Vec<String> = Vec::new();
-//        glob_files("/home/*", Path::new("."), &mut out)?;
-//        assert_eq!(out, vec!["/home/liljencrantz"]);
-//        return Ok(());
-//    }
 }
