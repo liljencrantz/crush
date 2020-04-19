@@ -357,8 +357,19 @@ operator instead. `?` is still used for single character wildcards.
     user         size modified                  type file
     liljencrantz   75 2020-03-07 17:09:15 +0100 file /home/liljencrantz/src/crush/build.rs
 
+The operator `%%` is used for performing globbing recursively into subdirectories.
+Another way of looking ath the same syntax is to say that `%` and `?` match any
+character except `/`, whereas `%%` also matches `/`.
+
+    # Count the number of lines of rust code in the crush source code
+    crush> lines src/%%.rs|count
+
 Wildcards are not automatically expanded, they are passed in to commands as glob
-objects, and the command chooses what to match the glob against.
+objects, and the command chooses what to match the glob against. If you want to
+perform glob expansion in a command that doesn't do so itself, use the `:files`
+method of the glob object to do so:
+
+    crush> echo (%%.rs):files
 
 ### Regular expressions
 
