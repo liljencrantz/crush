@@ -289,7 +289,7 @@ convenient.
     crush> cd /  # As does this
 
 The right hand side of the / operator is a label, not a value, so `./foo` refers
-to a file named foo i the current working directory, and is unrelated to the
+to a file named foo in the current working directory, and is unrelated to the
 contents of any variable named `foo`.
 
 ### Namespaces, members and methods
