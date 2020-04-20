@@ -27,6 +27,11 @@ lazy_static! {
             "string:lower",
             "Returns an identical string but in lower case",
             None);
+        res.declare(full("repeat"),
+            repeat, false,
+            "string:repeat times:integer",
+            "Returns this string repeated times times",
+            None);
         res.declare(full("split"),
             split, false,
             "string:split separator:string",
@@ -174,6 +179,13 @@ fn rpad(mut context: ExecutionContext) -> CrushResult<()> {
         res += pad_char.repeat(len - s.len()).as_str();
         context.output.send(Value::string(res.as_str()))
     }
+}
+
+fn repeat(mut context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(1)?;
+    let s = context.this.string()?;
+    let times = context.arguments.integer(0)? as usize;
+    context.output.send(Value::string(s.repeat(times).as_str()))
 }
 
 fn ends_with(mut context: ExecutionContext) -> CrushResult<()> {

@@ -95,7 +95,7 @@ fn from(mut context: ExecutionContext) -> CrushResult<()> {
 fn to_toml(value: Value) -> CrushResult<toml::Value> {
     match value.materialize() {
         Value::File(s) =>
-            Ok(toml::Value::from(mandate(s.to_str(),"Invalid filename")?)),
+            Ok(toml::Value::from(mandate(s.to_str(), "Invalid filename")?)),
 
         Value::String(s) => Ok(toml::Value::from(s.as_ref())),
 
@@ -156,11 +156,13 @@ fn to(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    let env = root.create_namespace("toml")?;
-    env.declare_command(
-        "from", from, true,
-        "toml:from [file:file]", "Parse toml format", Some(
-            r#"    Input can either be a binary stream or a file. All Toml types except
+    root.create_lazy_namespace(
+        "toml",
+        Box::new(move |env: &Scope| {
+            env.declare_command(
+                "from", from, true,
+                "toml:from [file:file]", "Parse toml format", Some(
+                    r#"    Input can either be a binary stream or a file. All Toml types except
     datetime are supported. Datetime is not suported because the rust toml
     currently doesn't support accessing the internal state of a datetime.
 
@@ -168,17 +170,19 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     toml:from Cargo.toml"#))?;
 
-    env.declare_command(
-        "to", to, true,
-        "toml:to [file:file]", "Serialize to toml format", Some(
-            r#"    If no file is specified, output is returned as a BinaryStream.
+            env.declare_command(
+                "to", to, true,
+                "toml:to [file:file]", "Serialize to toml format", Some(
+                    r#"    If no file is specified, output is returned as a BinaryStream.
     The following Crush types are supported: File, string, integer, float, bool, list, table,
     table_stream, struct, time, duration, binary and binary_stream.
 
     Examples:
 
     ls | toml:to"#))?;
-    env.readonly();
+            env.readonly();
 
+            Ok(())
+        }))?;
     Ok(())
 }

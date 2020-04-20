@@ -1,5 +1,5 @@
-use crate::lang::errors::{error, CrushResult};
-use std::sync::{Arc, Mutex};
+use crate::lang::errors::{error, CrushResult, mandate};
+use std::sync::{Arc, Mutex, MutexGuard};
 use crate::lang::{value::Value, value::ValueType};
 use std::collections::HashMap;
 use crate::lang::execution_context::ExecutionContext;
@@ -8,6 +8,11 @@ use crate::lang::r#struct::Struct;
 use crate::util::identity_arc::Identity;
 use crate::lang::help::Help;
 use std::cmp::max;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    pub static ref GLOBAL_NAMESPACE_LOCK: Mutex<()> = Mutex::new(());
+}
 
 /**
   This is where we store variables, including functions.
@@ -26,7 +31,6 @@ pub struct Scope {
     data: Arc<Mutex<ScopeData>>,
 }
 
-#[derive(Clone)]
 pub struct ScopeData {
     /** This is the parent scope used to perform variable name resolution. If a variable lookup
      fails in the current scope, it proceeds to this scope. This is usually the scope in which this
@@ -59,6 +63,8 @@ pub struct ScopeData {
     pub is_readonly: bool,
 
     pub name: Option<Box<str>>,
+    is_loaded: bool,
+    loader: Option<Box<dyn Send + FnOnce(&Scope) -> CrushResult<()>>>,
 }
 
 impl ScopeData {
@@ -72,6 +78,40 @@ impl ScopeData {
             is_stopped: false,
             is_readonly: false,
             name,
+            is_loaded: true,
+            loader: None,
+        }
+    }
+
+    fn lazy(parent_scope: Option<Scope>, calling_scope: Option<Scope>, is_loop: bool, name: Option<Box<str>>, loader: Box<dyn Send + FnOnce(&Scope) -> CrushResult<()>>) -> ScopeData {
+        ScopeData {
+            parent_scope,
+            calling_scope,
+            is_loop,
+            uses: Vec::new(),
+            mapping: HashMap::new(),
+            is_stopped: false,
+            is_readonly: false,
+            name,
+            is_loaded: false,
+            loader: Some(loader),
+        }
+    }
+}
+
+impl Clone for ScopeData {
+    fn clone(&self) -> Self {
+        ScopeData {
+            parent_scope: self.parent_scope.clone(),
+            calling_scope: self.calling_scope.clone(),
+            is_loop: self.is_loop,
+            uses: self.uses.clone(),
+            mapping: self.mapping.clone(),
+            is_stopped: self.is_stopped,
+            is_readonly: self.is_readonly,
+            name: self.name.clone(),
+            is_loaded: true,
+            loader: None,
         }
     }
 }
@@ -85,12 +125,12 @@ impl Scope {
 
     pub fn create(
         name: Option<Box<str>>,
-        is_loop:bool,
-        is_stopped:bool,
+        is_loop: bool,
+        is_stopped: bool,
         is_readonly: bool,
     ) -> Scope {
         Scope {
-            data: Arc::from(Mutex::new(ScopeData{
+            data: Arc::from(Mutex::new(ScopeData {
                 parent_scope: None,
                 calling_scope: None,
                 uses: vec![],
@@ -98,7 +138,9 @@ impl Scope {
                 is_loop,
                 is_stopped,
                 is_readonly,
-                name
+                name,
+                is_loaded: true,
+                loader: None,
             })),
         }
     }
@@ -113,45 +155,45 @@ impl Scope {
         }
     }
 
-    pub fn do_continue(&self) -> bool {
-        let data = self.data.lock().unwrap();
+    pub fn do_continue(&self) -> CrushResult<bool> {
+        let data = self.lock()?;
         if data.is_readonly {
-            false
+            Ok(false)
         } else if data.is_loop {
-            true
+            Ok(true)
         } else {
             let caller = data.calling_scope.clone();
             drop(data);
             let ok = caller
                 .map(|p| p.do_continue())
-                .unwrap_or(false);
+                .unwrap_or(Ok(false))?;
             if !ok {
-                false
+                Ok(false)
             } else {
                 self.data.lock().unwrap().is_stopped = true;
-                true
+                Ok(true)
             }
         }
     }
 
-    pub fn do_break(&self) -> bool {
-        let mut data = self.data.lock().unwrap();
+    pub fn do_break(&self) -> CrushResult<bool> {
+        let mut data = self.lock()?;
         if data.is_readonly {
-            false
+            Ok(false)
         } else if data.is_loop {
             data.is_stopped = true;
-            true
+            Ok(true)
         } else {
             let caller = data.calling_scope.clone();
             drop(data);
             let ok = caller
                 .map(|p| p.do_break())
-                .unwrap_or(false);
+                .unwrap_or(Ok(false))?;
             if !ok {
-                false
+                Ok(false)
             } else {
                 self.data.lock().unwrap().is_stopped = true;
-                true
+                Ok(true)
             }
         }
     }
@@ -160,9 +202,9 @@ impl Scope {
         self.data.lock().unwrap().is_stopped
     }
 
-    pub fn create_namespace(&self, name: &str) -> CrushResult<Scope> {
+    pub fn create_lazy_namespace(&self, name: &str, loader: Box<dyn Send + FnOnce(&Scope) -> CrushResult<()>>) -> CrushResult<Scope> {
         let res = Scope {
-            data: Arc::from(Mutex::new(ScopeData::new(None, Some(self.clone()), false, Some(Box::from(name))))),
+            data: Arc::from(Mutex::new(ScopeData::lazy(None, Some(self.clone()), false, Some(Box::from(name)), loader))),
         };
         self.declare(name, Value::Scope(res.clone()))?;
         Ok(res)
@@ -195,8 +237,23 @@ impl Scope {
         self.declare(name, Value::Command(command))
     }
 
+    fn lock(&self) -> CrushResult<MutexGuard<ScopeData>> {
+        let mut data = self.data.lock().unwrap();
+        if !data.is_loaded {
+            let l = GLOBAL_NAMESPACE_LOCK.lock();
+            data.is_loaded = true;
+            let loader = mandate(data.loader.take(), "Missing module loader")?;
+            drop(data);
+            loader(self)?;
+            drop(l);
+            self.lock()
+        } else {
+            Ok(data)
+        }
+    }
+
     pub fn full_path(&self) -> CrushResult<Vec<Box<str>>> {
-        let data = self.data.lock().unwrap();
+        let data = self.lock()?;
         match data.name.clone() {
             None => error("Tried to get full path of anonymous scope"),
             Some(name) => match data.calling_scope.clone() {
@@ -227,7 +284,7 @@ impl Scope {
     }
 
     pub fn global_value(&self, full_path: Vec<Box<str>>) -> CrushResult<Value> {
-        let data = self.data.lock().unwrap();
+        let data = self.lock()?;
         match data.parent_scope.clone() {
             Some(parent) => {
                 drop(data);
@@ -244,7 +301,7 @@ impl Scope {
         if path.is_empty() {
             error("Invalid path")
         } else {
-            let data = self.data.lock().unwrap();
+            let data = self.lock()?;
             match data.name.clone() {
                 None => error("Anonymous scope!"),
                 Some(name) => {
@@ -284,7 +341,7 @@ impl Scope {
     }
 
     pub fn declare(&self, name: &str, value: Value) -> CrushResult<()> {
-        let mut data = self.data.lock().unwrap();
+        let mut data = self.lock()?;
         if data.is_readonly {
             return error("Scope is read only");
         }
@@ -296,7 +353,7 @@ impl Scope {
     }
 
     pub fn redeclare(&self, name: &str, value: Value) -> CrushResult<()> {
-        let mut data = self.data.lock().unwrap();
+        let mut data = self.lock()?;
         if data.is_readonly {
             return error("Scope is read only");
         }
@@ -305,7 +362,7 @@ impl Scope {
     }
 
     pub fn set(&self, name: &str, value: Value) -> CrushResult<()> {
-        let mut data = self.data.lock().unwrap();
+        let mut data = self.lock()?;
         if !data.mapping.contains_key(name) {
             match data.parent_scope.clone() {
                 Some(p) => {
@@ -314,70 +371,68 @@ impl Scope {
                 }
                 None => error(format!("Unknown variable {}", name).as_str()),
             }
+        } else if data.is_readonly {
+            error("Scope is read only")
+        } else if data.mapping[name].value_type() != value.value_type() {
+            error(format!("Type mismatch when reassigning variable ${{{}}}. Use `unset ${{{}}}` to remove old variable.", name, name).as_str())
         } else {
-            if data.is_readonly {
-                error("Scope is read only")
-            } else if data.mapping[name].value_type() != value.value_type() {
-                error(format!("Type mismatch when reassigning variable ${{{}}}. Use `unset ${{{}}}` to remove old variable.", name, name).as_str())
-            } else {
-                data.mapping.insert(Box::from(name), value);
-                Ok(())
-            }
+            data.mapping.insert(Box::from(name), value);
+            Ok(())
         }
     }
 
-    pub fn remove_str(&self, name: &str) -> Option<Value> {
+    pub fn remove_str(&self, name: &str) -> CrushResult<Option<Value>> {
         let n = &name.split(':').map(|e: &str| Box::from(e)).collect::<Vec<Box<str>>>()[..];
         self.remove(n)
     }
 
-    pub fn remove(&self, name: &[Box<str>]) -> Option<Value> {
+    pub fn remove(&self, name: &[Box<str>]) -> CrushResult<Option<Value>> {
         if name.is_empty() {
-            return None;
+            return Ok(None);
         }
         if name.len() == 1 {
             self.remove_here(name[0].as_ref())
         } else {
-            match self.get(name[0].as_ref()) {
-                None => None,
+            match self.get(name[0].as_ref())? {
+                None => Ok(None),
                 Some(Value::Scope(env)) => env.remove(&name[1..name.len()]),
-                _ => None,
+                _ => Ok(None),
             }
         }
     }
 
-    fn remove_here(&self, key: &str) -> Option<Value> {
-        let mut data = self.data.lock().unwrap();
+    fn remove_here(&self, key: &str) -> CrushResult<Option<Value>> {
+        let mut data = self.lock()?;
         if !data.mapping.contains_key(key) {
             match data.parent_scope.clone() {
                 Some(p) => {
                     drop(data);
                     p.remove_here(key)
                 }
-                None => None,
+                None => Ok(None),
             }
         } else {
             if data.is_readonly {
-                return None;
+                return Ok(None);
             }
-            data.mapping.remove(key)
+            Ok(data.mapping.remove(key))
         }
     }
 
-    pub fn get(&self, name: &str) -> Option<Value> {
-        let data = self.data.lock().unwrap();
+    pub fn get(&self, name: &str) -> CrushResult<Option<Value>> {
+        let data = self.lock()?;
         match data.mapping.get(&Box::from(name)) {
-            Some(v) => Some(v.clone()),
+            Some(v) => Ok(Some(v.clone())),
             None => {
                 let uses = data.uses.clone();
                 drop(data);
                 for used in &uses {
-                    if let Some(res) = used.get(name) {
-                        return Some(res);
+                    if let Some(res) = used.get(name)? {
+                        return Ok(Some(res));
                     }
                 }
 
-                let data2 = self.data.lock().unwrap();
+                let data2 = self.lock()?;
 
                 match data2.parent_scope.clone() {
                     Some(p) => {
@@ -385,7 +440,7 @@ impl Scope {
                         p.get(name)
                     }
                     None => {
-                        None
+                        Ok(None)
                     }
                 }
             }
@@ -396,28 +451,31 @@ impl Scope {
         self.data.lock().unwrap().uses.push(other.clone());
     }
 
-    pub fn dump(&self, map: &mut HashMap<String, ValueType>) {
-        match self.data.lock().unwrap().parent_scope.clone() {
-            Some(p) => p.dump(map),
+    pub fn dump(&self, map: &mut HashMap<String, ValueType>) -> CrushResult<()> {
+        match self.lock()?.parent_scope.clone() {
+            Some(p) => {
+                p.dump(map)?;
+            }
             None => {}
         }
 
         for u in self.data.lock().unwrap().uses.clone().iter().rev() {
-            u.dump(map);
+            u.dump(map)?;
         }
 
-        let data = self.data.lock().unwrap();
+        let data = self.lock()?;
         for (k, v) in data.mapping.iter() {
             map.insert(k.to_string(), v.value_type());
         }
+        Ok(())
     }
 
     pub fn readonly(&self) {
         self.data.lock().unwrap().is_readonly = true;
     }
 
-    pub fn export(&self) -> ScopeData {
-        self.data.lock().unwrap().clone()
+    pub fn export(&self) -> CrushResult<ScopeData> {
+        Ok(self.lock()?.clone())
     }
 
     pub fn set_parent(&self, parent: Option<Scope>) {
@@ -432,7 +490,8 @@ impl Scope {
 impl ToString for Scope {
     fn to_string(&self) -> String {
         let mut map = HashMap::new();
-        self.dump(&mut map);
+        // This can fail and we ignore it, becasue there is no way to propagate the error. :-(
+        let _ = self.dump(&mut map);
         map.iter().map(|(k, _v)| k.clone()).collect::<Vec<String>>().join(", ")
     }
 }
@@ -459,7 +518,7 @@ impl Help for Scope {
 
         let data = self.data.lock().unwrap();
         let mut keys: Vec<_> = data.mapping.iter().collect();
-        keys.sort_by(|x,y| x.0.cmp(&y.0));
+        keys.sort_by(|x, y| x.0.cmp(&y.0));
 
         long_help_methods(&mut keys, &mut lines);
         Some(lines.join("\n"))

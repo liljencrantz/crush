@@ -104,65 +104,65 @@ fn class_get(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    let env = root.create_namespace("types")?;
-    root.r#use(&env);
-
-    let root =
-        Struct::new(vec![
-            (Box::from("__setattr__"), Value::Command(CrushCommand::command(
-                class_set, false,
-                vec![Box::from("global"), Box::from("types"), Box::from("root"), Box::from("__setattr__")],
-                "root:__setitem__ name:string value:any",
-                "Modify the specified field to hold the specified value",
-                None))),
-            (Box::from("__getitem__"), Value::Command(CrushCommand::command(
-                class_get, false,
-                vec![Box::from("global"), Box::from("types"), Box::from("root"), Box::from("__getitem__")],
-                "root:__getitem__ name:string",
-                "Return the value of the specified field",
-                None))),
-            (Box::from("__setitem__"), Value::Command(CrushCommand::command(
-                class_get, false,
-                vec![Box::from("global"), Box::from("types"), Box::from("root"), Box::from("__setitem__")],
-                "root:__setitem__ name:string value:any",
-                "Modify the specified field to hold the specified value",
-                None))),
-            (Box::from("new"), Value::Command(CrushCommand::command(
-                new, true,
-                vec![Box::from("global"), Box::from("types"), Box::from("root"), Box::from("new")],
-                "root:new @unnamed @@named",
-                "Create a new instance of the specified type",
-                None))),
-        ], None);
-
-    env.declare("root", Value::Struct(root))?;
-
-
-    env.declare_command("class_get", class_get, false,
+    let e = root.create_lazy_namespace(
+        "types",
+        Box::new(move |env: &Scope| {
+            let root =
+                Struct::new(vec![
+                    (Box::from("__setattr__"), Value::Command(CrushCommand::command(
+                        class_set, false,
+                        vec![Box::from("global"), Box::from("types"), Box::from("root"), Box::from("__setattr__")],
+                        "root:__setitem__ name:string value:any",
+                        "Modify the specified field to hold the specified value",
+                        None))),
+                    (Box::from("__getitem__"), Value::Command(CrushCommand::command(
+                        class_get, false,
+                        vec![Box::from("global"), Box::from("types"), Box::from("root"), Box::from("__getitem__")],
                         "root:__getitem__ name:string",
                         "Return the value of the specified field",
-                        None)?;
+                        None))),
+                    (Box::from("__setitem__"), Value::Command(CrushCommand::command(
+                        class_get, false,
+                        vec![Box::from("global"), Box::from("types"), Box::from("root"), Box::from("__setitem__")],
+                        "root:__setitem__ name:string value:any",
+                        "Modify the specified field to hold the specified value",
+                        None))),
+                    (Box::from("new"), Value::Command(CrushCommand::command(
+                        new, true,
+                        vec![Box::from("global"), Box::from("types"), Box::from("root"), Box::from("new")],
+                        "root:new @unnamed @@named",
+                        "Create a new instance of the specified type",
+                        None))),
+                ], None);
 
-    env.declare_command("data", data, false,
-                        "data <name>=value:any...",
-                        "Construct a struct with the specified members",
-                        None)?;
+            env.declare("root", Value::Struct(root))?;
 
-    env.declare_command("as", r#as, false,
-                        "value:any as type:type",
-                        "Convert the vale to the specified type",
-                        None)?;
 
-    env.declare_command("typeof", r#typeof, false,
-                        "typeof value:any",
-                        "Return the type of the specified value",
-                        None)?;
+            env.declare_command("class_get", class_get, false,
+                                "root:__getitem__ name:string",
+                                "Return the value of the specified field",
+                                None)?;
 
-    env.declare_command(
-        "class", class, false,
-        "class [parent:type]",
-        "Create an empty new class",
-        Some(r#"    Example:
+            env.declare_command("data", data, false,
+                                "data <name>=value:any...",
+                                "Construct a struct with the specified members",
+                                None)?;
+
+            env.declare_command("as", r#as, false,
+                                "value:any as type:type",
+                                "Convert the vale to the specified type",
+                                None)?;
+
+            env.declare_command("typeof", r#typeof, false,
+                                "typeof value:any",
+                                "Return the type of the specified value",
+                                None)?;
+
+            env.declare_command(
+                "class", class, false,
+                "class [parent:type]",
+                "Create an empty new class",
+                Some(r#"    Example:
 
     Point := class
 
@@ -184,11 +184,11 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     p := (Point:new x=1.0 y=2.0)
     p:len"#))?;
-    env.declare_command(
-        "materialize", materialize, true,
-        "materialize",
-        "Recursively convert all streams in input to materialized form",
-        Some(r#"    The purpose of materializing a value is so that it can be used many times.
+            env.declare_command(
+                "materialize", materialize, true,
+                "materialize",
+                "Recursively convert all streams in input to materialized form",
+                Some(r#"    The purpose of materializing a value is so that it can be used many times.
 
     Note that materializing a value is an inherently destructive operation.
     Original values of mutable types such as lists and streams are emptied by
@@ -198,33 +198,36 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     ls | materialize"#))?;
 
-    env.declare("file", Value::Type(ValueType::File))?;
-    env.declare("type", Value::Type(ValueType::Type))?;
-    env.declare("any", Value::Type(ValueType::Any))?;
-    env.declare("bool", Value::Type(ValueType::Bool))?;
-    env.declare("command", Value::Type(ValueType::Command))?;
-    env.declare("scope", Value::Type(ValueType::Scope))?;
-    env.declare("binary", Value::Type(ValueType::Binary))?;
-    env.declare("binary_stream", Value::Type(ValueType::BinaryStream))?;
-    env.declare("field", Value::Type(ValueType::Field))?;
-    env.declare("empty", Value::Type(ValueType::Empty))?;
-    env.declare("float", Value::Type(ValueType::Float))?;
-    env.declare("integer", Value::Type(ValueType::Integer))?;
-    env.declare("list", Value::Type(ValueType::List(Box::from(ValueType::Empty))))?;
-    env.declare("string", Value::Type(ValueType::String))?;
-    env.declare("glob", Value::Type(ValueType::Glob))?;
-    env.declare("re", Value::Type(ValueType::Regex))?;
-    env.declare("duration", Value::Type(ValueType::Duration))?;
-    env.declare("time", Value::Type(ValueType::Time))?;
-    env.declare("dict", Value::Type(ValueType::Dict(
-        Box::from(ValueType::Empty),
-        Box::from(ValueType::Empty))))?;
+            env.declare("file", Value::Type(ValueType::File))?;
+            env.declare("type", Value::Type(ValueType::Type))?;
+            env.declare("any", Value::Type(ValueType::Any))?;
+            env.declare("bool", Value::Type(ValueType::Bool))?;
+            env.declare("command", Value::Type(ValueType::Command))?;
+            env.declare("scope", Value::Type(ValueType::Scope))?;
+            env.declare("binary", Value::Type(ValueType::Binary))?;
+            env.declare("binary_stream", Value::Type(ValueType::BinaryStream))?;
+            env.declare("field", Value::Type(ValueType::Field))?;
+            env.declare("empty", Value::Type(ValueType::Empty))?;
+            env.declare("float", Value::Type(ValueType::Float))?;
+            env.declare("integer", Value::Type(ValueType::Integer))?;
+            env.declare("list", Value::Type(ValueType::List(Box::from(ValueType::Empty))))?;
+            env.declare("string", Value::Type(ValueType::String))?;
+            env.declare("glob", Value::Type(ValueType::Glob))?;
+            env.declare("re", Value::Type(ValueType::Regex))?;
+            env.declare("duration", Value::Type(ValueType::Duration))?;
+            env.declare("time", Value::Type(ValueType::Time))?;
+            env.declare("dict", Value::Type(ValueType::Dict(
+                Box::from(ValueType::Empty),
+                Box::from(ValueType::Empty))))?;
 
-    env.declare("table", Value::Type(ValueType::Table(vec![])))?;
-    env.declare("table_stream", Value::Type(ValueType::TableStream(vec![])))?;
-    env.declare("struct", Value::Type(ValueType::Struct))?;
+            env.declare("table", Value::Type(ValueType::Table(vec![])))?;
+            env.declare("table_stream", Value::Type(ValueType::TableStream(vec![])))?;
+            env.declare("struct", Value::Type(ValueType::Struct))?;
 
-    env.readonly();
+            env.readonly();
 
+            Ok(())
+        }))?;
+    root.r#use(&e);
     Ok(())
 }

@@ -13,22 +13,22 @@ pub struct CommandInvocation {
     arguments: Vec<ArgumentDefinition>,
 }
 
-fn resolve_external_command(name: &str, env: &Scope) -> Option<Box<Path>> {
-    if let Value::List(path) = env.get("cmd_path")? {
+fn resolve_external_command(name: &str, env: &Scope) -> CrushResult<Option<Box<Path>>> {
+    if let Some(Value::List(path)) = env.get("cmd_path")? {
         let path_vec = path.dump();
         for val in path_vec {
             match val {
                 Value::File(el) => {
                     let full = el.join(name);
                     if full.exists() {
-                        return Some(full.into_boxed_path());
+                        return Ok(Some(full.into_boxed_path()));
                     }
                 }
                 _ => {}
             }
         }
     }
-    None
+    Ok(None)
 }
 
 fn arg_can_block(local_arguments: &Vec<ArgumentDefinition>, context: &mut CompileContext) -> bool {
@@ -244,7 +244,7 @@ fn try_external_command(
         _ => return error("Not a command"),
     };
 
-    match resolve_external_command(&cmd, &context.env) {
+    match resolve_external_command(&cmd, &context.env)? {
         None => error(format!("Unknown command name {}", cmd).as_str()),
         Some(path) => {
             arguments.insert(

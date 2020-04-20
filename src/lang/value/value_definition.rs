@@ -65,13 +65,13 @@ impl ValueDefinition {
                 (None, Value::Command(CrushCommand::closure(name.clone(), p.clone(), c.clone(), &context.env))),
             ValueDefinition::Label(s) =>
                 (None, mandate(
-                    context.env.get(s).or_else(|| file_get(s)),
+                    context.env.get(s)?.or_else(|| file_get(s)),
                     format!("Unknown variable {}", self.to_string()).as_str())?),
 
             ValueDefinition::GetAttr(parent_def, entry) => {
                 let parent = parent_def.compile_internal(context, can_block)?.1;
                 let val = mandate(
-                    parent.field(&entry),
+                    parent.field(&entry)?,
                     format!("Missing field {} in value of type {}", entry, parent.value_type().to_string()).as_str())?;
                 (Some(parent), val)
             }

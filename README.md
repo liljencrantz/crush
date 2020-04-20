@@ -334,7 +334,7 @@ re-executed until the stream is empty.
 ### More SQL-like data stream operations
 
 Crush features many commands to operate om arbitrary streams of data using a
-SQL-like syntax. These commands use field-specifiers like ^foo to specify
+SQL-like syntax. These commands use field-specifiers like `^foo` to specify
 columns in the data stream that they operate on:
 
     ps | where {user == "root"} | group ^status | aggr proc_per_status={count}
@@ -387,7 +387,7 @@ matching and replacement:
 
 Crush has built-in lists:
 
-    crush> l := (list.of 1 2 3)
+    crush> l := (list:of 1 2 3)
     crush> l
     [1, 2, 3]
     crush> l:peek
@@ -423,7 +423,7 @@ Crush has built-in lists:
 
 and dictionaries:
 
-    crush> d := ((dict string integer):new)
+    crush> d := (dict string integer):new
     crush> d["foo"] = 42
     crush> d["foo"]
     42
@@ -446,10 +446,10 @@ and dictionaries:
 
 Crush has two data types for dealing with time: `time` and `duration`.
 
-    crush> start := (time:now)
+    crush> start := time:now
     crush> something_that_takes_a_lot_of_time
-    crush> end := (time:now)
-    crush> echo ("We spent {} on the thing" end - start)
+    crush> end := time:now
+    crush> echo ("We spent {} on the thing":format end - start)
     4:06
 
 The mathematical operators that make sense are defined for `time` and
@@ -470,7 +470,7 @@ computers memory, and even infinite data sets.
 But sometimes, streaming data sets are inconvenient, especially if one wants to
 use the same dataset twice.
 
-    crush> files := (ls)
+    crush> files := ls
     crush> files
     user         size  modified                  type      file
     liljencrantz  1307 2020-03-26 01:08:45 +0100 file      ideas
@@ -586,7 +586,8 @@ Crush features several shortcuts to make working with external commands easier.
   `git commit --message "hello"`.
 * Thirdly, named arguments with a value of boolean true are simply turned into
   options without a value, so for example `git:commit --a --append` (or 
-  `git:commit a=true append=true`) is converted into `git commit -a --append`.
+  `git:commit a=true append=true` for that matter) is converted into
+  `git commit -a --append`.
 
 Further work is required when it comes to job control, terminal emulation and various
 other integration points.

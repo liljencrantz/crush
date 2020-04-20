@@ -11,12 +11,11 @@ use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use lib::declare;
 use crate::lang::errors::{CrushResult, to_crush_error};
-use crate::lang::printer;
+use crate::lang::{printer, execute};
 use crate::lang::stream::empty_channel;
 use crate::lang::pretty_printer::create_pretty_printer;
 use crate::util::file::home;
-use std::path::Path;
-use std::fs;
+use std::path::{Path, PathBuf};
 use crate::lang::parser::parse;
 use crate::lang::scope::Scope;
 use crate::lang::execution_context::JobContext;
@@ -86,29 +85,6 @@ fn run_interactive(global_env: Scope, printer: Printer) -> CrushResult<()> {
     Ok(())
 }
 
-
-fn run_script(global_env: Scope, filename: &str, printer: Printer) -> CrushResult<()> {
-    let cmd = to_crush_error(fs::read_to_string(filename))?;
-    match parse(&cmd.as_str(), &global_env) {//&mut Lexer::new(&cmd)) {
-        Ok(jobs) => {
-            for job_definition in jobs {
-                let last_output = create_pretty_printer(printer.clone());
-                match job_definition.invoke(JobContext::new(
-                    empty_channel(), last_output, global_env.clone(), printer.clone())) {
-                    Ok(handle) => {
-                        handle.join(&printer);
-                    }
-                    Err(e) => printer.crush_error(e),
-                }
-            }
-        }
-        Err(error) => {
-            printer.crush_error(error);
-        }
-    }
-    Ok(())
-}
-
 fn run() -> CrushResult<()> {
     let global_env = lang::scope::Scope::create_root();
     let (printer, print_handle) = printer::init();
@@ -116,11 +92,17 @@ fn run() -> CrushResult<()> {
     let my_scope = global_env.create_child(&global_env, false);
 
     let args = std::env::args().collect::<Vec<String>>();
+    let pretty_printer = create_pretty_printer(printer.clone());
     match args.len() {
         1 => run_interactive(my_scope, printer)?,
-        2 => run_script(my_scope, args[1].as_str(), printer)?,
+        2 => execute::file(
+            my_scope,
+            PathBuf::from(&args[1]).as_path(),
+            &printer,
+            &pretty_printer)?,
         _ => {}
     }
+    drop (pretty_printer);
     let _ = print_handle.join();
     Ok(())
 }

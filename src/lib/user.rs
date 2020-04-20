@@ -41,12 +41,16 @@ fn gid(context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    let env = root.create_namespace("user")?;
-    env.declare_command("home", home_fun, false, "home", "Current users home directory", None)?;
-    env.declare_command("name", name, false, "name", "Current users name", None)?;
-    env.declare_command("group", group, false, "group", "Current group name", None)?;
-    env.declare_command("uid", uid, false, "uid", "Current users user id", None)?;
-    env.declare_command("gid", gid, false, "gid", "Current users group id", None)?;
-    env.readonly();
+    root.create_lazy_namespace(
+        "user",
+        Box::new(move |env: &Scope| {
+            env.declare_command("home", home_fun, false, "home", "Current users home directory", None)?;
+            env.declare_command("name", name, false, "name", "Current users name", None)?;
+            env.declare_command("group", group, false, "group", "Current group name", None)?;
+            env.declare_command("uid", uid, false, "uid", "Current users user id", None)?;
+            env.declare_command("gid", gid, false, "gid", "Current users group id", None)?;
+            env.readonly();
+            Ok(())
+        }))?;
     Ok(())
 }

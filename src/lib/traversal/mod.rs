@@ -73,31 +73,35 @@ members of a value, write "dir <value>".
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    let env = root.create_namespace("traversal")?;
-    root.r#use(&env);
-    env.declare_command(
-        "ls", find::perform_ls, true,
-        "ls @file:file", "Non-recursively list files", None)?;
-    env.declare_command(
-        "find", find::perform_find, true,
-        "find @file:file",
-        "Recursively list files", None)?;
-    env.declare_command(
-        "cd", cd, true,
-        "cd directory:(file,string,glob)",
-        "Change to the specified working directory", None)?;
-    env.declare_command(
-        "pwd", pwd, false,
-        "pwd", "Return the current working directory", None)?;
-    env.declare_command(
-        "help", help, false,
-        "help topic:any",
-        "Show help about the specified thing",
-        Some(r#"    Examples:
+    let e = root.create_lazy_namespace(
+        "traversal",
+        Box::new(move |env: &Scope| {
+            env.declare_command(
+                "ls", find::perform_ls, true,
+                "ls @file:file", "Non-recursively list files", None)?;
+            env.declare_command(
+                "find", find::perform_find, true,
+                "find @file:file",
+                "Recursively list files", None)?;
+            env.declare_command(
+                "cd", cd, true,
+                "cd directory:(file,string,glob)",
+                "Change to the specified working directory", None)?;
+            env.declare_command(
+                "pwd", pwd, false,
+                "pwd", "Return the current working directory", None)?;
+            env.declare_command(
+                "help", help, false,
+                "help topic:any",
+                "Show help about the specified thing",
+                Some(r#"    Examples:
 
     help ls
     help integer
     help help"#))?;
-    env.readonly();
+            env.readonly();
+            Ok(())
+        }))?;
+    root.r#use(&e);
     Ok(())
 }

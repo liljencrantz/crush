@@ -4,16 +4,16 @@ use crate::lang::ast::*;
 grammar;
 
 pub JobList: JobListNode = {
-    Separator? => JobListNode {jobs: Vec::new()},
-    <l:NonEmptyJobList> => l,
+    Separator? <l:JobListWithoutSeparator> => l,
+};
+
+JobListWithoutSeparator: JobListNode = {
+    => JobListNode {jobs: vec![]},
+    <j: NonEmptyJobList> Separator? => j,
 };
 
 NonEmptyJobList: JobListNode = {
-    <j: NonEmptyJobListWithoutSeparator> Separator? => j,
-};
-
-NonEmptyJobListWithoutSeparator: JobListNode = {
-    <mut l:NonEmptyJobListWithoutSeparator> Separator <j:Job> =>  {l.jobs.push(j); l},
+    <mut l:NonEmptyJobList> Separator <j:Job> =>  {l.jobs.push(j); l},
     Job => JobListNode {jobs: vec![<>]},
 };
 
@@ -100,7 +100,7 @@ Item: Box<Node> = {
     Flag => Box::from(Node::Assignment(Box::from(Node::Label(Box::from(&<>[2..]))), Box::from("="), Box::from(Node::Label(Box::from("true"))))),
     <i: Item> "[" <e: Assignment> "]" => Box::from(Node::GetItem(i, e)),
     <i: Item> Colon <l: AnyLabel> => Box::from(Node::GetAttr(i, l)),
-    "{" Separator? <s: Signature> <l: NonEmptyJobList> "}" => Box::from(Node::Closure(s, l)),
+    "{" Separator? <s: Signature> <l: JobListWithoutSeparator> "}" => Box::from(Node::Closure(s, l)),
     "(" <j:Job> ")" => Box::from(Node::Substitution(j)),
 }
 

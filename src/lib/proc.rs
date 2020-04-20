@@ -52,7 +52,7 @@ fn ps(context: ExecutionContext) -> CrushResult<()> {
             Value::Integer(proc.ppid as i128),
             Value::string(state_name(proc.state)),
             users.get_name(proc.uid as uid_t),
-            Value::Duration(Duration::microseconds((proc.utime*1_000_000.0) as i64)),
+            Value::Duration(Duration::microseconds((proc.utime * 1_000_000.0) as i64)),
             Value::string(
                 proc.cmdline_vec().unwrap_or_else(|_| Some(vec!["<Illegal name>".to_string()]))
                     .unwrap_or_else(|| vec![format!("[{}]", proc.comm)])[0]
@@ -81,13 +81,13 @@ fn kill(context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    let env = root.create_namespace("proc")?;
-    root.r#use(&env);
-
-    env.declare_command(
-        "ps", ps, true,
-        "ps", "Return a table stream containing information on all running processes on the system.",
-        Some(r#"    ps accepts no arguments. Each row contains the following columns:
+    let e = root.create_lazy_namespace(
+        "proc",
+        Box::new(move |env: &Scope| {
+            env.declare_command(
+                "ps", ps, true,
+                "ps", "Return a table stream containing information on all running processes on the system.",
+                Some(r#"    ps accepts no arguments. Each row contains the following columns:
 
     * pid:integer the process id of the process
 
@@ -110,11 +110,11 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     * name:string the process name"#))?;
 
-    env.declare_command(
-        "kill", kill, false,
-        "kill [signal=signal:string] [pid=pid:integer...] @pid:integer",
-        "Send a signal to a set of processes",
-        Some(r"    Kill accepts the following arguments:
+            env.declare_command(
+                "kill", kill, false,
+                "kill [signal=signal:string] [pid=pid:integer...] @pid:integer",
+                "Send a signal to a set of processes",
+                Some(r"    Kill accepts the following arguments:
 
     * signal:string the name of the signal to send. If unspecified, the kill signal is sent.
       The set of existing signals is platform dependent, but common signals include
@@ -123,6 +123,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     * pid:integer the process ids of all process to signal."))?;
 
-    env.readonly();
+            env.readonly();
+            Ok(())
+        }))?;
+    root.r#use(&e);
     Ok(())
 }

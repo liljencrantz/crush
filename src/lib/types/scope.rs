@@ -26,5 +26,5 @@ fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
     let val = context.this.scope()?;
     context.arguments.check_len(1)?;
     let name = context.arguments.string(0)?;
-    context.output.send(mandate(val.get(name.as_ref()), "Unknown member")?)
+    context.output.send(mandate(val.get(name.as_ref())?, "Unknown member")?)
 }

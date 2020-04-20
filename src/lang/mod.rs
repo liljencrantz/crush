@@ -18,4 +18,5 @@ pub mod ast;
 pub mod help;
 pub mod execution_context;
 pub mod serialization;
+pub mod execute;
 

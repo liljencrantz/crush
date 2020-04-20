@@ -52,71 +52,75 @@ math_fun2!(pow, |x:f64, y:f64| x.powf(y));
 math_fun2!(log, |x:f64, y:f64| x.log(y));
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    let env = root.create_namespace("math")?;
-    env.declare_command(
-        "sin", sin, false,
-        "math:sin angle:float",
-        "The sine of the specified angle",
-        None)?;
-    env.declare_command(
-        "cos", cos, false,
-        "math:cos angle:float",
-        "The cosine of the specified angle",
-        None)?;
-    env.declare_command(
-        "tan", tan, false,
-        "math:tan angle:float",
-        "The tangent of the specified angle",
-        None)?;
-    env.declare_command(
-        "sqrt", sqrt, false,
-        "math:sqrt angle:float",
-        "The square root of the specified angle",
-        None)?;
-    env.declare_command(
-        "asin", asin, false,
-        "math:asin arc:float",
-        "The inverse sine of the specified arc",
-        None)?;
-    env.declare_command(
-        "acos", acos, false,
-        "math:acos arc:float",
-        "The inverse cosine of the specified arc",
-        None)?;
-    env.declare_command(
-        "atan", atan, false,
-        "math:atan arc:float",
-        "The inverse tangent of the specified arc",
-        None)?;
-    env.declare_command(
-        "pow", pow, false,
-        "math:pow number:float n:float",
-        "Raise the number to n",
-        None)?;
-    env.declare_command(
-        "log", log, false,
-        "math:log number:float base:float",
-        "The logarithm of number in the specified base",
-        None)?;
-    env.declare_command(
-        "ln", ln, false,
-        "math:ln number:float",
-        "The natural logarithm of number",
-        None)?;
-    env.declare_command(
-        "floor", floor, false,
-        "math:floor number:float",
-        "The largest integer smaller than number",
-        None)?;
-    env.declare_command(
-        "ceil", ceil, false,
-        "math:ceil number:float",
-        "The smallest integer larger than number",
-        None)?;
-    env.declare("pi", Value::Float(std::f64::consts::PI))?;
-    env.declare("tau", Value::Float(std::f64::consts::PI * 2.0))?;
-    env.declare("e", Value::Float(std::f64::consts::E))?;
+    root.create_lazy_namespace(
+        "math",
+        Box::new(move |env: &Scope| {
+            env.declare_command(
+                "sin", sin, false,
+                "math:sin angle:float",
+                "The sine of the specified angle",
+                None)?;
+            env.declare_command(
+                "cos", cos, false,
+                "math:cos angle:float",
+                "The cosine of the specified angle",
+                None)?;
+            env.declare_command(
+                "tan", tan, false,
+                "math:tan angle:float",
+                "The tangent of the specified angle",
+                None)?;
+            env.declare_command(
+                "sqrt", sqrt, false,
+                "math:sqrt angle:float",
+                "The square root of the specified angle",
+                None)?;
+            env.declare_command(
+                "asin", asin, false,
+                "math:asin arc:float",
+                "The inverse sine of the specified arc",
+                None)?;
+            env.declare_command(
+                "acos", acos, false,
+                "math:acos arc:float",
+                "The inverse cosine of the specified arc",
+                None)?;
+            env.declare_command(
+                "atan", atan, false,
+                "math:atan arc:float",
+                "The inverse tangent of the specified arc",
+                None)?;
+            env.declare_command(
+                "pow", pow, false,
+                "math:pow number:float n:float",
+                "Raise the number to n",
+                None)?;
+            env.declare_command(
+                "log", log, false,
+                "math:log number:float base:float",
+                "The logarithm of number in the specified base",
+                None)?;
+            env.declare_command(
+                "ln", ln, false,
+                "math:ln number:float",
+                "The natural logarithm of number",
+                None)?;
+            env.declare_command(
+                "floor", floor, false,
+                "math:floor number:float",
+                "The largest integer smaller than number",
+                None)?;
+            env.declare_command(
+                "ceil", ceil, false,
+                "math:ceil number:float",
+                "The smallest integer larger than number",
+                None)?;
+            env.declare("pi", Value::Float(std::f64::consts::PI))?;
+            env.declare("tau", Value::Float(std::f64::consts::PI * 2.0))?;
+            env.declare("e", Value::Float(std::f64::consts::E))?;
 
-    env.readonly();
+            env.readonly();
+            Ok(())
+        }))?;
     Ok(())
 }

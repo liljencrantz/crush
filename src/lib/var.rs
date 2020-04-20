@@ -25,7 +25,7 @@ pub fn unset(context: ExecutionContext) -> CrushResult<()> {
             if s.len() == 0 {
                 return argument_error("Illegal variable name");
             } else {
-                context.env.remove_str(s);
+                context.env.remove_str(s)?;
             }
         } else {
             return argument_error("Illegal variable name");
@@ -51,7 +51,7 @@ pub fn env(context: ExecutionContext) -> CrushResult<()> {
     ])?;
 
     let mut values: HashMap<String, ValueType> = HashMap::new();
-    context.env.dump(&mut values);
+    context.env.dump(&mut values)?;
 
     let mut keys = values.keys().collect::<Vec<&String>>();
     keys.sort();
@@ -67,30 +67,34 @@ pub fn env(context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    let ns = root.create_namespace("var")?;
-    ns.declare_command(
-        "let", r#let, false,
-        "name := value", "Declare a new variable", None)?;
-    ns.declare_command(
-        "set", set, false,
-        "name = value", "Assign a new value to an already existing variable", None)?;
-    ns.declare_command(
-        "unset", unset, false,
-        "scope name:string",
-        "Removes a variable from the namespace",
-        None)?;
-    ns.declare_command(
-        "env", env, false,
-        "env", "Returns a table containing the current namespace",
-        Some(r#"    The columns of the table are the name, and the type of the value."#))?;
-    ns.declare_command(
-        "use", r#use, false,
-        "use scope:scope",
-        "Puts the specified scope into the list of scopes to search in by default during scope lookups",
-        Some(r#"    Example:
+    root.create_lazy_namespace(
+        "var",
+        Box::new(move |ns: &Scope| {
+            ns.declare_command(
+                "let", r#let, false,
+                "name := value", "Declare a new variable", None)?;
+            ns.declare_command(
+                "set", set, false,
+                "name = value", "Assign a new value to an already existing variable", None)?;
+            ns.declare_command(
+                "unset", unset, false,
+                "scope name:string",
+                "Removes a variable from the namespace",
+                None)?;
+            ns.declare_command(
+                "env", env, false,
+                "env", "Returns a table containing the current namespace",
+                Some(r#"    The columns of the table are the name, and the type of the value."#))?;
+            ns.declare_command(
+                "use", r#use, false,
+                "use scope:scope",
+                "Puts the specified scope into the list of scopes to search in by default during scope lookups",
+                Some(r#"    Example:
 
     use math
     sqrt 1.0"#))?;
-    ns.readonly();
+            ns.readonly();
+            Ok(())
+        }))?;
     Ok(())
 }

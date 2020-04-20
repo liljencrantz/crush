@@ -60,7 +60,6 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
                             Ok(Value::Table(Table::new(struct_types.iter().next().unwrap().clone(), row_list)))
                         }
                         _ => Ok(Value::List(List::new(list_type.clone(), lst)))
-
                     }
                 }
                 _ => Ok(Value::List(List::new(ValueType::Any, lst))),
@@ -77,7 +76,7 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
                             Err(e) => Err(e)
                         })
                         .collect::<Result<Vec<(Box<str>, Value)>, CrushError>>()?,
-                None,
+                    None,
                 )))
         }
     }
@@ -86,7 +85,7 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
 fn to_json(value: Value) -> CrushResult<serde_json::Value> {
     match value.materialize() {
         Value::File(s) =>
-            Ok(serde_json::Value::from(mandate(s.to_str(),"Invalid filename")?)),
+            Ok(serde_json::Value::from(mandate(s.to_str(), "Invalid filename")?)),
 
         Value::String(s) => Ok(serde_json::Value::from(s.as_ref())),
 
@@ -154,11 +153,13 @@ fn to(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    let env = root.create_namespace("json")?;
-    env.declare_command(
-        "from",from, true,
-        "json:from [file:file]", "Parse json", Some(
-            r#"    Input can either be a binary stream or a file.
+    root.create_lazy_namespace(
+        "json",
+        Box::new(move |env: &Scope| {
+            env.declare_command(
+                "from", from, true,
+                "json:from [file:file]", "Parse json", Some(
+                    r#"    Input can either be a binary stream or a file.
 
     Examples:
 
@@ -166,16 +167,18 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     (http "https://jsonplaceholder.typicode.com/todos/3"):body | json:from"#))?;
 
-    env.declare_command(
-        "to", to, true,
-        "json:to [file:file]", "Serialize to json format", Some(
-            r#"    If no file is specified, output is returned as a BinaryStream.
+            env.declare_command(
+                "to", to, true,
+                "json:to [file:file]", "Serialize to json format", Some(
+                    r#"    If no file is specified, output is returned as a BinaryStream.
 
     Examples:
 
     ls | json:to"#))?;
-    env.readonly();
+            env.readonly();
 
+            Ok(())
+        }))?;
     Ok(())
 }
 

@@ -6,18 +6,22 @@ pub mod input;
 #[macro_use]
 pub mod binary_op;
 
-pub mod comp;
-pub mod cond;
-pub mod stream;
+mod comp;
+mod cond;
+mod stream;
 pub mod types;
-pub mod control;
-pub mod constants;
-pub mod math;
+mod control;
+mod constants;
+mod math;
 mod toml;
 mod json;
 mod user;
 
 use crate::{lang::scope::Scope, lang::errors::CrushResult};
+
+pub fn declare_non_native(root: &Scope) -> CrushResult<()> {
+    Ok(())
+}
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     comp::declare(root)?;
@@ -34,6 +38,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     toml::declare(root)?;
     json::declare(root)?;
     user::declare(root)?;
+
+    declare_non_native(root)?;
+
     root.readonly();
     Ok(())
 }

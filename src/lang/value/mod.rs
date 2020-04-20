@@ -92,12 +92,12 @@ impl Value {
         }
     }
 
-    pub fn field(&self, name: &str) -> Option<Value> {
-        match self {
+    pub fn field(&self, name: &str) -> CrushResult<Option<Value>> {
+        Ok(match self {
             Value::Struct(s) => s.get(name),
             Value::Scope(subenv) =>
                 subenv
-                    .get(name)
+                    .get(name)?
                     .or_else(|| {
                         self.value_type()
                             .fields()
@@ -113,7 +113,7 @@ impl Value {
                     .fields()
                     .get(&Box::from(name))
                     .map(|m| Value::Command(m.as_ref().clone())),
-        }
+        })
     }
 
     pub fn fields(&self) -> Vec<Box<str>> {
@@ -138,8 +138,8 @@ impl Value {
             0 =>
                 error("Invalid path"),
             1 => Ok(self.clone()),
-            2 => mandate(self.field(&path[1]), "Invalid path"),
-            _ => mandate(self.field(&path[1]), "Invalid path")?.get_recursive(&path[1..]),
+            2 => mandate(self.field(&path[1])?, "Invalid path"),
+            _ => mandate(self.field(&path[1])?, "Invalid path")?.get_recursive(&path[1..]),
         }
     }
 

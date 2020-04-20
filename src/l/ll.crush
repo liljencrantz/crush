@@ -1,0 +1,7 @@
+
+l := {
+    |@args @@kwargs|
+#    find recursive=false @args @@kwargs | select ^file
+    ls @args @@kwargs | select ^file
+}
+

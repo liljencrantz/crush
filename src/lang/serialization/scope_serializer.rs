@@ -79,7 +79,7 @@ impl Serializable<Scope> for Scope {
                     }
                     Err(_) => {
                         let mut sscope: model::Scope = model::Scope::default();
-                        let scope_data = self.export();
+                        let scope_data = self.export()?;
 
                         match scope_data.name {
                             None => {
