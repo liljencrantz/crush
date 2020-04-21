@@ -26,40 +26,14 @@ pub struct Scope {
     data: Arc<Mutex<ScopeData>>,
 }
 
-pub trait ScopeLoader {
-    fn declare(&mut self, name: &str, value: Value) -> CrushResult<()>;
-
-    fn declare_command(
-        &mut self, name: &str,
-        call: fn(context: ExecutionContext) -> CrushResult<()>,
-        can_block: bool,
-        signature: &'static str,
-        short_help: &'static str,
-        long_help: Option<&'static str>,
-    ) -> CrushResult<()>;
-
-    fn declare_condition_command(
-        &mut self, name: &str,
-        call: fn(context: ExecutionContext) -> CrushResult<()>,
-        signature: &'static str,
-        short_help: &'static str,
-        long_help: Option<&'static str>,
-    ) -> CrushResult<()>;
-
-    fn copy_into(&mut self, target: &mut HashMap<Box<str>, Value>);
-
-    fn create_temporary_namespace(&self) -> CrushResult<Scope>;
-
-}
-
-struct ScopeLoaderImpl {
+pub struct ScopeLoader {
     mapping: HashMap<Box<str>, Value>,
     path: Vec<Box<str>>,
     parent: Scope,
 }
 
-impl ScopeLoader for ScopeLoaderImpl {
-    fn declare(&mut self, name: &str, value: Value) -> CrushResult<()> {
+impl ScopeLoader {
+    pub fn declare(&mut self, name: &str, value: Value) -> CrushResult<()> {
         if self.mapping.contains_key(name) {
             return error(format!("Variable ${{{}}} already exists", name).as_str());
         }
@@ -67,7 +41,7 @@ impl ScopeLoader for ScopeLoaderImpl {
         Ok(())
     }
 
-    fn declare_command(&mut self, name: &str, call: fn(ExecutionContext) -> CrushResult<()>, can_block: bool, signature: &'static str, short_help: &'static str, long_help: Option<&'static str>) -> CrushResult<()> {
+    pub fn declare_command(&mut self, name: &str, call: fn(ExecutionContext) -> CrushResult<()>, can_block: bool, signature: &'static str, short_help: &'static str, long_help: Option<&'static str>) -> CrushResult<()> {
         let mut full_name = self.path.clone();
         full_name.push(Box::from(name));
         let command = CrushCommand::command(call, can_block, full_name, signature, short_help, long_help);
@@ -78,7 +52,7 @@ impl ScopeLoader for ScopeLoaderImpl {
         Ok(())
     }
 
-    fn declare_condition_command(
+    pub fn declare_condition_command(
         &mut self, name: &str,
         call: fn(context: ExecutionContext) -> CrushResult<()>,
         signature: &'static str,
@@ -101,7 +75,7 @@ impl ScopeLoader for ScopeLoaderImpl {
         }
     }
 
-    fn create_temporary_namespace(&self) -> CrushResult<Scope> {
+    pub fn create_temporary_namespace(&self) -> CrushResult<Scope> {
         let res = Scope {
             data: Arc::from(Mutex::new(ScopeData::new(
                 Some(self.parent.clone()),
@@ -147,7 +121,7 @@ pub struct ScopeData {
 
     pub name: Option<Box<str>>,
     is_loaded: bool,
-    loader: Option<Box<dyn Send + FnOnce(&mut Box<dyn ScopeLoader>) -> CrushResult<()>>>,
+    loader: Option<Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>>,
 }
 
 impl ScopeData {
@@ -166,7 +140,7 @@ impl ScopeData {
         }
     }
 
-    fn lazy(parent_scope: Option<Scope>, calling_scope: Option<Scope>, is_loop: bool, name: Option<Box<str>>, loader: Box<dyn Send + FnOnce(&mut Box<dyn ScopeLoader>) -> CrushResult<()>>) -> ScopeData {
+    fn lazy(parent_scope: Option<Scope>, calling_scope: Option<Scope>, is_loop: bool, name: Option<Box<str>>, loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>) -> ScopeData {
         ScopeData {
             parent_scope,
             calling_scope,
@@ -238,7 +212,7 @@ impl Scope {
         }
     }
 
-    pub fn create_lazy_namespace(&self, name: &str, loader: Box<dyn Send + FnOnce(&mut Box<dyn ScopeLoader>) -> CrushResult<()>>) -> CrushResult<Scope> {
+    pub fn create_lazy_namespace(&self, name: &str, loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>) -> CrushResult<Scope> {
         let res = Scope {
             data: Arc::from(Mutex::new(ScopeData::lazy(None, Some(self.clone()), false, Some(Box::from(name)), loader))),
         };
@@ -309,11 +283,11 @@ impl Scope {
         }
         data.is_loaded = true;
         let loader = mandate(data.loader.take(), "Missing module loader")?;
-        let mut tmp: Box<dyn ScopeLoader> = Box::new(ScopeLoaderImpl {
+        let mut tmp = ScopeLoader {
             mapping: HashMap::new(),
             path,
             parent: data.calling_scope.as_ref().unwrap().clone(),
-        });
+        };
         loader(&mut tmp)?;
         tmp.copy_into(&mut data.mapping);
         data.is_readonly = true;
@@ -453,7 +427,7 @@ impl Scope {
     }
 
     pub fn remove_str(&self, name: &str) -> CrushResult<Option<Value>> {
-        let n = &name.split(':').map(|e: &str| Box::from(e)).collect::<Vec<Box<str>>>()[..];
+        let n = &name.split(':').map(Box::from).collect::<Vec<Box<str>>>()[..];
         self.remove(n)
     }
 
@@ -523,11 +497,8 @@ impl Scope {
     }
 
     pub fn dump(&self, map: &mut HashMap<String, ValueType>) -> CrushResult<()> {
-        match self.lock()?.parent_scope.clone() {
-            Some(p) => {
-                p.dump(map)?;
-            }
-            None => {}
+        if let Some(p) = self.lock()?.parent_scope.clone() {
+            p.dump(map)?;
         }
 
         for u in self.data.lock().unwrap().uses.clone().iter().rev() {

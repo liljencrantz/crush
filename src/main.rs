@@ -12,13 +12,10 @@ use rustyline::Editor;
 use lib::declare;
 use crate::lang::errors::{CrushResult, to_crush_error};
 use crate::lang::{printer, execute};
-use crate::lang::stream::empty_channel;
 use crate::lang::pretty_printer::create_pretty_printer;
 use crate::util::file::home;
 use std::path::{Path, PathBuf};
-use crate::lang::parser::parse;
 use crate::lang::scope::Scope;
-use crate::lang::execution_context::JobContext;
 use crate::lang::printer::Printer;
 
 fn crush_history_file() -> Box<str> {
@@ -45,22 +42,7 @@ fn run_interactive(global_env: Scope, printer: Printer) -> CrushResult<()> {
             Ok(cmd) => {
                 if !cmd.is_empty() {
                     rl.add_history_entry(cmd.as_str());
-                    match parse(&cmd.as_str(), &global_env) {//&mut Lexer::new(&cmd)) {
-                        Ok(jobs) => {
-                            for job_definition in jobs {
-                                match job_definition.invoke(JobContext::new(
-                                    empty_channel(), pretty_printer.clone(), global_env.clone(), printer.clone())) {
-                                    Ok(handle) => {
-                                        handle.join(&printer);
-                                    }
-                                    Err(e) => printer.crush_error(e),
-                                }
-                            }
-                        }
-                        Err(error) => {
-                            printer.crush_error(error);
-                        }
-                    }
+                    execute::string(global_env.clone(),&cmd.as_str(), &printer, &pretty_printer);
                 }
             }
             Err(ReadlineError::Interrupted) => {

@@ -17,7 +17,6 @@ impl ArgumentType {
         matches!(self, ArgumentType::Some(_))
     }
 
-
     pub fn is_this(&self) -> bool {
         if let ArgumentType::Some(v) = self {
             v.as_ref() == "this"

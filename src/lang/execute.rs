@@ -10,7 +10,12 @@ use std::path::Path;
 pub fn file(global_env: Scope, filename: &Path, printer: &Printer, output: &ValueSender) -> CrushResult<()> {
     let cmd = to_crush_error(fs::read_to_string(filename))?;
 
-    match parse(&cmd.as_str(), &global_env) {
+    string(global_env,&cmd.as_str(), printer, output);
+    Ok(())
+}
+
+pub fn string(global_env: Scope, s: &str, printer: &Printer, output: &ValueSender) {
+    match parse(s, &global_env) {
         Ok(jobs) => {
             for job_definition in jobs {
                 match job_definition.invoke(JobContext::new(
@@ -26,5 +31,4 @@ pub fn file(global_env: Scope, filename: &Path, printer: &Printer, output: &Valu
             printer.crush_error(error);
         }
     }
-    Ok(())
 }
