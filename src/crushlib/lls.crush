@@ -1,10 +1,12 @@
 
 ls := {
     |@args @@kwargs|
+    "List names of files non-recursively"
     find recursive=false @args @@kwargs | select ^file | sort ^file
 }
 
 ll := {
     |@args @@kwargs|
+    "List files non-recursively"
     find recursive=false @args @@kwargs | sort ^file
 }

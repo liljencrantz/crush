@@ -116,18 +116,20 @@ impl ColumnType {
             .collect()
     }
 
-    pub fn to_string(&self) -> String {
-        format!("{}=({})", self.name, self.cell_type.to_string())
-    }
-
     pub fn new(name: &str, cell_type: ValueType) -> ColumnType {
         ColumnType { name: Box::from(name), cell_type }
     }
 }
 
+impl ToString for ColumnType {
+    fn to_string(&self) -> String {
+        format!("{}=({})", self.name, self.cell_type.to_string())
+    }
+}
+
 pub trait ColumnVec {
     fn find_str(&self, needle: &str) -> CrushResult<usize>;
-    fn find(&self, needle: &Vec<Box<str>>) -> CrushResult<usize>;
+    fn find(&self, needle: &[Box<str>]) -> CrushResult<usize>;
 }
 
 impl ColumnVec for &[ColumnType] {
@@ -144,7 +146,7 @@ impl ColumnVec for &[ColumnType] {
         ).as_str())
     }
 
-    fn find(&self, needle_vec: &Vec<Box<str>>) -> CrushResult<usize> {
+    fn find(&self, needle_vec: &[Box<str>]) -> CrushResult<usize> {
         if needle_vec.len() != 1 {
             argument_error("Expected direct field")
         } else {

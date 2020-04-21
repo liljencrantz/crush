@@ -128,11 +128,11 @@ impl Struct {
             .map(|(idx, v)| (reverse_lookup[&idx].to_string().into_boxed_str(), v.clone())).collect()
     }
 
-    pub fn into_row(&self) -> Row {
+    pub fn to_row(&self) -> Row {
         Row::new(self.data.lock().unwrap().cells.clone())
     }
 
-    pub fn into_vec(&self) -> Vec<Value> {
+    pub fn to_vec(&self) -> Vec<Value> {
         self.data.lock().unwrap().cells.clone()
     }
 

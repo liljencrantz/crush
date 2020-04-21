@@ -53,7 +53,7 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
                             let row_list = lst
                                 .drain(..)
                                 .map(|v| match v {
-                                    Value::Struct(r) => Ok(r.into_row()),
+                                    Value::Struct(r) => Ok(r.to_row()),
                                     _ => error("Impossible!")
                                 })
                                 .collect::<CrushResult<Vec<Row>>>()?;

@@ -58,10 +58,10 @@ impl OutputStream {
             OutputStream::Sync(s) => s.send(row),
             OutputStream::Async(s) => s.send(row),
         };
-        return match native_output {
+        match native_output {
             Ok(_) => Ok(()),
             Err(_) => error("Broken pipe"),
-        };
+        }
     }
 }
 

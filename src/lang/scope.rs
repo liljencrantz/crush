@@ -59,6 +59,14 @@ struct ScopeLoaderImpl {
 }
 
 impl ScopeLoader for ScopeLoaderImpl {
+    fn declare(&mut self, name: &str, value: Value) -> CrushResult<()> {
+        if self.mapping.contains_key(name) {
+            return error(format!("Variable ${{{}}} already exists", name).as_str());
+        }
+        self.mapping.insert(Box::from(name), value);
+        Ok(())
+    }
+
     fn declare_command(&mut self, name: &str, call: fn(ExecutionContext) -> CrushResult<()>, can_block: bool, signature: &'static str, short_help: &'static str, long_help: Option<&'static str>) -> CrushResult<()> {
         let mut full_name = self.path.clone();
         full_name.push(Box::from(name));
@@ -67,14 +75,6 @@ impl ScopeLoader for ScopeLoaderImpl {
             return error(format!("Variable ${{{}}} already exists", name).as_str());
         }
         self.mapping.insert(Box::from(name), Value::Command(command));
-        Ok(())
-    }
-
-    fn declare(&mut self, name: &str, value: Value) -> CrushResult<()> {
-        if self.mapping.contains_key(name) {
-            return error(format!("Variable ${{{}}} already exists", name).as_str());
-        }
-        self.mapping.insert(Box::from(name), value);
         Ok(())
     }
 

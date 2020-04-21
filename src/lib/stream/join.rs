@@ -131,7 +131,7 @@ pub fn run(
     output: OutputStream,
     printer: &Printer,
 ) -> CrushResult<()> {
-    let mut v = row.into_vec();
+    let mut v = row.to_vec();
     match (v.replace(config.left_table_idx, Value::Integer(0)).readable(), v.replace(config.right_table_idx, Value::Integer(0)).readable()) {
         (Some(mut l), Some(mut r)) =>
             do_join(&config, l.as_mut(), r.as_mut(), &output, printer),
