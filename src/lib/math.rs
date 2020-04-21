@@ -54,7 +54,7 @@ math_fun2!(log, |x:f64, y:f64| x.log(y));
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_lazy_namespace(
         "math",
-        Box::new(move |env: &Scope| {
+        Box::new(move |env| {
             env.declare_command(
                 "sin", sin, false,
                 "math:sin angle:float",
@@ -118,8 +118,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare("pi", Value::Float(std::f64::consts::PI))?;
             env.declare("tau", Value::Float(std::f64::consts::PI * 2.0))?;
             env.declare("e", Value::Float(std::f64::consts::E))?;
-
-            env.readonly();
             Ok(())
         }))?;
     Ok(())

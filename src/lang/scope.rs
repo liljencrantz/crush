@@ -8,11 +8,6 @@ use crate::lang::r#struct::Struct;
 use crate::util::identity_arc::Identity;
 use crate::lang::help::Help;
 use std::cmp::max;
-use lazy_static::lazy_static;
-
-lazy_static! {
-    pub static ref GLOBAL_NAMESPACE_LOCK: Mutex<()> = Mutex::new(());
-}
 
 /**
   This is where we store variables, including functions.
@@ -31,6 +26,86 @@ pub struct Scope {
     data: Arc<Mutex<ScopeData>>,
 }
 
+pub trait ScopeLoader {
+    fn declare(&mut self, name: &str, value: Value) -> CrushResult<()>;
+
+    fn declare_command(
+        &mut self, name: &str,
+        call: fn(context: ExecutionContext) -> CrushResult<()>,
+        can_block: bool,
+        signature: &'static str,
+        short_help: &'static str,
+        long_help: Option<&'static str>,
+    ) -> CrushResult<()>;
+
+    fn declare_condition_command(
+        &mut self, name: &str,
+        call: fn(context: ExecutionContext) -> CrushResult<()>,
+        signature: &'static str,
+        short_help: &'static str,
+        long_help: Option<&'static str>,
+    ) -> CrushResult<()>;
+
+    fn copy_into(&mut self, target: &mut HashMap<Box<str>, Value>);
+
+    fn parent(&self) -> &Scope;
+}
+
+struct ScopeLoaderImpl {
+    mapping: HashMap<Box<str>, Value>,
+    path: Vec<Box<str>>,
+    parent: Scope,
+}
+
+impl ScopeLoader for ScopeLoaderImpl {
+    fn declare_command(&mut self, name: &str, call: fn(ExecutionContext) -> CrushResult<()>, can_block: bool, signature: &'static str, short_help: &'static str, long_help: Option<&'static str>) -> CrushResult<()> {
+        let mut full_name = self.path.clone();
+        full_name.push(Box::from(name));
+        let command = CrushCommand::command(call, can_block, full_name, signature, short_help, long_help);
+        if self.mapping.contains_key(name) {
+            return error(format!("Variable ${{{}}} already exists", name).as_str());
+        }
+        self.mapping.insert(Box::from(name), Value::Command(command));
+        Ok(())
+    }
+
+    fn declare(&mut self, name: &str, value: Value) -> CrushResult<()> {
+        if self.mapping.contains_key(name) {
+            return error(format!("Variable ${{{}}} already exists", name).as_str());
+        }
+        self.mapping.insert(Box::from(name), value);
+        Ok(())
+    }
+
+    fn declare_condition_command(
+        &mut self, name: &str,
+        call: fn(context: ExecutionContext) -> CrushResult<()>,
+        signature: &'static str,
+        short_help: &'static str,
+        long_help: Option<&'static str>,
+    ) -> CrushResult<()> {
+        let mut full_name = self.path.clone();
+        full_name.push(Box::from(name));
+        let command = CrushCommand::condition(call, full_name, signature, short_help, long_help);
+        if self.mapping.contains_key(name) {
+            return error(format!("Variable ${{{}}} already exists", name).as_str());
+        }
+        self.mapping.insert(Box::from(name), Value::Command(command));
+        Ok(())
+    }
+
+    fn copy_into(&mut self, target: &mut HashMap<Box<str>, Value>) {
+        for (k, v) in self.mapping.drain() {
+            target.insert(k, v);
+        }
+    }
+
+    fn parent(&self) -> &Scope {
+        &self.parent
+    }
+
+}
+
 pub struct ScopeData {
     /** This is the parent scope used to perform variable name resolution. If a variable lookup
      fails in the current scope, it proceeds to this scope. This is usually the scope in which this
@@ -39,6 +114,7 @@ pub struct ScopeData {
      Not that when scopes are used as namespaces, they do not use this scope.
      */
     pub parent_scope: Option<Scope>,
+
     /** This is the scope in which the current scope was called. Since a closure can be called
      from inside any scope, it need not be the same as the parent scope. This scope is the one used
      for break/continue loop control, and it is also the scope that builds up the namespace hierarchy. */
@@ -64,7 +140,7 @@ pub struct ScopeData {
 
     pub name: Option<Box<str>>,
     is_loaded: bool,
-    loader: Option<Box<dyn Send + FnOnce(&Scope) -> CrushResult<()>>>,
+    loader: Option<Box<dyn Send + FnOnce(&mut Box<dyn ScopeLoader>) -> CrushResult<()>>>,
 }
 
 impl ScopeData {
@@ -83,7 +159,7 @@ impl ScopeData {
         }
     }
 
-    fn lazy(parent_scope: Option<Scope>, calling_scope: Option<Scope>, is_loop: bool, name: Option<Box<str>>, loader: Box<dyn Send + FnOnce(&Scope) -> CrushResult<()>>) -> ScopeData {
+    fn lazy(parent_scope: Option<Scope>, calling_scope: Option<Scope>, is_loop: bool, name: Option<Box<str>>, loader: Box<dyn Send + FnOnce(&mut Box<dyn ScopeLoader>) -> CrushResult<()>>) -> ScopeData {
         ScopeData {
             parent_scope,
             calling_scope,
@@ -155,6 +231,21 @@ impl Scope {
         }
     }
 
+    pub fn create_temporary_namespace(&self, name: &str) -> CrushResult<Scope> {
+        let res = Scope {
+            data: Arc::from(Mutex::new(ScopeData::new(Some(self.clone()), Some(self.clone()), false, Some(Box::from(name))))),
+        };
+        Ok(res)
+    }
+
+    pub fn create_lazy_namespace(&self, name: &str, loader: Box<dyn Send + FnOnce(&mut Box<dyn ScopeLoader>) -> CrushResult<()>>) -> CrushResult<Scope> {
+        let res = Scope {
+            data: Arc::from(Mutex::new(ScopeData::lazy(None, Some(self.clone()), false, Some(Box::from(name)), loader))),
+        };
+        self.declare(name, Value::Scope(res.clone()))?;
+        Ok(res)
+    }
+
     pub fn do_continue(&self) -> CrushResult<bool> {
         let data = self.lock()?;
         if data.is_readonly {
@@ -202,58 +293,36 @@ impl Scope {
         self.data.lock().unwrap().is_stopped
     }
 
-    pub fn create_lazy_namespace(&self, name: &str, loader: Box<dyn Send + FnOnce(&Scope) -> CrushResult<()>>) -> CrushResult<Scope> {
-        let res = Scope {
-            data: Arc::from(Mutex::new(ScopeData::lazy(None, Some(self.clone()), false, Some(Box::from(name)), loader))),
-        };
-        self.declare(name, Value::Scope(res.clone()))?;
-        Ok(res)
-    }
-
-    pub fn declare_command(
-        &self, name: &str,
-        call: fn(context: ExecutionContext) -> CrushResult<()>,
-        can_block: bool,
-        signature: &'static str,
-        short_help: &'static str,
-        long_help: Option<&'static str>,
-    ) -> CrushResult<()> {
-        let mut full_name = self.full_path()?;
-        full_name.push(Box::from(name));
-        let command = CrushCommand::command(call, can_block, full_name, signature, short_help, long_help);
-        self.declare(name, Value::Command(command))
-    }
-
-    pub fn declare_condition_command(
-        &self, name: &str,
-        call: fn(context: ExecutionContext) -> CrushResult<()>,
-        signature: &'static str,
-        short_help: &'static str,
-        long_help: Option<&'static str>,
-    ) -> CrushResult<()> {
-        let mut full_name = self.full_path()?;
-        full_name.push(Box::from(name));
-        let command = CrushCommand::condition(call, full_name, signature, short_help, long_help);
-        self.declare(name, Value::Command(command))
-    }
 
     fn lock(&self) -> CrushResult<MutexGuard<ScopeData>> {
         let mut data = self.data.lock().unwrap();
-        if !data.is_loaded {
-            let l = GLOBAL_NAMESPACE_LOCK.lock();
-            data.is_loaded = true;
-            let loader = mandate(data.loader.take(), "Missing module loader")?;
-            drop(data);
-            loader(self)?;
-            drop(l);
-            self.lock()
-        } else {
-            Ok(data)
+        if data.is_loaded {
+            return Ok(data);
         }
+
+        drop(data);
+        let path = self.full_path()?;
+
+        data = self.data.lock().unwrap();
+        if data.is_loaded {
+            return Ok(data);
+        }
+        data.is_loaded = true;
+        let loader = mandate(data.loader.take(), "Missing module loader")?;
+        let mut tmp: Box<dyn ScopeLoader> = Box::new(ScopeLoaderImpl {
+            mapping: HashMap::new(),
+            path,
+            parent: data.calling_scope.as_ref().unwrap().clone(),
+        });
+        loader(&mut tmp)?;
+        tmp.copy_into(&mut data.mapping);
+        data.is_readonly = true;
+
+        Ok(data)
     }
 
     pub fn full_path(&self) -> CrushResult<Vec<Box<str>>> {
-        let data = self.lock()?;
+        let data = self.data.lock().unwrap();
         match data.name.clone() {
             None => error("Tried to get full path of anonymous scope"),
             Some(name) => match data.calling_scope.clone() {
@@ -285,7 +354,7 @@ impl Scope {
 
     pub fn global_value(&self, full_path: Vec<Box<str>>) -> CrushResult<Value> {
         let data = self.lock()?;
-        match data.parent_scope.clone() {
+        match data.calling_scope.clone() {
             Some(parent) => {
                 drop(data);
                 parent.global_value(full_path)
@@ -306,7 +375,9 @@ impl Scope {
                 None => error("Anonymous scope!"),
                 Some(name) => {
                     if name != path[0] {
-                        error("Invalid scope for command")
+                        error(format!(
+                            "Invalid scope during lookup, expected scope named {}, found one named {}",
+                            path[0], name).as_str())
                     } else {
                         match path.len() {
                             1 => Ok(Value::Scope(self.clone())),
@@ -320,7 +391,7 @@ impl Scope {
                                 }
                             }
                             _ => {
-                                let s = data.mapping.get(&path[1]).map(|v| v.clone());
+                                let s = data.mapping.get(&path[1]).map(Value::clone);
                                 drop(data);
                                 match s {
                                     Some(Value::Scope(s)) =>

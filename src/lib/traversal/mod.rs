@@ -75,7 +75,7 @@ members of a value, write "dir <value>".
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_lazy_namespace(
         "traversal",
-        Box::new(move |env: &Scope| {
+        Box::new(move |env| {
             env.declare_command(
                 "ls", find::perform_ls, true,
                 "ls @file:file", "Non-recursively list files", None)?;
@@ -99,7 +99,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     help ls
     help integer
     help help"#))?;
-            env.readonly();
             Ok(())
         }))?;
     root.r#use(&e);

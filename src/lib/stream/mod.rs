@@ -23,7 +23,7 @@ mod seq;
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_lazy_namespace(
         "stream",
-        Box::new(move |env: &Scope| {
+        Box::new(move |env| {
             env.declare_command(
                 "head", head::perform, true,
                 "head [lines:integer]", "Return the first lines of the input. Defaults to 10.", None)?;
@@ -99,7 +99,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "seq lines:integer",
                 "Return a stream of numbers",
                 None)?;
-            env.readonly();
             Ok(())
         }))?;
     root.r#use(&e);

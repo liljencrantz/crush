@@ -50,7 +50,7 @@ pub fn not(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_lazy_namespace(
         "comp",
-        Box::new(|env: &Scope| {
+        Box::new(|env| {
             env.declare_command("gt", gt, false, "any > any", "True if left side is greater than right side", None)?;
             env.declare_command("gte", gte, false, "any >= any", "True if left side is greater than or equal to right side", None)?;
             env.declare_command("lt", lt, false, "any < any", "True if left side is less than right side", None)?;
@@ -58,7 +58,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare_command("eq", eq, false, "any == any", "True if left side is equal to right side", None)?;
             env.declare_command("neq", neq, false, "any != any", "True if left side is not equal to right side", None)?;
             env.declare_command("not", not, false, "not boolean", "Negates a boolean value", None)?;
-            env.readonly();
             Ok(())
         }))?;
     Ok(())

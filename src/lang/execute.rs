@@ -9,6 +9,7 @@ use std::path::Path;
 
 pub fn file(global_env: Scope, filename: &Path, printer: &Printer, output: &ValueSender) -> CrushResult<()> {
     let cmd = to_crush_error(fs::read_to_string(filename))?;
+
     match parse(&cmd.as_str(), &global_env) {
         Ok(jobs) => {
             for job_definition in jobs {

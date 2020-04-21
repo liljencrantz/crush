@@ -158,7 +158,7 @@ fn to(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_lazy_namespace(
         "toml",
-        Box::new(move |env: &Scope| {
+        Box::new(move |env| {
             env.declare_command(
                 "from", from, true,
                 "toml:from [file:file]", "Parse toml format", Some(
@@ -180,8 +180,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     Examples:
 
     ls | toml:to"#))?;
-            env.readonly();
-
             Ok(())
         }))?;
     Ok(())

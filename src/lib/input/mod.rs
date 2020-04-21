@@ -40,7 +40,7 @@ fn cat(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_lazy_namespace(
         "input",
-        Box::new(move |env: &Scope| {
+        Box::new(move |env| {
             env.declare_command(
                 "cat", cat, true,
                 "cat @files:(file|glob)", "Read specified files as binary stream", None)?;
@@ -76,8 +76,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare_command(
                 "dir", dir, false,
                 "dir value:any", "List members of value", None)?;
-            env.readonly();
-
             Ok(())
         }))?;
     root.r#use(&e);

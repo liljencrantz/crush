@@ -155,7 +155,7 @@ fn to(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_lazy_namespace(
         "json",
-        Box::new(move |env: &Scope| {
+        Box::new(move |env| {
             env.declare_command(
                 "from", from, true,
                 "json:from [file:file]", "Parse json", Some(
@@ -175,8 +175,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     Examples:
 
     ls | json:to"#))?;
-            env.readonly();
-
             Ok(())
         }))?;
     Ok(())

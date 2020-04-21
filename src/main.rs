@@ -88,11 +88,11 @@ fn run_interactive(global_env: Scope, printer: Printer) -> CrushResult<()> {
 fn run() -> CrushResult<()> {
     let global_env = lang::scope::Scope::create_root();
     let (printer, print_handle) = printer::init();
-    declare(&global_env)?;
+    let pretty_printer = create_pretty_printer(printer.clone());
+    declare(&global_env, &printer, &pretty_printer)?;
     let my_scope = global_env.create_child(&global_env, false);
 
     let args = std::env::args().collect::<Vec<String>>();
-    let pretty_printer = create_pretty_printer(printer.clone());
     match args.len() {
         1 => run_interactive(my_scope, printer)?,
         2 => execute::file(

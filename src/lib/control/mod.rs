@@ -66,7 +66,7 @@ pub fn cmd(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_lazy_namespace(
         "control",
-        Box::new(move |env: &Scope| {
+        Box::new(move |env| {
             let path = List::new(ValueType::File, vec![]);
             to_crush_error(env::var("PATH").map(|v| {
                 let mut dirs: Vec<Value> = v
@@ -144,8 +144,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "cmd external_command:(file|string) @arguments:any",
                 "Execute external commands",
                 None)?;
-            env.readonly();
-
             Ok(())
         }))?;
     root.r#use(&e);

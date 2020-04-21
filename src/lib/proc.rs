@@ -83,7 +83,7 @@ fn kill(context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_lazy_namespace(
         "proc",
-        Box::new(move |env: &Scope| {
+        Box::new(move |env| {
             env.declare_command(
                 "ps", ps, true,
                 "ps", "Return a table stream containing information on all running processes on the system.",
@@ -123,7 +123,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     * pid:integer the process ids of all process to signal."))?;
 
-            env.readonly();
             Ok(())
         }))?;
     root.r#use(&e);

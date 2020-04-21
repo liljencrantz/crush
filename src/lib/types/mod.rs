@@ -106,7 +106,7 @@ fn class_get(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_lazy_namespace(
         "types",
-        Box::new(move |env: &Scope| {
+        Box::new(move |env| {
             let root =
                 Struct::new(vec![
                     (Box::from("__setattr__"), Value::Command(CrushCommand::command(
@@ -222,11 +222,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
             env.declare("table", Value::Type(ValueType::Table(vec![])))?;
             env.declare("table_stream", Value::Type(ValueType::TableStream(vec![])))?;
-            env.declare("struct", Value::Type(ValueType::Struct))?;
-
-            env.readonly();
-
-            Ok(())
+            env.declare("struct", Value::Type(ValueType::Struct))?;k(())
         }))?;
     root.r#use(&e);
     Ok(())

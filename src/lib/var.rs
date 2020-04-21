@@ -69,7 +69,7 @@ pub fn env(context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_lazy_namespace(
         "var",
-        Box::new(move |ns: &Scope| {
+        Box::new(move |ns| {
             ns.declare_command(
                 "let", r#let, false,
                 "name := value", "Declare a new variable", None)?;
@@ -93,7 +93,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     use math
     sqrt 1.0"#))?;
-            ns.readonly();
             Ok(())
         }))?;
     Ok(())

@@ -82,7 +82,7 @@ pub fn or(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_lazy_namespace(
         "cond",
-        Box::new(|env: &Scope| {
+        Box::new(|env| {
             env.declare_condition_command("and",
                                           and,
                                           "and condition:(bool|command)... -> boolean",
@@ -105,7 +105,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     Do note that or is a short circuiting command, meaning that if one of the conditions
     is found to be true, or will not evaluate any remaining closures."#))?;
 
-            env.readonly();
             Ok(())
         }))?;
     Ok(())
