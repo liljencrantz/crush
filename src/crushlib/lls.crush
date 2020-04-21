@@ -1,0 +1,10 @@
+
+ls := {
+    |@args @@kwargs|
+    find recursive=false @args @@kwargs | select ^file | sort ^file
+}
+
+ll := {
+    |@args @@kwargs|
+    find recursive=false @args @@kwargs | sort ^file
+}

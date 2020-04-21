@@ -48,7 +48,8 @@ pub trait ScopeLoader {
 
     fn copy_into(&mut self, target: &mut HashMap<Box<str>, Value>);
 
-    fn parent(&self) -> &Scope;
+    fn create_temporary_namespace(&self) -> CrushResult<Scope>;
+
 }
 
 struct ScopeLoaderImpl {
@@ -100,10 +101,16 @@ impl ScopeLoader for ScopeLoaderImpl {
         }
     }
 
-    fn parent(&self) -> &Scope {
-        &self.parent
+    fn create_temporary_namespace(&self) -> CrushResult<Scope> {
+        let res = Scope {
+            data: Arc::from(Mutex::new(ScopeData::new(
+                Some(self.parent.clone()),
+                Some(self.parent.clone()),
+                false,
+                None))),
+        };
+        Ok(res)
     }
-
 }
 
 pub struct ScopeData {
@@ -229,13 +236,6 @@ impl Scope {
                 is_loop,
                 None))),
         }
-    }
-
-    pub fn create_temporary_namespace(&self, name: &str) -> CrushResult<Scope> {
-        let res = Scope {
-            data: Arc::from(Mutex::new(ScopeData::new(Some(self.clone()), Some(self.clone()), false, Some(Box::from(name))))),
-        };
-        Ok(res)
     }
 
     pub fn create_lazy_namespace(&self, name: &str, loader: Box<dyn Send + FnOnce(&mut Box<dyn ScopeLoader>) -> CrushResult<()>>) -> CrushResult<Scope> {

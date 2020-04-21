@@ -222,7 +222,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
             env.declare("table", Value::Type(ValueType::Table(vec![])))?;
             env.declare("table_stream", Value::Type(ValueType::TableStream(vec![])))?;
-            env.declare("struct", Value::Type(ValueType::Struct))?;k(())
+            env.declare("struct", Value::Type(ValueType::Struct))?;
+            Ok(())
         }))?;
     root.r#use(&e);
     Ok(())

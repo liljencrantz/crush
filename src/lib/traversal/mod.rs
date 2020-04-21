@@ -77,10 +77,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "traversal",
         Box::new(move |env| {
             env.declare_command(
-                "ls", find::perform_ls, true,
-                "ls @file:file", "Non-recursively list files", None)?;
-            env.declare_command(
-                "find", find::perform_find, true,
+                "find", find::find, true,
                 "find @file:file",
                 "Recursively list files", None)?;
             env.declare_command(

@@ -10,10 +10,10 @@ use users::User;
 
 use lazy_static::lazy_static;
 
-use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
+use crate::lang::execution_context::ExecutionContext;
 use crate::util::user_map::{create_user_map, UserMap};
 use crate::lang::{value::Value, value::ValueType, table::ColumnType, table::Row};
-use crate::lang::errors::{error, CrushError, CrushResult, to_crush_error};
+use crate::lang::errors::{error, CrushError, CrushResult, to_crush_error, argument_error};
 use crate::lang::stream::OutputStream;
 
 lazy_static! {
@@ -115,21 +115,33 @@ pub struct Config {
     output: OutputStream,
 }
 
-fn parse(mut context: ExecutionContext, recursive: bool) -> Result<Config, CrushError> {
+fn parse(context: ExecutionContext) -> Result<Config, CrushError> {
     let output = context.output.initialize(OUTPUT_TYPE.clone())?;
-    if context.arguments.is_empty() {
-        Ok(Config { dirs: vec![Box::from(Path::new("."))], recursive, output })
+    let mut dirs = Vec::new();
+    let mut recursive = true;
+    let mut has_files = false;
+    for a in context.arguments {
+        match (a.argument_type.as_deref(), a.value) {
+            (Some("recursive"), Value::Bool(r)) => {
+                recursive = r;
+            }
+            (None, v) => {
+                has_files = true;
+                v.file_expand(&mut dirs, &context.printer)?;
+            }
+            _ => {
+                return argument_error("Unknown argument");
+            }
+        }
+    }
+    if has_files {
+        Ok(Config { dirs, recursive, output })
     } else {
-        Ok(Config { dirs: context.arguments.files(&context.printer)?, recursive, output })
+        Ok(Config { dirs: vec![Box::from(Path::new("."))], recursive, output })
     }
 }
 
-pub fn perform_ls(context: ExecutionContext) -> CrushResult<()> {
-    let cfg = parse(context, false)?;
-    run(cfg)
-}
-
-pub fn perform_find(context: ExecutionContext) -> CrushResult<()> {
-    let cfg = parse(context, true)?;
+pub fn find(context: ExecutionContext) -> CrushResult<()> {
+    let cfg = parse(context)?;
     run(cfg)
 }
