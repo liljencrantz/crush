@@ -33,7 +33,7 @@ struct Signature {
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    let cfg: Signature = Signature::parse(context.arguments)?;
+    let cfg: Signature = Signature::parse(context.arguments, &context.printer)?;
 
     let (mut output, input) = binary_channel();
     let client = reqwest::blocking::Client::new();

@@ -3,6 +3,7 @@ use crate::lang::{value::ValueDefinition};
 use crate::lang::errors::{CrushResult, error, argument_error};
 use std::collections::HashSet;
 use crate::lang::execution_context::CompileContext;
+use crate::lang::printer::Printer;
 
 #[derive(Debug, Clone)]
 pub enum ArgumentType {
@@ -183,5 +184,5 @@ pub fn column_names(arguments: &Vec<Argument>) -> Vec<Box<str>> {
 }
 
 pub trait ArgumentHandler : Sized {
-    fn parse(arguments: Vec<Argument>) -> CrushResult<Self>;
+    fn parse(arguments: Vec<Argument>, printer: &Printer) -> CrushResult<Self>;
 }

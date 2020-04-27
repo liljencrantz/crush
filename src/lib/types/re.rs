@@ -62,12 +62,12 @@ struct ReplaceSignature {
 
 fn replace(context: ExecutionContext) -> CrushResult<()> {
     let re = context.this.re()?.1;
-    let args: ReplaceSignature = ReplaceSignature::parse(context.arguments)?;
+    let args: ReplaceSignature = ReplaceSignature::parse(context.arguments, &context.printer)?;
     context.output.send(Value::string(re.replace(&args.text, args.replacement.as_str()).as_ref()))
 }
 
 fn replace_all(context: ExecutionContext) -> CrushResult<()> {
     let re = context.this.re()?.1;
-    let args: ReplaceSignature = ReplaceSignature::parse(context.arguments)?;
+    let args: ReplaceSignature = ReplaceSignature::parse(context.arguments, &context.printer)?;
     context.output.send(Value::string(re.replace_all(&args.text, args.replacement.as_str()).as_ref()))
 }

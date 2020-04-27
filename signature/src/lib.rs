@@ -8,9 +8,8 @@ use proc_macro2::Ident;
 use syn::spanned::Spanned;
 
 struct TypeData {
-    value_type: Ident,
     initialize: TokenStream,
-    mutate: TokenStream,
+    mappings: Vec<(Ident, TokenStream)>,
     unnamed_mutate: Option<TokenStream>,
     assign: TokenStream,
 }
@@ -57,6 +56,11 @@ fn extract_type(ty: &Type) -> SignatureResult<(&'static str, Vec<&'static str>)>
                         "Option" => "Option",
                         "i128" => "i128",
                         "bool" => "bool",
+                        "char" => "char",
+                        "f64" => "f64",
+                        "ValueType" => "ValueType",
+                        "PathBuf" => "PathBuf",
+                        "OrderedStringMap" => "OrderedStringMap",
                         _ =>
                             return fail!(seg.span(), "Unrecognised type"),
                     };
@@ -88,14 +92,14 @@ fn extract_values(attr: &Attribute) -> SignatureResult<Vec<TokenTree>> {
     let mut res = Vec::new();
     for tree in attr.tokens.clone().into_iter() {
         res.push(tree);
-/*        match tree {
-            TokenTree::Group(g) => {
-                for sub_tree in g.stream().into_iter() {
-                    res.push(sub_tree);
-                }
-            }
-            _ => return fail!(attr.span(),"Expected group"),
-        }*/
+        /*        match tree {
+                    TokenTree::Group(g) => {
+                        for sub_tree in g.stream().into_iter() {
+                            res.push(sub_tree);
+                        }
+                    }
+                    _ => return fail!(attr.span(),"Expected group"),
+                }*/
     }
     Ok(res)
 }
@@ -114,6 +118,9 @@ fn simple_type_to_value_name(simple_type: &str) -> &str {
         "String" => "String",
         "bool" => "Bool",
         "i128" => "Integer",
+        "ValueType" => "Type",
+        "f64" => "Float",
+        "char" => "String",
         _ => panic!("Noooo!")
     }
 }
@@ -121,16 +128,17 @@ fn simple_type_to_value_name(simple_type: &str) -> &str {
 fn simple_type_to_mutator(simple_type: &str) -> TokenStream {
     match simple_type {
         "String" => quote! {value.to_string()},
+        "char" => quote! { if value.len() == 1 { value.chars().next().unwrap()} else {return argument_error("Argument must be exactly one character")}},
         _ => quote! {value},
     }
 }
 
-fn type_to_value(ty: &Type, name: &Ident, default: Option<TokenTree>) -> SignatureResult<TypeData> {
+fn type_to_value(ty: &Type, name: &Ident, default: Option<TokenTree>, is_unnamed: bool) -> SignatureResult<TypeData> {
     let name_literal = proc_macro2::Literal::string(&name.to_string());
 
     let (type_name, args) = extract_type(ty)?;
     match type_name {
-        "i128" | "bool" | "String" => {
+        "i128" | "bool" | "String" | "char" | "ValueType" | "f64" => {
             if !args.is_empty() {
                 fail!(ty.span(), "This type can't be paramterizised")
             } else {
@@ -138,9 +146,8 @@ fn type_to_value(ty: &Type, name: &Ident, default: Option<TokenTree>) -> Signatu
                 let mutator = simple_type_to_mutator(type_name);
                 let value_type = Ident::new(simple_type_to_value_name(type_name), ty.span().clone());
                 Ok(TypeData {
-                    value_type: value_type.clone(),
                     initialize: quote! { None },
-                    mutate: quote! {#name = Some(#mutator)},
+                    mappings: vec![(value_type.clone(), quote! {#name = Some(#mutator)})],
                     unnamed_mutate:
                     match default {
                         None => {
@@ -178,19 +185,74 @@ if #name.is_none() {
         "Vec" => {
             if args.len() != 1 {
                 fail!(ty.span(), "Vec needs exactly one parameter")
+            } else if args[0] == "PathBuf" {
+                Ok(TypeData {
+                    initialize: quote! { Vec::new() },
+                    mappings: vec![
+/*                        (
+                            Ident::new("File", ty.span().clone()),
+                            quote! { value.file_expand(#name, printer)?; }
+                        ),
+                        (
+                            Ident::new("Glob", ty.span().clone()),
+                            quote! { value.file_expand(#name, printer)?; }
+                        ),
+                        (
+                            Ident::new("Regex", ty.span().clone()),
+                            quote! { value.file_expand(#name, printer)?; }
+                        ),*/
+                    ],
+                    unnamed_mutate: if is_unnamed {
+                        Some(quote! {
+                            while !_unnamed.is_empty() {
+                                match _unnamed.pop_front() {
+                                    Some(Value::File(value)) => #name.push(value.to_path_buf()),
+                                    _ => return argument_error(format!("Expected argument {} to be a file", #name_literal).as_str()),
+                                }
+                            }
+                        })
+                    } else { None },
+                    assign: quote! { #name, },
+                })
             } else {
                 let mutator = simple_type_to_mutator(args[0]);
                 let value_type = Ident::new(simple_type_to_value_name(args[0]), ty.span().clone());
 
                 Ok(TypeData {
-                    value_type: value_type.clone(),
                     initialize: quote! { Vec::new() },
-                    mutate: quote! { #name.push(#mutator); },
+                    mappings: vec![(value_type.clone(), quote! { #name.push(#mutator); })],
+                    unnamed_mutate: if is_unnamed {
+                        Some(quote! {
+                            while !_unnamed.is_empty() {
+                                if let Some(Value::#value_type(value)) = _unnamed.pop_front() {
+                                    #name.push(#mutator);
+                                } else {
+                                    return argument_error(format!("Expected argument {} to be of type {}", #name_literal, #type_name).as_str());
+                                }
+                            }
+                        })
+                    } else { None },
+                    assign: quote! { #name, },
+                })
+            }
+        }
+
+        "OrderedStringMap" => {
+            if args.len() != 1 {
+                fail!(ty.span(), "OrderedStringMap needs exactly one parameter")
+            } else {
+                let mutator = simple_type_to_mutator(args[0]);
+                let value_type = Ident::new(simple_type_to_value_name(args[0]), ty.span().clone());
+
+                Ok(TypeData {
+                    initialize: quote! { crate::lang::ordered_string_map::OrderedStringMap::new() },
+                    mappings: vec![(value_type.clone(), quote! { #name = value; })],
                     unnamed_mutate: None,
                     assign: quote! { #name, },
                 })
             }
         }
+
         "Option" => {
             if args.len() != 1 {
                 fail!(ty.span(), "Option needs exactly on parameter")
@@ -200,14 +262,13 @@ if #name.is_none() {
                 let value_type = Ident::new(simple_type_to_value_name(args[0]), ty.span().clone());
 
                 Ok(TypeData {
-                    value_type: value_type.clone(),
                     initialize: quote! { None },
-                    mutate: quote! { #name = Some(#mutator) },
+                    mappings: vec![(value_type.clone(), quote! { #name = Some(#mutator) })],
                     unnamed_mutate: Some(quote_spanned! { ty.span() =>
                             if #name.is_none() {
                                 match _unnamed.pop_front() {
                                     None => {}
-                                    Some(Value::Bool(value)) => #name = Some(#mutator),
+                                    Some(Value::#value_type(value)) => #name = Some(#mutator),
                                     Some(_) => return argument_error(format!("Expected argument {} to be of type {}", #name_literal, #sub_type).as_str()),
                                 }
                             }
@@ -225,54 +286,74 @@ if #name.is_none() {
 
 fn signature_real(input: TokenStream) -> SignatureResult<TokenStream> {
     let root: syn::Item = syn::parse2(input.clone()).expect("Invalid syntax tree");
-
     match root {
         Item::Struct(mut s) => {
             let mut named_matchers = proc_macro2::TokenStream::new();
             let mut values = proc_macro2::TokenStream::new();
             let mut unnamed_mutations = proc_macro2::TokenStream::new();
             let mut assignments = proc_macro2::TokenStream::new();
+            let mut named_fallback = proc_macro2::TokenStream::new();
+            let mut had_unnamed_target = false;
             let struct_name = s.ident.clone();
             for field in &mut s.fields {
                 let mut default_value = None;
+                let mut is_unnamed_target = false;
+                let mut is_named_target = false;
                 if !field.attrs.is_empty() {
                     for attr in &field.attrs {
                         if is_default(attr) {
                             default_value = Some(extract_value(attr)?)
+                        }
+                        if is_named(attr, "unnamed") {
+                            is_unnamed_target = true;
+                        }
+                        if is_named(attr, "named") {
+                            is_named_target = true;
                         }
                     }
                 }
                 field.attrs = Vec::new();
                 let name = &field.ident.clone().unwrap();
                 let name_literal = proc_macro2::Literal::string(&name.to_string());
-                let type_data = type_to_value(&field.ty, name, default_value)?;
+                let type_data = type_to_value(&field.ty, name, default_value, is_unnamed_target)?;
                 let initialize = type_data.initialize;
-                let value_type = type_data.value_type;
-                let mutate = type_data.mutate;
-                values.extend(quote! {let mut # name = # initialize; }.into_token_stream());
+                values.extend(quote! {let mut #name = #initialize; }.into_token_stream());
 
-                if let Some(mutate) = type_data.unnamed_mutate {
-                    unnamed_mutations.extend(quote! {
+                for (value_type, mutate) in type_data.mappings {
+                    if is_named_target {
+                        named_fallback.extend(quote! {
+                        (Some(name), Value::#value_type(value)) => { #name.insert(name.to_string(), value) }
+                    })
+                    } else {
+                        named_matchers.extend(quote! {
+                        (Some( # name_literal), Value::#value_type(value)) => { #mutate }
+                    }.into_token_stream());
+                    }
+                }
+
+                if !had_unnamed_target {
+                    if let Some(mutate) = type_data.unnamed_mutate {
+                        unnamed_mutations.extend(quote! {
                         #mutate
                     });
+                    }
                 }
-                named_matchers.extend(quote! {
-                    (Some( # name_literal), Value::#value_type(value)) => { # mutate }
-                }.into_token_stream());
 
                 assignments.extend(type_data.assign);
+                had_unnamed_target |= is_unnamed_target;
             }
 
             let handler = quote! {
 
 impl crate::lang::argument::ArgumentHandler for #struct_name {
-    fn parse(arguments: Vec < crate::lang::argument::Argument > ) -> crate::lang::errors::CrushResult < # struct_name > {
+    fn parse(arguments: Vec<crate::lang::argument::Argument>, printer: &crate::lang::printer::Printer) -> crate::lang::errors::CrushResult < # struct_name > {
         # values
         let mut _unnamed = std::collections::VecDeque::new();
 
         for arg in arguments {
             match (arg.argument_type.as_deref(), arg.value) {
-                # named_matchers
+                #named_matchers
+                #named_fallback
                 (None, value) => _unnamed.push_back(value),
                 _ => return crate::lang::errors::argument_error("Invalid parameter"),
             }
@@ -287,7 +368,7 @@ impl crate::lang::argument::ArgumentHandler for #struct_name {
 
             let mut output = s.to_token_stream();
             output.extend(handler.into_token_stream());
-//            println!("ABCABC {}", output.to_string());
+            println!("ABCABC {}", output.to_string());
             Ok(output)
         }
         _ => { fail!(root.span(), "Expected a struct") }

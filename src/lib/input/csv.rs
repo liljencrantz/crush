@@ -18,6 +18,12 @@ use crate::lang::errors::{CrushResult, to_crush_error, error};
 use crate::lang::stream::ValueReceiver;
 use crate::lang::printer::Printer;
 
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
+use crate::lang::value::ValueType;
+use crate::lang::ordered_string_map::OrderedStringMap;
+use std::path::{PathBuf, Path};
+
 pub struct Config {
     separator: char,
     columns: Vec<ColumnType>,
@@ -26,12 +32,28 @@ pub struct Config {
     input: Box<dyn BinaryReader>,
 }
 
+#[signature]
+#[derive(Debug)]
+struct Signature {
+    #[unnamed()]
+    files: Vec<PathBuf>,
+/*    #[named()]
+    columns: OrderedStringMap<ValueType>,
+    #[default(',')]
+    separator: char,
+    #[default(0)]
+    head: i128,
+    trim: Option<char>,*/
+}
+
 fn parse(arguments: Vec<Argument>, input: ValueReceiver, printer: &Printer) -> CrushResult<Config> {
     let mut separator = ',';
     let mut columns = Vec::new();
     let mut skip_head = 0;
     let mut trim = None;
     let mut files = Vec::new();
+    let s: Signature = Signature::parse(arguments.clone(), printer)?;
+    println!("ABC {:?}", s);
 
     for arg in arguments {
         match &arg.argument_type {
