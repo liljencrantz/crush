@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, argument_error, error};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::Value, execution_context::ExecutionContext};
 use regex::Regex;
 use crate::lang::command::CrushCommand;
@@ -6,6 +6,8 @@ use crate::lang::execution_context::{ArgumentVector, This};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
 use crate::lang::command::TypeMap;
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "re", name]
@@ -20,10 +22,10 @@ lazy_static! {
             "re !~ input:string", "True if the input does not match the pattern", None);
         res.declare(full("replace"),
             replace, false,
-            "re ~ input replacement", "Replace the first match of the regex in the input with the replacement", None);
+            "re ~ text replacement", "Replace the first match of the regex in text with the replacement", None);
         res.declare(full("replace_all"),
             replace_all, false,
-            "re ~ input replacement", "Replace all matches of the regex in the input with the replacement", None);
+            "re ~ text replacement", "Replace all matches of the regex in text with the replacement", None);
         res.declare(full("new"),
             new, false,
             "re:new pattern:string", "Create a new regular expression instance", None);
@@ -52,66 +54,20 @@ fn not_match(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Bool(!re.is_match(&needle)))
 }
 
-fn replace(mut context: ExecutionContext) -> CrushResult<()> {
-    let re = context.this.re()?.1;
-    let mut text = None;
-    let mut replace = None;
-
-    for arg in context.arguments.drain(..) {
-        match (arg.argument_type.as_deref(), arg.value) {
-            (None, Value::String(t)) => {
-                if text.is_none() {
-                    text = Some(t);
-                } else {
-                    if replace.is_none() {
-                        replace = Some(t);
-                    } else {
-                        return error("Too many arguments");
-                    }
-                }
-            }
-            (Some("text"), Value::String(t)) => text = Some(t),
-            (Some("replacement"), Value::String(t)) => replace = Some(t),
-            _ => return argument_error("Invalid argument"),
-        }
-    }
-
-    match (text, replace) {
-        (Some(t), Some(n)) => {
-            context.output.send(Value::string(re.replace(&t, n.as_ref()).as_ref()))
-        }
-        _ => argument_error("Must specify both pattern and text"),
-    }
+#[signature]
+struct ReplaceSignature {
+    text: String,
+    replacement: String,
 }
 
-fn replace_all(mut context: ExecutionContext) -> CrushResult<()> {
+fn replace(context: ExecutionContext) -> CrushResult<()> {
     let re = context.this.re()?.1;
-    let mut text = None;
-    let mut replace = None;
+    let args: ReplaceSignature = ReplaceSignature::parse(context.arguments)?;
+    context.output.send(Value::string(re.replace(&args.text, args.replacement.as_str()).as_ref()))
+}
 
-    for arg in context.arguments.drain(..) {
-        match (arg.argument_type.as_deref(), arg.value) {
-            (None, Value::String(t)) => {
-                if text.is_none() {
-                    text = Some(t);
-                } else {
-                    if replace.is_none() {
-                        replace = Some(t);
-                    } else {
-                        return error("Too many arguments");
-                    }
-                }
-            }
-            (Some("text"), Value::String(t)) => text = Some(t),
-            (Some("replacement"), Value::String(t)) => replace = Some(t),
-            _ => return argument_error("Invalid argument"),
-        }
-    }
-
-    match (text, replace) {
-        (Some(t), Some(n)) => {
-            context.output.send(Value::string(re.replace_all(&t, n.as_ref()).as_ref()))
-        }
-        _ => argument_error("Must specify both pattern and text"),
-    }
+fn replace_all(context: ExecutionContext) -> CrushResult<()> {
+    let re = context.this.re()?.1;
+    let args: ReplaceSignature = ReplaceSignature::parse(context.arguments)?;
+    context.output.send(Value::string(re.replace_all(&args.text, args.replacement.as_str()).as_ref()))
 }

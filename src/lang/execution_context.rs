@@ -43,6 +43,9 @@ pub trait ArgumentVector {
     fn optional_value(&mut self, idx: usize) -> CrushResult<Option<Value>>;
 }
 
+pub trait ArgumentHandler {
+    fn parse(arg: Vec<Argument>) -> Self;
+}
 
 macro_rules! argument_getter {
     ($name:ident, $return_type:ty, $value_type:ident, $description:literal) => {

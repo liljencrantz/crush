@@ -15,6 +15,8 @@ use nix::unistd::Pid;
 use std::str::FromStr;
 use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use lazy_static::lazy_static;
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
 
 lazy_static! {
     static ref PS_OUTPUT_TYPE: Vec<ColumnType> = vec![
@@ -62,20 +64,20 @@ fn ps(context: ExecutionContext) -> CrushResult<()> {
     Ok(())
 }
 
-fn kill(context: ExecutionContext) -> CrushResult<()> {
-    let mut pids = Vec::new();
-    let mut sig_to_send = signal::SIGTERM;
+#[signature]
+struct KillSignature {
+    #[unnamed]
+    pid: Vec<i128>,
+    #[default("SIGTERM")]
+    signal: String,
+}
 
-    for arg in context.arguments {
-        match (arg.argument_type.as_deref(), arg.value) {
-            (None, Value::Integer(pid)) => pids.push(Pid::from_raw(pid as i32)),
-            (Some("pid"), Value::Integer(pid)) => pids.push(Pid::from_raw(pid as i32)),
-            (Some("signal"), Value::String(sig)) => sig_to_send = to_crush_error(signal::Signal::from_str(sig.as_ref()))?,
-            _ => return argument_error("Unknown argument")
-        }
-    }
-    for pid in pids {
-        to_crush_error(signal::kill(pid, sig_to_send))?;
+fn kill(context: ExecutionContext) -> CrushResult<()> {
+    let sig: KillSignature = KillSignature::parse(context.arguments)?;
+    for pid in sig.pid {
+        to_crush_error(signal::kill(
+            Pid::from_raw(pid as i32),
+            to_crush_error(signal::Signal::from_str(&sig.signal))?))?;
     }
     Ok(())
 }

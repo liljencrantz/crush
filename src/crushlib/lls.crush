@@ -1,12 +1,23 @@
 
 ls := {
-    |@args @@kwargs|
+    |sort_by:field=^file @args|
     "List names of files non-recursively"
-    find recursive=false @args @@kwargs | select ^file | sort ^file
+    "    Unlike find and ll, ls only shows you the names of files.
+    sort_by can be one of ^user, ^size, ^modified, ^type or ^file.
+
+    Example:
+
+    ls / sort_by=^size"
+    find recursive=false @args | sort sort_by| select ^file
 }
 
 ll := {
-    |@args @@kwargs|
+    |sort_by:field=^file @args|
     "List files non-recursively"
-    find recursive=false @args @@kwargs | sort ^file
+    "    sort_by can be one of ^user, ^size, ^modified, ^type or ^file.
+
+    Example:
+
+    ll .. sort_by=^modified"
+    find recursive=false @args | sort sort_by
 }

@@ -5,7 +5,7 @@ mod lang;
 mod lib;
 mod util;
 
-extern crate rustyline;
+use rustyline;
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;

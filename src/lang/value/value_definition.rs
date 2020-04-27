@@ -6,9 +6,9 @@ use crate::{
 };
 use crate::lang::{job::Job, argument::ArgumentDefinition, command::CrushCommand};
 use crate::lang::errors::{block_error, mandate};
-use crate::lang::command::Parameter;
 use crate::lang::execution_context::CompileContext;
 use std::path::PathBuf;
+use crate::lang::command::Parameter;
 
 #[derive(Clone)]
 pub enum ValueDefinition {

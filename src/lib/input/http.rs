@@ -1,17 +1,10 @@
-use crate::lang::{argument::Argument, value::Value, r#struct::Struct, table::Table, table::ColumnType, value::ValueType, table::Row, binary::binary_channel};
+use crate::lang::{value::Value, r#struct::Struct, table::Table, table::ColumnType, value::ValueType, table::Row, binary::binary_channel};
 use crate::lang::execution_context::ExecutionContext;
-use crate::lang::errors::{argument_error, to_crush_error, CrushResult, demand};
+use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
 use reqwest::{StatusCode, Method};
 use reqwest::header::HeaderMap;
-
-#[derive(Debug)]
-pub struct Config {
-    url: String,
-    cache: bool,
-    body: Option<String>,
-    headers: Vec<(String, String)>,
-    method: Method,
-}
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
 
 fn parse_method(m: &str) -> CrushResult<Method> {
     Ok(match m.to_lowercase().as_str() {
@@ -28,49 +21,33 @@ fn parse_method(m: &str) -> CrushResult<Method> {
     })
 }
 
-fn parse(mut arguments: Vec<Argument>) -> CrushResult<Config> {
-    let mut url = None;
-    let cache = false;
-    let mut headers = Vec::new();
-    let mut form = None;
-    let mut method = Method::GET;
 
-    for arg in arguments.drain(..) {
-        match (arg.argument_type.as_deref(), arg.value) {
-            (None, Value::String(t)) | (Some("url"), Value::String(t)) => { url = Some(t); }
-//            (Some("cache"), Value::Bool(v)) => { cache = v; }
-            (Some("form"), Value::String(t)) => { form = Some(t.to_string()); }
-            (Some("method"), Value::String(t)) => { method = parse_method(t.as_ref())?; }
-            (Some("header"), Value::String(t)) => {
-                let h = t.splitn(2, ':').collect::<Vec<&str>>();
-                match h.len() {
-                    2 => { headers.push((h[0].to_string(), h[1].to_string())); }
-                    _ => { return argument_error("Bad header format"); }
-                }
-            }
-            _ => { return argument_error("Unknown argument"); }
-        }
-    }
-    Ok(Config {
-        url: demand(url, "url")?.to_string(),
-        method,
-        headers,
-        cache,
-        body: form,
-    })
+#[signature]
+struct Signature {
+    uri: String,
+    form: Option<String>,
+//    #[values("get", "post", "put", "delete", "head", "options", "connect", "patch", "trace")]
+    #[default("get")]
+    method: String,
+    header: Vec<String>,
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    let cfg = parse(context.arguments)?;
+    let cfg: Signature = Signature::parse(context.arguments)?;
+
     let (mut output, input) = binary_channel();
     let client = reqwest::blocking::Client::new();
-    let mut request = client.request(cfg.method, cfg.url.as_str());
+    let mut request = client.request(parse_method(&cfg.method)?, cfg.uri.as_str());
 
-    for (k, v) in cfg.headers {
-        request = request.header(&k, &v);
+    for t in cfg.header.iter() {
+        let h = t.splitn(2, ':').collect::<Vec<&str>>();
+        match h.len() {
+            2 => { request = request.header(h[0], h[1].to_string()); }
+            _ => { return argument_error("Bad header format"); }
+        }
     }
 
-    if let Some(body) = cfg.body {
+    if let Some(body) = cfg.form {
         request = request.body(body)
     }
 

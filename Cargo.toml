@@ -15,6 +15,14 @@ version = "0.6.1"
 version = "0.18.1"
 features = ["lexer"]
 
+[workspace]
+members = [
+    "signature",
+]
+
+[dependencies.signature]
+path = "signature"
+
 [dependencies]
 lalrpop-util = "0.18.1"
 chrono = "0.4"

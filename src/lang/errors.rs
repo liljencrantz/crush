@@ -61,13 +61,6 @@ pub fn to_crush_error<T, E: Error>(result: Result<T, E>) -> Result<T, CrushError
     }
 }
 
-pub fn demand<T>(result: Option<T>, desc: &str) -> Result<T, CrushError> {
-    match result {
-        Some(v) => Ok(v),
-        None => error(format!("Missing value for {}", desc).as_str()),
-    }
-}
-
 pub fn mandate<T>(result: Option<T>, msg: &str) -> Result<T, CrushError> {
     match result {
         Some(v) => Ok(v),

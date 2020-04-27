@@ -1,4 +1,4 @@
-use crate::lang::value::Value;
+use crate::lang::value::{Value};
 use crate::lang::{value::ValueDefinition};
 use crate::lang::errors::{CrushResult, error, argument_error};
 use std::collections::HashSet;
@@ -180,4 +180,8 @@ pub fn column_names(arguments: &Vec<Argument>) -> Vec<Box<str>> {
     }
 
     res
+}
+
+pub trait ArgumentHandler : Sized {
+    fn parse(arguments: Vec<Argument>) -> CrushResult<Self>;
 }
