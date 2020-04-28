@@ -29,36 +29,36 @@ Command: CommandNode = {
 
 Assignment: Box<Node> = {
     Logical,
-    <i: Item> "=" <e: Assignment> => Box::from(Node::Assignment(i, Box::from("="), e)),
-    <i: Item> ":=" <e: Assignment> => Box::from(Node::Assignment(i, Box::from(":="), e)),
+    <i: Item> "=" <e: Assignment> => Box::from(Node::Assignment(i, "=".to_string(), e)),
+    <i: Item> ":=" <e: Assignment> => Box::from(Node::Assignment(i, ":=".to_string(), e)),
 }
 
 Logical: Box<Node> = {
     Comparison,
-    <l: Logical> <op: LogicalOperator> <c: Comparison> => Box::from(Node::LogicalOperation(l, Box::from(op), c)),
+    <l: Logical> <op: LogicalOperator> <c: Comparison> => Box::from(Node::LogicalOperation(l, op.to_string(), c)),
 }
 
 Comparison: Box<Node> = {
     Term,
-    <c: Comparison> <op: ComparisonOperator> <t: Term> => Box::from(Node::Comparison(c, Box::from(op), t)),
-    <c: Comparison> <op: ReplaceOperator> <t1: Term> <t2: Term> => Box::from(Node::Replace(c, Box::from(op), t1, t2))
+    <c: Comparison> <op: ComparisonOperator> <t: Term> => Box::from(Node::Comparison(c, op.to_string(), t)),
+    <c: Comparison> <op: ReplaceOperator> <t1: Term> <t2: Term> => Box::from(Node::Replace(c, op.to_string(), t1, t2))
 }
 
 Term: Box<Node> = {
     Factor,
-    <t: Term> <op: TermOperator> <f: Factor> => Box::from(Node::Term(t, Box::from(op), f)),
+    <t: Term> <op: TermOperator> <f: Factor> => Box::from(Node::Term(t, op.to_string(), f)),
 }
 
 Factor: Box<Node> = {
     Unary,
-    <f: Factor> <op: FactorOperator> <u: Unary> => Box::from(Node::Factor(f, Box::from(op), u)),
+    <f: Factor> <op: FactorOperator> <u: Unary> => Box::from(Node::Factor(f, op.to_string(), u)),
 }
 
 Unary: Box<Node> = {
     Cast,
-    <op: UnaryOperator> <u: Unary> => Box::from(Node::Unary(Box::from(op), u)),
-    "@" <u: Unary> => Box::from(Node::Unary(Box::from("@"), u)),
-    "@@" <u: Unary> => Box::from(Node::Unary(Box::from("@@"), u)),
+    <op: UnaryOperator> <u: Unary> => Box::from(Node::Unary(op.to_string(), u)),
+    "@" <u: Unary> => Box::from(Node::Unary("@".to_string(), u)),
+    "@@" <u: Unary> => Box::from(Node::Unary("@@".to_string(), u)),
 }
 
 Cast: Box<Node> = {
@@ -78,10 +78,10 @@ ParameterList: Vec<ParameterNode> = {
 }
 
 Parameter: ParameterNode = {
-    <l: Label> <d: Default> => ParameterNode::Parameter(Box::from(l), None, d),
-    <n: Label> Colon <t: Item> <d: Default> => ParameterNode::Parameter(Box::from(n), Some(t), d),
-    "@" <l: Label> => ParameterNode::Unnamed(Box::from(l)),
-    "@@" <l: Label> => ParameterNode::Named(Box::from(l)),
+    <l: Label> <d: Default> => ParameterNode::Parameter(l.to_string(), None, d),
+    <n: Label> Colon <t: Item> <d: Default> => ParameterNode::Parameter(n.to_string(), Some(t), d),
+    "@" <l: Label> => ParameterNode::Unnamed(l.to_string()),
+    "@@" <l: Label> => ParameterNode::Named(l.to_string()),
 }
 
 Default: Option<Node> = {
@@ -91,13 +91,13 @@ Default: Option<Node> = {
 
 Item: Box<Node> = {
     Label => Node::parse_label(<>),
-    <l: Regex> => Box::from(Node::Regex(Box::from(&l[3..l.len()-1]))),
-    Field => Box::from(Node::Field(Box::from(<>))),
-    <l:QuotedLabel> => Box::from(Node::Label(Box::from(&l[1..l.len()-1]))),
-    QuotedString => Box::from(Node::String(Box::from(<>))),
+    <l: Regex> => Box::from(Node::Regex(l[3..l.len()-1].to_string())),
+    Field => Box::from(Node::Field(<>.to_string())),
+    <l:QuotedLabel> => Box::from(Node::Label(l[1..l.len()-1].to_string())),
+    QuotedString => Box::from(Node::String(<>.to_string())),
     Integer => Box::from(Node::Integer(i128::from_str(<>.replace("_", "").as_str()).unwrap())),
     Float => Box::from(Node::Float(f64::from_str(<>.replace("_", "").as_str()).unwrap())),
-    Flag => Box::from(Node::Assignment(Box::from(Node::Label(Box::from(&<>[2..]))), Box::from("="), Box::from(Node::Label(Box::from("true"))))),
+    Flag => Box::from(Node::Assignment(Box::from(Node::Label(<>[2..].to_string())), "=".to_string(), Box::from(Node::Label("true".to_string())))),
     <i: Item> "[" <e: Assignment> "]" => Box::from(Node::GetItem(i, e)),
     <i: Item> Colon <l: AnyLabel> => Box::from(Node::GetAttr(i, l)),
     "{" Separator? <s: Signature> <l: JobListWithoutSeparator> "}" => Box::from(Node::Closure(s, l)),
@@ -105,8 +105,8 @@ Item: Box<Node> = {
 }
 
 AnyLabel: String = {
-    Label => Box::from(<>),
-    <l: QuotedLabel> => Box::from(&l[1..l.len()-1]),
+    Label => <>.to_string(),
+    <l: QuotedLabel> => l[1..l.len()-1].to_string(),
 }
 
 match {

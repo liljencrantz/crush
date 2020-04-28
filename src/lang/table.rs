@@ -150,9 +150,9 @@ impl ColumnVec for &[ColumnType] {
         if needle_vec.len() != 1 {
             argument_error("Expected direct field")
         } else {
-            let needle = needle_vec[0];
+            let needle = &needle_vec[0];
             for (idx, field) in self.iter().enumerate() {
-                if field.name.as_ref() == needle {
+                if &field.name == needle {
                     return Ok(idx);
                 }
             }

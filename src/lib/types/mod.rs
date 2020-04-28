@@ -111,25 +111,25 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 Struct::new(vec![
                     ("__setattr__".to_string(), Value::Command(CrushCommand::command(
                         class_set, false,
-                        vec!["global".to_string(), Box::from("types"), Box::from("root"), Box::from("__setattr__")],
+                        vec!["global".to_string(), "types".to_string(), "root".to_string(), "__setattr__".to_string()],
                         "root:__setitem__ name:string value:any",
                         "Modify the specified field to hold the specified value",
                         None))),
                     ("__getitem__".to_string(), Value::Command(CrushCommand::command(
                         class_get, false,
-                        vec![Box::from("global"), Box::from("types"), Box::from("root"), Box::from("__getitem__")],
+                        vec!["global".to_string(), "types".to_string(), "root".to_string(), "__getitem__".to_string()],
                         "root:__getitem__ name:string",
                         "Return the value of the specified field",
                         None))),
                     ("__setitem__".to_string(), Value::Command(CrushCommand::command(
                         class_get, false,
-                        vec![Box::from("global"), Box::from("types"), Box::from("root"), Box::from("__setitem__")],
+                        vec!["global".to_string(), "types".to_string(), "root".to_string(), "__setitem__".to_string()],
                         "root:__setitem__ name:string value:any",
                         "Modify the specified field to hold the specified value",
                         None))),
                     ("new".to_string(), Value::Command(CrushCommand::command(
                         new, true,
-                        vec![Box::from("global"), Box::from("types"), Box::from("root"), Box::from("new")],
+                        vec!["global".to_string(), "types".to_string(), "root".to_string(), "new".to_string()],
                         "root:new @unnamed @@named",
                         "Create a new instance of the specified type",
                         None))),

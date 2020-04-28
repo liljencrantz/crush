@@ -67,13 +67,13 @@ pub fn stat(context: ExecutionContext) -> CrushResult<()> {
         Value::Struct(
             Struct::new(
                 vec![
-                    (Box::from("is_directory"), Value::Bool(metadata.is_dir())),
-                    (Box::from("is_file"), Value::Bool(metadata.is_file())),
-                    (Box::from("is_symlink"), Value::Bool(metadata.file_type().is_symlink())),
-                    (Box::from("inode"), Value::Integer(metadata.ino() as i128)),
-                    (Box::from("nlink"), Value::Integer(metadata.nlink() as i128)),
-                    (Box::from("mode"), Value::Integer(metadata.mode() as i128)),
-                    (Box::from("len"), Value::Integer(metadata.len() as i128)),
+                    ("is_directory".to_string(), Value::Bool(metadata.is_dir())),
+                    ("is_file".to_string(), Value::Bool(metadata.is_file())),
+                    ("is_symlink".to_string(), Value::Bool(metadata.file_type().is_symlink())),
+                    ("inode".to_string(), Value::Integer(metadata.ino() as i128)),
+                    ("nlink".to_string(), Value::Integer(metadata.nlink() as i128)),
+                    ("mode".to_string(), Value::Integer(metadata.mode() as i128)),
+                    ("len".to_string(), Value::Integer(metadata.len() as i128)),
                 ],
                 None,
             )
@@ -89,7 +89,7 @@ pub fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
     let base_directory = context.this.file()?;
     context.arguments.check_len(1)?;
     let sub = context.arguments.string(0)?;
-    context.output.send(Value::File(base_directory.join(sub.as_ref())))
+    context.output.send(Value::File(base_directory.join(&sub)))
 }
 
 pub fn to(mut context: ExecutionContext) -> CrushResult<()> {

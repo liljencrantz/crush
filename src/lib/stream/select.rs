@@ -170,7 +170,7 @@ fn perform_for(
                     return argument_error("Invalid field");
                 }
                 match (copy, input_type.find_str(name[0].as_ref())) {
-                    (false, Ok(idx)) => columns.push((Location::Append(name[0]), Source::Argument(idx))),
+                    (false, Ok(idx)) => columns.push((Location::Append(name[0].clone()), Source::Argument(idx))),
                     _ => return argument_error(format!("Unknown field {}", name[0]).as_str()),
                 }
             }

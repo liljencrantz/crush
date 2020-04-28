@@ -65,9 +65,9 @@ fn from_toml(toml_value: &toml::Value) -> CrushResult<Value> {
                 Struct::new(
                     t
                         .iter()
-                        .map(|(k, v)| (Box::from(k.as_str()), from_toml(v)))
+                        .map(|(k, v)| (k, from_toml(v)))
                         .map(|(k, v)| match v {
-                            Ok(vv) => Ok((k, vv)),
+                            Ok(vv) => Ok((k.to_string(), vv)),
                             Err(e) => Err(e)
                         })
                         .collect::<Result<Vec<(String, Value)>, CrushError>>()?,

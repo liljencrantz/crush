@@ -70,7 +70,7 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
                 Struct::new(
                     o
                         .iter()
-                        .map(|(k, v)| (Box::from(k.as_str()), from_json(v)))
+                        .map(|(k, v)| (k.to_string(), from_json(v)))
                         .map(|(k, v)| match v {
                             Ok(vv) => Ok((k, vv)),
                             Err(e) => Err(e)
@@ -87,7 +87,7 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
         Value::File(s) =>
             Ok(serde_json::Value::from(mandate(s.to_str(), "Invalid filename")?)),
 
-        Value::String(s) => Ok(serde_json::Value::from(s.as_ref())),
+        Value::String(s) => Ok(serde_json::Value::from(s)),
 
         Value::Integer(i) =>
             Ok(serde_json::Value::from(to_crush_error(i64::try_from(i))?)),
