@@ -8,7 +8,7 @@ mod r#while;
 mod r#loop;
 mod r#for;
 
-use std::path::Path;
+use std::path::PathBuf;
 
 pub fn r#break(context: ExecutionContext) -> CrushResult<()> {
     context.env.do_break()?;
@@ -71,7 +71,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             to_crush_error(env::var("PATH").map(|v| {
                 let mut dirs: Vec<Value> = v
                     .split(':')
-                    .map(|s| Value::File(Box::from(Path::new(s))))
+                    .map(|s| Value::File(PathBuf::from(s)))
                     .collect();
                 let _ = path.append(&mut dirs);
             }))?;

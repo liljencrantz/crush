@@ -15,8 +15,6 @@ use std::{
 
 use crate::lang::{table::ColumnType, binary::BinaryReader};
 use crate::lang::errors::{CrushResult, to_crush_error, error};
-use crate::lang::stream::ValueReceiver;
-use crate::lang::printer::Printer;
 
 use signature::signature;
 use crate::lang::argument::ArgumentHandler;
@@ -24,95 +22,40 @@ use crate::lang::value::ValueType;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use std::path::{PathBuf, Path};
 
-pub struct Config {
-    separator: char,
-    columns: Vec<ColumnType>,
-    skip_head: usize,
-    trim: Option<char>,
-    input: Box<dyn BinaryReader>,
-}
-
 #[signature]
 #[derive(Debug)]
 struct Signature {
-/*    #[unnamed()]
-    files: Vec<PathBuf>, *    #[named()]
+    #[unnamed()]
+    files: Vec<PathBuf>,
+    #[named()]
     columns: OrderedStringMap<ValueType>,
     #[default(',')]
     separator: char,
     #[default(0)]
     head: i128,
-    trim: Option<char>,*/
+    trim: Option<char>,
 }
 
-fn parse(arguments: Vec<Argument>, input: ValueReceiver, printer: &Printer) -> CrushResult<Config> {
-    let mut separator = ',';
-    let mut columns = Vec::new();
-    let mut skip_head = 0;
-    let mut trim = None;
-    let mut files = Vec::new();
-    let s: Signature = Signature::parse(arguments.clone(), printer)?;
-    println!("ABC {:?}", s);
+pub fn csv(context: ExecutionContext) -> CrushResult<()> {
+    let cfg: Signature = Signature::parse(context.arguments, &context.printer)?;
+    let columns = cfg.columns.iter().map(|(k, v)| ColumnType::new(k, v.clone())).collect::<Vec<_>>();
+    let output = context.output.initialize(columns.clone())?;
 
-    for arg in arguments {
-        match &arg.argument_type {
-            None => {
-                files.push(arg);
-            }
-            Some(name) => {
-                match (name.as_ref(), arg.value) {
-                    (_, Value::Type(s)) => columns.push(ColumnType::new(name, s)),
-
-                    ("head", Value::Integer(s)) => skip_head = s as usize,
-
-                    ("separator", Value::String(s)) =>
-                        if s.len() == 1 {
-                            separator = s.chars().next().unwrap();
-                        } else {
-                            return argument_error("Separator must be exactly one character long");
-                        }
-
-                    ("trim", Value::String(s)) =>
-                        if s.len() == 1 {
-                            trim = Some(s.chars().next().unwrap());
-                        } else {
-                            return argument_error("Only one character can be trimmed");
-                        }
-
-                    _ => return argument_error(format!("Unknown parameter {}", name).as_str()),
-                }
-            }
-        }
-    }
-
-    let reader = match files.len() {
+    let mut reader = BufReader::new(match cfg.files.len() {
         0 => {
-            match input.recv()? {
+            match context.input.recv()? {
                 Value::BinaryStream(b) => Ok(b),
                 Value::Binary(b) => Ok(BinaryReader::vec(&b)),
                 _ => argument_error("Expected either a file to read or binary pipe input"),
             }
         }
-        _ => BinaryReader::paths(files.files(printer)?),
-    }?;
+        _ => BinaryReader::paths(cfg.files),
+    }?);
 
-    Ok(Config {
-        separator,
-        columns,
-        skip_head,
-        trim,
-        input: reader,
-    })
-}
-
-fn run(cfg: Config, output: OutputStream) -> CrushResult<()> {
-
-    let separator = cfg.separator.clone();
+    let separator = cfg.separator;
     let trim = cfg.trim.clone();
-    let columns = cfg.columns.clone();
-    let skip = cfg.skip_head;
+    let skip = cfg.head as usize;
 
-    let mut reader = BufReader::new(cfg.input);
     let mut line = String::new();
     let mut skipped = 0usize;
     loop {
@@ -154,11 +97,4 @@ fn run(cfg: Config, output: OutputStream) -> CrushResult<()> {
         }
     }
     Ok(())
-}
-
-pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    let cfg = parse(context.arguments, context.input, &context.printer)?;
-    let output = context.output.initialize(
-        cfg.columns.clone())?;
-    run(cfg, output)
 }

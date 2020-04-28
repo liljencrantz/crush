@@ -5,7 +5,7 @@ use std::fs;
 use crate::lang::parser::parse;
 use crate::lang::execution_context::JobContext;
 use crate::lang::stream::{empty_channel, ValueSender};
-use std::path::Path;
+use std::path::{PathBuf, Path};
 
 pub fn file(global_env: Scope, filename: &Path, printer: &Printer, output: &ValueSender) -> CrushResult<()> {
     let cmd = to_crush_error(fs::read_to_string(filename))?;

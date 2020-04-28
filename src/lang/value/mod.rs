@@ -42,7 +42,7 @@ pub enum Value {
     Regex(Box<str>, Regex),
     Command(Box<dyn CrushCommand + Send + Sync>),
     TableStream(InputStream),
-    File(Box<Path>),
+    File(PathBuf),
     Table(Table),
     Struct(Struct),
     List(List),
@@ -145,7 +145,7 @@ impl Value {
 
     pub fn path(&self, name: &str) -> Option<Value> {
         match self {
-            Value::File(s) => Some(Value::File(s.join(name).into_boxed_path())),
+            Value::File(s) => Some(Value::File(s.join(name))),
             _ => None,
         }
     }
@@ -202,9 +202,9 @@ impl Value {
         }
     }
 
-    pub fn file_expand(&self, v: &mut Vec<Box<Path>>, printer: &Printer) -> CrushResult<()> {
+    pub fn file_expand(&self, v: &mut Vec<PathBuf>, printer: &Printer) -> CrushResult<()> {
         match self {
-            Value::String(s) => v.push(Box::from(Path::new(s.as_ref()))),
+            Value::String(s) => v.push(PathBuf::from(s.as_ref())),
             Value::File(p) => v.push(p.clone()),
             Value::Glob(pattern) => pattern.glob_files(&PathBuf::from("."), v)?,
             Value::Regex(_, re) => re.match_files(&cwd()?, v, printer),
@@ -267,7 +267,7 @@ impl Value {
         let str_val = self.to_string();
 
         match new_type {
-            ValueType::File => Ok(Value::File(Box::from(Path::new(str_val.as_str())))),
+            ValueType::File => Ok(Value::File(PathBuf::from(str_val.as_str()))),
             ValueType::Glob => Ok(Value::Glob(Glob::new(str_val.as_str()))),
             ValueType::Integer => to_crush_error(str_val.parse::<i128>()).map(Value::Integer),
             ValueType::Field => Ok(Value::Field(vec![str_val.into_boxed_str()])),

@@ -57,7 +57,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "lines", lines::perform, true,
                 "lines @files:(file|glob)", "Read specified files as a table with one line of text per row", None)?;
             env.declare_command(
-                "csv", csv::perform, true,
+                "csv", csv::csv, true,
                 "csv <column_name>=type:type... [head=skip:integer] [separator=separator:string] [trim=trim:string] @files:(file|glob)",
                 "Parse specified files as CSV files", Some(r#"    Examples:
 

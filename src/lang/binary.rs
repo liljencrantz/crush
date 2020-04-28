@@ -5,7 +5,7 @@ use std::io::{Error, Read, Write};
 use crossbeam::{Receiver, bounded, Sender};
 use std::fmt::{Debug, Formatter};
 use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 struct ChannelReader {
     receiver: Receiver<Box<[u8]>>,
@@ -108,7 +108,7 @@ impl BinaryReader for FileReader {
 }
 
 impl dyn BinaryReader {
-    pub fn paths(mut files: Vec<Box<Path>>) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
+    pub fn paths(mut files: Vec<PathBuf>) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
         if files.len() == 1 {
             Ok(Box::from(FileReader::new(to_crush_error(File::open(files.remove(0)))?)))
         } else {

@@ -3,7 +3,7 @@ use crate::lang::argument::Argument;
 use crate::lang::value::{Value, ValueType};
 use crate::util::replace::Replace;
 use crate::lang::command::CrushCommand;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use crate::util::glob::Glob;
 use crate::lang::stream::{ValueSender, ValueReceiver, InputStream};
 use crate::lang::scope::Scope;
@@ -27,14 +27,14 @@ pub trait ArgumentVector {
     fn integer(&mut self, idx: usize) -> CrushResult<i128>;
     fn float(&mut self, idx: usize) -> CrushResult<f64>;
     fn field(&mut self, idx: usize) -> CrushResult<Vec<Box<str>>>;
-    fn file(&mut self, idx: usize) -> CrushResult<Box<Path>>;
+    fn file(&mut self, idx: usize) -> CrushResult<PathBuf>;
     fn command(&mut self, idx: usize) -> CrushResult<Box<dyn CrushCommand + Send + Sync>>;
     fn r#type(&mut self, idx: usize) -> CrushResult<ValueType>;
     fn value(&mut self, idx: usize) -> CrushResult<Value>;
     fn glob(&mut self, idx: usize) -> CrushResult<Glob>;
     fn r#struct(&mut self, idx: usize) -> CrushResult<Struct>;
     fn bool(&mut self, idx: usize) -> CrushResult<bool>;
-    fn files(&mut self, printer: &Printer) -> CrushResult<Vec<Box<Path>>>;
+    fn files(&mut self, printer: &Printer) -> CrushResult<Vec<PathBuf>>;
     fn optional_bool(&mut self, idx: usize) -> CrushResult<Option<bool>>;
     fn optional_integer(&mut self, idx: usize) -> CrushResult<Option<i128>>;
     fn optional_string(&mut self, idx: usize) -> CrushResult<Option<Box<str>>>;
@@ -117,7 +117,7 @@ impl ArgumentVector for Vec<Argument> {
     argument_getter!(glob, Glob, Glob, "glob");
     argument_getter!(r#struct, Struct, Struct, "struct");
     argument_getter!(bool, bool, Bool, "bool");
-    argument_getter!(file, Box<Path>, File, "file");
+    argument_getter!(file, PathBuf, File, "file");
 
     fn value(&mut self, idx: usize) -> CrushResult<Value> {
         if idx < self.len() {
@@ -127,7 +127,7 @@ impl ArgumentVector for Vec<Argument> {
         }
     }
 
-    fn files(&mut self, printer: &Printer) -> CrushResult<Vec<Box<Path>>> {
+    fn files(&mut self, printer: &Printer) -> CrushResult<Vec<PathBuf>> {
         let mut files = Vec::new();
         for a in self.drain(..) {
             a.value.file_expand(&mut files, printer)?;
@@ -315,7 +315,7 @@ pub trait This {
     fn dict(self) -> CrushResult<Dict>;
     fn string(self) -> CrushResult<Box<str>>;
     fn r#struct(self) -> CrushResult<Struct>;
-    fn file(self) -> CrushResult<Box<Path>>;
+    fn file(self) -> CrushResult<PathBuf>;
     fn re(self) -> CrushResult<(Box<str>, Regex)>;
     fn glob(self) -> CrushResult<Glob>;
     fn integer(self) -> CrushResult<i128>;
@@ -348,7 +348,7 @@ impl This for Option<Value> {
     this_method!(dict, Dict, Dict, "dict");
     this_method!(string, Box<str>, String, "string");
     this_method!(r#struct, Struct, Struct, "struct");
-    this_method!(file, Box<Path>, File, "file");
+    this_method!(file, PathBuf, File, "file");
     this_method!(table, Table, Table, "table");
     this_method!(binary, Vec<u8>, Binary, "binary");
     this_method!(glob, Glob, Glob, "glob");

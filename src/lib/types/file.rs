@@ -89,7 +89,7 @@ pub fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
     let base_directory = context.this.file()?;
     context.arguments.check_len(1)?;
     let sub = context.arguments.string(0)?;
-    context.output.send(Value::File(base_directory.join(sub.as_ref()).into_boxed_path()))
+    context.output.send(Value::File(base_directory.join(sub.as_ref())))
 }
 
 pub fn to(mut context: ExecutionContext) -> CrushResult<()> {

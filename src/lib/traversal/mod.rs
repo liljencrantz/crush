@@ -2,7 +2,7 @@ use crate::lang::scope::Scope;
 use crate::lang::errors::{CrushResult, error, to_crush_error, argument_error};
 use crate::lang::{value::Value};
 use crate::util::file::{home, cwd};
-use std::path::Path;
+use std::path::PathBuf;
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::execution_context::ArgumentVector;
 use crate::lang::help::Help;
@@ -16,7 +16,7 @@ pub fn cd(context: ExecutionContext) -> CrushResult<()> {
         1 => {
             let dir = &context.arguments[0];
             match &dir.value {
-                Value::String(val) => Ok(Box::from(Path::new(val.as_ref()))),
+                Value::String(val) => Ok(PathBuf::from(val.as_ref())),
                 Value::File(val) => Ok(val.clone()),
                 Value::Glob(val) => val.glob_to_single_file(&cwd()?),
                 _ => error(format!("Wrong parameter type, expected text or file, found {}", &dir.value.value_type().to_string()).as_str())

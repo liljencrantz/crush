@@ -32,10 +32,7 @@ fn extract_argument(path: &PathArguments) -> SignatureResult<Vec<&'static str>> 
                     GenericArgument::Type(t) => {
                         res.push(extract_type(t)?.0);
                     }
-                    GenericArgument::Lifetime(_) => { unimplemented!("Wrong type"); }
-                    GenericArgument::Binding(_) => unimplemented!("Wrong type"),
-                    GenericArgument::Constraint(_) => unimplemented!("Wrong type"),
-                    GenericArgument::Const(_) => unimplemented!("Wrong type"),
+                    _ => return fail!(path.span(), "Expected a type"),
                 }
             }
             Ok(res)
@@ -73,7 +70,7 @@ fn extract_type(ty: &Type) -> SignatureResult<(&'static str, Vec<&'static str>)>
     }
 }
 
-fn is_named(attr: &Attribute, name: &str) -> bool {
+fn call_is_named(attr: &Attribute, name: &str) -> bool {
     let path = &attr.path;
     match (&path.leading_colon, path.segments.len()) {
         (None, 1) => {
@@ -84,30 +81,22 @@ fn is_named(attr: &Attribute, name: &str) -> bool {
     }
 }
 
-fn is_default(attr: &Attribute) -> bool {
-    is_named(attr, "default")
+fn call_is_default(attr: &Attribute) -> bool {
+    call_is_named(attr, "default")
 }
 
-fn extract_values(attr: &Attribute) -> SignatureResult<Vec<TokenTree>> {
+fn call_values(attr: &Attribute) -> SignatureResult<Vec<TokenTree>> {
     let mut res = Vec::new();
     for tree in attr.tokens.clone().into_iter() {
         res.push(tree);
-        /*        match tree {
-                    TokenTree::Group(g) => {
-                        for sub_tree in g.stream().into_iter() {
-                            res.push(sub_tree);
-                        }
-                    }
-                    _ => return fail!(attr.span(),"Expected group"),
-                }*/
     }
     Ok(res)
 }
 
-fn extract_value(attr: &Attribute) -> SignatureResult<TokenTree> {
-    let vals = extract_values(attr)?;
-    if vals.len() == 1 {
-        Ok(vals[0].clone())
+fn call_value(attr: &Attribute) -> SignatureResult<TokenTree> {
+    let values = call_values(attr)?;
+    if values.len() == 1 {
+        Ok(values[0].clone())
     } else {
         fail!(attr.span(), "Expected exactly one literal")
     }
@@ -121,7 +110,7 @@ fn simple_type_to_value_name(simple_type: &str) -> &str {
         "ValueType" => "Type",
         "f64" => "Float",
         "char" => "String",
-        _ => panic!("Noooo!")
+        _ => panic!("Unknown type")
     }
 }
 
@@ -132,6 +121,18 @@ fn simple_type_to_mutator(simple_type: &str) -> TokenStream {
         _ => quote! {value},
     }
 }
+
+fn simple_type_dump_list(simple_type: &str) -> &str {
+    match simple_type {
+        "String" => "dump_string",
+        "bool" => "dump_bool",
+        "i128" => "dump_integer",
+        "ValueType" => "dump_type",
+        "f64" => "dump_float",
+        _ => panic!("Unknown type"),
+    }
+}
+
 
 fn type_to_value(ty: &Type, name: &Ident, default: Option<TokenTree>, is_unnamed_target: bool, is_named_target: bool) -> SignatureResult<TypeData> {
     let name_literal = proc_macro2::Literal::string(&name.to_string());
@@ -192,10 +193,7 @@ if #name.is_none() {
                     unnamed_mutate: if is_unnamed_target {
                         Some(quote! {
                             while !_unnamed.is_empty() {
-                                match _unnamed.pop_front() {
-                                    Some(Value::File(value)) => #name.push(value.to_path_buf()),
-                                    _ => return argument_error(format!("Expected argument {} to be a file", #name_literal).as_str()),
-                                }
+                                _unnamed.pop_front().unwrap().file_expand(&mut #name, printer)?;
                             }
                         })
                     } else { None },
@@ -203,11 +201,15 @@ if #name.is_none() {
                 })
             } else {
                 let mutator = simple_type_to_mutator(args[0]);
+                let dump_all = Ident::new(simple_type_dump_list(args[0]), ty.span().clone());
                 let value_type = Ident::new(simple_type_to_value_name(args[0]), ty.span().clone());
 
                 Ok(TypeData {
                     initialize: quote! { Vec::new() },
-                    mappings: quote! { (Some(#name_literal), Value::#value_type(value)) => #name.push(#mutator), },
+                    mappings: quote! {
+                        (Some(#name_literal), Value::#value_type(value)) => #name.push(#mutator),
+                        (Some(#name_literal), Value::List(value)) => value.#dump_all(&mut #name)?,
+                    },
                     unnamed_mutate: if is_unnamed_target {
                         Some(quote! {
                             while !_unnamed.is_empty() {
@@ -233,7 +235,7 @@ if #name.is_none() {
 
                 Ok(TypeData {
                     initialize: quote! { crate::lang::ordered_string_map::OrderedStringMap::new() },
-                    mappings: quote! { (Some(#name_literal), Value::#value_type(value)) => #name = value, },
+                    mappings: quote! { (Some(name), Value::#value_type(value)) => #name.insert(name.to_string(), #mutator), },
                     unnamed_mutate: None,
                     assign: quote! { #name, },
                 })
@@ -270,7 +272,6 @@ if #name.is_none() {
     }
 }
 
-
 fn signature_real(input: TokenStream) -> SignatureResult<TokenStream> {
     let root: syn::Item = syn::parse2(input.clone()).expect("Invalid syntax tree");
     match root {
@@ -288,13 +289,13 @@ fn signature_real(input: TokenStream) -> SignatureResult<TokenStream> {
                 let mut is_named_target = false;
                 if !field.attrs.is_empty() {
                     for attr in &field.attrs {
-                        if is_default(attr) {
-                            default_value = Some(extract_value(attr)?)
+                        if call_is_default(attr) {
+                            default_value = Some(call_value(attr)?)
                         }
-                        if is_named(attr, "unnamed") {
+                        if call_is_named(attr, "unnamed") {
                             is_unnamed_target = true;
                         }
-                        if is_named(attr, "named") {
+                        if call_is_named(attr, "named") {
                             is_named_target = true;
                         }
                     }
@@ -302,7 +303,7 @@ fn signature_real(input: TokenStream) -> SignatureResult<TokenStream> {
                 field.attrs = Vec::new();
                 let name = &field.ident.clone().unwrap();
                 let name_literal = proc_macro2::Literal::string(&name.to_string());
-                let type_data = type_to_value(&field.ty, name, default_value, is_unnamed_target, is_named_target)?;
+                let type_data = type_to_value(&field.ty, name, default_value.clone(), is_unnamed_target, is_named_target)?;
                 let initialize = type_data.initialize;
                 let mappings = type_data.mappings;
                 values.extend(quote! {let mut #name = #initialize; }.into_token_stream());
@@ -313,7 +314,7 @@ fn signature_real(input: TokenStream) -> SignatureResult<TokenStream> {
                     named_matchers.extend(mappings);
                 }
 
-                if !had_unnamed_target {
+                if !had_unnamed_target || default_value.is_some() {
                     if let Some(mutate) = type_data.unnamed_mutate {
                         unnamed_mutations.extend(quote! {
                         #mutate

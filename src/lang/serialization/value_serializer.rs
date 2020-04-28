@@ -43,7 +43,7 @@ impl Serializable<Value> for Value {
         match elements[id].element.as_ref().unwrap() {
             element::Element::String(s) => Ok(Value::string(s.as_str())),
             element::Element::File(f) => Ok(Value::File(
-                PathBuf::from(OsStr::from_bytes(&f[..])).into_boxed_path())),
+                PathBuf::from(OsStr::from_bytes(&f[..])))),
             element::Element::Float(v) => Ok(Value::Float(*v)),
             element::Element::Binary(v) => Ok(Value::Binary(v.clone())),
             element::Element::Glob(v) => Ok(Value::Glob(Glob::new(v))),

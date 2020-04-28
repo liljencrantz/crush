@@ -2,7 +2,7 @@ use std::collections::{HashMap, VecDeque};
 use std::fs;
 use std::fs::Metadata;
 use std::os::unix::fs::MetadataExt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Local};
 use users::uid_t;
@@ -28,13 +28,13 @@ lazy_static! {
 
 fn insert_entity(
     meta: &Metadata,
-    file: Box<Path>,
+    file: PathBuf,
     users: &HashMap<uid_t, User>,
     output: &mut OutputStream) -> CrushResult<()> {
     let modified_system = to_crush_error(meta.modified())?;
     let modified_datetime: DateTime<Local> = DateTime::from(modified_system);
     let f = if file.starts_with("./") {
-        let b = file.to_str().map(|s| Box::from(Path::new(&s[2..])));
+        let b = file.to_str().map(|s| PathBuf::from(&s[2..]));
         b.unwrap_or(file)
     } else {
         file
@@ -58,10 +58,10 @@ fn insert_entity(
 }
 
 fn run_for_single_directory_or_file(
-    path: Box<Path>,
+    path: PathBuf,
     users: &HashMap<uid_t, User>,
     recursive: bool,
-    q: &mut VecDeque<Box<Path>>,
+    q: &mut VecDeque<PathBuf>,
     output: &mut OutputStream) -> CrushResult<()> {
     if path.is_dir() {
         let dirs = fs::read_dir(path);
@@ -69,11 +69,11 @@ fn run_for_single_directory_or_file(
             let entry = to_crush_error(maybe_entry)?;
             insert_entity(
                 &to_crush_error(entry.metadata())?,
-                entry.path().into_boxed_path(),
+                entry.path(),
                 &users,
                 output)?;
             if recursive && entry.path().is_dir() && (!(entry.file_name().eq(".") || entry.file_name().eq(".."))) {
-                q.push_back(entry.path().into_boxed_path());
+                q.push_back(entry.path());
             }
         }
     } else {
@@ -110,7 +110,7 @@ pub fn run(mut config: Config) -> CrushResult<()> {
 }
 
 pub struct Config {
-    dirs: Vec<Box<Path>>,
+    dirs: Vec<PathBuf>,
     recursive: bool,
     output: OutputStream,
 }
@@ -137,7 +137,7 @@ fn parse(context: ExecutionContext) -> Result<Config, CrushError> {
     if has_files {
         Ok(Config { dirs, recursive, output })
     } else {
-        Ok(Config { dirs: vec![Box::from(Path::new("."))], recursive, output })
+        Ok(Config { dirs: vec![PathBuf::from(".")], recursive, output })
     }
 }
 

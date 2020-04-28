@@ -87,11 +87,11 @@ impl Glob {
         glob_match(&self.pattern, v).matches
     }
 
-    pub fn glob_files(&self, cwd: &Path, out: &mut Vec<Box<Path>>) -> CrushResult<()> {
+    pub fn glob_files(&self, cwd: &Path, out: &mut Vec<PathBuf>) -> CrushResult<()> {
         to_crush_error(glob_files(&self.pattern, cwd, out))
     }
 
-    pub fn glob_to_single_file(&self, cwd: &Path) -> CrushResult<Box<Path>> {
+    pub fn glob_to_single_file(&self, cwd: &Path) -> CrushResult<PathBuf> {
         let mut dirs = Vec::new();
         self.glob_files(cwd, &mut dirs)?;
         match dirs.len() {
@@ -104,7 +104,7 @@ impl Glob {
 fn glob_files(
     pattern: &[Tile],
     cwd: &Path,
-    out: &mut Vec<Box<Path>>
+    out: &mut Vec<PathBuf>
 ) -> io::Result<()> {
     if pattern.is_empty() {
         return Ok(());
@@ -127,13 +127,13 @@ fn glob_files(
                     let mut ss = format!("{}{}", s, name);
                     let res = glob_match(pattern, &ss);
                     if res.matches {
-                        out.push(PathBuf::from(&ss).into_boxed_path())
+                        out.push(PathBuf::from(&ss))
                     }
                     if res.prefix && entry.metadata()?.is_dir() {
                         if !res.matches {
                             let with_trailing_slash = format!("{}/", ss);
                             if glob_match(pattern, &with_trailing_slash).matches {
-                                out.push(PathBuf::from(&with_trailing_slash).into_boxed_path())
+                                out.push(PathBuf::from(&with_trailing_slash))
                             }
                         }
                         ss.push('/');

@@ -23,7 +23,7 @@ pub enum ValueDefinition {
 fn file_get(f: &str) -> Option<Value> {
     let p = PathBuf::from(f);
     if p.exists() {
-        Some(Value::File(p.into_boxed_path()))
+        Some(Value::File(p))
     } else {
         None
     }

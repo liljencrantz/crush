@@ -17,7 +17,7 @@ fn parse_method(m: &str) -> CrushResult<Method> {
         "connect" => Method::CONNECT,
         "patch" => Method::PATCH,
         "trace" => Method::TRACE,
-        _ => { return argument_error(format!("Unknown method {}", m).as_str()); }
+        _ => return argument_error(format!("Unknown method {}", m).as_str()),
     })
 }
 

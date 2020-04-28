@@ -1,15 +1,15 @@
 use regex::Regex;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use crate::lang::errors::to_crush_error;
 use std::fs::read_dir;
 use crate::lang::printer::Printer;
 
 pub trait RegexFileMatcher {
-    fn match_files(&self, cwd: &Path, out: &mut Vec<Box<Path>>, printer: &Printer);
+    fn match_files(&self, cwd: &Path, out: &mut Vec<PathBuf>, printer: &Printer);
 }
 
 impl RegexFileMatcher for Regex {
-    fn match_files(&self, p: &Path, out: &mut Vec<Box<Path>>, printer: &Printer) {
+    fn match_files(&self, p: &Path, out: &mut Vec<PathBuf>, printer: &Printer) {
         match read_dir(p) {
             Ok(dir) => {
                 for e in dir {
@@ -19,7 +19,7 @@ impl RegexFileMatcher for Regex {
                                 None => printer.error("Invalid filename encountered. Sadly, I cannot tell you what it is. Because it's invalid."),
                                 Some(name) => {
                                     if self.is_match(name) {
-                                        out.push(p.join(entry.file_name()).into_boxed_path());
+                                        out.push(p.join(entry.file_name()));
                                     }
                                 },
                             }

@@ -7,7 +7,7 @@ use std::ops::Deref;
 use crate::lang::command::{CrushCommand, Parameter};
 use crate::util::glob::Glob;
 use regex::Regex;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use crate::lang::scope::Scope;
 
 pub struct JobListNode {
@@ -66,7 +66,7 @@ pub enum Node {
     Regex(Box<str>),
     Field(Box<str>),
     String(Box<str>),
-    File(Box<Path>),
+    File(PathBuf),
     Integer(i128),
     Float(f64),
     GetItem(Box<Node>, Box<Node>),
@@ -315,7 +315,7 @@ impl Node {
             Box::from(Node::Glob(Box::from(s)))
         } else if s.contains('/') {
             if s.starts_with('/') {
-                Box::from(Node::File(Box::from(Path::new(s))))
+                Box::from(Node::File(PathBuf::from(s)))
             } else {
                 let parts = s.split('/').collect::<Vec<&str>>();
                 let mut res = Node::Label(Box::from(parts[0]));

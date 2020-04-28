@@ -3,7 +3,7 @@ use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, v
 use crate::lang::scope::Scope;
 use crate::lang::errors::{error, CrushResult, Kind};
 use crate::util::thread::{handle, build};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use crate::lang::execution_context::{JobContext, CompileContext};
 use std::ops::Deref;
 
@@ -13,7 +13,7 @@ pub struct CommandInvocation {
     arguments: Vec<ArgumentDefinition>,
 }
 
-fn resolve_external_command(name: &str, env: &Scope) -> CrushResult<Option<Box<Path>>> {
+fn resolve_external_command(name: &str, env: &Scope) -> CrushResult<Option<PathBuf>> {
     if let Some(Value::List(path)) = env.get("cmd_path")? {
         let path_vec = path.dump();
         for val in path_vec {
@@ -21,7 +21,7 @@ fn resolve_external_command(name: &str, env: &Scope) -> CrushResult<Option<Box<P
                 Value::File(el) => {
                     let full = el.join(name);
                     if full.exists() {
-                        return Ok(Some(full.into_boxed_path()));
+                        return Ok(Some(full));
                     }
                 }
                 _ => {}
