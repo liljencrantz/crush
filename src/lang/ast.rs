@@ -7,7 +7,7 @@ use std::ops::Deref;
 use crate::lang::command::{CrushCommand, Parameter};
 use crate::util::glob::Glob;
 use regex::Regex;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use crate::lang::scope::Scope;
 
 pub struct JobListNode {

@@ -1,5 +1,5 @@
 use regex::Regex;
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf, Path};
 use crate::lang::errors::to_crush_error;
 use std::fs::read_dir;
 use crate::lang::printer::Printer;

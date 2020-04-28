@@ -152,9 +152,9 @@ impl List {
 
     dump_to!(dump_string, String, String, |e: &String| e.to_string());
     dump_to!(dump_integer, i128, Integer, |v: &i128| *v);
-    dump_to!(dump_bool, bool, Bool, |v: &bool| *v);
-    dump_to!(dump_type, ValueType, Type, |v: &ValueType| v.clone());
-    dump_to!(dump_float, f64, Float, |v: &f64| *v);
+    //dump_to!(dump_bool, bool, Bool, |v: &bool| *v);
+    //dump_to!(dump_type, ValueType, Type, |v: &ValueType| v.clone());
+    //dump_to!(dump_float, f64, Float, |v: &f64| *v);
 }
 
 impl ToString for List {

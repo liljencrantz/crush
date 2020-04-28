@@ -22,7 +22,7 @@ use crate::{lang::scope::Scope, lang::errors::CrushResult};
 use crate::lang::execute;
 use crate::lang::stream::ValueSender;
 use crate::lang::printer::Printer;
-use std::path::{PathBuf, Path};
+use std::path::Path;
 use std::fs::read_dir;
 use crate::lang::errors::to_crush_error;
 

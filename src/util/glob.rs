@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf, Path};
 use std::io;
 use std::fs::read_dir;
 use crate::lang::errors::{to_crush_error, argument_error, CrushResult};

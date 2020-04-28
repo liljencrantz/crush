@@ -1,5 +1,5 @@
 use crate::lang::errors::{CrushResult, error, to_crush_error};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 pub fn cwd() -> CrushResult<PathBuf> {
     match std::env::current_dir() {

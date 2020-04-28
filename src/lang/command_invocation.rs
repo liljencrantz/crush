@@ -3,7 +3,7 @@ use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, v
 use crate::lang::scope::Scope;
 use crate::lang::errors::{error, CrushResult, Kind};
 use crate::util::thread::{handle, build};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use crate::lang::execution_context::{JobContext, CompileContext};
 use std::ops::Deref;
 

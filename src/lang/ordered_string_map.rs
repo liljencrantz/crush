@@ -20,9 +20,11 @@ impl <T> OrderedStringMap <T> {
         self.mapping.insert(key, idx);
     }
 
+    /*
     pub fn get(&self, key: &str) -> Option<&T> {
         self.mapping.get(key).map(|idx| &self.values[*idx].1)
     }
+    */
 
     pub fn iter(&self) -> std::slice::Iter<'_, (String, T)>{
         self.values.iter()

@@ -4,7 +4,6 @@ Tab completion of files
 Tab completion of variable names
 Tab completion of globs
 Tab completion of arguments to commands
-Make builtin commands have same parameter syntax options as external ones
 multi-line editing
 Syntax highlighting
 Rethink join syntax, and refactor code

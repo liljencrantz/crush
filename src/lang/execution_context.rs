@@ -3,7 +3,7 @@ use crate::lang::argument::Argument;
 use crate::lang::value::{Value, ValueType};
 use crate::util::replace::Replace;
 use crate::lang::command::CrushCommand;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use crate::util::glob::Glob;
 use crate::lang::stream::{ValueSender, ValueReceiver, InputStream};
 use crate::lang::scope::Scope;

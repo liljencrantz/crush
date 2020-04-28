@@ -136,54 +136,50 @@ pub fn run(
     Ok(())
 }
 
-fn perform_for(
-    input: Box<dyn Readable>,
-    mut context: ExecutionContext,
-) -> CrushResult<()> {
-    let mut copy = false;
-    let mut columns = Vec::new();
 
-    if context.arguments.len() == 0 {
-        return argument_error("No columns selected");
-    }
-
-    if let Value::Glob(g) = &context.arguments[0].value {
-        if context.arguments[0].argument_type.is_none() && &g.to_string() == "%" {
-            copy = true;
-            context.arguments.remove(0);
-        } else {
-            return argument_error("Invalid argument");
-        }
-    }
-
-    let input_type = input.types();
-    for a in &context.arguments {
-        match (a.argument_type.as_deref(), a.value.clone()) {
-            (Some(name), Value::Command(closure)) => {
-                match (copy, input_type.find_str(name)) {
-                    (true, Ok(idx)) => columns.push((Location::Replace(idx), Source::Closure(closure))),
-                    _ => columns.push((Location::Append(name.to_string()), Source::Closure(closure))),
-                }
-            }
-            (None, Value::Field(name)) => {
-                if name.len() != 1 {
-                    return argument_error("Invalid field");
-                }
-                match (copy, input_type.find_str(name[0].as_ref())) {
-                    (false, Ok(idx)) => columns.push((Location::Append(name[0].clone()), Source::Argument(idx))),
-                    _ => return argument_error(format!("Unknown field {}", name[0]).as_str()),
-                }
-            }
-            _ => return argument_error("Invalid argument"),
-        }
-    }
-
-    run(Config { columns, copy }, input, context)
-}
-
-pub fn select(context: ExecutionContext) -> CrushResult<()> {
+pub fn select(mut context: ExecutionContext) -> CrushResult<()> {
     match context.input.clone().recv()?.readable() {
-        Some(r) => perform_for(r, context),
+        Some(input) => {
+            let mut copy = false;
+            let mut columns = Vec::new();
+
+            if context.arguments.len() == 0 {
+                return argument_error("No columns selected");
+            }
+
+            if let Value::Glob(g) = &context.arguments[0].value {
+                if context.arguments[0].argument_type.is_none() && &g.to_string() == "%" {
+                    copy = true;
+                    context.arguments.remove(0);
+                } else {
+                    return argument_error("Invalid argument");
+                }
+            }
+
+            let input_type = input.types();
+            for a in &context.arguments {
+                match (a.argument_type.as_deref(), a.value.clone()) {
+                    (Some(name), Value::Command(closure)) => {
+                        match (copy, input_type.find_str(name)) {
+                            (true, Ok(idx)) => columns.push((Location::Replace(idx), Source::Closure(closure))),
+                            _ => columns.push((Location::Append(name.to_string()), Source::Closure(closure))),
+                        }
+                    }
+                    (None, Value::Field(name)) => {
+                        if name.len() != 1 {
+                            return argument_error("Invalid field");
+                        }
+                        match (copy, input_type.find_str(name[0].as_ref())) {
+                            (false, Ok(idx)) => columns.push((Location::Append(name[0].clone()), Source::Argument(idx))),
+                            _ => return argument_error(format!("Unknown field {}", name[0]).as_str()),
+                        }
+                    }
+                    _ => return argument_error("Invalid argument"),
+                }
+            }
+
+            run(Config { columns, copy }, input, context)
+        }
         _ => error("Expected a stream"),
     }
 }

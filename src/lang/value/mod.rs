@@ -3,7 +3,7 @@ mod value_type;
 
 use std::cmp::Ordering;
 use std::hash::Hasher;
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf, Path};
 use std::str::FromStr;
 
 use chrono::{DateTime, Local};

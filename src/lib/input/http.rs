@@ -21,14 +21,13 @@ fn parse_method(m: &str) -> CrushResult<Method> {
     })
 }
 
-
 #[signature]
 struct Signature {
     uri: String,
-    form: Option<String>,
 //    #[values("get", "post", "put", "delete", "head", "options", "connect", "patch", "trace")]
     #[default("get")]
     method: String,
+    form: Option<String>,
     header: Vec<String>,
 }
 

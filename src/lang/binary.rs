@@ -5,7 +5,7 @@ use std::io::{Error, Read, Write};
 use crossbeam::{Receiver, bounded, Sender};
 use std::fmt::{Debug, Formatter};
 use std::fs::File;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 struct ChannelReader {
     receiver: Receiver<Box<[u8]>>,

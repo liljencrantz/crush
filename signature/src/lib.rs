@@ -116,7 +116,6 @@ fn simple_type_to_value_name(simple_type: &str) -> &str {
 
 fn simple_type_to_mutator(simple_type: &str) -> TokenStream {
     match simple_type {
-        "String" => quote! {value.to_string()},
         "char" => quote! { if value.len() == 1 { value.chars().next().unwrap()} else {return argument_error("Argument must be exactly one character")}},
         _ => quote! {value},
     }
@@ -134,7 +133,7 @@ fn simple_type_dump_list(simple_type: &str) -> &str {
 }
 
 
-fn type_to_value(ty: &Type, name: &Ident, default: Option<TokenTree>, is_unnamed_target: bool, is_named_target: bool) -> SignatureResult<TypeData> {
+fn type_to_value(ty: &Type, name: &Ident, default: Option<TokenTree>, is_unnamed_target: bool) -> SignatureResult<TypeData> {
     let name_literal = proc_macro2::Literal::string(&name.to_string());
 
     let (type_name, args) = extract_type(ty)?;
@@ -143,9 +142,9 @@ fn type_to_value(ty: &Type, name: &Ident, default: Option<TokenTree>, is_unnamed
             if !args.is_empty() {
                 fail!(ty.span(), "This type can't be paramterizised")
             } else {
-                let native_type = Ident::new(type_name, ty.span().clone());
+                let native_type = Ident::new(type_name, ty.span());
                 let mutator = simple_type_to_mutator(type_name);
-                let value_type = Ident::new(simple_type_to_value_name(type_name), ty.span().clone());
+                let value_type = Ident::new(simple_type_to_value_name(type_name), ty.span());
                 Ok(TypeData {
                     initialize: quote! { None },
                     mappings: quote! {(Some(#name_literal), Value::#value_type(value)) => #name = Some(#mutator),},
@@ -273,7 +272,7 @@ if #name.is_none() {
 }
 
 fn signature_real(input: TokenStream) -> SignatureResult<TokenStream> {
-    let root: syn::Item = syn::parse2(input.clone()).expect("Invalid syntax tree");
+    let root: syn::Item = syn::parse2(input).expect("Invalid syntax tree");
     match root {
         Item::Struct(mut s) => {
             let mut named_matchers = proc_macro2::TokenStream::new();
@@ -302,8 +301,7 @@ fn signature_real(input: TokenStream) -> SignatureResult<TokenStream> {
                 }
                 field.attrs = Vec::new();
                 let name = &field.ident.clone().unwrap();
-                let name_literal = proc_macro2::Literal::string(&name.to_string());
-                let type_data = type_to_value(&field.ty, name, default_value.clone(), is_unnamed_target, is_named_target)?;
+                let type_data = type_to_value(&field.ty, name, default_value.clone(), is_unnamed_target)?;
                 let initialize = type_data.initialize;
                 let mappings = type_data.mappings;
                 values.extend(quote! {let mut #name = #initialize; }.into_token_stream());
@@ -351,7 +349,7 @@ impl crate::lang::argument::ArgumentHandler for #struct_name {
 
             let mut output = s.to_token_stream();
             output.extend(handler.into_token_stream());
-            println!("ABCABC {}", output.to_string());
+            //println!("ABCABC {}", output.to_string());
             Ok(output)
         }
         _ => { fail!(root.span(), "Expected a struct") }

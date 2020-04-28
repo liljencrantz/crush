@@ -14,7 +14,7 @@ use crate::lang::errors::{CrushResult, to_crush_error};
 use crate::lang::{printer, execute};
 use crate::lang::pretty_printer::create_pretty_printer;
 use crate::util::file::home;
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf, Path};
 use crate::lang::scope::Scope;
 use crate::lang::printer::Printer;
 

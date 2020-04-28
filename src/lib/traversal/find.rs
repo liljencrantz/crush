@@ -2,7 +2,7 @@ use std::collections::{HashMap, VecDeque};
 use std::fs;
 use std::fs::Metadata;
 use std::os::unix::fs::MetadataExt;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use chrono::{DateTime, Local};
 use users::uid_t;
@@ -13,8 +13,10 @@ use lazy_static::lazy_static;
 use crate::lang::execution_context::ExecutionContext;
 use crate::util::user_map::{create_user_map, UserMap};
 use crate::lang::{value::Value, value::ValueType, table::ColumnType, table::Row};
-use crate::lang::errors::{error, CrushError, CrushResult, to_crush_error, argument_error};
+use crate::lang::errors::{error, CrushResult, to_crush_error};
 use crate::lang::stream::OutputStream;
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
 
 lazy_static! {
     static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
@@ -93,55 +95,30 @@ fn run_for_single_directory_or_file(
     Ok(())
 }
 
-pub fn run(mut config: Config) -> CrushResult<()> {
+#[signature]
+#[derive(Debug)]
+struct Signature {
+    #[unnamed()]
+    dirs: Vec<PathBuf>,
+    recursive: bool,
+}
+
+pub fn find(context: ExecutionContext) -> CrushResult<()> {
+    let mut output = context.output.initialize(OUTPUT_TYPE.clone())?;
+    let mut config: Signature = Signature::parse(context.arguments, &context.printer)?;
+
+    if config.dirs.len() == 0  {
+        config.dirs.push(PathBuf::from("."));
+    }
     let users = create_user_map();
     let mut q = VecDeque::new();
-    for dir in config.dirs {
-        q.push_back(dir);
-    }
+    q.extend(config.dirs.drain(..));
     loop {
         if q.is_empty() {
             break;
         }
         let dir = q.pop_front().unwrap();
-        let _ = run_for_single_directory_or_file(dir, &users, config.recursive, &mut q, &mut config.output);
+        let _ = run_for_single_directory_or_file(dir, &users, config.recursive, &mut q, &mut output);
     }
     Ok(())
-}
-
-pub struct Config {
-    dirs: Vec<PathBuf>,
-    recursive: bool,
-    output: OutputStream,
-}
-
-fn parse(context: ExecutionContext) -> Result<Config, CrushError> {
-    let output = context.output.initialize(OUTPUT_TYPE.clone())?;
-    let mut dirs = Vec::new();
-    let mut recursive = true;
-    let mut has_files = false;
-    for a in context.arguments {
-        match (a.argument_type.as_deref(), a.value) {
-            (Some("recursive"), Value::Bool(r)) => {
-                recursive = r;
-            }
-            (None, v) => {
-                has_files = true;
-                v.file_expand(&mut dirs, &context.printer)?;
-            }
-            _ => {
-                return argument_error("Unknown argument");
-            }
-        }
-    }
-    if has_files {
-        Ok(Config { dirs, recursive, output })
-    } else {
-        Ok(Config { dirs: vec![PathBuf::from(".")], recursive, output })
-    }
-}
-
-pub fn find(context: ExecutionContext) -> CrushResult<()> {
-    let cfg = parse(context)?;
-    run(cfg)
 }
