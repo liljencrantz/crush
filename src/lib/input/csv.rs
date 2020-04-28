@@ -1,11 +1,9 @@
-use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
+use crate::lang::execution_context::ExecutionContext;
 use crate::{
     lang::{
-        argument::Argument,
         table::Row,
         value::Value,
     },
-    lang::stream::OutputStream,
     lang::errors::{CrushError, argument_error},
 };
 use std::{
@@ -20,7 +18,7 @@ use signature::signature;
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::value::ValueType;
 use crate::lang::ordered_string_map::OrderedStringMap;
-use std::path::{PathBuf, Path};
+use std::path::PathBuf;
 
 #[signature]
 #[derive(Debug)]
@@ -53,7 +51,7 @@ pub fn csv(context: ExecutionContext) -> CrushResult<()> {
     }?);
 
     let separator = cfg.separator;
-    let trim = cfg.trim.clone();
+    let trim = cfg.trim;
     let skip = cfg.head as usize;
 
     let mut line = String::new();
