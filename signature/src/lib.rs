@@ -9,7 +9,7 @@ use syn::spanned::Spanned;
 
 struct TypeData {
     initialize: TokenStream,
-    mappings: Vec<(Ident, TokenStream)>,
+    mappings: TokenStream,
     unnamed_mutate: Option<TokenStream>,
     assign: TokenStream,
 }
@@ -133,7 +133,7 @@ fn simple_type_to_mutator(simple_type: &str) -> TokenStream {
     }
 }
 
-fn type_to_value(ty: &Type, name: &Ident, default: Option<TokenTree>, is_unnamed: bool) -> SignatureResult<TypeData> {
+fn type_to_value(ty: &Type, name: &Ident, default: Option<TokenTree>, is_unnamed_target: bool, is_named_target: bool) -> SignatureResult<TypeData> {
     let name_literal = proc_macro2::Literal::string(&name.to_string());
 
     let (type_name, args) = extract_type(ty)?;
@@ -147,7 +147,7 @@ fn type_to_value(ty: &Type, name: &Ident, default: Option<TokenTree>, is_unnamed
                 let value_type = Ident::new(simple_type_to_value_name(type_name), ty.span().clone());
                 Ok(TypeData {
                     initialize: quote! { None },
-                    mappings: vec![(value_type.clone(), quote! {#name = Some(#mutator)})],
+                    mappings: quote! {(Some(#name_literal), Value::#value_type(value)) => #name = Some(#mutator),},
                     unnamed_mutate:
                     match default {
                         None => {
@@ -188,21 +188,8 @@ if #name.is_none() {
             } else if args[0] == "PathBuf" {
                 Ok(TypeData {
                     initialize: quote! { Vec::new() },
-                    mappings: vec![
-/*                        (
-                            Ident::new("File", ty.span().clone()),
-                            quote! { value.file_expand(#name, printer)?; }
-                        ),
-                        (
-                            Ident::new("Glob", ty.span().clone()),
-                            quote! { value.file_expand(#name, printer)?; }
-                        ),
-                        (
-                            Ident::new("Regex", ty.span().clone()),
-                            quote! { value.file_expand(#name, printer)?; }
-                        ),*/
-                    ],
-                    unnamed_mutate: if is_unnamed {
+                    mappings: quote! { (Some(#name_literal), value) => value.file_expand(&mut #name, printer)?, },
+                    unnamed_mutate: if is_unnamed_target {
                         Some(quote! {
                             while !_unnamed.is_empty() {
                                 match _unnamed.pop_front() {
@@ -220,8 +207,8 @@ if #name.is_none() {
 
                 Ok(TypeData {
                     initialize: quote! { Vec::new() },
-                    mappings: vec![(value_type.clone(), quote! { #name.push(#mutator); })],
-                    unnamed_mutate: if is_unnamed {
+                    mappings: quote! { (Some(#name_literal), Value::#value_type(value)) => #name.push(#mutator), },
+                    unnamed_mutate: if is_unnamed_target {
                         Some(quote! {
                             while !_unnamed.is_empty() {
                                 if let Some(Value::#value_type(value)) = _unnamed.pop_front() {
@@ -246,7 +233,7 @@ if #name.is_none() {
 
                 Ok(TypeData {
                     initialize: quote! { crate::lang::ordered_string_map::OrderedStringMap::new() },
-                    mappings: vec![(value_type.clone(), quote! { #name = value; })],
+                    mappings: quote! { (Some(#name_literal), Value::#value_type(value)) => #name = value, },
                     unnamed_mutate: None,
                     assign: quote! { #name, },
                 })
@@ -263,7 +250,7 @@ if #name.is_none() {
 
                 Ok(TypeData {
                     initialize: quote! { None },
-                    mappings: vec![(value_type.clone(), quote! { #name = Some(#mutator) })],
+                    mappings: quote! { (Some(#name_literal), Value::#value_type(value)) => #name = Some(#mutator), },
                     unnamed_mutate: Some(quote_spanned! { ty.span() =>
                             if #name.is_none() {
                                 match _unnamed.pop_front() {
@@ -315,20 +302,15 @@ fn signature_real(input: TokenStream) -> SignatureResult<TokenStream> {
                 field.attrs = Vec::new();
                 let name = &field.ident.clone().unwrap();
                 let name_literal = proc_macro2::Literal::string(&name.to_string());
-                let type_data = type_to_value(&field.ty, name, default_value, is_unnamed_target)?;
+                let type_data = type_to_value(&field.ty, name, default_value, is_unnamed_target, is_named_target)?;
                 let initialize = type_data.initialize;
+                let mappings = type_data.mappings;
                 values.extend(quote! {let mut #name = #initialize; }.into_token_stream());
 
-                for (value_type, mutate) in type_data.mappings {
-                    if is_named_target {
-                        named_fallback.extend(quote! {
-                        (Some(name), Value::#value_type(value)) => { #name.insert(name.to_string(), value) }
-                    })
-                    } else {
-                        named_matchers.extend(quote! {
-                        (Some( # name_literal), Value::#value_type(value)) => { #mutate }
-                    }.into_token_stream());
-                    }
+                if is_named_target {
+                    named_fallback.extend(mappings)
+                } else {
+                    named_matchers.extend(mappings);
                 }
 
                 if !had_unnamed_target {

@@ -35,9 +35,8 @@ pub struct Config {
 #[signature]
 #[derive(Debug)]
 struct Signature {
-    #[unnamed()]
-    files: Vec<PathBuf>,
-/*    #[named()]
+/*    #[unnamed()]
+    files: Vec<PathBuf>, *    #[named()]
     columns: OrderedStringMap<ValueType>,
     #[default(',')]
     separator: char,
