@@ -16,7 +16,7 @@ impl Serializable<Scope> for Scope {
                     element::Element::UserScope(s) => {
                         let name = match s.name {
                             None | Some(model::scope::Name::HasName(_)) => None,
-                            Some(model::scope::Name::NameValue(n)) => Some(String::deserialize(n as usize, elements, state)?.into_boxed_str()),
+                            Some(model::scope::Name::NameValue(n)) => Some(String::deserialize(n as usize, elements, state)?),
                         };
                         let res = Scope::create(name, s.is_loop, s.is_stopped, s.is_readonly);
                         state.scopes.insert(id, res.clone());
@@ -48,7 +48,7 @@ impl Serializable<Scope> for Scope {
                         match state.env.global_value(
                             s.elements
                                 .iter()
-                                .map(|s| s.clone().into_boxed_str())
+                                .map(|s| s.clone())
                                 .collect()) {
                             Ok(Value::Scope(s)) => Ok(s),
                             Ok(_) => error("Value is not a scope"),

@@ -14,8 +14,8 @@ fn full(name: &'static str) -> Vec<&'static str> {
 mod format;
 
 lazy_static! {
-    pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
-        let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
+    pub static ref METHODS: HashMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
+        let mut res: HashMap<String, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
         res.declare(
             full("upper"),
             upper, false,
@@ -116,7 +116,7 @@ fn upper(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::String(
         context.this.string()?
             .to_uppercase()
-            .into_boxed_str()))
+            ))
 }
 
 fn lower(context: ExecutionContext) -> CrushResult<()> {
@@ -124,7 +124,7 @@ fn lower(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::String(
         context.this.string()?
             .to_lowercase()
-            .into_boxed_str()))
+            ))
 }
 
 fn split(mut context: ExecutionContext) -> CrushResult<()> {

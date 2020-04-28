@@ -44,11 +44,11 @@ fn new(mut context: ExecutionContext) -> CrushResult<()> {
 
 fn data(context: ExecutionContext) -> CrushResult<()> {
     let mut names = column_names(&context.arguments);
-    let arr: Vec<(Box<str>, Value)> =
+    let arr: Vec<(String, Value)> =
         names.drain(..)
             .zip(context.arguments)
             .map(|(name, arg)| (name, arg.value))
-            .collect::<Vec<(Box<str>, Value)>>();
+            .collect::<Vec<(String, Value)>>();
     context.output.send(
         Value::Struct(Struct::new(arr, None)))
 }
@@ -109,25 +109,25 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         Box::new(move |env| {
             let root =
                 Struct::new(vec![
-                    (Box::from("__setattr__"), Value::Command(CrushCommand::command(
+                    ("__setattr__".to_string(), Value::Command(CrushCommand::command(
                         class_set, false,
-                        vec![Box::from("global"), Box::from("types"), Box::from("root"), Box::from("__setattr__")],
+                        vec!["global".to_string(), Box::from("types"), Box::from("root"), Box::from("__setattr__")],
                         "root:__setitem__ name:string value:any",
                         "Modify the specified field to hold the specified value",
                         None))),
-                    (Box::from("__getitem__"), Value::Command(CrushCommand::command(
+                    ("__getitem__".to_string(), Value::Command(CrushCommand::command(
                         class_get, false,
                         vec![Box::from("global"), Box::from("types"), Box::from("root"), Box::from("__getitem__")],
                         "root:__getitem__ name:string",
                         "Return the value of the specified field",
                         None))),
-                    (Box::from("__setitem__"), Value::Command(CrushCommand::command(
+                    ("__setitem__".to_string(), Value::Command(CrushCommand::command(
                         class_get, false,
                         vec![Box::from("global"), Box::from("types"), Box::from("root"), Box::from("__setitem__")],
                         "root:__setitem__ name:string value:any",
                         "Modify the specified field to hold the specified value",
                         None))),
-                    (Box::from("new"), Value::Command(CrushCommand::command(
+                    ("new".to_string(), Value::Command(CrushCommand::command(
                         new, true,
                         vec![Box::from("global"), Box::from("types"), Box::from("root"), Box::from("new")],
                         "root:new @unnamed @@named",

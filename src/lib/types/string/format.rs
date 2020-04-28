@@ -98,5 +98,5 @@ pub fn format(context: ExecutionContext) -> CrushResult<()> {
         do_format(
             &format,
             context.arguments)?
-            .into_boxed_str()))
+            ))
 }

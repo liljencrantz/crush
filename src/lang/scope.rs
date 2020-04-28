@@ -27,8 +27,8 @@ pub struct Scope {
 }
 
 pub struct ScopeLoader {
-    mapping: HashMap<Box<str>, Value>,
-    path: Vec<Box<str>>,
+    mapping: HashMap<String, Value>,
+    path: Vec<String>,
     parent: Scope,
 }
 
@@ -37,18 +37,18 @@ impl ScopeLoader {
         if self.mapping.contains_key(name) {
             return error(format!("Variable ${{{}}} already exists", name).as_str());
         }
-        self.mapping.insert(Box::from(name), value);
+        self.mapping.insert(name.to_string(), value);
         Ok(())
     }
 
     pub fn declare_command(&mut self, name: &str, call: fn(ExecutionContext) -> CrushResult<()>, can_block: bool, signature: &'static str, short_help: &'static str, long_help: Option<&'static str>) -> CrushResult<()> {
         let mut full_name = self.path.clone();
-        full_name.push(Box::from(name));
+        full_name.push(name.to_string());
         let command = CrushCommand::command(call, can_block, full_name, signature, short_help, long_help);
         if self.mapping.contains_key(name) {
             return error(format!("Variable ${{{}}} already exists", name).as_str());
         }
-        self.mapping.insert(Box::from(name), Value::Command(command));
+        self.mapping.insert(name.to_string(), Value::Command(command));
         Ok(())
     }
 
@@ -60,16 +60,16 @@ impl ScopeLoader {
         long_help: Option<&'static str>,
     ) -> CrushResult<()> {
         let mut full_name = self.path.clone();
-        full_name.push(Box::from(name));
+        full_name.push(name.to_string());
         let command = CrushCommand::condition(call, full_name, signature, short_help, long_help);
         if self.mapping.contains_key(name) {
             return error(format!("Variable ${{{}}} already exists", name).as_str());
         }
-        self.mapping.insert(Box::from(name), Value::Command(command));
+        self.mapping.insert(name.to_string(), Value::Command(command));
         Ok(())
     }
 
-    fn copy_into(&mut self, target: &mut HashMap<Box<str>, Value>) {
+    fn copy_into(&mut self, target: &mut HashMap<String, Value>) {
         for (k, v) in self.mapping.drain() {
             target.insert(k, v);
         }
@@ -106,7 +106,7 @@ pub struct ScopeData {
     pub uses: Vec<Scope>,
 
     /** The actual data of this scope. */
-    pub mapping: HashMap<Box<str>, Value>,
+    pub mapping: HashMap<String, Value>,
 
     /** True if this scope is a loop. Required to implement the break/continue commands.*/
     pub is_loop: bool,
@@ -119,13 +119,13 @@ pub struct ScopeData {
     lists can still be modified. */
     pub is_readonly: bool,
 
-    pub name: Option<Box<str>>,
+    pub name: Option<String>,
     is_loaded: bool,
     loader: Option<Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>>,
 }
 
 impl ScopeData {
-    fn new(parent_scope: Option<Scope>, calling_scope: Option<Scope>, is_loop: bool, name: Option<Box<str>>) -> ScopeData {
+    fn new(parent_scope: Option<Scope>, calling_scope: Option<Scope>, is_loop: bool, name: Option<String>) -> ScopeData {
         ScopeData {
             parent_scope,
             calling_scope,
@@ -140,7 +140,7 @@ impl ScopeData {
         }
     }
 
-    fn lazy(parent_scope: Option<Scope>, calling_scope: Option<Scope>, is_loop: bool, name: Option<Box<str>>, loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>) -> ScopeData {
+    fn lazy(parent_scope: Option<Scope>, calling_scope: Option<Scope>, is_loop: bool, name: Option<String>, loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>) -> ScopeData {
         ScopeData {
             parent_scope,
             calling_scope,
@@ -176,12 +176,12 @@ impl Clone for ScopeData {
 impl Scope {
     pub fn create_root() -> Scope {
         Scope {
-            data: Arc::from(Mutex::new(ScopeData::new(None, None, false, Some(Box::from("global"))))),
+            data: Arc::from(Mutex::new(ScopeData::new(None, None, false, Some("global".to_string())))),
         }
     }
 
     pub fn create(
-        name: Option<Box<str>>,
+        name: Option<String>,
         is_loop: bool,
         is_stopped: bool,
         is_readonly: bool,
@@ -214,7 +214,7 @@ impl Scope {
 
     pub fn create_lazy_namespace(&self, name: &str, loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>) -> CrushResult<Scope> {
         let res = Scope {
-            data: Arc::from(Mutex::new(ScopeData::lazy(None, Some(self.clone()), false, Some(Box::from(name)), loader))),
+            data: Arc::from(Mutex::new(ScopeData::lazy(None, Some(self.clone()), false, Some(name.to_string()), loader))),
         };
         self.declare(name, Value::Scope(res.clone()))?;
         Ok(res)
@@ -295,7 +295,7 @@ impl Scope {
         Ok(data)
     }
 
-    pub fn full_path(&self) -> CrushResult<Vec<Box<str>>> {
+    pub fn full_path(&self) -> CrushResult<Vec<String>> {
         let data = self.data.lock().unwrap();
         match data.name.clone() {
             None => error("Tried to get full path of anonymous scope"),
@@ -312,21 +312,21 @@ impl Scope {
     }
 
     pub fn root_object(&self) -> Struct {
-        match self.global_value(vec![Box::from("global"), Box::from("types"), Box::from("root"), ]) {
+        match self.global_value(vec!["global".to_string(), "types".to_string(), "root".to_string(), ]) {
             Ok(Value::Struct(s)) => s,
             _ => panic!("Root missing!"),
         }
     }
 
     pub fn global_static_cmd(&self, full_path: Vec<&str>) -> CrushResult<Box<dyn CrushCommand + Sync + Send>> {
-        match self.global_value(full_path.iter().map(|p| Box::from(p.clone())).collect()) {
+        match self.global_value(full_path.iter().map(|p| p.to_string()).collect()) {
             Ok(Value::Command(cmd)) => Ok(cmd),
             Err(e) => Err(e),
             _ => error("Expected a command"),
         }
     }
 
-    pub fn global_value(&self, full_path: Vec<Box<str>>) -> CrushResult<Value> {
+    pub fn global_value(&self, full_path: Vec<String>) -> CrushResult<Value> {
         let data = self.lock()?;
         match data.calling_scope.clone() {
             Some(parent) => {
@@ -340,7 +340,7 @@ impl Scope {
         }
     }
 
-    fn get_recursive(&self, path: &[Box<str>]) -> CrushResult<Value> {
+    fn get_recursive(&self, path: &[String]) -> CrushResult<Value> {
         if path.is_empty() {
             error("Invalid path")
         } else {
@@ -393,7 +393,7 @@ impl Scope {
         if data.mapping.contains_key(name) {
             return error(format!("Variable ${{{}}} already exists", name).as_str());
         }
-        data.mapping.insert(Box::from(name), value);
+        data.mapping.insert(name.to_string(), value);
         Ok(())
     }
 
@@ -402,7 +402,7 @@ impl Scope {
         if data.is_readonly {
             return error("Scope is read only");
         }
-        data.mapping.insert(Box::from(name), value);
+        data.mapping.insert(name.to_string(), value);
         Ok(())
     }
 
@@ -421,17 +421,17 @@ impl Scope {
         } else if data.mapping[name].value_type() != value.value_type() {
             error(format!("Type mismatch when reassigning variable ${{{}}}. Use `unset ${{{}}}` to remove old variable.", name, name).as_str())
         } else {
-            data.mapping.insert(Box::from(name), value);
+            data.mapping.insert(name.to_string(), value);
             Ok(())
         }
     }
 
     pub fn remove_str(&self, name: &str) -> CrushResult<Option<Value>> {
-        let n = &name.split(':').map(Box::from).collect::<Vec<Box<str>>>()[..];
+        let n = &name.split(':').map(|s| s.to_string()).collect::<Vec<String>>()[..];
         self.remove(n)
     }
 
-    pub fn remove(&self, name: &[Box<str>]) -> CrushResult<Option<Value>> {
+    pub fn remove(&self, name: &[String]) -> CrushResult<Option<Value>> {
         if name.is_empty() {
             return Ok(None);
         }
@@ -466,7 +466,7 @@ impl Scope {
 
     pub fn get(&self, name: &str) -> CrushResult<Option<Value>> {
         let data = self.lock()?;
-        match data.mapping.get(&Box::from(name)) {
+        match data.mapping.get(name) {
             Some(v) => Ok(Some(v.clone())),
             None => {
                 let uses = data.uses.clone();
@@ -567,7 +567,7 @@ impl Help for Scope {
     }
 }
 
-fn long_help_methods(fields: &mut Vec<(&Box<str>, &Value)>, lines: &mut Vec<String>) {
+fn long_help_methods(fields: &mut Vec<(&String, &Value)>, lines: &mut Vec<String>) {
     let mut max_len = 0;
     for (k, _) in fields.iter() {
         max_len = max(max_len, k.len());

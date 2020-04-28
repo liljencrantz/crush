@@ -53,25 +53,25 @@ impl CommandNode {
 }
 
 pub enum Node {
-    Assignment(Box<Node>, Box<str>, Box<Node>),
-    LogicalOperation(Box<Node>, Box<str>, Box<Node>),
-    Comparison(Box<Node>, Box<str>, Box<Node>),
-    Replace(Box<Node>, Box<str>, Box<Node>, Box<Node>),
-    Term(Box<Node>, Box<str>, Box<Node>),
-    Factor(Box<Node>, Box<str>, Box<Node>),
-    Unary(Box<str>, Box<Node>),
+    Assignment(Box<Node>, String, Box<Node>),
+    LogicalOperation(Box<Node>, String, Box<Node>),
+    Comparison(Box<Node>, String, Box<Node>),
+    Replace(Box<Node>, String, Box<Node>, Box<Node>),
+    Term(Box<Node>, String, Box<Node>),
+    Factor(Box<Node>, String, Box<Node>),
+    Unary(String, Box<Node>),
     Cast(Box<Node>, Box<Node>),
-    Glob(Box<str>),
-    Label(Box<str>),
-    Regex(Box<str>),
-    Field(Box<str>),
-    String(Box<str>),
+    Glob(String),
+    Label(String),
+    Regex(String),
+    Field(String),
+    String(String),
     File(PathBuf),
     Integer(i128),
     Float(f64),
     GetItem(Box<Node>, Box<Node>),
-    GetAttr(Box<Node>, Box<str>),
-    Path(Box<Node>, Box<str>),
+    GetAttr(Box<Node>, String),
+    Path(Box<Node>, String),
     Substitution(JobNode),
     Closure(Option<Vec<ParameterNode>>, JobListNode),
 }
@@ -79,7 +79,7 @@ pub enum Node {
 fn propose_name(name: &str, v: ValueDefinition) -> ValueDefinition {
     match v {
         ValueDefinition::ClosureDefinition(_, p, j) =>
-            ValueDefinition::ClosureDefinition(Some(Box::from(name)), p, j),
+            ValueDefinition::ClosureDefinition(Some(name.to_string()), p, j),
         ValueDefinition::JobDefinition(d) => ValueDefinition::JobDefinition(d),
         o => {
             let j = Job::new(vec![
@@ -151,7 +151,7 @@ impl Node {
                 }
                 Node::Path(node, label) =>
                     ValueDefinition::Path(Box::new(node.generate_argument(env)?.unnamed_value()?), label.clone()),
-                Node::Field(f) => ValueDefinition::Value(Value::Field(vec![f[1..].to_string().into_boxed_str()])),
+                Node::Field(f) => ValueDefinition::Value(Value::Field(vec![f[1..].to_string()])),
                 Node::Substitution(s) => ValueDefinition::JobDefinition(s.generate(env)?),
                 Node::Closure(s, c) => {
                     let param = s.as_ref().map(|v| v.iter()
@@ -169,7 +169,7 @@ impl Node {
             }))
     }
 
-    fn generate_standalone_assignment(target: &Box<Node>, op: &Box<str>, value: &Node, env: &Scope) -> CrushResult<Option<CommandInvocation>> {
+    fn generate_standalone_assignment(target: &Box<Node>, op: &String, value: &Node, env: &Scope) -> CrushResult<Option<CommandInvocation>> {
         match op.deref() {
             "=" => {
                 match target.as_ref() {
@@ -305,27 +305,27 @@ impl Node {
     fn method_invocation(&self, name: &str, arguments: Vec<ArgumentDefinition>, env: &Scope) -> CrushResult<Option<CommandInvocation>> {
         Ok(Some(
             CommandInvocation::new(
-                ValueDefinition::GetAttr(Box::from(self.generate_argument(env)?.unnamed_value()?), name.to_string().into_boxed_str()),
+                ValueDefinition::GetAttr(Box::from(self.generate_argument(env)?.unnamed_value()?), name.to_string()),
                 arguments)
         ))
     }
 
     pub fn parse_label(s: &str) -> Box<Node> {
         if s.contains('%') || s.contains('?') {
-            Box::from(Node::Glob(Box::from(s)))
+            Box::from(Node::Glob(s.to_string()))
         } else if s.contains('/') {
             if s.starts_with('/') {
                 Box::from(Node::File(PathBuf::from(s)))
             } else {
                 let parts = s.split('/').collect::<Vec<&str>>();
-                let mut res = Node::Label(Box::from(parts[0]));
+                let mut res = Node::Label(parts[0].to_string());
                 for part in &parts[1..] {
-                    res = Node::Path(Box::from(res), Box::from(part.clone()))
+                    res = Node::Path(Box::from(res), part.to_string())
                 }
                 Box::from(res)
             }
         } else {
-            Box::from(Node::Label(Box::from(s)))
+            Box::from(Node::Label(s.to_string()))
         }
     }
 }
@@ -354,9 +354,9 @@ pub fn unescape(s: &str) -> String {
 }
 
 pub enum ParameterNode {
-    Parameter(Box<str>, Option<Box<Node>>, Option<Node>),
-    Named(Box<str>),
-    Unnamed(Box<str>),
+    Parameter(String, Option<Box<Node>>, Option<Node>),
+    Named(String),
+    Unnamed(String),
 }
 
 impl ParameterNode {

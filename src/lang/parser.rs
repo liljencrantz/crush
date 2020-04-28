@@ -4,14 +4,14 @@ use crate::lang::scope::Scope;
 
 lalrpop_mod!(pub lalrparser, "/lang/lalrparser.rs");
 
-pub fn parse_name(s: &str) -> Option<Vec<Box<str>>> {
+pub fn parse_name(s: &str) -> Option<Vec<String>> {
     let res = s.split('/').collect::<Vec<&str>>();
     for i in res.iter() {
         if i.is_empty() {
             return None;
         }
     }
-    Some(res.iter().map(|e| e.to_string().into_boxed_str()).collect())
+    Some(res.iter().map(|e| e.to_string()).collect())
 }
 
 pub fn parse(s: &str, env: &Scope) -> CrushResult<Vec<Job>> {

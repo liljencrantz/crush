@@ -8,7 +8,7 @@ use crate::lang::stream::{empty_channel, Readable, black_hole};
 pub fn run(
     context: ExecutionContext,
     body: Box<dyn CrushCommand>,
-    name: Option<Box<str>>,
+    name: Option<String>,
     mut input: impl Readable,
 ) -> CrushResult<()> {
     while let Ok(line) = input.read() {

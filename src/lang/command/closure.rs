@@ -17,7 +17,7 @@ use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::serialization::model::closure::Name;
 
 pub struct Closure {
-    name: Option<Box<str>>,
+    name: Option<String>,
     job_definitions: Vec<Job>,
     signature: Option<Vec<Parameter>>,
     env: Scope,
@@ -275,7 +275,7 @@ impl<'a> ClosureDeserializer<'a> {
                     name: match s.name {
                         None | Some(Name::HasName(_)) => None,
                         Some(Name::NameValue(idx)) =>
-                            Some(String::deserialize(idx as usize, self.elements, self.state)?.into_boxed_str())
+                            Some(String::deserialize(idx as usize, self.elements, self.state)?)
                     },
                     job_definitions: s.job_definitions.iter()
                         .map(|j| self.job(j))
@@ -305,15 +305,15 @@ impl<'a> ClosureDeserializer<'a> {
             None => error("Missing parameter"),
             Some(model::parameter::Paremeter::Normal(param)) =>
                 Ok(Parameter::Parameter(
-                    param.name.clone().into_boxed_str(),
+                    param.name.clone(),
                     self.value_definition(mandate(param.r#type.as_ref(), "Invalid parameter")?)?,
                     match &param.default {
                         None | Some(model::normal_parameter::Default::HasDefault(_)) => None,
                         Some(model::normal_parameter::Default::DefaultValue(def)) =>
                             Some(self.value_definition(def)?)
                     })),
-            Some(model::parameter::Paremeter::Named(param)) => Ok(Parameter::Named(param.clone().into_boxed_str())),
-            Some(model::parameter::Paremeter::Unnamed(param)) => Ok(Parameter::Unnamed(param.clone().into_boxed_str())),
+            Some(model::parameter::Paremeter::Named(param)) => Ok(Parameter::Named(param.clone())),
+            Some(model::parameter::Paremeter::Unnamed(param)) => Ok(Parameter::Unnamed(param.clone())),
         }
     }
 
@@ -353,7 +353,7 @@ impl<'a> ClosureDeserializer<'a> {
                 value: self.value_definition(mandate(s.value.as_ref(), "Missing argument value")?)?,
                 argument_type:
                 match mandate(s.argument_type.as_ref(), "Missing argument type")? {
-                    model::argument_definition::ArgumentType::Some(s) => ArgumentType::Some(s.clone().into_boxed_str()),
+                    model::argument_definition::ArgumentType::Some(s) => ArgumentType::Some(s.clone()),
                     model::argument_definition::ArgumentType::None(_) => ArgumentType::None,
                     model::argument_definition::ArgumentType::ArgumentList(_) => ArgumentType::ArgumentList,
                     model::argument_definition::ArgumentType::ArgumentDict(_) => ArgumentType::ArgumentDict,
@@ -377,7 +377,7 @@ impl<'a> ClosureDeserializer<'a> {
                             Some(String::deserialize(
                                 id as usize,
                                 self.elements,
-                                self.state)?.into_boxed_str())
+                                self.state)?)
                     },
                     match &c.signature {
                         None | Some(model::closure_definition::Signature::HasSignature(_)) => None,
@@ -392,15 +392,15 @@ impl<'a> ClosureDeserializer<'a> {
                     .map(|c| self.command(c))
                     .collect::<CrushResult<Vec<_>>>()?)),
             model::value_definition::ValueDefinition::Label(s) =>
-                ValueDefinition::Label(s.clone().into_boxed_str()),
+                ValueDefinition::Label(s.clone()),
             model::value_definition::ValueDefinition::GetAttr(a) =>
                 ValueDefinition::GetAttr(
                     Box::from(self.value_definition(mandate(a.parent.as_ref(), "Invalid value definition")?)?),
-                    a.element.clone().into_boxed_str()),
+                    a.element.clone()),
             model::value_definition::ValueDefinition::Path(a) =>
                 ValueDefinition::Path(
                     Box::from(self.value_definition(mandate(a.parent.as_ref(), "Invalid value definition")?)?),
-                    a.element.clone().into_boxed_str()),
+                    a.element.clone()),
         })
     }
 }
@@ -409,7 +409,7 @@ impl Help for Closure {
     fn signature(&self) -> String {
         format!(
             "{} {}",
-            self.name.as_ref().unwrap_or(&Box::from("<unnamed>")).to_string(),
+            self.name.as_deref().unwrap_or("<unnamed>"),
             self.signature.as_ref()
                 .map(|s| s
                     .iter()
@@ -456,7 +456,7 @@ impl Closure {
     */
 
     pub fn new(
-        name: Option<Box<str>>,
+        name: Option<String>,
         signature: Option<Vec<Parameter>>,
         mut job_definitions: Vec<Job>,
         env: Scope,
@@ -497,17 +497,17 @@ impl Closure {
                 match param {
                     Parameter::Parameter(name, value_type, default) => {
                         if let Value::Type(value_type) = value_type.compile_bound(context)? {
-                            if named.contains_key(name.as_ref()) {
-                                let value = named.remove(name.as_ref()).unwrap();
+                            if named.contains_key(name) {
+                                let value = named.remove(name).unwrap();
                                 if !value_type.is(&value) {
                                     return argument_error("Wrong parameter type");
                                 }
-                                context.env.redeclare(name.as_ref(), value)?;
+                                context.env.redeclare(name, value)?;
                             } else if !unnamed.is_empty() {
-                                context.env.redeclare(name.as_ref(), unnamed.remove(0))?;
+                                context.env.redeclare(name, unnamed.remove(0))?;
                             } else if let Some(default) = default {
                                 let env = context.env.clone();
-                                env.redeclare(name.as_ref(), default.compile_bound(context)?)?;
+                                env.redeclare(name, default.compile_bound(context)?)?;
                             } else {
                                 return argument_error("Missing variable!!!");
                             }

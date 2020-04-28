@@ -67,9 +67,9 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     let _ = context.output.send(
         Value::Struct(Struct::new(
             vec![
-                (Box::from("status"), Value::Integer(status.as_u16() as i128)),
-                (Box::from("headers"), Value::Table(headers)),
-                (Box::from("body"), Value::BinaryStream(input))
+                ("status".to_string(), Value::Integer(status.as_u16() as i128)),
+                ("headers".to_string(), Value::Table(headers)),
+                ("body".to_string(), Value::BinaryStream(input))
             ],
             None,
         )));

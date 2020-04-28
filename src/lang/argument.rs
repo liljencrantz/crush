@@ -7,7 +7,7 @@ use crate::lang::printer::Printer;
 
 #[derive(Debug, Clone)]
 pub enum ArgumentType {
-    Some(Box<str>),
+    Some(String),
     None,
     ArgumentList,
     ArgumentDict,
@@ -20,7 +20,7 @@ impl ArgumentType {
 
     pub fn is_this(&self) -> bool {
         if let ArgumentType::Some(v) = self {
-            v.as_ref() == "this"
+            v == "this"
         } else {
             false
         }
@@ -38,7 +38,7 @@ pub type ArgumentDefinition = BaseArgument<ArgumentType, ValueDefinition>;
 impl ArgumentDefinition {
     pub fn named(name: &str, value: ValueDefinition) -> ArgumentDefinition {
         ArgumentDefinition {
-            argument_type: ArgumentType::Some(Box::from(name)),
+            argument_type: ArgumentType::Some(name.to_string()),
             value,
         }
     }
@@ -73,10 +73,10 @@ impl ArgumentDefinition {
     }
 }
 
-pub type Argument = BaseArgument<Option<Box<str>>, Value>;
+pub type Argument = BaseArgument<Option<String>, Value>;
 
 impl Argument {
-    pub fn new(name: Option<Box<str>>, value: Value) -> Argument {
+    pub fn new(name: Option<String>, value: Value) -> Argument {
         Argument {
             argument_type: name,
             value,
@@ -92,7 +92,7 @@ impl Argument {
 
     pub fn named(name: &str, value: Value) -> Argument {
         BaseArgument {
-            argument_type: Some(Box::from(name)),
+            argument_type: Some(name.to_string()),
             value,
         }
     }
@@ -152,17 +152,17 @@ impl ArgumentVecCompiler for Vec<ArgumentDefinition> {
     }
 }
 
-pub fn column_names(arguments: &Vec<Argument>) -> Vec<Box<str>> {
+pub fn column_names(arguments: &Vec<Argument>) -> Vec<String> {
     let mut taken = HashSet::new();
-    taken.insert(Box::from("_"));
+    taken.insert("_".to_string());
     let mut res = Vec::new();
     let mut tmp = String::new();
     for arg in arguments {
         let mut name = match &arg.argument_type {
             None => "_",
-            Some(name) => name.as_ref(),
+            Some(name) => name,
         };
-        if taken.contains(&Box::from(name)) {
+        if taken.contains(name) {
             let mut idx = 1;
             tmp.truncate(0);
             tmp.push_str(name);
@@ -176,8 +176,8 @@ pub fn column_names(arguments: &Vec<Argument>) -> Vec<Box<str>> {
                 tmp.truncate(name.len());
             }
         }
-        taken.insert(Box::from(name));
-        res.push(Box::from(name));
+        taken.insert(name.to_string());
+        res.push(name.to_string());
     }
 
     res

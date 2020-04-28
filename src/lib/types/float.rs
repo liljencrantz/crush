@@ -11,8 +11,8 @@ fn full(name: &'static str) -> Vec<&'static str> {
 }
 
 lazy_static! {
-    pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
-        let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
+    pub static ref METHODS: HashMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
+        let mut res: HashMap<String, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
         res.declare(
             full("__add__"), add, false,
             "float + term:(integer|float)",

@@ -70,7 +70,7 @@ fn from_toml(toml_value: &toml::Value) -> CrushResult<Value> {
                             Ok(vv) => Ok((k, vv)),
                             Err(e) => Err(e)
                         })
-                        .collect::<Result<Vec<(Box<str>, Value)>, CrushError>>()?,
+                        .collect::<Result<Vec<(String, Value)>, CrushError>>()?,
                     None,
                 )))
         }

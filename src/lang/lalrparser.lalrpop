@@ -104,7 +104,7 @@ Item: Box<Node> = {
     "(" <j:Job> ")" => Box::from(Node::Substitution(j)),
 }
 
-AnyLabel: Box<str> = {
+AnyLabel: String = {
     Label => Box::from(<>),
     <l: QuotedLabel> => Box::from(&l[1..l.len()-1]),
 }

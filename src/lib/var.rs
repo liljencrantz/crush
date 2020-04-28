@@ -58,8 +58,8 @@ pub fn env(context: ExecutionContext) -> CrushResult<()> {
 
     for k in keys {
         context.printer.handle_error(output.send(Row::new(vec![
-            Value::String(k.clone().into_boxed_str()),
-            Value::String(values[k].to_string().into_boxed_str())
+            Value::String(k.clone()),
+            Value::String(values[k].to_string())
         ])));
     }
 

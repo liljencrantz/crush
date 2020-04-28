@@ -14,8 +14,8 @@ fn full(name: &'static str) -> Vec<&'static str> {
 }
 
 lazy_static! {
-    pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
-        let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
+    pub static ref METHODS: HashMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
+        let mut res: HashMap<String, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
         res.declare(full("match"), r#match, false,
             "re =~ input:string", "True if the input matches the pattern", None);
         res.declare(full("not_match"), not_match, false,

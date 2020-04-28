@@ -18,13 +18,13 @@ use std::path::{Path, PathBuf};
 use crate::lang::scope::Scope;
 use crate::lang::printer::Printer;
 
-fn crush_history_file() -> Box<str> {
-    Box::from(
+fn crush_history_file() -> String {
         home()
             .unwrap_or_else(|_| PathBuf::from("."))
             .join(Path::new(".crush_history"))
             .to_str()
-            .unwrap_or(".crush_history"))
+            .unwrap_or(".crush_history")
+            .to_string()
 }
 
 fn run_interactive(global_env: Scope, printer: Printer) -> CrushResult<()> {
@@ -34,7 +34,7 @@ fn run_interactive(global_env: Scope, printer: Printer) -> CrushResult<()> {
     let pretty_printer = create_pretty_printer(printer.clone());
 
     let mut rl = Editor::<()>::new();
-    let _ = rl.load_history(crush_history_file().as_ref());
+    let _ = rl.load_history(&crush_history_file());
     loop {
         let readline = rl.readline("crush> ");
 
@@ -57,7 +57,7 @@ fn run_interactive(global_env: Scope, printer: Printer) -> CrushResult<()> {
                 break;
             }
         }
-        match rl.save_history(crush_history_file().as_ref()) {
+        match rl.save_history(&crush_history_file()) {
             Ok(_) => {}
             Err(_) => {
                 printer.line("Error: Failed to save history.");

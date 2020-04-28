@@ -150,7 +150,7 @@ impl List {
         }
     }
 
-    dump_to!(dump_string, String, String, |e: &Box<str>| e.to_string());
+    dump_to!(dump_string, String, String, |e: &String| e.to_string());
     dump_to!(dump_integer, i128, Integer, |v: &i128| *v);
     dump_to!(dump_bool, bool, Bool, |v: &bool| *v);
     dump_to!(dump_type, ValueType, Type, |v: &ValueType| v.clone());

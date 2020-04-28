@@ -14,8 +14,8 @@ fn full(name: &'static str) -> Vec<&'static str> {
 }
 
 lazy_static! {
-    pub static ref METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
-        let mut res: HashMap<Box<str>, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
+    pub static ref METHODS: HashMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
+        let mut res: HashMap<String, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
         res.declare(full("__add__"),
             add, false,
             "time + delta:duration",
@@ -44,8 +44,8 @@ fn now(context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn parse(mut context: ExecutionContext) -> CrushResult<()> {
-    let mut tm: Option<Box<str>> = None;
-    let mut fmt: Option<Box<str>> = None;
+    let mut tm: Option<String> = None;
+    let mut fmt: Option<String> = None;
 
     for arg in context.arguments.drain(..) {
         match (arg.argument_type.as_deref().unwrap_or(""), arg.value) {

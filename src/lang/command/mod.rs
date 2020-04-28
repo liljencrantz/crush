@@ -36,7 +36,7 @@ pub trait TypeMap {
     );
 }
 
-impl TypeMap for HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> {
+impl TypeMap for HashMap<String, Box<dyn CrushCommand + Sync + Send>> {
     fn declare(
         &mut self,
         path: Vec<&str>,
@@ -46,9 +46,9 @@ impl TypeMap for HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> {
         short_help: &'static str,
         long_help: Option<&'static str>,
     ) {
-        self.insert(Box::from(path[path.len() - 1]),
+        self.insert(path[path.len() - 1].to_string(),
                     CrushCommand::command(
-                        call, can_block, path.iter().map(|e| e.to_string().into_boxed_str()).collect(),
+                        call, can_block, path.iter().map(|e| e.to_string()).collect(),
                         signature, short_help, long_help),
         );
     }
@@ -57,7 +57,7 @@ impl TypeMap for HashMap<Box<str>, Box<dyn CrushCommand + Sync + Send>> {
 struct SimpleCommand {
     call: fn(context: ExecutionContext) -> CrushResult<()>,
     can_block: bool,
-    full_name: Vec<Box<str>>,
+    full_name: Vec<String>,
     signature: &'static str,
     short_help: &'static str,
     long_help: Option<&'static str>,
@@ -65,7 +65,7 @@ struct SimpleCommand {
 
 struct ConditionCommand {
     call: fn(context: ExecutionContext) -> CrushResult<()>,
-    full_name: Vec<Box<str>>,
+    full_name: Vec<String>,
     signature: &'static str,
     short_help: &'static str,
     long_help: Option<&'static str>,
@@ -73,7 +73,7 @@ struct ConditionCommand {
 
 impl dyn CrushCommand {
     pub fn closure(
-        name: Option<Box<str>>,
+        name: Option<String>,
         signature: Option<Vec<Parameter>>,
         job_definitions: Vec<Job>,
         env: &Scope,
@@ -89,7 +89,7 @@ impl dyn CrushCommand {
     pub fn command(
         call: fn(context: ExecutionContext) -> CrushResult<()>,
         can_block: bool,
-        full_name: Vec<Box<str>>,
+        full_name: Vec<String>,
         signature: &'static str,
         short_help: &'static str,
         long_help: Option<&'static str>,
@@ -99,7 +99,7 @@ impl dyn CrushCommand {
 
     pub fn condition(
         call: fn(context: ExecutionContext) -> CrushResult<()>,
-        full_name: Vec<Box<str>>,
+        full_name: Vec<String>,
         signature: &'static str,
         short_help: &'static str,
         long_help: Option<&'static str>,
@@ -117,7 +117,7 @@ impl dyn CrushCommand {
                 let val = state.env.global_value(
                     strings.elements
                         .iter()
-                        .map(|e| e.clone().into_boxed_str())
+                        .map(|e| e.clone())
                         .collect())?;
                 match val {
                     Value::Command(c) => Ok(c),
@@ -279,9 +279,9 @@ impl std::cmp::Eq for ConditionCommand {}
 
 #[derive(Clone)]
 pub enum Parameter {
-    Parameter(Box<str>, ValueDefinition, Option<ValueDefinition>),
-    Named(Box<str>),
-    Unnamed(Box<str>),
+    Parameter(String, ValueDefinition, Option<ValueDefinition>),
+    Named(String),
+    Unnamed(String),
 }
 
 impl ToString for Parameter {

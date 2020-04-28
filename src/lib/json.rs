@@ -75,7 +75,7 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
                             Ok(vv) => Ok((k, vv)),
                             Err(e) => Err(e)
                         })
-                        .collect::<Result<Vec<(Box<str>, Value)>, CrushError>>()?,
+                        .collect::<Result<Vec<(String, Value)>, CrushError>>()?,
                     None,
                 )))
         }

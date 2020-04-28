@@ -173,7 +173,7 @@ fn invoke_value(
                 error(format!("Not a command {}", f.to_str().unwrap_or("<invalid filename>")).as_str())
             }
         Value::Type(t) => {
-            match t.fields().get(&Box::from("__call_type__")) {
+            match t.fields().get("__call_type__") {
                 None =>
                     invoke_command(
                         context.env.global_static_cmd(vec!["global", "input", "val"])?,
@@ -238,7 +238,7 @@ fn try_external_command(
         ValueDefinition::Label(str) => (str, None),
         ValueDefinition::GetAttr(parent, sub) =>
             match parent.deref() {
-                ValueDefinition::Label(str) => (str.to_string().into_boxed_str(), Some(sub)),
+                ValueDefinition::Label(str) => (str.to_string(), Some(sub)),
                 _ => return error("Not a command"),
             }
         _ => return error("Not a command"),

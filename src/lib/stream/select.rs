@@ -17,7 +17,7 @@ use crate::lang::execution_context::ExecutionContext;
 
 enum Location {
     Replace(usize),
-    Append(Box<str>),
+    Append(String),
 }
 
 enum Source {
@@ -162,7 +162,7 @@ fn perform_for(
             (Some(name), Value::Command(closure)) => {
                 match (copy, input_type.find_str(name)) {
                     (true, Ok(idx)) => columns.push((Location::Replace(idx), Source::Closure(closure))),
-                    _ => columns.push((Location::Append(Box::from(name)), Source::Closure(closure))),
+                    _ => columns.push((Location::Append(name.to_string()), Source::Closure(closure))),
                 }
             }
             (None, Value::Field(name)) => {
@@ -170,8 +170,8 @@ fn perform_for(
                     return argument_error("Invalid field");
                 }
                 match (copy, input_type.find_str(name[0].as_ref())) {
-                    (false, Ok(idx)) => columns.push((Location::Append(name[0].clone()), Source::Argument(idx))),
-                    _ => return argument_error(format!("Unknown field {}", name[0].as_ref()).as_str()),
+                    (false, Ok(idx)) => columns.push((Location::Append(name[0]), Source::Argument(idx))),
+                    _ => return argument_error(format!("Unknown field {}", name[0]).as_str()),
                 }
             }
             _ => return argument_error("Invalid argument"),

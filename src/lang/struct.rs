@@ -11,7 +11,7 @@ use crate::util::identity_arc::Identity;
 #[derive(Clone)]
 struct StructData {
     parent: Option<Struct>,
-    lookup: HashMap<Box<str>, usize>,
+    lookup: HashMap<String, usize>,
     cells: Vec<Value>,
 }
 
@@ -69,7 +69,7 @@ impl PartialOrd for Struct {
 }
 
 impl Struct {
-    pub fn new(mut vec: Vec<(Box<str>, Value)>, parent: Option<Struct>) -> Struct {
+    pub fn new(mut vec: Vec<(String, Value)>, parent: Option<Struct>) -> Struct {
         let mut lookup = HashMap::new();
         let mut cells = Vec::new();
         vec.drain(..)
@@ -118,14 +118,14 @@ impl Struct {
         res
     }
 
-    pub fn local_elements(&self) -> Vec<(Box<str>, Value)> {
+    pub fn local_elements(&self) -> Vec<(String, Value)> {
         let mut reverse_lookup = HashMap::new();
         let data = self.data.lock().unwrap();
         for (key, value) in &data.lookup {
             reverse_lookup.insert(value.clone(), key);
         }
         data.cells.iter().enumerate()
-            .map(|(idx, v)| (reverse_lookup[&idx].to_string().into_boxed_str(), v.clone())).collect()
+            .map(|(idx, v)| (reverse_lookup[&idx].to_string(), v.clone())).collect()
     }
 
     pub fn to_row(&self) -> Row {
@@ -151,13 +151,13 @@ impl Struct {
         }
     }
 
-    pub fn keys(&self) -> Vec<Box<str>> {
+    pub fn keys(&self) -> Vec<String> {
         let mut fields = HashSet::new();
         self.fill_keys(&mut fields);
         fields.drain().collect()
     }
 
-    fn fill_keys(&self, dest: &mut HashSet<Box<str>>) {
+    fn fill_keys(&self, dest: &mut HashSet<String>) {
         let data = self.data.lock().unwrap();
         data.lookup.keys().for_each(|name| { dest.insert(name.clone()); });
         let parent = data.parent.clone();
@@ -172,7 +172,7 @@ impl Struct {
         match data.lookup.get(name).cloned() {
             None => {
                 let idx = data.lookup.len();
-                data.lookup.insert(Box::from(name), idx);
+                data.lookup.insert(name.to_string(), idx);
                 data.cells.push(value);
                 None
             }

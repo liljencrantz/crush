@@ -13,11 +13,11 @@ use crate::lang::command::Parameter;
 #[derive(Clone)]
 pub enum ValueDefinition {
     Value(Value),
-    ClosureDefinition(Option<Box<str>>, Option<Vec<Parameter>>, Vec<Job>),
+    ClosureDefinition(Option<String>, Option<Vec<Parameter>>, Vec<Job>),
     JobDefinition(Job),
-    Label(Box<str>),
-    GetAttr(Box<ValueDefinition>, Box<str>),
-    Path(Box<ValueDefinition>, Box<str>),
+    Label(String),
+    GetAttr(Box<ValueDefinition>, String),
+    Path(Box<ValueDefinition>, String),
 }
 
 fn file_get(f: &str) -> Option<Value> {

@@ -104,7 +104,7 @@ impl Row {
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ColumnType {
-    pub name: Box<str>,
+    pub name: String,
     pub cell_type: ValueType,
 }
 
@@ -117,7 +117,7 @@ impl ColumnType {
     }
 
     pub fn new(name: &str, cell_type: ValueType) -> ColumnType {
-        ColumnType { name: Box::from(name), cell_type }
+        ColumnType { name: name.to_string(), cell_type }
     }
 }
 
@@ -129,13 +129,13 @@ impl ToString for ColumnType {
 
 pub trait ColumnVec {
     fn find_str(&self, needle: &str) -> CrushResult<usize>;
-    fn find(&self, needle: &[Box<str>]) -> CrushResult<usize>;
+    fn find(&self, needle: &[String]) -> CrushResult<usize>;
 }
 
 impl ColumnVec for &[ColumnType] {
     fn find_str(&self, needle: &str) -> CrushResult<usize> {
         for (idx, field) in self.iter().enumerate() {
-            if field.name.as_ref() == needle {
+            if field.name == needle {
                 return Ok(idx);
             }
         }
@@ -146,11 +146,11 @@ impl ColumnVec for &[ColumnType] {
         ).as_str())
     }
 
-    fn find(&self, needle_vec: &[Box<str>]) -> CrushResult<usize> {
+    fn find(&self, needle_vec: &[String]) -> CrushResult<usize> {
         if needle_vec.len() != 1 {
             argument_error("Expected direct field")
         } else {
-            let needle = needle_vec[0].as_ref();
+            let needle = needle_vec[0];
             for (idx, field) in self.iter().enumerate() {
                 if field.name.as_ref() == needle {
                     return Ok(idx);

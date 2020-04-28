@@ -5,9 +5,9 @@ use crate::lang::errors::{CrushError, CrushResult, to_crush_error, Kind};
 
 enum PrinterMessage {
     CrushError(CrushError),
-    Error(Box<str>),
-    Line(Box<str>),
-//    Lines(Vec<Box<str>>),
+    Error(String),
+    Line(String),
+//    Lines(Vec<String>),
 }
 
 use crate::lang::printer::PrinterMessage::*;
@@ -42,10 +42,10 @@ pub fn init() -> (Printer, JoinHandle<()>) {
 
 impl Printer {
     pub fn line(&self, line: &str) {
-        self.handle_error(to_crush_error(self.sender.send(PrinterMessage::Line(Box::from(line)))));
+        self.handle_error(to_crush_error(self.sender.send(PrinterMessage::Line(line.to_string()))));
     }
     /*
-        pub fn lines(&self, lines: Vec<Box<str>>) {
+        pub fn lines(&self, lines: Vec<String>) {
             self.handle_error(to_crush_error(self.sender.send(PrinterMessage::Lines(lines))));
         }
     */
@@ -63,7 +63,7 @@ impl Printer {
     }
 
     pub fn error(&self, err: &str) {
-        let _ = self.sender.send(PrinterMessage::Error(Box::from(err)));
+        let _ = self.sender.send(PrinterMessage::Error(err.to_string()));
     }
 
     pub fn width(&self) -> usize {

@@ -48,7 +48,7 @@ impl Serializable<Value> for Value {
             element::Element::Binary(v) => Ok(Value::Binary(v.clone())),
             element::Element::Glob(v) => Ok(Value::Glob(Glob::new(v))),
             element::Element::Regex(v) => Ok(Value::Regex(
-                v.clone().into_boxed_str(),
+                v.clone(),
                 to_crush_error(Regex::new(v))?,
             )),
             element::Element::Bool(v) => Ok(Value::Bool(*v)),

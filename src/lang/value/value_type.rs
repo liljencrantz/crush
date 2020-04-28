@@ -37,13 +37,13 @@ pub enum ValueType {
 }
 
 lazy_static! {
-    pub static ref EMPTY_METHODS: HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> = {
+    pub static ref EMPTY_METHODS: HashMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
         HashMap::new()
     };
 }
 
 impl ValueType {
-    pub fn fields(&self) -> &HashMap<Box<str>, Box<dyn CrushCommand +  Sync + Send>> {
+    pub fn fields(&self) -> &HashMap<String, Box<dyn CrushCommand +  Sync + Send>> {
         match self {
             ValueType::List(_) =>
                 &types::list::METHODS,
@@ -125,7 +125,7 @@ impl ValueType {
             }
             ValueType::Field => Ok(Value::Field(mandate(parse_name(s), "Invalid field name")?)),
             ValueType::Glob => Ok(Value::Glob(Glob::new(s))),
-            ValueType::Regex => Ok(Value::Regex(Box::from(s), to_crush_error(Regex::new(s))?)),
+            ValueType::Regex => Ok(Value::Regex(s.to_string(), to_crush_error(Regex::new(s))?)),
             ValueType::File => Ok(Value::string(s)),
             ValueType::Float => Ok(Value::Float(to_crush_error(s.parse::<f64>())?)),
             ValueType::Bool => Ok(Value::Bool(to_crush_error(s.parse::<bool>())?)),
@@ -177,7 +177,7 @@ impl Help for ValueType {
     }
 }
 
-fn long_help_methods(fields: &Vec<(&Box<str>, &Box<dyn CrushCommand +  Sync + Send>)>, lines: &mut Vec<String>) {
+fn long_help_methods(fields: &Vec<(&String, &Box<dyn CrushCommand +  Sync + Send>)>, lines: &mut Vec<String>) {
     let mut max_len = 0;
     for (k, _) in fields {
         max_len = max(max_len, k.len());

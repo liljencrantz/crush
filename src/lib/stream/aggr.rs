@@ -8,7 +8,7 @@ use crate::util::thread::{handle, build};
 
 struct Aggregation {
     idx: usize,
-    name: Box<str>,
+    name: String,
     command: Closure,
 }
 
@@ -109,7 +109,7 @@ pub fn guess_table(input_type: &[ColumnType]) -> JobResult<usize> {
 
 fn create_writer(
     uninitialized_output: ValueSender,
-    mut output_names: Vec<Option<Box<str>>>,
+    mut output_names: Vec<Option<String>>,
     writer_input: Receiver<Row>) ->
     JobJoinHandle {
     handle(build("aggr-writer".to_string()).spawn(
@@ -267,10 +267,10 @@ fn handle_row(
 pub fn run(config: Config, printer: &Printer, env: &Env, mut input: impl Readable, uninitialized_output: ValueSender) -> JobResult<()> {
     let (writer_output, writer_input) = bounded::<Row>(16);
 
-    let mut output_names = input.get_type().iter().map(|t| t.name.clone()).collect::<Vec<Option<Box<str>>>>();
+    let mut output_names = input.get_type().iter().map(|t| t.name.clone()).collect::<Vec<Option<String>>>();
     output_names.remove(config.table_idx);
     for (name, _, _) in &config.output_definition {
-        output_names.push(Some(name.clone().into_boxed_str()));
+        output_names.push(Some(name.clone()));
     }
 
     let writer_handle = create_writer(uninitialized_output, output_names, writer_input);

@@ -33,13 +33,13 @@ use crate::lang::printer::Printer;
 use crate::lang::help::Help;
 
 pub enum Value {
-    String(Box<str>),
+    String(String),
     Integer(i128),
     Time(DateTime<Local>),
     Duration(Duration),
-    Field(Vec<Box<str>>),
+    Field(Vec<String>),
     Glob(Glob),
-    Regex(Box<str>, Regex),
+    Regex(String, Regex),
     Command(Box<dyn CrushCommand + Send + Sync>),
     TableStream(InputStream),
     File(PathBuf),
@@ -80,8 +80,8 @@ impl ToString for Value {
     }
 }
 
-fn add_keys<T>(map: &HashMap<Box<str>, T>, res: &mut Vec<Box<str>>) {
-    res.append(&mut map.keys().map(|k| k.to_string().into_boxed_str()).collect());
+fn add_keys<T>(map: &HashMap<String, T>, res: &mut Vec<String>) {
+    res.append(&mut map.keys().map(|k| k.to_string()).collect());
 }
 
 impl Value {
@@ -101,22 +101,22 @@ impl Value {
                     .or_else(|| {
                         self.value_type()
                             .fields()
-                            .get(&Box::from(name))
+                            .get(name)
                             .map(|m| Value::Command(m.as_ref().clone()))
                     }),
             Value::Type(t) =>
                 t.fields()
-                    .get(&Box::from(name))
+                    .get(name)
                     .map(|m| Value::Command(m.as_ref().clone())),
             _ =>
                 self.value_type()
                     .fields()
-                    .get(&Box::from(name))
+                    .get(name)
                     .map(|m| Value::Command(m.as_ref().clone())),
         })
     }
 
-    pub fn fields(&self) -> Vec<Box<str>> {
+    pub fn fields(&self) -> Vec<String> {
         let mut res = Vec::new();
         match self {
             Value::Struct(s) => {
@@ -133,7 +133,7 @@ impl Value {
         res
     }
 
-    pub fn get_recursive(&self, path: &[Box<str>]) -> CrushResult<Value> {
+    pub fn get_recursive(&self, path: &[String]) -> CrushResult<Value> {
         match path.len() {
             0 =>
                 error("Invalid path"),
@@ -163,7 +163,7 @@ impl Value {
     }
 
     pub fn string(s: &str) -> Value {
-        Value::String(Box::from(s))
+        Value::String(s.to_string())
     }
 
     pub fn readable(&self) -> Option<Box<dyn Readable>> {
@@ -204,7 +204,7 @@ impl Value {
 
     pub fn file_expand(&self, v: &mut Vec<PathBuf>, printer: &Printer) -> CrushResult<()> {
         match self {
-            Value::String(s) => v.push(PathBuf::from(s.as_ref())),
+            Value::String(s) => v.push(PathBuf::from(s)),
             Value::File(p) => v.push(p.clone()),
             Value::Glob(pattern) => pattern.glob_files(&PathBuf::from("."), v)?,
             Value::Regex(_, re) => re.match_files(&cwd()?, v, printer),
@@ -270,8 +270,8 @@ impl Value {
             ValueType::File => Ok(Value::File(PathBuf::from(str_val.as_str()))),
             ValueType::Glob => Ok(Value::Glob(Glob::new(str_val.as_str()))),
             ValueType::Integer => to_crush_error(str_val.parse::<i128>()).map(Value::Integer),
-            ValueType::Field => Ok(Value::Field(vec![str_val.into_boxed_str()])),
-            ValueType::Regex => to_crush_error(Regex::new(str_val.as_str()).map(|v| Value::Regex(str_val.into_boxed_str(), v))),
+            ValueType::Field => Ok(Value::Field(vec![str_val])),
+            ValueType::Regex => to_crush_error(Regex::new(str_val.as_str()).map(|v| Value::Regex(str_val, v))),
             ValueType::Binary => Ok(Value::Binary(str_val.bytes().collect())),
             ValueType::Float => Ok(Value::Float(to_crush_error(f64::from_str(&str_val))?)),
             ValueType::Bool => Ok(Value::Bool(match str_val.as_str() {
@@ -279,7 +279,7 @@ impl Value {
                 "false" => false,
                 _ => return error("Can't cast to boolean")
             })),
-            ValueType::String => Ok(Value::String(str_val.into_boxed_str())),
+            ValueType::String => Ok(Value::String(str_val)),
             ValueType::Time => error("invalid cast"),
             ValueType::Duration => Ok(Value::Duration(Duration::seconds(to_crush_error(i64::from_str(&str_val))?))),
             ValueType::Command => error("invalid cast"),

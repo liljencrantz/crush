@@ -23,10 +23,10 @@ pub trait ArgumentVector {
     fn check_len(&self, len: usize) -> CrushResult<()>;
     fn check_len_range(&self, min_len: usize, max_len: usize) -> CrushResult<()>;
     fn check_len_min(&self, min_len: usize) -> CrushResult<()>;
-    fn string(&mut self, idx: usize) -> CrushResult<Box<str>>;
+    fn string(&mut self, idx: usize) -> CrushResult<String>;
     fn integer(&mut self, idx: usize) -> CrushResult<i128>;
     fn float(&mut self, idx: usize) -> CrushResult<f64>;
-    fn field(&mut self, idx: usize) -> CrushResult<Vec<Box<str>>>;
+    fn field(&mut self, idx: usize) -> CrushResult<Vec<String>>;
     fn file(&mut self, idx: usize) -> CrushResult<PathBuf>;
     fn command(&mut self, idx: usize) -> CrushResult<Box<dyn CrushCommand + Send + Sync>>;
     fn r#type(&mut self, idx: usize) -> CrushResult<ValueType>;
@@ -37,9 +37,9 @@ pub trait ArgumentVector {
     fn files(&mut self, printer: &Printer) -> CrushResult<Vec<PathBuf>>;
     fn optional_bool(&mut self, idx: usize) -> CrushResult<Option<bool>>;
     fn optional_integer(&mut self, idx: usize) -> CrushResult<Option<i128>>;
-    fn optional_string(&mut self, idx: usize) -> CrushResult<Option<Box<str>>>;
+    fn optional_string(&mut self, idx: usize) -> CrushResult<Option<String>>;
     fn optional_command(&mut self, idx: usize) -> CrushResult<Option<Box<dyn CrushCommand + Send + Sync>>>;
-    fn optional_field(&mut self, idx: usize) -> CrushResult<Option<Vec<Box<str>>>>;
+    fn optional_field(&mut self, idx: usize) -> CrushResult<Option<Vec<String>>>;
     fn optional_value(&mut self, idx: usize) -> CrushResult<Option<Value>>;
 }
 
@@ -108,10 +108,10 @@ impl ArgumentVector for Vec<Argument> {
         }
     }
 
-    argument_getter!(string, Box<str>, String, "string");
+    argument_getter!(string, String, String, "string");
     argument_getter!(integer, i128, Integer, "integer");
     argument_getter!(float, f64, Float, "float");
-    argument_getter!(field, Vec<Box<str>>, Field, "field");
+    argument_getter!(field, Vec<String>, Field, "field");
     argument_getter!(command, Box<dyn CrushCommand + Send + Sync>, Command, "command");
     argument_getter!(r#type, ValueType, Type, "type");
     argument_getter!(glob, Glob, Glob, "glob");
@@ -137,8 +137,8 @@ impl ArgumentVector for Vec<Argument> {
 
     optional_argument_getter!(optional_bool, bool, bool);
     optional_argument_getter!(optional_integer, i128, integer);
-    optional_argument_getter!(optional_string, Box<str>, string);
-    optional_argument_getter!(optional_field, Vec<Box<str>>, field);
+    optional_argument_getter!(optional_string, String, string);
+    optional_argument_getter!(optional_field, Vec<String>, field);
     optional_argument_getter!(optional_command, Box<dyn CrushCommand + Send + Sync>, command);
     optional_argument_getter!(optional_value, Value, value);
 }
@@ -313,10 +313,10 @@ impl ExecutionContext {
 pub trait This {
     fn list(self) -> CrushResult<List>;
     fn dict(self) -> CrushResult<Dict>;
-    fn string(self) -> CrushResult<Box<str>>;
+    fn string(self) -> CrushResult<String>;
     fn r#struct(self) -> CrushResult<Struct>;
     fn file(self) -> CrushResult<PathBuf>;
-    fn re(self) -> CrushResult<(Box<str>, Regex)>;
+    fn re(self) -> CrushResult<(String, Regex)>;
     fn glob(self) -> CrushResult<Glob>;
     fn integer(self) -> CrushResult<i128>;
     fn float(self) -> CrushResult<f64>;
@@ -346,7 +346,7 @@ macro_rules! this_method {
 impl This for Option<Value> {
     this_method!(list, List, List, "list");
     this_method!(dict, Dict, Dict, "dict");
-    this_method!(string, Box<str>, String, "string");
+    this_method!(string, String, String, "string");
     this_method!(r#struct, Struct, Struct, "struct");
     this_method!(file, PathBuf, File, "file");
     this_method!(table, Table, Table, "table");
@@ -360,7 +360,7 @@ impl This for Option<Value> {
     this_method!(scope, Scope, Scope, "scope");
     this_method!(table_stream, InputStream, TableStream, "table_stream");
 
-    fn re(mut self) -> CrushResult<(Box<str>, Regex)> {
+    fn re(mut self) -> CrushResult<(String, Regex)> {
         match self.take() {
             Some(Value::Regex(s, b)) => Ok((s, b)),
             _ => argument_error("Expected a regular expression"),
