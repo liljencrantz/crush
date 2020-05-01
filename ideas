@@ -3,30 +3,49 @@ Aggregating streams:
 find . | group ^size | aggr group={count}
 find . | group ^user | aggr group={sum ^size}
 
-Graph/Tree data:
+Graphs:
 
-Is there a nice way to represent and visualize graph data such as trees that makes sense for crush?
-Could be useful for showing a tree view of processes (ps), file trees (find, du), etc.
+Graphs consist of two data types: nodes and edges.
 
-* Should this be represented by a special type of tree-struct or just use regular structs with members of the same type? The latter can't represent cycles.
-* What additional primitives are needed to efficiently manipulate tree data?
+Crush nodes are simply rows in normal tables.
 
-Smoothing out the rough edges:
+Crush edges are a new type that connect two table rows to each others. Every
+edge contains two index references. Edges can be directed or undirected.
+Edges can point to the same row or other rows in the same table, but allowing
+them to point to rows in other tables would lead to reference cycles and memory
+leaks. One-to-one relationships are simply edge fields. One-to-many, and many-to-many
+relationships are modeled using fields of lists.
 
-* boolean flags supported using --foo, equivalent to foo=true
-* External commands need to be adapted to not be annoying
+# Find leaf nodes
+crush> ps | where { (children:len) == 0 }
 
-Example invocations:
-    git:status
-    git:commit --a m="This is a commit message"
-    git:add .
+A new operator, '::', is used to access a member in each element of a list.
 
-Writing libraries in crush:
+# Find processes who are running as a different user than their parent
+ps | where { parent::user != $user }
 
-Import command, etc.
+When using '::' on a list/set of edges, it fetches that member in each element in returns them in a new list.
 
-Crush configuration:
+In order to display a graph as a tree, simply return an edge as the root object, and the pretty-printer will
+do the rest:
 
-* One idea would be the standard configuration-is-code thing with reading specific files during startup.
-* Another idea would be to have a config variable that you can query and assign to at runtime,
-  and that is responsible for sharing config in real time across instances.
+crush> (ps | where {pid = 1}):parent
+...
+
+
+grpc command:
+
+#Create new grpc instance:
+crush> srv := (grpc "localhost:443")
+#List all services on a server
+crush> dir srv
+[my.service other.service]
+#List all methods of a service
+crush> dir srv:my.service
+[method1 method2]
+#Call method without parameters
+srv:my.service:method1
+["some" "output"]
+#Call method with parameters
+srv:my.service:method2 id=1234 tags=(list:of "foo" "bar")
+["other" "output"]

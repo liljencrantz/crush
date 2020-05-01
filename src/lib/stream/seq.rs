@@ -8,14 +8,42 @@ use crate::{
     }
 };
 use crate::lang::table::ColumnType;
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
 
-pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
-    let c  = context.arguments.optional_integer(0)?.unwrap_or(i128::max_value());
+#[signature]
+#[derive(Debug)]
+struct Signature {
+    #[default(i128::max_value())]
+    to: i128,
+    #[default(0)]
+    from: i128,
+    #[default(1)]
+    step: i128,
+}
+
+pub fn perform(context: ExecutionContext) -> CrushResult<()> {
+    let mut cfg: Signature = Signature::parse(context.arguments, &context.printer)?;
     let output = context.output.initialize(vec![
         ColumnType::new("value", ValueType::Integer)])?;
 
-    for i in 0..c {
-        output.send(Row::new(vec![Value::Integer(i)]))?;
+    if (cfg.to>cfg.from) != (cfg.step > 0) {
+        let tmp = cfg.to;
+        cfg.to = cfg.from;
+        cfg.from = tmp;
+    }
+
+    let mut idx = cfg.from;
+    loop {
+        if cfg.step > 0 {
+            if idx >= cfg.to {
+                break;
+            }
+        } else if idx <= cfg.to {
+            break;
+        }
+        output.send(Row::new(vec![Value::Integer(idx)]))?;
+        idx += cfg.step;
     }
     Ok(())
 }

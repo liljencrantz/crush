@@ -55,15 +55,10 @@ Factor: Box<Node> = {
 }
 
 Unary: Box<Node> = {
-    Cast,
+    Item,
     <op: UnaryOperator> <u: Unary> => Box::from(Node::Unary(op.to_string(), u)),
     "@" <u: Unary> => Box::from(Node::Unary("@".to_string(), u)),
     "@@" <u: Unary> => Box::from(Node::Unary("@@".to_string(), u)),
-}
-
-Cast: Box<Node> = {
-    Item,
-    <i: Item> CastOperator <t: Item> => Box::from(Node::Cast(i, t)),
 }
 
 Signature: Option<Vec<ParameterNode>> = {
@@ -111,7 +106,6 @@ AnyLabel: String = {
 
 match {
     r"(and|or)" => LogicalOperator,
-    "to" => CastOperator,
     r"(typeof|neg|not)" => UnaryOperator,
 } else {
     ":" => Colon,

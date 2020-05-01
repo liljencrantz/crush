@@ -17,6 +17,7 @@ use crate::util::file::home;
 use std::path::{PathBuf, Path};
 use crate::lang::scope::Scope;
 use crate::lang::printer::Printer;
+use crate::lang::stream::ValueSender;
 
 fn crush_history_file() -> String {
         home()
@@ -27,11 +28,9 @@ fn crush_history_file() -> String {
             .to_string()
 }
 
-fn run_interactive(global_env: Scope, printer: Printer) -> CrushResult<()> {
+fn run_interactive(global_env: Scope, printer: &Printer, pretty_printer: &ValueSender) -> CrushResult<()> {
     printer.line("Welcome to Crush");
     printer.line(r#"Type "help" for... help."#);
-
-    let pretty_printer = create_pretty_printer(printer.clone());
 
     let mut rl = Editor::<()>::new();
     let _ = rl.load_history(&crush_history_file());
@@ -42,7 +41,7 @@ fn run_interactive(global_env: Scope, printer: Printer) -> CrushResult<()> {
             Ok(cmd) => {
                 if !cmd.is_empty() {
                     rl.add_history_entry(cmd.as_str());
-                    execute::string(global_env.clone(),&cmd.as_str(), &printer, &pretty_printer);
+                    execute::string(global_env.clone(),&cmd.as_str(), &printer, pretty_printer);
                 }
             }
             Err(ReadlineError::Interrupted) => {
@@ -76,7 +75,10 @@ fn run() -> CrushResult<()> {
 
     let args = std::env::args().collect::<Vec<String>>();
     match args.len() {
-        1 => run_interactive(my_scope, printer)?,
+        1 => run_interactive(
+            my_scope,
+            &printer,
+            &pretty_printer)?,
         2 => execute::file(
             my_scope,
             PathBuf::from(&args[1]).as_path(),
@@ -85,6 +87,9 @@ fn run() -> CrushResult<()> {
         _ => {}
     }
     drop (pretty_printer);
+    drop (printer);
+    global_env.clear();
+    drop(global_env);
     let _ = print_handle.join();
     Ok(())
 }

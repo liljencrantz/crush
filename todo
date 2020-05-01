@@ -18,8 +18,6 @@ Make error printing display source of error
 Binary values can be big. Make them shared behind an Arc. Same with table. Maybe even String?
 In closures without a signature, put unnamed variables in the variable 'unnamed'
 Kwargs should maybe not be a dict? How should repeated arguments be handled? We should at least preserve order...
-Allow empty closures
-Missing some value serialisations and deserialisations
 Make integers overflow to arbitrary precision math
 Run an executable by giving its path
 Add reject command that removes specified columns from a table/stream
@@ -34,7 +32,6 @@ support adding prototypes to structs
 New operators: += increment and friends
 For single column tabular output, display it on screen it in many rows to save space
 Arbitrary precision integers?
-make file globing testable via fakes
 Add package command to create a new namespace
 Make it possible to use the pipe operator with the for command
 pbuf:from command that takes a protobuf definition and uses it to deserialize protobuf data

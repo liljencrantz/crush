@@ -60,7 +60,6 @@ pub enum Node {
     Term(Box<Node>, String, Box<Node>),
     Factor(Box<Node>, String, Box<Node>),
     Unary(String, Box<Node>),
-    Cast(Box<Node>, Box<Node>),
     Glob(String),
     Label(String),
     Regex(String),
@@ -126,14 +125,6 @@ impl Node {
                             return Ok(ArgumentDefinition::dict(r.generate_argument(env)?.unnamed_value()?)),
                         _ => return error("Unknown operator"),
                     },
-                Node::Cast(value, target_type) =>
-                    ValueDefinition::JobDefinition(
-                        Job::new(vec![CommandInvocation::new(
-                            ValueDefinition::Value(
-                                Value::Command(
-                                    env.global_static_cmd(vec!["global", "types", "as"])?)),
-                            vec![value.generate_argument(env)?, target_type.generate_argument(env)?])
-                        ])),
                 Node::Label(l) => ValueDefinition::Label(l.clone()),
                 Node::Regex(l) => ValueDefinition::Value(Value::Regex(l.clone(), to_crush_error(Regex::new(l.clone().as_ref()))?)),
                 Node::String(t) => ValueDefinition::Value(Value::string(unescape(t).as_str())),
@@ -289,7 +280,7 @@ impl Node {
                     _ => error("Unknown operator"),
                 },
 
-            Node::Cast(_, _) | Node::Glob(_) | Node::Label(_) | Node::Regex(_) | Node::Field(_) | Node::String(_) |
+            Node::Glob(_) | Node::Label(_) | Node::Regex(_) | Node::Field(_) | Node::String(_) |
             Node::Integer(_) | Node::Float(_) | Node::GetAttr(_, _) | Node::Path(_, _) | Node::Substitution(_) |
             Node::Closure(_, _) | Node::File(_) => Ok(None),
         }

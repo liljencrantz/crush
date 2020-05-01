@@ -295,6 +295,12 @@ impl Scope {
         Ok(data)
     }
 
+    pub fn clear(&self) {
+        let mut data = self.data.lock().unwrap();
+        data.mapping.clear();
+        data.uses.clear();
+    }
+
     pub fn full_path(&self) -> CrushResult<Vec<String>> {
         let data = self.data.lock().unwrap();
         match data.name.clone() {

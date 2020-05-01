@@ -22,22 +22,19 @@ pub struct Printer {
 pub fn init() -> (Printer, JoinHandle<()>) {
     let (sender, receiver) = bounded(128);
 
-    (Printer { sender: sender },
-     thread::Builder::new().name("printer".to_string()).spawn(move || {
-         loop {
-             match receiver.recv() {
-                 Ok(message) => {
-                     match message {
-                         Error(err) => eprintln!("Error: {}", err),
-                         CrushError(err) => eprintln!("Error: {}", err.message),
-                         Line(line) => println!("{}", line),
+    (
+        Printer { sender: sender },
+        thread::Builder::new().name("printer".to_string()).spawn(move || {
+            while let Ok(message) = receiver.recv() {
+                match message {
+                    Error(err) => eprintln!("Error: {}", err),
+                    CrushError(err) => eprintln!("Error: {}", err.message),
+                    Line(line) => println!("{}", line),
 //                        Lines(lines) => for line in lines {println!("{}", line)},
-                     }
-                 }
-                 Err(_) => break,
-             }
-         }
-     }).unwrap())
+                }
+            }
+        }).unwrap()
+    )
 }
 
 impl Printer {
@@ -51,8 +48,8 @@ impl Printer {
     */
     pub fn handle_error<T>(&self, result: CrushResult<T>) {
         if let Err(e) = result {
-            match e.kind{
-                Kind::SendError => {},
+            match e.kind {
+                Kind::SendError => {}
                 _ => self.crush_error(e),
             }
         }

@@ -1,7 +1,7 @@
 use proc_macro2;
 
 use syn;
-use proc_macro2::{TokenStream, Literal, TokenTree};
+use proc_macro2::{TokenStream, Literal, TokenTree, Group, Delimiter};
 use syn::{Item, Type, PathArguments, GenericArgument, Attribute};
 use quote::{quote, ToTokens, quote_spanned};
 use proc_macro2::Ident;
@@ -93,6 +93,28 @@ fn call_values(attr: &Attribute) -> SignatureResult<Vec<TokenTree>> {
     Ok(res)
 }
 
+fn call_literals(attr: &Attribute) -> SignatureResult<Vec<Literal>> {
+    let mut res = Vec::new();
+    for tree in attr.tokens.clone().into_iter() {
+        match tree {
+            TokenTree::Group(g) => {
+                println!("WEEEE {:?}", g.stream());
+                for item in g.stream().into_iter() {
+                    match item {
+                        TokenTree::Literal(l) => {
+                            res.push(l)
+                        }
+                        TokenTree::Punct(_) => {}
+                        _ => return fail!(attr.span(), "All values must be literals")
+                    }
+                }
+            }
+            _ => return fail!(attr.span(), "All values must be literals")
+        }
+    }
+    Ok(res)
+}
+
 fn call_value(attr: &Attribute) -> SignatureResult<TokenTree> {
     let values = call_values(attr)?;
     if values.len() == 1 {
@@ -114,10 +136,47 @@ fn simple_type_to_value_name(simple_type: &str) -> &str {
     }
 }
 
-fn simple_type_to_mutator(simple_type: &str) -> TokenStream {
-    match simple_type {
-        "char" => quote! { if value.len() == 1 { value.chars().next().unwrap()} else {return argument_error("Argument must be exactly one character")}},
-        _ => quote! {value},
+fn simple_type_to_mutator(
+    simple_type: &str,
+    allowed_values: &Option<Ident>,
+) -> TokenStream {
+    match allowed_values {
+        None => {
+            match simple_type {
+                "char" => quote! { if value.len() == 1 { value.chars().next().unwrap()} else {return crate::lang::errors::argument_error("Argument must be exactly one character")}},
+                _ => quote! {value},
+            }
+        }
+        Some(allowed) => {
+            match simple_type {
+                "char" => quote! {
+                    if value.len() == 1 {
+                        let c = value.chars().next().unwrap();
+                        if #allowed.contains(&c) {
+                            c
+                        } else {
+                            return crate::lang::errors::argument_error(format!("Only the following values are allowed: {:?}", #allowed).as_str())
+                        }
+                    } else {
+                        return crate::lang::errors::argument_error("Argument must be exactly one character")
+                    }
+                },
+                "String" => quote! {
+                    if #allowed.contains(&value.as_str()) {
+                        value
+                    } else {
+                        return crate::lang::errors::argument_error(format!("Only the following values are allowed: {:?}", #allowed).as_str())
+                    }
+                },
+                _ => quote! {
+                    if #allowed.contains(&value) {
+                        value
+                    } else {
+                        return crate::lang::errors::argument_error(format!("Only the following values are allowed: {:?}", #allowed).as_str())
+                    }
+                },
+            }
+        }
     }
 }
 
@@ -133,8 +192,17 @@ fn simple_type_dump_list(simple_type: &str) -> &str {
 }
 
 
-fn type_to_value(ty: &Type, name: &Ident, default: Option<TokenTree>, is_unnamed_target: bool) -> SignatureResult<TypeData> {
+fn type_to_value(
+    ty: &Type,
+    name: &Ident,
+    default: Option<TokenTree>,
+    is_unnamed_target: bool,
+    allowed_values: Option<Vec<Literal>>,
+) -> SignatureResult<TypeData> {
     let name_literal = proc_macro2::Literal::string(&name.to_string());
+
+    let allowed_values_name =
+        allowed_values.as_ref().map(|_| Ident::new(&format!("{}_allowed_values", name.to_string()), ty.span()));
 
     let (type_name, args) = extract_type(ty)?;
     match type_name {
@@ -143,10 +211,23 @@ fn type_to_value(ty: &Type, name: &Ident, default: Option<TokenTree>, is_unnamed
                 fail!(ty.span(), "This type can't be paramterizised")
             } else {
                 let native_type = Ident::new(type_name, ty.span());
-                let mutator = simple_type_to_mutator(type_name);
+                let mutator = simple_type_to_mutator(type_name, &allowed_values_name);
                 let value_type = Ident::new(simple_type_to_value_name(type_name), ty.span());
                 Ok(TypeData {
-                    initialize: quote! { None },
+                    initialize: match allowed_values {
+                        None => quote! { let mut #name = None; },
+                        Some(literals) => {
+                            let mut literal_params = proc_macro2::TokenStream::new();
+                            println!("ABCD {:?}", literals);
+                            for l in literals {
+                                literal_params.extend(quote! { #l,});
+                            }
+                            quote! {
+                                let mut #name = None;
+                                let #allowed_values_name = maplit::hashset![#literal_params];
+                            }
+                        }
+                    },
                     mappings: quote! {(Some(#name_literal), Value::#value_type(value)) => #name = Some(#mutator),},
                     unnamed_mutate:
                     match default {
@@ -156,7 +237,7 @@ if #name.is_none() {
     if let Some(Value::#value_type(value)) = _unnamed.pop_front() {
         #name = Some(#mutator);
     } else {
-        return argument_error(format!("Expected argument {} to be of type {}", #name_literal, #type_name).as_str());
+        return crate::lang::errors::argument_error(format!("Expected argument {} to be of type {}", #name_literal, #type_name).as_str());
     }
 }
                             })
@@ -167,7 +248,7 @@ if #name.is_none() {
     match _unnamed.pop_front() {
         Some(Value::#value_type(value)) => #name = Some(#mutator),
         None => #name = Some(#native_type::from(#def)),
-        _ => return argument_error(format!("Expected argument {} to be of type {}", #name_literal, #type_name).as_str()),
+        _ => return crate::lang::errors::argument_error(format!("Expected argument {} to be of type {}", #name_literal, #type_name).as_str()),
         }
 }
                             })
@@ -183,11 +264,14 @@ if #name.is_none() {
         }
 
         "Vec" => {
+            if allowed_values.is_some() {
+                return fail!(ty.span(), "Vactors can't have restricted values");
+            }
             if args.len() != 1 {
                 fail!(ty.span(), "Vec needs exactly one parameter")
             } else if args[0] == "PathBuf" {
                 Ok(TypeData {
-                    initialize: quote! { Vec::new() },
+                    initialize: quote! { let mut #name = Vec::new(); },
                     mappings: quote! { (Some(#name_literal), value) => value.file_expand(&mut #name, printer)?, },
                     unnamed_mutate: if is_unnamed_target {
                         Some(quote! {
@@ -199,12 +283,12 @@ if #name.is_none() {
                     assign: quote! { #name, },
                 })
             } else {
-                let mutator = simple_type_to_mutator(args[0]);
+                let mutator = simple_type_to_mutator(args[0], &None);
                 let dump_all = Ident::new(simple_type_dump_list(args[0]), ty.span().clone());
                 let value_type = Ident::new(simple_type_to_value_name(args[0]), ty.span().clone());
 
                 Ok(TypeData {
-                    initialize: quote! { Vec::new() },
+                    initialize: quote! { let mut #name = Vec::new(); },
                     mappings: quote! {
                         (Some(#name_literal), Value::#value_type(value)) => #name.push(#mutator),
                         (Some(#name_literal), Value::List(value)) => value.#dump_all(&mut #name)?,
@@ -215,7 +299,7 @@ if #name.is_none() {
                                 if let Some(Value::#value_type(value)) = _unnamed.pop_front() {
                                     #name.push(#mutator);
                                 } else {
-                                    return argument_error(format!("Expected argument {} to be of type {}", #name_literal, #type_name).as_str());
+                                    return crate::lang::errors::argument_error(format!("Expected argument {} to be of type {}", #name_literal, #type_name).as_str());
                                 }
                             }
                         })
@@ -226,14 +310,17 @@ if #name.is_none() {
         }
 
         "OrderedStringMap" => {
+            if allowed_values.is_some() {
+                return fail!(ty.span(), "Options can't have restricted values");
+            }
             if args.len() != 1 {
                 fail!(ty.span(), "OrderedStringMap needs exactly one parameter")
             } else {
-                let mutator = simple_type_to_mutator(args[0]);
+                let mutator = simple_type_to_mutator(args[0], &None);
                 let value_type = Ident::new(simple_type_to_value_name(args[0]), ty.span().clone());
 
                 Ok(TypeData {
-                    initialize: quote! { crate::lang::ordered_string_map::OrderedStringMap::new() },
+                    initialize: quote! { let mut #name = crate::lang::ordered_string_map::OrderedStringMap::new(); },
                     mappings: quote! { (Some(name), Value::#value_type(value)) => #name.insert(name.to_string(), #mutator), },
                     unnamed_mutate: None,
                     assign: quote! { #name, },
@@ -246,18 +333,18 @@ if #name.is_none() {
                 fail!(ty.span(), "Option needs exactly on parameter")
             } else {
                 let sub_type = Literal::string(args[0]);
-                let mutator = simple_type_to_mutator(args[0]);
+                let mutator = simple_type_to_mutator(args[0], &None);
                 let value_type = Ident::new(simple_type_to_value_name(args[0]), ty.span().clone());
 
                 Ok(TypeData {
-                    initialize: quote! { None },
+                    initialize: quote! { let mut #name = None; },
                     mappings: quote! { (Some(#name_literal), Value::#value_type(value)) => #name = Some(#mutator), },
                     unnamed_mutate: Some(quote_spanned! { ty.span() =>
                             if #name.is_none() {
                                 match _unnamed.pop_front() {
                                     None => {}
                                     Some(Value::#value_type(value)) => #name = Some(#mutator),
-                                    Some(_) => return argument_error(format!("Expected argument {} to be of type {}", #name_literal, #sub_type).as_str()),
+                                    Some(_) => return crate::lang::errors::argument_error(format!("Expected argument {} to be of type {}", #name_literal, #sub_type).as_str()),
                                 }
                             }
                             }
@@ -286,6 +373,7 @@ fn signature_real(input: TokenStream) -> SignatureResult<TokenStream> {
                 let mut default_value = None;
                 let mut is_unnamed_target = false;
                 let mut is_named_target = false;
+                let mut allowed_values = None;
                 if !field.attrs.is_empty() {
                     for attr in &field.attrs {
                         if call_is_default(attr) {
@@ -297,14 +385,17 @@ fn signature_real(input: TokenStream) -> SignatureResult<TokenStream> {
                         if call_is_named(attr, "named") {
                             is_named_target = true;
                         }
+                        if call_is_named(attr, "values") {
+                            allowed_values = Some(call_literals(attr)?);
+                        }
                     }
                 }
                 field.attrs = Vec::new();
                 let name = &field.ident.clone().unwrap();
-                let type_data = type_to_value(&field.ty, name, default_value.clone(), is_unnamed_target)?;
+                let type_data = type_to_value(&field.ty, name, default_value.clone(), is_unnamed_target, allowed_values)?;
                 let initialize = type_data.initialize;
                 let mappings = type_data.mappings;
-                values.extend(quote! {let mut #name = #initialize; }.into_token_stream());
+                values.extend(initialize);
 
                 if is_named_target {
                     named_fallback.extend(mappings)
@@ -349,7 +440,7 @@ impl crate::lang::argument::ArgumentHandler for #struct_name {
 
             let mut output = s.to_token_stream();
             output.extend(handler.into_token_stream());
-            //println!("ABCABC {}", output.to_string());
+            println!("ABCABC {}", output.to_string());
             Ok(output)
         }
         _ => { fail!(root.span(), "Expected a struct") }

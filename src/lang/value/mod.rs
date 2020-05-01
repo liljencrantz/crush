@@ -251,7 +251,7 @@ impl Value {
         }
     }
 
-    pub fn cast(self, new_type: ValueType) -> CrushResult<Value> {
+    pub fn convert(self, new_type: ValueType) -> CrushResult<Value> {
         if self.value_type() == new_type {
             return Ok(self);
         }
@@ -277,22 +277,22 @@ impl Value {
             ValueType::Bool => Ok(Value::Bool(match str_val.as_str() {
                 "true" => true,
                 "false" => false,
-                _ => return error("Can't cast to boolean")
+                _ => return error(format!("Can't convert value '{}' to boolean", str_val).as_str())
             })),
             ValueType::String => Ok(Value::String(str_val)),
-            ValueType::Time => error("invalid cast"),
+            ValueType::Time => error("invalid convert"),
             ValueType::Duration => Ok(Value::Duration(Duration::seconds(to_crush_error(i64::from_str(&str_val))?))),
-            ValueType::Command => error("invalid cast"),
-            ValueType::TableStream(_) => error("invalid cast"),
-            ValueType::Table(_) => error("invalid cast"),
-            ValueType::Struct => error("invalid cast"),
-            ValueType::List(_) => error("invalid cast"),
-            ValueType::Dict(_, _) => error("invalid cast"),
-            ValueType::Scope => error("Invalid cast"),
-            ValueType::Empty => error("Invalid cast"),
-            ValueType::Any => error("Invalid cast"),
-            ValueType::BinaryStream => error("invalid cast"),
-            ValueType::Type => error("invalid cast"),
+            ValueType::Command => error("invalid convert"),
+            ValueType::TableStream(_) => error("invalid convert"),
+            ValueType::Table(_) => error("invalid convert"),
+            ValueType::Struct => error("invalid convert"),
+            ValueType::List(_) => error("invalid convert"),
+            ValueType::Dict(_, _) => error("invalid convert"),
+            ValueType::Scope => error("Invalid convert"),
+            ValueType::Empty => error("Invalid convert"),
+            ValueType::Any => error("Invalid convert"),
+            ValueType::BinaryStream => error("invalid convert"),
+            ValueType::Type => error("invalid convert"),
         }
     }
 }
@@ -473,12 +473,12 @@ mod tests {
 
     #[test]
     fn text_casts() {
-        assert_eq!(Value::string("112432").cast(ValueType::Integer).is_err(), false);
-        assert_eq!(Value::string("1d").cast(ValueType::Integer).is_err(), true);
-        assert_eq!(Value::string("1d").cast(ValueType::Glob).is_err(), false);
-        assert_eq!(Value::string("1d").cast(ValueType::File).is_err(), false);
-        assert_eq!(Value::string("1d").cast(ValueType::Time).is_err(), true);
-        assert_eq!(Value::string("fad").cast(ValueType::Field).is_err(), false);
+        assert_eq!(Value::string("112432").convert(ValueType::Integer).is_err(), false);
+        assert_eq!(Value::string("1d").convert(ValueType::Integer).is_err(), true);
+        assert_eq!(Value::string("1d").convert(ValueType::Glob).is_err(), false);
+        assert_eq!(Value::string("1d").convert(ValueType::File).is_err(), false);
+        assert_eq!(Value::string("1d").convert(ValueType::Time).is_err(), true);
+        assert_eq!(Value::string("fad").convert(ValueType::Field).is_err(), false);
     }
 
     #[test]

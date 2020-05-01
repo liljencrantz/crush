@@ -80,8 +80,8 @@ pub fn parse_column_types(mut arguments: Vec<Argument>) -> CrushResult<Vec<Colum
     Ok(types)
 }
 
-pub fn r#as(mut context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(context.arguments.value(0)?.cast(context.arguments.r#type(1)?)?)
+pub fn convert(mut context: ExecutionContext) -> CrushResult<()> {
+    context.output.send(context.arguments.value(0)?.convert(context.arguments.r#type(1)?)?)
 }
 
 pub fn r#typeof(mut context: ExecutionContext) -> CrushResult<()> {
@@ -148,8 +148,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                                 "Construct a struct with the specified members",
                                 None)?;
 
-            env.declare_command("as", r#as, false,
-                                "value:any as type:type",
+            env.declare_command("convert", convert, false,
+                                "convert value:any type:type",
                                 "Convert the vale to the specified type",
                                 None)?;
 
