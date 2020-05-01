@@ -214,7 +214,7 @@ mod tests {
 
     #[test]
     fn allowed_values() {
-        let (printer, handle) = crate::lang::printer::init();
+        let (printer, _) = crate::lang::printer::init();
         let a = AllowedValuesStringSignature::parse(
             vec![
                 Argument::named("str_val", Value::string("aa")),
@@ -266,7 +266,7 @@ mod tests {
 
     #[test]
     fn option_signature() {
-        let (printer, handle) = crate::lang::printer::init();
+        let (printer, _) = crate::lang::printer::init();
         assert_eq!(OptionSignature::parse(
             vec![
                 Argument::named("int_val", Value::Integer(9)),
@@ -288,7 +288,7 @@ mod tests {
 
     #[test]
     fn default_signature() {
-        let (printer, handle) = crate::lang::printer::init();
+        let (printer, _) = crate::lang::printer::init();
         assert_eq!(DefaultSignature::parse(
             vec![
                 Argument::named("int_val", Value::Integer(9)),
@@ -309,7 +309,7 @@ mod tests {
 
     #[test]
     fn list_signature() {
-        let (printer, handle) = crate::lang::printer::init();
+        let (printer, _) = crate::lang::printer::init();
         assert_eq!(ListSignature::parse(
             vec![
                 Argument::named("list_val", Value::string("a")),
@@ -346,7 +346,7 @@ mod tests {
 
     #[test]
     fn named_signature() {
-        let (printer, handle) = crate::lang::printer::init();
+        let (printer, _) = crate::lang::printer::init();
         assert_eq!(NamedSignature::parse(
             vec![
                 Argument::named("a", Value::string("A")),
@@ -373,7 +373,7 @@ mod tests {
 
     #[test]
     fn named_signature_type_check() {
-        let (printer, handle) = crate::lang::printer::init();
+        let (printer, _) = crate::lang::printer::init();
         let s: NamedSignature2 = NamedSignature2::parse(
             vec![
                 Argument::named("foo", Value::string("s")),
@@ -389,7 +389,7 @@ mod tests {
 
     #[test]
     fn named_signature_with_bad_type() {
-        let (printer, handle) = crate::lang::printer::init();
+        let (printer, _) = crate::lang::printer::init();
         assert!(NamedSignature2::parse(
             vec![
                 Argument::named("foo", Value::Bool(true)),

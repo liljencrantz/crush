@@ -1,7 +1,7 @@
 use proc_macro2;
 
 use syn;
-use proc_macro2::{TokenStream, Literal, TokenTree, Group, Delimiter};
+use proc_macro2::{TokenStream, Literal, TokenTree};
 use syn::{Item, Type, PathArguments, GenericArgument, Attribute};
 use quote::{quote, ToTokens, quote_spanned};
 use proc_macro2::Ident;
@@ -98,7 +98,6 @@ fn call_literals(attr: &Attribute) -> SignatureResult<Vec<Literal>> {
     for tree in attr.tokens.clone().into_iter() {
         match tree {
             TokenTree::Group(g) => {
-                println!("WEEEE {:?}", g.stream());
                 for item in g.stream().into_iter() {
                     match item {
                         TokenTree::Literal(l) => {
@@ -218,7 +217,6 @@ fn type_to_value(
                         None => quote! { let mut #name = None; },
                         Some(literals) => {
                             let mut literal_params = proc_macro2::TokenStream::new();
-                            println!("ABCD {:?}", literals);
                             for l in literals {
                                 literal_params.extend(quote! { #l,});
                             }
@@ -440,7 +438,7 @@ impl crate::lang::argument::ArgumentHandler for #struct_name {
 
             let mut output = s.to_token_stream();
             output.extend(handler.into_token_stream());
-            println!("ABCABC {}", output.to_string());
+            //println!("ABCABC {}", output.to_string());
             Ok(output)
         }
         _ => { fail!(root.span(), "Expected a struct") }

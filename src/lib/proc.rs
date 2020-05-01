@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
+use crate::lang::errors::{CrushResult, to_crush_error};
 use crate::{
     lang::table::Row,
     lang::value::ValueType,
