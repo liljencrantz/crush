@@ -1,24 +1,24 @@
-use crate::lang::scope::Scope;
 use crate::lang::errors::CrushResult;
+use crate::lang::scope::Scope;
 
 mod head;
+mod reverse;
+mod sort;
 mod tail;
 mod r#where;
-mod sort;
-mod reverse;
 
-mod select;
 mod enumerate;
+mod select;
 
-mod uniq;
 mod group;
 mod join;
+mod uniq;
 mod zip;
 //mod aggr;
 
 mod count;
-mod sum_avg;
 mod seq;
+mod sum_avg;
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_lazy_namespace(

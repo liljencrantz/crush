@@ -1,8 +1,7 @@
 use crate::lang::errors::CrushResult;
 use crate::lang::execution_context::ArgumentVector;
 use crate::lang::execution_context::ExecutionContext;
-use crate::lang::stream::{empty_channel, black_hole};
-
+use crate::lang::stream::{black_hole, empty_channel};
 
 pub fn r#loop(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.initialize(vec![])?;

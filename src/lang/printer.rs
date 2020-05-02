@@ -1,13 +1,13 @@
-use crossbeam::Sender;
+use crate::lang::errors::{to_crush_error, CrushError, CrushResult, Kind};
 use crossbeam::bounded;
+use crossbeam::Sender;
 use std::thread;
-use crate::lang::errors::{CrushError, CrushResult, to_crush_error, Kind};
 
 enum PrinterMessage {
     CrushError(CrushError),
     Error(String),
     Line(String),
-//    Lines(Vec<String>),
+    //    Lines(Vec<String>),
 }
 
 use crate::lang::printer::PrinterMessage::*;
@@ -22,27 +22,34 @@ pub struct Printer {
 pub fn init() -> (Printer, JoinHandle<()>) {
     let (sender, receiver) = bounded(128);
 
-    (Printer { sender: sender },
-     thread::Builder::new().name("printer".to_string()).spawn(move || {
-         loop {
-             match receiver.recv() {
-                 Ok(message) => {
-                     match message {
-                         Error(err) => eprintln!("Error: {}", err),
-                         CrushError(err) => eprintln!("Error: {}", err.message),
-                         Line(line) => println!("{}", line),
-//                        Lines(lines) => for line in lines {println!("{}", line)},
-                     }
-                 }
-                 Err(_) => break,
-             }
-         }
-     }).unwrap())
+    (
+        Printer { sender: sender },
+        thread::Builder::new()
+            .name("printer".to_string())
+            .spawn(move || {
+                loop {
+                    match receiver.recv() {
+                        Ok(message) => {
+                            match message {
+                                Error(err) => eprintln!("Error: {}", err),
+                                CrushError(err) => eprintln!("Error: {}", err.message),
+                                Line(line) => println!("{}", line),
+                                //                        Lines(lines) => for line in lines {println!("{}", line)},
+                            }
+                        }
+                        Err(_) => break,
+                    }
+                }
+            })
+            .unwrap(),
+    )
 }
 
 impl Printer {
     pub fn line(&self, line: &str) {
-        self.handle_error(to_crush_error(self.sender.send(PrinterMessage::Line(line.to_string()))));
+        self.handle_error(to_crush_error(
+            self.sender.send(PrinterMessage::Line(line.to_string())),
+        ));
     }
     /*
         pub fn lines(&self, lines: Vec<String>) {
@@ -51,8 +58,8 @@ impl Printer {
     */
     pub fn handle_error<T>(&self, result: CrushResult<T>) {
         if let Err(e) = result {
-            match e.kind{
-                Kind::SendError => {},
+            match e.kind {
+                Kind::SendError => {}
                 _ => self.crush_error(e),
             }
         }
@@ -68,8 +75,7 @@ impl Printer {
 
     pub fn width(&self) -> usize {
         match terminal_size() {
-            Ok(s) =>
-                s.0 as usize,
+            Ok(s) => s.0 as usize,
             Err(_) => 80,
         }
     }

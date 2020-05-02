@@ -1,10 +1,13 @@
-use crate::lang::{value::Value, r#struct::Struct, table::Table, table::ColumnType, value::ValueType, table::Row, binary::binary_channel};
-use crate::lang::execution_context::ExecutionContext;
-use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
-use reqwest::{StatusCode, Method};
-use reqwest::header::HeaderMap;
-use signature::signature;
 use crate::lang::argument::ArgumentHandler;
+use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
+use crate::lang::execution_context::ExecutionContext;
+use crate::lang::{
+    binary::binary_channel, r#struct::Struct, table::ColumnType, table::Row, table::Table,
+    value::Value, value::ValueType,
+};
+use reqwest::header::HeaderMap;
+use reqwest::{Method, StatusCode};
+use signature::signature;
 
 fn parse_method(m: &str) -> CrushResult<Method> {
     Ok(match m.to_lowercase().as_str() {
@@ -24,7 +27,7 @@ fn parse_method(m: &str) -> CrushResult<Method> {
 #[signature]
 struct Signature {
     uri: String,
-//    #[values("get", "post", "put", "delete", "head", "options", "connect", "patch", "trace")]
+    //    #[values("get", "post", "put", "delete", "head", "options", "connect", "patch", "trace")]
     #[default("get")]
     method: String,
     form: Option<String>,
@@ -41,8 +44,12 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
     for t in cfg.header.iter() {
         let h = t.splitn(2, ':').collect::<Vec<&str>>();
         match h.len() {
-            2 => { request = request.header(h[0], h[1].to_string()); }
-            _ => { return argument_error("Bad header format"); }
+            2 => {
+                request = request.header(h[0], h[1].to_string());
+            }
+            _ => {
+                return argument_error("Bad header format");
+            }
         }
     }
 
@@ -61,17 +68,25 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
         ],
         header_map
             .iter()
-            .map(|(n, v)| Row::new(vec![Value::string(n.as_str()), Value::string(v.to_str().unwrap())]))
-            .collect());
-    let _ = context.output.send(
-        Value::Struct(Struct::new(
-            vec![
-                ("status".to_string(), Value::Integer(status.as_u16() as i128)),
-                ("headers".to_string(), Value::Table(headers)),
-                ("body".to_string(), Value::BinaryStream(input))
-            ],
-            None,
-        )));
+            .map(|(n, v)| {
+                Row::new(vec![
+                    Value::string(n.as_str()),
+                    Value::string(v.to_str().unwrap()),
+                ])
+            })
+            .collect(),
+    );
+    let _ = context.output.send(Value::Struct(Struct::new(
+        vec![
+            (
+                "status".to_string(),
+                Value::Integer(status.as_u16() as i128),
+            ),
+            ("headers".to_string(), Value::Table(headers)),
+            ("body".to_string(), Value::BinaryStream(input)),
+        ],
+        None,
+    )));
     to_crush_error(b.copy_to(output.as_mut()))?;
     Ok(())
 }

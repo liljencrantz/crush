@@ -7,24 +7,24 @@ mod util;
 
 use rustyline;
 
+use crate::lang::errors::{to_crush_error, CrushResult};
+use crate::lang::pretty_printer::create_pretty_printer;
+use crate::lang::printer::Printer;
+use crate::lang::scope::Scope;
+use crate::lang::{execute, printer};
+use crate::util::file::home;
+use lib::declare;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
-use lib::declare;
-use crate::lang::errors::{CrushResult, to_crush_error};
-use crate::lang::{printer, execute};
-use crate::lang::pretty_printer::create_pretty_printer;
-use crate::util::file::home;
-use std::path::{PathBuf, Path};
-use crate::lang::scope::Scope;
-use crate::lang::printer::Printer;
+use std::path::{Path, PathBuf};
 
 fn crush_history_file() -> String {
-        home()
-            .unwrap_or_else(|_| PathBuf::from("."))
-            .join(Path::new(".crush_history"))
-            .to_str()
-            .unwrap_or(".crush_history")
-            .to_string()
+    home()
+        .unwrap_or_else(|_| PathBuf::from("."))
+        .join(Path::new(".crush_history"))
+        .to_str()
+        .unwrap_or(".crush_history")
+        .to_string()
 }
 
 fn run_interactive(global_env: Scope, printer: Printer) -> CrushResult<()> {
@@ -42,7 +42,7 @@ fn run_interactive(global_env: Scope, printer: Printer) -> CrushResult<()> {
             Ok(cmd) => {
                 if !cmd.is_empty() {
                     rl.add_history_entry(cmd.as_str());
-                    execute::string(global_env.clone(),&cmd.as_str(), &printer, &pretty_printer);
+                    execute::string(global_env.clone(), &cmd.as_str(), &printer, &pretty_printer);
                 }
             }
             Err(ReadlineError::Interrupted) => {
@@ -81,10 +81,11 @@ fn run() -> CrushResult<()> {
             my_scope,
             PathBuf::from(&args[1]).as_path(),
             &printer,
-            &pretty_printer)?,
+            &pretty_printer,
+        )?,
         _ => {}
     }
-    drop (pretty_printer);
+    drop(pretty_printer);
     let _ = print_handle.join();
     Ok(())
 }

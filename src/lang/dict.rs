@@ -1,12 +1,12 @@
-use crate::lang::{value::ValueType, value::Value, table::ColumnType, table::Row};
-use crate::lang::errors::{CrushResult, error, argument_error};
-use std::hash::Hasher;
-use std::sync::{Arc, Mutex};
+use crate::lang::errors::{argument_error, error, CrushResult};
+use crate::lang::stream::Readable;
+use crate::lang::{table::ColumnType, table::Row, value::Value, value::ValueType};
+use crate::util::identity_arc::Identity;
+use crate::util::replace::Replace;
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use crate::lang::stream::Readable;
-use crate::util::replace::Replace;
-use crate::util::identity_arc::Identity;
+use std::hash::Hasher;
+use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
 pub struct Dict {
@@ -36,7 +36,11 @@ impl Dict {
     pub fn to_string(&self) -> String {
         let mut res = "dict{".to_string();
         let entries = self.entries.lock().unwrap();
-        res += &entries.iter().map(|(k, v)| format!("{}: {}", k.to_string(), v.to_string())).collect::<Vec<String>>().join(" ");
+        res += &entries
+            .iter()
+            .map(|(k, v)| format!("{}: {}", k.to_string(), v.to_string()))
+            .collect::<Vec<String>>()
+            .join(" ");
         res += "}";
         res
     }
@@ -90,19 +94,26 @@ impl Dict {
         self.value_type.clone()
     }
     pub fn dict_type(&self) -> ValueType {
-        ValueType::Dict(Box::from(self.key_type.clone()), Box::from(self.value_type.clone()))
+        ValueType::Dict(
+            Box::from(self.key_type.clone()),
+            Box::from(self.value_type.clone()),
+        )
     }
 
     pub fn elements(&self) -> Vec<(Value, Value)> {
         let entries = self.entries.lock().unwrap();
-        entries.iter()
+        entries
+            .iter()
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect()
     }
 
     pub fn materialize(self) -> Dict {
         let mut entries = self.entries.lock().unwrap();
-        let map = entries.drain().map(|(k, v)| (k.materialize(), v.materialize())).collect();
+        let map = entries
+            .drain()
+            .map(|(k, v)| (k.materialize(), v.materialize()))
+            .collect();
         Dict {
             key_type: self.key_type.materialize(),
             value_type: self.value_type.materialize(),
@@ -132,9 +143,11 @@ impl std::cmp::PartialEq for Dict {
             let them_value = them.get(k);
             match them_value {
                 None => return false,
-                Some(v2) => if !v.eq(v2) {
-                    return false;
-                },
+                Some(v2) => {
+                    if !v.eq(v2) {
+                        return false;
+                    }
+                }
             }
         }
         true
@@ -154,12 +167,12 @@ pub struct DictReader {
 }
 
 impl DictReader {
-    pub fn new(dict: Dict,
-    ) -> DictReader {
+    pub fn new(dict: Dict) -> DictReader {
         DictReader {
             types: vec![
                 ColumnType::new("key", dict.key_type.clone()),
-                ColumnType::new("value", dict.value_type.clone())],
+                ColumnType::new("value", dict.value_type.clone()),
+            ],
             list: dict.elements(),
             idx: 0usize,
         }
@@ -171,7 +184,9 @@ impl Readable for DictReader {
         if self.idx >= self.list.len() {
             return error("End of stream");
         }
-        let (a, b) = self.list.replace(self.idx, (Value::Bool(false), Value::Bool(false)));
+        let (a, b) = self
+            .list
+            .replace(self.idx, (Value::Bool(false), Value::Bool(false)));
         self.idx += 1;
         Ok(Row::new(vec![a, b]))
     }

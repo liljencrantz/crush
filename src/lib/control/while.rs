@@ -1,7 +1,7 @@
+use crate::lang::errors::{data_error, CrushResult};
+use crate::lang::execution_context::{ArgumentVector, ExecutionContext};
+use crate::lang::stream::{black_hole, channels, empty_channel};
 use crate::lang::value::Value;
-use crate::lang::errors::{CrushResult, data_error};
-use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
-use crate::lang::stream::{empty_channel, channels, black_hole};
 
 pub fn r#while(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.initialize(vec![])?;
@@ -26,25 +26,23 @@ pub fn r#while(mut context: ExecutionContext) -> CrushResult<()> {
         }
 
         match receiver.recv()? {
-            Value::Bool(true) => {
-                match &maybe_body {
-                    Some(body) => {
-                        let body_env = context.env.create_child(&context.env, true);
-                        body.invoke(ExecutionContext {
-                            input: empty_channel(),
-                            output: black_hole(),
-                            arguments: Vec::new(),
-                            env: body_env.clone(),
-                            this: None,
-                            printer: context.printer.clone(),
-                        })?;
-                        if body_env.is_stopped() {
-                            break;
-                        }
+            Value::Bool(true) => match &maybe_body {
+                Some(body) => {
+                    let body_env = context.env.create_child(&context.env, true);
+                    body.invoke(ExecutionContext {
+                        input: empty_channel(),
+                        output: black_hole(),
+                        arguments: Vec::new(),
+                        env: body_env.clone(),
+                        this: None,
+                        printer: context.printer.clone(),
+                    })?;
+                    if body_env.is_stopped() {
+                        break;
                     }
-                    None => {}
                 }
-            }
+                None => {}
+            },
             Value::Bool(false) => break,
             _ => return data_error("While loop condition must output value of boolean type"),
         }

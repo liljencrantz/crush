@@ -1,14 +1,17 @@
-use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
-use std::collections::HashSet;
 use crate::lang::argument::Argument;
-use crate::lang::table::Row;
-use crate::lang::{value::Value, table::ColumnType};
-use crate::lang::errors::{CrushResult, error};
-use crate::lang::stream::{Readable, OutputStream};
-use crate::lang::table::ColumnVec;
+use crate::lang::errors::{error, CrushResult};
+use crate::lang::execution_context::{ArgumentVector, ExecutionContext};
 use crate::lang::printer::Printer;
+use crate::lang::stream::{OutputStream, Readable};
+use crate::lang::table::ColumnVec;
+use crate::lang::table::Row;
+use crate::lang::{table::ColumnType, value::Value};
+use std::collections::HashSet;
 
-pub fn parse(input_type: &[ColumnType], mut arguments: Vec<Argument>) -> CrushResult<Option<usize>> {
+pub fn parse(
+    input_type: &[ColumnType],
+    mut arguments: Vec<Argument>,
+) -> CrushResult<Option<usize>> {
     arguments.check_len_range(0, 1)?;
     if let Some(f) = arguments.optional_field(0)? {
         Ok(Some(input_type.find(&f)?))

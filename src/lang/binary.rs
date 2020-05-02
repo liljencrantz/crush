@@ -1,10 +1,10 @@
-use crate::lang::errors::{CrushResult, to_crush_error};
-use std::cmp::{min};
-use std::collections::{VecDeque};
-use std::io::{Error, Read, Write};
-use crossbeam::{Receiver, bounded, Sender};
+use crate::lang::errors::{to_crush_error, CrushResult};
+use crossbeam::{bounded, Receiver, Sender};
+use std::cmp::min;
+use std::collections::VecDeque;
 use std::fmt::{Debug, Formatter};
 use std::fs::File;
+use std::io::{Error, Read, Write};
 use std::path::PathBuf;
 
 struct ChannelReader {
@@ -14,35 +14,34 @@ struct ChannelReader {
 
 impl Debug for ChannelReader {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        f.write_str("<channel reader>")//.map_err(|e| std::fmt::Error::default())
+        f.write_str("<channel reader>") //.map_err(|e| std::fmt::Error::default())
     }
 }
 
 impl BinaryReader for ChannelReader {
     fn clone(&self) -> Box<dyn BinaryReader + Send + Sync> {
-        Box::from(ChannelReader { receiver: self.receiver.clone(), buff: None })
+        Box::from(ChannelReader {
+            receiver: self.receiver.clone(),
+            buff: None,
+        })
     }
 }
 
 impl std::io::Read for ChannelReader {
     fn read(&mut self, mut dst: &mut [u8]) -> Result<usize, Error> {
         match &self.buff {
-            None => {
-                match self.receiver.recv() {
-                    Ok(b) => {
-                        if b.len() == 0 {
-                            Ok(0)
-                        } else {
-                            self.buff = Some(b);
-                            self.read(dst)
-                        }
-                    }
-
-                    Err(_) => {
+            None => match self.receiver.recv() {
+                Ok(b) => {
+                    if b.len() == 0 {
                         Ok(0)
+                    } else {
+                        self.buff = Some(b);
+                        self.read(dst)
                     }
                 }
-            }
+
+                Err(_) => Ok(0),
+            },
             Some(src) => {
                 if dst.len() >= src.len() {
                     let res = src.len();
@@ -103,14 +102,18 @@ impl Read for FileReader {
 
 impl BinaryReader for FileReader {
     fn clone(&self) -> Box<dyn BinaryReader + Send + Sync> {
-        Box::from(FileReader { file: self.file.try_clone().unwrap() })
+        Box::from(FileReader {
+            file: self.file.try_clone().unwrap(),
+        })
     }
 }
 
 impl dyn BinaryReader {
     pub fn paths(mut files: Vec<PathBuf>) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
         if files.len() == 1 {
-            Ok(Box::from(FileReader::new(to_crush_error(File::open(files.remove(0)))?)))
+            Ok(Box::from(FileReader::new(to_crush_error(File::open(
+                files.remove(0),
+            ))?)))
         } else {
             let mut readers: Vec<Box<dyn BinaryReader + Send + Sync>> = Vec::new();
 
@@ -118,21 +121,28 @@ impl dyn BinaryReader {
                 let f = to_crush_error(File::open(p).map(|f| Box::from(FileReader::new(f))))?;
                 readers.push(f)
             }
-            Ok(Box::from(MultiReader { inner: VecDeque::from(readers) }))
+            Ok(Box::from(MultiReader {
+                inner: VecDeque::from(readers),
+            }))
         }
     }
 
     pub fn vec(vec: &Vec<u8>) -> Box<dyn BinaryReader + Send + Sync> {
-        Box::from(VecReader { vec: vec.clone(), offset: 0 })
+        Box::from(VecReader {
+            vec: vec.clone(),
+            offset: 0,
+        })
     }
 }
-
 
 pub fn binary_channel() -> (Box<dyn Write>, Box<dyn BinaryReader + Send + Sync>) {
     let (s, r) = bounded(32);
     (
         Box::from(ChannelWriter { sender: s }),
-        Box::from(ChannelReader { receiver: r, buff: None })
+        Box::from(ChannelReader {
+            receiver: r,
+            buff: None,
+        }),
     )
 }
 
@@ -142,10 +152,14 @@ struct MultiReader {
 
 impl BinaryReader for MultiReader {
     fn clone(&self) -> Box<dyn BinaryReader + Send + Sync> {
-        let vec = self.inner.iter()
+        let vec = self
+            .inner
+            .iter()
             .map(|r| r.as_ref().clone())
             .collect::<Vec<Box<dyn BinaryReader + Send + Sync>>>();
-        Box::from(MultiReader { inner: VecDeque::from(vec) })
+        Box::from(MultiReader {
+            inner: VecDeque::from(vec),
+        })
     }
 }
 
@@ -167,7 +181,7 @@ impl Read for MultiReader {
 
 impl Debug for MultiReader {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        f.write_str("<multi reader>")//.map_err(|e| std::fmt::Error::default())
+        f.write_str("<multi reader>") //.map_err(|e| std::fmt::Error::default())
     }
 }
 
@@ -178,13 +192,16 @@ struct VecReader {
 
 impl BinaryReader for VecReader {
     fn clone(&self) -> Box<dyn BinaryReader + Send + Sync> {
-        Box::new(VecReader { vec: self.vec.clone(), offset: 0 })
+        Box::new(VecReader {
+            vec: self.vec.clone(),
+            offset: 0,
+        })
     }
 }
 
 impl Read for VecReader {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
-        let len = min(buf.len(), self.vec.len()-self.offset);
+        let len = min(buf.len(), self.vec.len() - self.offset);
         buf[0..len].copy_from_slice(&self.vec[self.offset..self.offset + len]);
         self.offset += len;
         Ok(len)

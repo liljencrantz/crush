@@ -1,26 +1,26 @@
-use crate::lang::value::{Value, ValueType};
-use std::collections::HashMap;
-use std::path::Path;
-use std::fs::File;
-use crate::lang::errors::{CrushResult, to_crush_error};
-use std::io::{Write, Read, Cursor};
-use prost::Message;
-use model::SerializedValue;
-use model::Element;
+use crate::lang::dict::Dict;
+use crate::lang::errors::{to_crush_error, CrushResult};
 use crate::lang::list::List;
 use crate::lang::r#struct::Struct;
-use crate::lang::dict::Dict;
 use crate::lang::scope::Scope;
+use crate::lang::value::{Value, ValueType};
+use model::Element;
+use model::SerializedValue;
+use prost::Message;
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{Cursor, Read, Write};
+use std::path::Path;
 
-mod scope_serializer;
-mod struct_serializer;
-mod integer_serializer;
-mod string_serializer;
-mod list_serializer;
 mod dict_serializer;
-mod value_type_serializer;
-mod value_serializer;
+mod integer_serializer;
+mod list_serializer;
+mod scope_serializer;
+mod string_serializer;
+mod struct_serializer;
 mod table_serializer;
+mod value_serializer;
+mod value_type_serializer;
 
 //pub mod model;
 pub mod model {
@@ -48,7 +48,10 @@ pub fn serialize(value: &Value, destination: &Path) -> CrushResult<()> {
         with_id: HashMap::new(),
         values: HashMap::new(),
     };
-    res.root = value. clone().materialize().serialize(&mut res.elements, &mut state)? as u64;
+    res.root = value
+        .clone()
+        .materialize()
+        .serialize(&mut res.elements, &mut state)? as u64;
 
     let mut buf = Vec::new();
     buf.reserve(res.encoded_len());
@@ -82,12 +85,24 @@ pub fn deserialize(source: &Path, env: &Scope) -> CrushResult<Value> {
 
     let res = SerializedValue::decode(&mut Cursor::new(buf)).unwrap();
 
-//    println!("AAA {:?}", res);
+    //    println!("AAA {:?}", res);
 
-    Ok(Value::deserialize(res.root as usize, &res.elements, &mut state)?)
+    Ok(Value::deserialize(
+        res.root as usize,
+        &res.elements,
+        &mut state,
+    )?)
 }
 
 pub trait Serializable<T> {
-    fn deserialize(id: usize, elements: &[Element], state: &mut DeserializationState) -> CrushResult<T>;
-    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize>;
+    fn deserialize(
+        id: usize,
+        elements: &[Element],
+        state: &mut DeserializationState,
+    ) -> CrushResult<T>;
+    fn serialize(
+        &self,
+        elements: &mut Vec<Element>,
+        state: &mut SerializationState,
+    ) -> CrushResult<usize>;
 }

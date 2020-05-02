@@ -1,8 +1,8 @@
-use regex::Regex;
-use std::path::{PathBuf, Path};
 use crate::lang::errors::to_crush_error;
-use std::fs::read_dir;
 use crate::lang::printer::Printer;
+use regex::Regex;
+use std::fs::read_dir;
+use std::path::{Path, PathBuf};
 
 pub trait RegexFileMatcher {
     fn match_files(&self, cwd: &Path, out: &mut Vec<PathBuf>, printer: &Printer);
@@ -27,7 +27,7 @@ impl RegexFileMatcher for Regex {
                         e => printer.handle_error(to_crush_error(e)),
                     }
                 }
-            },
+            }
             e => printer.handle_error(to_crush_error(e)),
         }
     }

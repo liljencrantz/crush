@@ -1,20 +1,25 @@
-use super::{Serializable, DeserializationState, SerializationState};
-use super::super::errors::{CrushResult, error};
-use super::model::{Element, element};
+use super::super::errors::{error, CrushResult};
+use super::super::value::{Value, ValueType};
 use super::model;
-use super::super::value::{ValueType, Value};
-use crate::util::identity_arc::Identity;
+use super::model::{element, Element};
+use super::{DeserializationState, Serializable, SerializationState};
 use crate::lang::dict::Dict;
+use crate::util::identity_arc::Identity;
 use std::collections::hash_map::Entry;
 
 impl Serializable<Dict> for Dict {
-    fn deserialize(id: usize, elements: &[Element], state: &mut DeserializationState) -> CrushResult<Dict> {
+    fn deserialize(
+        id: usize,
+        elements: &[Element],
+        state: &mut DeserializationState,
+    ) -> CrushResult<Dict> {
         match state.dicts.entry(id) {
             Entry::Occupied(o) => Ok(o.get().clone()),
             Entry::Vacant(_) => {
                 if let element::Element::Dict(d) = elements[id].element.as_ref().unwrap() {
                     let key_type = ValueType::deserialize(d.key_type as usize, elements, state)?;
-                    let value_type = ValueType::deserialize(d.value_type as usize, elements, state)?;
+                    let value_type =
+                        ValueType::deserialize(d.value_type as usize, elements, state)?;
                     let dict = Dict::new(key_type, value_type);
                     state.dicts.insert(id, dict.clone());
 
@@ -32,12 +37,15 @@ impl Serializable<Dict> for Dict {
         }
     }
 
-    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
+    fn serialize(
+        &self,
+        elements: &mut Vec<Element>,
+        state: &mut SerializationState,
+    ) -> CrushResult<usize> {
         let id = self.id();
         match state.with_id.entry(id) {
             Entry::Occupied(o) => Ok(*o.get()),
             Entry::Vacant(v) => {
-
                 let idx = elements.len();
                 elements.push(model::Element::default());
                 v.insert(idx);
@@ -54,7 +62,7 @@ impl Serializable<Dict> for Dict {
                 elements[idx].element = Some(element::Element::Dict(dd));
 
                 Ok(idx)
-            },
+            }
         }
     }
 }

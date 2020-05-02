@@ -1,27 +1,30 @@
-use crate::lang::execution_context::{ExecutionContext, This, ArgumentVector};
-use crate::lang::errors::{CrushResult, to_crush_error};
+use crate::lang::command::CrushCommand;
+use crate::lang::command::TypeMap;
+use crate::lang::errors::{to_crush_error, CrushResult};
+use crate::lang::execution_context::{ArgumentVector, ExecutionContext, This};
 use crate::lang::r#struct::Struct;
+use crate::lang::serialization::{deserialize, serialize};
 use crate::lang::value::Value;
-use std::fs::metadata;
-use std::os::unix::fs::MetadataExt;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
-use crate::lang::command::CrushCommand;
-use crate::lang::serialization::{serialize, deserialize};
-use crate::lang::command::TypeMap;
+use std::fs::metadata;
+use std::os::unix::fs::MetadataExt;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "file", name]
 }
 
 lazy_static! {
-    pub static ref METHODS: HashMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
-        let mut res: HashMap<String, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
-        res.declare(full("stat"),
-            stat, true,
+    pub static ref METHODS: HashMap<String, Box<dyn CrushCommand + Sync + Send>> = {
+        let mut res: HashMap<String, Box<dyn CrushCommand + Send + Sync>> = HashMap::new();
+        res.declare(
+            full("stat"),
+            stat,
+            true,
             "file:stat",
             "Return a struct with information about a file.",
-            Some(r#"    The return value contains the following fields:
+            Some(
+                r#"    The return value contains the following fields:
 
     * is_directory:bool is the file is a directory
     * is_file:bool is the file a regular file
@@ -29,18 +32,26 @@ lazy_static! {
     * inode:integer the inode number of the file
     * nlink:integer the number of hardlinks to the file
     * mode:integer the permission bits for the file
-    * len: integer the size of the file"#));
+    * len: integer the size of the file"#,
+            ),
+        );
 
-        res.declare(full("exists"),
-            exists, true,
+        res.declare(
+            full("exists"),
+            exists,
+            true,
             "file:exists",
             "Return true if this file exists",
-            None);
-        res.declare(full("__getitem__"),
-            getitem, true,
+            None,
+        );
+        res.declare(
+            full("__getitem__"),
+            getitem,
+            true,
             "file[name:string]",
             "Return a file or subdirectory in the specified base directory",
-            None);
+            None,
+        );
         res.declare(full("to"),
             to, true,
             "file:to [value:value]",
@@ -51,11 +62,14 @@ lazy_static! {
     Example:
 
     ls | ./some_file:to"#));
-        res.declare(full("from"),
-            from, true,
+        res.declare(
+            full("from"),
+            from,
+            true,
             "file:from",
             "Read a value from file specified file in native Crush format",
-            None);
+            None,
+        );
         res
     };
 }
@@ -63,26 +77,30 @@ lazy_static! {
 pub fn stat(context: ExecutionContext) -> CrushResult<()> {
     let file = context.this.file()?;
     let metadata = to_crush_error(metadata(file))?;
-    context.output.send(
-        Value::Struct(
-            Struct::new(
-                vec![
-                    ("is_directory".to_string(), Value::Bool(metadata.is_dir())),
-                    ("is_file".to_string(), Value::Bool(metadata.is_file())),
-                    ("is_symlink".to_string(), Value::Bool(metadata.file_type().is_symlink())),
-                    ("inode".to_string(), Value::Integer(metadata.ino() as i128)),
-                    ("nlink".to_string(), Value::Integer(metadata.nlink() as i128)),
-                    ("mode".to_string(), Value::Integer(metadata.mode() as i128)),
-                    ("len".to_string(), Value::Integer(metadata.len() as i128)),
-                ],
-                None,
-            )
-        )
-    )
+    context.output.send(Value::Struct(Struct::new(
+        vec![
+            ("is_directory".to_string(), Value::Bool(metadata.is_dir())),
+            ("is_file".to_string(), Value::Bool(metadata.is_file())),
+            (
+                "is_symlink".to_string(),
+                Value::Bool(metadata.file_type().is_symlink()),
+            ),
+            ("inode".to_string(), Value::Integer(metadata.ino() as i128)),
+            (
+                "nlink".to_string(),
+                Value::Integer(metadata.nlink() as i128),
+            ),
+            ("mode".to_string(), Value::Integer(metadata.mode() as i128)),
+            ("len".to_string(), Value::Integer(metadata.len() as i128)),
+        ],
+        None,
+    )))
 }
 
 pub fn exists(context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::Bool(context.this.file()?.exists()))
+    context
+        .output
+        .send(Value::Bool(context.this.file()?.exists()))
 }
 
 pub fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
@@ -95,12 +113,16 @@ pub fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
 pub fn to(mut context: ExecutionContext) -> CrushResult<()> {
     let file = context.this.file()?;
     context.arguments.check_len_range(0, 1)?;
-    let value = if context.arguments.is_empty() {context.input.recv()?} else {context.arguments.value(0)?};
+    let value = if context.arguments.is_empty() {
+        context.input.recv()?
+    } else {
+        context.arguments.value(0)?
+    };
     serialize(&value, &file)
 }
 
 pub fn from(context: ExecutionContext) -> CrushResult<()> {
     let file = context.this.file()?;
     context.arguments.check_len(0)?;
-    context.output.send(deserialize(&file, &context.env )?)
+    context.output.send(deserialize(&file, &context.env)?)
 }

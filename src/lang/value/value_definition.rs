@@ -1,14 +1,12 @@
-use crate::{
-    lang::errors::CrushResult,
-    lang::value::Value,
-    lang::stream::channels,
-    lang::stream::empty_channel,
-};
-use crate::lang::{job::Job, argument::ArgumentDefinition, command::CrushCommand};
+use crate::lang::command::Parameter;
 use crate::lang::errors::{block_error, mandate};
 use crate::lang::execution_context::CompileContext;
+use crate::lang::{argument::ArgumentDefinition, command::CrushCommand, job::Job};
+use crate::{
+    lang::errors::CrushResult, lang::stream::channels, lang::stream::empty_channel,
+    lang::value::Value,
+};
 use std::path::PathBuf;
-use crate::lang::command::Parameter;
 
 #[derive(Clone)]
 pub enum ValueDefinition {
@@ -38,17 +36,24 @@ impl ValueDefinition {
         }
     }
 
-    pub fn compile_unbound(&self, context: &mut CompileContext) -> CrushResult<(Option<Value>, Value)> {
+    pub fn compile_unbound(
+        &self,
+        context: &mut CompileContext,
+    ) -> CrushResult<(Option<Value>, Value)> {
         self.compile_internal(context, true)
     }
 
     pub fn compile_bound(&self, context: &mut CompileContext) -> CrushResult<Value> {
-        let (t,v) = self.compile_internal(context, true)?;
+        let (t, v) = self.compile_internal(context, true)?;
 
         Ok(t.map(|tt| v.clone().bind(tt)).unwrap_or(v))
     }
 
-    pub fn compile_internal(&self, context: &mut CompileContext, can_block: bool) -> CrushResult<(Option<Value>, Value)> {
+    pub fn compile_internal(
+        &self,
+        context: &mut CompileContext,
+        can_block: bool,
+    ) -> CrushResult<(Option<Value>, Value)> {
         Ok(match self {
             ValueDefinition::Value(v) => (None, v.clone()),
             ValueDefinition::JobDefinition(def) => {
@@ -61,24 +66,43 @@ impl ValueDefinition {
                 context.dependencies.push(j);
                 (None, last_input.recv()?)
             }
-            ValueDefinition::ClosureDefinition(name, p, c) =>
-                (None, Value::Command(CrushCommand::closure(name.clone(), p.clone(), c.clone(), &context.env))),
-            ValueDefinition::Label(s) =>
-                (None, mandate(
+            ValueDefinition::ClosureDefinition(name, p, c) => (
+                None,
+                Value::Command(CrushCommand::closure(
+                    name.clone(),
+                    p.clone(),
+                    c.clone(),
+                    &context.env,
+                )),
+            ),
+            ValueDefinition::Label(s) => (
+                None,
+                mandate(
                     context.env.get(s)?.or_else(|| file_get(s)),
-                    format!("Unknown variable {}", self.to_string()).as_str())?),
+                    format!("Unknown variable {}", self.to_string()).as_str(),
+                )?,
+            ),
 
             ValueDefinition::GetAttr(parent_def, entry) => {
                 let parent = parent_def.compile_internal(context, can_block)?.1;
                 let val = mandate(
                     parent.field(&entry)?,
-                    format!("Missing field {} in value of type {}", entry, parent.value_type().to_string()).as_str())?;
+                    format!(
+                        "Missing field {} in value of type {}",
+                        entry,
+                        parent.value_type().to_string()
+                    )
+                    .as_str(),
+                )?;
                 (Some(parent), val)
             }
 
             ValueDefinition::Path(parent_def, entry) => {
                 let parent = parent_def.compile_internal(context, can_block)?.1;
-                let val = mandate(parent.path(&entry), format!("Missing path entry {} in {}", entry, parent_def.to_string()).as_str())?;
+                let val = mandate(
+                    parent.path(&entry),
+                    format!("Missing path entry {} in {}", entry, parent_def.to_string()).as_str(),
+                )?;
                 (Some(parent), val)
             }
         })

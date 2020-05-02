@@ -1,11 +1,11 @@
 use proc_macro2;
 
-use syn;
-use proc_macro2::{TokenStream, Literal, TokenTree};
-use syn::{Item, Type, PathArguments, GenericArgument, Attribute};
-use quote::{quote, ToTokens, quote_spanned};
 use proc_macro2::Ident;
+use proc_macro2::{Literal, TokenStream, TokenTree};
+use quote::{quote, quote_spanned, ToTokens};
+use syn;
 use syn::spanned::Spanned;
+use syn::{Attribute, GenericArgument, Item, PathArguments, Type};
 
 struct TypeData {
     initialize: TokenStream,
@@ -19,7 +19,7 @@ type SignatureResult<T> = Result<T, TokenStream>;
 macro_rules! fail {
     ($span:expr, $msg:literal) => {
         Err(quote_spanned! {$span => compile_error!($msg);})
-    }
+    };
 }
 
 fn extract_argument(path: &PathArguments) -> SignatureResult<Vec<&'static str>> {
@@ -44,7 +44,11 @@ fn extract_argument(path: &PathArguments) -> SignatureResult<Vec<&'static str>> 
 fn extract_type(ty: &Type) -> SignatureResult<(&'static str, Vec<&'static str>)> {
     match ty {
         Type::Path(path) => {
-            match (&path.qself, &path.path.leading_colon, path.path.segments.len()) {
+            match (
+                &path.qself,
+                &path.path.leading_colon,
+                path.path.segments.len(),
+            ) {
                 (None, None, 1) => {
                     let seg = &path.path.segments[0];
                     let s = match seg.ident.to_string().as_str() {
@@ -58,12 +62,11 @@ fn extract_type(ty: &Type) -> SignatureResult<(&'static str, Vec<&'static str>)>
                         "ValueType" => "ValueType",
                         "PathBuf" => "PathBuf",
                         "OrderedStringMap" => "OrderedStringMap",
-                        _ =>
-                            return fail!(seg.span(), "Unrecognised type"),
+                        _ => return fail!(seg.span(), "Unrecognised type"),
                     };
                     Ok((s, extract_argument(&seg.arguments)?))
                 }
-                _ => fail!(ty.span(), "Invalid type")
+                _ => fail!(ty.span(), "Invalid type"),
             }
         }
         _ => fail!(ty.span(), "Invalid type, expected a Path segment"),
@@ -77,7 +80,7 @@ fn call_is_named(attr: &Attribute, name: &str) -> bool {
             let seg = &path.segments[0];
             seg.ident.to_string().as_str() == name
         }
-        _ => false
+        _ => false,
     }
 }
 
@@ -110,13 +113,15 @@ fn simple_type_to_value_name(simple_type: &str) -> &str {
         "ValueType" => "Type",
         "f64" => "Float",
         "char" => "String",
-        _ => panic!("Unknown type")
+        _ => panic!("Unknown type"),
     }
 }
 
 fn simple_type_to_mutator(simple_type: &str) -> TokenStream {
     match simple_type {
-        "char" => quote! { if value.len() == 1 { value.chars().next().unwrap()} else {return argument_error("Argument must be exactly one character")}},
+        "char" => {
+            quote! { if value.len() == 1 { value.chars().next().unwrap()} else {return argument_error("Argument must be exactly one character")}}
+        }
         _ => quote! {value},
     }
 }
@@ -132,8 +137,12 @@ fn simple_type_dump_list(simple_type: &str) -> &str {
     }
 }
 
-
-fn type_to_value(ty: &Type, name: &Ident, default: Option<TokenTree>, is_unnamed_target: bool) -> SignatureResult<TypeData> {
+fn type_to_value(
+    ty: &Type,
+    name: &Ident,
+    default: Option<TokenTree>,
+    is_unnamed_target: bool,
+) -> SignatureResult<TypeData> {
     let name_literal = proc_macro2::Literal::string(&name.to_string());
 
     let (type_name, args) = extract_type(ty)?;
@@ -148,36 +157,31 @@ fn type_to_value(ty: &Type, name: &Ident, default: Option<TokenTree>, is_unnamed
                 Ok(TypeData {
                     initialize: quote! { None },
                     mappings: quote! {(Some(#name_literal), Value::#value_type(value)) => #name = Some(#mutator),},
-                    unnamed_mutate:
-                    match default {
-                        None => {
-                            Some(quote! {
-if #name.is_none() {
-    if let Some(Value::#value_type(value)) = _unnamed.pop_front() {
-        #name = Some(#mutator);
-    } else {
-        return argument_error(format!("Expected argument {} to be of type {}", #name_literal, #type_name).as_str());
-    }
-}
-                            })
+                    unnamed_mutate: match default {
+                        None => Some(quote! {
+                        if #name.is_none() {
+                            if let Some(Value::#value_type(value)) = _unnamed.pop_front() {
+                                #name = Some(#mutator);
+                            } else {
+                                return argument_error(format!("Expected argument {} to be of type {}", #name_literal, #type_name).as_str());
+                            }
                         }
-                        Some(def) => {
-                            Some(quote! {
-if #name.is_none() {
-    match _unnamed.pop_front() {
-        Some(Value::#value_type(value)) => #name = Some(#mutator),
-        None => #name = Some(#native_type::from(#def)),
-        _ => return argument_error(format!("Expected argument {} to be of type {}", #name_literal, #type_name).as_str()),
-        }
-}
-                            })
+                                                    }),
+                        Some(def) => Some(quote! {
+                        if #name.is_none() {
+                            match _unnamed.pop_front() {
+                                Some(Value::#value_type(value)) => #name = Some(#mutator),
+                                None => #name = Some(#native_type::from(#def)),
+                                _ => return argument_error(format!("Expected argument {} to be of type {}", #name_literal, #type_name).as_str()),
+                                }
                         }
+                                                    }),
                     },
                     assign: quote! {
-#name: crate::lang::errors::mandate(
-    #name,
-    format!("Missing value for parameter {}", #name_literal).as_str())?,
-},
+                    #name: crate::lang::errors::mandate(
+                        #name,
+                        format!("Missing value for parameter {}", #name_literal).as_str())?,
+                    },
                 })
             }
         }
@@ -195,7 +199,9 @@ if #name.is_none() {
                                 _unnamed.pop_front().unwrap().file_expand(&mut #name, printer)?;
                             }
                         })
-                    } else { None },
+                    } else {
+                        None
+                    },
                     assign: quote! { #name, },
                 })
             } else {
@@ -219,7 +225,9 @@ if #name.is_none() {
                                 }
                             }
                         })
-                    } else { None },
+                    } else {
+                        None
+                    },
                     assign: quote! { #name, },
                 })
             }
@@ -253,15 +261,14 @@ if #name.is_none() {
                     initialize: quote! { None },
                     mappings: quote! { (Some(#name_literal), Value::#value_type(value)) => #name = Some(#mutator), },
                     unnamed_mutate: Some(quote_spanned! { ty.span() =>
-                            if #name.is_none() {
-                                match _unnamed.pop_front() {
-                                    None => {}
-                                    Some(Value::#value_type(value)) => #name = Some(#mutator),
-                                    Some(_) => return argument_error(format!("Expected argument {} to be of type {}", #name_literal, #sub_type).as_str()),
-                                }
-                            }
-                            }
-                    ),
+                    if #name.is_none() {
+                        match _unnamed.pop_front() {
+                            None => {}
+                            Some(Value::#value_type(value)) => #name = Some(#mutator),
+                            Some(_) => return argument_error(format!("Expected argument {} to be of type {}", #name_literal, #sub_type).as_str()),
+                        }
+                    }
+                    }),
                     assign: quote! { #name, },
                 })
             }
@@ -301,7 +308,8 @@ fn signature_real(input: TokenStream) -> SignatureResult<TokenStream> {
                 }
                 field.attrs = Vec::new();
                 let name = &field.ident.clone().unwrap();
-                let type_data = type_to_value(&field.ty, name, default_value.clone(), is_unnamed_target)?;
+                let type_data =
+                    type_to_value(&field.ty, name, default_value.clone(), is_unnamed_target)?;
                 let initialize = type_data.initialize;
                 let mappings = type_data.mappings;
                 values.extend(quote! {let mut #name = #initialize; }.into_token_stream());
@@ -315,8 +323,8 @@ fn signature_real(input: TokenStream) -> SignatureResult<TokenStream> {
                 if !had_unnamed_target || default_value.is_some() {
                     if let Some(mutate) = type_data.unnamed_mutate {
                         unnamed_mutations.extend(quote! {
-                        #mutate
-                    });
+                            #mutate
+                        });
                     }
                 }
 
@@ -326,42 +334,42 @@ fn signature_real(input: TokenStream) -> SignatureResult<TokenStream> {
 
             let handler = quote! {
 
-impl crate::lang::argument::ArgumentHandler for #struct_name {
-    fn parse(arguments: Vec<crate::lang::argument::Argument>, printer: &crate::lang::printer::Printer) -> crate::lang::errors::CrushResult < # struct_name > {
-        # values
-        let mut _unnamed = std::collections::VecDeque::new();
+            impl crate::lang::argument::ArgumentHandler for #struct_name {
+                fn parse(arguments: Vec<crate::lang::argument::Argument>, printer: &crate::lang::printer::Printer) -> crate::lang::errors::CrushResult < # struct_name > {
+                    # values
+                    let mut _unnamed = std::collections::VecDeque::new();
 
-        for arg in arguments {
-            match (arg.argument_type.as_deref(), arg.value) {
-                #named_matchers
-                #named_fallback
-                (None, value) => _unnamed.push_back(value),
-                _ => return crate::lang::errors::argument_error("Invalid parameter"),
+                    for arg in arguments {
+                        match (arg.argument_type.as_deref(), arg.value) {
+                            #named_matchers
+                            #named_fallback
+                            (None, value) => _unnamed.push_back(value),
+                            _ => return crate::lang::errors::argument_error("Invalid parameter"),
+                        }
+                    }
+
+                    #unnamed_mutations
+
+                    Ok( #struct_name { #assignments })
+                }
             }
-        }
-
-        #unnamed_mutations
-
-        Ok( #struct_name { #assignments })
-    }
-}
-};
+            };
 
             let mut output = s.to_token_stream();
             output.extend(handler.into_token_stream());
             //println!("ABCABC {}", output.to_string());
             Ok(output)
         }
-        _ => { fail!(root.span(), "Expected a struct") }
+        _ => fail!(root.span(), "Expected a struct"),
     }
 }
 
 #[proc_macro_attribute]
-pub fn signature(_metadata: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn signature(
+    _metadata: proc_macro::TokenStream,
+    input: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
     match signature_real(TokenStream::from(input)) {
-        Ok(res) | Err(res) => {
-            proc_macro::TokenStream::from(res)
-        }
+        Ok(res) | Err(res) => proc_macro::TokenStream::from(res),
     }
 }
-

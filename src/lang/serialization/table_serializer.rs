@@ -1,22 +1,31 @@
-use crate::lang::serialization::{Serializable, DeserializationState, SerializationState};
-use crate::lang::errors::{CrushResult, error};
-use crate::lang::serialization::model::{Element, element};
+use crate::lang::errors::{error, CrushResult};
 use crate::lang::serialization::model;
-use crate::lang::value::{ValueType, Value};
+use crate::lang::serialization::model::{element, Element};
+use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
 use crate::lang::table::{ColumnType, Row, Table};
+use crate::lang::value::{Value, ValueType};
 
 impl Serializable<ColumnType> for ColumnType {
-    fn deserialize(id: usize, elements: &[Element], state: &mut DeserializationState) -> CrushResult<ColumnType> {
-        if let element::Element::ColumnType(t) = elements[id].element.as_ref().unwrap(){
+    fn deserialize(
+        id: usize,
+        elements: &[Element],
+        state: &mut DeserializationState,
+    ) -> CrushResult<ColumnType> {
+        if let element::Element::ColumnType(t) = elements[id].element.as_ref().unwrap() {
             Ok(ColumnType::new(
                 t.name.as_str(),
-                ValueType::deserialize(t.r#type as usize, elements, state)?))
+                ValueType::deserialize(t.r#type as usize, elements, state)?,
+            ))
         } else {
             error("Expected a table")
         }
     }
 
-    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
+    fn serialize(
+        &self,
+        elements: &mut Vec<Element>,
+        state: &mut SerializationState,
+    ) -> CrushResult<usize> {
         let idx = elements.len();
         elements.push(model::Element::default());
         let mut stype = model::ColumnType::default();
@@ -28,8 +37,12 @@ impl Serializable<ColumnType> for ColumnType {
 }
 
 impl Serializable<Row> for Row {
-    fn deserialize(id: usize, elements: &[Element], state: &mut DeserializationState) -> CrushResult<Row> {
-        if let element::Element::Row(r) = elements[id].element.as_ref().unwrap(){
+    fn deserialize(
+        id: usize,
+        elements: &[Element],
+        state: &mut DeserializationState,
+    ) -> CrushResult<Row> {
+        if let element::Element::Row(r) = elements[id].element.as_ref().unwrap() {
             let mut cells = Vec::new();
             for c in &r.cells {
                 cells.push(Value::deserialize(*c as usize, elements, state)?);
@@ -40,7 +53,11 @@ impl Serializable<Row> for Row {
         }
     }
 
-    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
+    fn serialize(
+        &self,
+        elements: &mut Vec<Element>,
+        state: &mut SerializationState,
+    ) -> CrushResult<usize> {
         let idx = elements.len();
         elements.push(model::Element::default());
         let mut srow = model::Row::default();
@@ -53,8 +70,12 @@ impl Serializable<Row> for Row {
 }
 
 impl Serializable<Table> for Table {
-    fn deserialize(id: usize, elements: &[Element], state: &mut DeserializationState) -> CrushResult<Table> {
-        if let element::Element::Table(lt) = elements[id].element.as_ref().unwrap(){
+    fn deserialize(
+        id: usize,
+        elements: &[Element],
+        state: &mut DeserializationState,
+    ) -> CrushResult<Table> {
+        if let element::Element::Table(lt) = elements[id].element.as_ref().unwrap() {
             let mut column_types = Vec::new();
             let mut rows = Vec::new();
             for ct in &lt.column_types {
@@ -69,12 +90,18 @@ impl Serializable<Table> for Table {
         }
     }
 
-    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
+    fn serialize(
+        &self,
+        elements: &mut Vec<Element>,
+        state: &mut SerializationState,
+    ) -> CrushResult<usize> {
         let idx = elements.len();
         elements.push(model::Element::default());
         let mut stable = model::Table::default();
         for t in self.types() {
-            stable.column_types.push(t.serialize(elements, state)? as u64);
+            stable
+                .column_types
+                .push(t.serialize(elements, state)? as u64);
         }
         for r in self.rows() {
             stable.rows.push(r.serialize(elements, state)? as u64);

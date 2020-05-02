@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
 #[derive(Debug)]
-pub struct OrderedStringMap <T> {
+pub struct OrderedStringMap<T> {
     mapping: HashMap<String, usize>,
     values: Vec<(String, T)>,
 }
 
-impl <T> OrderedStringMap <T> {
+impl<T> OrderedStringMap<T> {
     pub fn new() -> OrderedStringMap<T> {
         OrderedStringMap {
             mapping: HashMap::new(),
@@ -26,7 +26,7 @@ impl <T> OrderedStringMap <T> {
     }
     */
 
-    pub fn iter(&self) -> std::slice::Iter<'_, (String, T)>{
+    pub fn iter(&self) -> std::slice::Iter<'_, (String, T)> {
         self.values.iter()
     }
 }

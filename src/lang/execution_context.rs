@@ -1,23 +1,23 @@
-use crate::lang::errors::{CrushResult, argument_error, error, to_crush_error};
 use crate::lang::argument::Argument;
-use crate::lang::value::{Value, ValueType};
-use crate::util::replace::Replace;
+use crate::lang::binary::{binary_channel, BinaryReader};
 use crate::lang::command::CrushCommand;
-use std::path::PathBuf;
-use crate::util::glob::Glob;
-use crate::lang::stream::{ValueSender, ValueReceiver, InputStream};
-use crate::lang::scope::Scope;
-use crate::lang::list::List;
 use crate::lang::dict::Dict;
-use crate::lang::r#struct::Struct;
-use regex::Regex;
-use chrono::{DateTime, Local, Duration};
-use crate::lang::table::Table;
-use crate::lang::printer::Printer;
+use crate::lang::errors::{argument_error, error, to_crush_error, CrushResult};
 use crate::lang::job::JobJoinHandle;
-use crate::lang::binary::{BinaryReader, binary_channel};
-use std::io::Write;
+use crate::lang::list::List;
+use crate::lang::printer::Printer;
+use crate::lang::r#struct::Struct;
+use crate::lang::scope::Scope;
+use crate::lang::stream::{InputStream, ValueReceiver, ValueSender};
+use crate::lang::table::Table;
+use crate::lang::value::{Value, ValueType};
+use crate::util::glob::Glob;
+use crate::util::replace::Replace;
+use chrono::{DateTime, Duration, Local};
+use regex::Regex;
 use std::fs::File;
+use std::io::Write;
+use std::path::PathBuf;
 
 pub trait ArgumentVector {
     fn check_len(&self, len: usize) -> CrushResult<()>;
@@ -38,7 +38,10 @@ pub trait ArgumentVector {
     fn optional_bool(&mut self, idx: usize) -> CrushResult<Option<bool>>;
     fn optional_integer(&mut self, idx: usize) -> CrushResult<Option<i128>>;
     fn optional_string(&mut self, idx: usize) -> CrushResult<Option<String>>;
-    fn optional_command(&mut self, idx: usize) -> CrushResult<Option<Box<dyn CrushCommand + Send + Sync>>>;
+    fn optional_command(
+        &mut self,
+        idx: usize,
+    ) -> CrushResult<Option<Box<dyn CrushCommand + Send + Sync>>>;
     fn optional_field(&mut self, idx: usize) -> CrushResult<Option<Vec<String>>>;
     fn optional_value(&mut self, idx: usize) -> CrushResult<Option<Value>>;
 }
@@ -49,36 +52,38 @@ pub trait ArgumentHandler {
 
 macro_rules! argument_getter {
     ($name:ident, $return_type:ty, $value_type:ident, $description:literal) => {
-
-    fn $name(&mut self, idx: usize) -> CrushResult<$return_type> {
-        if idx < self.len() {
-            match self.replace(idx, Argument::unnamed(Value::Bool(false))).value {
-                Value::$value_type(s) => Ok(s),
-                v => argument_error(
-                    format!(
-                        concat!("Invalid value, expected a ", $description, ", found a {}"),
-                        v.value_type().to_string()).as_str()),
+        fn $name(&mut self, idx: usize) -> CrushResult<$return_type> {
+            if idx < self.len() {
+                match self
+                    .replace(idx, Argument::unnamed(Value::Bool(false)))
+                    .value
+                {
+                    Value::$value_type(s) => Ok(s),
+                    v => argument_error(
+                        format!(
+                            concat!("Invalid value, expected a ", $description, ", found a {}"),
+                            v.value_type().to_string()
+                        )
+                        .as_str(),
+                    ),
+                }
+            } else {
+                error("Index out of bounds")
             }
-        } else {
-            error("Index out of bounds")
         }
-    }
-
-    }
+    };
 }
 
 macro_rules! optional_argument_getter {
     ($name:ident, $return_type:ty, $method:ident) => {
-
-    fn $name(&mut self, idx: usize) -> CrushResult<Option<$return_type>> {
-        match self.len() - idx {
-            0 => Ok(None),
-            1 => Ok(Some(self.$method(idx)?)),
-            _ => argument_error("Wrong number of arguments"),
+        fn $name(&mut self, idx: usize) -> CrushResult<Option<$return_type>> {
+            match self.len() - idx {
+                0 => Ok(None),
+                1 => Ok(Some(self.$method(idx)?)),
+                _ => argument_error("Wrong number of arguments"),
+            }
         }
-    }
-
-    }
+    };
 }
 
 impl ArgumentVector for Vec<Argument> {
@@ -92,9 +97,18 @@ impl ArgumentVector for Vec<Argument> {
 
     fn check_len_range(&self, min_len: usize, max_len: usize) -> CrushResult<()> {
         if self.len() < min_len {
-            argument_error(format!("Expected at least {} arguments, got {}", min_len, self.len()).as_str())
+            argument_error(
+                format!(
+                    "Expected at least {} arguments, got {}",
+                    min_len,
+                    self.len()
+                )
+                .as_str(),
+            )
         } else if self.len() > max_len {
-            argument_error(format!("Expected at most {} arguments, got {}", max_len, self.len()).as_str())
+            argument_error(
+                format!("Expected at most {} arguments, got {}", max_len, self.len()).as_str(),
+            )
         } else {
             Ok(())
         }
@@ -104,7 +118,14 @@ impl ArgumentVector for Vec<Argument> {
         if self.len() >= min_len {
             Ok(())
         } else {
-            argument_error(format!("Expected at least {} arguments, got {}", min_len, self.len()).as_str())
+            argument_error(
+                format!(
+                    "Expected at least {} arguments, got {}",
+                    min_len,
+                    self.len()
+                )
+                .as_str(),
+            )
         }
     }
 
@@ -112,7 +133,12 @@ impl ArgumentVector for Vec<Argument> {
     argument_getter!(integer, i128, Integer, "integer");
     argument_getter!(float, f64, Float, "float");
     argument_getter!(field, Vec<String>, Field, "field");
-    argument_getter!(command, Box<dyn CrushCommand + Send + Sync>, Command, "command");
+    argument_getter!(
+        command,
+        Box<dyn CrushCommand + Send + Sync>,
+        Command,
+        "command"
+    );
     argument_getter!(r#type, ValueType, Type, "type");
     argument_getter!(glob, Glob, Glob, "glob");
     argument_getter!(r#struct, Struct, Struct, "struct");
@@ -121,7 +147,9 @@ impl ArgumentVector for Vec<Argument> {
 
     fn value(&mut self, idx: usize) -> CrushResult<Value> {
         if idx < self.len() {
-            Ok(self.replace(idx, Argument::unnamed(Value::Bool(false))).value)
+            Ok(self
+                .replace(idx, Argument::unnamed(Value::Bool(false)))
+                .value)
         } else {
             error("Index out of bounds")
         }
@@ -139,7 +167,11 @@ impl ArgumentVector for Vec<Argument> {
     optional_argument_getter!(optional_integer, i128, integer);
     optional_argument_getter!(optional_string, String, string);
     optional_argument_getter!(optional_field, Vec<String>, field);
-    optional_argument_getter!(optional_command, Box<dyn CrushCommand + Send + Sync>, command);
+    optional_argument_getter!(
+        optional_command,
+        Box<dyn CrushCommand + Send + Sync>,
+        command
+    );
     optional_argument_getter!(optional_value, Value, value);
 }
 
@@ -150,10 +182,7 @@ pub struct CompileContext {
 }
 
 impl CompileContext {
-    pub fn new(
-        env: Scope,
-        printer: Printer,
-    ) -> CompileContext {
+    pub fn new(env: Scope, printer: Printer) -> CompileContext {
         CompileContext {
             dependencies: Vec::new(),
             env,
@@ -161,17 +190,11 @@ impl CompileContext {
         }
     }
 
-    pub fn job_context(
-        &self,
-        input: ValueReceiver,
-        output: ValueSender,
-    ) -> JobContext {
+    pub fn job_context(&self, input: ValueReceiver, output: ValueSender) -> JobContext {
         JobContext::new(input, output, self.env.clone(), self.printer.clone())
     }
 
-    pub fn with_scope(
-        &self,
-        env: &Scope) -> CompileContext {
+    pub fn with_scope(&self, env: &Scope) -> CompileContext {
         CompileContext {
             dependencies: vec![],
             env: env.clone(),
@@ -203,10 +226,7 @@ impl JobContext {
         }
     }
 
-    pub fn with_io(
-        &self,
-        input: ValueReceiver,
-        output: ValueSender) -> JobContext {
+    pub fn with_io(&self, input: ValueReceiver, output: ValueSender) -> JobContext {
         JobContext {
             input,
             output,
@@ -250,11 +270,7 @@ impl ExecutionContext {
         CompileContext::new(self.env.clone(), self.printer.clone())
     }
 
-    pub fn with_args(
-        self,
-        arguments: Vec<Argument>,
-        this: Option<Value>,
-    ) -> ExecutionContext {
+    pub fn with_args(self, arguments: Vec<Argument>, this: Option<Value>) -> ExecutionContext {
         ExecutionContext {
             input: self.input,
             output: self.output,
@@ -265,10 +281,7 @@ impl ExecutionContext {
         }
     }
 
-    pub fn with_sender(
-        self,
-        sender: ValueSender,
-    ) -> ExecutionContext {
+    pub fn with_sender(self, sender: ValueSender) -> ExecutionContext {
         ExecutionContext {
             input: self.input,
             output: sender,
@@ -293,7 +306,7 @@ impl ExecutionContext {
     pub fn writer(&mut self) -> CrushResult<Box<dyn Write>> {
         match self.arguments.len() {
             0 => {
-                let (w,r) = binary_channel();
+                let (w, r) = binary_channel();
                 self.output.send(Value::BinaryStream(r))?;
                 Ok(w)
             }
@@ -303,11 +316,10 @@ impl ExecutionContext {
                     return argument_error("Expected exactly one desitnation file");
                 }
                 Ok(Box::from(to_crush_error(File::create(files[0].clone()))?))
-            },
+            }
             _ => argument_error("Too many arguments"),
         }
     }
-
 }
 
 pub trait This {
@@ -331,16 +343,24 @@ pub trait This {
 
 macro_rules! this_method {
     ($name:ident, $return_type:ty, $value_type:ident, $description:literal) => {
-
-    fn $name(mut self) -> CrushResult<$return_type> {
-        match self.take() {
-            Some(Value::$value_type(l)) => Ok(l),
-            None => argument_error(concat!("Expected this to be a ", $description, ", but this is not set")),
-            Some(v) => argument_error(format!(concat!("Expected this to be a ", $description, ", but it is a {}"), v.value_type().to_string()).as_str()),
+        fn $name(mut self) -> CrushResult<$return_type> {
+            match self.take() {
+                Some(Value::$value_type(l)) => Ok(l),
+                None => argument_error(concat!(
+                    "Expected this to be a ",
+                    $description,
+                    ", but this is not set"
+                )),
+                Some(v) => argument_error(
+                    format!(
+                        concat!("Expected this to be a ", $description, ", but it is a {}"),
+                        v.value_type().to_string()
+                    )
+                    .as_str(),
+                ),
+            }
         }
-    }
-
-    }
+    };
 }
 
 impl This for Option<Value> {

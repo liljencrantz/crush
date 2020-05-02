@@ -1,5 +1,5 @@
-use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use crate::lang::errors::CrushResult;
+use crate::lang::execution_context::{ArgumentVector, ExecutionContext};
 use crate::lang::value::Value;
 
 fn execute_or_send(value: Value, context: ExecutionContext) -> CrushResult<()> {
@@ -15,7 +15,9 @@ pub fn r#if(mut context: ExecutionContext) -> CrushResult<()> {
     if b {
         execute_or_send(context.arguments.value(1)?, context.with_args(vec![], None))
     } else {
-        context.arguments.optional_value(2)?
+        context
+            .arguments
+            .optional_value(2)?
             .map(|v| execute_or_send(v, context.with_args(vec![], None)))
             .unwrap_or(Ok(()))
     }

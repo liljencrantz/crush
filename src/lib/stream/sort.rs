@@ -1,17 +1,11 @@
-use crate::{
-    lang::errors::argument_error,
-    lang::stream::OutputStream,
-};
-use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
-use crate::lang::{argument::Argument, table::Row};
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{error, CrushResult};
+use crate::lang::execution_context::{ArgumentVector, ExecutionContext};
 use crate::lang::stream::Readable;
 use crate::lang::table::{ColumnType, ColumnVec};
+use crate::lang::{argument::Argument, table::Row};
+use crate::{lang::errors::argument_error, lang::stream::OutputStream};
 
-fn parse(
-    mut arguments: Vec<Argument>,
-    types: &[ColumnType],
-) -> CrushResult<usize> {
+fn parse(mut arguments: Vec<Argument>, types: &[ColumnType]) -> CrushResult<usize> {
     arguments.check_len_range(0, 1)?;
     if let Some(f) = arguments.optional_field(0)? {
         Ok(types.find(&f)?)
@@ -28,10 +22,7 @@ pub fn run(idx: usize, input: &mut dyn Readable, output: OutputStream) -> CrushR
         res.push(row);
     }
 
-    res.sort_by(|a, b|
-        a.cells()[idx]
-            .partial_cmp(&b.cells()[idx])
-            .expect("OH NO!"));
+    res.sort_by(|a, b| a.cells()[idx].partial_cmp(&b.cells()[idx]).expect("OH NO!"));
 
     for row in res {
         output.send(row)?;

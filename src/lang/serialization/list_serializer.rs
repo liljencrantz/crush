@@ -1,34 +1,47 @@
+use super::super::errors::{error, CrushResult};
 use super::super::list::List;
-use super::{Serializable, DeserializationState, SerializationState};
-use super::super::errors::{CrushResult, error};
-use super::model::{Element, element};
+use super::super::value::{Value, ValueType};
 use super::model;
-use super::super::value::{ValueType, Value};
+use super::model::{element, Element};
+use super::{DeserializationState, Serializable, SerializationState};
 use crate::util::identity_arc::Identity;
 use std::collections::hash_map::Entry;
 
 impl Serializable<List> for List {
-    fn deserialize(id: usize, elements: &[Element], state: &mut DeserializationState) -> CrushResult<List> {
+    fn deserialize(
+        id: usize,
+        elements: &[Element],
+        state: &mut DeserializationState,
+    ) -> CrushResult<List> {
         match state.lists.entry(id) {
             Entry::Occupied(o) => Ok(o.get().clone()),
             Entry::Vacant(_) => {
-                if let element::Element::List(l) = elements[id].element.as_ref().unwrap(){
-                    let element_type = ValueType::deserialize(l.element_type as usize, elements, state)?;
+                if let element::Element::List(l) = elements[id].element.as_ref().unwrap() {
+                    let element_type =
+                        ValueType::deserialize(l.element_type as usize, elements, state)?;
                     let list = List::new(element_type, vec![]);
                     state.lists.insert(id, list.clone());
 
                     for el_id in &l.elements {
-                        list.append(&mut vec![Value::deserialize(*el_id as usize, elements, state)?])?;
+                        list.append(&mut vec![Value::deserialize(
+                            *el_id as usize,
+                            elements,
+                            state,
+                        )?])?;
                     }
                     Ok(list)
                 } else {
                     error("Expected a list")
                 }
-            },
+            }
         }
     }
 
-    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
+    fn serialize(
+        &self,
+        elements: &mut Vec<Element>,
+        state: &mut SerializationState,
+    ) -> CrushResult<usize> {
         let id = self.id();
         match state.with_id.entry(id) {
             Entry::Occupied(o) => Ok(*o.get()),
@@ -48,7 +61,7 @@ impl Serializable<List> for List {
                     element: Some(element::Element::List(ll)),
                 };
                 Ok(idx)
-            },
+            }
         }
     }
 }

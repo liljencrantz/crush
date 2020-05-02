@@ -1,15 +1,11 @@
 use std::collections::VecDeque;
 
-use crate::lang::table::Row;
-use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{error, CrushResult};
+use crate::lang::execution_context::{ArgumentVector, ExecutionContext};
 use crate::lang::stream::{Readable, ValueSender};
+use crate::lang::table::Row;
 
-pub fn run(
-    lines: i128,
-    input: &mut dyn Readable,
-    sender: ValueSender,
-) -> CrushResult<()> {
+pub fn run(lines: i128, input: &mut dyn Readable, sender: ValueSender) -> CrushResult<()> {
     let output = sender.initialize(input.types().to_vec())?;
     let mut q: VecDeque<Row> = VecDeque::new();
     while let Ok(row) = input.read() {

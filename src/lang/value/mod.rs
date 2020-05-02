@@ -3,34 +3,37 @@ mod value_type;
 
 use std::cmp::Ordering;
 use std::hash::Hasher;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use chrono::{DateTime, Local};
 use regex::Regex;
 
+use crate::lang::errors::{argument_error, mandate, CrushResult};
+use crate::lang::r#struct::Struct;
+use crate::lang::scope::Scope;
+use crate::lang::stream::{streams, InputStream, Readable};
+use crate::lang::{
+    binary::BinaryReader, dict::Dict, dict::DictReader, list::List, list::ListReader,
+    table::ColumnType, table::TableReader,
+};
+use crate::util::time::duration_format;
 use crate::{
-    util::file::cwd,
-    lang::table::Table,
     lang::errors::{error, to_crush_error},
+    lang::table::Table,
+    util::file::cwd,
     util::glob::Glob,
 };
-use crate::lang::{list::List, dict::Dict, table::ColumnType, binary::BinaryReader, table::TableReader, list::ListReader, dict::DictReader};
-use crate::lang::errors::{CrushResult, argument_error, mandate};
 use chrono::Duration;
-use crate::util::time::duration_format;
-use crate::lang::scope::Scope;
-use crate::lang::r#struct::Struct;
-use crate::lang::stream::{streams, Readable, InputStream};
 
-pub use value_type::ValueType;
-pub use value_definition::ValueDefinition;
 use crate::lang::command::CrushCommand;
-use std::collections::HashMap;
-use crate::lang::pretty_printer::format_buffer;
-use crate::util::regex::RegexFileMatcher;
-use crate::lang::printer::Printer;
 use crate::lang::help::Help;
+use crate::lang::pretty_printer::format_buffer;
+use crate::lang::printer::Printer;
+use crate::util::regex::RegexFileMatcher;
+use std::collections::HashMap;
+pub use value_definition::ValueDefinition;
+pub use value_type::ValueType;
 
 pub enum Value {
     String(String),
@@ -95,37 +98,30 @@ impl Value {
     pub fn field(&self, name: &str) -> CrushResult<Option<Value>> {
         Ok(match self {
             Value::Struct(s) => s.get(name),
-            Value::Scope(subenv) =>
-                subenv
-                    .get(name)?
-                    .or_else(|| {
-                        self.value_type()
-                            .fields()
-                            .get(name)
-                            .map(|m| Value::Command(m.as_ref().clone()))
-                    }),
-            Value::Type(t) =>
-                t.fields()
-                    .get(name)
-                    .map(|m| Value::Command(m.as_ref().clone())),
-            _ =>
+            Value::Scope(subenv) => subenv.get(name)?.or_else(|| {
                 self.value_type()
                     .fields()
                     .get(name)
-                    .map(|m| Value::Command(m.as_ref().clone())),
+                    .map(|m| Value::Command(m.as_ref().clone()))
+            }),
+            Value::Type(t) => t
+                .fields()
+                .get(name)
+                .map(|m| Value::Command(m.as_ref().clone())),
+            _ => self
+                .value_type()
+                .fields()
+                .get(name)
+                .map(|m| Value::Command(m.as_ref().clone())),
         })
     }
 
     pub fn fields(&self) -> Vec<String> {
         let mut res = Vec::new();
         match self {
-            Value::Struct(s) => {
-                res.append(&mut s.keys())
-            }
-//            Value::Scope(subenv) => subenv.get(name),
-            Value::Type(t) => {
-                add_keys(t.fields(), &mut res)
-            }
+            Value::Struct(s) => res.append(&mut s.keys()),
+            //            Value::Scope(subenv) => subenv.get(name),
+            Value::Type(t) => add_keys(t.fields(), &mut res),
             _ => add_keys(self.value_type().fields(), &mut res),
         }
         res.sort_by(|x, y| x.cmp(y));
@@ -135,8 +131,7 @@ impl Value {
 
     pub fn get_recursive(&self, path: &[String]) -> CrushResult<Value> {
         match path.len() {
-            0 =>
-                error("Invalid path"),
+            0 => error("Invalid path"),
             1 => Ok(self.clone()),
             2 => mandate(self.field(&path[1])?, "Invalid path"),
             _ => mandate(self.field(&path[1])?, "Invalid path")?.get_recursive(&path[1..]),
@@ -208,21 +203,19 @@ impl Value {
             Value::File(p) => v.push(p.clone()),
             Value::Glob(pattern) => pattern.glob_files(&PathBuf::from("."), v)?,
             Value::Regex(_, re) => re.match_files(&cwd()?, v, printer),
-            val => {
-                match val.readable() {
-                    None => return error("Expected a file name"),
-                    Some(mut s) => {
-                        let t = s.types();
-                        if t.len() == 1 && t[0].cell_type == ValueType::File {
-                            while let Ok(row) = s.read() {
-                                if let Value::File(f) = row.into_vec().remove(0) {
-                                    v.push(f);
-                                }
+            val => match val.readable() {
+                None => return error("Expected a file name"),
+                Some(mut s) => {
+                    let t = s.types();
+                    if t.len() == 1 && t[0].cell_type == ValueType::File {
+                        while let Ok(row) = s.read() {
+                            if let Value::File(f) = row.into_vec().remove(0) {
+                                v.push(f);
                             }
-                        } else {
-                            return argument_error("Table stream must contain one column of type file");
                         }
-                    },
+                    } else {
+                        return argument_error("Table stream must contain one column of type file");
+                    }
                 }
             },
         }
@@ -257,10 +250,8 @@ impl Value {
         }
 
         match (&self, &new_type) {
-            (Value::Integer(i), ValueType::Bool) =>
-                return Ok(Value::Bool(*i != 0)),
-            (Value::Float(f), ValueType::Integer) =>
-                return Ok(Value::Integer(*f as i128)),
+            (Value::Integer(i), ValueType::Bool) => return Ok(Value::Bool(*i != 0)),
+            (Value::Float(f), ValueType::Integer) => return Ok(Value::Integer(*f as i128)),
             _ => {}
         }
 
@@ -271,17 +262,21 @@ impl Value {
             ValueType::Glob => Ok(Value::Glob(Glob::new(str_val.as_str()))),
             ValueType::Integer => to_crush_error(str_val.parse::<i128>()).map(Value::Integer),
             ValueType::Field => Ok(Value::Field(vec![str_val])),
-            ValueType::Regex => to_crush_error(Regex::new(str_val.as_str()).map(|v| Value::Regex(str_val, v))),
+            ValueType::Regex => {
+                to_crush_error(Regex::new(str_val.as_str()).map(|v| Value::Regex(str_val, v)))
+            }
             ValueType::Binary => Ok(Value::Binary(str_val.bytes().collect())),
             ValueType::Float => Ok(Value::Float(to_crush_error(f64::from_str(&str_val))?)),
             ValueType::Bool => Ok(Value::Bool(match str_val.as_str() {
                 "true" => true,
                 "false" => false,
-                _ => return error("Can't cast to boolean")
+                _ => return error("Can't cast to boolean"),
             })),
             ValueType::String => Ok(Value::String(str_val)),
             ValueType::Time => error("invalid cast"),
-            ValueType::Duration => Ok(Value::Duration(Duration::seconds(to_crush_error(i64::from_str(&str_val))?))),
+            ValueType::Duration => Ok(Value::Duration(Duration::seconds(to_crush_error(
+                i64::from_str(&str_val),
+            )?))),
             ValueType::Command => error("invalid cast"),
             ValueType::TableStream(_) => error("invalid cast"),
             ValueType::Table(_) => error("invalid cast"),
@@ -357,8 +352,11 @@ impl std::hash::Hash for Value {
             Value::Bool(v) => v.hash(state),
             Value::Binary(v) => v.hash(state),
             Value::Struct(v) => v.hash(state),
-            Value::Scope(_) | Value::Dict(_) | Value::Table(_) |
-            Value::List(_) | Value::TableStream(_)
+            Value::Scope(_)
+            | Value::Dict(_)
+            | Value::Table(_)
+            | Value::List(_)
+            | Value::TableStream(_)
             | Value::BinaryStream(_) => panic!("Can't hash output"),
             Value::Float(v) => {
                 let (m, x, s) = integer_decode(*v);
@@ -389,7 +387,9 @@ impl std::cmp::PartialEq for Value {
             (Value::Field(val1), Value::Field(val2)) => val1 == val2,
             (Value::Glob(val1), Value::Glob(val2)) => val1 == val2,
             (Value::Regex(val1, _), Value::Regex(val2, _)) => val1 == val2,
-            (Value::File(val1), Value::String(val2)) => file_result_compare(&Path::new(&val2.to_string()), val1.as_ref()),
+            (Value::File(val1), Value::String(val2)) => {
+                file_result_compare(&Path::new(&val2.to_string()), val1.as_ref())
+            }
             (Value::Table(val1), Value::Table(val2)) => match val1.partial_cmp(val2) {
                 None => false,
                 Some(o) => o == Ordering::Equal,
@@ -473,7 +473,10 @@ mod tests {
 
     #[test]
     fn text_casts() {
-        assert_eq!(Value::string("112432").cast(ValueType::Integer).is_err(), false);
+        assert_eq!(
+            Value::string("112432").cast(ValueType::Integer).is_err(),
+            false
+        );
         assert_eq!(Value::string("1d").cast(ValueType::Integer).is_err(), true);
         assert_eq!(Value::string("1d").cast(ValueType::Glob).is_err(), false);
         assert_eq!(Value::string("1d").cast(ValueType::File).is_err(), false);
@@ -484,14 +487,43 @@ mod tests {
     #[test]
     fn test_duration_format() {
         assert_eq!(duration_format(&Duration::microseconds(0)), "0".to_string());
-        assert_eq!(duration_format(&Duration::microseconds(1)), "0.000001".to_string());
-        assert_eq!(duration_format(&Duration::microseconds(100)), "0.0001".to_string());
-        assert_eq!(duration_format(&Duration::milliseconds(1)), "0.001".to_string());
-        assert_eq!(duration_format(&Duration::milliseconds(1000)), "1".to_string());
-        assert_eq!(duration_format(&Duration::milliseconds(1000 * 61)), "1:01".to_string());
-        assert_eq!(duration_format(&Duration::milliseconds(1000 * 3601)), "1:00:01".to_string());
-        assert_eq!(duration_format(&Duration::milliseconds(1000 * (3600 * 24 * 3 + 1))), "3d0:00:01".to_string());
-        assert_eq!(duration_format(&Duration::milliseconds(1000 * (3600 * 24 * 365 * 10 + 1))), "10y0d0:00:01".to_string());
-        assert_eq!(duration_format(&Duration::milliseconds(1000 * (3600 * 24 * 365 * 10 + 1) + 1)), "10y0d0:00:01".to_string());
+        assert_eq!(
+            duration_format(&Duration::microseconds(1)),
+            "0.000001".to_string()
+        );
+        assert_eq!(
+            duration_format(&Duration::microseconds(100)),
+            "0.0001".to_string()
+        );
+        assert_eq!(
+            duration_format(&Duration::milliseconds(1)),
+            "0.001".to_string()
+        );
+        assert_eq!(
+            duration_format(&Duration::milliseconds(1000)),
+            "1".to_string()
+        );
+        assert_eq!(
+            duration_format(&Duration::milliseconds(1000 * 61)),
+            "1:01".to_string()
+        );
+        assert_eq!(
+            duration_format(&Duration::milliseconds(1000 * 3601)),
+            "1:00:01".to_string()
+        );
+        assert_eq!(
+            duration_format(&Duration::milliseconds(1000 * (3600 * 24 * 3 + 1))),
+            "3d0:00:01".to_string()
+        );
+        assert_eq!(
+            duration_format(&Duration::milliseconds(1000 * (3600 * 24 * 365 * 10 + 1))),
+            "10y0d0:00:01".to_string()
+        );
+        assert_eq!(
+            duration_format(&Duration::milliseconds(
+                1000 * (3600 * 24 * 365 * 10 + 1) + 1
+            )),
+            "10y0d0:00:01".to_string()
+        );
     }
 }

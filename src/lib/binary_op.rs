@@ -13,6 +13,6 @@ fn $name(mut context: ExecutionContext) -> CrushResult<()> {
 
 macro_rules! example {
     ($example:literal) => {
-    Some(concat!("    Example:\n\n    ", $example))
-    }
+        Some(concat!("    Example:\n\n    ", $example))
+    };
 }

@@ -1,28 +1,28 @@
-use crate::lang::scope::Scope;
-use crate::lang::errors::{CrushResult, argument_error, mandate};
-use crate::lang::{value::Value, r#struct::Struct};
-use crate::lang::command::CrushCommand;
-use crate::lang::execution_context::{ExecutionContext, This};
 use crate::lang::argument::{column_names, Argument};
+use crate::lang::command::CrushCommand;
+use crate::lang::errors::{argument_error, mandate, CrushResult};
 use crate::lang::execution_context::ArgumentVector;
-use crate::lang::value::ValueType;
-use crate::lang::table::ColumnType;
+use crate::lang::execution_context::{ExecutionContext, This};
+use crate::lang::scope::Scope;
 use crate::lang::stream::black_hole;
+use crate::lang::table::ColumnType;
+use crate::lang::value::ValueType;
+use crate::lang::{r#struct::Struct, value::Value};
 
+pub mod binary;
+pub mod dict;
+pub mod duration;
+pub mod file;
+pub mod float;
+pub mod glob;
+pub mod integer;
+pub mod list;
+pub mod re;
+pub mod scope;
+pub mod string;
 pub mod table;
 pub mod table_stream;
-pub mod list;
-pub mod dict;
-pub mod re;
-pub mod glob;
-pub mod string;
-pub mod file;
-pub mod integer;
-pub mod float;
-pub mod duration;
 pub mod time;
-pub mod binary;
-pub mod scope;
 
 fn materialize(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(context.input.recv()?.materialize())
@@ -44,13 +44,12 @@ fn new(mut context: ExecutionContext) -> CrushResult<()> {
 
 fn data(context: ExecutionContext) -> CrushResult<()> {
     let mut names = column_names(&context.arguments);
-    let arr: Vec<(String, Value)> =
-        names.drain(..)
-            .zip(context.arguments)
-            .map(|(name, arg)| (name, arg.value))
-            .collect::<Vec<(String, Value)>>();
-    context.output.send(
-        Value::Struct(Struct::new(arr, None)))
+    let arr: Vec<(String, Value)> = names
+        .drain(..)
+        .zip(context.arguments)
+        .map(|(name, arg)| (name, arg.value))
+        .collect::<Vec<(String, Value)>>();
+    context.output.send(Value::Struct(Struct::new(arr, None)))
 }
 
 fn class(mut context: ExecutionContext) -> CrushResult<()> {
@@ -74,19 +73,32 @@ pub fn parse_column_types(mut arguments: Vec<Argument>) -> CrushResult<Vec<Colum
         if let Value::Type(t) = arg.value {
             types.push(ColumnType::new(names[idx].as_ref(), t));
         } else {
-            return argument_error(format!("Expected all parameters to be types, found {}", arg.value.value_type().to_string()).as_str());
+            return argument_error(
+                format!(
+                    "Expected all parameters to be types, found {}",
+                    arg.value.value_type().to_string()
+                )
+                .as_str(),
+            );
         }
     }
     Ok(types)
 }
 
 pub fn r#as(mut context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(context.arguments.value(0)?.cast(context.arguments.r#type(1)?)?)
+    context.output.send(
+        context
+            .arguments
+            .value(0)?
+            .cast(context.arguments.r#type(1)?)?,
+    )
 }
 
 pub fn r#typeof(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
-    context.output.send(Value::Type(context.arguments.value(0)?.value_type()))
+    context
+        .output
+        .send(Value::Type(context.arguments.value(0)?.value_type()))
 }
 
 fn class_set(mut context: ExecutionContext) -> CrushResult<()> {
@@ -100,7 +112,10 @@ fn class_set(mut context: ExecutionContext) -> CrushResult<()> {
 fn class_get(mut context: ExecutionContext) -> CrushResult<()> {
     let this = context.this.r#struct()?;
     let name = context.arguments.string(0)?;
-    context.output.send(mandate(this.get(&name), format!("Unknown field {}", name).as_str())?)
+    context.output.send(mandate(
+        this.get(&name),
+        format!("Unknown field {}", name).as_str(),
+    )?)
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {

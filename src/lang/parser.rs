@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, to_crush_error};
+use crate::lang::errors::{to_crush_error, CrushResult};
 use crate::lang::job::Job;
 use crate::lang::scope::Scope;
 

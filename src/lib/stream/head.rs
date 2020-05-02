@@ -1,12 +1,8 @@
-use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{error, CrushResult};
+use crate::lang::execution_context::{ArgumentVector, ExecutionContext};
 use crate::lang::stream::{Readable, ValueSender};
 
-pub fn run(
-    lines: i128,
-    input: &mut dyn Readable,
-    sender: ValueSender,
-) -> CrushResult<()> {
+pub fn run(lines: i128, input: &mut dyn Readable, sender: ValueSender) -> CrushResult<()> {
     let output = sender.initialize(input.types().to_vec())?;
     let mut count = 0;
     while let Ok(row) = input.read() {

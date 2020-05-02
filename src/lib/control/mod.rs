@@ -1,12 +1,15 @@
+use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
 use crate::lang::scope::Scope;
-use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
-use crate::lang::{value::Value, list::List, value::ValueType, execution_context::ExecutionContext, binary::BinaryReader};
+use crate::lang::{
+    binary::BinaryReader, execution_context::ExecutionContext, list::List, value::Value,
+    value::ValueType,
+};
 use std::env;
 
-mod r#if;
-mod r#while;
-mod r#loop;
 mod r#for;
+mod r#if;
+mod r#loop;
+mod r#while;
 
 use std::path::PathBuf;
 
@@ -55,11 +58,11 @@ pub fn cmd(mut context: ExecutionContext) -> CrushResult<()> {
                     context.printer.error(err);
                 }
             }
-            context.output.send(
-                Value::BinaryStream(
-                    BinaryReader::vec(&output.stdout)))
+            context
+                .output
+                .send(Value::BinaryStream(BinaryReader::vec(&output.stdout)))
         }
-        _ => argument_error("Not a valid command")
+        _ => argument_error("Not a valid command"),
     }
 }
 

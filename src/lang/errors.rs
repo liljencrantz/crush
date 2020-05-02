@@ -1,9 +1,9 @@
-use std::error::Error;
 use crate::lang::errors::Kind::*;
+use std::error::Error;
 
 #[derive(Debug, PartialEq)]
 pub enum Kind {
-//    ParseError,
+    //    ParseError,
     InvalidArgument,
     InvalidData,
     GenericError,
@@ -21,7 +21,9 @@ pub type CrushResult<T> = Result<T, CrushError>;
 
 pub fn block_error<T>() -> Result<T, CrushError> {
     Err(CrushError {
-        message: String::from("Internal error: Tried to call blocking code in a thread that may not block"),
+        message: String::from(
+            "Internal error: Tried to call blocking code in a thread that may not block",
+        ),
         kind: BlockError,
     })
 }

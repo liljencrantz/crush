@@ -1,9 +1,9 @@
-use crate::lang::value::{Value};
-use crate::lang::{value::ValueDefinition};
-use crate::lang::errors::{CrushResult, error, argument_error};
-use std::collections::HashSet;
+use crate::lang::errors::{argument_error, error, CrushResult};
 use crate::lang::execution_context::CompileContext;
 use crate::lang::printer::Printer;
+use crate::lang::value::Value;
+use crate::lang::value::ValueDefinition;
+use std::collections::HashSet;
 
 #[derive(Debug, Clone)]
 pub enum ArgumentType {
@@ -96,7 +96,6 @@ impl Argument {
             value,
         }
     }
-
 }
 
 pub trait ArgumentVecCompiler {
@@ -112,39 +111,37 @@ impl ArgumentVecCompiler for Vec<ArgumentDefinition> {
                 this = Some(a.value.compile_bound(context)?);
             } else {
                 match &a.argument_type {
-                    ArgumentType::Some(name) =>
-                        res.push(Argument::named(&name, a.value.compile_bound(context)?)),
-
-                    ArgumentType::None =>
-                        res.push(Argument::unnamed(a.value.compile_bound(context)?)),
-
-                    ArgumentType::ArgumentList => {
-                        match a.value.compile_bound(context)? {
-                            Value::List(l) => {
-                                let mut copy = l.dump();
-                                for v in copy.drain(..) {
-                                    res.push(Argument::unnamed(v));
-                                }
-                            }
-                            _ => return argument_error("Argument list must be of type list"),
-                        }
+                    ArgumentType::Some(name) => {
+                        res.push(Argument::named(&name, a.value.compile_bound(context)?))
                     }
 
-                    ArgumentType::ArgumentDict => {
-                        match a.value.compile_bound(context)? {
-                            Value::Dict(d) => {
-                                let mut copy = d.elements();
-                                for (key, value) in copy.drain(..) {
-                                    if let Value::String(name) = key {
-                                        res.push(Argument::named(&name, value));
-                                    } else {
-                                        return argument_error("Argument dict must have string keys");
-                                    }
+                    ArgumentType::None => {
+                        res.push(Argument::unnamed(a.value.compile_bound(context)?))
+                    }
+
+                    ArgumentType::ArgumentList => match a.value.compile_bound(context)? {
+                        Value::List(l) => {
+                            let mut copy = l.dump();
+                            for v in copy.drain(..) {
+                                res.push(Argument::unnamed(v));
+                            }
+                        }
+                        _ => return argument_error("Argument list must be of type list"),
+                    },
+
+                    ArgumentType::ArgumentDict => match a.value.compile_bound(context)? {
+                        Value::Dict(d) => {
+                            let mut copy = d.elements();
+                            for (key, value) in copy.drain(..) {
+                                if let Value::String(name) = key {
+                                    res.push(Argument::named(&name, value));
+                                } else {
+                                    return argument_error("Argument dict must have string keys");
                                 }
                             }
-                            _ => return argument_error("Argument list must be of type list"),
                         }
-                    }
+                        _ => return argument_error("Argument list must be of type list"),
+                    },
                 }
             }
         }
@@ -183,6 +180,6 @@ pub fn column_names(arguments: &Vec<Argument>) -> Vec<String> {
     res
 }
 
-pub trait ArgumentHandler : Sized {
+pub trait ArgumentHandler: Sized {
     fn parse(arguments: Vec<Argument>, printer: &Printer) -> CrushResult<Self>;
 }

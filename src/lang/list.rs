@@ -1,10 +1,10 @@
-use crate::lang::{value::ValueType, value::Value, table::ColumnType, table::Row};
-use crate::lang::errors::{mandate, CrushResult, error, argument_error};
+use crate::lang::errors::{argument_error, error, mandate, CrushResult};
+use crate::lang::stream::Readable;
+use crate::lang::{table::ColumnType, table::Row, value::Value, value::ValueType};
+use crate::util::identity_arc::Identity;
+use std::cmp::Ordering;
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
-use std::cmp::Ordering;
-use crate::lang::stream::Readable;
-use crate::util::identity_arc::Identity;
 
 #[derive(Clone)]
 pub struct List {
@@ -20,28 +20,30 @@ impl Identity for List {
 
 macro_rules! dump_to {
     ($name:ident, $destination_type:ident, $value_type:ident, $convert:expr) => {
-    pub fn $name(&self, destination: &mut Vec<$destination_type>) -> CrushResult<()> {
-        if self.element_type() != ValueType::$value_type {
-            error("Wrong list type")
-        } else {
-            let cells = self.cells.lock().unwrap();
-            for el in cells.iter() {
-                match el {
-                    Value::$value_type(s) => destination.push($convert(s)),
-                    _ => return error("Wrong element type"),
+        pub fn $name(&self, destination: &mut Vec<$destination_type>) -> CrushResult<()> {
+            if self.element_type() != ValueType::$value_type {
+                error("Wrong list type")
+            } else {
+                let cells = self.cells.lock().unwrap();
+                for el in cells.iter() {
+                    match el {
+                        Value::$value_type(s) => destination.push($convert(s)),
+                        _ => return error("Wrong element type"),
+                    }
                 }
-
+                Ok(())
             }
-            Ok(())
         }
-    }
-
-    }
-
+    };
 }
 
 impl List {
-    pub fn new(cell_type: ValueType, cells: Vec<Value>) -> List { List { cell_type, cells: Arc::from(Mutex::new(cells)) } }
+    pub fn new(cell_type: ValueType, cells: Vec<Value>) -> List {
+        List {
+            cell_type,
+            cells: Arc::from(Mutex::new(cells)),
+        }
+    }
 
     pub fn len(&self) -> usize {
         let cells = self.cells.lock().unwrap();
@@ -103,7 +105,7 @@ impl List {
         Ok(())
     }
 
-    pub fn insert(&self, idx: usize, value: Value) -> CrushResult<()>{
+    pub fn insert(&self, idx: usize, value: Value) -> CrushResult<()> {
         let mut cells = self.cells.lock().unwrap();
         if !self.cell_type.is(&value) {
             return argument_error("Invalid argument type");
@@ -122,7 +124,7 @@ impl List {
 
     pub fn peek(&self) -> Option<Value> {
         let cells = self.cells.lock().unwrap();
-        cells.get(cells.len()-1).map(|v| v.clone())
+        cells.get(cells.len() - 1).map(|v| v.clone())
     }
 
     pub fn element_type(&self) -> ValueType {
@@ -161,7 +163,11 @@ impl ToString for List {
     fn to_string(&self) -> String {
         let mut res = "[".to_string();
         let cells = self.cells.lock().unwrap();
-        res += &cells.iter().map(|c| c.to_string()).collect::<Vec<String>>().join(", ");
+        res += &cells
+            .iter()
+            .map(|c| c.to_string())
+            .collect::<Vec<String>>()
+            .join(", ");
         res += "]";
         res
     }
@@ -199,7 +205,7 @@ impl std::cmp::PartialOrd for List {
         for (v1, v2) in us.iter().zip(them.iter()) {
             let d = v1.partial_cmp(v2);
             match d.clone() {
-                Some(Ordering::Equal) => {},
+                Some(Ordering::Equal) => {}
                 _ => return d,
             }
         }
@@ -217,9 +223,7 @@ pub struct ListReader {
 }
 
 impl ListReader {
-    pub fn new(list: List,
-           name: &str,
-    ) -> ListReader {
+    pub fn new(list: List, name: &str) -> ListReader {
         ListReader {
             types: vec![ColumnType::new(name, list.element_type())],
             list,

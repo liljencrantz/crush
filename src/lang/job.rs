@@ -1,9 +1,9 @@
-use crate::lang::stream::{channels};
-use crate::lang::{command_invocation::CommandInvocation};
-use crate::lang::errors::{ CrushResult};
-use std::thread::JoinHandle;
-use crate::lang::execution_context::{JobContext, CompileContext};
+use crate::lang::command_invocation::CommandInvocation;
+use crate::lang::errors::CrushResult;
+use crate::lang::execution_context::{CompileContext, JobContext};
 use crate::lang::printer::Printer;
+use crate::lang::stream::channels;
+use std::thread::JoinHandle;
 
 pub enum JobJoinHandle {
     Many(Vec<JobJoinHandle>),
@@ -14,7 +14,7 @@ impl JobJoinHandle {
     pub fn join(self, printer: &Printer) {
         match self {
             JobJoinHandle::Async(a) => match a.join() {
-                Ok(_) => {},
+                Ok(_) => {}
                 Err(_) => printer.error("Unknown error while waiting for command to exit"),
             },
             JobJoinHandle::Many(v) => {
@@ -76,6 +76,10 @@ impl Job {
 
 impl ToString for Job {
     fn to_string(&self) -> String {
-        self.commands.iter().map(|c| c.to_string()).collect::<Vec<String>>().join("|")
+        self.commands
+            .iter()
+            .map(|c| c.to_string())
+            .collect::<Vec<String>>()
+            .join("|")
     }
 }

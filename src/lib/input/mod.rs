@@ -1,13 +1,16 @@
-use crate::lang::scope::Scope;
 use crate::lang::errors::CrushResult;
-use crate::lang::{value::Value, execution_context::ExecutionContext, execution_context::ArgumentVector, binary::BinaryReader};
 use crate::lang::list::List;
-use crate::lang::value::ValueType;
 use crate::lang::pretty_printer::PrettyPrinter;
+use crate::lang::scope::Scope;
+use crate::lang::value::ValueType;
+use crate::lang::{
+    binary::BinaryReader, execution_context::ArgumentVector, execution_context::ExecutionContext,
+    value::Value,
+};
 
-mod lines;
 mod csv;
 mod http;
+mod lines;
 
 pub fn val(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
@@ -16,14 +19,16 @@ pub fn val(mut context: ExecutionContext) -> CrushResult<()> {
 
 pub fn dir(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
-    context.output.send(
-        Value::List(List::new(
-            ValueType::String,
-            context.arguments.value(0)?.fields()
-                .drain(..)
-                .map(|n| Value::String(n))
-                .collect()))
-    )
+    context.output.send(Value::List(List::new(
+        ValueType::String,
+        context
+            .arguments
+            .value(0)?
+            .fields()
+            .drain(..)
+            .map(|n| Value::String(n))
+            .collect(),
+    )))
 }
 
 fn echo(mut context: ExecutionContext) -> CrushResult<()> {
@@ -34,7 +39,9 @@ fn echo(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn cat(mut context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::BinaryStream(BinaryReader::paths(context.arguments.files(&context.printer)?)?))
+    context.output.send(Value::BinaryStream(BinaryReader::paths(
+        context.arguments.files(&context.printer)?,
+    )?))
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
