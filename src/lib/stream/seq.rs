@@ -11,9 +11,9 @@ use crate::lang::table::ColumnType;
 use signature::signature;
 use crate::lang::argument::ArgumentHandler;
 
-#[signature]
+#[signature(seq, description="Return a stream of sequential numbers")]
 #[derive(Debug)]
-struct Signature {
+pub struct Seq {
     #[default(i128::max_value())]
     to: i128,
     #[default(0)]
@@ -22,8 +22,8 @@ struct Signature {
     step: i128,
 }
 
-pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    let mut cfg: Signature = Signature::parse(context.arguments, &context.printer)?;
+pub fn seq(context: ExecutionContext) -> CrushResult<()> {
+    let mut cfg: Seq = Seq::parse(context.arguments, &context.printer)?;
     let output = context.output.initialize(vec![
         ColumnType::new("value", ValueType::Integer)])?;
 

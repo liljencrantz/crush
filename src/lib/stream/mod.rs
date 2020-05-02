@@ -1,5 +1,6 @@
 use crate::lang::scope::Scope;
 use crate::lang::errors::CrushResult;
+use crate::lang::argument::ArgumentHandler;
 
 mod head;
 mod tail;
@@ -94,11 +95,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "zip", zip::zip, true,
                 "zip stream1:(table_stream|table|list|dict) stream2:(table_stream|table|list|dict)",
                 "combine to streams of data into one", None)?;
-            env.declare_command(
-                "seq", seq::perform, true,
-                "seq lines:integer",
-                "Return a stream of numbers",
-                None)?;
+            seq::Seq::declare(env)?;
             Ok(())
         }))?;
     root.r#use(&e);

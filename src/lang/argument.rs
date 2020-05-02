@@ -4,6 +4,7 @@ use crate::lang::errors::{CrushResult, error, argument_error};
 use std::collections::HashSet;
 use crate::lang::execution_context::CompileContext;
 use crate::lang::printer::Printer;
+use crate::lang::scope::ScopeLoader;
 
 #[derive(Debug, Clone)]
 pub enum ArgumentType {
@@ -183,6 +184,7 @@ pub fn column_names(arguments: &Vec<Argument>) -> Vec<String> {
 }
 
 pub trait ArgumentHandler: Sized {
+    fn declare(env: &mut ScopeLoader) -> CrushResult<()>;
     fn parse(arguments: Vec<Argument>, printer: &Printer) -> CrushResult<Self>;
 }
 
@@ -193,20 +195,25 @@ mod tests {
     use crate::lang::list::List;
     use crate::lang::value::ValueType;
     use crate::lang::ordered_string_map::OrderedStringMap;
+    use crate::lang::execution_context::ExecutionContext;
 
-    #[signature]
+    fn x(_context: ExecutionContext) -> CrushResult<()> {
+        Ok(())
+    }
+
+    #[signature(x)]
     struct AllowedValuesStringSignature {
         #[values("aa", "bb", "cc")]
         str_val: String,
     }
 
-    #[signature]
+    #[signature(x)]
     struct AllowedValuesCharSignature {
         #[values('a', 'b', 'c')]
         char_val: char,
     }
 
-    #[signature]
+    #[signature(x)]
     struct AllowedValuesIntSignature {
         #[values(1, 2, 3)]
         int_val: i128,
@@ -259,7 +266,7 @@ mod tests {
         ).is_err());
     }
 
-    #[signature]
+    #[signature(x)]
     struct OptionSignature {
         int_val: Option<i128>,
     }
@@ -280,7 +287,7 @@ mod tests {
         ).unwrap().int_val, None);
     }
 
-    #[signature]
+    #[signature(x)]
     struct DefaultSignature {
         #[default(8)]
         int_val: i128,
@@ -302,7 +309,7 @@ mod tests {
         ).unwrap().int_val, 8);
     }
 
-    #[signature]
+    #[signature(x)]
     struct ListSignature {
         list_val: Vec<String>,
     }
@@ -338,7 +345,7 @@ mod tests {
 
     }
 
-    #[signature]
+    #[signature(x)]
     struct NamedSignature {
         #[named]
         unnamed_val: OrderedStringMap<String>,
@@ -363,7 +370,7 @@ mod tests {
         );
     }
 
-    #[signature]
+    #[signature(x)]
     struct NamedSignature2 {
         foo: Option<i128>,
         #[named]

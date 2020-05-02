@@ -4,10 +4,11 @@ use crate::lang::{value::Value, execution_context::ExecutionContext, execution_c
 use crate::lang::list::List;
 use crate::lang::value::ValueType;
 use crate::lang::pretty_printer::PrettyPrinter;
+use crate::lang::argument::ArgumentHandler;
 
 mod lines;
 mod csv;
-mod http;
+pub mod http;
 
 pub fn val(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
@@ -44,24 +45,11 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare_command(
                 "cat", cat, true,
                 "cat @files:(file|glob)", "Read specified files as binary stream", None)?;
-            env.declare_command(
-                "http", http::perform, true,
-                "http url:string [form=formdata:string] [method=method:string] [header=header:string]...",
-                "Make a http request",
-                Some(r#"    Headers should be on the form "key:value".
-
-    Examples:
-
-    http "https://example.com/" header="Authorization: Bearer {}":format token"#))?;
+            http::Http::declare(env)?;
             env.declare_command(
                 "lines", lines::perform, true,
                 "lines @files:(file|glob)", "Read specified files as a table with one line of text per row", None)?;
-            env.declare_command(
-                "csv", csv::csv, true,
-                "csv <column_name>=type:type... [head=skip:integer] [separator=separator:string] [trim=trim:string] @files:(file|glob)",
-                "Parse specified files as CSV files", Some(r#"    Examples:
-
-    csv separator="," head=1 name=string age=integer nick=string"#))?;
+            csv::Csv::declare(env)?;
 
             env.declare_command(
                 "echo", echo, false,

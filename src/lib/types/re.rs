@@ -54,8 +54,14 @@ fn not_match(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Bool(!re.is_match(&needle)))
 }
 
-#[signature]
+#[signature(replace)]
 struct ReplaceSignature {
+    text: String,
+    replacement: String,
+}
+
+#[signature(replace_all)]
+struct ReplaceAllSignature {
     text: String,
     replacement: String,
 }
@@ -68,6 +74,6 @@ fn replace(context: ExecutionContext) -> CrushResult<()> {
 
 fn replace_all(context: ExecutionContext) -> CrushResult<()> {
     let re = context.this.re()?.1;
-    let args: ReplaceSignature = ReplaceSignature::parse(context.arguments, &context.printer)?;
+    let args: ReplaceAllSignature = ReplaceAllSignature::parse(context.arguments, &context.printer)?;
     context.output.send(Value::string(re.replace_all(&args.text, args.replacement.as_str()).as_ref()))
 }

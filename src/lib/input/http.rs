@@ -21,18 +21,24 @@ fn parse_method(m: &str) -> CrushResult<Method> {
     })
 }
 
-#[signature]
-struct Signature {
+#[signature(
+    http,
+    description="Make a http request",
+    example="http \"https://example.com/\" header=(\"Authorization: Bearer {}\":format token)",
+can_block = true,
+)]
+pub struct Http {
     uri: String,
     #[values("get", "post", "put", "delete", "head", "options", "connect", "patch", "trace")]
     #[default("get")]
     method: String,
     form: Option<String>,
+    #[description("Http headers, must be on the form \"key:value\".")]
     header: Vec<String>,
 }
 
-pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    let cfg: Signature = Signature::parse(context.arguments, &context.printer)?;
+pub fn http(context: ExecutionContext) -> CrushResult<()> {
+    let cfg: Http = Http::parse(context.arguments, &context.printer)?;
 
     let (mut output, input) = binary_channel();
     let client = reqwest::blocking::Client::new();

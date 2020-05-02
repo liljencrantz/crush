@@ -95,7 +95,7 @@ fn run_for_single_directory_or_file(
     Ok(())
 }
 
-#[signature]
+#[signature(find)]
 #[derive(Debug)]
 struct Signature {
     #[unnamed()]

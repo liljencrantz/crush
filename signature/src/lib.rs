@@ -12,6 +12,7 @@ struct TypeData {
     mappings: TokenStream,
     unnamed_mutate: Option<TokenStream>,
     assign: TokenStream,
+    signature: String
 }
 
 type SignatureResult<T> = Result<T, TokenStream>;
@@ -213,6 +214,7 @@ fn type_to_value(
                 let mutator = simple_type_to_mutator(type_name, &allowed_values_name);
                 let value_type = Ident::new(simple_type_to_value_name(type_name), ty.span());
                 Ok(TypeData {
+                    signature: format!("{}={}", name.to_string(), simple_type_to_value_name(type_name).to_string().to_lowercase()),
                     initialize: match allowed_values {
                         None => quote! { let mut #name = None; },
                         Some(literals) => {
@@ -269,6 +271,7 @@ if #name.is_none() {
                 fail!(ty.span(), "Vec needs exactly one parameter")
             } else if args[0] == "PathBuf" {
                 Ok(TypeData {
+                    signature: format!("{}=(file|glob|regex)...", name.to_string()),
                     initialize: quote! { let mut #name = Vec::new(); },
                     mappings: quote! { (Some(#name_literal), value) => value.file_expand(&mut #name, printer)?, },
                     unnamed_mutate: if is_unnamed_target {
@@ -286,6 +289,7 @@ if #name.is_none() {
                 let value_type = Ident::new(simple_type_to_value_name(args[0]), ty.span().clone());
 
                 Ok(TypeData {
+                    signature: format!("{}={}...", name.to_string(), simple_type_to_value_name(args[0]).to_string().to_lowercase()),
                     initialize: quote! { let mut #name = Vec::new(); },
                     mappings: quote! {
                         (Some(#name_literal), Value::#value_type(value)) => #name.push(#mutator),
@@ -318,6 +322,7 @@ if #name.is_none() {
                 let value_type = Ident::new(simple_type_to_value_name(args[0]), ty.span().clone());
 
                 Ok(TypeData {
+                    signature: format!("<any>={}...", simple_type_to_value_name(args[0]).to_string().to_lowercase()),
                     initialize: quote! { let mut #name = crate::lang::ordered_string_map::OrderedStringMap::new(); },
                     mappings: quote! { (Some(name), Value::#value_type(value)) => #name.insert(name.to_string(), #mutator), },
                     unnamed_mutate: None,
@@ -335,6 +340,7 @@ if #name.is_none() {
                 let value_type = Ident::new(simple_type_to_value_name(args[0]), ty.span().clone());
 
                 Ok(TypeData {
+                    signature: format!("[{}={}]", name.to_string(), simple_type_to_value_name(args[0]).to_string().to_lowercase()),
                     initialize: quote! { let mut #name = None; },
                     mappings: quote! { (Some(#name_literal), Value::#value_type(value)) => #name = Some(#mutator), },
                     unnamed_mutate: Some(quote_spanned! { ty.span() =>
@@ -356,8 +362,115 @@ if #name.is_none() {
     }
 }
 
-fn signature_real(input: TokenStream) -> SignatureResult<TokenStream> {
+struct Metadata {
+    name: String,
+    can_block: bool,
+    description: Option<String>,
+    example: Option<String>,
+}
+
+fn unescape(s: &str) -> String {
+    let mut res = "".to_string();
+    let mut was_backslash = false;
+    for c in s[1..s.len() - 1].chars() {
+        if was_backslash {
+            match c {
+                'n' => res += "\n",
+                'r' => res += "\r",
+                't' => res += "\t",
+                _ => res += &c.to_string(),
+            }
+            was_backslash = false;
+        } else {
+            if c == '\\' {
+                was_backslash = true;
+            } else {
+                res += &c.to_string();
+            }
+        }
+    }
+    res
+}
+
+fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
+    let mut can_block = true;
+    let mut example = None;
+    let mut description = None;
+
+    let location = metadata.span().clone();
+    let metadata_iter = metadata.into_iter().collect::<Vec<_>>();
+    let v = metadata_iter.split(|e| {
+        match e {
+            TokenTree::Punct(p) => {
+                p.as_char() == ','
+            },
+            _ => false,
+        }
+    }).collect::<Vec<_>>();
+    if v.len() == 0 {
+        return fail!(location, "No name specified");
+    }
+    let name = match v[0].clone() {
+      [TokenTree::Ident(i)] => {
+          i.to_string()
+      }
+        _ => {
+            return fail!(location, "Invalid name");
+        }
+    };
+
+    for meta in &v[1..] {
+        if meta.len() == 0 {
+            continue;
+        }
+        if meta.len() != 3 {
+            return fail!(meta[0].span(), "Invalid parameter format")
+        }
+        match (&meta[0], &meta[1], &meta[2]) {
+            (TokenTree::Ident(i), TokenTree::Punct(p), TokenTree::Literal(l)) => {
+                let unescaped = unescape(&l.to_string());
+                match (i.to_string().as_str(), p.as_char()) {
+                    ("description", '=') => description = Some(unescaped),
+                    ("example", '=') => example = Some(unescaped),
+                    _ => return fail!(l.span(), "Unknown argument"),
+                }
+            }
+            (TokenTree::Ident(i), TokenTree::Punct(p), TokenTree::Ident(l)) => {
+                match (i.to_string().as_str(), p.as_char()) {
+                    ("can_block", '=') => can_block = match l.to_string().as_str() {
+                        "true" => true,
+                        "false" => false,
+                        _ => return fail!(l.span(), "Expected a boolean value"),
+                    },
+                    _ => return fail!(l.span(), "Unknown argument"),
+                }
+            }
+            _ => return fail!(meta[0].span(), "Invalid parameter format"),
+        }
+   }
+
+    Ok(Metadata {
+        name,
+        can_block,
+        description,
+        example,
+    })
+}
+
+fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<TokenStream> {
+    let metadata_location = metadata.span();
+    let metadata = parse_metadata(metadata)?;
+
+    let description = Literal::string(metadata.description.unwrap_or_else(|| "Missing description".to_string()).as_str());
+
+    let command_invocation = Ident::new(&metadata.name, metadata_location);
+    let command_name = Literal::string(&metadata.name);
+    let can_block = Ident::new(if metadata.can_block {"true"} else {"false"}, metadata_location);
+
     let root: syn::Item = syn::parse2(input).expect("Invalid syntax tree");
+
+    let mut signature = vec![metadata.name.to_string()];
+
     match root {
         Item::Struct(mut s) => {
             let mut named_matchers = proc_macro2::TokenStream::new();
@@ -391,6 +504,9 @@ fn signature_real(input: TokenStream) -> SignatureResult<TokenStream> {
                 field.attrs = Vec::new();
                 let name = &field.ident.clone().unwrap();
                 let type_data = type_to_value(&field.ty, name, default_value.clone(), is_unnamed_target, allowed_values)?;
+
+                signature.push(type_data.signature);
+
                 let initialize = type_data.initialize;
                 let mappings = type_data.mappings;
                 values.extend(initialize);
@@ -413,9 +529,25 @@ fn signature_real(input: TokenStream) -> SignatureResult<TokenStream> {
                 had_unnamed_target |= is_unnamed_target;
             }
 
+            let signature_literal = Literal::string(&signature.join(" "));
+            let long_description = if let Some(example) = metadata.example {
+                let example_text = Literal::string(&format!("    Example:\n\n    {}", example));
+                quote! {Some(#example_text) }
+            } else {
+                quote! {None}
+            };
+
             let handler = quote! {
 
 impl crate::lang::argument::ArgumentHandler for #struct_name {
+    fn declare(env: &mut crate::lang::scope::ScopeLoader) -> crate::lang::errors::CrushResult <()> {
+        env.declare_command(
+            #command_name, #command_invocation, #can_block,
+            #signature_literal,
+            #description,
+            #long_description)
+    }
+
     fn parse(arguments: Vec<crate::lang::argument::Argument>, printer: &crate::lang::printer::Printer) -> crate::lang::errors::CrushResult < # struct_name > {
         # values
         let mut _unnamed = std::collections::VecDeque::new();
@@ -446,8 +578,8 @@ impl crate::lang::argument::ArgumentHandler for #struct_name {
 }
 
 #[proc_macro_attribute]
-pub fn signature(_metadata: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    match signature_real(TokenStream::from(input)) {
+pub fn signature(metadata: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    match signature_real(TokenStream::from(metadata), TokenStream::from(input)) {
         Ok(res) | Err(res) => {
             proc_macro::TokenStream::from(res)
         }

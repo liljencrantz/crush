@@ -64,8 +64,8 @@ fn ps(context: ExecutionContext) -> CrushResult<()> {
     Ok(())
 }
 
-#[signature]
-struct KillSignature {
+#[signature(kill)]
+struct Kill {
     #[unnamed()]
     pid: Vec<i128>,
     #[default("SIGTERM")]
@@ -73,7 +73,7 @@ struct KillSignature {
 }
 
 fn kill(context: ExecutionContext) -> CrushResult<()> {
-    let sig: KillSignature = KillSignature::parse(context.arguments, &context.printer)?;
+    let sig: Kill = Kill::parse(context.arguments, &context.printer)?;
     for pid in sig.pid {
         to_crush_error(signal::kill(
             Pid::from_raw(pid as i32),

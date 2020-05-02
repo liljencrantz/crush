@@ -20,9 +20,9 @@ use crate::lang::value::ValueType;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use std::path::PathBuf;
 
-#[signature]
+#[signature(csv, example="csv separator=\",\" head=1 name=string age=integer nick=string", description="Parse specified files as CSV files")]
 #[derive(Debug)]
-struct Signature {
+pub struct Csv {
     #[unnamed()]
     files: Vec<PathBuf>,
     #[named()]
@@ -35,7 +35,7 @@ struct Signature {
 }
 
 pub fn csv(context: ExecutionContext) -> CrushResult<()> {
-    let cfg: Signature = Signature::parse(context.arguments, &context.printer)?;
+    let cfg: Csv = Csv::parse(context.arguments, &context.printer)?;
     let columns = cfg.columns.iter().map(|(k, v)| ColumnType::new(k, v.clone())).collect::<Vec<_>>();
     let output = context.output.initialize(columns.clone())?;
 

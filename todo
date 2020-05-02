@@ -1,6 +1,7 @@
 Todo:
 Make it possible to specify a set of allowed values for a closure parameter
-Extract signature and long help from signature
+Extract argument descriptions for long help
+Extract defaults for long help
 Signature Files type
 Tab completion of files
 Tab completion of variable names
