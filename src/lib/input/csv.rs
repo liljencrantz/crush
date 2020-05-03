@@ -20,7 +20,7 @@ use crate::lang::value::ValueType;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use std::path::PathBuf;
 
-#[signature(csv, example="csv separator=\",\" head=1 name=string age=integer nick=string", description="Parse specified files as CSV files")]
+#[signature(csv, example="csv separator=\",\" head=1 name=string age=integer nick=string", short="Parse specified files as CSV files")]
 #[derive(Debug)]
 pub struct Csv {
     #[unnamed()]

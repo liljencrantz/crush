@@ -64,11 +64,20 @@ fn ps(context: ExecutionContext) -> CrushResult<()> {
     Ok(())
 }
 
-#[signature(kill)]
+#[signature(
+    kill,
+    can_block=false,
+    short="Send a signal to a set of processes",
+    long="The set of existing signals is platform dependent, but common signals
+    include SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGTRAP, SIGABRT, SIGBUS, SIGFPE,
+    SIGKILL, SIGUSR1, SIGSEGV, SIGUSR2, SIGPIPE, SIGALRM, SIGTERM, SIGCHLD,
+    SIGCONT and SIGWINCH.")]
 struct Kill {
-    #[unnamed()]
+    #[unnamed("id of a process to signal")]
+    #[description("the name of the signal to send.")]
     pid: Vec<i128>,
     #[default("SIGTERM")]
+    #[description("the name of the signal to send.")]
     signal: String,
 }
 
@@ -112,19 +121,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     * name:string the process name"#))?;
 
-            env.declare_command(
-                "kill", kill, false,
-                "kill [signal=signal:string] [pid=pid:integer...] @pid:integer",
-                "Send a signal to a set of processes",
-                Some(r"    Kill accepts the following arguments:
-
-    * signal:string the name of the signal to send. If unspecified, the kill signal is sent.
-      The set of existing signals is platform dependent, but common signals include
-      SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGTRAP, SIGABRT, SIGBUS, SIGFPE, SIGKILL,
-      SIGUSR1, SIGSEGV, SIGUSR2, SIGPIPE, SIGALRM, SIGTERM, SIGCHLD, SIGCONT and SIGWINCH.
-
-    * pid:integer the process ids of all process to signal."))?;
-
+            Kill::declare(env);
             Ok(())
         }))?;
     root.r#use(&e);

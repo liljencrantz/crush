@@ -23,7 +23,7 @@ fn parse_method(m: &str) -> CrushResult<Method> {
 
 #[signature(
     http,
-    description="Make a http request",
+    short="Make a http request",
     example="http \"https://example.com/\" header=(\"Authorization: Bearer {}\":format token)",
 can_block = true,
 )]

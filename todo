@@ -1,5 +1,4 @@
 Todo:
-Make it possible to specify a set of allowed values for a closure parameter
 Extract argument descriptions for long help
 Extract defaults for long help
 Signature Files type

@@ -11,7 +11,7 @@ use crate::lang::table::ColumnType;
 use signature::signature;
 use crate::lang::argument::ArgumentHandler;
 
-#[signature(seq, description="Return a stream of sequential numbers")]
+#[signature(seq, short="Return a stream of sequential numbers")]
 #[derive(Debug)]
 pub struct Seq {
     #[default(i128::max_value())]

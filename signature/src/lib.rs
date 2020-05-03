@@ -12,7 +12,7 @@ struct TypeData {
     mappings: TokenStream,
     unnamed_mutate: Option<TokenStream>,
     assign: TokenStream,
-    signature: String
+    signature: String,
 }
 
 type SignatureResult<T> = Result<T, TokenStream>;
@@ -115,6 +115,15 @@ fn call_literals(attr: &Attribute) -> SignatureResult<Vec<Literal>> {
     Ok(res)
 }
 
+fn call_literal(attr: &Attribute) -> SignatureResult<Literal> {
+    let mut res = call_literals(attr)?;
+    if res.len() == 1 {
+        Ok(res.remove(0))
+    } else {
+        fail!(attr.span(), "Expected one description argument")
+    }
+}
+
 fn call_value(attr: &Attribute) -> SignatureResult<TokenTree> {
     let values = call_values(attr)?;
     if values.len() == 1 {
@@ -214,7 +223,13 @@ fn type_to_value(
                 let mutator = simple_type_to_mutator(type_name, &allowed_values_name);
                 let value_type = Ident::new(simple_type_to_value_name(type_name), ty.span());
                 Ok(TypeData {
-                    signature: format!("{}={}", name.to_string(), simple_type_to_value_name(type_name).to_string().to_lowercase()),
+                    signature:
+                    if default.is_none() {
+                        format!("{}={}", name.to_string(), simple_type_to_value_name(type_name).to_string().to_lowercase())
+                    } else {
+                        format!("[{}={}]", name.to_string(), simple_type_to_value_name(type_name).to_string().to_lowercase())
+                    }
+                    ,
                     initialize: match allowed_values {
                         None => quote! { let mut #name = None; },
                         Some(literals) => {
@@ -271,7 +286,7 @@ if #name.is_none() {
                 fail!(ty.span(), "Vec needs exactly one parameter")
             } else if args[0] == "PathBuf" {
                 Ok(TypeData {
-                    signature: format!("{}=(file|glob|regex)...", name.to_string()),
+                    signature: format!("[{}=(file|glob|regex)...]", name.to_string()),
                     initialize: quote! { let mut #name = Vec::new(); },
                     mappings: quote! { (Some(#name_literal), value) => value.file_expand(&mut #name, printer)?, },
                     unnamed_mutate: if is_unnamed_target {
@@ -289,7 +304,7 @@ if #name.is_none() {
                 let value_type = Ident::new(simple_type_to_value_name(args[0]), ty.span().clone());
 
                 Ok(TypeData {
-                    signature: format!("{}={}...", name.to_string(), simple_type_to_value_name(args[0]).to_string().to_lowercase()),
+                    signature: format!("[{}={}...]", name.to_string(), simple_type_to_value_name(args[0]).to_string().to_lowercase()),
                     initialize: quote! { let mut #name = Vec::new(); },
                     mappings: quote! {
                         (Some(#name_literal), Value::#value_type(value)) => #name.push(#mutator),
@@ -322,7 +337,7 @@ if #name.is_none() {
                 let value_type = Ident::new(simple_type_to_value_name(args[0]), ty.span().clone());
 
                 Ok(TypeData {
-                    signature: format!("<any>={}...", simple_type_to_value_name(args[0]).to_string().to_lowercase()),
+                    signature: format!("[<any>={}...]", simple_type_to_value_name(args[0]).to_string().to_lowercase()),
                     initialize: quote! { let mut #name = crate::lang::ordered_string_map::OrderedStringMap::new(); },
                     mappings: quote! { (Some(name), Value::#value_type(value)) => #name.insert(name.to_string(), #mutator), },
                     unnamed_mutate: None,
@@ -365,7 +380,8 @@ if #name.is_none() {
 struct Metadata {
     name: String,
     can_block: bool,
-    description: Option<String>,
+    short_description: Option<String>,
+    long_description: Vec<String>,
     example: Option<String>,
 }
 
@@ -381,12 +397,10 @@ fn unescape(s: &str) -> String {
                 _ => res += &c.to_string(),
             }
             was_backslash = false;
+        } else if c == '\\' {
+            was_backslash = true;
         } else {
-            if c == '\\' {
-                was_backslash = true;
-            } else {
-                res += &c.to_string();
-            }
+            res += &c.to_string();
         }
     }
     res
@@ -395,7 +409,8 @@ fn unescape(s: &str) -> String {
 fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
     let mut can_block = true;
     let mut example = None;
-    let mut description = None;
+    let mut short_description = None;
+    let mut long_description = Vec::new();
 
     let location = metadata.span().clone();
     let metadata_iter = metadata.into_iter().collect::<Vec<_>>();
@@ -403,7 +418,7 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
         match e {
             TokenTree::Punct(p) => {
                 p.as_char() == ','
-            },
+            }
             _ => false,
         }
     }).collect::<Vec<_>>();
@@ -411,9 +426,9 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
         return fail!(location, "No name specified");
     }
     let name = match v[0].clone() {
-      [TokenTree::Ident(i)] => {
-          i.to_string()
-      }
+        [TokenTree::Ident(i)] => {
+            i.to_string()
+        }
         _ => {
             return fail!(location, "Invalid name");
         }
@@ -424,13 +439,14 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
             continue;
         }
         if meta.len() != 3 {
-            return fail!(meta[0].span(), "Invalid parameter format")
+            return fail!(meta[0].span(), "Invalid parameter format");
         }
         match (&meta[0], &meta[1], &meta[2]) {
             (TokenTree::Ident(i), TokenTree::Punct(p), TokenTree::Literal(l)) => {
                 let unescaped = unescape(&l.to_string());
                 match (i.to_string().as_str(), p.as_char()) {
-                    ("description", '=') => description = Some(unescaped),
+                    ("short", '=') => short_description = Some(unescaped),
+                    ("long", '=') => long_description.push(unescaped),
                     ("example", '=') => example = Some(unescaped),
                     _ => return fail!(l.span(), "Unknown argument"),
                 }
@@ -447,12 +463,13 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
             }
             _ => return fail!(meta[0].span(), "Invalid parameter format"),
         }
-   }
+    }
 
     Ok(Metadata {
         name,
         can_block,
-        description,
+        short_description,
+        long_description,
         example,
     })
 }
@@ -461,13 +478,15 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
     let metadata_location = metadata.span();
     let metadata = parse_metadata(metadata)?;
 
-    let description = Literal::string(metadata.description.unwrap_or_else(|| "Missing description".to_string()).as_str());
+    let description = Literal::string(metadata.short_description.unwrap_or_else(|| "Missing description".to_string()).as_str());
 
     let command_invocation = Ident::new(&metadata.name, metadata_location);
     let command_name = Literal::string(&metadata.name);
-    let can_block = Ident::new(if metadata.can_block {"true"} else {"false"}, metadata_location);
+    let can_block = Ident::new(if metadata.can_block { "true" } else { "false" }, metadata_location);
 
     let root: syn::Item = syn::parse2(input).expect("Invalid syntax tree");
+
+    let mut long_description = metadata.long_description;
 
     let mut signature = vec![metadata.name.to_string()];
 
@@ -485,19 +504,19 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 let mut is_unnamed_target = false;
                 let mut is_named_target = false;
                 let mut allowed_values = None;
+                let mut description = None;
                 if !field.attrs.is_empty() {
                     for attr in &field.attrs {
                         if call_is_default(attr) {
                             default_value = Some(call_value(attr)?)
-                        }
-                        if call_is_named(attr, "unnamed") {
+                        } else if call_is_named(attr, "unnamed") {
                             is_unnamed_target = true;
-                        }
-                        if call_is_named(attr, "named") {
+                        } else if call_is_named(attr, "named") {
                             is_named_target = true;
-                        }
-                        if call_is_named(attr, "values") {
+                        } else if call_is_named(attr, "values") {
                             allowed_values = Some(call_literals(attr)?);
+                        } else if call_is_named(attr, "description") {
+                            description = Some(unescape(&(call_literal(attr)?.to_string())));
                         }
                     }
                 }
@@ -516,6 +535,9 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 } else {
                     named_matchers.extend(mappings);
                 }
+                if let Some(description) = description {
+                    long_description.push(format!("    * {} {}", name.to_string(), description));
+                }
 
                 if !had_unnamed_target || default_value.is_some() {
                     if let Some(mutate) = type_data.unnamed_mutate {
@@ -529,10 +551,18 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 had_unnamed_target |= is_unnamed_target;
             }
 
+            if let Some(example) = metadata.example {
+                long_description.push("Example".to_string());
+                long_description.push(example);
+            }
+
             let signature_literal = Literal::string(&signature.join(" "));
-            let long_description = if let Some(example) = metadata.example {
-                let example_text = Literal::string(&format!("    Example:\n\n    {}", example));
-                quote! {Some(#example_text) }
+
+            let long_description = if !long_description.is_empty() {
+                let mut s = "    ".to_string();
+                s.push_str(&long_description.join("\n\n    "));
+                let text = Literal::string(&s);
+                quote! {Some(#text) }
             } else {
                 quote! {None}
             };
