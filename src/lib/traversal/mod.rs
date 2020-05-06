@@ -7,6 +7,7 @@ use crate::lang::execution_context::ExecutionContext;
 use crate::lang::execution_context::ArgumentVector;
 use crate::lang::help::Help;
 use crate::lang::printer::Printer;
+use crate::lang::argument::ArgumentHandler;
 
 mod find;
 
@@ -76,10 +77,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_lazy_namespace(
         "traversal",
         Box::new(move |env| {
-            env.declare_command(
-                "find", find::find, true,
-                "find @file:file",
-                "Recursively list files", None)?;
+            find::Find::declare(env)?;
             env.declare_command(
                 "cd", cd, true,
                 "cd directory:(file,string,glob)",

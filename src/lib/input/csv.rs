@@ -19,18 +19,27 @@ use crate::lang::argument::ArgumentHandler;
 use crate::lang::value::ValueType;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use std::path::PathBuf;
+use crate::lang::files::Files;
 
-#[signature(csv, example="csv separator=\",\" head=1 name=string age=integer nick=string", short="Parse specified files as CSV files")]
+#[signature(
+    csv,
+    example="csv separator=\",\" head=1 name=string age=integer nick=string",
+    short="Parse specified files as CSV files")]
 #[derive(Debug)]
 pub struct Csv {
     #[unnamed()]
-    files: Vec<PathBuf>,
+    #[description("source. If unspecified, will read from input, which must be a binary or binary_stream.")]
+    files: Files,
     #[named()]
+    #[description("name and type of all columns.")]
     columns: OrderedStringMap<ValueType>,
+    #[description("column separator.")]
     #[default(',')]
     separator: char,
     #[default(0)]
+    #[description("skip this many lines of inpit from the beginning.")]
     head: i128,
+    #[description("trim this character from start and end of every value.")]
     trim: Option<char>,
 }
 
@@ -39,16 +48,7 @@ pub fn csv(context: ExecutionContext) -> CrushResult<()> {
     let columns = cfg.columns.iter().map(|(k, v)| ColumnType::new(k, v.clone())).collect::<Vec<_>>();
     let output = context.output.initialize(columns.clone())?;
 
-    let mut reader = BufReader::new(match cfg.files.len() {
-        0 => {
-            match context.input.recv()? {
-                Value::BinaryStream(b) => Ok(b),
-                Value::Binary(b) => Ok(BinaryReader::vec(&b)),
-                _ => argument_error("Expected either a file to read or binary pipe input"),
-            }
-        }
-        _ => BinaryReader::paths(cfg.files),
-    }?);
+    let mut reader = BufReader::new(cfg.files.reader(context.input)?);
 
     let separator = cfg.separator;
     let trim = cfg.trim;

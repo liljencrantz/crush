@@ -17,6 +17,7 @@ use crate::lang::errors::{error, CrushResult, to_crush_error};
 use crate::lang::stream::OutputStream;
 use signature::signature;
 use crate::lang::argument::ArgumentHandler;
+use crate::lang::files::Files;
 
 lazy_static! {
     static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
@@ -95,24 +96,28 @@ fn run_for_single_directory_or_file(
     Ok(())
 }
 
-#[signature(find)]
+#[signature(find, short="Recursively list files")]
 #[derive(Debug)]
-struct Signature {
+pub struct Find {
     #[unnamed()]
-    dirs: Vec<PathBuf>,
+    #[description("directories and files to list")]
+    directory: Files,
+    #[description("recurse into subdirectories")]
     recursive: bool,
 }
 
-pub fn find(context: ExecutionContext) -> CrushResult<()> {
+fn find(context: ExecutionContext) -> CrushResult<()> {
     let mut output = context.output.initialize(OUTPUT_TYPE.clone())?;
-    let mut config: Signature = Signature::parse(context.arguments, &context.printer)?;
+    let mut config: Find = Find::parse(context.arguments, &context.printer)?;
 
-    if config.dirs.len() == 0  {
-        config.dirs.push(PathBuf::from("."));
-    }
+    let mut dir = if config.directory.had_entries() {
+        config.directory.into_vec()
+    } else {
+        vec![PathBuf::from(".")]
+    };
     let users = create_user_map();
     let mut q = VecDeque::new();
-    q.extend(config.dirs.drain(..));
+    q.extend(dir.drain(..));
     loop {
         if q.is_empty() {
             break;

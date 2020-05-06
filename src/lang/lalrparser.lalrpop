@@ -109,7 +109,7 @@ match {
     r"(typeof|neg|not)" => UnaryOperator,
 } else {
     ":" => Colon,
-    r"( |\t)+" => {},
+    r"( |\t|\\\n)+" => {},
     r"#[^\n]*" => {},
     r"(>|<|>=|<=|==|!=|=~|!~)" => ComparisonOperator,
     r"(\*|//)" => FactorOperator,

@@ -56,6 +56,7 @@ fn extract_type(ty: &Type) -> SignatureResult<(&'static str, Vec<&'static str>)>
                         "bool" => "bool",
                         "char" => "char",
                         "f64" => "f64",
+                        "Files" => "Files",
                         "ValueType" => "ValueType",
                         "PathBuf" => "PathBuf",
                         "OrderedStringMap" => "OrderedStringMap",
@@ -278,26 +279,31 @@ if #name.is_none() {
             }
         }
 
+        "Files" => {
+            if !args.is_empty() {
+                fail!(ty.span(), "This type can't be paramterizised")
+            } else {
+                Ok(TypeData {
+                    signature: format!("[{}=(file|glob|regex|list|table|table_stream)...]", name.to_string()),
+                    initialize: quote! { let mut #name = crate::lang::files::Files::new(); },
+                    mappings: quote! { (Some(#name_literal), value) => #name.expand(value, printer)?, },
+                    unnamed_mutate: if is_unnamed_target {
+                        Some(quote! {
+                            while !_unnamed.is_empty() {
+                                #name.expand(_unnamed.pop_front().unwrap(), printer)?;
+                            }
+                        })
+                    } else { None },
+                    assign: quote! { #name, },
+                })
+            }
+        }
         "Vec" => {
             if allowed_values.is_some() {
                 return fail!(ty.span(), "Vactors can't have restricted values");
             }
             if args.len() != 1 {
                 fail!(ty.span(), "Vec needs exactly one parameter")
-            } else if args[0] == "PathBuf" {
-                Ok(TypeData {
-                    signature: format!("[{}=(file|glob|regex)...]", name.to_string()),
-                    initialize: quote! { let mut #name = Vec::new(); },
-                    mappings: quote! { (Some(#name_literal), value) => value.file_expand(&mut #name, printer)?, },
-                    unnamed_mutate: if is_unnamed_target {
-                        Some(quote! {
-                            while !_unnamed.is_empty() {
-                                _unnamed.pop_front().unwrap().file_expand(&mut #name, printer)?;
-                            }
-                        })
-                    } else { None },
-                    assign: quote! { #name, },
-                })
             } else {
                 let mutator = simple_type_to_mutator(args[0], &None);
                 let dump_all = Ident::new(simple_type_dump_list(args[0]), ty.span().clone());
@@ -487,7 +493,6 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
     let root: syn::Item = syn::parse2(input).expect("Invalid syntax tree");
 
     let mut long_description = metadata.long_description;
-
     let mut signature = vec![metadata.name.to_string()];
 
     match root {
@@ -499,6 +504,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
             let mut named_fallback = proc_macro2::TokenStream::new();
             let mut had_unnamed_target = false;
             let struct_name = s.ident.clone();
+            let mut had_field_description = false;
             for field in &mut s.fields {
                 let mut default_value = None;
                 let mut is_unnamed_target = false;
@@ -535,8 +541,18 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 } else {
                     named_matchers.extend(mappings);
                 }
+
+                let default_help = if let Some(d) = &default_value {
+                    format!(" {}", d.to_string())
+                } else {
+                    "".to_string()
+                };
                 if let Some(description) = description {
-                    long_description.push(format!("    * {} {}", name.to_string(), description));
+                    if !had_field_description {
+                        long_description.push("This command accepts the following arguments:".to_string());
+                        had_field_description = true;
+                    }
+                    long_description.push(format!("* {}{}, {}", name.to_string(), default_help, description));
                 }
 
                 if !had_unnamed_target || default_value.is_some() {

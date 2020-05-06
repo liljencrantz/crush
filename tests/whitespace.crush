@@ -1,0 +1,13 @@
+echo 1
+
+# Check that newline is ignored immediately after pipe
+(list:of 1 2 3) |
+    where {value == 2}
+
+# Check that newline is ignored if preceded by backslash
+(list:of 1 2 3)\
+| where {value == 3}
+
+# Check that newline is ignored if preceded by backslash in job
+(list:of 1\
+2 3 4) | where {value == 4}
