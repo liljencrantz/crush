@@ -2,6 +2,7 @@ use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 use std::cmp::max;
 use std::fmt::{Display, Formatter};
+use crate::lang::ordered_map::SourceIndex::{LookupIndex, ValueIndex};
 
 /**
     A simple hash map that preserves insertion order on iteration.
@@ -12,23 +13,128 @@ use std::fmt::{Display, Formatter};
     The lookup buckets only store an integer offset into the value vector,
     meaning that the performance/memory cost of storing very large keys and
     values (including the cost of rehashing) is slightly lessened.
-
-    Element removal has not been implemented, because it's currently not needed.
-    Also, it would require tombstones and overall just make thing more complicated.
 */
+pub enum Entry<'a, K: Eq + Hash, V> {
+    Occupied(OccupiedEntry<'a, K, V>),
+    Vacant(VacantEntry<'a, K, V>),
+}
+
+impl<'a, K: Eq + Hash, V> Entry<'a, K, V> {
+    pub fn insert(mut self, value: V) {
+        match self {
+            Entry::Occupied(mut o) => { o.insert(value); }
+            Entry::Vacant(v) => { v.insert(value); }
+        }
+    }
+}
+
+enum SourceIndex {
+    LookupIndex(usize),
+    ValueIndex(usize),
+}
+
+pub struct VacantEntry<'a, K: Eq + Hash, V> {
+    key: K,
+    hash: u64,
+    source: SourceIndex,
+    map: &'a mut OrderedMap<K, V>,
+}
+
+impl<'a, K: Eq + Hash, V> VacantEntry<'a, K, V> {
+    pub fn insert(self, value: V) {
+        let value_idx = self.map.values.len();
+        self.map.values.push(Element::Node(InternalEntry {
+            key: self.key,
+            value,
+            hash: self.hash,
+            next_with_same_idx: None,
+        }));
+        let lookup_len = self.map.lookup.len();
+        match self.source {
+            LookupIndex(idx) => {
+                self.map.lookup[(self.hash as usize) % lookup_len] = Some(value_idx);
+            }
+            ValueIndex(idx) => {
+                match &mut self.map.values[idx] {
+                    Element::Node(n) => n.next_with_same_idx = Some(value_idx),
+                    Element::Tombstone(t) => t.next_with_same_idx = Some(value_idx),
+                }
+            }
+        }
+    }
+}
+
+pub struct OccupiedEntry<'a, K: Eq + Hash, V> {
+    map: &'a mut OrderedMap<K, V>,
+    index: usize,
+}
+
+impl<'a, K: Eq + Hash, V> OccupiedEntry<'a, K, V> {
+    pub fn key(&self) -> &K {
+        match &self.map.values[self.index] {
+            Element::Node(n) => &n.key,
+            Element::Tombstone(_) => panic!("AAAA"),
+        }
+    }
+
+    pub fn value(&self) -> &V {
+        match &self.map.values[self.index] {
+            Element::Node(n) => &n.value,
+            Element::Tombstone(_) => panic!("AAAA"),
+        }
+    }
+
+    pub fn remove(self) -> V {
+        let mut idx = None;
+        match &mut self.map.values[self.index] {
+            Element::Node(n) => {
+                idx = n.next_with_same_idx;
+            }
+            Element::Tombstone(_) => { panic!("AAAA") }
+        }
+        let mut el = Element::Tombstone(Tombstone {
+            next_with_same_idx: idx,
+        });
+        std::mem::swap(&mut el, &mut self.map.values[self.index]);
+        match el {
+            Element::Node(n) => n.value,
+            Element::Tombstone(_) => panic!("AAAA"),
+        }
+    }
+
+    pub fn insert(&mut self, value: V) -> V {
+        match &mut self.map.values[self.index] {
+            Element::Node(n) => std::mem::replace(&mut n.value, value),
+            Element::Tombstone(_) => panic!("AAAA"),
+        }
+    }
+}
 
 #[derive(Debug)]
-struct Node<K: Eq + Hash, V> {
+struct InternalEntry<K: Eq + Hash, V> {
     key: K,
     value: V,
     hash: u64,
     next_with_same_idx: Option<usize>,
 }
 
+
+#[derive(Debug)]
+struct Tombstone {
+    next_with_same_idx: Option<usize>,
+}
+
+#[derive(Debug)]
+enum Element<K: Eq + Hash, V> {
+    Node(InternalEntry<K, V>),
+    Tombstone(Tombstone),
+}
+
 #[derive(Debug)]
 pub struct OrderedMap<K: Eq + Hash, V> {
     lookup: Vec<Option<usize>>,
-    values: Vec<Node<K, V>>,
+    values: Vec<Element<K, V>>,
+    tombstones: usize,
 }
 
 impl<K: Eq + Hash, V> OrderedMap<K, V> {
@@ -40,6 +146,7 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
         OrderedMap {
             lookup: vec![None; capacity],
             values: Vec::with_capacity(capacity),
+            tombstones: 0,
         }
     }
 
@@ -48,63 +155,116 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
     }
 
     pub fn len(&self) -> usize {
-        self.values.len()
+        self.values.len() - self.tombstones
     }
-
 
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
-    fn reallocate( &mut self, mut new_capacity: usize) {
+    fn reallocate(&mut self, mut new_capacity: usize) {
         new_capacity = max(new_capacity, 1);
         self.lookup = vec![None; new_capacity];
+        if self.tombstones == 0 {
+            self.values.reserve(new_capacity - self.values.len());
+        } else {
+            self.tombstones = 0;
+            let mut replacement: Vec<Element<K, V>> = Vec::with_capacity(new_capacity);
+            for el in self.values.drain(..) {
+                match el {
+                    Element::Node(n) => replacement.push(Element::Node(n)),
+                    Element::Tombstone(_) => {}
+                }
+            }
+            self.values = replacement;
+        }
         for i in 0..self.values.len() {
-            self.values[i].next_with_same_idx = None;
+            let el = &mut self.values[i];
+            match el {
+                Element::Node(n) => { n.next_with_same_idx = None }
+                Element::Tombstone(t) => { t.next_with_same_idx = None }
+            }
             self.insert_into_lookup(i);
         }
     }
 
     pub fn insert(&mut self, key: K, value: V) {
-        if self.capacity() <= self.len() {
-            self.reallocate(self.capacity()*2);
-        }
-
-        let mut s = DefaultHasher::new();
-        key.hash(&mut s);
-        let hash = s.finish();
-
-        let value_idx = self.values.len();
-        self.values.push(Node {
-            key,
-            value,
-            hash,
-            next_with_same_idx: None
-        });
-
-        self.insert_into_lookup(value_idx);
+        self.entry(key).insert(value);
     }
 
     fn insert_into_lookup(&mut self, value_idx: usize) {
-        let lookup_idx = (self.values[value_idx].hash as usize) % self.lookup.len();
+        match &mut self.values[value_idx] {
+            Element::Node(node) => {
+                let lookup_idx = (node.hash as usize) % self.lookup.len();
 
-        match self.lookup[lookup_idx] {
-            None => {
-                self.lookup[lookup_idx] = Some(value_idx);
-            },
-            Some(mut prev_with_same_idx) => {
-                loop {
-                    match self.values[prev_with_same_idx].next_with_same_idx {
-                        None => break,
-                        Some(idx) => prev_with_same_idx = idx,
+                match self.lookup[lookup_idx] {
+                    None => {
+                        self.lookup[lookup_idx] = Some(value_idx);
+                    }
+                    Some(mut prev_with_same_idx) => {
+                        loop {
+                            match &self.values[prev_with_same_idx] {
+                                Element::Node(n) => {
+                                    match n.next_with_same_idx {
+                                        None => break,
+                                        Some(idx) => prev_with_same_idx = idx,
+                                    }
+                                }
+                                Element::Tombstone(t) => {
+                                    match t.next_with_same_idx {
+                                        None => break,
+                                        Some(idx) => prev_with_same_idx = idx,
+                                    }
+                                }
+                            }
+                        }
+                        match &mut self.values[prev_with_same_idx] {
+                            Element::Node(n) => {
+                                n.next_with_same_idx = Some(value_idx);
+                            }
+                            Element::Tombstone(t) => {
+                                t.next_with_same_idx = Some(value_idx);
+                            }
+                        }
                     }
                 }
-                self.values[prev_with_same_idx].next_with_same_idx = Some(value_idx);
-            },
+            }
+            Element::Tombstone(_) => {}
         }
     }
 
     pub fn get(&self, key: &K) -> Option<&V> {
+        match self.find(key) {
+            None => None,
+            Some(idx) => match &self.values[idx] {
+                Element::Node(n) => Some(&n.value),
+                Element::Tombstone(_) => panic!("Invalid result for find operation"),
+            },
+        }
+    }
+
+    pub fn remove(&mut self, key: &K) -> Option<V> {
+        match self.find(key) {
+            None => None,
+            Some(idx) => {
+                self.tombstones += 1;
+                let next_with_same_idx = match &self.values[idx] {
+                    Element::Node(n) => n.next_with_same_idx,
+                    Element::Tombstone(t) => t.next_with_same_idx,
+                };
+                let mut el = Element::Tombstone::<K, V>(Tombstone { next_with_same_idx });
+                std::mem::swap(&mut el, &mut self.values[idx]);
+                match el {
+                    Element::Node(n) => {
+                        Some(n.value)
+                    },
+                    Element::Tombstone(_) => panic!("Impossible"),
+                }
+            }
+        }
+    }
+
+    fn find(&self, key: &K) -> Option<usize> {
         let mut s = DefaultHasher::new();
         key.hash(&mut s);
         let hash = s.finish();
@@ -113,28 +273,96 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
             None => None,
             Some(mut prev_with_same_idx) => {
                 loop {
-                    if &self.values[prev_with_same_idx].key == key {
-                        return Some(&self.values[prev_with_same_idx].value)
-                    }
-                    match self.values[prev_with_same_idx].next_with_same_idx {
-                        None => return None,
-                        Some(idx) => {
-                            prev_with_same_idx = idx
-                        },
+                    match &self.values[prev_with_same_idx] {
+                        Element::Node(n) => {
+                            if &n.key == key {
+                                return Some(prev_with_same_idx);
+                            }
+                            match n.next_with_same_idx {
+                                None => return None,
+                                Some(idx) => {
+                                    prev_with_same_idx = idx
+                                }
+                            }
+                        }
+                        Element::Tombstone(t) => {
+                            match t.next_with_same_idx {
+                                None => return None,
+                                Some(idx) => {
+                                    prev_with_same_idx = idx
+                                }
+                            }
+                        }
                     }
                 }
-            },
+            }
         }
-
     }
 
-    pub fn iter(&self) -> Iter<K, V>{
+    pub fn entry(&mut self, key: K) -> Entry<K, V> {
+        if self.capacity() <= (self.len() + self.tombstones) {
+            self.reallocate(self.capacity() * 2);
+        }
+
+        let mut s = DefaultHasher::new();
+        key.hash(&mut s);
+        let hash = s.finish();
+        let lookup_idx = (hash as usize) % self.lookup.len();
+        match self.lookup[lookup_idx] {
+            None => Entry::Vacant(VacantEntry {
+                key: key,
+                hash,
+                source: SourceIndex::LookupIndex(lookup_idx),
+                map: self,
+            }),
+            Some(mut prev_with_same_idx) => {
+                loop {
+                    match &mut self.values[prev_with_same_idx] {
+                        Element::Node(n) => {
+                            if n.key == key {
+                                return Entry::Occupied(OccupiedEntry { index: prev_with_same_idx, map: self });
+                            }
+                            match n.next_with_same_idx {
+                                None => return Entry::Vacant(
+                                    VacantEntry {
+                                        key: key,
+                                        hash,
+                                        source: SourceIndex::ValueIndex(prev_with_same_idx),
+                                        map: self,
+                                    }
+                                ),
+                                Some(idx) => {
+                                    prev_with_same_idx = idx
+                                }
+                            }
+                        }
+                        Element::Tombstone(t) => {
+                            match t.next_with_same_idx {
+                                None => return Entry::Vacant(
+                                    VacantEntry {
+                                        key: key,
+                                        hash,
+                                        source: SourceIndex::ValueIndex(prev_with_same_idx),
+                                        map: self,
+                                    }),
+                                Some(idx) => {
+                                    prev_with_same_idx = idx
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn iter(&self) -> Iter<K, V> {
         Iter {
             liter: self.values.iter(),
         }
     }
 
-    pub fn iter_mut(&mut self) -> IterMut<K, V>{
+    pub fn iter_mut(&mut self) -> IterMut<K, V> {
         IterMut {
             liter: self.values.iter_mut(),
         }
@@ -148,19 +376,18 @@ impl<K: Eq + Hash, V> Default for OrderedMap<K, V> {
 }
 
 impl<K: Eq + Hash + Display, V: Display> Display for OrderedMap<K, V> {
-
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str("[")?;
         let mut first = true;
-        for n in self.values.iter() {
+        for (key, val) in self.iter() {
             if first {
                 first = false;
             } else {
                 f.write_str(", ")?;
             }
-            n.key.fmt(f)?;
+            key.fmt(f)?;
             f.write_str(": ")?;
-            n.value.fmt(f)?;
+            val.fmt(f)?;
         }
         f.write_str("]")?;
         Ok(())
@@ -168,14 +395,20 @@ impl<K: Eq + Hash + Display, V: Display> Display for OrderedMap<K, V> {
 }
 
 pub struct Iter<'a, K: Eq + Hash, V> {
-    liter: std::slice::Iter<'a, Node<K, V>>,
+    liter: std::slice::Iter<'a, Element<K, V>>,
 }
 
 impl<'a, K: Eq + Hash, V> Iterator for Iter<'a, K, V> {
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.liter.next().map(|n| (&n.key, &n.value))
+        loop {
+            match self.liter.next() {
+                None => return None,
+                Some(Element::Tombstone(_)) => {}
+                Some(Element::Node(n)) => return Some((&n.key, &n.value)),
+            }
+        }
     }
 }
 
@@ -191,14 +424,20 @@ impl<'a, K: Eq + Hash, V> IntoIterator for &'a OrderedMap<K, V> {
 }
 
 pub struct IterMut<'a, K: Eq + Hash, V> {
-    liter: std::slice::IterMut<'a, Node<K, V>>,
+    liter: std::slice::IterMut<'a, Element<K, V>>,
 }
 
 impl<'a, K: Eq + Hash, V> Iterator for IterMut<'a, K, V> {
     type Item = (&'a K, &'a mut V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.liter.next().map(|n| (&n.key, &mut n.value))
+        loop {
+            match self.liter.next() {
+                None => return None,
+                Some(Element::Tombstone(_)) => {}
+                Some(Element::Node(n)) => return Some((&n.key, &mut n.value)),
+            }
+        }
     }
 }
 
@@ -214,14 +453,20 @@ impl<'a, K: Eq + Hash, V> IntoIterator for &'a mut OrderedMap<K, V> {
 }
 
 pub struct IntoIter<K: Eq + Hash, V> {
-    liter: std::vec::IntoIter<Node<K, V>>,
+    liter: std::vec::IntoIter<Element<K, V>>,
 }
 
 impl<K: Eq + Hash, V> Iterator for IntoIter<K, V> {
     type Item = (K, V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.liter.next().map(|n| (n.key, n.value))
+        loop {
+            match self.liter.next() {
+                None => return None,
+                Some(Element::Tombstone(_)) => {}
+                Some(Element::Node(n)) => return Some((n.key, n.value)),
+            }
+        }
     }
 }
 
@@ -249,7 +494,35 @@ mod tests {
         assert_eq!(m.get(&1).unwrap(), &"a");
         assert_eq!(m.get(&2).unwrap(), &"b");
         assert_eq!(m.get(&3).unwrap(), &"c");
+        assert_eq!(m.len(), 3);
         assert_eq!(m.iter().map(|(k, v)| v.to_string()).collect::<String>(), "acb".to_string());
+    }
+
+    #[test]
+    fn test_replacement() {
+        let mut m = OrderedMap::new();
+        m.insert(1, "a");
+        m.insert(1, "c");
+        m.insert(1, "b");
+        assert_eq!(m.len(), 1);
+        assert_eq!(m.get(&1).unwrap(), &"b");
+    }
+
+    #[test]
+    fn test_remove() {
+        let mut m = OrderedMap::new();
+        m.insert(1, "a");
+        m.insert(3, "c");
+        m.insert(4, "d");
+        m.insert(2, "b");
+
+        assert_eq!(m.len(), 4);
+
+        m.remove(&1);
+        assert_eq!(m.len(), 3);
+        assert_eq!(m.get(&1), None);
+
+        assert_eq!(m.to_string(), "[3: c, 4: d, 2: b]");
     }
 
     #[test]
@@ -265,10 +538,50 @@ mod tests {
     fn test_with_realloc() {
         let mut m = OrderedMap::new();
         for i in 0..10000 {
-            m.insert(i, i+1);
+            m.insert(i, i + 1);
         }
         for i in 0..10000 {
-            assert_eq!(m.get(&i).unwrap(), &(i+1));
+            assert_eq!(m.get(&i).unwrap(), &(i + 1));
+        }
+    }
+
+    #[test]
+    fn test_with_realloc_and_overwrite() {
+        let mut m = OrderedMap::new();
+        for i in 0..10000 {
+            m.insert(i, i + 1);
+        }
+        for i in (0..10000).step_by(2) {
+            m.insert(i, i + 2);
+        }
+        for i in (0..10000).step_by(2) {
+            assert_eq!(m.get(&i).unwrap(), &(i + 2));
+        }
+        for i in (1..10000).step_by(2) {
+            assert_eq!(m.get(&i).unwrap(), &(i + 1));
+        }
+    }
+
+    #[test]
+    fn test_with_realloc_and_remove_and_overwrite() {
+        let mut m = OrderedMap::new();
+        for i in 0..10000 {
+            m.insert(i, i + 1);
+        }
+        for i in (0..10000).step_by(2) {
+            m.remove(&i);
+        }
+        for i in (0..10000).step_by(4) {
+            m.insert(i, i + 2);
+        }
+        for i in (0..10000).step_by(4) {
+            assert_eq!(m.get(&i).unwrap(), &(i + 2));
+        }
+        for i in (1..10000).step_by(2) {
+            assert_eq!(m.get(&i).unwrap(), &(i + 1));
+        }
+        for i in (2..10000).step_by(4) {
+            assert_eq!(m.get(&i), None);
         }
     }
 
