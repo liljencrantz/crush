@@ -86,6 +86,7 @@ impl<'a, K: Eq + Hash, V> OccupiedEntry<'a, K, V> {
 
     pub fn remove(self) -> V {
         let mut idx = None;
+        self.map.tombstones += 1;
         match &mut self.map.values[self.index] {
             Element::Node(n) => {
                 idx = n.next_with_same_idx;
@@ -117,7 +118,6 @@ struct InternalEntry<K: Eq + Hash, V> {
     hash: u64,
     next_with_same_idx: Option<usize>,
 }
-
 
 #[derive(Debug)]
 struct Tombstone {
@@ -235,8 +235,8 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
 
     pub fn get(&self, key: &K) -> Option<&V> {
         match self.find(key) {
-            None => None,
-            Some(idx) => match &self.values[idx] {
+            Err(_) => None,
+            Ok(idx) => match &self.values[idx] {
                 Element::Node(n) => Some(&n.value),
                 Element::Tombstone(_) => panic!("Invalid result for find operation"),
             },
@@ -245,8 +245,8 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
 
     pub fn remove(&mut self, key: &K) -> Option<V> {
         match self.find(key) {
-            None => None,
-            Some(idx) => {
+            Err(_) => None,
+            Ok(idx) => {
                 self.tombstones += 1;
                 let next_with_same_idx = match &self.values[idx] {
                     Element::Node(n) => n.next_with_same_idx,
@@ -257,29 +257,31 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
                 match el {
                     Element::Node(n) => {
                         Some(n.value)
-                    },
+                    }
                     Element::Tombstone(_) => panic!("Impossible"),
                 }
             }
         }
     }
 
-    fn find(&self, key: &K) -> Option<usize> {
-        let mut s = DefaultHasher::new();
-        key.hash(&mut s);
-        let hash = s.finish();
+    fn find(&self, key: &K) -> Result<usize, SourceIndex> {
+        let hash = self.hash(&key);
+        self.find_from_hash(key, hash)
+    }
+
+    fn find_from_hash(&self, key: &K, hash: u64) -> Result<usize, SourceIndex> {
         let lookup_idx = (hash as usize) % self.lookup.len();
         match self.lookup[lookup_idx] {
-            None => None,
+            None => Err(SourceIndex::LookupIndex(lookup_idx)),
             Some(mut prev_with_same_idx) => {
                 loop {
                     match &self.values[prev_with_same_idx] {
                         Element::Node(n) => {
                             if &n.key == key {
-                                return Some(prev_with_same_idx);
+                                return Ok(prev_with_same_idx);
                             }
                             match n.next_with_same_idx {
-                                None => return None,
+                                None => return Err(SourceIndex::ValueIndex(prev_with_same_idx)),
                                 Some(idx) => {
                                     prev_with_same_idx = idx
                                 }
@@ -287,7 +289,7 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
                         }
                         Element::Tombstone(t) => {
                             match t.next_with_same_idx {
-                                None => return None,
+                                None => return Err(SourceIndex::ValueIndex(prev_with_same_idx)),
                                 Some(idx) => {
                                     prev_with_same_idx = idx
                                 }
@@ -299,60 +301,32 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
         }
     }
 
+    fn hash(&self, key: &K) -> u64 {
+        let mut s = DefaultHasher::new();
+        key.hash(&mut s);
+        let hash = s.finish();
+    }
+
     pub fn entry(&mut self, key: K) -> Entry<K, V> {
         if self.capacity() <= (self.len() + self.tombstones) {
             self.reallocate(self.capacity() * 2);
         }
+        let hash = self.hash(&key);
 
-        let mut s = DefaultHasher::new();
-        key.hash(&mut s);
-        let hash = s.finish();
-        let lookup_idx = (hash as usize) % self.lookup.len();
-        match self.lookup[lookup_idx] {
-            None => Entry::Vacant(VacantEntry {
-                key: key,
-                hash,
-                source: SourceIndex::LookupIndex(lookup_idx),
-                map: self,
-            }),
-            Some(mut prev_with_same_idx) => {
-                loop {
-                    match &mut self.values[prev_with_same_idx] {
-                        Element::Node(n) => {
-                            if n.key == key {
-                                return Entry::Occupied(OccupiedEntry { index: prev_with_same_idx, map: self });
-                            }
-                            match n.next_with_same_idx {
-                                None => return Entry::Vacant(
-                                    VacantEntry {
-                                        key: key,
-                                        hash,
-                                        source: SourceIndex::ValueIndex(prev_with_same_idx),
-                                        map: self,
-                                    }
-                                ),
-                                Some(idx) => {
-                                    prev_with_same_idx = idx
-                                }
-                            }
-                        }
-                        Element::Tombstone(t) => {
-                            match t.next_with_same_idx {
-                                None => return Entry::Vacant(
-                                    VacantEntry {
-                                        key: key,
-                                        hash,
-                                        source: SourceIndex::ValueIndex(prev_with_same_idx),
-                                        map: self,
-                                    }),
-                                Some(idx) => {
-                                    prev_with_same_idx = idx
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+        match self.find_from_hash(&key, hash) {
+            Ok(index) =>
+                Entry::Occupied(OccupiedEntry {
+                    index,
+                    map: self,
+                }),
+
+            Err(source) =>
+                Entry::Vacant(VacantEntry {
+                    key,
+                    hash,
+                    source,
+                    map: self,
+                }),
         }
     }
 
@@ -519,6 +493,26 @@ mod tests {
         assert_eq!(m.len(), 4);
 
         m.remove(&1);
+        assert_eq!(m.len(), 3);
+        assert_eq!(m.get(&1), None);
+
+        assert_eq!(m.to_string(), "[3: c, 4: d, 2: b]");
+    }
+
+    #[test]
+    fn test_entry_remove() {
+        let mut m = OrderedMap::new();
+        m.insert(1, "a");
+        m.insert(3, "c");
+        m.insert(4, "d");
+        m.insert(2, "b");
+
+        assert_eq!(m.len(), 4);
+
+        match m.entry(1) {
+            Entry::Occupied(e) => { e.remove(); }
+            Entry::Vacant(_) => { panic!("Impossible"); }
+        }
         assert_eq!(m.len(), 3);
         assert_eq!(m.get(&1), None);
 
