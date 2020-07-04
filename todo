@@ -1,6 +1,9 @@
 Todo:
+Sort wildcard/regexp matches
+Allow secondary/tertiary sort keys
+Remote execution builtin using ssh under the hood
+
 Show argument type in long description
-Signature Files type
 Tab completion of files
 Tab completion of variable names
 Tab completion of globs
@@ -10,7 +13,6 @@ Syntax highlighting
 Rethink join syntax, and refactor code
 Fix aggregation
 Add background job support
-Add a range type
 Add system tests for binary stream handling
 Error source propagation
 Add command-field to CrushError
