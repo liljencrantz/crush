@@ -361,11 +361,11 @@ mod tests {
                 Argument::named("c", Value::string("C")),
             ],
             &printer,
-        ).unwrap().unnamed_val.iter().collect::<Vec<_>>(),
+        ).unwrap().unnamed_val.into_iter().collect::<Vec<_>>(),
                    vec![
-                       &("a".to_string(), "A".to_string()),
-                       &("b".to_string(), "B".to_string()),
-                       &("c".to_string(), "C".to_string()),
+                       ("a".to_string(), "A".to_string()),
+                       ("b".to_string(), "B".to_string()),
+                       ("c".to_string(), "C".to_string()),
                    ]
         );
     }
@@ -388,9 +388,9 @@ mod tests {
             &printer,
         ).unwrap();
         assert_eq!(s.foo, None);
-        assert_eq!(s.unnamed_val.iter().collect::<Vec<_>>(),
+        assert_eq!(s.unnamed_val.into_iter().collect::<Vec<_>>(),
                    vec![
-                       &("foo".to_string(), "s".to_string()),
+                       ("foo".to_string(), "s".to_string()),
                    ]);
     }
 
