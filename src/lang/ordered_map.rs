@@ -3,6 +3,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::cmp::max;
 use std::fmt::{Display, Formatter};
 use crate::lang::ordered_map::SourceIndex::{LookupIndex, ValueIndex};
+use std::borrow::Borrow;
 
 /**
     A simple hash map that preserves insertion order on iteration.
@@ -13,6 +14,9 @@ use crate::lang::ordered_map::SourceIndex::{LookupIndex, ValueIndex};
     The lookup buckets only store an integer offset into the value vector,
     meaning that the performance/memory cost of storing very large keys and
     values (including the cost of rehashing) is slightly lessened.
+
+    This struct implements a limited subset of the functinality of the default
+    HashMap. The remaining functionality shouldn't be too hard to implement.
 */
 pub enum Entry<'a, K: Eq + Hash, V> {
     Occupied(OccupiedEntry<'a, K, V>),
@@ -233,7 +237,10 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
         }
     }
 
-    pub fn get(&self, key: &K) -> Option<&V> {
+    pub fn get<Q: ?Sized>(&self, key: &Q) -> Option<&V>
+        where
+            K: Borrow<Q>,
+            Q: Hash + Eq, {
         match self.find(key) {
             Err(_) => None,
             Ok(idx) => match &self.values[idx] {
@@ -243,7 +250,10 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
         }
     }
 
-    pub fn remove(&mut self, key: &K) -> Option<V> {
+    pub fn remove<Q: ?Sized>(&mut self, key: &Q) -> Option<V>
+        where
+        K: Borrow<Q>,
+        Q: Hash + Eq, {
         match self.find(key) {
             Err(_) => None,
             Ok(idx) => {
@@ -264,12 +274,18 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
         }
     }
 
-    fn find(&self, key: &K) -> Result<usize, SourceIndex> {
+    fn find<Q: ?Sized>(&self, key: &Q) -> Result<usize, SourceIndex>
+        where
+            K: Borrow<Q>,
+            Q: Hash + Eq, {
         let hash = self.hash(&key);
         self.find_from_hash(key, hash)
     }
 
-    fn find_from_hash(&self, key: &K, hash: u64) -> Result<usize, SourceIndex> {
+    fn find_from_hash<Q: ?Sized>(&self, key: &Q, hash: u64) -> Result<usize, SourceIndex>
+        where
+        K: Borrow<Q>,
+        Q: Hash + Eq, {
         let lookup_idx = (hash as usize) % self.lookup.len();
         match self.lookup[lookup_idx] {
             None => Err(SourceIndex::LookupIndex(lookup_idx)),
@@ -277,7 +293,7 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
                 loop {
                     match &self.values[prev_with_same_idx] {
                         Element::Node(n) => {
-                            if &n.key == key {
+                            if n.key.borrow().eq(&key) {
                                 return Ok(prev_with_same_idx);
                             }
                             match n.next_with_same_idx {
@@ -301,10 +317,13 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
         }
     }
 
-    fn hash(&self, key: &K) -> u64 {
+    fn hash<Q: ?Sized>(&self, key: &Q) -> u64
+        where
+            K: Borrow<Q>,
+            Q: Hash + Eq, {
         let mut s = DefaultHasher::new();
         key.hash(&mut s);
-        let hash = s.finish();
+        s.finish()
     }
 
     pub fn entry(&mut self, key: K) -> Entry<K, V> {
@@ -332,6 +351,12 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
 
     pub fn iter(&self) -> Iter<K, V> {
         Iter {
+            liter: self.values.iter(),
+        }
+    }
+
+    pub fn keys(&self) -> Keys<K, V> {
+        Keys {
             liter: self.values.iter(),
         }
     }
@@ -381,6 +406,24 @@ impl<'a, K: Eq + Hash, V> Iterator for Iter<'a, K, V> {
                 None => return None,
                 Some(Element::Tombstone(_)) => {}
                 Some(Element::Node(n)) => return Some((&n.key, &n.value)),
+            }
+        }
+    }
+}
+
+pub struct Keys<'a, K: Eq + Hash, V> {
+    liter: std::slice::Iter<'a, Element<K, V>>,
+}
+
+impl<'a, K: Eq + Hash, V> Iterator for Keys<'a, K, V> {
+    type Item = (&'a K);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.liter.next() {
+                None => return None,
+                Some(Element::Tombstone(_)) => {}
+                Some(Element::Node(n)) => return Some(&n.key),
             }
         }
     }

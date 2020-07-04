@@ -3,7 +3,7 @@ use crate::lang::execution_context::{ExecutionContext, This, ArgumentVector};
 use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::ValueType, dict::Dict};
 use crate::lang::value::Value;
-use std::collections::HashMap;
+use crate::lang::ordered_map::OrderedMap;
 use lazy_static::lazy_static;
 use crate::lang::command::TypeMap;
 
@@ -12,8 +12,8 @@ fn full(name: &'static str) -> Vec<&'static str> {
 }
 
 lazy_static! {
-    pub static ref METHODS: HashMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
-        let mut res: HashMap<String, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
+    pub static ref METHODS: OrderedMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
+        let mut res: OrderedMap<String, Box<dyn CrushCommand +  Send + Sync>> = OrderedMap::new();
         res.declare(full("new"),
             new, false,
             "dict:new",

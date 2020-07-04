@@ -5,7 +5,7 @@ use crate::lang::value::Value;
 use std::fs::metadata;
 use std::os::unix::fs::MetadataExt;
 use lazy_static::lazy_static;
-use std::collections::HashMap;
+use crate::lang::ordered_map::OrderedMap;
 use crate::lang::command::CrushCommand;
 use crate::lang::serialization::{serialize, deserialize};
 use crate::lang::command::TypeMap;
@@ -15,8 +15,8 @@ fn full(name: &'static str) -> Vec<&'static str> {
 }
 
 lazy_static! {
-    pub static ref METHODS: HashMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
-        let mut res: HashMap<String, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
+    pub static ref METHODS: OrderedMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
+        let mut res: OrderedMap<String, Box<dyn CrushCommand +  Send + Sync>> = OrderedMap::new();
         res.declare(full("stat"),
             stat, true,
             "file:stat",

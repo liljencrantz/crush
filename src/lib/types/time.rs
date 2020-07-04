@@ -1,7 +1,7 @@
 use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
 use crate::lang::{value::Value, execution_context::ExecutionContext};
 use crate::lang::execution_context::{ArgumentVector, This};
-use std::collections::HashMap;
+use crate::lang::ordered_map::OrderedMap;
 use lazy_static::lazy_static;
 use chrono::{Local, Datelike, Timelike};
 use time::strptime;
@@ -14,8 +14,8 @@ fn full(name: &'static str) -> Vec<&'static str> {
 }
 
 lazy_static! {
-    pub static ref METHODS: HashMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
-        let mut res: HashMap<String, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
+    pub static ref METHODS: OrderedMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
+        let mut res: OrderedMap<String, Box<dyn CrushCommand +  Send + Sync>> = OrderedMap::new();
         res.declare(full("__add__"),
             add, false,
             "time + delta:duration",

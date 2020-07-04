@@ -5,6 +5,7 @@ use regex::Regex;
 use crate::lang::parser::parse_name;
 use crate::lang::command::CrushCommand;
 use std::collections::HashMap;
+use crate::lang::ordered_map::OrderedMap;
 use crate::lib::types;
 use lazy_static::lazy_static;
 use crate::lang::help::Help;
@@ -37,13 +38,13 @@ pub enum ValueType {
 }
 
 lazy_static! {
-    pub static ref EMPTY_METHODS: HashMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
-        HashMap::new()
+    pub static ref EMPTY_METHODS: OrderedMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
+        OrderedMap::new()
     };
 }
 
 impl ValueType {
-    pub fn fields(&self) -> &HashMap<String, Box<dyn CrushCommand +  Sync + Send>> {
+    pub fn fields(&self) -> &OrderedMap<String, Box<dyn CrushCommand +  Sync + Send>> {
         match self {
             ValueType::List(_) =>
                 &types::list::METHODS,

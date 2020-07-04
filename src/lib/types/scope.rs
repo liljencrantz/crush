@@ -1,7 +1,7 @@
 use crate::lang::errors::{CrushResult, mandate};
 use crate::lang::{execution_context::ExecutionContext};
 use crate::lang::execution_context::{ArgumentVector, This};
-use std::collections::HashMap;
+use crate::lang::ordered_map::OrderedMap;
 use lazy_static::lazy_static;
 use crate::lang::command::CrushCommand;
 use crate::lang::command::TypeMap;
@@ -11,8 +11,8 @@ fn full(name: &'static str) -> Vec<&'static str> {
 }
 
 lazy_static! {
-    pub static ref METHODS: HashMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
-        let mut res: HashMap<String, Box<dyn CrushCommand +  Send + Sync>> = HashMap::new();
+    pub static ref METHODS: OrderedMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
+        let mut res: OrderedMap<String, Box<dyn CrushCommand +  Send + Sync>> = OrderedMap::new();
         res.declare(
             full("__getitem__"), getitem, false,
             "scope[name:string]",

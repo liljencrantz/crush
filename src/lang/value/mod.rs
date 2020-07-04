@@ -31,6 +31,7 @@ use crate::lang::pretty_printer::format_buffer;
 use crate::util::regex::RegexFileMatcher;
 use crate::lang::printer::Printer;
 use crate::lang::help::Help;
+use crate::lang::ordered_map::OrderedMap;
 
 pub enum Value {
     String(String),
@@ -80,7 +81,7 @@ impl ToString for Value {
     }
 }
 
-fn add_keys<T>(map: &HashMap<String, T>, res: &mut Vec<String>) {
+fn add_keys<T>(map: &OrderedMap<String, T>, res: &mut Vec<String>) {
     res.append(&mut map.keys().map(|k| k.to_string()).collect());
 }
 
