@@ -3,16 +3,17 @@ use crate::lang::errors::{CrushResult, error, argument_error};
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use crate::lang::ordered_map::OrderedMap;
 use crate::lang::stream::Readable;
 use crate::util::replace::Replace;
 use crate::util::identity_arc::Identity;
+use std::fmt::{Display, Formatter};
 
 #[derive(Clone)]
 pub struct Dict {
     key_type: ValueType,
     value_type: ValueType,
-    entries: Arc<Mutex<HashMap<Value, Value>>>,
+    entries: Arc<Mutex<OrderedMap<Value, Value>>>,
 }
 
 impl Identity for Dict {
@@ -29,16 +30,8 @@ impl Dict {
         Dict {
             key_type,
             value_type,
-            entries: Arc::new(Mutex::new(HashMap::new())),
+            entries: Arc::new(Mutex::new(OrderedMap::new())),
         }
-    }
-
-    pub fn to_string(&self) -> String {
-        let mut res = "dict{".to_string();
-        let entries = self.entries.lock().unwrap();
-        res += &entries.iter().map(|(k, v)| format!("{}: {}", k.to_string(), v.to_string())).collect::<Vec<String>>().join(" ");
-        res += "}";
-        res
     }
 
     pub fn len(&self) -> usize {
@@ -138,6 +131,26 @@ impl std::cmp::PartialEq for Dict {
             }
         }
         true
+    }
+}
+
+impl Display for Dict {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        f.write_str("dict{")?;
+        let entries = self.entries.lock().unwrap();
+        let mut first = true;
+        for (k, v) in &mut entries.iter() {
+            if first {
+                first = false;
+            } else {
+                f.write_str(" ");
+            }
+            f.write_str(&k.to_string())?;
+            f.write_str(": ")?;
+            f.write_str(&v.to_string())?;
+        }
+        f.write_str("}")?;
+        Ok(())
     }
 }
 

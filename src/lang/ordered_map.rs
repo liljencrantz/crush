@@ -123,7 +123,23 @@ struct InternalEntry<K: Eq + Hash, V> {
     next_with_same_idx: Option<usize>,
 }
 
-#[derive(Debug)]
+impl<K, V> Clone for InternalEntry<K, V>
+    where
+        K: Eq + Hash + Clone,
+        V: Clone
+{
+    fn clone(&self) -> Self {
+        InternalEntry {
+            key: self.key.clone(),
+            value: self.value.clone(),
+            hash: self.hash,
+            next_with_same_idx: self.next_with_same_idx,
+        }
+    }
+}
+
+
+#[derive(Debug, Clone)]
 struct Tombstone {
     next_with_same_idx: Option<usize>,
 }
@@ -132,6 +148,19 @@ struct Tombstone {
 enum Element<K: Eq + Hash, V> {
     Node(InternalEntry<K, V>),
     Tombstone(Tombstone),
+}
+
+impl<K, V> Clone for Element<K, V>
+    where
+        K: Eq + Hash + Clone,
+        V: Clone
+{
+    fn clone(&self) -> Self {
+        match self {
+            Element::Node(n) => Element::Node(n.clone()),
+            Element::Tombstone(t) => Element::Tombstone(t.clone()),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -252,8 +281,8 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
 
     pub fn remove<Q: ?Sized>(&mut self, key: &Q) -> Option<V>
         where
-        K: Borrow<Q>,
-        Q: Hash + Eq, {
+            K: Borrow<Q>,
+            Q: Hash + Eq, {
         match self.find(key) {
             Err(_) => None,
             Ok(idx) => {
@@ -284,8 +313,8 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
 
     fn find_from_hash<Q: ?Sized>(&self, key: &Q, hash: u64) -> Result<usize, SourceIndex>
         where
-        K: Borrow<Q>,
-        Q: Hash + Eq, {
+            K: Borrow<Q>,
+            Q: Hash + Eq, {
         let lookup_idx = (hash as usize) % self.lookup.len();
         match self.lookup[lookup_idx] {
             None => Err(SourceIndex::LookupIndex(lookup_idx)),
@@ -361,9 +390,69 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
         }
     }
 
+    pub fn values(&self) -> Values<K, V> {
+        Values {
+            liter: self.values.iter(),
+        }
+    }
+
     pub fn iter_mut(&mut self) -> IterMut<K, V> {
         IterMut {
             liter: self.values.iter_mut(),
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.tombstones = 0;
+        self.values.clear();
+        self.lookup.clear();
+    }
+
+    pub fn drain(&mut self) -> Drain<K, V> {
+        self.tombstones = 0;
+        self.lookup.drain(..);
+        Drain {
+            liter: self.values.drain(..),
+        }
+    }
+}
+
+impl<K, V> Clone for OrderedMap<K, V>
+    where
+        K: Eq + Hash + Clone,
+        V: Clone
+{
+    fn clone(&self) -> Self {
+        OrderedMap {
+            lookup: self.lookup.clone(),
+            values: self.values.clone(),
+            tombstones: self.tombstones,
+        }
+    }
+}
+
+impl<K, V> std::iter::FromIterator<(K, V)> for OrderedMap<K, V>
+    where
+        K: Eq + Hash,
+{
+    fn from_iter<T: IntoIterator<Item=(K, V)>>(iter: T) -> OrderedMap<K, V> {
+        let mut map = OrderedMap::new();
+        map.extend(iter);
+        map
+    }
+}
+
+impl<K, V> Extend<(K, V)> for OrderedMap<K, V>
+    where
+        K: Eq + Hash,
+{
+    fn extend<T: IntoIterator<Item=(K, V)>>(&mut self, iter: T) {
+        let mut i = iter.into_iter();
+        loop {
+            match i.next() {
+                None => break,
+                Some((key, value)) => self.insert(key, value),
+            }
         }
     }
 }
@@ -424,6 +513,42 @@ impl<'a, K: Eq + Hash, V> Iterator for Keys<'a, K, V> {
                 None => return None,
                 Some(Element::Tombstone(_)) => {}
                 Some(Element::Node(n)) => return Some(&n.key),
+            }
+        }
+    }
+}
+
+pub struct Values<'a, K: Eq + Hash, V> {
+    liter: std::slice::Iter<'a, Element<K, V>>,
+}
+
+impl<'a, K: Eq + Hash, V> Iterator for Values<'a, K, V> {
+    type Item = (&'a V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.liter.next() {
+                None => return None,
+                Some(Element::Tombstone(_)) => {}
+                Some(Element::Node(n)) => return Some(&n.value),
+            }
+        }
+    }
+}
+
+pub struct Drain<'a, K: Eq + Hash, V> {
+    liter: std::vec::Drain<'a, Element<K, V>>,
+}
+
+impl<'a, K: Eq + Hash, V> Iterator for Drain<'a, K, V> {
+    type Item = (K, V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.liter.next() {
+                None => return None,
+                Some(Element::Tombstone(_)) => {}
+                Some(Element::Node(n)) => return Some((n.key, n.value)),
             }
         }
     }
