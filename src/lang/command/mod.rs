@@ -9,7 +9,6 @@ use crate::lang::value::{ValueDefinition, Value};
 use closure::Closure;
 use crate::lang::execution_context::{ExecutionContext, CompileContext};
 use crate::lang::help::Help;
-use std::collections::HashMap;
 use crate::lang::serialization::{SerializationState, DeserializationState, Serializable};
 use crate::lang::serialization::model::{Element, element, Strings};
 use crate::lang::serialization::model;
@@ -35,24 +34,6 @@ pub trait TypeMap {
         short_help: &'static str,
         long_help: Option<&'static str>,
     );
-}
-
-impl TypeMap for HashMap<String, Box<dyn CrushCommand + Sync + Send>> {
-    fn declare(
-        &mut self,
-        path: Vec<&str>,
-        call: fn(ExecutionContext) -> CrushResult<()>,
-        can_block: bool,
-        signature: &'static str,
-        short_help: &'static str,
-        long_help: Option<&'static str>,
-    ) {
-        self.insert(path[path.len() - 1].to_string(),
-                    CrushCommand::command(
-                        call, can_block, path.iter().map(|e| e.to_string()).collect(),
-                        signature, short_help, long_help),
-        );
-    }
 }
 
 impl TypeMap for OrderedMap<String, Box<dyn CrushCommand + Sync + Send>> {

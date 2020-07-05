@@ -108,7 +108,7 @@ pub struct Find {
 
 fn find(context: ExecutionContext) -> CrushResult<()> {
     let mut output = context.output.initialize(OUTPUT_TYPE.clone())?;
-    let mut config: Find = Find::parse(context.arguments, &context.printer)?;
+    let config: Find = Find::parse(context.arguments, &context.printer)?;
 
     let mut dir = if config.directory.had_entries() {
         config.directory.into_vec()

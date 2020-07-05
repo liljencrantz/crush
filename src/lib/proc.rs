@@ -121,7 +121,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     * name:string the process name"#))?;
 
-            Kill::declare(env);
+            Kill::declare(env)?;
             Ok(())
         }))?;
     root.r#use(&e);

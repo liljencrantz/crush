@@ -3,7 +3,7 @@ use crate::lang::errors::{CrushResult, argument_error, mandate};
 use crate::lang::value::{Value, ValueType};
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::table::{ColumnType, Row};
-use std::collections::HashMap;
+use crate::lang::ordered_map::OrderedMap;
 
 pub fn r#let(context: ExecutionContext) -> CrushResult<()> {
     for arg in context.arguments {
@@ -50,7 +50,7 @@ pub fn env(context: ExecutionContext) -> CrushResult<()> {
         ColumnType::new("type", ValueType::String),
     ])?;
 
-    let mut values: HashMap<String, ValueType> = HashMap::new();
+    let mut values: OrderedMap<String, ValueType> = OrderedMap::new();
     context.env.dump(&mut values)?;
 
     let mut keys = values.keys().collect::<Vec<&String>>();

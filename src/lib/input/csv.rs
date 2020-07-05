@@ -4,21 +4,20 @@ use crate::{
         table::Row,
         value::Value,
     },
-    lang::errors::{CrushError, argument_error},
+    lang::errors::CrushError,
 };
 use std::{
     io::BufReader,
     io::prelude::*,
 };
 
-use crate::lang::{table::ColumnType, binary::BinaryReader};
+use crate::lang::table::ColumnType;
 use crate::lang::errors::{CrushResult, to_crush_error, error};
 
 use signature::signature;
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::value::ValueType;
 use crate::lang::ordered_string_map::OrderedStringMap;
-use std::path::PathBuf;
 use crate::lang::files::Files;
 
 #[signature(

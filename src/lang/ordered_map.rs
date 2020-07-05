@@ -4,6 +4,7 @@ use std::cmp::max;
 use std::fmt::{Display, Formatter};
 use crate::lang::ordered_map::SourceIndex::{LookupIndex, ValueIndex};
 use std::borrow::Borrow;
+use std::ops::Index;
 
 /**
     A simple hash map that preserves insertion order on iteration.
@@ -24,7 +25,7 @@ pub enum Entry<'a, K: Eq + Hash, V> {
 }
 
 impl<'a, K: Eq + Hash, V> Entry<'a, K, V> {
-    pub fn insert(mut self, value: V) {
+    pub fn insert(self, value: V) {
         match self {
             Entry::Occupied(mut o) => { o.insert(value); }
             Entry::Vacant(v) => { v.insert(value); }
@@ -53,10 +54,9 @@ impl<'a, K: Eq + Hash, V> VacantEntry<'a, K, V> {
             hash: self.hash,
             next_with_same_idx: None,
         }));
-        let lookup_len = self.map.lookup.len();
         match self.source {
-            LookupIndex(idx) => {
-                self.map.lookup[(self.hash as usize) % lookup_len] = Some(value_idx);
+            LookupIndex(lookup_idx) => {
+                self.map.lookup[lookup_idx] = Some(value_idx);
             }
             ValueIndex(idx) => {
                 match &mut self.map.values[idx] {
@@ -89,7 +89,7 @@ impl<'a, K: Eq + Hash, V> OccupiedEntry<'a, K, V> {
     }
 
     pub fn remove(self) -> V {
-        let mut idx = None;
+        let idx;
         self.map.tombstones += 1;
         match &mut self.map.values[self.index] {
             Element::Node(n) => {
@@ -274,6 +274,19 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
             Err(_) => None,
             Ok(idx) => match &self.values[idx] {
                 Element::Node(n) => Some(&n.value),
+                Element::Tombstone(_) => panic!("Invalid result for find operation"),
+            },
+        }
+    }
+
+    pub fn contains_key<Q: ?Sized>(&self, key: &Q) -> bool
+        where
+            K: Borrow<Q>,
+            Q: Hash + Eq, {
+        match self.find(key) {
+            Err(_) => false,
+            Ok(idx) => match &self.values[idx] {
+                Element::Node(_) => true,
                 Element::Tombstone(_) => panic!("Invalid result for find operation"),
             },
         }
@@ -505,7 +518,7 @@ pub struct Keys<'a, K: Eq + Hash, V> {
 }
 
 impl<'a, K: Eq + Hash, V> Iterator for Keys<'a, K, V> {
-    type Item = (&'a K);
+    type Item = &'a K;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -523,7 +536,7 @@ pub struct Values<'a, K: Eq + Hash, V> {
 }
 
 impl<'a, K: Eq + Hash, V> Iterator for Values<'a, K, V> {
-    type Item = (&'a V);
+    type Item = &'a V;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -623,6 +636,18 @@ impl<K: Eq + Hash, V> IntoIterator for OrderedMap<K, V> {
     }
 }
 
+impl<'a, K, Q: ?Sized, V> Index<&'a Q> for OrderedMap<K, V>
+    where
+        K: Eq + Hash + Borrow<Q>,
+        Q: Eq + Hash,
+{
+    type Output = V;
+
+    fn index(&self, key: &Q) -> &V {
+        self.get(key).unwrap()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -637,7 +662,7 @@ mod tests {
         assert_eq!(m.get(&2).unwrap(), &"b");
         assert_eq!(m.get(&3).unwrap(), &"c");
         assert_eq!(m.len(), 3);
-        assert_eq!(m.iter().map(|(k, v)| v.to_string()).collect::<String>(), "acb".to_string());
+        assert_eq!(m.iter().map(|(_, v)| v.to_string()).collect::<String>(), "acb".to_string());
     }
 
     #[test]
@@ -753,17 +778,17 @@ mod tests {
         m.insert(1, "a".to_string());
         m.insert(3, "c".to_string());
         m.insert(2, "b".to_string());
-        for (k, v) in &mut m {
+        for (_, v) in &mut m {
             v.push_str(".")
         }
         let mut r = "".to_string();
-        for (k, v) in &m {
+        for (_, v) in &m {
             r.push_str(&v);
         }
         assert_eq!(&r, "a.c.b.");
 
         let mut r2 = "".to_string();
-        for (k, v) in m {
+        for (_, v) in m {
             r2.push_str(&v);
         }
         assert_eq!(&r2, "a.c.b.");

@@ -143,7 +143,7 @@ impl Display for Dict {
             if first {
                 first = false;
             } else {
-                f.write_str(" ");
+                f.write_str(" ")?;
             }
             f.write_str(&k.to_string())?;
             f.write_str(": ")?;

@@ -26,7 +26,6 @@ use crate::lang::stream::{streams, Readable, InputStream};
 pub use value_type::ValueType;
 pub use value_definition::ValueDefinition;
 use crate::lang::command::CrushCommand;
-use std::collections::HashMap;
 use crate::lang::pretty_printer::format_buffer;
 use crate::util::regex::RegexFileMatcher;
 use crate::lang::printer::Printer;

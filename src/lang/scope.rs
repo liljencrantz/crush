@@ -1,7 +1,7 @@
 use crate::lang::errors::{error, CrushResult, mandate};
 use std::sync::{Arc, Mutex, MutexGuard};
 use crate::lang::{value::Value, value::ValueType};
-use std::collections::HashMap;
+use crate::lang::ordered_map::OrderedMap;
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::command::CrushCommand;
 use crate::lang::r#struct::Struct;
@@ -27,7 +27,7 @@ pub struct Scope {
 }
 
 pub struct ScopeLoader {
-    mapping: HashMap<String, Value>,
+    mapping: OrderedMap<String, Value>,
     path: Vec<String>,
     parent: Scope,
 }
@@ -69,7 +69,7 @@ impl ScopeLoader {
         Ok(())
     }
 
-    fn copy_into(&mut self, target: &mut HashMap<String, Value>) {
+    fn copy_into(&mut self, target: &mut OrderedMap<String, Value>) {
         for (k, v) in self.mapping.drain() {
             target.insert(k, v);
         }
@@ -106,7 +106,7 @@ pub struct ScopeData {
     pub uses: Vec<Scope>,
 
     /** The actual data of this scope. */
-    pub mapping: HashMap<String, Value>,
+    pub mapping: OrderedMap<String, Value>,
 
     /** True if this scope is a loop. Required to implement the break/continue commands.*/
     pub is_loop: bool,
@@ -131,7 +131,7 @@ impl ScopeData {
             calling_scope,
             is_loop,
             uses: Vec::new(),
-            mapping: HashMap::new(),
+            mapping: OrderedMap::new(),
             is_stopped: false,
             is_readonly: false,
             name,
@@ -146,7 +146,7 @@ impl ScopeData {
             calling_scope,
             is_loop,
             uses: Vec::new(),
-            mapping: HashMap::new(),
+            mapping: OrderedMap::new(),
             is_stopped: false,
             is_readonly: false,
             name,
@@ -191,7 +191,7 @@ impl Scope {
                 parent_scope: None,
                 calling_scope: None,
                 uses: vec![],
-                mapping: HashMap::new(),
+                mapping: OrderedMap::new(),
                 is_loop,
                 is_stopped,
                 is_readonly,
@@ -284,7 +284,7 @@ impl Scope {
         data.is_loaded = true;
         let loader = mandate(data.loader.take(), "Missing module loader")?;
         let mut tmp = ScopeLoader {
-            mapping: HashMap::new(),
+            mapping: OrderedMap::new(),
             path,
             parent: data.calling_scope.as_ref().unwrap().clone(),
         };
@@ -502,7 +502,7 @@ impl Scope {
         self.data.lock().unwrap().uses.push(other.clone());
     }
 
-    pub fn dump(&self, map: &mut HashMap<String, ValueType>) -> CrushResult<()> {
+    pub fn dump(&self, map: &mut OrderedMap<String, ValueType>) -> CrushResult<()> {
         if let Some(p) = self.lock()?.parent_scope.clone() {
             p.dump(map)?;
         }
@@ -537,7 +537,7 @@ impl Scope {
 
 impl ToString for Scope {
     fn to_string(&self) -> String {
-        let mut map = HashMap::new();
+        let mut map = OrderedMap::new();
         // This can fail and we ignore it, becasue there is no way to propagate the error. :-(
         let _ = self.dump(&mut map);
         map.iter().map(|(k, _v)| k.clone()).collect::<Vec<String>>().join(", ")
