@@ -18,14 +18,15 @@ use std::path::{PathBuf, Path};
 use crate::lang::scope::Scope;
 use crate::lang::printer::Printer;
 use crate::lang::stream::ValueSender;
+use std::io::Read;
 
 fn crush_history_file() -> String {
-        home()
-            .unwrap_or_else(|_| PathBuf::from("."))
-            .join(Path::new(".crush_history"))
-            .to_str()
-            .unwrap_or(".crush_history")
-            .to_string()
+    home()
+        .unwrap_or_else(|_| PathBuf::from("."))
+        .join(Path::new(".crush_history"))
+        .to_str()
+        .unwrap_or(".crush_history")
+        .to_string()
 }
 
 fn run_interactive(global_env: Scope, printer: &Printer, pretty_printer: &ValueSender) -> CrushResult<()> {
@@ -41,7 +42,7 @@ fn run_interactive(global_env: Scope, printer: &Printer, pretty_printer: &ValueS
             Ok(cmd) => {
                 if !cmd.is_empty() {
                     rl.add_history_entry(cmd.as_str());
-                    execute::string(global_env.clone(),&cmd.as_str(), &printer, pretty_printer);
+                    execute::string(global_env.clone(), &cmd.as_str(), &printer, pretty_printer);
                 }
             }
             Err(ReadlineError::Interrupted) => {
@@ -79,15 +80,22 @@ fn run() -> CrushResult<()> {
             my_scope,
             &printer,
             &pretty_printer)?,
-        2 => execute::file(
-            my_scope,
-            PathBuf::from(&args[1]).as_path(),
-            &printer,
-            &pretty_printer)?,
+        2 =>
+            if args[1] == "--pup" {
+                let mut buff = Vec::new();
+                to_crush_error(std::io::stdin().read_to_end(&mut buff))?;
+                execute::pup(my_scope, &buff, &printer, &pretty_printer)?;
+            } else {
+                execute::file(
+                    my_scope,
+                    PathBuf::from(&args[1]).as_path(),
+                    &printer,
+                    &pretty_printer)?
+            },
         _ => {}
     }
-    drop (pretty_printer);
-    drop (printer);
+    drop(pretty_printer);
+    drop(printer);
     global_env.clear();
     drop(global_env);
     let _ = print_handle.join();

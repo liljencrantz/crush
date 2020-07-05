@@ -7,7 +7,7 @@ use std::os::unix::fs::MetadataExt;
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use crate::lang::command::CrushCommand;
-use crate::lang::serialization::{serialize, deserialize};
+use crate::lang::serialization::{serialize_file, deserialize_file};
 use crate::lang::command::TypeMap;
 
 fn full(name: &'static str) -> Vec<&'static str> {
@@ -96,11 +96,11 @@ pub fn to(mut context: ExecutionContext) -> CrushResult<()> {
     let file = context.this.file()?;
     context.arguments.check_len_range(0, 1)?;
     let value = if context.arguments.is_empty() {context.input.recv()?} else {context.arguments.value(0)?};
-    serialize(&value, &file)
+    serialize_file(&value, &file)
 }
 
 pub fn from(context: ExecutionContext) -> CrushResult<()> {
     let file = context.this.file()?;
     context.arguments.check_len(0)?;
-    context.output.send(deserialize(&file, &context.env )?)
+    context.output.send(deserialize_file(&file, &context.env )?)
 }

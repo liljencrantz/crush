@@ -42,18 +42,22 @@ pub struct DeserializationState {
     pub scopes: HashMap<usize, Scope>,
 }
 
-pub fn serialize(value: &Value, destination: &Path) -> CrushResult<()> {
+pub fn serialize(value: &Value, buf: &mut Vec<u8>) -> CrushResult<()> {
     let mut res = SerializedValue::default();
     let mut state = SerializationState {
         with_id: HashMap::new(),
         values: HashMap::new(),
     };
-    res.root = value. clone().materialize().serialize(&mut res.elements, &mut state)? as u64;
+    res.root = value.clone().materialize().serialize(&mut res.elements, &mut state)? as u64;
 
-    let mut buf = Vec::new();
     buf.reserve(res.encoded_len());
-    res.encode(&mut buf).unwrap();
+    res.encode(buf).unwrap();
+    Ok(())
+}
 
+pub fn serialize_file(value: &Value, destination: &Path) -> CrushResult<()> {
+    let mut buf = Vec::new();
+    serialize(value, &mut buf)?;
     let mut file_buffer = to_crush_error(File::create(destination))?;
     let mut pos = 0;
 
@@ -64,12 +68,15 @@ pub fn serialize(value: &Value, destination: &Path) -> CrushResult<()> {
     Ok(())
 }
 
-pub fn deserialize(source: &Path, env: &Scope) -> CrushResult<Value> {
+pub fn deserialize_file(source: &Path, env: &Scope) -> CrushResult<Value> {
     let mut buf = Vec::new();
     let mut file_buffer = to_crush_error(File::open(source))?;
     buf.reserve(to_crush_error(source.metadata())?.len() as usize);
     to_crush_error(file_buffer.read_to_end(&mut buf))?;
+    deserialize(&buf, env)
+}
 
+pub fn deserialize(buf: &Vec<u8>, env: &Scope) -> CrushResult<Value> {
     let mut state = DeserializationState {
         values: HashMap::new(),
         types: HashMap::new(),
