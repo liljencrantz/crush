@@ -75,11 +75,11 @@ message ClosureDefinition {
 }
 
 message Signature {
-    repeated Parameter paremeter = 1;
+    repeated Parameter parameter = 1;
 }
 
 message Parameter {
-    oneof paremeter {
+    oneof parameter {
         NormalParameter normal = 1;
         string named = 2;
         string unnamed = 3;

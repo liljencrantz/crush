@@ -145,7 +145,7 @@ impl<'a> ClosureSerializer<'a> {
 
     fn signature2(&mut self, signature: &[Parameter]) -> CrushResult<model::Signature> {
         Ok(model::Signature {
-            paremeter: signature.iter()
+            parameter: signature.iter()
                 .map(|p| self.parameter(p))
                 .collect::<CrushResult<Vec<_>>>()?
         })
@@ -154,11 +154,11 @@ impl<'a> ClosureSerializer<'a> {
     fn parameter(&mut self, param: &Parameter) -> CrushResult<model::Parameter> {
         Ok(
             model::Parameter {
-                paremeter: Some(
+                parameter: Some(
                     match param {
-                        Parameter::Named(n) => model::parameter::Paremeter::Named(n.to_string()),
+                        Parameter::Named(n) => model::parameter::Parameter::Named(n.to_string()),
                         Parameter::Parameter(n, t, d) =>
-                            model::parameter::Paremeter::Normal(model::NormalParameter {
+                            model::parameter::Parameter::Normal(model::NormalParameter {
                                 name: n.to_string(),
                                 r#type: Some(self.value_definition(t)?),
                                 default: Some(
@@ -170,7 +170,7 @@ impl<'a> ClosureSerializer<'a> {
                                     }
                                 ),
                             }),
-                        Parameter::Unnamed(n) => model::parameter::Paremeter::Unnamed(n.to_string()),
+                        Parameter::Unnamed(n) => model::parameter::Parameter::Unnamed(n.to_string()),
                     })
             })
     }
@@ -295,15 +295,15 @@ impl<'a> ClosureDeserializer<'a> {
     }
 
     fn signature(&mut self, signature: &model::Signature) -> CrushResult<Option<Vec<Parameter>>> {
-        Ok(Some(signature.paremeter.iter().map(|p| self.parameter(p))
+        Ok(Some(signature.parameter.iter().map(|p| self.parameter(p))
             .collect::<CrushResult<Vec<_>>>()?
         ))
     }
 
     fn parameter(&mut self, parameter: &model::Parameter) -> CrushResult<Parameter> {
-        match &parameter.paremeter {
+        match &parameter.parameter {
             None => error("Missing parameter"),
-            Some(model::parameter::Paremeter::Normal(param)) =>
+            Some(model::parameter::Parameter::Normal(param)) =>
                 Ok(Parameter::Parameter(
                     param.name.clone(),
                     self.value_definition(mandate(param.r#type.as_ref(), "Invalid parameter")?)?,
@@ -312,8 +312,8 @@ impl<'a> ClosureDeserializer<'a> {
                         Some(model::normal_parameter::Default::DefaultValue(def)) =>
                             Some(self.value_definition(def)?)
                     })),
-            Some(model::parameter::Paremeter::Named(param)) => Ok(Parameter::Named(param.clone())),
-            Some(model::parameter::Paremeter::Unnamed(param)) => Ok(Parameter::Unnamed(param.clone())),
+            Some(model::parameter::Parameter::Named(param)) => Ok(Parameter::Named(param.clone())),
+            Some(model::parameter::Parameter::Unnamed(param)) => Ok(Parameter::Unnamed(param.clone())),
         }
     }
 
