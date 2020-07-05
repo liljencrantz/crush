@@ -3,7 +3,7 @@ use crate::lang::errors::{CrushResult, error, argument_error};
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;
-use crate::lang::ordered_map::OrderedMap;
+use ordered_map::OrderedMap;
 use crate::lang::stream::Readable;
 use crate::util::replace::Replace;
 use crate::util::identity_arc::Identity;

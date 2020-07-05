@@ -1,7 +1,7 @@
 use crate::lang::errors::{CrushResult, mandate};
 use crate::lang::{execution_context::ExecutionContext};
 use crate::lang::execution_context::{ArgumentVector, This};
-use crate::lang::ordered_map::OrderedMap;
+use ordered_map::OrderedMap;
 use lazy_static::lazy_static;
 use crate::lang::command::CrushCommand;
 use crate::lang::command::TypeMap;

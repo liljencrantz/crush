@@ -2,7 +2,7 @@ use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{execution_context::ExecutionContext, value::ValueType, list::List};
 use crate::lang::value::Value;
 use crate::lang::execution_context::{This, ArgumentVector};
-use crate::lang::ordered_map::OrderedMap;
+use ordered_map::OrderedMap;
 use lazy_static::lazy_static;
 use crate::lang::command::CrushCommand;
 use crate::lang::command::TypeMap;

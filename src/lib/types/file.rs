@@ -5,7 +5,7 @@ use crate::lang::value::Value;
 use std::fs::metadata;
 use std::os::unix::fs::MetadataExt;
 use lazy_static::lazy_static;
-use crate::lang::ordered_map::OrderedMap;
+use ordered_map::OrderedMap;
 use crate::lang::command::CrushCommand;
 use crate::lang::serialization::{serialize, deserialize};
 use crate::lang::command::TypeMap;

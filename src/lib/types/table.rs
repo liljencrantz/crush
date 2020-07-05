@@ -1,7 +1,7 @@
 use crate::lang::errors::{CrushResult, mandate, argument_error};
 use crate::lang::{value::Value, execution_context::ExecutionContext};
 use crate::lang::command::CrushCommand;
-use crate::lang::ordered_map::OrderedMap;
+use ordered_map::OrderedMap;
 use lazy_static::lazy_static;
 use crate::lang::value::ValueType;
 use crate::lib::types::parse_column_types;

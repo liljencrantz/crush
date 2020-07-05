@@ -2,7 +2,7 @@ use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 use std::cmp::max;
 use std::fmt::{Display, Formatter};
-use crate::lang::ordered_map::SourceIndex::{LookupIndex, ValueIndex};
+use SourceIndex::{LookupIndex, ValueIndex};
 use std::borrow::Borrow;
 use std::ops::Index;
 
@@ -16,7 +16,7 @@ use std::ops::Index;
     meaning that the performance/memory cost of storing very large keys and
     values (including the cost of rehashing) is slightly lessened.
 
-    This struct implements a limited subset of the functinality of the default
+    This struct implements a limited subset of the functionality of the default
     HashMap. The remaining functionality shouldn't be too hard to implement.
 */
 pub enum Entry<'a, K: Eq + Hash, V> {

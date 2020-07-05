@@ -3,7 +3,7 @@ use crate::lang::execution_context::{ExecutionContext, This, ArgumentVector};
 use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::ValueType, dict::Dict};
 use crate::lang::value::Value;
-use crate::lang::ordered_map::OrderedMap;
+use ordered_map::OrderedMap;
 use lazy_static::lazy_static;
 use crate::lang::command::TypeMap;
 

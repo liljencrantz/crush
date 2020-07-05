@@ -4,7 +4,7 @@ use crate::util::glob::Glob;
 use regex::Regex;
 use crate::lang::parser::parse_name;
 use crate::lang::command::CrushCommand;
-use crate::lang::ordered_map::OrderedMap;
+use ordered_map::OrderedMap;
 use crate::lib::types;
 use lazy_static::lazy_static;
 use crate::lang::help::Help;

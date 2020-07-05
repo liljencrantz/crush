@@ -18,10 +18,14 @@ features = ["lexer"]
 [workspace]
 members = [
     "signature",
+    "ordered_map",
 ]
 
 [dependencies.signature]
 path = "signature"
+
+[dependencies.ordered_map]
+path = "ordered_map"
 
 [dependencies]
 lalrpop-util = "0.18.1"

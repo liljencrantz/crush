@@ -12,7 +12,7 @@ use crate::lang::help::Help;
 use crate::lang::serialization::{SerializationState, DeserializationState, Serializable};
 use crate::lang::serialization::model::{Element, element, Strings};
 use crate::lang::serialization::model;
-use crate::lang::ordered_map::OrderedMap;
+use ordered_map::OrderedMap;
 
 pub trait CrushCommand: Help {
     fn invoke(&self, context: ExecutionContext) -> CrushResult<()>;

@@ -30,7 +30,7 @@ use crate::lang::pretty_printer::format_buffer;
 use crate::util::regex::RegexFileMatcher;
 use crate::lang::printer::Printer;
 use crate::lang::help::Help;
-use crate::lang::ordered_map::OrderedMap;
+use ordered_map::OrderedMap;
 
 pub enum Value {
     String(String),

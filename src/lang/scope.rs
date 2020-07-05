@@ -1,7 +1,7 @@
 use crate::lang::errors::{error, CrushResult, mandate};
 use std::sync::{Arc, Mutex, MutexGuard};
 use crate::lang::{value::Value, value::ValueType};
-use crate::lang::ordered_map::OrderedMap;
+use ordered_map::OrderedMap;
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::command::CrushCommand;
 use crate::lang::r#struct::Struct;

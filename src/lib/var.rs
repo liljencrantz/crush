@@ -3,7 +3,7 @@ use crate::lang::errors::{CrushResult, argument_error, mandate};
 use crate::lang::value::{Value, ValueType};
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::table::{ColumnType, Row};
-use crate::lang::ordered_map::OrderedMap;
+use ordered_map::OrderedMap;
 
 pub fn r#let(context: ExecutionContext) -> CrushResult<()> {
     for arg in context.arguments {
