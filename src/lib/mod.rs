@@ -17,6 +17,7 @@ mod math;
 mod toml;
 mod json;
 mod user;
+mod remote;
 
 use crate::{lang::scope::Scope, lang::errors::CrushResult};
 use crate::lang::execute;
@@ -79,6 +80,7 @@ pub fn declare(root: &Scope, printer: &Printer, output: &ValueSender) -> CrushRe
     toml::declare(root)?;
     json::declare(root)?;
     user::declare(root)?;
+    remote::declare(root)?;
 
     declare_external(root, printer, output)?;
     root.readonly();
