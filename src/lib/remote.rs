@@ -9,9 +9,12 @@ use crate::lang::command::CommandWrapper;
 use crate::lang::argument::ArgumentHandler;
 use std::net::TcpStream;
 use ssh2::Session;
+use std::io::{Read, Write};
+use crate::lang::serialization::{serialize, deserialize};
 
 fn exec(context: ExecutionContext) -> CrushResult<()> {
     let cfg: Exec = Exec::parse(context.arguments, &context.printer)?;
+    let cmd = Value::Command(cfg.command);
     for host in &cfg.host {
         let tcp = TcpStream::connect(host).unwrap();
         let mut sess = Session::new().unwrap();
@@ -19,6 +22,19 @@ fn exec(context: ExecutionContext) -> CrushResult<()> {
         sess.handshake().unwrap();
         sess.userauth_agent("liljencrantz").unwrap();
         assert!(sess.authenticated());
+
+        let mut channel = sess.channel_session().unwrap();
+        channel.exec("/home/liljencrantz/src/crush/target/debug/crush --pup").unwrap();
+        let mut in_buf = Vec::new();
+        serialize(&cmd, &mut in_buf)?;
+        channel.write(&in_buf);
+        channel.send_eof();
+        let mut out_buf = Vec::new();
+        channel.read_to_end(&mut out_buf);
+        println!("YAY {} {}", out_buf.len(), channel.exit_status().unwrap());
+        let res = deserialize(&mut out_buf, &context.env)?;
+        channel.wait_close();
+        context.output.send(res)?;
     }
     Ok(())
 }

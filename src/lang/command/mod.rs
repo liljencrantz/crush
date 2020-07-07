@@ -14,7 +14,7 @@ use crate::lang::serialization::model::{Element, element, Strings};
 use crate::lang::serialization::model;
 use ordered_map::OrderedMap;
 
-pub type CommandWrapper = Box<dyn CrushCommand>;
+pub type CommandWrapper = Box<dyn CrushCommand + Send + Sync>;
 
 pub trait CrushCommand: Help {
     fn invoke(&self, context: ExecutionContext) -> CrushResult<()>;
