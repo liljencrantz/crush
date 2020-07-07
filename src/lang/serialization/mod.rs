@@ -1,7 +1,5 @@
 use crate::lang::value::{Value, ValueType};
 use std::collections::HashMap;
-use std::path::Path;
-use std::fs::File;
 use crate::lang::errors::{CrushResult, to_crush_error};
 use std::io::{Write, Read, Cursor};
 use prost::Message;
@@ -66,20 +64,7 @@ pub fn serialize_writer(value: &Value, destination: &mut dyn Write) -> CrushResu
     Ok(())
 }
 
-pub fn serialize_file(value: &Value, destination: &Path) -> CrushResult<()> {
-    let mut file_buffer = to_crush_error(File::create(destination))?;
-    serialize_writer(value, &mut file_buffer)
-}
-
-pub fn deserialize_file(source: &Path, env: &Scope) -> CrushResult<Value> {
-    let mut buf = Vec::new();
-    let mut file_buffer = to_crush_error(File::open(source))?;
-    buf.reserve(to_crush_error(source.metadata())?.len() as usize);
-    to_crush_error(file_buffer.read_to_end(&mut buf))?;
-    deserialize(&buf, env)
-}
-
-pub fn deserialize_reader(source: &mut Read, env: &Scope) -> CrushResult<Value> {
+pub fn deserialize_reader(source: &mut dyn Read, env: &Scope) -> CrushResult<Value> {
     let mut buf = Vec::new();
     to_crush_error(source.read_to_end(&mut buf))?;
     deserialize(&buf, env)

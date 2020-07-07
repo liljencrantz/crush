@@ -84,7 +84,7 @@ fn run() -> CrushResult<()> {
             if args[1] == "--pup" {
                 let mut buff = Vec::new();
                 to_crush_error(std::io::stdin().read_to_end(&mut buff))?;
-                execute::pup(my_scope, &buff, &printer, &pretty_printer)?;
+                execute::pup(my_scope, &buff, &printer)?;
             } else {
                 execute::file(
                     my_scope,

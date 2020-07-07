@@ -1,21 +1,21 @@
 use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::Value, execution_context::ExecutionContext};
 use regex::Regex;
-use crate::lang::command::CrushCommand;
+use crate::lang::command::Command;
 use crate::lang::execution_context::{ArgumentVector, This};
 use ordered_map::OrderedMap;
 use lazy_static::lazy_static;
-use crate::lang::command::TypeMap;
 use signature::signature;
 use crate::lang::argument::ArgumentHandler;
+use crate::lang::command::TypeMap;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "re", name]
 }
 
 lazy_static! {
-    pub static ref METHODS: OrderedMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
-        let mut res: OrderedMap<String, Box<dyn CrushCommand +  Send + Sync>> = OrderedMap::new();
+    pub static ref METHODS: OrderedMap<String, Command> = {
+        let mut res: OrderedMap<String, Command> = OrderedMap::new();
         res.declare(full("match"), r#match, false,
             "re =~ input:string", "True if the input matches the pattern", None);
         res.declare(full("not_match"), not_match, false,

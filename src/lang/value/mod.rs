@@ -25,7 +25,7 @@ use crate::lang::stream::{streams, Readable, InputStream};
 
 pub use value_type::ValueType;
 pub use value_definition::ValueDefinition;
-use crate::lang::command::CrushCommand;
+use crate::lang::command::Command;
 use crate::lang::pretty_printer::format_buffer;
 use crate::util::regex::RegexFileMatcher;
 use crate::lang::printer::Printer;
@@ -40,7 +40,7 @@ pub enum Value {
     Field(Vec<String>),
     Glob(Glob),
     Regex(String, Regex),
-    Command(Box<dyn CrushCommand + Send + Sync>),
+    Command(Command),
     TableStream(InputStream),
     File(PathBuf),
     Table(Table),

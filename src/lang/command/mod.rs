@@ -14,16 +14,16 @@ use crate::lang::serialization::model::{Element, element, Strings};
 use crate::lang::serialization::model;
 use ordered_map::OrderedMap;
 
-pub type CommandWrapper = Box<dyn CrushCommand + Send + Sync>;
+pub type Command = Box<dyn CrushCommand + Send + Sync>;
 
 pub trait CrushCommand: Help {
     fn invoke(&self, context: ExecutionContext) -> CrushResult<()>;
     fn can_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool;
     fn name(&self) -> &str;
-    fn clone(&self) -> Box<dyn CrushCommand + Send + Sync>;
+    fn clone(&self) -> Command;
     fn help(&self) -> &dyn Help;
     fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize>;
-    fn bind(&self, this: Value) -> Box<dyn CrushCommand + Send + Sync>;
+    fn bind(&self, this: Value) -> Command;
 }
 
 pub trait TypeMap {
@@ -38,7 +38,7 @@ pub trait TypeMap {
     );
 }
 
-impl TypeMap for OrderedMap<String, Box<dyn CrushCommand + Sync + Send>> {
+impl TypeMap for OrderedMap<String, Command> {
     fn declare(
         &mut self,
         path: Vec<&str>,
@@ -79,7 +79,7 @@ impl dyn CrushCommand {
         signature: Option<Vec<Parameter>>,
         job_definitions: Vec<Job>,
         env: &Scope,
-    ) -> Box<dyn CrushCommand + Send + Sync> {
+    ) -> Command {
         Box::from(Closure::new(
             name,
             signature,
@@ -95,7 +95,7 @@ impl dyn CrushCommand {
         signature: &'static str,
         short_help: &'static str,
         long_help: Option<&'static str>,
-    ) -> Box<dyn CrushCommand + Send + Sync> {
+    ) -> Command {
         Box::from(SimpleCommand { call, can_block, full_name, signature, short_help, long_help })
     }
 
@@ -105,7 +105,7 @@ impl dyn CrushCommand {
         signature: &'static str,
         short_help: &'static str,
         long_help: Option<&'static str>,
-    ) -> Box<dyn CrushCommand + Send + Sync> {
+    ) -> Command {
         Box::from(ConditionCommand { call, full_name, signature, short_help, long_help })
     }
 
@@ -113,7 +113,7 @@ impl dyn CrushCommand {
         id: usize,
         elements: &[Element],
         state: &mut DeserializationState,
-    ) -> CrushResult<Box<dyn CrushCommand + Send + Sync>> {
+    ) -> CrushResult<Command> {
         match elements[id].element.as_ref().unwrap() {
             element::Element::Command(strings) => {
                 let val = state.env.global_value(
@@ -151,7 +151,7 @@ impl CrushCommand for SimpleCommand {
         self.can_block
     }
 
-    fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {
+    fn clone(&self) -> Command {
         Box::from(SimpleCommand {
             call: self.call,
             can_block: self.can_block,
@@ -176,7 +176,7 @@ impl CrushCommand for SimpleCommand {
         Ok(idx)
     }
 
-    fn bind(&self, this: Value) -> Box<dyn CrushCommand + Send + Sync> {
+    fn bind(&self, this: Value) -> Command {
         Box::from(BoundCommand {
             command: self.clone(),
             this,
@@ -224,7 +224,7 @@ impl CrushCommand for ConditionCommand {
         arguments.iter().any(|arg| arg.value.can_block(arguments, context))
     }
 
-    fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {
+    fn clone(&self) -> Command {
         Box::from(ConditionCommand {
             call: self.call,
             full_name: self.full_name.clone(),
@@ -248,7 +248,7 @@ impl CrushCommand for ConditionCommand {
         Ok(idx)
     }
 
-    fn bind(&self, this: Value) -> Box<dyn CrushCommand + Send + Sync> {
+    fn bind(&self, this: Value) -> Command {
         Box::from(BoundCommand {
             command: self.clone(),
             this,
@@ -304,7 +304,7 @@ impl ToString for Parameter {
 }
 
 pub struct BoundCommand {
-    command: Box<dyn CrushCommand + Send + Sync>,
+    command: Command,
     this: Value,
 }
 
@@ -322,7 +322,7 @@ impl CrushCommand for BoundCommand {
         self.command.name()
     }
 
-    fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {
+    fn clone(&self) -> Command {
         Box::from(
             BoundCommand {
                 command: self.command.clone(),
@@ -349,7 +349,7 @@ impl CrushCommand for BoundCommand {
         Ok(idx)
     }
 
-    fn bind(&self, this: Value) -> Box<dyn CrushCommand + Send + Sync> {
+    fn bind(&self, this: Value) -> Command {
         Box::from(
             BoundCommand {
                 command: self.command.clone(),

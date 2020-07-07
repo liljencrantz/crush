@@ -1,4 +1,4 @@
-use crate::lang::command::CrushCommand;
+use crate::lang::command::Command;
 use crate::lang::execution_context::{ExecutionContext, This, ArgumentVector};
 use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::ValueType, dict::Dict};
@@ -12,8 +12,8 @@ fn full(name: &'static str) -> Vec<&'static str> {
 }
 
 lazy_static! {
-    pub static ref METHODS: OrderedMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
-        let mut res: OrderedMap<String, Box<dyn CrushCommand +  Send + Sync>> = OrderedMap::new();
+    pub static ref METHODS: OrderedMap<String, Command> = {
+        let mut res: OrderedMap<String, Command> = OrderedMap::new();
         res.declare(full("new"),
             new, false,
             "dict:new",

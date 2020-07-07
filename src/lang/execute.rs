@@ -4,12 +4,11 @@ use crate::lang::scope::Scope;
 use std::{fs, thread};
 use crate::lang::parser::parse;
 use crate::lang::execution_context::{JobContext, ExecutionContext};
-use crate::lang::stream::{empty_channel, ValueSender, black_hole, channels};
+use crate::lang::stream::{empty_channel, ValueSender, channels};
 use std::path::Path;
-use crate::lang::serialization::{deserialize, serialize_file, serialize};
+use crate::lang::serialization::{deserialize, serialize};
 use crate::lang::value::Value;
 use std::io::Write;
-use std::any::Any;
 
 pub fn file(global_env: Scope, filename: &Path, printer: &Printer, output: &ValueSender) -> CrushResult<()> {
     let cmd = to_crush_error(fs::read_to_string(filename))?;
@@ -17,7 +16,7 @@ pub fn file(global_env: Scope, filename: &Path, printer: &Printer, output: &Valu
     Ok(())
 }
 
-pub fn pup(env: Scope, buf: &Vec<u8>, printer: &Printer, output: &ValueSender) -> CrushResult<()> {
+pub fn pup(env: Scope, buf: &Vec<u8>, printer: &Printer) -> CrushResult<()> {
     let cmd = deserialize(buf, &env)?;
     match cmd {
         Value::Command(cmd) => {
@@ -46,7 +45,7 @@ pub fn pup(env: Scope, buf: &Vec<u8>, printer: &Printer, output: &ValueSender) -
 
             match t.join() {
                 Ok(_) => Ok(()),
-                Err(e) => argument_error("Error while waiting for output"),
+                Err(_) => argument_error("Error while waiting for output"),
             }
         }
         _ => argument_error("Expected a command, but found other value"),

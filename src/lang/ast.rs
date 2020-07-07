@@ -4,7 +4,7 @@ use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::argument::ArgumentDefinition;
 use crate::lang::value::{ValueDefinition, Value, ValueType};
 use std::ops::Deref;
-use crate::lang::command::{CrushCommand, Parameter};
+use crate::lang::command::{Parameter, Command};
 use crate::util::glob::Glob;
 use regex::Regex;
 use std::path::PathBuf;
@@ -286,7 +286,7 @@ impl Node {
         }
     }
 
-    fn function_invocation(function: Box<dyn CrushCommand + Send + Sync>, arguments: Vec<ArgumentDefinition>) -> CrushResult<Option<CommandInvocation>> {
+    fn function_invocation(function: Command, arguments: Vec<ArgumentDefinition>) -> CrushResult<Option<CommandInvocation>> {
         Ok(Some(
             CommandInvocation::new(
                 ValueDefinition::Value(Value::Command(function)),

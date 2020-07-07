@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use crate::lang::{value::Value, value::ValueType};
 use ordered_map::OrderedMap;
 use crate::lang::execution_context::ExecutionContext;
-use crate::lang::command::CrushCommand;
+use crate::lang::command::{CrushCommand, Command};
 use crate::lang::r#struct::Struct;
 use crate::util::identity_arc::Identity;
 use crate::lang::help::Help;
@@ -324,7 +324,7 @@ impl Scope {
         }
     }
 
-    pub fn global_static_cmd(&self, full_path: Vec<&str>) -> CrushResult<Box<dyn CrushCommand + Sync + Send>> {
+    pub fn global_static_cmd(&self, full_path: Vec<&str>) -> CrushResult<Command> {
         match self.global_value(full_path.iter().map(|p| p.to_string()).collect()) {
             Ok(Value::Command(cmd)) => Ok(cmd),
             Err(e) => Err(e),

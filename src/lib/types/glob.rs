@@ -4,19 +4,19 @@ use crate::lang::execution_context::{ArgumentVector, This};
 use ordered_map::OrderedMap;
 use lazy_static::lazy_static;
 use crate::util::glob::Glob;
-use crate::lang::command::CrushCommand;
-use crate::lang::command::TypeMap;
+use crate::lang::command::Command;
 use crate::util::file::cwd;
 use crate::lang::list::List;
 use crate::lang::value::ValueType;
+use crate::lang::command::TypeMap;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "glob", name]
 }
 
 lazy_static! {
-    pub static ref METHODS: OrderedMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
-        let mut res: OrderedMap<String, Box<dyn CrushCommand +  Send + Sync>> = OrderedMap::new();
+    pub static ref METHODS: OrderedMap<String, Command> = {
+        let mut res: OrderedMap<String, Command> = OrderedMap::new();
         res.declare(full("new"),
             new, false,
             "glob:new pattern:string", "Return a new glob", None);

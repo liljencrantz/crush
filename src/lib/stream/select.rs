@@ -1,4 +1,4 @@
-use crate::lang::command::CrushCommand;
+use crate::lang::command::Command;
 use crate::{
     lang::errors::argument_error,
     lang::{
@@ -21,7 +21,7 @@ enum Location {
 }
 
 enum Source {
-    Closure(Box<dyn CrushCommand>),
+    Closure(Command),
     Argument(usize),
 }
 

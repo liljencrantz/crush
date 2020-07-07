@@ -3,7 +3,7 @@ use crate::lang::{value::Value, table::ColumnType};
 use crate::util::glob::Glob;
 use regex::Regex;
 use crate::lang::parser::parse_name;
-use crate::lang::command::CrushCommand;
+use crate::lang::command::Command;
 use ordered_map::OrderedMap;
 use crate::lib::types;
 use lazy_static::lazy_static;
@@ -37,13 +37,13 @@ pub enum ValueType {
 }
 
 lazy_static! {
-    pub static ref EMPTY_METHODS: OrderedMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
+    pub static ref EMPTY_METHODS: OrderedMap<String, Command> = {
         OrderedMap::new()
     };
 }
 
 impl ValueType {
-    pub fn fields(&self) -> &OrderedMap<String, Box<dyn CrushCommand +  Sync + Send>> {
+    pub fn fields(&self) -> &OrderedMap<String, Command> {
         match self {
             ValueType::List(_) =>
                 &types::list::METHODS,
@@ -177,7 +177,7 @@ impl Help for ValueType {
     }
 }
 
-fn long_help_methods(fields: &Vec<(&String, &Box<dyn CrushCommand +  Sync + Send>)>, lines: &mut Vec<String>) {
+fn long_help_methods(fields: &Vec<(&String, &Command)>, lines: &mut Vec<String>) {
     let mut max_len = 0;
     for (k, _) in fields {
         max_len = max(max_len, k.len());

@@ -2,7 +2,7 @@ use crate::lang::errors::{CrushResult, argument_error, error, to_crush_error};
 use crate::lang::argument::Argument;
 use crate::lang::value::{Value, ValueType};
 use crate::util::replace::Replace;
-use crate::lang::command::CrushCommand;
+use crate::lang::command::Command;
 use std::path::PathBuf;
 use crate::util::glob::Glob;
 use crate::lang::stream::{ValueSender, ValueReceiver, InputStream};
@@ -28,7 +28,7 @@ pub trait ArgumentVector {
     fn float(&mut self, idx: usize) -> CrushResult<f64>;
     fn field(&mut self, idx: usize) -> CrushResult<Vec<String>>;
     fn file(&mut self, idx: usize) -> CrushResult<PathBuf>;
-    fn command(&mut self, idx: usize) -> CrushResult<Box<dyn CrushCommand + Send + Sync>>;
+    fn command(&mut self, idx: usize) -> CrushResult<Command>;
     fn r#type(&mut self, idx: usize) -> CrushResult<ValueType>;
     fn value(&mut self, idx: usize) -> CrushResult<Value>;
     fn glob(&mut self, idx: usize) -> CrushResult<Glob>;
@@ -38,7 +38,7 @@ pub trait ArgumentVector {
     fn optional_bool(&mut self, idx: usize) -> CrushResult<Option<bool>>;
     fn optional_integer(&mut self, idx: usize) -> CrushResult<Option<i128>>;
     fn optional_string(&mut self, idx: usize) -> CrushResult<Option<String>>;
-    fn optional_command(&mut self, idx: usize) -> CrushResult<Option<Box<dyn CrushCommand + Send + Sync>>>;
+    fn optional_command(&mut self, idx: usize) -> CrushResult<Option<Command>>;
     fn optional_field(&mut self, idx: usize) -> CrushResult<Option<Vec<String>>>;
     fn optional_value(&mut self, idx: usize) -> CrushResult<Option<Value>>;
 }
@@ -112,7 +112,7 @@ impl ArgumentVector for Vec<Argument> {
     argument_getter!(integer, i128, Integer, "integer");
     argument_getter!(float, f64, Float, "float");
     argument_getter!(field, Vec<String>, Field, "field");
-    argument_getter!(command, Box<dyn CrushCommand + Send + Sync>, Command, "command");
+    argument_getter!(command, Command, Command, "command");
     argument_getter!(r#type, ValueType, Type, "type");
     argument_getter!(glob, Glob, Glob, "glob");
     argument_getter!(r#struct, Struct, Struct, "struct");
@@ -139,7 +139,7 @@ impl ArgumentVector for Vec<Argument> {
     optional_argument_getter!(optional_integer, i128, integer);
     optional_argument_getter!(optional_string, String, string);
     optional_argument_getter!(optional_field, Vec<String>, field);
-    optional_argument_getter!(optional_command, Box<dyn CrushCommand + Send + Sync>, command);
+    optional_argument_getter!(optional_command, Command, command);
     optional_argument_getter!(optional_value, Value, value);
 }
 

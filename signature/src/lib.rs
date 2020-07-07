@@ -60,7 +60,7 @@ fn extract_type(ty: &Type) -> SignatureResult<(&'static str, Vec<&'static str>)>
                         "ValueType" => "ValueType",
                         "PathBuf" => "PathBuf",
                         "OrderedStringMap" => "OrderedStringMap",
-                        "CommandWrapper" => "CommandWrapper",
+                        "Command" => "Command",
                         _ =>
                             return fail!(seg.span(), "Unrecognised type"),
                     };
@@ -143,7 +143,7 @@ fn simple_type_to_value_name(simple_type: &str) -> &str {
         "ValueType" => "Type",
         "f64" => "Float",
         "char" => "String",
-        "CommandWrapper" => "Command",
+        "Command" => "Command",
         _ => panic!("Unknown type")
     }
 }
@@ -218,7 +218,7 @@ fn type_to_value(
 
     let (type_name, args) = extract_type(ty)?;
     match type_name {
-        "i128" | "bool" | "String" | "char" | "ValueType" | "f64" | "CommandWrapper"=> {
+        "i128" | "bool" | "String" | "char" | "ValueType" | "f64" | "Command"=> {
             if !args.is_empty() {
                 fail!(ty.span(), "This type can't be paramterizised")
             } else {

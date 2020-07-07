@@ -1,6 +1,6 @@
 use crate::lang::errors::{CrushResult, mandate, argument_error};
 use crate::lang::{value::Value, execution_context::ExecutionContext};
-use crate::lang::command::CrushCommand;
+use crate::lang::command::Command;
 use ordered_map::OrderedMap;
 use lazy_static::lazy_static;
 use crate::lang::value::ValueType;
@@ -13,8 +13,8 @@ fn full(name: &'static str) -> Vec<&'static str> {
 }
 
 lazy_static! {
-    pub static ref METHODS: OrderedMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
-        let mut res: OrderedMap<String, Box<dyn CrushCommand +  Send + Sync>> = OrderedMap::new();
+    pub static ref METHODS: OrderedMap<String, Command> = {
+        let mut res: OrderedMap<String, Command> = OrderedMap::new();
         res.declare(
             full("__call_type__"), call_type, false,
             "table column_name=type:type...",

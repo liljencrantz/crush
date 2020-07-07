@@ -1,11 +1,11 @@
-use crate::lang::errors::{CrushResult};
+use crate::lang::errors::{CrushResult, to_crush_error};
 use crate::{
     lang::value::Value,
 };
 use crate::lang::scope::Scope;
 use crate::lang::execution_context::{ExecutionContext};
 use signature::signature;
-use crate::lang::command::CommandWrapper;
+use crate::lang::command::Command;
 use crate::lang::argument::ArgumentHandler;
 use std::net::TcpStream;
 use ssh2::Session;
@@ -27,13 +27,13 @@ fn exec(context: ExecutionContext) -> CrushResult<()> {
         channel.exec("/home/liljencrantz/src/crush/target/debug/crush --pup").unwrap();
         let mut in_buf = Vec::new();
         serialize(&cmd, &mut in_buf)?;
-        channel.write(&in_buf);
-        channel.send_eof();
+        to_crush_error(channel.write(&in_buf))?;
+        to_crush_error(channel.send_eof())?;
         let mut out_buf = Vec::new();
-        channel.read_to_end(&mut out_buf);
+        to_crush_error(channel.read_to_end(&mut out_buf))?;
         println!("YAY {} {}", out_buf.len(), channel.exit_status().unwrap());
         let res = deserialize(&mut out_buf, &context.env)?;
-        channel.wait_close();
+        to_crush_error(channel.wait_close())?;
         context.output.send(res)?;
     }
     Ok(())
@@ -46,7 +46,7 @@ fn exec(context: ExecutionContext) -> CrushResult<()> {
     long="    Execute the specified command all specified hosts")]
 struct Exec {
     #[description("the command to execute.")]
-    command: CommandWrapper,
+    command: Command,
     #[unnamed()]
     #[description("hosts to execute the command on.")]
     host: Vec<String>,

@@ -1,4 +1,4 @@
-use crate::lang::{execution_context::ExecutionContext, job::JobJoinHandle, command::CrushCommand, value::ValueDefinition};
+use crate::lang::{execution_context::ExecutionContext, job::JobJoinHandle, command::Command, value::ValueDefinition};
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, value::Value};
 use crate::lang::scope::Scope;
 use crate::lang::errors::{error, CrushResult, Kind};
@@ -202,7 +202,7 @@ fn invoke_value(
 }
 
 fn invoke_command(
-    action: Box<dyn CrushCommand + Sync + Send>,
+    action: Command,
     this: Option<Value>,
     local_arguments: Vec<ArgumentDefinition>,
     context: JobContext) -> CrushResult<JobJoinHandle> {

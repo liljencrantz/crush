@@ -1,6 +1,6 @@
 use crate::lang::errors::{CrushResult, argument_error, error, mandate};
 use crate::lang::argument::{Argument, ArgumentDefinition, ArgumentType};
-use crate::lang::command::{Parameter, CrushCommand, BoundCommand};
+use crate::lang::command::{Parameter, Command, BoundCommand, CrushCommand};
 use crate::lang::scope::Scope;
 use std::collections::HashMap;
 use crate::lang::value::{Value, ValueType, ValueDefinition};
@@ -63,7 +63,7 @@ impl CrushCommand for Closure {
 
     fn name(&self) -> &str { "closure" }
 
-    fn clone(&self) -> Box<dyn CrushCommand + Send + Sync> {
+    fn clone(&self) -> Command {
         Box::from(Closure {
             name: self.name.clone(),
             signature: self.signature.clone(),
@@ -82,7 +82,7 @@ impl CrushCommand for Closure {
         ClosureSerializer::new(elements, state).closure(self)
     }
 
-    fn bind(&self, this: Value) -> Box<dyn CrushCommand + Send + Sync> {
+    fn bind(&self, this: Value) -> Command {
         Box::from(BoundCommand {
             command: self.clone(),
             this,
@@ -267,7 +267,7 @@ impl<'a> ClosureDeserializer<'a> {
     pub fn closure(
         &mut self,
         id: usize,
-    ) -> CrushResult<Box<dyn CrushCommand + Send + Sync>> {
+    ) -> CrushResult<Command> {
         match self.elements[id].element.as_ref().unwrap() {
             element::Element::Closure(s) => {
                 let env = Scope::deserialize(s.env as usize, self.elements, self.state)?;
@@ -567,7 +567,7 @@ impl Closure {
         id: usize,
         elements: &[Element],
         state: &mut DeserializationState,
-    ) -> CrushResult<Box<dyn CrushCommand + Send + Sync>> {
+    ) -> CrushResult<Command> {
         ClosureDeserializer::new(elements, state).closure(id)
     }
 }

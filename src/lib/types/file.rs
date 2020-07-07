@@ -6,8 +6,7 @@ use std::fs::metadata;
 use std::os::unix::fs::MetadataExt;
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
-use crate::lang::command::CrushCommand;
-use crate::lang::serialization::{serialize_file, deserialize_file};
+use crate::lang::command::Command;
 use crate::lang::command::TypeMap;
 
 fn full(name: &'static str) -> Vec<&'static str> {
@@ -15,8 +14,8 @@ fn full(name: &'static str) -> Vec<&'static str> {
 }
 
 lazy_static! {
-    pub static ref METHODS: OrderedMap<String, Box<dyn CrushCommand +  Sync + Send>> = {
-        let mut res: OrderedMap<String, Box<dyn CrushCommand +  Send + Sync>> = OrderedMap::new();
+    pub static ref METHODS: OrderedMap<String, Command> = {
+        let mut res: OrderedMap<String, Command> = OrderedMap::new();
         res.declare(full("stat"),
             stat, true,
             "file:stat",
