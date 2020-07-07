@@ -55,17 +55,20 @@ pub fn serialize(value: &Value, buf: &mut Vec<u8>) -> CrushResult<()> {
     Ok(())
 }
 
-pub fn serialize_file(value: &Value, destination: &Path) -> CrushResult<()> {
+pub fn serialize_writer(value: &Value, destination: &mut dyn Write) -> CrushResult<()> {
     let mut buf = Vec::new();
     serialize(value, &mut buf)?;
-    let mut file_buffer = to_crush_error(File::create(destination))?;
     let mut pos = 0;
-
     while pos < buf.len() {
-        let bytes_written = to_crush_error(file_buffer.write(&buf[pos..]))?;
+        let bytes_written = to_crush_error(destination.write(&buf[pos..]))?;
         pos += bytes_written;
     }
     Ok(())
+}
+
+pub fn serialize_file(value: &Value, destination: &Path) -> CrushResult<()> {
+    let mut file_buffer = to_crush_error(File::create(destination))?;
+    serialize_writer(value, &mut file_buffer)
 }
 
 pub fn deserialize_file(source: &Path, env: &Scope) -> CrushResult<Value> {
@@ -73,6 +76,12 @@ pub fn deserialize_file(source: &Path, env: &Scope) -> CrushResult<Value> {
     let mut file_buffer = to_crush_error(File::open(source))?;
     buf.reserve(to_crush_error(source.metadata())?.len() as usize);
     to_crush_error(file_buffer.read_to_end(&mut buf))?;
+    deserialize(&buf, env)
+}
+
+pub fn deserialize_reader(source: &mut Read, env: &Scope) -> CrushResult<Value> {
+    let mut buf = Vec::new();
+    to_crush_error(source.read_to_end(&mut buf))?;
     deserialize(&buf, env)
 }
 

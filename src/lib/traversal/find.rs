@@ -103,6 +103,7 @@ pub struct Find {
     #[description("directories and files to list")]
     directory: Files,
     #[description("recurse into subdirectories")]
+    #[default(true)]
     recursive: bool,
 }
 

@@ -41,21 +41,6 @@ lazy_static! {
             "file[name:string]",
             "Return a file or subdirectory in the specified base directory",
             None);
-        res.declare(full("to"),
-            to, true,
-            "file:to [value:value]",
-            "Write a value to the specified file in native Crush format",
-            Some(r#"    The value can either be specified as an argument or it can be read from a pipe.
-    Use the file:from method to deserialize the value.
-
-    Example:
-
-    ls | ./some_file:to"#));
-        res.declare(full("from"),
-            from, true,
-            "file:from",
-            "Read a value from file specified file in native Crush format",
-            None);
         res
     };
 }
@@ -90,17 +75,4 @@ pub fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     let sub = context.arguments.string(0)?;
     context.output.send(Value::File(base_directory.join(&sub)))
-}
-
-pub fn to(mut context: ExecutionContext) -> CrushResult<()> {
-    let file = context.this.file()?;
-    context.arguments.check_len_range(0, 1)?;
-    let value = if context.arguments.is_empty() {context.input.recv()?} else {context.arguments.value(0)?};
-    serialize_file(&value, &file)
-}
-
-pub fn from(context: ExecutionContext) -> CrushResult<()> {
-    let file = context.this.file()?;
-    context.arguments.check_len(0)?;
-    context.output.send(deserialize_file(&file, &context.env )?)
 }

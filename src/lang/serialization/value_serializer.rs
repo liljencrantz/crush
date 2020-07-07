@@ -32,6 +32,7 @@ fn serialize_simple(value: &Value, elements: &mut Vec<Element>, state: &mut Seri
             Value::Bool(b) => element::Element::Bool(*b),
             Value::Empty() => element::Element::Empty(false),
             Value::Time(d) => element::Element::Time(d.timestamp_nanos()),
+            Value::Field(f) => element::Element::Field(model::Strings { elements: f.clone() }),
             _ => return error("Expected simple value"),
         }),
     });
@@ -71,7 +72,7 @@ impl Serializable<Value> for Value {
             element::Element::Closure(_) =>
                 Ok(Value::Command(CrushCommand::deserialize(id, elements, state)?)),
 
-            element::Element::Field(_) => unimplemented!(),
+            element::Element::Field(f) => Ok(Value::Field(f.elements.clone())),
             element::Element::UserScope(_) | element::Element::InternalScope(_) =>
                 Ok(Value::Scope(Scope::deserialize(id, elements, state)?)),
             element::Element::Dict(_) => Ok(Value::Dict(Dict::deserialize(id, elements, state)?)),
@@ -90,7 +91,7 @@ impl Serializable<Value> for Value {
         match self {
             Value::String(_) | Value::Glob(_) | Value::Regex(_, _) | Value::File(_) |
             Value::Binary(_) | Value::Float(_) | Value::Bool(_) | Value::Empty() |
-            Value::Time(_) => serialize_simple(self, elements, state),
+            Value::Time(_) | Value::Field(_) => serialize_simple(self, elements, state),
 
             Value::Integer(s) => s.serialize(elements, state),
 
@@ -109,7 +110,6 @@ impl Serializable<Value> for Value {
             Value::Type(t) => t.serialize(elements, state),
             Value::List(l) => l.serialize(elements, state),
             Value::Table(t) => t.serialize(elements, state),
-            Value::Field(_) => unimplemented!(),
             Value::Command(c) => c.serialize(elements, state),
             Value::Struct(s) => s.serialize(elements, state),
             Value::Dict(d) => d.serialize(elements, state),
