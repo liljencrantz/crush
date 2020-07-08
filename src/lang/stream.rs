@@ -103,7 +103,7 @@ impl InputStream {
                     return error("Wrong number of columns in input");
                 }
                 for (c, ct) in row.cells().iter().zip(self.types.iter()) {
-                    if c.value_type() != ct.cell_type {
+                    if !ct.cell_type.is(c) {
                         return error(format!(
                             "Wrong cell type in input column {:?}, expected {:?}, got {:?}",
                             ct.name,
