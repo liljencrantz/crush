@@ -3,6 +3,7 @@ use crate::lang::errors::{CrushError, error, CrushResult, argument_error};
 use crate::lang::stream::{Readable};
 use crate::util::replace::Replace;
 use crate::lang::value::ValueType;
+use time::Duration;
 
 #[derive(PartialEq, PartialOrd, Clone)]
 pub struct Table {
@@ -54,6 +55,13 @@ impl Readable for TableReader {
         }
         self.idx += 1;
         Ok(self.rows.rows.replace(self.idx - 1, Row::new(vec![Value::Integer(0)])))
+    }
+
+    fn read_timeout(&mut self, timeout: Duration) -> Result<Row, crate::lang::stream::RecvTimeoutError> {
+        match self.read() {
+            Ok(r) => Ok(r),
+            Err(e) => Err(crate::lang::stream::RecvTimeoutError::Disconnected),
+        }
     }
 
     fn types(&self) -> &[ColumnType] {

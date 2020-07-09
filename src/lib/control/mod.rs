@@ -2,6 +2,7 @@ use crate::lang::scope::Scope;
 use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
 use crate::lang::{value::Value, list::List, value::ValueType, execution_context::ExecutionContext, binary::BinaryReader};
 use std::env;
+use signature::signature;
 
 mod r#if;
 mod r#while;
@@ -9,6 +10,8 @@ mod r#loop;
 mod r#for;
 
 use std::path::PathBuf;
+use chrono::Duration;
+use crate::lang::argument::ArgumentHandler;
 
 pub fn r#break(context: ExecutionContext) -> CrushResult<()> {
     context.env.do_break()?;
@@ -61,6 +64,22 @@ pub fn cmd(mut context: ExecutionContext) -> CrushResult<()> {
         }
         _ => argument_error("Not a valid command")
     }
+}
+
+#[signature(
+sleep,
+can_block = true,
+short = "Pause execution of commands for the specified amount of time",
+long = "    Execute the specified command all specified hosts")]
+struct Sleep {
+    #[description("the time to sleep for.")]
+    duration: Duration,
+}
+
+pub fn sleep(context: ExecutionContext) -> CrushResult<()> {
+    let cfg = Sleep::parse(context.arguments, &context.printer)?;
+    std::thread::sleep(to_crush_error(cfg.duration.to_std())?);
+    Ok(())
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
@@ -144,6 +163,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "cmd external_command:(file|string) @arguments:any",
                 "Execute external commands",
                 None)?;
+            Sleep::declare(env)?;
             Ok(())
         }))?;
     root.r#use(&e);

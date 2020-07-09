@@ -12,6 +12,7 @@ use std::cmp::{max};
 use std::io::{BufReader, Read};
 use crate::lang::printer::Printer;
 use crate::lang::errors::to_crush_error;
+use time::Duration;
 
 pub fn create_pretty_printer(printer: Printer) -> ValueSender {
     let (o, i) = channels();
@@ -94,22 +95,18 @@ impl PrettyPrinter {
 
     pub fn print_value(&self, cell: Value) {
         match cell {
-            Value::TableStream(mut output) => self.print(&mut output),
-            Value::Table(rows) => self.print(&mut TableReader::new(rows)),
+            Value::TableStream(mut output) => self.print_readable(&mut output, 0),
+            Value::Table(rows) => self.print_readable(&mut TableReader::new(rows), 0),
             Value::BinaryStream(mut b) => self.print_binary(b.as_mut(), 0),
             _ => self.printer.line(cell.to_string().as_str()),
         };
     }
 
-    fn print(&self, stream: &mut impl Readable) {
-        self.print_internal(stream, 0);
-    }
-
-    fn print_internal(&self, stream: &mut impl Readable, indent: usize) {
+    fn print_readable(&self, readable: &mut impl Readable, indent: usize) {
         let mut data: Vec<Row> = Vec::new();
         let mut has_table = false;
 
-        for val in stream.types().iter() {
+        for val in readable.types().iter() {
             match val.cell_type {
                 ValueType::TableStream(_) => has_table = true,
                 ValueType::Table(_) => has_table = true,
@@ -117,20 +114,28 @@ impl PrettyPrinter {
             }
         }
         loop {
-            match stream.read() {
+            match readable.read_timeout(Duration::milliseconds(100)) {
                 Ok(r) => {
-                    data.push(r)
+                    data.push(r);
+                    if data.len() == self.printer.height() - 1 || has_table {
+                        self.print_partial(data, readable.types(), indent, has_table);
+                        data = Vec::new();
+                        data.drain(..);
+                    }
                 }
-                Err(_) => break,
-            }
-            if data.len() == self.printer.height() - 1 || has_table {
-                self.print_partial(data, stream.types(), indent, has_table);
-                data = Vec::new();
-                data.drain(..);
+                Err(e) => {
+                    if e.is_disconnected() {
+                        break;
+                    } else {
+                        self.print_partial(data, readable.types(), indent, has_table);
+                        data = Vec::new();
+                        data.drain(..);
+                    }
+                }
             }
         }
         if !data.is_empty() {
-            self.print_partial(data, stream.types(), indent, has_table);
+            self.print_partial(data, readable.types(), indent, has_table);
         }
     }
 
@@ -213,10 +218,10 @@ impl PrettyPrinter {
             let mut binaries = Vec::new();
             self.print_row(w, r, indent, &mut rows, &mut outputs, &mut binaries);
             for r in rows {
-                self.print_internal(&mut TableReader::new(r), indent + 1);
+                self.print_readable(&mut TableReader::new(r), indent + 1);
             }
             for mut r in outputs {
-                self.print_internal(&mut r, indent + 1);
+                self.print_readable(&mut r, indent + 1);
             }
             for mut r in binaries {
                 self.print_binary(r.as_mut(), indent + 1);
@@ -257,7 +262,7 @@ impl PrettyPrinter {
     }
 
     fn print_partial(&self, data: Vec<Row>, types: &[ColumnType], indent: usize, has_table: bool) {
-        if types.len() == 1 && indent == 0 && !has_table{
+        if types.len() == 1 && indent == 0 && !has_table {
             self.print_single_column_table(data, types)
         } else {
             let mut w = vec![0; types.len()];

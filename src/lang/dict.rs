@@ -8,6 +8,7 @@ use crate::lang::stream::Readable;
 use crate::util::replace::Replace;
 use crate::util::identity_arc::Identity;
 use std::fmt::{Display, Formatter};
+use chrono::Duration;
 
 #[derive(Clone)]
 pub struct Dict {
@@ -187,6 +188,13 @@ impl Readable for DictReader {
         let (a, b) = self.list.replace(self.idx, (Value::Bool(false), Value::Bool(false)));
         self.idx += 1;
         Ok(Row::new(vec![a, b]))
+    }
+
+    fn read_timeout(&mut self, timeout: Duration) -> Result<Row, crate::lang::stream::RecvTimeoutError> {
+        match self.read() {
+            Ok(r) => Ok(r),
+            Err(e) => Err(crate::lang::stream::RecvTimeoutError::Disconnected),
+        }
     }
 
     fn types(&self) -> &[ColumnType] {

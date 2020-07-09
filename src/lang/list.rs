@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;
 use crate::lang::stream::Readable;
 use crate::util::identity_arc::Identity;
+use chrono::Duration;
 
 #[derive(Clone)]
 pub struct List {
@@ -232,6 +233,13 @@ impl Readable for ListReader {
     fn read(&mut self) -> CrushResult<Row> {
         self.idx += 1;
         Ok(Row::new(vec![self.list.get(self.idx - 1)?]))
+    }
+
+    fn read_timeout(&mut self, timeout: Duration) -> Result<Row, crate::lang::stream::RecvTimeoutError> {
+        match self.read() {
+            Ok(r) => Ok(r),
+            Err(e) => Err(crate::lang::stream::RecvTimeoutError::Disconnected),
+        }
     }
 
     fn types(&self) -> &[ColumnType] {

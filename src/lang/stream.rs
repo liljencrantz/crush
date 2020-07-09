@@ -4,6 +4,9 @@ use crate::lang::{table::Row};
 use crossbeam::{Receiver, bounded, unbounded, Sender};
 use crate::lang::errors::{CrushError, error, CrushResult, to_crush_error, send_error};
 use lazy_static::lazy_static;
+use chrono::Duration;
+
+pub type RecvTimeoutError = crossbeam::channel::RecvTimeoutError;
 
 lazy_static! {
     static ref BLACK_HOLE: ValueSender = {
@@ -92,6 +95,10 @@ impl InputStream {
         self.validate(to_crush_error(self.receiver.recv()))
     }
 
+    pub fn recv_timeout(&self, timeout: Duration) -> Result<Row, RecvTimeoutError> {
+        self.receiver.recv_timeout(timeout.to_std().unwrap())
+    }
+
     pub fn types(&self) -> &[ColumnType] {
         &self.types
     }
@@ -141,15 +148,17 @@ pub fn empty_channel() -> ValueReceiver {
 
 pub trait Readable {
     fn read(&mut self) -> CrushResult<Row>;
+    fn read_timeout(&mut self, timeout: Duration) -> Result<Row, RecvTimeoutError>;
     fn types(&self) -> &[ColumnType];
 }
 
 impl Readable for InputStream {
     fn read(&mut self) -> Result<Row, CrushError> {
-        match self.recv() {
-            Ok(v) => Ok(v),
-            Err(e) => error(&e.message),
-        }
+        self.recv()
+    }
+
+    fn read_timeout(&mut self, timeout: Duration) -> Result<Row, RecvTimeoutError> {
+        self.recv_timeout(timeout)
     }
 
     fn types(&self) -> &[ColumnType] {

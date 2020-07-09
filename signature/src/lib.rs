@@ -61,6 +61,7 @@ fn extract_type(ty: &Type) -> SignatureResult<(&'static str, Vec<&'static str>)>
                         "PathBuf" => "PathBuf",
                         "OrderedStringMap" => "OrderedStringMap",
                         "Command" => "Command",
+                        "Duration" => "Duration",
                         _ =>
                             return fail!(seg.span(), "Unrecognised type"),
                     };
@@ -144,6 +145,7 @@ fn simple_type_to_value_name(simple_type: &str) -> &str {
         "f64" => "Float",
         "char" => "String",
         "Command" => "Command",
+        "Duration" => "Duration",
         _ => panic!("Unknown type")
     }
 }
@@ -218,7 +220,7 @@ fn type_to_value(
 
     let (type_name, args) = extract_type(ty)?;
     match type_name {
-        "i128" | "bool" | "String" | "char" | "ValueType" | "f64" | "Command"=> {
+        "i128" | "bool" | "String" | "char" | "ValueType" | "f64" | "Command" | "Duration" => {
             if !args.is_empty() {
                 fail!(ty.span(), "This type can't be paramterizised")
             } else {
@@ -252,10 +254,18 @@ fn type_to_value(
                         None => {
                             Some(quote! {
 if #name.is_none() {
-    if let Some(Value::#value_type(value)) = _unnamed.pop_front() {
-        #name = Some(#mutator);
-    } else {
-        return crate::lang::errors::argument_error(format!("Expected argument {} to be of type {}", #name_literal, #type_name).as_str());
+    match _unnamed.pop_front() {
+        Some(Value::#value_type(value)) => #name = Some(#mutator),
+        Some(value) =>
+            return crate::lang::errors::argument_error(format!(
+                "Expected argument \"{}\" to be of type {}, was of type {}",
+                #name_literal,
+                #type_name,
+                value.value_type().to_string()).as_str()),
+        _ =>
+            return crate::lang::errors::argument_error(format!(
+                "No value provided for argument \"{}\"",
+                #name_literal).as_str()),
     }
 }
                             })
@@ -303,7 +313,7 @@ if #name.is_none() {
 
         "Vec" => {
             if allowed_values.is_some() {
-                return fail!(ty.span(), "Vactors can't have restricted values");
+                return fail!(ty.span(), "Vectors can't have restricted values");
             }
             if args.len() != 1 {
                 fail!(ty.span(), "Vec needs exactly one parameter")
