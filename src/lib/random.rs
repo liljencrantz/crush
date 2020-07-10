@@ -8,22 +8,37 @@ use lazy_static::lazy_static;
 use rand::prelude::*;
 use signature::signature;
 use crate::lang::argument::ArgumentHandler;
-/*
-lazy_static! {
-    pub static ref RNG: OrderedMap<String, Command> = {
-        let mut res: OrderedMap<String, Command> = OrderedMap::new();
-        res
-    };
-}
-*/
-#[signature(
-    random,
-    can_block = false,
-    short = "generate a random number between 0 and 1")]
-struct Random {}
 
-fn random(context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::Float(rand::random()))?;
+#[signature(
+    float,
+    can_block = false,
+    short = "generate a random floating point number between 0 (inclusive) and 1 (exclusive)")]
+struct Float {
+    #[default(1.0)]
+    #[description("upper bound.")]
+    to: f64,
+}
+
+fn float(context: ExecutionContext) -> CrushResult<()> {
+    let cfg: Float = Float::parse(context.arguments, &context.printer)?;
+    context.output.send(Value::Float(rand::random::<f64>()*cfg.to))?;
+    Ok(())
+}
+
+#[signature(
+integer,
+can_block = false,
+short = "generate a random integer between 0 and 1 (or some other specified number)")]
+struct Integer {
+    #[default(2)]
+    #[description("upper bound (exclusive).")]
+    to: i128,
+}
+
+fn integer(context: ExecutionContext) -> CrushResult<()> {
+    let cfg: Integer = Integer::parse(context.arguments, &context.printer)?;
+    let n = (rand::random::<f64>()*(cfg.to as f64));
+    context.output.send(Value::Integer(n as i128))?;
     Ok(())
 }
 
@@ -31,7 +46,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_lazy_namespace(
         "random",
         Box::new(move |env| {
-            Random::declare(env)?;
+            Float::declare(env)?;
+            Integer::declare(env)?;
             Ok(())
         }))?;
     Ok(())
