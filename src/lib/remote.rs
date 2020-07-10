@@ -22,7 +22,7 @@ fn exec(context: ExecutionContext) -> CrushResult<()> {
     let cmd = Value::Command(cfg.command);
 
     let (host_send, host_recv) = unbounded::<String>();
-    let (result_send, result_recv) = unbounded::<Value>();
+    let (result_send, result_recv) = unbounded::<(String, Value)>();
 
     let mut in_buf = Vec::new();
 
@@ -58,17 +58,20 @@ fn exec(context: ExecutionContext) -> CrushResult<()> {
                         to_crush_error(channel.read_to_end(&mut out_buf))?;
                         let res = deserialize(&out_buf, &my_env)?;
                         to_crush_error(channel.wait_close())?;
-                        to_crush_error(my_send.send(res))?;
+                        to_crush_error(my_send.send((host, res)))?;
                     }
                     Ok(())
                 }))?;
     }
 
     drop(result_send);
-    let output = context.output.initialize(vec![ColumnType::new("result", ValueType::Any)])?;
+    let output = context.output.initialize(vec![
+        ColumnType::new("host", ValueType::String),
+        ColumnType::new("result", ValueType::Any),
+    ])?;
 
-    while let Ok(val) = result_recv.recv() {
-        output.send(Row::new(vec![val]))?;
+    while let Ok((host, val)) = result_recv.recv() {
+        output.send(Row::new(vec![Value::String(host), val]))?;
     }
 
     Ok(())
