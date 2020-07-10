@@ -262,6 +262,9 @@ impl PrettyPrinter {
     }
 
     fn print_partial(&self, data: Vec<Row>, types: &[ColumnType], indent: usize, has_table: bool) {
+        if data.len() == 0 {
+            return;
+        }
         if types.len() == 1 && indent == 0 && !has_table {
             self.print_single_column_table(data, types)
         } else {

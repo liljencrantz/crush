@@ -235,10 +235,10 @@ impl Readable for ListReader {
         Ok(Row::new(vec![self.list.get(self.idx - 1)?]))
     }
 
-    fn read_timeout(&mut self, timeout: Duration) -> Result<Row, crate::lang::stream::RecvTimeoutError> {
+    fn read_timeout(&mut self, _timeout: Duration) -> Result<Row, crate::lang::stream::RecvTimeoutError> {
         match self.read() {
             Ok(r) => Ok(r),
-            Err(e) => Err(crate::lang::stream::RecvTimeoutError::Disconnected),
+            Err(_) => Err(crate::lang::stream::RecvTimeoutError::Disconnected),
         }
     }
 

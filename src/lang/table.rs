@@ -57,10 +57,10 @@ impl Readable for TableReader {
         Ok(self.rows.rows.replace(self.idx - 1, Row::new(vec![Value::Integer(0)])))
     }
 
-    fn read_timeout(&mut self, timeout: Duration) -> Result<Row, crate::lang::stream::RecvTimeoutError> {
+    fn read_timeout(&mut self, _timeout: Duration) -> Result<Row, crate::lang::stream::RecvTimeoutError> {
         match self.read() {
             Ok(r) => Ok(r),
-            Err(e) => Err(crate::lang::stream::RecvTimeoutError::Disconnected),
+            Err(_) => Err(crate::lang::stream::RecvTimeoutError::Disconnected),
         }
     }
 

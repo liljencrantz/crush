@@ -1,6 +1,8 @@
 use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use crate::lang::errors::CrushResult;
 use crate::lang::value::Value;
+use signature::signature;
+use crate::lang::command::Command;
 
 fn execute_or_send(value: Value, context: ExecutionContext) -> CrushResult<()> {
     match value {

@@ -19,6 +19,7 @@ mod json;
 mod user;
 mod remote;
 mod pup;
+mod random;
 
 use crate::{lang::scope::Scope, lang::errors::CrushResult};
 use crate::lang::execute;
@@ -88,6 +89,7 @@ pub fn declare(root: &Scope, printer: &Printer, output: &ValueSender) -> CrushRe
     user::declare(root)?;
     remote::declare(root)?;
     pup::declare(root)?;
+    random::declare(root)?;
     declare_external(root, printer, output)?;
     root.readonly();
     Ok(())

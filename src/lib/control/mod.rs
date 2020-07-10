@@ -79,6 +79,7 @@ struct Sleep {
 pub fn sleep(context: ExecutionContext) -> CrushResult<()> {
     let cfg = Sleep::parse(context.arguments, &context.printer)?;
     std::thread::sleep(to_crush_error(cfg.duration.to_std())?);
+    context.output.send(Value::Empty());
     Ok(())
 }
 
