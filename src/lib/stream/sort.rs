@@ -7,19 +7,18 @@ use crate::lang::{argument::Argument, table::Row};
 use crate::lang::errors::{CrushResult, error};
 use crate::lang::stream::Readable;
 use crate::lang::table::{ColumnType, ColumnVec};
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
+use crate::lang::value::Field;
 
-fn parse(
-    mut arguments: Vec<Argument>,
-    types: &[ColumnType],
-) -> CrushResult<usize> {
-    arguments.check_len_range(0, 1)?;
-    if let Some(f) = arguments.optional_field(0)? {
-        Ok(types.find(&f)?)
-    } else if types.len() != 1 {
-        argument_error("No sort key specified")
-    } else {
-        Ok(0)
-    }
+#[signature(
+sort,
+can_block = false,
+short = "Sort input based on column",
+long = "    ps | sort ^cpu")]
+pub struct Sort {
+    #[description("the column to sort on.")]
+    field: Field,
 }
 
 pub fn run(idx: usize, input: &mut dyn Readable, output: OutputStream) -> CrushResult<()> {
@@ -40,11 +39,12 @@ pub fn run(idx: usize, input: &mut dyn Readable, output: OutputStream) -> CrushR
     Ok(())
 }
 
-pub fn perform(context: ExecutionContext) -> CrushResult<()> {
+pub fn sort(context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()?.readable() {
         Some(mut input) => {
             let output = context.output.initialize(input.types().to_vec())?;
-            let idx = parse(context.arguments, input.types())?;
+            let cfg: Sort = Sort::parse(context.arguments, &context.printer)?;
+            let idx = input.types().find(&cfg.field)?;
             if input.types()[idx].cell_type.is_comparable() {
                 run(idx, input.as_mut(), output)
             } else {

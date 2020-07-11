@@ -32,12 +32,14 @@ use crate::lang::printer::Printer;
 use crate::lang::help::Help;
 use ordered_map::OrderedMap;
 
+pub type Field = Vec<String>;
+
 pub enum Value {
     String(String),
     Integer(i128),
     Time(DateTime<Local>),
     Duration(Duration),
-    Field(Vec<String>),
+    Field(Field),
     Glob(Glob),
     Regex(String, Regex),
     Command(Command),

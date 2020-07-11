@@ -41,9 +41,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     Example:
 
     ps | where {$status != "Sleeping"}"#))?;
-            env.declare_command(
-                "sort", sort::perform, true,
-                "sort column:field", "Sort input based on column", example!("ps | sort ^cpu"))?;
+            sort::Sort::declare(env)?;
             env.declare_command(
                 "reverse", reverse::reverse, true,
                 "reverse", "Reverses the order of the rows in the input", None)?;

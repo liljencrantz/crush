@@ -62,6 +62,7 @@ fn extract_type(ty: &Type) -> SignatureResult<(&'static str, Vec<&'static str>)>
                         "OrderedStringMap" => "OrderedStringMap",
                         "Command" => "Command",
                         "Duration" => "Duration",
+                        "Field" => "Field",
                         _ =>
                             return fail!(seg.span(), "Unrecognised type"),
                     };
@@ -146,6 +147,7 @@ fn simple_type_to_value_name(simple_type: &str) -> &str {
         "char" => "String",
         "Command" => "Command",
         "Duration" => "Duration",
+        "Field" => "Field",
         _ => panic!("Unknown type")
     }
 }
@@ -220,7 +222,7 @@ fn type_to_value(
 
     let (type_name, args) = extract_type(ty)?;
     match type_name {
-        "i128" | "bool" | "String" | "char" | "ValueType" | "f64" | "Command" | "Duration" => {
+        "i128" | "bool" | "String" | "char" | "ValueType" | "f64" | "Command" | "Duration" | "Field" => {
             if !args.is_empty() {
                 fail!(ty.span(), "This type can't be paramterizised")
             } else {
@@ -248,14 +250,14 @@ fn type_to_value(
                             }
                         }
                     },
-                    mappings: quote! {(Some(#name_literal), Value::#value_type(value)) => #name = Some(#mutator),},
+                    mappings: quote! {(Some(#name_literal), crate::lang::value::Value::#value_type(value)) => #name = Some(#mutator),},
                     unnamed_mutate:
                     match default {
                         None => {
                             Some(quote! {
 if #name.is_none() {
     match _unnamed.pop_front() {
-        Some(Value::#value_type(value)) => #name = Some(#mutator),
+        Some(crate::lang::value::Value::#value_type(value)) => #name = Some(#mutator),
         Some(value) =>
             return crate::lang::errors::argument_error(format!(
                 "Expected argument \"{}\" to be of type {}, was of type {}",
