@@ -2,9 +2,6 @@ use crate::lang::execution_context::ExecutionContext;
 use crate::lang::errors::CrushResult;
 use crate::lang::{value::Value};
 use crate::lang::scope::Scope;
-use crate::lang::execution_context::ArgumentVector;
-use crate::lang::errors::argument_error;
-use lazy_static::lazy_static;
 use rand::prelude::*;
 use signature::signature;
 use crate::lang::argument::ArgumentHandler;
@@ -37,7 +34,7 @@ struct Integer {
 
 fn integer(context: ExecutionContext) -> CrushResult<()> {
     let cfg: Integer = Integer::parse(context.arguments, &context.printer)?;
-    let n = (rand::random::<f64>()*(cfg.to as f64));
+    let n = rand::random::<f64>()*(cfg.to as f64);
     context.output.send(Value::Integer(n as i128))?;
     Ok(())
 }
