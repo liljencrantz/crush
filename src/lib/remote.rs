@@ -17,12 +17,83 @@ use crate::lang::value::ValueType;
 use users::get_current_username;
 use std::thread::JoinHandle;
 
+fn parse(mut host: String, default_username: &Option<String>) -> CrushResult<(String, String)> {
+    let username;
+    if host.contains('@') {
+        let mut tmp = host.splitn(2, '@');
+        username = tmp.next().unwrap().to_string();
+        host = tmp.next().unwrap().to_string();
+    } else {
+        username =
+            default_username.clone().unwrap_or(
+                mandate(
+                    mandate(
+                        get_current_username(),
+                        "Could not determine current username")?.to_str(),
+                    "Invalid username")?.to_string());
+    }
+
+    if !host.contains(':') {
+        host = format!("{}:22", host);
+    }
+    Ok((host, username))
+}
+
+fn run_remote(cmd: &Vec<u8>, env: &Scope, host: String, default_username: &Option<String>) -> CrushResult<Value> {
+    let (host, username) = parse(host, &default_username)?;
+
+    let tcp = to_crush_error(TcpStream::connect(&host))?;
+    let mut sess = to_crush_error(Session::new())?;
+
+    sess.set_tcp_stream(tcp);
+    to_crush_error(sess.handshake())?;
+    to_crush_error(sess.userauth_agent(&username))?;
+
+    let mut channel = to_crush_error(sess.channel_session())?;
+    to_crush_error(channel.exec("crush --pup"))?;
+    to_crush_error(channel.write(cmd))?;
+    to_crush_error(channel.send_eof())?;
+    let mut out_buf = Vec::new();
+    to_crush_error(channel.read_to_end(&mut out_buf))?;
+    let res = deserialize(&out_buf, env)?;
+    to_crush_error(channel.wait_close())?;
+    Ok(res)
+}
+
 #[signature(
 exec,
 can_block = true,
+short = "Execute a command on a host",
+long = "    Execute the specified command on the soecified host")]
+struct Exec {
+    #[description("the command to execute.")]
+    command: Command,
+    #[description("host to execute the command on.")]
+    host: String,
+    #[description("username on remote machines.")]
+    username: Option<String>,
+}
+
+
+fn exec(context: ExecutionContext) -> CrushResult<()> {
+    let cfg: Exec = Exec::parse(context.arguments, &context.printer)?;
+    let cmd = Value::Command(cfg.command);
+
+    let mut in_buf = Vec::new();
+
+    serialize(&cmd, &mut in_buf)?;
+
+    let res = run_remote(&in_buf, &context.env, cfg.host, &cfg.username)?;
+    context.output.send(res)?;
+    Ok(())
+}
+
+#[signature(
+pexec,
+can_block = true,
 short = "Execute a command on a set of hosts",
 long = "    Execute the specified command all specified hosts")]
-struct Exec {
+struct Pexec {
     #[description("the command to execute.")]
     command: Command,
     #[unnamed()]
@@ -35,8 +106,8 @@ struct Exec {
     username: Option<String>,
 }
 
-fn exec(context: ExecutionContext) -> CrushResult<()> {
-    let cfg: Exec = Exec::parse(context.arguments, &context.printer)?;
+fn pexec(context: ExecutionContext) -> CrushResult<()> {
+    let cfg: Pexec = Pexec::parse(context.arguments, &context.printer)?;
     let cmd = Value::Command(cfg.command);
 
     let (host_send, host_recv) = unbounded::<String>();
@@ -59,45 +130,13 @@ fn exec(context: ExecutionContext) -> CrushResult<()> {
         let my_send = result_send.clone();
         let my_buf = in_buf.clone();
         let my_env = context.env.clone();
-        let my_username =
-            cfg.username.clone().unwrap_or(
-                mandate(
-                    mandate(
-                        get_current_username(),
-                        "Could not determine current username")?.to_str(),
-                    "Invalid username")?.to_string());
+        let my_username = cfg.username.clone();
 
         let t: JoinHandle<std::result::Result<(), CrushError>> =
-            to_crush_error(thread::Builder::new().name("remote:exec".to_string()).spawn(
+            to_crush_error(thread::Builder::new().name("remote:pexec".to_string()).spawn(
                 move || {
-                    while let Ok(mut host) = my_recv.recv() {
-                        let username;
-                        if host.contains('@') {
-                            let mut tmp = host.splitn(2, '@');
-                            username = tmp.next().unwrap().to_string();
-                            host = tmp.next().unwrap().to_string();
-                        } else {
-                            username = my_username.clone();
-                        }
-
-                        if !host.contains(':') {
-                            host = format!("{}:22", host);
-                        }
-                        let tcp = to_crush_error(TcpStream::connect(&host))?;
-                        let mut sess = to_crush_error(Session::new())?;
-
-                        sess.set_tcp_stream(tcp);
-                        to_crush_error(sess.handshake())?;
-                        to_crush_error(sess.userauth_agent(&username))?;
-
-                        let mut channel = to_crush_error(sess.channel_session())?;
-                        to_crush_error(channel.exec("crush --pup"))?;
-                        to_crush_error(channel.write(&my_buf))?;
-                        to_crush_error(channel.send_eof())?;
-                        let mut out_buf = Vec::new();
-                        to_crush_error(channel.read_to_end(&mut out_buf))?;
-                        let res = deserialize(&out_buf, &my_env)?;
-                        to_crush_error(channel.wait_close())?;
+                    while let Ok(host) = my_recv.recv() {
+                        let res = run_remote(&my_buf, &my_env, host.clone(), &my_username)?;
                         to_crush_error(my_send.send((host, res)))?;
                     }
                     Ok(())
@@ -117,8 +156,8 @@ fn exec(context: ExecutionContext) -> CrushResult<()> {
 
     for t in threads {
         match t.join() {
-            Ok(res) => {res?;},
-            Err(_) => {return error("Unknown error while waiting for thread in remote:exec")},
+            Ok(res) => { res?; }
+            Err(_) => { return error("Unknown error while waiting for thread in remote:exec"); }
         }
     }
 
@@ -130,6 +169,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "remote",
         Box::new(move |env| {
             Exec::declare(env)?;
+            Pexec::declare(env)?;
             Ok(())
         }))?;
     root.r#use(&e);
