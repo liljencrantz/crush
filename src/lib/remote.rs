@@ -77,15 +77,10 @@ struct Exec {
 
 fn exec(context: ExecutionContext) -> CrushResult<()> {
     let cfg: Exec = Exec::parse(context.arguments, &context.printer)?;
-    let cmd = Value::Command(cfg.command);
-
     let mut in_buf = Vec::new();
-
-    serialize(&cmd, &mut in_buf)?;
-
-    let res = run_remote(&in_buf, &context.env, cfg.host, &cfg.username)?;
-    context.output.send(res)?;
-    Ok(())
+    serialize(&Value::Command(cfg.command), &mut in_buf)?;
+    context.output.send(
+        run_remote(&in_buf, &context.env, cfg.host, &cfg.username)?)
 }
 
 #[signature(
@@ -108,14 +103,13 @@ struct Pexec {
 
 fn pexec(context: ExecutionContext) -> CrushResult<()> {
     let cfg: Pexec = Pexec::parse(context.arguments, &context.printer)?;
-    let cmd = Value::Command(cfg.command);
 
     let (host_send, host_recv) = unbounded::<String>();
     let (result_send, result_recv) = unbounded::<(String, Value)>();
 
     let mut in_buf = Vec::new();
 
-    serialize(&cmd, &mut in_buf)?;
+    serialize(&Value::Command(cfg.command), &mut in_buf)?;
 
     for host in &cfg.host {
         to_crush_error(host_send.send(host.clone()))?;
