@@ -109,17 +109,13 @@ lazy_static! {
 fn upper(context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context.output.send(Value::String(
-        context.this.string()?
-            .to_uppercase()
-            ))
+        context.this.string()?.to_uppercase()))
 }
 
 fn lower(context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context.output.send(Value::String(
-        context.this.string()?
-            .to_lowercase()
-            ))
+        context.this.string()?.to_lowercase()))
 }
 
 fn split(mut context: ExecutionContext) -> CrushResult<()> {

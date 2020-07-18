@@ -8,6 +8,8 @@ use time::strptime;
 use std::cmp::max;
 use crate::lang::command::Command;
 use crate::lang::command::TypeMap;
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "time", name]
@@ -16,6 +18,7 @@ fn full(name: &'static str) -> Vec<&'static str> {
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
+        let path = vec!["global", "types", "string"];
         res.declare(full("__add__"),
             add, false,
             "time + delta:duration",
@@ -26,12 +29,7 @@ lazy_static! {
             "time - delta:duration", "Remove the specified delta from this time", None);
         res.declare(
             full("now"), now, false,"time:now", "The current point in time", None);
-        res.declare(full("parse"),
-            parse, false,
-            "time:parse format=format:string time=time:string",
-            "Parse a time string using a strptime-style pattern string",
-            None
-            );
+        Parse::declare_method(&mut res, &path);
         res
     };
 }
@@ -43,31 +41,27 @@ fn now(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Time(Local::now()))
 }
 
-fn parse(mut context: ExecutionContext) -> CrushResult<()> {
-    let mut tm: Option<String> = None;
-    let mut fmt: Option<String> = None;
+#[signature(
+parse,
+can_block = false,
+short = "Parse a time string using a strptime-style pattern string")]
+struct Parse {
+    #[description("the format of the time.")]
+    format: String,
+    #[description("the time string to parse.")]
+    time: String,
+}
 
-    for arg in context.arguments.drain(..) {
-        match (arg.argument_type.as_deref().unwrap_or(""), arg.value) {
-            ("format", Value::String(s)) => fmt = Some(s),
-            ("time", Value::String(s)) => tm = Some(s),
-            _ => return argument_error("Invalid argument"),
-        }
-    }
-
-    match (tm, fmt) {
-        (Some(t), Some(f)) => {
-            let tm = to_crush_error(strptime(t.as_ref(), f.as_ref()))?;
-            let dt = Local::now()
-                .with_year(tm.tm_year + 1900).unwrap()
-                .with_month0(tm.tm_mon as u32).unwrap()
-                .with_day(max(tm.tm_mday as u32, 1)).unwrap()
-                .with_hour(tm.tm_hour as u32).unwrap()
-                .with_minute(tm.tm_min as u32).unwrap()
-                .with_second(tm.tm_sec as u32).unwrap()
-                .with_nanosecond(tm.tm_nsec as u32).unwrap();
-            context.output.send(Value::Time(dt))
-        }
-        _ => argument_error("Must specify both time and format"),
-    }
+fn parse(context: ExecutionContext) -> CrushResult<()> {
+    let cfg: Parse = Parse::parse(context.arguments, &context.printer)?;
+    let tm = to_crush_error(strptime(&cfg.time, cfg.format.as_ref()))?;
+    let dt = Local::now()
+        .with_year(tm.tm_year + 1900).unwrap()
+        .with_month0(tm.tm_mon as u32).unwrap()
+        .with_day(max(tm.tm_mday as u32, 1)).unwrap()
+        .with_hour(tm.tm_hour as u32).unwrap()
+        .with_minute(tm.tm_min as u32).unwrap()
+        .with_second(tm.tm_sec as u32).unwrap()
+        .with_nanosecond(tm.tm_nsec as u32).unwrap();
+    context.output.send(Value::Time(dt))
 }
