@@ -97,7 +97,6 @@ fn run_for_single_directory_or_file(
 }
 
 #[signature(find, short="Recursively list files")]
-#[derive(Debug)]
 pub struct Find {
     #[unnamed()]
     #[description("directories and files to list")]

@@ -100,7 +100,7 @@ fn repeat(context: ExecutionContext) -> CrushResult<()> {
         argument_error("The times value must not be negative")
     } else {
         let mut l = Vec::with_capacity(cfg.times as usize);
-        for i in 0..cfg.times {
+        for _i in 0..cfg.times {
             l.push(cfg.item.clone());
         }
         context.output.send(Value::List(List::new(cfg.item.value_type(), l)))

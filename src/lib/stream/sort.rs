@@ -2,11 +2,11 @@ use crate::{
     lang::errors::argument_error,
     lang::stream::OutputStream,
 };
-use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
-use crate::lang::{argument::Argument, table::Row};
+use crate::lang::execution_context::ExecutionContext;
+use crate::lang::table::Row;
 use crate::lang::errors::{CrushResult, error};
 use crate::lang::stream::Readable;
-use crate::lang::table::{ColumnType, ColumnVec};
+use crate::lang::table::ColumnVec;
 use signature::signature;
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::value::Field;

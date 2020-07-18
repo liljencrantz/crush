@@ -6,6 +6,8 @@ use ordered_map::OrderedMap;
 use lazy_static::lazy_static;
 use crate::lang::command::Command;
 use crate::lang::command::TypeMap;
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "string", name]
@@ -16,6 +18,7 @@ mod format;
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
+        let path = vec!["global", "types", "string"];
         res.declare(
             full("upper"),
             upper, false,
@@ -47,11 +50,7 @@ lazy_static! {
             "string:format pattern:string [parameters:any]...",
             "Format arguments into a string",
             None);
-        res.declare(full("lpad"),
-            lpad, false,
-            "string:lpad length [padding:string]",
-            "Returns a string truncated or left-padded to be the exact specified length",
-            None);
+        LPad::declare_method(&mut res, &path);
         res.declare(full("rpad"),
             rpad, false,
             "string:rpad length [padding:string]",
@@ -143,19 +142,30 @@ fn trim(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::string(context.this.string()?.trim()))
 }
 
-fn lpad(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len_range(1, 2)?;
+#[signature(
+lpad,
+can_block = false,
+short = "Returns a string truncated or left-padded to be the exact specified length")]
+struct LPad {
+    #[description("the length to pad to.")]
+    length: i128,
+    #[description("the character to pad with.")]
+    #[default(" ")]
+    padding: String,
+}
+
+fn lpad(context: ExecutionContext) -> CrushResult<()> {
+    let cfg: LPad = LPad::parse(context.arguments, &context.printer)?;
     let s = context.this.string()?;
-    let len = context.arguments.integer(0)? as usize;
-    let pad_char = context.arguments.optional_string(1)?.unwrap_or_else(|| " ".to_string());
-    if pad_char.len() != 1 {
+    if cfg.padding.len() != 1 {
         return argument_error("Padding string must be exactly one character long");
     }
+    let len = cfg.length as usize;
     if len <= s.len() {
         context.output.send(Value::string(
             &s[0..len]))
     } else {
-        let mut res = pad_char.repeat(len - s.len());
+        let mut res = cfg.padding.repeat(len - s.len());
         res += s.as_ref();
         context.output.send(Value::string(res.as_str()))
     }
