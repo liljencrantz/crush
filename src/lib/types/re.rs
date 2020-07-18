@@ -16,16 +16,13 @@ fn full(name: &'static str) -> Vec<&'static str> {
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
+        let path = vec!["global", "types", "re"];
         res.declare(full("match"), r#match, false,
             "re =~ input:string", "True if the input matches the pattern", None);
         res.declare(full("not_match"), not_match, false,
             "re !~ input:string", "True if the input does not match the pattern", None);
-        res.declare(full("replace"),
-            replace, false,
-            "re ~ text replacement", "Replace the first match of the regex in text with the replacement", None);
-        res.declare(full("replace_all"),
-            replace_all, false,
-            "re ~ text replacement", "Replace all matches of the regex in text with the replacement", None);
+        ReplaceSignature::declare_method(&mut res, &path);
+        ReplaceAllSignature::declare_method(&mut res, &path);
         res.declare(full("new"),
             new, false,
             "re:new pattern:string", "Create a new regular expression instance", None);
@@ -54,15 +51,19 @@ fn not_match(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Bool(!re.is_match(&needle)))
 }
 
-#[signature(replace)]
+#[signature(replace, can_block=false, short="Replace the first match of the regex in text with the replacement", long="\"123-456\" ~ re\"[0-9]\" \"X\"")]
 struct ReplaceSignature {
+    #[description("the text to perform replacement on.")]
     text: String,
+    #[description("the replacement")]
     replacement: String,
 }
 
-#[signature(replace_all)]
+#[signature(replace_all, can_block=false, short="Replace all matches of the regex in text with the replacement", long="\"123-456\" ~~ re\"[0-9]\" \"X\"")]
 struct ReplaceAllSignature {
+    #[description("the text to perform replacement on.")]
     text: String,
+    #[description("the replacement")]
     replacement: String,
 }
 
