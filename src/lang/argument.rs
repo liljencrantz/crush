@@ -5,6 +5,8 @@ use std::collections::HashSet;
 use crate::lang::execution_context::CompileContext;
 use crate::lang::printer::Printer;
 use crate::lang::scope::ScopeLoader;
+use crate::lang::command::Command;
+use ordered_map::OrderedMap;
 
 #[derive(Debug, Clone)]
 pub enum ArgumentType {
@@ -185,6 +187,7 @@ pub fn column_names(arguments: &Vec<Argument>) -> Vec<String> {
 
 pub trait ArgumentHandler: Sized {
     fn declare(env: &mut ScopeLoader) -> CrushResult<()>;
+    fn declare_method(env: &mut OrderedMap<String, Command>, path: &Vec<&str>) -> CrushResult <()>;
     fn parse(arguments: Vec<Argument>, printer: &Printer) -> CrushResult<Self>;
 }
 

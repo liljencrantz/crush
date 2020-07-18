@@ -63,6 +63,7 @@ fn extract_type(ty: &Type) -> SignatureResult<(&'static str, Vec<&'static str>)>
                         "Command" => "Command",
                         "Duration" => "Duration",
                         "Field" => "Field",
+                        "Value" => "Value",
                         _ =>
                             return fail!(seg.span(), "Unrecognised type"),
                     };
@@ -137,7 +138,23 @@ fn call_value(attr: &Attribute) -> SignatureResult<TokenTree> {
     }
 }
 
-fn simple_type_to_value_name(simple_type: &str) -> &str {
+fn simple_type_to_value(simple_type: &str) -> TokenStream {
+    match simple_type {
+        "String" => quote!{crate::lang::value::Value::String(value)},
+        "bool" => quote!{crate::lang::value::Value::Bool(value)},
+        "i128" => quote!{crate::lang::value::Value::Integer(value)},
+        "ValueType" => quote!{crate::lang::value::Value::Type(value)},
+        "f64" => quote!{crate::lang::value::Value::Float(value)},
+        "char" => quote!{crate::lang::value::Value::String(value)},
+        "Command" => quote!{crate::lang::value::Value::Command(value)},
+        "Duration" => quote!{crate::lang::value::Value::Duration(value)},
+        "Field" => quote!{crate::lang::value::Value::Field(value)},
+        "Value" => quote!{value},
+        _ => panic!("Unknown type")
+    }
+}
+
+fn simple_type_to_value_description(simple_type: &str) -> &str {
     match simple_type {
         "String" => "String",
         "bool" => "Bool",
@@ -148,6 +165,7 @@ fn simple_type_to_value_name(simple_type: &str) -> &str {
         "Command" => "Command",
         "Duration" => "Duration",
         "Field" => "Field",
+        "Value" => "Value",
         _ => panic!("Unknown type")
     }
 }
@@ -222,19 +240,19 @@ fn type_to_value(
 
     let (type_name, args) = extract_type(ty)?;
     match type_name {
-        "i128" | "bool" | "String" | "char" | "ValueType" | "f64" | "Command" | "Duration" | "Field" => {
+        "i128" | "bool" | "String" | "char" | "ValueType" | "f64" | "Command" | "Duration" | "Field" | "Value" => {
             if !args.is_empty() {
                 fail!(ty.span(), "This type can't be paramterizised")
             } else {
                 let native_type = Ident::new(type_name, ty.span());
                 let mutator = simple_type_to_mutator(type_name, &allowed_values_name);
-                let value_type = Ident::new(simple_type_to_value_name(type_name), ty.span());
+                let value_type = simple_type_to_value(type_name);
                 Ok(TypeData {
                     signature:
                     if default.is_none() {
-                        format!("{}={}", name.to_string(), simple_type_to_value_name(type_name).to_string().to_lowercase())
+                        format!("{}={}", name.to_string(), simple_type_to_value_description(type_name).to_string().to_lowercase())
                     } else {
-                        format!("[{}={}]", name.to_string(), simple_type_to_value_name(type_name).to_string().to_lowercase())
+                        format!("[{}={}]", name.to_string(), simple_type_to_value_description(type_name).to_string().to_lowercase())
                     }
                     ,
                     initialize: match allowed_values {
@@ -250,14 +268,14 @@ fn type_to_value(
                             }
                         }
                     },
-                    mappings: quote! {(Some(#name_literal), crate::lang::value::Value::#value_type(value)) => #name = Some(#mutator),},
+                    mappings: quote! {(Some(#name_literal), #value_type) => #name = Some(#mutator),},
                     unnamed_mutate:
                     match default {
                         None => {
                             Some(quote! {
 if #name.is_none() {
     match _unnamed.pop_front() {
-        Some(crate::lang::value::Value::#value_type(value)) => #name = Some(#mutator),
+        Some(#value_type) => #name = Some(#mutator),
         Some(value) =>
             return crate::lang::errors::argument_error(format!(
                 "Expected argument \"{}\" to be of type {}, was of type {}",
@@ -276,7 +294,7 @@ if #name.is_none() {
                             Some(quote! {
 if #name.is_none() {
     match _unnamed.pop_front() {
-        Some(Value::#value_type(value)) => #name = Some(#mutator),
+        Some(#value_type) => #name = Some(#mutator),
         None => #name = Some(#native_type::from(#def)),
         _ => return crate::lang::errors::argument_error(format!("Expected argument {} to be of type {}", #name_literal, #type_name).as_str()),
         }
@@ -322,19 +340,19 @@ if #name.is_none() {
             } else {
                 let mutator = simple_type_to_mutator(args[0], &None);
                 let dump_all = Ident::new(simple_type_dump_list(args[0]), ty.span().clone());
-                let value_type = Ident::new(simple_type_to_value_name(args[0]), ty.span().clone());
+                let value_type = simple_type_to_value(args[0]);
 
                 Ok(TypeData {
-                    signature: format!("[{}={}...]", name.to_string(), simple_type_to_value_name(args[0]).to_string().to_lowercase()),
+                    signature: format!("[{}={}...]", name.to_string(), simple_type_to_value_description(args[0]).to_string().to_lowercase()),
                     initialize: quote! { let mut #name = Vec::new(); },
                     mappings: quote! {
-                        (Some(#name_literal), Value::#value_type(value)) => #name.push(#mutator),
-                        (Some(#name_literal), Value::List(value)) => value.#dump_all(&mut #name)?,
+                        (Some(#name_literal), #value_type) => #name.push(#mutator),
+                        (Some(#name_literal), crate::lang::value::Value::List(value)) => value.#dump_all(&mut #name)?,
                     },
                     unnamed_mutate: if is_unnamed_target {
                         Some(quote! {
                             while !_unnamed.is_empty() {
-                                if let Some(Value::#value_type(value)) = _unnamed.pop_front() {
+                                if let Some(#value_type) = _unnamed.pop_front() {
                                     #name.push(#mutator);
                                 } else {
                                     return crate::lang::errors::argument_error(format!("Expected argument {} to be of type {}", #name_literal, #type_name).as_str());
@@ -355,12 +373,12 @@ if #name.is_none() {
                 fail!(ty.span(), "OrderedStringMap needs exactly one parameter")
             } else {
                 let mutator = simple_type_to_mutator(args[0], &None);
-                let value_type = Ident::new(simple_type_to_value_name(args[0]), ty.span().clone());
+                let value_type = simple_type_to_value(args[0]);
 
                 Ok(TypeData {
-                    signature: format!("[<any>={}...]", simple_type_to_value_name(args[0]).to_string().to_lowercase()),
+                    signature: format!("[<any>={}...]", simple_type_to_value_description(args[0]).to_string().to_lowercase()),
                     initialize: quote! { let mut #name = crate::lang::ordered_string_map::OrderedStringMap::new(); },
-                    mappings: quote! { (Some(name), Value::#value_type(value)) => #name.insert(name.to_string(), #mutator), },
+                    mappings: quote! { (Some(name), #value_type) => #name.insert(name.to_string(), #mutator), },
                     unnamed_mutate: None,
                     assign: quote! { #name, },
                 })
@@ -373,17 +391,17 @@ if #name.is_none() {
             } else {
                 let sub_type = Literal::string(args[0]);
                 let mutator = simple_type_to_mutator(args[0], &None);
-                let value_type = Ident::new(simple_type_to_value_name(args[0]), ty.span().clone());
+                let value_type = simple_type_to_value(args[0]);
 
                 Ok(TypeData {
-                    signature: format!("[{}={}]", name.to_string(), simple_type_to_value_name(args[0]).to_string().to_lowercase()),
+                    signature: format!("[{}={}]", name.to_string(), simple_type_to_value_description(args[0]).to_string().to_lowercase()),
                     initialize: quote! { let mut #name = None; },
-                    mappings: quote! { (Some(#name_literal), Value::#value_type(value)) => #name = Some(#mutator), },
+                    mappings: quote! { (Some(#name_literal), #value_type) => #name = Some(#mutator), },
                     unnamed_mutate: Some(quote_spanned! { ty.span() =>
                             if #name.is_none() {
                                 match _unnamed.pop_front() {
                                     None => {}
-                                    Some(Value::#value_type(value)) => #name = Some(#mutator),
+                                    Some(#value_type) => #name = Some(#mutator),
                                     Some(_) => return crate::lang::errors::argument_error(format!("Expected argument {} to be of type {}", #name_literal, #sub_type).as_str()),
                                 }
                             }
@@ -607,6 +625,16 @@ impl crate::lang::argument::ArgumentHandler for #struct_name {
             #signature_literal,
             #description,
             #long_description)
+    }
+
+    fn declare_method(env: &mut ordered_map::OrderedMap<std::string::String, crate::lang::command::Command>, path: &Vec<&str>) -> crate::lang::errors::CrushResult <()> {
+        let mut full = path.clone();
+        full.push(#command_name);
+        env.insert(#command_name.to_string(),
+                    crate::lang::command::CrushCommand::command(
+                        #command_invocation, #can_block, full.iter().map(|e| e.to_string()).collect(),
+                        #signature_literal, #description, #long_description));
+        Ok(())
     }
 
     fn parse(arguments: Vec<crate::lang::argument::Argument>, printer: &crate::lang::printer::Printer) -> crate::lang::errors::CrushResult < # struct_name > {

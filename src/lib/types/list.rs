@@ -6,6 +6,8 @@ use std::collections::HashSet;
 use ordered_map::OrderedMap;
 use lazy_static::lazy_static;
 use crate::lang::command::TypeMap;
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "list", name]
@@ -14,6 +16,7 @@ fn full(name: &'static str) -> Vec<&'static str> {
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
+        let path = vec!["global", "types", "list"];
         res.declare(full("len"),
             len, false,
             "list:len",
@@ -74,8 +77,34 @@ lazy_static! {
             "name[idx:index]",
             "Return a file or subdirectory in the specified base directory",
             None);
+        Repeat::declare_method(&mut res, &path);
+
         res
     };
+}
+
+#[signature(
+repeat,
+can_block = false,
+short = "Create a list containing the same value multiple times")]
+struct Repeat {
+    #[description("the value to put into the list.")]
+    item: Value,
+    #[description("the number of times to put it in the list.")]
+    times: i128,
+}
+
+fn repeat(context: ExecutionContext) -> CrushResult<()> {
+    let cfg: Repeat = Repeat::parse(context.arguments, &context.printer)?;
+    if cfg.times < 0 {
+        argument_error("The times value must not be negative")
+    } else {
+        let mut l = Vec::with_capacity(cfg.times as usize);
+        for i in 0..cfg.times {
+            l.push(cfg.item.clone());
+        }
+        context.output.send(Value::List(List::new(cfg.item.value_type(), l)))
+    }
 }
 
 fn call_type(mut context: ExecutionContext) -> CrushResult<()> {
