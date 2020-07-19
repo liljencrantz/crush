@@ -53,6 +53,7 @@ fn extract_type(ty: &Type) -> SignatureResult<(&'static str, Vec<&'static str>)>
                         "Vec" => "Vec",
                         "Option" => "Option",
                         "i128" => "i128",
+                        "usize" => "usize",
                         "bool" => "bool",
                         "char" => "char",
                         "f64" => "f64",
@@ -143,6 +144,7 @@ fn simple_type_to_value(simple_type: &str) -> TokenStream {
         "String" => quote!{crate::lang::value::Value::String(value)},
         "bool" => quote!{crate::lang::value::Value::Bool(value)},
         "i128" => quote!{crate::lang::value::Value::Integer(value)},
+        "usize" => quote!{crate::lang::value::Value::Integer(value)},
         "ValueType" => quote!{crate::lang::value::Value::Type(value)},
         "f64" => quote!{crate::lang::value::Value::Float(value)},
         "char" => quote!{crate::lang::value::Value::String(value)},
@@ -159,6 +161,7 @@ fn simple_type_to_value_description(simple_type: &str) -> &str {
         "String" => "String",
         "bool" => "Bool",
         "i128" => "Integer",
+        "usize" => "Integer",
         "ValueType" => "Type",
         "f64" => "Float",
         "char" => "String",
@@ -178,6 +181,7 @@ fn simple_type_to_mutator(
         None => {
             match simple_type {
                 "char" => quote! { if value.len() == 1 { value.chars().next().unwrap()} else {return crate::lang::errors::argument_error("Argument must be exactly one character")}},
+                "usize" => quote! { crate::lang::errors::to_crush_error(usize::try_from(value))?},
                 _ => quote! {value},
             }
         }
@@ -240,7 +244,7 @@ fn type_to_value(
 
     let (type_name, args) = extract_type(ty)?;
     match type_name {
-        "i128" | "bool" | "String" | "char" | "ValueType" | "f64" | "Command" | "Duration" | "Field" | "Value" => {
+        "i128" | "bool" | "String" | "char" | "ValueType" | "f64" | "Command" | "Duration" | "Field" | "Value" | "usize" => {
             if !args.is_empty() {
                 fail!(ty.span(), "This type can't be paramterizised")
             } else {
@@ -638,6 +642,7 @@ impl crate::lang::argument::ArgumentHandler for #struct_name {
     }
 
     fn parse(arguments: Vec<crate::lang::argument::Argument>, printer: &crate::lang::printer::Printer) -> crate::lang::errors::CrushResult < # struct_name > {
+        use std::convert::TryFrom;
         # values
         let mut _unnamed = std::collections::VecDeque::new();
 

@@ -35,9 +35,9 @@ pub struct Csv {
     #[description("column separator.")]
     #[default(',')]
     separator: char,
-    #[default(0)]
+    #[default(0usize)]
     #[description("skip this many lines of inpit from the beginning.")]
-    head: i128,
+    head: usize,
     #[description("trim this character from start and end of every value.")]
     trim: Option<char>,
 }
@@ -51,7 +51,7 @@ pub fn csv(context: ExecutionContext) -> CrushResult<()> {
 
     let separator = cfg.separator;
     let trim = cfg.trim;
-    let skip = cfg.head as usize;
+    let skip = cfg.head;
 
     let mut line = String::new();
     let mut skipped = 0usize;

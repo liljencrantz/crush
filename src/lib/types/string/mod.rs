@@ -231,13 +231,12 @@ per_char_method!(is_control, |ch| ch.is_control());
     long="\"123\":is_digit # true")]
 struct IsDigit {
     #[description("radix to use")]
-    #[default(10)]
-    radix: i128,
+    #[default(10usize)]
+    radix: usize,
 }
 
 fn is_digit(context: ExecutionContext) -> CrushResult<()> {
     let cfg: IsDigit = IsDigit::parse(context.arguments, &context.printer)?;
     let s = context.this.string()?;
-    let radix = cfg.radix as u32;
-    context.output.send(Value::Bool(s.chars().all(|ch| ch.is_digit(radix))))
+    context.output.send(Value::Bool(s.chars().all(|ch| ch.is_digit(cfg.radix as u32))))
 }
