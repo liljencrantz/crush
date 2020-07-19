@@ -12,10 +12,10 @@ use crate::lang::argument::ArgumentHandler;
 use crate::lang::value::Field;
 
 #[signature(
-sort,
-can_block = false,
-short = "Sort input based on column",
-long = "    ps | sort ^cpu")]
+    sort,
+    can_block=false,
+    short="Sort input based on column",
+    long="ps | sort ^cpu")]
 pub struct Sort {
     #[description("the column to sort on.")]
     field: Field,

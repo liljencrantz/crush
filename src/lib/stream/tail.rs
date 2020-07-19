@@ -5,7 +5,7 @@ use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use crate::lang::errors::{CrushResult, error};
 use crate::lang::stream::{Readable, ValueSender};
 
-pub fn run(
+fn run(
     lines: i128,
     input: &mut dyn Readable,
     sender: ValueSender,

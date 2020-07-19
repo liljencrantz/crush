@@ -12,7 +12,7 @@ use crate::lang::table::ColumnVec;
 use chrono::Duration;
 use float_ord::FloatOrd;
 
-pub fn parse(input_type: &[ColumnType], arguments: &[Argument]) -> CrushResult<usize> {
+fn parse(input_type: &[ColumnType], arguments: &[Argument]) -> CrushResult<usize> {
     match arguments.len() {
         0 => if input_type.len() == 1 {
             Ok(0)

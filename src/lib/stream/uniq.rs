@@ -8,7 +8,7 @@ use crate::lang::stream::{Readable, OutputStream};
 use crate::lang::table::ColumnVec;
 use crate::lang::printer::Printer;
 
-pub fn parse(input_type: &[ColumnType], mut arguments: Vec<Argument>) -> CrushResult<Option<usize>> {
+fn parse(input_type: &[ColumnType], mut arguments: Vec<Argument>) -> CrushResult<Option<usize>> {
     arguments.check_len_range(0, 1)?;
     if let Some(f) = arguments.optional_field(0)? {
         Ok(Some(input_type.find(&f)?))
@@ -17,7 +17,7 @@ pub fn parse(input_type: &[ColumnType], mut arguments: Vec<Argument>) -> CrushRe
     }
 }
 
-pub fn run(
+fn run(
     idx: Option<usize>,
     input: &mut dyn Readable,
     output: OutputStream,

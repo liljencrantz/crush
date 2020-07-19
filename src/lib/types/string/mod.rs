@@ -97,11 +97,7 @@ lazy_static! {
             "string:is_control",
             "True if every character of this string is a control character",
             None);
-        res.declare(full("is_digit"),
-            is_digit, false,
-            "string:is_digit [radix:integer]",
-            "True if every character of this string is a digit in the specified radix (default is 10)",
-            None);
+        IsDigit::declare_method(&mut res, &path);
         res
     };
 }
@@ -228,9 +224,20 @@ per_char_method!(is_uppercase, |ch| ch.is_uppercase());
 per_char_method!(is_whitespace, |ch| ch.is_whitespace());
 per_char_method!(is_control, |ch| ch.is_control());
 
-fn is_digit(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len_range(0, 1)?;
+#[signature(
+    is_digit,
+    can_block=false,
+    short="True if every character of this string is a digit in the specified radix",
+    long="\"123\":is_digit # true")]
+struct IsDigit {
+    #[description("radix to use")]
+    #[default(10)]
+    radix: i128,
+}
+
+fn is_digit(context: ExecutionContext) -> CrushResult<()> {
+    let cfg: IsDigit = IsDigit::parse(context.arguments, &context.printer)?;
     let s = context.this.string()?;
-    let radix = context.arguments.optional_integer(0)?.unwrap_or(10i128) as u32;
+    let radix = cfg.radix as u32;
     context.output.send(Value::Bool(s.chars().all(|ch| ch.is_digit(radix))))
 }
