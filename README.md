@@ -592,6 +592,34 @@ Crush features several shortcuts to make working with external commands easier.
 Further work is required when it comes to job control, terminal emulation and various
 other integration points.
 
+### Serialization
+
+Crush can serialize and deserialize data to various popular formats like
+json and toml. Use e.g. `json:from` and `json:to` to deserialize and 
+serialize data, respectively. These file formats allow data sharing between
+different languages, but only support a subset of all Crush data types.
+
+Crush also has a language specific serialization format called Pup. The
+Pup-format is protobuf-based, and it's schema is available
+[here](src/crush.proto). The advantage of Pup is that all crush types,
+including classes and closures, can be serialized into this format.
+But because Pup is Crush-specific, it's useless for data sharing.
+
+### Executing remote commands
+
+To run a closure on a remote host, use the `remote:exec` command:
+
+    remote:exec {uptime} "example.com"
+
+The closure will be serialized, transferred to the remote host using
+ssh, deserialized, and executed on the remote host (the crush shell
+must be in the default path on the remote host). Once the command has
+been executed and the output of the closure is serialized, transferred,
+deserialized on the local machine and used as the output of the
+`remote:exec` command.
+
+To run a closure on multiple remote hosts, use `remote:pexec` instead.
+
 ### Creating custom types
 
 You can create custom types in Crush, by using the class command:
