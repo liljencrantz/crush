@@ -8,6 +8,7 @@ use crate::lang::command::Command;
 use crate::lang::command::TypeMap;
 use signature::signature;
 use crate::lang::argument::ArgumentHandler;
+use crate::lang::command::OutputType::Known;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "string", name]
@@ -24,79 +25,94 @@ lazy_static! {
             upper, false,
             "string:upper",
             "Returns an identical string but in upper case",
-            None);
+            None,
+            Known(ValueType::String));
         res.declare(full("lower"),
             lower, false,
             "string:lower",
             "Returns an identical string but in lower case",
-            None);
+            None,
+            Known(ValueType::String));
         res.declare(full("repeat"),
             repeat, false,
             "string:repeat times:integer",
             "Returns this string repeated times times",
-            None);
+            None,
+            Known(ValueType::String));
         res.declare(full("split"),
             split, false,
             "string:split separator:string",
             "Splits a string using the specifiec separator",
-            None);
+            None,
+            Known(ValueType::List(Box::from(ValueType::String))));
         res.declare(full("trim"),
             trim, false,
             "string:trim",
             "Returns a string with all whitespace trimmed from both ends",
-            None);
+            None,
+            Known(ValueType::String));
         res.declare(full("format"),
             format::format, false,
             "string:format pattern:string [parameters:any]...",
             "Format arguments into a string",
-            None);
+            None,
+            Known(ValueType::String));
         LPad::declare_method(&mut res, &path);
         RPad::declare_method(&mut res, &path);
         res.declare(full("ends_with"),
             ends_with, false,
             "string:ends_with suffix:string",
             "True if this string ends with suffix",
-            None);
+            None,
+            Known(ValueType::Bool));
         res.declare(full("starts_with"),
             starts_with, false,
             "string:starts_with prefix:string",
             "True if this string starts with prefix",
-            None);
+            None,
+            Known(ValueType::Bool));
         res.declare(full("is_alphanumeric"),
             is_alphanumeric, false,
             "string:is_alphanumeric",
             "True if every character of this string is alphabetic or numeric (assuming radix 10)",
-            None);
+            None,
+            Known(ValueType::Bool));
         res.declare(full("is_alphabetic"),
             is_alphabetic, false,
             "string:is_alphabetic",
             "True if every character of this string is alphabetic",
-            None);
+            None,
+            Known(ValueType::Bool));
         res.declare(full("is_ascii"),
             is_ascii, false,
             "string:is_ascii",
             "True if every character of this string is part of the ascii character set",
-            None);
+            None,
+            Known(ValueType::Bool));
         res.declare(full("is_lowercase"),
             is_lowercase, false,
             "string:is_lowercase",
             "True if every character of this string is lower case",
-            None);
+            None,
+            Known(ValueType::Bool));
         res.declare(full("is_uppercase"),
             is_uppercase, false,
             "string:is_uppercase",
             "True if every character of this string is upper case",
-            None);
+            None,
+            Known(ValueType::Bool));
         res.declare(full("is_whitespace"),
             is_whitespace, false,
             "string:is_whitespace",
             "True if every character of this string is a whitespace character",
-            None);
+            None,
+            Known(ValueType::Bool));
         res.declare(full("is_control"),
             is_control, false,
             "string:is_control",
             "True if every character of this string is a control character",
-            None);
+            None,
+            Known(ValueType::Bool));
         IsDigit::declare_method(&mut res, &path);
         res
     };

@@ -1,15 +1,17 @@
 use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
 use crate::lang::{value::Value, execution_context::ExecutionContext};
-use crate::lang::execution_context::{ArgumentVector, This};
+use crate::lang::execution_context::{ArgumentVector, This, ValueExecutionContext};
 use ordered_map::OrderedMap;
 use lazy_static::lazy_static;
-use chrono::{Local, Datelike, Timelike};
+use chrono::{Local, Datelike, Timelike, DateTime};
 use time::strptime;
 use std::cmp::max;
 use crate::lang::command::Command;
 use crate::lang::command::TypeMap;
 use signature::signature;
 use crate::lang::argument::ArgumentHandler;
+use crate::lang::value::ValueType;
+use crate::lang::command::OutputType::Known;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "time", name]
@@ -23,12 +25,15 @@ lazy_static! {
             add, false,
             "time + delta:duration",
             "Add the specified delta to this time",
-            None);
+            None,
+            Known(ValueType::Time));
         res.declare(
             full("__sub__"), sub, false,
-            "time - delta:duration", "Remove the specified delta from this time", None);
+            "time - delta:duration", "Remove the specified delta from this time", None,
+            Known(ValueType::Time));
         res.declare(
-            full("now"), now, false,"time:now", "The current point in time", None);
+            full("now"), now, false,"time:now", "The current point in time", None,
+            Known(ValueType::Time));
         Parse::declare_method(&mut res, &path);
         res
     };
@@ -43,8 +48,9 @@ fn now(context: ExecutionContext) -> CrushResult<()> {
 
 #[signature(
 parse,
-can_block = false,
-short = "Parse a time string using a strptime-style pattern string")]
+can_block=false,
+output=Known(ValueType::Time),
+short="Parse a time string using a strptime-style pattern string")]
 struct Parse {
     #[description("the format of the time.")]
     format: String,

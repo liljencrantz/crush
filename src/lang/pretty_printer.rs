@@ -98,6 +98,7 @@ impl PrettyPrinter {
             Value::TableStream(mut output) => self.print_readable(&mut output, 0),
             Value::Table(rows) => self.print_readable(&mut TableReader::new(rows), 0),
             Value::BinaryStream(mut b) => self.print_binary(b.as_mut(), 0),
+            Value::Empty() => {},
             _ => self.printer.line(cell.to_string().as_str()),
         };
     }

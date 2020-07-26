@@ -5,14 +5,14 @@ use crate::util::replace::Replace;
 use crate::lang::command::Command;
 use std::path::PathBuf;
 use crate::util::glob::Glob;
-use crate::lang::stream::{ValueSender, ValueReceiver, InputStream};
+use crate::lang::stream::{ValueSender, ValueReceiver, InputStream, OutputStream};
 use crate::lang::scope::Scope;
 use crate::lang::list::List;
 use crate::lang::dict::Dict;
 use crate::lang::r#struct::Struct;
 use regex::Regex;
 use chrono::{DateTime, Local, Duration};
-use crate::lang::table::Table;
+use crate::lang::table::{Table, TableReader};
 use crate::lang::printer::Printer;
 use crate::lang::job::JobJoinHandle;
 use crate::lang::binary::{BinaryReader, binary_channel};
@@ -242,6 +242,20 @@ pub struct ExecutionContext {
     pub arguments: Vec<Argument>,
     pub env: Scope,
     pub this: Option<Value>,
+    pub printer: Printer,
+}
+
+pub struct StreamExecutionContext<C> {
+    pub config: C,
+    pub input: TableReader,
+    pub output: OutputStream,
+    pub env: Scope,
+    pub printer: Printer,
+}
+
+pub struct ValueExecutionContext<C> {
+    pub config: C,
+    pub env: Scope,
     pub printer: Printer,
 }
 

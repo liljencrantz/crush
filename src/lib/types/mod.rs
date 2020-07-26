@@ -8,6 +8,7 @@ use crate::lang::execution_context::ArgumentVector;
 use crate::lang::value::ValueType;
 use crate::lang::table::ColumnType;
 use crate::lang::stream::black_hole;
+use crate::lang::command::OutputType::{Known, Unknown};
 
 pub mod table;
 pub mod table_stream;
@@ -94,7 +95,7 @@ fn class_set(mut context: ExecutionContext) -> CrushResult<()> {
     let value = context.arguments.value(1)?;
     let name = context.arguments.string(0)?;
     this.set(&name, value);
-    Ok(())
+    context.output.send(Value::Empty())
 }
 
 fn class_get(mut context: ExecutionContext) -> CrushResult<()> {
@@ -114,25 +115,25 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                         vec!["global".to_string(), "types".to_string(), "root".to_string(), "__setattr__".to_string()],
                         "root:__setitem__ name:string value:any",
                         "Modify the specified field to hold the specified value",
-                        None))),
+                        None, Known(ValueType::Empty)))),
                     ("__getitem__".to_string(), Value::Command(CrushCommand::command(
                         class_get, false,
                         vec!["global".to_string(), "types".to_string(), "root".to_string(), "__getitem__".to_string()],
                         "root:__getitem__ name:string",
                         "Return the value of the specified field",
-                        None))),
+                        None, Unknown))),
                     ("__setitem__".to_string(), Value::Command(CrushCommand::command(
                         class_get, false,
                         vec!["global".to_string(), "types".to_string(), "root".to_string(), "__setitem__".to_string()],
                         "root:__setitem__ name:string value:any",
                         "Modify the specified field to hold the specified value",
-                        None))),
+                        None, Unknown))),
                     ("new".to_string(), Value::Command(CrushCommand::command(
                         new, true,
                         vec!["global".to_string(), "types".to_string(), "root".to_string(), "new".to_string()],
                         "root:new @unnamed @@named",
                         "Create a new instance of the specified type",
-                        None))),
+                        None, Known(ValueType::Struct)))),
                 ], None);
 
             env.declare("root", Value::Struct(root))?;
@@ -141,22 +142,22 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare_command("class_get", class_get, false,
                                 "root:__getitem__ name:string",
                                 "Return the value of the specified field",
-                                None)?;
+                                None, Unknown)?;
 
             env.declare_command("data", data, false,
                                 "data <name>=value:any...",
                                 "Construct a struct with the specified members",
-                                None)?;
+                                None, Known(ValueType::Struct))?;
 
             env.declare_command("convert", convert, false,
                                 "convert value:any type:type",
                                 "Convert the vale to the specified type",
-                                None)?;
+                                None, Unknown)?;
 
             env.declare_command("typeof", r#typeof, false,
                                 "typeof value:any",
                                 "Return the type of the specified value",
-                                None)?;
+                                None, Known(ValueType::Type))?;
 
             env.declare_command(
                 "class", class, false,
@@ -183,7 +184,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     }
 
     p := (Point:new x=1.0 y=2.0)
-    p:len"#))?;
+    p:len"#), Known(ValueType::Type))?;
             env.declare_command(
                 "materialize", materialize, true,
                 "materialize",
@@ -196,7 +197,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     Example:
 
-    ls | materialize"#))?;
+    ls | materialize"#), Unknown)?;
 
             env.declare("file", Value::Type(ValueType::File))?;
             env.declare("type", Value::Type(ValueType::Type))?;

@@ -9,6 +9,7 @@ use crate::util::file::cwd;
 use crate::lang::list::List;
 use crate::lang::value::ValueType;
 use crate::lang::command::TypeMap;
+use crate::lang::command::OutputType::Known;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "glob", name]
@@ -19,16 +20,16 @@ lazy_static! {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
         res.declare(full("new"),
             new, false,
-            "glob:new pattern:string", "Return a new glob", None);
+            "glob:new pattern:string", "Return a new glob", None, Known(ValueType::Glob));
         res.declare(full("match"),
             r#match, false,
-            "glob:match input:string", "True if the input matches the pattern", None);
+            "glob:match input:string", "True if the input matches the pattern", None, Known(ValueType::Bool));
         res.declare(full("not_match"),
             not_match, false,
-            "glob:not_match input:string", "True if the input does not match the pattern", None);
+            "glob:not_match input:string", "True if the input does not match the pattern", None, Known(ValueType::Bool));
         res.declare(full("files"),
             r#files, false,
-            "glob:files", "Perform file matching of this glob", None);
+            "glob:files", "Perform file matching of this glob", None, Known(ValueType::List(Box::from(ValueType::File))));
         res
     };
 }

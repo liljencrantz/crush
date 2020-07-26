@@ -5,6 +5,8 @@ use ordered_map::OrderedMap;
 use lazy_static::lazy_static;
 use crate::lang::command::Command;
 use crate::lang::command::TypeMap;
+use crate::lang::command::OutputType::Known;
+use crate::lang::value::ValueType;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "integer", name]
@@ -17,32 +19,39 @@ lazy_static! {
             add, false,
             "integer + term:(integer|float)",
             "Add this number by the specified term",
-            None);
+            None,
+            Known(ValueType::Integer));
         res.declare(full("__sub__"),
             sub, false,
             "integer - term:(integer|float)",
             "Subtract the specified term from this number",
-            None);
+            None,
+            Known(ValueType::Integer));
         res.declare(full("__mul__"),
             mul, false,
             "integer * factor:(integer|float)", "Multiply this number with the specified factor",
-            None);
+            None,
+            Known(ValueType::Integer));
         res.declare(
             full("__div__"), div, false,
             "integer / factor:(integer|float)", "Divide this number by the specified factor",
-            None);
+            None,
+            Known(ValueType::Integer));
         res.declare(
             full("mod"), r#mod, false,
             "integer:mod factor:integer", "Least positive residue after integer division",
-            None);
+            None,
+            Known(ValueType::Integer));
         res.declare(
             full("rem"), rem, false,
             "integer:rem factor:integer", "Remainder after integer division",
-            None);
+            None,
+            Known(ValueType::Integer));
         res.declare(
             full("__neg__"), neg, false,
             "neg integer", "Negate this integer",
-            None);
+            None,
+            Known(ValueType::Integer));
         res
     };
 }

@@ -8,6 +8,8 @@ use crate::lang::execution_context::ArgumentVector;
 use crate::lang::help::Help;
 use crate::lang::printer::Printer;
 use crate::lang::argument::ArgumentHandler;
+use crate::lang::value::ValueType;
+use crate::lang::command::OutputType::Known;
 
 mod find;
 
@@ -25,6 +27,7 @@ pub fn cd(context: ExecutionContext) -> CrushResult<()> {
         }
         _ => error("Wrong number of arguments")
     }?;
+    context.output.send(Value::Empty())?;
     to_crush_error(std::env::set_current_dir(dir))
 }
 
@@ -57,7 +60,7 @@ commands "help help", "help string", "help if" or "help where".
 To get a list of everything in your namespace, write "var:env". To list the
 members of a value, write "dir <value>".
 "#);
-            Ok(())
+            context.output.send(Value::Empty())
         }
         1 => {
             let v = context.arguments.value(0)?;
@@ -67,7 +70,7 @@ members of a value, write "dir <value>".
                 Value::Type(t) => halp(&t, &context.printer),
                 v => halp(&v, &context.printer),
             }
-            Ok(())
+            context.output.send(Value::Empty())
         }
         _ => argument_error("The help command expects at most one argument")
     }
@@ -81,10 +84,10 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare_command(
                 "cd", cd, true,
                 "cd directory:(file,string,glob)",
-                "Change to the specified working directory", None)?;
+                "Change to the specified working directory", None, Known(ValueType::Empty))?;
             env.declare_command(
                 "pwd", pwd, false,
-                "pwd", "Return the current working directory", None)?;
+                "pwd", "Return the current working directory", None, Known(ValueType::File))?;
             env.declare_command(
                 "help", help, false,
                 "help topic:any",
@@ -93,7 +96,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     help ls
     help integer
-    help help"#))?;
+    help help"#), Known(ValueType::Empty))?;
             Ok(())
         }))?;
     root.r#use(&e);

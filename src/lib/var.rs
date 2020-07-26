@@ -4,19 +4,20 @@ use crate::lang::value::{Value, ValueType};
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::table::{ColumnType, Row};
 use ordered_map::OrderedMap;
+use crate::lang::command::OutputType::{Known, Unknown};
 
 pub fn r#let(context: ExecutionContext) -> CrushResult<()> {
     for arg in context.arguments {
         context.env.declare(mandate(arg.argument_type, "Missing variable name")?.as_ref(), arg.value)?;
     }
-    Ok(())
+    context.output.send(Value::Empty())
 }
 
 pub fn set(context: ExecutionContext) -> CrushResult<()> {
     for arg in context.arguments {
         context.env.set(mandate(arg.argument_type, "Missing variable name")?.as_ref(), arg.value)?;
     }
-    Ok(())
+    context.output.send(Value::Empty())
 }
 
 pub fn unset(context: ExecutionContext) -> CrushResult<()> {
@@ -31,7 +32,7 @@ pub fn unset(context: ExecutionContext) -> CrushResult<()> {
             return argument_error("Illegal variable name");
         }
     }
-    Ok(())
+    context.output.send(Value::Empty())
 }
 
 pub fn r#use(context: ExecutionContext) -> CrushResult<()> {
@@ -41,7 +42,7 @@ pub fn r#use(context: ExecutionContext) -> CrushResult<()> {
             _ => return argument_error("Expected all arguments to be scopes"),
         }
     }
-    Ok(())
+    context.output.send(Value::Empty())
 }
 
 pub fn env(context: ExecutionContext) -> CrushResult<()> {
@@ -72,19 +73,19 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         Box::new(move |ns| {
             ns.declare_command(
                 "let", r#let, false,
-                "name := value", "Declare a new variable", None)?;
+                "name := value", "Declare a new variable", None, Known(ValueType::Empty))?;
             ns.declare_command(
                 "set", set, false,
-                "name = value", "Assign a new value to an already existing variable", None)?;
+                "name = value", "Assign a new value to an already existing variable", None, Known(ValueType::Empty))?;
             ns.declare_command(
                 "unset", unset, false,
                 "scope name:string",
                 "Removes a variable from the namespace",
-                None)?;
+                None, Known(ValueType::Empty))?;
             ns.declare_command(
                 "env", env, false,
                 "env", "Returns a table containing the current namespace",
-                Some(r#"    The columns of the table are the name, and the type of the value."#))?;
+                Some(r#"    The columns of the table are the name, and the type of the value."#), Unknown)?;
             ns.declare_command(
                 "use", r#use, false,
                 "use scope:scope",
@@ -92,7 +93,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 Some(r#"    Example:
 
     use math
-    sqrt 1.0"#))?;
+    sqrt 1.0"#), Known(ValueType::Empty))?;
             Ok(())
         }))?;
     Ok(())

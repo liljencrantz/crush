@@ -8,6 +8,9 @@ use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use crate::lang::command::Command;
 use crate::lang::command::TypeMap;
+use crate::lang::command::OutputType::Unknown;
+use crate::lang::command::OutputType::Known;
+use crate::lang::value::ValueType;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "file", name]
@@ -28,18 +31,20 @@ lazy_static! {
     * inode:integer the inode number of the file
     * nlink:integer the number of hardlinks to the file
     * mode:integer the permission bits for the file
-    * len: integer the size of the file"#));
+    * len: integer the size of the file"#), Unknown);
 
         res.declare(full("exists"),
             exists, true,
             "file:exists",
             "Return true if this file exists",
-            None);
+            None,
+            Known(ValueType::Bool));
         res.declare(full("__getitem__"),
             getitem, true,
             "file[name:string]",
             "Return a file or subdirectory in the specified base directory",
-            None);
+            None,
+            Known(ValueType::File));
         res
     };
 }

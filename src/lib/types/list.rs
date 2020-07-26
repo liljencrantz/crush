@@ -8,6 +8,8 @@ use lazy_static::lazy_static;
 use crate::lang::command::TypeMap;
 use signature::signature;
 use crate::lang::argument::ArgumentHandler;
+use crate::lang::command::OutputType::Known;
+use crate::lang::command::OutputType::Unknown;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "list", name]
@@ -17,66 +19,79 @@ lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
         let path = vec!["global", "types", "list"];
-        res.declare(full("len"),
+        res.declare(
+            full("len"),
             len, false,
             "list:len",
             "The number of elements in the list",
-            None);
+            None,
+            Known(ValueType::Integer));
         res.declare(full("empty"),
             empty, false,
             "list:empty",
             "True if there are no elements in the list",
-            None);
+            None,
+            Known(ValueType::Bool));
         res.declare(full("push"),
             push, false,
-            "list:push", "Push an element to the end of the list", None);
+            "list:push", "Push an element to the end of the list",
+            None,
+            Unknown);
         res.declare(full("pop"),
             pop, false,
-            "list:pop", "Remove the last element from the list", None);
+            "list:pop", "Remove the last element from the list", None,
+            Unknown);
         res.declare(full("peek"),
             peek, false,
-            "list:peek", "Return the last element from the list", None);
+            "list:peek", "Return the last element from the list", None,
+            Unknown);
         res.declare(full("clear"),
             clear, false,
-            "list:clear", "Remove all elments from the list", None);
+            "list:clear", "Remove all elments from the list", None,
+            Unknown);
         res.declare(full("__setitem__"),
             setitem, false,
-            "list[idx:integer] = value:any", "Assign a new value to the element at the specified index", None);
+            "list[idx:integer] = value:any", "Assign a new value to the element at the specified index", None,
+            Known(ValueType::Empty));
         res.declare(full("remove"),
             remove, false,
-            "list:remove idx:integer", "Remove the element at the specified index", None);
+            "list:remove idx:integer", "Remove the element at the specified index", None,
+            Unknown);
         res.declare(full("insert"),
             insert, false,
-            "list:insert idx:integer value:any", "Insert a new element at the specified index", None);
+            "list:insert idx:integer value:any", "Insert a new element at the specified index", None,
+            Unknown);
         res.declare(full("truncate"),
             truncate, false,
-            "list:truncate idx:integer", "Remove all elements past the specified index", None);
+            "list:truncate idx:integer", "Remove all elements past the specified index", None,
+            Unknown);
         res.declare(full("clone"),
             clone, false,
-            "list:clone", "Create a duplicate of the list", None);
+            "list:clone", "Create a duplicate of the list", None,
+            Unknown);
         res.declare(full("of"),
             of, false,
             "list:of element:any...",
             "Create a new list containing the supplied elements",
-            None);
+            None, Unknown);
         res.declare(full("new"),
         new, false,
         "list:new", "Create a new list with the specified element type",
         Some(r#"    Example:
 
-    l := ((list string):new)"#));
+    l := ((list string):new)"#), Unknown);
         res.declare(full("__call_type__"),
             call_type, false,
             "list element_type:type", "Return a list type for the specified element type",
             Some(r#"    Example:
 
     # This command returns the type 'list of integers':
-    list integer"#));
+    list integer"#), Known(ValueType::Type));
         res.declare(full("__getitem__"),
             getitem, true,
             "name[idx:index]",
             "Return a file or subdirectory in the specified base directory",
-            None);
+            None, Unknown);
         Repeat::declare_method(&mut res, &path);
 
         res
@@ -188,8 +203,9 @@ fn peek(context: ExecutionContext) -> CrushResult<()> {
 
 fn clear(context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    context.this.list()?.clear();
-    Ok(())
+    let l = context.this.list()?;
+    l.clear();
+    context.output.send(Value::List(l))
 }
 
 fn setitem(mut context: ExecutionContext) -> CrushResult<()> {
@@ -197,7 +213,8 @@ fn setitem(mut context: ExecutionContext) -> CrushResult<()> {
     let list = context.this.list()?;
     let key = context.arguments.integer(0)?;
     let value = context.arguments.value(1)?;
-    list.set(key as usize, value)
+    list.set(key as usize, value)?;
+    context.output.empty()
 }
 
 fn remove(mut context: ExecutionContext) -> CrushResult<()> {

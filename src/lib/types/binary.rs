@@ -5,6 +5,8 @@ use ordered_map::OrderedMap;
 use lazy_static::lazy_static;
 use crate::lang::command::Command;
 use crate::lang::command::TypeMap;
+use crate::lang::command::OutputType::{Known, Unknown};
+use crate::lang::value::ValueType;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "binary", name]
@@ -17,10 +19,11 @@ lazy_static! {
             len, false,
             "binary:len",
             "The number of bytes in the binary",
-            None);
+            None, Known(ValueType::Integer));
         res.declare(full("__getitem__"),
             getitem, false,
-            "binary[idx:integer]", "Returns the byte at the specified offset", None);
+            "binary[idx:integer]", "Returns the byte at the specified offset", None,
+            Unknown);
         res
     };
 }

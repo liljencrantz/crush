@@ -7,6 +7,7 @@ use crate::lang::value::ValueType;
 use crate::lib::types::parse_column_types;
 use crate::lang::execution_context::{This, ArgumentVector};
 use crate::lang::command::TypeMap;
+use crate::lang::command::OutputType::{Known, Unknown};
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "table", name]
@@ -19,12 +20,17 @@ lazy_static! {
             full("__call_type__"), call_type, false,
             "table column_name=type:type...",
             "Return the table type with the specified column signature",
-            None);
-        res.declare(full("len"), len, false, "table:len", "The number of rows in the table", None);
+            None,
+            Known(ValueType::Type));
+        res.declare(
+            full("len"), len, false, "table:len", "The number of rows in the table",
+            None,
+            Known(ValueType::Integer));
         res.declare(
             full("__getitem__"),
             getitem, false,
-            "table[idx:integer]", "Returns the specified row of the table as a struct", None);
+            "table[idx:integer]", "Returns the specified row of the table as a struct", None,
+            Unknown);
         res
     };
 }

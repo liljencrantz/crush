@@ -426,6 +426,7 @@ struct Metadata {
     short_description: Option<String>,
     long_description: Vec<String>,
     example: Option<String>,
+    output: Option<TokenStream>,
 }
 
 fn unescape(s: &str) -> String {
@@ -454,6 +455,7 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
     let mut example = None;
     let mut short_description = None;
     let mut long_description = Vec::new();
+    let mut output: Option<TokenStream> = None;
 
     let location = metadata.span().clone();
     let metadata_iter = metadata.into_iter().collect::<Vec<_>>();
@@ -481,30 +483,40 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
         if meta.len() == 0 {
             continue;
         }
-        if meta.len() != 3 {
-            return fail!(meta[0].span(), "Invalid parameter format");
-        }
-        match (&meta[0], &meta[1], &meta[2]) {
-            (TokenTree::Ident(i), TokenTree::Punct(p), TokenTree::Literal(l)) => {
-                let unescaped = unescape(&l.to_string());
-                match (i.to_string().as_str(), p.as_char()) {
-                    ("short", '=') => short_description = Some(unescaped),
-                    ("long", '=') => long_description.push(unescaped),
-                    ("example", '=') => example = Some(unescaped),
-                    _ => return fail!(l.span(), "Unknown argument"),
+        if let TokenTree::Ident(name) = &meta[0] {
+            if name.to_string().as_str() == "output" && meta.len() > 2 {
+                let mut tmp = TokenStream::new();
+                for s in &meta[2..] {
+                    tmp.extend(s.into_token_stream());
+                }
+                output = Some(tmp);
+            } else {
+                if meta.len() != 3 {
+                    return fail!(meta[0].span(), "Invalid parameter format");
+                }
+                match (&meta[1], &meta[2]) {
+                    (TokenTree::Punct(p), TokenTree::Literal(l)) => {
+                        let unescaped = unescape(&l.to_string());
+                        match (name.to_string().as_str(), p.as_char()) {
+                            ("short", '=') => short_description = Some(unescaped),
+                            ("long", '=') => long_description.push(unescaped),
+                            ("example", '=') => example = Some(unescaped),
+                            _ => return fail!(l.span(), "Unknown argument"),
+                        }
+                    }
+                    (TokenTree::Punct(p), TokenTree::Ident(l)) => {
+                        match (name.to_string().as_str(), p.as_char()) {
+                            ("can_block", '=') => can_block = match l.to_string().as_str() {
+                                "true" => true,
+                                "false" => false,
+                                _ => return fail!(l.span(), "Expected a boolean value"),
+                            },
+                            _ => return fail!(l.span(), "Unknown argument"),
+                        }
+                    }
+                    _ => return fail!(meta[0].span(), "Invalid parameter format"),
                 }
             }
-            (TokenTree::Ident(i), TokenTree::Punct(p), TokenTree::Ident(l)) => {
-                match (i.to_string().as_str(), p.as_char()) {
-                    ("can_block", '=') => can_block = match l.to_string().as_str() {
-                        "true" => true,
-                        "false" => false,
-                        _ => return fail!(l.span(), "Expected a boolean value"),
-                    },
-                    _ => return fail!(l.span(), "Unknown argument"),
-                }
-            }
-            _ => return fail!(meta[0].span(), "Invalid parameter format"),
         }
     }
 
@@ -514,6 +526,7 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
         short_description,
         long_description,
         example,
+        output,
     })
 }
 
@@ -531,6 +544,9 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
     let mut long_description = metadata.long_description;
     let mut signature = vec![metadata.name.to_string()];
+    let output = metadata.output
+        .map(|o| quote!{#o} )
+        .unwrap_or(quote!{crate::lang::command::OutputType::Unknown});
 
     match root {
         Item::Struct(mut s) => {
@@ -628,7 +644,8 @@ impl crate::lang::argument::ArgumentHandler for #struct_name {
             #command_name, #command_invocation, #can_block,
             #signature_literal,
             #description,
-            #long_description)
+            #long_description,
+            #output)
     }
 
     fn declare_method(env: &mut ordered_map::OrderedMap<std::string::String, crate::lang::command::Command>, path: &Vec<&str>) -> crate::lang::errors::CrushResult <()> {
@@ -637,7 +654,7 @@ impl crate::lang::argument::ArgumentHandler for #struct_name {
         env.insert(#command_name.to_string(),
                     crate::lang::command::CrushCommand::command(
                         #command_invocation, #can_block, full.iter().map(|e| e.to_string()).collect(),
-                        #signature_literal, #description, #long_description));
+                        #signature_literal, #description, #long_description, #output));
         Ok(())
     }
 

@@ -17,6 +17,7 @@ use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use lazy_static::lazy_static;
 use signature::signature;
 use crate::lang::argument::ArgumentHandler;
+use crate::lang::command::OutputType::{Known, Unknown};
 
 lazy_static! {
     static ref PS_OUTPUT_TYPE: Vec<ColumnType> = vec![
@@ -68,6 +69,7 @@ fn ps(context: ExecutionContext) -> CrushResult<()> {
     kill,
     can_block=false,
     short="Send a signal to a set of processes",
+    output=Known(ValueType::Empty),
     long="The set of existing signals is platform dependent, but common signals
     include SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGTRAP, SIGABRT, SIGBUS, SIGFPE,
     SIGKILL, SIGUSR1, SIGSEGV, SIGUSR2, SIGPIPE, SIGALRM, SIGTERM, SIGCHLD,
@@ -88,7 +90,7 @@ fn kill(context: ExecutionContext) -> CrushResult<()> {
             Pid::from_raw(pid as i32),
             to_crush_error(signal::Signal::from_str(&sig.signal))?))?;
     }
-    Ok(())
+    context.output.send(Value::Empty())
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
@@ -119,7 +121,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     * cpu:duration the amount of CPU time this process has used since its creation
 
-    * name:string the process name"#))?;
+    * name:string the process name"#), Unknown)?;
 
             Kill::declare(env)?;
             Ok(())

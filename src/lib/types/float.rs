@@ -5,6 +5,8 @@ use ordered_map::OrderedMap;
 use lazy_static::lazy_static;
 use crate::lang::command::Command;
 use crate::lang::command::TypeMap;
+use crate::lang::command::OutputType::Known;
+use crate::lang::value::ValueType;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "float", name]
@@ -17,35 +19,42 @@ lazy_static! {
             full("__add__"), add, false,
             "float + term:(integer|float)",
             "Add this number and the specified term",
-            None);
+            None,
+            Known(ValueType::Float));
         res.declare(
             full("__sub__"), sub, false,
             "float - term:(integer|float)",
             "Subtract the specified term from this number",
-            None);
+            None,
+            Known(ValueType::Float));
         res.declare(
             full("__mul__"), mul, false,
             "float * factor:(integer|float)",
             "Multiply this number by the specified factor",
-            None);
+            None,
+            Known(ValueType::Float));
         res.declare(
             full("__div__"), div, false,
             "integer / factor:(integer|float)",
             "Divide this number by the specified factor",
-            None);
+            None,
+            Known(ValueType::Float));
         res.declare(
             full("__neg__"), neg, false,
-            "neg float", "Negate this integer", None);
+            "neg float", "Negate this integer", None,
+            Known(ValueType::Float));
         res.declare(full("is_finite"),
             is_infinite, false,
             "float:is_infinite",
             "True if this float is positive or negative infinity",
-            None);
+            None,
+            Known(ValueType::Bool));
         res.declare(full("is_nan"),
             is_nan, false,
             "float:is_nan",
             "True if this float is NaN",
-            None);
+            None,
+            Known(ValueType::Bool));
         res
     };
 }

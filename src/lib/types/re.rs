@@ -8,6 +8,8 @@ use lazy_static::lazy_static;
 use signature::signature;
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::TypeMap;
+use crate::lang::command::OutputType::Known;
+use crate::lang::value::ValueType;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "re", name]
@@ -18,14 +20,14 @@ lazy_static! {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
         let path = vec!["global", "types", "re"];
         res.declare(full("match"), r#match, false,
-            "re =~ input:string", "True if the input matches the pattern", None);
+            "re =~ input:string", "True if the input matches the pattern", None, Known(ValueType::Bool));
         res.declare(full("not_match"), not_match, false,
-            "re !~ input:string", "True if the input does not match the pattern", None);
+            "re !~ input:string", "True if the input does not match the pattern", None, Known(ValueType::Bool));
         ReplaceSignature::declare_method(&mut res, &path);
         ReplaceAllSignature::declare_method(&mut res, &path);
         res.declare(full("new"),
             new, false,
-            "re:new pattern:string", "Create a new regular expression instance", None);
+            "re:new pattern:string", "Create a new regular expression instance", None, Known(ValueType::Regex));
         res
     };
 }

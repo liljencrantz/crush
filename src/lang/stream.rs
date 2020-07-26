@@ -32,6 +32,10 @@ impl ValueSender {
         }
     }
 
+    pub fn empty(&self) -> CrushResult<()> {
+        self.send(Value::Empty())
+    }
+
     pub fn initialize(&self, signature: Vec<ColumnType>) -> CrushResult<OutputStream> {
         let (output, input) = streams(signature);
         self.send(Value::TableStream(input))?;

@@ -6,6 +6,8 @@ use lazy_static::lazy_static;
 use chrono::Duration;
 use crate::lang::command::Command;
 use crate::lang::command::TypeMap;
+use crate::lang::command::OutputType::{Unknown, Known};
+use crate::lang::value::ValueType;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "duration", name]
@@ -18,22 +20,26 @@ lazy_static! {
             add, false,
             "duration + (delta:duration | time:time)",
             "Add the specified delta or time to this duration",
-            None);
+            None,
+            Unknown);
         res.declare(full("__sub__"),
             sub, false,
             "duration - delta:duration",
             "Remove the specified delta from this duration",
-            None);
+            None,
+            Known(ValueType::Duration));
         res.declare(full("__mul__"),
             mul, false,
             "duration * factor:integer",
             "Multiply this duration by the specified factor",
-            None);
+            None,
+            Known(ValueType::Duration));
         res.declare(full("__div__"),
             div, false,
             "duration / divisor:integer",
             "Divide this duration by the specified divisor",
-            None);
+            None,
+            Known(ValueType::Duration));
         res.declare(full("new"),
             new, false,
             "duration:new [count:integer timeunit:string]...",
@@ -45,10 +51,12 @@ lazy_static! {
     Example:
 
     # A complicated way of specifying a 23 hour duration
-    duration:new 1 "days" -3600 "seconds""#));
+    duration:new 1 "days" (neg 3600) "seconds""#),
+    Known(ValueType::Duration));
         res.declare(
             full("__neg__"), neg, false,
-            "neg duration", "Negate this duration", None);
+            "neg duration", "Negate this duration", None,
+            Known(ValueType::Duration));
         res
     };
 }

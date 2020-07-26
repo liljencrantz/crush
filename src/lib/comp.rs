@@ -3,6 +3,8 @@ use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::{value::Value};
 use crate::lang::scope::Scope;
 use std::cmp::Ordering;
+use crate::lang::value::ValueType;
+use crate::lang::command::OutputType::Known;
 
 macro_rules! cmp {
     ($name:ident, $op:expr) => {
@@ -51,13 +53,13 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_lazy_namespace(
         "comp",
         Box::new(|env| {
-            env.declare_command("gt", gt, false, "any > any", "True if left side is greater than right side", None)?;
-            env.declare_command("gte", gte, false, "any >= any", "True if left side is greater than or equal to right side", None)?;
-            env.declare_command("lt", lt, false, "any < any", "True if left side is less than right side", None)?;
-            env.declare_command("lte", lte, false, "any <= any", "True if left side is less than or equal to right side", None)?;
-            env.declare_command("eq", eq, false, "any == any", "True if left side is equal to right side", None)?;
-            env.declare_command("neq", neq, false, "any != any", "True if left side is not equal to right side", None)?;
-            env.declare_command("not", not, false, "not boolean", "Negates a boolean value", None)?;
+            env.declare_command("gt", gt, false, "any > any", "True if left side is greater than right side", None, Known(ValueType::Bool))?;
+            env.declare_command("gte", gte, false, "any >= any", "True if left side is greater than or equal to right side", None, Known(ValueType::Bool))?;
+            env.declare_command("lt", lt, false, "any < any", "True if left side is less than right side", None, Known(ValueType::Bool))?;
+            env.declare_command("lte", lte, false, "any <= any", "True if left side is less than or equal to right side", None, Known(ValueType::Bool))?;
+            env.declare_command("eq", eq, false, "any == any", "True if left side is equal to right side", None, Known(ValueType::Bool))?;
+            env.declare_command("neq", neq, false, "any != any", "True if left side is not equal to right side", None, Known(ValueType::Bool))?;
+            env.declare_command("not", not, false, "not boolean", "Negates a boolean value", None, Known(ValueType::Bool))?;
             Ok(())
         }))?;
     Ok(())

@@ -4,10 +4,13 @@ use crate::lang::execution_context::ExecutionContext;
 use crate::lang::errors::{CrushResult};
 use crate::lang::scope::Scope;
 use crate::lang::serialization::{serialize_writer, deserialize_reader};
+use crate::lang::command::OutputType::{Known, Unknown};
+use crate::lang::value::ValueType;
 
 fn to(mut context: ExecutionContext) -> CrushResult<()> {
     let value = context.input.recv()?;
-    serialize_writer(&value, &mut context.writer()?)
+    serialize_writer(&value, &mut context.writer()?)?;
+    context.output.empty()
 }
 
 fn from(mut context: ExecutionContext) -> CrushResult<()> {
@@ -26,7 +29,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     Examples:
 
-    pup:from serialized.pup"#))?;
+    pup:from serialized.pup"#),
+            Unknown)?;
 
             env.declare_command(
                 "to", to, true,
@@ -36,7 +40,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     Examples:
 
-    ls | pup:to"#))?;
+    ls | pup:to"#),
+            Known(ValueType::Empty))?;
             Ok(())
         }))?;
     Ok(())

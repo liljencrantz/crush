@@ -5,7 +5,7 @@ use std::fmt::Formatter;
 use crate::lang::{argument::ArgumentDefinition};
 use crate::lang::scope::Scope;
 use crate::lang::job::Job;
-use crate::lang::value::{ValueDefinition, Value};
+use crate::lang::value::{ValueDefinition, Value, ValueType};
 use closure::Closure;
 use crate::lang::execution_context::{ExecutionContext, CompileContext};
 use crate::lang::help::Help;
@@ -16,6 +16,31 @@ use ordered_map::OrderedMap;
 
 pub type Command = Box<dyn CrushCommand + Send + Sync>;
 
+#[derive(Clone, Debug)]
+pub enum OutputType {
+    Unknown,
+    Known(ValueType),
+    Passthrough,
+}
+
+impl OutputType {
+    fn calculate<'a>(&'a self, input: &'a OutputType) -> Option<&'a ValueType> {
+        match self {
+            OutputType::Unknown => None,
+            OutputType::Known(t) => Some(t),
+            OutputType::Passthrough => input.calculate(&OutputType::Unknown),
+        }
+    }
+
+    fn format(&self) -> Option<String> {
+        match self {
+            OutputType::Unknown => None,
+            OutputType::Known(t) => Some(format!("    Output: {}", t.to_string())),
+            OutputType::Passthrough => Some("    Output: Same as input".to_string()),
+        }
+    }
+}
+
 pub trait CrushCommand: Help {
     fn invoke(&self, context: ExecutionContext) -> CrushResult<()>;
     fn can_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool;
@@ -24,6 +49,7 @@ pub trait CrushCommand: Help {
     fn help(&self) -> &dyn Help;
     fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize>;
     fn bind(&self, this: Value) -> Command;
+    fn output<'a>(&'a self, input: &'a OutputType) -> Option<&'a ValueType>;
 }
 
 pub trait TypeMap {
@@ -35,6 +61,7 @@ pub trait TypeMap {
         signature: &'static str,
         short_help: &'static str,
         long_help: Option<&'static str>,
+        output: OutputType,
     );
 }
 
@@ -47,11 +74,12 @@ impl TypeMap for OrderedMap<String, Command> {
         signature: &'static str,
         short_help: &'static str,
         long_help: Option<&'static str>,
+        output: OutputType,
     ) {
         self.insert(path[path.len() - 1].to_string(),
                     CrushCommand::command(
                         call, can_block, path.iter().map(|e| e.to_string()).collect(),
-                        signature, short_help, long_help),
+                        signature, short_help, long_help, output),
         );
     }
 }
@@ -63,6 +91,7 @@ struct SimpleCommand {
     signature: &'static str,
     short_help: &'static str,
     long_help: Option<&'static str>,
+    output: OutputType,
 }
 
 struct ConditionCommand {
@@ -95,8 +124,9 @@ impl dyn CrushCommand {
         signature: &'static str,
         short_help: &'static str,
         long_help: Option<&'static str>,
+        output: OutputType,
     ) -> Command {
-        Box::from(SimpleCommand { call, can_block, full_name, signature, short_help, long_help })
+        Box::from(SimpleCommand { call, can_block, full_name, signature, short_help, long_help, output })
     }
 
     pub fn condition(
@@ -159,6 +189,7 @@ impl CrushCommand for SimpleCommand {
             signature: self.signature,
             short_help: self.short_help,
             long_help: self.long_help,
+            output: self.output.clone(),
         })
     }
 
@@ -182,6 +213,10 @@ impl CrushCommand for SimpleCommand {
             this,
         })
     }
+
+    fn output<'a>(&'a self, input: &'a OutputType) -> Option<&'a ValueType> {
+        self.output.calculate(input)
+    }
 }
 
 impl Help for SimpleCommand {
@@ -194,7 +229,14 @@ impl Help for SimpleCommand {
     }
 
     fn long_help(&self) -> Option<String> {
-        self.long_help.map(|s| s.to_string())
+        let output = self.output.format();
+        let long_cat = self.long_help.map(|s| s.to_string());
+        match (output, long_cat) {
+            (Some(o), Some(l)) => Some(format!("{}\n\n{}", o, l)),
+            (Some(o), None) => Some(o),
+            (None, Some(o)) => Some(o),
+            (None, None) => None,
+        }
     }
 }
 
@@ -253,6 +295,10 @@ impl CrushCommand for ConditionCommand {
             command: self.clone(),
             this,
         })
+    }
+
+    fn output(&self, input: &OutputType) -> Option<&ValueType> {
+        None
     }
 }
 
@@ -356,6 +402,10 @@ impl CrushCommand for BoundCommand {
                 this: this.clone(),
             }
         )
+    }
+
+    fn output<'a>(&'a self, input: &'a OutputType) -> Option<&'a ValueType> {
+        self.command.output(input)
     }
 }
 

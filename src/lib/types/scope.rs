@@ -5,6 +5,7 @@ use ordered_map::OrderedMap;
 use lazy_static::lazy_static;
 use crate::lang::command::Command;
 use crate::lang::command::TypeMap;
+use crate::lang::command::OutputType::Unknown;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "scope", name]
@@ -17,7 +18,8 @@ lazy_static! {
             full("__getitem__"), getitem, false,
             "scope[name:string]",
             "Return the specified member",
-            None);
+            None,
+            Unknown);
         res
     };
 }

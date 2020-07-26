@@ -1,6 +1,6 @@
 use crate::lang::errors::{CrushResult, argument_error, error, mandate};
 use crate::lang::argument::{Argument, ArgumentDefinition, ArgumentType};
-use crate::lang::command::{Parameter, Command, BoundCommand, CrushCommand};
+use crate::lang::command::{Parameter, Command, BoundCommand, CrushCommand, OutputType};
 use crate::lang::scope::Scope;
 use std::collections::HashMap;
 use crate::lang::value::{Value, ValueType, ValueDefinition};
@@ -87,6 +87,10 @@ impl CrushCommand for Closure {
             command: self.clone(),
             this,
         })
+    }
+
+    fn output(&self, input: &OutputType) -> Option<&ValueType> {
+        None
     }
 }
 

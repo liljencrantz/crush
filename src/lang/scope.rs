@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use crate::lang::{value::Value, value::ValueType};
 use ordered_map::OrderedMap;
 use crate::lang::execution_context::ExecutionContext;
-use crate::lang::command::{CrushCommand, Command};
+use crate::lang::command::{CrushCommand, Command, OutputType};
 use crate::lang::r#struct::Struct;
 use crate::util::identity_arc::Identity;
 use crate::lang::help::Help;
@@ -41,10 +41,19 @@ impl ScopeLoader {
         Ok(())
     }
 
-    pub fn declare_command(&mut self, name: &str, call: fn(ExecutionContext) -> CrushResult<()>, can_block: bool, signature: &'static str, short_help: &'static str, long_help: Option<&'static str>) -> CrushResult<()> {
+    pub fn declare_command(
+        &mut self,
+        name: &str,
+        call: fn(ExecutionContext) -> CrushResult<()>,
+        can_block: bool,
+        signature: &'static str,
+        short_help: &'static str,
+        long_help: Option<&'static str>,
+        output: OutputType,
+    ) -> CrushResult<()> {
         let mut full_name = self.path.clone();
         full_name.push(name.to_string());
-        let command = CrushCommand::command(call, can_block, full_name, signature, short_help, long_help);
+        let command = CrushCommand::command(call, can_block, full_name, signature, short_help, long_help, output);
         if self.mapping.contains_key(name) {
             return error(format!("Variable ${{{}}} already exists", name).as_str());
         }

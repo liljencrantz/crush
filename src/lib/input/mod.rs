@@ -5,6 +5,7 @@ use crate::lang::list::List;
 use crate::lang::value::ValueType;
 use crate::lang::pretty_printer::PrettyPrinter;
 use crate::lang::argument::ArgumentHandler;
+use crate::lang::command::OutputType::{Known, Unknown};
 
 mod lines;
 mod csv;
@@ -31,7 +32,7 @@ fn echo(mut context: ExecutionContext) -> CrushResult<()> {
     for arg in context.arguments.drain(..) {
         PrettyPrinter::new(context.printer.clone()).print_value(arg.value);
     }
-    Ok(())
+    context.output.send(Value::Empty())
 }
 
 fn cat(mut context: ExecutionContext) -> CrushResult<()> {
@@ -44,26 +45,26 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         Box::new(move |env| {
             env.declare_command(
                 "cat", cat, true,
-                "cat @files:(file|glob)", "Read specified files as binary stream", None)?;
+                "cat @files:(file|glob)", "Read specified files as binary stream", None, Known(ValueType::BinaryStream))?;
             http::Http::declare(env)?;
             env.declare_command(
                 "lines", lines::perform, true,
-                "lines @files:(file|glob)", "Read specified files as a table with one line of text per row", None)?;
+                "lines @files:(file|glob)", "Read specified files as a table with one line of text per row", None, Unknown)?;
             csv::Csv::declare(env)?;
 
             env.declare_command(
                 "echo", echo, false,
-                "echo @value:any", "Prints all arguments directly to the screen", None)?;
+                "echo @value:any", "Prints all arguments directly to the screen", None, Known(ValueType::Empty))?;
             env.declare_command(
                 "val", val, false,
                 "val value:any",
                 "Return value",
                 Some(r#"    This command is useful if you want to e.g. pass a command as input in
     a pipeline instead of executing it. It is different from the echo command
-    in that val returns the value, and echo prints it to screen."#))?;
+    in that val returns the value, and echo prints it to screen."#), Known(ValueType::Any))?;
             env.declare_command(
                 "dir", dir, false,
-                "dir value:any", "List members of value", None)?;
+                "dir value:any", "List members of value", None, Known(ValueType::Empty))?;
             Ok(())
         }))?;
     root.r#use(&e);

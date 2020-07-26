@@ -18,6 +18,7 @@ use crate::lang::stream::OutputStream;
 use signature::signature;
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::files::Files;
+use crate::lang::command::OutputType::Known;
 
 lazy_static! {
     static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
@@ -96,7 +97,7 @@ fn run_for_single_directory_or_file(
     Ok(())
 }
 
-#[signature(find, short="Recursively list files")]
+#[signature(find, short="Recursively list files", output=Known(ValueType::TableStream(OUTPUT_TYPE.clone())))]
 pub struct Find {
     #[unnamed()]
     #[description("directories and files to list")]

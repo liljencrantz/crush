@@ -12,15 +12,16 @@ mod r#for;
 use std::path::PathBuf;
 use chrono::Duration;
 use crate::lang::argument::ArgumentHandler;
+use crate::lang::command::OutputType::Known;
 
 pub fn r#break(context: ExecutionContext) -> CrushResult<()> {
     context.env.do_break()?;
-    Ok(())
+    context.output.empty()
 }
 
 pub fn r#continue(context: ExecutionContext) -> CrushResult<()> {
     context.env.do_continue()?;
-    Ok(())
+    context.output.empty()
 }
 
 pub fn cmd(mut context: ExecutionContext) -> CrushResult<()> {
@@ -153,17 +154,17 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
             env.declare_command(
                 "break", r#break, false,
-                "break", "Stop execution of a loop", None)?;
+                "break", "Stop execution of a loop", None, Known(ValueType::Empty))?;
             env.declare_command(
                 "continue", r#continue, false,
                 "continue",
                 "Skip execution of the current iteration of a loop",
-                None)?;
+                None, Known(ValueType::Empty))?;
             env.declare_command(
                 "cmd", cmd, true,
                 "cmd external_command:(file|string) @arguments:any",
                 "Execute external commands",
-                None)?;
+                None, Known(ValueType::BinaryStream))?;
             Sleep::declare(env)?;
             Ok(())
         }))?;

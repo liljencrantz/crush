@@ -6,6 +6,7 @@ use crate::lang::value::Value;
 use ordered_map::OrderedMap;
 use lazy_static::lazy_static;
 use crate::lang::command::TypeMap;
+use crate::lang::command::OutputType::{Unknown, Known};
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "dict", name]
@@ -19,55 +20,57 @@ lazy_static! {
             "dict:new",
             "Construct a new dict",
             Some(r#"    Examples:
-    my_dict := (dict string integer):new"#));
+    my_dict := (dict string integer):new"#), Unknown);
         res.declare(full("len"),
             len, false,
             "dict:len",
             "The number of mappings in the dict",
-            None);
+            None, Known(ValueType::Integer));
         res.declare(full("empty"),
             empty, false,
             "dict:empty",
             "True if there are no mappings in the dict",
-            None);
+            None, Known(ValueType::Bool));
         res.declare(full("clear"),
             clear, false,
-            "dict:clear", "Remove all mappings from this dict", None);
+            "dict:clear", "Remove all mappings from this dict", None, Unknown);
         res.declare(full("__setitem__"),
             setitem, false,
             "dict[key] = value",
             "Create a new mapping or replace an existing one",
-            None);
+            None,
+            Unknown);
         res.declare(full("__getitem__"),
             getitem, false,
             "dict[key]",
             "Return the value the specified key is mapped to",
-            None);
+            None,
+            Unknown);
         res.declare(full("remove"),
             remove, false,
             "dict:remove key",
             "Remove a mapping from the dict",
-            None);
+            None, Unknown);
         res.declare(full("clone"),
             clone, false,
             "dict:clone",
             "Create a new dict with the same st of mappings as this one",
-            None);
+            None, Unknown);
         res.declare(full("__call_type__"),
             call_type, false,
             "dict key_type:type value_type:type",
             "Returns a dict type with the specifiec key and value types",
-            None);
+            None, Known(ValueType::Type));
         res.declare(full("key_type"),
             key_type, false,
             "dict:key_type",
             "Return the type of the keys in this dict",
-            None);
+            None, Known(ValueType::Type));
         res.declare(full("value_type"),
             value_type, false,
             "dict:value_type",
             "Return the type of the values in this dict",
-            None);
+            None, Known(ValueType::Type));
         res
     };
 }

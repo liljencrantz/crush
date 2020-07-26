@@ -15,6 +15,7 @@ use std::collections::HashSet;
 use crate::lang::table::ColumnType;
 use std::convert::TryFrom;
 use crate::lang::scope::Scope;
+use crate::lang::command::OutputType::{Unknown, Known};
 
 fn from_toml(toml_value: &toml::Value) -> CrushResult<Value> {
     match toml_value {
@@ -152,7 +153,7 @@ fn to(mut context: ExecutionContext) -> CrushResult<()> {
     let value = context.input.recv()?;
     let toml_value = to_toml(value)?;
     to_crush_error(writer.write(toml_value.to_string().as_bytes()))?;
-    Ok(())
+    context.output.empty()
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
@@ -168,7 +169,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     Examples:
 
-    toml:from Cargo.toml"#))?;
+    toml:from Cargo.toml"#), Unknown)?;
 
             env.declare_command(
                 "to", to, true,
@@ -179,7 +180,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     Examples:
 
-    ls | toml:to"#))?;
+    ls | toml:to"#), Known(ValueType::Empty))?;
             Ok(())
         }))?;
     Ok(())

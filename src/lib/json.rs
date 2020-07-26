@@ -16,6 +16,7 @@ use crate::lang::errors::Kind::InvalidData;
 use crate::lang::table::ColumnType;
 use crate::lang::scope::Scope;
 use std::convert::TryFrom;
+use crate::lang::command::OutputType::{Unknown, Known};
 
 fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
     match json_value {
@@ -149,7 +150,7 @@ fn to(mut context: ExecutionContext) -> CrushResult<()> {
     let value = context.input.recv()?;
     let json_value = to_json(value)?;
     to_crush_error(writer.write(json_value.to_string().as_bytes()))?;
-    Ok(())
+    context.output.empty()
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
@@ -165,7 +166,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     json:from some_file.json
 
-    (http "https://jsonplaceholder.typicode.com/todos/3"):body | json:from"#))?;
+    (http "https://jsonplaceholder.typicode.com/todos/3"):body | json:from"#), Unknown)?;
 
             env.declare_command(
                 "to", to, true,
@@ -174,7 +175,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
     Examples:
 
-    ls | json:to"#))?;
+    ls | json:to"#),
+            Known(ValueType::Empty))?;
             Ok(())
         }))?;
     Ok(())
