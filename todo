@@ -1,7 +1,7 @@
 Todo:
 Sort wildcard/regexp matches
 Allow secondary/tertiary sort keys
-Remote execution builtin using ssh under the hood
+Allow input type specification
 
 Show argument type in long description
 Tab completion of files

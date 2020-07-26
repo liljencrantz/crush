@@ -10,12 +10,14 @@ use crate::lang::table::ColumnVec;
 use signature::signature;
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::value::Field;
+use crate::lang::command::OutputType::Passthrough;
 
 #[signature(
     sort,
-    can_block=false,
+    can_block=true,
     short="Sort input based on column",
-    long="ps | sort ^cpu")]
+    long="ps | sort ^cpu",
+    output=Passthrough)]
 pub struct Sort {
     #[description("the column to sort on.")]
     field: Field,
