@@ -39,7 +39,7 @@ fn parse(mut host: String, default_username: &Option<String>) -> CrushResult<(St
     Ok((host, username))
 }
 
-fn run_remote(cmd: &Vec<u8>, env: &Scope, host: String, default_username: &Option<String>) -> CrushResult<Value> {
+fn run_remote(cmd: &Vec<u8>, env: &Scope, host: String, default_username: &Option<String>, password: &Option<String>) -> CrushResult<Value> {
     let (host, username) = parse(host, &default_username)?;
 
     let tcp = to_crush_error(TcpStream::connect(&host))?;
@@ -47,7 +47,11 @@ fn run_remote(cmd: &Vec<u8>, env: &Scope, host: String, default_username: &Optio
 
     sess.set_tcp_stream(tcp);
     to_crush_error(sess.handshake())?;
-    to_crush_error(sess.userauth_agent(&username))?;
+    if let Some(pass) = password {
+        to_crush_error(sess.userauth_password(&username, pass))?
+    } else {
+        to_crush_error(sess.userauth_agent(&username))?;
+    }
 
     let mut channel = to_crush_error(sess.channel_session())?;
     to_crush_error(channel.exec("crush --pup"))?;
@@ -72,6 +76,8 @@ struct Exec {
     host: String,
     #[description("username on remote machines.")]
     username: Option<String>,
+    #[description("password on remote machines. If no password is provided, agent authentication will be used.")]
+    password: Option<String>,
 }
 
 
@@ -80,7 +86,7 @@ fn exec(context: ExecutionContext) -> CrushResult<()> {
     let mut in_buf = Vec::new();
     serialize(&Value::Command(cfg.command), &mut in_buf)?;
     context.output.send(
-        run_remote(&in_buf, &context.env, cfg.host, &cfg.username)?)
+        run_remote(&in_buf, &context.env, cfg.host, &cfg.username, &cfg.username)?)
 }
 
 #[signature(
@@ -99,6 +105,8 @@ struct Pexec {
     parallel: i128,
     #[description("username on remote machines.")]
     username: Option<String>,
+    #[description("password on remote machines. If no password is provided, agent authentication will be used.")]
+    password: Option<String>,
 }
 
 fn pexec(context: ExecutionContext) -> CrushResult<()> {
@@ -125,12 +133,13 @@ fn pexec(context: ExecutionContext) -> CrushResult<()> {
         let my_buf = in_buf.clone();
         let my_env = context.env.clone();
         let my_username = cfg.username.clone();
+        let my_password = cfg.password.clone();
 
         let t: JoinHandle<std::result::Result<(), CrushError>> =
             to_crush_error(thread::Builder::new().name("remote:pexec".to_string()).spawn(
                 move || {
                     while let Ok(host) = my_recv.recv() {
-                        let res = run_remote(&my_buf, &my_env, host.clone(), &my_username)?;
+                        let res = run_remote(&my_buf, &my_env, host.clone(), &my_username, &my_password)?;
                         to_crush_error(my_send.send((host, res)))?;
                     }
                     Ok(())
