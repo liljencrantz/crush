@@ -8,6 +8,8 @@ use crate::lang::command::Command;
 use crate::lang::command::TypeMap;
 use crate::lang::command::OutputType::{Unknown, Known};
 use crate::lang::value::ValueType;
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "duration", name]
@@ -16,6 +18,7 @@ fn full(name: &'static str) -> Vec<&'static str> {
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
+        let path = vec!["global", "types", "duration"];
         res.declare(full("__add__"),
             add, false,
             "duration + (delta:duration | time:time)",
@@ -40,6 +43,8 @@ lazy_static! {
             "Divide this duration by the specified divisor",
             None,
             Known(ValueType::Duration));
+        New::declare_method(&mut res, &path);
+/*
         res.declare(full("new"),
             new, false,
             "duration:new [count:integer timeunit:string]...",
@@ -52,7 +57,7 @@ lazy_static! {
 
     # A complicated way of specifying a 23 hour duration
     duration:new 1 "days" (neg 3600) "seconds""#),
-    Known(ValueType::Duration));
+    Known(ValueType::Duration));*/
         res.declare(
             full("__neg__"), neg, false,
             "neg duration", "Negate this duration", None,
@@ -80,26 +85,42 @@ fn to_duration(a: i64, t: &str) -> CrushResult<chrono::Duration> {
     }
 }
 
-fn new(mut context: ExecutionContext) -> CrushResult<()> {
-    let v: Vec<Value> = context.arguments.drain(..)
-        .map(|a| a.value)
-        .collect::<Vec<Value>>();
-    if v.len() % 2 == 0 {
-        let vec = v.chunks(2)
-            .map(|chunks| match (&chunks[0], &chunks[1]) {
-                (Value::Integer(a), Value::String(t)) => to_duration(*a as i64, t.as_ref()),
-                _ => argument_error("Unknown duration format"),
-            })
-            .collect::<CrushResult<Vec<Duration>>>()?;
-        let mut res = Duration::seconds(0);
-        vec.iter()
-            .for_each(|d| {
-                res = res + *d;
-            });
-        context.output.send(Value::Duration(res))
-    } else {
-        argument_error("Unknown duration format")
-    }
+#[signature(new, can_block=false, short="Create a new duration")]
+struct New {
+    #[description("the number of nanoseconds in the duration.")]
+    #[default(0i64)]
+    nanoseconds: i64,
+    #[description("the number of microseconds in the duration.")]
+    #[default(0i64)]
+    microseconds: i64,
+    #[description("the number of milliseconds in the duration.")]
+    #[default(0i64)]
+    milliseconds: i64,
+    #[description("the number of seconds in the duration.")]
+    #[default(0i64)]
+    seconds: i64,
+    #[description("the number of minutes in the duration.")]
+    #[default(0i64)]
+    minutes: i64,
+    #[description("the number of hours in the duration.")]
+    #[default(0i64)]
+    hours: i64,
+    #[description("the number of days in the duration.")]
+    #[default(0i64)]
+    days: i64,
+}
+
+fn new(context: ExecutionContext) -> CrushResult<()> {
+    let cfg: New = New::parse(context.arguments, &context.printer)?;
+
+    let res = Duration::nanoseconds(cfg.nanoseconds) +
+        Duration::microseconds(cfg.microseconds) +
+        Duration::milliseconds(cfg.milliseconds) +
+        Duration::seconds(cfg.seconds) +
+        Duration::minutes(cfg.minutes) +
+        Duration::hours(cfg.hours) +
+        Duration::days(cfg.days);
+    context.output.send(Value::Duration(res))
 }
 
 fn neg(context: ExecutionContext) -> CrushResult<()> {

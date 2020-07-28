@@ -77,7 +77,6 @@ impl ValueType {
         }
     }
 
-
     pub fn is(&self, value: &Value) -> bool {
         (*self == ValueType::Any) || (*self == value.value_type())
     }

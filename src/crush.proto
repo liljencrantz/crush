@@ -234,4 +234,3 @@ message Member {
     uint64 name = 1;
     uint64 value = 2;
 }
-

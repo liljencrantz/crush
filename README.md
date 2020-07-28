@@ -151,39 +151,14 @@ with a floating point number results in a floating point number, for example.
 
 ### Named and unnamed arguments
 
-Crush does not have any conventions around arguments with and without leading
-hyphens meaning different things. Instead, Crush supports named and unnamed
-arguments at the language level, similar to e.g. Python.
+Crush supports named and unnamed arguments.
 
-The `http` command is an example of a command that expects named arguments:
+The `http` command is an example of a command that expe below
+invocations are equivalent.
 
-    crush> help http
-    http url:string [form=formdata:string] [method=method:string] [header=header:string]...
-    
-        Make a http request
-    
-        Headers should be on the form "key:value".
-    
-            Examples:
-    
-        http "https://example.com/" header=("Authorization: Bearer {}":format token)
-
-
-The `duration:new` command accepts any even numbered unnamed arguments:
-
-    crush> help duration:new
-    duration:new [count:integer timeunit:string]...
-    
-        Create a new duration
-    
-        * timeunit:string is one of nanosecond/nanoseconds, microsecond/microseconds,
-          millisecond/milliseconds, second/seconds, minute/minutes, hour/hours,
-          day/days, week/weeks, month/months, year/years
-    
-        Example:
-    
-        # A complicated way of specifying a 23 hour duration
-        duration:new 1 "days" -3600 "seconds"
+    http uri="http://example.com" method="get"
+    http "http://example.com" "get"
+    http "http://example.com" method="get"
 
 It is quite common to want to pass boolean arguments to commands, which is why
 Crush has a special shorthand syntax for it. Passing in `--foo` is equivalent

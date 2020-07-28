@@ -9,12 +9,12 @@ pub fn duration_format(d: &Duration) -> String {
     let mut remaining_nanos = d.num_nanoseconds()
         .map(|v| v as i128)
         .unwrap_or_else(||
-        d.num_microseconds()
-            .map(|v| v as i128 * 1000)
-            .unwrap_or(
-                d.num_milliseconds() as i128 * 1000_000
-            )
-    );
+            d.num_microseconds()
+                .map(|v| v as i128 * 1000)
+                .unwrap_or(
+                    d.num_milliseconds() as i128 * 1000_000
+                )
+        );
 
     let mut res = "".to_string();
 
@@ -58,10 +58,8 @@ pub fn duration_format(d: &Duration) -> String {
         res.push_str(format!("{:02}", seconds.abs()).as_str());
     }
 
-    if res.len() < 4 {
-        if remaining_nanos != 0 {
-            res.push_str(format!(".{:09}", remaining_nanos.abs()).trim_end_matches('0'))
-        }
+    if (res.len() < 4) && (remaining_nanos != 0) {
+        res.push_str(format!(".{:09}", remaining_nanos.abs()).trim_end_matches('0'));
     }
     res
 }
