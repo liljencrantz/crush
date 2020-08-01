@@ -30,6 +30,7 @@ pub struct ScopeLoader {
     mapping: OrderedMap<String, Value>,
     path: Vec<String>,
     parent: Scope,
+    scope: Scope,
 }
 
 impl ScopeLoader {
@@ -39,6 +40,14 @@ impl ScopeLoader {
         }
         self.mapping.insert(name.to_string(), value);
         Ok(())
+    }
+
+    pub fn create_lazy_namespace(&mut self, name: &str, loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>) -> CrushResult<Scope> {
+        let res = Scope {
+            data: Arc::from(Mutex::new(ScopeData::lazy(None, Some(self.scope.clone()), false, Some(name.to_string()), loader))),
+        };
+        self.declare(name, Value::Scope(res.clone()))?;
+        Ok(res)
     }
 
     pub fn declare_command(
@@ -84,15 +93,14 @@ impl ScopeLoader {
         }
     }
 
-    pub fn create_temporary_namespace(&self) -> CrushResult<Scope> {
-        let res = Scope {
+    pub fn create_temporary_namespace(&self) -> Scope {
+        Scope {
             data: Arc::from(Mutex::new(ScopeData::new(
                 Some(self.parent.clone()),
                 Some(self.parent.clone()),
                 false,
                 None))),
-        };
-        Ok(res)
+        }
     }
 }
 
@@ -296,6 +304,7 @@ impl Scope {
             mapping: OrderedMap::new(),
             path,
             parent: data.calling_scope.as_ref().unwrap().clone(),
+            scope: self.clone(),
         };
         loader(&mut tmp)?;
         tmp.copy_into(&mut data.mapping);

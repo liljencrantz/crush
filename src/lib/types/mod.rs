@@ -138,7 +138,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
             env.declare("root", Value::Struct(root))?;
 
-
             env.declare_command("class_get", class_get, false,
                                 "root:__getitem__ name:string",
                                 "Return the value of the specified field",

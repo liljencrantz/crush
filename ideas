@@ -22,30 +22,46 @@ crush> ps | where { (children:len) == 0 }
 A new operator, '::', is used to access a member in each element of a list.
 
 # Find processes who are running as a different user than their parent
-ps | where { parent::user != $user }
+ps | where { parent::user != global:user:me:name }
 
 When using '::' on a list/set of edges, it fetches that member in each element in returns them in a new list.
 
 In order to display a graph as a tree, simply return an edge as the root object, and the pretty-printer will
 do the rest:
 
-crush> (ps | where {pid = 1}):parent
+crush> (ps | where {pid == 1}):parent
 ...
 
 
 grpc command:
 
-#Create new grpc instance:
+# Create new grpc instance:
 crush> srv := (grpc "localhost:443")
-#List all services on a server
+# List all services on a server
 crush> dir srv
 [my.service other.service]
-#List all methods of a service
+# List all methods of a service
 crush> dir srv:my.service
 [method1 method2]
-#Call method without parameters
+# Call method without parameters
 srv:my.service:method1
 ["some" "output"]
-#Call method with parameters
+# Call method with parameters
 srv:my.service:method2 id=1234 tags=(list:of "foo" "bar")
 ["other" "output"]
+
+Validation:
+All commands declare valid input and output types.
+Input types can be partial, e.g. any iterator or any iterator with some restrictions.
+Checks are performed to validate consistency.
+Syntax for not having to duplicate output type.
+
+Commands:
+A simple command for replacing a regex in every line of a file.
+Show permissions in the find command.
+The find command could accept a glob or file as an optional parameter for filtering.
+Extra columned for ps: memory usage, tty, current CPU usage.
+du-like command for showing disk usage hierachy.
+A grep-command.
+A host namespace containing host information like name, OS, arch, kernel name, kernel version, uptime, number of logged in users, cpu load, etc.
+User namespace should be for *any* user, and user:me is the current user. There are also user:from_name and user:from_id methods.

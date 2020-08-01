@@ -20,6 +20,7 @@ mod user;
 mod remote;
 mod pup;
 mod random;
+mod host;
 
 use crate::{lang::scope::Scope, lang::errors::CrushResult};
 use crate::lang::execute;
@@ -62,7 +63,7 @@ fn load_external_namespace(name: &str, file: &Path, root: &Scope, printer: &Prin
     let local_output = output.clone();
     let local_file = file.to_path_buf();
     root.create_lazy_namespace(name, Box::new(move |env| {
-        let tmp_env: Scope = env.create_temporary_namespace()?;
+        let tmp_env: Scope = env.create_temporary_namespace();
         execute::file(tmp_env.clone(), &local_file, &local_printer, &local_output)?;
         let data = tmp_env.export()?;
         for (k, v) in data.mapping {
@@ -90,6 +91,7 @@ pub fn declare(root: &Scope, printer: &Printer, output: &ValueSender) -> CrushRe
     remote::declare(root)?;
     pup::declare(root)?;
     random::declare(root)?;
+    host::declare(root)?;
     declare_external(root, printer, output)?;
     root.readonly();
     Ok(())
