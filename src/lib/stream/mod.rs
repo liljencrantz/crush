@@ -29,14 +29,14 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         Box::new(move |env| {
             env.declare_command(
                 "head", head::perform, true,
-                "head [lines:integer]", "Return the first lines of the input. Defaults to 10.", None, Passthrough)?;
+                "head [lines:integer]", "Return the first lines of the io. Defaults to 10.", None, Passthrough)?;
             env.declare_command(
                 "tail", tail::perform, true,
-                "tail [lines:integer]", "Return the last lines of the input. Defaults to 10.", None, Passthrough)?;
+                "tail [lines:integer]", "Return the last lines of the io. Defaults to 10.", None, Passthrough)?;
             env.declare_command(
                 "where", r#where::r#where, true,
                 "where condition:command",
-                "Filter out rows from input based on condition",
+                "Filter out rows from io based on condition",
                 Some(r#"    The columns of the row are exported to the environment using the
     column names.
 
@@ -46,10 +46,10 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             sort::Sort::declare(env)?;
             env.declare_command(
                 "reverse", reverse::reverse, true,
-                "reverse", "Reverses the order of the rows in the input", None, Passthrough)?;
+                "reverse", "Reverses the order of the rows in the io", None, Passthrough)?;
             env.declare_command(
                 "group", group::perform, true,
-                "group group=field|string", "Group input by the specified column", None, Unknown)?;
+                "group group=field|string", "Group io by the specified column", None, Unknown)?;
             env.declare_command(
                 "join", join::perform, true,
                 "join left:field right:field", "Join two streams together on the specified keys", None, Unknown)?;
@@ -63,7 +63,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare_command(
                 "count", count::perform, true,
                 "count",
-                "Count the number of rows in the input", example!("ps | count"), Known(ValueType::Integer))?;
+                "Count the number of rows in the io", example!("ps | count"), Known(ValueType::Integer))?;
             env.declare_command(
                 "sum", sum_avg::sum, true,
                 "sum column:field",
@@ -87,11 +87,11 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare_command(
                 "select", select::select, true,
                 "select copy_fields:field... [%] new_field=definition:command",
-                "Pass on some old fields and calculate new ones for each line of input",
+                "Pass on some old fields and calculate new ones for each line of io",
                 example!(r#"ls | select ^user path={"{}/{}":format (pwd) file}"#), Unknown)?;
             env.declare_command(
                 "enumerate", enumerate::perform, true,
-                "enumerate", "Prepend a column containing the row number to each row of the input", None, Unknown)?;
+                "enumerate", "Prepend a column containing the row number to each row of the io", None, Unknown)?;
             env.declare_command(
                 "zip", zip::zip, true,
                 "zip stream1:(table_stream|table|list|dict) stream2:(table_stream|table|list|dict)",

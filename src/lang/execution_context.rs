@@ -298,7 +298,7 @@ impl ExecutionContext {
             0 => match self.input.recv()? {
                 Value::BinaryStream(b) => Ok(b),
                 Value::Binary(b) => Ok(BinaryReader::vec(&b)),
-                _ => argument_error("Expected either a file to read or binary pipe input"),
+                _ => argument_error("Expected either a file to read or binary pipe io"),
             },
             _ => Ok(BinaryReader::paths(self.arguments.files(&self.printer)?)?),
         }

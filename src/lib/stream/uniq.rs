@@ -53,6 +53,6 @@ pub fn uniq(context: ExecutionContext) -> CrushResult<()> {
             let output = context.output.initialize(input.types().to_vec())?;
             run(idx, input.as_mut(), output, &context.printer)
         }
-        _ => error("Expected input to be a stream"),
+        _ => error("Expected io to be a stream"),
     }
 }

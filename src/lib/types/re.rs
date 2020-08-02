@@ -20,9 +20,9 @@ lazy_static! {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
         let path = vec!["global", "types", "re"];
         res.declare(full("match"), r#match, false,
-            "re =~ input:string", "True if the input matches the pattern", None, Known(ValueType::Bool));
+            "re =~ io:string", "True if the io matches the pattern", None, Known(ValueType::Bool));
         res.declare(full("not_match"), not_match, false,
-            "re !~ input:string", "True if the input does not match the pattern", None, Known(ValueType::Bool));
+            "re !~ io:string", "True if the io does not match the pattern", None, Known(ValueType::Bool));
         ReplaceSignature::declare_method(&mut res, &path);
         ReplaceAllSignature::declare_method(&mut res, &path);
         res.declare(full("new"),

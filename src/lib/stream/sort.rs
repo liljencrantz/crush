@@ -15,7 +15,7 @@ use crate::lang::command::OutputType::Passthrough;
 #[signature(
     sort,
     can_block=true,
-    short="Sort input based on column",
+    short="Sort io based on column",
     long="ps | sort ^cpu",
     output=Passthrough)]
 pub struct Sort {

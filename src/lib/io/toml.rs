@@ -14,8 +14,11 @@ use crate::lang::errors::{CrushResult, to_crush_error, error, mandate};
 use std::collections::HashSet;
 use crate::lang::table::ColumnType;
 use std::convert::TryFrom;
-use crate::lang::scope::Scope;
+use crate::lang::scope::{Scope, ScopeLoader};
 use crate::lang::command::OutputType::{Unknown, Known};
+use crate::lang::files::Files;
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
 
 fn from_toml(toml_value: &toml::Value) -> CrushResult<Value> {
     match toml_value {
@@ -81,8 +84,25 @@ fn from_toml(toml_value: &toml::Value) -> CrushResult<Value> {
     }
 }
 
+#[signature(
+from,
+can_block = true,
+short = "Parse toml format",
+long = "Input can either be a binary stream or a file. All Toml types except",
+long = "datetime are supported. Datetime is not supported because the rust toml",
+long = "currently doesn't support accessing the internal state of a datetime.",
+long = "",
+long = "Examples:",
+long = "",
+long = "toml:from Cargo.toml")]
+struct From {
+    #[unnamed()]
+    files: Files,
+}
+
 fn from(mut context: ExecutionContext) -> CrushResult<()> {
-    let mut reader = BufReader::new(context.reader()?);
+    let cfg: From = From::parse(context.arguments, &context.printer)?;
+    let mut reader = BufReader::new(cfg.files.reader(context.input)?);
     let mut v = Vec::new();
 
     to_crush_error(reader.read_to_end(&mut v))?;
@@ -148,39 +168,38 @@ fn to_toml(value: Value) -> CrushResult<toml::Value> {
     }
 }
 
+#[signature(
+to,
+can_block = true,
+short = "Serialize to toml format",
+long = "If no file is specified, output is returned as a BinaryStream.",
+long = "The following Crush types are supported: File, string, integer, float, bool, list, table,",
+long = "table_stream, struct, time, duration, binary and binary_stream.",
+long = "",
+long = "Examples:",
+long = "",
+long = "ls | toml:to")]
+struct To {
+    #[unnamed()]
+    file: Files,
+}
+
 fn to(mut context: ExecutionContext) -> CrushResult<()> {
-    let mut writer = context.writer()?;
+    let cfg: To = To::parse(context.arguments, &context.printer)?;
+
+    let mut writer = cfg.file.writer(context.output)?;
     let value = context.input.recv()?;
     let toml_value = to_toml(value)?;
     to_crush_error(writer.write(toml_value.to_string().as_bytes()))?;
-    context.output.empty()
+    Ok(())
 }
 
-pub fn declare(root: &Scope) -> CrushResult<()> {
+pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
     root.create_lazy_namespace(
         "toml",
         Box::new(move |env| {
-            env.declare_command(
-                "from", from, true,
-                "toml:from [file:file]", "Parse toml format", Some(
-                    r#"    Input can either be a binary stream or a file. All Toml types except
-    datetime are supported. Datetime is not suported because the rust toml
-    currently doesn't support accessing the internal state of a datetime.
-
-    Examples:
-
-    toml:from Cargo.toml"#), Unknown)?;
-
-            env.declare_command(
-                "to", to, true,
-                "toml:to [file:file]", "Serialize to toml format", Some(
-                    r#"    If no file is specified, output is returned as a BinaryStream.
-    The following Crush types are supported: File, string, integer, float, bool, list, table,
-    table_stream, struct, time, duration, binary and binary_stream.
-
-    Examples:
-
-    ls | toml:to"#), Known(ValueType::Empty))?;
+            From::declare(env)?;
+            To::declare(env)?;
             Ok(())
         }))?;
     Ok(())

@@ -111,12 +111,12 @@ impl InputStream {
         match &res {
             Ok(row) => {
                 if row.cells().len() != self.types.len() {
-                    return error("Wrong number of columns in input");
+                    return error("Wrong number of columns in io");
                 }
                 for (c, ct) in row.cells().iter().zip(self.types.iter()) {
                     if !ct.cell_type.is(c) {
                         return error(format!(
-                            "Wrong cell type in input column {:?}, expected {:?}, got {:?}",
+                            "Wrong cell type in io column {:?}, expected {:?}, got {:?}",
                             ct.name,
                             c.value_type(),
                             ct.cell_type).as_str());

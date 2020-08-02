@@ -1,11 +1,13 @@
 use std::path::PathBuf;
 use crate::lang::printer::Printer;
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
 use crate::lang::value::{Value, ValueType};
 use crate::util::file::cwd;
 use crate::util::regex::RegexFileMatcher;
-use crate::lang::binary::BinaryReader;
-use crate::lang::stream::ValueReceiver;
+use crate::lang::binary::{BinaryReader, binary_channel};
+use crate::lang::stream::{ValueReceiver, ValueSender};
+use std::fs::File;
+use std::io::Write;
 
 #[derive(Debug)]
 pub struct Files {
@@ -34,10 +36,26 @@ impl Files {
             match input.recv()? {
                 Value::BinaryStream(b) => Ok(b),
                 Value::Binary(b) => Ok(BinaryReader::vec(&b)),
-                _ => argument_error("Expected either a file to read or binary pipe input"),
+                _ => argument_error("Expected either a file to read or binary pipe io"),
             }
         } else {
             BinaryReader::paths(self.files)
+        }
+    }
+
+    pub fn writer(self, output: ValueSender) -> CrushResult<Box<dyn Write>> {
+        if !self.had_entries {
+            println!("NO FILE");
+            let (w,r) = binary_channel();
+            output.send(Value::BinaryStream(r))?;
+            Ok(w)
+        } else if self.files.len() == 1 {
+            println!("SINGLE FILE");
+            output.send(Value::Empty())?;
+            Ok(Box::from(to_crush_error(File::create(self.files[0].clone()))?))
+        } else {
+            println!("MUTIFILE");
+            return argument_error("Expected exactly one desitnation file");
         }
     }
 

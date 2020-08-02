@@ -164,7 +164,7 @@ fn invoke_value(
                         context)
                 } else {
                     invoke_command(
-                        context.env.global_static_cmd(vec!["global", "input", "val"])?,
+                        context.env.global_static_cmd(vec!["global", "io", "val"])?,
                         None,
                         vec![ArgumentDefinition::unnamed(ValueDefinition::Value(Value::File(f)))],
                         context)
@@ -176,7 +176,7 @@ fn invoke_value(
             match t.fields().get("__call_type__") {
                 None =>
                     invoke_command(
-                        context.env.global_static_cmd(vec!["global", "input", "val"])?,
+                        context.env.global_static_cmd(vec!["global", "io", "val"])?,
                         None,
                         vec![ArgumentDefinition::unnamed(ValueDefinition::Value(Value::Type(t)))],
                         context),
@@ -191,7 +191,7 @@ fn invoke_value(
         _ =>
             if local_arguments.len() == 0 {
                 invoke_command(
-                    context.env.global_static_cmd(vec!["global", "input", "val"])?,
+                    context.env.global_static_cmd(vec!["global", "io", "val"])?,
                     None,
                     vec![ArgumentDefinition::unnamed(ValueDefinition::Value(value))],
                     context)

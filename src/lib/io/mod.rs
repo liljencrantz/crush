@@ -10,6 +10,8 @@ use crate::lang::command::OutputType::{Known, Unknown};
 mod lines;
 mod csv;
 pub mod http;
+pub mod toml;
+pub mod json;
 
 pub fn val(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
@@ -41,16 +43,16 @@ fn cat(mut context: ExecutionContext) -> CrushResult<()> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_lazy_namespace(
-        "input",
+        "io",
         Box::new(move |env| {
+            toml::declare(env)?;
+            json::declare(env)?;
+            lines::declare(env)?;
+            csv::Csv::declare(env)?;
             env.declare_command(
                 "cat", cat, true,
                 "cat @files:(file|glob)", "Read specified files as binary stream", None, Known(ValueType::BinaryStream))?;
             http::Http::declare(env)?;
-            env.declare_command(
-                "lines", lines::perform, true,
-                "lines @files:(file|glob)", "Read specified files as a table with one line of text per row", None, Unknown)?;
-            csv::Csv::declare(env)?;
 
             env.declare_command(
                 "echo", echo, false,

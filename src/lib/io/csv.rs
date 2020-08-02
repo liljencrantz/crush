@@ -27,7 +27,7 @@ use crate::lang::files::Files;
 #[derive(Debug)]
 pub struct Csv {
     #[unnamed()]
-    #[description("source. If unspecified, will read from input, which must be a binary or binary_stream.")]
+    #[description("source. If unspecified, will read from io, which must be a binary or binary_stream.")]
     files: Files,
     #[named()]
     #[description("name and type of all columns.")]

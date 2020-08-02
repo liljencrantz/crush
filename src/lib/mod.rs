@@ -1,7 +1,7 @@
 pub mod traversal;
 pub mod var;
 pub mod proc;
-pub mod input;
+pub mod io;
 
 #[macro_use]
 pub mod binary_op;
@@ -14,8 +14,6 @@ pub mod types;
 mod control;
 mod constants;
 mod math;
-mod toml;
-mod json;
 mod user;
 mod remote;
 mod pup;
@@ -81,12 +79,10 @@ pub fn declare(root: &Scope, printer: &Printer, output: &ValueSender) -> CrushRe
     stream::declare(root)?;
     types::declare(root)?;
     proc::declare(root)?;
-    input::declare(root)?;
+    io::declare(root)?;
     control::declare(root)?;
     constants::declare(root)?;
     math::declare(root)?;
-    toml::declare(root)?;
-    json::declare(root)?;
     user::declare(root)?;
     remote::declare(root)?;
     pup::declare(root)?;

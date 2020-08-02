@@ -187,7 +187,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare_command(
                 "materialize", materialize, true,
                 "materialize",
-                "Recursively convert all streams in input to materialized form",
+                "Recursively convert all streams in io to materialized form",
                 Some(r#"    The purpose of materializing a value is so that it can be used many times.
 
     Note that materializing a value is an inherently destructive operation.

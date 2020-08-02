@@ -14,7 +14,7 @@ use crate::lang::errors::{CrushResult, to_crush_error, error, mandate};
 use std::collections::HashSet;
 use crate::lang::errors::Kind::InvalidData;
 use crate::lang::table::ColumnType;
-use crate::lang::scope::Scope;
+use crate::lang::scope::{Scope, ScopeLoader};
 use std::convert::TryFrom;
 use crate::lang::command::OutputType::{Unknown, Known};
 
@@ -153,7 +153,7 @@ fn to(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.empty()
 }
 
-pub fn declare(root: &Scope) -> CrushResult<()> {
+pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
     root.create_lazy_namespace(
         "json",
         Box::new(move |env| {

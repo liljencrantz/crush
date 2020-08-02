@@ -57,11 +57,10 @@ Checks are performed to validate consistency.
 Syntax for not having to duplicate output type.
 
 Commands:
-A simple command for replacing a regex in every line of a file.
+A simple command for replacing a regex in every line of a file. Implement it in crush, using built in commands.
 Show permissions in the find command.
 The find command could accept a glob or file as an optional parameter for filtering.
 Extra columned for ps: memory usage, tty, current CPU usage.
 du-like command for showing disk usage hierachy.
 A grep-command.
-A host namespace containing host information like name, OS, arch, kernel name, kernel version, uptime, number of logged in users, cpu load, etc.
 User namespace should be for *any* user, and user:me is the current user. There are also user:from_name and user:from_id methods.

@@ -36,7 +36,7 @@ impl OutputType {
         match self {
             OutputType::Unknown => None,
             OutputType::Known(t) => Some(format!("    Output: {}", t.to_string())),
-            OutputType::Passthrough => Some("    Output: A stream with the same columns as the input".to_string()),
+            OutputType::Passthrough => Some("    Output: A stream with the same columns as the io".to_string()),
         }
     }
 }

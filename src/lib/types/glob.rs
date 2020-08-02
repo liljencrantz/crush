@@ -23,10 +23,10 @@ lazy_static! {
             "glob:new pattern:string", "Return a new glob", None, Known(ValueType::Glob));
         res.declare(full("match"),
             r#match, false,
-            "glob:match input:string", "True if the input matches the pattern", None, Known(ValueType::Bool));
+            "glob:match io:string", "True if the io matches the pattern", None, Known(ValueType::Bool));
         res.declare(full("not_match"),
             not_match, false,
-            "glob:not_match input:string", "True if the input does not match the pattern", None, Known(ValueType::Bool));
+            "glob:not_match io:string", "True if the io does not match the pattern", None, Known(ValueType::Bool));
         res.declare(full("files"),
             r#files, false,
             "glob:files", "Perform file matching of this glob", None, Known(ValueType::List(Box::from(ValueType::File))));
