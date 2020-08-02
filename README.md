@@ -59,6 +59,51 @@ operating on these columns is easy, and because the components used to do this
 are generic and reusable, you can trivially do the same to data from any source,
 such as json files, http requests, etc.
 
+### Reading and writing files
+
+In traditional shells, I/O is done as binary streams. Because Crush streams
+are typed, I/O happens differently. Crush has command pairs used
+for serializing and deserializing various file format. Use e.g. `json:from`
+and `json:to` to deserialize and serialize json data, respectively. These
+commands all work like you'd expect:
+
+| Namespace | Description |
+| --- | --- |
+| `bin` | Binary stream, i.e. no encoding at all. |
+| `csv` | Comma separated values. |
+| `json` | JSON file format. |
+| `lines` | Lines of text files. |
+| `pup` | The native file format of Crush.  |
+| `toml` | TOML file format. |
+
+```shell script
+# Dump the output of the ls command to the file listing.json in json format
+ls | json:to ./listing.json
+
+# Read the file Cargo.toml as a toml file, and extract the dependencies-field
+(toml:from Cargo.toml):dependencies
+```
+
+If you don't supply an input file to any of the deserializer commands,
+the command will read from the input, which must be a binary or binary
+stream, e.g. `(http "https://jsonplaceholder.typicode.com/posts/1"):body | json:from`.
+
+If you don't supply an output file to any of the serializer commands,
+the command will serialize the output to a binary stream as the pipeline
+output:
+
+```
+crush> list:of 1 2 3 | json:to
+[1,2,3]
+```
+
+One of the Crush serializers, Pup, is a native file format for Crush. The
+Pup-format is protobuf-based, and it's schema is available
+[here](src/crush.proto). The advantage of Pup is that all crush types,
+including classes and closures, can be serialized into this format.
+But because Pup is Crush-specific, it's useless for data sharing to
+other languages.
+
 ### Operators for comparison, logical operations and arithmetical operations
 
 Crush allows you to perform mathematical calculations on integer and floating
@@ -566,19 +611,6 @@ Crush features several shortcuts to make working with external commands easier.
 
 Further work is required when it comes to job control, terminal emulation and various
 other integration points.
-
-### Serialization
-
-Crush can serialize and deserialize data to various popular formats like
-json and toml. Use e.g. `json:from` and `json:to` to deserialize and 
-serialize data, respectively. These file formats allow data sharing between
-different languages, but only support a subset of all Crush data types.
-
-Crush also has a language specific serialization format called Pup. The
-Pup-format is protobuf-based, and it's schema is available
-[here](src/crush.proto). The advantage of Pup is that all crush types,
-including classes and closures, can be serialized into this format.
-But because Pup is Crush-specific, it's useless for data sharing.
 
 ### Executing remote commands
 
