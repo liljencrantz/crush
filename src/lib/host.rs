@@ -5,6 +5,7 @@ use sys_info;
 use crate::lang::value::Value;
 use signature::signature;
 use crate::lang::argument::ArgumentHandler;
+use crate::lang::r#struct::Struct;
 
 #[signature(
 name,
@@ -15,6 +16,28 @@ struct Name {
 
 fn name(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::String(to_crush_error(sys_info::hostname())?))
+}
+
+#[signature(
+mem,
+can_block = false,
+short = "name of this host")]
+struct Mem {
+}
+
+fn mem(context: ExecutionContext) -> CrushResult<()> {
+    let mem = to_crush_error(sys_info::mem_info())?;
+    context.output.send(Value::Struct(Struct::new(
+                                      vec![
+                                          ("total".to_string(), Value::Integer(mem.total as i128)),
+                                          ("free".to_string(), Value::Integer(mem.free as i128)),
+                                          ("avail".to_string(), Value::Integer(mem.avail as i128)),
+                                          ("buffers".to_string(), Value::Integer(mem.buffers as i128)),
+                                          ("cached".to_string(), Value::Integer(mem.cached as i128)),
+                                          ("swap_total".to_string(), Value::Integer(mem.swap_total as i128)),
+                                          ("swap_free".to_string(), Value::Integer(mem.swap_free as i128)),
+                                      ],
+                                      None)))
 }
 
 mod os {
@@ -50,6 +73,7 @@ mod cpu {
     use crate::lang::value::{Value, ValueType};
     use signature::signature;
     use crate::lang::list::List;
+    use crate::lang::r#struct::Struct;
 
     #[signature(
     count,
@@ -64,23 +88,24 @@ mod cpu {
     #[signature(
     load,
     can_block = false,
-    short = "number of CPU cores")]
+    short = "current CPU load")]
     pub struct Load {}
 
     fn load(context: ExecutionContext) -> CrushResult<()> {
         let load = to_crush_error(sys_info::loadavg())?;
-        context.output.send(Value::List(
-            List::new(ValueType::Float, vec![
-                Value::Float(load.one),
-                Value::Float(load.five),
-                Value::Float(load.fifteen)])
-        ))
+        context.output.send(Value::Struct(Struct::new(
+            vec![
+                ("one".to_string(), Value::Float(load.one)),
+                ("five".to_string(), Value::Float(load.five)),
+                ("fifteen".to_string(), Value::Float(load.fifteen)),
+            ],
+            None)))
     }
 
     #[signature(
     speed,
     can_block = false,
-    short = "number of CPU cores")]
+    short = "current CPU frequency")]
     pub struct Speed {}
 
     fn speed(context: ExecutionContext) -> CrushResult<()> {
@@ -89,11 +114,11 @@ mod cpu {
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    let e = root.create_lazy_namespace(
+    root.create_lazy_namespace(
         "host",
-        Box::new(move |env| {
-            Name::declare(env)?;
-            env.create_lazy_namespace(
+        Box::new(move |host| {
+            Name::declare(host)?;
+            host.create_lazy_namespace(
                 "os",
                 Box::new(move |env| {
                     os::Name::declare(env)?;
@@ -101,7 +126,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     Ok(())
                 })
             )?;
-            env.create_lazy_namespace(
+            host.create_lazy_namespace(
                 "cpu",
                 Box::new(move |env| {
                     cpu::Count::declare(env)?;
@@ -110,6 +135,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     Ok(())
                 })
             )?;
+            Mem::declare(host)?;
             Ok(())
         }))?;
     Ok(())
