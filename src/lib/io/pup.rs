@@ -2,7 +2,7 @@ use std::io::{BufReader};
 
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::errors::{CrushResult};
-use crate::lang::scope::Scope;
+use crate::lang::scope::{Scope, ScopeLoader};
 use crate::lang::serialization::{serialize_writer, deserialize_reader};
 use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::value::ValueType;
@@ -18,7 +18,7 @@ fn from(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(deserialize_reader(&mut BufReader::new(&mut reader), &context.env )?)
 }
 
-pub fn declare(root: &Scope) -> CrushResult<()> {
+pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
     root.create_lazy_namespace(
         "pup",
         Box::new(move |env| {

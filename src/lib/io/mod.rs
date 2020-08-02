@@ -1,17 +1,19 @@
 use crate::lang::scope::Scope;
 use crate::lang::errors::CrushResult;
-use crate::lang::{value::Value, execution_context::ExecutionContext, execution_context::ArgumentVector, binary::BinaryReader};
+use crate::lang::{value::Value, execution_context::ExecutionContext, execution_context::ArgumentVector};
 use crate::lang::list::List;
 use crate::lang::value::ValueType;
 use crate::lang::pretty_printer::PrettyPrinter;
 use crate::lang::argument::ArgumentHandler;
-use crate::lang::command::OutputType::{Known, Unknown};
+use crate::lang::command::OutputType::{Known};
 
-mod lines;
+mod bin;
 mod csv;
-pub mod http;
-pub mod toml;
-pub mod json;
+mod http;
+mod json;
+mod lines;
+mod pup;
+mod toml;
 
 pub fn val(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
@@ -37,21 +39,16 @@ fn echo(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Empty())
 }
 
-fn cat(mut context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::BinaryStream(BinaryReader::paths(context.arguments.files(&context.printer)?)?))
-}
-
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_lazy_namespace(
         "io",
         Box::new(move |env| {
+            bin::declare(env)?;
+            csv::declare(env)?;
+            pup::declare(env)?;
             toml::declare(env)?;
             json::declare(env)?;
             lines::declare(env)?;
-            csv::Csv::declare(env)?;
-            env.declare_command(
-                "cat", cat, true,
-                "cat @files:(file|glob)", "Read specified files as binary stream", None, Known(ValueType::BinaryStream))?;
             http::Http::declare(env)?;
 
             env.declare_command(
@@ -63,7 +60,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "Return value",
                 Some(r#"    This command is useful if you want to e.g. pass a command as input in
     a pipeline instead of executing it. It is different from the echo command
-    in that val returns the value, and echo prints it to screen."#), Known(ValueType::Any))?;
+    in that val sends the value thorugh the pipeline, where echo prints it to screen."#), Known(ValueType::Any))?;
             env.declare_command(
                 "dir", dir, false,
                 "dir value:any", "List members of value", None, Known(ValueType::Empty))?;

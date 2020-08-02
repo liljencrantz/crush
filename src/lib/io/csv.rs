@@ -19,13 +19,14 @@ use crate::lang::argument::ArgumentHandler;
 use crate::lang::value::ValueType;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::files::Files;
+use crate::lang::scope::ScopeLoader;
 
 #[signature(
-    csv,
-    example="csv separator=\",\" head=1 name=string age=integer nick=string",
+    from,
+    example="csv:from separator=\",\" head=1 name=string age=integer nick=string",
     short="Parse specified files as CSV files")]
 #[derive(Debug)]
-pub struct Csv {
+struct From {
     #[unnamed()]
     #[description("source. If unspecified, will read from io, which must be a binary or binary_stream.")]
     files: Files,
@@ -42,8 +43,8 @@ pub struct Csv {
     trim: Option<char>,
 }
 
-pub fn csv(context: ExecutionContext) -> CrushResult<()> {
-    let cfg: Csv = Csv::parse(context.arguments, &context.printer)?;
+fn from(context: ExecutionContext) -> CrushResult<()> {
+    let cfg: From = From::parse(context.arguments, &context.printer)?;
     let columns = cfg.columns.iter().map(|(k, v)| ColumnType::new(k, v.clone())).collect::<Vec<_>>();
     let output = context.output.initialize(columns.clone())?;
 
@@ -93,5 +94,15 @@ pub fn csv(context: ExecutionContext) -> CrushResult<()> {
             }
         }
     }
+    Ok(())
+}
+
+pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
+    root.create_lazy_namespace(
+        "csv",
+        Box::new(move |env| {
+            From::declare(env)?;
+            Ok(())
+        }))?;
     Ok(())
 }

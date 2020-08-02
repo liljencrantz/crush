@@ -45,17 +45,14 @@ impl Files {
 
     pub fn writer(self, output: ValueSender) -> CrushResult<Box<dyn Write>> {
         if !self.had_entries {
-            println!("NO FILE");
             let (w,r) = binary_channel();
             output.send(Value::BinaryStream(r))?;
             Ok(w)
         } else if self.files.len() == 1 {
-            println!("SINGLE FILE");
             output.send(Value::Empty())?;
             Ok(Box::from(to_crush_error(File::create(self.files[0].clone()))?))
         } else {
-            println!("MUTIFILE");
-            return argument_error("Expected exactly one desitnation file");
+            argument_error("Expected exactly one desitnation file")
         }
     }
 

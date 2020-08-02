@@ -16,7 +16,6 @@ mod constants;
 mod math;
 mod user;
 mod remote;
-mod pup;
 mod random;
 mod host;
 
@@ -85,7 +84,6 @@ pub fn declare(root: &Scope, printer: &Printer, output: &ValueSender) -> CrushRe
     math::declare(root)?;
     user::declare(root)?;
     remote::declare(root)?;
-    pup::declare(root)?;
     random::declare(root)?;
     host::declare(root)?;
     declare_external(root, printer, output)?;
