@@ -14,8 +14,8 @@ use crate::lang::errors::{CrushResult, to_crush_error, error, mandate};
 use std::collections::HashSet;
 use crate::lang::table::ColumnType;
 use std::convert::TryFrom;
-use crate::lang::scope::{Scope, ScopeLoader};
-use crate::lang::command::OutputType::{Unknown, Known};
+use crate::lang::scope::ScopeLoader;
+use crate::lang::command::OutputType::Unknown;
 use crate::lang::files::Files;
 use signature::signature;
 use crate::lang::argument::ArgumentHandler;
@@ -87,6 +87,7 @@ fn from_toml(toml_value: &toml::Value) -> CrushResult<Value> {
 #[signature(
 from,
 can_block = true,
+output = Unknown,
 short = "Parse toml format",
 long = "Input can either be a binary stream or a file. All Toml types except",
 long = "datetime are supported. Datetime is not supported because the rust toml",
@@ -100,7 +101,7 @@ struct From {
     files: Files,
 }
 
-fn from(mut context: ExecutionContext) -> CrushResult<()> {
+fn from(context: ExecutionContext) -> CrushResult<()> {
     let cfg: From = From::parse(context.arguments, &context.printer)?;
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
     let mut v = Vec::new();
@@ -171,6 +172,7 @@ fn to_toml(value: Value) -> CrushResult<toml::Value> {
 #[signature(
 to,
 can_block = true,
+output = Unknown,
 short = "Serialize to toml format",
 long = "If no file is specified, output is returned as a BinaryStream.",
 long = "The following Crush types are supported: File, string, integer, float, bool, list, table,",
@@ -184,12 +186,11 @@ struct To {
     file: Files,
 }
 
-fn to(mut context: ExecutionContext) -> CrushResult<()> {
+fn to(context: ExecutionContext) -> CrushResult<()> {
     let cfg: To = To::parse(context.arguments, &context.printer)?;
-
     let mut writer = cfg.file.writer(context.output)?;
-    let value = context.input.recv()?;
-    let toml_value = to_toml(value)?;
+    let serde_value = context.input.recv()?;
+    let toml_value = to_toml(serde_value)?;
     to_crush_error(writer.write(toml_value.to_string().as_bytes()))?;
     Ok(())
 }

@@ -33,6 +33,7 @@ impl Files {
 
     pub fn reader(self, input: ValueReceiver) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
         if !self.had_entries {
+println!("TRAFDFKDSAÖLFADSK");
             match input.recv()? {
                 Value::BinaryStream(b) => Ok(b),
                 Value::Binary(b) => Ok(BinaryReader::vec(&b)),

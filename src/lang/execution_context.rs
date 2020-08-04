@@ -292,36 +292,6 @@ impl ExecutionContext {
             this: self.this,
         }
     }
-
-    pub fn reader(&mut self) -> CrushResult<Box<dyn BinaryReader>> {
-        match self.arguments.len() {
-            0 => match self.input.recv()? {
-                Value::BinaryStream(b) => Ok(b),
-                Value::Binary(b) => Ok(BinaryReader::vec(&b)),
-                _ => argument_error("Expected either a file to read or binary pipe io"),
-            },
-            _ => Ok(BinaryReader::paths(self.arguments.files(&self.printer)?)?),
-        }
-    }
-
-    pub fn writer(&mut self) -> CrushResult<Box<dyn Write>> {
-        match self.arguments.len() {
-            0 => {
-                let (w,r) = binary_channel();
-                self.output.send(Value::BinaryStream(r))?;
-                Ok(w)
-            }
-            1 => {
-                let files = self.arguments.files(&self.printer)?;
-                if files.len() != 1 {
-                    return argument_error("Expected exactly one desitnation file");
-                }
-                Ok(Box::from(to_crush_error(File::create(files[0].clone()))?))
-            },
-            _ => argument_error("Too many arguments"),
-        }
-    }
-
 }
 
 pub trait This {

@@ -14,9 +14,12 @@ use crate::lang::errors::{CrushResult, to_crush_error, error, mandate};
 use std::collections::HashSet;
 use crate::lang::errors::Kind::InvalidData;
 use crate::lang::table::ColumnType;
-use crate::lang::scope::{Scope, ScopeLoader};
+use crate::lang::scope::ScopeLoader;
 use std::convert::TryFrom;
-use crate::lang::command::OutputType::{Unknown, Known};
+use crate::lang::command::OutputType::Unknown;
+use crate::lang::files::Files;
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
 
 fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
     match json_value {
@@ -138,45 +141,51 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
     }
 }
 
+#[signature(
+from,
+can_block = true,
+output = Unknown,
+short = "Parse json format",
+example = "(http \"https://jsonplaceholder.typicode.com/todos/3\"):body | json:from")]
+struct From {
+    #[unnamed()]
+    files: Files,
+}
+
 pub fn from(mut context: ExecutionContext) -> CrushResult<()> {
-    let reader = BufReader::new(context.reader()?);
-    let v = to_crush_error(serde_json::from_reader(reader))?;
-    let crush_value = from_json(&v)?;
+    let cfg: From = From::parse(context.arguments, &context.printer)?;
+    let reader = BufReader::new(cfg.files.reader(context.input)?);
+    let serde_value = to_crush_error(serde_json::from_reader(reader))?;
+    let crush_value = from_json(&serde_value)?;
     context.output.send(crush_value)
 }
 
+#[signature(
+to,
+can_block = true,
+output = Unknown,
+short = "Serialize to json format",
+example = "ls | json:to")]
+struct To {
+    #[unnamed()]
+    file: Files,
+}
+
 fn to(mut context: ExecutionContext) -> CrushResult<()> {
-    let mut writer = context.writer()?;
+    let cfg: To = To::parse(context.arguments, &context.printer)?;
+    let mut writer = cfg.file.writer(context.output)?;
     let value = context.input.recv()?;
     let json_value = to_json(value)?;
     to_crush_error(writer.write(json_value.to_string().as_bytes()))?;
-    context.output.empty()
+    Ok(())
 }
 
 pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
     root.create_lazy_namespace(
         "json",
         Box::new(move |env| {
-            env.declare_command(
-                "from", from, true,
-                "json:from [file:file]", "Parse json", Some(
-                    r#"    Input can either be a binary stream or a file.
-
-    Examples:
-
-    json:from some_file.json
-
-    (http "https://jsonplaceholder.typicode.com/todos/3"):body | json:from"#), Unknown)?;
-
-            env.declare_command(
-                "to", to, true,
-                "json:to [file:file]", "Serialize to json format", Some(
-                    r#"    If no file is specified, output is returned as a BinaryStream.
-
-    Examples:
-
-    ls | json:to"#),
-            Known(ValueType::Empty))?;
+            From::declare(env);
+            To::declare(env);
             Ok(())
         }))?;
     Ok(())
