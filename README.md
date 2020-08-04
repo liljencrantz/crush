@@ -74,7 +74,9 @@ commands all work like you'd expect:
 | `json` | JSON file format. |
 | `lines` | Lines of text files. |
 | `pup` | The native file format of Crush.  |
+| `split` | Split text file on custom separators. |
 | `toml` | TOML file format. |
+| `words` | Word split text files. |
 
 ```shell script
 # Dump the output of the ls command to the file listing.json in json format
@@ -103,7 +105,7 @@ crush> list:of 1 2 3 | json:to
 One of the Crush serializers, Pup, is a native file format for Crush. The
 Pup-format is protobuf-based, and it's schema is available
 [here](src/crush.proto). The advantage of Pup is that all crush types,
-including classes and closures, can be serialized into this format.
+including classes and closures, can be losslessly serialized into this format.
 But because Pup is Crush-specific, it's useless for data sharing to
 other languages.
 

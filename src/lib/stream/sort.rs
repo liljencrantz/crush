@@ -19,8 +19,8 @@ use crate::lang::command::OutputType::Passthrough;
     long="ps | sort ^cpu",
     output=Passthrough)]
 pub struct Sort {
-    #[description("the column to sort on.")]
-    field: Field,
+    #[description("the column to sort on. Not required if there is only one column.")]
+    field: Option<Field>,
 }
 
 pub fn run(idx: usize, input: &mut dyn Readable, output: OutputStream) -> CrushResult<()> {
@@ -46,7 +46,11 @@ pub fn sort(context: ExecutionContext) -> CrushResult<()> {
         Some(mut input) => {
             let output = context.output.initialize(input.types().to_vec())?;
             let cfg: Sort = Sort::parse(context.arguments, &context.printer)?;
-            let idx = input.types().find(&cfg.field)?;
+            let idx = match cfg.field {
+                None => if input.types().len() == 1 {0} else {return argument_error("Missing comparison key"); },
+                Some(field) => input.types().find(&field)?,
+            };
+
             if input.types()[idx].cell_type.is_comparable() {
                 run(idx, input.as_mut(), output)
             } else {
