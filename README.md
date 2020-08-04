@@ -63,7 +63,7 @@ such as json files, http requests, etc.
 
 In traditional shells, I/O is done as binary streams. Because Crush streams
 are typed, I/O happens differently. Crush has command pairs used
-for serializing and deserializing various file format. Use e.g. `json:from`
+for serializing and deserializing various file formats. Use e.g. `json:from`
 and `json:to` to deserialize and serialize json data, respectively. These
 commands all work like you'd expect:
 
@@ -78,21 +78,24 @@ commands all work like you'd expect:
 
 ```shell script
 # Dump the output of the ls command to the file listing.json in json format
-ls | json:to ./listing.json
+crush> ls | json:to ./listing.json
 
 # Read the file Cargo.toml as a toml file, and extract the dependencies-field
-(toml:from Cargo.toml):dependencies
+crush> (toml:from Cargo.toml):dependencies
+
+# Fetch a web page and write it to a file
+(http "https://isitchristmas.com/"):body | bin:to ./isitchristmas.html
 ```
 
 If you don't supply an input file to any of the deserializer commands,
 the command will read from the input, which must be a binary or binary
 stream, e.g. `(http "https://jsonplaceholder.typicode.com/posts/1"):body | json:from`.
 
-If you don't supply an output file to any of the serializer commands,
+If you don't supply an output file to one of the serializer commands,
 the command will serialize the output to a binary stream as the pipeline
 output:
 
-```
+```shell script
 crush> list:of 1 2 3 | json:to
 [1,2,3]
 ```
@@ -107,8 +110,8 @@ other languages.
 ### Operators for comparison, logical operations and arithmetical operations
 
 Crush allows you to perform mathematical calculations on integer and floating
-point numbers directly in the shell, using the same mathematical operators used
-in almost any other programming language.
+point numbers directly in the shell, mostly using the same mathematical operators
+used in almost any other programming language.
 
     crush> 5+6
     11
@@ -196,10 +199,8 @@ with a floating point number results in a floating point number, for example.
 
 ### Named and unnamed arguments
 
-Crush supports named and unnamed arguments.
-
-The `http` command is an example of a command that expe below
-invocations are equivalent.
+Crush supports named and unnamed arguments. It is often possible to use one,
+the other or a combination of both. The following three invocations are equivalent.
 
     http uri="http://example.com" method="get"
     http "http://example.com" "get"

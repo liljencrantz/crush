@@ -18,6 +18,7 @@ can_block = true,
 short = "Read specified files (or input) as a table with one line of text per row")]
 struct From {
     #[unnamed()]
+    #[description("the files to read from (read from input if no file is specified).")]
     files: Files,
 }
 
@@ -32,7 +33,13 @@ pub fn from(context: ExecutionContext) -> CrushResult<()> {
         if line.is_empty() {
             break;
         }
-        let s = if line.ends_with('\n') { &line[0..line.len() - 1] } else { &line[..] };
+        let mut s = if line.ends_with('\n') { &line[0..line.len() - 1] } else { &line[..] };
+        while s.starts_with('\r') {
+            s = &s[1..];
+        }
+        while s.ends_with('\r') {
+            s = &s[0..line.len()-1];
+        }
         context.printer.handle_error(output.send(Row::new(vec![Value::string(s)])));
         line.clear();
     }

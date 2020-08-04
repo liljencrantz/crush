@@ -13,7 +13,9 @@ mod http;
 mod json;
 mod lines;
 mod pup;
+mod split;
 mod toml;
+mod words;
 
 pub fn val(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
@@ -49,6 +51,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             toml::declare(env)?;
             json::declare(env)?;
             lines::declare(env)?;
+            split::declare(env)?;
+            words::declare(env)?;
             http::Http::declare(env)?;
 
             env.declare_command(

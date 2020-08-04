@@ -1,0 +1,12 @@
+This is an example file. It contains text, interspersed with
+punctuation.
+
+It contains several paragraphs of text. Some of the paragraphs are
+broken up into several lines of text. The text is punctuated and
+a handful of the characters contained in it are in upper case.
+
+Some of the words in the file are repeated several times.
+
+A file such as this one can be useful for testing purposes. It is
+possible to use it in tests to verify that word splitting and various
+other parts of a program work as intended.
