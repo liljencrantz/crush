@@ -4,7 +4,7 @@ use crate::lang::argument::Argument;
 use crate::lang::table::Row;
 use crate::lang::{value::Value, table::ColumnType};
 use crate::lang::errors::{CrushResult, error};
-use crate::lang::stream::{Readable, OutputStream};
+use crate::lang::stream::{CrushStream, OutputStream};
 use crate::lang::table::ColumnVec;
 use crate::lang::printer::Printer;
 
@@ -19,7 +19,7 @@ fn parse(input_type: &[ColumnType], mut arguments: Vec<Argument>) -> CrushResult
 
 fn run(
     idx: Option<usize>,
-    input: &mut dyn Readable,
+    input: &mut dyn CrushStream,
     output: OutputStream,
     printer: &Printer,
 ) -> CrushResult<()> {
@@ -47,7 +47,7 @@ fn run(
 }
 
 pub fn uniq(context: ExecutionContext) -> CrushResult<()> {
-    match context.input.recv()?.readable() {
+    match context.input.recv()?.stream() {
         Some(mut input) => {
             let idx = parse(input.types(), context.arguments)?;
             let output = context.output.initialize(input.types().to_vec())?;

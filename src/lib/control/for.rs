@@ -3,14 +3,14 @@ use crate::lang::value::Value;
 use crate::lang::{table::TableReader, list::ListReader, r#struct::Struct, dict::DictReader};
 use crate::lang::errors::{argument_error, CrushResult};
 use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
-use crate::lang::stream::{empty_channel, Readable, black_hole};
+use crate::lang::stream::{empty_channel, CrushStream, black_hole};
 use crate::lang::command::Command;
 
 pub fn run(
     context: ExecutionContext,
     body: Command,
     name: Option<String>,
-    mut input: impl Readable,
+    mut input: impl CrushStream,
 ) -> CrushResult<()> {
     while let Ok(line) = input.read() {
         let env = context.env.create_child(&context.env, true);

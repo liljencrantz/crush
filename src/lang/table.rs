@@ -1,6 +1,6 @@
 use crate::lang::{value::Value, r#struct::Struct};
 use crate::lang::errors::{CrushError, error, CrushResult, argument_error};
-use crate::lang::stream::{Readable};
+use crate::lang::stream::{CrushStream};
 use crate::util::replace::Replace;
 use crate::lang::value::ValueType;
 use time::Duration;
@@ -48,7 +48,7 @@ impl TableReader {
     }
 }
 
-impl Readable for TableReader {
+impl CrushStream for TableReader {
     fn read(&mut self) -> Result<Row, CrushError> {
         if self.idx >= self.rows.rows().len() {
             return error("EOF");

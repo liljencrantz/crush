@@ -12,7 +12,7 @@ use crate::{
 };
 use crate::lang::{table::ColumnType};
 use crate::lang::errors::{CrushResult, error};
-use crate::lang::stream::Readable;
+use crate::lang::stream::CrushStream;
 use crate::lang::table::ColumnVec;
 
 pub struct Config {
@@ -42,7 +42,7 @@ pub fn parse(input_type: &[ColumnType], arguments: Vec<Argument>) -> CrushResult
 pub fn run(
     config: Config,
     input_type: &[ColumnType],
-    input: &mut dyn Readable,
+    input: &mut dyn CrushStream,
     output: OutputStream,
 ) -> CrushResult<()> {
     let mut groups: HashMap<Value, OutputStream> = HashMap::new();
@@ -67,7 +67,7 @@ pub fn run(
 }
 
 pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    match context.input.recv()?.readable() {
+    match context.input.recv()?.stream() {
         Some(mut input) => {
             let config = parse(input.types(), context.arguments)?;
             let output_type = vec![

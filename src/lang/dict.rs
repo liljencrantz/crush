@@ -4,7 +4,7 @@ use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;
 use ordered_map::OrderedMap;
-use crate::lang::stream::Readable;
+use crate::lang::stream::CrushStream;
 use crate::util::replace::Replace;
 use crate::util::identity_arc::Identity;
 use std::fmt::{Display, Formatter};
@@ -180,7 +180,7 @@ impl DictReader {
     }
 }
 
-impl Readable for DictReader {
+impl CrushStream for DictReader {
     fn read(&mut self) -> CrushResult<Row> {
         if self.idx >= self.list.len() {
             return error("End of stream");

@@ -150,13 +150,13 @@ pub fn empty_channel() -> ValueReceiver {
     i
 }
 
-pub trait Readable {
+pub trait CrushStream {
     fn read(&mut self) -> CrushResult<Row>;
     fn read_timeout(&mut self, timeout: Duration) -> Result<Row, RecvTimeoutError>;
     fn types(&self) -> &[ColumnType];
 }
 
-impl Readable for InputStream {
+impl CrushStream for InputStream {
     fn read(&mut self) -> Result<Row, CrushError> {
         self.recv()
     }

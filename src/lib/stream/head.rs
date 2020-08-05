@@ -1,10 +1,10 @@
 use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use crate::lang::errors::{CrushResult, error};
-use crate::lang::stream::{Readable, ValueSender};
+use crate::lang::stream::{CrushStream, ValueSender};
 
 pub fn run(
     lines: i128,
-    input: &mut dyn Readable,
+    input: &mut dyn CrushStream,
     sender: ValueSender,
 ) -> CrushResult<()> {
     let output = sender.initialize(input.types().to_vec())?;
@@ -22,7 +22,7 @@ pub fn run(
 pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len_range(0, 1)?;
     let lines = context.arguments.optional_integer(0)?.unwrap_or(10);
-    match context.input.recv()?.readable() {
+    match context.input.recv()?.stream() {
         Some(mut r) => run(lines, r.as_mut(), context.output),
         None => error("Expected a stream"),
     }

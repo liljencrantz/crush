@@ -1,4 +1,4 @@
-use crate::lang::stream::{ValueSender, channels, Readable, InputStream};
+use crate::lang::stream::{ValueSender, channels, CrushStream, InputStream};
 use std::thread;
 use crate::lang::table::Table;
 use crate::lang::value::Value;
@@ -103,7 +103,7 @@ impl PrettyPrinter {
         };
     }
 
-    fn print_readable(&self, readable: &mut impl Readable, indent: usize) {
+    fn print_readable(&self, readable: &mut impl CrushStream, indent: usize) {
         let mut data: Vec<Row> = Vec::new();
         let mut has_table = false;
 

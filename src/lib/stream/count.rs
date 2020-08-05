@@ -1,9 +1,9 @@
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::value::Value;
-use crate::lang::stream::Readable;
+use crate::lang::stream::CrushStream;
 
-fn count_rows(mut s: Box<dyn Readable>) -> Value {
+fn count_rows(mut s: Box<dyn CrushStream>) -> Value {
     let mut res: i128 = 0;
     while let Ok(_) = s.read() {
         res += 1;
@@ -17,7 +17,7 @@ pub fn perform(context: ExecutionContext) -> CrushResult<()> {
         Value::List(r) => context.output.send(Value::Integer(r.len() as i128)),
         Value::Dict(r) => context.output.send(Value::Integer(r.len() as i128)),
         v =>
-            match v.readable() {
+            match v.stream() {
                 Some(readable) => context.output.send(count_rows(readable)),
                 None => argument_error("Expected a stream")
             }

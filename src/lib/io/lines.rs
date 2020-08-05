@@ -58,7 +58,7 @@ struct To {
 pub fn to(context: ExecutionContext) -> CrushResult<()> {
     let cfg: To = To::parse(context.arguments, &context.printer)?;
 
-    match context.input.recv()?.readable() {
+    match context.input.recv()?.stream() {
         Some(mut input) => {
             let mut out = cfg.file.writer(context.output)?;
             if input.types().len() != 1 || input.types()[0].cell_type != ValueType::String {

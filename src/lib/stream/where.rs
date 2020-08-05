@@ -7,7 +7,7 @@ use crate::{
 };
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::errors::{error, CrushResult, argument_error};
-use crate::lang::stream::{Readable, empty_channel, channels, black_hole};
+use crate::lang::stream::{CrushStream, empty_channel, channels, black_hole};
 use crate::lang::{table::ColumnType, argument::Argument};
 use crate::lang::command::Command;
 
@@ -32,7 +32,7 @@ fn evaluate(
     }
 }
 
-pub fn run(condition: Command, input: &mut dyn Readable, output: OutputStream, base_context: &ExecutionContext) -> CrushResult<()> {
+pub fn run(condition: Command, input: &mut dyn CrushStream, output: OutputStream, base_context: &ExecutionContext) -> CrushResult<()> {
     while let Ok(row) = input.read() {
         match evaluate(condition.clone(), &row, input.types(), &base_context) {
             Ok(val) => if val { if output.send(row).is_err() { break; } },
@@ -51,7 +51,7 @@ pub fn parse(_input_type: &[ColumnType],
 }
 
 pub fn r#where(mut context: ExecutionContext) -> CrushResult<()> {
-    match context.input.recv()?.readable() {
+    match context.input.recv()?.stream() {
         Some(mut input) => {
             let base_context = ExecutionContext {
                 input: empty_channel(),

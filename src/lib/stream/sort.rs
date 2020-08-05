@@ -5,7 +5,7 @@ use crate::{
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::table::Row;
 use crate::lang::errors::{CrushResult, error};
-use crate::lang::stream::Readable;
+use crate::lang::stream::CrushStream;
 use crate::lang::table::ColumnVec;
 use signature::signature;
 use crate::lang::argument::ArgumentHandler;
@@ -23,7 +23,7 @@ pub struct Sort {
     field: Option<Field>,
 }
 
-pub fn run(idx: usize, input: &mut dyn Readable, output: OutputStream) -> CrushResult<()> {
+pub fn run(idx: usize, input: &mut dyn CrushStream, output: OutputStream) -> CrushResult<()> {
     let mut res: Vec<Row> = Vec::new();
     while let Ok(row) = input.read() {
         res.push(row);
@@ -42,7 +42,7 @@ pub fn run(idx: usize, input: &mut dyn Readable, output: OutputStream) -> CrushR
 }
 
 pub fn sort(context: ExecutionContext) -> CrushResult<()> {
-    match context.input.recv()?.readable() {
+    match context.input.recv()?.stream() {
         Some(mut input) => {
             let output = context.output.initialize(input.types().to_vec())?;
             let cfg: Sort = Sort::parse(context.arguments, &context.printer)?;

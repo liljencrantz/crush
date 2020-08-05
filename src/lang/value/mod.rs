@@ -21,7 +21,7 @@ use chrono::Duration;
 use crate::util::time::duration_format;
 use crate::lang::scope::Scope;
 use crate::lang::r#struct::Struct;
-use crate::lang::stream::{streams, Readable, InputStream};
+use crate::lang::stream::{streams, CrushStream, InputStream};
 
 pub use value_type::ValueType;
 pub use value_definition::ValueDefinition;
@@ -168,7 +168,7 @@ impl Value {
         Value::String(s.to_string())
     }
 
-    pub fn readable(&self) -> Option<Box<dyn Readable>> {
+    pub fn stream(&self) -> Option<Box<dyn CrushStream>> {
         match self {
             Value::TableStream(s) => Some(Box::from(s.clone())),
             Value::Table(r) => Some(Box::from(TableReader::new(r.clone()))),
@@ -211,7 +211,7 @@ impl Value {
             Value::Glob(pattern) => pattern.glob_files(&PathBuf::from("."), v)?,
             Value::Regex(_, re) => re.match_files(&cwd()?, v, printer),
             val => {
-                match val.readable() {
+                match val.stream() {
                     None => return error("Expected a file name"),
                     Some(mut s) => {
                         let t = s.types();

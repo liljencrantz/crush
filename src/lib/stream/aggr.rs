@@ -1,5 +1,5 @@
 use crate::lang::{Closure, Argument, ExecutionContext, Value, ColumnType, RowsReader, Row, JobJoinHandle};
-use crate::lang::stream::{Readable, ValueSender};
+use crate::lang::stream::{CrushStream, ValueSender};
 use crate::lang::errors::{CrushResult, argument_error, mandate, error};
 use crate::lib::command_util::{find_field, find_field_from_str};
 use crate::lang::printer::Printer;
@@ -167,7 +167,7 @@ pub fn create_collector(
 }
 
 pub fn pump_table(
-    job_output: &mut impl Readable,
+    job_output: &mut impl CrushStream,
     outputs: Vec<OutputStream>,
     output_definition: &Vec<(String, usize, Closure)>) -> JobResult<()> {
     let stream_to_column_mapping = output_definition.iter().map(|(_, off, _)| *off).collect::<Vec<usize>>();
@@ -220,7 +220,7 @@ fn create_aggregator(
 fn handle_row(
     row: Row,
     config: &Config,
-    job_output: &mut impl Readable,
+    job_output: &mut impl CrushStream,
     printer: &Printer,
     env: &Env,
     input: &InputStream,
@@ -264,7 +264,7 @@ fn handle_row(
     Ok(())
 }
 
-pub fn run(config: Config, printer: &Printer, env: &Env, mut input: impl Readable, uninitialized_output: ValueSender) -> JobResult<()> {
+pub fn run(config: Config, printer: &Printer, env: &Env, mut input: impl CrushStream, uninitialized_output: ValueSender) -> JobResult<()> {
     let (writer_output, writer_input) = bounded::<Row>(16);
 
     let mut output_names = input.get_type().iter().map(|t| t.name.clone()).collect::<Vec<Option<String>>>();
@@ -298,7 +298,7 @@ pub fn run(config: Config, printer: &Printer, env: &Env, mut input: impl Readabl
     Ok(())
 }
 
-fn perform_on(arguments: Vec<Argument>, input: &Readable, sender: ValueSender) -> CrushResult<()> {
+fn perform_on(arguments: Vec<Argument>, input: &CrushStream, sender: ValueSender) -> CrushResult<()> {
     let config = parse(input.types(), arguments)?;
     Ok(())
 }

@@ -1,7 +1,7 @@
 use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use crate::lang::errors::CrushResult;
 use std::collections::HashMap;
-use crate::lang::stream::Readable;
+use crate::lang::stream::CrushStream;
 use crate::lang::errors::CrushError;
 use crate::lang::table::Row;
 use crate::lang::table::ColumnType;
@@ -110,7 +110,7 @@ fn combine(mut l: Row, r: Row, cfg: &Config) -> Row {
     l
 }
 
-fn do_join(cfg: &Config, l: &mut dyn Readable, r: &mut dyn Readable, output: &OutputStream, printer: &Printer) -> CrushResult<()> {
+fn do_join(cfg: &Config, l: &mut dyn CrushStream, r: &mut dyn CrushStream, output: &OutputStream, printer: &Printer) -> CrushResult<()> {
     let mut l_data: HashMap<Value, Row> = HashMap::new();
     while let Ok(row) = l.read() {
         l_data.insert(row.cells()[cfg.left_column_idx].clone(), row);
@@ -132,7 +132,7 @@ pub fn run(
     printer: &Printer,
 ) -> CrushResult<()> {
     let mut v = row.to_vec();
-    match (v.replace(config.left_table_idx, Value::Integer(0)).readable(), v.replace(config.right_table_idx, Value::Integer(0)).readable()) {
+    match (v.replace(config.left_table_idx, Value::Integer(0)).stream(), v.replace(config.right_table_idx, Value::Integer(0)).stream()) {
         (Some(mut l), Some(mut r)) =>
             do_join(&config, l.as_mut(), r.as_mut(), &output, printer),
         _ => panic!("Wrong row format"),

@@ -63,7 +63,7 @@ println!("TRAFDFKDSAÖLFADSK");
             Value::Glob(pattern) => pattern.glob_files(&PathBuf::from("."), &mut self.files)?,
             Value::Regex(_, re) => re.match_files(&cwd()?, &mut self.files, printer),
             value => {
-                match value.readable() {
+                match value.stream() {
                     None => return argument_error("Expected a file name"),
                     Some(mut s) => {
                         let t = s.types();

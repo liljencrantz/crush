@@ -1,10 +1,10 @@
 use crate::lang::table::Row;
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::errors::{CrushResult, error};
-use crate::lang::stream::{Readable, ValueSender};
+use crate::lang::stream::{CrushStream, ValueSender};
 
 pub fn run(
-    input: &mut dyn Readable,
+    input: &mut dyn CrushStream,
     sender: ValueSender,
 ) -> CrushResult<()> {
     let output = sender.initialize(input.types().to_vec())?;
@@ -19,7 +19,7 @@ pub fn run(
 }
 
 pub fn reverse(context: ExecutionContext) -> CrushResult<()> {
-    match context.input.recv()?.readable() {
+    match context.input.recv()?.stream() {
         Some(mut input) => run(input.as_mut(), context.output),
         None => error("Expected a stream"),
     }
