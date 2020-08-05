@@ -3,13 +3,27 @@ use crate::{
         value::Value,
         table::Row,
     },
-    lang::stream::OutputStream,
 };
 use crate::lang::execution_context::ExecutionContext;
-use crate::lang::errors::{error, CrushResult, argument_error};
-use crate::lang::stream::{CrushStream, empty_channel, channels, black_hole};
+use crate::lang::errors::{error, CrushResult};
+use crate::lang::stream::{empty_channel, channels, black_hole};
 use crate::lang::{table::ColumnType, argument::Argument};
 use crate::lang::command::Command;
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
+use crate::lang::command::OutputType::Passthrough;
+
+#[signature(
+r#where,
+can_block = true,
+output = Passthrough,
+short = "Filter out rows from io based on condition",
+long = "The columns of the row are exported to the environment using the column names.",
+example = "ps | where {status != \"Sleeping\"}")]
+pub struct Where {
+    #[description("the condition to filter on.")]
+    condition: Command,
+}
 
 fn evaluate(
     condition: Command,
@@ -32,25 +46,9 @@ fn evaluate(
     }
 }
 
-pub fn run(condition: Command, input: &mut dyn CrushStream, output: OutputStream, base_context: &ExecutionContext) -> CrushResult<()> {
-    while let Ok(row) = input.read() {
-        match evaluate(condition.clone(), &row, input.types(), &base_context) {
-            Ok(val) => if val { if output.send(row).is_err() { break; } },
-            Err(e) => base_context.printer.crush_error(e),
-        }
-    }
-    Ok(())
-}
+pub fn r#where(context: ExecutionContext) -> CrushResult<()> {
+    let cfg: Where = Where::parse(context.arguments, &context.printer)?;
 
-pub fn parse(_input_type: &[ColumnType],
-             arguments: &mut Vec<Argument>) -> CrushResult<Command> {
-    match arguments.remove(0).value {
-        Value::Command(c) => Ok(c),
-        _ => argument_error("Expected a closure"),
-    }
-}
-
-pub fn r#where(mut context: ExecutionContext) -> CrushResult<()> {
     match context.input.recv()?.stream() {
         Some(mut input) => {
             let base_context = ExecutionContext {
@@ -62,10 +60,13 @@ pub fn r#where(mut context: ExecutionContext) -> CrushResult<()> {
                 printer: context.printer.clone(),
             };
             let output = context.output.initialize(input.types().to_vec())?;
-            run(parse(input.types(), context.arguments.as_mut())?,
-                input.as_mut(),
-                output,
-                &base_context)
+            while let Ok(row) = input.read() {
+                match evaluate(cfg.condition.clone(), &row, input.types(), &base_context) {
+                    Ok(val) => if val && output.send(row).is_err() { break; },
+                    Err(e) => base_context.printer.crush_error(e),
+                }
+            }
+            Ok(())
         }
         None => error("Expected a stream"),
     }

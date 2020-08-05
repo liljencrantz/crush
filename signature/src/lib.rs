@@ -433,6 +433,7 @@ if #name.is_none() {
 }
 
 struct Metadata {
+    identifier: Ident,
     name: String,
     can_block: bool,
     short_description: Option<String>,
@@ -482,9 +483,17 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
     if v.len() == 0 {
         return fail!(location, "No name specified");
     }
-    let name = match v[0].clone() {
+    let (name, identifier) = match v[0].clone() {
         [TokenTree::Ident(i)] => {
-            i.to_string()
+            let as_str = i.to_string();
+            if as_str.starts_with("r#") {
+                let mut ch = as_str.chars();
+                ch.next();
+                ch.next();
+                (ch.as_str().to_string(), i.clone())
+            } else {
+                (as_str, i.clone())
+            }
         }
         _ => {
             return fail!(location, "Invalid name");
@@ -533,6 +542,7 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
     }
 
     Ok(Metadata {
+        identifier,
         name,
         can_block,
         short_description,
@@ -548,7 +558,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
     let description = Literal::string(metadata.short_description.unwrap_or_else(|| "Missing description".to_string()).as_str());
 
-    let command_invocation = Ident::new(&metadata.name, metadata_location);
+    let command_invocation = metadata.identifier;
     let command_name = Literal::string(&metadata.name);
     let can_block = Ident::new(if metadata.can_block { "true" } else { "false" }, metadata_location);
 

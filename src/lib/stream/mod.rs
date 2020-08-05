@@ -33,32 +33,26 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare_command(
                 "tail", tail::perform, true,
                 "tail [lines:integer]", "Return the last lines of the io. Defaults to 10.", None, Passthrough)?;
-            env.declare_command(
-                "where", r#where::r#where, true,
-                "where condition:command",
-                "Filter out rows from io based on condition",
-                Some(r#"    The columns of the row are exported to the environment using the
-    column names.
-
-    Example:
-
-    ps | where {$status != "Sleeping"}"#), Passthrough)?;
+            r#where::Where::declare(env)?;
             sort::Sort::declare(env)?;
             env.declare_command(
                 "reverse", reverse::reverse, true,
-                "reverse", "Reverses the order of the rows in the io", None, Passthrough)?;
+                "reverse", "Reverses the order of the rows in the io", None,
+                Passthrough)?;
             env.declare_command(
                 "group", group::perform, true,
-                "group group=field|string", "Group io by the specified column", None, Unknown)?;
+                "group group=field|string", "Group io by the specified column", None,
+                Unknown)?;
             env.declare_command(
                 "join", join::perform, true,
-                "join left:field right:field", "Join two streams together on the specified keys", None, Unknown)?;
+                "join left:field right:field", "Join two streams together on the specified keys", None,
+                Unknown)?;
             env.declare_command(
                 "uniq", uniq::uniq, true,
                 "uniq column:field",
                 "Only output the first row if multiple rows has the same value for the specified column",
                 example!("ps | uniq ^user"),
-            Passthrough)?;
+                Passthrough)?;
             //env.declare_str("aggr", Value::Command(CrushCommand::command_undocumented(aggr::perform)))?;
             env.declare_command(
                 "count", count::perform, true,
