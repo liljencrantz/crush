@@ -1,24 +1,29 @@
-use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
-use crate::lang::errors::{CrushResult, argument_error};
-use crate::lang::stream::{ValueSender, CrushStream};
+use crate::lang::execution_context::ExecutionContext;
+use crate::lang::errors::CrushResult;
+use crate::lang::stream::{ValueSender, Stream};
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
 
-fn run(input1: &mut dyn CrushStream, input2: &mut dyn CrushStream, sender: ValueSender) -> CrushResult<()> {
+#[signature(
+zip,
+can_block = true,
+short = "Combine two streams of data into one")]
+pub struct Zip {
+    #[description("the first stream.")]
+    first: Stream,
+    #[description("the second stream.")]
+    second: Stream,
+}
+
+pub fn zip(context: ExecutionContext) -> CrushResult<()> {
+    let mut cfg: Zip = Zip::parse(context.arguments, &context.printer)?;
     let mut output_type = Vec::new();
-    output_type.append(&mut input1.types().to_vec());
-    output_type.append(&mut input2.types().to_vec());
-    let output = sender.initialize(output_type)?;
-    while let (Ok(mut row1), Ok(row2)) = (input1.read(), input2.read()) {
+    output_type.append(&mut cfg.first.types().to_vec());
+    output_type.append(&mut cfg.second.types().to_vec());
+    let output = context.output.initialize(output_type)?;
+    while let (Ok(mut row1), Ok(row2)) = (cfg.first.read(), cfg.second.read()) {
         row1.append(&mut row2.into_vec());
         output.send(row1)?;
     }
     Ok(())
-}
-
-pub fn zip(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(2)?;
-    match (context.arguments.value(0)?.stream(), context.arguments.value(1)?.stream()) {
-        (Some(mut o1), Some(mut o2)) =>
-            run(o1.as_mut(), o2.as_mut(), context.output),
-        _ => argument_error("Expected two datasets"),
-    }
 }

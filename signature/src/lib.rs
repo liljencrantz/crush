@@ -67,6 +67,7 @@ fn extract_type(ty: &Type) -> SignatureResult<(&'static str, Vec<&'static str>)>
                         "Duration" => "Duration",
                         "Field" => "Field",
                         "Value" => "Value",
+                        "Stream" => "Stream",
                         _ =>
                             return fail!(seg.span(), "Unrecognised type"),
                     };
@@ -155,6 +156,7 @@ fn simple_type_to_value(simple_type: &str) -> TokenStream {
         "Command" => quote!{crate::lang::value::Value::Command(value)},
         "Duration" => quote!{crate::lang::value::Value::Duration(value)},
         "Field" => quote!{crate::lang::value::Value::Field(value)},
+        "Stream" => quote!{value},
         "Value" => quote!{value},
         _ => panic!("Unknown type")
     }
@@ -162,19 +164,20 @@ fn simple_type_to_value(simple_type: &str) -> TokenStream {
 
 fn simple_type_to_value_description(simple_type: &str) -> &str {
     match simple_type {
-        "String" => "String",
-        "bool" => "Bool",
-        "i128" => "Integer",
-        "usize" => "Integer",
-        "u64" => "Integer",
-        "i64" => "Integer",
-        "ValueType" => "Type",
-        "f64" => "Float",
-        "char" => "String",
-        "Command" => "Command",
-        "Duration" => "Duration",
-        "Field" => "Field",
-        "Value" => "Value",
+        "String" => "string",
+        "bool" => "bool",
+        "i128" => "integer",
+        "usize" => "integer",
+        "u64" => "integer",
+        "i64" => "integer",
+        "ValueType" => "type",
+        "f64" => "float",
+        "char" => "string",
+        "Command" => "command",
+        "Duration" => "duration",
+        "Field" => "field",
+        "Value" => "any value",
+        "Stream" => "stream",
         _ => panic!("Unknown type")
     }
 }
@@ -190,6 +193,7 @@ fn simple_type_to_mutator(
                 "usize" => quote! { crate::lang::errors::to_crush_error(usize::try_from(value))?},
                 "u64" => quote! { crate::lang::errors::to_crush_error(u64::try_from(value))?},
                 "i64" => quote! { crate::lang::errors::to_crush_error(i64::try_from(value))?},
+                "Stream" => quote! { crate::lang::errors::mandate(value.stream(), "Expected a type that can be streamed")? },
                 _ => quote! {value},
             }
         }
@@ -252,7 +256,7 @@ fn type_to_value(
 
     let (type_name, args) = extract_type(ty)?;
     match type_name {
-        "i128" | "bool" | "String" | "char" | "ValueType" | "f64" | "Command" | "Duration" | "Field" | "Value" | "usize" | "i64" | "u64" => {
+        "i128" | "bool" | "String" | "char" | "ValueType" | "f64" | "Command" | "Duration" | "Field" | "Value" | "usize" | "i64" | "u64" | "Stream" => {
             if !args.is_empty() {
                 fail!(ty.span(), "This type can't be paramterizised")
             } else {

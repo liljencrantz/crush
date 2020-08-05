@@ -92,10 +92,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare_command(
                 "enumerate", enumerate::perform, true,
                 "enumerate", "Prepend a column containing the row number to each row of the io", None, Unknown)?;
-            env.declare_command(
-                "zip", zip::zip, true,
-                "zip stream1:(table_stream|table|list|dict) stream2:(table_stream|table|list|dict)",
-                "combine two streams of data into one", None, Unknown)?;
+            zip::Zip::declare(env)?;
             seq::Seq::declare(env)?;
             Ok(())
         }))?;
