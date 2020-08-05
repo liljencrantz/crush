@@ -1,9 +1,9 @@
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::value::Value;
-use crate::lang::stream::CrushStream;
+use crate::lang::stream::Stream;
 
-fn count_rows(mut s: Box<dyn CrushStream>) -> Value {
+fn count_rows(mut s: Stream) -> Value {
     let mut res: i128 = 0;
     while let Ok(_) = s.read() {
         res += 1;

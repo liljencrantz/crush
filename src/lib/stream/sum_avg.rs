@@ -7,7 +7,7 @@ use crate::{
     }
 };
 use crate::lang::{table::ColumnType, argument::Argument};
-use crate::lang::stream::CrushStream;
+use crate::lang::stream::Stream;
 use crate::lang::table::ColumnVec;
 use chrono::Duration;
 use float_ord::FloatOrd;
@@ -39,7 +39,7 @@ fn parse(input_type: &[ColumnType], arguments: &[Argument]) -> CrushResult<usize
 
 macro_rules! sum_function {
     ($name:ident, $var_type:ident, $var_initializer:expr, $value_type:ident) => {
-fn $name(mut s: Box<dyn CrushStream>, column: usize) -> CrushResult<Value> {
+fn $name(mut s: Stream, column: usize) -> CrushResult<Value> {
     let mut res: $var_type = $var_initializer;
     while let Ok(row) = s.read() {
 match row.cells()[column] {
@@ -73,7 +73,7 @@ pub fn sum(context: ExecutionContext) -> CrushResult<()> {
 
 macro_rules! avg_function {
     ($name:ident, $var_type:ident, $var_initializer:expr, $value_type:ident, $count_type:ident) => {
-fn $name(mut s: Box<dyn CrushStream>, column: usize) -> CrushResult<Value> {
+fn $name(mut s: Stream, column: usize) -> CrushResult<Value> {
     let mut res: $var_type = $var_initializer;
     let mut count: i128 = 0;
     loop {
@@ -114,7 +114,7 @@ pub fn avg(context: ExecutionContext) -> CrushResult<()> {
 
 macro_rules! aggr_function {
     ($name:ident, $value_type:ident, $op:expr) => {
-fn $name(mut s: Box<dyn CrushStream>, column: usize) -> CrushResult<Value> {
+fn $name(mut s: Stream, column: usize) -> CrushResult<Value> {
     let mut res = match s.read()?.cells()[column] {
             Value::$value_type(i) => i,
             _ => return error("Invalid cell value, expected an integer")

@@ -169,3 +169,5 @@ impl CrushStream for InputStream {
         self.types()
     }
 }
+
+pub type Stream = Box<dyn CrushStream>;

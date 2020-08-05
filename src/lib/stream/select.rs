@@ -10,7 +10,7 @@ use crate::{
     lang::table::ColumnType,
     lang::errors::CrushResult,
 };
-use crate::lang::stream::{CrushStream, empty_channel, channels};
+use crate::lang::stream::{empty_channel, channels, Stream};
 use crate::lang::errors::error;
 use crate::lang::table::ColumnVec;
 use crate::lang::execution_context::ExecutionContext;
@@ -32,7 +32,7 @@ pub struct Config {
 
 pub fn run(
     config: Config,
-    mut input: Box<dyn CrushStream>,
+    mut input: Stream,
     context: ExecutionContext,
 ) -> CrushResult<()> {
     let input_type = input.types().to_vec();

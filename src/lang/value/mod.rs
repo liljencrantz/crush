@@ -21,7 +21,7 @@ use chrono::Duration;
 use crate::util::time::duration_format;
 use crate::lang::scope::Scope;
 use crate::lang::r#struct::Struct;
-use crate::lang::stream::{streams, CrushStream, InputStream};
+use crate::lang::stream::{streams, InputStream, Stream};
 
 pub use value_type::ValueType;
 pub use value_definition::ValueDefinition;
@@ -168,7 +168,7 @@ impl Value {
         Value::String(s.to_string())
     }
 
-    pub fn stream(&self) -> Option<Box<dyn CrushStream>> {
+    pub fn stream(&self) -> Option<Stream> {
         match self {
             Value::TableStream(s) => Some(Box::from(s.clone())),
             Value::Table(r) => Some(Box::from(TableReader::new(r.clone()))),
