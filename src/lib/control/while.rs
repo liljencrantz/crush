@@ -2,18 +2,32 @@ use crate::lang::value::Value;
 use crate::lang::errors::{CrushResult, data_error};
 use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
 use crate::lang::stream::{empty_channel, channels, black_hole};
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
+use crate::lang::command::Command;
 
-pub fn r#while(mut context: ExecutionContext) -> CrushResult<()> {
+#[signature(
+r#while,
+condition = true,
+short = "Repeatedly execute the body for as long the condition is met.",
+long = "The loop body is optional. If not specified, the condition is executed until it returns false.\n    This effectively means that the condition becomes the body, and the loop break check comes at\n    the end of the loop.",
+example = "while {./some_file:exists} {echo \"hello\"}")]
+pub struct While {
+    #[description("the condition.")]
+    condition: Command,
+    #[description("the command to invoke as long as the condition is true.")]
+    body: Option<Command>,
+}
+
+fn r#while(context: ExecutionContext) -> CrushResult<()> {
     context.output.initialize(vec![])?;
-    context.arguments.check_len_range(1, 2)?;
+    let cfg: While = While::parse(context.arguments, &context.printer)?;
 
-    let condition = context.arguments.command(0)?;
-    let maybe_body = context.arguments.optional_command(1)?;
     loop {
         let (sender, receiver) = channels();
 
         let cond_env = context.env.create_child(&context.env, true);
-        condition.invoke(ExecutionContext {
+        cfg.condition.invoke(ExecutionContext {
             input: empty_channel(),
             output: sender,
             arguments: Vec::new(),
@@ -27,7 +41,7 @@ pub fn r#while(mut context: ExecutionContext) -> CrushResult<()> {
 
         match receiver.recv()? {
             Value::Bool(true) => {
-                match &maybe_body {
+                match &cfg.body {
                     Some(body) => {
                         let body_env = context.env.create_child(&context.env, true);
                         body.invoke(ExecutionContext {

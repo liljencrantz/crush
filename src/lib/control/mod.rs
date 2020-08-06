@@ -98,24 +98,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             }))?;
             env.declare("cmd_path", Value::List(path))?;
             r#if::If::declare(env)?;
-
-            env.declare_condition_command(
-                "while",
-                r#while::r#while,
-                "while condition:command [body:command]",
-                "Repeatedly execute the body for as long the condition is met",
-                Some(r#"    In every pass of the loop, the condition is executed. If it returns false,
-    the loop terminates. If it returns true, the body is executed and the loop
-    continues.
-
-    Example:
-
-    while {not (./some_file:stat):is_file} {echo "hello"}
-
-    The loop body is optional. If not specified, the condition is executed until it returns false.
-    This effectively means that the condition becomes the body, and the loop break check comes at
-    the end of the loop."#))?;
-
+            r#while::While::declare(env)?;
             r#loop::Loop::declare(env)?;
 
             env.declare_condition_command(
@@ -128,7 +111,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     for (seq 10) {
         echo ("Lap #{}":format value)
     }"#))?;
-
 
             env.declare_command(
                 "break", r#break, false,

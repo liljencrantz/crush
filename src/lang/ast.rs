@@ -270,7 +270,7 @@ impl Node {
                     "neg" => r.method_invocation("__neg__", vec![], env),
                     "not" =>
                         Node::function_invocation(
-                            env.global_static_cmd(vec!["global", "comp", "gt"])?,
+                            env.global_static_cmd(vec!["global", "comp", "not"])?,
                             vec![r.generate_argument(env)?]),
                     "typeof" =>
                         Node::function_invocation(
