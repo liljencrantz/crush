@@ -1,16 +1,26 @@
 use crate::lang::errors::CrushResult;
-use crate::lang::execution_context::ArgumentVector;
 use crate::lang::execution_context::ExecutionContext;
 use crate::lang::stream::{empty_channel, black_hole};
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
+use crate::lang::command::Command;
 
+#[signature(
+r#loop,
+condition = true,
+short = "Repeatedly execute the body until the break command is called.",
+example = "loop {\n        if (i_am_tired) {\n            break\n        }\n        echo \"Working\"\n    }")]
+pub struct Loop {
+    #[description("the command to repeatedly invoke.")]
+    body: Command,
+}
 
-pub fn r#loop(mut context: ExecutionContext) -> CrushResult<()> {
+fn r#loop(context: ExecutionContext) -> CrushResult<()> {
+    let cfg: Loop = Loop::parse(context.arguments.clone(), &context.printer)?;
     context.output.initialize(vec![])?;
-    context.arguments.check_len(1)?;
-    let body = context.arguments.command(0)?;
     loop {
         let env = context.env.create_child(&context.env, true);
-        body.invoke(ExecutionContext {
+        cfg.body.invoke(ExecutionContext {
             input: empty_channel(),
             output: black_hole(),
             arguments: Vec::new(),

@@ -18,7 +18,7 @@ pub struct If {
     false_clause: Option<Command>,
 }
 
-fn r#if(mut context: ExecutionContext) -> CrushResult<()> {
+fn r#if(context: ExecutionContext) -> CrushResult<()> {
     let cfg: If = If::parse(context.arguments.clone(), &context.printer)?;
 
     if cfg.condition {

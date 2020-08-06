@@ -97,7 +97,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 let _ = path.append(&mut dirs);
             }))?;
             env.declare("cmd_path", Value::List(path))?;
-            r#if::If::declare(env);
+            r#if::If::declare(env)?;
 
             env.declare_condition_command(
                 "while",
@@ -116,18 +116,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     This effectively means that the condition becomes the body, and the loop break check comes at
     the end of the loop."#))?;
 
-            env.declare_condition_command(
-                "loop",
-                r#loop::r#loop,
-                "loop body:command",
-                "Repeatedly execute the body until the break command is called.",
-                Some(r#"    Example:
-    loop {
-        if (i_am_tired) {
-            break
-        }
-        echo "Working"
-    }"#))?;
+            r#loop::Loop::declare(env)?;
 
             env.declare_condition_command(
                 "for",
