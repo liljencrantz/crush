@@ -1,22 +1,31 @@
-use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
+use crate::lang::execution_context::ExecutionContext;
 use crate::lang::errors::CrushResult;
-use crate::lang::value::Value;
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
+use crate::lang::command::Command;
 
-fn execute_or_send(value: Value, context: ExecutionContext) -> CrushResult<()> {
-    match value {
-        Value::Command(cmd) => cmd.invoke(context),
-        v => context.output.send(v),
-    }
+#[signature(
+r#if,
+condition = true,
+short = "Conditionally execute a command once.",
+example = "if a > 10 {echo \"big\"} {echo \"small\"}")]
+pub struct If {
+    #[description("the condition to filter on.")]
+    condition: bool,
+    #[description("the command to invoke if the condition is true.")]
+    true_clause: Command,
+    #[description("the (optional) command to invoke if the condition is false.")]
+    false_clause: Option<Command>,
 }
 
-pub fn r#if(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len_range(2, 3)?;
-    let b = context.arguments.bool(0)?;
-    if b {
-        execute_or_send(context.arguments.value(1)?, context.with_args(vec![], None))
+fn r#if(mut context: ExecutionContext) -> CrushResult<()> {
+    let cfg: If = If::parse(context.arguments.clone(), &context.printer)?;
+
+    if cfg.condition {
+        cfg.true_clause.invoke(context.with_args(vec![], None))
     } else {
-        context.arguments.optional_value(2)?
-            .map(|v| execute_or_send(v, context.with_args(vec![], None)))
+        cfg.false_clause
+            .map(|v| v.invoke(context.with_args(vec![], None)))
             .unwrap_or(Ok(()))
     }
 }

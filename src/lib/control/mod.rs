@@ -97,18 +97,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 let _ = path.append(&mut dirs);
             }))?;
             env.declare("cmd_path", Value::List(path))?;
-
-            env.declare_condition_command(
-                "if",
-                r#if::r#if,
-                "if condition:bool if-clause:command [else-clause:command]",
-                "Conditionally execute a command once.",
-                Some(r#"    If the condition is true, the if-clause is executed. Otherwise, the else-clause
-    (if specified) is executed.
-
-    Example:
-
-    if a > 10 {echo "big"} {echo "small"}"#))?;
+            r#if::If::declare(env);
 
             env.declare_condition_command(
                 "while",

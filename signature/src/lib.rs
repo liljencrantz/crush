@@ -440,6 +440,7 @@ struct Metadata {
     long_description: Vec<String>,
     example: Option<String>,
     output: Option<TokenStream>,
+    condition: bool,
 }
 
 fn unescape(s: &str) -> String {
@@ -469,6 +470,7 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
     let mut short_description = None;
     let mut long_description = Vec::new();
     let mut output: Option<TokenStream> = None;
+    let mut condition = false;
 
     let location = metadata.span().clone();
     let metadata_iter = metadata.into_iter().collect::<Vec<_>>();
@@ -532,6 +534,11 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
                                 "false" => false,
                                 _ => return fail!(l.span(), "Expected a boolean value"),
                             },
+                            ("condition", '=') => condition = match l.to_string().as_str() {
+                                "true" => true,
+                                "false" => false,
+                                _ => return fail!(l.span(), "Expected a boolean value"),
+                            },
                             _ => return fail!(l.span(), "Unknown argument"),
                         }
                     }
@@ -549,6 +556,7 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
         long_description,
         example,
         output,
+        condition,
     })
 }
 
