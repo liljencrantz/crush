@@ -64,22 +64,5 @@ Extra columns for ps: memory usage, tty, current CPU usage.
 du-like command for showing disk usage hierachy.
 A grep-command.
 User namespace should be for *any* user, and user:me is the current user. There are also user:from_name and user:from_id methods.
-words:from
-split:from
 chmod/chown equivalent
 read equivalent
-
-More pipelines:
-
-Currently, accessing a field in a struct isn't a pipeline step, it's done via e.g.
-
-(http "example.com"):body | json:from
-
-When writing a pipeline, this doesn't always make the code flow naturally. There should be a pipeline-based
-way to do the same in order to make the code flow more naturally, e.g.
-
-http "example.com" | member ^body | json:from
-
-http "example.com" | ^body | json:from
-
-Such a syntax would be longer, but as noted, it would allow the code to flow more naturally in many cases.

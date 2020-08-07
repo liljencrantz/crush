@@ -237,6 +237,7 @@ fn simple_type_dump_list(simple_type: &str) -> &str {
         "i128" => "dump_integer",
         "ValueType" => "dump_type",
         "f64" => "dump_float",
+        "Value" => "dump_value",
         _ => panic!("Unknown type"),
     }
 }

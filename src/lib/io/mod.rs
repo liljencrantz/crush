@@ -1,11 +1,12 @@
 use crate::lang::scope::Scope;
-use crate::lang::errors::CrushResult;
+use crate::lang::errors::{CrushResult, data_error, argument_error, mandate};
 use crate::lang::{value::Value, execution_context::ExecutionContext, execution_context::ArgumentVector};
 use crate::lang::list::List;
-use crate::lang::value::ValueType;
+use crate::lang::value::{ValueType, Field};
 use crate::lang::pretty_printer::PrettyPrinter;
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::OutputType::{Known};
+use signature::signature;
 
 mod bin;
 mod csv;
@@ -34,11 +35,39 @@ pub fn dir(mut context: ExecutionContext) -> CrushResult<()> {
     )
 }
 
-fn echo(mut context: ExecutionContext) -> CrushResult<()> {
-    for arg in context.arguments.drain(..) {
-        PrettyPrinter::new(context.printer.clone()).print_value(arg.value);
+#[signature(echo, can_block=false, short="Prints all arguments directly to the screen", output = Known(ValueType::Empty), example="echo \"Hello, world!\"")]
+struct Echo {
+    #[description("the values to print.")]
+    #[unnamed()]
+    values: Vec<Value>,
+}
+
+fn echo(context: ExecutionContext) -> CrushResult<()> {
+    let cfg: Echo = Echo::parse(context.arguments, &context.printer)?;
+    let pretty = PrettyPrinter::new(context.printer.clone());
+    for value in cfg.values {
+        pretty.print_value(value);
     }
     context.output.send(Value::Empty())
+}
+
+#[signature(member, can_block=false, short="Extracts one member from the input struct.", example="http \"example.com\" | member ^body | json:from")]
+struct Member {
+    #[description("the member to extract.")]
+    field: Field,
+}
+
+fn member(context: ExecutionContext) -> CrushResult<()> {
+    let cfg: Member = Member::parse(context.arguments, &context.printer)?;
+    if cfg.field.len() != 1 {
+        return argument_error("Invalid field - should have exactly one element");
+    }
+    match context.input.recv()? {
+        Value::Struct(s) => {
+            context.output.send(mandate(s.get(&cfg.field[0]), format!("Unknown field \"{}\"", cfg.field[0]).as_str())?)
+        }
+        _ => data_error("Expected a struct"),
+    }
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
@@ -53,11 +82,10 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             lines::declare(env)?;
             split::declare(env)?;
             words::declare(env)?;
-            http::Http::declare(env)?;
 
-            env.declare_command(
-                "echo", echo, false,
-                "echo @value:any", "Prints all arguments directly to the screen", None, Known(ValueType::Empty))?;
+            http::Http::declare(env)?;
+            Echo::declare(env)?;
+            Member::declare(env)?;
             env.declare_command(
                 "val", val, false,
                 "val value:any",
