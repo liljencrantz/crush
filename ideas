@@ -1,8 +1,3 @@
-Aggregating streams:
-
-find . | group ^size | aggr group={count}
-find . | group ^user | aggr group={sum ^size}
-
 Graphs:
 
 Graphs consist of two data types: nodes and edges.
@@ -66,3 +61,4 @@ A grep-command.
 User namespace should be for *any* user, and user:me is the current user. There are also user:from_name and user:from_id methods.
 chmod/chown equivalent
 read equivalent
+A drop command that is the opposite of select, i.e. it drops anu columns you mention and keeps the rest

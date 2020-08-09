@@ -104,17 +104,17 @@ impl Value {
                         self.value_type()
                             .fields()
                             .get(name)
-                            .map(|m| Value::Command(m.as_ref().clone()))
+                            .map(|m| Value::Command(m.as_ref().copy()))
                     }),
             Value::Type(t) =>
                 t.fields()
                     .get(name)
-                    .map(|m| Value::Command(m.as_ref().clone())),
+                    .map(|m| Value::Command(m.as_ref().copy())),
             _ =>
                 self.value_type()
                     .fields()
                     .get(name)
-                    .map(|m| Value::Command(m.as_ref().clone())),
+                    .map(|m| Value::Command(m.as_ref().copy())),
         })
     }
 
@@ -308,7 +308,7 @@ impl Clone for Value {
             Value::Field(v) => Value::Field(v.clone()),
             Value::Glob(v) => Value::Glob(v.clone()),
             Value::Regex(v, r) => Value::Regex(v.clone(), r.clone()),
-            Value::Command(v) => Value::Command(v.as_ref().clone()),
+            Value::Command(v) => Value::Command(v.as_ref().copy()),
             Value::File(v) => Value::File(v.clone()),
             Value::Table(r) => Value::Table(r.clone()),
             Value::Struct(r) => Value::Struct(r.clone()),

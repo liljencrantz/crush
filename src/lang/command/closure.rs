@@ -49,7 +49,7 @@ impl CrushCommand for Closure {
             let input = if first { context.input.clone() } else { empty_channel() };
             let output = if last { context.output.clone() } else { black_hole() };
             let job = job_definition.invoke(JobContext::new(input, output, env.clone(), context.printer.clone()))?;
-            job.join(&context.printer);
+//            job.join(&context.printer);
             if env.is_stopped() {
                 return Ok(());
             }
@@ -63,7 +63,7 @@ impl CrushCommand for Closure {
 
     fn name(&self) -> &str { "closure" }
 
-    fn clone(&self) -> Command {
+    fn copy(&self) -> Command {
         Box::from(Closure {
             name: self.name.clone(),
             signature: self.signature.clone(),
@@ -84,7 +84,7 @@ impl CrushCommand for Closure {
 
     fn bind(&self, this: Value) -> Command {
         Box::from(BoundCommand {
-            command: self.clone(),
+            command: self.copy(),
             this,
         })
     }

@@ -232,7 +232,7 @@ impl Node {
                     "!~" => return r.method_invocation("not_match", vec![l.generate_argument(env)?], env),
                     _ => return error("Unknown operator"),
                 })?;
-                Node::function_invocation(cmd.clone(), vec![l.generate_argument(env)?, r.generate_argument(env)?])
+                Node::function_invocation(cmd.copy(), vec![l.generate_argument(env)?, r.generate_argument(env)?])
             }
 
             Node::Replace(v1, op, v2, v3) => {

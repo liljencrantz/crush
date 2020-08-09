@@ -5,6 +5,7 @@ use crossbeam::{Receiver, bounded, unbounded, Sender};
 use crate::lang::errors::{CrushError, error, CrushResult, to_crush_error, send_error};
 use lazy_static::lazy_static;
 use chrono::Duration;
+use std::error::Error;
 
 pub type RecvTimeoutError = crossbeam::channel::RecvTimeoutError;
 
@@ -54,20 +55,17 @@ impl ValueReceiver {
     }
 }
 
-pub enum OutputStream {
-    Sync(Sender<Row>),
-    Async(Sender<Row>),
+#[derive(Clone)]
+pub struct OutputStream {
+    sender: Sender<Row>,
 }
 
 impl OutputStream {
     pub fn send(&self, row: Row) -> CrushResult<()> {
-        let native_output = match self {
-            OutputStream::Sync(s) => s.send(row),
-            OutputStream::Async(s) => s.send(row),
-        };
+        let native_output = self.sender.send(row);
         match native_output {
             Ok(_) => Ok(()),
-            Err(_) => error("Broken pipe"),
+            Err(e) => error(e.description()),
         }
     }
 }
@@ -136,12 +134,12 @@ pub fn channels() -> (ValueSender, ValueReceiver) {
 
 pub fn streams(signature: Vec<ColumnType>) -> (OutputStream, InputStream) {
     let (output, input) = bounded(128);
-    (OutputStream::Sync(output), InputStream { receiver: input, types: signature })
+    (OutputStream{ sender:output }, InputStream { receiver: input, types: signature })
 }
 
 pub fn unlimited_streams(signature: Vec<ColumnType>) -> (OutputStream, InputStream) {
     let (output, input) = unbounded();
-    (OutputStream::Async(output), InputStream { receiver: input, types: signature })
+    (OutputStream{ sender:output }, InputStream { receiver: input, types: signature })
 }
 
 pub fn empty_channel() -> ValueReceiver {

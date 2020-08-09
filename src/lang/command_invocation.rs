@@ -182,7 +182,7 @@ fn invoke_value(
                         context),
                 Some(call) =>
                     invoke_command(
-                        call.as_ref().clone(),
+                        call.as_ref().copy(),
                         Some(Value::Type(t)),
                         local_arguments,
                         context),

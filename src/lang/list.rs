@@ -1,4 +1,4 @@
-use crate::lang::{value::ValueType, value::Value, table::ColumnType, table::Row};
+use crate::lang::{value::ValueType, value::Value, table::ColumnType, table::Row, value::Field};
 use crate::lang::errors::{mandate, CrushResult, error, argument_error};
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
@@ -164,6 +164,7 @@ impl List {
     dump_to!(dump_bool, bool, Bool, |v: &bool| *v);
     dump_to!(dump_type, ValueType, Type, |v: &ValueType| v.clone());
     dump_to!(dump_float, f64, Float, |v: &f64| *v);
+    dump_to!(dump_field, Field, Field, |e: &Field| e.clone());
 }
 
 impl ToString for List {

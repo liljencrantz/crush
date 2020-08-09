@@ -1,9 +1,8 @@
-use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
+use crate::lang::execution_context::ExecutionContext;
 use std::collections::HashMap;
 use crate::{
     lang::errors::argument_error,
     lang::{
-        argument::Argument,
         table::Row,
         value::ValueType,
         value::Value,
@@ -11,50 +10,157 @@ use crate::{
     lang::stream::{OutputStream, unlimited_streams},
 };
 use crate::lang::{table::ColumnType};
-use crate::lang::errors::{CrushResult, error};
-use crate::lang::stream::CrushStream;
+use crate::lang::errors::{CrushResult, mandate};
+use crate::lang::stream::{InputStream, channels};
 use crate::lang::table::ColumnVec;
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
+use crate::lang::ordered_string_map::OrderedStringMap;
+use crate::lang::command::Command;
+use crate::lang::value::Field;
+use crate::util::thread::{handle, build};
+use crate::lang::job::JobJoinHandle;
+use crossbeam::{Receiver, unbounded};
+use crate::lang::scope::Scope;
+use crate::lang::printer::Printer;
 
-pub struct Config {
-    name: String,
-    column: usize,
+#[signature(group, can_block = true, short = "Group stream by the specified column(s)", example = "find . | group ^user ^type file_count={count} size={sum ^size}")]
+pub struct Group {
+    #[unnamed()]
+    #[description("the column(s) to group by and copy into the output stream.")]
+    group_by: Vec<Field>,
+    #[named()]
+    #[description("create these additional columns by aggregating the grouped rows using the supplied aggregation command.")]
+    command: OrderedStringMap<Command>,
 }
 
-pub fn parse(input_type: &[ColumnType], arguments: Vec<Argument>) -> CrushResult<Config> {
-    arguments.check_len(1)?;
-    let arg = &arguments[0];
-    let name = arg.argument_type.clone().unwrap_or_else(|| "group".to_string());
-    match &arg.value {
-        Value::String(cell_name) =>
-            Ok(Config {
-                column: input_type.find_str(cell_name)?,
-                name,
-            }),
-        Value::Field(cell_name) =>
-            Ok(Config {
-                column: input_type.find(cell_name)?,
-                name,
-            }),
-        _ => argument_error("Bad comparison key"),
-    }
-}
-
-pub fn run(
-    config: Config,
-    input_type: &[ColumnType],
-    input: &mut dyn CrushStream,
-    output: OutputStream,
+fn aggregate(
+    commands: Vec<Command>,
+    printer: Printer,
+    scope: Scope,
+    destination: OutputStream,
+    task_input: Receiver<(Vec<Value>, InputStream)>,
 ) -> CrushResult<()> {
-    let mut groups: HashMap<Value, OutputStream> = HashMap::new();
+    while let Ok((key, rows)) = task_input.recv() {
+
+        match commands.len() {
+            0 => {
+                destination.send(Row::new(key))?;
+            }
+            1 => {
+                let (input_sender, input_receiver) = channels();
+                let (output_sender, output_receiver) = channels();
+                input_sender.send(Value::TableStream(rows))?;
+                drop(input_sender);
+                commands[0].invoke(
+                    ExecutionContext {
+                        input: input_receiver,
+                        output: output_sender,
+                        arguments: vec![],
+                        env: scope.clone(),
+                        this: None,
+                        printer: printer.clone(),
+                    }
+                )?;
+                let mut result = key;
+                result.push(output_receiver.recv()?);
+                destination.send(Row::new(result))?;
+            }
+            _ => {
+                let mut receivers = Vec::with_capacity(commands.len());
+                let mut streams = Vec::with_capacity(commands.len());
+                for command in &commands {
+                    let (input_sender, input_receiver) = channels();
+                    let (output_sender, output_receiver) = channels();
+                    streams.push(input_sender.initialize(rows.types().to_vec())?);
+                    printer.handle_error(command.invoke(
+                        ExecutionContext {
+                            input: input_receiver,
+                            output: output_sender,
+                            arguments: vec![],
+                            env: scope.clone(),
+                            this: None,
+                            printer: printer.clone(),
+                        }
+                    ));
+                    receivers.push(output_receiver);
+                }
+
+                while let Ok(row) = rows.recv() {
+                    for stream in streams.iter() {
+                        let _ = stream.send(row.clone());
+                    }
+                }
+                drop(streams);
+
+                let mut result = key;
+                for receiver in receivers {
+                        result.push(receiver.recv()?);
+                }
+                destination.send(Row::new(result))?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn create_worker_thread(
+    cfg: &Group,
+    printer: &Printer,
+    scope: &Scope,
+    destination: &OutputStream,
+    task_input: &Receiver<(Vec<Value>, InputStream)>,
+) -> JobJoinHandle {
+    let my_commands: Vec<Command> = cfg.command.iter()
+        .map(|(name, cmd)| cmd.copy())
+        .collect::<Vec<_>>();
+    let my_printer = printer.clone();
+    let my_scope = scope.clone();
+    let my_input = task_input.clone();
+    let my_destination = destination.clone();
+    handle(build("group-worker").spawn(
+        move || {
+            let local_printer = my_printer.clone();
+            local_printer.handle_error(aggregate(my_commands, my_printer, my_scope, my_destination, my_input));
+        }))
+}
+
+pub fn group(context: ExecutionContext) -> CrushResult<()> {
+    let cfg: Group = Group::parse(context.arguments, &context.printer)?;
+    let mut input = mandate(context.input.recv()?.stream(), "Expected input to be a stream")?;
+    let input_type = input.types().to_vec();
+    let indices: Vec<usize> = cfg.group_by.iter().map(|f| input_type.as_slice().find(f)).collect::<CrushResult<Vec<_>>>()?;
+
+    if indices.is_empty() {
+        return argument_error("No group-by column specified");
+    }
+
+    let mut output_type = indices.iter()
+        .map(|input_idx| input_type[*input_idx].clone())
+        .collect::<Vec<_>>();
+
+    for name in cfg.command.keys() {
+        output_type.push(ColumnType::new(name, ValueType::Any));
+    }
+
+    let output = context.output.initialize(output_type)?;
+    let mut groups: HashMap<Vec<Value>, OutputStream> = HashMap::new();
+
+    let (task_output, task_input) = unbounded::<(Vec<Value>, InputStream)>();
+
+    for _ in 0..16 {
+        create_worker_thread(&cfg, &context.printer, &context.env, &output, &task_input);
+    }
+
+    drop(task_input);
 
     while let Ok(row) = input.read() {
-        let key = row.cells()[config.column].clone();
+        let key = indices.iter().map(|idx| row.cells()[*idx].clone()).collect::<Vec<_>>();
         let val = groups.get(&key);
         match val {
             None => {
                 let (output_stream, input_stream) = unlimited_streams(input_type.to_vec());
-                let out_row = Row::new(vec![key.clone(), Value::TableStream(input_stream)]);
-                output.send(out_row)?;
+                let _ = task_output.send((key.clone(), input_stream));
                 let _ = output_stream.send(row);
                 groups.insert(key, output_stream);
             }
@@ -64,21 +170,4 @@ pub fn run(
         }
     }
     Ok(())
-}
-
-pub fn perform(context: ExecutionContext) -> CrushResult<()> {
-    match context.input.recv()?.stream() {
-        Some(mut input) => {
-            let config = parse(input.types(), context.arguments)?;
-            let output_type = vec![
-                input.types()[config.column].clone(),
-                ColumnType::new(
-                    &config.name,
-                    ValueType::TableStream(input.types().to_vec()))
-            ];
-            let output = context.output.initialize(output_type)?;
-            run(config, &input.types().to_vec(), input.as_mut(), output)
-        }
-        None => error("Expected a stream"),
-    }
 }

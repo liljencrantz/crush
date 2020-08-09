@@ -45,7 +45,7 @@ pub trait CrushCommand: Help {
     fn invoke(&self, context: ExecutionContext) -> CrushResult<()>;
     fn can_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool;
     fn name(&self) -> &str;
-    fn clone(&self) -> Command;
+    fn copy(&self) -> Command;
     fn help(&self) -> &dyn Help;
     fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize>;
     fn bind(&self, this: Value) -> Command;
@@ -181,7 +181,7 @@ impl CrushCommand for SimpleCommand {
         self.can_block
     }
 
-    fn clone(&self) -> Command {
+    fn copy(&self) -> Command {
         Box::from(SimpleCommand {
             call: self.call,
             can_block: self.can_block,
@@ -209,7 +209,7 @@ impl CrushCommand for SimpleCommand {
 
     fn bind(&self, this: Value) -> Command {
         Box::from(BoundCommand {
-            command: self.clone(),
+            command: self.copy(),
             this,
         })
     }
@@ -266,7 +266,7 @@ impl CrushCommand for ConditionCommand {
         arguments.iter().any(|arg| arg.value.can_block(arguments, context))
     }
 
-    fn clone(&self) -> Command {
+    fn copy(&self) -> Command {
         Box::from(ConditionCommand {
             call: self.call,
             full_name: self.full_name.clone(),
@@ -292,7 +292,7 @@ impl CrushCommand for ConditionCommand {
 
     fn bind(&self, this: Value) -> Command {
         Box::from(BoundCommand {
-            command: self.clone(),
+            command: self.copy(),
             this,
         })
     }
@@ -368,10 +368,10 @@ impl CrushCommand for BoundCommand {
         self.command.name()
     }
 
-    fn clone(&self) -> Command {
+    fn copy(&self) -> Command {
         Box::from(
             BoundCommand {
-                command: self.command.clone(),
+                command: self.command.copy(),
                 this: self.this.clone(),
             }
         )
@@ -398,7 +398,7 @@ impl CrushCommand for BoundCommand {
     fn bind(&self, this: Value) -> Command {
         Box::from(
             BoundCommand {
-                command: self.command.clone(),
+                command: self.command.copy(),
                 this: this.clone(),
             }
         )

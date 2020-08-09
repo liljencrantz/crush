@@ -61,7 +61,7 @@ pub fn r#where(context: ExecutionContext) -> CrushResult<()> {
             };
             let output = context.output.initialize(input.types().to_vec())?;
             while let Ok(row) = input.read() {
-                match evaluate(cfg.condition.clone(), &row, input.types(), &base_context) {
+                match evaluate(cfg.condition.copy(), &row, input.types(), &base_context) {
                     Ok(val) => if val && output.send(row).is_err() { break; },
                     Err(e) => base_context.printer.crush_error(e),
                 }

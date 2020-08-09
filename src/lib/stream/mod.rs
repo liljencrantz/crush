@@ -17,7 +17,6 @@ mod uniq;
 mod group;
 mod join;
 mod zip;
-//mod aggr;
 
 mod count;
 mod sum_avg;
@@ -39,10 +38,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "reverse", reverse::reverse, true,
                 "reverse", "Reverses the order of the rows in the io", None,
                 Passthrough)?;
-            env.declare_command(
-                "group", group::perform, true,
-                "group group=field|string", "Group io by the specified column", None,
-                Unknown)?;
+            group::Group::declare(env)?;
             env.declare_command(
                 "join", join::perform, true,
                 "join left:field right:field", "Join two streams together on the specified keys", None,
@@ -53,7 +49,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "Only output the first row if multiple rows has the same value for the specified column",
                 example!("ps | uniq ^user"),
                 Passthrough)?;
-            //env.declare_str("aggr", Value::Command(CrushCommand::command_undocumented(aggr::perform)))?;
             env.declare_command(
                 "count", count::perform, true,
                 "count",
