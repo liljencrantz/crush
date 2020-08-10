@@ -62,3 +62,5 @@ User namespace should be for *any* user, and user:me is the current user. There 
 chmod/chown equivalent
 read equivalent
 A drop command that is the opposite of select, i.e. it drops anu columns you mention and keeps the rest
+Is it really a good idea to auto-run commands when they are passed in as named parameters? Might have gone overboard with eager evaluation there...
+Allow simpler column renaming via select, e.g. 'ps|select time=^cpu'
