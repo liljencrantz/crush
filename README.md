@@ -103,7 +103,7 @@ crush> list:of 1 2 3 | json:to
 ```
 
 One of the Crush serializers, Pup, is a native file format for Crush. The
-Pup-format is protobuf-based, and it's schema is available
+Pup-format is protobuf-based, and its schema is available
 [here](src/crush.proto). The advantage of Pup is that all crush types,
 including classes and closures, can be losslessly serialized into this format.
 But because Pup is Crush-specific, it's useless for data sharing to
