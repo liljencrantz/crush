@@ -360,9 +360,10 @@ Crush features many commands to operate om arbitrary streams of data using a
 SQL-like syntax. These commands use field-specifiers like `^foo` to specify
 columns in the data stream that they operate on:
 
-    ps | where {user == "root"} | group ^status | aggr proc_per_status={count}
-
-(Note that the `aggr` command is currently broken.)
+    ps | where {user == "root"} | group ^status proc_per_status={count}
+    status   proc_per_status
+    Idle     108
+    Sleeping 170
 
 Unlike in SQL, these commands all operate on input streams, meaning they can be
 combined in any order, and the input source can be file/http resources in a
