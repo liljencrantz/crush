@@ -1,12 +1,12 @@
 use crate::lang::table::ColumnType;
-use crate::lang::value::Value;
 use crate::lang::table::Row;
-use std::sync::{Mutex, Arc};
+use crate::lang::value::Value;
+use crate::util::identity_arc::Identity;
+use crate::util::replace::Replace;
+use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
-use std::cmp::Ordering;
-use crate::util::replace::Replace;
-use crate::util::identity_arc::Identity;
+use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
 struct StructData {
@@ -53,9 +53,11 @@ impl PartialEq for Struct {
         for (name, idx) in us.lookup.iter() {
             match them.lookup.get(name) {
                 None => return false,
-                Some(idx2) => if !idx.eq(idx2) {
-                    return false;
-                },
+                Some(idx2) => {
+                    if !idx.eq(idx2) {
+                        return false;
+                    }
+                }
             }
         }
         true
@@ -72,17 +74,16 @@ impl Struct {
     pub fn new(mut vec: Vec<(String, Value)>, parent: Option<Struct>) -> Struct {
         let mut lookup = HashMap::new();
         let mut cells = Vec::new();
-        vec.drain(..)
-            .for_each(|(key, value)| {
-                lookup.insert(key, cells.len());
-                cells.push(value);
-            });
+        vec.drain(..).for_each(|(key, value)| {
+            lookup.insert(key, cells.len());
+            cells.push(value);
+        });
         Struct {
             data: Arc::new(Mutex::new(StructData {
                 parent,
                 cells,
                 lookup,
-            }))
+            })),
         }
     }
 
@@ -90,18 +91,16 @@ impl Struct {
         let mut lookup = HashMap::new();
         let mut cells = Vec::new();
 
-        values.drain(..)
-            .zip(types)
-            .for_each(|(value, column)| {
-                lookup.insert(column.name, cells.len());
-                cells.push(value);
-            });
+        values.drain(..).zip(types).for_each(|(value, column)| {
+            lookup.insert(column.name, cells.len());
+            cells.push(value);
+        });
         Struct {
             data: Arc::new(Mutex::new(StructData {
                 parent: None,
                 lookup,
                 cells,
-            }))
+            })),
         }
     }
 
@@ -113,7 +112,10 @@ impl Struct {
             reverse_lookup.insert(value.clone(), key);
         }
         for (idx, value) in data.cells.iter().enumerate() {
-            res.push(ColumnType::new(reverse_lookup.get(&idx).unwrap(), value.value_type()));
+            res.push(ColumnType::new(
+                reverse_lookup.get(&idx).unwrap(),
+                value.value_type(),
+            ));
         }
         res
     }
@@ -124,8 +126,11 @@ impl Struct {
         for (key, value) in &data.lookup {
             reverse_lookup.insert(value.clone(), key);
         }
-        data.cells.iter().enumerate()
-            .map(|(idx, v)| (reverse_lookup[&idx].to_string(), v.clone())).collect()
+        data.cells
+            .iter()
+            .enumerate()
+            .map(|(idx, v)| (reverse_lookup[&idx].to_string(), v.clone()))
+            .collect()
     }
 
     pub fn to_row(&self) -> Row {
@@ -159,7 +164,9 @@ impl Struct {
 
     fn fill_keys(&self, dest: &mut HashSet<String>) {
         let data = self.data.lock().unwrap();
-        data.lookup.keys().for_each(|name| { dest.insert(name.clone()); });
+        data.lookup.keys().for_each(|name| {
+            dest.insert(name.clone());
+        });
         let parent = data.parent.clone();
         drop(data);
         if let Some(p) = parent {
@@ -186,8 +193,12 @@ impl Struct {
             data: Arc::new(Mutex::new(StructData {
                 parent: data.parent.clone(),
                 lookup: data.lookup.clone(),
-                cells: data.cells.iter().map(|value| value.clone().materialize()).collect(),
-            }))
+                cells: data
+                    .cells
+                    .iter()
+                    .map(|value| value.clone().materialize())
+                    .collect(),
+            })),
         }
     }
 
@@ -202,12 +213,16 @@ impl ToString for Struct {
         let data = self.data.lock().unwrap();
         let parent = data.parent.clone();
         drop(data);
-        format!("data{} {}",
-                parent.map(|p| format!(" parent=({})", p.to_string())).unwrap_or_else(|| "".to_string()),
-                elements
-                    .iter()
-                    .map(|(c, t)| format!("{}=({})", c, t.to_string()))
-                    .collect::<Vec<String>>()
-                    .join(", "))
+        format!(
+            "data{} {}",
+            parent
+                .map(|p| format!(" parent=({})", p.to_string()))
+                .unwrap_or_else(|| "".to_string()),
+            elements
+                .iter()
+                .map(|(c, t)| format!("{}=({})", c, t.to_string()))
+                .collect::<Vec<String>>()
+                .join(", ")
+        )
     }
 }

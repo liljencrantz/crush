@@ -1,22 +1,20 @@
-use std::io::{BufReader, BufRead};
-use crate::lang::{
-    execution_context::ExecutionContext,
-    table::Row,
-    table::ColumnType,
-    value::ValueType,
-    value::Value,
-};
-use crate::lang::errors::{CrushResult, to_crush_error};
-use crate::lang::files::Files;
-use signature::signature;
 use crate::lang::argument::ArgumentHandler;
+use crate::lang::errors::{to_crush_error, CrushResult};
+use crate::lang::files::Files;
 use crate::lang::scope::ScopeLoader;
 use crate::lang::stream::OutputStream;
+use crate::lang::{
+    execution_context::ExecutionContext, table::ColumnType, table::Row, value::Value,
+    value::ValueType,
+};
+use signature::signature;
+use std::io::{BufRead, BufReader};
 
 #[signature(
-from,
-can_block = true,
-short = "Read specified files (or input) as a table, split on the specified separator")]
+    from,
+    can_block = true,
+    short = "Read specified files (or input) as a table, split on the specified separator"
+)]
 struct From {
     #[unnamed()]
     #[description("the files to read from (read from input if no file is specified).")]
@@ -29,7 +27,12 @@ struct From {
     allow_empty: bool,
 }
 
-fn send(output: &OutputStream, trim: &Option<String>, allow_empty: bool, mut ptr: &str) -> CrushResult<()> {
+fn send(
+    output: &OutputStream,
+    trim: &Option<String>,
+    allow_empty: bool,
+    mut ptr: &str,
+) -> CrushResult<()> {
     if let Some(t) = trim {
         ptr = ptr.trim_matches(|ch| t.contains(ch));
     }
@@ -41,7 +44,9 @@ fn send(output: &OutputStream, trim: &Option<String>, allow_empty: bool, mut ptr
 }
 
 pub fn from(context: ExecutionContext) -> CrushResult<()> {
-    let output = context.output.initialize(vec![ColumnType::new("token", ValueType::String)])?;
+    let output = context
+        .output
+        .initialize(vec![ColumnType::new("token", ValueType::String)])?;
     let cfg: From = From::parse(context.arguments, &context.printer)?;
 
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
@@ -75,6 +80,7 @@ pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
         Box::new(move |env| {
             From::declare(env)?;
             Ok(())
-        }))?;
+        }),
+    )?;
     Ok(())
 }

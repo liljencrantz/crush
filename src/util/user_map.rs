@@ -6,7 +6,7 @@ use users::User;
 
 use lazy_static::lazy_static;
 
-use crate::lang::{value::Value};
+use crate::lang::value::Value;
 
 lazy_static! {
     static ref USER_MUTEX: Mutex<i32> = Mutex::new(0i32);
@@ -14,7 +14,7 @@ lazy_static! {
 
 pub fn create_user_map() -> HashMap<uid_t, User> {
     let _user_lock = USER_MUTEX.lock().unwrap();
-    let users = unsafe {users::all_users()};
+    let users = unsafe { users::all_users() };
     users.map(|user| (user.uid(), user)).collect()
 }
 
@@ -24,6 +24,10 @@ pub trait UserMap {
 
 impl UserMap for HashMap<uid_t, User> {
     fn get_name(&self, uid: uid_t) -> Value {
-        Value::string(self.get(&uid).map(|u| u.name().to_str().unwrap_or("<illegal username>")).unwrap_or("<unknown user>"))
+        Value::string(
+            self.get(&uid)
+                .map(|u| u.name().to_str().unwrap_or("<illegal username>"))
+                .unwrap_or("<unknown user>"),
+        )
     }
 }

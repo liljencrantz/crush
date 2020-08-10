@@ -1,12 +1,12 @@
-use std::io::BufReader;
-use crate::lang::execution_context::ExecutionContext;
-use crate::lang::errors::CrushResult;
-use crate::lang::scope::ScopeLoader;
-use crate::lang::serialization::{serialize_writer, deserialize_reader};
-use crate::lang::command::OutputType::{Unknown};
-use crate::lang::files::Files;
-use signature::signature;
 use crate::lang::argument::ArgumentHandler;
+use crate::lang::command::OutputType::Unknown;
+use crate::lang::errors::CrushResult;
+use crate::lang::execution_context::ExecutionContext;
+use crate::lang::files::Files;
+use crate::lang::scope::ScopeLoader;
+use crate::lang::serialization::{deserialize_reader, serialize_writer};
+use signature::signature;
+use std::io::BufReader;
 
 #[signature(
 to,
@@ -41,7 +41,10 @@ struct From {
 
 fn from(context: ExecutionContext) -> CrushResult<()> {
     let cfg: From = From::parse(context.arguments, &context.printer)?;
-    context.output.send(deserialize_reader(&mut BufReader::new(&mut cfg.files.reader(context.input)?), &context.env )?)
+    context.output.send(deserialize_reader(
+        &mut BufReader::new(&mut cfg.files.reader(context.input)?),
+        &context.env,
+    )?)
 }
 
 pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
@@ -51,6 +54,7 @@ pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
             From::declare(env);
             To::declare(env);
             Ok(())
-        }))?;
+        }),
+    )?;
     Ok(())
 }

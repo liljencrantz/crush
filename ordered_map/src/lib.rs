@@ -1,10 +1,10 @@
-use std::hash::{Hash, Hasher};
-use std::collections::hash_map::DefaultHasher;
-use std::cmp::max;
-use std::fmt::{Display, Formatter};
-use SourceIndex::{LookupIndex, ValueIndex};
 use std::borrow::Borrow;
+use std::cmp::max;
+use std::collections::hash_map::DefaultHasher;
+use std::fmt::{Display, Formatter};
+use std::hash::{Hash, Hasher};
 use std::ops::Index;
+use SourceIndex::{LookupIndex, ValueIndex};
 
 /**
     A simple hash map that preserves insertion order on iteration.
@@ -27,8 +27,12 @@ pub enum Entry<'a, K: Eq + Hash, V> {
 impl<'a, K: Eq + Hash, V> Entry<'a, K, V> {
     pub fn insert(self, value: V) {
         match self {
-            Entry::Occupied(mut o) => { o.insert(value); }
-            Entry::Vacant(v) => { v.insert(value); }
+            Entry::Occupied(mut o) => {
+                o.insert(value);
+            }
+            Entry::Vacant(v) => {
+                v.insert(value);
+            }
         }
     }
 }
@@ -58,12 +62,10 @@ impl<'a, K: Eq + Hash, V> VacantEntry<'a, K, V> {
             LookupIndex(lookup_idx) => {
                 self.map.lookup[lookup_idx] = Some(value_idx);
             }
-            ValueIndex(idx) => {
-                match &mut self.map.values[idx] {
-                    Element::Node(n) => n.next_with_same_idx = Some(value_idx),
-                    Element::Tombstone(t) => t.next_with_same_idx = Some(value_idx),
-                }
-            }
+            ValueIndex(idx) => match &mut self.map.values[idx] {
+                Element::Node(n) => n.next_with_same_idx = Some(value_idx),
+                Element::Tombstone(t) => t.next_with_same_idx = Some(value_idx),
+            },
         }
     }
 }
@@ -95,7 +97,7 @@ impl<'a, K: Eq + Hash, V> OccupiedEntry<'a, K, V> {
             Element::Node(n) => {
                 idx = n.next_with_same_idx;
             }
-            Element::Tombstone(_) => { panic!("AAAA") }
+            Element::Tombstone(_) => panic!("AAAA"),
         }
         let mut el = Element::Tombstone(Tombstone {
             next_with_same_idx: idx,
@@ -124,9 +126,9 @@ struct InternalEntry<K: Eq + Hash, V> {
 }
 
 impl<K, V> Clone for InternalEntry<K, V>
-    where
-        K: Eq + Hash + Clone,
-        V: Clone
+where
+    K: Eq + Hash + Clone,
+    V: Clone,
 {
     fn clone(&self) -> Self {
         InternalEntry {
@@ -137,7 +139,6 @@ impl<K, V> Clone for InternalEntry<K, V>
         }
     }
 }
-
 
 #[derive(Debug, Clone)]
 struct Tombstone {
@@ -151,9 +152,9 @@ enum Element<K: Eq + Hash, V> {
 }
 
 impl<K, V> Clone for Element<K, V>
-    where
-        K: Eq + Hash + Clone,
-        V: Clone
+where
+    K: Eq + Hash + Clone,
+    V: Clone,
 {
     fn clone(&self) -> Self {
         match self {
@@ -214,8 +215,8 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
         for i in 0..self.values.len() {
             let el = &mut self.values[i];
             match el {
-                Element::Node(n) => { n.next_with_same_idx = None }
-                Element::Tombstone(t) => { t.next_with_same_idx = None }
+                Element::Node(n) => n.next_with_same_idx = None,
+                Element::Tombstone(t) => t.next_with_same_idx = None,
             }
             self.insert_into_lookup(i);
         }
@@ -237,18 +238,14 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
                     Some(mut prev_with_same_idx) => {
                         loop {
                             match &self.values[prev_with_same_idx] {
-                                Element::Node(n) => {
-                                    match n.next_with_same_idx {
-                                        None => break,
-                                        Some(idx) => prev_with_same_idx = idx,
-                                    }
-                                }
-                                Element::Tombstone(t) => {
-                                    match t.next_with_same_idx {
-                                        None => break,
-                                        Some(idx) => prev_with_same_idx = idx,
-                                    }
-                                }
+                                Element::Node(n) => match n.next_with_same_idx {
+                                    None => break,
+                                    Some(idx) => prev_with_same_idx = idx,
+                                },
+                                Element::Tombstone(t) => match t.next_with_same_idx {
+                                    None => break,
+                                    Some(idx) => prev_with_same_idx = idx,
+                                },
                             }
                         }
                         match &mut self.values[prev_with_same_idx] {
@@ -267,9 +264,10 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
     }
 
     pub fn get<Q: ?Sized>(&self, key: &Q) -> Option<&V>
-        where
-            K: Borrow<Q>,
-            Q: Hash + Eq, {
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq,
+    {
         match self.find(key) {
             Err(_) => None,
             Ok(idx) => match &self.values[idx] {
@@ -280,9 +278,10 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
     }
 
     pub fn contains_key<Q: ?Sized>(&self, key: &Q) -> bool
-        where
-            K: Borrow<Q>,
-            Q: Hash + Eq, {
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq,
+    {
         match self.find(key) {
             Err(_) => false,
             Ok(idx) => match &self.values[idx] {
@@ -293,9 +292,10 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
     }
 
     pub fn remove<Q: ?Sized>(&mut self, key: &Q) -> Option<V>
-        where
-            K: Borrow<Q>,
-            Q: Hash + Eq, {
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq,
+    {
         match self.find(key) {
             Err(_) => None,
             Ok(idx) => {
@@ -307,9 +307,7 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
                 let mut el = Element::Tombstone::<K, V>(Tombstone { next_with_same_idx });
                 std::mem::swap(&mut el, &mut self.values[idx]);
                 match el {
-                    Element::Node(n) => {
-                        Some(n.value)
-                    }
+                    Element::Node(n) => Some(n.value),
                     Element::Tombstone(_) => panic!("Impossible"),
                 }
             }
@@ -317,52 +315,47 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
     }
 
     fn find<Q: ?Sized>(&self, key: &Q) -> Result<usize, SourceIndex>
-        where
-            K: Borrow<Q>,
-            Q: Hash + Eq, {
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq,
+    {
         let hash = self.hash(&key);
         self.find_from_hash(key, hash)
     }
 
     fn find_from_hash<Q: ?Sized>(&self, key: &Q, hash: u64) -> Result<usize, SourceIndex>
-        where
-            K: Borrow<Q>,
-            Q: Hash + Eq, {
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq,
+    {
         let lookup_idx = (hash as usize) % self.lookup.len();
         match self.lookup[lookup_idx] {
             None => Err(SourceIndex::LookupIndex(lookup_idx)),
-            Some(mut prev_with_same_idx) => {
-                loop {
-                    match &self.values[prev_with_same_idx] {
-                        Element::Node(n) => {
-                            if n.key.borrow().eq(&key) {
-                                return Ok(prev_with_same_idx);
-                            }
-                            match n.next_with_same_idx {
-                                None => return Err(SourceIndex::ValueIndex(prev_with_same_idx)),
-                                Some(idx) => {
-                                    prev_with_same_idx = idx
-                                }
-                            }
+            Some(mut prev_with_same_idx) => loop {
+                match &self.values[prev_with_same_idx] {
+                    Element::Node(n) => {
+                        if n.key.borrow().eq(&key) {
+                            return Ok(prev_with_same_idx);
                         }
-                        Element::Tombstone(t) => {
-                            match t.next_with_same_idx {
-                                None => return Err(SourceIndex::ValueIndex(prev_with_same_idx)),
-                                Some(idx) => {
-                                    prev_with_same_idx = idx
-                                }
-                            }
+                        match n.next_with_same_idx {
+                            None => return Err(SourceIndex::ValueIndex(prev_with_same_idx)),
+                            Some(idx) => prev_with_same_idx = idx,
                         }
                     }
+                    Element::Tombstone(t) => match t.next_with_same_idx {
+                        None => return Err(SourceIndex::ValueIndex(prev_with_same_idx)),
+                        Some(idx) => prev_with_same_idx = idx,
+                    },
                 }
-            }
+            },
         }
     }
 
     fn hash<Q: ?Sized>(&self, key: &Q) -> u64
-        where
-            K: Borrow<Q>,
-            Q: Hash + Eq, {
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq,
+    {
         let mut s = DefaultHasher::new();
         key.hash(&mut s);
         s.finish()
@@ -375,19 +368,14 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
         let hash = self.hash(&key);
 
         match self.find_from_hash(&key, hash) {
-            Ok(index) =>
-                Entry::Occupied(OccupiedEntry {
-                    index,
-                    map: self,
-                }),
+            Ok(index) => Entry::Occupied(OccupiedEntry { index, map: self }),
 
-            Err(source) =>
-                Entry::Vacant(VacantEntry {
-                    key,
-                    hash,
-                    source,
-                    map: self,
-                }),
+            Err(source) => Entry::Vacant(VacantEntry {
+                key,
+                hash,
+                source,
+                map: self,
+            }),
         }
     }
 
@@ -431,9 +419,9 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
 }
 
 impl<K, V> Clone for OrderedMap<K, V>
-    where
-        K: Eq + Hash + Clone,
-        V: Clone
+where
+    K: Eq + Hash + Clone,
+    V: Clone,
 {
     fn clone(&self) -> Self {
         OrderedMap {
@@ -445,10 +433,10 @@ impl<K, V> Clone for OrderedMap<K, V>
 }
 
 impl<K, V> std::iter::FromIterator<(K, V)> for OrderedMap<K, V>
-    where
-        K: Eq + Hash,
+where
+    K: Eq + Hash,
 {
-    fn from_iter<T: IntoIterator<Item=(K, V)>>(iter: T) -> OrderedMap<K, V> {
+    fn from_iter<T: IntoIterator<Item = (K, V)>>(iter: T) -> OrderedMap<K, V> {
         let mut map = OrderedMap::new();
         map.extend(iter);
         map
@@ -456,10 +444,10 @@ impl<K, V> std::iter::FromIterator<(K, V)> for OrderedMap<K, V>
 }
 
 impl<K, V> Extend<(K, V)> for OrderedMap<K, V>
-    where
-        K: Eq + Hash,
+where
+    K: Eq + Hash,
 {
-    fn extend<T: IntoIterator<Item=(K, V)>>(&mut self, iter: T) {
+    fn extend<T: IntoIterator<Item = (K, V)>>(&mut self, iter: T) {
         let mut i = iter.into_iter();
         loop {
             match i.next() {
@@ -637,9 +625,9 @@ impl<K: Eq + Hash, V> IntoIterator for OrderedMap<K, V> {
 }
 
 impl<'a, K, Q: ?Sized, V> Index<&'a Q> for OrderedMap<K, V>
-    where
-        K: Eq + Hash + Borrow<Q>,
-        Q: Eq + Hash,
+where
+    K: Eq + Hash + Borrow<Q>,
+    Q: Eq + Hash,
 {
     type Output = V;
 
@@ -662,7 +650,10 @@ mod tests {
         assert_eq!(m.get(&2).unwrap(), &"b");
         assert_eq!(m.get(&3).unwrap(), &"c");
         assert_eq!(m.len(), 3);
-        assert_eq!(m.iter().map(|(_, v)| v.to_string()).collect::<String>(), "acb".to_string());
+        assert_eq!(
+            m.iter().map(|(_, v)| v.to_string()).collect::<String>(),
+            "acb".to_string()
+        );
     }
 
     #[test]
@@ -703,8 +694,12 @@ mod tests {
         assert_eq!(m.len(), 4);
 
         match m.entry(1) {
-            Entry::Occupied(e) => { e.remove(); }
-            Entry::Vacant(_) => { panic!("Impossible"); }
+            Entry::Occupied(e) => {
+                e.remove();
+            }
+            Entry::Vacant(_) => {
+                panic!("Impossible");
+            }
         }
         assert_eq!(m.len(), 3);
         assert_eq!(m.get(&1), None);

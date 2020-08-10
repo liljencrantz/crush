@@ -1,23 +1,19 @@
-use crate::lang::errors::{CrushResult, to_crush_error};
-use crate::{
-    lang::table::Row,
-    lang::value::ValueType,
-    lang::value::Value,
-};
-use crate::util::user_map::{create_user_map, UserMap};
-use psutil::process::State;
-use users::uid_t;
-use crate::lang::{table::ColumnType};
-use chrono::Duration;
-use crate::lang::scope::Scope;
-use nix::sys::signal;
-use nix::unistd::Pid;
-use std::str::FromStr;
-use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
-use lazy_static::lazy_static;
-use signature::signature;
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::OutputType::{Known, Unknown};
+use crate::lang::errors::{to_crush_error, CrushResult};
+use crate::lang::execution_context::{ArgumentVector, ExecutionContext};
+use crate::lang::scope::Scope;
+use crate::lang::table::ColumnType;
+use crate::util::user_map::{create_user_map, UserMap};
+use crate::{lang::table::Row, lang::value::Value, lang::value::ValueType};
+use chrono::Duration;
+use lazy_static::lazy_static;
+use nix::sys::signal;
+use nix::unistd::Pid;
+use psutil::process::State;
+use signature::signature;
+use std::str::FromStr;
+use users::uid_t;
 
 lazy_static! {
     static ref PS_OUTPUT_TYPE: Vec<ColumnType> = vec![
@@ -57,9 +53,11 @@ fn ps(context: ExecutionContext) -> CrushResult<()> {
             users.get_name(proc.uid as uid_t),
             Value::Duration(Duration::microseconds((proc.utime * 1_000_000.0) as i64)),
             Value::string(
-                proc.cmdline_vec().unwrap_or_else(|_| Some(vec!["<Illegal name>".to_string()]))
+                proc.cmdline_vec()
+                    .unwrap_or_else(|_| Some(vec!["<Illegal name>".to_string()]))
                     .unwrap_or_else(|| vec![format!("[{}]", proc.comm)])[0]
-                    .as_ref()),
+                    .as_ref(),
+            ),
         ]))?;
     }
     Ok(())
@@ -88,7 +86,8 @@ fn kill(context: ExecutionContext) -> CrushResult<()> {
     for pid in sig.pid {
         to_crush_error(signal::kill(
             Pid::from_raw(pid as i32),
-            to_crush_error(signal::Signal::from_str(&sig.signal))?))?;
+            to_crush_error(signal::Signal::from_str(&sig.signal))?,
+        ))?;
     }
     context.output.send(Value::Empty())
 }

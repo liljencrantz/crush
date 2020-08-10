@@ -1,11 +1,11 @@
-use crate::lang::{value::ValueType, value::Value, table::ColumnType, table::Row, value::Field};
-use crate::lang::errors::{mandate, CrushResult, error, argument_error};
-use std::hash::Hasher;
-use std::sync::{Arc, Mutex};
-use std::cmp::Ordering;
+use crate::lang::errors::{argument_error, error, mandate, CrushResult};
 use crate::lang::stream::CrushStream;
+use crate::lang::{table::ColumnType, table::Row, value::Field, value::Value, value::ValueType};
 use crate::util::identity_arc::Identity;
 use chrono::Duration;
+use std::cmp::Ordering;
+use std::hash::Hasher;
+use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
 pub struct List {
@@ -42,7 +42,12 @@ macro_rules! dump_to {
 }
 
 impl List {
-    pub fn new(cell_type: ValueType, cells: Vec<Value>) -> List { List { cell_type, cells: Arc::from(Mutex::new(cells)) } }
+    pub fn new(cell_type: ValueType, cells: Vec<Value>) -> List {
+        List {
+            cell_type,
+            cells: Arc::from(Mutex::new(cells)),
+        }
+    }
 
     pub fn len(&self) -> usize {
         let cells = self.cells.lock().unwrap();
@@ -104,7 +109,7 @@ impl List {
         Ok(())
     }
 
-    pub fn insert(&self, idx: usize, value: Value) -> CrushResult<()>{
+    pub fn insert(&self, idx: usize, value: Value) -> CrushResult<()> {
         let mut cells = self.cells.lock().unwrap();
         if !self.cell_type.is(&value) {
             return argument_error("Invalid argument type");
@@ -123,7 +128,7 @@ impl List {
 
     pub fn peek(&self) -> Option<Value> {
         let cells = self.cells.lock().unwrap();
-        cells.get(cells.len()-1).map(|v| v.clone())
+        cells.get(cells.len() - 1).map(|v| v.clone())
     }
 
     pub fn element_type(&self) -> ValueType {
@@ -171,7 +176,11 @@ impl ToString for List {
     fn to_string(&self) -> String {
         let mut res = "[".to_string();
         let cells = self.cells.lock().unwrap();
-        res += &cells.iter().map(|c| c.to_string()).collect::<Vec<String>>().join(", ");
+        res += &cells
+            .iter()
+            .map(|c| c.to_string())
+            .collect::<Vec<String>>()
+            .join(", ");
         res += "]";
         res
     }
@@ -209,7 +218,7 @@ impl std::cmp::PartialOrd for List {
         for (v1, v2) in us.iter().zip(them.iter()) {
             let d = v1.partial_cmp(v2);
             match d.clone() {
-                Some(Ordering::Equal) => {},
+                Some(Ordering::Equal) => {}
                 _ => return d,
             }
         }
@@ -227,9 +236,7 @@ pub struct ListReader {
 }
 
 impl ListReader {
-    pub fn new(list: List,
-           name: &str,
-    ) -> ListReader {
+    pub fn new(list: List, name: &str) -> ListReader {
         ListReader {
             types: vec![ColumnType::new(name, list.element_type())],
             list,
@@ -244,7 +251,10 @@ impl CrushStream for ListReader {
         Ok(Row::new(vec![self.list.get(self.idx - 1)?]))
     }
 
-    fn read_timeout(&mut self, _timeout: Duration) -> Result<Row, crate::lang::stream::RecvTimeoutError> {
+    fn read_timeout(
+        &mut self,
+        _timeout: Duration,
+    ) -> Result<Row, crate::lang::stream::RecvTimeoutError> {
         match self.read() {
             Ok(r) => Ok(r),
             Err(_) => Err(crate::lang::stream::RecvTimeoutError::Disconnected),

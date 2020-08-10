@@ -1,14 +1,15 @@
-use crate::lang::execution_context::ExecutionContext;
-use crate::lang::errors::CrushResult;
-use signature::signature;
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::Command;
+use crate::lang::errors::CrushResult;
+use crate::lang::execution_context::ExecutionContext;
+use signature::signature;
 
 #[signature(
-r#if,
-condition = true,
-short = "Conditionally execute a command once.",
-example = "if a > 10 {echo \"big\"} {echo \"small\"}")]
+    r#if,
+    condition = true,
+    short = "Conditionally execute a command once.",
+    example = "if a > 10 {echo \"big\"} {echo \"small\"}"
+)]
 pub struct If {
     #[description("the condition to filter on.")]
     condition: bool,

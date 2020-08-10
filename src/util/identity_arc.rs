@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use std::ops::Deref;
+use std::sync::Arc;
 
 pub trait Identity {
     fn id(&self) -> u64;
@@ -13,9 +13,9 @@ impl<T> Identity for Arc<T> {
 
 #[cfg(test)]
 mod tests {
+    use super::Identity;
     use std::collections::HashMap;
     use std::sync::Arc;
-    use super::Identity;
 
     #[test]
     fn arc_identity() {

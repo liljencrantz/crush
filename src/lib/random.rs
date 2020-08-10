@@ -1,14 +1,15 @@
-use crate::lang::execution_context::ExecutionContext;
-use crate::lang::errors::CrushResult;
-use crate::lang::{value::Value};
-use crate::lang::scope::Scope;
-use signature::signature;
 use crate::lang::argument::ArgumentHandler;
+use crate::lang::errors::CrushResult;
+use crate::lang::execution_context::ExecutionContext;
+use crate::lang::scope::Scope;
+use crate::lang::value::Value;
+use signature::signature;
 
 #[signature(
     float,
     can_block = false,
-    short = "generate a random floating point number between 0 (inclusive) and 1 (exclusive)")]
+    short = "generate a random floating point number between 0 (inclusive) and 1 (exclusive)"
+)]
 struct Float {
     #[default(1.0)]
     #[description("upper bound.")]
@@ -17,14 +18,17 @@ struct Float {
 
 fn float(context: ExecutionContext) -> CrushResult<()> {
     let cfg: Float = Float::parse(context.arguments, &context.printer)?;
-    context.output.send(Value::Float(rand::random::<f64>()*cfg.to))?;
+    context
+        .output
+        .send(Value::Float(rand::random::<f64>() * cfg.to))?;
     Ok(())
 }
 
 #[signature(
-integer,
-can_block = false,
-short = "generate a random integer between 0 and 1 (or some other specified number)")]
+    integer,
+    can_block = false,
+    short = "generate a random integer between 0 and 1 (or some other specified number)"
+)]
 struct Integer {
     #[default(2)]
     #[description("upper bound (exclusive).")]
@@ -33,7 +37,7 @@ struct Integer {
 
 fn integer(context: ExecutionContext) -> CrushResult<()> {
     let cfg: Integer = Integer::parse(context.arguments, &context.printer)?;
-    let n = rand::random::<f64>()*(cfg.to as f64);
+    let n = rand::random::<f64>() * (cfg.to as f64);
     context.output.send(Value::Integer(n as i128))?;
     Ok(())
 }
@@ -45,6 +49,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Float::declare(env)?;
             Integer::declare(env)?;
             Ok(())
-        }))?;
+        }),
+    )?;
     Ok(())
 }

@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, error, to_crush_error};
+use crate::lang::errors::{error, to_crush_error, CrushResult};
 use std::path::PathBuf;
 
 pub fn cwd() -> CrushResult<PathBuf> {

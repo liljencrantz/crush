@@ -1,18 +1,21 @@
+use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
 use crate::lang::scope::Scope;
-use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
-use crate::lang::{value::Value, list::List, value::ValueType, execution_context::ExecutionContext, binary::BinaryReader};
-use std::env;
+use crate::lang::{
+    binary::BinaryReader, execution_context::ExecutionContext, list::List, value::Value,
+    value::ValueType,
+};
 use signature::signature;
+use std::env;
 
-mod r#if;
-mod r#while;
-mod r#loop;
 mod r#for;
+mod r#if;
+mod r#loop;
+mod r#while;
 
-use std::path::PathBuf;
-use chrono::Duration;
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::OutputType::Known;
+use chrono::Duration;
+use std::path::PathBuf;
 
 pub fn r#break(context: ExecutionContext) -> CrushResult<()> {
     context.env.do_break()?;
@@ -59,19 +62,20 @@ pub fn cmd(mut context: ExecutionContext) -> CrushResult<()> {
                     context.printer.error(err);
                 }
             }
-            context.output.send(
-                Value::BinaryStream(
-                    BinaryReader::vec(&output.stdout)))
+            context
+                .output
+                .send(Value::BinaryStream(BinaryReader::vec(&output.stdout)))
         }
-        _ => argument_error("Not a valid command")
+        _ => argument_error("Not a valid command"),
     }
 }
 
 #[signature(
-sleep,
-can_block = true,
-short = "Pause execution of commands for the specified amount of time",
-long = "    Execute the specified command all specified hosts")]
+    sleep,
+    can_block = true,
+    short = "Pause execution of commands for the specified amount of time",
+    long = "    Execute the specified command all specified hosts"
+)]
 struct Sleep {
     #[description("the time to sleep for.")]
     duration: Duration,
@@ -106,28 +110,46 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 r#for::r#for,
                 "for [name=]iterable:(table_stream|table|dict|list) body:command",
                 "Execute body once for every element in iterable.",
-                Some(r#"    Example:
+                Some(
+                    r#"    Example:
 
     for (seq 10) {
         echo ("Lap #{}":format value)
-    }"#))?;
+    }"#,
+                ),
+            )?;
 
             env.declare_command(
-                "break", r#break, false,
-                "break", "Stop execution of a loop", None, Known(ValueType::Empty))?;
+                "break",
+                r#break,
+                false,
+                "break",
+                "Stop execution of a loop",
+                None,
+                Known(ValueType::Empty),
+            )?;
             env.declare_command(
-                "continue", r#continue, false,
+                "continue",
+                r#continue,
+                false,
                 "continue",
                 "Skip execution of the current iteration of a loop",
-                None, Known(ValueType::Empty))?;
+                None,
+                Known(ValueType::Empty),
+            )?;
             env.declare_command(
-                "cmd", cmd, true,
+                "cmd",
+                cmd,
+                true,
                 "cmd external_command:(file|string) @arguments:any",
                 "Execute external commands",
-                None, Known(ValueType::BinaryStream))?;
+                None,
+                Known(ValueType::BinaryStream),
+            )?;
             Sleep::declare(env)?;
             Ok(())
-        }))?;
+        }),
+    )?;
     root.r#use(&e);
     Ok(())
 }

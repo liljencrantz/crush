@@ -1,11 +1,13 @@
-use crate::lang::scope::Scope;
-use crate::lang::errors::{CrushResult, data_error, argument_error, mandate};
-use crate::lang::{value::Value, execution_context::ExecutionContext, execution_context::ArgumentVector};
-use crate::lang::list::List;
-use crate::lang::value::{ValueType, Field};
-use crate::lang::pretty_printer::PrettyPrinter;
 use crate::lang::argument::ArgumentHandler;
-use crate::lang::command::OutputType::{Known};
+use crate::lang::command::OutputType::Known;
+use crate::lang::errors::{argument_error, data_error, mandate, CrushResult};
+use crate::lang::list::List;
+use crate::lang::pretty_printer::PrettyPrinter;
+use crate::lang::scope::Scope;
+use crate::lang::value::{Field, ValueType};
+use crate::lang::{
+    execution_context::ArgumentVector, execution_context::ExecutionContext, value::Value,
+};
 use signature::signature;
 
 mod bin;
@@ -25,14 +27,16 @@ pub fn val(mut context: ExecutionContext) -> CrushResult<()> {
 
 pub fn dir(mut context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
-    context.output.send(
-        Value::List(List::new(
-            ValueType::String,
-            context.arguments.value(0)?.fields()
-                .drain(..)
-                .map(|n| Value::String(n))
-                .collect()))
-    )
+    context.output.send(Value::List(List::new(
+        ValueType::String,
+        context
+            .arguments
+            .value(0)?
+            .fields()
+            .drain(..)
+            .map(|n| Value::String(n))
+            .collect(),
+    )))
 }
 
 #[signature(echo, can_block=false, short="Prints all arguments directly to the screen", output = Known(ValueType::Empty), example="echo \"Hello, world!\"")]
@@ -51,7 +55,12 @@ fn echo(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Empty())
 }
 
-#[signature(member, can_block=false, short="Extracts one member from the input struct.", example="http \"example.com\" | member ^body | json:from")]
+#[signature(
+    member,
+    can_block = false,
+    short = "Extracts one member from the input struct.",
+    example = "http \"example.com\" | member ^body | json:from"
+)]
 struct Member {
     #[description("the member to extract.")]
     field: Field,
@@ -63,9 +72,10 @@ fn member(context: ExecutionContext) -> CrushResult<()> {
         return argument_error("Invalid field - should have exactly one element");
     }
     match context.input.recv()? {
-        Value::Struct(s) => {
-            context.output.send(mandate(s.get(&cfg.field[0]), format!("Unknown field \"{}\"", cfg.field[0]).as_str())?)
-        }
+        Value::Struct(s) => context.output.send(mandate(
+            s.get(&cfg.field[0]),
+            format!("Unknown field \"{}\"", cfg.field[0]).as_str(),
+        )?),
         _ => data_error("Expected a struct"),
     }
 }
@@ -87,17 +97,30 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Echo::declare(env)?;
             Member::declare(env)?;
             env.declare_command(
-                "val", val, false,
+                "val",
+                val,
+                false,
                 "val value:any",
                 "Return value",
-                Some(r#"    This command is useful if you want to e.g. pass a command as input in
+                Some(
+                    r#"    This command is useful if you want to e.g. pass a command as input in
     a pipeline instead of executing it. It is different from the echo command
-    in that val sends the value thorugh the pipeline, where echo prints it to screen."#), Known(ValueType::Any))?;
+    in that val sends the value thorugh the pipeline, where echo prints it to screen."#,
+                ),
+                Known(ValueType::Any),
+            )?;
             env.declare_command(
-                "dir", dir, false,
-                "dir value:any", "List members of value", None, Known(ValueType::Empty))?;
+                "dir",
+                dir,
+                false,
+                "dir value:any",
+                "List members of value",
+                None,
+                Known(ValueType::Empty),
+            )?;
             Ok(())
-        }))?;
+        }),
+    )?;
     root.r#use(&e);
     Ok(())
 }

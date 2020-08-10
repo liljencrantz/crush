@@ -7,18 +7,18 @@ mod util;
 
 use rustyline;
 
+use crate::lang::errors::{to_crush_error, CrushResult};
+use crate::lang::pretty_printer::create_pretty_printer;
+use crate::lang::printer::Printer;
+use crate::lang::scope::Scope;
+use crate::lang::stream::ValueSender;
+use crate::lang::{execute, printer};
+use crate::util::file::home;
+use lib::declare;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
-use lib::declare;
-use crate::lang::errors::{CrushResult, to_crush_error};
-use crate::lang::{printer, execute};
-use crate::lang::pretty_printer::create_pretty_printer;
-use crate::util::file::home;
-use std::path::{PathBuf, Path};
-use crate::lang::scope::Scope;
-use crate::lang::printer::Printer;
-use crate::lang::stream::ValueSender;
 use std::io::Read;
+use std::path::{Path, PathBuf};
 
 fn crush_history_file() -> String {
     home()
@@ -29,7 +29,11 @@ fn crush_history_file() -> String {
         .to_string()
 }
 
-fn run_interactive(global_env: Scope, printer: &Printer, pretty_printer: &ValueSender) -> CrushResult<()> {
+fn run_interactive(
+    global_env: Scope,
+    printer: &Printer,
+    pretty_printer: &ValueSender,
+) -> CrushResult<()> {
     printer.line("Welcome to Crush");
     printer.line(r#"Type "help" for... help."#);
 
@@ -76,11 +80,8 @@ fn run() -> CrushResult<()> {
 
     let args = std::env::args().collect::<Vec<String>>();
     match args.len() {
-        1 => run_interactive(
-            my_scope,
-            &printer,
-            &pretty_printer)?,
-        2 =>
+        1 => run_interactive(my_scope, &printer, &pretty_printer)?,
+        2 => {
             if args[1] == "--pup" {
                 let mut buff = Vec::new();
                 to_crush_error(std::io::stdin().read_to_end(&mut buff))?;
@@ -90,8 +91,10 @@ fn run() -> CrushResult<()> {
                     my_scope,
                     PathBuf::from(&args[1]).as_path(),
                     &printer,
-                    &pretty_printer)?
-            },
+                    &pretty_printer,
+                )?
+            }
+        }
         _ => {}
     }
     drop(pretty_printer);

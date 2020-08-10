@@ -1,11 +1,11 @@
 use proc_macro2;
 
-use syn;
-use proc_macro2::{TokenStream, Literal, TokenTree};
-use syn::{Item, Type, PathArguments, GenericArgument, Attribute};
-use quote::{quote, ToTokens, quote_spanned};
 use proc_macro2::Ident;
+use proc_macro2::{Literal, TokenStream, TokenTree};
+use quote::{quote, quote_spanned, ToTokens};
+use syn;
 use syn::spanned::Spanned;
+use syn::{Attribute, GenericArgument, Item, PathArguments, Type};
 
 struct TypeData {
     initialize: TokenStream,
@@ -20,7 +20,7 @@ type SignatureResult<T> = Result<T, TokenStream>;
 macro_rules! fail {
     ($span:expr, $msg:literal) => {
         Err(quote_spanned! {$span => compile_error!($msg);})
-    }
+    };
 }
 
 fn extract_argument(path: &PathArguments) -> SignatureResult<Vec<&'static str>> {
@@ -45,7 +45,11 @@ fn extract_argument(path: &PathArguments) -> SignatureResult<Vec<&'static str>> 
 fn extract_type(ty: &Type) -> SignatureResult<(&'static str, Vec<&'static str>)> {
     match ty {
         Type::Path(path) => {
-            match (&path.qself, &path.path.leading_colon, path.path.segments.len()) {
+            match (
+                &path.qself,
+                &path.path.leading_colon,
+                path.path.segments.len(),
+            ) {
                 (None, None, 1) => {
                     let seg = &path.path.segments[0];
                     let s = match seg.ident.to_string().as_str() {
@@ -68,12 +72,11 @@ fn extract_type(ty: &Type) -> SignatureResult<(&'static str, Vec<&'static str>)>
                         "Field" => "Field",
                         "Value" => "Value",
                         "Stream" => "Stream",
-                        _ =>
-                            return fail!(seg.span(), "Unrecognised type"),
+                        _ => return fail!(seg.span(), "Unrecognised type"),
                     };
                     Ok((s, extract_argument(&seg.arguments)?))
                 }
-                _ => fail!(ty.span(), "Invalid type")
+                _ => fail!(ty.span(), "Invalid type"),
             }
         }
         _ => fail!(ty.span(), "Invalid type, expected a Path segment"),
@@ -87,7 +90,7 @@ fn call_is_named(attr: &Attribute, name: &str) -> bool {
             let seg = &path.segments[0];
             seg.ident.to_string().as_str() == name
         }
-        _ => false
+        _ => false,
     }
 }
 
@@ -110,15 +113,13 @@ fn call_literals(attr: &Attribute) -> SignatureResult<Vec<Literal>> {
             TokenTree::Group(g) => {
                 for item in g.stream().into_iter() {
                     match item {
-                        TokenTree::Literal(l) => {
-                            res.push(l)
-                        }
+                        TokenTree::Literal(l) => res.push(l),
                         TokenTree::Punct(_) => {}
-                        _ => return fail!(attr.span(), "All values must be literals")
+                        _ => return fail!(attr.span(), "All values must be literals"),
                     }
                 }
             }
-            _ => return fail!(attr.span(), "All values must be literals")
+            _ => return fail!(attr.span(), "All values must be literals"),
         }
     }
     Ok(res)
@@ -144,21 +145,21 @@ fn call_value(attr: &Attribute) -> SignatureResult<TokenTree> {
 
 fn simple_type_to_value(simple_type: &str) -> TokenStream {
     match simple_type {
-        "String" => quote!{crate::lang::value::Value::String(value)},
-        "bool" => quote!{crate::lang::value::Value::Bool(value)},
-        "i128" => quote!{crate::lang::value::Value::Integer(value)},
-        "usize" => quote!{crate::lang::value::Value::Integer(value)},
-        "u64" => quote!{crate::lang::value::Value::Integer(value)},
-        "i64" => quote!{crate::lang::value::Value::Integer(value)},
-        "ValueType" => quote!{crate::lang::value::Value::Type(value)},
-        "f64" => quote!{crate::lang::value::Value::Float(value)},
-        "char" => quote!{crate::lang::value::Value::String(value)},
-        "Command" => quote!{crate::lang::value::Value::Command(value)},
-        "Duration" => quote!{crate::lang::value::Value::Duration(value)},
-        "Field" => quote!{crate::lang::value::Value::Field(value)},
-        "Stream" => quote!{value},
-        "Value" => quote!{value},
-        _ => panic!("Unknown type")
+        "String" => quote! {crate::lang::value::Value::String(value)},
+        "bool" => quote! {crate::lang::value::Value::Bool(value)},
+        "i128" => quote! {crate::lang::value::Value::Integer(value)},
+        "usize" => quote! {crate::lang::value::Value::Integer(value)},
+        "u64" => quote! {crate::lang::value::Value::Integer(value)},
+        "i64" => quote! {crate::lang::value::Value::Integer(value)},
+        "ValueType" => quote! {crate::lang::value::Value::Type(value)},
+        "f64" => quote! {crate::lang::value::Value::Float(value)},
+        "char" => quote! {crate::lang::value::Value::String(value)},
+        "Command" => quote! {crate::lang::value::Value::Command(value)},
+        "Duration" => quote! {crate::lang::value::Value::Duration(value)},
+        "Field" => quote! {crate::lang::value::Value::Field(value)},
+        "Stream" => quote! {value},
+        "Value" => quote! {value},
+        _ => panic!("Unknown type"),
     }
 }
 
@@ -178,55 +179,52 @@ fn simple_type_to_value_description(simple_type: &str) -> &str {
         "Field" => "field",
         "Value" => "any value",
         "Stream" => "stream",
-        _ => panic!("Unknown type")
+        _ => panic!("Unknown type"),
     }
 }
 
-fn simple_type_to_mutator(
-    simple_type: &str,
-    allowed_values: &Option<Ident>,
-) -> TokenStream {
+fn simple_type_to_mutator(simple_type: &str, allowed_values: &Option<Ident>) -> TokenStream {
     match allowed_values {
-        None => {
-            match simple_type {
-                "char" => quote! { if value.len() == 1 { value.chars().next().unwrap()} else {return crate::lang::errors::argument_error("Argument must be exactly one character")}},
-                "usize" => quote! { crate::lang::errors::to_crush_error(usize::try_from(value))?},
-                "u64" => quote! { crate::lang::errors::to_crush_error(u64::try_from(value))?},
-                "i64" => quote! { crate::lang::errors::to_crush_error(i64::try_from(value))?},
-                "Stream" => quote! { crate::lang::errors::mandate(value.stream(), "Expected a type that can be streamed")? },
-                _ => quote! {value},
+        None => match simple_type {
+            "char" => {
+                quote! { if value.len() == 1 { value.chars().next().unwrap()} else {return crate::lang::errors::argument_error("Argument must be exactly one character")}}
             }
-        }
-        Some(allowed) => {
-            match simple_type {
-                "char" => quote! {
-                    if value.len() == 1 {
-                        let c = value.chars().next().unwrap();
-                        if #allowed.contains(&c) {
-                            c
-                        } else {
-                            return crate::lang::errors::argument_error(format!("Only the following values are allowed: {:?}", #allowed).as_str())
-                        }
-                    } else {
-                        return crate::lang::errors::argument_error("Argument must be exactly one character")
-                    }
-                },
-                "String" => quote! {
-                    if #allowed.contains(&value.as_str()) {
-                        value
+            "usize" => quote! { crate::lang::errors::to_crush_error(usize::try_from(value))?},
+            "u64" => quote! { crate::lang::errors::to_crush_error(u64::try_from(value))?},
+            "i64" => quote! { crate::lang::errors::to_crush_error(i64::try_from(value))?},
+            "Stream" => {
+                quote! { crate::lang::errors::mandate(value.stream(), "Expected a type that can be streamed")? }
+            }
+            _ => quote! {value},
+        },
+        Some(allowed) => match simple_type {
+            "char" => quote! {
+                if value.len() == 1 {
+                    let c = value.chars().next().unwrap();
+                    if #allowed.contains(&c) {
+                        c
                     } else {
                         return crate::lang::errors::argument_error(format!("Only the following values are allowed: {:?}", #allowed).as_str())
                     }
-                },
-                _ => quote! {
-                    if #allowed.contains(&value) {
-                        value
-                    } else {
-                        return crate::lang::errors::argument_error(format!("Only the following values are allowed: {:?}", #allowed).as_str())
-                    }
-                },
-            }
-        }
+                } else {
+                    return crate::lang::errors::argument_error("Argument must be exactly one character")
+                }
+            },
+            "String" => quote! {
+                if #allowed.contains(&value.as_str()) {
+                    value
+                } else {
+                    return crate::lang::errors::argument_error(format!("Only the following values are allowed: {:?}", #allowed).as_str())
+                }
+            },
+            _ => quote! {
+                if #allowed.contains(&value) {
+                    value
+                } else {
+                    return crate::lang::errors::argument_error(format!("Only the following values are allowed: {:?}", #allowed).as_str())
+                }
+            },
+        },
     }
 }
 
@@ -243,7 +241,6 @@ fn simple_type_dump_list(simple_type: &str) -> &str {
     }
 }
 
-
 fn type_to_value(
     ty: &Type,
     name: &Ident,
@@ -253,12 +250,14 @@ fn type_to_value(
 ) -> SignatureResult<TypeData> {
     let name_literal = proc_macro2::Literal::string(&name.to_string());
 
-    let allowed_values_name =
-        allowed_values.as_ref().map(|_| Ident::new(&format!("{}_allowed_values", name.to_string()), ty.span()));
+    let allowed_values_name = allowed_values
+        .as_ref()
+        .map(|_| Ident::new(&format!("{}_allowed_values", name.to_string()), ty.span()));
 
     let (type_name, args) = extract_type(ty)?;
     match type_name {
-        "i128" | "bool" | "String" | "char" | "ValueType" | "f64" | "Command" | "Duration" | "Field" | "Value" | "usize" | "i64" | "u64" | "Stream" => {
+        "i128" | "bool" | "String" | "char" | "ValueType" | "f64" | "Command" | "Duration"
+        | "Field" | "Value" | "usize" | "i64" | "u64" | "Stream" => {
             if !args.is_empty() {
                 fail!(ty.span(), "This type can't be paramterizised")
             } else {
@@ -266,13 +265,23 @@ fn type_to_value(
                 let mutator = simple_type_to_mutator(type_name, &allowed_values_name);
                 let value_type = simple_type_to_value(type_name);
                 Ok(TypeData {
-                    signature:
-                    if default.is_none() {
-                        format!("{}={}", name.to_string(), simple_type_to_value_description(type_name).to_string().to_lowercase())
+                    signature: if default.is_none() {
+                        format!(
+                            "{}={}",
+                            name.to_string(),
+                            simple_type_to_value_description(type_name)
+                                .to_string()
+                                .to_lowercase()
+                        )
                     } else {
-                        format!("[{}={}]", name.to_string(), simple_type_to_value_description(type_name).to_string().to_lowercase())
-                    }
-                    ,
+                        format!(
+                            "[{}={}]",
+                            name.to_string(),
+                            simple_type_to_value_description(type_name)
+                                .to_string()
+                                .to_lowercase()
+                        )
+                    },
                     initialize: match allowed_values {
                         None => quote! { let mut #name = None; },
                         Some(literals) => {
@@ -287,44 +296,39 @@ fn type_to_value(
                         }
                     },
                     mappings: quote! {(Some(#name_literal), #value_type) => #name = Some(#mutator),},
-                    unnamed_mutate:
-                    match default {
-                        None => {
-                            Some(quote! {
-if #name.is_none() {
-    match _unnamed.pop_front() {
-        Some(#value_type) => #name = Some(#mutator),
-        Some(value) =>
-            return crate::lang::errors::argument_error(format!(
-                "Expected argument \"{}\" to be of type {}, was of type {}",
-                #name_literal,
-                #type_name,
-                value.value_type().to_string()).as_str()),
-        _ =>
-            return crate::lang::errors::argument_error(format!(
-                "No value provided for argument \"{}\"",
-                #name_literal).as_str()),
-    }
-}
-                            })
+                    unnamed_mutate: match default {
+                        None => Some(quote! {
+                        if #name.is_none() {
+                            match _unnamed.pop_front() {
+                                Some(#value_type) => #name = Some(#mutator),
+                                Some(value) =>
+                                    return crate::lang::errors::argument_error(format!(
+                                        "Expected argument \"{}\" to be of type {}, was of type {}",
+                                        #name_literal,
+                                        #type_name,
+                                        value.value_type().to_string()).as_str()),
+                                _ =>
+                                    return crate::lang::errors::argument_error(format!(
+                                        "No value provided for argument \"{}\"",
+                                        #name_literal).as_str()),
+                            }
                         }
-                        Some(def) => {
-                            Some(quote! {
-if #name.is_none() {
-    match _unnamed.pop_front() {
-        Some(#value_type) => #name = Some(#mutator),
-        None => #name = Some(#native_type::from(#def)),
-        _ => return crate::lang::errors::argument_error(format!("Expected argument {} to be of type {}", #name_literal, #type_name).as_str()),
-        }
-}
-                            })
+                                                    }),
+                        Some(def) => Some(quote! {
+                        if #name.is_none() {
+                            match _unnamed.pop_front() {
+                                Some(#value_type) => #name = Some(#mutator),
+                                None => #name = Some(#native_type::from(#def)),
+                                _ => return crate::lang::errors::argument_error(format!("Expected argument {} to be of type {}", #name_literal, #type_name).as_str()),
+                                }
                         }
+                                                    }),
                     },
                     assign: quote! {
-#name: crate::lang::errors::mandate(
-    #name,
-    format!("Missing value for parameter {}", #name_literal).as_str())?,
-},
+                    #name: crate::lang::errors::mandate(
+                        #name,
+                        format!("Missing value for parameter {}", #name_literal).as_str())?,
+                    },
                 })
             }
         }
@@ -334,7 +338,10 @@ if #name.is_none() {
                 fail!(ty.span(), "This type can't be paramterizised")
             } else {
                 Ok(TypeData {
-                    signature: format!("[{}=(file|glob|regex|list|table|table_stream)...]", name.to_string()),
+                    signature: format!(
+                        "[{}=(file|glob|regex|list|table|table_stream)...]",
+                        name.to_string()
+                    ),
                     initialize: quote! { let mut #name = crate::lang::files::Files::new(); },
                     mappings: quote! { (Some(#name_literal), value) => #name.expand(value, printer)?, },
                     unnamed_mutate: if is_unnamed_target {
@@ -343,7 +350,9 @@ if #name.is_none() {
                                 #name.expand(_unnamed.pop_front().unwrap(), printer)?;
                             }
                         })
-                    } else { None },
+                    } else {
+                        None
+                    },
                     assign: quote! { #name, },
                 })
             }
@@ -361,7 +370,13 @@ if #name.is_none() {
                 let value_type = simple_type_to_value(args[0]);
 
                 Ok(TypeData {
-                    signature: format!("[{}={}...]", name.to_string(), simple_type_to_value_description(args[0]).to_string().to_lowercase()),
+                    signature: format!(
+                        "[{}={}...]",
+                        name.to_string(),
+                        simple_type_to_value_description(args[0])
+                            .to_string()
+                            .to_lowercase()
+                    ),
                     initialize: quote! { let mut #name = Vec::new(); },
                     mappings: quote! {
                         (Some(#name_literal), #value_type) => #name.push(#mutator),
@@ -377,7 +392,9 @@ if #name.is_none() {
                                 }
                             }
                         })
-                    } else { None },
+                    } else {
+                        None
+                    },
                     assign: quote! { #name, },
                 })
             }
@@ -394,7 +411,12 @@ if #name.is_none() {
                 let value_type = simple_type_to_value(args[0]);
 
                 Ok(TypeData {
-                    signature: format!("[<any>={}...]", simple_type_to_value_description(args[0]).to_string().to_lowercase()),
+                    signature: format!(
+                        "[<any>={}...]",
+                        simple_type_to_value_description(args[0])
+                            .to_string()
+                            .to_lowercase()
+                    ),
                     initialize: quote! { let mut #name = crate::lang::ordered_string_map::OrderedStringMap::new(); },
                     mappings: quote! { (Some(name), #value_type) => #name.insert(name.to_string(), #mutator), },
                     unnamed_mutate: None,
@@ -412,19 +434,24 @@ if #name.is_none() {
                 let value_type = simple_type_to_value(args[0]);
 
                 Ok(TypeData {
-                    signature: format!("[{}={}]", name.to_string(), simple_type_to_value_description(args[0]).to_string().to_lowercase()),
+                    signature: format!(
+                        "[{}={}]",
+                        name.to_string(),
+                        simple_type_to_value_description(args[0])
+                            .to_string()
+                            .to_lowercase()
+                    ),
                     initialize: quote! { let mut #name = None; },
                     mappings: quote! { (Some(#name_literal), #value_type) => #name = Some(#mutator), },
                     unnamed_mutate: Some(quote_spanned! { ty.span() =>
-                            if #name.is_none() {
-                                match _unnamed.pop_front() {
-                                    None => {}
-                                    Some(#value_type) => #name = Some(#mutator),
-                                    Some(_) => return crate::lang::errors::argument_error(format!("Expected argument {} to be of type {}", #name_literal, #sub_type).as_str()),
-                                }
-                            }
-                            }
-                    ),
+                    if #name.is_none() {
+                        match _unnamed.pop_front() {
+                            None => {}
+                            Some(#value_type) => #name = Some(#mutator),
+                            Some(_) => return crate::lang::errors::argument_error(format!("Expected argument {} to be of type {}", #name_literal, #sub_type).as_str()),
+                        }
+                    }
+                    }),
                     assign: quote! { #name, },
                 })
             }
@@ -476,14 +503,12 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
 
     let location = metadata.span().clone();
     let metadata_iter = metadata.into_iter().collect::<Vec<_>>();
-    let v = metadata_iter.split(|e| {
-        match e {
-            TokenTree::Punct(p) => {
-                p.as_char() == ','
-            }
+    let v = metadata_iter
+        .split(|e| match e {
+            TokenTree::Punct(p) => p.as_char() == ',',
             _ => false,
-        }
-    }).collect::<Vec<_>>();
+        })
+        .collect::<Vec<_>>();
     if v.len() == 0 {
         return fail!(location, "No name specified");
     }
@@ -531,16 +556,20 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
                     }
                     (TokenTree::Punct(p), TokenTree::Ident(l)) => {
                         match (name.to_string().as_str(), p.as_char()) {
-                            ("can_block", '=') => can_block = match l.to_string().as_str() {
-                                "true" => true,
-                                "false" => false,
-                                _ => return fail!(l.span(), "Expected a boolean value"),
-                            },
-                            ("condition", '=') => condition = match l.to_string().as_str() {
-                                "true" => true,
-                                "false" => false,
-                                _ => return fail!(l.span(), "Expected a boolean value"),
-                            },
+                            ("can_block", '=') => {
+                                can_block = match l.to_string().as_str() {
+                                    "true" => true,
+                                    "false" => false,
+                                    _ => return fail!(l.span(), "Expected a boolean value"),
+                                }
+                            }
+                            ("condition", '=') => {
+                                condition = match l.to_string().as_str() {
+                                    "true" => true,
+                                    "false" => false,
+                                    _ => return fail!(l.span(), "Expected a boolean value"),
+                                }
+                            }
                             _ => return fail!(l.span(), "Unknown argument"),
                         }
                     }
@@ -566,19 +595,28 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
     let metadata_location = metadata.span();
     let metadata = parse_metadata(metadata)?;
 
-    let description = Literal::string(metadata.short_description.unwrap_or_else(|| "Missing description".to_string()).as_str());
+    let description = Literal::string(
+        metadata
+            .short_description
+            .unwrap_or_else(|| "Missing description".to_string())
+            .as_str(),
+    );
 
     let command_invocation = metadata.identifier;
     let command_name = Literal::string(&metadata.name);
-    let can_block = Ident::new(if metadata.can_block { "true" } else { "false" }, metadata_location);
+    let can_block = Ident::new(
+        if metadata.can_block { "true" } else { "false" },
+        metadata_location,
+    );
 
     let root: syn::Item = syn::parse2(input).expect("Invalid syntax tree");
 
     let mut long_description = metadata.long_description;
     let mut signature = vec![metadata.name.to_string()];
-    let output = metadata.output
-        .map(|o| quote!{#o} )
-        .unwrap_or(quote!{crate::lang::command::OutputType::Unknown});
+    let output = metadata
+        .output
+        .map(|o| quote! {#o})
+        .unwrap_or(quote! {crate::lang::command::OutputType::Unknown});
 
     match root {
         Item::Struct(mut s) => {
@@ -613,7 +651,13 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 }
                 field.attrs = Vec::new();
                 let name = &field.ident.clone().unwrap();
-                let type_data = type_to_value(&field.ty, name, default_value.clone(), is_unnamed_target, allowed_values)?;
+                let type_data = type_to_value(
+                    &field.ty,
+                    name,
+                    default_value.clone(),
+                    is_unnamed_target,
+                    allowed_values,
+                )?;
 
                 signature.push(type_data.signature);
 
@@ -634,17 +678,23 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 };
                 if let Some(description) = description {
                     if !had_field_description {
-                        long_description.push("This command accepts the following arguments:".to_string());
+                        long_description
+                            .push("This command accepts the following arguments:".to_string());
                         had_field_description = true;
                     }
-                    long_description.push(format!("* {}{}, {}", name.to_string(), default_help, description));
+                    long_description.push(format!(
+                        "* {}{}, {}",
+                        name.to_string(),
+                        default_help,
+                        description
+                    ));
                 }
 
                 if !had_unnamed_target || default_value.is_some() {
                     if let Some(mutate) = type_data.unnamed_mutate {
                         unnamed_mutations.extend(quote! {
-                        #mutate
-                    });
+                            #mutate
+                        });
                     }
                 }
 
@@ -670,62 +720,62 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
             let handler = quote! {
 
-impl crate::lang::argument::ArgumentHandler for #struct_name {
-    fn declare(env: &mut crate::lang::scope::ScopeLoader) -> crate::lang::errors::CrushResult <()> {
-        env.declare_command(
-            #command_name, #command_invocation, #can_block,
-            #signature_literal,
-            #description,
-            #long_description,
-            #output)
-    }
+            impl crate::lang::argument::ArgumentHandler for #struct_name {
+                fn declare(env: &mut crate::lang::scope::ScopeLoader) -> crate::lang::errors::CrushResult <()> {
+                    env.declare_command(
+                        #command_name, #command_invocation, #can_block,
+                        #signature_literal,
+                        #description,
+                        #long_description,
+                        #output)
+                }
 
-    fn declare_method(env: &mut ordered_map::OrderedMap<std::string::String, crate::lang::command::Command>, path: &Vec<&str>) -> crate::lang::errors::CrushResult <()> {
-        let mut full = path.clone();
-        full.push(#command_name);
-        env.insert(#command_name.to_string(),
-                    crate::lang::command::CrushCommand::command(
-                        #command_invocation, #can_block, full.iter().map(|e| e.to_string()).collect(),
-                        #signature_literal, #description, #long_description, #output));
-        Ok(())
-    }
+                fn declare_method(env: &mut ordered_map::OrderedMap<std::string::String, crate::lang::command::Command>, path: &Vec<&str>) -> crate::lang::errors::CrushResult <()> {
+                    let mut full = path.clone();
+                    full.push(#command_name);
+                    env.insert(#command_name.to_string(),
+                                crate::lang::command::CrushCommand::command(
+                                    #command_invocation, #can_block, full.iter().map(|e| e.to_string()).collect(),
+                                    #signature_literal, #description, #long_description, #output));
+                    Ok(())
+                }
 
-    fn parse(arguments: Vec<crate::lang::argument::Argument>, printer: &crate::lang::printer::Printer) -> crate::lang::errors::CrushResult < # struct_name > {
-        use std::convert::TryFrom;
-        # values
-        let mut _unnamed = std::collections::VecDeque::new();
+                fn parse(arguments: Vec<crate::lang::argument::Argument>, printer: &crate::lang::printer::Printer) -> crate::lang::errors::CrushResult < # struct_name > {
+                    use std::convert::TryFrom;
+                    # values
+                    let mut _unnamed = std::collections::VecDeque::new();
 
-        for arg in arguments {
-            match (arg.argument_type.as_deref(), arg.value) {
-                #named_matchers
-                #named_fallback
-                (None, value) => _unnamed.push_back(value),
-                _ => return crate::lang::errors::argument_error("Invalid parameter"),
+                    for arg in arguments {
+                        match (arg.argument_type.as_deref(), arg.value) {
+                            #named_matchers
+                            #named_fallback
+                            (None, value) => _unnamed.push_back(value),
+                            _ => return crate::lang::errors::argument_error("Invalid parameter"),
+                        }
+                    }
+
+                    #unnamed_mutations
+
+                    Ok( #struct_name { #assignments })
+                }
             }
-        }
-
-        #unnamed_mutations
-
-        Ok( #struct_name { #assignments })
-    }
-}
-};
+            };
 
             let mut output = s.to_token_stream();
             output.extend(handler.into_token_stream());
             //println!("ABCABC {}", output.to_string());
             Ok(output)
         }
-        _ => { fail!(root.span(), "Expected a struct") }
+        _ => fail!(root.span(), "Expected a struct"),
     }
 }
 
 #[proc_macro_attribute]
-pub fn signature(metadata: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn signature(
+    metadata: proc_macro::TokenStream,
+    input: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
     match signature_real(TokenStream::from(metadata), TokenStream::from(input)) {
-        Ok(res) | Err(res) => {
-            proc_macro::TokenStream::from(res)
-        }
+        Ok(res) | Err(res) => proc_macro::TokenStream::from(res),
     }
 }
-

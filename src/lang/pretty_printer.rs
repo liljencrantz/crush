@@ -1,30 +1,32 @@
-use crate::lang::stream::{ValueSender, channels, CrushStream, InputStream};
-use std::thread;
-use crate::lang::table::Table;
-use crate::lang::value::Value;
-use crate::lang::value::Alignment;
-use crate::lang::value::ValueType;
+use crate::lang::binary::BinaryReader;
+use crate::lang::errors::to_crush_error;
+use crate::lang::printer::Printer;
+use crate::lang::stream::{channels, CrushStream, InputStream, ValueSender};
 use crate::lang::table::ColumnType;
 use crate::lang::table::Row;
-use crate::lang::binary::BinaryReader;
+use crate::lang::table::Table;
 use crate::lang::table::TableReader;
-use std::cmp::{max};
+use crate::lang::value::Alignment;
+use crate::lang::value::Value;
+use crate::lang::value::ValueType;
+use std::cmp::max;
 use std::io::{BufReader, Read};
-use crate::lang::printer::Printer;
-use crate::lang::errors::to_crush_error;
+use std::thread;
 use time::Duration;
 
 pub fn create_pretty_printer(printer: Printer) -> ValueSender {
     let (o, i) = channels();
     let printer_clone = printer.clone();
-    printer_clone.handle_error(to_crush_error(thread::Builder::new()
-        .name("output-formater".to_string())
-        .spawn(move || {
-            let pp = PrettyPrinter { printer };
-            while let Ok(val) = i.recv() {
-                pp.print_value(val);
-            }
-        })));
+    printer_clone.handle_error(to_crush_error(
+        thread::Builder::new()
+            .name("output-formater".to_string())
+            .spawn(move || {
+                let pp = PrettyPrinter { printer };
+                while let Ok(val) = i.recv() {
+                    pp.print_value(val);
+                }
+            }),
+    ));
     o
 }
 
@@ -33,7 +35,9 @@ pub struct PrettyPrinter {
 }
 
 fn hex(v: u8) -> String {
-    let arr = vec!["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"];
+    let arr = vec![
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f",
+    ];
     format!("{}{}", arr[(v >> 4) as usize], arr[(v & 15) as usize])
 }
 
@@ -51,7 +55,11 @@ fn printable(v: u8) -> String {
 
 fn format_binary_chunk(c: &[u8]) -> String {
     let hex = c.iter().map(|u| hex(*u)).collect::<Vec<String>>().join("");
-    let printable = c.iter().map(|u| printable(*u)).collect::<Vec<String>>().join("");
+    let printable = c
+        .iter()
+        .map(|u| printable(*u))
+        .collect::<Vec<String>>()
+        .join("");
     return format!("{} {}{}", hex, " ".repeat(64 - hex.len()), printable);
 }
 
@@ -88,9 +96,7 @@ fn is_text(buff: &[u8]) -> bool {
 
 impl PrettyPrinter {
     pub fn new(printer: Printer) -> PrettyPrinter {
-        PrettyPrinter {
-            printer
-        }
+        PrettyPrinter { printer }
     }
 
     pub fn print_value(&self, cell: Value) {
@@ -98,7 +104,7 @@ impl PrettyPrinter {
             Value::TableStream(mut output) => self.print_readable(&mut output, 0),
             Value::Table(rows) => self.print_readable(&mut TableReader::new(rows), 0),
             Value::BinaryStream(mut b) => self.print_binary(b.as_mut(), 0),
-            Value::Empty() => {},
+            Value::Empty() => {}
             _ => self.printer.line(cell.to_string().as_str()),
         };
     }
@@ -176,13 +182,18 @@ impl PrettyPrinter {
         indent: usize,
         rows: &mut Vec<Table>,
         outputs: &mut Vec<InputStream>,
-        binaries: &mut Vec<Box<dyn BinaryReader>>) {
+        binaries: &mut Vec<Box<dyn BinaryReader>>,
+    ) {
         let cell_len = r.len();
         let mut row = " ".repeat(indent * 4);
         let last_idx = r.len() - 1;
         for (idx, c) in r.into_vec().drain(..).enumerate() {
             let cell = c.to_string();
-            let spaces = if idx == cell_len - 1 { "".to_string() } else { " ".repeat(w[idx] - cell.len()) };
+            let spaces = if idx == cell_len - 1 {
+                "".to_string()
+            } else {
+                " ".repeat(w[idx] - cell.len())
+            };
             let is_last = idx == last_idx;
             match c.alignment() {
                 Alignment::Right => {
@@ -211,8 +222,7 @@ impl PrettyPrinter {
         self.printer.line(row.as_str());
     }
 
-    fn print_body(
-        &self, w: &[usize], data: Vec<Row>, indent: usize) {
+    fn print_body(&self, w: &[usize], data: Vec<Row>, indent: usize) {
         for r in data.into_iter() {
             let mut rows = Vec::new();
             let mut outputs = Vec::new();
@@ -230,14 +240,11 @@ impl PrettyPrinter {
         }
     }
 
-
     fn print_binary(&self, binary: &mut dyn BinaryReader, _indent: usize) {
         let mut reader = BufReader::new(binary);
 
         let buff_len = 128 * 1024;
-        let mut buff = vec![
-            0; buff_len
-        ];
+        let mut buff = vec![0; buff_len];
         let mut complete = false;
 
         let mut used = 0;
@@ -259,7 +266,8 @@ impl PrettyPrinter {
                 }
             }
         }
-        self.printer.line(format_buffer(&buff[0..used], complete).as_str());
+        self.printer
+            .line(format_buffer(&buff[0..used], complete).as_str());
     }
 
     fn print_partial(&self, data: Vec<Row>, types: &[ColumnType], indent: usize, has_table: bool) {
@@ -285,15 +293,16 @@ impl PrettyPrinter {
         let mut columns = 1;
         let mut widths = vec![];
         let mut items_per_column;
-        let data = data.iter().map(|s| s.cells()[0].to_string()).collect::<Vec<_>>();
+        let data = data
+            .iter()
+            .map(|s| s.cells()[0].to_string())
+            .collect::<Vec<_>>();
 
         for cols in (2..50).rev() {
             items_per_column = (data.len() - 1) / cols + 1;
-            let ww = data.chunks(items_per_column)
-                .map(|el| el.iter()
-                    .map(|v| v.len())
-                    .max()
-                    .unwrap())
+            let ww = data
+                .chunks(items_per_column)
+                .map(|el| el.iter().map(|v| v.len()).max().unwrap())
                 .collect::<Vec<usize>>();
             let tot_width: usize = ww.iter().sum::<usize>() + ww.len() - 1;
             if tot_width <= max_width {

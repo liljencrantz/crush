@@ -1,16 +1,13 @@
-use crate::{
-    lang::errors::argument_error,
-    lang::stream::OutputStream,
-};
+use crate::lang::argument::ArgumentHandler;
+use crate::lang::command::OutputType::Passthrough;
+use crate::lang::errors::{error, CrushResult};
 use crate::lang::execution_context::ExecutionContext;
-use crate::lang::table::Row;
-use crate::lang::errors::{CrushResult, error};
 use crate::lang::stream::CrushStream;
 use crate::lang::table::ColumnVec;
-use signature::signature;
-use crate::lang::argument::ArgumentHandler;
+use crate::lang::table::Row;
 use crate::lang::value::Field;
-use crate::lang::command::OutputType::Passthrough;
+use crate::{lang::errors::argument_error, lang::stream::OutputStream};
+use signature::signature;
 
 #[signature(
     sort,
@@ -29,10 +26,7 @@ pub fn run(idx: usize, input: &mut dyn CrushStream, output: OutputStream) -> Cru
         res.push(row);
     }
 
-    res.sort_by(|a, b|
-        a.cells()[idx]
-            .partial_cmp(&b.cells()[idx])
-            .expect("OH NO!"));
+    res.sort_by(|a, b| a.cells()[idx].partial_cmp(&b.cells()[idx]).expect("OH NO!"));
 
     for row in res {
         output.send(row)?;
@@ -47,7 +41,13 @@ pub fn sort(context: ExecutionContext) -> CrushResult<()> {
             let output = context.output.initialize(input.types().to_vec())?;
             let cfg: Sort = Sort::parse(context.arguments, &context.printer)?;
             let idx = match cfg.field {
-                None => if input.types().len() == 1 {0} else {return argument_error("Missing comparison key"); },
+                None => {
+                    if input.types().len() == 1 {
+                        0
+                    } else {
+                        return argument_error("Missing comparison key");
+                    }
+                }
                 Some(field) => input.types().find(&field)?,
             };
 

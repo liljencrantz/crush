@@ -1,21 +1,19 @@
-use std::io::{BufReader, BufRead};
-use crate::lang::{
-    execution_context::ExecutionContext,
-    table::Row,
-    table::ColumnType,
-    value::ValueType,
-    value::Value,
-};
-use crate::lang::errors::{CrushResult, to_crush_error, argument_error, data_error};
-use crate::lang::files::Files;
-use signature::signature;
 use crate::lang::argument::ArgumentHandler;
+use crate::lang::errors::{argument_error, data_error, to_crush_error, CrushResult};
+use crate::lang::files::Files;
 use crate::lang::scope::ScopeLoader;
+use crate::lang::{
+    execution_context::ExecutionContext, table::ColumnType, table::Row, value::Value,
+    value::ValueType,
+};
+use signature::signature;
+use std::io::{BufRead, BufReader};
 
 #[signature(
-from,
-can_block = true,
-short = "Read specified files (or input) as a table with one line of text per row")]
+    from,
+    can_block = true,
+    short = "Read specified files (or input) as a table with one line of text per row"
+)]
 struct From {
     #[unnamed()]
     #[description("the files to read from (read from input if no file is specified).")]
@@ -23,7 +21,9 @@ struct From {
 }
 
 pub fn from(context: ExecutionContext) -> CrushResult<()> {
-    let output = context.output.initialize(vec![ColumnType::new("line", ValueType::String)])?;
+    let output = context
+        .output
+        .initialize(vec![ColumnType::new("line", ValueType::String)])?;
     let cfg: From = From::parse(context.arguments, &context.printer)?;
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
     let mut line = String::new();
@@ -33,23 +33,30 @@ pub fn from(context: ExecutionContext) -> CrushResult<()> {
         if line.is_empty() {
             break;
         }
-        let mut s = if line.ends_with('\n') { &line[0..line.len() - 1] } else { &line[..] };
+        let mut s = if line.ends_with('\n') {
+            &line[0..line.len() - 1]
+        } else {
+            &line[..]
+        };
         while s.starts_with('\r') {
             s = &s[1..];
         }
         while s.ends_with('\r') {
-            s = &s[0..line.len()-1];
+            s = &s[0..line.len() - 1];
         }
-        context.printer.handle_error(output.send(Row::new(vec![Value::string(s)])));
+        context
+            .printer
+            .handle_error(output.send(Row::new(vec![Value::string(s)])));
         line.clear();
     }
     Ok(())
 }
 
 #[signature(
-to,
-can_block = true,
-short = "Write specified iterator of strings to a file (or convert to BinaryStream) separated by newlines")]
+    to,
+    can_block = true,
+    short = "Write specified iterator of strings to a file (or convert to BinaryStream) separated by newlines"
+)]
 struct To {
     #[unnamed()]
     file: Files,
@@ -62,7 +69,9 @@ pub fn to(context: ExecutionContext) -> CrushResult<()> {
         Some(mut input) => {
             let mut out = cfg.file.writer(context.output)?;
             if input.types().len() != 1 || input.types()[0].cell_type != ValueType::String {
-                return data_error("Expected an input iterator containing a single column of type string");
+                return data_error(
+                    "Expected an input iterator containing a single column of type string",
+                );
             }
             while let Ok(row) = input.read() {
                 match row.into_vec().remove(0) {
@@ -88,6 +97,7 @@ pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
             From::declare(env)?;
             To::declare(env)?;
             Ok(())
-        }))?;
+        }),
+    )?;
     Ok(())
 }

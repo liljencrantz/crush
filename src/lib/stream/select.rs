@@ -1,19 +1,15 @@
 use crate::lang::command::Command;
+use crate::lang::errors::error;
+use crate::lang::execution_context::ExecutionContext;
+use crate::lang::stream::{channels, empty_channel, Stream};
+use crate::lang::table::ColumnVec;
 use crate::{
     lang::errors::argument_error,
-    lang::{
-        argument::Argument,
-        table::Row,
-        value::Value,
-    },
-    util::replace::Replace,
-    lang::table::ColumnType,
     lang::errors::CrushResult,
+    lang::table::ColumnType,
+    lang::{argument::Argument, table::Row, value::Value},
+    util::replace::Replace,
 };
-use crate::lang::stream::{empty_channel, channels, Stream};
-use crate::lang::errors::error;
-use crate::lang::table::ColumnVec;
-use crate::lang::execution_context::ExecutionContext;
 
 enum Location {
     Replace(usize),
@@ -30,11 +26,7 @@ pub struct Config {
     columns: Vec<(Location, Source)>,
 }
 
-pub fn run(
-    config: Config,
-    mut input: Stream,
-    context: ExecutionContext,
-) -> CrushResult<()> {
+pub fn run(config: Config, mut input: Stream, context: ExecutionContext) -> CrushResult<()> {
     let input_type = input.types().to_vec();
     let mut output_type = if config.copy {
         input_type.clone()
@@ -57,18 +49,18 @@ pub fn run(
                             .cells()
                             .iter()
                             .zip(&input_type)
-                            .map(|(cell, cell_type)| Argument::named(cell_type.name.as_ref(), cell.clone()))
+                            .map(|(cell, cell_type)| {
+                                Argument::named(cell_type.name.as_ref(), cell.clone())
+                            })
                             .collect();
-                        closure.invoke(
-                            ExecutionContext {
-                                input: empty_channel(),
-                                output: sender,
-                                arguments,
-                                env: context.env.clone(),
-                                this: None,
-                                printer: context.printer.clone(),
-                            }
-                        )?;
+                        closure.invoke(ExecutionContext {
+                            input: empty_channel(),
+                            output: sender,
+                            arguments,
+                            env: context.env.clone(),
+                            this: None,
+                            printer: context.printer.clone(),
+                        })?;
                         receiver.recv()?
                     }
                     Source::Argument(idx) => row.cells()[*idx].clone(),
@@ -80,7 +72,10 @@ pub fn run(
                         first_result.push(value);
                     }
                     Location::Replace(idx) => {
-                        output_type.replace(*idx, ColumnType::new(output_type[*idx].name.as_ref(), value.value_type()));
+                        output_type.replace(
+                            *idx,
+                            ColumnType::new(output_type[*idx].name.as_ref(), value.value_type()),
+                        );
                         first_result[*idx] = value;
                     }
                 }
@@ -108,16 +103,14 @@ pub fn run(
                         .map(|(cell, cell_type)| Argument::named(&cell_type.name, cell.clone()))
                         .collect();
                     let (sender, receiver) = channels();
-                    closure.invoke(
-                        ExecutionContext {
-                            input: empty_channel(),
-                            output: sender,
-                            arguments,
-                            env: context.env.clone(),
-                            this: None,
-                            printer: context.printer.clone(),
-                        }
-                    )?;
+                    closure.invoke(ExecutionContext {
+                        input: empty_channel(),
+                        output: sender,
+                        arguments,
+                        env: context.env.clone(),
+                        this: None,
+                        printer: context.printer.clone(),
+                    })?;
                     receiver.recv()?
                 }
                 Source::Argument(idx) => row.cells()[*idx].clone(),
@@ -135,7 +128,6 @@ pub fn run(
     }
     Ok(())
 }
-
 
 pub fn select(mut context: ExecutionContext) -> CrushResult<()> {
     match context.input.clone().recv()?.stream() {
@@ -161,8 +153,13 @@ pub fn select(mut context: ExecutionContext) -> CrushResult<()> {
                 match (a.argument_type.as_deref(), a.value.clone()) {
                     (Some(name), Value::Command(closure)) => {
                         match (copy, input_type.find_str(name)) {
-                            (true, Ok(idx)) => columns.push((Location::Replace(idx), Source::Closure(closure))),
-                            _ => columns.push((Location::Append(name.to_string()), Source::Closure(closure))),
+                            (true, Ok(idx)) => {
+                                columns.push((Location::Replace(idx), Source::Closure(closure)))
+                            }
+                            _ => columns.push((
+                                Location::Append(name.to_string()),
+                                Source::Closure(closure),
+                            )),
                         }
                     }
                     (None, Value::Field(name)) => {
@@ -170,8 +167,13 @@ pub fn select(mut context: ExecutionContext) -> CrushResult<()> {
                             return argument_error("Invalid field");
                         }
                         match (copy, input_type.find_str(name[0].as_ref())) {
-                            (false, Ok(idx)) => columns.push((Location::Append(name[0].clone()), Source::Argument(idx))),
-                            _ => return argument_error(format!("Unknown field {}", name[0]).as_str()),
+                            (false, Ok(idx)) => columns
+                                .push((Location::Append(name[0].clone()), Source::Argument(idx))),
+                            _ => {
+                                return argument_error(
+                                    format!("Unknown field {}", name[0]).as_str(),
+                                )
+                            }
                         }
                     }
                     _ => return argument_error("Invalid argument"),

@@ -1,8 +1,8 @@
-use crate::lang::{value::Value, r#struct::Struct};
-use crate::lang::errors::{CrushError, error, CrushResult, argument_error};
-use crate::lang::stream::{CrushStream};
-use crate::util::replace::Replace;
+use crate::lang::errors::{argument_error, error, CrushError, CrushResult};
+use crate::lang::stream::CrushStream;
 use crate::lang::value::ValueType;
+use crate::lang::{r#struct::Struct, value::Value};
+use crate::util::replace::Replace;
 use time::Duration;
 
 #[derive(PartialEq, PartialOrd, Clone)]
@@ -54,10 +54,16 @@ impl CrushStream for TableReader {
             return error("EOF");
         }
         self.idx += 1;
-        Ok(self.rows.rows.replace(self.idx - 1, Row::new(vec![Value::Integer(0)])))
+        Ok(self
+            .rows
+            .rows
+            .replace(self.idx - 1, Row::new(vec![Value::Integer(0)])))
     }
 
-    fn read_timeout(&mut self, _timeout: Duration) -> Result<Row, crate::lang::stream::RecvTimeoutError> {
+    fn read_timeout(
+        &mut self,
+        _timeout: Duration,
+    ) -> Result<Row, crate::lang::stream::RecvTimeoutError> {
         match self.read() {
             Ok(r) => Ok(r),
             Err(_) => Err(crate::lang::stream::RecvTimeoutError::Disconnected),
@@ -120,12 +126,18 @@ impl ColumnType {
     pub fn materialize(input: &[ColumnType]) -> Vec<ColumnType> {
         input
             .iter()
-            .map(|col| ColumnType { name: col.name.clone(), cell_type: col.cell_type.materialize() })
+            .map(|col| ColumnType {
+                name: col.name.clone(),
+                cell_type: col.cell_type.materialize(),
+            })
             .collect()
     }
 
     pub fn new(name: &str, cell_type: ValueType) -> ColumnType {
-        ColumnType { name: name.to_string(), cell_type }
+        ColumnType {
+            name: name.to_string(),
+            cell_type,
+        }
     }
 }
 
@@ -147,11 +159,17 @@ impl ColumnVec for &[ColumnType] {
                 return Ok(idx);
             }
         }
-        argument_error(format!(
-            "Unknown column {}, available columns are {}",
-            needle,
-            self.iter().map(|t| t.name.to_string()).collect::<Vec<String>>().join(", "),
-        ).as_str())
+        argument_error(
+            format!(
+                "Unknown column {}, available columns are {}",
+                needle,
+                self.iter()
+                    .map(|t| t.name.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", "),
+            )
+            .as_str(),
+        )
     }
 
     fn find(&self, needle_vec: &[String]) -> CrushResult<usize> {
@@ -165,11 +183,17 @@ impl ColumnVec for &[ColumnType] {
                 }
             }
 
-            error(format!(
-                "Unknown column {}, available columns are {}",
-                needle,
-                self.iter().map(|t| t.name.to_string()).collect::<Vec<String>>().join(", "),
-            ).as_str())
+            error(
+                format!(
+                    "Unknown column {}, available columns are {}",
+                    needle,
+                    self.iter()
+                        .map(|t| t.name.to_string())
+                        .collect::<Vec<String>>()
+                        .join(", "),
+                )
+                .as_str(),
+            )
         }
     }
 }

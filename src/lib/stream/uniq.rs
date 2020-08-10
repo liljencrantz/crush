@@ -1,12 +1,12 @@
-use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
-use std::collections::HashSet;
 use crate::lang::argument::Argument;
-use crate::lang::table::Row;
-use crate::lang::{value::Value, table::ColumnType};
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{error, CrushResult};
+use crate::lang::execution_context::{ArgumentVector, ExecutionContext};
+use crate::lang::printer::Printer;
 use crate::lang::stream::{CrushStream, OutputStream};
 use crate::lang::table::ColumnVec;
-use crate::lang::printer::Printer;
+use crate::lang::table::Row;
+use crate::lang::{table::ColumnType, value::Value};
+use std::collections::HashSet;
 
 fn parse(input_type: &[ColumnType], mut arguments: Vec<Argument>) -> CrushResult<Option<usize>> {
     arguments.check_len_range(0, 1)?;

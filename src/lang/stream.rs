@@ -1,10 +1,10 @@
+use crate::lang::errors::{error, send_error, to_crush_error, CrushError, CrushResult};
 use crate::lang::table::ColumnType;
+use crate::lang::table::Row;
 use crate::lang::value::Value;
-use crate::lang::{table::Row};
-use crossbeam::{Receiver, bounded, unbounded, Sender};
-use crate::lang::errors::{CrushError, error, CrushResult, to_crush_error, send_error};
-use lazy_static::lazy_static;
 use chrono::Duration;
+use crossbeam::{bounded, unbounded, Receiver, Sender};
+use lazy_static::lazy_static;
 use std::error::Error;
 
 pub type RecvTimeoutError = crossbeam::channel::RecvTimeoutError;
@@ -77,7 +77,6 @@ pub struct InputStream {
 }
 
 impl InputStream {
-
     pub fn get(&self, idx: i128) -> CrushResult<Row> {
         let mut i = 0i128;
         loop {
@@ -87,7 +86,7 @@ impl InputStream {
                         return Ok(row);
                     }
                     i += 1;
-                },
+                }
                 Err(_) => return error("Index out of bounds"),
             }
         }
@@ -113,15 +112,19 @@ impl InputStream {
                 }
                 for (c, ct) in row.cells().iter().zip(self.types.iter()) {
                     if !ct.cell_type.is(c) {
-                        return error(format!(
-                            "Wrong cell type in io column {:?}, expected {:?}, got {:?}",
-                            ct.name,
-                            c.value_type(),
-                            ct.cell_type).as_str());
+                        return error(
+                            format!(
+                                "Wrong cell type in io column {:?}, expected {:?}, got {:?}",
+                                ct.name,
+                                c.value_type(),
+                                ct.cell_type
+                            )
+                            .as_str(),
+                        );
                     }
                 }
                 res
-            },
+            }
             Err(_) => res,
         }
     }
@@ -129,17 +132,32 @@ impl InputStream {
 
 pub fn channels() -> (ValueSender, ValueReceiver) {
     let (send, recv) = bounded(1);
-    (ValueSender {sender: send}, ValueReceiver { receiver: recv })
+    (
+        ValueSender { sender: send },
+        ValueReceiver { receiver: recv },
+    )
 }
 
 pub fn streams(signature: Vec<ColumnType>) -> (OutputStream, InputStream) {
     let (output, input) = bounded(128);
-    (OutputStream{ sender:output }, InputStream { receiver: input, types: signature })
+    (
+        OutputStream { sender: output },
+        InputStream {
+            receiver: input,
+            types: signature,
+        },
+    )
 }
 
 pub fn unlimited_streams(signature: Vec<ColumnType>) -> (OutputStream, InputStream) {
     let (output, input) = unbounded();
-    (OutputStream{ sender:output }, InputStream { receiver: input, types: signature })
+    (
+        OutputStream { sender: output },
+        InputStream {
+            receiver: input,
+            types: signature,
+        },
+    )
 }
 
 pub fn empty_channel() -> ValueReceiver {

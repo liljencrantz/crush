@@ -1,15 +1,15 @@
-use crate::lang::errors::{CrushResult, argument_error};
-use crate::lang::{value::Value, execution_context::ExecutionContext};
-use crate::lang::execution_context::{ArgumentVector, This};
-use ordered_map::OrderedMap;
-use lazy_static::lazy_static;
-use chrono::Duration;
-use crate::lang::command::Command;
-use crate::lang::command::TypeMap;
-use crate::lang::command::OutputType::{Unknown, Known};
-use crate::lang::value::ValueType;
-use signature::signature;
 use crate::lang::argument::ArgumentHandler;
+use crate::lang::command::Command;
+use crate::lang::command::OutputType::{Known, Unknown};
+use crate::lang::command::TypeMap;
+use crate::lang::errors::{argument_error, CrushResult};
+use crate::lang::execution_context::{ArgumentVector, This};
+use crate::lang::value::ValueType;
+use crate::lang::{execution_context::ExecutionContext, value::Value};
+use chrono::Duration;
+use lazy_static::lazy_static;
+use ordered_map::OrderedMap;
+use signature::signature;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "duration", name]
@@ -66,10 +66,19 @@ lazy_static! {
     };
 }
 
-binary_op!(add, duration, Duration, Duration, |a, b| a+b, Time, Time, |a, b| b+a);
-binary_op!(sub, duration, Duration, Duration, |a, b| a-b);
-binary_op!(mul, duration, Integer, Duration, |a, b| a*(b as i32));
-binary_op!(div, duration, Integer, Duration, |a, b| a/(b as i32));
+binary_op!(
+    add,
+    duration,
+    Duration,
+    Duration,
+    |a, b| a + b,
+    Time,
+    Time,
+    |a, b| b + a
+);
+binary_op!(sub, duration, Duration, Duration, |a, b| a - b);
+binary_op!(mul, duration, Integer, Duration, |a, b| a * (b as i32));
+binary_op!(div, duration, Integer, Duration, |a, b| a / (b as i32));
 
 fn to_duration(a: i64, t: &str) -> CrushResult<chrono::Duration> {
     match t {
@@ -85,7 +94,7 @@ fn to_duration(a: i64, t: &str) -> CrushResult<chrono::Duration> {
     }
 }
 
-#[signature(new, can_block=false, short="Create a new duration")]
+#[signature(new, can_block = false, short = "Create a new duration")]
 struct New {
     #[description("the number of nanoseconds in the duration.")]
     #[default(0i64)]
@@ -113,17 +122,19 @@ struct New {
 fn new(context: ExecutionContext) -> CrushResult<()> {
     let cfg: New = New::parse(context.arguments, &context.printer)?;
 
-    let res = Duration::nanoseconds(cfg.nanoseconds) +
-        Duration::microseconds(cfg.microseconds) +
-        Duration::milliseconds(cfg.milliseconds) +
-        Duration::seconds(cfg.seconds) +
-        Duration::minutes(cfg.minutes) +
-        Duration::hours(cfg.hours) +
-        Duration::days(cfg.days);
+    let res = Duration::nanoseconds(cfg.nanoseconds)
+        + Duration::microseconds(cfg.microseconds)
+        + Duration::milliseconds(cfg.milliseconds)
+        + Duration::seconds(cfg.seconds)
+        + Duration::minutes(cfg.minutes)
+        + Duration::hours(cfg.hours)
+        + Duration::days(cfg.days);
     context.output.send(Value::Duration(res))
 }
 
 fn neg(context: ExecutionContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    context.output.send(Value::Duration(-context.this.duration()?))
+    context
+        .output
+        .send(Value::Duration(-context.this.duration()?))
 }

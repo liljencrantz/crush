@@ -1,19 +1,19 @@
-use crate::lang::execution_context::{ExecutionContext, ArgumentVector};
-use crate::lang::errors::CrushResult;
-use std::collections::HashMap;
-use crate::lang::stream::CrushStream;
-use crate::lang::errors::CrushError;
-use crate::lang::table::Row;
-use crate::lang::table::ColumnType;
-use crate::lang::value::ValueType;
-use crate::lang::value::Value;
-use crate::lang::stream::OutputStream;
-use crate::util::replace::Replace;
-use crate::lang::errors::argument_error;
-use crate::lang::r#struct::Struct;
-use crate::lang::table::ColumnVec;
 use crate::lang::argument::Argument;
+use crate::lang::errors::argument_error;
+use crate::lang::errors::CrushError;
+use crate::lang::errors::CrushResult;
+use crate::lang::execution_context::{ArgumentVector, ExecutionContext};
 use crate::lang::printer::Printer;
+use crate::lang::r#struct::Struct;
+use crate::lang::stream::CrushStream;
+use crate::lang::stream::OutputStream;
+use crate::lang::table::ColumnType;
+use crate::lang::table::ColumnVec;
+use crate::lang::table::Row;
+use crate::lang::value::Value;
+use crate::lang::value::ValueType;
+use crate::util::replace::Replace;
+use std::collections::HashMap;
 
 pub struct Config {
     left_table_idx: usize,
@@ -29,23 +29,40 @@ pub fn get_sub_type(cell_type: &ValueType) -> Result<&[ColumnType], CrushError> 
     }
 }
 
-pub fn guess_tables(input_type: &[ColumnType]) -> Result<(usize, usize, &[ColumnType], &[ColumnType]), CrushError> {
-    let tables: Vec<(usize, &Vec<ColumnType>)> = input_type.iter().enumerate().flat_map(|(idx, t)| {
-        match &t.cell_type {
-            ValueType::TableStream(sub_types) | ValueType::Table(sub_types) => Some((idx, sub_types)),
+pub fn guess_tables(
+    input_type: &[ColumnType],
+) -> Result<(usize, usize, &[ColumnType], &[ColumnType]), CrushError> {
+    let tables: Vec<(usize, &Vec<ColumnType>)> = input_type
+        .iter()
+        .enumerate()
+        .flat_map(|(idx, t)| match &t.cell_type {
+            ValueType::TableStream(sub_types) | ValueType::Table(sub_types) => {
+                Some((idx, sub_types))
+            }
             _ => None,
-        }
-    }).collect();
+        })
+        .collect();
     if tables.len() == 2 {
         Ok((tables[0].0, tables[1].0, tables[0].1, tables[1].1))
     } else {
-        argument_error(format!("Could not guess tables to join, expected two tables, found {}", tables.len()).as_str())
+        argument_error(
+            format!(
+                "Could not guess tables to join, expected two tables, found {}",
+                tables.len()
+            )
+            .as_str(),
+        )
     }
 }
 
-fn scan_table(table: &str, column: &str, input_type: &[ColumnType]) -> Result<(usize, usize), CrushError> {
+fn scan_table(
+    table: &str,
+    column: &str,
+    input_type: &[ColumnType],
+) -> Result<(usize, usize), CrushError> {
     let table_idx = input_type.find_str(&table.to_string())?;
-    let column_idx = get_sub_type(&input_type[table_idx].cell_type)?.find_str(&column.to_string())?;
+    let column_idx =
+        get_sub_type(&input_type[table_idx].cell_type)?.find_str(&column.to_string())?;
     Ok((table_idx, column_idx))
 }
 
@@ -56,7 +73,8 @@ fn parse(input_type: &[ColumnType], arguments: Vec<Argument>) -> Result<Config, 
         (Value::Field(l), Value::Field(r)) => {
             let config = match (l.len(), r.len()) {
                 (1, 1) => {
-                    let (left_table_idx, right_table_idx, left_types, right_types) = guess_tables(&input_type)?;
+                    let (left_table_idx, right_table_idx, left_types, right_types) =
+                        guess_tables(&input_type)?;
 
                     Config {
                         left_table_idx,
@@ -83,16 +101,26 @@ fn parse(input_type: &[ColumnType], arguments: Vec<Argument>) -> Result<Config, 
                         right_column_idx,
                     }
                 }
-                _ => return argument_error("Expected both fields on the form %table.column or %column"),
+                _ => {
+                    return argument_error(
+                        "Expected both fields on the form %table.column or %column",
+                    )
+                }
             };
 
-            let r_type = &get_sub_type(&input_type[config.right_table_idx].cell_type)?[config.right_column_idx].cell_type;
-            let l_type = &get_sub_type(&input_type[config.left_table_idx].cell_type)?[config.left_column_idx].cell_type;
+            let r_type = &get_sub_type(&input_type[config.right_table_idx].cell_type)?
+                [config.right_column_idx]
+                .cell_type;
+            let l_type = &get_sub_type(&input_type[config.left_table_idx].cell_type)?
+                [config.left_column_idx]
+                .cell_type;
             if r_type != l_type {
                 return argument_error("Cannot join two columns of different types");
             }
             if !r_type.is_hashable() {
-                argument_error("Cannot join on this column type. (It is either mutable or not comparable)")
+                argument_error(
+                    "Cannot join on this column type. (It is either mutable or not comparable)",
+                )
             } else {
                 Ok(config)
             }
@@ -110,14 +138,21 @@ fn combine(mut l: Row, r: Row, cfg: &Config) -> Row {
     l
 }
 
-fn do_join(cfg: &Config, l: &mut dyn CrushStream, r: &mut dyn CrushStream, output: &OutputStream, printer: &Printer) -> CrushResult<()> {
+fn do_join(
+    cfg: &Config,
+    l: &mut dyn CrushStream,
+    r: &mut dyn CrushStream,
+    output: &OutputStream,
+    printer: &Printer,
+) -> CrushResult<()> {
     let mut l_data: HashMap<Value, Row> = HashMap::new();
     while let Ok(row) = l.read() {
         l_data.insert(row.cells()[cfg.left_column_idx].clone(), row);
     }
 
     while let Ok(r_row) = r.read() {
-        l_data.remove(&r_row.cells()[cfg.right_column_idx])
+        l_data
+            .remove(&r_row.cells()[cfg.right_column_idx])
             .map(|l_row| {
                 printer.handle_error(output.send(combine(l_row, r_row, cfg)));
             });
@@ -132,20 +167,24 @@ pub fn run(
     printer: &Printer,
 ) -> CrushResult<()> {
     let mut v = row.to_vec();
-    match (v.replace(config.left_table_idx, Value::Integer(0)).stream(), v.replace(config.right_table_idx, Value::Integer(0)).stream()) {
-        (Some(mut l), Some(mut r)) =>
-            do_join(&config, l.as_mut(), r.as_mut(), &output, printer),
+    match (
+        v.replace(config.left_table_idx, Value::Integer(0)).stream(),
+        v.replace(config.right_table_idx, Value::Integer(0))
+            .stream(),
+    ) {
+        (Some(mut l), Some(mut r)) => do_join(&config, l.as_mut(), r.as_mut(), &output, printer),
         _ => panic!("Wrong row format"),
     }
 }
 
 fn get_output_type(input_type: &[ColumnType], cfg: &Config) -> Result<Vec<ColumnType>, CrushError> {
-    let tables: Vec<Option<&Vec<ColumnType>>> = input_type.iter().map(|t| {
-        match &t.cell_type {
+    let tables: Vec<Option<&Vec<ColumnType>>> = input_type
+        .iter()
+        .map(|t| match &t.cell_type {
             ValueType::TableStream(sub_types) | ValueType::Table(sub_types) => Some(sub_types),
             _ => None,
-        }
-    }).collect();
+        })
+        .collect();
 
     match (tables[cfg.left_table_idx], tables[cfg.right_table_idx]) {
         (Some(v1), Some(v2)) => {

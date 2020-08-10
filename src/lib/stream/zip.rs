@@ -1,13 +1,10 @@
-use crate::lang::execution_context::ExecutionContext;
-use crate::lang::errors::CrushResult;
-use crate::lang::stream::{ValueSender, Stream};
-use signature::signature;
 use crate::lang::argument::ArgumentHandler;
+use crate::lang::errors::CrushResult;
+use crate::lang::execution_context::ExecutionContext;
+use crate::lang::stream::{Stream, ValueSender};
+use signature::signature;
 
-#[signature(
-zip,
-can_block = true,
-short = "Combine two streams of data into one")]
+#[signature(zip, can_block = true, short = "Combine two streams of data into one")]
 pub struct Zip {
     #[description("the first stream.")]
     first: Stream,

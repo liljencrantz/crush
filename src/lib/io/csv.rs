@@ -1,34 +1,31 @@
 use crate::lang::execution_context::ExecutionContext;
 use crate::{
-    lang::{
-        table::Row,
-        value::Value,
-    },
     lang::errors::CrushError,
+    lang::{table::Row, value::Value},
 };
-use std::{
-    io::BufReader,
-    io::prelude::*,
-};
+use std::{io::prelude::*, io::BufReader};
 
+use crate::lang::errors::{error, to_crush_error, CrushResult};
 use crate::lang::table::ColumnType;
-use crate::lang::errors::{CrushResult, to_crush_error, error};
 
-use signature::signature;
 use crate::lang::argument::ArgumentHandler;
-use crate::lang::value::ValueType;
-use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::files::Files;
+use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::scope::ScopeLoader;
+use crate::lang::value::ValueType;
+use signature::signature;
 
 #[signature(
     from,
-    example="csv:from separator=\",\" head=1 name=string age=integer nick=string",
-    short="Parse specified files as CSV files")]
+    example = "csv:from separator=\",\" head=1 name=string age=integer nick=string",
+    short = "Parse specified files as CSV files"
+)]
 #[derive(Debug)]
 struct From {
     #[unnamed()]
-    #[description("source. If unspecified, will read from io, which must be a binary or binary_stream.")]
+    #[description(
+        "source. If unspecified, will read from io, which must be a binary or binary_stream."
+    )]
     files: Files,
     #[named()]
     #[description("name and type of all columns.")]
@@ -45,7 +42,11 @@ struct From {
 
 fn from(context: ExecutionContext) -> CrushResult<()> {
     let cfg: From = From::parse(context.arguments, &context.printer)?;
-    let columns = cfg.columns.iter().map(|(k, v)| ColumnType::new(k, v.clone())).collect::<Vec<_>>();
+    let columns = cfg
+        .columns
+        .iter()
+        .map(|(k, v)| ColumnType::new(k, v.clone()))
+        .collect::<Vec<_>>();
     let output = context.output.initialize(columns.clone())?;
 
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
@@ -69,9 +70,7 @@ fn from(context: ExecutionContext) -> CrushResult<()> {
         let line_without_newline = &line[0..line.len() - 1];
         let mut split: Vec<&str> = line_without_newline
             .split(separator)
-            .map(|s| trim
-                .map(|c| s.trim_matches(c))
-                .unwrap_or(s))
+            .map(|s| trim.map(|c| s.trim_matches(c)).unwrap_or(s))
             .collect();
 
         if split.len() != columns.len() {
@@ -82,10 +81,12 @@ fn from(context: ExecutionContext) -> CrushResult<()> {
             split = split.iter().map(|s| s.trim_matches(trim)).collect();
         }
 
-        match split.iter()
+        match split
+            .iter()
             .zip(columns.iter())
             .map({ |(s, t)| t.cell_type.parse(*s) })
-            .collect::<Result<Vec<Value>, CrushError>>() {
+            .collect::<Result<Vec<Value>, CrushError>>()
+        {
             Ok(cells) => {
                 let _ = output.send(Row::new(cells));
             }
@@ -103,6 +104,7 @@ pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
         Box::new(move |env| {
             From::declare(env)?;
             Ok(())
-        }))?;
+        }),
+    )?;
     Ok(())
 }

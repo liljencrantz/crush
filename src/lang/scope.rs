@@ -1,13 +1,13 @@
-use crate::lang::errors::{error, CrushResult, mandate};
-use std::sync::{Arc, Mutex, MutexGuard};
-use crate::lang::{value::Value, value::ValueType};
-use ordered_map::OrderedMap;
+use crate::lang::command::{Command, CrushCommand, OutputType};
+use crate::lang::errors::{error, mandate, CrushResult};
 use crate::lang::execution_context::ExecutionContext;
-use crate::lang::command::{CrushCommand, Command, OutputType};
-use crate::lang::r#struct::Struct;
-use crate::util::identity_arc::Identity;
 use crate::lang::help::Help;
+use crate::lang::r#struct::Struct;
+use crate::lang::{value::Value, value::ValueType};
+use crate::util::identity_arc::Identity;
+use ordered_map::OrderedMap;
 use std::cmp::max;
+use std::sync::{Arc, Mutex, MutexGuard};
 
 /**
   This is where we store variables, including functions.
@@ -42,9 +42,19 @@ impl ScopeLoader {
         Ok(())
     }
 
-    pub fn create_lazy_namespace(&mut self, name: &str, loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>) -> CrushResult<Scope> {
+    pub fn create_lazy_namespace(
+        &mut self,
+        name: &str,
+        loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>,
+    ) -> CrushResult<Scope> {
         let res = Scope {
-            data: Arc::from(Mutex::new(ScopeData::lazy(None, Some(self.scope.clone()), false, Some(name.to_string()), loader))),
+            data: Arc::from(Mutex::new(ScopeData::lazy(
+                None,
+                Some(self.scope.clone()),
+                false,
+                Some(name.to_string()),
+                loader,
+            ))),
         };
         self.declare(name, Value::Scope(res.clone()))?;
         Ok(res)
@@ -62,16 +72,20 @@ impl ScopeLoader {
     ) -> CrushResult<()> {
         let mut full_name = self.path.clone();
         full_name.push(name.to_string());
-        let command = CrushCommand::command(call, can_block, full_name, signature, short_help, long_help, output);
+        let command = CrushCommand::command(
+            call, can_block, full_name, signature, short_help, long_help, output,
+        );
         if self.mapping.contains_key(name) {
             return error(format!("Variable ${{{}}} already exists", name).as_str());
         }
-        self.mapping.insert(name.to_string(), Value::Command(command));
+        self.mapping
+            .insert(name.to_string(), Value::Command(command));
         Ok(())
     }
 
     pub fn declare_condition_command(
-        &mut self, name: &str,
+        &mut self,
+        name: &str,
         call: fn(context: ExecutionContext) -> CrushResult<()>,
         signature: &'static str,
         short_help: &'static str,
@@ -83,7 +97,8 @@ impl ScopeLoader {
         if self.mapping.contains_key(name) {
             return error(format!("Variable ${{{}}} already exists", name).as_str());
         }
-        self.mapping.insert(name.to_string(), Value::Command(command));
+        self.mapping
+            .insert(name.to_string(), Value::Command(command));
         Ok(())
     }
 
@@ -99,23 +114,24 @@ impl ScopeLoader {
                 Some(self.parent.clone()),
                 Some(self.parent.clone()),
                 false,
-                None))),
+                None,
+            ))),
         }
     }
 }
 
 pub struct ScopeData {
     /** This is the parent scope used to perform variable name resolution. If a variable lookup
-     fails in the current scope, it proceeds to this scope. This is usually the scope in which this
-     scope was *created*.
+    fails in the current scope, it proceeds to this scope. This is usually the scope in which this
+    scope was *created*.
 
-     Not that when scopes are used as namespaces, they do not use this scope.
-     */
+    Not that when scopes are used as namespaces, they do not use this scope.
+    */
     pub parent_scope: Option<Scope>,
 
     /** This is the scope in which the current scope was called. Since a closure can be called
-     from inside any scope, it need not be the same as the parent scope. This scope is the one used
-     for break/continue loop control, and it is also the scope that builds up the namespace hierarchy. */
+    from inside any scope, it need not be the same as the parent scope. This scope is the one used
+    for break/continue loop control, and it is also the scope that builds up the namespace hierarchy. */
     pub calling_scope: Option<Scope>,
 
     /** This is a list of scopes that are imported into the current scope. Anything directly inside
@@ -142,7 +158,12 @@ pub struct ScopeData {
 }
 
 impl ScopeData {
-    fn new(parent_scope: Option<Scope>, calling_scope: Option<Scope>, is_loop: bool, name: Option<String>) -> ScopeData {
+    fn new(
+        parent_scope: Option<Scope>,
+        calling_scope: Option<Scope>,
+        is_loop: bool,
+        name: Option<String>,
+    ) -> ScopeData {
         ScopeData {
             parent_scope,
             calling_scope,
@@ -157,7 +178,13 @@ impl ScopeData {
         }
     }
 
-    fn lazy(parent_scope: Option<Scope>, calling_scope: Option<Scope>, is_loop: bool, name: Option<String>, loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>) -> ScopeData {
+    fn lazy(
+        parent_scope: Option<Scope>,
+        calling_scope: Option<Scope>,
+        is_loop: bool,
+        name: Option<String>,
+        loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>,
+    ) -> ScopeData {
         ScopeData {
             parent_scope,
             calling_scope,
@@ -193,7 +220,12 @@ impl Clone for ScopeData {
 impl Scope {
     pub fn create_root() -> Scope {
         Scope {
-            data: Arc::from(Mutex::new(ScopeData::new(None, None, false, Some("global".to_string())))),
+            data: Arc::from(Mutex::new(ScopeData::new(
+                None,
+                None,
+                false,
+                Some("global".to_string()),
+            ))),
         }
     }
 
@@ -225,13 +257,24 @@ impl Scope {
                 Some(self.clone()),
                 Some(caller.clone()),
                 is_loop,
-                None))),
+                None,
+            ))),
         }
     }
 
-    pub fn create_lazy_namespace(&self, name: &str, loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>) -> CrushResult<Scope> {
+    pub fn create_lazy_namespace(
+        &self,
+        name: &str,
+        loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>,
+    ) -> CrushResult<Scope> {
         let res = Scope {
-            data: Arc::from(Mutex::new(ScopeData::lazy(None, Some(self.clone()), false, Some(name.to_string()), loader))),
+            data: Arc::from(Mutex::new(ScopeData::lazy(
+                None,
+                Some(self.clone()),
+                false,
+                Some(name.to_string()),
+                loader,
+            ))),
         };
         self.declare(name, Value::Scope(res.clone()))?;
         Ok(res)
@@ -246,9 +289,7 @@ impl Scope {
         } else {
             let caller = data.calling_scope.clone();
             drop(data);
-            let ok = caller
-                .map(|p| p.do_continue())
-                .unwrap_or(Ok(false))?;
+            let ok = caller.map(|p| p.do_continue()).unwrap_or(Ok(false))?;
             if !ok {
                 Ok(false)
             } else {
@@ -268,9 +309,7 @@ impl Scope {
         } else {
             let caller = data.calling_scope.clone();
             drop(data);
-            let ok = caller
-                .map(|p| p.do_break())
-                .unwrap_or(Ok(false))?;
+            let ok = caller.map(|p| p.do_break()).unwrap_or(Ok(false))?;
             if !ok {
                 Ok(false)
             } else {
@@ -283,7 +322,6 @@ impl Scope {
     pub fn is_stopped(&self) -> bool {
         self.data.lock().unwrap().is_stopped
     }
-
 
     fn lock(&self) -> CrushResult<MutexGuard<ScopeData>> {
         let mut data = self.data.lock().unwrap();
@@ -336,7 +374,11 @@ impl Scope {
     }
 
     pub fn root_object(&self) -> Struct {
-        match self.global_value(vec!["global".to_string(), "types".to_string(), "root".to_string(), ]) {
+        match self.global_value(vec![
+            "global".to_string(),
+            "types".to_string(),
+            "root".to_string(),
+        ]) {
             Ok(Value::Struct(s)) => s,
             _ => panic!("Root missing!"),
         }
@@ -379,27 +421,29 @@ impl Scope {
                     } else {
                         match path.len() {
                             1 => Ok(Value::Scope(self.clone())),
-                            2 => {
-                                match data.mapping.get(&path[1]) {
-                                    Some(v) => Ok(v.clone()),
-                                    _ => error(format!(
+                            2 => match data.mapping.get(&path[1]) {
+                                Some(v) => Ok(v.clone()),
+                                _ => error(
+                                    format!(
                                         "Could not find command {} in scope {}",
-                                        path[1],
-                                        path[0]).as_str()),
-                                }
-                            }
+                                        path[1], path[0]
+                                    )
+                                    .as_str(),
+                                ),
+                            },
                             _ => {
                                 let s = data.mapping.get(&path[1]).map(Value::clone);
                                 drop(data);
                                 match s {
-                                    Some(Value::Scope(s)) =>
-                                        s.get_recursive(&path[1..]),
-                                    Some(v) =>
-                                        v.get_recursive(&path[1..]),
-                                    _ => error(format!(
-                                        "Could not find scope {} in scope {}",
-                                        path[1],
-                                        path[0]).as_str()),
+                                    Some(Value::Scope(s)) => s.get_recursive(&path[1..]),
+                                    Some(v) => v.get_recursive(&path[1..]),
+                                    _ => error(
+                                        format!(
+                                            "Could not find scope {} in scope {}",
+                                            path[1], path[0]
+                                        )
+                                        .as_str(),
+                                    ),
                                 }
                             }
                         }
@@ -451,7 +495,10 @@ impl Scope {
     }
 
     pub fn remove_str(&self, name: &str) -> CrushResult<Option<Value>> {
-        let n = &name.split(':').map(|s| s.to_string()).collect::<Vec<String>>()[..];
+        let n = &name
+            .split(':')
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>()[..];
         self.remove(n)
     }
 
@@ -508,9 +555,7 @@ impl Scope {
                         drop(data2);
                         p.get(name)
                     }
-                    None => {
-                        Ok(None)
-                    }
+                    None => Ok(None),
                 }
             }
         }
@@ -558,7 +603,10 @@ impl ToString for Scope {
         let mut map = OrderedMap::new();
         // This can fail and we ignore it, becasue there is no way to propagate the error. :-(
         let _ = self.dump(&mut map);
-        map.iter().map(|(k, _v)| k.clone()).collect::<Vec<String>>().join(", ")
+        map.iter()
+            .map(|(k, _v)| k.clone())
+            .collect::<Vec<String>>()
+            .join(", ")
     }
 }
 
@@ -597,6 +645,11 @@ fn long_help_methods(fields: &mut Vec<(&String, &Value)>, lines: &mut Vec<String
         max_len = max(max_len, k.len());
     }
     for (k, v) in fields.drain(..) {
-        lines.push(format!("    * {}  {}{}", k, " ".repeat(max_len - k.len()), v.short_help()));
+        lines.push(format!(
+            "    * {}  {}{}",
+            k,
+            " ".repeat(max_len - k.len()),
+            v.short_help()
+        ));
     }
 }

@@ -1,23 +1,23 @@
-use crate::lang::errors::{CrushResult, argument_error, error, to_crush_error};
 use crate::lang::argument::Argument;
-use crate::lang::value::{Value, ValueType};
-use crate::util::replace::Replace;
+use crate::lang::binary::{binary_channel, BinaryReader};
 use crate::lang::command::Command;
-use std::path::PathBuf;
-use crate::util::glob::Glob;
-use crate::lang::stream::{ValueSender, ValueReceiver, InputStream, OutputStream};
-use crate::lang::scope::Scope;
-use crate::lang::list::List;
 use crate::lang::dict::Dict;
-use crate::lang::r#struct::Struct;
-use regex::Regex;
-use chrono::{DateTime, Local, Duration};
-use crate::lang::table::{Table, TableReader};
-use crate::lang::printer::Printer;
+use crate::lang::errors::{argument_error, error, to_crush_error, CrushResult};
 use crate::lang::job::JobJoinHandle;
-use crate::lang::binary::{BinaryReader, binary_channel};
-use std::io::Write;
+use crate::lang::list::List;
+use crate::lang::printer::Printer;
+use crate::lang::r#struct::Struct;
+use crate::lang::scope::Scope;
+use crate::lang::stream::{InputStream, OutputStream, ValueReceiver, ValueSender};
+use crate::lang::table::{Table, TableReader};
+use crate::lang::value::{Value, ValueType};
+use crate::util::glob::Glob;
+use crate::util::replace::Replace;
+use chrono::{DateTime, Duration, Local};
+use regex::Regex;
 use std::fs::File;
+use std::io::Write;
+use std::path::PathBuf;
 
 pub trait ArgumentVector {
     fn check_len(&self, len: usize) -> CrushResult<()>;
@@ -92,9 +92,18 @@ impl ArgumentVector for Vec<Argument> {
 
     fn check_len_range(&self, min_len: usize, max_len: usize) -> CrushResult<()> {
         if self.len() < min_len {
-            argument_error(format!("Expected at least {} arguments, got {}", min_len, self.len()).as_str())
+            argument_error(
+                format!(
+                    "Expected at least {} arguments, got {}",
+                    min_len,
+                    self.len()
+                )
+                .as_str(),
+            )
         } else if self.len() > max_len {
-            argument_error(format!("Expected at most {} arguments, got {}", max_len, self.len()).as_str())
+            argument_error(
+                format!("Expected at most {} arguments, got {}", max_len, self.len()).as_str(),
+            )
         } else {
             Ok(())
         }
@@ -104,7 +113,14 @@ impl ArgumentVector for Vec<Argument> {
         if self.len() >= min_len {
             Ok(())
         } else {
-            argument_error(format!("Expected at least {} arguments, got {}", min_len, self.len()).as_str())
+            argument_error(
+                format!(
+                    "Expected at least {} arguments, got {}",
+                    min_len,
+                    self.len()
+                )
+                .as_str(),
+            )
         }
     }
 
@@ -121,7 +137,9 @@ impl ArgumentVector for Vec<Argument> {
 
     fn value(&mut self, idx: usize) -> CrushResult<Value> {
         if idx < self.len() {
-            Ok(self.replace(idx, Argument::unnamed(Value::Bool(false))).value)
+            Ok(self
+                .replace(idx, Argument::unnamed(Value::Bool(false)))
+                .value)
         } else {
             error("Index out of bounds")
         }
@@ -150,10 +168,7 @@ pub struct CompileContext {
 }
 
 impl CompileContext {
-    pub fn new(
-        env: Scope,
-        printer: Printer,
-    ) -> CompileContext {
+    pub fn new(env: Scope, printer: Printer) -> CompileContext {
         CompileContext {
             dependencies: Vec::new(),
             env,
@@ -161,17 +176,11 @@ impl CompileContext {
         }
     }
 
-    pub fn job_context(
-        &self,
-        input: ValueReceiver,
-        output: ValueSender,
-    ) -> JobContext {
+    pub fn job_context(&self, input: ValueReceiver, output: ValueSender) -> JobContext {
         JobContext::new(input, output, self.env.clone(), self.printer.clone())
     }
 
-    pub fn with_scope(
-        &self,
-        env: &Scope) -> CompileContext {
+    pub fn with_scope(&self, env: &Scope) -> CompileContext {
         CompileContext {
             dependencies: vec![],
             env: env.clone(),
@@ -203,10 +212,7 @@ impl JobContext {
         }
     }
 
-    pub fn with_io(
-        &self,
-        input: ValueReceiver,
-        output: ValueSender) -> JobContext {
+    pub fn with_io(&self, input: ValueReceiver, output: ValueSender) -> JobContext {
         JobContext {
             input,
             output,
@@ -264,11 +270,7 @@ impl ExecutionContext {
         CompileContext::new(self.env.clone(), self.printer.clone())
     }
 
-    pub fn with_args(
-        self,
-        arguments: Vec<Argument>,
-        this: Option<Value>,
-    ) -> ExecutionContext {
+    pub fn with_args(self, arguments: Vec<Argument>, this: Option<Value>) -> ExecutionContext {
         ExecutionContext {
             input: self.input,
             output: self.output,
@@ -279,10 +281,7 @@ impl ExecutionContext {
         }
     }
 
-    pub fn with_sender(
-        self,
-        sender: ValueSender,
-    ) -> ExecutionContext {
+    pub fn with_sender(self, sender: ValueSender) -> ExecutionContext {
         ExecutionContext {
             input: self.input,
             output: sender,

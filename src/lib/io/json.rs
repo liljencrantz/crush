@@ -1,25 +1,21 @@
 use crate::lang::execution_context::ExecutionContext;
 use crate::{
-    lang::{
-        table::Row,
-        value::ValueType,
-        value::Value,
-    },
     lang::errors::CrushError,
+    lang::{table::Row, value::Value, value::ValueType},
 };
 use std::io::{BufReader, Write};
 
-use crate::lang::{r#struct::Struct, list::List, table::Table};
-use crate::lang::errors::{CrushResult, to_crush_error, error, mandate};
-use std::collections::HashSet;
-use crate::lang::errors::Kind::InvalidData;
-use crate::lang::table::ColumnType;
-use crate::lang::scope::ScopeLoader;
-use std::convert::TryFrom;
-use crate::lang::command::OutputType::Unknown;
-use crate::lang::files::Files;
-use signature::signature;
 use crate::lang::argument::ArgumentHandler;
+use crate::lang::command::OutputType::Unknown;
+use crate::lang::errors::Kind::InvalidData;
+use crate::lang::errors::{error, mandate, to_crush_error, CrushResult};
+use crate::lang::files::Files;
+use crate::lang::scope::ScopeLoader;
+use crate::lang::table::ColumnType;
+use crate::lang::{list::List, r#struct::Struct, table::Table};
+use signature::signature;
+use std::collections::HashSet;
+use std::convert::TryFrom;
 
 fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
     match json_value {
@@ -31,22 +27,26 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
             } else if f.is_i64() {
                 Ok(Value::Integer(f.as_i64().expect("") as i128))
             } else {
-                Ok(Value::Float(f.as_f64().ok_or(CrushError { kind: InvalidData, message: "Not a valid number".to_string() })?))
+                Ok(Value::Float(f.as_f64().ok_or(CrushError {
+                    kind: InvalidData,
+                    message: "Not a valid number".to_string(),
+                })?))
             }
         }
         serde_json::Value::String(s) => Ok(Value::string(s.as_str())),
         serde_json::Value::Array(arr) => {
-            let mut lst = arr.iter()
+            let mut lst = arr
+                .iter()
                 .map(|v| from_json(v))
                 .collect::<CrushResult<Vec<Value>>>()?;
             let types: HashSet<ValueType> = lst.iter().map(|v| v.value_type()).collect();
-            let struct_types: HashSet<Vec<ColumnType>> =
-                lst.iter()
-                    .flat_map(|v| match v {
-                        Value::Struct(r) => vec![r.local_signature()],
-                        _ => vec![]
-                    })
-                    .collect();
+            let struct_types: HashSet<Vec<ColumnType>> = lst
+                .iter()
+                .flat_map(|v| match v {
+                    Value::Struct(r) => vec![r.local_signature()],
+                    _ => vec![],
+                })
+                .collect();
 
             match types.len() {
                 0 => Ok(Value::Empty()),
@@ -58,53 +58,55 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
                                 .drain(..)
                                 .map(|v| match v {
                                     Value::Struct(r) => Ok(r.to_row()),
-                                    _ => error("Impossible!")
+                                    _ => error("Impossible!"),
                                 })
                                 .collect::<CrushResult<Vec<Row>>>()?;
-                            Ok(Value::Table(Table::new(struct_types.iter().next().unwrap().clone(), row_list)))
+                            Ok(Value::Table(Table::new(
+                                struct_types.iter().next().unwrap().clone(),
+                                row_list,
+                            )))
                         }
-                        _ => Ok(Value::List(List::new(list_type.clone(), lst)))
+                        _ => Ok(Value::List(List::new(list_type.clone(), lst))),
                     }
                 }
                 _ => Ok(Value::List(List::new(ValueType::Any, lst))),
             }
         }
-        serde_json::Value::Object(o) => {
-            Ok(Value::Struct(
-                Struct::new(
-                    o
-                        .iter()
-                        .map(|(k, v)| (k.to_string(), from_json(v)))
-                        .map(|(k, v)| match v {
-                            Ok(vv) => Ok((k, vv)),
-                            Err(e) => Err(e)
-                        })
-                        .collect::<Result<Vec<(String, Value)>, CrushError>>()?,
-                    None,
-                )))
-        }
+        serde_json::Value::Object(o) => Ok(Value::Struct(Struct::new(
+            o.iter()
+                .map(|(k, v)| (k.to_string(), from_json(v)))
+                .map(|(k, v)| match v {
+                    Ok(vv) => Ok((k, vv)),
+                    Err(e) => Err(e),
+                })
+                .collect::<Result<Vec<(String, Value)>, CrushError>>()?,
+            None,
+        ))),
     }
 }
 
 fn to_json(value: Value) -> CrushResult<serde_json::Value> {
     match value.materialize() {
-        Value::File(s) =>
-            Ok(serde_json::Value::from(mandate(s.to_str(), "Invalid filename")?)),
+        Value::File(s) => Ok(serde_json::Value::from(mandate(
+            s.to_str(),
+            "Invalid filename",
+        )?)),
 
         Value::String(s) => Ok(serde_json::Value::from(s)),
 
-        Value::Integer(i) =>
-            Ok(serde_json::Value::from(to_crush_error(i64::try_from(i))?)),
+        Value::Integer(i) => Ok(serde_json::Value::from(to_crush_error(i64::try_from(i))?)),
 
-        Value::List(l) =>
-            Ok(serde_json::Value::Array(
-                l.dump().drain(..)
-                    .map(to_json)
-                    .collect::<CrushResult<Vec<_>>>()?)),
+        Value::List(l) => Ok(serde_json::Value::Array(
+            l.dump()
+                .drain(..)
+                .map(to_json)
+                .collect::<CrushResult<Vec<_>>>()?,
+        )),
 
         Value::Table(t) => {
             let types = t.types().to_vec();
-            let structs = t.rows()
+            let structs = t
+                .rows()
                 .iter()
                 .map(|r| r.clone().into_struct(&types))
                 .map(|s| to_json(Value::Struct(s)))
@@ -134,10 +136,7 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
 
         Value::TableStream(_) => panic!("Impossible"),
 
-        v => error(format!(
-            "Unsupported data type {}",
-            v.value_type().to_string()).as_str()
-        ),
+        v => error(format!("Unsupported data type {}", v.value_type().to_string()).as_str()),
     }
 }
 
@@ -187,7 +186,7 @@ pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
             From::declare(env);
             To::declare(env);
             Ok(())
-        }))?;
+        }),
+    )?;
     Ok(())
 }
-

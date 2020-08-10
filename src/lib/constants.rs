@@ -1,6 +1,6 @@
-use crate::lang::value::Value;
-use crate::lang::scope::Scope;
 use crate::lang::errors::CrushResult;
+use crate::lang::scope::Scope;
+use crate::lang::value::Value;
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let root_clone = root.clone();
@@ -11,7 +11,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare("false", Value::Bool(false))?;
             env.declare("global", Value::Scope(root_clone))?;
             Ok(())
-        }))?;
+        }),
+    )?;
     root.r#use(&e);
     Ok(())
 }

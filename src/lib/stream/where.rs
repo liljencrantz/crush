@@ -1,17 +1,12 @@
-use crate::{
-    lang::{
-        value::Value,
-        table::Row,
-    },
-};
-use crate::lang::execution_context::ExecutionContext;
-use crate::lang::errors::{error, CrushResult};
-use crate::lang::stream::{empty_channel, channels, black_hole};
-use crate::lang::{table::ColumnType, argument::Argument};
-use crate::lang::command::Command;
-use signature::signature;
 use crate::lang::argument::ArgumentHandler;
+use crate::lang::command::Command;
 use crate::lang::command::OutputType::Passthrough;
+use crate::lang::errors::{error, CrushResult};
+use crate::lang::execution_context::ExecutionContext;
+use crate::lang::stream::{black_hole, channels, empty_channel};
+use crate::lang::{argument::Argument, table::ColumnType};
+use crate::lang::{table::Row, value::Value};
+use signature::signature;
 
 #[signature(
 r#where,
@@ -29,8 +24,11 @@ fn evaluate(
     condition: Command,
     row: &Row,
     input_type: &[ColumnType],
-    base_context: &ExecutionContext) -> CrushResult<bool> {
-    let arguments = row.clone().into_vec()
+    base_context: &ExecutionContext,
+) -> CrushResult<bool> {
+    let arguments = row
+        .clone()
+        .into_vec()
         .drain(..)
         .zip(input_type.iter())
         .map(|(c, t)| Argument::named(t.name.as_ref(), c))
@@ -38,11 +36,16 @@ fn evaluate(
 
     let (sender, reciever) = channels();
 
-    condition.invoke(base_context.clone().with_args(arguments, None).with_sender(sender))?;
+    condition.invoke(
+        base_context
+            .clone()
+            .with_args(arguments, None)
+            .with_sender(sender),
+    )?;
 
     match reciever.recv()? {
         Value::Bool(b) => Ok(b),
-        _ => error("Expected a boolean result")
+        _ => error("Expected a boolean result"),
     }
 }
 
@@ -62,7 +65,11 @@ pub fn r#where(context: ExecutionContext) -> CrushResult<()> {
             let output = context.output.initialize(input.types().to_vec())?;
             while let Ok(row) = input.read() {
                 match evaluate(cfg.condition.copy(), &row, input.types(), &base_context) {
-                    Ok(val) => if val && output.send(row).is_err() { break; },
+                    Ok(val) => {
+                        if val && output.send(row).is_err() {
+                            break;
+                        }
+                    }
                     Err(e) => base_context.printer.crush_error(e),
                 }
             }

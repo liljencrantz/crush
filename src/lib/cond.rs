@@ -1,8 +1,8 @@
+use crate::lang::errors::{argument_error, CrushResult};
 use crate::lang::execution_context::ExecutionContext;
-use crate::lang::errors::{CrushResult, argument_error};
-use crate::lang::{value::Value};
 use crate::lang::scope::Scope;
-use crate::lang::stream::{empty_channel, channels};
+use crate::lang::stream::{channels, empty_channel};
+use crate::lang::value::Value;
 
 pub fn and(mut context: ExecutionContext) -> CrushResult<()> {
     let mut res = true;

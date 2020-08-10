@@ -1,21 +1,27 @@
-use crate::lang::scope::Scope;
-use crate::lang::errors::{CrushResult, argument_error, mandate};
-use crate::lang::value::{Value, ValueType};
-use crate::lang::execution_context::ExecutionContext;
-use crate::lang::table::{ColumnType, Row};
-use ordered_map::OrderedMap;
 use crate::lang::command::OutputType::{Known, Unknown};
+use crate::lang::errors::{argument_error, mandate, CrushResult};
+use crate::lang::execution_context::ExecutionContext;
+use crate::lang::scope::Scope;
+use crate::lang::table::{ColumnType, Row};
+use crate::lang::value::{Value, ValueType};
+use ordered_map::OrderedMap;
 
 pub fn r#let(context: ExecutionContext) -> CrushResult<()> {
     for arg in context.arguments {
-        context.env.declare(mandate(arg.argument_type, "Missing variable name")?.as_ref(), arg.value)?;
+        context.env.declare(
+            mandate(arg.argument_type, "Missing variable name")?.as_ref(),
+            arg.value,
+        )?;
     }
     context.output.send(Value::Empty())
 }
 
 pub fn set(context: ExecutionContext) -> CrushResult<()> {
     for arg in context.arguments {
-        context.env.set(mandate(arg.argument_type, "Missing variable name")?.as_ref(), arg.value)?;
+        context.env.set(
+            mandate(arg.argument_type, "Missing variable name")?.as_ref(),
+            arg.value,
+        )?;
     }
     context.output.send(Value::Empty())
 }
@@ -60,7 +66,7 @@ pub fn env(context: ExecutionContext) -> CrushResult<()> {
     for k in keys {
         context.printer.handle_error(output.send(Row::new(vec![
             Value::String(k.clone()),
-            Value::String(values[k].to_string())
+            Value::String(values[k].to_string()),
         ])));
     }
 
