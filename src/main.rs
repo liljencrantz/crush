@@ -36,7 +36,7 @@ fn run_interactive(global_env: Scope, printer: &Printer, pretty_printer: &ValueS
     let mut rl = Editor::<()>::new();
     let _ = rl.load_history(&crush_history_file());
     loop {
-        let readline = rl.readline("crush> ");
+        let readline = rl.readline("crush# ");
 
         match readline {
             Ok(cmd) => {
