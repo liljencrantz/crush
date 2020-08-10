@@ -21,13 +21,13 @@ they are quite different, and nearly everything beyond that is different.
 Let's start with two trivial commands; listing files in the current directory,
 and checking how many files are in the current directory:
 
-    crush> ls
+    crush# ls
     user         size modified                  type      file
     liljencrantz 2279 2020-03-07 13:00:33 +0100 file      ideas
     liljencrantz 4096 2019-11-22 21:56:30 +0100 directory target
     ...
     
-    crush> ls | count
+    crush# ls | count
     14
 
 This all looks familiar. But appearances are deceiving. The `ls` command being
@@ -36,7 +36,7 @@ a Rush channel. It is not understood by the command as a series of bytes, but as
 a table of rows, and Crush provides you with SQL-like commands to sort, filter,
 aggregate and group rows of data.
 
-    crush> ls | sort ^size
+    crush# ls | sort ^size
     user         size  modified                  type      file
     liljencrantz    31 2019-10-03 13:43:12 +0200 file      .gitignore
     liljencrantz    75 2020-03-07 17:09:15 +0100 file      build.rs
@@ -44,7 +44,7 @@ aggregate and group rows of data.
     liljencrantz   711 2019-10-03 14:19:46 +0200 file      crush.iml
     ...
 
-    crush> ls | where {type == "directory"}
+    crush# ls | where {type == "directory"}
     user         size modified                  type      file
     liljencrantz 4096 2019-11-22 21:56:30 +0100 directory target
     liljencrantz 4096 2020-02-22 11:50:12 +0100 directory tests
@@ -80,10 +80,10 @@ commands all work like you'd expect:
 
 ```shell script
 # Dump the output of the ls command to the file listing.json in json format
-crush> ls | json:to ./listing.json
+crush# ls | json:to ./listing.json
 
 # Read the file Cargo.toml as a toml file, and extract the dependencies-field
-crush> (toml:from Cargo.toml):dependencies
+crush# (toml:from Cargo.toml):dependencies
 
 # Fetch a web page and write it to a file
 (http "https://isitchristmas.com/"):body | bin:to ./isitchristmas.html
@@ -98,7 +98,7 @@ the command will serialize the output to a binary stream as the pipeline
 output:
 
 ```shell script
-crush> list:of 1 2 3 | json:to
+crush# list:of 1 2 3 | json:to
 [1,2,3]
 ```
 
@@ -115,46 +115,46 @@ Crush allows you to perform mathematical calculations on integer and floating
 point numbers directly in the shell, mostly using the same mathematical operators
 used in almost any other programming language.
 
-    crush> 5+6
+    crush# 5+6
     11
-    crush> 1+2*3
+    crush# 1+2*3
     7
 
 The only exception is that the `/` operator is used for constructing files and
 paths (more on that later), so division is done using the `//` operator.
 
-    crush> 4.2//3
+    crush# 4.2//3
     1.4000000000000001
 
 Comparisons between values are done using `>`, `<`, `<=`, `>=`, `==` and `!=`,
 just like in most languages. All comparisons between values of different types
 are false.
 
-    crush> 4 > 5
+    crush# 4 > 5
     false
     
 The `and` and `or` operators are used to combine logical expressions:
     
-    crush> false or true
+    crush# false or true
     true
-    crush> if some_file:exists and (some_file:stat):is_file {echo "yay"}
+    crush# if some_file:exists and (some_file:stat):is_file {echo "yay"}
     
 Crush also has operators related to patterns and matching. `=~` and `!~` are
 used to check if a pattern matches an input:
 
     # The % character is the wildcard operator in globs
-    crush> %.txt =~ foo.txt
+    crush# %.txt =~ foo.txt
     true
     # This is how you construct and match a regular expression
-    crush> re"ab+c" =~ "abbbbbc"
+    crush# re"ab+c" =~ "abbbbbc"
     true
 
 Regexps also support replacement using the `~` (replace once) and `~~` (replace
 all) operators, which are trinary operators:
 
-    crush> re"a+" ~ "baalaa" "a"
+    crush# re"a+" ~ "baalaa" "a"
     balaa
-    crush> re"a+" ~~ "baalaa" "a"
+    crush# re"a+" ~~ "baalaa" "a"
     bala
 
 
@@ -165,7 +165,7 @@ The individual cells in this table stream can be any of a variety of types,
 including strings, integers, floating point numbers, lists, binary data or
 another table stream.
 
-    crush> ps | head 5
+    crush# ps | head 5
     pid ppid status   user cpu  name
       1    0 Sleeping root 4.73 /sbin/init
       2    0 Sleeping root    0 [kthreadd]
@@ -180,14 +180,14 @@ current working directory as a single element of the `file` type.
 
 Variables must be declared (using the `:=` operator) before use.
 
-    crush> some_number := 4      # The := operator declares a new variable
-    crush> some_number * 5
+    crush# some_number := 4      # The := operator declares a new variable
+    crush# some_number * 5
     20
 
 Once declared, a variable can be reassigned to using the `=` operator.
 
-    crush> some_number = 6
-    crush> some_number * 5
+    crush# some_number = 6
+    crush# some_number * 5
     30
 
 Like in any sane programming language, variables can be of any type supported by
@@ -195,8 +195,8 @@ the type system. There is no implicit type conversion. Do note that some
 mathematical operators are defined between types, so multiplying an integer
 with a floating point number results in a floating point number, for example.
 
-    crush> some_text := "5"
-    crush> some_text * some_number
+    crush# some_text := "5"
+    crush# some_text * some_number
     Error: Can not process arguments of specified type
 
 ### Named and unnamed arguments
@@ -218,22 +218,22 @@ Sometimes you want to use the output of one command as an *argument* to another
 command, just like a subshell in e.g. bash. This is different from using the
 output as the *input*, and is done using `()`:
 
-    crush> echo (pwd)
+    crush# echo (pwd)
 
 ### Closures
 
 In Crush, braces (`{}`) are used to create a closure. Assigning a closure to a
 variable is how you create a function.
 
-    crush> print_greeting := {echo "Hello"}
-    crush> print_greeting
+    crush# print_greeting := {echo "Hello"}
+    crush# print_greeting
     Hello
 
 Any named arguments passed when calling a closure and added to the local scope
 of the invocation:
 
-    crush> print_a := {echo a}
-    crush> print_a a="Greetings"
+    crush# print_a := {echo a}
+    crush# print_a a="Greetings"
     Greetings
 
 For added type safety, you can declare what parameters a closure expects at the
@@ -243,13 +243,13 @@ The following closure requires the caller to supply the argument `a`, and allows
 the caller to specify the argument `b`, which must by of type integer. If the
 caller does not specify it, it falls back to a default value of 7.
 
-    crush> print_things := {|a b: integer = 7|}
+    crush# print_things := {|a b: integer = 7|}
 
 Additionally, the `@` operator can be used to create a list of all unnamed
 arguments, and the `@@` operator can be used to create a list of all named
 arguments not mentioned elsewhere in the parameter list.
 
-    crush> print_everything := {|@unnamed @@named| echo "Named" named "Unnamed" unnamed}
+    crush# print_everything := {|@unnamed @@named| echo "Named" named "Unnamed" unnamed}
 
 The `@` and `@@` operators are also used during command invocation to perform
 the mirrored operation. The following code creates an `lss` function that calls
@@ -287,7 +287,7 @@ commands.
 When playing around with Crush, the `help` and `dir`commands are useful. The
 former displays a help messages, the latter lists the content of a value.
 
-    crush> help
+    crush# help
     sort column:field
     
         Sort input based on column
@@ -295,7 +295,7 @@ former displays a help messages, the latter lists the content of a value.
         Example:
     
         ps | sort ^cpu
-    crush> dir list
+    crush# dir list
     [type, truncate, remove, clone, of, __call_type__, __setitem__, pop, push, empty, len, peek, new, clear]
 
 ### The content of your current working directory lives in your namespace
@@ -308,8 +308,8 @@ together.
 This means that for the most part, using files in Crush is extremely simple and
 convenient.
 
-    crush> cd .. # This does what you'd think
-    crush> cd /  # As does this
+    crush# cd .. # This does what you'd think
+    crush# cd /  # As does this
 
 The right hand side of the / operator is a label, not a value, so `./foo` refers
 to a file named foo in the current working directory, and is unrelated to the
@@ -324,32 +324,32 @@ something else.
 Most types have several useful methods. Files have `exists` and `stat`, which do
 what you'd expect.
 
-    crush> .:exists
+    crush# .:exists
     true
-    crush> .:stat
+    crush# .:stat
     {is_directory: true, is_file: false, is_symlink: false, inode: 50856186, nlink: 8, mode: 16877, len: 4096}
-    crush> (.:stat):is_file
+    crush# (.:stat):is_file
     false
 
 ### Semi-lazy stream evaluation:
 
 If you assign the output of the find command to a variable like so:
 
-    crush> all_the_files := (find /)
+    crush# all_the_files := (find /)
 
 What will really be stored in the `all_the_files` variable is simply a stream. A
 small number of lines of output will be eagerly evaluated, before the thread
 executing the find command will start blocking. If the stream is consumed, for
 example by writing
 
-    crush> all_the_files
+    crush# all_the_files
 
 then all hell will break loose on your screen as tens of thousands of lines are
 printed to your screen.
 
 Another option would be to pipe the output via the head command
 
-    crush> all_the_files | head 1
+    crush# all_the_files | head 1
 
 Which will consume one line of output from the stream. This command can be
 re-executed until the stream is empty.
@@ -373,10 +373,10 @@ variety of formats or output of commands like `ps`, `find`.
 The `*` operator is used for multiplication, so Crush uses `%` as the wildcard
 operator instead. `?` is still used for single character wildcards.
 
-    crush> ls %.txt
+    crush# ls %.txt
     user         size  modified                  type file
     liljencrantz 21303 2020-03-30 13:40:37 +0200 file /home/liljencrantz/src/crush/README.md
-    crush> ls ????????
+    crush# ls ????????
     user         size modified                  type file
     liljencrantz   75 2020-03-07 17:09:15 +0100 file /home/liljencrantz/src/crush/build.rs
 
@@ -385,46 +385,46 @@ Another way of looking ath the same syntax is to say that `%` and `?` match any
 character except `/`, whereas `%%` also matches `/`.
 
     # Count the number of lines of rust code in the crush source code
-    crush> lines src/%%.rs|count
+    crush# lines src/%%.rs|count
 
 Wildcards are not automatically expanded, they are passed in to commands as glob
 objects, and the command chooses what to match the glob against. If you want to
 perform glob expansion in a command that doesn't do so itself, use the `:files`
 method of the glob object to do so:
 
-    crush> echo (%%.rs):files
+    crush# echo (%%.rs):files
 
 ### Regular expressions
 
 Regular expressions are constructed like `re"REGEXP GOES HERE"`. They support
 matching and replacement:
 
-    crush> re"ab+c" =~ "abbbbbc"
+    crush# re"ab+c" =~ "abbbbbc"
     true
-    crush> re"a+" ~ "baalaa" "a"
+    crush# re"a+" ~ "baalaa" "a"
     balaa
-    crush> re"a+" ~~ "baalaa" "a"
+    crush# re"a+" ~~ "baalaa" "a"
     bala
 
 ### Lists and dicts
 
 Crush has built-in lists:
 
-    crush> l := (list:of 1 2 3)
-    crush> l
+    crush# l := (list:of 1 2 3)
+    crush# l
     [1, 2, 3]
-    crush> l:peek
+    crush# l:peek
     3
-    crush> l:pop
+    crush# l:pop
     3
-    crush> l:len
+    crush# l:len
     2
-    crush> l[1]
+    crush# l[1]
     2
-    crush> l[1] = 7
-    crush> l
+    crush# l[1] = 7
+    crush# l
     [1, 7]
-    crush> help l
+    crush# help l
     type list integer
 
         A mutable list of items, usually of the same type
@@ -446,11 +446,11 @@ Crush has built-in lists:
 
 and dictionaries:
 
-    crush> d := (dict string integer):new
-    crush> d["foo"] = 42
-    crush> d["foo"]
+    crush# d := (dict string integer):new
+    crush# d["foo"] = 42
+    crush# d["foo"]
     42
-    crush> help d
+    crush# help d
     type dict string integer
 
         A mutable mapping from one set of values to another
@@ -469,10 +469,10 @@ and dictionaries:
 
 Crush has two data types for dealing with time: `time` and `duration`.
 
-    crush> start := time:now
-    crush> something_that_takes_a_lot_of_time
-    crush> end := time:now
-    crush> echo ("We spent {} on the thing":format end - start)
+    crush# start := time:now
+    crush# something_that_takes_a_lot_of_time
+    crush# end := time:now
+    crush# echo ("We spent {} on the thing":format end - start)
     4:06
 
 The mathematical operators that make sense are defined for `time` and
@@ -493,8 +493,8 @@ computers memory, and even infinite data sets.
 But sometimes, streaming data sets are inconvenient, especially if one wants to
 use the same dataset twice.
 
-    crush> files := ls
-    crush> files
+    crush# files := ls
+    crush# files
     user         size  modified                  type      file
     liljencrantz  1307 2020-03-26 01:08:45 +0100 file      ideas
     liljencrantz  4096 2019-11-22 21:56:30 +0100 directory target
@@ -509,7 +509,7 @@ use the same dataset twice.
     liljencrantz  8382 2020-03-29 00:54:13 +0100 file      todo
     liljencrantz    75 2020-03-07 17:09:15 +0100 file      build.rs
     liljencrantz   711 2019-10-03 14:19:46 +0200 file      crush.iml
-    crush> files
+    crush# files
 
 Notice how there is no output the second time `files` is displayed, because the
 table_stream has already been consumed.
@@ -517,8 +517,8 @@ table_stream has already been consumed.
 Enter the materialize command, which takes any value and recursively converts
 all transient components into an equivalent but fully in-memory form.
 
-    crush> materialized_files := (ls|materialize)
-    crush> materialized_files
+    crush# materialized_files := (ls|materialize)
+    crush# materialized_files
     user         size  modified                  type      file
     liljencrantz  1307 2020-03-26 01:08:45 +0100 file      ideas
     liljencrantz  4096 2019-11-22 21:56:30 +0100 directory target
@@ -533,7 +533,7 @@ all transient components into an equivalent but fully in-memory form.
     liljencrantz  8382 2020-03-29 00:54:13 +0100 file      todo
     liljencrantz    75 2020-03-07 17:09:15 +0100 file      build.rs
     liljencrantz   711 2019-10-03 14:19:46 +0200 file      crush.iml
-    crush> materialized_files
+    crush# materialized_files
     user         size  modified                  type      file
     liljencrantz  1307 2020-03-26 01:08:45 +0100 file      ideas
     liljencrantz  4096 2019-11-22 21:56:30 +0100 directory target
@@ -557,7 +557,7 @@ multiple times.
 Of course Crush has an `if` command, as well as `for`, `while` and `loop` loops,
 that can be controlled using `break` and `continue`.
 
-    crush> help if
+    crush# help if
     if condition:bool if-clause:command [else-clause:command]
     
         Conditionally execute a command once.
@@ -593,7 +593,7 @@ their output with escape sequences may fail.
 This part of Crush should be considered a proof of concept, but still, most
 non-interactive commands work as expected:
 
-    crush> whoami
+    crush# whoami
     liljencrantz
     
 Crush features several shortcuts to make working with external commands easier.
