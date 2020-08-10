@@ -2,14 +2,13 @@ use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command::TypeMap;
-use crate::lang::errors::{argument_error, CrushResult};
+use crate::lang::errors::{argument_error, data_error, mandate, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, ExecutionContext, This};
 use crate::lang::value::Value;
 use crate::lang::{command::Command, list::List, value::ValueType};
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use signature::signature;
-use std::collections::HashSet;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "list", name]
@@ -121,10 +120,10 @@ lazy_static! {
         res.declare(
             full("of"),
             of,
-            false,
+            true,
             "list:of element:any...",
             "Create a new list containing the supplied elements",
-            None,
+            Some("    If no elements are supplied as arguments, input must be a stream with\n    exactly one column."),
             Unknown,
         );
         res.declare(
@@ -222,22 +221,29 @@ fn call_type(mut context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn of(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len_min(1)?;
-
-    let types = context
-        .arguments
-        .iter()
-        .map(|a| a.value.value_type())
-        .collect::<HashSet<ValueType>>();
-    let lst = List::new(
-        if types.len() == 1 {
-            context.arguments[0].value.value_type()
-        } else {
-            ValueType::Any
-        },
-        context.arguments.drain(..).map(|a| a.value).collect(),
-    );
-    context.output.send(Value::List(lst))
+    match context.arguments.len() {
+        0 => {
+            let mut lst = Vec::new();
+            let mut input = mandate(context.input.recv()?.stream(), "Expected a stream")?;
+            if input.types().len() != 1 {
+                return data_error("Expected input with exactly one column");
+            }
+            while let Ok(row) = input.read() {
+                lst.push(row.into_vec().remove(0));
+            }
+            if lst.is_empty() {
+                return data_error("Empty stream!");
+            }
+            context
+                .output
+                .send(Value::List(List::new_without_type(lst)))
+        }
+        _ => {
+            let lst =
+                List::new_without_type(context.arguments.drain(..).map(|a| a.value).collect());
+            context.output.send(Value::List(lst))
+        }
+    }
 }
 
 fn new(context: ExecutionContext) -> CrushResult<()> {

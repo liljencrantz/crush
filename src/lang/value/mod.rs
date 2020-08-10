@@ -224,6 +224,15 @@ impl Value {
         Ok(())
     }
 
+    pub fn matches(&self, value: &str) -> CrushResult<bool> {
+        match self {
+            Value::String(s) => Ok(value == s),
+            Value::Glob(pattern) => Ok(pattern.matches(value)),
+            Value::Regex(_, re) => Ok(re.is_match(value)),
+            _ => return argument_error("Invalid value for match"),
+        }
+    }
+
     pub fn materialize(self) -> Value {
         match self {
             Value::TableStream(output) => {
@@ -273,7 +282,7 @@ impl Value {
                 "true" => true,
                 "false" => false,
                 _ => {
-                    return error(format!("Can't convert value '{}' to boolean", str_val).as_str())
+                    return error(format!("Can't convert value '{}' to boolean", str_val).as_str());
                 }
             })),
             ValueType::String => Ok(Value::String(str_val)),

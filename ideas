@@ -65,3 +65,6 @@ A drop command that is the opposite of select, i.e. it drops anu columns you men
 Is it really a good idea to auto-run commands when they are passed in as named parameters? Might have gone overboard with eager evaluation there...
 Allow simpler column renaming via select, e.g. 'ps|select time=^cpu'
 html:from/to using html5ever under the hood
+Add hex and base64 en/decoding methods to the binary/string types
+Add utf-8 and other character encoding methods to the binary/string types
+Add support for ~

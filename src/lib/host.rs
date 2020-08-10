@@ -42,10 +42,7 @@ fn mem(context: ExecutionContext) -> CrushResult<()> {
 }
 
 mod os {
-    use crate::lang::errors::{to_crush_error, CrushResult};
-    use crate::lang::execution_context::ExecutionContext;
-    use crate::lang::value::Value;
-    use signature::signature;
+    use super::*;
 
     #[signature(name, can_block = false, short = "name of the operating system")]
     pub struct Name {}
@@ -71,12 +68,7 @@ mod os {
 }
 
 mod cpu {
-    use crate::lang::errors::{to_crush_error, CrushResult};
-    use crate::lang::execution_context::ExecutionContext;
-    use crate::lang::list::List;
-    use crate::lang::r#struct::Struct;
-    use crate::lang::value::{Value, ValueType};
-    use signature::signature;
+    use super::*;
 
     #[signature(count, can_block = false, short = "number of CPU cores")]
     pub struct Count {}

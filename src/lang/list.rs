@@ -4,6 +4,7 @@ use crate::lang::{table::ColumnType, table::Row, value::Field, value::Value, val
 use crate::util::identity_arc::Identity;
 use chrono::Duration;
 use std::cmp::Ordering;
+use std::collections::HashSet;
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 
@@ -47,6 +48,21 @@ impl List {
             cell_type,
             cells: Arc::from(Mutex::new(cells)),
         }
+    }
+
+    pub fn new_without_type(cells: Vec<Value>) -> List {
+        let types = cells
+            .iter()
+            .map(|a| a.value_type())
+            .collect::<HashSet<ValueType>>();
+        List::new(
+            if types.len() == 1 {
+                cells[0].value_type()
+            } else {
+                ValueType::Any
+            },
+            cells,
+        )
     }
 
     pub fn len(&self) -> usize {

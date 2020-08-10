@@ -13,6 +13,7 @@ pub mod job;
 pub mod list;
 pub mod ordered_string_map;
 pub mod parser;
+pub mod patterns;
 pub mod pretty_printer;
 pub mod printer;
 pub mod scope;

@@ -1,5 +1,5 @@
 use crate::lang::binary::{binary_channel, BinaryReader};
-use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
+use crate::lang::errors::{argument_error, error, to_crush_error, CrushResult};
 use crate::lang::printer::Printer;
 use crate::lang::stream::{ValueReceiver, ValueSender};
 use crate::lang::value::{Value, ValueType};
@@ -31,9 +31,16 @@ impl Files {
         self.files
     }
 
+    pub fn into_file(&self) -> CrushResult<PathBuf> {
+        if self.files.len() == 1 {
+            Ok(self.files[0].clone())
+        } else {
+            error("Invalid file")
+        }
+    }
+
     pub fn reader(self, input: ValueReceiver) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
         if !self.had_entries {
-            println!("TRAFDFKDSAÖLFADSK");
             match input.recv()? {
                 Value::BinaryStream(b) => Ok(b),
                 Value::Binary(b) => Ok(BinaryReader::vec(&b)),

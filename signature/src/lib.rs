@@ -64,6 +64,7 @@ fn extract_type(ty: &Type) -> SignatureResult<(&'static str, Vec<&'static str>)>
                         "char" => "char",
                         "f64" => "f64",
                         "Files" => "Files",
+                        "Patterns" => "Patterns",
                         "ValueType" => "ValueType",
                         "PathBuf" => "PathBuf",
                         "OrderedStringMap" => "OrderedStringMap",
@@ -348,6 +349,36 @@ fn type_to_value(
                         Some(quote! {
                             while !_unnamed.is_empty() {
                                 #name.expand(_unnamed.pop_front().unwrap(), printer)?;
+                            }
+                        })
+                    } else {
+                        None
+                    },
+                    assign: quote! { #name, },
+                })
+            }
+        }
+
+        "Patterns" => {
+            if !args.is_empty() {
+                fail!(ty.span(), "This type can't be paramterizised")
+            } else {
+                Ok(TypeData {
+                    signature: format!("[{}=(string|glob|regex)...]", name.to_string()),
+                    initialize: quote! { let mut #name = crate::lang::patterns::Patterns::new(); },
+                    mappings: quote! {
+                        (Some(#name_literal), crate::lang::value::Value::Glob(value)) => #name.expand_glob(value),
+                        (Some(#name_literal), crate::lang::value::Value::String(value)) => #name.expand_string(value),
+                        (Some(#name_literal), crate::lang::value::Value::Regex(pattern, value)) => #name.expand_regex(pattern, value),
+                    },
+                    unnamed_mutate: if is_unnamed_target {
+                        Some(quote! {
+                            while !_unnamed.is_empty() {
+                                match _unnamed.pop_front().unwrap() {
+                        crate::lang::value::Value::Glob(value) => #name.expand_glob(value),
+                        crate::lang::value::Value::String(value) => #name.expand_string(value),
+                        crate::lang::value::Value::Regex(pattern, value) => #name.expand_regex(pattern, value),
+                                }
                             }
                         })
                     } else {
