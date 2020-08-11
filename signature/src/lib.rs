@@ -146,20 +146,20 @@ fn call_value(attr: &Attribute) -> SignatureResult<TokenTree> {
 
 fn simple_type_to_value(simple_type: &str) -> TokenStream {
     match simple_type {
-        "String" => quote! {crate::lang::value::Value::String(value)},
-        "bool" => quote! {crate::lang::value::Value::Bool(value)},
-        "i128" => quote! {crate::lang::value::Value::Integer(value)},
-        "usize" => quote! {crate::lang::value::Value::Integer(value)},
-        "u64" => quote! {crate::lang::value::Value::Integer(value)},
-        "i64" => quote! {crate::lang::value::Value::Integer(value)},
-        "ValueType" => quote! {crate::lang::value::Value::Type(value)},
-        "f64" => quote! {crate::lang::value::Value::Float(value)},
-        "char" => quote! {crate::lang::value::Value::String(value)},
-        "Command" => quote! {crate::lang::value::Value::Command(value)},
-        "Duration" => quote! {crate::lang::value::Value::Duration(value)},
-        "Field" => quote! {crate::lang::value::Value::Field(value)},
-        "Stream" => quote! {value},
-        "Value" => quote! {value},
+        "String" => quote! {crate::lang::value::Value::String(_value)},
+        "bool" => quote! {crate::lang::value::Value::Bool(_value)},
+        "i128" => quote! {crate::lang::value::Value::Integer(_value)},
+        "usize" => quote! {crate::lang::value::Value::Integer(_value)},
+        "u64" => quote! {crate::lang::value::Value::Integer(_value)},
+        "i64" => quote! {crate::lang::value::Value::Integer(_value)},
+        "ValueType" => quote! {crate::lang::value::Value::Type(_value)},
+        "f64" => quote! {crate::lang::value::Value::Float(_value)},
+        "char" => quote! {crate::lang::value::Value::String(_value)},
+        "Command" => quote! {crate::lang::value::Value::Command(_value)},
+        "Duration" => quote! {crate::lang::value::Value::Duration(_value)},
+        "Field" => quote! {crate::lang::value::Value::Field(_value)},
+        "Stream" => quote! {_value},
+        "Value" => quote! {_value},
         _ => panic!("Unknown type"),
     }
 }
@@ -188,20 +188,20 @@ fn simple_type_to_mutator(simple_type: &str, allowed_values: &Option<Ident>) -> 
     match allowed_values {
         None => match simple_type {
             "char" => {
-                quote! { if value.len() == 1 { value.chars().next().unwrap()} else {return crate::lang::errors::argument_error("Argument must be exactly one character")}}
+                quote! { if _value.len() == 1 { _value.chars().next().unwrap()} else {return crate::lang::errors::argument_error("Argument must be exactly one character")}}
             }
-            "usize" => quote! { crate::lang::errors::to_crush_error(usize::try_from(value))?},
-            "u64" => quote! { crate::lang::errors::to_crush_error(u64::try_from(value))?},
-            "i64" => quote! { crate::lang::errors::to_crush_error(i64::try_from(value))?},
+            "usize" => quote! { crate::lang::errors::to_crush_error(usize::try_from(_value))?},
+            "u64" => quote! { crate::lang::errors::to_crush_error(u64::try_from(_value))?},
+            "i64" => quote! { crate::lang::errors::to_crush_error(i64::try_from(_value))?},
             "Stream" => {
-                quote! { crate::lang::errors::mandate(value.stream(), "Expected a type that can be streamed")? }
+                quote! { crate::lang::errors::mandate(_value.stream(), "Expected a type that can be streamed")? }
             }
-            _ => quote! {value},
+            _ => quote! {_value},
         },
         Some(allowed) => match simple_type {
             "char" => quote! {
-                if value.len() == 1 {
-                    let c = value.chars().next().unwrap();
+                if _value.len() == 1 {
+                    let c = _value.chars().next().unwrap();
                     if #allowed.contains(&c) {
                         c
                     } else {
@@ -212,15 +212,15 @@ fn simple_type_to_mutator(simple_type: &str, allowed_values: &Option<Ident>) -> 
                 }
             },
             "String" => quote! {
-                if #allowed.contains(&value.as_str()) {
-                    value
+                if #allowed.contains(&_value.as_str()) {
+                    _value
                 } else {
                     return crate::lang::errors::argument_error(format!("Only the following values are allowed: {:?}", #allowed).as_str())
                 }
             },
             _ => quote! {
-                if #allowed.contains(&value) {
-                    value
+                if #allowed.contains(&_value) {
+                    _value
                 } else {
                     return crate::lang::errors::argument_error(format!("Only the following values are allowed: {:?}", #allowed).as_str())
                 }
@@ -780,7 +780,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                         match (arg.argument_type.as_deref(), arg.value) {
                             #named_matchers
                             #named_fallback
-                            (None, value) => _unnamed.push_back(value),
+                            (None, _value) => _unnamed.push_back(_value),
                             _ => return crate::lang::errors::argument_error("Invalid parameter"),
                         }
                     }
@@ -794,7 +794,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
             let mut output = s.to_token_stream();
             output.extend(handler.into_token_stream());
-            //println!("ABCABC {}", output.to_string());
+            //            println!("ABCABC {}", output.to_string());
             Ok(output)
         }
         _ => fail!(root.span(), "Expected a struct"),

@@ -108,7 +108,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare_condition_command(
                 "for",
                 r#for::r#for,
-                "for [name=]iterable:(table_stream|table|dict|list) body:command",
+                "for [name=](table_stream|table|dict|list) body:command",
                 "Execute body once for every element in iterable.",
                 Some(
                     r#"    Example:

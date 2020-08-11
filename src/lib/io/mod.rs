@@ -5,9 +5,7 @@ use crate::lang::list::List;
 use crate::lang::pretty_printer::PrettyPrinter;
 use crate::lang::scope::Scope;
 use crate::lang::value::{Field, ValueType};
-use crate::lang::{
-    execution_context::ArgumentVector, execution_context::ExecutionContext, value::Value,
-};
+use crate::lang::{execution_context::ExecutionContext, value::Value};
 use signature::signature;
 
 mod bin;
@@ -20,18 +18,37 @@ mod split;
 mod toml;
 mod words;
 
-pub fn val(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(1)?;
-    context.output.send(context.arguments.value(0)?)
+#[signature(val,
+can_block = false,
+short = "Return value",
+output = Known(ValueType::Any),
+example = "val val",
+long = "This command is useful if you want to pass a command as input in\n    a pipeline instead of executing it. It is different from the echo command\n    in that val sends the value through the pipeline, whereas echo prints it to screen.")]
+struct Val {
+    #[description("the value to pass as output.")]
+    value: Value,
 }
 
-pub fn dir(mut context: ExecutionContext) -> CrushResult<()> {
-    context.arguments.check_len(1)?;
+pub fn val(context: ExecutionContext) -> CrushResult<()> {
+    let cfg: Val = Val::parse(context.arguments, &context.printer)?;
+    context.output.send(cfg.value)
+}
+
+#[signature(dir,
+can_block = false,
+short = "List members of value",
+output = Known(ValueType::List(Box::from(ValueType::String))),
+example = "dir .")]
+struct Dir {
+    #[description("the value to list the members of.")]
+    value: Value,
+}
+
+pub fn dir(context: ExecutionContext) -> CrushResult<()> {
+    let cfg: Dir = Dir::parse(context.arguments, &context.printer)?;
     context.output.send(Value::List(List::new(
         ValueType::String,
-        context
-            .arguments
-            .value(0)?
+        cfg.value
             .fields()
             .drain(..)
             .map(|n| Value::String(n))
@@ -39,7 +56,7 @@ pub fn dir(mut context: ExecutionContext) -> CrushResult<()> {
     )))
 }
 
-#[signature(echo, can_block=false, short="Prints all arguments directly to the screen", output = Known(ValueType::Empty), example="echo \"Hello, world!\"")]
+#[signature(echo, can_block = false, short = "Prints all arguments directly to the screen", output = Known(ValueType::Empty), example = "echo \"Hello, world!\"")]
 struct Echo {
     #[description("the values to print.")]
     #[unnamed()]
@@ -96,28 +113,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             http::Http::declare(env)?;
             Echo::declare(env)?;
             Member::declare(env)?;
-            env.declare_command(
-                "val",
-                val,
-                false,
-                "val value:any",
-                "Return value",
-                Some(
-                    r#"    This command is useful if you want to e.g. pass a command as input in
-    a pipeline instead of executing it. It is different from the echo command
-    in that val sends the value thorugh the pipeline, where echo prints it to screen."#,
-                ),
-                Known(ValueType::Any),
-            )?;
-            env.declare_command(
-                "dir",
-                dir,
-                false,
-                "dir value:any",
-                "List members of value",
-                None,
-                Known(ValueType::Empty),
-            )?;
+            Val::declare(env)?;
+            Dir::declare(env)?;
             Ok(())
         }),
     )?;
