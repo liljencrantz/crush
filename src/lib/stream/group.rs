@@ -110,7 +110,7 @@ fn create_worker_thread(
     let my_commands: Vec<Command> = cfg
         .command
         .iter()
-        .map(|(name, cmd)| cmd.copy())
+        .map(|(_name, cmd)| cmd.copy())
         .collect::<Vec<_>>();
     let my_printer = printer.clone();
     let my_scope = scope.clone();

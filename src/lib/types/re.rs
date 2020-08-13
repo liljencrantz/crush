@@ -37,8 +37,8 @@ lazy_static! {
             None,
             Known(ValueType::Bool),
         );
-        ReplaceSignature::declare_method(&mut res, &path);
-        ReplaceAllSignature::declare_method(&mut res, &path);
+        let _ = ReplaceSignature::declare_method(&mut res, &path); // TODO: why unused?
+        let _ = ReplaceAllSignature::declare_method(&mut res, &path); // TODO: why unused?
         res.declare(
             full("new"),
             new,

@@ -1,5 +1,6 @@
 use crate::lang::errors::Kind::*;
 use std::error::Error;
+use std::fmt::Display;
 
 #[derive(Debug, PartialEq)]
 pub enum Kind {
@@ -15,6 +16,12 @@ pub enum Kind {
 pub struct CrushError {
     pub kind: Kind,
     pub message: String,
+}
+
+impl<T: Display> From<T> for CrushError {
+    fn from(message: T) -> Self {
+        CrushError{kind: Kind::GenericError, message: message.to_string()}
+    }
 }
 
 pub type CrushResult<T> = Result<T, CrushError>;
@@ -49,9 +56,9 @@ pub fn data_error<T>(message: &str) -> Result<T, CrushError> {
     })
 }
 
-pub fn error<T>(message: &str) -> Result<T, CrushError> {
+pub fn error<T>(message: impl Into<String>) -> Result<T, CrushError> {
     Err(CrushError {
-        message: String::from(message),
+        message: message.into(),
         kind: GenericError,
     })
 }

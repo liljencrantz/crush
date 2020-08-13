@@ -18,15 +18,10 @@ use lib::declare;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-fn crush_history_file() -> String {
-    home()
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .join(Path::new(".crush_history"))
-        .to_str()
-        .unwrap_or(".crush_history")
-        .to_string()
+fn crush_history_file() -> PathBuf {
+    home().unwrap_or_else(|_| PathBuf::from(".")).join(".crush_history")
 }
 
 fn run_interactive(
@@ -43,11 +38,10 @@ fn run_interactive(
         let readline = rl.readline("crush# ");
 
         match readline {
+            Ok(cmd) if cmd.is_empty() => {}
             Ok(cmd) => {
-                if !cmd.is_empty() {
-                    rl.add_history_entry(cmd.as_str());
-                    execute::string(global_env.clone(), &cmd.as_str(), &printer, pretty_printer);
-                }
+                rl.add_history_entry(&cmd);
+                execute::string(global_env.clone(), &cmd, &printer, pretty_printer);
             }
             Err(ReadlineError::Interrupted) => {
                 printer.line("^C");
@@ -61,11 +55,9 @@ fn run_interactive(
                 break;
             }
         }
-        match rl.save_history(&crush_history_file()) {
-            Ok(_) => {}
-            Err(_) => {
-                printer.line("Error: Failed to save history.");
-            }
+
+        if let Err(err) = rl.save_history(&crush_history_file()) {
+            printer.line(&format!("Error: Failed to save history: {}", err))
         }
     }
     Ok(())
@@ -78,18 +70,18 @@ fn run() -> CrushResult<()> {
     declare(&global_env, &printer, &pretty_printer)?;
     let my_scope = global_env.create_child(&global_env, false);
 
-    let args = std::env::args().collect::<Vec<String>>();
-    match args.len() {
-        1 => run_interactive(my_scope, &printer, &pretty_printer)?,
-        2 => {
-            if args[1] == "--pup" {
+    let args = std::env::args().collect::<Vec<_>>();
+    match &args[..] {
+        [_exe] => run_interactive(my_scope, &printer, &pretty_printer)?,
+        [_exe, arg] => {
+            if arg == "--pup" {
                 let mut buff = Vec::new();
                 to_crush_error(std::io::stdin().read_to_end(&mut buff))?;
                 execute::pup(my_scope, &buff, &printer)?;
             } else {
                 execute::file(
                     my_scope,
-                    PathBuf::from(&args[1]).as_path(),
+                    PathBuf::from(&arg).as_path(),
                     &printer,
                     &pretty_printer,
                 )?
@@ -106,8 +98,7 @@ fn run() -> CrushResult<()> {
 }
 
 fn main() {
-    match run() {
-        Ok(_) => (),
-        Err(e) => println!("Error during initialization: {}", e.message),
+    if let Err(err) = run() {
+        eprintln!("Error during initialization: {}", err.message);
     }
 }

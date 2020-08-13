@@ -162,7 +162,7 @@ lazy_static! {
             None,
             Unknown,
         );
-        Repeat::declare_method(&mut res, &path);
+        let _ = Repeat::declare_method(&mut res, &path); // TODO: why unused?
 
         res
     };

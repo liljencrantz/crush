@@ -151,7 +151,7 @@ struct From {
     files: Files,
 }
 
-pub fn from(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn from(context: ExecutionContext) -> CrushResult<()> {
     let cfg: From = From::parse(context.arguments, &context.printer)?;
     let reader = BufReader::new(cfg.files.reader(context.input)?);
     let serde_value = to_crush_error(serde_json::from_reader(reader))?;
@@ -170,7 +170,7 @@ struct To {
     file: Files,
 }
 
-fn to(mut context: ExecutionContext) -> CrushResult<()> {
+fn to(context: ExecutionContext) -> CrushResult<()> {
     let cfg: To = To::parse(context.arguments, &context.printer)?;
     let mut writer = cfg.file.writer(context.output)?;
     let value = context.input.recv()?;
@@ -183,8 +183,8 @@ pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
     root.create_lazy_namespace(
         "json",
         Box::new(move |env| {
-            From::declare(env);
-            To::declare(env);
+            let _ = From::declare(env); // TODO: why unused?
+            let _ = To::declare(env); // TODO: why unused?
             Ok(())
         }),
     )?;
