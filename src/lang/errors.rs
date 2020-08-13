@@ -49,9 +49,9 @@ pub fn data_error<T>(message: &str) -> Result<T, CrushError> {
     })
 }
 
-pub fn error<T>(message: &str) -> Result<T, CrushError> {
+pub fn error<T>(message: impl Into<String>) -> Result<T, CrushError> {
     Err(CrushError {
-        message: String::from(message),
+        message: message.into(),
         kind: GenericError,
     })
 }

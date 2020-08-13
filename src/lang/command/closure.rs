@@ -53,7 +53,7 @@ impl CrushCommand for Closure {
             } else {
                 black_hole()
             };
-            let job = job_definition.invoke(JobContext::new(
+            let _job = job_definition.invoke(JobContext::new(
                 input,
                 output,
                 env.clone(),
@@ -105,7 +105,7 @@ impl CrushCommand for Closure {
         })
     }
 
-    fn output(&self, input: &OutputType) -> Option<&ValueType> {
+    fn output(&self, _input: &OutputType) -> Option<&ValueType> {
         None
     }
 }

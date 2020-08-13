@@ -3,10 +3,10 @@ use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::TypeMap;
 use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
-use crate::lang::execution_context::{ArgumentVector, This, ValueExecutionContext};
+use crate::lang::execution_context::{ArgumentVector, This};
 use crate::lang::value::ValueType;
 use crate::lang::{execution_context::ExecutionContext, value::Value};
-use chrono::{DateTime, Datelike, Local, Timelike};
+use chrono::{Datelike, Local, Timelike};
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use signature::signature;
@@ -48,7 +48,8 @@ lazy_static! {
             None,
             Known(ValueType::Time),
         );
-        Parse::declare_method(&mut res, &path);
+        // TODO: why unused?
+        let _ = Parse::declare_method(&mut res, &path);
         res
     };
 }

@@ -330,7 +330,7 @@ impl CrushCommand for ConditionCommand {
         })
     }
 
-    fn output(&self, input: &OutputType) -> Option<&ValueType> {
+    fn output(&self, _input: &OutputType) -> Option<&ValueType> {
         None
     }
 }

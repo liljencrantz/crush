@@ -37,7 +37,7 @@ pub enum ValueType {
 }
 
 lazy_static! {
-    pub static ref EMPTY_METHODS: OrderedMap<String, Command> = { OrderedMap::new() };
+    pub static ref EMPTY_METHODS: OrderedMap<String, Command> = OrderedMap::new();
 }
 
 impl ValueType {
