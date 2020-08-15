@@ -1,8 +1,7 @@
 use crate::lang::argument::Argument;
-use crate::lang::binary::{binary_channel, BinaryReader};
 use crate::lang::command::Command;
 use crate::lang::dict::Dict;
-use crate::lang::errors::{argument_error, error, to_crush_error, CrushResult};
+use crate::lang::errors::{argument_error, error, CrushResult};
 use crate::lang::job::JobJoinHandle;
 use crate::lang::list::List;
 use crate::lang::printer::Printer;
@@ -15,8 +14,6 @@ use crate::util::glob::Glob;
 use crate::util::replace::Replace;
 use chrono::{DateTime, Duration, Local};
 use regex::Regex;
-use std::fs::File;
-use std::io::Write;
 use std::path::PathBuf;
 
 pub trait ArgumentVector {
@@ -49,36 +46,38 @@ pub trait ArgumentHandler {
 
 macro_rules! argument_getter {
     ($name:ident, $return_type:ty, $value_type:ident, $description:literal) => {
-
-    fn $name(&mut self, idx: usize) -> CrushResult<$return_type> {
-        if idx < self.len() {
-            match self.replace(idx, Argument::unnamed(Value::Bool(false))).value {
-                Value::$value_type(s) => Ok(s),
-                v => argument_error(
-                    format!(
-                        concat!("Invalid value, expected a ", $description, ", found a {}"),
-                        v.value_type().to_string()).as_str()),
+        fn $name(&mut self, idx: usize) -> CrushResult<$return_type> {
+            if idx < self.len() {
+                match self
+                    .replace(idx, Argument::unnamed(Value::Bool(false)))
+                    .value
+                {
+                    Value::$value_type(s) => Ok(s),
+                    v => argument_error(
+                        format!(
+                            concat!("Invalid value, expected a ", $description, ", found a {}"),
+                            v.value_type().to_string()
+                        )
+                        .as_str(),
+                    ),
+                }
+            } else {
+                error("Index out of bounds")
             }
-        } else {
-            error("Index out of bounds")
         }
-    }
-
-    }
+    };
 }
 
 macro_rules! optional_argument_getter {
     ($name:ident, $return_type:ty, $method:ident) => {
-
-    fn $name(&mut self, idx: usize) -> CrushResult<Option<$return_type>> {
-        match self.len() - idx {
-            0 => Ok(None),
-            1 => Ok(Some(self.$method(idx)?)),
-            _ => argument_error("Wrong number of arguments"),
+        fn $name(&mut self, idx: usize) -> CrushResult<Option<$return_type>> {
+            match self.len() - idx {
+                0 => Ok(None),
+                1 => Ok(Some(self.$method(idx)?)),
+                _ => argument_error("Wrong number of arguments"),
+            }
         }
-    }
-
-    }
+    };
 }
 
 impl ArgumentVector for Vec<Argument> {
@@ -251,6 +250,7 @@ pub struct ExecutionContext {
     pub printer: Printer,
 }
 
+#[allow(unused)] // TODO: remove me?
 pub struct StreamExecutionContext<C> {
     pub config: C,
     pub input: TableReader,
@@ -259,6 +259,7 @@ pub struct StreamExecutionContext<C> {
     pub printer: Printer,
 }
 
+#[allow(unused)] // TODO: remove me?
 pub struct ValueExecutionContext<C> {
     pub config: C,
     pub env: Scope,
@@ -314,16 +315,24 @@ pub trait This {
 
 macro_rules! this_method {
     ($name:ident, $return_type:ty, $value_type:ident, $description:literal) => {
-
-    fn $name(mut self) -> CrushResult<$return_type> {
-        match self.take() {
-            Some(Value::$value_type(l)) => Ok(l),
-            None => argument_error(concat!("Expected this to be a ", $description, ", but this is not set")),
-            Some(v) => argument_error(format!(concat!("Expected this to be a ", $description, ", but it is a {}"), v.value_type().to_string()).as_str()),
+        fn $name(mut self) -> CrushResult<$return_type> {
+            match self.take() {
+                Some(Value::$value_type(l)) => Ok(l),
+                None => argument_error(concat!(
+                    "Expected this to be a ",
+                    $description,
+                    ", but this is not set"
+                )),
+                Some(v) => argument_error(
+                    format!(
+                        concat!("Expected this to be a ", $description, ", but it is a {}"),
+                        v.value_type().to_string()
+                    )
+                    .as_str(),
+                ),
+            }
         }
-    }
-
-    }
+    };
 }
 
 impl This for Option<Value> {

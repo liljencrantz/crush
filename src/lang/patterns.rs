@@ -1,4 +1,3 @@
-use crate::lang::errors::{to_crush_error, CrushResult};
 use crate::lang::value::Value;
 use crate::util::glob::Glob;
 use regex::Regex;

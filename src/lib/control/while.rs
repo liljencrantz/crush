@@ -1,7 +1,7 @@
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::Command;
 use crate::lang::errors::{data_error, CrushResult};
-use crate::lang::execution_context::{ArgumentVector, ExecutionContext};
+use crate::lang::execution_context::ExecutionContext;
 use crate::lang::stream::{black_hole, channels, empty_channel};
 use crate::lang::value::Value;
 use signature::signature;

@@ -22,24 +22,22 @@ impl Identity for List {
 
 macro_rules! dump_to {
     ($name:ident, $destination_type:ident, $value_type:ident, $convert:expr) => {
-    pub fn $name(&self, destination: &mut Vec<$destination_type>) -> CrushResult<()> {
-        if self.element_type() != ValueType::$value_type {
-            error("Wrong list type")
-        } else {
-            let cells = self.cells.lock().unwrap();
-            for el in cells.iter() {
-                match el {
-                    Value::$value_type(s) => destination.push($convert(s)),
-                    _ => return error("Wrong element type"),
+        #[allow(unused)]
+        pub fn $name(&self, destination: &mut Vec<$destination_type>) -> CrushResult<()> {
+            if self.element_type() != ValueType::$value_type {
+                error("Wrong list type")
+            } else {
+                let cells = self.cells.lock().unwrap();
+                for el in cells.iter() {
+                    match el {
+                        Value::$value_type(s) => destination.push($convert(s)),
+                        _ => return error("Wrong element type"),
+                    }
                 }
-
+                Ok(())
             }
-            Ok(())
         }
-    }
-
-    }
-
+    };
 }
 
 impl List {

@@ -500,6 +500,7 @@ struct Metadata {
     long_description: Vec<String>,
     example: Option<String>,
     output: Option<TokenStream>,
+    #[allow(unused)]
     condition: bool,
 }
 
@@ -751,6 +752,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
             let handler = quote! {
 
+            #[allow(unused_parens)] // TODO: don't emit unnecessary parenthesis in the first place
             impl crate::lang::argument::ArgumentHandler for #struct_name {
                 fn declare(env: &mut crate::lang::scope::ScopeLoader) -> crate::lang::errors::CrushResult <()> {
                     env.declare_command(

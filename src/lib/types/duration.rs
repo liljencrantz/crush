@@ -43,7 +43,7 @@ lazy_static! {
             "Divide this duration by the specified divisor",
             None,
             Known(ValueType::Duration));
-        New::declare_method(&mut res, &path);
+        let _ = New::declare_method(&mut res, &path); // TODO why unused?
 /*
         res.declare(full("new"),
             new, false,
@@ -80,6 +80,7 @@ binary_op!(sub, duration, Duration, Duration, |a, b| a - b);
 binary_op!(mul, duration, Integer, Duration, |a, b| a * (b as i32));
 binary_op!(div, duration, Integer, Duration, |a, b| a / (b as i32));
 
+#[allow(unused)]
 fn to_duration(a: i64, t: &str) -> CrushResult<chrono::Duration> {
     match t {
         "nanosecond" | "nanoseconds" => Ok(Duration::nanoseconds(a)),

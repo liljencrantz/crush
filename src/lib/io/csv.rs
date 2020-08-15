@@ -84,7 +84,7 @@ fn from(context: ExecutionContext) -> CrushResult<()> {
         match split
             .iter()
             .zip(columns.iter())
-            .map({ |(s, t)| t.cell_type.parse(*s) })
+            .map(|(s, t)| t.cell_type.parse(*s))
             .collect::<Result<Vec<Value>, CrushError>>()
         {
             Ok(cells) => {

@@ -5,7 +5,6 @@ use crate::lang::value::Value;
 use chrono::Duration;
 use crossbeam::{bounded, unbounded, Receiver, Sender};
 use lazy_static::lazy_static;
-use std::error::Error;
 
 pub type RecvTimeoutError = crossbeam::channel::RecvTimeoutError;
 
@@ -65,7 +64,7 @@ impl OutputStream {
         let native_output = self.sender.send(row);
         match native_output {
             Ok(_) => Ok(()),
-            Err(e) => error(e.description()),
+            Err(e) => error(e.to_string()),
         }
     }
 }
