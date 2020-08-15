@@ -2,6 +2,7 @@ use crate::lang::errors::{to_crush_error, CrushResult};
 use crate::lang::value::Value;
 use crate::util::glob::Glob;
 use regex::Regex;
+use std::fmt::{Display, Formatter};
 
 pub struct Patterns {
     patterns: Vec<Value>,
@@ -33,5 +34,14 @@ impl Patterns {
             }
         }
         false
+    }
+}
+
+impl Display for Patterns {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        f.write_str("[")?;
+        f.write_str(&self.patterns.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", "))?;
+        f.write_str("]")?;
+        Ok(())
     }
 }

@@ -344,11 +344,11 @@ fn type_to_value(
                         name.to_string()
                     ),
                     initialize: quote! { let mut #name = crate::lang::files::Files::new(); },
-                    mappings: quote! { (Some(#name_literal), value) => #name.expand(value, printer)?, },
+                    mappings: quote! { (Some(#name_literal), value) => #name.expand(value, _printer)?, },
                     unnamed_mutate: if is_unnamed_target {
                         Some(quote! {
                             while !_unnamed.is_empty() {
-                                #name.expand(_unnamed.pop_front().unwrap(), printer)?;
+                                #name.expand(_unnamed.pop_front().unwrap(), _printer)?;
                             }
                         })
                     } else {
@@ -771,12 +771,12 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                     Ok(())
                 }
 
-                fn parse(arguments: Vec<crate::lang::argument::Argument>, printer: &crate::lang::printer::Printer) -> crate::lang::errors::CrushResult < # struct_name > {
+                fn parse(_arguments: Vec<crate::lang::argument::Argument>, _printer: &crate::lang::printer::Printer) -> crate::lang::errors::CrushResult < # struct_name > {
                     use std::convert::TryFrom;
                     # values
                     let mut _unnamed = std::collections::VecDeque::new();
 
-                    for arg in arguments {
+                    for arg in _arguments {
                         match (arg.argument_type.as_deref(), arg.value) {
                             #named_matchers
                             #named_fallback
@@ -794,7 +794,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
             let mut output = s.to_token_stream();
             output.extend(handler.into_token_stream());
-            //            println!("ABCABC {}", output.to_string());
+            //println!("ABCABC {}", output.to_string());
             Ok(output)
         }
         _ => fail!(root.span(), "Expected a struct"),

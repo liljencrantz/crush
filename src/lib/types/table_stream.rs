@@ -17,7 +17,7 @@ lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
         res.declare(
-            full("__call_type__"),
+            full("__call__"),
             call_type,
             false,
             "table_stream column_name=type:type...",

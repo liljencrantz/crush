@@ -296,7 +296,7 @@ former displays a help messages, the latter lists the content of a value.
     
         ps | sort ^cpu
     crush# dir list
-    [type, truncate, remove, clone, of, __call_type__, __setitem__, pop, push, empty, len, peek, new, clear]
+    [type, truncate, remove, clone, of, __call__, __setitem__, pop, push, empty, len, peek, new, clear]
 
 ### The content of your current working directory lives in your namespace
 
@@ -430,7 +430,7 @@ Crush has built-in lists:
 
         A mutable list of items, usually of the same type
 
-        * __call_type__  Return a list type for the specified element type
+        * __call__  Return a list type for the specified element type
         * __getitem__    Return a file or subdirectory in the specified base directory
         * __setitem__    Assign a new value to the element at the specified index
         * clear          Remove all elments from the list
@@ -456,7 +456,7 @@ and dictionaries:
 
         A mutable mapping from one set of values to another
 
-        * __call_type__  Returns a dict type with the specifiec key and value types
+        * __call__  Returns a dict type with the specifiec key and value types
         * __getitem__    Return the value the specified key is mapped to
         * __setitem__    Create a new mapping or replace an existing one
         * clear          Remove all mappings from this dict

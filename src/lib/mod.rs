@@ -10,6 +10,7 @@ mod comp;
 mod cond;
 mod constants;
 mod control;
+mod dbus;
 mod host;
 mod math;
 mod random;
@@ -98,6 +99,7 @@ pub fn declare(root: &Scope, printer: &Printer, output: &ValueSender) -> CrushRe
     remote::declare(root)?;
     random::declare(root)?;
     host::declare(root)?;
+    dbus::declare(root)?;
     declare_external(root, printer, output)?;
     root.readonly();
     Ok(())

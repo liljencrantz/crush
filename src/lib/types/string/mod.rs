@@ -155,9 +155,25 @@ lazy_static! {
                 None,
                 Known(ValueType::Bool),
             );
+            res.declare(
+                full("len"),
+                len,
+                false,
+                "string:len",
+                "Returns the length (in number of characters) of the string",
+                None,
+                Known(ValueType::Integer),
+            );
             IsDigit::declare_method(&mut res, &path);
             res
         };
+}
+
+fn len(context: ExecutionContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
+    context
+        .output
+        .send(Value::Integer(context.this.string()?.len() as i128))
 }
 
 fn upper(context: ExecutionContext) -> CrushResult<()> {

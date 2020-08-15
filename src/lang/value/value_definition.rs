@@ -1,5 +1,5 @@
 use crate::lang::command::Parameter;
-use crate::lang::errors::{block_error, mandate};
+use crate::lang::errors::{block_error, mandate, error};
 use crate::lang::execution_context::CompileContext;
 use crate::lang::{argument::ArgumentDefinition, command::CrushCommand, job::Job};
 use crate::{
@@ -7,6 +7,7 @@ use crate::{
     lang::value::Value,
 };
 use std::path::PathBuf;
+use crate::lang::stream::black_hole;
 
 #[derive(Clone)]
 pub enum ValueDefinition {
@@ -84,7 +85,18 @@ impl ValueDefinition {
             ),
 
             ValueDefinition::GetAttr(parent_def, entry) => {
-                let parent = parent_def.compile_internal(context, can_block)?.1;
+                let (grand_parent, mut parent) = parent_def.compile_internal(context, can_block)?;
+                parent = if let Value::Command(parent_cmd) = &parent {
+                    if !can_block {
+                        return block_error();
+                    }
+                    let first_input = empty_channel();
+                    let (last_output, last_input) = channels();
+                    parent_cmd.invoke(context.job_context(first_input, last_output).execution_context(vec![], grand_parent))?;
+                    last_input.recv()?
+                } else {
+                    parent
+                };
                 let val = mandate(
                     parent.field(&entry)?,
                     format!(
@@ -92,7 +104,7 @@ impl ValueDefinition {
                         entry,
                         parent.value_type().to_string()
                     )
-                    .as_str(),
+                        .as_str(),
                 )?;
                 (Some(parent), val)
             }

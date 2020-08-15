@@ -195,7 +195,7 @@ fn invoke_value(
                 )
             }
         }
-        Value::Type(t) => match t.fields().get("__call_type__") {
+        Value::Type(t) => match t.fields().get("__call__") {
             None => invoke_command(
                 context.env.global_static_cmd(vec!["global", "io", "val"])?,
                 None,
@@ -210,6 +210,16 @@ fn invoke_value(
                 local_arguments,
                 context,
             ),
+        },
+        Value::Struct(s) => match s.get("__call__") {
+            Some(Value::Command(call)) => invoke_command(
+                call,
+                Some(Value::Struct(s)),
+                local_arguments,
+                context,
+            ),
+            Some(v) => error(format!("__call__ should be a command, was of type {}", v.value_type().to_string()).as_str()),
+            _ => error(format!("Struct must have a member __call__ to be used as a command {}", s.to_string()).as_str()),
         },
         _ => {
             if local_arguments.len() == 0 {

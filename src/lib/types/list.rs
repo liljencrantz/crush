@@ -140,7 +140,7 @@ lazy_static! {
             Unknown,
         );
         res.declare(
-            full("__call_type__"),
+            full("__call__"),
             call_type,
             false,
             "list element_type:type",
