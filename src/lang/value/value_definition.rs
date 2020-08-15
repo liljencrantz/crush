@@ -1,5 +1,5 @@
 use crate::lang::command::Parameter;
-use crate::lang::errors::{block_error, mandate, error};
+use crate::lang::errors::{block_error, mandate};
 use crate::lang::execution_context::CompileContext;
 use crate::lang::{argument::ArgumentDefinition, command::CrushCommand, job::Job};
 use crate::{
@@ -7,7 +7,6 @@ use crate::{
     lang::value::Value,
 };
 use std::path::PathBuf;
-use crate::lang::stream::black_hole;
 
 #[derive(Clone)]
 pub enum ValueDefinition {

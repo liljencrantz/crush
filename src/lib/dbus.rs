@@ -2,13 +2,12 @@ use signature::signature;
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::*;
-use crate::lang::errors::{mandate, CrushResult, to_crush_error, data_error, argument_error, error, CrushError};
-use crate::lang::execution_context::{ArgumentVector, ExecutionContext};
+use crate::lang::errors::{mandate, CrushResult, to_crush_error, data_error, argument_error, error};
+use crate::lang::execution_context::{ExecutionContext};
 use crate::lang::scope::Scope;
 use crate::lang::value::{Value, ValueType};
 use dbus::blocking::{Connection, Proxy, BlockingSender};
 use std::time::Duration;
-use crate::lang::table::{Row};
 use crate::lang::r#struct::Struct;
 use crate::lang::list::List;
 use dbus::Message;
@@ -16,7 +15,7 @@ use dbus::arg::{ArgType, IterAppend};
 use std::collections::HashSet;
 use std::iter::Peekable;
 use std::str::Chars;
-use std::convert::{TryInto, TryFrom};
+use std::convert::TryFrom;
 
 struct DBusThing {
     connection: Connection,
@@ -374,10 +373,12 @@ impl DBusMethod {
     fn deserialize(&self, message: &Message) -> CrushResult<Vec<Value>> {
         let mut iter = message.iter_init();
         let mut res = Vec::new();
-        for arg in self.arguments.iter()
-            .filter(|a| a.direction == DBusArgumentDirection::Out) {
-            res.push(deserialize(&mut iter)?);
+        while let Ok(value) = deserialize(&mut iter) {
+            res.push(value);
             iter.next();
+            if !iter.next() {
+                break;
+            }
         }
         Ok(res)
     }
@@ -428,7 +429,7 @@ fn filter_object(mut input: Vec<DBusObject>, filter: Value) -> CrushResult<DBusO
 fn filter_method(mut input: Vec<DBusInterface>, filter: Value) -> CrushResult<(DBusInterface, DBusMethod)> {
     let mut res: Vec<_>;
     let mut flattened = input.drain(..)
-        .flat_map(|mut i|
+        .flat_map(|i|
             i.methods.iter().map(|m| (i.clone(), m.clone()))
                 .collect::<Vec<_>>())
         .collect::<Vec<_>>();
@@ -473,12 +474,12 @@ fn service_call(context: ExecutionContext) -> CrushResult<()> {
                             .collect())))
                 }
                 (Some(object), Some(method)) => {
-                    let mut object = filter_object(objects, object)?;
+                    let object = filter_object(objects, object)?;
                     let (interface, method) = filter_method(object.interfaces.clone(), method)?;
                     let result = dbus.call(&service, &object, &interface, &method, cfg.arguments)?;
                     context.output.send(Value::List(List::new(ValueType::Any, result)))
                 }
-                (None, Some(method)) => {
+                (None, Some(_)) => {
                     argument_error("Missing object")
                 }
             }
@@ -493,9 +494,20 @@ fn service_call(context: ExecutionContext) -> CrushResult<()> {
 #[signature(session, can_block = false, output = Known(ValueType::Struct), short = "A struct containing all dbus session-level services")]
 struct Session {}
 
-
 fn session(context: ExecutionContext) -> CrushResult<()> {
     let dbus = DBusThing::new(to_crush_error(Connection::new_session())?);
+    populate_bus(context, dbus)
+}
+
+#[signature(system, can_block = false, output = Known(ValueType::Struct), short = "A struct containing all dbus system-level services")]
+struct System {}
+
+fn system(context: ExecutionContext) -> CrushResult<()> {
+    let dbus = DBusThing::new(to_crush_error(Connection::new_system())?);
+    populate_bus(context, dbus)
+}
+
+fn populate_bus(context: ExecutionContext, dbus: DBusThing) -> CrushResult<()> {
 
     let mut members = Vec::new();
 
@@ -543,12 +555,12 @@ dbus:session:org.pulseaudio.Server /org/pulseaudio/Server
 dbus:session:org.gnome.Shell %%/ScreenSaver %.setActive true
 
 */
-
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_lazy_namespace(
         "dbus",
         Box::new(move |dbus| {
             Session::declare(dbus)?;
+            System::declare(dbus)?;
             Ok(())
         }),
     )?;
