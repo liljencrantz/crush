@@ -13,9 +13,9 @@ pub enum CrushError {
 impl CrushError {
     pub fn message(&self) -> String {
         match self {
-            CrushError::InvalidArgument(s) |
-            CrushError::InvalidData(s) |
-            CrushError::GenericError(s) => s.clone(),
+            CrushError::InvalidArgument(s)
+            | CrushError::InvalidData(s)
+            | CrushError::GenericError(s) => s.clone(),
             CrushError::BlockError => "Block error".to_string(),
             CrushError::SendError => "Send error".to_string(),
             CrushError::EOFError => "EOF error".to_string(),

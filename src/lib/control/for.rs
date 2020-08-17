@@ -1,11 +1,11 @@
 use crate::lang::argument::Argument;
 use crate::lang::command::Command;
-use crate::lang::errors::{argument_error, CrushResult, mandate};
+use crate::lang::errors::{argument_error, mandate, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, ExecutionContext};
+use crate::lang::r#struct::StructReader;
 use crate::lang::stream::{black_hole, empty_channel, CrushStream};
 use crate::lang::value::Value;
 use crate::lang::{dict::DictReader, list::ListReader, r#struct::Struct, table::TableReader};
-use crate::lang::r#struct::StructReader;
 
 pub fn r#for(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Empty());
@@ -47,9 +47,7 @@ pub fn r#for(mut context: ExecutionContext) -> CrushResult<()> {
             this: None,
             printer: context.printer.clone(),
         })?;
-        if
-        env.
-            is_stopped() {
+        if env.is_stopped() {
             break;
         }
     }

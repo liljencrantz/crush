@@ -1,6 +1,8 @@
 use crate::lang::binary::BinaryReader;
 use crate::lang::errors::to_crush_error;
+use crate::lang::list::ListReader;
 use crate::lang::printer::Printer;
+use crate::lang::r#struct::StructReader;
 use crate::lang::stream::{channels, CrushStream, InputStream, ValueSender};
 use crate::lang::table::ColumnType;
 use crate::lang::table::Row;
@@ -9,12 +11,10 @@ use crate::lang::table::TableReader;
 use crate::lang::value::Alignment;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
-use crate::lang::r#struct::StructReader;
 use std::cmp::max;
 use std::io::{BufReader, Read};
 use std::thread;
 use time::Duration;
-use crate::lang::list::ListReader;
 
 pub fn create_pretty_printer(printer: Printer) -> ValueSender {
     let (o, i) = channels();
@@ -113,14 +113,14 @@ impl PrettyPrinter {
                 } else {
                     self.print_readable(&mut StructReader::new(data), 0)
                 }
-            },
+            }
             Value::List(list) => {
                 if list.len() < 8 {
                     self.printer.line(list.to_string().as_str())
                 } else {
                     self.print_readable(&mut ListReader::new(list, "value"), 0)
                 }
-            },
+            }
             _ => self.printer.line(cell.to_string().as_str()),
         };
     }

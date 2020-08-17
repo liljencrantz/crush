@@ -21,7 +21,9 @@ use std::io::Read;
 use std::path::PathBuf;
 
 fn crush_history_file() -> PathBuf {
-    home().unwrap_or_else(|_| PathBuf::from(".")).join(".crush_history")
+    home()
+        .unwrap_or_else(|_| PathBuf::from("."))
+        .join(".crush_history")
 }
 
 fn run_interactive(

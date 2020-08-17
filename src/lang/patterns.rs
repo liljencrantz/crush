@@ -39,7 +39,14 @@ impl Patterns {
 impl Display for Patterns {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         f.write_str("[")?;
-        f.write_str(&self.patterns.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", "))?;
+        f.write_str(
+            &self
+                .patterns
+                .iter()
+                .map(|v| v.to_string())
+                .collect::<Vec<_>>()
+                .join(", "),
+        )?;
         f.write_str("]")?;
         Ok(())
     }

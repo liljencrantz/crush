@@ -1,4 +1,4 @@
-use crate::lang::errors::{error, CrushResult, CrushError};
+use crate::lang::errors::{error, CrushError, CrushResult};
 use crate::lang::execution_context::{CompileContext, JobContext};
 use crate::lang::scope::Scope;
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, value::Value};
@@ -212,14 +212,23 @@ fn invoke_value(
             ),
         },
         Value::Struct(s) => match s.get("__call__") {
-            Some(Value::Command(call)) => invoke_command(
-                call,
-                Some(Value::Struct(s)),
-                local_arguments,
-                context,
+            Some(Value::Command(call)) => {
+                invoke_command(call, Some(Value::Struct(s)), local_arguments, context)
+            }
+            Some(v) => error(
+                format!(
+                    "__call__ should be a command, was of type {}",
+                    v.value_type().to_string()
+                )
+                .as_str(),
             ),
-            Some(v) => error(format!("__call__ should be a command, was of type {}", v.value_type().to_string()).as_str()),
-            _ => error(format!("Struct must have a member __call__ to be used as a command {}", s.to_string()).as_str()),
+            _ => error(
+                format!(
+                    "Struct must have a member __call__ to be used as a command {}",
+                    s.to_string()
+                )
+                .as_str(),
+            ),
         },
         _ => {
             if local_arguments.len() == 0 {

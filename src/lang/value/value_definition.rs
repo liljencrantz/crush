@@ -91,7 +91,11 @@ impl ValueDefinition {
                     }
                     let first_input = empty_channel();
                     let (last_output, last_input) = channels();
-                    parent_cmd.invoke(context.job_context(first_input, last_output).execution_context(vec![], grand_parent))?;
+                    parent_cmd.invoke(
+                        context
+                            .job_context(first_input, last_output)
+                            .execution_context(vec![], grand_parent),
+                    )?;
                     last_input.recv()?
                 } else {
                     parent
@@ -103,7 +107,7 @@ impl ValueDefinition {
                         entry,
                         parent.value_type().to_string()
                     )
-                        .as_str(),
+                    .as_str(),
                 )?;
                 (Some(parent), val)
             }

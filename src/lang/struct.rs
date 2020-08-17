@@ -1,18 +1,18 @@
+use crate::lang::errors::{error, CrushError};
+use crate::lang::stream::CrushStream;
 use crate::lang::table::ColumnType;
 use crate::lang::table::Row;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use crate::util::identity_arc::Identity;
 use crate::util::replace::Replace;
+use chrono::Duration;
+use lazy_static::lazy_static;
+use ordered_map::OrderedMap;
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
-use ordered_map::OrderedMap;
-use lazy_static::lazy_static;
-use chrono::Duration;
-use crate::lang::stream::CrushStream;
-use crate::lang::errors::{CrushError, error};
 
 lazy_static! {
     pub static ref STRUCT_STREAM_TYPE: Vec<ColumnType> = vec![

@@ -1,5 +1,4 @@
 use proc_macro2;
-
 use proc_macro2::Ident;
 use proc_macro2::{Literal, TokenStream, TokenTree};
 use quote::{quote, quote_spanned, ToTokens};

@@ -1,8 +1,9 @@
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::OutputType::{Known, Unknown};
-use crate::lang::errors::{to_crush_error, CrushResult};
+use crate::lang::errors::{error, to_crush_error, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, ExecutionContext};
 use crate::lang::scope::Scope;
+use crate::lang::stream::OutputStream;
 use crate::lang::table::ColumnType;
 use crate::util::user_map::{create_user_map, UserMap};
 use crate::{lang::table::Row, lang::value::Value, lang::value::ValueType};
@@ -10,10 +11,12 @@ use chrono::Duration;
 use lazy_static::lazy_static;
 use nix::sys::signal;
 use nix::unistd::Pid;
-use psutil::process::State;
+use psutil::process::os::unix::ProcessExt;
+use psutil::process::{Process, ProcessResult, Status};
 use signature::signature;
+use std::collections::HashMap;
 use std::str::FromStr;
-use users::uid_t;
+use users::{uid_t, User};
 
 lazy_static! {
     static ref PS_OUTPUT_TYPE: Vec<ColumnType> = vec![
@@ -26,17 +29,22 @@ lazy_static! {
     ];
 }
 
-fn state_name(s: psutil::process::State) -> &'static str {
+fn state_name(s: Status) -> &'static str {
     match s {
-        State::Running => "Running",
-        State::Sleeping => "Sleeping",
-        State::Waiting => "Waiting",
-        State::Stopped => "Stopped",
-        State::Traced => "Traced",
-        State::Paging => "Paging",
-        State::Dead => "Dead",
-        State::Zombie => "Zombie",
-        State::Idle => "Idle",
+        Status::Running => "Running",
+        Status::Sleeping => "Sleeping",
+        Status::Waiting => "Waiting",
+        Status::Stopped => "Stopped",
+        Status::Dead => "Dead",
+        Status::Zombie => "Zombie",
+        Status::Idle => "Idle",
+        Status::DiskSleep => "DiskSleep",
+        Status::TracingStop => "TracingStop",
+        Status::WakeKill => "WakeKill",
+        Status::Waking => "Waking",
+        Status::Parked => "Parked",
+        Status::Locked => "Locked",
+        Status::Suspended => "Suspended",
     }
 }
 
@@ -45,30 +53,41 @@ fn ps(context: ExecutionContext) -> CrushResult<()> {
     let output = context.output.initialize(PS_OUTPUT_TYPE.clone())?;
     let users = create_user_map();
 
-    for proc in &psutil::process::all().unwrap() {
-        output.send(Row::new(vec![
-            Value::Integer(proc.pid as i128),
-            Value::Integer(proc.ppid as i128),
-            Value::string(state_name(proc.state)),
-            users.get_name(proc.uid as uid_t),
-            Value::Duration(Duration::microseconds((proc.utime * 1_000_000.0) as i64)),
-            Value::string(
-                proc.cmdline_vec()
-                    .unwrap_or_else(|_| Some(vec!["<Illegal name>".to_string()]))
-                    .unwrap_or_else(|| vec![format!("[{}]", proc.comm)])[0]
-                    .as_ref(),
-            ),
-        ]))?;
+    match psutil::process::processes() {
+        Ok(procs) => {
+            for proc in procs {
+                output.send(to_crush_error(ps_internal(proc, &users))?)?;
+            }
+        }
+        Err(e) => return error("Failed to list processes"),
     }
     Ok(())
 }
 
+fn ps_internal(proc: ProcessResult<Process>, users: &HashMap<u32, User>) -> ProcessResult<Row> {
+    let mut proc = proc?;
+    Ok(Row::new(vec![
+        Value::Integer(proc.pid() as i128),
+        Value::Integer(proc.ppid()?.unwrap_or(0) as i128),
+        Value::string(state_name(proc.status()?)),
+        users.get_name(proc.uids()?.effective as uid_t),
+        Value::Duration(Duration::microseconds(
+            proc.cpu_times()?.busy().as_micros() as i64
+        )),
+        Value::string(
+            proc.cmdline_vec()?
+                .unwrap_or(vec![format!("[{}]", proc.name()?)])[0]
+                .as_ref(),
+        ),
+    ]))
+}
+
 #[signature(
-    kill,
-    can_block=false,
-    short="Send a signal to a set of processes",
-    output=Known(ValueType::Empty),
-    long="The set of existing signals is platform dependent, but common signals
+kill,
+can_block = false,
+short = "Send a signal to a set of processes",
+output = Known(ValueType::Empty),
+long = "The set of existing signals is platform dependent, but common signals
     include SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGTRAP, SIGABRT, SIGBUS, SIGFPE,
     SIGKILL, SIGUSR1, SIGSEGV, SIGUSR2, SIGPIPE, SIGALRM, SIGTERM, SIGCHLD,
     SIGCONT and SIGWINCH.")]
