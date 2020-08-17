@@ -1,5 +1,6 @@
 pub mod io;
-pub mod proc;
+#[cfg(target_os = "linux")]
+mod proc;
 pub mod traversal;
 pub mod var;
 
@@ -10,6 +11,7 @@ mod comp;
 mod cond;
 mod constants;
 mod control;
+#[cfg(target_os = "linux")]
 mod dbus;
 mod host;
 mod math;
@@ -90,6 +92,7 @@ pub fn declare(root: &Scope, printer: &Printer, output: &ValueSender) -> CrushRe
     var::declare(root)?;
     stream::declare(root)?;
     types::declare(root)?;
+    #[cfg(target_os = "linux")]
     proc::declare(root)?;
     io::declare(root)?;
     control::declare(root)?;
@@ -99,6 +102,7 @@ pub fn declare(root: &Scope, printer: &Printer, output: &ValueSender) -> CrushRe
     remote::declare(root)?;
     random::declare(root)?;
     host::declare(root)?;
+    #[cfg(target_os = "linux")]
     dbus::declare(root)?;
     declare_external(root, printer, output)?;
     root.readonly();
