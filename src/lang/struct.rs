@@ -1,17 +1,30 @@
 use crate::lang::table::ColumnType;
 use crate::lang::table::Row;
 use crate::lang::value::Value;
+use crate::lang::value::ValueType;
 use crate::util::identity_arc::Identity;
 use crate::util::replace::Replace;
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
+use ordered_map::OrderedMap;
+use lazy_static::lazy_static;
+use chrono::Duration;
+use crate::lang::stream::CrushStream;
+use crate::lang::errors::{CrushError, error};
+
+lazy_static! {
+    pub static ref STRUCT_STREAM_TYPE: Vec<ColumnType> = vec![
+        ColumnType::new("name", ValueType::String),
+        ColumnType::new("value", ValueType::Any),
+    ];
+}
 
 #[derive(Clone)]
 struct StructData {
     parent: Option<Struct>,
-    lookup: HashMap<String, usize>,
+    lookup: OrderedMap<String, usize>,
     cells: Vec<Value>,
 }
 
@@ -72,7 +85,7 @@ impl PartialOrd for Struct {
 
 impl Struct {
     pub fn new(mut vec: Vec<(String, Value)>, parent: Option<Struct>) -> Struct {
-        let mut lookup = HashMap::new();
+        let mut lookup = OrderedMap::new();
         let mut cells = Vec::new();
         vec.drain(..).for_each(|(key, value)| {
             lookup.insert(key, cells.len());
@@ -88,7 +101,7 @@ impl Struct {
     }
 
     pub fn from_vec(mut values: Vec<Value>, types: Vec<ColumnType>) -> Struct {
-        let mut lookup = HashMap::new();
+        let mut lookup = OrderedMap::new();
         let mut cells = Vec::new();
 
         values.drain(..).zip(types).for_each(|(value, column)| {
@@ -107,7 +120,7 @@ impl Struct {
     pub fn local_signature(&self) -> Vec<ColumnType> {
         let mut res = Vec::new();
         let data = self.data.lock().unwrap();
-        let mut reverse_lookup = HashMap::new();
+        let mut reverse_lookup = OrderedMap::new();
         for (key, value) in &data.lookup {
             reverse_lookup.insert(value.clone(), key);
         }
@@ -121,7 +134,7 @@ impl Struct {
     }
 
     pub fn local_elements(&self) -> Vec<(String, Value)> {
-        let mut reverse_lookup = HashMap::new();
+        let mut reverse_lookup = OrderedMap::new();
         let data = self.data.lock().unwrap();
         for (key, value) in &data.lookup {
             reverse_lookup.insert(value.clone(), key);
@@ -171,6 +184,26 @@ impl Struct {
         drop(data);
         if let Some(p) = parent {
             p.fill_keys(dest);
+        }
+    }
+
+    pub fn map(&self) -> OrderedMap<String, Value> {
+        let mut map = OrderedMap::new();
+        self.fill_map(&mut map);
+        map
+    }
+
+    fn fill_map(&self, dest: &mut OrderedMap<String, Value>) {
+        let data = self.data.lock().unwrap();
+        data.lookup.iter().for_each(|(name, idx)| {
+            if !dest.contains_key(name) {
+                dest.insert(name.clone(), data.cells[*idx].clone());
+            }
+        });
+        let parent = data.parent.clone();
+        drop(data);
+        if let Some(p) = parent {
+            p.fill_map(dest);
         }
     }
 
@@ -224,5 +257,46 @@ impl ToString for Struct {
                 .collect::<Vec<String>>()
                 .join(", ")
         )
+    }
+}
+
+pub struct StructReader {
+    idx: usize,
+    rows: Vec<(String, Value)>,
+}
+
+impl StructReader {
+    pub fn new(s: Struct) -> StructReader {
+        StructReader {
+            idx: 0,
+            rows: s.map().drain().collect(),
+        }
+    }
+}
+
+impl CrushStream for StructReader {
+    fn read(&mut self) -> Result<Row, CrushError> {
+        if self.idx >= self.rows.len() {
+            return error("EOF");
+        }
+        self.idx += 1;
+        let (k, v) = self
+            .rows
+            .replace(self.idx - 1, ("".to_string(), Value::Empty()));
+        Ok(Row::new(vec![Value::String(k), v]))
+    }
+
+    fn read_timeout(
+        &mut self,
+        _timeout: Duration,
+    ) -> Result<Row, crate::lang::stream::RecvTimeoutError> {
+        match self.read() {
+            Ok(r) => Ok(r),
+            Err(_) => Err(crate::lang::stream::RecvTimeoutError::Disconnected),
+        }
+    }
+
+    fn types(&self) -> &[ColumnType] {
+        &STRUCT_STREAM_TYPE
     }
 }

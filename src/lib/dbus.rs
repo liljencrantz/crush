@@ -1,8 +1,8 @@
 use signature::signature;
-use crate::lang::argument::ArgumentHandler;
+use crate::lang::argument::{ArgumentHandler, column_names, Argument};
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::*;
-use crate::lang::errors::{mandate, CrushResult, to_crush_error, data_error, argument_error, error};
+use crate::lang::errors::{mandate, CrushResult, to_crush_error, data_error, argument_error, error, send_error, eof_error, CrushError};
 use crate::lang::execution_context::{ExecutionContext};
 use crate::lang::scope::Scope;
 use crate::lang::value::{Value, ValueType};
@@ -16,6 +16,7 @@ use std::collections::HashSet;
 use std::iter::Peekable;
 use std::str::Chars;
 use std::convert::TryFrom;
+use crate::lang::dict::Dict;
 
 struct DBusThing {
     connection: Connection,
@@ -30,7 +31,7 @@ impl DBusThing {
         self.connection.with_proxy(service, object, Duration::from_millis(5000))
     }
 
-    fn call(&self, service: &str, object: &DBusObject, interface: &DBusInterface, method: &DBusMethod, mut input: Vec<Value>) -> CrushResult<Vec<Value>> {
+    fn call(&self, service: &str, object: &DBusObject, interface: &DBusInterface, method: &DBusMethod, mut input: Vec<Value>) -> CrushResult<Value> {
         let mut msg = Message::new_method_call(service, &object.path, &interface.name, &method.name).unwrap();
 
         let input_arguments = method.arguments.iter()
@@ -41,8 +42,27 @@ impl DBusThing {
         }
 
         let reply = to_crush_error(self.connection.send_with_reply_and_block(msg, Duration::from_secs(5)))?;
-        let values = method.deserialize(&reply)?;
-        Ok(values)
+        let mut values = method.deserialize(&reply)?;
+        let mut output_arguments = method.arguments.iter()
+            .filter(|a| a.direction == DBusArgumentDirection::Out)
+            .collect::<Vec<_>>();
+        if values.len() != output_arguments.len() {
+            return error("Wrong number of arguments returned from DBUS call");
+        }
+
+        let values_as_arguments = values.drain(..)
+            .zip(output_arguments.drain(..))
+            .map(|(value, arg)| Argument::new(arg.name.clone(), value))
+            .collect::<Vec<_>>();
+
+        let mut names = column_names(&values_as_arguments);
+        let arr: Vec<(String, Value)> = names
+            .drain(..)
+            .zip(values_as_arguments)
+            .map(|(name, arg)| (name, arg.value))
+            .collect::<Vec<(String, Value)>>();
+
+        Ok(Value::Struct(Struct::new(arr, None)))
     }
 
     pub fn list_services(&self) -> CrushResult<Vec<String>> {
@@ -227,15 +247,14 @@ impl DBusType {
                 Ok(Some(DBusType::Struct(sub)))
             }
 
-        Some(ch) => error(&format!("Unknown dbus type '{}'", ch)),
-    }
+            Some(ch) => error(&format!("Unknown dbus type '{}'", ch)),
         }
+    }
 }
 
 
 impl DBusArgument {
     fn serialize(&self, value: Value, message: &mut Message) -> CrushResult<()> {
-        println!("Serialize");
         let t = DBusType::parse(&self.argument_type)?;
         let mut a = IterAppend::new(message);
         match t {
@@ -336,27 +355,109 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
         ArgType::Double => { Value::Float(mandate(iter.get::<f64>(), "Unexpected type")?) }
         ArgType::Array => {
             let mut sub = iter.recurse(ArgType::Array).unwrap();
+
+            if sub.arg_type() == ArgType::DictEntry {
+                let mut res = Vec::new();
+                let mut key_types = HashSet::new();
+                let mut value_types = HashSet::new();
+
+                while let Some(mut entry) = sub.recurse(ArgType::DictEntry) {
+                    let key = match deserialize(&mut entry) {
+                        Ok(value) => {
+                            key_types.insert(value.value_type());
+                            entry.next();
+                            value
+                        }
+                        Err(CrushError::EOFError) => break,
+                        Err(e) => return Err(e),
+                    };
+
+                    let value = match deserialize(&mut entry) {
+                        Ok(value) => {
+                            value_types.insert(value.value_type());
+                            entry.next();
+                            value
+                        }
+                        Err(CrushError::EOFError) => return error("Unexpected EOF in dbus message"),
+                        Err(e) => return Err(e),
+                    };
+
+                    res.push((key, value));
+                    sub.next();
+                }
+
+                let key_type = if key_types.len() == 1 {
+                    res[0].0.value_type()
+                } else {
+                    ValueType::Any
+                };
+
+                let value_type = if value_types.len() == 1 {
+                    res[0].1.value_type()
+                } else {
+                    ValueType::Any
+                };
+
+                let dict = Dict::new(key_type, value_type);
+                for (key, value) in res {
+                    dict.insert(key, value)?;
+                }
+
+                Value::Dict(dict)
+            } else {
+                let mut res = Vec::new();
+                let mut types = HashSet::new();
+
+                loop {
+                    match deserialize(&mut sub) {
+                        Ok(value) => {
+                            types.insert(value.value_type());
+                            res.push(value);
+                            sub.next();
+                        }
+                        Err(CrushError::EOFError) => break,
+                        Err(e) => return Err(e),
+                    }
+                }
+
+                let list_type = if types.len() == 1 {
+                    res[0].value_type()
+                } else {
+                    ValueType::Any
+                };
+                Value::List(List::new(list_type, res))
+            }
+        }
+        ArgType::Variant => {
+            let mut sub = iter.recurse(ArgType::Variant).unwrap();
+            match deserialize(&mut sub) {
+                Ok(value) => {
+
+                    sub.next();
+                    value
+                }
+                Err(CrushError::EOFError) => return error("Unexpected EOF in DBUS message"),
+                Err(e) => return Err(e),
+            }
+        },
+        ArgType::Invalid => return eof_error(),
+        ArgType::DictEntry => panic!("Invalid location for DictEntry"),
+        ArgType::UnixFd => panic!("unimplemented"),
+        ArgType::Struct => {
+            let mut sub = iter.recurse(ArgType::Struct).unwrap();
             let mut res = Vec::new();
-            let mut types = HashSet::new();
-            while let Ok(it) = deserialize(&mut sub) {
-                types.insert(it.value_type());
-                res.push(it);
-                if !sub.next() {
-                    break;
+            loop {
+                match deserialize(&mut sub) {
+                    Ok(value) => {
+                        res.push(value);
+                        sub.next();
+                    }
+                    Err(CrushError::EOFError) => break,
+                    Err(e) => return Err(e),
                 }
             }
-            let list_type = if types.len() == 1 {
-                res[0].value_type()
-            } else {
-                ValueType::Any
-            };
-            Value::List(List::new(list_type, res))
+            Value::List(List::new(ValueType::Any, res))
         }
-        ArgType::Variant => panic!("unimplemented"),
-        ArgType::Invalid => panic!("unimplemented"),
-        ArgType::DictEntry => panic!("unimplemented"),
-        ArgType::UnixFd => panic!("unimplemented"),
-        ArgType::Struct => panic!("unimplemented"),
         ArgType::ObjectPath => panic!("unimplemented"),
         ArgType::Signature => panic!("unimplemented"),
     })
@@ -373,11 +474,14 @@ impl DBusMethod {
     fn deserialize(&self, message: &Message) -> CrushResult<Vec<Value>> {
         let mut iter = message.iter_init();
         let mut res = Vec::new();
-        while let Ok(value) = deserialize(&mut iter) {
-            res.push(value);
-            iter.next();
-            if !iter.next() {
-                break;
+        loop {
+            match deserialize(&mut iter) {
+                Ok(value) => {
+                    res.push(value);
+                    iter.next();
+                }
+                Err(CrushError::EOFError) => break,
+                Err(e) => return Err(e),
             }
         }
         Ok(res)
@@ -477,7 +581,7 @@ fn service_call(context: ExecutionContext) -> CrushResult<()> {
                     let object = filter_object(objects, object)?;
                     let (interface, method) = filter_method(object.interfaces.clone(), method)?;
                     let result = dbus.call(&service, &object, &interface, &method, cfg.arguments)?;
-                    context.output.send(Value::List(List::new(ValueType::Any, result)))
+                    context.output.send(result)
                 }
                 (None, Some(_)) => {
                     argument_error("Missing object")
@@ -508,7 +612,6 @@ fn system(context: ExecutionContext) -> CrushResult<()> {
 }
 
 fn populate_bus(context: ExecutionContext, dbus: DBusThing) -> CrushResult<()> {
-
     let mut members = Vec::new();
 
     for service in dbus.list_services()? {

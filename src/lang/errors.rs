@@ -1,66 +1,58 @@
-use crate::lang::errors::Kind::*;
 use std::error::Error;
-use std::fmt::Display;
+use std::fmt::{Display, Formatter};
 
-#[derive(Debug, PartialEq)]
-pub enum Kind {
-    //    ParseError,
-    InvalidArgument,
-    InvalidData,
-    GenericError,
+#[derive(Debug, PartialEq, Eq)]
+pub enum CrushError {
+    InvalidArgument(String),
+    InvalidData(String),
+    GenericError(String),
     BlockError,
     SendError,
+    EOFError,
 }
-
-#[derive(Debug)]
-pub struct CrushError {
-    pub kind: Kind,
-    pub message: String,
+impl CrushError {
+    pub fn message(&self) -> String {
+        match self {
+            CrushError::InvalidArgument(s) |
+            CrushError::InvalidData(s) |
+            CrushError::GenericError(s) => s.clone(),
+            CrushError::BlockError => "Block error".to_string(),
+            CrushError::SendError => "Send error".to_string(),
+            CrushError::EOFError => "EOF error".to_string(),
+        }
+    }
 }
 
 impl<T: Display> From<T> for CrushError {
     fn from(message: T) -> Self {
-        CrushError{kind: Kind::GenericError, message: message.to_string()}
+        CrushError::GenericError(message.to_string())
     }
 }
 
 pub type CrushResult<T> = Result<T, CrushError>;
 
 pub fn block_error<T>() -> Result<T, CrushError> {
-    Err(CrushError {
-        message: String::from(
-            "Internal error: Tried to call blocking code in a thread that may not block",
-        ),
-        kind: BlockError,
-    })
+    Err(CrushError::BlockError)
+}
+
+pub fn eof_error<T>() -> Result<T, CrushError> {
+    Err(CrushError::EOFError)
 }
 
 pub fn send_error<T>() -> Result<T, CrushError> {
-    Err(CrushError {
-        message: String::from("Tried to send data to a command that is no longer listening. This is almost normal behaviour and can be safely ignored."),
-        kind: SendError,
-    })
+    Err(CrushError::SendError)
 }
 
 pub fn argument_error<T>(message: &str) -> Result<T, CrushError> {
-    Err(CrushError {
-        message: String::from(message),
-        kind: InvalidArgument,
-    })
+    Err(CrushError::InvalidArgument(String::from(message)))
 }
 
 pub fn data_error<T>(message: &str) -> Result<T, CrushError> {
-    Err(CrushError {
-        message: String::from(message),
-        kind: InvalidData,
-    })
+    Err(CrushError::InvalidData(String::from(message)))
 }
 
 pub fn error<T>(message: impl Into<String>) -> Result<T, CrushError> {
-    Err(CrushError {
-        message: message.into(),
-        kind: GenericError,
-    })
+    Err(CrushError::GenericError(message.into()))
 }
 
 pub fn to_crush_error<T, E: Error>(result: Result<T, E>) -> Result<T, CrushError> {

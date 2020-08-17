@@ -1,4 +1,4 @@
-use crate::lang::errors::{to_crush_error, CrushError, CrushResult, Kind};
+use crate::lang::errors::{to_crush_error, CrushError, CrushResult};
 use crossbeam::bounded;
 use crossbeam::Sender;
 use std::thread;
@@ -30,7 +30,7 @@ pub fn init() -> (Printer, JoinHandle<()>) {
                 while let Ok(message) = receiver.recv() {
                     match message {
                         Error(err) => eprintln!("Error: {}", err),
-                        CrushError(err) => eprintln!("Error: {}", err.message),
+                        CrushError(err) => eprintln!("Error: {}", err.message()),
                         Line(line) => println!("{}", line),
                         //                        Lines(lines) => for line in lines {println!("{}", line)},
                     }
@@ -53,9 +53,8 @@ impl Printer {
     */
     pub fn handle_error<T>(&self, result: CrushResult<T>) {
         if let Err(e) = result {
-            match e.kind {
-                Kind::SendError => {}
-                _ => self.crush_error(e),
+            if e != CrushError::SendError {
+                self.crush_error(e)
             }
         }
     }

@@ -9,10 +9,12 @@ use crate::lang::table::TableReader;
 use crate::lang::value::Alignment;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
+use crate::lang::r#struct::StructReader;
 use std::cmp::max;
 use std::io::{BufReader, Read};
 use std::thread;
 use time::Duration;
+use crate::lang::list::ListReader;
 
 pub fn create_pretty_printer(printer: Printer) -> ValueSender {
     let (o, i) = channels();
@@ -105,6 +107,20 @@ impl PrettyPrinter {
             Value::Table(rows) => self.print_readable(&mut TableReader::new(rows), 0),
             Value::BinaryStream(mut b) => self.print_binary(b.as_mut(), 0),
             Value::Empty() => {}
+            Value::Struct(data) => {
+                if data.keys().len() < 8 {
+                    self.printer.line(data.to_string().as_str())
+                } else {
+                    self.print_readable(&mut StructReader::new(data), 0)
+                }
+            },
+            Value::List(list) => {
+                if list.len() < 8 {
+                    self.printer.line(list.to_string().as_str())
+                } else {
+                    self.print_readable(&mut ListReader::new(list, "value"), 0)
+                }
+            },
             _ => self.printer.line(cell.to_string().as_str()),
         };
     }

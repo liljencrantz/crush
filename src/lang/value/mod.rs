@@ -11,6 +11,7 @@ use regex::Regex;
 
 use crate::lang::errors::{argument_error, mandate, CrushResult};
 use crate::lang::r#struct::Struct;
+use crate::lang::r#struct::StructReader;
 use crate::lang::scope::Scope;
 use crate::lang::stream::{streams, InputStream, Stream};
 use crate::lang::{
@@ -169,6 +170,7 @@ impl Value {
             Value::Table(r) => Some(Box::from(TableReader::new(r.clone()))),
             Value::List(l) => Some(Box::from(ListReader::new(l.clone(), "value"))),
             Value::Dict(d) => Some(Box::from(DictReader::new(d.clone()))),
+            Value::Struct(s) => Some(Box::from(StructReader::new(s.clone()))),
             _ => None,
         }
     }
