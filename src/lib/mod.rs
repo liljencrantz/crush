@@ -1,26 +1,3 @@
-pub mod io;
-#[cfg(target_os = "linux")]
-mod proc;
-pub mod traversal;
-pub mod var;
-
-#[macro_use]
-pub mod binary_op;
-
-mod comp;
-mod cond;
-mod constants;
-mod control;
-#[cfg(target_os = "linux")]
-mod dbus;
-mod host;
-mod math;
-mod random;
-mod remote;
-mod stream;
-pub mod types;
-mod user;
-
 use crate::lang::errors::to_crush_error;
 use crate::lang::execute;
 use crate::lang::printer::Printer;
@@ -28,6 +5,29 @@ use crate::lang::stream::ValueSender;
 use crate::{lang::errors::CrushResult, lang::scope::Scope};
 use std::fs::read_dir;
 use std::path::Path;
+
+#[macro_use]
+pub mod binary_op;
+
+mod battery;
+mod comp;
+mod cond;
+mod constants;
+mod control;
+#[cfg(target_os = "linux")]
+mod dbus;
+mod host;
+mod io;
+mod math;
+#[cfg(target_os = "linux")]
+mod proc;
+mod random;
+mod remote;
+mod stream;
+mod traversal;
+pub mod types;
+mod user;
+mod var;
 
 fn declare_external(root: &Scope, printer: &Printer, output: &ValueSender) -> CrushResult<()> {
     match read_dir("src/crushlib/") {
@@ -86,6 +86,7 @@ fn load_external_namespace(
 }
 
 pub fn declare(root: &Scope, printer: &Printer, output: &ValueSender) -> CrushResult<()> {
+    battery::declare(root)?;
     comp::declare(root)?;
     cond::declare(root)?;
     traversal::declare(root)?;
