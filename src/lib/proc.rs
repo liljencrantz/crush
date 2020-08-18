@@ -25,8 +25,19 @@ lazy_static! {
         ColumnType::new("status", ValueType::String),
         ColumnType::new("user", ValueType::String),
         ColumnType::new("cpu", ValueType::Duration),
+        ColumnType::new("rss", ValueType::Integer),
+        ColumnType::new("vms", ValueType::Integer),
         ColumnType::new("name", ValueType::String),
     ];
+}
+
+#[signature(
+ps,
+can_block = true,
+short = "Return a table stream containing information on all running processes on the system",
+output = Known(ValueType::TableStream(PS_OUTPUT_TYPE.clone())),
+long = "ps accepts no arguments.")]
+struct Ps {
 }
 
 fn state_name(s: Status) -> &'static str {
@@ -74,6 +85,8 @@ fn ps_internal(proc: ProcessResult<Process>, users: &HashMap<u32, User>) -> Proc
         Value::Duration(Duration::microseconds(
             proc.cpu_times()?.busy().as_micros() as i64
         )),
+        Value::Integer(proc.memory_info()?.rss() as i128),
+        Value::Integer(proc.memory_info()?.vms() as i128),
         Value::string(
             proc.cmdline_vec()?
                 .unwrap_or(vec![format!("[{}]", proc.name()?)])[0]
@@ -115,32 +128,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_lazy_namespace(
         "proc",
         Box::new(move |env| {
-            env.declare_command(
-                "ps", ps, true,
-                "ps", "Return a table stream containing information on all running processes on the system.",
-                Some(r#"    ps accepts no arguments. Each row contains the following columns:
-
-    * pid:integer the process id of the process
-
-    * ppid:integer the process id of the parent of the process
-
-    * status:string one of the following states:
-      - Running
-      - Sleeping
-      - Waiting
-      - Stopped
-      - Traces
-      - Paging
-      - Dead
-      - Zombie
-      - Idle
-
-    * user:string the username of the process owner
-
-    * cpu:duration the amount of CPU time this process has used since its creation
-
-    * name:string the process name"#), Unknown)?;
-
+            Ps::declare(env)?;
             Kill::declare(env)?;
             Ok(())
         }))?;

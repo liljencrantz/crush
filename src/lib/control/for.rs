@@ -8,7 +8,7 @@ use crate::lang::value::Value;
 use crate::lang::{dict::DictReader, list::ListReader, r#struct::Struct, table::TableReader};
 
 pub fn r#for(mut context: ExecutionContext) -> CrushResult<()> {
-    context.output.send(Value::Empty());
+    context.output.send(Value::Empty())?;
     context.arguments.check_len(2)?;
 
     let body = context.arguments.command(1)?;
