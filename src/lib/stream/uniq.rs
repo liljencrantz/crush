@@ -1,6 +1,6 @@
 use crate::lang::argument::Argument;
 use crate::lang::errors::{error, CrushResult};
-use crate::lang::execution_context::{ArgumentVector, ExecutionContext};
+use crate::lang::execution_context::{ArgumentVector, CommandContext};
 use crate::lang::printer::Printer;
 use crate::lang::stream::{CrushStream, OutputStream};
 use crate::lang::table::ColumnVec;
@@ -46,7 +46,7 @@ fn run(
     Ok(())
 }
 
-pub fn uniq(context: ExecutionContext) -> CrushResult<()> {
+pub fn uniq(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream() {
         Some(mut input) => {
             let idx = parse(input.types(), context.arguments)?;

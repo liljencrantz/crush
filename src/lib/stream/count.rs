@@ -1,5 +1,5 @@
 use crate::lang::errors::{argument_error, CrushResult};
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::stream::Stream;
 use crate::lang::value::Value;
 
@@ -11,7 +11,7 @@ fn count_rows(mut s: Stream) -> Value {
     Value::Integer(res)
 }
 
-pub fn perform(context: ExecutionContext) -> CrushResult<()> {
+pub fn perform(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Table(r) => context.output.send(Value::Integer(r.rows().len() as i128)),
         Value::List(r) => context.output.send(Value::Integer(r.len() as i128)),

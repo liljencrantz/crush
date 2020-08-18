@@ -7,25 +7,27 @@ use crate::lang::stream::{black_hole, channels, empty_channel};
 use crate::lang::{argument::Argument, table::ColumnType};
 use crate::lang::{table::Row, value::Value};
 use signature::signature;
+use crate::lang::value::ValueType::Empty;
+use crate::lang::command::OutputType::Known;
 
 #[signature(
-r#where,
+r#each,
 can_block = true,
-output = Passthrough,
-short = "Filter out rows from io based on condition",
+output = Known(Empty),
+short = "Runs a command one for each row of input",
 long = "The columns of the row are exported to the environment using the column names.",
-example = "ps | where {status != \"Sleeping\"}")]
-pub struct Where {
-    #[description("the condition to filter on.")]
-    condition: Command,
+example = "ps | where {status != \"Sleeping\"} | each {echo (\"{} is sleepy\":format name)}")]
+pub struct Each {
+    #[description("the command to run.")]
+    body: Command,
 }
 
-fn evaluate(
+fn run(
     condition: Command,
     row: &Row,
     input_type: &[ColumnType],
     base_context: &CommandContext,
-) -> CrushResult<bool> {
+) -> CrushResult<()> {
     let arguments = row
         .clone()
         .into_vec()
@@ -34,23 +36,16 @@ fn evaluate(
         .map(|(c, t)| Argument::named(t.name.as_ref(), c))
         .collect();
 
-    let (sender, reciever) = channels();
-
     condition.invoke(
         base_context
             .clone()
             .with_args(arguments, None)
-            .with_output(sender),
-    )?;
-
-    match reciever.recv()? {
-        Value::Bool(b) => Ok(b),
-        _ => error("Expected a boolean result"),
-    }
+    )
 }
 
-pub fn r#where(context: CommandContext) -> CrushResult<()> {
-    let cfg: Where = Where::parse(context.arguments, &context.printer)?;
+pub fn each(context: CommandContext) -> CrushResult<()> {
+    let cfg: Each = Each::parse(context.arguments, &context.printer)?;
+    context.output.send(Value::Empty())?;
 
     match context.input.recv()?.stream() {
         Some(mut input) => {
@@ -63,14 +58,9 @@ pub fn r#where(context: CommandContext) -> CrushResult<()> {
                 printer: context.printer.clone(),
             };
 
-            let output = context.output.initialize(input.types().to_vec())?;
             while let Ok(row) = input.read() {
-                match evaluate(cfg.condition.copy(), &row, input.types(), &base_context) {
-                    Ok(val) => {
-                        if val && output.send(row).is_err() {
-                            break;
-                        }
-                    }
+                match run(cfg.body.copy(), &row, input.types(), &base_context) {
+                    Ok(_) => (),
                     Err(e) => base_context.printer.crush_error(e),
                 }
             }

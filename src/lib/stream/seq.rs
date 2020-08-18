@@ -1,6 +1,6 @@
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::errors::CrushResult;
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::table::ColumnType;
 use crate::lang::{table::Row, value::Value, value::ValueType};
 use signature::signature;
@@ -16,7 +16,7 @@ pub struct Seq {
     step: i128,
 }
 
-pub fn seq(context: ExecutionContext) -> CrushResult<()> {
+pub fn seq(context: CommandContext) -> CrushResult<()> {
     let mut cfg: Seq = Seq::parse(context.arguments, &context.printer)?;
     let output = context
         .output

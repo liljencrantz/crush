@@ -7,7 +7,7 @@ use crate::lang::list::List;
 use crate::lang::printer::Printer;
 use crate::lang::r#struct::Struct;
 use crate::lang::scope::Scope;
-use crate::lang::stream::{InputStream, OutputStream, ValueReceiver, ValueSender};
+use crate::lang::stream::{InputStream, OutputStream, ValueReceiver, ValueSender, empty_channel, black_hole};
 use crate::lang::table::{Table, TableReader};
 use crate::lang::value::{Value, ValueType};
 use crate::util::glob::Glob;
@@ -224,69 +224,59 @@ impl JobContext {
         CompileContext::new(self.env.clone(), self.printer.clone())
     }
 
-    pub fn execution_context(
+    pub fn command_context(
         &self,
         arguments: Vec<Argument>,
         this: Option<Value>,
-    ) -> ExecutionContext {
-        ExecutionContext {
+    ) -> CommandContext {
+        CommandContext {
             arguments,
             this,
             input: self.input.clone(),
             output: self.output.clone(),
             printer: self.printer.clone(),
-            env: self.env.clone(),
+            scope: self.env.clone(),
         }
     }
 }
 
 #[derive(Clone)]
-pub struct ExecutionContext {
+pub struct CommandContext {
     pub input: ValueReceiver,
     pub output: ValueSender,
     pub arguments: Vec<Argument>,
-    pub env: Scope,
+    pub scope: Scope,
     pub this: Option<Value>,
     pub printer: Printer,
 }
 
-#[allow(unused)] // TODO: remove me?
-pub struct StreamExecutionContext<C> {
-    pub config: C,
-    pub input: TableReader,
-    pub output: OutputStream,
-    pub env: Scope,
-    pub printer: Printer,
-}
-
-#[allow(unused)] // TODO: remove me?
-pub struct ValueExecutionContext<C> {
-    pub config: C,
-    pub env: Scope,
-    pub printer: Printer,
-}
-
-impl ExecutionContext {
+impl CommandContext {
+    /**
+    Return a compile context with the environemnt from this execution context..
+    */
     pub fn compile_context(&self) -> CompileContext {
-        CompileContext::new(self.env.clone(), self.printer.clone())
+        CompileContext::new(self.scope.clone(), self.printer.clone())
     }
 
-    pub fn with_args(self, arguments: Vec<Argument>, this: Option<Value>) -> ExecutionContext {
-        ExecutionContext {
+    /**
+    Return a new Command context with different arguments.
+    */
+    pub fn with_args(self, arguments: Vec<Argument>, this: Option<Value>) -> CommandContext {
+        CommandContext {
             input: self.input,
             output: self.output,
-            env: self.env,
+            scope: self.scope,
             printer: self.printer,
             arguments,
             this,
         }
     }
 
-    pub fn with_sender(self, sender: ValueSender) -> ExecutionContext {
-        ExecutionContext {
+    pub fn with_output(self, sender: ValueSender) -> CommandContext {
+        CommandContext {
             input: self.input,
             output: sender,
-            env: self.env,
+            scope: self.scope,
             printer: self.printer,
             arguments: self.arguments,
             this: self.this,
@@ -359,11 +349,3 @@ impl This for Option<Value> {
         }
     }
 }
-
-/*
-pub struct StreamExecutionContext {
-    pub argument_stream: InputStream,
-    pub output: ValueSender,
-    pub env: Scope,
-}
-*/

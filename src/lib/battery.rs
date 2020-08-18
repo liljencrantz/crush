@@ -1,6 +1,6 @@
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::errors::{to_crush_error, CrushResult};
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::r#struct::Struct;
 use crate::lang::scope::Scope;
 use crate::lang::value::Value;
@@ -49,7 +49,7 @@ fn time_to_duration(tm: Option<battery::units::Time>) -> Duration {
     tm.map(|t| Duration::seconds(t.value as i64)).unwrap_or(Duration::seconds(0))
 }
 
-fn battery(context: ExecutionContext) -> CrushResult<()> {
+fn battery(context: CommandContext) -> CrushResult<()> {
     let manager = battery::Manager::new()?;
     let output = context.output.initialize(BATTERY_OUTPUT_TYPE.clone())?;
     for battery in to_crush_error(manager.batteries())? {

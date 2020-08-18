@@ -1,7 +1,7 @@
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::Command;
 use crate::lang::errors::{mandate, CrushResult};
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::job::JobJoinHandle;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::printer::Printer;
@@ -52,11 +52,11 @@ fn aggregate(
                 let (output_sender, output_receiver) = channels();
                 input_sender.send(Value::TableStream(rows))?;
                 drop(input_sender);
-                commands[0].invoke(ExecutionContext {
+                commands[0].invoke(CommandContext {
                     input: input_receiver,
                     output: output_sender,
                     arguments: vec![],
-                    env: scope.clone(),
+                    scope: scope.clone(),
                     this: None,
                     printer: printer.clone(),
                 })?;
@@ -71,11 +71,11 @@ fn aggregate(
                     let (input_sender, input_receiver) = channels();
                     let (output_sender, output_receiver) = channels();
                     streams.push(input_sender.initialize(rows.types().to_vec())?);
-                    printer.handle_error(command.invoke(ExecutionContext {
+                    printer.handle_error(command.invoke(CommandContext {
                         input: input_receiver,
                         output: output_sender,
                         arguments: vec![],
-                        env: scope.clone(),
+                        scope: scope.clone(),
                         this: None,
                         printer: printer.clone(),
                     }));
@@ -128,7 +128,7 @@ fn create_worker_thread(
     }))
 }
 
-pub fn group(context: ExecutionContext) -> CrushResult<()> {
+pub fn group(context: CommandContext) -> CrushResult<()> {
     let cfg: Group = Group::parse(context.arguments, &context.printer)?;
     let mut input = mandate(
         context.input.recv()?.stream(),
@@ -160,7 +160,7 @@ pub fn group(context: ExecutionContext) -> CrushResult<()> {
     let (task_output, task_input) = unbounded::<(Vec<Value>, InputStream)>();
 
     for _ in 0..16 {
-        create_worker_thread(&cfg, &context.printer, &context.env, &output, &task_input);
+        create_worker_thread(&cfg, &context.printer, &context.scope, &output, &task_input);
     }
 
     drop(task_input);

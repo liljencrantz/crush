@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use crate::lang::errors::{error, CrushResult};
-use crate::lang::execution_context::{ArgumentVector, ExecutionContext};
+use crate::lang::execution_context::{ArgumentVector, CommandContext};
 use crate::lang::stream::{CrushStream, ValueSender};
 use crate::lang::table::Row;
 
@@ -20,7 +20,7 @@ fn run(lines: i128, input: &mut dyn CrushStream, sender: ValueSender) -> CrushRe
     Ok(())
 }
 
-pub fn perform(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn perform(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len_range(0, 1)?;
     let lines = context.arguments.optional_integer(0)?.unwrap_or(10);
     match context.input.recv()?.stream() {

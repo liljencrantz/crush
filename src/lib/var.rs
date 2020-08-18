@@ -1,14 +1,14 @@
 use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::errors::{argument_error, mandate, CrushResult};
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::scope::Scope;
 use crate::lang::table::{ColumnType, Row};
 use crate::lang::value::{Value, ValueType};
 use ordered_map::OrderedMap;
 
-pub fn r#let(context: ExecutionContext) -> CrushResult<()> {
+pub fn r#let(context: CommandContext) -> CrushResult<()> {
     for arg in context.arguments {
-        context.env.declare(
+        context.scope.declare(
             mandate(arg.argument_type, "Missing variable name")?.as_ref(),
             arg.value,
         )?;
@@ -16,9 +16,9 @@ pub fn r#let(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Empty())
 }
 
-pub fn set(context: ExecutionContext) -> CrushResult<()> {
+pub fn set(context: CommandContext) -> CrushResult<()> {
     for arg in context.arguments {
-        context.env.set(
+        context.scope.set(
             mandate(arg.argument_type, "Missing variable name")?.as_ref(),
             arg.value,
         )?;
@@ -26,13 +26,13 @@ pub fn set(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Empty())
 }
 
-pub fn unset(context: ExecutionContext) -> CrushResult<()> {
+pub fn unset(context: CommandContext) -> CrushResult<()> {
     for arg in context.arguments {
         if let Value::String(s) = &arg.value {
             if s.len() == 0 {
                 return argument_error("Illegal variable name");
             } else {
-                context.env.remove_str(s)?;
+                context.scope.remove_str(s)?;
             }
         } else {
             return argument_error("Illegal variable name");
@@ -41,24 +41,24 @@ pub fn unset(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Empty())
 }
 
-pub fn r#use(context: ExecutionContext) -> CrushResult<()> {
+pub fn r#use(context: CommandContext) -> CrushResult<()> {
     for arg in context.arguments.iter() {
         match (arg.argument_type.is_none(), &arg.value) {
-            (true, Value::Scope(e)) => context.env.r#use(e),
+            (true, Value::Scope(e)) => context.scope.r#use(e),
             _ => return argument_error("Expected all arguments to be scopes"),
         }
     }
     context.output.send(Value::Empty())
 }
 
-pub fn env(context: ExecutionContext) -> CrushResult<()> {
+pub fn env(context: CommandContext) -> CrushResult<()> {
     let output = context.output.initialize(vec![
         ColumnType::new("name", ValueType::String),
         ColumnType::new("type", ValueType::String),
     ])?;
 
     let mut values: OrderedMap<String, ValueType> = OrderedMap::new();
-    context.env.dump(&mut values)?;
+    context.scope.dump(&mut values)?;
 
     let mut keys = values.keys().collect::<Vec<&String>>();
     keys.sort();

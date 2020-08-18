@@ -1,6 +1,6 @@
 use crate::lang::command::Command;
 use crate::lang::errors::error;
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::stream::{channels, empty_channel, Stream};
 use crate::lang::table::ColumnVec;
 use crate::{
@@ -26,7 +26,7 @@ pub struct Config {
     columns: Vec<(Location, Source)>,
 }
 
-pub fn run(config: Config, mut input: Stream, context: ExecutionContext) -> CrushResult<()> {
+pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushResult<()> {
     let input_type = input.types().to_vec();
     let mut output_type = if config.copy {
         input_type.clone()
@@ -53,11 +53,11 @@ pub fn run(config: Config, mut input: Stream, context: ExecutionContext) -> Crus
                                 Argument::named(cell_type.name.as_ref(), cell.clone())
                             })
                             .collect();
-                        closure.invoke(ExecutionContext {
+                        closure.invoke(CommandContext {
                             input: empty_channel(),
                             output: sender,
                             arguments,
-                            env: context.env.clone(),
+                            scope: context.scope.clone(),
                             this: None,
                             printer: context.printer.clone(),
                         })?;
@@ -103,11 +103,11 @@ pub fn run(config: Config, mut input: Stream, context: ExecutionContext) -> Crus
                         .map(|(cell, cell_type)| Argument::named(&cell_type.name, cell.clone()))
                         .collect();
                     let (sender, receiver) = channels();
-                    closure.invoke(ExecutionContext {
+                    closure.invoke(CommandContext {
                         input: empty_channel(),
                         output: sender,
                         arguments,
-                        env: context.env.clone(),
+                        scope: context.scope.clone(),
                         this: None,
                         printer: context.printer.clone(),
                     })?;
@@ -129,7 +129,7 @@ pub fn run(config: Config, mut input: Stream, context: ExecutionContext) -> Crus
     Ok(())
 }
 
-pub fn select(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn select(mut context: CommandContext) -> CrushResult<()> {
     match context.input.clone().recv()?.stream() {
         Some(input) => {
             let mut copy = false;

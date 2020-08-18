@@ -1,10 +1,10 @@
 use crate::lang::errors::{argument_error, CrushResult};
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::scope::Scope;
 use crate::lang::stream::{channels, empty_channel};
 use crate::lang::value::Value;
 
-pub fn and(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn and(mut context: CommandContext) -> CrushResult<()> {
     let mut res = true;
     for arg in context.arguments.drain(..) {
         match arg.value {
@@ -16,11 +16,11 @@ pub fn and(mut context: ExecutionContext) -> CrushResult<()> {
             }
             Value::Command(c) => {
                 let (sender, receiver) = channels();
-                let cc = ExecutionContext {
+                let cc = CommandContext {
                     input: empty_channel(),
                     output: sender,
                     arguments: vec![],
-                    env: context.env.clone(),
+                    scope: context.scope.clone(),
                     this: None,
                     printer: context.printer.clone(),
                 };
@@ -41,7 +41,7 @@ pub fn and(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Bool(res))
 }
 
-pub fn or(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn or(mut context: CommandContext) -> CrushResult<()> {
     let mut res = false;
     for arg in context.arguments.drain(..) {
         match arg.value {
@@ -54,11 +54,11 @@ pub fn or(mut context: ExecutionContext) -> CrushResult<()> {
 
             Value::Command(c) => {
                 let (sender, receiver) = channels();
-                let cc = ExecutionContext {
+                let cc = CommandContext {
                     input: empty_channel(),
                     output: sender,
                     arguments: vec![],
-                    env: context.env.clone(),
+                    scope: context.scope.clone(),
                     this: None,
                     printer: context.printer.clone(),
                 };

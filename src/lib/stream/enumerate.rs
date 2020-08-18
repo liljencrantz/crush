@@ -1,5 +1,5 @@
 use crate::lang::errors::{error, CrushResult};
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::stream::{CrushStream, ValueSender};
 use crate::lang::table::ColumnType;
 use crate::lang::{table::Row, value::Value, value::ValueType};
@@ -19,7 +19,7 @@ pub fn run(input: &mut dyn CrushStream, sender: ValueSender) -> CrushResult<()> 
     Ok(())
 }
 
-pub fn perform(context: ExecutionContext) -> CrushResult<()> {
+pub fn perform(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream() {
         Some(mut r) => run(r.as_mut(), context.output),
         None => error("Expected a stream"),

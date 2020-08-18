@@ -1,7 +1,7 @@
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::OutputType::Passthrough;
 use crate::lang::errors::{error, CrushResult};
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::stream::CrushStream;
 use crate::lang::table::ColumnVec;
 use crate::lang::table::Row;
@@ -35,7 +35,7 @@ pub fn run(idx: usize, input: &mut dyn CrushStream, output: OutputStream) -> Cru
     Ok(())
 }
 
-pub fn sort(context: ExecutionContext) -> CrushResult<()> {
+pub fn sort(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream() {
         Some(mut input) => {
             let output = context.output.initialize(input.types().to_vec())?;

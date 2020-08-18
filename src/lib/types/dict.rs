@@ -2,7 +2,7 @@ use crate::lang::command::Command;
 use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::command::TypeMap;
 use crate::lang::errors::{argument_error, CrushResult};
-use crate::lang::execution_context::{ArgumentVector, ExecutionContext, This};
+use crate::lang::execution_context::{ArgumentVector, CommandContext, This};
 use crate::lang::value::Value;
 use crate::lang::{dict::Dict, value::ValueType};
 use lazy_static::lazy_static;
@@ -121,7 +121,7 @@ lazy_static! {
     };
 }
 
-fn call_type(mut context: ExecutionContext) -> CrushResult<()> {
+fn call_type(mut context: CommandContext) -> CrushResult<()> {
     match context.this.r#type()? {
         ValueType::Dict(t1, t2) => match (*t1, *t2) {
             (ValueType::Empty, ValueType::Empty) => {
@@ -147,7 +147,7 @@ fn call_type(mut context: ExecutionContext) -> CrushResult<()> {
     }
 }
 
-fn new(context: ExecutionContext) -> CrushResult<()> {
+fn new(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     let t = context.this.r#type()?;
     if let ValueType::Dict(key_type, value_type) = t {
@@ -163,7 +163,7 @@ fn new(context: ExecutionContext) -> CrushResult<()> {
     }
 }
 
-fn setitem(mut context: ExecutionContext) -> CrushResult<()> {
+fn setitem(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(2)?;
     let dict = context.this.dict()?;
     let value = context.arguments.value(1)?;
@@ -171,7 +171,7 @@ fn setitem(mut context: ExecutionContext) -> CrushResult<()> {
     dict.insert(key, value)
 }
 
-fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
+fn getitem(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     let dict = context.this.dict()?;
     let key = context.arguments.value(0)?;
@@ -180,7 +180,7 @@ fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
     Ok(())
 }
 
-fn remove(mut context: ExecutionContext) -> CrushResult<()> {
+fn remove(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     let dict = context.this.dict()?;
     let key = context.arguments.value(0)?;
@@ -189,41 +189,41 @@ fn remove(mut context: ExecutionContext) -> CrushResult<()> {
     Ok(())
 }
 
-fn len(context: ExecutionContext) -> CrushResult<()> {
+fn len(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
         .send(Value::Integer(context.this.dict()?.len() as i128))
 }
 
-fn clear(context: ExecutionContext) -> CrushResult<()> {
+fn clear(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     let d = context.this.dict()?;
     d.clear();
     context.output.send(Value::Dict(d))
 }
 
-fn clone(context: ExecutionContext) -> CrushResult<()> {
+fn clone(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     let d = context.this.dict()?;
     context.output.send(Value::Dict(d.copy()))
 }
 
-fn empty(context: ExecutionContext) -> CrushResult<()> {
+fn empty(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
         .send(Value::Bool(context.this.dict()?.len() == 0))
 }
 
-fn key_type(context: ExecutionContext) -> CrushResult<()> {
+fn key_type(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
         .send(Value::Type(context.this.dict()?.key_type()))
 }
 
-fn value_type(context: ExecutionContext) -> CrushResult<()> {
+fn value_type(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output

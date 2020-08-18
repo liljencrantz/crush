@@ -1,6 +1,6 @@
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::errors::{to_crush_error, CrushResult};
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::r#struct::Struct;
 use crate::lang::scope::Scope;
 use crate::lang::value::Value;
@@ -10,7 +10,7 @@ use sys_info;
 #[signature(name, can_block = false, short = "name of this host")]
 struct Name {}
 
-fn name(context: ExecutionContext) -> CrushResult<()> {
+fn name(context: CommandContext) -> CrushResult<()> {
     context
         .output
         .send(Value::String(to_crush_error(sys_info::hostname())?))
@@ -19,7 +19,7 @@ fn name(context: ExecutionContext) -> CrushResult<()> {
 #[signature(mem, can_block = false, short = "name of this host")]
 struct Mem {}
 
-fn mem(context: ExecutionContext) -> CrushResult<()> {
+fn mem(context: CommandContext) -> CrushResult<()> {
     let mem = to_crush_error(sys_info::mem_info())?;
     context.output.send(Value::Struct(Struct::new(
         vec![
@@ -47,7 +47,7 @@ mod os {
     #[signature(name, can_block = false, short = "name of the operating system")]
     pub struct Name {}
 
-    fn name(context: ExecutionContext) -> CrushResult<()> {
+    fn name(context: CommandContext) -> CrushResult<()> {
         context
             .output
             .send(Value::String(to_crush_error(sys_info::os_type())?))
@@ -60,7 +60,7 @@ mod os {
     )]
     pub struct Version {}
 
-    fn version(context: ExecutionContext) -> CrushResult<()> {
+    fn version(context: CommandContext) -> CrushResult<()> {
         context
             .output
             .send(Value::String(to_crush_error(sys_info::os_release())?))
@@ -73,7 +73,7 @@ mod cpu {
     #[signature(count, can_block = false, short = "number of CPU cores")]
     pub struct Count {}
 
-    fn count(context: ExecutionContext) -> CrushResult<()> {
+    fn count(context: CommandContext) -> CrushResult<()> {
         context
             .output
             .send(Value::Integer(to_crush_error(sys_info::cpu_num())? as i128))
@@ -82,7 +82,7 @@ mod cpu {
     #[signature(load, can_block = false, short = "current CPU load")]
     pub struct Load {}
 
-    fn load(context: ExecutionContext) -> CrushResult<()> {
+    fn load(context: CommandContext) -> CrushResult<()> {
         let load = to_crush_error(sys_info::loadavg())?;
         context.output.send(Value::Struct(Struct::new(
             vec![
@@ -97,7 +97,7 @@ mod cpu {
     #[signature(speed, can_block = false, short = "current CPU frequency")]
     pub struct Speed {}
 
-    fn speed(context: ExecutionContext) -> CrushResult<()> {
+    fn speed(context: CommandContext) -> CrushResult<()> {
         context.output.send(Value::Integer(
             to_crush_error(sys_info::cpu_speed())? as i128
         ))

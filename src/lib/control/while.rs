@@ -1,7 +1,7 @@
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::Command;
 use crate::lang::errors::{data_error, CrushResult};
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::stream::{black_hole, channels, empty_channel};
 use crate::lang::value::Value;
 use signature::signature;
@@ -20,19 +20,19 @@ pub struct While {
     body: Option<Command>,
 }
 
-fn r#while(context: ExecutionContext) -> CrushResult<()> {
+fn r#while(context: CommandContext) -> CrushResult<()> {
     context.output.initialize(vec![])?;
     let cfg: While = While::parse(context.arguments, &context.printer)?;
 
     loop {
         let (sender, receiver) = channels();
 
-        let cond_env = context.env.create_child(&context.env, true);
-        cfg.condition.invoke(ExecutionContext {
+        let cond_env = context.scope.create_child(&context.scope, true);
+        cfg.condition.invoke(CommandContext {
             input: empty_channel(),
             output: sender,
             arguments: Vec::new(),
-            env: cond_env.clone(),
+            scope: cond_env.clone(),
             this: None,
             printer: context.printer.clone(),
         })?;
@@ -43,12 +43,12 @@ fn r#while(context: ExecutionContext) -> CrushResult<()> {
         match receiver.recv()? {
             Value::Bool(true) => match &cfg.body {
                 Some(body) => {
-                    let body_env = context.env.create_child(&context.env, true);
-                    body.invoke(ExecutionContext {
+                    let body_env = context.scope.create_child(&context.scope, true);
+                    body.invoke(CommandContext {
                         input: empty_channel(),
                         output: black_hole(),
                         arguments: Vec::new(),
-                        env: body_env.clone(),
+                        scope: body_env.clone(),
                         this: None,
                         printer: context.printer.clone(),
                     })?;

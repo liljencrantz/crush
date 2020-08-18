@@ -5,7 +5,7 @@ use crate::lang::command::TypeMap;
 use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, This};
 use crate::lang::value::ValueType;
-use crate::lang::{execution_context::ExecutionContext, value::Value};
+use crate::lang::{execution_context::CommandContext, value::Value};
 use chrono::{Datelike, Local, Timelike};
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
@@ -66,7 +66,7 @@ binary_op!(
     |a, b| a - b
 );
 
-fn now(context: ExecutionContext) -> CrushResult<()> {
+fn now(context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Time(Local::now()))
 }
 
@@ -82,7 +82,7 @@ struct Parse {
     time: String,
 }
 
-fn parse(context: ExecutionContext) -> CrushResult<()> {
+fn parse(context: CommandContext) -> CrushResult<()> {
     let cfg: Parse = Parse::parse(context.arguments, &context.printer)?;
     let tm = to_crush_error(strptime(&cfg.time, cfg.format.as_ref()))?;
     let dt = Local::now()

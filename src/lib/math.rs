@@ -2,14 +2,14 @@ use crate::lang::command::OutputType::Known;
 use crate::lang::errors::argument_error;
 use crate::lang::errors::CrushResult;
 use crate::lang::execution_context::ArgumentVector;
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 
 macro_rules! math_fun {
     ($name:ident, $op:expr) => {
-        fn $name(mut context: ExecutionContext) -> CrushResult<()> {
+        fn $name(mut context: CommandContext) -> CrushResult<()> {
             context.arguments.check_len(1)?;
             let x = match context.arguments.value(0)? {
                 Value::Float(f) => f,
@@ -27,7 +27,7 @@ macro_rules! math_fun {
 
 macro_rules! math_fun2 {
     ($name:ident, $op:expr) => {
-        fn $name(mut context: ExecutionContext) -> CrushResult<()> {
+        fn $name(mut context: CommandContext) -> CrushResult<()> {
             context.arguments.check_len(2)?;
             let x = match context.arguments.value(0)? {
                 Value::Float(f) => f,

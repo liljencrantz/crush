@@ -2,7 +2,7 @@ mod closure;
 
 use crate::lang::argument::ArgumentDefinition;
 use crate::lang::errors::{error, CrushResult};
-use crate::lang::execution_context::{CompileContext, ExecutionContext};
+use crate::lang::execution_context::{CompileContext, CommandContext};
 use crate::lang::help::Help;
 use crate::lang::job::Job;
 use crate::lang::scope::Scope;
@@ -44,7 +44,7 @@ impl OutputType {
 }
 
 pub trait CrushCommand: Help {
-    fn invoke(&self, context: ExecutionContext) -> CrushResult<()>;
+    fn invoke(&self, context: CommandContext) -> CrushResult<()>;
     fn can_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool;
     fn name(&self) -> &str;
     fn copy(&self) -> Command;
@@ -62,7 +62,7 @@ pub trait TypeMap {
     fn declare(
         &mut self,
         path: Vec<&str>,
-        call: fn(context: ExecutionContext) -> CrushResult<()>,
+        call: fn(context: CommandContext) -> CrushResult<()>,
         can_block: bool,
         signature: &'static str,
         short_help: &'static str,
@@ -75,7 +75,7 @@ impl TypeMap for OrderedMap<String, Command> {
     fn declare(
         &mut self,
         path: Vec<&str>,
-        call: fn(ExecutionContext) -> CrushResult<()>,
+        call: fn(CommandContext) -> CrushResult<()>,
         can_block: bool,
         signature: &'static str,
         short_help: &'static str,
@@ -98,7 +98,7 @@ impl TypeMap for OrderedMap<String, Command> {
 }
 
 struct SimpleCommand {
-    call: fn(context: ExecutionContext) -> CrushResult<()>,
+    call: fn(context: CommandContext) -> CrushResult<()>,
     can_block: bool,
     full_name: Vec<String>,
     signature: &'static str,
@@ -108,7 +108,7 @@ struct SimpleCommand {
 }
 
 struct ConditionCommand {
-    call: fn(context: ExecutionContext) -> CrushResult<()>,
+    call: fn(context: CommandContext) -> CrushResult<()>,
     full_name: Vec<String>,
     signature: &'static str,
     short_help: &'static str,
@@ -126,7 +126,7 @@ impl dyn CrushCommand {
     }
 
     pub fn command(
-        call: fn(context: ExecutionContext) -> CrushResult<()>,
+        call: fn(context: CommandContext) -> CrushResult<()>,
         can_block: bool,
         full_name: Vec<String>,
         signature: &'static str,
@@ -146,7 +146,7 @@ impl dyn CrushCommand {
     }
 
     pub fn condition(
-        call: fn(context: ExecutionContext) -> CrushResult<()>,
+        call: fn(context: CommandContext) -> CrushResult<()>,
         full_name: Vec<String>,
         signature: &'static str,
         short_help: &'static str,
@@ -189,7 +189,7 @@ impl dyn CrushCommand {
 }
 
 impl CrushCommand for SimpleCommand {
-    fn invoke(&self, context: ExecutionContext) -> CrushResult<()> {
+    fn invoke(&self, context: CommandContext) -> CrushResult<()> {
         let c = self.call;
         c(context)
     }
@@ -280,7 +280,7 @@ impl std::fmt::Debug for SimpleCommand {
 }
 
 impl CrushCommand for ConditionCommand {
-    fn invoke(&self, context: ExecutionContext) -> CrushResult<()> {
+    fn invoke(&self, context: CommandContext) -> CrushResult<()> {
         let c = self.call;
         c(context)
     }
@@ -388,7 +388,7 @@ pub struct BoundCommand {
 }
 
 impl CrushCommand for BoundCommand {
-    fn invoke(&self, mut context: ExecutionContext) -> CrushResult<()> {
+    fn invoke(&self, mut context: CommandContext) -> CrushResult<()> {
         context.this = Some(self.this.clone());
         self.command.invoke(context)
     }

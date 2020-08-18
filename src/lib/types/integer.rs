@@ -4,7 +4,7 @@ use crate::lang::command::TypeMap;
 use crate::lang::errors::{argument_error, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, This};
 use crate::lang::value::ValueType;
-use crate::lang::{execution_context::ExecutionContext, value::Value};
+use crate::lang::{execution_context::CommandContext, value::Value};
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 
@@ -125,7 +125,7 @@ binary_op!(
 binary_op!(rem, integer, Integer, Integer, |a, b| a % b);
 binary_op!(r#mod, integer, Integer, Integer, |a, b| (a % b + b) % b);
 
-fn neg(context: ExecutionContext) -> CrushResult<()> {
+fn neg(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output

@@ -6,7 +6,7 @@ use crate::lang::errors::{
     argument_error, data_error, eof_error, error, mandate, send_error, to_crush_error, CrushError,
     CrushResult,
 };
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::list::List;
 use crate::lang::r#struct::Struct;
 use crate::lang::scope::Scope;
@@ -654,7 +654,7 @@ fn filter_method(
     }
 }
 
-fn service_call(context: ExecutionContext) -> CrushResult<()> {
+fn service_call(context: CommandContext) -> CrushResult<()> {
     let cfg: ServiceCall = ServiceCall::parse(context.arguments, &context.printer)?;
     if let Value::Struct(service_obj) = mandate(context.this, "Missing this parameter for method")?
     {
@@ -705,7 +705,7 @@ fn service_call(context: ExecutionContext) -> CrushResult<()> {
 #[signature(session, can_block = false, output = Known(ValueType::Struct), short = "A struct containing all dbus session-level services")]
 struct Session {}
 
-fn session(context: ExecutionContext) -> CrushResult<()> {
+fn session(context: CommandContext) -> CrushResult<()> {
     let dbus = DBusThing::new(to_crush_error(Connection::new_session())?);
     populate_bus(context, dbus)
 }
@@ -713,12 +713,12 @@ fn session(context: ExecutionContext) -> CrushResult<()> {
 #[signature(system, can_block = false, output = Known(ValueType::Struct), short = "A struct containing all dbus system-level services")]
 struct System {}
 
-fn system(context: ExecutionContext) -> CrushResult<()> {
+fn system(context: CommandContext) -> CrushResult<()> {
     let dbus = DBusThing::new(to_crush_error(Connection::new_system())?);
     populate_bus(context, dbus)
 }
 
-fn populate_bus(context: ExecutionContext, dbus: DBusThing) -> CrushResult<()> {
+fn populate_bus(context: CommandContext, dbus: DBusThing) -> CrushResult<()> {
     let mut members = Vec::new();
 
     for service in dbus.list_services()? {

@@ -2,7 +2,7 @@ use crate::lang::command::Command;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command::TypeMap;
 use crate::lang::errors::{mandate, CrushResult};
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::execution_context::{ArgumentVector, This};
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
@@ -27,7 +27,7 @@ lazy_static! {
     };
 }
 
-fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
+fn getitem(mut context: CommandContext) -> CrushResult<()> {
     let val = context.this.scope()?;
     context.arguments.check_len(1)?;
     let name = context.arguments.string(0)?;

@@ -1,4 +1,4 @@
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::{
     lang::errors::CrushError,
     lang::{table::Row, value::Value, value::ValueType},
@@ -90,7 +90,7 @@ struct From {
     files: Files,
 }
 
-fn from(context: ExecutionContext) -> CrushResult<()> {
+fn from(context: CommandContext) -> CrushResult<()> {
     let cfg: From = From::parse(context.arguments, &context.printer)?;
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
     let mut v = Vec::new();
@@ -167,7 +167,7 @@ struct To {
     file: Files,
 }
 
-fn to(context: ExecutionContext) -> CrushResult<()> {
+fn to(context: CommandContext) -> CrushResult<()> {
     let cfg: To = To::parse(context.arguments, &context.printer)?;
     let mut writer = cfg.file.writer(context.output)?;
     let serde_value = context.input.recv()?;

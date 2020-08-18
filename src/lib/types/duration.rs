@@ -5,7 +5,7 @@ use crate::lang::command::TypeMap;
 use crate::lang::errors::{argument_error, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, This};
 use crate::lang::value::ValueType;
-use crate::lang::{execution_context::ExecutionContext, value::Value};
+use crate::lang::{execution_context::CommandContext, value::Value};
 use chrono::Duration;
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
@@ -120,7 +120,7 @@ struct New {
     days: i64,
 }
 
-fn new(context: ExecutionContext) -> CrushResult<()> {
+fn new(context: CommandContext) -> CrushResult<()> {
     let cfg: New = New::parse(context.arguments, &context.printer)?;
 
     let res = Duration::nanoseconds(cfg.nanoseconds)
@@ -133,7 +133,7 @@ fn new(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Duration(res))
 }
 
-fn neg(context: ExecutionContext) -> CrushResult<()> {
+fn neg(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output

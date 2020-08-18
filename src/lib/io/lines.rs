@@ -3,7 +3,7 @@ use crate::lang::errors::{argument_error, data_error, to_crush_error, CrushResul
 use crate::lang::files::Files;
 use crate::lang::scope::ScopeLoader;
 use crate::lang::{
-    execution_context::ExecutionContext, table::ColumnType, table::Row, value::Value,
+    execution_context::CommandContext, table::ColumnType, table::Row, value::Value,
     value::ValueType,
 };
 use signature::signature;
@@ -20,7 +20,7 @@ struct From {
     files: Files,
 }
 
-pub fn from(context: ExecutionContext) -> CrushResult<()> {
+pub fn from(context: CommandContext) -> CrushResult<()> {
     let output = context
         .output
         .initialize(vec![ColumnType::new("line", ValueType::String)])?;
@@ -62,7 +62,7 @@ struct To {
     file: Files,
 }
 
-pub fn to(context: ExecutionContext) -> CrushResult<()> {
+pub fn to(context: CommandContext) -> CrushResult<()> {
     let cfg: To = To::parse(context.arguments, &context.printer)?;
 
     match context.input.recv()?.stream() {

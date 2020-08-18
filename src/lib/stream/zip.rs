@@ -1,6 +1,6 @@
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::errors::CrushResult;
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::stream::Stream;
 use signature::signature;
 
@@ -12,7 +12,7 @@ pub struct Zip {
     second: Stream,
 }
 
-pub fn zip(context: ExecutionContext) -> CrushResult<()> {
+pub fn zip(context: CommandContext) -> CrushResult<()> {
     let mut cfg: Zip = Zip::parse(context.arguments, &context.printer)?;
     let mut output_type = Vec::new();
     output_type.append(&mut cfg.first.types().to_vec());

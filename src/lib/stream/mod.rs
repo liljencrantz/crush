@@ -10,6 +10,7 @@ mod sort;
 mod tail;
 mod r#where;
 
+mod each;
 mod enumerate;
 mod select;
 
@@ -32,6 +33,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare_command(
                 "tail", tail::perform, true,
                 "tail [lines:integer]", "Return the last lines of the io. Defaults to 10.", None, Passthrough)?;
+            each::Each::declare(env)?;
             r#where::Where::declare(env)?;
             sort::Sort::declare(env)?;
             env.declare_command(

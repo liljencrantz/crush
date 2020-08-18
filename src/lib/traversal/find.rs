@@ -13,7 +13,7 @@ use lazy_static::lazy_static;
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{error, to_crush_error, CrushResult};
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::files::Files;
 use crate::lang::stream::OutputStream;
 use crate::lang::{table::ColumnType, table::Row, value::Value, value::ValueType};
@@ -110,7 +110,7 @@ pub struct Find {
     recursive: bool,
 }
 
-fn find(context: ExecutionContext) -> CrushResult<()> {
+fn find(context: CommandContext) -> CrushResult<()> {
     let mut output = context.output.initialize(OUTPUT_TYPE.clone())?;
     let config: Find = Find::parse(context.arguments, &context.printer)?;
 

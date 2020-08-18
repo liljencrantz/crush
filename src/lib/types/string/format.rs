@@ -1,5 +1,5 @@
 use crate::lang::errors::{argument_error, mandate, CrushResult};
-use crate::lang::execution_context::{ExecutionContext, This};
+use crate::lang::execution_context::{CommandContext, This};
 use crate::lang::{argument::Argument, value::Value};
 use crate::lib::types::string::format::FormatState::*;
 
@@ -86,7 +86,7 @@ fn do_format(format: &str, param: Vec<Argument>) -> CrushResult<String> {
     Ok(res)
 }
 
-pub fn format(context: ExecutionContext) -> CrushResult<()> {
+pub fn format(context: CommandContext) -> CrushResult<()> {
     let format = context.this.string()?;
     context
         .output

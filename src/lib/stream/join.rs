@@ -2,7 +2,7 @@ use crate::lang::argument::Argument;
 use crate::lang::errors::argument_error;
 use crate::lang::errors::CrushError;
 use crate::lang::errors::CrushResult;
-use crate::lang::execution_context::{ArgumentVector, ExecutionContext};
+use crate::lang::execution_context::{ArgumentVector, CommandContext};
 use crate::lang::printer::Printer;
 use crate::lang::r#struct::Struct;
 use crate::lang::stream::CrushStream;
@@ -200,7 +200,7 @@ fn get_output_type(input_type: &[ColumnType], cfg: &Config) -> Result<Vec<Column
     }
 }
 
-pub fn perform(context: ExecutionContext) -> CrushResult<()> {
+pub fn perform(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Struct(s) => {
             let cfg = parse(&s.local_signature(), context.arguments)?;

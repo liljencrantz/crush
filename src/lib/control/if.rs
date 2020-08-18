@@ -1,7 +1,7 @@
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::Command;
 use crate::lang::errors::CrushResult;
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use signature::signature;
 
 #[signature(
@@ -19,7 +19,7 @@ pub struct If {
     false_clause: Option<Command>,
 }
 
-fn r#if(context: ExecutionContext) -> CrushResult<()> {
+fn r#if(context: CommandContext) -> CrushResult<()> {
     let cfg: If = If::parse(context.arguments.clone(), &context.printer)?;
 
     if cfg.condition {

@@ -2,7 +2,7 @@ use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{argument_error, error, to_crush_error, CrushResult};
 use crate::lang::execution_context::ArgumentVector;
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::help::Help;
 use crate::lang::printer::Printer;
 use crate::lang::scope::Scope;
@@ -13,7 +13,7 @@ use std::path::PathBuf;
 
 mod find;
 
-pub fn cd(context: ExecutionContext) -> CrushResult<()> {
+pub fn cd(context: CommandContext) -> CrushResult<()> {
     let dir = match context.arguments.len() {
         0 => home(),
         1 => {
@@ -37,7 +37,7 @@ pub fn cd(context: ExecutionContext) -> CrushResult<()> {
     to_crush_error(std::env::set_current_dir(dir))
 }
 
-pub fn pwd(context: ExecutionContext) -> CrushResult<()> {
+pub fn pwd(context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::File(cwd()?))
 }
 
@@ -56,7 +56,7 @@ fn halp(o: &dyn Help, printer: &Printer) {
     );
 }
 
-pub fn help(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn help(mut context: CommandContext) -> CrushResult<()> {
     match context.arguments.len() {
         0 => {
             context.printer.line(

@@ -1,6 +1,6 @@
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::errors::CrushResult;
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::scope::Scope;
 use crate::lang::value::Value;
 use signature::signature;
@@ -16,7 +16,7 @@ struct Float {
     to: f64,
 }
 
-fn float(context: ExecutionContext) -> CrushResult<()> {
+fn float(context: CommandContext) -> CrushResult<()> {
     let cfg: Float = Float::parse(context.arguments, &context.printer)?;
     context
         .output
@@ -35,7 +35,7 @@ struct Integer {
     to: i128,
 }
 
-fn integer(context: ExecutionContext) -> CrushResult<()> {
+fn integer(context: CommandContext) -> CrushResult<()> {
     let cfg: Integer = Integer::parse(context.arguments, &context.printer)?;
     let n = rand::random::<f64>() * (cfg.to as f64);
     context.output.send(Value::Integer(n as i128))?;

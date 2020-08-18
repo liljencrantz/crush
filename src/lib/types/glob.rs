@@ -5,7 +5,7 @@ use crate::lang::errors::CrushResult;
 use crate::lang::execution_context::{ArgumentVector, This};
 use crate::lang::list::List;
 use crate::lang::value::ValueType;
-use crate::lang::{execution_context::ExecutionContext, value::Value};
+use crate::lang::{execution_context::CommandContext, value::Value};
 use crate::util::file::cwd;
 use crate::util::glob::Glob;
 use lazy_static::lazy_static;
@@ -58,24 +58,24 @@ lazy_static! {
     };
 }
 
-fn new(mut context: ExecutionContext) -> CrushResult<()> {
+fn new(mut context: CommandContext) -> CrushResult<()> {
     let def = context.arguments.string(0)?;
     context.output.send(Value::Glob(Glob::new(&def)))
 }
 
-fn r#match(mut context: ExecutionContext) -> CrushResult<()> {
+fn r#match(mut context: CommandContext) -> CrushResult<()> {
     let g = context.this.glob()?;
     let needle = context.arguments.string(0)?;
     context.output.send(Value::Bool(g.matches(&needle)))
 }
 
-fn not_match(mut context: ExecutionContext) -> CrushResult<()> {
+fn not_match(mut context: CommandContext) -> CrushResult<()> {
     let g = context.this.glob()?;
     let needle = context.arguments.string(0)?;
     context.output.send(Value::Bool(!g.matches(&needle)))
 }
 
-fn files(context: ExecutionContext) -> CrushResult<()> {
+fn files(context: CommandContext) -> CrushResult<()> {
     let g = context.this.glob()?;
     let mut files = Vec::new();
     g.glob_files(&cwd()?, &mut files)?;

@@ -1,7 +1,7 @@
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::errors::{error, to_crush_error, CrushResult};
-use crate::lang::execution_context::{ArgumentVector, ExecutionContext};
+use crate::lang::execution_context::{ArgumentVector, CommandContext};
 use crate::lang::scope::Scope;
 use crate::lang::stream::OutputStream;
 use crate::lang::table::ColumnType;
@@ -59,7 +59,7 @@ fn state_name(s: Status) -> &'static str {
     }
 }
 
-fn ps(context: ExecutionContext) -> CrushResult<()> {
+fn ps(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     let output = context.output.initialize(PS_OUTPUT_TYPE.clone())?;
     let users = create_user_map();
@@ -113,7 +113,7 @@ struct Kill {
     signal: String,
 }
 
-fn kill(context: ExecutionContext) -> CrushResult<()> {
+fn kill(context: CommandContext) -> CrushResult<()> {
     let sig: Kill = Kill::parse(context.arguments, &context.printer)?;
     for pid in sig.pid {
         to_crush_error(signal::kill(

@@ -3,7 +3,7 @@ use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command::TypeMap;
 use crate::lang::errors::{to_crush_error, CrushResult};
-use crate::lang::execution_context::{ArgumentVector, ExecutionContext, This};
+use crate::lang::execution_context::{ArgumentVector, CommandContext, This};
 use crate::lang::r#struct::Struct;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
@@ -61,7 +61,7 @@ lazy_static! {
     };
 }
 
-pub fn stat(context: ExecutionContext) -> CrushResult<()> {
+pub fn stat(context: CommandContext) -> CrushResult<()> {
     let file = context.this.file()?;
     let metadata = to_crush_error(metadata(file))?;
     context.output.send(Value::Struct(Struct::new(
@@ -84,13 +84,13 @@ pub fn stat(context: ExecutionContext) -> CrushResult<()> {
     )))
 }
 
-pub fn exists(context: ExecutionContext) -> CrushResult<()> {
+pub fn exists(context: CommandContext) -> CrushResult<()> {
     context
         .output
         .send(Value::Bool(context.this.file()?.exists()))
 }
 
-pub fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn getitem(mut context: CommandContext) -> CrushResult<()> {
     let base_directory = context.this.file()?;
     context.arguments.check_len(1)?;
     let sub = context.arguments.string(0)?;

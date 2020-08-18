@@ -192,13 +192,13 @@ pub trait ArgumentHandler: Sized {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lang::execution_context::ExecutionContext;
+    use crate::lang::execution_context::CommandContext;
     use crate::lang::list::List;
     use crate::lang::ordered_string_map::OrderedStringMap;
     use crate::lang::value::ValueType;
     use signature::signature;
 
-    fn x(_context: ExecutionContext) -> CrushResult<()> {
+    fn x(_context: CommandContext) -> CrushResult<()> {
         Ok(())
     }
 

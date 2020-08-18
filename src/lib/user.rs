@@ -1,17 +1,17 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{mandate, CrushResult};
-use crate::lang::execution_context::{ArgumentVector, ExecutionContext};
+use crate::lang::execution_context::{ArgumentVector, CommandContext};
 use crate::lang::scope::Scope;
 use crate::lang::value::{Value, ValueType};
 use crate::util::file::home;
 use users::{get_current_gid, get_current_groupname, get_current_uid, get_current_username};
 
-fn home_fun(context: ExecutionContext) -> CrushResult<()> {
+fn home_fun(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context.output.send(Value::File(home()?))
 }
 
-fn name(context: ExecutionContext) -> CrushResult<()> {
+fn name(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context.output.send(Value::string(mandate(
         mandate(
@@ -23,7 +23,7 @@ fn name(context: ExecutionContext) -> CrushResult<()> {
     )?))
 }
 
-fn group(context: ExecutionContext) -> CrushResult<()> {
+fn group(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context.output.send(Value::string(mandate(
         mandate(
@@ -35,14 +35,14 @@ fn group(context: ExecutionContext) -> CrushResult<()> {
     )?))
 }
 
-fn uid(context: ExecutionContext) -> CrushResult<()> {
+fn uid(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
         .send(Value::Integer(get_current_uid() as i128))
 }
 
-fn gid(context: ExecutionContext) -> CrushResult<()> {
+fn gid(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output

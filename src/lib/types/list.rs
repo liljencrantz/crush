@@ -3,7 +3,7 @@ use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command::TypeMap;
 use crate::lang::errors::{argument_error, data_error, mandate, CrushResult};
-use crate::lang::execution_context::{ArgumentVector, ExecutionContext, This};
+use crate::lang::execution_context::{ArgumentVector, CommandContext, This};
 use crate::lang::value::Value;
 use crate::lang::{command::Command, list::List, value::ValueType};
 use lazy_static::lazy_static;
@@ -180,7 +180,7 @@ struct Repeat {
     times: usize,
 }
 
-fn repeat(context: ExecutionContext) -> CrushResult<()> {
+fn repeat(context: CommandContext) -> CrushResult<()> {
     let cfg: Repeat = Repeat::parse(context.arguments, &context.printer)?;
     let mut l = Vec::with_capacity(cfg.times as usize);
     for _i in 0..cfg.times {
@@ -191,7 +191,7 @@ fn repeat(context: ExecutionContext) -> CrushResult<()> {
         .send(Value::List(List::new(cfg.item.value_type(), l)))
 }
 
-fn call_type(mut context: ExecutionContext) -> CrushResult<()> {
+fn call_type(mut context: CommandContext) -> CrushResult<()> {
     match context.this.r#type()? {
         ValueType::List(c) => match *c {
             ValueType::Empty => {
@@ -220,7 +220,7 @@ fn call_type(mut context: ExecutionContext) -> CrushResult<()> {
     }
 }
 
-fn of(mut context: ExecutionContext) -> CrushResult<()> {
+fn of(mut context: CommandContext) -> CrushResult<()> {
     match context.arguments.len() {
         0 => {
             let mut lst = Vec::new();
@@ -246,7 +246,7 @@ fn of(mut context: ExecutionContext) -> CrushResult<()> {
     }
 }
 
-fn new(context: ExecutionContext) -> CrushResult<()> {
+fn new(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     match context.this.r#type()? {
         ValueType::List(t) => context.output.send(Value::List(List::new(*t, vec![]))),
@@ -254,21 +254,21 @@ fn new(context: ExecutionContext) -> CrushResult<()> {
     }
 }
 
-fn len(context: ExecutionContext) -> CrushResult<()> {
+fn len(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
         .send(Value::Integer(context.this.list()?.len() as i128))
 }
 
-fn empty(context: ExecutionContext) -> CrushResult<()> {
+fn empty(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
         .send(Value::Bool(context.this.list()?.len() == 0))
 }
 
-fn push(mut context: ExecutionContext) -> CrushResult<()> {
+fn push(mut context: CommandContext) -> CrushResult<()> {
     let l = context.this.list()?;
     let mut new_elements: Vec<Value> = Vec::new();
     for el in context.arguments.drain(..) {
@@ -284,28 +284,28 @@ fn push(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::List(l))
 }
 
-fn pop(context: ExecutionContext) -> CrushResult<()> {
+fn pop(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     let o = context.output;
     context.this.list()?.pop().map(|c| o.send(c));
     Ok(())
 }
 
-fn peek(context: ExecutionContext) -> CrushResult<()> {
+fn peek(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     let o = context.output;
     context.this.list()?.peek().map(|c| o.send(c));
     Ok(())
 }
 
-fn clear(context: ExecutionContext) -> CrushResult<()> {
+fn clear(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     let l = context.this.list()?;
     l.clear();
     context.output.send(Value::List(l))
 }
 
-fn setitem(mut context: ExecutionContext) -> CrushResult<()> {
+fn setitem(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(2)?;
     let list = context.this.list()?;
     let key = context.arguments.integer(0)?;
@@ -314,14 +314,14 @@ fn setitem(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.empty()
 }
 
-fn remove(mut context: ExecutionContext) -> CrushResult<()> {
+fn remove(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     let list = context.this.list()?;
     let idx = context.arguments.integer(0)?;
     list.remove(idx as usize)
 }
 
-fn insert(mut context: ExecutionContext) -> CrushResult<()> {
+fn insert(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(2)?;
     let list = context.this.list()?;
     let idx = context.arguments.integer(0)?;
@@ -329,7 +329,7 @@ fn insert(mut context: ExecutionContext) -> CrushResult<()> {
     list.insert(idx as usize, value)
 }
 
-fn truncate(mut context: ExecutionContext) -> CrushResult<()> {
+fn truncate(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     let list = context.this.list()?;
     let idx = context.arguments.integer(0)?;
@@ -337,14 +337,14 @@ fn truncate(mut context: ExecutionContext) -> CrushResult<()> {
     Ok(())
 }
 
-fn clone(context: ExecutionContext) -> CrushResult<()> {
+fn clone(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
         .send(Value::List(context.this.list()?.copy()))
 }
 
-fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
+fn getitem(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     let list = context.this.list()?;
     let idx = context.arguments.integer(0)?;

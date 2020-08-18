@@ -1,6 +1,6 @@
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::{
     binary::binary_channel, r#struct::Struct, table::ColumnType, table::Row, table::Table,
     value::Value, value::ValueType,
@@ -48,7 +48,7 @@ pub struct Http {
     header: Vec<String>,
 }
 
-pub fn http(context: ExecutionContext) -> CrushResult<()> {
+pub fn http(context: CommandContext) -> CrushResult<()> {
     let cfg: Http = Http::parse(context.arguments, &context.printer)?;
 
     let (mut output, input) = binary_channel();

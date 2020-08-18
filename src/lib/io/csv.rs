@@ -1,4 +1,4 @@
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::{
     lang::errors::CrushError,
     lang::{table::Row, value::Value},
@@ -40,7 +40,7 @@ struct From {
     trim: Option<char>,
 }
 
-fn from(context: ExecutionContext) -> CrushResult<()> {
+fn from(context: CommandContext) -> CrushResult<()> {
     let cfg: From = From::parse(context.arguments, &context.printer)?;
     let columns = cfg
         .columns

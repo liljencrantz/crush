@@ -4,7 +4,7 @@ use crate::lang::command::TypeMap;
 use crate::lang::errors::{argument_error, mandate, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, This};
 use crate::lang::value::ValueType;
-use crate::lang::{execution_context::ExecutionContext, value::Value};
+use crate::lang::{execution_context::CommandContext, value::Value};
 use crate::lib::types::parse_column_types;
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
@@ -47,7 +47,7 @@ lazy_static! {
     };
 }
 
-fn call_type(context: ExecutionContext) -> CrushResult<()> {
+fn call_type(context: CommandContext) -> CrushResult<()> {
     match context.this.r#type()? {
         ValueType::Table(c) => {
             if c.is_empty() {
@@ -66,14 +66,14 @@ fn call_type(context: ExecutionContext) -> CrushResult<()> {
     }
 }
 
-fn len(context: ExecutionContext) -> CrushResult<()> {
+fn len(context: CommandContext) -> CrushResult<()> {
     let table = context.this.table()?;
     context
         .output
         .send(Value::Integer(table.rows().len() as i128))
 }
 
-fn getitem(mut context: ExecutionContext) -> CrushResult<()> {
+fn getitem(mut context: CommandContext) -> CrushResult<()> {
     let o = context.this.table()?;
     context.arguments.check_len(1)?;
     let idx = context.arguments.integer(0)?;

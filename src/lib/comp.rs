@@ -1,6 +1,6 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{argument_error, CrushResult};
-use crate::lang::execution_context::{ArgumentVector, ExecutionContext};
+use crate::lang::execution_context::{ArgumentVector, CommandContext};
 use crate::lang::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
@@ -8,7 +8,7 @@ use std::cmp::Ordering;
 
 macro_rules! cmp {
     ($name:ident, $op:expr) => {
-        pub fn $name(mut context: ExecutionContext) -> CrushResult<()> {
+        pub fn $name(mut context: CommandContext) -> CrushResult<()> {
             context.arguments.check_len(2)?;
             let l = context.arguments.value(0)?;
             let r = context.arguments.value(1)?;
@@ -34,21 +34,21 @@ cmp!(lt, |o| o == Ordering::Less);
 cmp!(gte, |o| o != Ordering::Less);
 cmp!(lte, |o| o != Ordering::Greater);
 
-pub fn eq(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn eq(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(2)?;
     let l = context.arguments.value(0)?;
     let r = context.arguments.value(1)?;
     context.output.send(Value::Bool(l.eq(&r)))
 }
 
-pub fn neq(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn neq(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(2)?;
     let l = context.arguments.value(0)?;
     let r = context.arguments.value(1)?;
     context.output.send(Value::Bool(!l.eq(&r)))
 }
 
-pub fn not(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn not(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     context
         .output

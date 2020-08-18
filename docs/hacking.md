@@ -5,10 +5,10 @@ crush, but changing the shell itself. It is currently woefully incomplete.
 
 ## Writing your own commands
 
-Commands are Rust functions that take an `ExecutionContext` as input and return a `CrushResult<()>`, e.g.
+Commands are Rust functions that take an `CommandContext` as input and return a `CrushResult<()>`, e.g.
 
 ```rust
-fn find(context: ExecutionContext) -> CrushResult<()> {
+fn find(context: CommandContext) -> CrushResult<()> {
     ...
 }
 ```
@@ -56,7 +56,7 @@ The final bit of wiring needed is to actually *parse* your input argument during
 command invocation, which is done using an invocation like
 
 ```rust
-fn find(context: ExecutionContext) -> CrushResult<()> {
+fn find(context: CommandContext) -> CrushResult<()> {
     let config: Find = Find::parse(context.arguments, &context.printer)?;
     ...
 }

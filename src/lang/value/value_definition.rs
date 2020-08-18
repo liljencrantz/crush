@@ -94,7 +94,7 @@ impl ValueDefinition {
                     parent_cmd.invoke(
                         context
                             .job_context(first_input, last_output)
-                            .execution_context(vec![], grand_parent),
+                            .command_context(vec![], grand_parent),
                     )?;
                     last_input.recv()?
                 } else {

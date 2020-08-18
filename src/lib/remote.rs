@@ -2,7 +2,7 @@ use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{error, mandate, to_crush_error, CrushError, CrushResult};
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::files::Files;
 use crate::lang::patterns::Patterns;
 use crate::lang::scope::Scope;
@@ -162,7 +162,7 @@ struct Exec {
     allow_not_found: bool,
 }
 
-fn exec(context: ExecutionContext) -> CrushResult<()> {
+fn exec(context: CommandContext) -> CrushResult<()> {
     let cfg: Exec = Exec::parse(context.arguments, &context.printer)?;
     let host_file = if cfg.host_file.had_entries() {
         cfg.host_file.into_file()?
@@ -173,7 +173,7 @@ fn exec(context: ExecutionContext) -> CrushResult<()> {
     serialize(&Value::Command(cfg.command), &mut in_buf)?;
     context.output.send(run_remote(
         &in_buf,
-        &context.env,
+        &context.scope,
         cfg.host,
         &cfg.username,
         &cfg.password,
@@ -212,7 +212,7 @@ struct Pexec {
     allow_not_found: bool,
 }
 
-fn pexec(context: ExecutionContext) -> CrushResult<()> {
+fn pexec(context: CommandContext) -> CrushResult<()> {
     let cfg: Pexec = Pexec::parse(context.arguments, &context.printer)?;
     let host_file = if cfg.host_file.had_entries() {
         cfg.host_file.into_file()?
@@ -240,7 +240,7 @@ fn pexec(context: ExecutionContext) -> CrushResult<()> {
         let my_recv = host_recv.clone();
         let my_send = result_send.clone();
         let my_buf = in_buf.clone();
-        let my_env = context.env.clone();
+        let my_env = context.scope.clone();
         let my_username = cfg.username.clone();
         let my_password = cfg.password.clone();
         let my_host_file = host_file.clone();
@@ -302,7 +302,7 @@ short = "List all known ssh-agent identities"
 )]
 struct Identity {}
 
-fn identity(context: ExecutionContext) -> CrushResult<()> {
+fn identity(context: CommandContext) -> CrushResult<()> {
     let output = context.output.initialize(IDENTITY_OUTPUT_TYPE.clone())?;
     let sess = to_crush_error(Session::new())?;
     let mut agent = to_crush_error(sess.agent())?;
@@ -334,7 +334,7 @@ mod host {
         host_file: Files,
     }
 
-    fn list(context: ExecutionContext) -> CrushResult<()> {
+    fn list(context: CommandContext) -> CrushResult<()> {
         let cfg: List = List::parse(context.arguments, &context.printer)?;
         let output = context
             .output
@@ -375,7 +375,7 @@ mod host {
         key: Patterns,
     }
 
-    fn remove(context: ExecutionContext) -> CrushResult<()> {
+    fn remove(context: CommandContext) -> CrushResult<()> {
         let cfg: Remove = Remove::parse(context.arguments, &context.printer)?;
         let host_file = if cfg.host_file.had_entries() {
             cfg.host_file.into_file()?

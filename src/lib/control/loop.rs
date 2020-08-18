@@ -1,7 +1,7 @@
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::Command;
 use crate::lang::errors::CrushResult;
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::stream::{black_hole, empty_channel};
 use signature::signature;
 
@@ -16,16 +16,16 @@ pub struct Loop {
     body: Command,
 }
 
-fn r#loop(context: ExecutionContext) -> CrushResult<()> {
+fn r#loop(context: CommandContext) -> CrushResult<()> {
     let cfg: Loop = Loop::parse(context.arguments.clone(), &context.printer)?;
     context.output.initialize(vec![])?;
     loop {
-        let env = context.env.create_child(&context.env, true);
-        cfg.body.invoke(ExecutionContext {
+        let env = context.scope.create_child(&context.scope, true);
+        cfg.body.invoke(CommandContext {
             input: empty_channel(),
             output: black_hole(),
             arguments: Vec::new(),
-            env: env.clone(),
+            scope: env.clone(),
             this: None,
             printer: context.printer.clone(),
         })?;

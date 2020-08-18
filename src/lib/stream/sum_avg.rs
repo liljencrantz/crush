@@ -1,5 +1,5 @@
 use crate::lang::errors::{argument_error, error, CrushResult};
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::stream::Stream;
 use crate::lang::table::ColumnVec;
 use crate::lang::{argument::Argument, table::ColumnType};
@@ -49,7 +49,7 @@ sum_function!(sum_int, i128, 0, Integer);
 sum_function!(sum_float, f64, 0.0, Float);
 sum_function!(sum_duration, Duration, Duration::seconds(0), Duration);
 
-pub fn sum(context: ExecutionContext) -> CrushResult<()> {
+pub fn sum(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream() {
         Some(input) => {
             let column = parse(input.types(), &context.arguments)?;
@@ -92,7 +92,7 @@ avg_function!(avg_int, i128, 0, Integer, i128);
 avg_function!(avg_float, f64, 0.0, Float, f64);
 avg_function!(avg_duration, Duration, Duration::seconds(0), Duration, i32);
 
-pub fn avg(context: ExecutionContext) -> CrushResult<()> {
+pub fn avg(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream() {
         Some(input) => {
             let column = parse(input.types(), &context.arguments)?;
@@ -149,7 +149,7 @@ aggr_function!(max_float, Float, |a, b| std::cmp::max(
 aggr_function!(max_duration, Duration, |a, b| std::cmp::max(a, b));
 aggr_function!(max_time, Time, |a, b| std::cmp::max(a, b));
 
-pub fn min(context: ExecutionContext) -> CrushResult<()> {
+pub fn min(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream() {
         Some(input) => {
             let column = parse(input.types(), &context.arguments)?;
@@ -167,7 +167,7 @@ pub fn min(context: ExecutionContext) -> CrushResult<()> {
     }
 }
 
-pub fn max(context: ExecutionContext) -> CrushResult<()> {
+pub fn max(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream() {
         Some(input) => {
             let column = parse(input.types(), &context.arguments)?;

@@ -1,6 +1,6 @@
 use crate::lang::command::{Command, CrushCommand, OutputType};
 use crate::lang::errors::{error, mandate, CrushResult};
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::help::Help;
 use crate::lang::r#struct::Struct;
 use crate::lang::{value::Value, value::ValueType};
@@ -63,7 +63,7 @@ impl ScopeLoader {
     pub fn declare_command(
         &mut self,
         name: &str,
-        call: fn(ExecutionContext) -> CrushResult<()>,
+        call: fn(CommandContext) -> CrushResult<()>,
         can_block: bool,
         signature: &'static str,
         short_help: &'static str,
@@ -86,7 +86,7 @@ impl ScopeLoader {
     pub fn declare_condition_command(
         &mut self,
         name: &str,
-        call: fn(context: ExecutionContext) -> CrushResult<()>,
+        call: fn(context: CommandContext) -> CrushResult<()>,
         signature: &'static str,
         short_help: &'static str,
         long_help: Option<&'static str>,

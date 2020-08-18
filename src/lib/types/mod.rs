@@ -3,7 +3,7 @@ use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::errors::{argument_error, mandate, CrushResult};
 use crate::lang::execution_context::ArgumentVector;
-use crate::lang::execution_context::{ExecutionContext, This};
+use crate::lang::execution_context::{CommandContext, This};
 use crate::lang::scope::Scope;
 use crate::lang::stream::black_hole;
 use crate::lang::table::ColumnType;
@@ -25,11 +25,11 @@ pub mod table;
 pub mod table_stream;
 pub mod time;
 
-fn materialize(context: ExecutionContext) -> CrushResult<()> {
+fn materialize(context: CommandContext) -> CrushResult<()> {
     context.output.send(context.input.recv()?.materialize())
 }
 
-fn new(mut context: ExecutionContext) -> CrushResult<()> {
+fn new(mut context: CommandContext) -> CrushResult<()> {
     let parent = context.this.clone().r#struct()?;
     let res = Struct::new(vec![], Some(parent));
     let o = context.output;
@@ -43,7 +43,7 @@ fn new(mut context: ExecutionContext) -> CrushResult<()> {
     o.send(Value::Struct(res))
 }
 
-fn data(context: ExecutionContext) -> CrushResult<()> {
+fn data(context: CommandContext) -> CrushResult<()> {
     let mut names = column_names(&context.arguments);
     let arr: Vec<(String, Value)> = names
         .drain(..)
@@ -53,12 +53,12 @@ fn data(context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Struct(Struct::new(arr, None)))
 }
 
-fn class(mut context: ExecutionContext) -> CrushResult<()> {
+fn class(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len_range(0, 1)?;
     let parent = if !context.arguments.is_empty() {
         context.arguments.r#struct(0)?
     } else {
-        context.env.root_object()
+        context.scope.root_object()
     };
 
     let res = Struct::new(vec![], Some(parent));
@@ -86,7 +86,7 @@ pub fn parse_column_types(mut arguments: Vec<Argument>) -> CrushResult<Vec<Colum
     Ok(types)
 }
 
-pub fn convert(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn convert(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(
         context
             .arguments
@@ -95,14 +95,14 @@ pub fn convert(mut context: ExecutionContext) -> CrushResult<()> {
     )
 }
 
-pub fn r#typeof(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn r#typeof(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     context
         .output
         .send(Value::Type(context.arguments.value(0)?.value_type()))
 }
 
-fn class_set(mut context: ExecutionContext) -> CrushResult<()> {
+fn class_set(mut context: CommandContext) -> CrushResult<()> {
     let this = context.this.r#struct()?;
     let value = context.arguments.value(1)?;
     let name = context.arguments.string(0)?;
@@ -110,7 +110,7 @@ fn class_set(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(Value::Empty())
 }
 
-fn class_get(mut context: ExecutionContext) -> CrushResult<()> {
+fn class_get(mut context: CommandContext) -> CrushResult<()> {
     let this = context.this.r#struct()?;
     let name = context.arguments.string(0)?;
     context.output.send(mandate(

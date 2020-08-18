@@ -1,7 +1,7 @@
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::errors::CrushResult;
-use crate::lang::execution_context::ExecutionContext;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::files::Files;
 use crate::lang::scope::ScopeLoader;
 use crate::lang::serialization::{deserialize_reader, serialize_writer};
@@ -21,7 +21,7 @@ struct To {
     file: Files,
 }
 
-fn to(context: ExecutionContext) -> CrushResult<()> {
+fn to(context: CommandContext) -> CrushResult<()> {
     let cfg: To = To::parse(context.arguments, &context.printer)?;
     let mut writer = cfg.file.writer(context.output)?;
     let value = context.input.recv()?;
@@ -39,11 +39,11 @@ struct From {
     files: Files,
 }
 
-fn from(context: ExecutionContext) -> CrushResult<()> {
+fn from(context: CommandContext) -> CrushResult<()> {
     let cfg: From = From::parse(context.arguments, &context.printer)?;
     context.output.send(deserialize_reader(
         &mut BufReader::new(&mut cfg.files.reader(context.input)?),
-        &context.env,
+        &context.scope,
     )?)
 }
 

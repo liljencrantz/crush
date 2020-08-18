@@ -5,7 +5,7 @@ use crate::lang::command::TypeMap;
 use crate::lang::errors::{argument_error, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, This};
 use crate::lang::value::ValueType;
-use crate::lang::{execution_context::ExecutionContext, value::Value};
+use crate::lang::{execution_context::CommandContext, value::Value};
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use regex::Regex;
@@ -52,7 +52,7 @@ lazy_static! {
     };
 }
 
-fn new(mut context: ExecutionContext) -> CrushResult<()> {
+fn new(mut context: CommandContext) -> CrushResult<()> {
     let def = context.arguments.string(0)?;
     let res = match Regex::new(def.as_ref()) {
         Ok(r) => Value::Regex(def, r),
@@ -61,13 +61,13 @@ fn new(mut context: ExecutionContext) -> CrushResult<()> {
     context.output.send(res)
 }
 
-fn r#match(mut context: ExecutionContext) -> CrushResult<()> {
+fn r#match(mut context: CommandContext) -> CrushResult<()> {
     let re = context.this.re()?.1;
     let needle = context.arguments.string(0)?;
     context.output.send(Value::Bool(re.is_match(&needle)))
 }
 
-fn not_match(mut context: ExecutionContext) -> CrushResult<()> {
+fn not_match(mut context: CommandContext) -> CrushResult<()> {
     let re = context.this.re()?.1;
     let needle = context.arguments.string(0)?;
     context.output.send(Value::Bool(!re.is_match(&needle)))
@@ -99,7 +99,7 @@ struct ReplaceAllSignature {
     replacement: String,
 }
 
-fn replace(context: ExecutionContext) -> CrushResult<()> {
+fn replace(context: CommandContext) -> CrushResult<()> {
     let re = context.this.re()?.1;
     let args: ReplaceSignature = ReplaceSignature::parse(context.arguments, &context.printer)?;
     context.output.send(Value::string(
@@ -107,7 +107,7 @@ fn replace(context: ExecutionContext) -> CrushResult<()> {
     ))
 }
 
-fn replace_all(context: ExecutionContext) -> CrushResult<()> {
+fn replace_all(context: CommandContext) -> CrushResult<()> {
     let re = context.this.re()?.1;
     let args: ReplaceAllSignature =
         ReplaceAllSignature::parse(context.arguments, &context.printer)?;

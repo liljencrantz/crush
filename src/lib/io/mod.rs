@@ -5,7 +5,7 @@ use crate::lang::list::List;
 use crate::lang::pretty_printer::PrettyPrinter;
 use crate::lang::scope::Scope;
 use crate::lang::value::{Field, ValueType};
-use crate::lang::{execution_context::ExecutionContext, value::Value};
+use crate::lang::{execution_context::CommandContext, value::Value};
 use signature::signature;
 
 mod bin;
@@ -29,7 +29,7 @@ struct Val {
     value: Value,
 }
 
-pub fn val(context: ExecutionContext) -> CrushResult<()> {
+pub fn val(context: CommandContext) -> CrushResult<()> {
     let cfg: Val = Val::parse(context.arguments, &context.printer)?;
     context.output.send(cfg.value)
 }
@@ -44,7 +44,7 @@ struct Dir {
     value: Value,
 }
 
-pub fn dir(context: ExecutionContext) -> CrushResult<()> {
+pub fn dir(context: CommandContext) -> CrushResult<()> {
     let cfg: Dir = Dir::parse(context.arguments, &context.printer)?;
     context.output.send(Value::List(List::new(
         ValueType::String,
@@ -63,7 +63,7 @@ struct Echo {
     values: Vec<Value>,
 }
 
-fn echo(context: ExecutionContext) -> CrushResult<()> {
+fn echo(context: CommandContext) -> CrushResult<()> {
     let cfg: Echo = Echo::parse(context.arguments, &context.printer)?;
     let pretty = PrettyPrinter::new(context.printer.clone());
     for value in cfg.values {
@@ -83,7 +83,7 @@ struct Member {
     field: Field,
 }
 
-fn member(context: ExecutionContext) -> CrushResult<()> {
+fn member(context: CommandContext) -> CrushResult<()> {
     let cfg: Member = Member::parse(context.arguments, &context.printer)?;
     if cfg.field.len() != 1 {
         return argument_error("Invalid field - should have exactly one element");

@@ -1,7 +1,7 @@
 use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
 use crate::lang::scope::Scope;
 use crate::lang::{
-    binary::BinaryReader, execution_context::ExecutionContext, list::List, value::Value,
+    binary::BinaryReader, execution_context::CommandContext, list::List, value::Value,
     value::ValueType,
 };
 use signature::signature;
@@ -17,17 +17,17 @@ use crate::lang::command::OutputType::Known;
 use chrono::Duration;
 use std::path::PathBuf;
 
-pub fn r#break(context: ExecutionContext) -> CrushResult<()> {
-    context.env.do_break()?;
+pub fn r#break(context: CommandContext) -> CrushResult<()> {
+    context.scope.do_break()?;
     context.output.empty()
 }
 
-pub fn r#continue(context: ExecutionContext) -> CrushResult<()> {
-    context.env.do_continue()?;
+pub fn r#continue(context: CommandContext) -> CrushResult<()> {
+    context.scope.do_continue()?;
     context.output.empty()
 }
 
-pub fn cmd(mut context: ExecutionContext) -> CrushResult<()> {
+pub fn cmd(mut context: CommandContext) -> CrushResult<()> {
     if context.arguments.is_empty() {
         return argument_error("No command given");
     }
@@ -81,7 +81,7 @@ struct Sleep {
     duration: Duration,
 }
 
-pub fn sleep(context: ExecutionContext) -> CrushResult<()> {
+pub fn sleep(context: CommandContext) -> CrushResult<()> {
     let cfg = Sleep::parse(context.arguments, &context.printer)?;
     std::thread::sleep(to_crush_error(cfg.duration.to_std())?);
     context.output.send(Value::Empty())?;

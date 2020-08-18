@@ -1,5 +1,5 @@
 use crate::lang::errors::{argument_error, to_crush_error, CrushError, CrushResult};
-use crate::lang::execution_context::{ExecutionContext, JobContext};
+use crate::lang::execution_context::{CommandContext, JobContext};
 use crate::lang::parser::parse;
 use crate::lang::printer::Printer;
 use crate::lang::scope::Scope;
@@ -38,11 +38,11 @@ pub fn pup(env: Scope, buf: &Vec<u8>, printer: &Printer) -> CrushResult<()> {
                     },
                 ))?;
 
-            cmd.invoke(ExecutionContext {
+            cmd.invoke(CommandContext {
                 input: empty_channel(),
                 output: snd,
                 arguments: vec![],
-                env,
+                scope: env,
                 this: None,
                 printer: printer.clone(),
             })?;

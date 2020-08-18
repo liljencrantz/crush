@@ -4,7 +4,7 @@ use crate::lang::command::TypeMap;
 use crate::lang::errors::{argument_error, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, This};
 use crate::lang::value::ValueType;
-use crate::lang::{execution_context::ExecutionContext, value::Value};
+use crate::lang::{execution_context::CommandContext, value::Value};
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 
@@ -123,19 +123,19 @@ binary_op!(
     |a, b| a / b
 );
 
-fn neg(context: ExecutionContext) -> CrushResult<()> {
+fn neg(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context.output.send(Value::Float(-context.this.float()?))
 }
 
-fn is_nan(context: ExecutionContext) -> CrushResult<()> {
+fn is_nan(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
         .send(Value::Bool(context.this.float()?.is_nan()))
 }
 
-fn is_infinite(context: ExecutionContext) -> CrushResult<()> {
+fn is_infinite(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output

@@ -5,7 +5,7 @@ use crate::lang::command::TypeMap;
 use crate::lang::errors::{argument_error, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, This};
 use crate::lang::value::Value;
-use crate::lang::{execution_context::ExecutionContext, list::List, value::ValueType};
+use crate::lang::{execution_context::CommandContext, list::List, value::ValueType};
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use signature::signature;
@@ -171,28 +171,28 @@ lazy_static! {
         };
 }
 
-fn len(context: ExecutionContext) -> CrushResult<()> {
+fn len(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
         .send(Value::Integer(context.this.string()?.len() as i128))
 }
 
-fn upper(context: ExecutionContext) -> CrushResult<()> {
+fn upper(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
         .send(Value::String(context.this.string()?.to_uppercase()))
 }
 
-fn lower(context: ExecutionContext) -> CrushResult<()> {
+fn lower(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
         .send(Value::String(context.this.string()?.to_lowercase()))
 }
 
-fn split(mut context: ExecutionContext) -> CrushResult<()> {
+fn split(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     let this = context.this.string()?;
     let separator = context.arguments.string(0)?;
@@ -202,7 +202,7 @@ fn split(mut context: ExecutionContext) -> CrushResult<()> {
     )))
 }
 
-fn trim(context: ExecutionContext) -> CrushResult<()> {
+fn trim(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
@@ -222,7 +222,7 @@ struct LPad {
     padding: String,
 }
 
-fn lpad(context: ExecutionContext) -> CrushResult<()> {
+fn lpad(context: CommandContext) -> CrushResult<()> {
     let cfg: LPad = LPad::parse(context.arguments, &context.printer)?;
     let s = context.this.string()?;
     let len = cfg.length as usize;
@@ -250,7 +250,7 @@ struct RPad {
     padding: String,
 }
 
-fn rpad(context: ExecutionContext) -> CrushResult<()> {
+fn rpad(context: CommandContext) -> CrushResult<()> {
     let cfg: RPad = RPad::parse(context.arguments, &context.printer)?;
     let s = context.this.string()?;
     let len = cfg.length as usize;
@@ -265,21 +265,21 @@ fn rpad(context: ExecutionContext) -> CrushResult<()> {
     }
 }
 
-fn repeat(mut context: ExecutionContext) -> CrushResult<()> {
+fn repeat(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     let s = context.this.string()?;
     let times = context.arguments.integer(0)? as usize;
     context.output.send(Value::string(s.repeat(times).as_str()))
 }
 
-fn ends_with(mut context: ExecutionContext) -> CrushResult<()> {
+fn ends_with(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     let s = context.this.string()?;
     let suff = context.arguments.string(0)?;
     context.output.send(Value::Bool(s.ends_with(&suff)))
 }
 
-fn starts_with(mut context: ExecutionContext) -> CrushResult<()> {
+fn starts_with(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     let s = context.this.string()?;
     let pre = context.arguments.string(0)?;
@@ -288,7 +288,7 @@ fn starts_with(mut context: ExecutionContext) -> CrushResult<()> {
 
 macro_rules! per_char_method {
     ($name:ident, $test:expr) => {
-        fn $name(context: ExecutionContext) -> CrushResult<()> {
+        fn $name(context: CommandContext) -> CrushResult<()> {
             context.arguments.check_len(0)?;
             let s = context.this.string()?;
             context.output.send(Value::Bool(s.chars().all($test)))
@@ -316,7 +316,7 @@ struct IsDigit {
     radix: usize,
 }
 
-fn is_digit(context: ExecutionContext) -> CrushResult<()> {
+fn is_digit(context: CommandContext) -> CrushResult<()> {
     let cfg: IsDigit = IsDigit::parse(context.arguments, &context.printer)?;
     let s = context.this.string()?;
     context.output.send(Value::Bool(

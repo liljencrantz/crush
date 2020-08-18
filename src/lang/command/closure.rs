@@ -3,7 +3,7 @@ use crate::lang::command::{BoundCommand, Command, CrushCommand, OutputType, Para
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::dict::Dict;
 use crate::lang::errors::{argument_error, error, mandate, CrushResult};
-use crate::lang::execution_context::{CompileContext, ExecutionContext, JobContext};
+use crate::lang::execution_context::{CompileContext, CommandContext, JobContext};
 use crate::lang::help::Help;
 use crate::lang::job::Job;
 use crate::lang::list::List;
@@ -26,10 +26,10 @@ pub struct Closure {
 }
 
 impl CrushCommand for Closure {
-    fn invoke(&self, context: ExecutionContext) -> CrushResult<()> {
+    fn invoke(&self, context: CommandContext) -> CrushResult<()> {
         let job_definitions = self.job_definitions.clone();
         let parent_env = self.env.clone();
-        let env = parent_env.create_child(&context.env, false);
+        let env = parent_env.create_child(&context.scope, false);
 
         let mut cc = context.compile_context().with_scope(&env);
         if let Some(this) = context.this {
@@ -505,7 +505,7 @@ fn extract_help(jobs: &mut Vec<Job>) -> String {
 
 impl Closure {
     /*
-        pub fn spawn_stream(&self, context: StreamExecutionContext) -> CrushResult<()> {
+        pub fn spawn_stream(&self, context: StreamCommandContext) -> CrushResult<()> {
             let job_definitions = self.job_definitions.clone();
             let parent_env = self.env.clone();
             Ok(())

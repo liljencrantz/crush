@@ -3,7 +3,7 @@ use crate::lang::execution_context::{CompileContext, JobContext};
 use crate::lang::scope::Scope;
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, value::Value};
 use crate::lang::{
-    command::Command, execution_context::ExecutionContext, job::JobJoinHandle,
+    command::Command, execution_context::CommandContext, job::JobJoinHandle,
     value::ValueDefinition,
 };
 use crate::util::thread::{build, handle};
@@ -99,14 +99,14 @@ impl CommandInvocation {
         local_arguments: Vec<ArgumentDefinition>,
         mut this: Option<Value>,
         job_context: JobContext,
-    ) -> CrushResult<ExecutionContext> {
+    ) -> CrushResult<CommandContext> {
         let (arguments, arg_this) = local_arguments.compile(&mut job_context.compile_context())?;
 
         if arg_this.is_some() {
             this = arg_this;
         }
 
-        Ok(job_context.execution_context(arguments, this))
+        Ok(job_context.command_context(arguments, this))
     }
 
     pub fn can_block(&self, arg: &[ArgumentDefinition], context: &mut CompileContext) -> bool {

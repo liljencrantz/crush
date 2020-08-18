@@ -4,7 +4,7 @@ use crate::lang::files::Files;
 use crate::lang::scope::ScopeLoader;
 use crate::lang::stream::OutputStream;
 use crate::lang::{
-    execution_context::ExecutionContext, table::ColumnType, table::Row, value::Value,
+    execution_context::CommandContext, table::ColumnType, table::Row, value::Value,
     value::ValueType,
 };
 use signature::signature;
@@ -43,7 +43,7 @@ fn send(
     }
 }
 
-pub fn from(context: ExecutionContext) -> CrushResult<()> {
+pub fn from(context: CommandContext) -> CrushResult<()> {
     let output = context
         .output
         .initialize(vec![ColumnType::new("token", ValueType::String)])?;

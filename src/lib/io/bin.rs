@@ -2,7 +2,7 @@ use crate::lang::argument::ArgumentHandler;
 use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
 use crate::lang::files::Files;
 use crate::lang::scope::ScopeLoader;
-use crate::lang::{execution_context::ExecutionContext, value::Value};
+use crate::lang::{execution_context::CommandContext, value::Value};
 use signature::signature;
 
 #[signature(
@@ -15,7 +15,7 @@ struct From {
     files: Files,
 }
 
-pub fn from(context: ExecutionContext) -> CrushResult<()> {
+pub fn from(context: CommandContext) -> CrushResult<()> {
     let cfg: From = From::parse(context.arguments, &context.printer)?;
     context
         .output
@@ -32,7 +32,7 @@ struct To {
     file: Files,
 }
 
-pub fn to(context: ExecutionContext) -> CrushResult<()> {
+pub fn to(context: CommandContext) -> CrushResult<()> {
     let cfg: To = To::parse(context.arguments, &context.printer)?;
 
     match context.input.recv()? {
