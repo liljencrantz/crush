@@ -133,7 +133,7 @@ impl ValueType {
 
 impl Help for ValueType {
     fn signature(&self) -> String {
-        format!("type {}", self.to_string())
+        format!("type {}", self)
     }
 
     fn short_help(&self) -> String {

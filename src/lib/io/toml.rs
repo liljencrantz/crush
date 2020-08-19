@@ -151,7 +151,7 @@ fn to_toml(value: Value) -> CrushResult<toml::Value> {
 
         Value::TableStream(_) => panic!("Impossible"),
 
-        v => error(format!("Unsupported data type {}", v.value_type().to_string()).as_str()),
+        v => error(&format!("Unsupported data type {}", v.value_type())),
     }
 }
 

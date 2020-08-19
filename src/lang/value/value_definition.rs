@@ -80,7 +80,7 @@ impl ValueDefinition {
                 None,
                 mandate(
                     context.env.get(s)?.or_else(|| file_get(s)),
-                    format!("Unknown variable {}", self.to_string()).as_str(),
+                    &format!("Unknown variable {}", self),
                 )?,
             ),
 
@@ -103,12 +103,11 @@ impl ValueDefinition {
                 };
                 let val = mandate(
                     parent.field(&entry)?,
-                    format!(
+                    &format!(
                         "Missing field {} in value of type {}",
                         entry,
-                        parent.value_type().to_string()
-                    )
-                    .as_str(),
+                        parent.value_type()
+                    ),
                 )?;
                 (Some(parent), val)
             }
@@ -117,7 +116,7 @@ impl ValueDefinition {
                 let parent = parent_def.compile_internal(context, can_block)?.1;
                 let val = mandate(
                     parent.path(&entry),
-                    format!("Missing path entry {} in {}", entry, parent_def.to_string()).as_str(),
+                    &format!("Missing path entry {} in {}", entry, parent_def),
                 )?;
                 (Some(parent), val)
             }

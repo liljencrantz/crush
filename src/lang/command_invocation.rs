@@ -253,7 +253,7 @@ fn invoke_value(
                     context,
                 )
             } else {
-                error(format!("Not a command {}", value.to_string()).as_str())
+                error(&format!("Not a command {}", value))
             }
         }
     }

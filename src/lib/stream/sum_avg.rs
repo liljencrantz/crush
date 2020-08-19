@@ -58,7 +58,7 @@ pub fn sum(context: CommandContext) -> CrushResult<()> {
                 ValueType::Float => context.output.send(sum_float(input, column)?),
                 ValueType::Duration => context.output.send(sum_duration(input, column)?),
                 t => argument_error(
-                    format!("Can't calculate sum of elements of type {}", t.to_string()).as_str(),
+                    &format!("Can't calculate sum of elements of type {}", t),
                 ),
             }
         }
@@ -101,11 +101,10 @@ pub fn avg(context: CommandContext) -> CrushResult<()> {
                 ValueType::Float => context.output.send(avg_float(input, column)?),
                 ValueType::Duration => context.output.send(avg_duration(input, column)?),
                 t => argument_error(
-                    format!(
+                    &format!(
                         "Can't calculate average of elements of type {}",
-                        t.to_string()
-                    )
-                    .as_str(),
+                        t
+                    ),
                 ),
             }
         }
@@ -159,7 +158,7 @@ pub fn min(context: CommandContext) -> CrushResult<()> {
                 ValueType::Duration => context.output.send(min_duration(input, column)?),
                 ValueType::Time => context.output.send(min_time(input, column)?),
                 t => argument_error(
-                    format!("Can't pick min of elements of type {}", t.to_string()).as_str(),
+                    &format!("Can't pick min of elements of type {}", t),
                 ),
             }
         }
@@ -177,7 +176,7 @@ pub fn max(context: CommandContext) -> CrushResult<()> {
                 ValueType::Duration => context.output.send(max_duration(input, column)?),
                 ValueType::Time => context.output.send(max_time(input, column)?),
                 t => argument_error(
-                    format!("Can't pick max of elements of type {}", t.to_string()).as_str(),
+                    &format!("Can't pick max of elements of type {}", t),
                 ),
             }
         }

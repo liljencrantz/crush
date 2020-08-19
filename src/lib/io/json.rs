@@ -134,7 +134,7 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
 
         Value::TableStream(_) => panic!("Impossible"),
 
-        v => error(format!("Unsupported data type {}", v.value_type().to_string()).as_str()),
+        v => error(&format!("Unsupported data type {}", v.value_type())),
     }
 }
 

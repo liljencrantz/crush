@@ -16,7 +16,7 @@ macro_rules! math_fun {
                 Value::Integer(i) => i as f64,
                 v => {
                     return argument_error(
-                        format!("Expected a number, got a {}", v.value_type().to_string()).as_str(),
+                        &format!("Expected a number, got a {}", v.value_type()),
                     )
                 }
             };
@@ -34,7 +34,7 @@ macro_rules! math_fun2 {
                 Value::Integer(i) => i as f64,
                 v => {
                     return argument_error(
-                        format!("Expected a number, got a {}", v.value_type().to_string()).as_str(),
+                        &format!("Expected a number, got a {}", v.value_type()),
                     )
                 }
             };
@@ -43,7 +43,7 @@ macro_rules! math_fun2 {
                 Value::Integer(i) => i as f64,
                 v => {
                     return argument_error(
-                        format!("Expected a number, got a {}", v.value_type().to_string()).as_str(),
+                        &format!("Expected a number, got a {}", v.value_type()),
                     )
                 }
             };

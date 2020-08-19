@@ -599,7 +599,7 @@ fn filter_object(mut input: Vec<DBusObject>, filter: Value) -> CrushResult<DBusO
         _ => return error("Invalid filter type"),
     }
     match res.len() {
-        0 => error(&format!("No match for filter {}", filter.to_string())),
+        0 => error(&format!("No match for filter {}", filter)),
         1 => Ok(res.remove(0)),
         _ => error(&format!(
             "Multiple matches for filter {}",
@@ -645,7 +645,7 @@ fn filter_method(
         _ => return error("Invalid filter type"),
     }
     match res.len() {
-        0 => error(&format!("No match for filter {}", filter.to_string())),
+        0 => error(&format!("No match for filter {}", filter)),
         1 => Ok(res.remove(0)),
         _ => error(&format!(
             "Multiple matches for filter {}",
