@@ -4,6 +4,7 @@ use crate::lang::value::ValueType;
 use crate::lang::{r#struct::Struct, value::Value};
 use crate::util::replace::Replace;
 use time::Duration;
+use std::fmt::{Display, Formatter};
 
 #[derive(PartialEq, PartialOrd, Clone)]
 pub struct Table {
@@ -141,9 +142,12 @@ impl ColumnType {
     }
 }
 
-impl ToString for ColumnType {
-    fn to_string(&self) -> String {
-        format!("{}=({})", self.name, self.cell_type.to_string())
+impl Display for ColumnType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        self.name.fmt(f)?;
+        f.write_str("=(")?;
+        self.cell_type.fmt(f)?;
+        f.write_str(")")
     }
 }
 
@@ -168,7 +172,7 @@ impl ColumnVec for &[ColumnType] {
                     .collect::<Vec<String>>()
                     .join(", "),
             )
-            .as_str(),
+                .as_str(),
         )
     }
 
@@ -192,7 +196,7 @@ impl ColumnVec for &[ColumnType] {
                         .collect::<Vec<String>>()
                         .join(", "),
                 )
-                .as_str(),
+                    .as_str(),
             )
         }
     }

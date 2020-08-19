@@ -11,6 +11,7 @@ use crate::lang::table::TableReader;
 use crate::lang::value::Alignment;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
+use crate::lang::r#struct::Struct;
 use std::cmp::max;
 use std::io::{BufReader, Read};
 use std::thread;
@@ -103,33 +104,29 @@ impl PrettyPrinter {
 
     pub fn print_value(&self, cell: Value) {
         match cell {
-            Value::TableStream(mut output) => self.print_readable(&mut output, 0),
-            Value::Table(rows) => self.print_readable(&mut TableReader::new(rows), 0),
+            Value::TableStream(mut output) => self.print_stream(&mut output, 0),
+            Value::Table(rows) => self.print_stream(&mut TableReader::new(rows), 0),
             Value::BinaryStream(mut b) => self.print_binary(b.as_mut(), 0),
             Value::Empty() => {}
             Value::Struct(data) => {
-                if data.keys().len() < 8 {
-                    self.printer.line(data.to_string().as_str())
-                } else {
-                    self.print_readable(&mut StructReader::new(data), 0)
-                }
+                self.print_struct(data, 0)
             }
             Value::List(list) => {
                 if list.len() < 8 {
                     self.printer.line(list.to_string().as_str())
                 } else {
-                    self.print_readable(&mut ListReader::new(list, "value"), 0)
+                    self.print_stream(&mut ListReader::new(list, "value"), 0)
                 }
             }
             _ => self.printer.line(cell.to_string().as_str()),
         };
     }
 
-    fn print_readable(&self, readable: &mut impl CrushStream, indent: usize) {
+    fn print_stream(&self, stream: &mut impl CrushStream, indent: usize) {
         let mut data: Vec<Row> = Vec::new();
         let mut has_table = false;
 
-        for val in readable.types().iter() {
+        for val in stream.types().iter() {
             match val.cell_type {
                 ValueType::TableStream(_) => has_table = true,
                 ValueType::Table(_) => has_table = true,
@@ -137,11 +134,11 @@ impl PrettyPrinter {
             }
         }
         loop {
-            match readable.read_timeout(Duration::milliseconds(100)) {
+            match stream.read_timeout(Duration::milliseconds(100)) {
                 Ok(r) => {
                     data.push(r);
                     if data.len() == self.printer.height() - 1 || has_table {
-                        self.print_partial(data, readable.types(), indent, has_table);
+                        self.print_partial(data, stream.types(), indent, has_table);
                         data = Vec::new();
                         data.drain(..);
                     }
@@ -150,7 +147,7 @@ impl PrettyPrinter {
                     if e.is_disconnected() {
                         break;
                     } else {
-                        self.print_partial(data, readable.types(), indent, has_table);
+                        self.print_partial(data, stream.types(), indent, has_table);
                         data = Vec::new();
                         data.drain(..);
                     }
@@ -158,7 +155,7 @@ impl PrettyPrinter {
             }
         }
         if !data.is_empty() {
-            self.print_partial(data, readable.types(), indent, has_table);
+            self.print_partial(data, stream.types(), indent, has_table);
         }
     }
 
@@ -245,10 +242,10 @@ impl PrettyPrinter {
             let mut binaries = Vec::new();
             self.print_row(w, r, indent, &mut rows, &mut outputs, &mut binaries);
             for r in rows {
-                self.print_readable(&mut TableReader::new(r), indent + 1);
+                self.print_stream(&mut TableReader::new(r), indent + 1);
             }
             for mut r in outputs {
-                self.print_readable(&mut r, indent + 1);
+                self.print_stream(&mut r, indent + 1);
             }
             for mut r in binaries {
                 self.print_binary(r.as_mut(), indent + 1);
@@ -300,6 +297,50 @@ impl PrettyPrinter {
 
             self.print_header(&w, types, indent);
             self.print_body(&w, data, indent)
+        }
+    }
+
+    fn print_struct(&self, s: Struct, indent: usize) {
+        let mut data = s.map();
+        if data.len() > 0 {
+            let max_name_width = data.keys().map(|n| n.len()).max().unwrap();
+            for (name, value) in data.drain() {
+                if indent * 4 + max_name_width + value.to_string().len() + 2 < self.printer.width() {
+                    let mut line = " ".repeat(4 * indent);
+                    line.push_str(&name);
+                    line.push(':');
+                    line.push_str(&" ".repeat(max_name_width - name.len() + 1));
+                    line.push_str(&value.to_string());
+                    self.printer.line(&line);
+                } else {
+                    let mut line = " ".repeat(4 * indent);
+                    line.push_str(&name);
+                    line.push(':');
+                    self.printer.line(&line);
+                    self.print_struct_value(value, indent+1);
+                }
+            }
+        }
+    }
+
+    fn print_struct_value(&self, value: Value, indent: usize) {
+        if value.to_string().len() + 4 * indent < self.printer.width() {
+            let mut line = " ".repeat(4 * indent);
+            line.push_str(&value.to_string());
+            self.printer.line(&line);
+        } else {
+            match value {
+                Value::Struct(s) => self.print_struct(s, indent),
+                Value::TableStream(mut output) => self.print_stream(&mut output, indent),
+                Value::Table(rows) => self.print_stream(&mut TableReader::new(rows), indent),
+                Value::BinaryStream(mut b) => self.print_binary(b.as_mut(), indent),
+                Value::List(list) => self.print_stream(&mut ListReader::new(list, "value"), indent),
+                _ => {
+                    let mut line = " ".repeat(4 * indent);
+                    line.push_str(&value.to_string());
+                    self.printer.line(&line);
+                }
+            }
         }
     }
 

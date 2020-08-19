@@ -8,6 +8,7 @@ use crate::util::identity_arc::Identity;
 use ordered_map::OrderedMap;
 use std::cmp::max;
 use std::sync::{Arc, Mutex, MutexGuard};
+use std::fmt::{Display, Formatter};
 
 /**
   This is where we store variables, including functions.
@@ -598,15 +599,22 @@ impl Scope {
     }
 }
 
-impl ToString for Scope {
-    fn to_string(&self) -> String {
+impl Display for Scope {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut map = OrderedMap::new();
         // This can fail and we ignore it, becasue there is no way to propagate the error. :-(
-        let _ = self.dump(&mut map);
-        map.iter()
-            .map(|(k, _v)| k.clone())
-            .collect::<Vec<String>>()
-            .join(", ")
+        self.dump(&mut map);
+
+        let mut first = true;
+        for (key, _) in map.iter() {
+            if first {
+                first = false;
+            } else {
+                f.write_str(", ")?;
+            }
+            f.write_str(&key)?;
+        }
+        Ok(())
     }
 }
 

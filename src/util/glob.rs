@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 use std::fs::read_dir;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::fmt::{Display, Formatter};
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, PartialOrd, Ord)]
 pub struct Glob {
@@ -24,9 +25,9 @@ struct GlobResult {
     prefix: bool,
 }
 
-impl ToString for Glob {
-    fn to_string(&self) -> String {
-        self.original.clone()
+impl Display for Glob {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.original)
     }
 }
 

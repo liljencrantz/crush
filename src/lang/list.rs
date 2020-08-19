@@ -7,6 +7,7 @@ use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
+use std::fmt::{Display, Formatter};
 
 #[derive(Clone)]
 pub struct List {
@@ -186,17 +187,20 @@ impl List {
     dump_to!(dump_field, Field, Field, |e: &Field| e.clone());
 }
 
-impl ToString for List {
-    fn to_string(&self) -> String {
-        let mut res = "[".to_string();
-        let cells = self.cells.lock().unwrap();
-        res += &cells
-            .iter()
-            .map(|c| c.to_string())
-            .collect::<Vec<String>>()
-            .join(", ");
-        res += "]";
-        res
+impl Display for List {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str("[")?;
+        let mut first = true;
+        for cell in self.cells.lock().unwrap().iter() {
+            if first {
+                first = false;
+            } else {
+                f.write_str(", ")?;
+            }
+            cell.fmt(f)?;
+        }
+        f.write_str("]")?;
+        Ok(())
     }
 }
 

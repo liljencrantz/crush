@@ -13,6 +13,7 @@ use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
+use std::fmt::{Formatter, Display};
 
 lazy_static! {
     pub static ref STRUCT_STREAM_TYPE: Vec<ColumnType> = vec![
@@ -240,23 +241,26 @@ impl Struct {
     }
 }
 
-impl ToString for Struct {
-    fn to_string(&self) -> String {
+impl Display for Struct {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let elements = self.local_elements();
         let data = self.data.lock().unwrap();
-        let parent = data.parent.clone();
-        drop(data);
-        format!(
-            "data{} {}",
-            parent
-                .map(|p| format!(" parent=({})", p.to_string()))
-                .unwrap_or_else(|| "".to_string()),
-            elements
-                .iter()
-                .map(|(c, t)| format!("{}=({})", c, t.to_string()))
-                .collect::<Vec<String>>()
-                .join(", ")
-        )
+
+        f.write_str("data")?;
+        if let Some(parent) = data.parent.clone() {
+            f.write_str(" parent=(")?;
+            parent.fmt(f)?;
+            f.write_str(")")?;
+        }
+
+        for (name, value) in elements.iter() {
+            f.write_str(" ")?;
+            name.fmt(f)?;
+            f.write_str("=(")?;
+            value.fmt(f)?;
+            f.write_str(")")?;
+        }
+        Ok(())
     }
 }
 

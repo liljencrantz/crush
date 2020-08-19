@@ -35,6 +35,7 @@ use crate::util::regex::RegexFileMatcher;
 use ordered_map::OrderedMap;
 pub use value_definition::ValueDefinition;
 pub use value_type::ValueType;
+use std::fmt::{Display, Formatter};
 
 pub type Field = Vec<String>;
 
@@ -62,26 +63,38 @@ pub enum Value {
     Type(ValueType),
 }
 
-impl ToString for Value {
-    fn to_string(&self) -> String {
+impl Display for Value {
+
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Value::String(val) => val.to_string(),
-            Value::Integer(val) => val.to_string(),
-            Value::Time(val) => val.format("%Y-%m-%d %H:%M:%S %z").to_string(),
-            Value::Field(val) => format!(r"^{}", val.join(":")),
-            Value::Glob(val) => val.to_string(),
-            Value::Regex(val, _) => format!(r#"re"{}""#, val),
-            Value::File(val) => val.to_str().unwrap_or("<invalid filename>").to_string(),
-            Value::List(l) => l.to_string(),
-            Value::Duration(d) => duration_format(d),
-            Value::Scope(env) => env.to_string(),
-            Value::Bool(v) => (if *v { "true" } else { "false" }).to_string(),
-            Value::Dict(d) => d.to_string(),
-            Value::Float(f) => f.to_string(),
-            Value::Binary(v) => format_buffer(v, true),
-            Value::Type(t) => t.to_string(),
-            Value::Struct(s) => s.to_string(),
-            _ => format!("<{}>", self.value_type().to_string()),
+            Value::String(val) => val.fmt(f),
+            Value::Integer(val) => val.fmt(f),
+            Value::Time(val) => f.write_str(&val.format("%Y-%m-%d %H:%M:%S %z").to_string()),
+            Value::Field(val) => {
+                f.write_str("^")?;
+                f.write_str(&val.join(":"))
+            },
+            Value::Glob(val) => val.fmt(f),
+            Value::Regex(val, _) => {
+                f.write_str("re\"")?;
+                f.write_str(val)?;
+                f.write_str("\"")
+            },
+            Value::File(val) => val.to_str().unwrap_or("<invalid filename>").fmt(f),
+            Value::List(l) => l.fmt(f),
+            Value::Duration(d) => f.write_str(&duration_format(d)),
+            Value::Scope(env) => env.fmt(f),
+            Value::Bool(v) => (if *v { "true" } else { "false" }).fmt(f),
+            Value::Dict(d) => d.fmt(f),
+            Value::Float(val) => val.fmt(f),
+            Value::Binary(v) => f.write_str(&format_buffer(v, true)),
+            Value::Type(t) => t.fmt(f),
+            Value::Struct(s) => s.fmt(f),
+            _ => {
+                f.write_str("<")?;
+                self.value_type().fmt(f)?;
+                f.write_str(">")
+            }
         }
     }
 }

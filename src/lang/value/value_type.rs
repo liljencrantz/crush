@@ -9,6 +9,7 @@ use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use regex::Regex;
 use std::cmp::max;
+use std::fmt::{Display, Formatter};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum ValueType {
@@ -164,7 +165,7 @@ impl Help for ValueType {
             ValueType::Binary => "Binary data",
             ValueType::Type => "A type",
         }
-        .to_string()
+            .to_string()
     }
 
     fn long_help(&self) -> Option<String> {
@@ -193,43 +194,53 @@ fn long_help_methods(fields: &Vec<(&String, &Command)>, lines: &mut Vec<String>)
     }
 }
 
-impl ToString for ValueType {
-    fn to_string(&self) -> String {
+impl Display for ValueType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            ValueType::String => "string".to_string(),
-            ValueType::Integer => "integer".to_string(),
-            ValueType::Time => "time".to_string(),
-            ValueType::Duration => "duration".to_string(),
-            ValueType::Field => "field".to_string(),
-            ValueType::Glob => "glob".to_string(),
-            ValueType::Regex => "regex".to_string(),
-            ValueType::Command => "command".to_string(),
-            ValueType::File => "file".to_string(),
-            ValueType::TableStream(o) => format!(
-                "table_stream {}",
-                o.iter()
-                    .map(|i| i.to_string())
-                    .collect::<Vec<String>>()
-                    .join(" ")
-            ),
-            ValueType::Table(r) => format!(
-                "table {}",
-                r.iter()
-                    .map(|i| i.to_string())
-                    .collect::<Vec<String>>()
-                    .join(" ")
-            ),
-            ValueType::Struct => "struct".to_string(),
-            ValueType::List(l) => format!("list {}", l.to_string()),
-            ValueType::Dict(k, v) => format!("dict {} {}", k.to_string(), v.to_string()),
-            ValueType::Scope => "scope".to_string(),
-            ValueType::Bool => "bool".to_string(),
-            ValueType::Float => "float".to_string(),
-            ValueType::Empty => "empty".to_string(),
-            ValueType::Any => "any".to_string(),
-            ValueType::BinaryStream => "binary_stream".to_string(),
-            ValueType::Binary => "binary".to_string(),
-            ValueType::Type => "type".to_string(),
+            ValueType::String => f.write_str("string"),
+            ValueType::Integer => f.write_str("integer"),
+            ValueType::Time => f.write_str("time"),
+            ValueType::Duration => f.write_str("duration"),
+            ValueType::Field => f.write_str("field"),
+            ValueType::Glob => f.write_str("glob"),
+            ValueType::Regex => f.write_str("regex"),
+            ValueType::Command => f.write_str("command"),
+            ValueType::File => f.write_str("file"),
+            ValueType::TableStream(o) => {
+                f.write_str("table_stream")?;
+                for i in o.iter() {
+                    f.write_str(" ")?;
+                    i.fmt(f)?;
+                }
+                Ok(())
+            }
+            ValueType::Table(o) => {
+                f.write_str("table")?;
+                for i in o.iter() {
+                    f.write_str(" ")?;
+                    i.fmt(f)?;
+                }
+                Ok(())
+            }
+            ValueType::Struct => f.write_str("struct"),
+            ValueType::List(l) => {
+                f.write_str("list ")?;
+                l.fmt(f)
+            }
+            ValueType::Dict(k, v) => {
+                f.write_str("dict ")?;
+                k.fmt(f)?;
+                f.write_str(" ")?;
+                v.fmt(f)
+            }
+            ValueType::Scope => f.write_str("scope"),
+            ValueType::Bool => f.write_str("bool"),
+            ValueType::Float => f.write_str("float"),
+            ValueType::Empty => f.write_str("empty"),
+            ValueType::Any => f.write_str("any"),
+            ValueType::BinaryStream => f.write_str("binary_stream"),
+            ValueType::Binary => f.write_str("binary"),
+            ValueType::Type => f.write_str("type"),
         }
     }
 }
