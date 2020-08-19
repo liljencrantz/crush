@@ -9,6 +9,7 @@ use crate::lang::{
 use crate::util::thread::{build, handle};
 use std::ops::Deref;
 use std::path::PathBuf;
+use std::fmt::{Display, Formatter};
 
 #[derive(Clone)]
 pub struct CommandInvocation {
@@ -326,8 +327,8 @@ fn try_external_command(
     }
 }
 
-impl ToString for CommandInvocation {
-    fn to_string(&self) -> String {
-        self.command.to_string()
+impl Display for CommandInvocation {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        self.command.fmt(f)
     }
 }

@@ -7,6 +7,7 @@ use crate::{
     lang::value::Value,
 };
 use std::path::PathBuf;
+use std::fmt::{Display, Formatter};
 
 #[derive(Clone)]
 pub enum ValueDefinition {
@@ -124,15 +125,23 @@ impl ValueDefinition {
     }
 }
 
-impl ToString for ValueDefinition {
-    fn to_string(&self) -> String {
+impl Display for ValueDefinition {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
-            ValueDefinition::Value(v) => v.to_string(),
-            ValueDefinition::Label(v) => v.to_string(),
-            ValueDefinition::ClosureDefinition(_, _, _) => "<closure>".to_string(),
-            ValueDefinition::JobDefinition(_) => "<job>".to_string(),
-            ValueDefinition::GetAttr(v, l) => format!("{}:{}", v.to_string(), l),
-            ValueDefinition::Path(v, l) => format!("{}/{}", v.to_string(), l),
+            ValueDefinition::Value(v) => v.fmt(f),
+            ValueDefinition::Label(v) => v.fmt(f),
+            ValueDefinition::ClosureDefinition(_, _, _) => f.write_str("<closure>"),
+            ValueDefinition::JobDefinition(_) => f.write_str("<job>"),
+            ValueDefinition::GetAttr(v, l) => {
+                v.fmt(f)?;
+                f.write_str(":")?;
+                l.fmt(f)
+            }
+            ValueDefinition::Path(v, l) => {
+                v.fmt(f)?;
+                f.write_str("/")?;
+                l.fmt(f)
+            }
         }
     }
 }

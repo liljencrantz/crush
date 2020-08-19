@@ -15,6 +15,7 @@ use crate::lang::serialization::{DeserializationState, Serializable, Serializati
 use crate::lang::stream::{black_hole, empty_channel};
 use crate::lang::value::{Value, ValueDefinition, ValueType};
 use std::collections::HashMap;
+use std::fmt::Display;
 
 pub struct Closure {
     name: Option<String>,
@@ -504,14 +505,6 @@ fn extract_help(jobs: &mut Vec<Job>) -> String {
 }
 
 impl Closure {
-    /*
-        pub fn spawn_stream(&self, context: StreamCommandContext) -> CrushResult<()> {
-            let job_definitions = self.job_definitions.clone();
-            let parent_env = self.env.clone();
-            Ok(())
-        }
-    */
-
     pub fn new(
         name: Option<String>,
         signature: Option<Vec<Parameter>>,
@@ -629,12 +622,17 @@ impl Closure {
     }
 }
 
-impl ToString for Closure {
-    fn to_string(&self) -> String {
-        self.job_definitions
-            .iter()
-            .map(|j| j.to_string())
-            .collect::<Vec<String>>()
-            .join("; ")
+impl Display for Closure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut first = true;
+        for j in &self.job_definitions {
+            if first {
+                first = false;
+            } else {
+                f.write_str("; ")?;
+            }
+            j.fmt(f)?;
+        }
+        Ok(())
     }
 }

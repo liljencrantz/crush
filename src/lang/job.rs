@@ -4,6 +4,7 @@ use crate::lang::execution_context::{CompileContext, JobContext};
 use crate::lang::printer::Printer;
 use crate::lang::stream::channels;
 use std::thread::JoinHandle;
+use std::fmt::{Display, Formatter};
 
 pub enum JobJoinHandle {
     Many(Vec<JobJoinHandle>),
@@ -74,12 +75,17 @@ impl Job {
     }
 }
 
-impl ToString for Job {
-    fn to_string(&self) -> String {
-        self.commands
-            .iter()
-            .map(|c| c.to_string())
-            .collect::<Vec<String>>()
-            .join("|")
+impl Display for Job {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut first = true;
+        for c in self.commands.iter() {
+            if first {
+                first = false;
+            } else {
+                f.write_str("|")?;
+            }
+            c.fmt(f)?;
+        }
+        Ok(())
     }
 }

@@ -44,9 +44,7 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
         while s.ends_with('\r') {
             s = &s[0..line.len() - 1];
         }
-        context
-            .printer
-            .handle_error(output.send(Row::new(vec![Value::string(s)])));
+        output.send(Row::new(vec![Value::string(s)]))?;
         line.clear();
     }
     Ok(())

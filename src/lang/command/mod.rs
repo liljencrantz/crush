@@ -12,7 +12,7 @@ use crate::lang::serialization::{DeserializationState, Serializable, Serializati
 use crate::lang::value::{Value, ValueDefinition, ValueType};
 use closure::Closure;
 use ordered_map::OrderedMap;
-use std::fmt::Formatter;
+use std::fmt::{Formatter, Display};
 
 pub type Command = Box<dyn CrushCommand + Send + Sync>;
 
@@ -35,7 +35,7 @@ impl OutputType {
     fn format(&self) -> Option<String> {
         match self {
             OutputType::Unknown => None,
-            OutputType::Known(t) => Some(format!("    Output: {}", t.to_string())),
+            OutputType::Known(t) => Some(format!("    Output: {}", t)),
             OutputType::Passthrough => {
                 Some("    Output: A stream with the same columns as the input".to_string())
             }
@@ -364,20 +364,27 @@ pub enum Parameter {
     Unnamed(String),
 }
 
-impl ToString for Parameter {
-    fn to_string(&self) -> String {
+impl Display for Parameter {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Parameter::Parameter(name, value_type, default) => format!(
-                "{}:{}{}",
-                name,
-                value_type.to_string(),
-                default
-                    .as_ref()
-                    .map(|d| format!("={}", d.to_string()))
-                    .unwrap_or("".to_string())
-            ),
-            Parameter::Named(n) => format!("@@{}", n),
-            Parameter::Unnamed(n) => format!("@{}", n),
+            Parameter::Parameter(name, value_type, default) => {
+                name.fmt(f)?;
+                f.write_str(":")?;
+                value_type.fmt(f)?;
+                if let Some(default) = default {
+                    f.write_str("=")?;
+                    default.fmt(f)?;
+                }
+                Ok(())
+            }
+            Parameter::Named(n) => {
+                f.write_str("@@")?;
+                n.fmt(f)
+            }
+            Parameter::Unnamed(n) => {
+                f.write_str("@")?;
+                n.fmt(f)
+            }
         }
     }
 }
