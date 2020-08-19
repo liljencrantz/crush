@@ -222,13 +222,26 @@ fn invoke_value(
                 )
                 .as_str(),
             ),
-            _ => error(
-                format!(
-                    "Struct must have a member __call__ to be used as a command {}",
-                    s.to_string()
-                )
-                .as_str(),
-            ),
+            _ => {
+                if local_arguments.len() == 0 {
+                    invoke_command(
+                        context.env.global_static_cmd(vec!["global", "io", "val"])?,
+                        None,
+                        vec![ArgumentDefinition::unnamed(ValueDefinition::Value(
+                            Value::Struct(s)
+                        ))],
+                        context,
+                    )
+                } else {
+                    error(
+                        format!(
+                            "Struct must have a member __call__ to be used as a command {}",
+                            s.to_string()
+                        )
+                            .as_str(),
+                    )
+                }
+            },
         },
         _ => {
             if local_arguments.len() == 0 {
