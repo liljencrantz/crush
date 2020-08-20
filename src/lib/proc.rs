@@ -125,7 +125,7 @@ fn kill(context: CommandContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    let e = root.create_lazy_namespace(
+    let e = root.create_namespace(
         "proc",
         Box::new(move |env| {
             Ps::declare(env)?;

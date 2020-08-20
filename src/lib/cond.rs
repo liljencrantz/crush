@@ -80,7 +80,7 @@ pub fn or(mut context: CommandContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    root.create_lazy_namespace(
+    root.create_namespace(
         "cond",
         Box::new(|env| {
             env.declare_condition_command("and",

@@ -120,7 +120,7 @@ fn class_get(mut context: CommandContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    let e = root.create_lazy_namespace(
+    let e = root.create_namespace(
         "types",
         Box::new(move |env| {
             let root =

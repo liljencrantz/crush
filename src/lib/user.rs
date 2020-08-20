@@ -1,10 +1,16 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{mandate, CrushResult};
+use crate::lang::errors::{mandate, CrushResult, argument_error, to_crush_error};
 use crate::lang::execution_context::{ArgumentVector, CommandContext};
 use crate::lang::scope::Scope;
+use crate::lang::r#struct::Struct;
 use crate::lang::value::{Value, ValueType};
 use crate::util::file::home;
 use users::{get_current_gid, get_current_groupname, get_current_uid, get_current_username};
+use signature::signature;
+use std::convert::TryFrom;
+use std::ffi::{CStr, CString};
+use crate::lang::argument::ArgumentHandler;
+use std::path::PathBuf;
 
 fn home_fun(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
@@ -18,7 +24,7 @@ fn name(context: CommandContext) -> CrushResult<()> {
             get_current_username(),
             "Could not determine current username",
         )?
-        .to_str(),
+            .to_str(),
         "Invalid username",
     )?))
 }
@@ -30,7 +36,7 @@ fn group(context: CommandContext) -> CrushResult<()> {
             get_current_groupname(),
             "Could not determine current group name",
         )?
-        .to_str(),
+            .to_str(),
         "Invalid group name",
     )?))
 }
@@ -49,55 +55,85 @@ fn gid(context: CommandContext) -> CrushResult<()> {
         .send(Value::Integer(get_current_gid() as i128))
 }
 
+#[signature(
+me,
+can_block = false,
+short = "current user",
+)]
+struct Me {
+}
+
+fn me(context: CommandContext) -> CrushResult<()> {
+    unsafe {
+        context.output.send(search(
+            mandate(
+                mandate(
+                    get_current_username(),
+                    "Could not determine current username",
+                )?
+                    .to_str(),
+                "Invalid username",
+            )?.to_string()
+        )?)
+    }
+}
+
+#[signature(
+find,
+can_block = false,
+short = "find a user by name",
+)]
+struct FromName {
+    #[description("the of the user to find.")]
+    name: String,
+}
+
+fn find(context: CommandContext) -> CrushResult<()> {
+    let cfg: FromName = FromName::parse(context.arguments, &context.printer)?;
+    unsafe {
+        context.output.send(search(cfg.name)?)
+    }
+}
+
+unsafe fn parse(s: *const i8) -> CrushResult<String> {
+    Ok(to_crush_error(CStr::from_ptr(s).to_str())?.to_string())
+}
+
+unsafe fn search(input_name: String) -> CrushResult<Value> {
+    nix::libc::setpwent();
+    loop {
+        let passwd = nix::libc::getpwent();
+        if passwd.is_null() {
+            return argument_error(format!("Unknown user {}", input_name));
+        }
+        let name = parse((*passwd).pw_name)?;
+        if name == input_name {
+            let res = Value::Struct(
+                    Struct::new(
+                        vec![
+                            ("name".to_string(), Value::String(input_name)),
+                            ("home".to_string(), Value::File(PathBuf::from(parse((*passwd).pw_dir)?))),
+                            ("shell".to_string(), Value::File(PathBuf::from(parse((*passwd).pw_shell)?))),
+                            ("information".to_string(), Value::String(parse((*passwd).pw_gecos)?)),
+                            ("uid".to_string(), Value::Integer((*passwd).pw_uid as i128)),
+                            ("gid".to_string(), Value::Integer((*passwd).pw_gid as i128)),
+                        ],
+                        None,
+                    )
+                );
+            nix::libc::endpwent();
+            return Ok(res);
+        }
+    }
+}
+
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    root.create_lazy_namespace(
+    root.create_namespace(
         "user",
-        Box::new(move |env| {
-            env.declare_command(
-                "home",
-                home_fun,
-                false,
-                "home",
-                "Current users home directory",
-                None,
-                Known(ValueType::File),
-            )?;
-            env.declare_command(
-                "name",
-                name,
-                false,
-                "name",
-                "Current users name",
-                None,
-                Known(ValueType::String),
-            )?;
-            env.declare_command(
-                "group",
-                group,
-                false,
-                "group",
-                "Current group name",
-                None,
-                Known(ValueType::String),
-            )?;
-            env.declare_command(
-                "uid",
-                uid,
-                false,
-                "uid",
-                "Current users user id",
-                None,
-                Known(ValueType::Integer),
-            )?;
-            env.declare_command(
-                "gid",
-                gid,
-                false,
-                "gid",
-                "Current users group id",
-                None,
-                Known(ValueType::Integer),
-            )?;
+        Box::new(move |user| {
+            Me::declare(user)?;
+            FromName::declare(user)?;
+
             Ok(())
         }),
     )?;

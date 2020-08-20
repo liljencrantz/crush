@@ -74,7 +74,7 @@ pub fn env(context: CommandContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    root.create_lazy_namespace(
+    root.create_namespace(
         "var",
         Box::new(move |ns| {
             ns.declare_command(

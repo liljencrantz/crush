@@ -403,14 +403,14 @@ mod host {
 }
 
 pub fn declare(scope: &Scope) -> CrushResult<()> {
-    let e = scope.create_lazy_namespace(
+    let e = scope.create_namespace(
         "remote",
         Box::new(move |remote| {
             Exec::declare(remote)?;
             Pexec::declare(remote)?;
             Identity::declare(remote)?;
 
-            remote.create_lazy_namespace(
+            remote.create_namespace(
                 "host",
                 Box::new(move |env| {
                     host::List::declare(env)?;

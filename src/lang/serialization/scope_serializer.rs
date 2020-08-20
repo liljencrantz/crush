@@ -52,7 +52,7 @@ impl Serializable<Scope> for Scope {
                 element::Element::InternalScope(s) => {
                     match state
                         .env
-                        .global_value(s.elements.iter().map(|s| s.clone()).collect())
+                        .get_absolute_path(s.elements.iter().map(|s| s.clone()).collect())
                     {
                         Ok(Value::Scope(s)) => Ok(s),
                         Ok(_) => error("Value is not a scope"),

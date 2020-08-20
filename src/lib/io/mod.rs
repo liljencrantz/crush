@@ -98,7 +98,7 @@ fn member(context: CommandContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    let e = root.create_lazy_namespace(
+    let e = root.create_namespace(
         "io",
         Box::new(move |env| {
             bin::declare(env)?;

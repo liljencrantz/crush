@@ -56,7 +56,7 @@ pub fn not(mut context: CommandContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    root.create_lazy_namespace(
+    root.create_namespace(
         "comp",
         Box::new(|env| {
             env.declare_command(

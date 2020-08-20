@@ -9,7 +9,6 @@ use std::path::Path;
 #[macro_use]
 pub mod binary_op;
 
-mod battery;
 mod comp;
 mod cond;
 mod constants;
@@ -71,7 +70,7 @@ fn load_external_namespace(
     let local_printer = printer.clone();
     let local_output = output.clone();
     let local_file = file.to_path_buf();
-    root.create_lazy_namespace(
+    root.create_namespace(
         name,
         Box::new(move |env| {
             let tmp_env: Scope = env.create_temporary_namespace();
@@ -86,7 +85,6 @@ fn load_external_namespace(
 }
 
 pub fn declare(root: &Scope, printer: &Printer, output: &ValueSender) -> CrushResult<()> {
-    battery::declare(root)?;
     comp::declare(root)?;
     cond::declare(root)?;
     traversal::declare(root)?;

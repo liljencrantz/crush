@@ -89,7 +89,7 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
-    root.create_lazy_namespace(
+    root.create_namespace(
         "lines",
         Box::new(move |env| {
             From::declare(env)?;

@@ -66,7 +66,7 @@ math_fun2!(pow, |x: f64, y: f64| x.powf(y));
 math_fun2!(log, |x: f64, y: f64| x.log(y));
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    root.create_lazy_namespace(
+    root.create_namespace(
         "math",
         Box::new(move |env| {
             env.declare_command(

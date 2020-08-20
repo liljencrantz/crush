@@ -1,8 +1,9 @@
 Todo:
-Sort wildcard/regexp matches
 Allow secondary/tertiary sort keys
 Allow input type specification
-
+lazy loading of scopes leaks when displaying the help for a scope
+There should be a scope help message
+Write a command that extracts all help into html
 Tab completion of files
 Tab completion of variable names
 Tab completion of globs
@@ -37,4 +38,4 @@ Add history command with all previous interactive invocations, including invocat
 Add proc:jobs command
 pseudo-tty for cmd command output
 pseudo-tty for cmd command input
-Support __str__ method
+Support __str__ method for string rendering

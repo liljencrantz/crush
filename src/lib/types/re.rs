@@ -77,7 +77,7 @@ fn not_match(mut context: CommandContext) -> CrushResult<()> {
     replace,
     can_block = false,
     short = "Replace the first match of the regex in text with the replacement",
-    long = "\"123-456\" ~ re\"[0-9]\" \"X\""
+    long = "re\"[0-9]\":replace \"123-456\" \"X\""
 )]
 struct ReplaceSignature {
     #[description("the text to perform replacement on.")]
@@ -90,7 +90,7 @@ struct ReplaceSignature {
     replace_all,
     can_block = false,
     short = "Replace all matches of the regex in text with the replacement",
-    long = "\"123-456\" ~~ re\"[0-9]\" \"X\""
+    long = "re\"[0-9]\":replace \"123-456\" \"X\""
 )]
 struct ReplaceAllSignature {
     #[description("the text to perform replacement on.")]

@@ -288,7 +288,7 @@ impl DBusType {
                 Ok(Some(DBusType::Struct(sub)))
             }
 
-            Some(ch) => error(&format!("Unknown dbus type '{}'", ch)),
+            Some(ch) => error(format!("Unknown dbus type '{}'", ch)),
         }
     }
 }
@@ -302,7 +302,7 @@ impl DBusArgument {
                 if let Value::String(value) = value {
                     a.append(value);
                 } else {
-                    return argument_error(&format!(
+                    return argument_error(format!(
                         "Expected a string value, got a {}",
                         value.value_type().to_string()
                     ));
@@ -312,7 +312,7 @@ impl DBusArgument {
                 if let Value::Bool(value) = value {
                     a.append(value);
                 } else {
-                    return argument_error(&format!(
+                    return argument_error(format!(
                         "Expected a boolean value, got a {}",
                         value.value_type().to_string()
                     ));
@@ -322,7 +322,7 @@ impl DBusArgument {
                 if let Value::Integer(value) = value {
                     a.append(to_crush_error(u8::try_from(value))?);
                 } else {
-                    return argument_error(&format!(
+                    return argument_error(format!(
                         "Expected a number, got a {}",
                         value.value_type().to_string()
                     ));
@@ -332,7 +332,7 @@ impl DBusArgument {
                 if let Value::Integer(value) = value {
                     a.append(to_crush_error(i16::try_from(value))?);
                 } else {
-                    return argument_error(&format!(
+                    return argument_error(format!(
                         "Expected a number, got a {}",
                         value.value_type().to_string()
                     ));
@@ -342,7 +342,7 @@ impl DBusArgument {
                 if let Value::Integer(value) = value {
                     a.append(to_crush_error(u16::try_from(value))?);
                 } else {
-                    return argument_error(&format!(
+                    return argument_error(format!(
                         "Expected a number, got a {}",
                         value.value_type().to_string()
                     ));
@@ -352,7 +352,7 @@ impl DBusArgument {
                 if let Value::Integer(value) = value {
                     a.append(to_crush_error(i32::try_from(value))?);
                 } else {
-                    return argument_error(&format!(
+                    return argument_error(format!(
                         "Expected a number, got a {}",
                         value.value_type().to_string()
                     ));
@@ -362,7 +362,7 @@ impl DBusArgument {
                 if let Value::Integer(value) = value {
                     a.append(to_crush_error(u32::try_from(value))?);
                 } else {
-                    return argument_error(&format!(
+                    return argument_error(format!(
                         "Expected a number, got a {}",
                         value.value_type().to_string()
                     ));
@@ -372,7 +372,7 @@ impl DBusArgument {
                 if let Value::Integer(value) = value {
                     a.append(to_crush_error(i64::try_from(value))?);
                 } else {
-                    return argument_error(&format!(
+                    return argument_error(format!(
                         "Expected a number, got a {}",
                         value.value_type().to_string()
                     ));
@@ -382,7 +382,7 @@ impl DBusArgument {
                 if let Value::Integer(value) = value {
                     a.append(to_crush_error(u64::try_from(value))?);
                 } else {
-                    return argument_error(&format!(
+                    return argument_error(format!(
                         "Expected a number value, got a {}",
                         value.value_type().to_string()
                     ));
@@ -392,7 +392,7 @@ impl DBusArgument {
                 if let Value::Float(value) = value {
                     a.append(value);
                 } else {
-                    return argument_error(&format!(
+                    return argument_error(format!(
                         "Expected a floating point number value, got a {}",
                         value.value_type().to_string()
                     ));
@@ -599,9 +599,9 @@ fn filter_object(mut input: Vec<DBusObject>, filter: Value) -> CrushResult<DBusO
         _ => return error("Invalid filter type"),
     }
     match res.len() {
-        0 => error(&format!("No match for filter {}", filter)),
+        0 => error(format!("No match for filter {}", filter)),
         1 => Ok(res.remove(0)),
-        _ => error(&format!(
+        _ => error(format!(
             "Multiple matches for filter {}",
             filter.to_string()
         )),
@@ -645,9 +645,9 @@ fn filter_method(
         _ => return error("Invalid filter type"),
     }
     match res.len() {
-        0 => error(&format!("No match for filter {}", filter)),
+        0 => error(format!("No match for filter {}", filter)),
         1 => Ok(res.remove(0)),
-        _ => error(&format!(
+        _ => error(format!(
             "Multiple matches for filter {}",
             filter.to_string()
         )),
@@ -778,7 +778,7 @@ dbus:session:org.gnome.Shell %%/ScreenSaver %.setActive true
 
 */
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    root.create_lazy_namespace(
+    root.create_namespace(
         "dbus",
         Box::new(move |dbus| {
             Session::declare(dbus)?;

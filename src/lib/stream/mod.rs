@@ -24,7 +24,7 @@ mod seq;
 mod sum_avg;
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    let e = root.create_lazy_namespace(
+    let e = root.create_namespace(
         "stream",
         Box::new(move |env| {
             env.declare_command(

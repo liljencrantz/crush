@@ -62,7 +62,6 @@ pub enum Node {
     Assignment(Box<Node>, String, Box<Node>),
     LogicalOperation(Box<Node>, String, Box<Node>),
     Comparison(Box<Node>, String, Box<Node>),
-    Replace(Box<Node>, String, Box<Node>, Box<Node>),
     Term(Box<Node>, String, Box<Node>),
     Factor(Box<Node>, String, Box<Node>),
     Unary(String, Box<Node>),
@@ -105,14 +104,13 @@ impl Node {
                             propose_name(&t, value.generate_argument(env)?.unnamed_value()?),
                         )),
                         _ => error("Invalid left side in named argument"),
-                    }
+                    };
                 }
                 _ => return error("Invalid assignment operator"),
             },
 
             Node::LogicalOperation(_, _, _)
             | Node::Comparison(_, _, _)
-            | Node::Replace(_, _, _, _)
             | Node::GetItem(_, _)
             | Node::Term(_, _, _)
             | Node::Factor(_, _, _) => ValueDefinition::JobDefinition(Job::new(vec![self
@@ -125,12 +123,12 @@ impl Node {
                 "@" => {
                     return Ok(ArgumentDefinition::list(
                         r.generate_argument(env)?.unnamed_value()?,
-                    ))
+                    ));
                 }
                 "@@" => {
                     return Ok(ArgumentDefinition::dict(
                         r.generate_argument(env)?.unnamed_value()?,
-                    ))
+                    ));
                 }
                 _ => return error("Unknown operator"),
             },
@@ -255,33 +253,20 @@ impl Node {
                     "==" => vec!["global", "comp", "eq"],
                     "!=" => vec!["global", "comp", "neq"],
                     "=~" => {
-                        return r.method_invocation("match", vec![l.generate_argument(env)?], env)
+                        return r.method_invocation("match", vec![l.generate_argument(env)?], env);
                     }
                     "!~" => {
                         return r.method_invocation(
                             "not_match",
                             vec![l.generate_argument(env)?],
                             env,
-                        )
+                        );
                     }
                     _ => return error("Unknown operator"),
                 })?;
                 Node::function_invocation(
                     cmd.copy(),
                     vec![l.generate_argument(env)?, r.generate_argument(env)?],
-                )
-            }
-
-            Node::Replace(v1, op, v2, v3) => {
-                let method = match op.as_ref() {
-                    "~" => "replace",
-                    "~~" => "replace_all",
-                    _ => return error("Unknown operator"),
-                };
-                v2.method_invocation(
-                    method,
-                    vec![v1.generate_argument(env)?, v3.generate_argument(env)?],
-                    env,
                 )
             }
 
@@ -364,20 +349,89 @@ impl Node {
     pub fn parse_label(s: &str) -> Box<Node> {
         if s.contains('%') || s.contains('?') {
             Box::from(Node::Glob(s.to_string()))
+        } else if s.starts_with('~') {
+            expand_user_path(s)
         } else if s.contains('/') {
             if s.starts_with('/') {
                 Box::from(Node::File(PathBuf::from(s)))
             } else {
                 let parts = s.split('/').collect::<Vec<&str>>();
-                let mut res = Node::Label(parts[0].to_string());
-                for part in &parts[1..] {
-                    res = Node::Path(Box::from(res), part.to_string())
-                }
-                Box::from(res)
+                Box::from(path(&parts))
             }
         } else {
             Box::from(Node::Label(s.to_string()))
         }
+    }
+}
+
+fn path(parts: &[&str]) -> Node {
+    let mut res = Node::Label(parts[0].to_string());
+    for part in &parts[1..] {
+        res = Node::Path(Box::from(res), part.to_string());
+    }
+    res
+}
+
+fn attr(parts: &[&str]) -> Node {
+    let mut res = Node::Label(parts[0].to_string());
+    for part in &parts[1..] {
+        res = Node::GetAttr(Box::from(res), part.to_string());
+    }
+    res
+}
+
+fn simple_substitution(cmd: Vec<Node>) -> Box<Node> {
+    Box::from(
+        Node::Substitution(
+            JobNode {
+                commands: vec![
+                    CommandNode {
+                        expressions: cmd
+                    }
+                ]
+            }
+        )
+    )
+}
+
+fn expand_user(s: &str) -> Box<Node> {
+    if s.len() == 1 {
+        Box::from(
+            Node::GetAttr(
+                simple_substitution(
+                    vec![
+                        attr(&vec!["global", "user", "me"])
+                    ]
+                ),
+                "home".to_string(),
+            )
+        )
+    } else {
+        Box::from(
+            Node::GetAttr(
+                simple_substitution(
+                    vec![
+                        attr(&vec!["global", "user", "find"]),
+                        Node::String(format!("\"{}\"", &s[1..]))
+                    ]
+                ),
+                "home".to_string(),
+            )
+        )
+    }
+}
+
+fn expand_user_path(s: &str) -> Box<Node> {
+    if s.contains('/') {
+        let (user, path) = s.split_at(s.find('/').unwrap());
+        Box::from(
+            Node::Path(
+                expand_user(user),
+                path[1..].to_string(),
+            )
+        )
+    } else {
+        expand_user(s)
     }
 }
 

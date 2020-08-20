@@ -48,7 +48,7 @@ fn from(context: CommandContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
-    root.create_lazy_namespace(
+    root.create_namespace(
         "pup",
         Box::new(move |env| {
             let _ = From::declare(env); // TODO: why unused?

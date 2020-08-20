@@ -62,7 +62,7 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
-    root.create_lazy_namespace(
+    root.create_namespace(
         "words",
         Box::new(move |env| {
             From::declare(env)?;

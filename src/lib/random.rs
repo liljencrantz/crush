@@ -43,7 +43,7 @@ fn integer(context: CommandContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    root.create_lazy_namespace(
+    root.create_namespace(
         "random",
         Box::new(move |env| {
             Float::declare(env)?;

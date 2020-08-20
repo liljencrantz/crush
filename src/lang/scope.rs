@@ -13,6 +13,8 @@ use std::fmt::{Display, Formatter};
 /**
   This is where we store variables, including functions.
 
+  The Scope type is both used to implement namespaces and as the function stack.
+
   The data is protected by a mutex, in order to make sure that all threads can read and write
   concurrently.
 
@@ -20,13 +22,18 @@ use std::fmt::{Display, Formatter};
   across threads.
 
   In order to ensure that there are no deadlocks, a given thread will only ever lock one scope at a
-  time. This forces us to manually drop some variables.
+  time. This forces us to manually drop some variables making some of the code in this file look a
+  little wonky and cumbersome.
 */
 #[derive(Clone)]
 pub struct Scope {
     data: Arc<Mutex<ScopeData>>,
 }
 
+/**
+    The ScopeLoader type allows us to lazy-load namespaces.
+    Without it, every single library in Crush would be loaded on startup.
+*/
 pub struct ScopeLoader {
     mapping: OrderedMap<String, Value>,
     path: Vec<String>,
@@ -37,13 +44,18 @@ pub struct ScopeLoader {
 impl ScopeLoader {
     pub fn declare(&mut self, name: &str, value: Value) -> CrushResult<()> {
         if self.mapping.contains_key(name) {
-            return error(format!("Variable ${{{}}} already exists", name).as_str());
+            return error(format!("Variable {{{}}} already exists", name).as_str());
         }
         self.mapping.insert(name.to_string(), value);
         Ok(())
     }
 
-    pub fn create_lazy_namespace(
+    /**
+        Create a namespace. Namespaces are lazily loaded, so on creating, only a stub is created,
+        and the first time a namespace is used, the loader function will be called, and that will
+        load the namespace.
+    */
+    pub fn create_namespace(
         &mut self,
         name: &str,
         loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>,
@@ -77,7 +89,7 @@ impl ScopeLoader {
             call, can_block, full_name, signature, short_help, long_help, output,
         );
         if self.mapping.contains_key(name) {
-            return error(format!("Variable ${{{}}} already exists", name).as_str());
+            return error(format!("Variable {{{}}} already exists", name).as_str());
         }
         self.mapping
             .insert(name.to_string(), Value::Command(command));
@@ -96,7 +108,7 @@ impl ScopeLoader {
         full_name.push(name.to_string());
         let command = CrushCommand::condition(call, full_name, signature, short_help, long_help);
         if self.mapping.contains_key(name) {
-            return error(format!("Variable ${{{}}} already exists", name).as_str());
+            return error(format!("Variable {{{}}} already exists", name).as_str());
         }
         self.mapping
             .insert(name.to_string(), Value::Command(command));
@@ -263,7 +275,7 @@ impl Scope {
         }
     }
 
-    pub fn create_lazy_namespace(
+    pub fn create_namespace(
         &self,
         name: &str,
         loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>,
@@ -374,8 +386,11 @@ impl Scope {
         }
     }
 
+    /**
+        Returns the "root" object, which is the object that classes inherit from.
+    */
     pub fn root_object(&self) -> Struct {
-        match self.global_value(vec![
+        match self.get_absolute_path(vec![
             "global".to_string(),
             "types".to_string(),
             "root".to_string(),
@@ -386,23 +401,26 @@ impl Scope {
     }
 
     pub fn global_static_cmd(&self, full_path: Vec<&str>) -> CrushResult<Command> {
-        match self.global_value(full_path.iter().map(|p| p.to_string()).collect()) {
+        match self.get_absolute_path(full_path.iter().map(|p| p.to_string()).collect()) {
             Ok(Value::Command(cmd)) => Ok(cmd),
             Err(e) => Err(e),
             _ => error("Expected a command"),
         }
     }
 
-    pub fn global_value(&self, full_path: Vec<String>) -> CrushResult<Value> {
+    /**
+        Resolve the given path from the root of the namespace
+    */
+    pub fn get_absolute_path(&self, absolute_path: Vec<String>) -> CrushResult<Value> {
         let data = self.lock()?;
         match data.calling_scope.clone() {
             Some(parent) => {
                 drop(data);
-                parent.global_value(full_path)
+                parent.get_absolute_path(absolute_path)
             }
             None => {
                 drop(data);
-                self.get_recursive(&full_path[..])
+                self.get_recursive(&absolute_path[..])
             }
         }
     }
@@ -460,7 +478,7 @@ impl Scope {
             return error("Scope is read only");
         }
         if data.mapping.contains_key(name) {
-            return error(format!("Variable ${{{}}} already exists", name).as_str());
+            return error(format!("Variable {{{}}} already exists", name).as_str());
         }
         data.mapping.insert(name.to_string(), value);
         Ok(())
@@ -486,9 +504,9 @@ impl Scope {
                 None => error(format!("Unknown variable {}", name).as_str()),
             }
         } else if data.is_readonly {
-            error("Scope is read only")
+            error(format!("Tried to modify {}, a member of a read-only scope", name))
         } else if data.mapping[name].value_type() != value.value_type() {
-            error(format!("Type mismatch when reassigning variable ${{{}}}. Use `unset ${{{}}}` to remove old variable.", name, name).as_str())
+            error(format!("Type mismatch when reassigning variable {{{}}}. Use `var:unset \"{}\"` to remove old variable.", name, name).as_str())
         } else {
             data.mapping.insert(name.to_string(), value);
             Ok(())
@@ -602,7 +620,6 @@ impl Scope {
 impl Display for Scope {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut map = OrderedMap::new();
-        // This can fail and we ignore it, becasue there is no way to propagate the error. :-(
         self.dump(&mut map);
 
         let mut first = true;
@@ -638,7 +655,7 @@ impl Help for Scope {
     fn long_help(&self) -> Option<String> {
         let mut lines = Vec::new();
 
-        let data = self.data.lock().unwrap();
+        let data = self.lock().unwrap();
         let mut keys: Vec<_> = data.mapping.iter().collect();
         keys.sort_by(|x, y| x.0.cmp(&y.0));
 

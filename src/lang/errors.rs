@@ -10,6 +10,7 @@ pub enum CrushError {
     SendError,
     EOFError,
 }
+
 impl CrushError {
     pub fn message(&self) -> String {
         match self {
@@ -43,12 +44,12 @@ pub fn send_error<T>() -> Result<T, CrushError> {
     Err(CrushError::SendError)
 }
 
-pub fn argument_error<T>(message: &str) -> Result<T, CrushError> {
-    Err(CrushError::InvalidArgument(String::from(message)))
+pub fn argument_error<T>(message: impl Into<String>) -> Result<T, CrushError> {
+    Err(CrushError::InvalidArgument(message.into()))
 }
 
-pub fn data_error<T>(message: &str) -> Result<T, CrushError> {
-    Err(CrushError::InvalidData(String::from(message)))
+pub fn data_error<T>(message: impl Into<String>) -> Result<T, CrushError> {
+    Err(CrushError::InvalidData(message.into()))
 }
 
 pub fn error<T>(message: impl Into<String>) -> Result<T, CrushError> {
@@ -58,11 +59,11 @@ pub fn error<T>(message: impl Into<String>) -> Result<T, CrushError> {
 pub fn to_crush_error<T, E: Error>(result: Result<T, E>) -> Result<T, CrushError> {
     match result {
         Ok(v) => Ok(v),
-        Err(e) => error(e.to_string().as_str()),
+        Err(e) => error(e.to_string()),
     }
 }
 
-pub fn mandate<T>(result: Option<T>, msg: &str) -> Result<T, CrushError> {
+pub fn mandate<T>(result: Option<T>, msg: impl Into<String>) -> Result<T, CrushError> {
     match result {
         Some(v) => Ok(v),
         None => error(msg),

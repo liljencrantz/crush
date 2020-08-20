@@ -170,7 +170,7 @@ impl dyn CrushCommand {
             element::Element::Command(strings) => {
                 let val = state
                     .env
-                    .global_value(strings.elements.iter().map(|e| e.clone()).collect())?;
+                    .get_absolute_path(strings.elements.iter().map(|e| e.clone()).collect())?;
                 match val {
                     Value::Command(c) => Ok(c),
                     _ => error("Expected a command"),

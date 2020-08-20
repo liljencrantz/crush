@@ -4,7 +4,7 @@ use crate::lang::value::Value;
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let root_clone = root.clone();
-    let e = root.create_lazy_namespace(
+    let e = root.create_namespace(
         "constants",
         Box::new(move |env| {
             env.declare("true", Value::Bool(true))?;

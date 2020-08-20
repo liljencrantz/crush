@@ -149,14 +149,12 @@ used to check if a pattern matches an input:
     crush# re"ab+c" =~ "abbbbbc"
     true
 
-Regexps also support replacement using the `~` (replace once) and `~~` (replace
-all) operators, which are trinary operators:
+Regexps also support replacement using the `replace` and `replace_all` methods.
 
-    crush# re"a+" ~ "baalaa" "a"
-    balaa
-    crush# re"a+" ~~ "baalaa" "a"
-    bala
-
+    crush# re"a":replace "tralala" "aaa"
+    traaalala
+    crush# re"a":replace_all "tralala" "aaa"
+    traaalaaalaaa
 
 ### Type system
 
@@ -402,9 +400,9 @@ matching and replacement:
 
     crush# re"ab+c" =~ "abbbbbc"
     true
-    crush# re"a+" ~ "baalaa" "a"
+    crush# re"a+":replace "baalaa" "a"
     balaa
-    crush# re"a+" ~~ "baalaa" "a"
+    crush# re"a+":replace_all "baalaa" "a"
     bala
 
 ### Lists and dicts
