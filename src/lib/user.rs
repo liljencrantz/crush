@@ -11,57 +11,15 @@ use std::convert::TryFrom;
 use std::ffi::{CStr, CString};
 use crate::lang::argument::ArgumentHandler;
 use std::path::PathBuf;
-
-fn home_fun(context: CommandContext) -> CrushResult<()> {
-    context.arguments.check_len(0)?;
-    context.output.send(Value::File(home()?))
-}
-
-fn name(context: CommandContext) -> CrushResult<()> {
-    context.arguments.check_len(0)?;
-    context.output.send(Value::string(mandate(
-        mandate(
-            get_current_username(),
-            "Could not determine current username",
-        )?
-            .to_str(),
-        "Invalid username",
-    )?))
-}
-
-fn group(context: CommandContext) -> CrushResult<()> {
-    context.arguments.check_len(0)?;
-    context.output.send(Value::string(mandate(
-        mandate(
-            get_current_groupname(),
-            "Could not determine current group name",
-        )?
-            .to_str(),
-        "Invalid group name",
-    )?))
-}
-
-fn uid(context: CommandContext) -> CrushResult<()> {
-    context.arguments.check_len(0)?;
-    context
-        .output
-        .send(Value::Integer(get_current_uid() as i128))
-}
-
-fn gid(context: CommandContext) -> CrushResult<()> {
-    context.arguments.check_len(0)?;
-    context
-        .output
-        .send(Value::Integer(get_current_gid() as i128))
-}
+use crate::lang::{table::ColumnType, table::Row};
+use lazy_static::lazy_static;
 
 #[signature(
 me,
 can_block = false,
 short = "current user",
 )]
-struct Me {
-}
+struct Me {}
 
 fn me(context: CommandContext) -> CrushResult<()> {
     unsafe {
@@ -78,18 +36,62 @@ fn me(context: CommandContext) -> CrushResult<()> {
     }
 }
 
+lazy_static! {
+    static ref LIST_OUTPUT_TYPE: Vec<ColumnType> = vec![
+        ColumnType::new("name", ValueType::String),
+        ColumnType::new("home", ValueType::File),
+        ColumnType::new("shell", ValueType::File),
+        ColumnType::new("information", ValueType::String),
+        ColumnType::new("uid", ValueType::Integer),
+        ColumnType::new("gid", ValueType::Integer),
+    ];
+}
+
+#[signature(
+list,
+can_block = true,
+output = Known(ValueType::TableStream(LIST_OUTPUT_TYPE.clone())),
+short = "List all users on the system",
+)]
+struct List {}
+
+fn list(context: CommandContext) -> CrushResult<()> {
+    let output = context.output.initialize(LIST_OUTPUT_TYPE.clone())?;
+    unsafe {
+        nix::libc::setpwent();
+        loop {
+            let passwd = nix::libc::getpwent();
+            if passwd.is_null() {
+                break;
+            }
+            output.send(Row::new(
+                vec![
+                    Value::String(parse((*passwd).pw_name)?),
+                    Value::File(PathBuf::from(parse((*passwd).pw_dir)?)),
+                    Value::File(PathBuf::from(parse((*passwd).pw_shell)?)),
+                    Value::String(parse((*passwd).pw_gecos)?),
+                    Value::Integer((*passwd).pw_uid as i128),
+                    Value::Integer((*passwd).pw_gid as i128),
+                ]))?;
+        }
+        nix::libc::endpwent();
+    }
+    Ok(())
+}
+
+
 #[signature(
 find,
 can_block = false,
 short = "find a user by name",
 )]
-struct FromName {
+struct Find {
     #[description("the of the user to find.")]
     name: String,
 }
 
 fn find(context: CommandContext) -> CrushResult<()> {
-    let cfg: FromName = FromName::parse(context.arguments, &context.printer)?;
+    let cfg: Find = Find::parse(context.arguments, &context.printer)?;
     unsafe {
         context.output.send(search(cfg.name)?)
     }
@@ -109,18 +111,18 @@ unsafe fn search(input_name: String) -> CrushResult<Value> {
         let name = parse((*passwd).pw_name)?;
         if name == input_name {
             let res = Value::Struct(
-                    Struct::new(
-                        vec![
-                            ("name".to_string(), Value::String(input_name)),
-                            ("home".to_string(), Value::File(PathBuf::from(parse((*passwd).pw_dir)?))),
-                            ("shell".to_string(), Value::File(PathBuf::from(parse((*passwd).pw_shell)?))),
-                            ("information".to_string(), Value::String(parse((*passwd).pw_gecos)?)),
-                            ("uid".to_string(), Value::Integer((*passwd).pw_uid as i128)),
-                            ("gid".to_string(), Value::Integer((*passwd).pw_gid as i128)),
-                        ],
-                        None,
-                    )
-                );
+                Struct::new(
+                    vec![
+                        ("name".to_string(), Value::String(input_name)),
+                        ("home".to_string(), Value::File(PathBuf::from(parse((*passwd).pw_dir)?))),
+                        ("shell".to_string(), Value::File(PathBuf::from(parse((*passwd).pw_shell)?))),
+                        ("information".to_string(), Value::String(parse((*passwd).pw_gecos)?)),
+                        ("uid".to_string(), Value::Integer((*passwd).pw_uid as i128)),
+                        ("gid".to_string(), Value::Integer((*passwd).pw_gid as i128)),
+                    ],
+                    None,
+                )
+            );
             nix::libc::endpwent();
             return Ok(res);
         }
@@ -132,8 +134,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "user",
         Box::new(move |user| {
             Me::declare(user)?;
-            FromName::declare(user)?;
-
+            Find::declare(user)?;
+            List::declare(user)?;
             Ok(())
         }),
     )?;

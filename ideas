@@ -67,6 +67,11 @@ Allow simpler column renaming via select, e.g. 'ps|select time=^cpu'
 html:from/to using html5ever under the hood
 Add hex and base64 en/decoding methods to the binary/string types
 Add utf-8 and other character encoding methods to the binary/string types
-Add support for ~
 Maybe unset should be an operator, so that we don't have to quote the variable name, which feels inconsistent
+
 command for reading systemd logs
+
+j := systemd:journal seek=(time:now) foo="bar"
+Returns a table_stream with two fields: timestamp and data. The latter is a struct.
+
+
