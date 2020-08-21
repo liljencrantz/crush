@@ -1,6 +1,5 @@
 /target
 **/*.rs.bk
 .*
-!.npmignore
 *.iml
 src/lang/serialization/model.rs
