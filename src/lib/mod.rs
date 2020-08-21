@@ -23,6 +23,8 @@ mod proc;
 mod random;
 mod remote;
 mod stream;
+#[cfg(target_os = "linux")]
+mod systemd;
 mod traversal;
 pub mod types;
 mod user;
@@ -103,6 +105,8 @@ pub fn declare(root: &Scope, printer: &Printer, output: &ValueSender) -> CrushRe
     host::declare(root)?;
     #[cfg(target_os = "linux")]
     dbus::declare(root)?;
+    #[cfg(target_os = "linux")]
+    systemd::declare(root)?;
     declare_external(root, printer, output)?;
     root.readonly();
     Ok(())
