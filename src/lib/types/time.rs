@@ -39,15 +39,7 @@ lazy_static! {
             None,
             Known(ValueType::Time),
         );
-        res.declare(
-            full("now"),
-            now,
-            false,
-            "time:now",
-            "The current point in time",
-            None,
-            Known(ValueType::Time),
-        );
+        Now::declare_method(&mut res, &path);
         Parse::declare_method(&mut res, &path);
         Format::declare_method(&mut res, &path);
         res
@@ -65,6 +57,14 @@ binary_op!(
     Duration,
     |a, b| a - b
 );
+
+#[signature(
+now,
+can_block = false,
+output = Known(ValueType::Time),
+short = "The current point in time.",
+)]
+struct Now {}
 
 fn now(context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Time(Local::now()))

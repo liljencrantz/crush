@@ -43,21 +43,7 @@ lazy_static! {
             "Divide this duration by the specified divisor",
             None,
             Known(ValueType::Duration));
-        let _ = New::declare_method(&mut res, &path); // TODO why unused?
-/*
-        res.declare(full("new"),
-            new, false,
-            "duration:new [count:integer timeunit:string]...",
-            "Create a new duration",
-            Some(r#"    * timeunit:string is one of nanosecond/nanoseconds, microsecond/microseconds,
-      millisecond/milliseconds, second/seconds, minute/minutes, hour/hours,
-      day/days, week/weeks, month/months, year/years
-
-    Example:
-
-    # A complicated way of specifying a 23 hour duration
-    duration:new 1 "days" (neg 3600) "seconds""#),
-    Known(ValueType::Duration));*/
+        New::declare_method(&mut res, &path);
         res.declare(
             full("__neg__"), neg, false,
             "neg duration", "Negate this duration", None,
