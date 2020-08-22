@@ -1,7 +1,7 @@
-use crate::lang::argument::{column_names, Argument};
+use crate::lang::argument::column_names;
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::{Known, Unknown};
-use crate::lang::errors::{argument_error, mandate, CrushResult};
+use crate::lang::errors::{mandate, CrushResult};
 use crate::lang::execution_context::ArgumentVector;
 use crate::lang::execution_context::{CommandContext, This};
 use crate::lang::scope::Scope;
@@ -9,6 +9,7 @@ use crate::lang::stream::black_hole;
 use crate::lang::table::ColumnType;
 use crate::lang::value::ValueType;
 use crate::lang::{r#struct::Struct, value::Value};
+use crate::lang::ordered_string_map::OrderedStringMap;
 
 pub mod binary;
 pub mod dict;
@@ -66,24 +67,8 @@ fn class(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Struct(res))
 }
 
-pub fn parse_column_types(mut arguments: Vec<Argument>) -> CrushResult<Vec<ColumnType>> {
-    let mut types = Vec::new();
-    let names = column_names(&arguments);
-
-    for (idx, arg) in arguments.drain(..).enumerate() {
-        if let Value::Type(t) = arg.value {
-            types.push(ColumnType::new(names[idx].as_ref(), t));
-        } else {
-            return argument_error(
-                format!(
-                    "Expected all parameters to be types, found {}",
-                    arg.value.value_type().to_string()
-                )
-                .as_str(),
-            );
-        }
-    }
-    Ok(types)
+pub fn column_types(columns: &OrderedStringMap<ValueType>) -> Vec<ColumnType> {
+    columns.iter().map(|(key, value)| ColumnType::new(key, value.clone())).collect()
 }
 
 pub fn convert(mut context: CommandContext) -> CrushResult<()> {

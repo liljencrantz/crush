@@ -3,7 +3,7 @@ use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::*;
 use crate::lang::dict::Dict;
 use crate::lang::errors::{
-    argument_error, data_error, eof_error, error, mandate, send_error, to_crush_error, CrushError,
+    argument_error, data_error, eof_error, error, mandate, to_crush_error, CrushError,
     CrushResult,
 };
 use crate::lang::execution_context::CommandContext;
@@ -403,7 +403,7 @@ impl DBusArgument {
             DBusType::Invalid => {}
             DBusType::DictEntry => {}
             DBusType::UnixFd => {}
-            DBusType::Struct(fields) => {}
+            DBusType::Struct(_) => {}
             DBusType::ObjectPath => {}
             DBusType::Signature => {}
         }

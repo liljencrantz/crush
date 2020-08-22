@@ -620,7 +620,9 @@ impl Scope {
 impl Display for Scope {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut map = OrderedMap::new();
-        self.dump(&mut map);
+        if let Err(_) = self.dump(&mut map) {
+            return Err(std::fmt::Error{});
+        }
 
         let mut first = true;
         for (key, _) in map.iter() {

@@ -1,9 +1,8 @@
 use crate::lang::argument::ArgumentHandler;
-use crate::lang::command::OutputType::{Known, Unknown};
+use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{error, to_crush_error, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, CommandContext};
 use crate::lang::scope::Scope;
-use crate::lang::stream::OutputStream;
 use crate::lang::table::ColumnType;
 use crate::util::user_map::{create_user_map, UserMap};
 use crate::{lang::table::Row, lang::value::Value, lang::value::ValueType};
@@ -70,13 +69,13 @@ fn ps(context: CommandContext) -> CrushResult<()> {
                 output.send(to_crush_error(ps_internal(proc, &users))?)?;
             }
         }
-        Err(e) => return error("Failed to list processes"),
+        Err(_) => return error("Failed to list processes"),
     }
     Ok(())
 }
 
 fn ps_internal(proc: ProcessResult<Process>, users: &HashMap<u32, User>) -> ProcessResult<Row> {
-    let mut proc = proc?;
+    let proc = proc?;
     Ok(Row::new(vec![
         Value::Integer(proc.pid() as i128),
         Value::Integer(proc.ppid()?.unwrap_or(0) as i128),

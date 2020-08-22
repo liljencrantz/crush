@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Display};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum CrushError {

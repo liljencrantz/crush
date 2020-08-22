@@ -48,9 +48,8 @@ lazy_static! {
             None,
             Known(ValueType::Time),
         );
-        // TODO: why unused?
-        let _ = Parse::declare_method(&mut res, &path);
-        let _ = Format::declare_method(&mut res, &path);
+        Parse::declare_method(&mut res, &path);
+        Format::declare_method(&mut res, &path);
         res
     };
 }

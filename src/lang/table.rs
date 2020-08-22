@@ -106,10 +106,6 @@ impl Row {
         self.cells.append(values);
     }
 
-    pub fn len(&self) -> usize {
-        self.cells.len()
-    }
-
     pub fn materialize(mut self) -> Row {
         Row {
             cells: self.cells.drain(..).map(|c| c.materialize()).collect(),

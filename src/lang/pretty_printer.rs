@@ -2,7 +2,6 @@ use crate::lang::binary::BinaryReader;
 use crate::lang::errors::to_crush_error;
 use crate::lang::list::ListReader;
 use crate::lang::printer::Printer;
-use crate::lang::r#struct::StructReader;
 use crate::lang::stream::{channels, CrushStream, InputStream, ValueSender};
 use crate::lang::table::ColumnType;
 use crate::lang::table::Row;

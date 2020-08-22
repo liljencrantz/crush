@@ -75,9 +75,8 @@ lazy_static! {
                 None,
                 Known(ValueType::String),
             );
-            // TODO: why unused?
-            let _ = LPad::declare_method(&mut res, &path);
-            let _ = RPad::declare_method(&mut res, &path);
+            LPad::declare_method(&mut res, &path);
+            RPad::declare_method(&mut res, &path);
             res.declare(
                 full("ends_with"),
                 ends_with,
@@ -165,8 +164,7 @@ lazy_static! {
                 None,
                 Known(ValueType::Integer),
             );
-            // TODO: why unused?
-            let _ = IsDigit::declare_method(&mut res, &path);
+            IsDigit::declare_method(&mut res, &path);
             res
         };
 }

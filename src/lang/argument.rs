@@ -185,7 +185,7 @@ pub fn column_names(arguments: &Vec<Argument>) -> Vec<String> {
 
 pub trait ArgumentHandler: Sized {
     fn declare(env: &mut ScopeLoader) -> CrushResult<()>;
-    fn declare_method(env: &mut OrderedMap<String, Command>, path: &Vec<&str>) -> CrushResult<()>;
+    fn declare_method(env: &mut OrderedMap<String, Command>, path: &Vec<&str>);
     fn parse(arguments: Vec<Argument>, printer: &Printer) -> CrushResult<Self>;
 }
 

@@ -1,62 +1,48 @@
 use crate::lang::command::Command;
-use crate::lang::command::OutputType::{Known, Unknown};
-use crate::lang::command::TypeMap;
+use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{argument_error, mandate, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, This};
 use crate::lang::value::ValueType;
 use crate::lang::{execution_context::CommandContext, value::Value};
-use crate::lib::types::parse_column_types;
+use crate::lib::types::column_types;
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
-
-fn full(name: &'static str) -> Vec<&'static str> {
-    vec!["global", "types", "table", name]
-}
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
+use crate::lang::ordered_string_map::OrderedStringMap;
 
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
-        res.declare(
-            full("__call__"),
-            call_type,
-            false,
-            "table column_name=type:type...",
-            "Return the table type with the specified column signature",
-            None,
-            Known(ValueType::Type),
-        );
-        res.declare(
-            full("len"),
-            len,
-            false,
-            "table:len",
-            "The number of rows in the table",
-            None,
-            Known(ValueType::Integer),
-        );
-        res.declare(
-            full("__getitem__"),
-            getitem,
-            false,
-            "table[idx:integer]",
-            "Returns the specified row of the table as a struct",
-            None,
-            Unknown,
-        );
+        let path = vec!["global", "types", "table"];
+        Call::declare_method(&mut res, &path);
+        Len::declare_method(&mut res, &path);
+        GetItem::declare_method(&mut res, &path);
         res
     };
 }
 
-fn call_type(context: CommandContext) -> CrushResult<()> {
+#[signature(
+__call__,
+can_block = false,
+output = Known(ValueType::Type),
+short = "Return the table_stream type with the specified column signature.",
+)]
+struct Call {
+    #[description("return the table type with the specified column signature.")]
+    #[named()]
+    columns: OrderedStringMap<ValueType>,
+}
+
+fn __call__(context: CommandContext) -> CrushResult<()> {
+    let cfg: Call = Call::parse(context.arguments, &context.printer)?;
     match context.this.r#type()? {
         ValueType::Table(c) => {
             if c.is_empty() {
                 context
                     .output
-                    .send(Value::Type(ValueType::Table(parse_column_types(
-                        context.arguments,
-                    )?)))
-            } else if context.arguments.is_empty() {
+                    .send(Value::Type(ValueType::TableStream(column_types(&cfg.columns))))
+            } else if cfg.columns.is_empty() {
                 context.output.send(Value::Type(ValueType::Table(c)))
             } else {
                 argument_error("Tried to set columns on a table type that already has columns")
@@ -66,6 +52,14 @@ fn call_type(context: CommandContext) -> CrushResult<()> {
     }
 }
 
+#[signature(
+len,
+can_block = false,
+output = Known(ValueType::Integer),
+short = "The number of rows in the table.",
+)]
+struct Len {}
+
 fn len(context: CommandContext) -> CrushResult<()> {
     let table = context.this.table()?;
     context
@@ -73,12 +67,22 @@ fn len(context: CommandContext) -> CrushResult<()> {
         .send(Value::Integer(table.rows().len() as i128))
 }
 
-fn getitem(mut context: CommandContext) -> CrushResult<()> {
+#[signature(
+__getitem__,
+can_block = false,
+output = Known(ValueType::Struct),
+short = "Returns the specified row of the table as a struct.",
+example = "(bin:from Cargo.toml|materialize)[4]"
+)]
+struct GetItem {
+    index: usize,
+}
+
+fn __getitem__(context: CommandContext) -> CrushResult<()> {
+    let cfg: GetItem = GetItem::parse(context.arguments, &context.printer)?;
     let o = context.this.table()?;
-    context.arguments.check_len(1)?;
-    let idx = context.arguments.integer(0)?;
     context.output.send(Value::Struct(
-        mandate(o.rows().get(idx as usize), "Index out of range")?
+        mandate(o.rows().get(cfg.index), "Index out of range")?
             .clone()
             .into_struct(o.types()),
     ))

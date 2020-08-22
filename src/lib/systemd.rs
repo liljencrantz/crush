@@ -6,7 +6,6 @@ use crate::lang::r#struct::Struct;
 use crate::lang::value::Value;
 use signature::signature;
 use systemd::journal::{JournalFiles, Journal, JournalSeek};
-use std::collections::BTreeMap;
 use crate::lang::table::Row;
 use lazy_static::lazy_static;
 use crate::lang::{table::ColumnType, value::ValueType};
@@ -83,7 +82,7 @@ fn journal(context: CommandContext) -> CrushResult<()> {
     }
 
     for (key, value) in &cfg.filters {
-        journal.match_add(key, value.as_bytes());
+        to_crush_error(journal.match_add(key, value.as_bytes()))?;
     }
 
     let output = context.output.initialize(JOURNAL_OUTPUT_TYPE.clone())?;

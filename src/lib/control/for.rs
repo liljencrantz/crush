@@ -1,11 +1,9 @@
 use crate::lang::argument::Argument;
-use crate::lang::command::Command;
-use crate::lang::errors::{argument_error, mandate, CrushResult};
+use crate::lang::errors::{mandate, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, CommandContext};
-use crate::lang::r#struct::StructReader;
 use crate::lang::stream::{black_hole, empty_channel, CrushStream};
 use crate::lang::value::Value;
-use crate::lang::{dict::DictReader, list::ListReader, r#struct::Struct, table::TableReader};
+use crate::lang::r#struct::Struct;
 
 pub fn r#for(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Empty())?;

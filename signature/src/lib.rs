@@ -762,14 +762,13 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                         #output)
                 }
 
-                fn declare_method(env: &mut ordered_map::OrderedMap<std::string::String, crate::lang::command::Command>, path: &Vec<&str>) -> crate::lang::errors::CrushResult <()> {
+                fn declare_method(env: &mut ordered_map::OrderedMap<std::string::String, crate::lang::command::Command>, path: &Vec<&str>) {
                     let mut full = path.clone();
                     full.push(#command_name);
                     env.insert(#command_name.to_string(),
                                 crate::lang::command::CrushCommand::command(
                                     #command_invocation, #can_block, full.iter().map(|e| e.to_string()).collect(),
                                     #signature_literal, #description, #long_description, #output));
-                    Ok(())
                 }
 
                 fn parse(_arguments: Vec<crate::lang::argument::Argument>, _printer: &crate::lang::printer::Printer) -> crate::lang::errors::CrushResult < # struct_name > {
