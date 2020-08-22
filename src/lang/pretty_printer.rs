@@ -133,6 +133,7 @@ impl PrettyPrinter {
                 _ => (),
             }
         }
+
         loop {
             match stream.read_timeout(Duration::milliseconds(100)) {
                 Ok(r) => {
@@ -167,8 +168,10 @@ impl PrettyPrinter {
 
     fn calculate_body_width(&self, w: &mut [usize], data: &[Row], col_count: usize) {
         for r in data {
-            assert_eq!(col_count, r.cells().len());
             for (idx, c) in r.cells().iter().enumerate() {
+                if idx == col_count {
+                    break;
+                }
                 let l = c.to_string().len();
                 w[idx] = max(w[idx], l);
             }
@@ -191,16 +194,20 @@ impl PrettyPrinter {
     fn print_row(
         &self,
         w: &[usize],
-        r: Row,
+        mut r: Vec<Value>,
         indent: usize,
         rows: &mut Vec<Table>,
         outputs: &mut Vec<InputStream>,
         binaries: &mut Vec<Box<dyn BinaryReader>>,
+        col_count: usize,
     ) {
         let cell_len = r.len();
         let mut row = " ".repeat(indent * 4);
-        let last_idx = r.len() - 1;
-        for (idx, c) in r.into_vec().drain(..).enumerate() {
+        let last_idx = col_count - 1;
+        for (idx, c) in r.drain(..).enumerate() {
+            if idx == col_count {
+                break;
+            }
             let cell = c.to_string();
             let spaces = if idx == cell_len - 1 {
                 "".to_string()
@@ -235,12 +242,28 @@ impl PrettyPrinter {
         self.printer.line(row.as_str());
     }
 
-    fn print_body(&self, w: &[usize], data: Vec<Row>, indent: usize) {
+    fn print_body(&self, w: &[usize], data: Vec<Row>, indent: usize, last_separate: bool) {
+        let col_count = w.len();
         for r in data.into_iter() {
             let mut rows = Vec::new();
             let mut outputs = Vec::new();
             let mut binaries = Vec::new();
-            self.print_row(w, r, indent, &mut rows, &mut outputs, &mut binaries);
+
+            let mut r_vec = r.into_vec();
+
+            if last_separate {
+                let last = r_vec.remove(r_vec.len()-1);
+                self.print_row(w, r_vec, indent, &mut rows, &mut outputs, &mut binaries, col_count);
+                match last {
+                    Value::Struct(s) => {
+                        self.print_struct(s, indent+1);
+                    }
+                    _ => panic!("Invalid data"),
+                }
+            } else {
+                self.print_row(w, r_vec, indent, &mut rows, &mut outputs, &mut binaries, col_count);
+            }
+
             for r in rows {
                 self.print_stream(&mut TableReader::new(r), indent + 1);
             }
@@ -290,13 +313,21 @@ impl PrettyPrinter {
         if types.len() == 1 && indent == 0 && !has_table {
             self.print_single_column_table(data, types)
         } else {
+            let last_separate = types.len() > 0 && indent == 0 && !has_table && types[types.len()-1].cell_type == ValueType::Struct;
+
+            let types = if last_separate {
+                &types[0..types.len()-1]
+            } else {
+                types
+            };
+
             let mut w = vec![0; types.len()];
 
             self.calculate_header_width(&mut w, types);
             self.calculate_body_width(&mut w, &data, types.len());
 
             self.print_header(&w, types, indent);
-            self.print_body(&w, data, indent)
+            self.print_body(&w, data, indent, last_separate)
         }
     }
 
