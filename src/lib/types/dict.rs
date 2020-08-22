@@ -7,6 +7,8 @@ use crate::lang::value::Value;
 use crate::lang::{dict::Dict, value::ValueType};
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "dict", name]
@@ -15,6 +17,14 @@ fn full(name: &'static str) -> Vec<&'static str> {
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
+        let path = vec!["global", "types", "dict"];
+        Len::declare_method(&mut res, &path);
+        Empty::declare_method(&mut res, &path);
+        Call::declare_method(&mut res, &path);
+        Clone::declare_method(&mut res, &path);
+        Clear::declare_method(&mut res, &path);
+        KeyType::declare_method(&mut res, &path);
+        ValueTypeMethod::declare_method(&mut res, &path);
         res.declare(
             full("new"),
             new,
@@ -25,33 +35,6 @@ lazy_static! {
                 r#"    Examples:
     my_dict := (dict string integer):new"#,
             ),
-            Unknown,
-        );
-        res.declare(
-            full("len"),
-            len,
-            false,
-            "dict:len",
-            "The number of mappings in the dict",
-            None,
-            Known(ValueType::Integer),
-        );
-        res.declare(
-            full("empty"),
-            empty,
-            false,
-            "dict:empty",
-            "True if there are no mappings in the dict",
-            None,
-            Known(ValueType::Bool),
-        );
-        res.declare(
-            full("clear"),
-            clear,
-            false,
-            "dict:clear",
-            "Remove all mappings from this dict",
-            None,
             Unknown,
         );
         res.declare(
@@ -81,56 +64,31 @@ lazy_static! {
             None,
             Unknown,
         );
-        res.declare(
-            full("clone"),
-            clone,
-            false,
-            "dict:clone",
-            "Create a new dict with the same st of mappings as this one",
-            None,
-            Unknown,
-        );
-        res.declare(
-            full("__call__"),
-            call_type,
-            false,
-            "dict key_type:type value_type:type",
-            "Returns a dict type with the specifiec key and value types",
-            None,
-            Known(ValueType::Type),
-        );
-        res.declare(
-            full("key_type"),
-            key_type,
-            false,
-            "dict:key_type",
-            "Return the type of the keys in this dict",
-            None,
-            Known(ValueType::Type),
-        );
-        res.declare(
-            full("value_type"),
-            value_type,
-            false,
-            "dict:value_type",
-            "Return the type of the values in this dict",
-            None,
-            Known(ValueType::Type),
-        );
         res
     };
 }
 
-fn call_type(mut context: CommandContext) -> CrushResult<()> {
+#[signature(
+__call__,
+can_block = false,
+output = Known(ValueType::Type),
+short = "Returns a dict type with the specific key and value types.",
+)]
+struct Call {
+    #[description("the type of the keys in the dict.")]
+    key_type: ValueType,
+    #[description("the type of the values in the dict.")]
+    value_type: ValueType,
+}
+
+fn __call__(mut context: CommandContext) -> CrushResult<()> {
     match context.this.r#type()? {
         ValueType::Dict(t1, t2) => match (*t1, *t2) {
             (ValueType::Empty, ValueType::Empty) => {
-                context.arguments.check_len(2)?;
-                let key_type = context.arguments.r#type(0)?;
-                let value_type = context.arguments.r#type(1)?;
+                let cfg: Call = Call::parse(context.arguments, &context.printer)?;
                 context.output.send(Value::Type(ValueType::Dict(
-                    Box::new(key_type),
-                    Box::new(value_type),
+                    Box::new(cfg.key_type),
+                    Box::new(cfg.value_type),
                 )))
             }
             (t1, t2) => {
@@ -189,11 +147,28 @@ fn remove(mut context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
+#[signature(
+len,
+can_block = false,
+output = Known(ValueType::Integer),
+short = "The number of mappings in the dict.",
+)]
+struct Len {}
+
 fn len(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
         .send(Value::Integer(context.this.dict()?.len() as i128))
+}
+
+#[signature(
+clear,
+can_block = false,
+output = Unknown,
+short = "Remove all mappings from this dict.",
+)]
+struct Clear {
 }
 
 fn clear(context: CommandContext) -> CrushResult<()> {
@@ -203,11 +178,28 @@ fn clear(context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Dict(d))
 }
 
+#[signature(
+clone,
+can_block = false,
+output = Unknown,
+short = "Create a new dict with the same set of mappings as this one.",
+)]
+struct Clone {
+}
+
 fn clone(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     let d = context.this.dict()?;
     context.output.send(Value::Dict(d.copy()))
 }
+
+#[signature(
+empty,
+can_block = false,
+output = Known(ValueType::Bool),
+short = "True if there are no mappings in the dict.",
+)]
+struct Empty {}
 
 fn empty(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
@@ -216,12 +208,28 @@ fn empty(context: CommandContext) -> CrushResult<()> {
         .send(Value::Bool(context.this.dict()?.len() == 0))
 }
 
+#[signature(
+key_type,
+can_block = false,
+output = Known(ValueType::Type),
+short = "the type of the keys in this dict.",
+)]
+struct KeyType {}
+
 fn key_type(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
         .send(Value::Type(context.this.dict()?.key_type()))
 }
+
+#[signature(
+value_type,
+can_block = false,
+output = Known(ValueType::Type),
+short = "the type of the values in this dict.",
+)]
+struct ValueTypeMethod {}
 
 fn value_type(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;

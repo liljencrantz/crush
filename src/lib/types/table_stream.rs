@@ -34,9 +34,9 @@ struct Call {
 }
 
 fn __call__(context: CommandContext) -> CrushResult<()> {
-    let cfg: Call = Call::parse(context.arguments, &context.printer)?;
     match context.this.r#type()? {
         ValueType::TableStream(c) => {
+            let cfg: Call = Call::parse(context.arguments, &context.printer)?;
             if c.is_empty() {
                 context
                     .output
