@@ -13,6 +13,7 @@ use crate::lang::{table::ColumnType, value::ValueType};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use chrono::{DateTime, Local};
 use std::convert::TryFrom;
+use crate::lang::command::OutputType::Known;
 
 lazy_static! {
     static ref JOURNAL_OUTPUT_TYPE: Vec<ColumnType> = vec![
@@ -24,6 +25,7 @@ lazy_static! {
 #[signature(
 journal,
 can_block = true,
+output = Known(ValueType::TableStream(JOURNAL_OUTPUT_TYPE.clone())),
 short = "Show the systemd journal"
 )]
 struct JournalSignature {
