@@ -1,7 +1,7 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{argument_error, mandate, CrushResult};
-use crate::lang::execution_context::{ArgumentVector, This};
+use crate::lang::execution_context::This;
 use crate::lang::value::ValueType;
 use crate::lang::{execution_context::CommandContext, value::Value};
 use crate::lib::types::column_types;

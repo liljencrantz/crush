@@ -1,14 +1,12 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{mandate, CrushResult, argument_error, to_crush_error};
-use crate::lang::execution_context::{ArgumentVector, CommandContext};
+use crate::lang::execution_context::CommandContext;
 use crate::lang::scope::Scope;
 use crate::lang::r#struct::Struct;
 use crate::lang::value::{Value, ValueType};
-use crate::util::file::home;
-use users::{get_current_gid, get_current_groupname, get_current_uid, get_current_username};
+use users::get_current_username;
 use signature::signature;
-use std::convert::TryFrom;
-use std::ffi::{CStr, CString};
+use std::ffi::CStr;
 use crate::lang::argument::ArgumentHandler;
 use std::path::PathBuf;
 use crate::lang::{table::ColumnType, table::Row};

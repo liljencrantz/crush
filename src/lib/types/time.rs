@@ -11,7 +11,7 @@ use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use signature::signature;
 use std::cmp::max;
-use time::{strptime, strftime};
+use time::strptime;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "time", name]

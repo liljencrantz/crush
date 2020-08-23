@@ -72,7 +72,7 @@ lazy_static! {
 __call__,
 can_block = false,
 output = Known(ValueType::Type),
-short = "Returns a dict type with the specific key and value types.",
+short = "Returns a dict type with the specified key and value types.",
 )]
 struct Call {
     #[description("the type of the keys in the dict.")]
@@ -81,7 +81,7 @@ struct Call {
     value_type: ValueType,
 }
 
-fn __call__(mut context: CommandContext) -> CrushResult<()> {
+fn __call__(context: CommandContext) -> CrushResult<()> {
     match context.this.r#type()? {
         ValueType::Dict(t1, t2) => match (*t1, *t2) {
             (ValueType::Empty, ValueType::Empty) => {

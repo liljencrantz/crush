@@ -1,9 +1,7 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::command::OutputType::Unknown;
-use crate::lang::command::TypeMap;
 use crate::lang::errors::{to_crush_error, CrushResult};
-use crate::lang::execution_context::{ArgumentVector, CommandContext, This};
+use crate::lang::execution_context::{CommandContext, This};
 use crate::lang::r#struct::Struct;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
@@ -11,54 +9,35 @@ use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use std::fs::metadata;
 use std::os::unix::fs::MetadataExt;
-
-fn full(name: &'static str) -> Vec<&'static str> {
-    vec!["global", "types", "file", name]
-}
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
 
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
-        res.declare(
-            full("stat"),
-            stat,
-            true,
-            "file:stat",
-            "Return a struct with information about a file.",
-            Some(
-                r#"    The return value contains the following fields:
-
-    * is_directory:bool is the file is a directory
-    * is_file:bool is the file a regular file
-    * is_symlink:bool is the file a symbolic link
-    * inode:integer the inode number of the file
-    * nlink:integer the number of hardlinks to the file
-    * mode:integer the permission bits for the file
-    * len: integer the size of the file"#,
-            ),
-            Unknown,
-        );
-
-        res.declare(
-            full("exists"),
-            exists,
-            true,
-            "file:exists",
-            "Return true if this file exists",
-            None,
-            Known(ValueType::Bool),
-        );
-        res.declare(
-            full("__getitem__"),
-            getitem,
-            true,
-            "file[name:string]",
-            "Return a file or subdirectory in the specified base directory",
-            None,
-            Known(ValueType::File),
-        );
+        let path = vec!["global", "types", "file"];
+        Stat::declare_method(&mut res, &path);
+        Exists::declare_method(&mut res, &path);
+        GetItem::declare_method(&mut res, &path);
         res
     };
+}
+
+#[signature(
+stat,
+can_block = false,
+output = Known(ValueType::Struct),
+short = "Return a struct with information about a file.",
+long = "The return value contains the following fields:",
+long = "* is_directory:bool is the file is a directory",
+long = "* is_file:bool is the file a regular file",
+long = "* is_symlink:bool is the file a symbolic link",
+long = "* inode:integer the inode number of the file",
+long = "* nlink:integer the number of hardlinks to the file",
+long = "* mode:integer the permission bits for the file",
+long = "* len: integer the size of the file"
+)]
+struct Stat {
 }
 
 pub fn stat(context: CommandContext) -> CrushResult<()> {
@@ -84,15 +63,31 @@ pub fn stat(context: CommandContext) -> CrushResult<()> {
     )))
 }
 
+#[signature(
+exists,
+can_block = false,
+output = Known(ValueType::Bool),
+short = "True if the file exists.",
+)]
+struct Exists {}
+
 pub fn exists(context: CommandContext) -> CrushResult<()> {
     context
         .output
         .send(Value::Bool(context.this.file()?.exists()))
 }
 
-pub fn getitem(mut context: CommandContext) -> CrushResult<()> {
+#[signature(
+__getitem__,
+can_block = false,
+output = Known(ValueType::Bool),
+short = "Return a file or subdirectory in the specified base directory.",
+)]
+struct GetItem {
+    name: String,
+}
+pub fn __getitem__(context: CommandContext) -> CrushResult<()> {
     let base_directory = context.this.file()?;
-    context.arguments.check_len(1)?;
-    let sub = context.arguments.string(0)?;
-    context.output.send(Value::File(base_directory.join(&sub)))
+    let cfg: GetItem = GetItem::parse(context.arguments, &context.printer)?;
+    context.output.send(Value::File(base_directory.join(&cfg.name)))
 }

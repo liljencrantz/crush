@@ -18,24 +18,9 @@ lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
         let path = vec!["global", "types", "list"];
-        res.declare(
-            full("len"),
-            len,
-            false,
-            "list:len",
-            "The number of elements in the list",
-            None,
-            Known(ValueType::Integer),
-        );
-        res.declare(
-            full("empty"),
-            empty,
-            false,
-            "list:empty",
-            "True if there are no elements in the list",
-            None,
-            Known(ValueType::Bool),
-        );
+        Len::declare_method(&mut res, &path);
+        Empty::declare_method(&mut res, &path);
+        Clear::declare_method(&mut res, &path);
         res.declare(
             full("push"),
             push,
@@ -60,15 +45,6 @@ lazy_static! {
             false,
             "list:peek",
             "Return the last element from the list",
-            None,
-            Unknown,
-        );
-        res.declare(
-            full("clear"),
-            clear,
-            false,
-            "list:clear",
-            "Remove all elments from the list",
             None,
             Unknown,
         );
@@ -140,20 +116,6 @@ lazy_static! {
             Unknown,
         );
         res.declare(
-            full("__call__"),
-            call_type,
-            false,
-            "list element_type:type",
-            "Return a list type for the specified element type",
-            Some(
-                r#"    Example:
-
-    # This command returns the type 'list of integers':
-    list integer"#,
-            ),
-            Known(ValueType::Type),
-        );
-        res.declare(
             full("__getitem__"),
             getitem,
             true,
@@ -163,6 +125,7 @@ lazy_static! {
             Unknown,
         );
         Repeat::declare_method(&mut res, &path);
+        Call::declare_method(&mut res, &path);
 
         res
     };
@@ -191,14 +154,24 @@ fn repeat(context: CommandContext) -> CrushResult<()> {
         .send(Value::List(List::new(cfg.item.value_type(), l)))
 }
 
-fn call_type(mut context: CommandContext) -> CrushResult<()> {
+#[signature(
+__call__,
+can_block = false,
+output = Known(ValueType::Type),
+short = "Returns a list type with the specified value type.",
+)]
+struct Call {
+    #[description("the type of the values in the list.")]
+    value_type: ValueType,
+}
+
+fn __call__(context: CommandContext) -> CrushResult<()> {
     match context.this.r#type()? {
         ValueType::List(c) => match *c {
             ValueType::Empty => {
-                context.arguments.check_len(1)?;
+                let cfg: Call = Call::parse(context.arguments, &context.printer)?;
                 context.output.send(Value::Type(ValueType::List(Box::new(
-                    context.arguments.r#type(0)?,
-                ))))
+                    cfg.value_type))))
             }
             c => {
                 if context.arguments.is_empty() {
@@ -254,12 +227,28 @@ fn new(context: CommandContext) -> CrushResult<()> {
     }
 }
 
+#[signature(
+len,
+can_block = false,
+output = Known(ValueType::Integer),
+short = "The number of values in the list.",
+)]
+struct Len {}
+
 fn len(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
         .send(Value::Integer(context.this.list()?.len() as i128))
 }
+
+#[signature(
+empty,
+can_block = false,
+output = Known(ValueType::Bool),
+short = "True if there are no values in the list.",
+)]
+struct Empty {}
 
 fn empty(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
@@ -296,6 +285,15 @@ fn peek(context: CommandContext) -> CrushResult<()> {
     let o = context.output;
     context.this.list()?.peek().map(|c| o.send(c));
     Ok(())
+}
+
+#[signature(
+clear,
+can_block = false,
+output = Unknown,
+short = "Remove all values from this list.",
+)]
+struct Clear {
 }
 
 fn clear(context: CommandContext) -> CrushResult<()> {

@@ -1,7 +1,7 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{mandate, CrushResult};
-use crate::lang::execution_context::{ArgumentVector, This};
+use crate::lang::execution_context::This;
 use crate::lang::value::ValueType;
 use crate::lang::{execution_context::CommandContext, value::Value};
 use lazy_static::lazy_static;
