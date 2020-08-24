@@ -87,7 +87,7 @@ impl DBusThing {
 
     pub fn list_services(&self) -> CrushResult<Vec<String>> {
         let proxy = self.proxy("org.freedesktop.DBus", "/");
-        let (mut names,): (Vec<String>,) =
+        let (mut names, ): (Vec<String>, ) =
             to_crush_error(proxy.method_call("org.freedesktop.DBus", "ListNames", ()))?;
         Ok(names.drain(..).filter(|n| !n.starts_with(':')).collect())
     }
@@ -99,7 +99,7 @@ impl DBusThing {
         while !queue.is_empty() {
             let path = queue.pop().unwrap();
             let sub_proxy = self.proxy(service, &path);
-            let (intro_xml,): (String,) = to_crush_error(sub_proxy.method_call(
+            let (intro_xml, ): (String, ) = to_crush_error(sub_proxy.method_call(
                 "org.freedesktop.DBus.Introspectable", //&name,
                 "Introspect",
                 (),
@@ -174,13 +174,13 @@ fn parse_interface(path: &str, xml: &str) -> CrushResult<DBusParsedInterface> {
                                 argument.attribute("type"),
                                 "Missing argument type attribute",
                             )?
-                            .to_string();
+                                .to_string();
                             let direction = match mandate(
                                 argument.attribute("direction"),
                                 "Missing argument direction attribute",
                             )?
-                            .to_lowercase()
-                            .as_str()
+                                .to_lowercase()
+                                .as_str()
                             {
                                 "in" => DBusArgumentDirection::In,
                                 "out" => DBusArgumentDirection::Out,
@@ -240,8 +240,10 @@ enum DBusType {
     Double,
     Array(Box<DBusType>),
     Variant,
-    Invalid,
-    DictEntry,
+    DictEntry {
+        key_type: Box<DBusType>,
+        value_type: Box<DBusType>,
+    },
     UnixFd,
     Struct(Vec<DBusType>),
     ObjectPath,
@@ -262,7 +264,6 @@ impl DBusType {
         match i.next() {
             None => Ok(None),
             Some('b') => Ok(Some(DBusType::Boolean)),
-            Some('s') => Ok(Some(DBusType::String)),
             Some('y') => Ok(Some(DBusType::Byte)),
             Some('n') => Ok(Some(DBusType::Int16)),
             Some('q') => Ok(Some(DBusType::UInt16)),
@@ -271,8 +272,14 @@ impl DBusType {
             Some('x') => Ok(Some(DBusType::Int64)),
             Some('t') => Ok(Some(DBusType::UInt64)),
             Some('d') => Ok(Some(DBusType::Double)),
+
+            Some('s') => Ok(Some(DBusType::String)),
             Some('o') => Ok(Some(DBusType::ObjectPath)),
             Some('g') => Ok(Some(DBusType::Signature)),
+
+            Some('h') => Ok(Some(DBusType::UnixFd)),
+            Some('v') => Ok(Some(DBusType::Variant)),
+
             Some('a') => Ok(Some(DBusType::Array(Box::from(mandate(
                 DBusType::parse_internal(i)?,
                 "Expected an array subtype",
@@ -286,6 +293,21 @@ impl DBusType {
                     )?);
                 }
                 Ok(Some(DBusType::Struct(sub)))
+            }
+
+            Some('{') => {
+                let key_type = mandate(
+                    DBusType::parse_internal(i)?,
+                    "Expected an array subtype",
+                )?;
+                let value_type = mandate(
+                    DBusType::parse_internal(i)?,
+                    "Expected an array subtype",
+                )?;
+                Ok(Some(DBusType::DictEntry {
+                    key_type: Box::from(key_type),
+                    value_type: Box::from(value_type),
+                }))
             }
 
             Some(ch) => error(format!("Unknown dbus type '{}'", ch)),
@@ -401,7 +423,7 @@ impl DBusArgument {
             DBusType::Array(_) => {}
             DBusType::Variant => {}
             DBusType::Invalid => {}
-            DBusType::DictEntry => {}
+            DBusType::DictEntry{ key_type, value_type } => {}
             DBusType::UnixFd => {}
             DBusType::Struct(_) => {}
             DBusType::ObjectPath => {}
@@ -449,7 +471,7 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
                             value
                         }
                         Err(CrushError::EOFError) => {
-                            return error("Unexpected EOF in dbus message")
+                            return error("Unexpected EOF in dbus message");
                         }
                         Err(e) => return Err(e),
                     };
