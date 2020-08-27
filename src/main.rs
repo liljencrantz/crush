@@ -8,7 +8,7 @@ mod util;
 use rustyline;
 
 use crate::lang::errors::{to_crush_error, CrushResult};
-use crate::lang::pretty_printer::create_pretty_printer;
+use crate::lang::pretty::create_pretty_printer;
 use crate::lang::printer::Printer;
 use crate::lang::scope::Scope;
 use crate::lang::stream::ValueSender;

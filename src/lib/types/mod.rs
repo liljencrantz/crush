@@ -28,6 +28,14 @@ pub mod table;
 pub mod table_stream;
 pub mod time;
 
+#[signature(
+materialize,
+can_block = true,
+short = "Recursively convert all streams in io to materialized form",
+example= "ls | materialize"
+)]
+struct Materialize {}
+
 fn materialize(context: CommandContext) -> CrushResult<()> {
     context.output.send(context.input.recv()?.materialize())
 }
@@ -44,6 +52,23 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
         c.invoke(context)?;
     }
     o.send(Value::Struct(res))
+}
+
+#[signature(
+data,
+can_block = false,
+output = Known(ValueType::Struct),
+short = "Construct a struct with the specified members",
+long= "Example:",
+long= "data foo=5 bar=\"baz\" false",
+)]
+struct Data {
+    #[description("unnamed values.")]
+    #[unnamed]
+    unnamed: Vec<Value>,
+    #[description("named values.")]
+    #[named]
+    named: OrderedStringMap<Value>,
 }
 
 fn data(context: CommandContext) -> CrushResult<()> {
@@ -168,28 +193,11 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 ], None);
 
             env.declare("root", Value::Struct(root))?;
-            env.declare_command("data", data, false,
-                                "data <name>=value:any...",
-                                "Construct a struct with the specified members",
-                                None, Known(ValueType::Struct))?;
-
-            Class::declare(env);
-            Convert::declare(env);
-            TypeOf::declare(env);
-
-            env.declare_command(
-                "materialize", materialize, true,
-                "materialize",
-                "Recursively convert all streams in io to materialized form",
-                Some(r#"    The purpose of materializing a value is so that it can be used many times.
-
-    Note that materializing a value is an inherently destructive operation.
-    Original values of mutable types such as lists and streams are emptied by
-    the operation.
-
-    Example:
-
-    ls | materialize"#), Unknown)?;
+            Data::declare(env)?;
+            Class::declare(env)?;
+            Convert::declare(env)?;
+            TypeOf::declare(env)?;
+            Materialize::declare(env)?;
 
             env.declare("file", Value::Type(ValueType::File))?;
             env.declare("type", Value::Type(ValueType::Type))?;

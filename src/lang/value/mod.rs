@@ -29,7 +29,7 @@ use chrono::Duration;
 
 use crate::lang::command::Command;
 use crate::lang::help::Help;
-use crate::lang::pretty_printer::format_buffer;
+use crate::lang::pretty::format_buffer;
 use crate::lang::printer::Printer;
 use crate::util::regex::RegexFileMatcher;
 use ordered_map::OrderedMap;

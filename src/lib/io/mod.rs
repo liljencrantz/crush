@@ -2,7 +2,7 @@ use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{argument_error, data_error, mandate, CrushResult};
 use crate::lang::list::List;
-use crate::lang::pretty_printer::PrettyPrinter;
+use crate::lang::pretty::PrettyPrinter;
 use crate::lang::scope::Scope;
 use crate::lang::value::{Field, ValueType};
 use crate::lang::{execution_context::CommandContext, value::Value};

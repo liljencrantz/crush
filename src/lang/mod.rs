@@ -14,7 +14,7 @@ pub mod list;
 pub mod ordered_string_map;
 pub mod parser;
 pub mod patterns;
-pub mod pretty_printer;
+pub mod pretty;
 pub mod printer;
 pub mod scope;
 pub mod serialization;
