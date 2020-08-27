@@ -63,8 +63,7 @@ impl ValueDefinition {
                 if !can_block {
                     return block_error();
                 }
-                let j = def.invoke(context.job_context(first_input, last_output))?;
-                context.dependencies.push(j);
+                def.invoke(context.job_context(first_input, last_output))?;
                 (None, last_input.recv()?)
             }
             ValueDefinition::ClosureDefinition(name, p, c) => (

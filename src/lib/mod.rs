@@ -5,6 +5,7 @@ use crate::lang::stream::ValueSender;
 use crate::{lang::errors::CrushResult, lang::scope::Scope};
 use std::fs::read_dir;
 use std::path::Path;
+use crate::lang::threads::ThreadStore;
 
 #[macro_use]
 pub mod binary_op;
@@ -30,7 +31,7 @@ pub mod types;
 mod user;
 mod var;
 
-fn declare_external(root: &Scope, printer: &Printer, output: &ValueSender) -> CrushResult<()> {
+fn declare_external(root: &Scope, printer: &Printer, threads: &ThreadStore, output: &ValueSender) -> CrushResult<()> {
     match read_dir("src/crushlib/") {
         Err(_) => Ok(()),
         Ok(dirs) => {
@@ -47,6 +48,7 @@ fn declare_external(root: &Scope, printer: &Printer, output: &ValueSender) -> Cr
                                 &entry.path(),
                                 root,
                                 printer,
+                                threads,
                                 output,
                             )?;
                             if name == "lls" {
@@ -67,16 +69,18 @@ fn load_external_namespace(
     file: &Path,
     root: &Scope,
     printer: &Printer,
+    threads: &ThreadStore,
     output: &ValueSender,
 ) -> CrushResult<Scope> {
     let local_printer = printer.clone();
+    let local_threads = threads.clone();
     let local_output = output.clone();
     let local_file = file.to_path_buf();
     root.create_namespace(
         name,
         Box::new(move |env| {
             let tmp_env: Scope = env.create_temporary_namespace();
-            execute::file(tmp_env.clone(), &local_file, &local_printer, &local_output)?;
+            execute::file(tmp_env.clone(), &local_file, &local_printer, &local_output, &local_threads)?;
             let data = tmp_env.export()?;
             for (k, v) in data.mapping {
                 env.declare(&k, v)?;
@@ -86,7 +90,7 @@ fn load_external_namespace(
     )
 }
 
-pub fn declare(root: &Scope, printer: &Printer, output: &ValueSender) -> CrushResult<()> {
+pub fn declare(root: &Scope, printer: &Printer, threads: &ThreadStore, output: &ValueSender) -> CrushResult<()> {
     comp::declare(root)?;
     cond::declare(root)?;
     traversal::declare(root)?;
@@ -107,7 +111,7 @@ pub fn declare(root: &Scope, printer: &Printer, output: &ValueSender) -> CrushRe
     dbus::declare(root)?;
     #[cfg(target_os = "linux")]
     systemd::declare(root)?;
-    declare_external(root, printer, output)?;
+    declare_external(root, printer, threads, output)?;
     root.readonly();
     Ok(())
 }

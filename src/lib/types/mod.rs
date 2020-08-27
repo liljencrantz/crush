@@ -10,6 +10,8 @@ use crate::lang::table::ColumnType;
 use crate::lang::value::ValueType;
 use crate::lang::{r#struct::Struct, value::Value};
 use crate::lang::ordered_string_map::OrderedStringMap;
+use signature::signature;
+use crate::lang::argument::ArgumentHandler;
 
 pub mod binary;
 pub mod dict;
@@ -54,16 +56,28 @@ fn data(context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Struct(Struct::new(arr, None)))
 }
 
+#[signature(
+class,
+can_block = false,
+output = Known(ValueType::Struct),
+short = "Create an empty new class",
+long= "Example:",
+long= "Point := class",
+long= "Point:__init__ = {\n        |x:float y:float|\n        this:x = x\n        this:y = y\n    }",
+long= "Point:len = {\n        ||\n        math:sqrt this:x*this:x + this:y*this:y\n    }",
+long= "Point:__add__ = {\n        |other|\n        Point:new x=this:x+other:x y=this:y+other:y\n    }",
+long= "p := (Point:new x=1.0 y=2.0)\n    p:len"
+)]
+struct Class {
+    #[description("the type to convert the value to.")]
+    parent: Option<Struct>,
+}
+
 fn class(mut context: CommandContext) -> CrushResult<()> {
-    context.arguments.check_len_range(0, 1)?;
-    let parent = if !context.arguments.is_empty() {
-        context.arguments.r#struct(0)?
-    } else {
-        context.scope.root_object()
-    };
-
+    let cfg: Class = Class::parse(context.arguments, &context.printer)?;
+    let scope = context.scope;
+    let parent = cfg.parent.unwrap_or_else(|| scope.root_object());
     let res = Struct::new(vec![], Some(parent));
-
     context.output.send(Value::Struct(res))
 }
 
@@ -71,20 +85,37 @@ pub fn column_types(columns: &OrderedStringMap<ValueType>) -> Vec<ColumnType> {
     columns.iter().map(|(key, value)| ColumnType::new(key, value.clone())).collect()
 }
 
+#[signature(
+convert,
+can_block = false,
+short = "Convert the vale to the specified type"
+)]
+struct Convert {
+    #[description("the value to convert.")]
+    value: Value,
+    #[description("the type to convert the value to.")]
+    target_type: ValueType,
+}
+
 pub fn convert(mut context: CommandContext) -> CrushResult<()> {
-    context.output.send(
-        context
-            .arguments
-            .value(0)?
-            .convert(context.arguments.r#type(1)?)?,
-    )
+    let cfg: Convert = Convert::parse(context.arguments, &context.printer)?;
+    context.output.send(cfg.value.convert(cfg.target_type)?)
+}
+
+#[signature(
+r#typeof,
+can_block = false,
+output = Known(ValueType::Type),
+short = "Return the type of the specified value.",
+)]
+struct TypeOf {
+    #[description("the value to convert.")]
+    value: Value,
 }
 
 pub fn r#typeof(mut context: CommandContext) -> CrushResult<()> {
-    context.arguments.check_len(1)?;
-    context
-        .output
-        .send(Value::Type(context.arguments.value(0)?.value_type()))
+    let cfg: TypeOf = TypeOf::parse(context.arguments, &context.printer)?;
+    context.output.send(Value::Type(cfg.value.value_type()))
 }
 
 fn class_set(mut context: CommandContext) -> CrushResult<()> {
@@ -123,7 +154,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                         "Return the value of the specified field",
                         None, Unknown))),
                     ("__setitem__".to_string(), Value::Command(CrushCommand::command(
-                        class_get, false,
+                        class_set, false,
                         vec!["global".to_string(), "types".to_string(), "root".to_string(), "__setitem__".to_string()],
                         "root:__setitem__ name:string value:any",
                         "Modify the specified field to hold the specified value",
@@ -137,53 +168,15 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 ], None);
 
             env.declare("root", Value::Struct(root))?;
-
-            env.declare_command("class_get", class_get, false,
-                                "root:__getitem__ name:string",
-                                "Return the value of the specified field",
-                                None, Unknown)?;
-
             env.declare_command("data", data, false,
                                 "data <name>=value:any...",
                                 "Construct a struct with the specified members",
                                 None, Known(ValueType::Struct))?;
 
-            env.declare_command("convert", convert, false,
-                                "convert value:any type:type",
-                                "Convert the vale to the specified type",
-                                None, Unknown)?;
+            Class::declare(env);
+            Convert::declare(env);
+            TypeOf::declare(env);
 
-            env.declare_command("typeof", r#typeof, false,
-                                "typeof value:any",
-                                "Return the type of the specified value",
-                                None, Known(ValueType::Type))?;
-
-            env.declare_command(
-                "class", class, false,
-                "class [parent:type]",
-                "Create an empty new class",
-                Some(r#"    Example:
-
-    Point := class
-
-    Point:__init__ = {
-        |x:float y:float|
-        this:x = x
-        this:y = y
-    }
-
-    Point:len = {
-        ||
-        math:sqrt this:x*this:x + this:y*this:y
-    }
-
-    Point:__add__ = {
-        |other|
-        Point:new x=this:x+other:x y=this:y+other:y
-    }
-
-    p := (Point:new x=1.0 y=2.0)
-    p:len"#), Known(ValueType::Type))?;
             env.declare_command(
                 "materialize", materialize, true,
                 "materialize",

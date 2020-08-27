@@ -69,6 +69,7 @@ fn extract_type(ty: &Type) -> SignatureResult<(&'static str, Vec<&'static str>)>
                         "OrderedStringMap" => "OrderedStringMap",
                         "Command" => "Command",
                         "Duration" => "Duration",
+                        "Struct" => "Struct",
                         "Field" => "Field",
                         "Value" => "Value",
                         "Stream" => "Stream",
@@ -157,6 +158,7 @@ fn simple_type_to_value(simple_type: &str) -> TokenStream {
         "Command" => quote! {crate::lang::value::Value::Command(_value)},
         "Duration" => quote! {crate::lang::value::Value::Duration(_value)},
         "Field" => quote! {crate::lang::value::Value::Field(_value)},
+        "Struct" => quote! {crate::lang::value::Value::Struct(_value)},
         "Stream" => quote! {_value},
         "Value" => quote! {_value},
         _ => panic!("Unknown type"),
@@ -179,6 +181,7 @@ fn simple_type_to_value_description(simple_type: &str) -> &str {
         "Field" => "field",
         "Value" => "any value",
         "Stream" => "stream",
+        "Struct" => "Struct",
         _ => panic!("Unknown type"),
     }
 }
@@ -257,7 +260,7 @@ fn type_to_value(
     let (type_name, args) = extract_type(ty)?;
     match type_name {
         "i128" | "bool" | "String" | "char" | "ValueType" | "f64" | "Command" | "Duration"
-        | "Field" | "Value" | "usize" | "i64" | "u64" | "Stream" => {
+        | "Field" | "Value" | "usize" | "i64" | "u64" | "Stream" | "Struct" => {
             if !args.is_empty() {
                 fail!(ty.span(), "This type can't be paramterizised")
             } else {

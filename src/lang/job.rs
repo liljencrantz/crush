@@ -3,29 +3,8 @@ use crate::lang::errors::CrushResult;
 use crate::lang::execution_context::{CompileContext, JobContext};
 use crate::lang::printer::Printer;
 use crate::lang::stream::channels;
-use std::thread::JoinHandle;
+use std::thread::{JoinHandle, ThreadId};
 use std::fmt::{Display, Formatter};
-
-pub enum JobJoinHandle {
-    Many(Vec<JobJoinHandle>),
-    Async(JoinHandle<()>),
-}
-
-impl JobJoinHandle {
-    pub fn join(self, printer: &Printer) {
-        match self {
-            JobJoinHandle::Async(a) => match a.join() {
-                Ok(_) => {}
-                Err(_) => printer.error("Unknown error while waiting for command to exit"),
-            },
-            JobJoinHandle::Many(v) => {
-                for j in v {
-                    j.join(printer);
-                }
-            }
-        }
-    }
-}
 
 #[derive(Clone)]
 pub struct Job {
@@ -49,21 +28,16 @@ impl Job {
         &self.commands
     }
 
-    pub fn invoke(&self, context: JobContext) -> CrushResult<JobJoinHandle> {
-        let mut calls = Vec::new();
-
+    pub fn invoke(&self, context: JobContext) -> CrushResult<Option<ThreadId>> {
         let mut input = context.input.clone();
         let last_job_idx = self.commands.len() - 1;
         for call_def in &self.commands[..last_job_idx] {
             let (output, next_input) = channels();
-            let call = call_def.invoke(context.with_io(input, output))?;
+            call_def.invoke(context.with_io(input, output))?;
             input = next_input;
-            calls.push(call);
         }
         let last_call_def = &self.commands[last_job_idx];
-        calls.push(last_call_def.invoke(context.with_io(input, context.output.clone()))?);
-
-        Ok(JobJoinHandle::Many(calls))
+        last_call_def.invoke(context.with_io(input, context.output.clone()))
     }
 
     pub fn as_string(&self) -> Option<String> {

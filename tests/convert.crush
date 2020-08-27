@@ -1,4 +1,4 @@
-1.0 as integer
-0.5 as integer
-5 as string
-typeof (5 as string)
+convert 1.0 integer
+convert 0.5 integer
+convert 5 string
+typeof (convert 5 string)

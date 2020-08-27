@@ -422,7 +422,6 @@ impl DBusArgument {
             }
             DBusType::Array(_) => {}
             DBusType::Variant => {}
-            DBusType::Invalid => {}
             DBusType::DictEntry{ key_type, value_type } => {}
             DBusType::UnixFd => {}
             DBusType::Struct(_) => {}

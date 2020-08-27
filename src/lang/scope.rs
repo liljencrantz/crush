@@ -306,7 +306,7 @@ impl Scope {
             if !ok {
                 Ok(false)
             } else {
-                self.data.lock().unwrap().is_stopped = true;
+                self.lock().unwrap().is_stopped = true;
                 Ok(true)
             }
         }
@@ -326,14 +326,14 @@ impl Scope {
             if !ok {
                 Ok(false)
             } else {
-                self.data.lock().unwrap().is_stopped = true;
+                self.lock().unwrap().is_stopped = true;
                 Ok(true)
             }
         }
     }
 
     pub fn is_stopped(&self) -> bool {
-        self.data.lock().unwrap().is_stopped
+        self.lock().unwrap().is_stopped
     }
 
     fn lock(&self) -> CrushResult<MutexGuard<ScopeData>> {
@@ -365,7 +365,7 @@ impl Scope {
     }
 
     pub fn clear(&self) {
-        let mut data = self.data.lock().unwrap();
+        let mut data = self.lock().unwrap();
         data.mapping.clear();
         data.uses.clear();
     }
@@ -447,7 +447,7 @@ impl Scope {
                                         "Could not find command {} in scope {}",
                                         path[1], path[0]
                                     )
-                                    .as_str(),
+                                        .as_str(),
                                 ),
                             },
                             _ => {
@@ -456,13 +456,19 @@ impl Scope {
                                 match s {
                                     Some(Value::Scope(s)) => s.get_recursive(&path[1..]),
                                     Some(v) => v.get_recursive(&path[1..]),
-                                    _ => error(
-                                        format!(
-                                            "Could not find scope {} in scope {}",
-                                            path[1], path[0]
+                                    _ => {
+                                        let data = self.lock()?;
+                                        error(
+                                            format!(
+                                                "Could not find subscope {} in scope {} {}. Candidates are {}",
+                                                path.iter().map(|k| k.to_string()).collect::<Vec<_>>().join(":"),
+                                                //path[1],
+                                                 data.name.clone().unwrap(),
+                                                self.id(),
+                                                data.mapping.iter().map(|(k, v)| k.to_string()).collect::<Vec<_>>().join(", "),
+                                            )
                                         )
-                                        .as_str(),
-                                    ),
+                                    }
                                 }
                             }
                         }
@@ -581,7 +587,7 @@ impl Scope {
     }
 
     pub fn r#use(&self, other: &Scope) {
-        self.data.lock().unwrap().uses.push(other.clone());
+        self.lock().unwrap().uses.push(other.clone());
     }
 
     pub fn dump(&self, map: &mut OrderedMap<String, ValueType>) -> CrushResult<()> {
@@ -589,7 +595,7 @@ impl Scope {
             p.dump(map)?;
         }
 
-        for u in self.data.lock().unwrap().uses.clone().iter().rev() {
+        for u in self.lock().unwrap().uses.clone().iter().rev() {
             u.dump(map)?;
         }
 
@@ -601,7 +607,7 @@ impl Scope {
     }
 
     pub fn readonly(&self) {
-        self.data.lock().unwrap().is_readonly = true;
+        self.lock().unwrap().is_readonly = true;
     }
 
     pub fn export(&self) -> CrushResult<ScopeData> {
@@ -609,11 +615,11 @@ impl Scope {
     }
 
     pub fn set_parent(&self, parent: Option<Scope>) {
-        self.data.lock().unwrap().parent_scope = parent;
+        self.lock().unwrap().parent_scope = parent;
     }
 
     pub fn set_calling(&self, calling: Option<Scope>) {
-        self.data.lock().unwrap().calling_scope = calling;
+        self.lock().unwrap().calling_scope = calling;
     }
 }
 
@@ -621,7 +627,7 @@ impl Display for Scope {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut map = OrderedMap::new();
         if let Err(_) = self.dump(&mut map) {
-            return Err(std::fmt::Error{});
+            return Err(std::fmt::Error {});
         }
 
         let mut first = true;

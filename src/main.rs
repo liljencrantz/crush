@@ -19,6 +19,8 @@ use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use std::io::Read;
 use std::path::PathBuf;
+use crate::util::identity_arc::Identity;
+use crate::lang::threads::ThreadStore;
 
 fn crush_history_file() -> PathBuf {
     home()
@@ -30,6 +32,7 @@ fn run_interactive(
     global_env: Scope,
     printer: &Printer,
     pretty_printer: &ValueSender,
+    threads: &ThreadStore,
 ) -> CrushResult<()> {
     printer.line("Welcome to Crush");
     printer.line(r#"Type "help" for... help."#);
@@ -43,7 +46,7 @@ fn run_interactive(
             Ok(cmd) if cmd.is_empty() => {}
             Ok(cmd) => {
                 rl.add_history_entry(&cmd);
-                execute::string(global_env.clone(), &cmd, &printer, pretty_printer);
+                execute::string(global_env.clone(), &cmd, &printer, pretty_printer, threads);
             }
             Err(ReadlineError::Interrupted) => {
                 printer.line("^C");
@@ -69,30 +72,35 @@ fn run() -> CrushResult<()> {
     let global_env = lang::scope::Scope::create_root();
     let (printer, print_handle) = printer::init();
     let pretty_printer = create_pretty_printer(printer.clone());
-    declare(&global_env, &printer, &pretty_printer)?;
+    let threads = ThreadStore::new();
+    declare(&global_env, &printer, &threads, &pretty_printer)?;
+
     let my_scope = global_env.create_child(&global_env, false);
 
     let args = std::env::args().collect::<Vec<_>>();
     match &args[..] {
-        [_exe] => run_interactive(my_scope, &printer, &pretty_printer)?,
+        [_exe] => run_interactive(my_scope, &printer, &pretty_printer, &threads)?,
         [_exe, arg] => {
             if arg == "--pup" {
                 let mut buff = Vec::new();
                 to_crush_error(std::io::stdin().read_to_end(&mut buff))?;
-                execute::pup(my_scope, &buff, &printer)?;
+                execute::pup(my_scope, &buff, &printer, &threads)?;
             } else {
                 execute::file(
                     my_scope,
                     PathBuf::from(&arg).as_path(),
                     &printer,
                     &pretty_printer,
+                    &threads,
                 )?
             }
         }
         _ => {}
     }
+    threads.join(&printer);
     drop(pretty_printer);
     drop(printer);
+    drop(threads);
     global_env.clear();
     drop(global_env);
     let _ = print_handle.join();

@@ -61,6 +61,7 @@ pub fn r#where(context: CommandContext) -> CrushResult<()> {
                 scope: context.scope.clone(),
                 this: None,
                 printer: context.printer.clone(),
+                threads: context.threads.clone(),
             };
 
             let output = context.output.initialize(input.types().to_vec())?;

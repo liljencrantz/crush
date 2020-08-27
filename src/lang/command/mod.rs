@@ -282,7 +282,8 @@ impl std::fmt::Debug for SimpleCommand {
 impl CrushCommand for ConditionCommand {
     fn invoke(&self, context: CommandContext) -> CrushResult<()> {
         let c = self.call;
-        c(context)
+        c(context)?;
+        Ok(())
     }
 
     fn name(&self) -> &str {

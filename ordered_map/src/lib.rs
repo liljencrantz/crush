@@ -268,6 +268,9 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
         K: Borrow<Q>,
         Q: Hash + Eq,
     {
+        if self.lookup.is_empty() {
+            return None;
+        }
         match self.find(key) {
             Err(_) => None,
             Ok(idx) => match &self.values[idx] {
@@ -282,6 +285,9 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
         K: Borrow<Q>,
         Q: Hash + Eq,
     {
+        if self.lookup.is_empty() {
+            return false;
+        }
         match self.find(key) {
             Err(_) => false,
             Ok(idx) => match &self.values[idx] {
@@ -296,6 +302,9 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
         K: Borrow<Q>,
         Q: Hash + Eq,
     {
+        if self.lookup.is_empty() {
+            return None;
+        }
         match self.find(key) {
             Err(_) => None,
             Ok(idx) => {

@@ -17,6 +17,7 @@ use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt;
 use std::os::unix::ffi::OsStringExt;
 use std::path::PathBuf;
+use regex::internal::Input;
 
 fn serialize_simple(
     value: &Value,
@@ -51,6 +52,9 @@ impl Serializable<Value> for Value {
         elements: &[Element],
         state: &mut DeserializationState,
     ) -> CrushResult<Value> {
+        if id >= elements.len() {
+            println!("OOOOPS {} >= {}", id, elements.len())
+        }
         match elements[id].element.as_ref().unwrap() {
             element::Element::String(s) => Ok(Value::string(s.as_str())),
             element::Element::File(f) => Ok(Value::File(PathBuf::from(OsStr::from_bytes(&f[..])))),

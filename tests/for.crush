@@ -20,7 +20,7 @@ for table {
 }
 
 for i=table {
-    echo i:value
+    echo i
 }
 
 
@@ -29,5 +29,5 @@ for (seq 3) {
 }
 
 for i=(seq 3) {
-    echo i:value
+    echo i
 }

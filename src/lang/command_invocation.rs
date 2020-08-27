@@ -3,13 +3,13 @@ use crate::lang::execution_context::{CompileContext, JobContext};
 use crate::lang::scope::Scope;
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, value::Value};
 use crate::lang::{
-    command::Command, execution_context::CommandContext, job::JobJoinHandle,
+    command::Command, execution_context::CommandContext,
     value::ValueDefinition,
 };
-use crate::util::thread::{build, handle};
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::fmt::{Display, Formatter};
+use std::thread::ThreadId;
 
 #[derive(Clone)]
 pub struct CommandInvocation {
@@ -120,7 +120,7 @@ impl CommandInvocation {
         }
     }
 
-    pub fn invoke(&self, context: JobContext) -> CrushResult<JobJoinHandle> {
+    pub fn invoke(&self, context: JobContext) -> CrushResult<Option<ThreadId>> {
         match self
             .command
             .compile_internal(&mut context.compile_context(), false)
@@ -130,22 +130,27 @@ impl CommandInvocation {
                 if err == CrushError::BlockError {
                     let cmd = self.command.clone();
                     let arguments = self.arguments.clone();
-                    Ok(handle(build(self.command.to_string().as_str()).spawn(
-                        move || match cmd.clone().compile_unbound(&mut context.compile_context()) {
-                            Ok((this, value)) => context.printer.handle_error(invoke_value(
-                                this,
-                                value,
-                                arguments,
-                                context.clone(),
-                            )),
+                    let t = context.threads.clone();
+                    Ok(Some(t.spawn(
+                        &self.command.to_string(),
+                        move || {
+                            match cmd.clone().compile_unbound(&mut context.compile_context()) {
+                                Ok((this, value)) => context.printer.handle_error(invoke_value(
+                                    this,
+                                    value,
+                                    arguments,
+                                    context.clone(),
+                                )),
 
-                            _ => context.printer.handle_error(try_external_command(
-                                cmd,
-                                arguments,
-                                context.clone(),
-                            )),
+                                _ => context.printer.handle_error(try_external_command(
+                                    cmd,
+                                    arguments,
+                                    context.clone(),
+                                )),
+                            }
+                            Ok(())
                         },
-                    )))
+                    )?))
                 } else {
                     try_external_command(self.command.clone(), self.arguments.clone(), context)
                 }
@@ -159,7 +164,7 @@ fn invoke_value(
     value: Value,
     local_arguments: Vec<ArgumentDefinition>,
     context: JobContext,
-) -> CrushResult<JobJoinHandle> {
+) -> CrushResult<Option<ThreadId>> {
     match value {
         Value::Command(command) => invoke_command(command, this, local_arguments, context),
         Value::File(f) => {
@@ -192,7 +197,7 @@ fn invoke_value(
                         "Not a command {}",
                         f.to_str().unwrap_or("<invalid filename>")
                     )
-                    .as_str(),
+                        .as_str(),
                 )
             }
         }
@@ -221,7 +226,7 @@ fn invoke_value(
                     "__call__ should be a command, was of type {}",
                     v.value_type().to_string()
                 )
-                .as_str(),
+                    .as_str(),
             ),
             _ => {
                 if local_arguments.len() == 0 {
@@ -242,7 +247,7 @@ fn invoke_value(
                             .as_str(),
                     )
                 }
-            },
+            }
         },
         _ => {
             if local_arguments.len() == 0 {
@@ -264,24 +269,24 @@ fn invoke_command(
     this: Option<Value>,
     local_arguments: Vec<ArgumentDefinition>,
     context: JobContext,
-) -> CrushResult<JobJoinHandle> {
+) -> CrushResult<Option<ThreadId>> {
     if !action.can_block(&local_arguments, &mut context.compile_context())
         && !arg_can_block(&local_arguments, &mut context.compile_context())
     {
         let new_context =
             CommandInvocation::execution_context(local_arguments, this, context.clone())?;
         context.printer.handle_error(action.invoke(new_context));
-        Ok(JobJoinHandle::Many(vec![]))
+        Ok(None)
     } else {
-        Ok(handle(build(action.name()).spawn(move || {
-            let res = CommandInvocation::execution_context(local_arguments, this, context.clone());
-            if let Ok(ctx) = res {
-                let p = ctx.printer.clone();
-                p.handle_error(action.invoke(ctx));
-            } else {
-                context.printer.handle_error(res);
-            }
-        })))
+        let t = context.threads.clone();
+        let name = action.name().to_string();
+        Ok(Some(t.spawn(
+            &name,
+            move || {
+                let res = CommandInvocation::execution_context(local_arguments, this, context.clone())?;
+                action.invoke(res)
+            },
+        )?))
     }
 }
 
@@ -289,7 +294,7 @@ fn try_external_command(
     def: ValueDefinition,
     mut arguments: Vec<ArgumentDefinition>,
     context: JobContext,
-) -> CrushResult<JobJoinHandle> {
+) -> CrushResult<Option<ThreadId>> {
     let (cmd, sub) = match def {
         ValueDefinition::Label(str) => (str, None),
         ValueDefinition::GetAttr(parent, sub) => match parent.deref() {

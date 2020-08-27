@@ -1,15 +1,13 @@
 rm ./.test_file
 # Pipe output of find into a file
-find example_data/tree|select ^file ^type | ./.test_file:to
+find example_data/tree|select ^file ^type | pup:to ./.test_file
 # And read it back out again
-./.test_file:from
+pup:from ./.test_file
 
 # Serialize a closure
 a := 4
 b := 7.5
 fff := {|c:integer=1 d| echo a*b*c; for (seq 3) d }
-
-./.test_file:to fff
-
-var:unset "a" "b" "fff"
-(./.test_file:from) c=3 {echo 1}
+val fff | pup:to ./.test_file
+#var:unset "a" "b" "fff"
+(pup:from ./.test_file) c=3 {echo 1}

@@ -41,6 +41,7 @@ impl CrushCommand for Closure {
         if env.is_stopped() {
             return Ok(());
         }
+
         for (idx, job_definition) in job_definitions.iter().enumerate() {
             let first = idx == 0;
             let last = idx == job_definitions.len() - 1;
@@ -54,13 +55,18 @@ impl CrushCommand for Closure {
             } else {
                 black_hole()
             };
-            let _job = job_definition.invoke(JobContext::new(
+
+            let job = job_definition.invoke(JobContext::new(
                 input,
                 output,
                 env.clone(),
                 context.printer.clone(),
+                context.threads.clone(),
             ))?;
-            //            job.join(&context.printer);
+            let local_printer = context.printer.clone();
+            let local_threads = context.threads.clone();
+            job.map(|id| local_threads.join_one(id, &local_printer));
+
             if env.is_stopped() {
                 return Ok(());
             }

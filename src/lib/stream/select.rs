@@ -60,6 +60,7 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
                             scope: context.scope.clone(),
                             this: None,
                             printer: context.printer.clone(),
+                            threads: context.threads.clone(),
                         })?;
                         receiver.recv()?
                     }
@@ -110,6 +111,7 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
                         scope: context.scope.clone(),
                         this: None,
                         printer: context.printer.clone(),
+                        threads: context.threads.clone(),
                     })?;
                     receiver.recv()?
                 }

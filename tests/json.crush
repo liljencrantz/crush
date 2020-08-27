@@ -1,5 +1,5 @@
-json example_data/din%.json |
+json:from example_data/din%.json |
     sort ^name
 
-json example_data/din%.json |
+json:from example_data/din%.json |
     where {name =~ re"Tri.*"}

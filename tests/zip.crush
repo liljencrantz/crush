@@ -1,7 +1,7 @@
-age := (lines example_data/age.csv|materialize)
-home := (lines example_data/home.csv|materialize)
+age := (lines:from example_data/age.csv|materialize)
+home := (lines:from example_data/home.csv|materialize)
 
-zip (lines example_data/age.csv) (lines example_data/home.csv)
+zip (lines:from example_data/age.csv) (lines:from example_data/home.csv)
 zip age home | head 1
-zip (lines example_data/age.csv) home | head 1
-zip age (lines example_data/home.csv) | head 1
+zip (lines:from example_data/age.csv) home | head 1
+zip age (lines:from example_data/home.csv) | head 1

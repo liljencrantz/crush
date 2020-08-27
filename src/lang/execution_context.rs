@@ -2,7 +2,6 @@ use crate::lang::argument::Argument;
 use crate::lang::command::Command;
 use crate::lang::dict::Dict;
 use crate::lang::errors::{argument_error, error, CrushResult};
-use crate::lang::job::JobJoinHandle;
 use crate::lang::list::List;
 use crate::lang::printer::Printer;
 use crate::lang::r#struct::Struct;
@@ -15,6 +14,7 @@ use crate::util::replace::Replace;
 use chrono::{DateTime, Duration, Local};
 use regex::Regex;
 use std::path::PathBuf;
+use crate::lang::threads::ThreadStore;
 
 pub trait ArgumentVector {
     fn check_len(&self, len: usize) -> CrushResult<()>;
@@ -161,29 +161,29 @@ impl ArgumentVector for Vec<Argument> {
 }
 
 pub struct CompileContext {
-    pub dependencies: Vec<JobJoinHandle>,
     pub env: Scope,
     pub printer: Printer,
+    pub threads: ThreadStore,
 }
 
 impl CompileContext {
-    pub fn new(env: Scope, printer: Printer) -> CompileContext {
+    pub fn new(env: Scope, printer: Printer, threads: ThreadStore) -> CompileContext {
         CompileContext {
-            dependencies: Vec::new(),
             env,
             printer,
+            threads,
         }
     }
 
     pub fn job_context(&self, input: ValueReceiver, output: ValueSender) -> JobContext {
-        JobContext::new(input, output, self.env.clone(), self.printer.clone())
+        JobContext::new(input, output, self.env.clone(), self.printer.clone(), self.threads.clone())
     }
 
     pub fn with_scope(&self, env: &Scope) -> CompileContext {
         CompileContext {
-            dependencies: vec![],
             env: env.clone(),
             printer: self.printer.clone(),
+            threads: self.threads.clone(),
         }
     }
 }
@@ -194,6 +194,7 @@ pub struct JobContext {
     pub output: ValueSender,
     pub env: Scope,
     pub printer: Printer,
+    pub threads: ThreadStore,
 }
 
 impl JobContext {
@@ -202,12 +203,14 @@ impl JobContext {
         output: ValueSender,
         env: Scope,
         printer: Printer,
+        threads: ThreadStore,
     ) -> JobContext {
         JobContext {
             input,
             output,
             env,
             printer,
+            threads,
         }
     }
 
@@ -217,11 +220,12 @@ impl JobContext {
             output,
             env: self.env.clone(),
             printer: self.printer.clone(),
+            threads: self.threads.clone(),
         }
     }
 
     pub fn compile_context(&self) -> CompileContext {
-        CompileContext::new(self.env.clone(), self.printer.clone())
+        CompileContext::new(self.env.clone(), self.printer.clone(), self.threads.clone())
     }
 
     pub fn command_context(
@@ -236,6 +240,7 @@ impl JobContext {
             output: self.output.clone(),
             printer: self.printer.clone(),
             scope: self.env.clone(),
+            threads: self.threads.clone(),
         }
     }
 }
@@ -248,6 +253,7 @@ pub struct CommandContext {
     pub scope: Scope,
     pub this: Option<Value>,
     pub printer: Printer,
+    pub threads: ThreadStore,
 }
 
 impl CommandContext {
@@ -255,7 +261,7 @@ impl CommandContext {
     Return a compile context with the environemnt from this execution context..
     */
     pub fn compile_context(&self) -> CompileContext {
-        CompileContext::new(self.scope.clone(), self.printer.clone())
+        CompileContext::new(self.scope.clone(), self.printer.clone(), self.threads.clone())
     }
 
     /**
@@ -269,6 +275,7 @@ impl CommandContext {
             printer: self.printer,
             arguments,
             this,
+            threads: self.threads,
         }
     }
 
@@ -280,6 +287,7 @@ impl CommandContext {
             printer: self.printer,
             arguments: self.arguments,
             this: self.this,
+            threads: self.threads,
         }
     }
 }

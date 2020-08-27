@@ -1,5 +1,3 @@
 file
-example_data/tree/a
-example_data/tree/sub
-example_data/tree/sub/b
-example_data/tree/sub/c
+example_data/tree/a   example_data/tree/sub/b
+example_data/tree/sub example_data/tree/sub/c

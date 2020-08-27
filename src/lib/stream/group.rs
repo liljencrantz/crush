@@ -2,7 +2,6 @@ use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::Command;
 use crate::lang::errors::{mandate, CrushResult};
 use crate::lang::execution_context::CommandContext;
-use crate::lang::job::JobJoinHandle;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::printer::Printer;
 use crate::lang::scope::Scope;
@@ -10,7 +9,6 @@ use crate::lang::stream::{channels, InputStream};
 use crate::lang::table::ColumnType;
 use crate::lang::table::ColumnVec;
 use crate::lang::value::Field;
-use crate::util::thread::{build, handle};
 use crate::{
     lang::errors::argument_error,
     lang::stream::{unlimited_streams, OutputStream},
@@ -19,12 +17,13 @@ use crate::{
 use crossbeam::{unbounded, Receiver};
 use signature::signature;
 use std::collections::HashMap;
+use crate::lang::threads::ThreadStore;
 
 #[signature(
-    group,
-    can_block = true,
-    short = "Group stream by the specified column(s)",
-    example = "find . | group ^user ^type file_count={count} size={sum ^size}"
+group,
+can_block = true,
+short = "Group stream by the specified column(s)",
+example = "find . | group ^user ^type file_count={count} size={sum ^size}"
 )]
 pub struct Group {
     #[unnamed()]
@@ -38,6 +37,7 @@ pub struct Group {
 fn aggregate(
     commands: Vec<Command>,
     printer: Printer,
+    threads: ThreadStore,
     scope: Scope,
     destination: OutputStream,
     task_input: Receiver<(Vec<Value>, InputStream)>,
@@ -59,6 +59,7 @@ fn aggregate(
                     scope: scope.clone(),
                     this: None,
                     printer: printer.clone(),
+                    threads: threads.clone(),
                 })?;
                 let mut result = key;
                 result.push(output_receiver.recv()?);
@@ -78,6 +79,7 @@ fn aggregate(
                         scope: scope.clone(),
                         this: None,
                         printer: printer.clone(),
+                        threads: threads.clone(),
                     }));
                     receivers.push(output_receiver);
                 }
@@ -106,7 +108,8 @@ fn create_worker_thread(
     scope: &Scope,
     destination: &OutputStream,
     task_input: &Receiver<(Vec<Value>, InputStream)>,
-) -> JobJoinHandle {
+    threads: &ThreadStore,
+) -> CrushResult<()> {
     let my_commands: Vec<Command> = cfg
         .command
         .iter()
@@ -116,16 +119,23 @@ fn create_worker_thread(
     let my_scope = scope.clone();
     let my_input = task_input.clone();
     let my_destination = destination.clone();
-    handle(build("group-worker").spawn(move || {
-        let local_printer = my_printer.clone();
-        local_printer.handle_error(aggregate(
-            my_commands,
-            my_printer,
-            my_scope,
-            my_destination,
-            my_input,
-        ));
-    }))
+    let my_threads = threads.clone();
+    threads.spawn(
+        "group-worker",
+        move || {
+            let local_printer = my_printer.clone();
+            local_printer.handle_error(aggregate(
+                my_commands,
+                my_printer,
+                my_threads,
+                my_scope,
+                my_destination,
+                my_input,
+            ));
+            Ok(())
+        }
+    )?;
+    Ok(())
 }
 
 pub fn group(context: CommandContext) -> CrushResult<()> {
@@ -160,7 +170,10 @@ pub fn group(context: CommandContext) -> CrushResult<()> {
     let (task_output, task_input) = unbounded::<(Vec<Value>, InputStream)>();
 
     for _ in 0..16 {
-        create_worker_thread(&cfg, &context.printer, &context.scope, &output, &task_input);
+        create_worker_thread(
+            &cfg,
+            &context.printer, &context.scope, &output,
+            &task_input, &context.threads);
     }
 
     drop(task_input);

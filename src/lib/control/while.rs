@@ -35,6 +35,7 @@ fn r#while(context: CommandContext) -> CrushResult<()> {
             scope: cond_env.clone(),
             this: None,
             printer: context.printer.clone(),
+            threads: context.threads.clone(),
         })?;
         if cond_env.is_stopped() {
             break;
@@ -51,6 +52,7 @@ fn r#while(context: CommandContext) -> CrushResult<()> {
                         scope: body_env.clone(),
                         this: None,
                         printer: context.printer.clone(),
+                        threads: context.threads.clone(),
                     })?;
                     if body_env.is_stopped() {
                         break;

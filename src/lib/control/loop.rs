@@ -28,6 +28,7 @@ fn r#loop(context: CommandContext) -> CrushResult<()> {
             scope: env.clone(),
             this: None,
             printer: context.printer.clone(),
+            threads: context.threads.clone(),
         })?;
         if env.is_stopped() {
             break;

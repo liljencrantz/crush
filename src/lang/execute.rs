@@ -9,34 +9,36 @@ use crate::lang::value::Value;
 use std::io::Write;
 use std::path::Path;
 use std::{fs, thread};
+use crate::lang::threads::ThreadStore;
 
 pub fn file(
     global_env: Scope,
     filename: &Path,
     printer: &Printer,
     output: &ValueSender,
+    threads: &ThreadStore,
 ) -> CrushResult<()> {
     let cmd = to_crush_error(fs::read_to_string(filename))?;
-    string(global_env, &cmd.as_str(), printer, output);
+    string(global_env, &cmd.as_str(), printer, output, threads);
     Ok(())
 }
 
-pub fn pup(env: Scope, buf: &Vec<u8>, printer: &Printer) -> CrushResult<()> {
+pub fn pup(env: Scope, buf: &Vec<u8>, printer: &Printer, threads: &ThreadStore) -> CrushResult<()> {
     let cmd = deserialize(buf, &env)?;
     match cmd {
         Value::Command(cmd) => {
             let (snd, recv) = channels();
 
-            let t: std::thread::JoinHandle<std::result::Result<(), CrushError>> =
-                to_crush_error(thread::Builder::new().name("serializer".to_string()).spawn(
-                    move || {
-                        let val = recv.recv()?;
-                        let mut buf = Vec::new();
-                        serialize(&val.materialize(), &mut buf)?;
-                        to_crush_error(std::io::stdout().write(&buf))?;
-                        Ok(())
-                    },
-                ))?;
+            threads.spawn(
+                "serializer",
+                move || {
+                    let val = recv.recv()?;
+                    let mut buf = Vec::new();
+                    serialize(&val.materialize(), &mut buf)?;
+                    to_crush_error(std::io::stdout().write(&buf))?;
+                    Ok(())
+                },
+            );
 
             cmd.invoke(CommandContext {
                 input: empty_channel(),
@@ -45,18 +47,16 @@ pub fn pup(env: Scope, buf: &Vec<u8>, printer: &Printer) -> CrushResult<()> {
                 scope: env,
                 this: None,
                 printer: printer.clone(),
+                threads: threads.clone(),
             })?;
-
-            match t.join() {
-                Ok(_) => Ok(()),
-                Err(_) => argument_error("Error while waiting for output"),
-            }
+            threads.join(printer);
+            Ok(())
         }
         _ => argument_error("Expected a command, but found other value"),
     }
 }
 
-pub fn string(global_env: Scope, s: &str, printer: &Printer, output: &ValueSender) {
+pub fn string(global_env: Scope, s: &str, printer: &Printer, output: &ValueSender, threads: &ThreadStore) {
     match parse(s, &global_env) {
         Ok(jobs) => {
             for job_definition in jobs {
@@ -65,9 +65,11 @@ pub fn string(global_env: Scope, s: &str, printer: &Printer, output: &ValueSende
                     output.clone(),
                     global_env.clone(),
                     printer.clone(),
+                    threads.clone(),
                 )) {
                     Ok(handle) => {
-                        handle.join(&printer);
+                        handle.map(|id| threads.join_one(id, printer));
+
                     }
                     Err(e) => printer.crush_error(e),
                 }
