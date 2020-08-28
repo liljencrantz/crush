@@ -1,0 +1,47 @@
+Integer comparisons
+false
+true
+false
+true
+true
+false
+false
+false
+true
+true
+false
+true
+true
+false
+true
+false
+true
+false
+Float comparisons
+false
+true
+false
+true
+true
+false
+Duration comparisons
+false
+true
+false
+true
+true
+false
+Time comparisons
+false
+true
+false
+true
+true
+false
+String comparisons
+false
+true
+false
+true
+true
+false

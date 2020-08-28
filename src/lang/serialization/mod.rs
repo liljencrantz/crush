@@ -85,7 +85,7 @@ pub fn deserialize(buf: &Vec<u8>, env: &Scope) -> CrushResult<Value> {
 
     let res = SerializedValue::decode(&mut Cursor::new(buf)).unwrap();
 
-    println!("AAA {:?}", res);
+//    println!("AAA {:?}", res);
 
     Ok(Value::deserialize(
         res.root as usize,

@@ -1,0 +1,59 @@
+echo "Integer comparisons"
+
+1>2
+1<2
+1>=2
+1<=2
+1!=2
+1==2
+
+2>2
+2<2
+2>=2
+2<=2
+2!=2
+2==2
+
+2>1
+2<1
+2>=1
+2<=1
+2!=1
+2==1
+
+echo "Float comparisons"
+
+1.0>2.0
+1.0<2.0
+1.0>=2.0
+1.0<=2.0
+1.0!=2.0
+1.0==2.0
+
+echo "Duration comparisons"
+
+(duration:new seconds=1) > (duration:new seconds=2)
+(duration:new seconds=1) < (duration:new seconds=2)
+(duration:new seconds=1) >= (duration:new seconds=2)
+(duration:new seconds=1) <= (duration:new seconds=2)
+(duration:new seconds=1) != (duration:new seconds=2)
+(duration:new seconds=1) == (duration:new seconds=2)
+
+echo "Time comparisons"
+
+t1 := (time:now)
+t2 := (time:now + (duration:new seconds=1))
+t1 > t2
+t1 < t2
+t1 >= t2
+t1 <= t2
+t1 != t2
+t1 == t2
+
+echo "String comparisons"
+"a" > "b"
+"a" < "b"
+"a" >= "b"
+"a" <= "b"
+"a" != "b"
+"a" == "b"
