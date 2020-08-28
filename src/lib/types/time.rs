@@ -6,12 +6,12 @@ use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, This};
 use crate::lang::value::ValueType;
 use crate::lang::{execution_context::CommandContext, value::Value};
-use chrono::{Datelike, Local, Timelike};
+use chrono::{Datelike, Local, Timelike, DateTime, NaiveDateTime};
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use signature::signature;
 use std::cmp::max;
-use time::strptime;
+use time::PrimitiveDateTime;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "time", name]
@@ -75,30 +75,58 @@ parse,
 can_block=false,
 output=Known(ValueType::Time),
 short="Parse a time string using a strptime-style pattern string",
-long="The following format codes are recognised in the format string:",
+long="After parsing the date, it will be converted to the local time zone.",
+long="Date specifiers:",
+long=" * %Y, year with century.",
+long=" * %y, year without century, zero padded.",
+long=" * %C, century, zero padded.",
+long=" * %m, month, zero padded.",
+long=" * %b, abbreviated month name.",
+long=" * %h, abbreviated month name.",
+long=" * %B, full month name.",
+long=" * %d, day of month, zero padded.",
+long=" * %e, day of month, space padded.",
 long=" * %a, weekday as abbreviated name.",
 long=" * %A, weekday as full name.",
 long=" * %w, weekday as a number, where 0 is Sunday and 6 is Saturday.",
-long=" * %d, day of month, zero padded.",
-long=" * %b, abbreviated month name.",
-long=" * %B, month name.",
-long=" * %m, month, zero padded.",
-long=" * %y, year without century, zero padded.",
-long=" * %Y, year with century.",
+long=" * %u, weekday as a number, where 1 is Monday and 7 is Sunday.",
+long=" * %U, week number of the year (Sunday as first day of week), zero padded.",
+long=" * %W, week number of the year (Monday as first day of week), zero padded.",
+long=" * %G, same to %Y but uses the year number in ISO 8601 week date.",
+long=" * %g, same to %y but uses the year number in ISO 8601 week date.",
+long=" * %V, same to %U but uses the year number in ISO 8601 week date.",
+long=" * %j, day of the year, zero-padded.",
+long=" * %D, month-day-year format. Same to %m/%d/%y.",
+long=" * %x, month-day-year format. Same to %m/%d/%y.",
+long=" * %F, year-month-day format (ISO 8601). Same to %Y-%m-%d.",
+long=" * %v, day-month-year format. Same to %e-%b-%Y.",
+
+long="Time specifiers:",
 long=" * %H, hour (24-hour clock) as a zero-padded number.",
+long=" * %k, hour (24-hour clock) as a space-padded number.",
 long=" * %I, hour (12-hour clock) as a zero-padded number.",
+long=" * %l, hour (12-hour clock) as a space-padded number.",
+long=" * %P, locale’s equivalent of either am or pm.",
 long=" * %p, locale’s equivalent of either AM or PM.",
 long=" * %M, minute as a zero-padded number.",
 long=" * %S, second as a zero-padded number.",
-long=" * %f, microsecond as a decimal number, zero-padded.",
+long=" * %f, fractional nanoseconds since last whole seconds, zero-padded.",
+long=" * %R, hour-minute format. Same to %H:%M.",
+long=" * %T, hour-minute-second format. Same to %H:%M:%S.",
+long=" * %X, hour-minute-second format. Same to %H:%M:%S.",
+long=" * %r, hour-minute-second format in 12-hour clocks. Same to %I:%M:%S %p.",
+
+long="Time zone specifiers:",
 long=" * %z, UTC offset in the form +HHMM or -HHMM.",
 long=" * %Z, time zone name.",
-long=" * %j, day of the year, zero-padded.",
-long=" * %U, week number of the year (Sunday as first day of week).",
-long=" * %W, week number of the year (Monday as first day of week).",
-long=" * %c, default data and time representation of current locale.",
-long=" * %x, default date representation of current locale.",
-long=" * %X, default time representation of current locale.",
+long=" * %:z, a colon, followed by UTC offset in the form +HHMM or -HHMM.",
+
+long="Special characters:",
+long=" * %c, ctime date & time format. Same to %a %b %e %T %Y sans \\n.",
+long=" * %+, ISO 8601 / RFC 3339 date & time format.",
+long=" * %s, UNIX timestamp, the number of seconds since 1970-01-01 00:00 UTC.",
+long=" * %t, a literal tab character.",
+long=" * %n, a literal newline character.",
 long=" * %%, a literal % character."
 )]
 struct Parse {
@@ -110,22 +138,8 @@ struct Parse {
 
 fn parse(context: CommandContext) -> CrushResult<()> {
     let cfg: Parse = Parse::parse(context.arguments, &context.printer)?;
-    let tm = to_crush_error(strptime(&cfg.time, cfg.format.as_ref()))?;
-    let dt = Local::now()
-        .with_year(tm.tm_year + 1900)
-        .unwrap()
-        .with_month0(tm.tm_mon as u32)
-        .unwrap()
-        .with_day(max(tm.tm_mday as u32, 1))
-        .unwrap()
-        .with_hour(tm.tm_hour as u32)
-        .unwrap()
-        .with_minute(tm.tm_min as u32)
-        .unwrap()
-        .with_second(tm.tm_sec as u32)
-        .unwrap()
-        .with_nanosecond(tm.tm_nsec as u32)
-        .unwrap();
+    let tm = to_crush_error(DateTime::parse_from_str(&cfg.time, &cfg.format))?;
+    let dt = tm.with_timezone(&Local);
     context.output.send(Value::Time(dt))
 }
 

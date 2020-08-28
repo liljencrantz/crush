@@ -3,7 +3,7 @@ use crate::lang::stream::CrushStream;
 use crate::lang::value::ValueType;
 use crate::lang::{r#struct::Struct, value::Value};
 use crate::util::replace::Replace;
-use time::Duration;
+use chrono::Duration;
 use std::fmt::{Display, Formatter};
 
 #[derive(PartialEq, PartialOrd, Clone)]

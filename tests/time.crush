@@ -1,0 +1,3 @@
+tm := (time:parse format="%+" "2020-01-02T03:04:05+06:07")
+tm = tm - (duration:new hours=1 seconds=66)
+tm:format "%s"

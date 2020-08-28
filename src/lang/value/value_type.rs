@@ -169,7 +169,12 @@ impl Help for ValueType {
     }
 
     fn long_help(&self) -> Option<String> {
-        let mut lines = Vec::new();
+        let mut lines = match self {
+            ValueType::Time => {
+                vec!["    All time instances use the local time zone.\n".to_string()]
+            },
+            _ => {Vec::new()}
+        };
 
         let mut keys: Vec<_> = self.fields().into_iter().collect();
         keys.sort_by(|x, y| x.0.cmp(&y.0));

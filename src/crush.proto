@@ -1,38 +1,47 @@
 syntax = "proto3";
 package model;
 
+/*
+This is the root of a serialized value.
+ */
 message SerializedValue {
-    uint64 root = 1;
-    repeated Element elements = 2;
+    uint64 root = 1; // The index in the elements array that contains the value we're serializing
+    repeated Element elements = 2; // An array of all sub-parts of the value we're serializing
 }
 
+/*
+    A value is serialized into an arbitrarily large number of Element-values.
+ */
 message Element {
     oneof element {
-        string string = 2;
-        int64 small_integer = 3;
-        string large_integer = 4;
-        Struct struct = 5;
-        bytes file = 6;
-        double float = 7;
-        Dict dict = 8;
-        Closure closure = 9;
-        bytes binary = 10;
-        Duration duration = 11;
-        Strings field = 12;
-        string glob = 13;
-        string regex = 14;
-        Scope user_scope = 15;
-        bool bool = 16;
-        bool empty = 17;
-        Type type = 18;
-        int64 time = 19;
-        Table table = 20;
-        List list = 21;
-        ColumnType column_type = 22;
-        Row row = 23;
-        Member member = 24;
-        Strings command = 26;
-        BoundCommand bound_command = 27;
+        string string = 2; // A Value::String
+        int64 small_integer = 3; // A Value::Integer that fits into a signed 64-bit integer
+        string large_integer = 4; // A Value::Integer that does not fit into a signed 64-bit integer
+        Struct struct = 5; // A Value::Struct
+        bytes file = 6; // A Value::File
+        double float = 7; // A Value::Float
+        Dict dict = 8; // A Value::Dict
+        Closure closure = 9; // A Value::Command that is a closure
+        bytes binary = 10; // A Value::binary
+        Duration duration = 11; // A Value::Duration
+        Strings field = 12; // A Value::Field
+        string glob = 13; // A Value::Glob
+        string regex = 14; // A Value::RegEx
+        Scope user_scope = 15; // A Value::Scope
+        bool bool = 16; // A Value::Bool
+        bool empty = 17; // A Value::Empty
+        Type type = 18; // A Value::Type
+        int64 time = 19; // A Value::Time
+        Table table = 20; // A Value::Table
+        List list = 21; // A Value::List
+        ColumnType column_type = 22; // A description of a single column of a table, including name and type.
+        Row row = 23; // A single row of a table
+        Member member = 24; // A single member of a struct
+        Strings command = 26; // A command invocation
+        BoundCommand bound_command = 27; // A rebinding of the this-value of a command
+
+        // A Value::Scope instance that is in fact a namespace, e.g. global:io.
+        // These aren't serialised, they are passed by name.
         Strings internal_scope = 28;
     }
 }

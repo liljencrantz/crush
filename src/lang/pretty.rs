@@ -14,7 +14,7 @@ use crate::lang::r#struct::Struct;
 use std::cmp::max;
 use std::io::{BufReader, Read};
 use std::thread;
-use time::Duration;
+use chrono::Duration;
 
 pub fn create_pretty_printer(printer: Printer) -> ValueSender {
     let (o, i) = channels();

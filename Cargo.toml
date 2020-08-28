@@ -12,7 +12,7 @@ repository = "https://github.com/liljencrantz/crush"
 version = "0.6.1"
 
 [build-dependencies.lalrpop]
-version = "0.18.1"
+version = "0.19.0"
 features = ["lexer"]
 
 [workspace]
@@ -28,19 +28,19 @@ path = "signature"
 path = "ordered_map"
 
 [dependencies]
-lalrpop-util = "0.18.1"
-chrono = "0.4"
-regex = "1"
+lalrpop-util = "0.19.0"
+chrono = "0.4.15"
+regex = "1.3.9"
 lazy_static = "1.4.0"
 rustyline = "5.0.3"
 users = "0.9.1"
 dirs = "1.0.5"
-serde_json = "1.0"
+serde_json = { version = "1.0", features = ["preserve_order"] }
 toml = "0.5.6"
-reqwest = { version = "0.10", features = ["blocking"] }
-crossbeam = "0.7"
-time = "0.1.40"
-prost = "0.6"
+reqwest = { version = "0.10.8", features = ["blocking"] }
+crossbeam = "0.7.3"
+time = "0.2.16"
+prost = "0.6.1"
 bytes = "0.5.4"
 termion = "1.5.5"
 float-ord = "0.2.0"

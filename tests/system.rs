@@ -1,6 +1,9 @@
 use std::fs;
 use std::process::Command;
 
+// The datatest crate could be used to make the output of running this test far superior,
+// but that crate relies on functionality that is currently not stable. :-(
+
 #[test]
 fn run_all_tests() {
     let dirs = fs::read_dir("tests").expect("Failed to read directory");
