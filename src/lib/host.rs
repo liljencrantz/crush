@@ -1,11 +1,11 @@
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::errors::{to_crush_error, CrushResult};
 use crate::lang::execution_context::CommandContext;
-use crate::lang::r#struct::Struct;
-use crate::lang::scope::Scope;
+use crate::lang::data::r#struct::Struct;
+use crate::lang::data::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
-use crate::lang::table::{ColumnType, Row};
+use crate::lang::data::table::{ColumnType, Row};
 use signature::signature;
 use sys_info;
 use lazy_static::lazy_static;

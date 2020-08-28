@@ -1,7 +1,7 @@
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::OutputType::{Known, Passthrough, Unknown};
 use crate::lang::errors::CrushResult;
-use crate::lang::scope::Scope;
+use crate::lang::data::scope::Scope;
 use crate::lang::value::ValueType;
 
 mod head;

@@ -5,9 +5,9 @@ use crate::lang::errors::{error, mandate, to_crush_error, CrushError, CrushResul
 use crate::lang::execution_context::CommandContext;
 use crate::lang::files::Files;
 use crate::lang::patterns::Patterns;
-use crate::lang::scope::Scope;
+use crate::lang::data::scope::Scope;
 use crate::lang::serialization::{deserialize, serialize};
-use crate::lang::table::{ColumnType, Row};
+use crate::lang::data::table::{ColumnType, Row};
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use crate::util::file::home;

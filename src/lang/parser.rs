@@ -1,6 +1,6 @@
 use crate::lang::errors::{to_crush_error, CrushResult};
 use crate::lang::job::Job;
-use crate::lang::scope::Scope;
+use crate::lang::data::scope::Scope;
 
 lalrpop_mod!(pub lalrparser, "/lang/lalrparser.rs");
 

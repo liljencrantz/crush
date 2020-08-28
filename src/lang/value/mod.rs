@@ -10,18 +10,18 @@ use chrono::{DateTime, Local};
 use regex::Regex;
 
 use crate::lang::errors::{argument_error, mandate, CrushResult};
-use crate::lang::r#struct::Struct;
-use crate::lang::r#struct::StructReader;
-use crate::lang::scope::Scope;
+use crate::lang::data::r#struct::Struct;
+use crate::lang::data::r#struct::StructReader;
+use crate::lang::data::scope::Scope;
 use crate::lang::stream::{streams, InputStream, Stream};
-use crate::lang::{
+use crate::lang::data::{
     binary::BinaryReader, dict::Dict, dict::DictReader, list::List, list::ListReader,
     table::ColumnType, table::TableReader,
 };
 use crate::util::time::duration_format;
 use crate::{
     lang::errors::{error, to_crush_error},
-    lang::table::Table,
+    lang::data::table::Table,
     util::file::cwd,
     util::glob::Glob,
 };

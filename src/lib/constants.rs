@@ -1,5 +1,5 @@
 use crate::lang::errors::CrushResult;
-use crate::lang::scope::Scope;
+use crate::lang::data::scope::Scope;
 use crate::lang::value::Value;
 
 pub fn declare(root: &Scope) -> CrushResult<()> {

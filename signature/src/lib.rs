@@ -756,7 +756,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
             #[allow(unused_parens)] // TODO: don't emit unnecessary parenthesis in the first place
             impl crate::lang::argument::ArgumentHandler for #struct_name {
-                fn declare(env: &mut crate::lang::scope::ScopeLoader) -> crate::lang::errors::CrushResult <()> {
+                fn declare(env: &mut crate::lang::data::scope::ScopeLoader) -> crate::lang::errors::CrushResult <()> {
                     env.declare_command(
                         #command_name, #command_invocation, #can_block,
                         #signature_literal,

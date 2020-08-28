@@ -3,7 +3,7 @@ use crate::lang::command::{Command, Parameter};
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::{error, to_crush_error, CrushResult};
 use crate::lang::job::Job;
-use crate::lang::scope::Scope;
+use crate::lang::data::scope::Scope;
 use crate::lang::value::{Value, ValueDefinition, ValueType};
 use crate::util::glob::Glob;
 use regex::Regex;

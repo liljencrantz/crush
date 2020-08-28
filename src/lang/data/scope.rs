@@ -2,7 +2,7 @@ use crate::lang::command::{Command, CrushCommand, OutputType};
 use crate::lang::errors::{error, mandate, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::help::Help;
-use crate::lang::r#struct::Struct;
+use crate::lang::data::r#struct::Struct;
 use crate::lang::{value::Value, value::ValueType};
 use crate::util::identity_arc::Identity;
 use ordered_map::OrderedMap;

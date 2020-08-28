@@ -1,8 +1,8 @@
 use crate::lang::errors::{error, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::stream::{CrushStream, ValueSender};
-use crate::lang::table::ColumnType;
-use crate::lang::{table::Row, value::Value, value::ValueType};
+use crate::lang::data::table::ColumnType;
+use crate::lang::{data::table::Row, value::Value, value::ValueType};
 
 pub fn run(input: &mut dyn CrushStream, sender: ValueSender) -> CrushResult<()> {
     let mut output_type = vec![ColumnType::new("idx", ValueType::Integer)];

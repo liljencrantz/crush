@@ -1,7 +1,7 @@
 use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
-use crate::lang::scope::Scope;
+use crate::lang::data::scope::Scope;
 use crate::lang::{
-    binary::BinaryReader, execution_context::CommandContext, list::List, value::Value,
+    data::binary::BinaryReader, execution_context::CommandContext, data::list::List, value::Value,
     value::ValueType,
 };
 use signature::signature;

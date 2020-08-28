@@ -3,7 +3,7 @@ use crate::lang::errors::{mandate, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, CommandContext};
 use crate::lang::stream::{black_hole, empty_channel};
 use crate::lang::value::Value;
-use crate::lang::r#struct::Struct;
+use crate::lang::data::r#struct::Struct;
 
 pub fn r#for(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Empty())?;

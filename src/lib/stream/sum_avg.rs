@@ -1,8 +1,8 @@
 use crate::lang::errors::{argument_error, error, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::stream::Stream;
-use crate::lang::table::ColumnVec;
-use crate::lang::{argument::Argument, table::ColumnType};
+use crate::lang::data::table::ColumnVec;
+use crate::lang::{argument::Argument, data::table::ColumnType};
 use crate::lang::{value::Value, value::ValueType};
 use chrono::Duration;
 use float_ord::FloatOrd;

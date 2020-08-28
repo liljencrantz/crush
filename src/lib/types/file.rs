@@ -2,7 +2,7 @@ use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{to_crush_error, CrushResult};
 use crate::lang::execution_context::{CommandContext, This};
-use crate::lang::r#struct::Struct;
+use crate::lang::data::r#struct::Struct;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use lazy_static::lazy_static;

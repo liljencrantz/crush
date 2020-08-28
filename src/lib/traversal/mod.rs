@@ -5,7 +5,7 @@ use crate::lang::execution_context::ArgumentVector;
 use crate::lang::execution_context::CommandContext;
 use crate::lang::help::Help;
 use crate::lang::printer::Printer;
-use crate::lang::scope::Scope;
+use crate::lang::data::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use crate::util::file::{cwd, home};

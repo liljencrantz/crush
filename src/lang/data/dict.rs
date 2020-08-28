@@ -1,6 +1,6 @@
 use crate::lang::errors::{argument_error, error, CrushResult};
 use crate::lang::stream::CrushStream;
-use crate::lang::{table::ColumnType, table::Row, value::Value, value::ValueType};
+use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value::ValueType};
 use crate::util::identity_arc::Identity;
 use crate::util::replace::Replace;
 use chrono::Duration;

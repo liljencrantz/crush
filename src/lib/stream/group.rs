@@ -4,15 +4,15 @@ use crate::lang::errors::{mandate, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::printer::Printer;
-use crate::lang::scope::Scope;
+use crate::lang::data::scope::Scope;
 use crate::lang::stream::{channels, InputStream};
-use crate::lang::table::ColumnType;
-use crate::lang::table::ColumnVec;
+use crate::lang::data::table::ColumnType;
+use crate::lang::data::table::ColumnVec;
 use crate::lang::value::Field;
 use crate::{
     lang::errors::argument_error,
     lang::stream::{unlimited_streams, OutputStream},
-    lang::{table::Row, value::Value, value::ValueType},
+    lang::{data::table::Row, value::Value, value::ValueType},
 };
 use crossbeam::{unbounded, Receiver};
 use signature::signature;

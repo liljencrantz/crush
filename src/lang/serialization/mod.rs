@@ -1,8 +1,8 @@
-use crate::lang::dict::Dict;
+use crate::lang::data::dict::Dict;
 use crate::lang::errors::{to_crush_error, CrushResult};
-use crate::lang::list::List;
-use crate::lang::r#struct::Struct;
-use crate::lang::scope::Scope;
+use crate::lang::data::list::List;
+use crate::lang::data::r#struct::Struct;
+use crate::lang::data::scope::Scope;
 use crate::lang::value::{Value, ValueType};
 use model::Element;
 use model::SerializedValue;

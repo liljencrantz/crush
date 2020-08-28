@@ -10,7 +10,7 @@ use rustyline;
 use crate::lang::errors::{to_crush_error, CrushResult};
 use crate::lang::pretty::create_pretty_printer;
 use crate::lang::printer::Printer;
-use crate::lang::scope::Scope;
+use lang::data::scope::Scope;
 use crate::lang::stream::ValueSender;
 use crate::lang::{execute, printer};
 use crate::util::file::home;
@@ -21,6 +21,7 @@ use std::io::Read;
 use std::path::PathBuf;
 use crate::util::identity_arc::Identity;
 use crate::lang::threads::ThreadStore;
+use lang::data;
 
 fn crush_history_file() -> PathBuf {
     home()
@@ -69,7 +70,7 @@ fn run_interactive(
 }
 
 fn run() -> CrushResult<()> {
-    let global_env = lang::scope::Scope::create_root();
+    let global_env = data::scope::Scope::create_root();
     let (printer, print_handle) = printer::init();
     let pretty_printer = create_pretty_printer(printer.clone());
     let threads = ThreadStore::new();

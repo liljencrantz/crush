@@ -1,10 +1,10 @@
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::errors::{to_crush_error, CrushResult};
 use crate::lang::files::Files;
-use crate::lang::scope::ScopeLoader;
+use crate::lang::data::scope::ScopeLoader;
 use crate::lang::stream::OutputStream;
 use crate::lang::{
-    execution_context::CommandContext, table::ColumnType, table::Row, value::Value,
+    execution_context::CommandContext, data::table::ColumnType, data::table::Row, value::Value,
     value::ValueType,
 };
 use signature::signature;

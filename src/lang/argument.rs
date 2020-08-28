@@ -2,7 +2,7 @@ use crate::lang::command::Command;
 use crate::lang::errors::{argument_error, error, CrushResult};
 use crate::lang::execution_context::CompileContext;
 use crate::lang::printer::Printer;
-use crate::lang::scope::ScopeLoader;
+use crate::lang::data::scope::ScopeLoader;
 use crate::lang::value::Value;
 use crate::lang::value::ValueDefinition;
 use ordered_map::OrderedMap;
@@ -193,7 +193,7 @@ pub trait ArgumentHandler: Sized {
 mod tests {
     use super::*;
     use crate::lang::execution_context::CommandContext;
-    use crate::lang::list::List;
+    use crate::lang::data::list::List;
     use crate::lang::ordered_string_map::OrderedStringMap;
     use crate::lang::value::ValueType;
     use signature::signature;

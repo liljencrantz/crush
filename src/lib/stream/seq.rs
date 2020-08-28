@@ -1,8 +1,8 @@
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::errors::CrushResult;
 use crate::lang::execution_context::CommandContext;
-use crate::lang::table::ColumnType;
-use crate::lang::{table::Row, value::Value, value::ValueType};
+use crate::lang::data::table::ColumnType;
+use crate::lang::{data::table::Row, value::Value, value::ValueType};
 use signature::signature;
 
 #[signature(seq, can_block=true, short = "Return a stream of sequential numbers")]

@@ -1,13 +1,13 @@
 use crate::lang::command::CrushCommand;
-use crate::lang::dict::Dict;
+use crate::lang::data::dict::Dict;
 use crate::lang::errors::{error, to_crush_error, CrushResult};
-use crate::lang::list::List;
-use crate::lang::r#struct::Struct;
-use crate::lang::scope::Scope;
+use crate::lang::data::list::List;
+use crate::lang::data::r#struct::Struct;
+use crate::lang::data::scope::Scope;
 use crate::lang::serialization::model;
 use crate::lang::serialization::model::{element, Element};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
-use crate::lang::table::Table;
+use crate::lang::data::table::Table;
 use crate::lang::value::{Value, ValueType};
 use crate::util::glob::Glob;
 use chrono::offset::TimeZone;

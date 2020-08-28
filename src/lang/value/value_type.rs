@@ -2,7 +2,7 @@ use crate::lang::command::Command;
 use crate::lang::errors::{error, mandate, to_crush_error, CrushResult};
 use crate::lang::help::Help;
 use crate::lang::parser::parse_name;
-use crate::lang::{table::ColumnType, value::Value};
+use crate::lang::{data::table::ColumnType, value::Value};
 use crate::lib::types;
 use crate::util::glob::Glob;
 use lazy_static::lazy_static;

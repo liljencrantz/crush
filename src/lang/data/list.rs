@@ -1,6 +1,6 @@
 use crate::lang::errors::{argument_error, error, mandate, CrushResult};
 use crate::lang::stream::CrushStream;
-use crate::lang::{table::ColumnType, table::Row, value::Field, value::Value, value::ValueType};
+use crate::lang::{data::table::ColumnType, data::table::Row, value::Field, value::Value, value::ValueType};
 use crate::util::identity_arc::Identity;
 use chrono::Duration;
 use std::cmp::Ordering;

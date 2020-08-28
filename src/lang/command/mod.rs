@@ -5,7 +5,7 @@ use crate::lang::errors::{error, CrushResult};
 use crate::lang::execution_context::{CompileContext, CommandContext};
 use crate::lang::help::Help;
 use crate::lang::job::Job;
-use crate::lang::scope::Scope;
+use crate::lang::data::scope::Scope;
 use crate::lang::serialization::model;
 use crate::lang::serialization::model::{element, Element, Strings};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};

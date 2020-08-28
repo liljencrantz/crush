@@ -1,14 +1,14 @@
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::errors::{CrushResult, to_crush_error, argument_error, mandate};
 use crate::lang::execution_context::CommandContext;
-use crate::lang::scope::Scope;
-use crate::lang::r#struct::Struct;
+use crate::lang::data::scope::Scope;
+use crate::lang::data::r#struct::Struct;
 use crate::lang::value::Value;
 use signature::signature;
 use systemd::journal::{JournalFiles, Journal, JournalSeek};
-use crate::lang::table::Row;
+use crate::lang::data::table::Row;
 use lazy_static::lazy_static;
-use crate::lang::{table::ColumnType, value::ValueType};
+use crate::lang::{data::table::ColumnType, value::ValueType};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use chrono::{DateTime, Local};
 use std::convert::TryFrom;

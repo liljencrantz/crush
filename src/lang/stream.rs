@@ -1,6 +1,6 @@
 use crate::lang::errors::{error, send_error, to_crush_error, CrushError, CrushResult};
-use crate::lang::table::ColumnType;
-use crate::lang::table::Row;
+use crate::lang::data::table::ColumnType;
+use crate::lang::data::table::Row;
 use crate::lang::value::Value;
 use chrono::Duration;
 use crossbeam::{bounded, unbounded, Receiver, Sender};

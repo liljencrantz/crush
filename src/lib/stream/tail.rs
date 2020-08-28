@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use crate::lang::errors::{error, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, CommandContext};
 use crate::lang::stream::{CrushStream, ValueSender};
-use crate::lang::table::Row;
+use crate::lang::data::table::Row;
 
 fn run(lines: i128, input: &mut dyn CrushStream, sender: ValueSender) -> CrushResult<()> {
     let output = sender.initialize(input.types().to_vec())?;

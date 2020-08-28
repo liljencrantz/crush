@@ -3,9 +3,9 @@ use crate::lang::errors::{error, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, CommandContext};
 use crate::lang::printer::Printer;
 use crate::lang::stream::{CrushStream, OutputStream};
-use crate::lang::table::ColumnVec;
-use crate::lang::table::Row;
-use crate::lang::{table::ColumnType, value::Value};
+use crate::lang::data::table::ColumnVec;
+use crate::lang::data::table::Row;
+use crate::lang::{data::table::ColumnType, value::Value};
 use std::collections::HashSet;
 
 fn parse(input_type: &[ColumnType], mut arguments: Vec<Argument>) -> CrushResult<Option<usize>> {

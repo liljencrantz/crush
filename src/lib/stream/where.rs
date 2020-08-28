@@ -4,8 +4,8 @@ use crate::lang::command::OutputType::Passthrough;
 use crate::lang::errors::{error, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::stream::{black_hole, channels, empty_channel};
-use crate::lang::{argument::Argument, table::ColumnType};
-use crate::lang::{table::Row, value::Value};
+use crate::lang::{argument::Argument, data::table::ColumnType};
+use crate::lang::{data::table::Row, value::Value};
 use signature::signature;
 
 #[signature(

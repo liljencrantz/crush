@@ -3,7 +3,7 @@ use crate::lang::errors::argument_error;
 use crate::lang::errors::CrushResult;
 use crate::lang::execution_context::ArgumentVector;
 use crate::lang::execution_context::CommandContext;
-use crate::lang::scope::Scope;
+use crate::lang::data::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 

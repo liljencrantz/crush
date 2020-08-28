@@ -2,7 +2,7 @@ use crate::lang::errors::{error, CrushResult};
 use crate::lang::serialization::model;
 use crate::lang::serialization::model::{element, Element};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
-use crate::lang::table::{ColumnType, Row, Table};
+use crate::lang::data::table::{ColumnType, Row, Table};
 use crate::lang::value::{Value, ValueType};
 
 impl Serializable<ColumnType> for ColumnType {

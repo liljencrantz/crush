@@ -2,12 +2,12 @@ use crate::lang::command::Command;
 use crate::lang::errors::error;
 use crate::lang::execution_context::CommandContext;
 use crate::lang::stream::{channels, empty_channel, Stream};
-use crate::lang::table::ColumnVec;
+use crate::lang::data::table::ColumnVec;
 use crate::{
     lang::errors::argument_error,
     lang::errors::CrushResult,
-    lang::table::ColumnType,
-    lang::{argument::Argument, table::Row, value::Value},
+    data::table::ColumnType,
+    lang::{argument::Argument, data::table::Row, value::Value},
     util::replace::Replace,
 };
 

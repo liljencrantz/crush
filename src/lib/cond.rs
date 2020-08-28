@@ -1,6 +1,6 @@
 use crate::lang::errors::{argument_error, CrushResult};
 use crate::lang::execution_context::CommandContext;
-use crate::lang::scope::Scope;
+use crate::lang::data::scope::Scope;
 use crate::lang::stream::{channels, empty_channel};
 use crate::lang::value::Value;
 

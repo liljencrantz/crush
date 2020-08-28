@@ -1,7 +1,7 @@
 use crate::lang::errors::{error, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::stream::{CrushStream, ValueSender};
-use crate::lang::table::Row;
+use crate::lang::data::table::Row;
 
 pub fn run(input: &mut dyn CrushStream, sender: ValueSender) -> CrushResult<()> {
     let output = sender.initialize(input.types().to_vec())?;

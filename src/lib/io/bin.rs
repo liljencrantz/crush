@@ -1,7 +1,7 @@
 use crate::lang::argument::ArgumentHandler;
 use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
 use crate::lang::files::Files;
-use crate::lang::scope::ScopeLoader;
+use crate::lang::data::scope::ScopeLoader;
 use crate::lang::{execution_context::CommandContext, value::Value};
 use signature::signature;
 

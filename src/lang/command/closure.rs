@@ -1,13 +1,13 @@
 use crate::lang::argument::{Argument, ArgumentDefinition, ArgumentType};
 use crate::lang::command::{BoundCommand, Command, CrushCommand, OutputType, Parameter};
 use crate::lang::command_invocation::CommandInvocation;
-use crate::lang::dict::Dict;
+use crate::lang::data::dict::Dict;
 use crate::lang::errors::{argument_error, error, mandate, CrushResult};
 use crate::lang::execution_context::{CompileContext, CommandContext, JobContext};
 use crate::lang::help::Help;
 use crate::lang::job::Job;
-use crate::lang::list::List;
-use crate::lang::scope::Scope;
+use crate::lang::data::list::List;
+use crate::lang::data::scope::Scope;
 use crate::lang::serialization::model;
 use crate::lang::serialization::model::closure::Name;
 use crate::lang::serialization::model::{element, Element};

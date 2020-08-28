@@ -3,7 +3,7 @@ use crate::lang::command::OutputType::Known;
 use crate::lang::command::TypeMap;
 use crate::lang::errors::CrushResult;
 use crate::lang::execution_context::{ArgumentVector, This};
-use crate::lang::list::List;
+use crate::lang::data::list::List;
 use crate::lang::value::ValueType;
 use crate::lang::{execution_context::CommandContext, value::Value};
 use crate::util::file::cwd;

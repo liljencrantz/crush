@@ -1,7 +1,7 @@
 use crate::lang::errors::{error, CrushError};
 use crate::lang::stream::CrushStream;
-use crate::lang::table::ColumnType;
-use crate::lang::table::Row;
+use crate::lang::data::table::ColumnType;
+use crate::lang::data::table::Row;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use crate::util::identity_arc::Identity;

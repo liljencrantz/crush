@@ -2,7 +2,7 @@ use crate::lang::errors::{error, mandate, CrushResult};
 use crate::lang::serialization::model;
 use crate::lang::serialization::model::{element, Element};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
-use crate::lang::table::ColumnType;
+use crate::lang::data::table::ColumnType;
 use crate::lang::value::ValueType;
 use model::r#type::SimpleTypeKind;
 use model::r#type::Type::SimpleType;

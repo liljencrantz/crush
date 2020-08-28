@@ -1,6 +1,6 @@
 use crate::lang::errors::{error, CrushError, CrushResult};
 use crate::lang::execution_context::{CompileContext, JobContext};
-use crate::lang::scope::Scope;
+use crate::lang::data::scope::Scope;
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, value::Value};
 use crate::lang::{
     command::Command, execution_context::CommandContext,

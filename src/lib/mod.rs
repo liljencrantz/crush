@@ -2,7 +2,7 @@ use crate::lang::errors::to_crush_error;
 use crate::lang::execute;
 use crate::lang::printer::Printer;
 use crate::lang::stream::ValueSender;
-use crate::{lang::errors::CrushResult, lang::scope::Scope};
+use crate::lang::{errors::CrushResult, data::scope::Scope};
 use std::fs::read_dir;
 use std::path::Path;
 use crate::lang::threads::ThreadStore;

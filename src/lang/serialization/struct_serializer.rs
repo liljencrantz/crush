@@ -3,7 +3,7 @@ use super::super::value::Value;
 use super::model;
 use super::model::{element, Element};
 use super::{DeserializationState, Serializable, SerializationState};
-use crate::lang::r#struct::Struct;
+use crate::lang::data::r#struct::Struct;
 use crate::util::identity_arc::Identity;
 use std::collections::hash_map::Entry;
 

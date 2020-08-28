@@ -2,7 +2,7 @@ use crate::lang::argument::ArgumentHandler;
 use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::{
-    binary::binary_channel, r#struct::Struct, table::ColumnType, table::Row, table::Table,
+    data::binary::binary_channel, data::r#struct::Struct, data::table::ColumnType, data::table::Row, data::table::Table,
     value::Value, value::ValueType,
 };
 use reqwest::header::HeaderMap;

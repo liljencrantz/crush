@@ -4,7 +4,7 @@ use crate::lang::command::TypeMap;
 use crate::lang::errors::{argument_error, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, CommandContext, This};
 use crate::lang::value::Value;
-use crate::lang::{dict::Dict, value::ValueType};
+use crate::lang::{data::dict::Dict, value::ValueType};
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use signature::signature;

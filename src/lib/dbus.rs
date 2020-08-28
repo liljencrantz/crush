@@ -1,15 +1,15 @@
 use crate::lang::argument::{column_names, Argument, ArgumentHandler};
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::*;
-use crate::lang::dict::Dict;
+use crate::lang::data::dict::Dict;
 use crate::lang::errors::{
     argument_error, data_error, eof_error, error, mandate, to_crush_error, CrushError,
     CrushResult,
 };
 use crate::lang::execution_context::CommandContext;
-use crate::lang::list::List;
-use crate::lang::r#struct::Struct;
-use crate::lang::scope::Scope;
+use crate::lang::data::list::List;
+use crate::lang::data::r#struct::Struct;
+use crate::lang::data::scope::Scope;
 use crate::lang::value::{Value, ValueType};
 use dbus::arg::{ArgType, IterAppend};
 use dbus::blocking::{BlockingSender, Connection, Proxy};

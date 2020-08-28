@@ -2,7 +2,7 @@ use crate::lang::errors::{argument_error, to_crush_error, CrushError, CrushResul
 use crate::lang::execution_context::{CommandContext, JobContext};
 use crate::lang::parser::parse;
 use crate::lang::printer::Printer;
-use crate::lang::scope::Scope;
+use crate::lang::data::scope::Scope;
 use crate::lang::serialization::{deserialize, serialize};
 use crate::lang::stream::{channels, empty_channel, ValueSender};
 use crate::lang::value::Value;

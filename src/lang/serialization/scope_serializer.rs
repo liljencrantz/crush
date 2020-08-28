@@ -1,5 +1,5 @@
 use crate::lang::errors::{error, CrushResult};
-use crate::lang::scope::Scope;
+use crate::lang::data::scope::Scope;
 use crate::lang::serialization::model;
 use crate::lang::serialization::model::{element, Element};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
