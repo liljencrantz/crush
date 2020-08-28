@@ -5,7 +5,7 @@ use crate::lang::table::ColumnType;
 use crate::lang::{table::Row, value::Value, value::ValueType};
 use signature::signature;
 
-#[signature(seq, short = "Return a stream of sequential numbers")]
+#[signature(seq, can_block=true, short = "Return a stream of sequential numbers")]
 #[derive(Debug)]
 pub struct Seq {
     #[default(i128::max_value())]

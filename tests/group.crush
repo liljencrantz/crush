@@ -1,0 +1,1 @@
+seq 1000 | select num={(value*5):mod 7} | group ^num c={count} s={sum}| sort ^num

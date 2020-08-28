@@ -72,15 +72,21 @@ fn aggregate(
                     let (input_sender, input_receiver) = channels();
                     let (output_sender, output_receiver) = channels();
                     streams.push(input_sender.initialize(rows.types().to_vec())?);
-                    printer.handle_error(command.invoke(CommandContext {
-                        input: input_receiver,
-                        output: output_sender,
-                        arguments: vec![],
-                        scope: scope.clone(),
-                        this: None,
-                        printer: printer.clone(),
-                        threads: threads.clone(),
-                    }));
+
+                    let local_command = command.copy();
+                    let local_printer = printer.clone();
+                    let local_threads = threads.clone();
+                    let local_scope = scope.clone();
+                    threads.spawn("group-aggr", move ||
+                        local_command.invoke(CommandContext {
+                            input: input_receiver,
+                            output: output_sender,
+                            arguments: vec![],
+                            scope: local_scope,
+                            this: None,
+                            printer: local_printer,
+                            threads: local_threads,
+                        }));
                     receivers.push(output_receiver);
                 }
 
@@ -133,7 +139,7 @@ fn create_worker_thread(
                 my_input,
             ));
             Ok(())
-        }
+        },
     )?;
     Ok(())
 }
