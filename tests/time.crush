@@ -1,3 +1,8 @@
 tm := (time:parse format="%+" "2020-01-02T03:04:05+06:07")
 tm = tm - (duration:new hours=1 seconds=66)
 tm:format "%s"
+
+t1 := (time:now)
+sleep (duration:new milliseconds=50)
+t2 := (time:now)
+(t2 - t1) >= (duration:new milliseconds=50)

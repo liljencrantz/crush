@@ -110,7 +110,7 @@ match {
     ":" => Colon,
     r"( |\t|\\\n)+" => {},
     r"#[^\n]*" => {},
-    r"(>|<|>=|<=|==|!=|=~|!~)" => ComparisonOperator,
+    r"(>=|<=|>|<|==|!=|=~|!~)" => ComparisonOperator,
     r"(\*|//)" => FactorOperator,
     r"(\+|-)" => TermOperator,
     r#""([^\\"]|\\.)*""# => QuotedString,
