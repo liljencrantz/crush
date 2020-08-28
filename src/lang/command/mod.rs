@@ -166,11 +166,14 @@ impl dyn CrushCommand {
         elements: &[Element],
         state: &mut DeserializationState,
     ) -> CrushResult<Command> {
+
         match elements[id].element.as_ref().unwrap() {
-            element::Element::Command(strings) => {
+            element::Element::Command(_) => {
+                let strings = Vec::deserialize(id, elements, state)?;
+
                 let val = state
                     .env
-                    .get_absolute_path(strings.elements.iter().map(|e| e.clone()).collect())?;
+                    .get_absolute_path(strings.iter().map(|e| e.clone()).collect())?;
                 match val {
                     Value::Command(c) => Ok(c),
                     _ => error("Expected a command"),
@@ -221,13 +224,12 @@ impl CrushCommand for SimpleCommand {
     fn serialize(
         &self,
         elements: &mut Vec<Element>,
-        _state: &mut SerializationState,
+        state: &mut SerializationState,
     ) -> CrushResult<usize> {
+        let strings_idx = self.full_name.serialize(elements, state)?;
         let idx = elements.len();
         elements.push(Element {
-            element: Some(element::Element::Command(Strings {
-                elements: self.full_name.iter().map(|e| e.to_string()).collect(),
-            })),
+            element: Some(element::Element::Command(strings_idx as u64)),
         });
         Ok(idx)
     }
@@ -313,15 +315,13 @@ impl CrushCommand for ConditionCommand {
     fn serialize(
         &self,
         elements: &mut Vec<Element>,
-        _state: &mut SerializationState,
+        state: &mut SerializationState,
     ) -> CrushResult<usize> {
-        let idx = elements.len();
+        let strings_idx = self.full_name.serialize(elements, state)?;
         elements.push(Element {
-            element: Some(element::Element::Command(Strings {
-                elements: self.full_name.iter().map(|e| e.to_string()).collect(),
-            })),
+            element: Some(element::Element::Command(strings_idx as u64)),
         });
-        Ok(idx)
+        Ok(elements.len()-1)
     }
 
     fn bind(&self, this: Value) -> Command {

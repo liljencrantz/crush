@@ -50,9 +50,10 @@ impl Serializable<Scope> for Scope {
                     Ok(res)
                 }
                 element::Element::InternalScope(s) => {
+                    let strings = Vec::deserialize(*s as usize, elements, state)?;
                     match state
                         .env
-                        .get_absolute_path(s.elements.iter().map(|s| s.clone()).collect())
+                        .get_absolute_path(strings)
                     {
                         Ok(Value::Scope(s)) => Ok(s),
                         Ok(_) => error("Value is not a scope"),
@@ -79,10 +80,9 @@ impl Serializable<Scope> for Scope {
 
                 match self.full_path() {
                     Ok(p) => {
+                        let strings_idx = p.serialize(elements, state)?;
                         elements[idx] = model::Element {
-                            element: Some(model::element::Element::InternalScope(model::Strings {
-                                elements: p.iter().map(|s| s.to_string()).collect(),
-                            })),
+                            element: Some(model::element::Element::InternalScope(strings_idx as u64)),
                         };
                     }
                     Err(_) => {

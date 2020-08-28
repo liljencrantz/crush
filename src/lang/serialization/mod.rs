@@ -20,7 +20,6 @@ mod table_serializer;
 mod value_serializer;
 mod value_type_serializer;
 
-//pub mod model;
 pub mod model {
     include!(concat!(env!("OUT_DIR"), "/model.rs"));
 }
@@ -86,7 +85,7 @@ pub fn deserialize(buf: &Vec<u8>, env: &Scope) -> CrushResult<Value> {
 
     let res = SerializedValue::decode(&mut Cursor::new(buf)).unwrap();
 
-    //    println!("AAA {:?}", res);
+    println!("AAA {:?}", res);
 
     Ok(Value::deserialize(
         res.root as usize,

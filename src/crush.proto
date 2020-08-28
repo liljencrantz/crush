@@ -24,7 +24,7 @@ message Element {
         Closure closure = 9; // A Value::Command that is a closure
         bytes binary = 10; // A Value::binary
         Duration duration = 11; // A Value::Duration
-        Strings field = 12; // A Value::Field
+        uint64 field = 12; // A Value::Field
         string glob = 13; // A Value::Glob
         string regex = 14; // A Value::RegEx
         Scope user_scope = 15; // A Value::Scope
@@ -37,12 +37,12 @@ message Element {
         ColumnType column_type = 22; // A description of a single column of a table, including name and type.
         Row row = 23; // A single row of a table
         Member member = 24; // A single member of a struct
-        Strings command = 26; // A command invocation
+        uint64 command = 26; // A command invocation
         BoundCommand bound_command = 27; // A rebinding of the this-value of a command
-
         // A Value::Scope instance that is in fact a namespace, e.g. global:io.
         // These aren't serialised, they are passed by name.
-        Strings internal_scope = 28;
+        uint64 internal_scope = 28;
+        Strings strings = 29;
     }
 }
 
@@ -109,7 +109,7 @@ message ValueDefinition {
         uint64 value = 1;
         ClosureDefinition closure_definition = 2;
         Job job = 3;
-        string label = 4;
+        uint64 label = 4;
         Attr get_attr = 5;
         Attr path = 6;
     }
@@ -117,7 +117,7 @@ message ValueDefinition {
 
 message Attr {
     ValueDefinition parent = 1;
-    string element = 2;
+    uint64 element = 2;
 }
 
 message Job {
@@ -140,7 +140,7 @@ message ArgumentDefinition {
 }
 
 message Strings {
-    repeated string elements = 1;
+    repeated uint64 elements = 1;
 }
 
 message Table {
@@ -207,7 +207,7 @@ message TableType {
 }
 
 message ColumnType {
-    string name = 1;
+    uint64 name = 1;
     uint64 type = 2;
 }
 

@@ -276,18 +276,18 @@ impl<'a> ClosureSerializer<'a> {
                     model::value_definition::ValueDefinition::Job(self.job(j)?)
                 }
                 ValueDefinition::Label(l) => {
-                    model::value_definition::ValueDefinition::Label(l.to_string())
+                    model::value_definition::ValueDefinition::Label(l.serialize(self.elements, self.state)? as u64)
                 }
                 ValueDefinition::GetAttr(parent, element) => {
                     model::value_definition::ValueDefinition::GetAttr(Box::from(model::Attr {
                         parent: Some(Box::from(self.value_definition(parent)?)),
-                        element: element.to_string(),
+                        element: element.serialize(self.elements, self.state)? as u64,
                     }))
                 }
                 ValueDefinition::Path(parent, element) => {
                     model::value_definition::ValueDefinition::Path(Box::from(model::Attr {
                         parent: Some(Box::from(self.value_definition(parent)?)),
-                        element: element.to_string(),
+                        element: element.serialize(self.elements, self.state)? as u64,
                     }))
                 }
             }),
@@ -447,21 +447,21 @@ impl<'a> ClosureDeserializer<'a> {
                     ))
                 }
                 model::value_definition::ValueDefinition::Label(s) => {
-                    ValueDefinition::Label(s.clone())
+                    ValueDefinition::Label(String::deserialize(*s as usize, self.elements, self.state)?)
                 }
                 model::value_definition::ValueDefinition::GetAttr(a) => ValueDefinition::GetAttr(
                     Box::from(self.value_definition(mandate(
                         a.parent.as_ref(),
                         "Invalid value definition",
                     )?)?),
-                    a.element.clone(),
+                    String::deserialize(a.element as usize, self.elements, self.state)?,
                 ),
                 model::value_definition::ValueDefinition::Path(a) => ValueDefinition::Path(
                     Box::from(self.value_definition(mandate(
                         a.parent.as_ref(),
                         "Invalid value definition",
                     )?)?),
-                    a.element.clone(),
+                    String::deserialize(a.element as usize, self.elements, self.state)?,
                 ),
             },
         )

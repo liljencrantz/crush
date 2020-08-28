@@ -26,7 +26,7 @@ fn serialize_simple(
 ) -> CrushResult<usize> {
     let idx = elements.len();
     state.values.insert(value.clone(), idx);
-    elements.push(Element {
+    let el = Element {
         element: Some(match value {
             Value::String(s) => element::Element::String(s.to_string()),
             Value::Glob(s) => element::Element::Glob(s.to_string()),
@@ -37,12 +37,11 @@ fn serialize_simple(
             Value::Bool(b) => element::Element::Bool(*b),
             Value::Empty() => element::Element::Empty(false),
             Value::Time(d) => element::Element::Time(d.timestamp_nanos()),
-            Value::Field(f) => element::Element::Field(model::Strings {
-                elements: f.clone(),
-            }),
+            Value::Field(f) => element::Element::Field(f.serialize(elements, state)? as u64),
             _ => return error("Expected simple value"),
         }),
-    });
+    };
+    elements.push(el);
     Ok(idx)
 }
 
@@ -52,9 +51,6 @@ impl Serializable<Value> for Value {
         elements: &[Element],
         state: &mut DeserializationState,
     ) -> CrushResult<Value> {
-        if id >= elements.len() {
-            println!("OOOOPS {} >= {}", id, elements.len())
-        }
         match elements[id].element.as_ref().unwrap() {
             element::Element::String(s) => Ok(Value::string(s.as_str())),
             element::Element::File(f) => Ok(Value::File(PathBuf::from(OsStr::from_bytes(&f[..])))),
@@ -93,13 +89,14 @@ impl Serializable<Value> for Value {
                 id, elements, state,
             )?)),
 
-            element::Element::Field(f) => Ok(Value::Field(f.elements.clone())),
+            element::Element::Field(f) => Ok(Value::Field(Vec::deserialize(*f as usize, elements, state)?)),
             element::Element::UserScope(_) | element::Element::InternalScope(_) => {
                 Ok(Value::Scope(Scope::deserialize(id, elements, state)?))
             }
             element::Element::Dict(_) => Ok(Value::Dict(Dict::deserialize(id, elements, state)?)),
 
-            element::Element::ColumnType(_)
+            element::Element::Strings(_)
+            | element::Element::ColumnType(_)
             | element::Element::Row(_)
             | element::Element::Member(_) => error("Not a value"),
         }
