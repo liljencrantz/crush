@@ -48,7 +48,7 @@ pub struct Http {
     header: Vec<String>,
 }
 
-pub fn http(context: CommandContext) -> CrushResult<()> {
+fn http(context: CommandContext) -> CrushResult<()> {
     let cfg: Http = Http::parse(context.arguments, &context.printer)?;
 
     let (mut output, input) = binary_channel();
@@ -90,7 +90,7 @@ pub fn http(context: CommandContext) -> CrushResult<()> {
             })
             .collect(),
     );
-    let _ = context.output.send(Value::Struct(Struct::new(
+    context.output.send(Value::Struct(Struct::new(
         vec![
             (
                 "status".to_string(),
@@ -100,7 +100,7 @@ pub fn http(context: CommandContext) -> CrushResult<()> {
             ("body".to_string(), Value::BinaryStream(input)),
         ],
         None,
-    )));
+    )))?;
     to_crush_error(b.copy_to(output.as_mut()))?;
     Ok(())
 }

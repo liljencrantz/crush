@@ -36,6 +36,7 @@ rustyline = "5.0.3"
 users = "0.9.1"
 dirs = "1.0.5"
 serde_json = { version = "1.0", features = ["preserve_order"] }
+serde_yaml = { version = "0.8.13" }
 toml = "0.5.6"
 reqwest = { version = "0.10.8", features = ["blocking"] }
 crossbeam = "0.7.3"

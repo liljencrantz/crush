@@ -17,6 +17,7 @@ mod pup;
 mod split;
 mod toml;
 mod words;
+mod yaml;
 
 #[signature(val,
 can_block = false,
@@ -109,6 +110,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             lines::declare(env)?;
             split::declare(env)?;
             words::declare(env)?;
+            yaml::declare(env)?;
 
             http::Http::declare(env)?;
             Echo::declare(env)?;

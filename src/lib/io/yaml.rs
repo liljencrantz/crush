@@ -15,12 +15,13 @@ use crate::lang::{data::list::List, data::r#struct::Struct, data::table::Table};
 use signature::signature;
 use std::collections::HashSet;
 use std::convert::TryFrom;
+use crate::lang::data::dict::Dict;
 
-fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
-    match json_value {
-        serde_json::Value::Null => Ok(Value::Empty()),
-        serde_json::Value::Bool(b) => Ok(Value::Bool(*b)),
-        serde_json::Value::Number(f) => {
+fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
+    match yaml_value {
+        serde_yaml::Value::Null => Ok(Value::Empty()),
+        serde_yaml::Value::Bool(b) => Ok(Value::Bool(*b)),
+        serde_yaml::Value::Number(f) => {
             if f.is_u64() {
                 Ok(Value::Integer(f.as_u64().expect("") as i128))
             } else if f.is_i64() {
@@ -31,11 +32,11 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
                 ))?))
             }
         }
-        serde_json::Value::String(s) => Ok(Value::string(s.as_str())),
-        serde_json::Value::Array(arr) => {
+        serde_yaml::Value::String(s) => Ok(Value::string(s.as_str())),
+        serde_yaml::Value::Sequence(arr) => {
             let mut lst = arr
                 .iter()
-                .map(|v| from_json(v))
+                .map(|v| from_yaml(v))
                 .collect::<CrushResult<Vec<Value>>>()?;
             let types: HashSet<ValueType> = lst.iter().map(|v| v.value_type()).collect();
             let struct_types: HashSet<Vec<ColumnType>> = lst
@@ -70,34 +71,32 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
                 _ => Ok(Value::List(List::new(ValueType::Any, lst))),
             }
         }
-        serde_json::Value::Object(o) => Ok(Value::Struct(Struct::new(
-            o.iter()
-                .map(|(k, v)| (k.to_string(), from_json(v)))
-                .map(|(k, v)| match v {
-                    Ok(vv) => Ok((k, vv)),
-                    Err(e) => Err(e),
-                })
-                .collect::<Result<Vec<(String, Value)>, CrushError>>()?,
-            None,
-        ))),
+        serde_yaml::Value::Mapping(o) => {
+            let d = Dict::new(ValueType::Any, ValueType::Any);
+            for (k, v) in o.into_iter() {
+                d.insert(from_yaml(k)?, from_yaml(v)?)?;
+            }
+            Ok(Value::Dict(d))
+        }
+
     }
 }
 
-fn to_json(value: Value) -> CrushResult<serde_json::Value> {
+fn to_yaml(value: Value) -> CrushResult<serde_yaml::Value> {
     match value.materialize() {
-        Value::File(s) => Ok(serde_json::Value::from(mandate(
+        Value::File(s) => Ok(serde_yaml::Value::from(mandate(
             s.to_str(),
             "Invalid filename",
         )?)),
 
-        Value::String(s) => Ok(serde_json::Value::from(s)),
+        Value::String(s) => Ok(serde_yaml::Value::from(s)),
 
-        Value::Integer(i) => Ok(serde_json::Value::from(to_crush_error(i64::try_from(i))?)),
+        Value::Integer(i) => Ok(serde_yaml::Value::from(to_crush_error(i64::try_from(i))?)),
 
-        Value::List(l) => Ok(serde_json::Value::Array(
+        Value::List(l) => Ok(serde_yaml::Value::Sequence(
             l.dump()
                 .drain(..)
-                .map(to_json)
+                .map(to_yaml)
                 .collect::<CrushResult<Vec<_>>>()?,
         )),
 
@@ -107,28 +106,28 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
                 .rows()
                 .iter()
                 .map(|r| r.clone().into_struct(&types))
-                .map(|s| to_json(Value::Struct(s)))
+                .map(|s| to_yaml(Value::Struct(s)))
                 .collect::<CrushResult<Vec<_>>>()?;
-            Ok(serde_json::Value::Array(structs))
+            Ok(serde_yaml::Value::Sequence(structs))
         }
 
-        Value::Bool(b) => Ok(serde_json::Value::from(b)),
+        Value::Bool(b) => Ok(serde_yaml::Value::from(b)),
 
-        Value::Float(f) => Ok(serde_json::Value::from(f)),
+        Value::Float(f) => Ok(serde_yaml::Value::from(f)),
 
         Value::Struct(s) => {
-            let mut map = serde_json::map::Map::new();
+            let mut map = serde_yaml::Mapping::new();
             for (k, v) in s.local_elements() {
-                map.insert(k.to_string(), to_json(v)?);
+                map.insert(to_yaml(Value::String(k))?, to_yaml(v)?);
             }
-            Ok(serde_json::Value::Object(map))
+            Ok(serde_yaml::Value::Mapping(map))
         }
 
-        Value::Duration(d) => Ok(serde_json::Value::from(d.num_seconds())),
+        Value::Duration(d) => Ok(serde_yaml::Value::from(d.num_seconds())),
 
-        Value::Time(t) => Ok(serde_json::Value::from(t.to_rfc3339())),
+        Value::Time(t) => Ok(serde_yaml::Value::from(t.to_rfc3339())),
 
-        Value::Binary(b) => Ok(serde_json::Value::from(b)),
+        Value::Binary(b) => Ok(serde_yaml::Value::from(b)),
 
         Value::BinaryStream(_) => panic!("Impossible"),
 
@@ -142,8 +141,8 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
 from,
 can_block = true,
 output = Unknown,
-short = "Parse json format",
-example = "(http \"https://jsonplaceholder.typicode.com/todos/3\"):body | json:from")]
+short = "Parse yaml format",
+example = "(http \"https://jsonplaceholder.typicode.com/todos/3\"):body | yaml:from")]
 struct From {
     #[unnamed()]
     files: Files,
@@ -152,8 +151,8 @@ struct From {
 pub fn from(context: CommandContext) -> CrushResult<()> {
     let cfg: From = From::parse(context.arguments, &context.printer)?;
     let reader = BufReader::new(cfg.files.reader(context.input)?);
-    let serde_value = to_crush_error(serde_json::from_reader(reader))?;
-    let crush_value = from_json(&serde_value)?;
+    let serde_value = to_crush_error(serde_yaml::from_reader(reader))?;
+    let crush_value = from_yaml(&serde_value)?;
     context.output.send(crush_value)
 }
 
@@ -161,33 +160,25 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
 to,
 can_block = true,
 output = Unknown,
-short = "Serialize to json format",
-example = "ls | json:to")]
+short = "Serialize to yaml format",
+example = "ls | yaml:to")]
 struct To {
     #[unnamed()]
     file: Files,
-    #[description("Disable line breaking and indentation.")]
-    #[default(false)]
-    compact: bool,
 }
 
 fn to(context: CommandContext) -> CrushResult<()> {
     let cfg: To = To::parse(context.arguments, &context.printer)?;
     let mut writer = cfg.file.writer(context.output)?;
     let value = context.input.recv()?;
-    let json_value = to_json(value)?;
-    to_crush_error(writer.write(
-        if cfg.compact {
-            json_value.to_string()
-        } else {
-            to_crush_error(serde_json::to_string_pretty(&json_value))?
-        }.as_bytes()))?;
+    let yaml_value = to_yaml(value)?;
+    to_crush_error(writer.write(to_crush_error(serde_yaml::to_string(&yaml_value))?.as_bytes()))?;
     Ok(())
 }
 
 pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
     root.create_namespace(
-        "json",
+        "yaml",
         Box::new(move |env| {
             From::declare(env)?;
             To::declare(env)?;
