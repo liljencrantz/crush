@@ -166,6 +166,9 @@ example = "ls | json:to")]
 struct To {
     #[unnamed()]
     file: Files,
+    #[description("Disable line breaking and indentation.")]
+    #[default(false)]
+    compact: bool,
 }
 
 fn to(context: CommandContext) -> CrushResult<()> {
@@ -173,7 +176,12 @@ fn to(context: CommandContext) -> CrushResult<()> {
     let mut writer = cfg.file.writer(context.output)?;
     let value = context.input.recv()?;
     let json_value = to_json(value)?;
-    to_crush_error(writer.write(json_value.to_string().as_bytes()))?;
+    to_crush_error(writer.write(
+        if cfg.compact {
+            json_value.to_string()
+        } else {
+            to_crush_error(serde_json::to_string_pretty(&json_value))?
+        }.as_bytes()))?;
     Ok(())
 }
 
