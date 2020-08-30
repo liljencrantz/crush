@@ -1,6 +1,6 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{to_crush_error, CrushResult};
+use crate::lang::errors::{to_crush_error, CrushResult, argument_error, error};
 use crate::lang::execution_context::{CommandContext, This};
 use crate::lang::data::r#struct::Struct;
 use crate::lang::value::Value;
@@ -11,13 +11,16 @@ use std::fs::metadata;
 use std::os::unix::fs::MetadataExt;
 use signature::signature;
 use crate::lang::argument::ArgumentHandler;
+use std::collections::HashSet;
+use crate::lib::types::file::PermissionAdjustment::{Add, Remove, Set};
+use std::os::unix::fs::PermissionsExt;
 
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
         let path = vec!["global", "types", "file"];
         Stat::declare_method(&mut res, &path);
-//        Chmod::declare_method(&mut res, &path);
+        Chmod::declare_method(&mut res, &path);
         Exists::declare_method(&mut res, &path);
         GetItem::declare_method(&mut res, &path);
         res
@@ -38,8 +41,7 @@ long = "* nlink:integer the number of hardlinks to the file",
 long = "* mode:integer the permission bits for the file",
 long = "* len: integer the size of the file"
 )]
-struct Stat {
-}
+struct Stat {}
 
 pub fn stat(context: CommandContext) -> CrushResult<()> {
     let file = context.this.file()?;
@@ -69,18 +71,127 @@ chmod,
 can_block = false,
 output = Known(ValueType::Empty),
 short = "Change permissions of this file.",
+long = "Permissions are strings of the form [classes...][adjustment][modes..].",
+long = "* A class is one of u, g, o, a, signifying file owner, file group, other users and all users, respectively.",
+long = "* The adjustment must be one of +, -, and =, signifying added permissions, removed permissions and set permissions, respectively.",
+long = "* A mode is one of r w, x, signifying read, write and execute permissions.",
+example = "./foo:chmod \"a=\" \"u+r\" # First strip all rights for all users, then re-add read rights for the owner",
 )]
 struct Chmod {
+    #[description("the set of permissions to add.")]
     #[unnamed()]
     permissions: Vec<String>,
 }
 
+const OWNER: u32 = 6;
+const GROUP: u32 = 3;
+const OTHER: u32 = 0;
+
+enum PermissionAdjustment {
+    Add,
+    Remove,
+    Set,
+}
+
+const READ: u32 = 4;
+const WRITE: u32 = 2;
+const EXECUTE: u32 = 1;
+
+
+fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
+    let mut class_done = false;
+    let mut classes = HashSet::new();
+    let mut adjustments = PermissionAdjustment::Add;
+    let mut modes = 0u32;
+
+    for c in perm.chars() {
+        match class_done {
+            false => {
+                match c {
+                    'u' => {classes.insert(OWNER);}
+                    'g' => {classes.insert(GROUP);}
+                    'o' => {classes.insert(OTHER);}
+                    'a' => {
+                        classes.insert(OWNER);
+                        classes.insert(GROUP);
+                        classes.insert(OTHER);
+                    }
+                    '+' => {
+                        class_done = true;
+                    }
+                    '-' => {
+                        adjustments = Remove;
+                        class_done = true;
+                    }
+                    '=' => {
+                        adjustments = Set;
+                        class_done = true;
+                    }
+                    c => {
+                        return argument_error(format!("Illegal character in class-part of permission: {}", c));
+                    }
+                }
+            }
+            true => {
+                match c {
+                    'r' => modes |= READ,
+                    'w' => modes |= WRITE,
+                    'x' => modes |= EXECUTE,
+                    c => {
+                        return argument_error(format!("Illegal character in mode-part of permission: {}", c));
+                    }
+                }
+            }
+        }
+    }
+
+    if !class_done {
+        return argument_error("Premature end of permission");
+    }
+
+    if classes.is_empty() {
+        return argument_error("No user classes specified in permission");
+    }
+
+    for cl in classes {
+        match adjustments {
+            Add => {
+                println!("Add {} << {}", modes, cl);
+                // Add new bits
+                current |= (modes << cl);
+            },
+            Remove => {
+                // Remove bits
+                current = current & !(modes << cl);
+            },
+            Set => {
+                // Clear current bits
+                current = current & !(7 << cl);
+                // Add new bits
+                current |= (modes << cl);
+            },
+        }
+    }
+
+    Ok(current)
+}
+
 pub fn chmod(context: CommandContext) -> CrushResult<()> {
     let cfg: Chmod = Chmod::parse(context.arguments, &context.printer)?;
+    let file = context.this.file()?;
+    let mut metadata = to_crush_error(metadata(&file))?;
 
+    let mut permissions = metadata.permissions();
+    let mut current: u32 = permissions.mode();
+
+    for perm in cfg.permissions {
+        current = apply(&perm, current)?;
+    }
+
+    to_crush_error(std::fs::set_permissions(&file, std::fs::Permissions::from_mode(current)))?;
     context
         .output
-        .send(Value::Bool(context.this.file()?.exists()))
+        .send(Value::Empty())
 }
 
 #[signature(
@@ -106,6 +217,7 @@ short = "Return a file or subdirectory in the specified base directory.",
 struct GetItem {
     name: String,
 }
+
 pub fn __getitem__(context: CommandContext) -> CrushResult<()> {
     let base_directory = context.this.file()?;
     let cfg: GetItem = GetItem::parse(context.arguments, &context.printer)?;
