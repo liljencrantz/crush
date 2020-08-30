@@ -83,7 +83,7 @@ fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
 }
 
 fn to_yaml(value: Value) -> CrushResult<serde_yaml::Value> {
-    match value.materialize() {
+    match value.materialize()? {
         Value::File(s) => Ok(serde_yaml::Value::from(mandate(
             s.to_str(),
             "Invalid filename",

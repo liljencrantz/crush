@@ -70,20 +70,21 @@ commands all work like you'd expect:
 | Namespace | Description |
 | --- | --- |
 | `bin` | Binary stream, i.e. no encoding at all. |
-| `csv` | Comma separated values. |
+| `csv` | Comma separated values. Only decoding supported. |
 | `json` | JSON file format. |
 | `lines` | Lines of text files. |
 | `pup` | The native file format of Crush.  |
-| `split` | Split text file on custom separators. |
+| `split` | Split text file on custom separators. Only decoding supported. |
 | `toml` | TOML file format. |
-| `words` | Word split text files. |
+| `words` | Word split text files. Only decoding supported. |
+| `yaml` | YAML file format. |
 
 ```shell script
 # Dump the output of the ls command to the file listing.json in json format
 crush# ls | json:to ./listing.json
 
 # Read the file Cargo.toml as a toml file, and extract the dependencies-field
-crush# (toml:from Cargo.toml):dependencies
+crush# toml:from Cargo.toml | member ^dependencies
 
 # Fetch a web page and write it to a file
 (http "https://isitchristmas.com/"):body | bin:to ./isitchristmas.html

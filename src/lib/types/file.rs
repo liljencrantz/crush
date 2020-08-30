@@ -17,6 +17,7 @@ lazy_static! {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
         let path = vec!["global", "types", "file"];
         Stat::declare_method(&mut res, &path);
+//        Chmod::declare_method(&mut res, &path);
         Exists::declare_method(&mut res, &path);
         GetItem::declare_method(&mut res, &path);
         res
@@ -61,6 +62,25 @@ pub fn stat(context: CommandContext) -> CrushResult<()> {
         ],
         None,
     )))
+}
+
+#[signature(
+chmod,
+can_block = false,
+output = Known(ValueType::Empty),
+short = "Change permissions of this file.",
+)]
+struct Chmod {
+    #[unnamed()]
+    permissions: Vec<String>,
+}
+
+pub fn chmod(context: CommandContext) -> CrushResult<()> {
+    let cfg: Chmod = Chmod::parse(context.arguments, &context.printer)?;
+
+    context
+        .output
+        .send(Value::Bool(context.this.file()?.exists()))
 }
 
 #[signature(

@@ -1,4 +1,4 @@
-use crate::lang::errors::{error, CrushError};
+use crate::lang::errors::{error, CrushError, CrushResult};
 use crate::lang::stream::CrushStream;
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
@@ -221,9 +221,9 @@ impl Struct {
         }
     }
 
-    pub fn materialize(&self) -> Struct {
+    pub fn materialize(&self) -> CrushResult<Struct> {
         let data = self.data.lock().unwrap();
-        Struct {
+        Ok(Struct {
             data: Arc::new(Mutex::new(StructData {
                 parent: data.parent.clone(),
                 lookup: data.lookup.clone(),
@@ -231,9 +231,9 @@ impl Struct {
                     .cells
                     .iter()
                     .map(|value| value.clone().materialize())
-                    .collect(),
+                    .collect::<CrushResult<Vec<_>>>()?,
             })),
-        }
+        })
     }
 
     pub fn set_parent(&self, parent: Option<Struct>) {

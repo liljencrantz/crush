@@ -9,7 +9,7 @@ use std::str::FromStr;
 use chrono::{DateTime, Local};
 use regex::Regex;
 
-use crate::lang::errors::{argument_error, mandate, CrushResult};
+use crate::lang::errors::{argument_error, mandate, CrushResult, CrushError};
 use crate::lang::data::r#struct::Struct;
 use crate::lang::data::r#struct::StructReader;
 use crate::lang::data::scope::Scope;
@@ -64,7 +64,6 @@ pub enum Value {
 }
 
 impl Display for Value {
-
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Value::String(val) => val.fmt(f),
@@ -73,13 +72,13 @@ impl Display for Value {
             Value::Field(val) => {
                 f.write_str("^")?;
                 f.write_str(&val.join(":"))
-            },
+            }
             Value::Glob(val) => val.fmt(f),
             Value::Regex(val, _) => {
                 f.write_str("re\"")?;
                 f.write_str(val)?;
                 f.write_str("\"")
-            },
+            }
             Value::File(val) => val.to_str().unwrap_or("<invalid filename>").fmt(f),
             Value::List(l) => l.fmt(f),
             Value::Duration(d) => f.write_str(&duration_format(d)),
@@ -248,26 +247,26 @@ impl Value {
         }
     }
 
-    pub fn materialize(self) -> Value {
-        match self {
+    pub fn materialize(self) -> CrushResult<Value> {
+        Ok(match self {
             Value::TableStream(output) => {
                 let mut rows = Vec::new();
                 while let Ok(r) = output.recv() {
-                    rows.push(r.materialize());
+                    rows.push(r.materialize()?);
                 }
                 Value::Table(Table::new(ColumnType::materialize(output.types()), rows))
             }
             Value::BinaryStream(mut s) => {
                 let mut vec = Vec::new();
-                std::io::copy(s.as_mut(), &mut vec).unwrap();
+                to_crush_error(std::io::copy(s.as_mut(), &mut vec))?;
                 Value::Binary(vec)
             }
-            Value::Table(r) => Value::Table(r.materialize()),
-            Value::Dict(d) => Value::Dict(d.materialize()),
-            Value::Struct(r) => Value::Struct(r.materialize()),
-            Value::List(l) => Value::List(l.materialize()),
+            Value::Table(r) => Value::Table(r.materialize()?),
+            Value::Dict(d) => Value::Dict(d.materialize()?),
+            Value::Struct(r) => Value::Struct(r.materialize()?),
+            Value::List(l) => Value::List(l.materialize()?),
             _ => self,
-        }
+        })
     }
 
     pub fn convert(self, new_type: ValueType) -> CrushResult<Value> {

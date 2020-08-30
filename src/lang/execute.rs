@@ -34,7 +34,7 @@ pub fn pup(env: Scope, buf: &Vec<u8>, printer: &Printer, threads: &ThreadStore) 
                 move || {
                     let val = recv.recv()?;
                     let mut buf = Vec::new();
-                    serialize(&val.materialize(), &mut buf)?;
+                    serialize(&val.materialize()?, &mut buf)?;
                     to_crush_error(std::io::stdout().write(&buf))?;
                     Ok(())
                 },

@@ -104,7 +104,7 @@ fn from(context: CommandContext) -> CrushResult<()> {
 }
 
 fn to_toml(value: Value) -> CrushResult<toml::Value> {
-    match value.materialize() {
+    match value.materialize()? {
         Value::File(s) => Ok(toml::Value::from(mandate(s.to_str(), "Invalid filename")?)),
 
         Value::String(s) => Ok(toml::Value::from(s.as_ref())),

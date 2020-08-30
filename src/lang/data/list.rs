@@ -154,13 +154,13 @@ impl List {
         ValueType::List(Box::from(self.cell_type.clone()))
     }
 
-    pub fn materialize(self) -> List {
+    pub fn materialize(self) -> CrushResult<List> {
         let mut cells = self.cells.lock().unwrap();
-        let vec: Vec<Value> = cells.drain(..).map(|c| c.materialize()).collect();
-        List {
+        let vec: Vec<Value> = cells.drain(..).map(|c| c.materialize()).collect::<CrushResult<Vec<_>>>()?;
+        Ok(List {
             cell_type: self.cell_type.materialize(),
             cells: Arc::new(Mutex::from(vec)),
-        }
+        })
     }
 
     pub fn copy(&self) -> List {

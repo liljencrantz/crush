@@ -47,7 +47,7 @@ pub fn serialize(value: &Value, buf: &mut Vec<u8>) -> CrushResult<()> {
     };
     res.root = value
         .clone()
-        .materialize()
+        .materialize()?
         .serialize(&mut res.elements, &mut state)? as u64;
 
     buf.reserve(res.encoded_len());

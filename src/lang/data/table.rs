@@ -17,11 +17,11 @@ impl Table {
         Table { types, rows }
     }
 
-    pub fn materialize(mut self) -> Table {
-        Table {
+    pub fn materialize(mut self) -> CrushResult<Table> {
+        Ok(Table {
             types: ColumnType::materialize(&self.types),
-            rows: self.rows.drain(..).map(|r| r.materialize()).collect(),
-        }
+            rows: self.rows.drain(..).map(|r| r.materialize()).collect::<CrushResult<Vec<_>>>()?,
+        })
     }
 
     pub fn types(&self) -> &[ColumnType] {
@@ -106,10 +106,10 @@ impl Row {
         self.cells.append(values);
     }
 
-    pub fn materialize(mut self) -> Row {
-        Row {
-            cells: self.cells.drain(..).map(|c| c.materialize()).collect(),
-        }
+    pub fn materialize(mut self) -> CrushResult<Row> {
+        Ok(Row {
+            cells: self.cells.drain(..).map(|c| c.materialize()).collect::<CrushResult<Vec<_>>>()?,
+        })
     }
 }
 

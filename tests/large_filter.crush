@@ -1,1 +1,1 @@
-seq 10000| yaml:to |yaml:from|count
+seq 10000| yaml:to | yaml:from|count

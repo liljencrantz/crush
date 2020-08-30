@@ -98,17 +98,17 @@ impl Dict {
             .collect()
     }
 
-    pub fn materialize(self) -> Dict {
+    pub fn materialize(self) -> CrushResult<Dict> {
         let mut entries = self.entries.lock().unwrap();
-        let map = entries
-            .drain()
-            .map(|(k, v)| (k.materialize(), v.materialize()))
-            .collect();
-        Dict {
+        let mut map = OrderedMap::with_capacity(entries.len());
+        for (k, v) in entries.drain() {
+            map.insert(k.materialize()?, v.materialize()?);
+        }
+        Ok(Dict {
             key_type: self.key_type.materialize(),
             value_type: self.value_type.materialize(),
             entries: Arc::new(Mutex::new(map)),
-        }
+        })
     }
 }
 

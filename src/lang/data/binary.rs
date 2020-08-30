@@ -33,7 +33,7 @@ impl std::io::Read for ChannelReader {
             None => match self.receiver.recv() {
                 Ok(b) => {
                     if b.len() == 0 {
-                        Ok(0)
+                        self.read(dst)
                     } else {
                         self.buff = Some(b);
                         self.read(dst)
@@ -49,9 +49,9 @@ impl std::io::Read for ChannelReader {
                     self.buff = None;
                     Ok(res)
                 } else {
-                    dst.write_all(src)?;
-                    self.buff = Some(Box::from(&src[dst.len()..]));
-                    Ok(dst.len())
+                    let written = dst.write(src)?;
+                    self.buff = Some(Box::from(&src[written..]));
+                    Ok(written)
                 }
             }
         }

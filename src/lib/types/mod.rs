@@ -37,7 +37,7 @@ example= "ls | materialize"
 struct Materialize {}
 
 fn materialize(context: CommandContext) -> CrushResult<()> {
-    context.output.send(context.input.recv()?.materialize())
+    context.output.send(context.input.recv()?.materialize()?)
 }
 
 fn new(mut context: CommandContext) -> CrushResult<()> {

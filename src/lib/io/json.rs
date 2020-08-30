@@ -84,7 +84,7 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
 }
 
 fn to_json(value: Value) -> CrushResult<serde_json::Value> {
-    match value.materialize() {
+    match value.materialize()? {
         Value::File(s) => Ok(serde_json::Value::from(mandate(
             s.to_str(),
             "Invalid filename",

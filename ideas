@@ -67,6 +67,9 @@ html:from/to using html5ever under the hood
 Add hex and base64 en/decoding methods to the binary/string types
 Add utf-8 and other character encoding methods to the binary/string types
 Maybe unset should be an operator, so that we don't have to quote the variable name, which feels inconsistent
+Pretty printing option for text output formats
+chmod method
+open file commands, e.g. list all open fds, list sockets, list all fds of user, of process, etc.
 
 Time to figure out tab completion.
 This will eventually require a parser that can parse broken and incomplete input and return some kind of best guess.
