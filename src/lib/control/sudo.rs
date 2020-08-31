@@ -14,7 +14,7 @@ use crate::lang::serialization::{serialize, deserialize};
 sudo,
 can_block = true,
 short = "Execute a lambda as another user.",
-example = "sudo {./foo:chown \"root\"}"
+example = "sudo {./foo:chown \"root\"} # Set owner of foo to root"
 )]
 pub struct Sudo {
     #[description("the command to run as another user.")]
@@ -31,9 +31,9 @@ pub struct Sudo {
     the terminal.
 
     Secondly, it creates 3 separate subthreads just to deal with stdin, stdout and stderr without
-    blocking while the main thread waits for the command to exit. It is absolutely
-    possible to do this much more efficiently, but this was the most straight forward implementation
-    and the sudo command should never be run in a loop regardless.
+    blocking while the main thread waits for the command to exit. It is easy to do this much more
+    efficiently, but this was the most straight forward implementation and the sudo command should
+    never be run in a loop regardless.
  */
 fn sudo(context: CommandContext) -> CrushResult<()> {
     let cfg: Sudo = Sudo::parse(context.arguments.clone(), &context.printer)?;

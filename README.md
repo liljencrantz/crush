@@ -615,18 +615,31 @@ Crush features several shortcuts to make working with external commands easier.
 Further work is required when it comes to job control, terminal emulation and various
 other integration points.
 
-### Executing remote commands
+### Executing commands remotely or as other users
 
-To run a closure on a remote host, use the `remote:exec` command:
+Traditional shells allow you to run commands as other users or on
+other systems using commands like ssh or sudo. The problem with
+their approach is that the commands to run and their parameters are
+locally expanded and then transferred as text. This leads to a multitude
+of issues related to double expansion, double whitespace splitting and
+permissions on I/O redirections. Work around these problems leads to
+quoting, escaping, double quoting, double escaping, hair loss, insanity
+and if unmitigated, eventually suicide.
 
-    remote:exec {uptime} "example.com"
+The Crush way of running commands in other processes (potentially on
+other machines) is to pass in a closure as an argument to the command.
+The command will serialize the closure, transfer it to the remote
+process, and run the closure remotely. The output of this remote
+execution is then serialized and passed back to
+the calling process.
 
-The closure will be serialized, transferred to the remote host using
-ssh, deserialized, and executed on the remote host (the crush shell
-must be in the default path on the remote host). Once the command has
-been executed and the output of the closure is serialized, transferred,
-deserialized on the local machine and used as the output of the
-`remote:exec` command.
+To execute a command as another user, use the `sudo` command:
+
+    sudo {./carrot:chown group="rabbit"}
+
+To execute a command on a remote host, use the `remote:exec` command:
+
+    remote:exec {uptime} "popplar.meadow"
 
 To run a closure on multiple remote hosts, use `remote:pexec` instead.
 

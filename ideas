@@ -72,7 +72,6 @@ sticky bits for chmod
 recursive chmod
 recursive chown
 open file commands, e.g. list all open fds, list sockets, list all fds of user, of process, etc.
-A sudo-like command that takes a lambda and executes it as a different user.
 remote:exec should use the thread store
 Fix echo-command in pup-mode.
 
