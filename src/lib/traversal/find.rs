@@ -19,9 +19,11 @@ use crate::lang::stream::OutputStream;
 use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value::ValueType};
 use crate::util::user_map::{create_user_map, UserMap};
 use signature::signature;
+use std::os::unix::fs::PermissionsExt;
 
 lazy_static! {
     static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
+        ColumnType::new("permissions", ValueType::String),
         ColumnType::new("user", ValueType::String),
         ColumnType::new("size", ValueType::Integer),
         ColumnType::new("modified", ValueType::Time),
@@ -30,12 +32,37 @@ lazy_static! {
     ];
 }
 
+fn format_permissions(mode: u32) -> String {
+    let mut res = String::with_capacity(9);
+    let sticky = ((mode >> 9) & 1) != 0;
+    let setgid = ((mode >> 9) & 2) != 0;
+    let setuid = ((mode >> 9) & 4) != 0;
+    for (sticky, set_owner, rwx) in vec![(false, setuid, (mode >> 6) & 7), (false, setgid, (mode >> 3) & 7), (sticky, false, mode & 7)] {
+        res.push(if (rwx & 4) != 0 { 'r' } else { '-' });
+        res.push(if (rwx & 2) != 0 { 'w' } else { '-' });
+        res.push(
+            match (sticky, set_owner, (rwx & 2) != 0) {
+                (false, false, false) => '-',
+                (false, false, true) => 'x',
+                (false, true, false) => 'S',
+                (false, true, true) => 's',
+                (true, false, false) => 'T',
+                (true, false, true) => 't',
+                _ => '?',
+            }
+        );
+    }
+    res
+}
+
 fn insert_entity(
     meta: &Metadata,
     file: PathBuf,
     users: &HashMap<uid_t, User>,
     output: &mut OutputStream,
 ) -> CrushResult<()> {
+    let mode = meta.permissions().mode();
+    let permissions = format_permissions(mode);
     let modified_system = to_crush_error(meta.modified())?;
     let modified_datetime: DateTime<Local> = DateTime::from(modified_system);
     let f = if file.starts_with("./") {
@@ -54,6 +81,7 @@ fn insert_entity(
     };
 
     output.send(Row::new(vec![
+        Value::String(permissions),
         users.get_name(meta.uid()),
         Value::Integer(i128::from(meta.len())),
         Value::Time(modified_datetime),
@@ -83,7 +111,7 @@ fn run_for_single_directory_or_file(
             if recursive
                 && entry.path().is_dir()
                 && (!(entry.file_name().eq(".") || entry.file_name().eq("..")))
-            {
+                {
                 q.push_back(entry.path());
             }
         }
@@ -100,7 +128,7 @@ fn run_for_single_directory_or_file(
     Ok(())
 }
 
-#[signature(find, short="Recursively list files", output=Known(ValueType::TableStream(OUTPUT_TYPE.clone())))]
+#[signature(find, short = "Recursively list files", output = Known(ValueType::TableStream(OUTPUT_TYPE.clone())))]
 pub struct Find {
     #[unnamed()]
     #[description("directories and files to list")]

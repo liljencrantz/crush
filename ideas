@@ -68,8 +68,13 @@ Add hex and base64 en/decoding methods to the binary/string types
 Add utf-8 and other character encoding methods to the binary/string types
 Maybe unset should be an operator, so that we don't have to quote the variable name, which feels inconsistent
 Pretty printing option for text output formats
-chown method
+sticky bits for chmod
+recursive chmod
+recursive chown
 open file commands, e.g. list all open fds, list sockets, list all fds of user, of process, etc.
+A sudo-like command that takes a lambda and executes it as a different user.
+remote:exec should use the thread store
+Fix echo-command in pup-mode.
 
 Time to figure out tab completion.
 This will eventually require a parser that can parse broken and incomplete input and return some kind of best guess.

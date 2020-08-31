@@ -10,6 +10,7 @@ use std::env;
 mod r#for;
 mod r#if;
 mod r#loop;
+mod sudo;
 mod r#while;
 
 use crate::lang::argument::ArgumentHandler;
@@ -104,6 +105,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             r#if::If::declare(env)?;
             r#while::While::declare(env)?;
             r#loop::Loop::declare(env)?;
+            sudo::Sudo::declare(env)?;
 
             env.declare_condition_command(
                 "for",

@@ -191,6 +191,7 @@ fn exec(context: CommandContext) -> CrushResult<()> {
 )]
 struct Pexec {
     #[description("the command to execute.")]
+    #[description("the command to execute.")]
     command: Command,
     #[unnamed()]
     #[description("hosts to execute the command on.")]

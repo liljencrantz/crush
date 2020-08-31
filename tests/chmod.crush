@@ -1,0 +1,3 @@
+touch ./foo
+foo:chmod "a=" "o+xr" "u+w" "g-r"
+find ./foo | select ^permissions

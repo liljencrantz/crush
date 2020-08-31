@@ -1,6 +1,6 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{to_crush_error, CrushResult, argument_error, error};
+use crate::lang::errors::{to_crush_error, CrushResult, argument_error, error, mandate};
 use crate::lang::execution_context::{CommandContext, This};
 use crate::lang::data::r#struct::Struct;
 use crate::lang::value::Value;
@@ -14,12 +14,16 @@ use crate::lang::argument::ArgumentHandler;
 use std::collections::HashSet;
 use crate::lib::types::file::PermissionAdjustment::{Add, Remove, Set};
 use std::os::unix::fs::PermissionsExt;
+use std::ffi::CStr;
+use users::{uid_t, gid_t};
+use nix::unistd::{Uid, Gid};
 
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
         let path = vec!["global", "types", "file"];
         Stat::declare_method(&mut res, &path);
+        Chown::declare_method(&mut res, &path);
         Chmod::declare_method(&mut res, &path);
         Exists::declare_method(&mut res, &path);
         GetItem::declare_method(&mut res, &path);
@@ -64,6 +68,84 @@ pub fn stat(context: CommandContext) -> CrushResult<()> {
         ],
         None,
     )))
+}
+
+#[signature(
+chown,
+can_block = false,
+output = Known(ValueType::Empty),
+short = "Change owner of this file.",
+)]
+struct Chown {
+    #[description("the owning user for the file.")]
+    user: Option<String>,
+    #[description("the owning group for the file.")]
+    group: Option<String>,
+}
+
+unsafe fn parse(s: *const i8) -> CrushResult<String> {
+    Ok(to_crush_error(CStr::from_ptr(s).to_str())?.to_string())
+}
+
+fn get_uid(target_username: &str) -> CrushResult<Option<Uid>> {
+    unsafe {
+        nix::libc::setpwent();
+        loop {
+            let passwd = nix::libc::getpwent();
+            if passwd.is_null() {
+                break;
+            }
+            let pw_username = parse((*passwd).pw_name)?;
+            if pw_username == target_username {
+                nix::libc::endpwent();
+                return Ok(Some(Uid::from_raw((*passwd).pw_uid)));
+            }
+        }
+        nix::libc::endpwent();
+    }
+    Ok(None)
+}
+
+fn get_gid(target_groupname: &str) -> CrushResult<Option<Gid>> {
+    unsafe {
+        nix::libc::setgrent();
+        loop {
+            let grp = nix::libc::getgrent();
+            if grp.is_null() {
+                break;
+            }
+            let gr_groupname = parse((*grp).gr_name)?;
+            if gr_groupname == target_groupname {
+                nix::libc::endgrent();
+                return Ok(Some(Gid::from_raw((*grp).gr_gid)));
+            }
+        }
+        nix::libc::endgrent();
+    }
+    Ok(None)
+}
+
+pub fn chown(context: CommandContext) -> CrushResult<()> {
+    let cfg: Chown = Chown::parse(context.arguments, &context.printer)?;
+    let file = context.this.file()?;
+
+    let uid = if let Some(name) = cfg.user {
+        Some(mandate(get_uid(&name)?, format!("Unknown user {}", &name))?)
+    } else {
+        None
+    };
+
+    let gid = if let Some(name) = cfg.group {
+        Some(mandate(get_gid(&name)?, format!("Unknown group {}", &name))?)
+    } else {
+        None
+    };
+
+    to_crush_error(nix::unistd::chown(&file, uid, gid))?;
+
+    context
+        .output
+        .send(Value::Empty())
 }
 
 #[signature(
@@ -156,7 +238,6 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
     for cl in classes {
         match adjustments {
             Add => {
-                println!("Add {} << {}", modes, cl);
                 // Add new bits
                 current |= (modes << cl);
             },
