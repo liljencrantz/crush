@@ -174,7 +174,7 @@ fn invoke_value(
                     invoke_command(
                         context
                             .env
-                            .global_static_cmd(vec!["global", "traversal", "cd"])?,
+                            .global_static_cmd(vec!["global", "fs", "cd"])?,
                         None,
                         vec![ArgumentDefinition::unnamed(ValueDefinition::Value(
                             Value::File(f),

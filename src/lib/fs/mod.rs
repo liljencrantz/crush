@@ -92,7 +92,7 @@ members of a value, write "dir <value>".
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
-        "traversal",
+        "fs",
         Box::new(move |env| {
             find::Find::declare(env)?;
             env.declare_command(

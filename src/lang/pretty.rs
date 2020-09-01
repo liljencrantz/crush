@@ -15,6 +15,7 @@ use std::cmp::max;
 use std::io::{BufReader, Read};
 use std::thread;
 use chrono::Duration;
+use crate::util::hex::to_hex;
 
 pub fn create_pretty_printer(printer: Printer) -> ValueSender {
     let (o, i) = channels();
@@ -36,13 +37,6 @@ pub struct PrettyPrinter {
     printer: Printer,
 }
 
-pub fn hex(v: u8) -> String {
-    let arr = vec![
-        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f",
-    ];
-    format!("{}{}", arr[(v >> 4) as usize], arr[(v & 15) as usize])
-}
-
 fn is_printable(v: u8) -> bool {
     v >= 0x20 && v <= 0x7e
 }
@@ -56,7 +50,7 @@ fn printable(v: u8) -> String {
 }
 
 fn format_binary_chunk(c: &[u8]) -> String {
-    let hex = c.iter().map(|u| hex(*u)).collect::<Vec<String>>().join("");
+    let hex = c.iter().map(|u| to_hex(*u)).collect::<Vec<String>>().join("");
     let printable = c
         .iter()
         .map(|u| printable(*u))

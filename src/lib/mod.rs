@@ -16,6 +16,7 @@ mod constants;
 mod control;
 #[cfg(target_os = "linux")]
 mod dbus;
+mod fd;
 mod host;
 mod io;
 mod math;
@@ -26,7 +27,7 @@ mod remote;
 mod stream;
 #[cfg(target_os = "linux")]
 mod systemd;
-mod traversal;
+mod fs;
 pub mod types;
 mod user;
 mod var;
@@ -93,7 +94,7 @@ fn load_external_namespace(
 pub fn declare(root: &Scope, printer: &Printer, threads: &ThreadStore, output: &ValueSender) -> CrushResult<()> {
     comp::declare(root)?;
     cond::declare(root)?;
-    traversal::declare(root)?;
+    fs::declare(root)?;
     var::declare(root)?;
     stream::declare(root)?;
     types::declare(root)?;
@@ -102,6 +103,7 @@ pub fn declare(root: &Scope, printer: &Printer, threads: &ThreadStore, output: &
     io::declare(root)?;
     control::declare(root)?;
     constants::declare(root)?;
+    fd::declare(root)?;
     math::declare(root)?;
     user::declare(root)?;
     remote::declare(root)?;

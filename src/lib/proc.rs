@@ -11,7 +11,7 @@ use lazy_static::lazy_static;
 use nix::sys::signal;
 use nix::unistd::{Pid, Uid};
 use psutil::process::os::unix::ProcessExt;
-use psutil::process::{Process, ProcessResult, Status};
+use psutil::process::{Process, ProcessResult, Status, ProcessError, OpenFile};
 use signature::signature;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -75,6 +75,13 @@ fn ps(context: CommandContext) -> CrushResult<()> {
 
 fn ps_internal(proc: ProcessResult<Process>, users: &HashMap<Uid, String>) -> ProcessResult<Row> {
     let proc = proc?;
+    match proc.open_files() {
+        Ok(e) => {
+            println!("{:?}", e.iter().map(|f| (f.path.to_str().unwrap_or("?").to_string(), f.fd.unwrap_or(0))).collect::<Vec<_>>());
+        },
+        Err(_) => {},
+    }
+
     Ok(Row::new(vec![
         Value::Integer(proc.pid() as i128),
         Value::Integer(proc.ppid()?.unwrap_or(0) as i128),

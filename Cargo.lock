@@ -311,6 +311,7 @@ dependencies = [
  "crossbeam 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "dbus 0.8.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "dirs 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dns-lookup 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "float-ord 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lalrpop 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lalrpop-util 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -430,6 +431,16 @@ dependencies = [
 name = "discard"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "dns-lookup"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "libc 0.2.76 (registry+https://github.com/rust-lang/crates.io-index)",
+ "socket2 0.3.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "winapi 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "doc-comment"
@@ -2332,6 +2343,7 @@ dependencies = [
 "checksum dirs 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "13aea89a5c93364a98e9b37b2fa237effbb694d5cfe01c5b70941f7eb087d5e3"
 "checksum dirs-sys 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "afa0b23de8fd801745c471deffa6e12d248f962c9fd4b4c33787b055599bde7b"
 "checksum discard 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)" = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
+"checksum dns-lookup 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)" = "4cbea23c15f7e685a7ad01c994407f3849fa7c88556aaafe4054215b6df93f78"
 "checksum doc-comment 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 "checksum docopt 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7f525a586d310c87df72ebcd98009e57f1cc030c8c268305287a476beb653969"
 "checksum dtoa 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)" = "4358a9e11b9a09cf52383b451b49a169e8d797b68aa02301ff586d70d9661ea3"

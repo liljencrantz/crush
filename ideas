@@ -67,9 +67,12 @@ Maybe unset should be an operator, so that we don't have to quote the variable n
 sticky bits support for chmod
 recursive chmod
 recursive chown
-open file commands, e.g. list all open fds, list sockets, list all fds of user, of process, etc.
+open file command
+open sockets command
 remote:exec should use the thread store
 Fix echo-command in pup-mode.
+Threads command, shows all threads on the system
+watch command
 
 Time to figure out tab completion.
 This will eventually require a parser that can parse broken and incomplete input and return some kind of best guess.
