@@ -77,7 +77,7 @@ fn aggregate(
                     let local_printer = printer.clone();
                     let local_threads = threads.clone();
                     let local_scope = scope.clone();
-                    threads.spawn("group-aggr", move ||
+                    threads.spawn("group:aggr", move ||
                         local_command.invoke(CommandContext {
                             input: input_receiver,
                             output: output_sender,
@@ -127,7 +127,7 @@ fn create_worker_thread(
     let my_destination = destination.clone();
     let my_threads = threads.clone();
     threads.spawn(
-        "group-worker",
+        "group:collect",
         move || {
             let local_printer = my_printer.clone();
             local_printer.handle_error(aggregate(

@@ -51,14 +51,14 @@ fn sudo(context: CommandContext) -> CrushResult<()> {
     serialize(&Value::Command(cfg.command), &mut serialized)?;
     let threads = context.threads.clone();
 
-    threads.spawn("sudo-stdin", move || {
+    threads.spawn("sudo:stdin", move || {
         stdin.write(&serialized)?;
         Ok(())
     })?;
 
     let mut stdout = mandate(child.stdout.take(), "Expected output stream")?;
     let env = context.scope.clone();
-    threads.spawn("sudo-stdout", move || {
+    threads.spawn("sudo:stdout", move || {
         let mut buff = Vec::new();
         stdout.read_to_end(&mut buff);
         if buff.len() == 0 {
@@ -71,7 +71,7 @@ fn sudo(context: CommandContext) -> CrushResult<()> {
     })?;
 
     let mut stderr = mandate(child.stderr.take(), "Expected error stream")?;
-    threads.spawn("sudo-stderr", move || {
+    threads.spawn("sudo:stderr", move || {
         let mut buff = Vec::new();
         stderr.read_to_end(&mut buff);
         let errors = to_crush_error(String::from_utf8(buff))?;
