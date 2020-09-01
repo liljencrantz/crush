@@ -54,7 +54,7 @@ fn sudo(context: CommandContext) -> CrushResult<()> {
     threads.spawn("sudo-stdin", move || {
         stdin.write(&serialized)?;
         Ok(())
-    });
+    })?;
 
     let mut stdout = mandate(child.stdout.take(), "Expected output stream")?;
     let env = context.scope.clone();
@@ -68,7 +68,7 @@ fn sudo(context: CommandContext) -> CrushResult<()> {
                 .output
                 .send(deserialize(&buff, &env)?)
         }
-    });
+    })?;
 
     let mut stderr = mandate(child.stderr.take(), "Expected error stream")?;
     threads.spawn("sudo-stderr", move || {
@@ -82,7 +82,7 @@ fn sudo(context: CommandContext) -> CrushResult<()> {
             }
         }
         Ok(())
-    });
+    })?;
 
     child.wait();
     Ok(())

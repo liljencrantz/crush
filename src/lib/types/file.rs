@@ -14,9 +14,7 @@ use crate::lang::argument::ArgumentHandler;
 use std::collections::HashSet;
 use crate::lib::types::file::PermissionAdjustment::{Add, Remove, Set};
 use std::os::unix::fs::PermissionsExt;
-use std::ffi::CStr;
-use users::{uid_t, gid_t};
-use nix::unistd::{Uid, Gid};
+use crate::util::user_map::{get_uid, get_gid};
 
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
@@ -81,48 +79,6 @@ struct Chown {
     user: Option<String>,
     #[description("the owning group for the file.")]
     group: Option<String>,
-}
-
-unsafe fn parse(s: *const i8) -> CrushResult<String> {
-    Ok(to_crush_error(CStr::from_ptr(s).to_str())?.to_string())
-}
-
-fn get_uid(target_username: &str) -> CrushResult<Option<Uid>> {
-    unsafe {
-        nix::libc::setpwent();
-        loop {
-            let passwd = nix::libc::getpwent();
-            if passwd.is_null() {
-                break;
-            }
-            let pw_username = parse((*passwd).pw_name)?;
-            if pw_username == target_username {
-                nix::libc::endpwent();
-                return Ok(Some(Uid::from_raw((*passwd).pw_uid)));
-            }
-        }
-        nix::libc::endpwent();
-    }
-    Ok(None)
-}
-
-fn get_gid(target_groupname: &str) -> CrushResult<Option<Gid>> {
-    unsafe {
-        nix::libc::setgrent();
-        loop {
-            let grp = nix::libc::getgrent();
-            if grp.is_null() {
-                break;
-            }
-            let gr_groupname = parse((*grp).gr_name)?;
-            if gr_groupname == target_groupname {
-                nix::libc::endgrent();
-                return Ok(Some(Gid::from_raw((*grp).gr_gid)));
-            }
-        }
-        nix::libc::endgrent();
-    }
-    Ok(None)
 }
 
 pub fn chown(context: CommandContext) -> CrushResult<()> {

@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::fmt::{Display};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum CrushError {
     InvalidArgument(String),
     InvalidData(String),

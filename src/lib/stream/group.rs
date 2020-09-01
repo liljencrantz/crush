@@ -86,7 +86,7 @@ fn aggregate(
                             this: None,
                             printer: local_printer,
                             threads: local_threads,
-                        }));
+                        }))?;
                     receivers.push(output_receiver);
                 }
 

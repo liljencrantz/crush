@@ -22,7 +22,7 @@ use std::net::TcpStream;
 use std::path::PathBuf;
 use std::thread;
 use std::thread::JoinHandle;
-use users::get_current_username;
+use crate::util::user_map::get_current_username;
 
 lazy_static! {
     static ref IDENTITY_OUTPUT_TYPE: Vec<ColumnType> = vec![
@@ -45,17 +45,8 @@ fn parse(
         username = tmp.next().unwrap().to_string();
         host = tmp.next().unwrap().to_string();
     } else {
-        username = default_username.clone().unwrap_or(
-            mandate(
-                mandate(
-                    get_current_username(),
-                    "Could not determine current username",
-                )?
-                .to_str(),
-                "Invalid username",
-            )?
-            .to_string(),
-        );
+        username = default_username.clone()
+            .unwrap_or(get_current_username()?);
     }
 
     let port: u16;
@@ -138,10 +129,10 @@ fn run_remote(
 }
 
 #[signature(
-    exec,
-    can_block = true,
-    short = "Execute a command on a host",
-    long = "    Execute the specified command on the soecified host"
+exec,
+can_block = true,
+short = "Execute a command on a host",
+long = "    Execute the specified command on the soecified host"
 )]
 struct Exec {
     #[description("the command to execute.")]
@@ -184,10 +175,10 @@ fn exec(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    pexec,
-    can_block = true,
-    short = "Execute a command on a set of hosts",
-    long = "    Execute the specified command all specified hosts"
+pexec,
+can_block = true,
+short = "Execute a command on a set of hosts",
+long = "    Execute the specified command all specified hosts"
 )]
 struct Pexec {
     #[description("the command to execute.")]
@@ -235,8 +226,6 @@ fn pexec(context: CommandContext) -> CrushResult<()> {
     drop(host_send);
 
     let thread_count = min(cfg.parallel as usize, cfg.host.len());
-    let mut threads: Vec<JoinHandle<std::result::Result<(), CrushError>>> =
-        Vec::with_capacity(thread_count);
     for _ in 0..thread_count {
         let my_recv = host_recv.clone();
         let my_send = result_send.clone();
@@ -248,27 +237,24 @@ fn pexec(context: CommandContext) -> CrushResult<()> {
         let my_ignore_host_file = cfg.ignore_host_file;
         let my_allow_not_found = cfg.allow_not_found;
 
-        let t: JoinHandle<std::result::Result<(), CrushError>> = to_crush_error(
-            thread::Builder::new()
-                .name("remote:pexec".to_string())
-                .spawn(move || {
-                    while let Ok(host) = my_recv.recv() {
-                        let res = run_remote(
-                            &my_buf,
-                            &my_env,
-                            host.clone(),
-                            &my_username,
-                            &my_password,
-                            &my_host_file,
-                            my_ignore_host_file,
-                            my_allow_not_found,
-                        )?;
-                        to_crush_error(my_send.send((host, res)))?;
-                    }
-                    Ok(())
-                }),
-        )?;
-        threads.push(t);
+        let t = context.threads.spawn(
+            "remote:pexec",
+            move || {
+                while let Ok(host) = my_recv.recv() {
+                    let res = run_remote(
+                        &my_buf,
+                        &my_env,
+                        host.clone(),
+                        &my_username,
+                        &my_password,
+                        &my_host_file,
+                        my_ignore_host_file,
+                        my_allow_not_found,
+                    )?;
+                    to_crush_error(my_send.send((host, res)))?;
+                }
+                Ok(())
+            })?;
     }
 
     drop(result_send);
@@ -279,17 +265,6 @@ fn pexec(context: CommandContext) -> CrushResult<()> {
 
     while let Ok((host, val)) = result_recv.recv() {
         output.send(Row::new(vec![Value::String(host), val]))?;
-    }
-
-    for t in threads {
-        match t.join() {
-            Ok(res) => {
-                res?;
-            }
-            Err(_) => {
-                return error("Unknown error while waiting for thread in remote:exec");
-            }
-        }
     }
 
     Ok(())

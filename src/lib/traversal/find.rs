@@ -5,8 +5,6 @@ use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
 
 use chrono::{DateTime, Local};
-use users::uid_t;
-use users::User;
 
 use lazy_static::lazy_static;
 
@@ -17,14 +15,16 @@ use crate::lang::execution_context::CommandContext;
 use crate::lang::files::Files;
 use crate::lang::stream::OutputStream;
 use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value::ValueType};
-use crate::util::user_map::{create_user_map, UserMap};
+use crate::util::user_map::{create_user_map, create_group_map};
 use signature::signature;
 use std::os::unix::fs::PermissionsExt;
+use nix::unistd::{Uid, Gid};
 
 lazy_static! {
     static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
         ColumnType::new("permissions", ValueType::String),
         ColumnType::new("user", ValueType::String),
+        ColumnType::new("group", ValueType::String),
         ColumnType::new("size", ValueType::Integer),
         ColumnType::new("modified", ValueType::Time),
         ColumnType::new("type", ValueType::String),
@@ -41,7 +41,7 @@ fn format_permissions(mode: u32) -> String {
         res.push(if (rwx & 4) != 0 { 'r' } else { '-' });
         res.push(if (rwx & 2) != 0 { 'w' } else { '-' });
         res.push(
-            match (sticky, set_owner, (rwx & 2) != 0) {
+            match (sticky, set_owner, (rwx & 1) != 0) {
                 (false, false, false) => '-',
                 (false, false, true) => 'x',
                 (false, true, false) => 'S',
@@ -58,7 +58,8 @@ fn format_permissions(mode: u32) -> String {
 fn insert_entity(
     meta: &Metadata,
     file: PathBuf,
-    users: &HashMap<uid_t, User>,
+    users: &HashMap<Uid, String>,
+    groups: &HashMap<Gid, String>,
     output: &mut OutputStream,
 ) -> CrushResult<()> {
     let mode = meta.permissions().mode();
@@ -82,7 +83,8 @@ fn insert_entity(
 
     output.send(Row::new(vec![
         Value::String(permissions),
-        users.get_name(meta.uid()),
+        users.get(&Uid::from_raw(meta.uid())).map(|n| Value::string(n)).unwrap_or_else(|| Value::string("?")),
+        groups.get(&Gid::from_raw(meta.gid())).map(|n| Value::string(n)).unwrap_or_else(|| Value::string("?")),
         Value::Integer(i128::from(meta.len())),
         Value::Time(modified_datetime),
         Value::string(type_str),
@@ -93,7 +95,8 @@ fn insert_entity(
 
 fn run_for_single_directory_or_file(
     path: PathBuf,
-    users: &HashMap<uid_t, User>,
+    users: &HashMap<Uid, String>,
+    groups: &HashMap<Gid, String>,
     recursive: bool,
     q: &mut VecDeque<PathBuf>,
     output: &mut OutputStream,
@@ -105,7 +108,8 @@ fn run_for_single_directory_or_file(
             insert_entity(
                 &to_crush_error(entry.metadata())?,
                 entry.path(),
-                &users,
+                users,
+                groups,
                 output,
             )?;
             if recursive
@@ -118,7 +122,7 @@ fn run_for_single_directory_or_file(
     } else {
         match path.file_name() {
             Some(_) => {
-                insert_entity(&to_crush_error(path.metadata())?, path, &users, output)?;
+                insert_entity(&to_crush_error(path.metadata())?, path, users, groups, output)?;
             }
             None => {
                 return error("Invalid file name");
@@ -147,7 +151,8 @@ fn find(context: CommandContext) -> CrushResult<()> {
     } else {
         vec![PathBuf::from(".")]
     };
-    let users = create_user_map();
+    let users = create_user_map()?;
+    let groups = create_group_map()?;
     let mut q = VecDeque::new();
     q.extend(dir.drain(..));
     loop {
@@ -156,7 +161,7 @@ fn find(context: CommandContext) -> CrushResult<()> {
         }
         let dir = q.pop_front().unwrap();
         let _ =
-            run_for_single_directory_or_file(dir, &users, config.recursive, &mut q, &mut output);
+            run_for_single_directory_or_file(dir, &users, &groups, config.recursive, &mut q, &mut output);
     }
     Ok(())
 }

@@ -4,13 +4,13 @@ use crate::lang::execution_context::CommandContext;
 use crate::lang::data::scope::Scope;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::value::{Value, ValueType};
-use users::get_current_username;
 use signature::signature;
 use std::ffi::CStr;
 use crate::lang::argument::ArgumentHandler;
 use std::path::PathBuf;
 use crate::lang::{data::table::ColumnType, data::table::Row};
 use lazy_static::lazy_static;
+use crate::util::user_map::get_current_username;
 
 #[signature(
 me,
@@ -21,16 +21,7 @@ struct Me {}
 
 fn me(context: CommandContext) -> CrushResult<()> {
     unsafe {
-        context.output.send(search(
-            mandate(
-                mandate(
-                    get_current_username(),
-                    "Could not determine current username",
-                )?
-                    .to_str(),
-                "Invalid username",
-            )?.to_string()
-        )?)
+        context.output.send(search(get_current_username()?.clone())?)
     }
 }
 
@@ -77,28 +68,6 @@ fn list(context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
-
-#[signature(
-find,
-can_block = false,
-short = "find a user by name",
-)]
-struct Find {
-    #[description("the of the user to find.")]
-    name: String,
-}
-
-fn find(context: CommandContext) -> CrushResult<()> {
-    let cfg: Find = Find::parse(context.arguments, &context.printer)?;
-    unsafe {
-        context.output.send(search(cfg.name)?)
-    }
-}
-
-unsafe fn parse(s: *const i8) -> CrushResult<String> {
-    Ok(to_crush_error(CStr::from_ptr(s).to_str())?.to_string())
-}
-
 unsafe fn search(input_name: String) -> CrushResult<Value> {
     nix::libc::setpwent();
     loop {
@@ -126,6 +95,29 @@ unsafe fn search(input_name: String) -> CrushResult<Value> {
         }
     }
 }
+
+
+#[signature(
+find,
+can_block = false,
+short = "find a user by name",
+)]
+struct Find {
+    #[description("the of the user to find.")]
+    name: String,
+}
+
+fn find(context: CommandContext) -> CrushResult<()> {
+    let cfg: Find = Find::parse(context.arguments, &context.printer)?;
+    unsafe {
+        context.output.send(search(cfg.name)?)
+    }
+}
+
+unsafe fn parse(s: *const i8) -> CrushResult<String> {
+    Ok(to_crush_error(CStr::from_ptr(s).to_str())?.to_string())
+}
+
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(

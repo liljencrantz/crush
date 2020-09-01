@@ -4,18 +4,17 @@ use crate::lang::errors::{error, to_crush_error, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, CommandContext};
 use crate::lang::data::scope::Scope;
 use crate::lang::data::table::ColumnType;
-use crate::util::user_map::{create_user_map, UserMap};
+use crate::util::user_map::create_user_map;
 use crate::{data::table::Row, lang::value::Value, lang::value::ValueType};
 use chrono::Duration;
 use lazy_static::lazy_static;
 use nix::sys::signal;
-use nix::unistd::Pid;
+use nix::unistd::{Pid, Uid};
 use psutil::process::os::unix::ProcessExt;
 use psutil::process::{Process, ProcessResult, Status};
 use signature::signature;
 use std::collections::HashMap;
 use std::str::FromStr;
-use users::{uid_t, User};
 
 lazy_static! {
     static ref PS_OUTPUT_TYPE: Vec<ColumnType> = vec![
@@ -61,7 +60,7 @@ fn state_name(s: Status) -> &'static str {
 fn ps(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     let output = context.output.initialize(PS_OUTPUT_TYPE.clone())?;
-    let users = create_user_map();
+    let users = create_user_map()?;
 
     match psutil::process::processes() {
         Ok(procs) => {
@@ -74,13 +73,13 @@ fn ps(context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
-fn ps_internal(proc: ProcessResult<Process>, users: &HashMap<u32, User>) -> ProcessResult<Row> {
+fn ps_internal(proc: ProcessResult<Process>, users: &HashMap<Uid, String>) -> ProcessResult<Row> {
     let proc = proc?;
     Ok(Row::new(vec![
         Value::Integer(proc.pid() as i128),
         Value::Integer(proc.ppid()?.unwrap_or(0) as i128),
         Value::string(state_name(proc.status()?)),
-        users.get_name(proc.uids()?.effective as uid_t),
+        users.get(&nix::unistd::Uid::from_raw(proc.uids()?.effective)).map(|s| Value::string(s)).unwrap_or_else(|| Value::string("?")),
         Value::Duration(Duration::microseconds(
             proc.cpu_times()?.busy().as_micros() as i64
         )),
