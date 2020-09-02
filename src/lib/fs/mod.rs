@@ -9,32 +9,42 @@ use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use crate::util::file::{cwd, home};
 use std::path::PathBuf;
+use signature::signature;
+use crate::lang::files::Files;
 
 mod find;
 
-pub fn cd(context: CommandContext) -> CrushResult<()> {
-    let dir = match context.arguments.len() {
-        0 => home(),
-        1 => {
-            let dir = &context.arguments[0];
-            match &dir.value {
-                Value::String(val) => Ok(PathBuf::from(val)),
-                Value::File(val) => Ok(val.clone()),
-                Value::Glob(val) => val.glob_to_single_file(&cwd()?),
-                _ => error(
-                    format!(
-                        "Wrong parameter type, expected text or file, found {}",
-                        &dir.value.value_type().to_string()
-                    )
-                    .as_str(),
-                ),
-            }
-        }
-        _ => error("Wrong number of arguments"),
-    }?;
-    context.output.send(Value::Empty())?;
-    to_crush_error(std::env::set_current_dir(dir))
+#[signature(
+cd,
+can_block=false,
+output = Known(ValueType::Empty),
+short = "Change to the specified working directory.",
+)]
+pub struct Cd {
+    #[unnamed()]
+    #[description("the new working directory.")]
+    destination: Files,
 }
+
+pub fn cd(context: CommandContext) -> CrushResult<()> {
+    let cfg: Cd = Cd::parse(context.arguments, &context.printer)?;
+
+    let dir = match cfg.destination.had_entries() {
+        true => cfg.destination.into_file(),
+        false => home(),
+    }?;
+
+    to_crush_error(std::env::set_current_dir(dir))?;
+    context.output.send(Value::Empty())
+}
+
+#[signature(
+pwd,
+can_block=false,
+output = Known(ValueType::File),
+short = "Return the current working directory.",
+)]
+pub struct Pwd {}
 
 pub fn pwd(context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::File(cwd()?))
@@ -55,9 +65,24 @@ fn halp(o: &dyn Help, printer: &Printer) {
     );
 }
 
+#[signature(
+help,
+can_block=false,
+output = Known(ValueType::Empty),
+short = "Show help about the specified thing.",
+example = "help ls",
+example = "help integer",
+example = "help help",
+)]
+pub struct HelpSignature {
+    #[description("the topic you want help on.")]
+    topic: Option<Value>,
+}
+
 pub fn help(mut context: CommandContext) -> CrushResult<()> {
-    match context.arguments.len() {
-        0 => {
+    let cfg: HelpSignature = HelpSignature::parse(context.arguments, &context.printer)?;
+    match cfg.topic {
+        None => {
             context.printer.line(
                 r#"
 Welcome to Crush!
@@ -76,8 +101,7 @@ members of a value, write "dir <value>".
             );
             context.output.send(Value::Empty())
         }
-        1 => {
-            let v = context.arguments.value(0)?;
+        Some(v) => {
             match v {
                 Value::Command(cmd) => halp(cmd.help(), &context.printer),
                 Value::Type(t) => halp(&t, &context.printer),
@@ -94,39 +118,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "fs",
         Box::new(move |env| {
             find::Find::declare(env)?;
-            env.declare_command(
-                "cd",
-                cd,
-                true,
-                "cd directory:(file,string,glob)",
-                "Change to the specified working directory",
-                None,
-                Known(ValueType::Empty),
-            )?;
-            env.declare_command(
-                "pwd",
-                pwd,
-                false,
-                "pwd",
-                "Return the current working directory",
-                None,
-                Known(ValueType::File),
-            )?;
-            env.declare_command(
-                "help",
-                help,
-                false,
-                "help topic:any",
-                "Show help about the specified thing",
-                Some(
-                    r#"    Examples:
-
-    help ls
-    help integer
-    help help"#,
-                ),
-                Known(ValueType::Empty),
-            )?;
+            Cd::declare(env)?;
+            Pwd::declare(env)?;
+            HelpSignature::declare(env)?;
             Ok(())
         }),
     )?;
