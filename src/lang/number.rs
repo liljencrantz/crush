@@ -1,8 +1,3 @@
-use crate::lang::value::Value;
-use crate::util::glob::Glob;
-use regex::Regex;
-use std::fmt::{Display, Formatter};
-
 pub enum Number {
     Float(f64),
     Integer(i128),

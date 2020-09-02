@@ -11,7 +11,7 @@ use crate::lang::number::Number;
 
 macro_rules! math_fun {
     ($name:ident, $Signature: ident, $op:expr) => {
-        fn $name(mut context: CommandContext) -> CrushResult<()> {
+        fn $name(context: CommandContext) -> CrushResult<()> {
             let cfg: $Signature = $Signature::parse(context.arguments, &context.printer)?;
             context.output.send(Value::Float($op(cfg.number.as_float())))
         }

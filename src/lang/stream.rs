@@ -61,10 +61,9 @@ pub struct OutputStream {
 
 impl OutputStream {
     pub fn send(&self, row: Row) -> CrushResult<()> {
-        let native_output = self.sender.send(row);
-        match native_output {
+        match self.sender.send(row) {
             Ok(_) => Ok(()),
-            Err(e) => error(e.to_string()),
+            Err(_) => send_error(),
         }
     }
 }

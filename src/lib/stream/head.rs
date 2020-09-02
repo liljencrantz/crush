@@ -2,6 +2,7 @@ use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::execution_context::CommandContext;
 use signature::signature;
 use crate::lang::command::OutputType::Passthrough;
+
 #[signature(
 head,
 can_block = true,
@@ -28,7 +29,6 @@ fn head(context: CommandContext) -> CrushResult<()> {
                 count += 1;
             }
             Ok(())
-
         }
         None => argument_error("Expected a stream"),
     }

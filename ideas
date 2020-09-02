@@ -60,6 +60,7 @@ read equivalent
 A drop command that is the opposite of select, i.e. it drops any columns you mention and keeps the rest
 Is it really a good idea to auto-run commands when they are passed in as named parameters? Might have gone overboard with eager evaluation there...
 Allow simpler column renaming via select, e.g. 'ps|select time=^cpu'
+xml:from/to using html5ever under the hood
 html:from/to using html5ever under the hood
 Add hex and base64 en/decoding methods to the binary/string types
 Add utf-8 and other character encoding methods to the binary/string types
@@ -67,9 +68,6 @@ Maybe unset should be an operator, so that we don't have to quote the variable n
 sticky bits support for chmod
 recursive chmod
 recursive chown
-open file command
-open sockets command
-remote:exec should use the thread store
 Fix echo-command in pup-mode.
 Threads command, shows all threads on the system
 watch command

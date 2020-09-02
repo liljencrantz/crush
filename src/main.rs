@@ -43,10 +43,12 @@ fn run_interactive(
         let readline = rl.readline("crush# ");
 
         match readline {
-            Ok(cmd) if cmd.is_empty() => {}
+            Ok(cmd) if cmd.is_empty() => threads.reap(&printer),
             Ok(cmd) => {
                 rl.add_history_entry(&cmd);
+                threads.reap(&printer);
                 execute::string(global_env.clone(), &cmd, &printer, pretty_printer, threads);
+                threads.reap(&printer);
             }
             Err(ReadlineError::Interrupted) => {
                 printer.line("^C");

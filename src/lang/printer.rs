@@ -13,6 +13,7 @@ enum PrinterMessage {
 use crate::lang::printer::PrinterMessage::*;
 use std::thread::JoinHandle;
 use termion::terminal_size;
+use std::cmp::max;
 
 #[derive(Clone)]
 pub struct Printer {
@@ -69,14 +70,14 @@ impl Printer {
 
     pub fn width(&self) -> usize {
         match terminal_size() {
-            Ok(s) => s.0 as usize,
+            Ok(s) => max(10, s.0 as usize),
             Err(_) => 80,
         }
     }
 
     pub fn height(&self) -> usize {
         match terminal_size() {
-            Ok(s) => s.1 as usize,
+            Ok(s) => max(s.1 as usize, 5),
             Err(_) => 30,
         }
     }
