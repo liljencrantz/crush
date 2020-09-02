@@ -8,6 +8,7 @@ pub mod execution_context;
 pub mod files;
 pub mod help;
 pub mod job;
+pub mod number;
 pub mod ordered_string_map;
 pub mod parser;
 pub mod patterns;

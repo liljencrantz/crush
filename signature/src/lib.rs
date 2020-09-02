@@ -73,6 +73,7 @@ fn extract_type(ty: &Type) -> SignatureResult<(&'static str, Vec<&'static str>)>
                         "Field" => "Field",
                         "Value" => "Value",
                         "Stream" => "Stream",
+                        "Number" => "Number",
                         _ => return fail!(seg.span(), "Unrecognised type"),
                     };
                     Ok((s, extract_argument(&seg.arguments)?))
@@ -327,6 +328,46 @@ fn type_to_value(
                         }
                                                     }),
                     },
+                    assign: quote! {
+                    #name: crate::lang::errors::mandate(
+                        #name,
+                        format!("Missing value for parameter {}", #name_literal).as_str())?,
+                    },
+                })
+            }
+        }
+
+        "Number" => {
+            if !args.is_empty() {
+                fail!(ty.span(), "This type can't be paramterizised")
+            } else {
+                Ok(TypeData {
+                    signature: format!(
+                        "{}=(float|integer)",
+                        name.to_string()
+                    ),
+                    initialize: quote! { let mut #name = None; },
+                    mappings: quote! {
+                        (Some(#name_literal), crate::lang::value::Value::Float(_value)) => #name = Some(Number::Float(_value)),
+                        (Some(#name_literal), crate::lang::value::Value::Integer(_value)) => #name = Some(Number::Integer(_value)),
+                    },
+                    unnamed_mutate: Some(quote! {
+                        if #name.is_none() {
+                            match _unnamed.pop_front() {
+                                Some(crate::lang::value::Value::Float(_value)) => #name = Some(Number::Float(_value)),
+                                Some(crate::lang::value::Value::Integer(_value)) => #name = Some(Number::Integer(_value)),
+                                Some(value) =>
+                                    return crate::lang::errors::argument_error(format!(
+                                        "Expected argument \"{}\" to be a number, was of type {}",
+                                        #name_literal,
+                                        value.value_type().to_string()).as_str()),
+                                _ =>
+                                    return crate::lang::errors::argument_error(format!(
+                                        "No value provided for argument \"{}\"",
+                                        #name_literal).as_str()),
+                             }
+                        }
+                    }),
                     assign: quote! {
                     #name: crate::lang::errors::mandate(
                         #name,

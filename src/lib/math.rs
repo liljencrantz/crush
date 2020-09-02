@@ -6,21 +6,14 @@ use crate::lang::execution_context::CommandContext;
 use crate::lang::data::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
+use signature::signature;
+use crate::lang::number::Number;
 
 macro_rules! math_fun {
-    ($name:ident, $op:expr) => {
+    ($name:ident, $Signature: ident, $op:expr) => {
         fn $name(mut context: CommandContext) -> CrushResult<()> {
-            context.arguments.check_len(1)?;
-            let x = match context.arguments.value(0)? {
-                Value::Float(f) => f,
-                Value::Integer(i) => i as f64,
-                v => {
-                    return argument_error(
-                        &format!("Expected a number, got a {}", v.value_type()),
-                    )
-                }
-            };
-            context.output.send(Value::Float($op(x)))
+            let cfg: $Signature = $Signature::parse(context.arguments, &context.printer)?;
+            context.output.send(Value::Float($op(cfg.number.as_float())))
         }
     };
 }
@@ -52,16 +45,96 @@ macro_rules! math_fun2 {
     };
 }
 
-math_fun!(sin, |x: f64| x.sin());
-math_fun!(cos, |x: f64| x.cos());
-math_fun!(tan, |x: f64| x.tan());
-math_fun!(sqrt, |x: f64| x.sqrt());
-math_fun!(asin, |x: f64| x.asin());
-math_fun!(acos, |x: f64| x.acos());
-math_fun!(atan, |x: f64| x.atan());
-math_fun!(ceil, |x: f64| x.ceil());
-math_fun!(floor, |x: f64| x.floor());
-math_fun!(ln, |x: f64| x.ln());
+#[signature(
+sin,
+output = Known(ValueType::Float),
+short = "The sine of number.")]
+pub struct Sin {
+    number: Number,
+}
+math_fun!(sin, Sin, |x: f64| x.sin());
+
+#[signature(
+cos,
+output = Known(ValueType::Float),
+short = "The cosine of number.")]
+pub struct Cos {
+    number: Number,
+}
+math_fun!(cos, Cos, |x: f64| x.cos());
+
+#[signature(
+tan,
+output = Known(ValueType::Float),
+short = "The tangent of number.")]
+pub struct Tan {
+    number: Number,
+}
+math_fun!(tan, Tan, |x: f64| x.tan());
+
+#[signature(
+sqrt,
+output = Known(ValueType::Float),
+short = "The square root of number.")]
+pub struct Sqrt {
+    number: Number,
+}
+math_fun!(sqrt, Sqrt, |x: f64| x.sqrt());
+
+#[signature(
+asin,
+output = Known(ValueType::Float),
+short = "The arc sine of number.")]
+pub struct ASin {
+    number: Number,
+}
+math_fun!(asin, ASin, |x: f64| x.asin());
+
+#[signature(
+acos,
+output = Known(ValueType::Float),
+short = "The arc cosineof  number.")]
+pub struct ACos {
+    number: Number,
+}
+math_fun!(acos, ACos, |x: f64| x.acos());
+
+#[signature(
+atan,
+output = Known(ValueType::Float),
+short = "The arc tangent of number.")]
+pub struct ATan {
+    number: Number,
+}
+math_fun!(atan, ATan, |x: f64| x.atan());
+
+#[signature(
+ceil,
+output = Known(ValueType::Float),
+short = "The smallest integer larger than number.")]
+pub struct Ceil {
+    number: Number,
+}
+math_fun!(ceil, Ceil, |x: f64| x.ceil());
+
+#[signature(
+floor,
+output = Known(ValueType::Float),
+short = "The largest integer smaller than number.")]
+pub struct Floor {
+    number: Number,
+}
+math_fun!(floor, Floor, |x: f64| x.floor());
+
+#[signature(
+ln,
+output = Known(ValueType::Float),
+short = "The natural logarithm of number.")]
+pub struct Ln {
+    number: Number,
+}
+math_fun!(ln, Ln, |x: f64| x.ln());
+
 math_fun2!(pow, |x: f64, y: f64| x.powf(y));
 math_fun2!(log, |x: f64, y: f64| x.log(y));
 
@@ -69,69 +142,16 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "math",
         Box::new(move |env| {
-            env.declare_command(
-                "sin",
-                sin,
-                false,
-                "math:sin angle:float",
-                "The sine of the specified angle",
-                None,
-                Known(ValueType::Float),
-            )?;
-            env.declare_command(
-                "cos",
-                cos,
-                false,
-                "math:cos angle:float",
-                "The cosine of the specified angle",
-                None,
-                Known(ValueType::Float),
-            )?;
-            env.declare_command(
-                "tan",
-                tan,
-                false,
-                "math:tan angle:float",
-                "The tangent of the specified angle",
-                None,
-                Known(ValueType::Float),
-            )?;
-            env.declare_command(
-                "sqrt",
-                sqrt,
-                false,
-                "math:sqrt angle:float",
-                "The square root of the specified angle",
-                None,
-                Known(ValueType::Float),
-            )?;
-            env.declare_command(
-                "asin",
-                asin,
-                false,
-                "math:asin arc:float",
-                "The inverse sine of the specified arc",
-                None,
-                Known(ValueType::Float),
-            )?;
-            env.declare_command(
-                "acos",
-                acos,
-                false,
-                "math:acos arc:float",
-                "The inverse cosine of the specified arc",
-                None,
-                Known(ValueType::Float),
-            )?;
-            env.declare_command(
-                "atan",
-                atan,
-                false,
-                "math:atan arc:float",
-                "The inverse tangent of the specified arc",
-                None,
-                Known(ValueType::Float),
-            )?;
+            Sin::declare(env)?;
+            Cos::declare(env)?;
+            Tan::declare(env)?;
+            Sqrt::declare(env)?;
+            ASin::declare(env)?;
+            ACos::declare(env)?;
+            ATan::declare(env)?;
+            Ln::declare(env)?;
+            Floor::declare(env)?;
+            Ceil::declare(env)?;
             env.declare_command(
                 "pow",
                 pow,
@@ -147,33 +167,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 false,
                 "math:log number:float base:float",
                 "The logarithm of number in the specified base",
-                None,
-                Known(ValueType::Float),
-            )?;
-            env.declare_command(
-                "ln",
-                ln,
-                false,
-                "math:ln number:float",
-                "The natural logarithm of number",
-                None,
-                Known(ValueType::Float),
-            )?;
-            env.declare_command(
-                "floor",
-                floor,
-                false,
-                "math:floor number:float",
-                "The largest integer smaller than number",
-                None,
-                Known(ValueType::Float),
-            )?;
-            env.declare_command(
-                "ceil",
-                ceil,
-                false,
-                "math:ceil number:float",
-                "The smallest integer larger than number",
                 None,
                 Known(ValueType::Float),
             )?;
