@@ -1,23 +1,31 @@
 use crate::lang::errors::{error, CrushResult};
 use crate::lang::execution_context::CommandContext;
-use crate::lang::stream::{CrushStream, ValueSender};
 use crate::lang::data::table::Row;
+use signature::signature;
+use crate::lang::command::OutputType::Passthrough;
 
-pub fn run(input: &mut dyn CrushStream, sender: ValueSender) -> CrushResult<()> {
-    let output = sender.initialize(input.types().to_vec())?;
-    let mut q: Vec<Row> = Vec::new();
-    while let Ok(row) = input.read() {
-        q.push(row);
-    }
-    while !q.is_empty() {
-        output.send(q.pop().unwrap())?;
-    }
-    Ok(())
+#[signature(
+reverse,
+can_block = true,
+short = "Reverses the order of the rows in the input",
+output = Passthrough)]
+pub struct Reverse {
 }
 
-pub fn reverse(context: CommandContext) -> CrushResult<()> {
+fn reverse(context: CommandContext) -> CrushResult<()> {
+    Reverse::parse(context.arguments.clone(), &context.printer)?;
     match context.input.recv()?.stream() {
-        Some(mut input) => run(input.as_mut(), context.output),
+        Some(mut input) => {
+            let output = context.output.initialize(input.types().to_vec())?;
+            let mut q: Vec<Row> = Vec::new();
+            while let Ok(row) = input.read() {
+                q.push(row);
+            }
+            while !q.is_empty() {
+                output.send(q.pop().unwrap())?;
+            }
+            Ok(())
+        }
         None => error("Expected a stream"),
     }
 }

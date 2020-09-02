@@ -1,4 +1,3 @@
-use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::Command;
 use crate::lang::errors::{mandate, CrushResult};
 use crate::lang::execution_context::CommandContext;
@@ -179,7 +178,7 @@ pub fn group(context: CommandContext) -> CrushResult<()> {
         create_worker_thread(
             &cfg,
             &context.printer, &context.scope, &output,
-            &task_input, &context.threads);
+            &task_input, &context.threads)?;
     }
 
     drop(task_input);

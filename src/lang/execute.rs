@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error, to_crush_error, CrushError, CrushResult};
+use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
 use crate::lang::execution_context::{CommandContext, JobContext};
 use crate::lang::parser::parse;
 use crate::lang::printer::Printer;
@@ -8,7 +8,7 @@ use crate::lang::stream::{channels, empty_channel, ValueSender};
 use crate::lang::value::Value;
 use std::io::Write;
 use std::path::Path;
-use std::{fs, thread};
+use std::{fs};
 use crate::lang::threads::ThreadStore;
 
 pub fn file(
@@ -38,7 +38,7 @@ pub fn pup(env: Scope, buf: &Vec<u8>, printer: &Printer, threads: &ThreadStore) 
                     to_crush_error(std::io::stdout().write(&buf))?;
                     Ok(())
                 },
-            );
+            )?;
 
             cmd.invoke(CommandContext {
                 input: empty_channel(),

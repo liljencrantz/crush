@@ -1,4 +1,3 @@
-use crate::lang::argument::ArgumentHandler;
 use crate::lang::errors::{CrushResult, to_crush_error, argument_error, mandate};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::data::scope::Scope;

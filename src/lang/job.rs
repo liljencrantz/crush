@@ -1,9 +1,8 @@
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::CrushResult;
 use crate::lang::execution_context::{CompileContext, JobContext};
-use crate::lang::printer::Printer;
 use crate::lang::stream::channels;
-use std::thread::{JoinHandle, ThreadId};
+use std::thread::ThreadId;
 use std::fmt::{Display, Formatter};
 
 #[derive(Clone)]

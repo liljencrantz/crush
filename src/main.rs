@@ -19,7 +19,6 @@ use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use std::io::Read;
 use std::path::PathBuf;
-use crate::util::identity_arc::Identity;
 use crate::lang::threads::ThreadStore;
 use lang::data;
 

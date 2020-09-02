@@ -1,12 +1,10 @@
-use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::OutputType::Passthrough;
 use crate::lang::errors::{error, CrushResult};
 use crate::lang::execution_context::CommandContext;
-use crate::lang::stream::CrushStream;
 use crate::lang::data::table::ColumnVec;
 use crate::lang::data::table::Row;
 use crate::lang::value::Field;
-use crate::{lang::errors::argument_error, lang::stream::OutputStream};
+use crate::lang::errors::argument_error;
 use signature::signature;
 
 #[signature(
@@ -18,24 +16,12 @@ use signature::signature;
 pub struct Sort {
     #[description("the column to sort on. Not required if there is only one column.")]
     field: Option<Field>,
+    #[description("if true, reverse sort order.")]
+    #[default(false)]
+    reverse: bool,
 }
 
-pub fn run(idx: usize, input: &mut dyn CrushStream, output: OutputStream) -> CrushResult<()> {
-    let mut res: Vec<Row> = Vec::new();
-    while let Ok(row) = input.read() {
-        res.push(row);
-    }
-
-    res.sort_by(|a, b| a.cells()[idx].partial_cmp(&b.cells()[idx]).expect("OH NO!"));
-
-    for row in res {
-        output.send(row)?;
-    }
-
-    Ok(())
-}
-
-pub fn sort(context: CommandContext) -> CrushResult<()> {
+fn sort(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream() {
         Some(mut input) => {
             let output = context.output.initialize(input.types().to_vec())?;
@@ -52,7 +38,27 @@ pub fn sort(context: CommandContext) -> CrushResult<()> {
             };
 
             if input.types()[idx].cell_type.is_comparable() {
-                run(idx, input.as_mut(), output)
+                let mut res: Vec<Row> = Vec::new();
+
+                while let Ok(row) = input.read() {
+                    res.push(row);
+                }
+
+                if cfg.reverse {
+                    res.sort_by(|a, b|
+                        b.cells()[idx].partial_cmp(&a.cells()[idx])
+                            .expect("OH NO!"));
+                } else {
+                    res.sort_by(|a, b|
+                        a.cells()[idx].partial_cmp(&b.cells()[idx])
+                            .expect("OH NO!"));
+                }
+
+                for row in res {
+                    output.send(row)?;
+                }
+
+                Ok(())
             } else {
                 argument_error("Bad comparison key")
             }

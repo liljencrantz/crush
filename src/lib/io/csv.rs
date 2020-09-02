@@ -8,7 +8,6 @@ use std::{io::prelude::*, io::BufReader};
 use crate::lang::errors::{error, to_crush_error, CrushResult};
 use crate::lang::data::table::ColumnType;
 
-use crate::lang::argument::ArgumentHandler;
 use crate::lang::files::Files;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::data::scope::ScopeLoader;

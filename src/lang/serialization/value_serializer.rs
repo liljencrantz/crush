@@ -17,7 +17,6 @@ use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt;
 use std::os::unix::ffi::OsStringExt;
 use std::path::PathBuf;
-use regex::internal::Input;
 
 fn serialize_simple(
     value: &Value,

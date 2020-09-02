@@ -11,8 +11,6 @@ use crate::lang::value::ValueType;
 use crate::lang::{data::r#struct::Struct, value::Value};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use signature::signature;
-use crate::lang::argument::ArgumentHandler;
-
 pub mod binary;
 pub mod dict;
 pub mod duration;
@@ -98,7 +96,7 @@ struct Class {
     parent: Option<Struct>,
 }
 
-fn class(mut context: CommandContext) -> CrushResult<()> {
+fn class(context: CommandContext) -> CrushResult<()> {
     let cfg: Class = Class::parse(context.arguments, &context.printer)?;
     let scope = context.scope;
     let parent = cfg.parent.unwrap_or_else(|| scope.root_object());
@@ -122,7 +120,7 @@ struct Convert {
     target_type: ValueType,
 }
 
-pub fn convert(mut context: CommandContext) -> CrushResult<()> {
+pub fn convert(context: CommandContext) -> CrushResult<()> {
     let cfg: Convert = Convert::parse(context.arguments, &context.printer)?;
     context.output.send(cfg.value.convert(cfg.target_type)?)
 }
@@ -138,7 +136,7 @@ struct TypeOf {
     value: Value,
 }
 
-pub fn r#typeof(mut context: CommandContext) -> CrushResult<()> {
+pub fn r#typeof(context: CommandContext) -> CrushResult<()> {
     let cfg: TypeOf = TypeOf::parse(context.arguments, &context.printer)?;
     context.output.send(Value::Type(cfg.value.value_type()))
 }

@@ -755,8 +755,8 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
             let handler = quote! {
 
             #[allow(unused_parens)] // TODO: don't emit unnecessary parenthesis in the first place
-            impl crate::lang::argument::ArgumentHandler for #struct_name {
-                fn declare(env: &mut crate::lang::data::scope::ScopeLoader) -> crate::lang::errors::CrushResult <()> {
+            impl #struct_name {
+                pub fn declare(env: &mut crate::lang::data::scope::ScopeLoader) -> crate::lang::errors::CrushResult <()> {
                     env.declare_command(
                         #command_name, #command_invocation, #can_block,
                         #signature_literal,
@@ -765,7 +765,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                         #output)
                 }
 
-                fn declare_method(env: &mut ordered_map::OrderedMap<std::string::String, crate::lang::command::Command>, path: &Vec<&str>) {
+                pub fn declare_method(env: &mut ordered_map::OrderedMap<std::string::String, crate::lang::command::Command>, path: &Vec<&str>) {
                     let mut full = path.clone();
                     full.push(#command_name);
                     env.insert(#command_name.to_string(),
@@ -774,7 +774,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                                     #signature_literal, #description, #long_description, #output));
                 }
 
-                fn parse(_arguments: Vec<crate::lang::argument::Argument>, _printer: &crate::lang::printer::Printer) -> crate::lang::errors::CrushResult < # struct_name > {
+                pub fn parse(_arguments: Vec<crate::lang::argument::Argument>, _printer: &crate::lang::printer::Printer) -> crate::lang::errors::CrushResult < # struct_name > {
                     use std::convert::TryFrom;
                     # values
                     let mut _unnamed = std::collections::VecDeque::new();

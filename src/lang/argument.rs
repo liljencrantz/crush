@@ -1,11 +1,7 @@
-use crate::lang::command::Command;
 use crate::lang::errors::{argument_error, error, CrushResult};
 use crate::lang::execution_context::CompileContext;
-use crate::lang::printer::Printer;
-use crate::lang::data::scope::ScopeLoader;
 use crate::lang::value::Value;
 use crate::lang::value::ValueDefinition;
-use ordered_map::OrderedMap;
 use std::collections::HashSet;
 
 #[derive(Debug, Clone)]
@@ -181,12 +177,6 @@ pub fn column_names(arguments: &Vec<Argument>) -> Vec<String> {
     }
 
     res
-}
-
-pub trait ArgumentHandler: Sized {
-    fn declare(env: &mut ScopeLoader) -> CrushResult<()>;
-    fn declare_method(env: &mut OrderedMap<String, Command>, path: &Vec<&str>);
-    fn parse(arguments: Vec<Argument>, printer: &Printer) -> CrushResult<Self>;
 }
 
 #[cfg(test)]

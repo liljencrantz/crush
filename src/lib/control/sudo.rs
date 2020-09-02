@@ -1,11 +1,9 @@
-use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::Command;
 use crate::lang::errors::{CrushResult, to_crush_error, mandate, error};
 use crate::lang::execution_context::CommandContext;
 use signature::signature;
 use std::process;
 use crate::lang::value::Value;
-use crate::lang::data::binary::BinaryReader;
 use std::process::Stdio;
 use std::io::{Write, Read};
 use crate::lang::serialization::{serialize, deserialize};
@@ -40,6 +38,7 @@ fn sudo(context: CommandContext) -> CrushResult<()> {
     let mut cmd = process::Command::new("sudo");
     let printer = context.printer.clone();
 
+    cmd.arg("--user").arg(&cfg.user);
     cmd.arg("--").arg("crush").arg("--pup");
     cmd.stdin(Stdio::piped());
     cmd.stdout(Stdio::piped());
@@ -60,7 +59,7 @@ fn sudo(context: CommandContext) -> CrushResult<()> {
     let env = context.scope.clone();
     threads.spawn("sudo:stdout", move || {
         let mut buff = Vec::new();
-        stdout.read_to_end(&mut buff);
+        to_crush_error(stdout.read_to_end(&mut buff))?;
         if buff.len() == 0 {
             error("No value returned")
         } else {
@@ -73,7 +72,7 @@ fn sudo(context: CommandContext) -> CrushResult<()> {
     let mut stderr = mandate(child.stderr.take(), "Expected error stream")?;
     threads.spawn("sudo:stderr", move || {
         let mut buff = Vec::new();
-        stderr.read_to_end(&mut buff);
+        to_crush_error(stderr.read_to_end(&mut buff))?;
         let errors = to_crush_error(String::from_utf8(buff))?;
         for e in errors.split('\n') {
             let err = e.trim();
@@ -84,6 +83,6 @@ fn sudo(context: CommandContext) -> CrushResult<()> {
         Ok(())
     })?;
 
-    child.wait();
+    child.wait()?;
     Ok(())
 }

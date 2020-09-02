@@ -1,4 +1,4 @@
-use crate::lang::argument::{column_names, Argument, ArgumentHandler};
+use crate::lang::argument::{column_names, Argument};
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::*;
 use crate::lang::data::dict::Dict;

@@ -1,4 +1,3 @@
-use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{argument_error, data_error, mandate, CrushResult};
 use crate::lang::data::list::List;

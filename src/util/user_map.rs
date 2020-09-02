@@ -3,7 +3,6 @@ use std::sync::Mutex;
 
 use lazy_static::lazy_static;
 
-use crate::lang::value::Value;
 use nix::unistd::{Uid, Gid, getuid};
 use crate::lang::errors::{CrushResult, to_crush_error, error};
 use std::ffi::CStr;

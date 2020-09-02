@@ -32,17 +32,17 @@ echo "Float comparisons"
 
 echo "Duration comparisons"
 
-(duration:new seconds=1) > (duration:new seconds=2)
-(duration:new seconds=1) < (duration:new seconds=2)
-(duration:new seconds=1) >= (duration:new seconds=2)
-(duration:new seconds=1) <= (duration:new seconds=2)
-(duration:new seconds=1) != (duration:new seconds=2)
-(duration:new seconds=1) == (duration:new seconds=2)
+(duration:of seconds=1) > (duration:of seconds=2)
+(duration:of seconds=1) < (duration:of seconds=2)
+(duration:of seconds=1) >= (duration:of seconds=2)
+(duration:of seconds=1) <= (duration:of seconds=2)
+(duration:of seconds=1) != (duration:of seconds=2)
+(duration:of seconds=1) == (duration:of seconds=2)
 
 echo "Time comparisons"
 
 t1 := (time:now)
-t2 := (time:now + (duration:new seconds=1))
+t2 := (time:now + (duration:of seconds=1))
 t1 > t2
 t1 < t2
 t1 >= t2

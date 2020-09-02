@@ -1,9 +1,8 @@
-use std::thread::{JoinHandle, Thread, ThreadId};
+use std::thread::{JoinHandle, ThreadId};
 use crate::lang::printer::Printer;
 use crate::lang::errors::{to_crush_error, CrushResult};
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::any::Any;
 
 struct ThreadData {
     handle: JoinHandle<CrushResult<()>>,

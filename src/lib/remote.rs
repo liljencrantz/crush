@@ -1,7 +1,6 @@
-use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{error, mandate, to_crush_error, CrushError, CrushResult};
+use crate::lang::errors::{error, mandate, to_crush_error, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::files::Files;
 use crate::lang::patterns::Patterns;
@@ -20,8 +19,6 @@ use std::cmp::min;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::PathBuf;
-use std::thread;
-use std::thread::JoinHandle;
 use crate::util::user_map::get_current_username;
 
 lazy_static! {
@@ -237,7 +234,7 @@ fn pexec(context: CommandContext) -> CrushResult<()> {
         let my_ignore_host_file = cfg.ignore_host_file;
         let my_allow_not_found = cfg.allow_not_found;
 
-        let t = context.threads.spawn(
+        context.threads.spawn(
             "remote:pexec",
             move || {
                 while let Ok(host) = my_recv.recv() {

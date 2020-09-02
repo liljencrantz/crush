@@ -9,7 +9,7 @@ use std::str::FromStr;
 use chrono::{DateTime, Local};
 use regex::Regex;
 
-use crate::lang::errors::{argument_error, mandate, CrushResult, CrushError};
+use crate::lang::errors::{argument_error, mandate, CrushResult};
 use crate::lang::data::r#struct::Struct;
 use crate::lang::data::r#struct::StructReader;
 use crate::lang::data::scope::Scope;

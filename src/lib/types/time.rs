@@ -1,4 +1,3 @@
-use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::TypeMap;
@@ -6,12 +5,10 @@ use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, This};
 use crate::lang::value::ValueType;
 use crate::lang::{execution_context::CommandContext, value::Value};
-use chrono::{Datelike, Local, Timelike, DateTime, NaiveDateTime};
+use chrono::{ Local, DateTime};
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use signature::signature;
-use std::cmp::max;
-use time::PrimitiveDateTime;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "time", name]

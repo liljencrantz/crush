@@ -5,7 +5,6 @@ use crate::{
 };
 use std::io::{BufReader, Write};
 
-use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::errors::{error, mandate, to_crush_error, CrushResult};
 use crate::lang::files::Files;

@@ -5,13 +5,12 @@ use crate::{
 };
 use std::io::{BufReader, Write};
 
-use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::errors::{error, mandate, to_crush_error, CrushResult};
 use crate::lang::files::Files;
 use crate::lang::data::scope::ScopeLoader;
 use crate::lang::data::table::ColumnType;
-use crate::lang::{data::list::List, data::r#struct::Struct, data::table::Table};
+use crate::lang::{data::list::List, data::table::Table};
 use signature::signature;
 use std::collections::HashSet;
 use std::convert::TryFrom;

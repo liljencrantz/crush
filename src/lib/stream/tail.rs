@@ -1,30 +1,39 @@
 use std::collections::VecDeque;
-
-use crate::lang::errors::{error, CrushResult};
-use crate::lang::execution_context::{ArgumentVector, CommandContext};
-use crate::lang::stream::{CrushStream, ValueSender};
+use crate::lang::errors::argument_error;
+use crate::lang::errors::CrushResult;
+use crate::lang::execution_context::CommandContext;
 use crate::lang::data::table::Row;
-
-fn run(lines: i128, input: &mut dyn CrushStream, sender: ValueSender) -> CrushResult<()> {
-    let output = sender.initialize(input.types().to_vec())?;
-    let mut q: VecDeque<Row> = VecDeque::new();
-    while let Ok(row) = input.read() {
-        if q.len() >= lines as usize {
-            q.pop_front();
-        }
-        q.push_back(row);
-    }
-    for row in q.drain(..) {
-        output.send(row)?;
-    }
-    Ok(())
+use signature::signature;
+use crate::lang::command::OutputType::Passthrough;
+#[signature(
+tail,
+can_block = true,
+output = Passthrough,
+short = "Return the last row(s) of the input.",
+)]
+pub struct Tail {
+    #[description("the number of rows to return.")]
+    #[default(10)]
+    rows: i128,
 }
 
-pub fn perform(mut context: CommandContext) -> CrushResult<()> {
-    context.arguments.check_len_range(0, 1)?;
-    let lines = context.arguments.optional_integer(0)?.unwrap_or(10);
+fn tail(context: CommandContext) -> CrushResult<()> {
+    let cfg: Tail = Tail::parse(context.arguments, &context.printer)?;
     match context.input.recv()?.stream() {
-        Some(mut input) => run(lines, input.as_mut(), context.output),
-        None => error("Expected a stream"),
+        Some(mut input) => {
+            let output = context.output.initialize(input.types().to_vec())?;
+            let mut q: VecDeque<Row> = VecDeque::new();
+            while let Ok(row) = input.read() {
+                if q.len() >= cfg.rows as usize {
+                    q.pop_front();
+                }
+                q.push_back(row);
+            }
+            for row in q.drain(..) {
+                output.send(row)?;
+            }
+            Ok(())
+        }
+        None => argument_error("Expected a stream"),
     }
 }

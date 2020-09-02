@@ -8,7 +8,6 @@ use chrono::{DateTime, Local};
 
 use lazy_static::lazy_static;
 
-use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{error, to_crush_error, CrushResult};
 use crate::lang::execution_context::CommandContext;

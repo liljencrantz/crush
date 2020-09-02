@@ -4,7 +4,6 @@ use crate::lang::errors::CrushError;
 use crate::lang::errors::CrushResult;
 use crate::lang::execution_context::{ArgumentVector, CommandContext};
 use crate::lang::printer::Printer;
-use crate::lang::data::r#struct::Struct;
 use crate::lang::stream::CrushStream;
 use crate::lang::stream::OutputStream;
 use crate::lang::data::table::ColumnType;
@@ -160,23 +159,6 @@ fn do_join(
     Ok(())
 }
 
-pub fn run(
-    config: Config,
-    row: Struct,
-    output: OutputStream,
-    printer: &Printer,
-) -> CrushResult<()> {
-    let mut v = row.to_vec();
-    match (
-        v.replace(config.left_table_idx, Value::Integer(0)).stream(),
-        v.replace(config.right_table_idx, Value::Integer(0))
-            .stream(),
-    ) {
-        (Some(mut l), Some(mut r)) => do_join(&config, l.as_mut(), r.as_mut(), &output, printer),
-        _ => panic!("Wrong row format"),
-    }
-}
-
 fn get_output_type(input_type: &[ColumnType], cfg: &Config) -> Result<Vec<ColumnType>, CrushError> {
     let tables: Vec<Option<&Vec<ColumnType>>> = input_type
         .iter()
@@ -200,13 +182,23 @@ fn get_output_type(input_type: &[ColumnType], cfg: &Config) -> Result<Vec<Column
     }
 }
 
-pub fn perform(context: CommandContext) -> CrushResult<()> {
+pub fn join(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()? {
-        Value::Struct(s) => {
-            let cfg = parse(&s.local_signature(), context.arguments)?;
-            let output_type = get_output_type(&s.local_signature(), &cfg)?;
+        Value::Struct(row) => {
+            let config = parse(&row.local_signature(), context.arguments)?;
+            let output_type = get_output_type(&row.local_signature(), &config)?;
             let output = context.output.initialize(output_type)?;
-            run(cfg, s, output, &context.printer)
+
+            let mut v = row.to_vec();
+            match (
+                v.replace(config.left_table_idx, Value::Integer(0)).stream(),
+                v.replace(config.right_table_idx, Value::Integer(0))
+                    .stream(),
+            ) {
+                (Some(mut l), Some(mut r)) => do_join(&config, l.as_mut(), r.as_mut(), &output, &context.printer),
+                _ => return argument_error("Wrong row format"),
+            }
+
         }
         _ => argument_error("Expected a struct"),
     }

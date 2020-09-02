@@ -1,4 +1,3 @@
-use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Passthrough;
 use crate::lang::errors::{error, CrushResult};

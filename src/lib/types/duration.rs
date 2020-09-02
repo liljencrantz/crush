@@ -1,4 +1,3 @@
-use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::command::TypeMap;
@@ -43,7 +42,7 @@ lazy_static! {
             "Divide this duration by the specified divisor",
             None,
             Known(ValueType::Duration));
-        New::declare_method(&mut res, &path);
+        Of::declare_method(&mut res, &path);
         res.declare(
             full("__neg__"), neg, false,
             "neg duration", "Negate this duration", None,
@@ -81,33 +80,33 @@ fn to_duration(a: i64, t: &str) -> CrushResult<chrono::Duration> {
     }
 }
 
-#[signature(new, can_block = false, short = "Create a new duration")]
-struct New {
+#[signature(of, can_block = false, short = "Create a new duration")]
+struct Of {
     #[description("the number of nanoseconds in the duration.")]
-    #[default(0i64)]
+    #[default(0)]
     nanoseconds: i64,
     #[description("the number of microseconds in the duration.")]
-    #[default(0i64)]
+    #[default(0)]
     microseconds: i64,
     #[description("the number of milliseconds in the duration.")]
-    #[default(0i64)]
+    #[default(0)]
     milliseconds: i64,
     #[description("the number of seconds in the duration.")]
-    #[default(0i64)]
+    #[default(0)]
     seconds: i64,
     #[description("the number of minutes in the duration.")]
-    #[default(0i64)]
+    #[default(0)]
     minutes: i64,
     #[description("the number of hours in the duration.")]
-    #[default(0i64)]
+    #[default(0)]
     hours: i64,
     #[description("the number of days in the duration.")]
-    #[default(0i64)]
+    #[default(0)]
     days: i64,
 }
 
-fn new(context: CommandContext) -> CrushResult<()> {
-    let cfg: New = New::parse(context.arguments, &context.printer)?;
+fn of(context: CommandContext) -> CrushResult<()> {
+    let cfg: Of = Of::parse(context.arguments, &context.printer)?;
 
     let res = Duration::nanoseconds(cfg.nanoseconds)
         + Duration::microseconds(cfg.microseconds)

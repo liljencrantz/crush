@@ -1,7 +1,6 @@
-use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{error, to_crush_error, CrushResult};
-use crate::lang::execution_context::{ArgumentVector, CommandContext};
+use crate::lang::execution_context::CommandContext;
 use crate::lang::data::scope::Scope;
 use crate::lang::data::table::ColumnType;
 use crate::util::user_map::create_user_map;
@@ -11,7 +10,7 @@ use lazy_static::lazy_static;
 use nix::sys::signal;
 use nix::unistd::{Pid, Uid};
 use psutil::process::os::unix::ProcessExt;
-use psutil::process::{Process, ProcessResult, Status, ProcessError, OpenFile};
+use psutil::process::{Process, ProcessResult, Status};
 use signature::signature;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -58,7 +57,7 @@ fn state_name(s: Status) -> &'static str {
 }
 
 fn ps(context: CommandContext) -> CrushResult<()> {
-    context.arguments.check_len(0)?;
+    Ps::parse(context.arguments.clone(), &context.printer)?;
     let output = context.output.initialize(PS_OUTPUT_TYPE.clone())?;
     let users = create_user_map()?;
 
@@ -75,12 +74,6 @@ fn ps(context: CommandContext) -> CrushResult<()> {
 
 fn ps_internal(proc: ProcessResult<Process>, users: &HashMap<Uid, String>) -> ProcessResult<Row> {
     let proc = proc?;
-    match proc.open_files() {
-        Ok(e) => {
-            println!("{:?}", e.iter().map(|f| (f.path.to_str().unwrap_or("?").to_string(), f.fd.unwrap_or(0))).collect::<Vec<_>>());
-        },
-        Err(_) => {},
-    }
 
     Ok(Row::new(vec![
         Value::Integer(proc.pid() as i128),

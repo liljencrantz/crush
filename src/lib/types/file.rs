@@ -1,6 +1,6 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{to_crush_error, CrushResult, argument_error, error, mandate};
+use crate::lang::errors::{to_crush_error, CrushResult, argument_error, mandate};
 use crate::lang::execution_context::{CommandContext, This};
 use crate::lang::data::r#struct::Struct;
 use crate::lang::value::Value;
@@ -10,7 +10,6 @@ use ordered_map::OrderedMap;
 use std::fs::metadata;
 use std::os::unix::fs::MetadataExt;
 use signature::signature;
-use crate::lang::argument::ArgumentHandler;
 use std::collections::HashSet;
 use crate::lib::types::file::PermissionAdjustment::{Add, Remove, Set};
 use std::os::unix::fs::PermissionsExt;
@@ -195,7 +194,7 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
         match adjustments {
             Add => {
                 // Add new bits
-                current |= (modes << cl);
+                current |= modes << cl;
             },
             Remove => {
                 // Remove bits
@@ -205,7 +204,7 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
                 // Clear current bits
                 current = current & !(7 << cl);
                 // Add new bits
-                current |= (modes << cl);
+                current |= modes << cl;
             },
         }
     }
@@ -216,10 +215,9 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
 pub fn chmod(context: CommandContext) -> CrushResult<()> {
     let cfg: Chmod = Chmod::parse(context.arguments, &context.printer)?;
     let file = context.this.file()?;
-    let mut metadata = to_crush_error(metadata(&file))?;
+    let metadata = to_crush_error(metadata(&file))?;
 
-    let mut permissions = metadata.permissions();
-    let mut current: u32 = permissions.mode();
+    let mut current: u32 = metadata.permissions().mode();
 
     for perm in cfg.permissions {
         current = apply(&perm, current)?;

@@ -1,4 +1,3 @@
-use crate::lang::argument::ArgumentHandler;
 use crate::lang::errors::{to_crush_error, CrushResult};
 use crate::lang::files::Files;
 use crate::lang::data::scope::ScopeLoader;

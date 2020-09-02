@@ -8,7 +8,6 @@ use crate::lib::types::column_types;
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use signature::signature;
-use crate::lang::argument::ArgumentHandler;
 use crate::lang::ordered_string_map::OrderedStringMap;
 
 lazy_static! {

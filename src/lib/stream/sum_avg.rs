@@ -2,32 +2,22 @@ use crate::lang::errors::{argument_error, error, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::stream::Stream;
 use crate::lang::data::table::ColumnVec;
-use crate::lang::{argument::Argument, data::table::ColumnType};
+use crate::lang::{data::table::ColumnType};
 use crate::lang::{value::Value, value::ValueType};
 use chrono::Duration;
 use float_ord::FloatOrd;
+use signature::signature;
+use crate::lang::value::Field;
 
-fn parse(input_type: &[ColumnType], arguments: &[Argument]) -> CrushResult<usize> {
-    match arguments.len() {
-        0 => {
+fn parse(input_type: &[ColumnType], field: Option<Field>) -> CrushResult<usize> {
+    field.map(|f| input_type.find(&f))
+        .unwrap_or_else(||
             if input_type.len() == 1 {
                 Ok(0)
             } else {
                 error("Specify which column to operate on")
             }
-        }
-        1 => {
-            if let Value::Field(f) = &arguments[0].value {
-                match f.len() {
-                    1 => Ok(input_type.find_str(f[0].as_ref())?),
-                    _ => error("Path contains too many elements"),
-                }
-            } else {
-                error("Unexpected cell type, expected field")
-            }
-        }
-        _ => error("Expected exactly one argument, a field definition"),
-    }
+        )
 }
 
 macro_rules! sum_function {
@@ -49,10 +39,19 @@ sum_function!(sum_int, i128, 0, Integer);
 sum_function!(sum_float, f64, 0.0, Float);
 sum_function!(sum_duration, Duration, Duration::seconds(0), Duration);
 
-pub fn sum(context: CommandContext) -> CrushResult<()> {
+#[signature(
+sum,
+short = "Calculate the sum for the specific column across all rows.",
+example = "ps | sum ^cpu")]
+pub struct Sum {
+    field: Option<Field>,
+}
+
+fn sum(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream() {
         Some(input) => {
-            let column = parse(input.types(), &context.arguments)?;
+            let cfg: Sum = Sum::parse(context.arguments, &context.printer)?;
+            let column = parse(input.types(), cfg.field)?;
             match &input.types()[column].cell_type {
                 ValueType::Integer => context.output.send(sum_int(input, column)?),
                 ValueType::Float => context.output.send(sum_float(input, column)?),
@@ -92,10 +91,19 @@ avg_function!(avg_int, i128, 0, Integer, i128);
 avg_function!(avg_float, f64, 0.0, Float, f64);
 avg_function!(avg_duration, Duration, Duration::seconds(0), Duration, i32);
 
-pub fn avg(context: CommandContext) -> CrushResult<()> {
+#[signature(
+avg,
+short = "Calculate the average for the specific column across all rows.",
+example = "ps | avg ^cpu")]
+pub struct Avg {
+    field: Option<Field>,
+}
+
+fn avg(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream() {
         Some(input) => {
-            let column = parse(input.types(), &context.arguments)?;
+            let cfg: Avg = Avg::parse(context.arguments, &context.printer)?;
+            let column = parse(input.types(), cfg.field)?;
             match &input.types()[column].cell_type {
                 ValueType::Integer => context.output.send(avg_int(input, column)?),
                 ValueType::Float => context.output.send(avg_float(input, column)?),
@@ -148,10 +156,19 @@ aggr_function!(max_float, Float, |a, b| std::cmp::max(
 aggr_function!(max_duration, Duration, |a, b| std::cmp::max(a, b));
 aggr_function!(max_time, Time, |a, b| std::cmp::max(a, b));
 
-pub fn min(context: CommandContext) -> CrushResult<()> {
+#[signature(
+min,
+short = "Calculate the minimum for the specific column across all rows.",
+example = "ps | min ^cpu")]
+pub struct Min {
+    field: Option<Field>,
+}
+
+fn min(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream() {
         Some(input) => {
-            let column = parse(input.types(), &context.arguments)?;
+            let cfg: Min = Min::parse(context.arguments, &context.printer)?;
+            let column = parse(input.types(), cfg.field)?;
             match &input.types()[column].cell_type {
                 ValueType::Integer => context.output.send(min_int(input, column)?),
                 ValueType::Float => context.output.send(min_float(input, column)?),
@@ -166,10 +183,19 @@ pub fn min(context: CommandContext) -> CrushResult<()> {
     }
 }
 
-pub fn max(context: CommandContext) -> CrushResult<()> {
+#[signature(
+max,
+short = "Calculate the maximum for the specific column across all rows.",
+example = "ps | max ^cpu")]
+pub struct Max {
+    field: Option<Field>,
+}
+
+fn max(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream() {
         Some(input) => {
-            let column = parse(input.types(), &context.arguments)?;
+            let cfg: Max = Max::parse(context.arguments, &context.printer)?;
+            let column = parse(input.types(), cfg.field)?;
             match &input.types()[column].cell_type {
                 ValueType::Integer => context.output.send(max_int(input, column)?),
                 ValueType::Float => context.output.send(max_float(input, column)?),

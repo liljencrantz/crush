@@ -13,7 +13,6 @@ mod r#loop;
 mod sudo;
 mod r#while;
 
-use crate::lang::argument::ArgumentHandler;
 use crate::lang::command::OutputType::Known;
 use chrono::Duration;
 use std::path::PathBuf;

@@ -465,7 +465,7 @@ impl Scope {
                                                 //path[1],
                                                  data.name.clone().unwrap(),
                                                 self.id(),
-                                                data.mapping.iter().map(|(k, v)| k.to_string()).collect::<Vec<_>>().join(", "),
+                                                data.mapping.iter().map(|(k, _)| k.to_string()).collect::<Vec<_>>().join(", "),
                                             )
                                         )
                                     }

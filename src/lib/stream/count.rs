@@ -1,23 +1,30 @@
 use crate::lang::errors::{argument_error, CrushResult};
 use crate::lang::execution_context::CommandContext;
-use crate::lang::stream::Stream;
 use crate::lang::value::Value;
+use signature::signature;
+use crate::lang::value::ValueType;
+use crate::lang::command::OutputType::Known;
 
-fn count_rows(mut s: Stream) -> Value {
-    let mut res: i128 = 0;
-    while let Ok(_) = s.read() {
-        res += 1;
-    }
-    Value::Integer(res)
-}
+#[signature(
+    count,
+    short = "Count the number of rows in the input.",
+    output = Known(ValueType::Integer),
+    example = "ps | count # Number of processes on the system")]
+pub struct Count {}
 
-pub fn perform(context: CommandContext) -> CrushResult<()> {
+pub fn count(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Table(r) => context.output.send(Value::Integer(r.rows().len() as i128)),
         Value::List(r) => context.output.send(Value::Integer(r.len() as i128)),
         Value::Dict(r) => context.output.send(Value::Integer(r.len() as i128)),
         v => match v.stream() {
-            Some(readable) => context.output.send(count_rows(readable)),
+            Some(mut input) => {
+                let mut res: i128 = 0;
+                while let Ok(_) = input.read() {
+                    res += 1;
+                }
+                context.output.send(Value::Integer(res))
+            }
             None => argument_error("Expected a stream"),
         },
     }
