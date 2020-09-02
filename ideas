@@ -57,8 +57,6 @@ Extra columns for ps: tty, current CPU usage.
 du-like command for showing disk usage hierachy.
 A grep-command.
 read equivalent
-A drop command that is the opposite of select, i.e. it drops any columns you mention and keeps the rest
-Is it really a good idea to auto-run commands when they are passed in as named parameters? Might have gone overboard with eager evaluation there...
 Allow simpler column renaming via select, e.g. 'ps|select time=^cpu'
 xml:from/to using html5ever under the hood
 html:from/to using html5ever under the hood

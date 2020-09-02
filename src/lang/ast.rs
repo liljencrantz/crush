@@ -82,14 +82,9 @@ pub enum Node {
 
 fn propose_name(name: &str, v: ValueDefinition) -> ValueDefinition {
     match v {
-        ValueDefinition::ClosureDefinition(_, p, j) => {
-            ValueDefinition::ClosureDefinition(Some(name.to_string()), p, j)
-        }
-        ValueDefinition::JobDefinition(d) => ValueDefinition::JobDefinition(d),
-        o => {
-            let j = Job::new(vec![CommandInvocation::new(o, vec![])]);
-            ValueDefinition::JobDefinition(j)
-        }
+        ValueDefinition::ClosureDefinition(_, p, j) =>
+            ValueDefinition::ClosureDefinition(Some(name.to_string()), p, j),
+        _ => v,
     }
 }
 
