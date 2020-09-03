@@ -1,5 +1,5 @@
 use crate::lang::command::{Command, CrushCommand, OutputType};
-use crate::lang::errors::{error, mandate, CrushResult};
+use crate::lang::errors::{error, mandate, CrushResult, argument_error};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::help::Help;
 use crate::lang::data::r#struct::Struct;
@@ -230,6 +230,14 @@ impl Clone for ScopeData {
     }
 }
 
+fn lookup(key: &str, scope: &Scope, data: &MutexGuard<ScopeData>) -> Option<Value> {
+    match key {
+        "__scope__" => Some(Value::Scope(scope.clone())),
+        "__parent_scope__" => Some(Value::Scope(data.parent_scope.clone().unwrap_or(scope.clone()))),
+        _ => data.mapping.get(key).map(|v| v.clone()),
+    }
+}
+
 impl Scope {
     pub fn create_root() -> Scope {
         Scope {
@@ -364,14 +372,15 @@ impl Scope {
         Ok(data)
     }
 
-    pub fn clear(&self) {
-        let mut data = self.lock().unwrap();
+    pub fn clear(&self) -> CrushResult<()> {
+        let mut data = self.lock()?;
         data.mapping.clear();
         data.uses.clear();
+        Ok(())
     }
 
     pub fn full_path(&self) -> CrushResult<Vec<String>> {
-        let data = self.data.lock().unwrap();
+        let data = self.data.lock()?;
         match data.name.clone() {
             None => error("Tried to get full path of anonymous scope"),
             Some(name) => match data.calling_scope.clone() {
@@ -440,30 +449,36 @@ impl Scope {
                     } else {
                         match path.len() {
                             1 => Ok(Value::Scope(self.clone())),
-                            2 => match data.mapping.get(&path[1]) {
-                                Some(v) => Ok(v.clone()),
-                                _ => error(
-                                    format!(
-                                        "Could not find command {} in scope {}",
-                                        path[1], path[0]
+                            2 => {
+                                match lookup(&path[1], self, &data) {
+                                    Some(v) => Ok(v),
+                                    _ => error(
+                                        format!(
+                                            "Could not find command {} in scope {}",
+                                            path[1], path[0]
+                                        )
+                                            .as_str(),
                                     )
-                                        .as_str(),
-                                ),
-                            },
+                                }
+                            }
+
                             _ => {
-                                let s = data.mapping.get(&path[1]).map(Value::clone);
-                                drop(data);
-                                match s {
-                                    Some(Value::Scope(s)) => s.get_recursive(&path[1..]),
-                                    Some(v) => v.get_recursive(&path[1..]),
+                                match lookup(&path[1], self, &data) {
+                                    Some(Value::Scope(s)) => {
+                                        drop(data);
+                                        s.get_recursive(&path[1..])
+                                    }
+                                    Some(v) => {
+                                        drop(data);
+                                        v.get_recursive(&path[1..])
+                                    }
                                     _ => {
-                                        let data = self.lock()?;
                                         error(
                                             format!(
                                                 "Could not find subscope {} in scope {} {}. Candidates are {}",
                                                 path.iter().map(|k| k.to_string()).collect::<Vec<_>>().join(":"),
                                                 //path[1],
-                                                 data.name.clone().unwrap(),
+                                                data.name.clone().unwrap(),
                                                 self.id(),
                                                 data.mapping.iter().map(|(k, _)| k.to_string()).collect::<Vec<_>>().join(", "),
                                             )
@@ -479,6 +494,9 @@ impl Scope {
     }
 
     pub fn declare(&self, name: &str, value: Value) -> CrushResult<()> {
+        if name.starts_with("__") {
+            return argument_error(format!("Illegal operation: Can't declare variables beginning with double underscores. ({})", name));
+        }
         let mut data = self.lock()?;
         if data.is_readonly {
             return error("Scope is read only");
@@ -491,6 +509,9 @@ impl Scope {
     }
 
     pub fn redeclare(&self, name: &str, value: Value) -> CrushResult<()> {
+        if name.starts_with("__") {
+            return argument_error(format!("Illegal operation: Can't redeclare variables beginning with double underscores. ({})", name));
+        }
         let mut data = self.lock()?;
         if data.is_readonly {
             return error("Scope is read only");
@@ -500,6 +521,9 @@ impl Scope {
     }
 
     pub fn set(&self, name: &str, value: Value) -> CrushResult<()> {
+        if name.starts_with("__") {
+            return argument_error(format!("Illegal operation: Can't set variables beginning with double underscores. ({})", name));
+        }
         let mut data = self.lock()?;
         if !data.mapping.contains_key(name) {
             match data.parent_scope.clone() {
@@ -543,6 +567,9 @@ impl Scope {
     }
 
     fn remove_here(&self, key: &str) -> CrushResult<Option<Value>> {
+        if key.starts_with("__") {
+            return argument_error(format!("Illegal operation: Can't remove variables beginning with double underscores. ({})", key));
+        }
         let mut data = self.lock()?;
         if !data.mapping.contains_key(key) {
             match data.parent_scope.clone() {
@@ -562,8 +589,8 @@ impl Scope {
 
     pub fn get(&self, name: &str) -> CrushResult<Option<Value>> {
         let data = self.lock()?;
-        match data.mapping.get(name) {
-            Some(v) => Ok(Some(v.clone())),
+        match lookup(name, self, &data) {
+            Some(v) => Ok(Some(v)),
             None => {
                 let uses = data.uses.clone();
                 drop(data);
@@ -573,11 +600,11 @@ impl Scope {
                     }
                 }
 
-                let data2 = self.lock()?;
+                let data = self.lock()?;
 
-                match data2.parent_scope.clone() {
+                match data.parent_scope.clone() {
                     Some(p) => {
-                        drop(data2);
+                        drop(data);
                         p.get(name)
                     }
                     None => Ok(None),
@@ -591,11 +618,13 @@ impl Scope {
     }
 
     pub fn dump(&self, map: &mut OrderedMap<String, ValueType>) -> CrushResult<()> {
-        if let Some(p) = self.lock()?.parent_scope.clone() {
+        let p = self.lock()?.parent_scope.clone();
+        if let Some(p) = p {
             p.dump(map)?;
         }
 
-        for u in self.lock().unwrap().uses.clone().iter().rev() {
+        let u = self.lock()?.uses.clone();
+        for u in u.iter().rev() {
             u.dump(map)?;
         }
 

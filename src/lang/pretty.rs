@@ -2,7 +2,7 @@ use crate::lang::data::binary::BinaryReader;
 use crate::lang::errors::to_crush_error;
 use crate::lang::data::list::ListReader;
 use crate::lang::printer::Printer;
-use crate::lang::stream::{channels, CrushStream, InputStream, ValueSender};
+use crate::lang::stream::{CrushStream, InputStream, ValueSender, unbounded_channels};
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
 use crate::lang::data::table::Table;
@@ -18,7 +18,7 @@ use chrono::Duration;
 use crate::util::hex::to_hex;
 
 pub fn create_pretty_printer(printer: Printer) -> ValueSender {
-    let (o, i) = channels();
+    let (o, i) = unbounded_channels();
     let printer_clone = printer.clone();
     printer_clone.handle_error(to_crush_error(
         thread::Builder::new()

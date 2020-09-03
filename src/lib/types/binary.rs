@@ -7,6 +7,7 @@ use crate::lang::{execution_context::CommandContext, value::Value};
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use signature::signature;
+
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();

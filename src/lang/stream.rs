@@ -136,6 +136,14 @@ pub fn channels() -> (ValueSender, ValueReceiver) {
     )
 }
 
+pub fn unbounded_channels() -> (ValueSender, ValueReceiver) {
+    let (send, recv) = unbounded();
+    (
+        ValueSender { sender: send },
+        ValueReceiver { receiver: recv },
+    )
+}
+
 pub fn streams(signature: Vec<ColumnType>) -> (OutputStream, InputStream) {
     let (output, input) = bounded(128);
     (
