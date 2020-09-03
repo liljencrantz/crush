@@ -2,7 +2,7 @@ for i=(list:of 1 2) {
     echo i
 }
 
-d := (dict string integer):new
+d := ((dict string integer):new)
 d["fooo"] = 3
 
 for d {
