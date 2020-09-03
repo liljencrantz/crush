@@ -21,43 +21,43 @@ they are quite different, and nearly everything beyond that is different.
 Let's start with two trivial commands; listing files in the current directory,
 and checking how many files are in the current directory:
 
-    crush# ls
-    user         size modified                  type      file
-    liljencrantz 2279 2020-03-07 13:00:33 +0100 file      ideas
-    liljencrantz 4096 2019-11-22 21:56:30 +0100 directory target
+    crush# ll
+    user size modified                  type      file
+    fox  2279 2020-03-07 13:00:33 +0100 file      ideas
+    fox  4096 2019-11-22 21:56:30 +0100 directory target
     ...
     
     crush# ls | count
     14
 
-This all looks familiar. But appearances are deceiving. The `ls` command being
+This all looks familiar. But appearances are deceiving. The `ll` command being
 called is a Crush builtin, and the output is not sent over a unix pipe but over
 a Rush channel. It is not understood by the command as a series of bytes, but as
 a table of rows, and Crush provides you with SQL-like commands to sort, filter,
 aggregate and group rows of data.
 
-    crush# ls | sort ^size
-    user         size  modified                  type      file
-    liljencrantz    31 2019-10-03 13:43:12 +0200 file      .gitignore
-    liljencrantz    75 2020-03-07 17:09:15 +0100 file      build.rs
-    liljencrantz   491 2020-03-07 23:50:08 +0100 file      Cargo.toml
-    liljencrantz   711 2019-10-03 14:19:46 +0200 file      crush.iml
+    crush# ll | sort ^size
+    user size modified                  type      file
+    fox    31 2019-10-03 13:43:12 +0200 file      .gitignore
+    fox    75 2020-03-07 17:09:15 +0100 file      build.rs
+    fox   491 2020-03-07 23:50:08 +0100 file      Cargo.toml
+    fox   711 2019-10-03 14:19:46 +0200 file      crush.iml
     ...
 
-    crush# ls | where {type == "directory"}
-    user         size modified                  type      file
-    liljencrantz 4096 2019-11-22 21:56:30 +0100 directory target
-    liljencrantz 4096 2020-02-22 11:50:12 +0100 directory tests
-    liljencrantz 4096 2020-03-16 14:11:39 +0100 directory .idea
-    liljencrantz 4096 2020-02-15 00:12:18 +0100 directory example_data
-    liljencrantz 4096 2020-03-14 17:34:39 +0100 directory src
-    liljencrantz 4096 2020-03-14 19:44:54 +0100 directory .git
+    crush# ll | where {type == "directory"}
+    user size modified                  type      file
+    fox  4096 2019-11-22 21:56:30 +0100 directory target
+    fox  4096 2020-02-22 11:50:12 +0100 directory tests
+    fox  4096 2020-03-16 14:11:39 +0100 directory .idea
+    fox  4096 2020-02-15 00:12:18 +0100 directory example_data
+    fox  4096 2020-03-14 17:34:39 +0100 directory src
+    fox  4096 2020-03-14 19:44:54 +0100 directory .git
 
 Because Crush output is a stream of rows with columns, actions like sorting by
 an arbitrary column or filtering data based on arbitrary logical expressions
 operating on these columns is easy, and because the components used to do this
 are generic and reusable, you can trivially do the same to data from any source,
-such as json files, http requests, etc.
+such as a process list, a json file, an http request, etc.
 
 ### Reading and writing files
 
@@ -99,8 +99,12 @@ the command will serialize the output to a binary stream as the pipeline
 output:
 
 ```shell script
-crush# list:of 1 2 3 | json:to
-[1,2,3]
+crush# list:of "carrot" "carrot" "acorn" | json:to
+[
+  "carrot",
+  "carrot",
+  "acorn"
+]
 ```
 
 One of the Crush serializers, Pup, is a native file format for Crush. The
@@ -138,7 +142,7 @@ The `and` and `or` operators are used to combine logical expressions:
     
     crush# false or true
     true
-    crush# if some_file:exists and (some_file:stat):is_file {echo "yay"}
+    crush# if (./tree:exists) and ((./tree:stat):is_file) {echo "yay"}
     
 Crush also has operators related to patterns and matching. `=~` and `!~` are
 used to check if a pattern matches an input:

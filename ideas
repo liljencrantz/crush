@@ -63,12 +63,16 @@ html:from/to using html5ever under the hood
 Add hex and base64 en/decoding methods to the binary/string types
 Add utf-8 and other character encoding methods to the binary/string types
 Maybe unset should be an operator, so that we don't have to quote the variable name, which feels inconsistent
+Maybe unset should only be able to delete members of the current scope
 sticky bits support for chmod
 recursive chmod
 recursive chown
 Fix echo-command in pup-mode.
 Threads command, shows all threads on the system
 watch command
+Every scope contains a __scope__ member that points to the scope itself
+Every scope contains a __parent_scope__ member that points to the parent scope (used for variable name resolution). Global points to itself, just like with /.
+Every scope contains a __calling_scope__ member that points to the scope that created this scope (used for loop breaking, etc)
 
 Time to figure out tab completion.
 This will eventually require a parser that can parse broken and incomplete input and return some kind of best guess.
