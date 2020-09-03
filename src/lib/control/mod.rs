@@ -7,19 +7,35 @@ use crate::lang::{
 use signature::signature;
 use std::env;
 
+use crate::lang::command::OutputType::Known;
+use chrono::Duration;
+use std::path::PathBuf;
+
 mod r#for;
 mod r#if;
 mod r#loop;
 mod sudo;
 mod r#while;
 
-use crate::lang::command::OutputType::Known;
-use chrono::Duration;
-use std::path::PathBuf;
+#[signature(
+r#break,
+can_block = false,
+short = "Stop execution of a loop.",
+output = Known(ValueType::Empty))]
+pub struct Break {
+}
 
 pub fn r#break(context: CommandContext) -> CrushResult<()> {
     context.scope.do_break()?;
     context.output.empty()
+}
+
+#[signature(
+r#continue,
+can_block = false,
+short = "Skip execution of the current iteration of a loop.",
+output = Known(ValueType::Empty))]
+pub struct Continue {
 }
 
 pub fn r#continue(context: CommandContext) -> CrushResult<()> {
@@ -121,24 +137,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             )?;
 
             env.declare_command(
-                "break",
-                r#break,
-                false,
-                "break",
-                "Stop execution of a loop",
-                None,
-                Known(ValueType::Empty),
-            )?;
-            env.declare_command(
-                "continue",
-                r#continue,
-                false,
-                "continue",
-                "Skip execution of the current iteration of a loop",
-                None,
-                Known(ValueType::Empty),
-            )?;
-            env.declare_command(
                 "cmd",
                 cmd,
                 true,
@@ -147,6 +145,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 None,
                 Known(ValueType::BinaryStream),
             )?;
+            Break::declare(env)?;
+            Continue::declare(env)?;
             Sleep::declare(env)?;
             Ok(())
         }),
