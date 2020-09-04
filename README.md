@@ -202,6 +202,9 @@ with a floating point number results in a floating point number, for example.
     crush# some_text * some_number
     Error: Can not process arguments of specified type
 
+Variable names beginning with double underscores (`__`) are reserved for internal
+use by Crush. They can not be assigned to.
+
 ### Named and unnamed arguments
 
 Crush supports named and unnamed arguments. It is often possible to use one,

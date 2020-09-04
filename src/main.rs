@@ -7,7 +7,7 @@ mod util;
 
 use rustyline;
 
-use crate::lang::errors::{to_crush_error, CrushResult};
+use crate::lang::errors::{to_crush_error, CrushResult, argument_error};
 use crate::lang::pretty::create_pretty_printer;
 use crate::lang::printer::Printer;
 use lang::data::scope::Scope;
@@ -70,35 +70,55 @@ fn run_interactive(
     Ok(())
 }
 
+#[derive(PartialEq, Eq)]
+enum Mode {
+    Interactive,
+    Pup,
+    File(PathBuf),
+}
+
 fn run() -> CrushResult<()> {
     let global_env = data::scope::Scope::create_root();
-    let (printer, print_handle) = printer::init();
-    let pretty_printer = create_pretty_printer(printer.clone());
     let threads = ThreadStore::new();
-    declare(&global_env, &printer, &threads, &pretty_printer)?;
 
     let my_scope = global_env.create_child(&global_env, false);
 
     let args = std::env::args().collect::<Vec<_>>();
-    match &args[..] {
-        [_exe] => run_interactive(my_scope, &printer, &pretty_printer, &threads)?,
+
+    let mode = match &args[..] {
+        [_exe] => Mode::Interactive,
         [_exe, arg] => {
             if arg == "--pup" {
-                let mut buff = Vec::new();
-                to_crush_error(std::io::stdin().read_to_end(&mut buff))?;
-                execute::pup(my_scope, &buff, &printer, &threads)?;
+                Mode::Pup
             } else {
-                execute::file(
-                    my_scope,
-                    PathBuf::from(&arg).as_path(),
-                    &printer,
-                    &pretty_printer,
-                    &threads,
-                )?
+                Mode::File(PathBuf::from(&arg))
             }
         }
-        _ => {}
+        _ => return argument_error("Invalid input parameters"),
+    };
+
+    let (mut printer, mut print_handle) = if mode == Mode::Pup {printer::noop()} else {printer::init()};
+    let pretty_printer = create_pretty_printer(printer.clone());
+    declare(&global_env, &printer, &threads, &pretty_printer)?;
+
+    match mode {
+        Mode::Interactive => run_interactive(my_scope, &printer, &pretty_printer, &threads)?,
+        Mode::Pup => {
+            let mut buff = Vec::new();
+            to_crush_error(std::io::stdin().read_to_end(&mut buff))?;
+            execute::pup(my_scope, &buff, &printer, &threads)?;
+        }
+        Mode::File(f) => {
+            execute::file(
+                my_scope,
+                f.as_path(),
+                &printer,
+                &pretty_printer,
+                &threads,
+            )?
+        }
     }
+
     threads.join(&printer);
     drop(pretty_printer);
     drop(printer);

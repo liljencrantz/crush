@@ -41,6 +41,20 @@ pub fn init() -> (Printer, JoinHandle<()>) {
     )
 }
 
+pub fn noop() -> (Printer, JoinHandle<()>) {
+    let (sender, receiver) = bounded(128);
+
+    (
+        Printer { sender: sender },
+        thread::Builder::new()
+            .name("printer:noop".to_string())
+            .spawn(move || {
+                while let Ok(message) = receiver.recv() {}
+            })
+            .unwrap(),
+    )
+}
+
 impl Printer {
     pub fn line(&self, line: &str) {
         self.handle_error(to_crush_error(
