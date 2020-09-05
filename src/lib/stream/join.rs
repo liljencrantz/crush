@@ -1,4 +1,3 @@
-use crate::lang::argument::Argument;
 use crate::lang::errors::{argument_error, mandate};
 use crate::lang::errors::CrushError;
 use crate::lang::errors::CrushResult;
@@ -10,8 +9,6 @@ use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::ColumnVec;
 use crate::lang::data::table::Row;
 use crate::lang::value::Value;
-use crate::lang::value::ValueType;
-use crate::util::replace::Replace;
 use std::collections::HashMap;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use signature::signature;

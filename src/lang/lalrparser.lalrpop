@@ -7,6 +7,11 @@ pub JobList: JobListNode = {
     Separator? <l:JobListWithoutSeparator> => l,
 };
 
+pub TokenList: TokenListNode = {
+    => TokenListNode::new(),
+    <mut p:TokenList> <t:Token> => {p.tokens.push(t); p}
+};
+
 JobListWithoutSeparator: JobListNode = {
     => JobListNode {jobs: vec![]},
     <j: NonEmptyJobList> Separator? => j,
@@ -101,6 +106,24 @@ Item: Box<Node> = {
 AnyLabel: String = {
     Label => <>.to_string(),
     <l: QuotedLabel> => l[1..l.len()-1].to_string(),
+}
+
+Token: TokenNode = {
+    LogicalOperator => TokenNode::LogicalOperator(<>.to_string()),
+    UnaryOperator => TokenNode::UnaryOperator(<>.to_string()),
+    Colon => TokenNode::Colon(<>.to_string()),
+    ComparisonOperator => TokenNode::ComparisonOperator(<>.to_string()),
+    FactorOperator => TokenNode::FactorOperator(<>.to_string()),
+    TermOperator => TokenNode::TermOperator(<>.to_string()),
+    QuotedString => TokenNode::QuotedString(<>.to_string()),
+    Label => TokenNode::Label(<>.to_string()),
+    Flag => TokenNode::Flag(<>.to_string()),
+    Field => TokenNode::Field(<>.to_string()),
+    QuotedLabel => TokenNode::QuotedLabel(<>.to_string()),
+    Regex => TokenNode::Regex(<>.to_string()),
+    Separator => TokenNode::Separator(<>.to_string()),
+    Integer => TokenNode::Integer(<>.to_string()),
+    Float => TokenNode::Float(<>.to_string()),
 }
 
 match {

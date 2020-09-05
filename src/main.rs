@@ -77,12 +77,11 @@ enum Mode {
     File(PathBuf),
 }
 
-fn run() -> CrushResult<()> {
-    let global_env = data::scope::Scope::create_root();
-    let threads = ThreadStore::new();
+struct Config {
+    mode: Mode,
+}
 
-    let my_scope = global_env.create_child(&global_env, false);
-
+fn parse_args() -> CrushResult<Config> {
     let args = std::env::args().collect::<Vec<_>>();
 
     let mode = match &args[..] {
@@ -96,12 +95,22 @@ fn run() -> CrushResult<()> {
         }
         _ => return argument_error("Invalid input parameters"),
     };
+    Ok(Config { mode })
+}
 
-    let (mut printer, mut print_handle) = if mode == Mode::Pup {printer::noop()} else {printer::init()};
+fn run() -> CrushResult<()> {
+    let global_env = data::scope::Scope::create_root();
+    let threads = ThreadStore::new();
+
+    let my_scope = global_env.create_child(&global_env, false);
+
+    let config = parse_args()?;
+
+    let (mut printer, mut print_handle) = if config.mode == Mode::Pup { printer::noop() } else { printer::init() };
     let pretty_printer = create_pretty_printer(printer.clone());
     declare(&global_env, &printer, &threads, &pretty_printer)?;
 
-    match mode {
+    match config.mode {
         Mode::Interactive => run_interactive(my_scope, &printer, &pretty_printer, &threads)?,
         Mode::Pup => {
             let mut buff = Vec::new();

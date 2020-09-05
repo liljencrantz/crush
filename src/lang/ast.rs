@@ -480,3 +480,33 @@ impl ParameterNode {
         }
     }
 }
+
+pub struct TokenListNode {
+    pub tokens: Vec<TokenNode>,
+}
+
+impl TokenListNode {
+    pub fn new() -> TokenListNode {
+        TokenListNode {
+            tokens: Vec::new(),
+        }
+    }
+}
+
+pub enum TokenNode {
+    LogicalOperator(String),
+    UnaryOperator(String),
+    Colon(String),
+    ComparisonOperator(String),
+    FactorOperator(String),
+    TermOperator(String),
+    QuotedString(String),
+    Label(String),
+    Flag(String),
+    Field(String),
+    QuotedLabel(String),
+    Regex(String),
+    Separator(String),
+    Integer(String),
+    Float(String),
+}

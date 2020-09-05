@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error, error, to_crush_error, CrushResult};
+use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
 use crate::lang::execution_context::ArgumentVector;
 use crate::lang::execution_context::CommandContext;
 use crate::lang::help::Help;
@@ -8,7 +8,6 @@ use crate::lang::data::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use crate::util::file::{cwd, home};
-use std::path::PathBuf;
 use signature::signature;
 use crate::lang::files::Files;
 
