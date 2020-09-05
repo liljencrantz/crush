@@ -3,7 +3,7 @@ use crate::lang::errors::CrushError;
 use crate::lang::errors::CrushResult;
 use crate::lang::execution_context::{ArgumentVector, CommandContext};
 use crate::lang::printer::Printer;
-use crate::lang::stream::{CrushStream, Stream};
+use crate::lang::stream::Stream;
 use crate::lang::stream::OutputStream;
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::ColumnVec;

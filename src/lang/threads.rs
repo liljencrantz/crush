@@ -40,7 +40,7 @@ impl ThreadStore {
     }
 
     fn exit(&self) {
-        let mut data = self.data.lock().unwrap();
+        let data = self.data.lock().unwrap();
         let _ = data.sender.send(std::thread::current().id());
     }
 
@@ -86,7 +86,7 @@ impl ThreadStore {
     Error report all threads that have already exited
     */
     pub fn reap(&self, printer: &Printer) {
-        let mut data = self.data.lock().unwrap();
+        let data = self.data.lock().unwrap();
         let mut kill_list = Vec::new();
         while let Ok(id) = data.receiver.recv_timeout(Duration::from_nanos(0)) {
             kill_list.push(id);

@@ -493,20 +493,47 @@ impl TokenListNode {
     }
 }
 
-pub enum TokenNode {
-    LogicalOperator(String),
-    UnaryOperator(String),
-    Colon(String),
-    ComparisonOperator(String),
-    FactorOperator(String),
-    TermOperator(String),
-    QuotedString(String),
-    Label(String),
-    Flag(String),
-    Field(String),
-    QuotedLabel(String),
-    Regex(String),
-    Separator(String),
-    Integer(String),
-    Float(String),
+pub enum TokenType {
+    LogicalOperator,
+    UnaryOperator,
+    Colon,
+    AssignmentOperator,
+    ComparisonOperator,
+    FactorOperator,
+    TermOperator,
+    QuotedString,
+    Label,
+    Flag,
+    Field,
+    QuotedLabel,
+    Regex,
+    Separator,
+    Integer,
+    Float,
+/*
+Missing:
+|, @, @@ [] () {}
+ */
+}
+
+pub struct TokenNode {
+    pub token_type: TokenType,
+    pub start: usize,
+    pub end: usize,
+    pub data: String,
+}
+
+impl TokenNode {
+    pub fn new(token_type: TokenType, start: usize, data: &str, end: usize) -> TokenNode {
+        TokenNode {
+            token_type,
+            start,
+            end,
+            data: data.to_string(),
+        }
+    }
+
+    pub fn location(&self) -> (usize, usize) {
+        (self.start, self.end)
+    }
 }

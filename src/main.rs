@@ -101,13 +101,13 @@ fn parse_args() -> CrushResult<Config> {
 fn run() -> CrushResult<()> {
     let global_env = data::scope::Scope::create_root();
     let threads = ThreadStore::new();
-
     let my_scope = global_env.create_child(&global_env, false);
 
     let config = parse_args()?;
 
-    let (mut printer, mut print_handle) = if config.mode == Mode::Pup { printer::noop() } else { printer::init() };
+    let (printer, print_handle) = if config.mode == Mode::Pup { printer::noop() } else { printer::init() };
     let pretty_printer = create_pretty_printer(printer.clone());
+
     declare(&global_env, &printer, &threads, &pretty_printer)?;
 
     match config.mode {

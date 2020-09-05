@@ -34,8 +34,7 @@ Command: CommandNode = {
 
 Assignment: Box<Node> = {
     Logical,
-    <i: Item> "=" <e: Assignment> => Box::from(Node::Assignment(i, "=".to_string(), e)),
-    <i: Item> ":=" <e: Assignment> => Box::from(Node::Assignment(i, ":=".to_string(), e)),
+    <i: Item> <op: AssignmentOperator> <e: Assignment> => Box::from(Node::Assignment(i, op.to_string(), e)),
 }
 
 Logical: Box<Node> = {
@@ -109,27 +108,29 @@ AnyLabel: String = {
 }
 
 Token: TokenNode = {
-    LogicalOperator => TokenNode::LogicalOperator(<>.to_string()),
-    UnaryOperator => TokenNode::UnaryOperator(<>.to_string()),
-    Colon => TokenNode::Colon(<>.to_string()),
-    ComparisonOperator => TokenNode::ComparisonOperator(<>.to_string()),
-    FactorOperator => TokenNode::FactorOperator(<>.to_string()),
-    TermOperator => TokenNode::TermOperator(<>.to_string()),
-    QuotedString => TokenNode::QuotedString(<>.to_string()),
-    Label => TokenNode::Label(<>.to_string()),
-    Flag => TokenNode::Flag(<>.to_string()),
-    Field => TokenNode::Field(<>.to_string()),
-    QuotedLabel => TokenNode::QuotedLabel(<>.to_string()),
-    Regex => TokenNode::Regex(<>.to_string()),
-    Separator => TokenNode::Separator(<>.to_string()),
-    Integer => TokenNode::Integer(<>.to_string()),
-    Float => TokenNode::Float(<>.to_string()),
+    @L LogicalOperator @R => TokenNode::new(TokenType::LogicalOperator, <>),
+    @L UnaryOperator @R => TokenNode::new(TokenType::UnaryOperator, <>),
+    @L Colon @R => TokenNode::new(TokenType::Colon, <>),
+    @L AssignmentOperator @R => TokenNode::new(TokenType::AssignmentOperator, <>),
+    @L ComparisonOperator @R => TokenNode::new(TokenType::ComparisonOperator, <>),
+    @L FactorOperator @R => TokenNode::new(TokenType::FactorOperator, <>),
+    @L TermOperator @R => TokenNode::new(TokenType::TermOperator, <>),
+    @L QuotedString @R => TokenNode::new(TokenType::QuotedString, <>),
+    @L Label @R => TokenNode::new(TokenType::Label, <>),
+    @L Flag @R => TokenNode::new(TokenType::Flag, <>),
+    @L Field @R => TokenNode::new(TokenType::Field, <>),
+    @L QuotedLabel @R => TokenNode::new(TokenType::QuotedLabel, <>),
+    @L Regex @R => TokenNode::new(TokenType::Regex, <>),
+    @L Separator @R => TokenNode::new(TokenType::Separator, <>),
+    @L Integer @R => TokenNode::new(TokenType::Integer, <>),
+    @L Float @R => TokenNode::new(TokenType::Float, <>),
 }
 
 match {
     r"(and|or)" => LogicalOperator,
     r"(typeof|neg|not)" => UnaryOperator,
 } else {
+    r"(=|:=)" => AssignmentOperator,
     ":" => Colon,
     r"( |\t|\\\n)+" => {},
     r"#[^\n]*" => {},

@@ -49,7 +49,7 @@ pub fn noop() -> (Printer, JoinHandle<()>) {
         thread::Builder::new()
             .name("printer:noop".to_string())
             .spawn(move || {
-                while let Ok(message) = receiver.recv() {}
+                while let Ok(_) = receiver.recv() {}
             })
             .unwrap(),
     )
