@@ -493,6 +493,7 @@ impl TokenListNode {
     }
 }
 
+#[derive(Clone)]
 pub enum TokenType {
     LogicalOperator,
     UnaryOperator,
@@ -516,6 +517,7 @@ Missing:
  */
 }
 
+#[derive(Clone)]
 pub struct TokenNode {
     pub token_type: TokenType,
     pub start: usize,

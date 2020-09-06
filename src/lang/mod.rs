@@ -2,6 +2,7 @@ pub mod argument;
 pub mod ast;
 pub mod command;
 pub mod command_invocation;
+pub mod completion;
 pub mod errors;
 pub mod execute;
 pub mod execution_context;
