@@ -3,10 +3,11 @@ use crate::lang::execution_context::CompileContext;
 use crate::lang::value::Value;
 use crate::lang::value::ValueDefinition;
 use std::collections::HashSet;
+use crate::lang::ast::TrackedString;
 
 #[derive(Debug, Clone)]
 pub enum ArgumentType {
-    Some(String),
+    Some(TrackedString),
     None,
     ArgumentList,
     ArgumentDict,
@@ -19,7 +20,7 @@ impl ArgumentType {
 
     pub fn is_this(&self) -> bool {
         if let ArgumentType::Some(v) = self {
-            v == "this"
+            v.string == "this"
         } else {
             false
         }
@@ -35,9 +36,9 @@ pub struct BaseArgument<A: Clone, C: Clone> {
 pub type ArgumentDefinition = BaseArgument<ArgumentType, ValueDefinition>;
 
 impl ArgumentDefinition {
-    pub fn named(name: &str, value: ValueDefinition) -> ArgumentDefinition {
+    pub fn named(name: &TrackedString, value: ValueDefinition) -> ArgumentDefinition {
         ArgumentDefinition {
-            argument_type: ArgumentType::Some(name.to_string()),
+            argument_type: ArgumentType::Some(name.clone()),
             value,
         }
     }
@@ -111,7 +112,7 @@ impl ArgumentVecCompiler for Vec<ArgumentDefinition> {
             } else {
                 match &a.argument_type {
                     ArgumentType::Some(name) => {
-                        res.push(Argument::named(&name, a.value.compile_bound(context)?))
+                        res.push(Argument::named(&name.string, a.value.compile_bound(context)?))
                     }
 
                     ArgumentType::None => {

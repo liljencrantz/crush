@@ -8,15 +8,16 @@ use crate::{
 };
 use std::path::PathBuf;
 use std::fmt::{Display, Formatter};
+use crate::lang::ast::{Location, TrackedString};
 
 #[derive(Clone)]
 pub enum ValueDefinition {
-    Value(Value),
-    ClosureDefinition(Option<String>, Option<Vec<Parameter>>, Vec<Job>),
+    Value(Value, Location),
+    ClosureDefinition(Option<TrackedString>, Option<Vec<Parameter>>, Vec<Job>, Location),
     JobDefinition(Job),
-    Label(String),
-    GetAttr(Box<ValueDefinition>, String),
-    Path(Box<ValueDefinition>, String),
+    Label(TrackedString),
+    GetAttr(Box<ValueDefinition>, TrackedString),
+    Path(Box<ValueDefinition>, TrackedString),
 }
 
 fn file_get(f: &str) -> Option<Value> {
@@ -29,6 +30,17 @@ fn file_get(f: &str) -> Option<Value> {
 }
 
 impl ValueDefinition {
+    pub fn location(&self) -> Location {
+        match self {
+            ValueDefinition::Value(_, l) => *l,
+            ValueDefinition::ClosureDefinition(_, _, _, l) => *l,
+            ValueDefinition::JobDefinition(j) => j.location(),
+            ValueDefinition::Label(l) => l.location,
+            ValueDefinition::GetAttr(p, a) |
+            ValueDefinition::Path(p, a)=> p.location().union(&a.location),
+        }
+    }
+
     pub fn can_block(&self, _arg: &[ArgumentDefinition], context: &mut CompileContext) -> bool {
         match self {
             ValueDefinition::JobDefinition(j) => j.can_block(context),
@@ -56,7 +68,7 @@ impl ValueDefinition {
         can_block: bool,
     ) -> CrushResult<(Option<Value>, Value)> {
         Ok(match self {
-            ValueDefinition::Value(v) => (None, v.clone()),
+            ValueDefinition::Value(v, _) => (None, v.clone()),
             ValueDefinition::JobDefinition(def) => {
                 let first_input = empty_channel();
                 let (last_output, last_input) = channels();
@@ -66,7 +78,7 @@ impl ValueDefinition {
                 def.invoke(context.job_context(first_input, last_output))?;
                 (None, last_input.recv()?)
             }
-            ValueDefinition::ClosureDefinition(name, p, c) => (
+            ValueDefinition::ClosureDefinition(name, p, c, _) => (
                 None,
                 Value::Command(CrushCommand::closure(
                     name.clone(),
@@ -78,7 +90,7 @@ impl ValueDefinition {
             ValueDefinition::Label(s) => (
                 None,
                 mandate(
-                    context.env.get(s)?.or_else(|| file_get(s)),
+                    context.env.get(&s.string)?.or_else(|| file_get(&s.string)),
                     &format!("Unknown variable {}", self),
                 )?,
             ),
@@ -101,7 +113,7 @@ impl ValueDefinition {
                     parent
                 };
                 let val = mandate(
-                    parent.field(&entry)?,
+                    parent.field(&entry.string)?,
                     &format!(
                         "Missing field {} in value of type {}",
                         entry,
@@ -114,7 +126,7 @@ impl ValueDefinition {
             ValueDefinition::Path(parent_def, entry) => {
                 let parent = parent_def.compile_internal(context, can_block)?.1;
                 let val = mandate(
-                    parent.path(&entry),
+                    parent.path(&entry.string),
                     &format!("Missing path entry {} in {}", entry, parent_def),
                 )?;
                 (Some(parent), val)
@@ -126,9 +138,9 @@ impl ValueDefinition {
 impl Display for ValueDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
-            ValueDefinition::Value(v) => v.fmt(f),
+            ValueDefinition::Value(v, _location) => v.fmt(f),
             ValueDefinition::Label(v) => v.fmt(f),
-            ValueDefinition::ClosureDefinition(_, _, _) => f.write_str("<closure>"),
+            ValueDefinition::ClosureDefinition(_, _, _, _location) => f.write_str("<closure>"),
             ValueDefinition::JobDefinition(_) => f.write_str("<job>"),
             ValueDefinition::GetAttr(v, l) => {
                 v.fmt(f)?;

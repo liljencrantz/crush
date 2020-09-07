@@ -9,9 +9,12 @@ use crate::util::glob::Glob;
 use regex::Regex;
 use std::ops::Deref;
 use std::path::PathBuf;
+use std::fmt::{Display, Formatter};
+use std::cmp::{min, max};
 
 pub struct JobListNode {
     pub jobs: Vec<JobNode>,
+    pub location: Location,
 }
 
 impl JobListNode {
@@ -22,6 +25,7 @@ impl JobListNode {
 
 pub struct JobNode {
     pub commands: Vec<CommandNode>,
+    pub location: Location,
 }
 
 impl JobNode {
@@ -31,6 +35,7 @@ impl JobNode {
                 .iter()
                 .map(|c| c.generate(env))
                 .collect::<CrushResult<Vec<CommandInvocation>>>()?,
+            self.location,
         ))
     }
 }
@@ -58,37 +63,124 @@ impl CommandNode {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct TrackedString {
+    pub string: String,
+    pub location: Location,
+}
+
+impl TrackedString {
+    pub fn from(string: &str, location: Location) -> TrackedString {
+        TrackedString {
+            string: string.to_string(),
+            location,
+        }
+    }
+
+    pub fn literal(start: usize, string: &str, end: usize) -> TrackedString {
+        TrackedString {
+            string: string.to_string(),
+            location: Location::new(start, end),
+        }
+    }
+}
+
+impl Display for TrackedString {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.string)
+    }
+}
+
+#[derive(Clone, Debug, Copy)]
+pub struct Location {
+    pub start: usize,
+    pub end: usize,
+}
+
+impl Location {
+    pub fn empty() -> Location {
+        Location { start: 0, end: 0 }
+    }
+
+    pub fn new(start: usize, end: usize) -> Location {
+        Location { start, end }
+    }
+
+    pub fn union(&self, other: &Location) -> Location {
+        Location {
+            start: min(self.start, other.start),
+            end: max(self.end, other.end),
+        }
+    }
+}
+
 pub enum Node {
     Assignment(Box<Node>, String, Box<Node>),
-    LogicalOperation(Box<Node>, String, Box<Node>),
-    Comparison(Box<Node>, String, Box<Node>),
-    Term(Box<Node>, String, Box<Node>),
-    Factor(Box<Node>, String, Box<Node>),
-    Unary(String, Box<Node>),
-    Glob(String),
-    Label(String),
-    Regex(String),
-    Field(String),
-    String(String),
-    File(PathBuf),
-    Integer(i128),
-    Float(f64),
+    LogicalOperation(Box<Node>, TrackedString, Box<Node>),
+    Comparison(Box<Node>, TrackedString, Box<Node>),
+    Term(Box<Node>, TrackedString, Box<Node>),
+    Factor(Box<Node>, TrackedString, Box<Node>),
+    Unary(TrackedString, Box<Node>),
+    Glob(TrackedString),
+    Label(TrackedString),
+    Regex(TrackedString),
+    Field(TrackedString),
+    String(TrackedString),
+    File(PathBuf, Location),
+    Integer(i128, Location),
+    Float(f64, Location),
     GetItem(Box<Node>, Box<Node>),
-    GetAttr(Box<Node>, String),
-    Path(Box<Node>, String),
+    GetAttr(Box<Node>, TrackedString),
+    Path(Box<Node>, TrackedString),
     Substitution(JobNode),
     Closure(Option<Vec<ParameterNode>>, JobListNode),
 }
 
-fn propose_name(name: &str, v: ValueDefinition) -> ValueDefinition {
+fn propose_name(name: &TrackedString, v: ValueDefinition) -> ValueDefinition {
     match v {
-        ValueDefinition::ClosureDefinition(_, p, j) =>
-            ValueDefinition::ClosureDefinition(Some(name.to_string()), p, j),
+        ValueDefinition::ClosureDefinition(_, p, j, l) =>
+            ValueDefinition::ClosureDefinition(Some(name.clone()), p, j, l),
         _ => v,
     }
 }
 
 impl Node {
+    pub fn location(&self) -> Location {
+        use Node::*;
+
+        match self {
+            Glob(s) |
+            Label(s) |
+            Field(s) |
+            String(s) |
+            Regex(s) =>
+                s.location,
+
+            Assignment(a, _, b) |
+            LogicalOperation(a, _, b) |
+            Comparison(a, _, b) |
+            Term(a, _, b) |
+            Factor(a, _, b) =>
+                a.location().union(&b.location()),
+
+            Unary(s, a) =>
+                s.location.union(&a.location()),
+
+            File(_, l) |
+            Integer(_, l) |
+            Float(_, l) => *l,
+
+            GetItem(a, b) => a.location().union(&b.location()),
+            GetAttr(p, n) |
+            Path(p, n) => p.location().union(&n.location),
+            Substitution(j) => j.location,
+            Closure(p, j) => {
+                // Fixme: Can't tab complete or error report on parameters because they're not currently tracked
+                j.location
+            }
+        }
+    }
+
     pub fn generate_argument(&self, env: &Scope) -> CrushResult<ArgumentDefinition> {
         Ok(ArgumentDefinition::unnamed(match self {
             Node::Assignment(target, op, value) => match op.deref() {
@@ -104,17 +196,27 @@ impl Node {
                 _ => return error("Invalid assignment operator"),
             },
 
-            Node::LogicalOperation(_, _, _)
-            | Node::Comparison(_, _, _)
-            | Node::GetItem(_, _)
-            | Node::Term(_, _, _)
-            | Node::Factor(_, _, _) => ValueDefinition::JobDefinition(Job::new(vec![self
-                .generate_standalone(env)?
-                .unwrap()])),
-            Node::Unary(op, r) => match op.deref() {
+            Node::GetItem(a, o) => ValueDefinition::JobDefinition(
+                Job::new(vec![self
+                    .generate_standalone(env)?
+                    .unwrap()],
+                         a.location().union(&o.location()),
+                )),
+
+            Node::LogicalOperation(a, o, b)
+            | Node::Comparison(a, o, b)
+            | Node::Term(a, o, b)
+            | Node::Factor(a, o, b) => ValueDefinition::JobDefinition(
+                Job::new(vec![self
+                    .generate_standalone(env)?
+                    .unwrap()],
+                         a.location().union(&b.location()).union(&o.location),
+                )),
+            Node::Unary(op, r) => match op.string.as_str() {
                 "neg" | "not" | "typeof" => ValueDefinition::JobDefinition(Job::new(vec![self
                     .generate_standalone(env)?
-                    .unwrap()])),
+                    .unwrap()],
+                op.location.union(&r.location()))),
                 "@" => {
                     return Ok(ArgumentDefinition::list(
                         r.generate_argument(env)?.unnamed_value()?,
@@ -128,19 +230,21 @@ impl Node {
                 _ => return error("Unknown operator"),
             },
             Node::Label(l) => ValueDefinition::Label(l.clone()),
-            Node::Regex(l) => ValueDefinition::Value(Value::Regex(
-                l.clone(),
-                to_crush_error(Regex::new(l.clone().as_ref()))?,
-            )),
-            Node::String(t) => ValueDefinition::Value(Value::string(unescape(t).as_str())),
-            Node::Integer(i) => ValueDefinition::Value(Value::Integer(*i)),
-            Node::Float(f) => ValueDefinition::Value(Value::Float(*f)),
+            Node::Regex(l) => ValueDefinition::Value(
+                Value::Regex(
+                    l.string.clone(),
+                    to_crush_error(Regex::new(&l.string.clone()))?, ),
+                l.location,
+            ),
+            Node::String(t) => ValueDefinition::Value(Value::String(unescape(&t.string)), t.location),
+            Node::Integer(i, location) => ValueDefinition::Value(Value::Integer(*i), *location),
+            Node::Float(f, location) => ValueDefinition::Value(Value::Float(*f), *location),
             Node::GetAttr(node, label) => {
                 let parent = node.generate_argument(env)?;
                 match parent.unnamed_value()? {
-                    ValueDefinition::Value(Value::Field(mut f)) => {
-                        f.push(label.clone());
-                        ValueDefinition::Value(Value::Field(f))
+                    ValueDefinition::Value(Value::Field(mut f), location) => {
+                        f.push(label.string.clone());
+                        ValueDefinition::Value(Value::Field(f), location)
                     }
                     value => ValueDefinition::GetAttr(Box::new(value), label.clone()),
                 }
@@ -149,7 +253,7 @@ impl Node {
                 Box::new(node.generate_argument(env)?.unnamed_value()?),
                 label.clone(),
             ),
-            Node::Field(f) => ValueDefinition::Value(Value::Field(vec![f[1..].to_string()])),
+            Node::Field(f) => ValueDefinition::Value(Value::Field(vec![f.string[1..].to_string()]), f.location),
             Node::Substitution(s) => ValueDefinition::JobDefinition(s.generate(env)?),
             Node::Closure(s, c) => {
                 let param = s.as_ref().map(|v| {
@@ -162,10 +266,10 @@ impl Node {
                     Some(Ok(p)) => Some(p),
                     Some(Err(e)) => return Err(e),
                 };
-                ValueDefinition::ClosureDefinition(None, p, c.generate(env)?)
+                ValueDefinition::ClosureDefinition(None, p, c.generate(env)?, c.location)
             }
-            Node::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g))),
-            Node::File(f) => ValueDefinition::Value(Value::File(f.clone())),
+            Node::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g.string)), g.location),
+            Node::File(f, location) => ValueDefinition::Value(Value::File(f.clone()), *location),
         }))
     }
 
@@ -179,6 +283,7 @@ impl Node {
             "=" => match target.as_ref() {
                 Node::Label(t) => Node::function_invocation(
                     env.global_static_cmd(vec!["global", "var", "set"])?,
+                    t.location,
                     vec![ArgumentDefinition::named(
                         t,
                         propose_name(&t, value.generate_argument(env)?.unnamed_value()?),
@@ -186,7 +291,7 @@ impl Node {
                 ),
 
                 Node::GetItem(container, key) => container.method_invocation(
-                    "__setitem__",
+                    &TrackedString::from("__setitem__", key.location()),
                     vec![
                         ArgumentDefinition::unnamed(key.generate_argument(env)?.unnamed_value()?),
                         ArgumentDefinition::unnamed(value.generate_argument(env)?.unnamed_value()?),
@@ -195,11 +300,12 @@ impl Node {
                 ),
 
                 Node::GetAttr(container, attr) => container.method_invocation(
-                    "__setattr__",
+                    &TrackedString::from("__setattr__", attr.location),
                     vec![
-                        ArgumentDefinition::unnamed(ValueDefinition::Value(Value::string(
-                            &attr.to_string(),
-                        ))),
+                        ArgumentDefinition::unnamed(ValueDefinition::Value(Value::String(
+                            attr.string.to_string(),
+                        ),
+                                                                           attr.location)),
                         ArgumentDefinition::unnamed(value.generate_argument(env)?.unnamed_value()?),
                     ],
                     env,
@@ -210,6 +316,7 @@ impl Node {
             ":=" => match target.as_ref() {
                 Node::Label(t) => Node::function_invocation(
                     env.global_static_cmd(vec!["global", "var", "let"])?,
+                    t.location,
                     vec![ArgumentDefinition::named(
                         t,
                         propose_name(&t, value.generate_argument(env)?.unnamed_value()?),
@@ -228,19 +335,20 @@ impl Node {
             }
 
             Node::LogicalOperation(l, op, r) => {
-                let cmd = env.global_static_cmd(match op.as_ref() {
+                let function = env.global_static_cmd(match op.string.as_ref() {
                     "and" => vec!["global", "cond", "and"],
                     "or" => vec!["global", "cond", "or"],
                     _ => return error("Unknown operator"),
                 })?;
                 Node::function_invocation(
-                    cmd,
+                    function,
+                    op.location,
                     vec![l.generate_argument(env)?, r.generate_argument(env)?],
                 )
             }
 
             Node::Comparison(l, op, r) => {
-                let cmd = env.global_static_cmd(match op.as_ref() {
+                let function = env.global_static_cmd(match op.string.as_ref() {
                     "<" => vec!["global", "comp", "lt"],
                     "<=" => vec!["global", "comp", "lte"],
                     ">" => vec!["global", "comp", "gt"],
@@ -248,11 +356,11 @@ impl Node {
                     "==" => vec!["global", "comp", "eq"],
                     "!=" => vec!["global", "comp", "neq"],
                     "=~" => {
-                        return r.method_invocation("match", vec![l.generate_argument(env)?], env);
+                        return r.method_invocation(&TrackedString::from("match", op.location), vec![l.generate_argument(env)?], env);
                     }
                     "!~" => {
                         return r.method_invocation(
-                            "not_match",
+                            &TrackedString::from("not_match", op.location),
                             vec![l.generate_argument(env)?],
                             env,
                         );
@@ -260,41 +368,44 @@ impl Node {
                     _ => return error("Unknown operator"),
                 })?;
                 Node::function_invocation(
-                    cmd.copy(),
+                    function,
+                    op.location,
                     vec![l.generate_argument(env)?, r.generate_argument(env)?],
                 )
             }
 
             Node::Term(l, op, r) => {
-                let method = match op.as_ref() {
+                let method = match op.string.as_ref() {
                     "+" => "__add__",
                     "-" => "__sub__",
                     _ => return error("Unknown operator"),
                 };
-                l.method_invocation(method, vec![r.generate_argument(env)?], env)
+                l.method_invocation(&TrackedString::from(method, op.location), vec![r.generate_argument(env)?], env)
             }
 
             Node::Factor(l, op, r) => {
-                let method = match op.as_ref() {
+                let method = match op.string.as_ref() {
                     "*" => "__mul__",
                     "//" => "__div__",
                     _ => return error("Unknown operator"),
                 };
-                l.method_invocation(method, vec![r.generate_argument(env)?], env)
+                l.method_invocation(&TrackedString::from(method, op.location), vec![r.generate_argument(env)?], env)
             }
 
             Node::GetItem(val, key) => {
-                val.method_invocation("__getitem__", vec![key.generate_argument(env)?], env)
+                val.method_invocation(&TrackedString::from("__getitem__", key.location()), vec![key.generate_argument(env)?], env)
             }
 
-            Node::Unary(op, r) => match op.deref() {
-                "neg" => r.method_invocation("__neg__", vec![], env),
+            Node::Unary(op, r) => match op.string.as_ref() {
+                "neg" => r.method_invocation(&TrackedString::from("__neg__", op.location), vec![], env),
                 "not" => Node::function_invocation(
                     env.global_static_cmd(vec!["global", "comp", "not"])?,
+                    op.location,
                     vec![r.generate_argument(env)?],
                 ),
                 "typeof" => Node::function_invocation(
                     env.global_static_cmd(vec!["global", "types", "typeof"])?,
+                    op.location,
                     vec![r.generate_argument(env)?],
                 ),
                 "@" | "@@" => Ok(None),
@@ -306,76 +417,77 @@ impl Node {
             | Node::Regex(_)
             | Node::Field(_)
             | Node::String(_)
-            | Node::Integer(_)
-            | Node::Float(_)
+            | Node::Integer(_, _)
+            | Node::Float(_, _)
             | Node::GetAttr(_, _)
             | Node::Path(_, _)
             | Node::Substitution(_)
             | Node::Closure(_, _)
-            | Node::File(_) => Ok(None),
+            | Node::File(_, _) => Ok(None),
         }
     }
 
     fn function_invocation(
         function: Command,
+        location: Location,
         arguments: Vec<ArgumentDefinition>,
     ) -> CrushResult<Option<CommandInvocation>> {
         Ok(Some(CommandInvocation::new(
-            ValueDefinition::Value(Value::Command(function)),
+            ValueDefinition::Value(Value::Command(function), location),
             arguments,
         )))
     }
 
     fn method_invocation(
         &self,
-        name: &str,
+        name: &TrackedString,
         arguments: Vec<ArgumentDefinition>,
         env: &Scope,
     ) -> CrushResult<Option<CommandInvocation>> {
         Ok(Some(CommandInvocation::new(
             ValueDefinition::GetAttr(
                 Box::from(self.generate_argument(env)?.unnamed_value()?),
-                name.to_string(),
+                name.clone(),
             ),
             arguments,
         )))
     }
 
-    pub fn parse_label(s: &str) -> Box<Node> {
-        if s.contains('%') || s.contains('?') {
-            Box::from(Node::Glob(s.to_string()))
-        } else if s.starts_with('~') {
+    pub fn parse_label(s: &TrackedString) -> Box<Node> {
+        if s.string.contains('%') || s.string.contains('?') {
+            Box::from(Node::Glob(s.clone()))
+        } else if s.string.starts_with('~') {
             expand_user_path(s)
-        } else if s.contains('/') {
-            if s.starts_with('/') {
-                Box::from(Node::File(PathBuf::from(s)))
+        } else if s.string.contains('/') {
+            if s.string.starts_with('/') {
+                Box::from(Node::File(PathBuf::from(&s.string), s.location))
             } else {
-                let parts = s.split('/').collect::<Vec<&str>>();
-                Box::from(path(&parts))
+                let parts = s.string.split('/').collect::<Vec<&str>>();
+                Box::from(path(&parts, s.location))
             }
         } else {
-            Box::from(Node::Label(s.to_string()))
+            Box::from(Node::Label(s.clone()))
         }
     }
 }
 
-fn path(parts: &[&str]) -> Node {
-    let mut res = Node::Label(parts[0].to_string());
+fn path(parts: &[&str], location: Location) -> Node {
+    let mut res = Node::Label(TrackedString::from(parts[0], location));
     for part in &parts[1..] {
-        res = Node::Path(Box::from(res), part.to_string());
+        res = Node::Path(Box::from(res), TrackedString::from(part, location));
     }
     res
 }
 
-fn attr(parts: &[&str]) -> Node {
-    let mut res = Node::Label(parts[0].to_string());
+fn attr(parts: &[&str], location: Location) -> Node {
+    let mut res = Node::Label(TrackedString::from(parts[0], location));
     for part in &parts[1..] {
-        res = Node::GetAttr(Box::from(res), part.to_string());
+        res = Node::GetAttr(Box::from(res), TrackedString::from(part, location));
     }
     res
 }
 
-fn simple_substitution(cmd: Vec<Node>) -> Box<Node> {
+fn simple_substitution(cmd: Vec<Node>, location: Location) -> Box<Node> {
     Box::from(
         Node::Substitution(
             JobNode {
@@ -383,22 +495,24 @@ fn simple_substitution(cmd: Vec<Node>) -> Box<Node> {
                     CommandNode {
                         expressions: cmd
                     }
-                ]
+                ],
+                location,
             }
         )
     )
 }
 
-fn expand_user(s: &str) -> Box<Node> {
+fn expand_user(s: &str, location: Location) -> Box<Node> {
     if s.len() == 1 {
         Box::from(
             Node::GetAttr(
                 simple_substitution(
                     vec![
-                        attr(&vec!["global", "user", "me"])
-                    ]
+                        attr(&vec!["global", "user", "me"], location)
+                    ],
+                    location,
                 ),
-                "home".to_string(),
+                TrackedString::from("home", location),
             )
         )
     } else {
@@ -406,27 +520,28 @@ fn expand_user(s: &str) -> Box<Node> {
             Node::GetAttr(
                 simple_substitution(
                     vec![
-                        attr(&vec!["global", "user", "find"]),
-                        Node::String(format!("\"{}\"", &s[1..]))
-                    ]
+                        attr(&vec!["global", "user", "find"], location),
+                        Node::String(TrackedString::from(&format!("\"{}\"", &s[1..]), location))
+                    ],
+                    location,
                 ),
-                "home".to_string(),
+                TrackedString::from("home", location),
             )
         )
     }
 }
 
-fn expand_user_path(s: &str) -> Box<Node> {
-    if s.contains('/') {
-        let (user, path) = s.split_at(s.find('/').unwrap());
+fn expand_user_path(s: &TrackedString) -> Box<Node> {
+    if s.string.contains('/') {
+        let (user, path) = s.string.split_at(s.string.find('/').unwrap());
         Box::from(
             Node::Path(
-                expand_user(user),
-                path[1..].to_string(),
+                expand_user(user, s.location),
+                TrackedString::from(&path[1..], s.location),
             )
         )
     } else {
-        expand_user(s)
+        expand_user(&s.string, s.location)
     }
 }
 
@@ -454,9 +569,9 @@ pub fn unescape(s: &str) -> String {
 }
 
 pub enum ParameterNode {
-    Parameter(String, Option<Box<Node>>, Option<Node>),
-    Named(String),
-    Unnamed(String),
+    Parameter(TrackedString, Option<Box<Node>>, Option<Node>),
+    Named(TrackedString),
+    Unnamed(TrackedString),
 }
 
 impl ParameterNode {
@@ -467,7 +582,7 @@ impl ParameterNode {
                 value_type
                     .as_ref()
                     .map(|t| t.generate_argument(env)?.unnamed_value())
-                    .unwrap_or(Ok(ValueDefinition::Value(Value::Type(ValueType::Any))))?,
+                    .unwrap_or(Ok(ValueDefinition::Value(Value::Type(ValueType::Any), name.location)))?,
                 default
                     .as_ref()
                     .map(|d| d.generate_argument(env))
@@ -511,10 +626,10 @@ pub enum TokenType {
     Separator,
     Integer,
     Float,
-/*
-Missing:
-|, @, @@ [] () {}
- */
+    /*
+    Missing:
+    |, @, @@ [] () {}
+     */
 }
 
 #[derive(Clone)]

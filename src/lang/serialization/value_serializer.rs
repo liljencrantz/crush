@@ -94,7 +94,8 @@ impl Serializable<Value> for Value {
             }
             element::Element::Dict(_) => Ok(Value::Dict(Dict::deserialize(id, elements, state)?)),
 
-            element::Element::Strings(_)
+            element::Element::TrackedString(_)
+            | element::Element::Strings(_)
             | element::Element::ColumnType(_)
             | element::Element::Row(_)
             | element::Element::Member(_) => error("Not a value"),

@@ -72,3 +72,13 @@ watch command
 
 Time to figure out tab completion.
 This will eventually require a parser that can parse broken and incomplete input and return some kind of best guess.
+
+Long term completion feature list:
+
+* Command specific completions for arguments with a set of allowed values supported out of the box.
+* General purpose command specific completions are specified as an extra command
+* Command specific completions are specified for the individual argument, as part of the signature.
+* Complete only scope members of the right type.
+    - if type of argument is a type, only complete with known types
+    - Complete with files from current scope only when argument may be a file
+* Complete with prior arguments from same command from history

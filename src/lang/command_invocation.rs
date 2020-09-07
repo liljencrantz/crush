@@ -10,6 +10,7 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use std::fmt::{Display, Formatter};
 use std::thread::ThreadId;
+use crate::lang::ast::Location;
 
 #[derive(Clone)]
 pub struct CommandInvocation {
@@ -55,7 +56,7 @@ impl CommandInvocation {
         }
 
         match &self.command {
-            ValueDefinition::Value(Value::String(s)) => Some(s.to_string()),
+            ValueDefinition::Value(Value::String(s), _) => Some(s.to_string()),
             _ => None,
         }
     }
@@ -125,12 +126,13 @@ impl CommandInvocation {
             .command
             .compile_internal(&mut context.compile_context(), false)
         {
-            Ok((this, value)) => invoke_value(this, value, self.arguments.clone(), context),
+            Ok((this, value)) => invoke_value(this, value, self.arguments.clone(), context, self.command.location()),
             Err(err) => {
                 if err == CrushError::BlockError {
                     let cmd = self.command.clone();
                     let arguments = self.arguments.clone();
                     let t = context.threads.clone();
+                    let location = self.command.location();
                     Ok(Some(t.spawn(
                         &self.command.to_string(),
                         move || {
@@ -140,6 +142,7 @@ impl CommandInvocation {
                                     value,
                                     arguments,
                                     context.clone(),
+                                    location,
                                 )),
 
                                 _ => context.printer.handle_error(try_external_command(
@@ -164,6 +167,7 @@ fn invoke_value(
     value: Value,
     local_arguments: Vec<ArgumentDefinition>,
     context: JobContext,
+    location: Location,
 ) -> CrushResult<Option<ThreadId>> {
     match value {
         Value::Command(command) => invoke_command(command, this, local_arguments, context),
@@ -178,6 +182,7 @@ fn invoke_value(
                         None,
                         vec![ArgumentDefinition::unnamed(ValueDefinition::Value(
                             Value::File(f),
+                            location,
                         ))],
                         context,
                     )
@@ -187,6 +192,7 @@ fn invoke_value(
                         None,
                         vec![ArgumentDefinition::unnamed(ValueDefinition::Value(
                             Value::File(f),
+                            location,
                         ))],
                         context,
                     )
@@ -207,6 +213,7 @@ fn invoke_value(
                 None,
                 vec![ArgumentDefinition::unnamed(ValueDefinition::Value(
                     Value::Type(t),
+                    location,
                 ))],
                 context,
             ),
@@ -234,7 +241,8 @@ fn invoke_value(
                         context.env.global_static_cmd(vec!["global", "io", "val"])?,
                         None,
                         vec![ArgumentDefinition::unnamed(ValueDefinition::Value(
-                            Value::Struct(s)
+                            Value::Struct(s),
+                            location,
                         ))],
                         context,
                     )
@@ -254,7 +262,7 @@ fn invoke_value(
                 invoke_command(
                     context.env.global_static_cmd(vec!["global", "io", "val"])?,
                     None,
-                    vec![ArgumentDefinition::unnamed(ValueDefinition::Value(value))],
+                    vec![ArgumentDefinition::unnamed(ValueDefinition::Value(value, location))],
                     context,
                 )
             } else {
@@ -295,36 +303,43 @@ fn try_external_command(
     mut arguments: Vec<ArgumentDefinition>,
     context: JobContext,
 ) -> CrushResult<Option<ThreadId>> {
+    let def_location = def.location();
     let (cmd, sub) = match def {
         ValueDefinition::Label(str) => (str, None),
         ValueDefinition::GetAttr(parent, sub) => match parent.deref() {
-            ValueDefinition::Label(str) => (str.to_string(), Some(sub)),
+            ValueDefinition::Label(str) => (str.clone(), Some(sub)),
             _ => return error("Not a command"),
         },
         _ => return error("Not a command"),
     };
 
-    match resolve_external_command(&cmd, &context.env)? {
+    match resolve_external_command(&cmd.string, &context.env)? {
         None => error(format!("Unknown command name {}", cmd).as_str()),
         Some(path) => {
             arguments.insert(
                 0,
-                ArgumentDefinition::unnamed(ValueDefinition::Value(Value::File(path))),
+                ArgumentDefinition::unnamed(ValueDefinition::Value(Value::File(path), cmd.location)),
             );
             if let Some(subcmd) = sub {
                 arguments.insert(
                     1,
-                    ArgumentDefinition::unnamed(ValueDefinition::Value(Value::string(
-                        subcmd.as_ref(),
-                    ))),
+                    ArgumentDefinition::unnamed(
+                        ValueDefinition::Value(
+                            Value::string(
+                                subcmd.string.as_ref()),
+                            subcmd.location,
+                        )),
                 );
             }
             let call = CommandInvocation {
-                command: ValueDefinition::Value(Value::Command(
-                    context
-                        .env
-                        .global_static_cmd(vec!["global", "control", "cmd"])?,
-                )),
+                command: ValueDefinition::Value(
+                    Value::Command(
+                        context
+                            .env
+                            .global_static_cmd(vec!["global", "control", "cmd"])?,
+                    ),
+                    def_location,
+                ),
                 arguments,
             };
             call.invoke(context)

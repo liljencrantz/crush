@@ -5,10 +5,45 @@ use std::collections::HashMap;
 use ordered_map::OrderedMap;
 use crate::lang::ast::{TokenNode, TokenType};
 use crate::lang::argument::ArgumentDefinition;
+use crate::lang::value::ValueDefinition;
 
 pub struct Completion {
     completion: String,
     position: usize,
+}
+
+struct ParseState {
+    vec: Vec<TokenNode>,
+    idx: usize,
+}
+
+
+struct ParseResult {
+    cmd: Option<String>,
+    previous_arguments: Vec<ArgumentDefinition>,
+    partial_argument: Option<ArgumentDefinition>,
+}
+
+impl ParseState {
+    pub fn new(vec: Vec<TokenNode>) -> ParseState {
+        ParseState {
+            vec,
+            idx: 0,
+        }
+    }
+
+    pub fn next(&mut self) -> Option<&str> {
+        self.idx += 1;
+        self.vec.get(self.idx).map(|t| t.data.as_str())
+    }
+
+    pub fn peek(&self) -> Option<&str> {
+        self.vec.get(self.idx + 1).map(|t| t.data.as_str())
+    }
+
+    pub fn location(&self) -> Option<(usize, usize)> {
+        self.vec.get(self.idx).map(|t| (t.start, t.end))
+    }
 }
 
 impl Completion {
@@ -28,7 +63,6 @@ fn complete_cmd(cmd: Option<String>, args: Vec<ArgumentDefinition>, arg: TokenNo
     let mut res = Vec::new();
 
     for name in map.keys() {
-        println!("Compare {} and {}", name, &arg.data);
         if name.starts_with(&arg.data) {
             res.push(Completion {
                 completion: name.strip_prefix(&arg.data).unwrap().to_string(),
@@ -40,30 +74,18 @@ fn complete_cmd(cmd: Option<String>, args: Vec<ArgumentDefinition>, arg: TokenNo
     Ok(res)
 }
 
-pub fn complete_parse(line: &str, cursor: usize) -> CrushResult<(Option<String>, Vec<ArgumentDefinition>, Option<TokenNode>)> {
-    let tokens = tokenize(line)?;
-
-    let mut cmd = None;
-    let mut args = Vec::new();
-    let mut token = None;
-
-    for t in tokens.iter() {
-        if t.start < cursor && t.end >= cursor {
-            token = Some(t.clone());
-            break;
-        }
-    }
-
-    Ok((cmd, args, token))
+fn complete_parse(line: &str, cursor: usize) -> CrushResult<ParseResult> {
+    error("Not implemented")
 }
 
 pub fn complete(line: &str, cursor: usize, scope: Scope) -> CrushResult<Vec<Completion>> {
-    let (cmd, args, token) = complete_parse(line, cursor)?;
-
+    let parse_result = complete_parse(line, cursor)?;
+/*
     match token {
         None => Ok(Vec::new()),
-        Some(tok) => complete_cmd(cmd, args, tok, scope),
-    }
+        Some(tok) => complete_cmd(parse_result, scope),
+    }*/
+    Ok(Vec::new())
 }
 
 #[cfg(test)]
@@ -106,5 +128,4 @@ mod tests {
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "ab cdef ef");
     }
-
 }

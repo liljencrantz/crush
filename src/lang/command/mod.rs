@@ -13,6 +13,7 @@ use crate::lang::value::{Value, ValueDefinition, ValueType};
 use closure::Closure;
 use ordered_map::OrderedMap;
 use std::fmt::{Formatter, Display};
+use crate::lang::ast::TrackedString;
 
 pub type Command = Box<dyn CrushCommand + Send + Sync>;
 
@@ -117,7 +118,7 @@ struct ConditionCommand {
 
 impl dyn CrushCommand {
     pub fn closure(
-        name: Option<String>,
+        name: Option<TrackedString>,
         signature: Option<Vec<Parameter>>,
         job_definitions: Vec<Job>,
         env: &Scope,
@@ -360,9 +361,9 @@ impl std::cmp::Eq for ConditionCommand {}
 
 #[derive(Clone)]
 pub enum Parameter {
-    Parameter(String, ValueDefinition, Option<ValueDefinition>),
-    Named(String),
-    Unnamed(String),
+    Parameter(TrackedString, ValueDefinition, Option<ValueDefinition>),
+    Named(TrackedString),
+    Unnamed(TrackedString),
 }
 
 impl Display for Parameter {

@@ -43,12 +43,19 @@ message Element {
         // These aren't serialised, they are passed by name.
         uint64 internal_scope = 28;
         Strings strings = 29;
+        TrackedString tracked_string = 30; // A Value::String
     }
 }
 
 message Duration {
     int64 secs = 1;
     int32 nanos = 2;
+}
+
+message TrackedString {
+    uint64 start = 1;
+    uint64 end = 2;
+    uint64 string = 3;
 }
 
 message BoundCommand {
@@ -76,11 +83,13 @@ message ClosureDefinition {
         bool has_name = 1;
         uint64 name_value = 2;
     }
-    repeated Job job_definitions = 3;
     oneof signature {
-        bool has_signature = 4;
-        Signature signature_value = 5;
+        bool has_signature = 3;
+        Signature signature_value = 4;
     }
+    repeated Job job_definitions = 5;
+    uint64 start = 6;
+    uint64 end = 7;
 }
 
 message Signature {
@@ -90,13 +99,13 @@ message Signature {
 message Parameter {
     oneof parameter {
         NormalParameter normal = 1;
-        string named = 2;
-        string unnamed = 3;
+        uint64 named = 2;
+        uint64 unnamed = 3;
     }
 }
 
 message NormalParameter {
-    string name = 1;
+    uint64 name = 1;
     ValueDefinition type = 2;
     oneof default {
         bool has_default = 3;
@@ -106,13 +115,19 @@ message NormalParameter {
 
 message ValueDefinition {
     oneof value_definition {
-        uint64 value = 1;
+        Value value = 1;
         ClosureDefinition closure_definition = 2;
         Job job = 3;
         uint64 label = 4;
         Attr get_attr = 5;
         Attr path = 6;
     }
+}
+
+message Value {
+    uint64 value = 1;
+    uint64 start = 2;
+    uint64 end = 3;
 }
 
 message Attr {
@@ -122,6 +137,8 @@ message Attr {
 
 message Job {
     repeated CommandInvocation commands = 1;
+    uint64 start = 2;
+    uint64 end = 3;
 }
 
 message CommandInvocation {
@@ -131,7 +148,7 @@ message CommandInvocation {
 
 message ArgumentDefinition {
     oneof argument_type {
-        string some = 1;
+        uint64 some = 1;
         bool none = 2;
         bool argument_list = 3;
         bool argument_dict = 4;

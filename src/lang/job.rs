@@ -4,15 +4,21 @@ use crate::lang::execution_context::{CompileContext, JobContext};
 use crate::lang::stream::channels;
 use std::thread::ThreadId;
 use std::fmt::{Display, Formatter};
+use crate::lang::ast::Location;
 
 #[derive(Clone)]
 pub struct Job {
     commands: Vec<CommandInvocation>,
+    location: Location,
 }
 
 impl Job {
-    pub fn new(commands: Vec<CommandInvocation>) -> Job {
-        Job { commands }
+    pub fn location(&self) -> Location {
+        self.location
+    }
+
+    pub fn new(commands: Vec<CommandInvocation>, location: Location) -> Job {
+        Job { commands, location }
     }
 
     pub fn can_block(&self, context: &mut CompileContext) -> bool {

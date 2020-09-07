@@ -16,9 +16,10 @@ use crate::lang::stream::{black_hole, empty_channel};
 use crate::lang::value::{Value, ValueDefinition, ValueType};
 use std::collections::HashMap;
 use std::fmt::Display;
+use crate::lang::ast::{TrackedString, Location};
 
 pub struct Closure {
-    name: Option<String>,
+    name: Option<TrackedString>,
     job_definitions: Vec<Job>,
     signature: Option<Vec<Parameter>>,
     env: Scope,
@@ -135,7 +136,7 @@ impl<'a> ClosureSerializer<'a> {
         serialized.name = Some(match &closure.name {
             None => model::closure::Name::HasName(false),
             Some(name) => model::closure::Name::NameValue(
-                Value::string(name).serialize(self.elements, self.state)? as u64,
+                name.serialize(self.elements, self.state)? as u64,
             ),
         });
 
@@ -191,10 +192,10 @@ impl<'a> ClosureSerializer<'a> {
     fn parameter(&mut self, param: &Parameter) -> CrushResult<model::Parameter> {
         Ok(model::Parameter {
             parameter: Some(match param {
-                Parameter::Named(n) => model::parameter::Parameter::Named(n.to_string()),
+                Parameter::Named(n) => model::parameter::Parameter::Named(n.serialize(self.elements, self.state)? as u64),
                 Parameter::Parameter(n, t, d) => {
                     model::parameter::Parameter::Normal(model::NormalParameter {
-                        name: n.to_string(),
+                        name: n.serialize(self.elements, self.state)? as u64,
                         r#type: Some(self.value_definition(t)?),
                         default: Some(match d {
                             None => model::normal_parameter::Default::HasDefault(false),
@@ -204,7 +205,7 @@ impl<'a> ClosureSerializer<'a> {
                         }),
                     })
                 }
-                Parameter::Unnamed(n) => model::parameter::Parameter::Unnamed(n.to_string()),
+                Parameter::Unnamed(n) => model::parameter::Parameter::Unnamed(n.serialize(self.elements, self.state)? as u64),
             }),
         })
     }
@@ -231,13 +232,13 @@ impl<'a> ClosureSerializer<'a> {
     fn argument(&mut self, a: &ArgumentDefinition) -> CrushResult<model::ArgumentDefinition> {
         Ok(model::ArgumentDefinition {
             value: Some(self.value_definition(&a.value)?),
-            argument_type: Some(self.argument_type(&a.argument_type)),
+            argument_type: Some(self.argument_type(&a.argument_type)?),
         })
     }
 
-    fn argument_type(&mut self, a: &ArgumentType) -> model::argument_definition::ArgumentType {
-        match a {
-            ArgumentType::Some(s) => model::argument_definition::ArgumentType::Some(s.to_string()),
+    fn argument_type(&mut self, a: &ArgumentType) -> CrushResult<model::argument_definition::ArgumentType> {
+        Ok(match a {
+            ArgumentType::Some(s) => model::argument_definition::ArgumentType::Some(s.serialize(self.elements, self.state)? as u64),
             ArgumentType::None => model::argument_definition::ArgumentType::None(false),
             ArgumentType::ArgumentList => {
                 model::argument_definition::ArgumentType::ArgumentList(false)
@@ -245,16 +246,20 @@ impl<'a> ClosureSerializer<'a> {
             ArgumentType::ArgumentDict => {
                 model::argument_definition::ArgumentType::ArgumentDict(false)
             }
-        }
+        })
     }
 
     fn value_definition(&mut self, v: &ValueDefinition) -> CrushResult<model::ValueDefinition> {
         Ok(model::ValueDefinition {
             value_definition: Some(match v {
-                ValueDefinition::Value(v) => model::value_definition::ValueDefinition::Value(
-                    v.serialize(self.elements, self.state)? as u64,
+                ValueDefinition::Value(v, location) => model::value_definition::ValueDefinition::Value(
+                    model::Value {
+                        value: v.serialize(self.elements, self.state)? as u64,
+                        start: location.start as u64,
+                        end: location.end as u64,
+                    },
                 ),
-                ValueDefinition::ClosureDefinition(name, parameters, jobs) => {
+                ValueDefinition::ClosureDefinition(name, parameters, jobs, location) => {
                     model::value_definition::ValueDefinition::ClosureDefinition(
                         model::ClosureDefinition {
                             job_definitions: jobs
@@ -264,11 +269,12 @@ impl<'a> ClosureSerializer<'a> {
                             name: Some(match name {
                                 None => model::closure_definition::Name::HasName(false),
                                 Some(name) => model::closure_definition::Name::NameValue(
-                                    Value::string(name).serialize(self.elements, self.state)?
-                                        as u64,
+                                    name.serialize(self.elements, self.state)? as u64,
                                 ),
                             }),
                             signature: self.signature_definition(parameters)?,
+                            start: location.start as u64,
+                            end: location.end as u64,
                         },
                     )
                 }
@@ -315,7 +321,7 @@ impl<'a> ClosureDeserializer<'a> {
                 Ok(Box::from(Closure {
                     name: match s.name {
                         None | Some(Name::HasName(_)) => None,
-                        Some(Name::NameValue(idx)) => Some(String::deserialize(
+                        Some(Name::NameValue(idx)) => Some(TrackedString::deserialize(
                             idx as usize,
                             self.elements,
                             self.state,
@@ -355,7 +361,7 @@ impl<'a> ClosureDeserializer<'a> {
         match &parameter.parameter {
             None => error("Missing parameter"),
             Some(model::parameter::Parameter::Normal(param)) => Ok(Parameter::Parameter(
-                param.name.clone(),
+                TrackedString::deserialize(param.name as usize, self.elements, self.state)?,
                 self.value_definition(mandate(param.r#type.as_ref(), "Invalid parameter")?)?,
                 match &param.default {
                     None | Some(model::normal_parameter::Default::HasDefault(_)) => None,
@@ -364,9 +370,12 @@ impl<'a> ClosureDeserializer<'a> {
                     }
                 },
             )),
-            Some(model::parameter::Parameter::Named(param)) => Ok(Parameter::Named(param.clone())),
+            Some(model::parameter::Parameter::Named(param)) => Ok(Parameter::Named(
+                TrackedString::deserialize(*param as usize, self.elements, self.state)?)),
             Some(model::parameter::Parameter::Unnamed(param)) => {
-                Ok(Parameter::Unnamed(param.clone()))
+                Ok(Parameter::Unnamed(
+                    TrackedString::deserialize(*param as usize, self.elements, self.state)?
+                ))
             }
         }
     }
@@ -377,6 +386,7 @@ impl<'a> ClosureDeserializer<'a> {
                 .iter()
                 .map(|c| self.command(c))
                 .collect::<CrushResult<Vec<_>>>()?,
+            Location::new(s.start as usize, s.end as usize),
         ))
     }
 
@@ -398,7 +408,7 @@ impl<'a> ClosureDeserializer<'a> {
         Ok(ArgumentDefinition {
             value: self.value_definition(mandate(s.value.as_ref(), "Missing argument value")?)?,
             argument_type: match mandate(s.argument_type.as_ref(), "Missing argument type")? {
-                model::argument_definition::ArgumentType::Some(s) => ArgumentType::Some(s.clone()),
+                model::argument_definition::ArgumentType::Some(s) => ArgumentType::Some(TrackedString::deserialize(*s as usize, self.elements, self.state)?),
                 model::argument_definition::ArgumentType::None(_) => ArgumentType::None,
                 model::argument_definition::ArgumentType::ArgumentList(_) => {
                     ArgumentType::ArgumentList
@@ -413,55 +423,56 @@ impl<'a> ClosureDeserializer<'a> {
     fn value_definition(&mut self, s: &model::ValueDefinition) -> CrushResult<ValueDefinition> {
         Ok(
             match mandate(s.value_definition.as_ref(), "Invalid value definition")? {
-                model::value_definition::ValueDefinition::Value(idx) => ValueDefinition::Value(
-                    Value::deserialize(*idx as usize, self.elements, self.state)?,
+                model::value_definition::ValueDefinition::Value(val) => ValueDefinition::Value(
+                    Value::deserialize(val.value as usize, self.elements, self.state)?,
+                    Location { start: val.start as usize, end: val.end as usize },
                 ),
                 model::value_definition::ValueDefinition::ClosureDefinition(c) => {
                     ValueDefinition::ClosureDefinition(
                         match c.name {
                             None | Some(model::closure_definition::Name::HasName(_)) => None,
-                            Some(model::closure_definition::Name::NameValue(id)) => {
-                                Some(String::deserialize(id as usize, self.elements, self.state)?)
-                            }
+                            Some(model::closure_definition::Name::NameValue(id)) =>
+                                Some(TrackedString::deserialize(id as usize, self.elements, self.state)?),
                         },
                         match &c.signature {
-                            None | Some(model::closure_definition::Signature::HasSignature(_)) => {
-                                None
-                            }
-                            Some(model::closure_definition::Signature::SignatureValue(sig)) => {
-                                self.signature(sig)?
-                            }
+                            None | Some(model::closure_definition::Signature::HasSignature(_)) =>
+                                None,
+                            Some(model::closure_definition::Signature::SignatureValue(sig)) =>
+                                self.signature(sig)?,
                         },
                         c.job_definitions
                             .iter()
                             .map(|j| self.job(j))
                             .collect::<CrushResult<Vec<_>>>()?,
+                        Location::new(c.start as usize, c.end as usize),
                     )
                 }
                 model::value_definition::ValueDefinition::Job(j) => {
-                    ValueDefinition::JobDefinition(Job::new(
-                        j.commands
-                            .iter()
-                            .map(|c| self.command(c))
-                            .collect::<CrushResult<Vec<_>>>()?,
-                    ))
+                    ValueDefinition::JobDefinition(
+                        Job::new(
+                            j.commands
+                                .iter()
+                                .map(|c| self.command(c))
+                                .collect::<CrushResult<Vec<_>>>()?,
+                            Location::new(j.start as usize, j.end as usize)
+                        ))
                 }
                 model::value_definition::ValueDefinition::Label(s) => {
-                    ValueDefinition::Label(String::deserialize(*s as usize, self.elements, self.state)?)
+                    ValueDefinition::Label(TrackedString::deserialize(*s as usize, self.elements, self.state)?)
                 }
                 model::value_definition::ValueDefinition::GetAttr(a) => ValueDefinition::GetAttr(
                     Box::from(self.value_definition(mandate(
                         a.parent.as_ref(),
                         "Invalid value definition",
                     )?)?),
-                    String::deserialize(a.element as usize, self.elements, self.state)?,
+                    TrackedString::deserialize(a.element as usize, self.elements, self.state)?,
                 ),
                 model::value_definition::ValueDefinition::Path(a) => ValueDefinition::Path(
                     Box::from(self.value_definition(mandate(
                         a.parent.as_ref(),
                         "Invalid value definition",
                     )?)?),
-                    String::deserialize(a.element as usize, self.elements, self.state)?,
+                    TrackedString::deserialize(a.element as usize, self.elements, self.state)?,
                 ),
             },
         )
@@ -472,7 +483,7 @@ impl Help for Closure {
     fn signature(&self) -> String {
         format!(
             "{} {}",
-            self.name.as_deref().unwrap_or("<unnamed>"),
+            self.name.as_ref().map(|s| s.string.clone()).as_deref().unwrap_or("<unnamed>"),
             self.signature
                 .as_ref()
                 .map(|s| s
@@ -512,7 +523,7 @@ fn extract_help(jobs: &mut Vec<Job>) -> String {
 
 impl Closure {
     pub fn new(
-        name: Option<String>,
+        name: Option<TrackedString>,
         signature: Option<Vec<Parameter>>,
         mut job_definitions: Vec<Job>,
         env: Scope,
@@ -553,17 +564,17 @@ impl Closure {
                 match param {
                     Parameter::Parameter(name, value_type, default) => {
                         if let Value::Type(value_type) = value_type.compile_bound(context)? {
-                            if named.contains_key(name) {
-                                let value = named.remove(name).unwrap();
+                            if named.contains_key(&name.string) {
+                                let value = named.remove(&name.string).unwrap();
                                 if !value_type.is(&value) {
                                     return argument_error("Wrong parameter type");
                                 }
-                                context.env.redeclare(name, value)?;
+                                context.env.redeclare(&name.string, value)?;
                             } else if !unnamed.is_empty() {
-                                context.env.redeclare(name, unnamed.remove(0))?;
+                                context.env.redeclare(&name.string, unnamed.remove(0))?;
                             } else if let Some(default) = default {
                                 let env = context.env.clone();
-                                env.redeclare(name, default.compile_bound(context)?)?;
+                                env.redeclare(&name.string, default.compile_bound(context)?)?;
                             } else {
                                 return argument_error("Missing variable!!!");
                             }
@@ -588,7 +599,7 @@ impl Closure {
 
             if let Some(unnamed_name) = unnamed_name {
                 context.env.redeclare(
-                    unnamed_name.as_ref(),
+                    unnamed_name.string.as_ref(),
                     Value::List(List::new(ValueType::Any, unnamed)),
                 )?;
             } else if !unnamed.is_empty() {
@@ -600,7 +611,7 @@ impl Closure {
                 for (k, v) in named {
                     d.insert(Value::string(&k), v)?;
                 }
-                context.env.redeclare(named_name.as_ref(), Value::Dict(d))?;
+                context.env.redeclare(named_name.string.as_ref(), Value::Dict(d))?;
             } else if !named.is_empty() {
                 return argument_error("No target for extra named arguments");
             }
