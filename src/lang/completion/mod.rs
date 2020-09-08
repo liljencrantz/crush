@@ -40,7 +40,7 @@ impl Clone for CompletionCommand {
 #[derive(Clone)]
 enum LastArgument {
     Unknown,
-    Label(String),
+    Field(Field),
     QuotedString(String),
 }
 
@@ -167,15 +167,25 @@ fn complete_parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<Parse
                 }));
         }
     } else {
-        match cmd.expressions.last().unwrap() {
+        let arg = cmd.expressions.last().unwrap();
+        match arg {
             Node::Label(l) => {
                 return Ok(ParseResult::PartialArgument(
                     PartialCommandResult {
                         command: CompletionCommand::Unknown,
                         previousArguments: vec![],
-                        last_argument: LastArgument::Label(l.string.clone())
+                        last_argument: LastArgument::Field(vec![l.string.clone()])
                     }));
             },
+            Node::GetAttr(_, _) => {
+                return Ok(ParseResult::PartialArgument(
+                    PartialCommandResult {
+                        command: CompletionCommand::Unknown,
+                        previousArguments: vec![],
+                        last_argument: LastArgument::Field(simple_path(arg)?)
+                    }));
+            },
+
             Node::String(_) => {error("String completions not yet impemented")},
             _ => {
                 error("Can't extract argument to complete")
@@ -214,8 +224,8 @@ pub fn complete(line: &str, cursor: usize, scope: &Scope) -> CrushResult<Vec<Com
                         LastArgument::Unknown => {
                             return complete_value(Value::Scope(scope.clone()), &vec!["".to_string()], ValueType::Any, cursor)
                         },
-                        LastArgument::Label(l) => {
-                            return complete_value(Value::Scope(scope.clone()), &vec![l], ValueType::Any, cursor)
+                        LastArgument::Field(l) => {
+                            return complete_value(Value::Scope(scope.clone()), &l, ValueType::Any, cursor)
                         },
                         LastArgument::QuotedString(_) => {},
                     }
@@ -285,6 +295,21 @@ mod tests {
         assert_eq!(&completions[0].complete(line), "abcd:bcde");
     }
 
+    #[test]
+    fn complete_namespaced_argument() {
+        let line = "xxx abcd:bc";
+        let cursor = 11;
+
+        let s = Scope::create_root();
+        s.create_namespace("abcd", Box::new(|env| {
+            env.declare("bcde", Value::Empty()).unwrap();
+            Ok(())
+        })).unwrap();
+
+        let completions = complete(line, cursor, &s).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "xxx abcd:bcde");
+    }
 
     #[test]
     fn complete_simple_argument() {
