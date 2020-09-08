@@ -1,7 +1,7 @@
 use crate::lang::errors::{to_crush_error, CrushResult};
 use crate::lang::job::Job;
 use crate::lang::data::scope::Scope;
-use crate::lang::ast::TokenNode;
+use crate::lang::ast::{TokenNode, JobListNode};
 
 lalrpop_mod!(pub lalrparser, "/lang/lalrparser.rs");
 
@@ -17,6 +17,10 @@ pub fn parse_name(s: &str) -> Option<Vec<String>> {
 
 pub fn parse(s: &str, env: &Scope) -> CrushResult<Vec<Job>> {
     to_crush_error(lalrparser::JobListParser::new().parse(s))?.generate(env)
+}
+
+pub fn ast(s: &str) -> CrushResult<JobListNode> {
+    to_crush_error(lalrparser::JobListParser::new().parse(s))
 }
 
 pub fn tokenize(s: &str) -> CrushResult<Vec<TokenNode>>{

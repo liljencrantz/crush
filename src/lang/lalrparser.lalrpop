@@ -28,8 +28,12 @@ Job: JobNode = {
 };
 
 Command: CommandNode = {
-    Assignment => CommandNode{expressions: vec![*<>]},
-    <mut c: Command> <a:Assignment> => {c.expressions.push(*a); c}
+    <start: @L> <a: Assignment> <end: @R> => CommandNode{expressions: vec![*a], location: Location::new(start, end)},
+    <start: @L> <mut c: Command> <a:Assignment> <end: @R> =>
+        {c.expressions.push(*a);
+        c.location = c.location.union(&Location::new(start, end));
+        c
+    }
 };
 
 Assignment: Box<Node> = {
@@ -100,7 +104,7 @@ Parameter: ParameterNode = {
 
 Default: Option<Node> = {
     => None,
-    "=" <l: Logical> => Some(*l),
+    Equals <l: Logical> => Some(*l),
 }
 
 Item: Box<Node> = {
@@ -141,6 +145,11 @@ AnyLabel: String = {
     <l: QuotedLabel> => l[1..l.len()-1].to_string(),
 }
 
+AssignmentOperator: &'input str = {
+    Equals => <>,
+    Declare => <>,
+}
+
 Token: TokenNode = {
     @L LogicalOperator @R => TokenNode::new(TokenType::LogicalOperator, <>),
     @L UnaryOperator @R => TokenNode::new(TokenType::UnaryOperator, <>),
@@ -164,7 +173,8 @@ match {
     r"(and|or)" => LogicalOperator,
     r"(typeof|neg|not)" => UnaryOperator,
 } else {
-    r"(=|:=)" => AssignmentOperator,
+    r"=" => Equals,
+    r":=" => Declare,
     ":" => Colon,
     r"( |\t|\\\n)+" => {},
     r"#[^\n]*" => {},

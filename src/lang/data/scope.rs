@@ -617,15 +617,21 @@ impl Scope {
         self.lock().unwrap().uses.push(other.clone());
     }
 
-    pub fn dump(&self, map: &mut OrderedMap<String, ValueType>) -> CrushResult<()> {
+    pub fn dump(&self) -> CrushResult<OrderedMap<String, ValueType>> {
+        let mut res = OrderedMap::new();
+        self.dump_internal(&mut res)?;
+        Ok(res)
+    }
+
+    fn dump_internal(&self, map: &mut OrderedMap<String, ValueType>) -> CrushResult<()> {
         let p = self.lock()?.parent_scope.clone();
         if let Some(p) = p {
-            p.dump(map)?;
+            p.dump_internal(map)?;
         }
 
         let u = self.lock()?.uses.clone();
         for u in u.iter().rev() {
-            u.dump(map)?;
+            u.dump_internal(map)?;
         }
 
         let data = self.lock()?;
@@ -655,7 +661,7 @@ impl Scope {
 impl Display for Scope {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut map = OrderedMap::new();
-        if let Err(_) = self.dump(&mut map) {
+        if let Err(_) = self.dump_internal(&mut map) {
             return Err(std::fmt::Error {});
         }
 

@@ -57,8 +57,7 @@ pub fn env(context: CommandContext) -> CrushResult<()> {
         ColumnType::new("type", ValueType::String),
     ])?;
 
-    let mut values: OrderedMap<String, ValueType> = OrderedMap::new();
-    context.scope.dump(&mut values)?;
+    let values = context.scope.dump()?;
 
     let mut keys = values.keys().collect::<Vec<&String>>();
     keys.sort();

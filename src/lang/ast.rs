@@ -12,6 +12,7 @@ use std::path::PathBuf;
 use std::fmt::{Display, Formatter};
 use std::cmp::{min, max};
 
+#[derive(Clone)]
 pub struct JobListNode {
     pub jobs: Vec<JobNode>,
     pub location: Location,
@@ -23,6 +24,7 @@ impl JobListNode {
     }
 }
 
+#[derive(Clone)]
 pub struct JobNode {
     pub commands: Vec<CommandNode>,
     pub location: Location,
@@ -40,8 +42,10 @@ impl JobNode {
     }
 }
 
+#[derive(Clone)]
 pub struct CommandNode {
     pub expressions: Vec<Node>,
+    pub location: Location,
 }
 
 impl CommandNode {
@@ -112,8 +116,13 @@ impl Location {
             end: max(self.end, other.end),
         }
     }
+
+    pub fn contains(&self, cursor: usize) -> bool {
+        cursor >= self.start && cursor <= self.end
+    }
 }
 
+#[derive(Clone)]
 pub enum Node {
     Assignment(Box<Node>, String, Box<Node>),
     LogicalOperation(Box<Node>, TrackedString, Box<Node>),
@@ -493,7 +502,8 @@ fn simple_substitution(cmd: Vec<Node>, location: Location) -> Box<Node> {
             JobNode {
                 commands: vec![
                     CommandNode {
-                        expressions: cmd
+                        expressions: cmd,
+                        location,
                     }
                 ],
                 location,
@@ -568,6 +578,7 @@ pub fn unescape(s: &str) -> String {
     res
 }
 
+#[derive(Clone)]
 pub enum ParameterNode {
     Parameter(TrackedString, Option<Box<Node>>, Option<Node>),
     Named(TrackedString),

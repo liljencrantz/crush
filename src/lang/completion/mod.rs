@@ -1,27 +1,66 @@
 use crate::lang::data::scope::Scope;
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult, error, mandate};
 use crate::lang::parser::tokenize;
 use std::collections::HashMap;
 use ordered_map::OrderedMap;
-use crate::lang::ast::{TokenNode, TokenType};
+use crate::lang::ast::{TokenNode, TokenType, JobListNode, CommandNode, Node};
 use crate::lang::argument::ArgumentDefinition;
-use crate::lang::value::ValueDefinition;
+use crate::lang::value::{ValueDefinition, Field, ValueType};
+use crate::lang::command::Command;
 
 pub struct Completion {
     completion: String,
     position: usize,
 }
 
+impl Completion {
+    pub fn complete(&self,
+                    line: &str,
+    ) -> String {
+        let mut res = line.to_string();
+        res.insert_str(self.position, &self.completion);
+        res
+    }
+}
+
+enum CompletionCommand {
+    Unknown,
+    Known(Command),
+}
+
+impl Clone for CompletionCommand {
+    fn clone(&self) -> Self {
+        match self {
+            CompletionCommand::Unknown => CompletionCommand::Unknown,
+            CompletionCommand::Known(c) => CompletionCommand::Known(c.copy()),
+        }
+    }
+}
+
+#[derive(Clone)]
+enum LastArgument {
+    Unknown,
+    Label(String),
+    QuotedString(String),
+}
+
+#[derive(Clone)]
+struct PartialCommandResult {
+    command: CompletionCommand,
+    previousArguments: Vec<(Option<String>, ValueType)>,
+    last_argument: LastArgument,
+}
+
+#[derive(Clone)]
+enum ParseResult {
+    Nothing,
+    PartialCommand(Field),
+    PartialArgument(PartialCommandResult),
+}
+
 struct ParseState {
     vec: Vec<TokenNode>,
     idx: usize,
-}
-
-
-struct ParseResult {
-    cmd: Option<String>,
-    previous_arguments: Vec<ArgumentDefinition>,
-    partial_argument: Option<ArgumentDefinition>,
 }
 
 impl ParseState {
@@ -46,19 +85,8 @@ impl ParseState {
     }
 }
 
-impl Completion {
-    pub fn complete(&self,
-                    line: &str,
-    ) -> String {
-        let mut res = line.to_string();
-        res.insert_str(self.position, &self.completion);
-        res
-    }
-}
-
 fn complete_cmd(cmd: Option<String>, args: Vec<ArgumentDefinition>, arg: TokenNode, scope: Scope) -> CrushResult<Vec<Completion>> {
-    let mut map = OrderedMap::new();
-    scope.dump(&mut map)?;
+    let mut map = scope.dump()?;
 
     let mut res = Vec::new();
 
@@ -74,35 +102,184 @@ fn complete_cmd(cmd: Option<String>, args: Vec<ArgumentDefinition>, arg: TokenNo
     Ok(res)
 }
 
-fn complete_parse(line: &str, cursor: usize) -> CrushResult<ParseResult> {
-    error("Not implemented")
+
+fn find_command_in_job_list(mut ast: JobListNode, cursor: usize) -> CrushResult<CommandNode> {
+    for job in &ast.jobs {
+        if job.location.contains(cursor) {
+            for cmd in &job.commands {
+                if cmd.location.contains(cursor) {
+                    return Ok(cmd.clone())
+                }
+            }
+        }
+    }
+    mandate(ast.jobs.last().and_then(|j| j.commands.last().map(|c| c.clone())), "Nothing to complete")
 }
 
-pub fn complete(line: &str, cursor: usize, scope: Scope) -> CrushResult<Vec<Completion>> {
-    let parse_result = complete_parse(line, cursor)?;
-/*
-    match token {
-        None => Ok(Vec::new()),
-        Some(tok) => complete_cmd(parse_result, scope),
-    }*/
-    Ok(Vec::new())
+fn complete_parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResult> {
+    let ast = crate::lang::parser::ast(&line[0..cursor])?;
+
+    if ast.jobs.len() == 0 {
+        return Ok(ParseResult::Nothing);
+    }
+
+    let cmd = find_command_in_job_list(ast, cursor)?;
+
+    if cmd.expressions.len() == 0 {
+        return Ok(ParseResult::Nothing);
+    }
+    else if cmd.expressions.len() == 1 {
+        let cmd = &cmd.expressions[0];
+        if cmd.location().contains(cursor) {
+            match cmd {
+                Node::Label(label) => {return Ok(ParseResult::PartialCommand(vec![label.string.clone()]))},
+                Node::Path(parent, child) => {panic!("AAA");},
+                Node::File(path, _) => {panic!("AAA");},
+                Node::String(string) => {panic!("AAA");},
+                Node::GetItem(parent, item) => {panic!("AAA");},
+                Node::GetAttr(parent, attr) => {
+                    panic!("AAA");
+                },
+
+                _ => {return error("Can't extract command to complete")}
+            }
+        }
+        else {
+            return Ok(ParseResult::PartialArgument(
+                PartialCommandResult {
+                    command: CompletionCommand::Unknown,
+                    previousArguments: vec![],
+                    last_argument: LastArgument::Unknown
+                }));
+        }
+    } else {
+        match cmd.expressions.last().unwrap() {
+            Node::Label(l) => {
+                return Ok(ParseResult::PartialArgument(
+                    PartialCommandResult {
+                        command: CompletionCommand::Unknown,
+                        previousArguments: vec![],
+                        last_argument: LastArgument::Label(l.string.clone())
+                    }));
+            },
+            Node::String(_) => {error("String completions not yet impemented")},
+            _ => {
+                error("Can't extract argument to complete")
+            }
+        }
+    }
+}
+
+fn complete_scope(scope: &Scope, prefix: &str, t: ValueType, cursor: usize) -> CrushResult<Vec<Completion>> {
+    Ok(scope.dump()?
+        .iter()
+        .filter(|(k, v)| k.starts_with(prefix))
+        .map(|(k, v)| Completion { completion: k[prefix.len()..].to_string(), position: cursor })
+        .collect())
+}
+
+pub fn complete(line: &str, cursor: usize, scope: &Scope) -> CrushResult<Vec<Completion>> {
+    let cmd = complete_parse(line, cursor, scope)?;
+
+    match cmd {
+        ParseResult::Nothing => {
+            return complete_scope(scope, "", ValueType::Any, cursor);
+        },
+        ParseResult::PartialCommand(cmd) => {
+            if cmd.len() == 1 {
+                return complete_scope(scope, &cmd[0], ValueType::Any, cursor)
+            }
+        },
+        ParseResult::PartialArgument(p) => {
+
+            match p.command {
+                CompletionCommand::Unknown => {
+                    match p.last_argument {
+                        LastArgument::Unknown => {
+                            return complete_scope(scope, "", ValueType::Any, cursor)
+                        },
+                        LastArgument::Label(l) => {
+                            return complete_scope(scope, &l, ValueType::Any, cursor)
+                        },
+                        LastArgument::QuotedString(_) => {},
+                    }
+                },
+                CompletionCommand::Known(_) => {},
+            }
+        },
+    }
+    error("unimplemented completion")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::lang::value::Value;
+    use crate::lang::data::scope::ScopeLoader;
 
     #[test]
-    fn check_simple_test() {
+    fn check_empty() {
+        let line = "";
+        let cursor = 0;
+
+        let s = Scope::create_root();
+        s.declare("abcd", Value::Empty()).unwrap();
+        let completions = complete(line, cursor, &s).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "abcd");
+    }
+
+    #[test]
+    fn check_empty_token() {
+        let line = "a ";
+        let cursor = 2;
+
+        let s = Scope::create_root();
+        s.declare("abcd", Value::Empty()).unwrap();
+        let completions = complete(line, cursor, &s).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "a abcd");
+    }
+
+    #[test]
+    fn complete_simple_command() {
         let line = "ab";
         let cursor = 2;
 
         let s = Scope::create_root();
         s.declare("abcd", Value::Empty()).unwrap();
-        let completions = complete(line, cursor, s).unwrap();
+        let completions = complete(line, cursor, &s).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "abcd");
+    }
+
+    #[test]
+    fn complete_namespaced_command() {
+        let line = "abcd:bc";
+        let cursor = 7;
+
+        let s = Scope::create_root();
+        s.create_namespace("abcd", Box::new(|env| {
+            env.declare("bcde", Value::Empty()).unwrap();
+            Ok(())
+        })).unwrap();
+
+        let completions = complete(line, cursor, &s).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "abcd:bcde");
+    }
+
+
+    #[test]
+    fn complete_simple_argument() {
+        let line = "abcd ab";
+        let cursor = 7;
+
+        let s = Scope::create_root();
+        s.declare("abcd", Value::Empty()).unwrap();
+        let completions = complete(line, cursor, &s).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "abcd abcd");
     }
 
     #[test]
@@ -112,9 +289,9 @@ mod tests {
 
         let s = Scope::create_root();
         s.declare("abcd", Value::Empty()).unwrap();
-        let completions = complete(line, cursor, s).unwrap();
+        let completions = complete(line, cursor, &s).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "abcd");
+        assert_eq!(&completions[0].complete(line), "abcdb");
     }
 
     #[test]
@@ -124,7 +301,7 @@ mod tests {
 
         let s = Scope::create_root();
         s.declare("cdef", Value::Empty()).unwrap();
-        let completions = complete(line, cursor, s).unwrap();
+        let completions = complete(line, cursor, &s).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "ab cdef ef");
     }
