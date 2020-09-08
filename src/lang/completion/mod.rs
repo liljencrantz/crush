@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use ordered_map::OrderedMap;
 use crate::lang::ast::{TokenNode, TokenType, JobListNode, CommandNode, Node};
 use crate::lang::argument::ArgumentDefinition;
-use crate::lang::value::{ValueDefinition, Field, ValueType};
+use crate::lang::value::{ValueDefinition, Field, ValueType, Value};
 use crate::lang::command::Command;
 
 pub struct Completion {
@@ -116,6 +116,20 @@ fn find_command_in_job_list(mut ast: JobListNode, cursor: usize) -> CrushResult<
     mandate(ast.jobs.last().and_then(|j| j.commands.last().map(|c| c.clone())), "Nothing to complete")
 }
 
+fn simple_path(node: &Node) -> CrushResult<Field> {
+    match node {
+        Node::Label(label) => Ok(vec![label.string.clone()]),
+        Node::GetAttr(p, a) => {
+            let mut res = simple_path(p.as_ref())?;
+            res.push(a.string.clone());
+            Ok(res)
+        }
+        _ => {
+            error("Invalid path")
+        }
+    }
+}
+
 fn complete_parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResult> {
     let ast = crate::lang::parser::ast(&line[0..cursor])?;
 
@@ -132,14 +146,14 @@ fn complete_parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<Parse
         let cmd = &cmd.expressions[0];
         if cmd.location().contains(cursor) {
             match cmd {
-                Node::Label(label) => {return Ok(ParseResult::PartialCommand(vec![label.string.clone()]))},
+                Node::Label(_) |
+                Node::GetAttr(_, _) => {
+                    return Ok(ParseResult::PartialCommand(simple_path(cmd)?));
+                },
                 Node::Path(parent, child) => {panic!("AAA");},
                 Node::File(path, _) => {panic!("AAA");},
                 Node::String(string) => {panic!("AAA");},
                 Node::GetItem(parent, item) => {panic!("AAA");},
-                Node::GetAttr(parent, attr) => {
-                    panic!("AAA");
-                },
 
                 _ => {return error("Can't extract command to complete")}
             }
@@ -170,12 +184,17 @@ fn complete_parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<Parse
     }
 }
 
-fn complete_scope(scope: &Scope, prefix: &str, t: ValueType, cursor: usize) -> CrushResult<Vec<Completion>> {
-    Ok(scope.dump()?
-        .iter()
-        .filter(|(k, v)| k.starts_with(prefix))
-        .map(|(k, v)| Completion { completion: k[prefix.len()..].to_string(), position: cursor })
-        .collect())
+fn complete_value(value: Value, prefix: &[String], t: ValueType, cursor: usize) -> CrushResult<Vec<Completion>> {
+    if prefix.len() == 1 {
+        Ok(value.fields()
+            .iter()
+            .filter(|k| k.starts_with(&prefix[0]))
+            .map(|k| Completion { completion: k[prefix[0].len()..].to_string(), position: cursor })
+            .collect())
+    } else {
+        let child = mandate(value.field(&prefix[0])?, "Unknown member")?;
+        complete_value(child, &prefix[1..], t, cursor)
+    }
 }
 
 pub fn complete(line: &str, cursor: usize, scope: &Scope) -> CrushResult<Vec<Completion>> {
@@ -183,23 +202,20 @@ pub fn complete(line: &str, cursor: usize, scope: &Scope) -> CrushResult<Vec<Com
 
     match cmd {
         ParseResult::Nothing => {
-            return complete_scope(scope, "", ValueType::Any, cursor);
+            return complete_value(Value::Scope(scope.clone()), &vec!["".to_string()], ValueType::Any, cursor);
         },
         ParseResult::PartialCommand(cmd) => {
-            if cmd.len() == 1 {
-                return complete_scope(scope, &cmd[0], ValueType::Any, cursor)
-            }
+                return complete_value(Value::Scope(scope.clone()), &cmd, ValueType::Any, cursor)
         },
         ParseResult::PartialArgument(p) => {
-
             match p.command {
                 CompletionCommand::Unknown => {
                     match p.last_argument {
                         LastArgument::Unknown => {
-                            return complete_scope(scope, "", ValueType::Any, cursor)
+                            return complete_value(Value::Scope(scope.clone()), &vec!["".to_string()], ValueType::Any, cursor)
                         },
                         LastArgument::Label(l) => {
-                            return complete_scope(scope, &l, ValueType::Any, cursor)
+                            return complete_value(Value::Scope(scope.clone()), &vec![l], ValueType::Any, cursor)
                         },
                         LastArgument::QuotedString(_) => {},
                     }
