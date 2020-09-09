@@ -637,6 +637,13 @@ pub enum TokenType {
     Separator,
     Integer,
     Float,
+    SubStart,
+    SubEnd,
+    JobStart,
+    JobEnd,
+    Pipe,
+    Unnamed,
+    Named,
     /*
     Missing:
     |, @, @@ [] () {}

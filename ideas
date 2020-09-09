@@ -69,6 +69,7 @@ recursive chmod
 recursive chown
 Threads command, shows all threads on the system
 watch command
+Use new location data to display better error messages
 
 Time to figure out tab completion.
 This will eventually require a parser that can parse broken and incomplete input and return some kind of best guess.

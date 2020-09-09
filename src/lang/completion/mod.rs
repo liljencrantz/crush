@@ -5,7 +5,7 @@ use crate::lang::value::{Field, ValueType, Value};
 use crate::lang::command::Command;
 use crate::util::directory_lister::DirectoryLister;
 use std::path::PathBuf;
-use crate::lang::completion::parse::{ParseResult, CompletionCommand, LastArgument, complete_parse};
+use crate::lang::completion::parse::{ParseResult, CompletionCommand, LastArgument, parse};
 use crate::lang::ast::TokenNode;
 
 mod parse;
@@ -97,7 +97,7 @@ fn complete_file(lister: &impl DirectoryLister, prefix: impl Into<PathBuf>, t: V
 }
 
 pub fn complete(line: &str, cursor: usize, scope: &Scope, lister: &impl DirectoryLister) -> CrushResult<Vec<Completion>> {
-    let cmd = complete_parse(line, cursor, scope)?;
+    let cmd = parse(line, cursor, scope)?;
 
     let mut res = Vec::new();
 

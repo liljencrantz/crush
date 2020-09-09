@@ -167,6 +167,13 @@ Token: TokenNode = {
     @L Separator @R => TokenNode::new(TokenType::Separator, <>),
     @L Integer @R => TokenNode::new(TokenType::Integer, <>),
     @L Float @R => TokenNode::new(TokenType::Float, <>),
+    @L "(" @R => TokenNode::new(TokenType::SubStart, <>),
+    @L ")" @R => TokenNode::new(TokenType::SubEnd, <>),
+    @L "{" @R => TokenNode::new(TokenType::JobStart, <>),
+    @L "}" @R => TokenNode::new(TokenType::JobEnd, <>),
+    @L "|" @R => TokenNode::new(TokenType::Pipe, <>),
+    @L "@@" @R => TokenNode::new(TokenType::Named, <>),
+    @L "@" @R => TokenNode::new(TokenType::Unnamed, <>),
 }
 
 match {

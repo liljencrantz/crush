@@ -85,8 +85,26 @@ fn find_command_in_job_list(mut ast: JobListNode, cursor: usize) -> CrushResult<
     mandate(ast.jobs.last().and_then(|j| j.commands.last().map(|c| c.clone())), "Nothing to complete")
 }
 
-pub fn complete_parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResult> {
-    let ast = crate::lang::parser::ast(&line[0..cursor])?;
+fn close_command(input: &str) -> CrushResult<String> {
+    let tokens = crate::lang::parser::tokenize(input)?;
+    let mut stack = Vec::new();
+
+    for tok in &tokens {
+        match tok.token_type {
+            TokenType::SubStart => {stack.push(")");}
+            TokenType::SubEnd => {stack.pop();}
+            TokenType::JobStart => {stack.push("}");}
+            TokenType::JobEnd => {stack.pop();}
+            _ => {}
+        }
+    }
+    stack.reverse();
+
+    Ok(format!("{}{}", input, stack.join("")))
+}
+
+pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResult> {
+    let ast = crate::lang::parser::ast(&close_command(&line[0..cursor])?)?;
 
     if ast.jobs.len() == 0 {
         return Ok(ParseResult::Nothing);
@@ -170,5 +188,17 @@ pub fn complete_parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<P
                 error("Can't extract argument to complete")
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn close_command_test() {
+        assert_eq!(close_command("x (a").unwrap(), "x (a)");
+        assert_eq!(close_command("x {a").unwrap(), "x {a}");
+        assert_eq!(close_command("x (a) {b} {c (d) (e").unwrap(), "x (a) {b} {c (d) (e)}");
     }
 }
