@@ -183,7 +183,7 @@ impl Node {
             GetAttr(p, n) |
             Path(p, n) => p.location().union(&n.location),
             Substitution(j) => j.location,
-            Closure(p, j) => {
+            Closure(_, j) => {
                 // Fixme: Can't tab complete or error report on parameters because they're not currently tracked
                 j.location
             }

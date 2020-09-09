@@ -1,14 +1,14 @@
 use crate::lang::data::scope::Scope;
 use crate::lang::errors::{CrushResult, error, mandate};
-use crate::lang::parser::tokenize;
-use std::collections::HashMap;
-use ordered_map::OrderedMap;
-use crate::lang::ast::{TokenNode, TokenType, JobListNode, CommandNode, Node};
 use crate::lang::argument::ArgumentDefinition;
-use crate::lang::value::{ValueDefinition, Field, ValueType, Value};
+use crate::lang::value::{Field, ValueType, Value};
 use crate::lang::command::Command;
 use crate::util::directory_lister::DirectoryLister;
 use std::path::PathBuf;
+use crate::lang::completion::parse::{ParseResult, CompletionCommand, LastArgument, complete_parse};
+use crate::lang::ast::TokenNode;
+
+mod parse;
 
 pub struct Completion {
     completion: String,
@@ -24,43 +24,6 @@ impl Completion {
         res.insert_str(self.position, &self.completion);
         res
     }
-}
-
-enum CompletionCommand {
-    Unknown,
-    Known(Command),
-}
-
-impl Clone for CompletionCommand {
-    fn clone(&self) -> Self {
-        match self {
-            CompletionCommand::Unknown => CompletionCommand::Unknown,
-            CompletionCommand::Known(c) => CompletionCommand::Known(c.copy()),
-        }
-    }
-}
-
-#[derive(Clone)]
-enum LastArgument {
-    Unknown,
-    Field(Field),
-    Path(PathBuf),
-    QuotedString(String),
-}
-
-#[derive(Clone)]
-struct PartialCommandResult {
-    command: CompletionCommand,
-    previous_arguments: Vec<(Option<String>, ValueType)>,
-    last_argument: LastArgument,
-}
-
-#[derive(Clone)]
-enum ParseResult {
-    Nothing,
-    PartialCommand(Field),
-    PartialPath(PathBuf),
-    PartialArgument(PartialCommandResult),
 }
 
 struct ParseState {
@@ -92,7 +55,6 @@ impl ParseState {
 
 fn complete_cmd(cmd: Option<String>, args: Vec<ArgumentDefinition>, arg: TokenNode, scope: Scope) -> CrushResult<Vec<Completion>> {
     let mut map = scope.dump()?;
-
     let mut res = Vec::new();
 
     for name in map.keys() {
@@ -105,118 +67,6 @@ fn complete_cmd(cmd: Option<String>, args: Vec<ArgumentDefinition>, arg: TokenNo
     }
 
     Ok(res)
-}
-
-fn find_command_in_job_list(mut ast: JobListNode, cursor: usize) -> CrushResult<CommandNode> {
-    for job in &ast.jobs {
-        if job.location.contains(cursor) {
-            for cmd in &job.commands {
-                if cmd.location.contains(cursor) {
-                    return Ok(cmd.clone());
-                }
-            }
-        }
-    }
-    mandate(ast.jobs.last().and_then(|j| j.commands.last().map(|c| c.clone())), "Nothing to complete")
-}
-
-fn simple_attr(node: &Node) -> CrushResult<Field> {
-    match node {
-        Node::Label(label) => Ok(vec![label.string.clone()]),
-        Node::GetAttr(p, a) => {
-            let mut res = simple_attr(p.as_ref())?;
-            res.push(a.string.clone());
-            Ok(res)
-        }
-        _ => {
-            error("Invalid path")
-        }
-    }
-}
-
-fn simple_path(node: &Node) -> CrushResult<PathBuf> {
-    match node {
-        Node::Label(label) => Ok(PathBuf::from(&label.string)),
-        Node::Path(p, a) => {
-            let mut res = simple_path(p.as_ref())?;
-            Ok(res.join(&a.string))
-        }
-        _ => {
-            error("Invalid path")
-        }
-    }
-}
-
-fn complete_parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResult> {
-    let ast = crate::lang::parser::ast(&line[0..cursor])?;
-
-    if ast.jobs.len() == 0 {
-        return Ok(ParseResult::Nothing);
-    }
-
-    let cmd = find_command_in_job_list(ast, cursor)?;
-
-    if cmd.expressions.len() == 0 {
-        return Ok(ParseResult::Nothing);
-    } else if cmd.expressions.len() == 1 {
-        let cmd = &cmd.expressions[0];
-        if cmd.location().contains(cursor) {
-            match cmd {
-                Node::Label(_) |
-                Node::GetAttr(_, _) => {
-                    return Ok(ParseResult::PartialCommand(simple_attr(cmd)?));
-                }
-                Node::Path(_, _) => {
-                    return Ok(ParseResult::PartialPath(simple_path(cmd)?));
-                }
-                Node::File(path, _) => { panic!("AAA"); }
-                Node::String(string) => { panic!("AAA"); }
-                Node::GetItem(parent, item) => { panic!("AAA"); }
-
-                _ => { return error("Can't extract command to complete"); }
-            }
-        } else {
-            return Ok(ParseResult::PartialArgument(
-                PartialCommandResult {
-                    command: CompletionCommand::Unknown,
-                    previous_arguments: vec![],
-                    last_argument: LastArgument::Unknown,
-                }));
-        }
-    } else {
-        let arg = cmd.expressions.last().unwrap();
-        match arg {
-            Node::Label(l) => {
-                return Ok(ParseResult::PartialArgument(
-                    PartialCommandResult {
-                        command: CompletionCommand::Unknown,
-                        previous_arguments: vec![],
-                        last_argument: LastArgument::Field(vec![l.string.clone()]),
-                    }));
-            }
-            Node::GetAttr(_, _) => {
-                return Ok(ParseResult::PartialArgument(
-                    PartialCommandResult {
-                        command: CompletionCommand::Unknown,
-                        previous_arguments: vec![],
-                        last_argument: LastArgument::Field(simple_attr(arg)?),
-                    }));
-            }
-            Node::Path(_, _) => {
-                return Ok(ParseResult::PartialArgument(
-                    PartialCommandResult {
-                        command: CompletionCommand::Unknown,
-                        previous_arguments: vec![],
-                        last_argument: LastArgument::Path(simple_path(arg)?),
-                    }));
-            }
-
-            Node::String(_) => { error("String completions not yet impemented") }
-            _ => {
-                error("Can't extract argument to complete")
-            }
-        }
-    }
 }
 
 fn complete_value(value: Value, prefix: &[String], t: ValueType, cursor: usize, out: &mut Vec<Completion>) -> CrushResult<()> {
@@ -335,6 +185,19 @@ mod tests {
     }
 
     #[test]
+    fn check_subcommand() {
+        let line = "x (a";
+        let cursor = 4;
+
+        let s = Scope::create_root();
+        s.declare("abcd", Value::Empty()).unwrap();
+        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "x (abcd");
+    }
+
+
+    #[test]
     fn complete_simple_command() {
         let line = "ab";
         let cursor = 2;
@@ -445,5 +308,17 @@ mod tests {
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "ab cdef ef");
+    }
+
+    #[test]
+    fn check_named_argument() {
+        let line = "ab foo=cd";
+        let cursor = 9;
+
+        let s = Scope::create_root();
+        s.declare("cdef", Value::Empty()).unwrap();
+        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "ab foo=cdef");
     }
 }

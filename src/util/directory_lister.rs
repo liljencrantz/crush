@@ -2,7 +2,7 @@
 A simple wrapper around std::fs::read_dir to allow for unit testing via fakes.
 */
 
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 use crate::lang::errors::{CrushResult, to_crush_error, mandate};
 use std::fs::{ReadDir, read_dir};
 use ordered_map::{OrderedMap, Entry};
@@ -135,7 +135,6 @@ impl DirectoryLister for FakeDirectoryLister {
         Ok(
             FakeIter {
                 vec: VecDeque::from(mandate(self.map.get(&path), "Unknown directory")?.clone()),
-                idx: 0,
             }
         )
     }
@@ -143,7 +142,6 @@ impl DirectoryLister for FakeDirectoryLister {
 
 pub struct FakeIter {
     vec: VecDeque<Directory>,
-    idx: usize,
 }
 
 impl Iterator for FakeIter {

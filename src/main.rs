@@ -132,7 +132,7 @@ fn run() -> CrushResult<()> {
     drop(pretty_printer);
     drop(printer);
     drop(threads);
-    global_env.clear();
+    global_env.clear()?;
     drop(global_env);
     let _ = print_handle.join();
     Ok(())

@@ -4,7 +4,6 @@ use crate::lang::execution_context::CommandContext;
 use crate::lang::data::scope::Scope;
 use crate::lang::data::table::{ColumnType, Row};
 use crate::lang::value::{Value, ValueType};
-use ordered_map::OrderedMap;
 
 pub fn r#let(context: CommandContext) -> CrushResult<()> {
     for arg in context.arguments {
