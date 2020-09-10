@@ -269,7 +269,7 @@ mod tests {
     #[test]
     fn find_command_in_operator() {
         let ast = crate::lang::parser::ast("ps | where {^cpu == (max_)}").unwrap();
-        let cmd = find_command_in_job_list(ast, 24).unwrap();
+        let cmd = find_command_in_job_list(ast, 25).unwrap();
         assert_eq!(cmd.location, Location::new(21, 25))
     }
 }

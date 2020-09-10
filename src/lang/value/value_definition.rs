@@ -37,7 +37,7 @@ impl ValueDefinition {
             ValueDefinition::JobDefinition(j) => j.location(),
             ValueDefinition::Label(l) => l.location,
             ValueDefinition::GetAttr(p, a) |
-            ValueDefinition::Path(p, a)=> p.location().union(&a.location),
+            ValueDefinition::Path(p, a)=> p.location().union(a.location),
         }
     }
 

@@ -30,8 +30,9 @@ pub struct JobNode {
     pub location: Location,
 }
 
-pub fn operator_function(op: &[&str], location: Location, l: Box<Node>, r: Box<Node>) -> Box<Node> {
-    let cmd = attr(op, location);
+pub fn operator_function(op: &[&str], op_location: Location, l: Box<Node>, r: Box<Node>) -> Box<Node> {
+    let location = op_location.union(l.location()).union(r.location());
+    let cmd = attr(op, op_location);
     Box::from(
         Node::Substitution(
             JobNode {
@@ -39,16 +40,17 @@ pub fn operator_function(op: &[&str], location: Location, l: Box<Node>, r: Box<N
                     expressions: vec![
                         cmd, *l, *r,
                     ],
-                    location,
+                    location: location,
                 }],
-                location,
+                location: location,
             }
         )
     )
 }
 
-pub fn operator_method(op: &str, location: Location, l: Box<Node>, r: Box<Node>) -> Box<Node> {
-    let cmd = Node::GetAttr(l, TrackedString::from(op, location));
+pub fn operator_method(op: &str, op_location: Location, l: Box<Node>, r: Box<Node>) -> Box<Node> {
+    let location = op_location.union(l.location()).union(r.location());
+    let cmd = Node::GetAttr(l, TrackedString::from(op, op_location));
     Box::from(
         Node::Substitution(
             JobNode {
@@ -56,16 +58,15 @@ pub fn operator_method(op: &str, location: Location, l: Box<Node>, r: Box<Node>)
                     expressions: vec![
                         cmd, *r,
                     ],
-                    location,
+                    location: location,
                 }],
-                location,
+                location: location,
             }
         )
     )
 }
 
 pub fn operator(op: TrackedString, l: Box<Node>, r: Box<Node>) -> Box<Node> {
-    let location = op.location.union(&l.location()).union(&r.location());
     match op.string.as_str() {
         "<" => operator_function(&vec!["global", "comp", "lt"], op.location, l, r),
         "<=" => operator_function(&vec!["global", "comp", "lte"], op.location, l, r),
@@ -88,7 +89,7 @@ pub fn operator(op: TrackedString, l: Box<Node>, r: Box<Node>) -> Box<Node> {
 
         //"" => operator_method("", op.location, l, r),
 
-        _ => panic!("hej"),
+        _ => panic!("invalid operator"),
     }
 }
 
@@ -172,7 +173,7 @@ impl Location {
         Location { start, end }
     }
 
-    pub fn union(&self, other: &Location) -> Location {
+    pub fn union(&self, other: Location) -> Location {
         Location {
             start: min(self.start, other.start),
             end: max(self.end, other.end),
@@ -224,18 +225,18 @@ impl Node {
                 s.location,
 
             Assignment(a, _, b) =>
-                a.location().union(&b.location()),
+                a.location().union(b.location()),
 
             Unary(s, a) =>
-                s.location.union(&a.location()),
+                s.location.union(a.location()),
 
             File(_, l) |
             Integer(_, l) |
             Float(_, l) => *l,
 
-            GetItem(a, b) => a.location().union(&b.location()),
+            GetItem(a, b) => a.location().union(b.location()),
             GetAttr(p, n) |
-            Path(p, n) => p.location().union(&n.location),
+            Path(p, n) => p.location().union(n.location),
             Substitution(j) => j.location,
             Closure(_, j) => {
                 // Fixme: Can't tab complete or error report on parameters because they're not currently tracked
@@ -263,14 +264,15 @@ impl Node {
                 Job::new(vec![self
                     .generate_standalone(env)?
                     .unwrap()],
-                         a.location().union(&o.location()),
+                         a.location().union(o.location()),
                 )),
 
             Node::Unary(op, r) => match op.string.as_str() {
-                "neg" | "not" | "typeof" => ValueDefinition::JobDefinition(Job::new(vec![self
-                    .generate_standalone(env)?
-                    .unwrap()],
-                                                                                    op.location.union(&r.location()))),
+                "neg" | "not" | "typeof" => ValueDefinition::JobDefinition(Job::new(
+                    vec![self
+                        .generate_standalone(env)?
+                        .unwrap()],
+                    op.location.union(r.location()))),
                 "@" => {
                     return Ok(ArgumentDefinition::list(
                         r.generate_argument(env)?.unnamed_value()?,

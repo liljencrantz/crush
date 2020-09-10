@@ -39,7 +39,7 @@ Command: CommandNode = {
     <start: @L> <a: Assignment> <end: @R> => CommandNode{expressions: vec![*a], location: Location::new(start, end)},
     <start: @L> <mut c: Command> <a:Assignment> <end: @R> =>
         {c.expressions.push(*a);
-        c.location = c.location.union(&Location::new(start, end));
+        c.location = c.location.union(Location::new(start, end));
         c
     }
 };
