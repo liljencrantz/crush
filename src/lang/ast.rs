@@ -95,7 +95,7 @@ impl Display for TrackedString {
     }
 }
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, PartialEq, Eq)]
 pub struct Location {
     pub start: usize,
     pub end: usize,

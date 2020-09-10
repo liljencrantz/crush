@@ -1,5 +1,11 @@
 /**
 A simple wrapper around std::fs::read_dir to allow for unit testing via fakes.
+
+There are two implementations, the real one can be instantiated via the directory_lister() function.
+There is also a fake lister for tests, accessible via FakeDirectoryLister::new().
+
+It only allows you to list files and check if they are a directory, so if you need full metadata,
+you'll need something cleverer.
 */
 
 use std::path::{PathBuf};
@@ -10,7 +16,14 @@ use std::collections::VecDeque;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Directory {
-    pub path: PathBuf,
+    pub name: PathBuf,
+    pub full_path: PathBuf,
+    pub is_directory: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FakeListerEntry {
+    pub name: PathBuf,
     pub is_directory: bool,
 }
 
@@ -22,10 +35,8 @@ pub trait DirectoryLister {
 
 pub struct RealDirectoryLister {}
 
-impl RealDirectoryLister {
-    pub fn new() -> RealDirectoryLister {
-        RealDirectoryLister {}
-    }
+pub fn directory_lister() -> RealDirectoryLister {
+    RealDirectoryLister {}
 }
 
 impl DirectoryLister for RealDirectoryLister {
@@ -55,7 +66,8 @@ impl Iterator for RealIter {
              */
             if let Ok(next) = self.read_dir.next()? {
                 return Some(Directory {
-                    path: PathBuf::from(next.file_name()),
+                    name: PathBuf::from(next.file_name()),
+                    full_path: PathBuf::from(next.path()),
                     is_directory: next.metadata().map(|m| m.is_dir()).unwrap_or(false),
                 });
             }
@@ -65,7 +77,7 @@ impl Iterator for RealIter {
 
 pub struct FakeDirectoryLister {
     cwd: PathBuf,
-    map: OrderedMap<PathBuf, Vec<Directory>>,
+    map: OrderedMap<PathBuf, Vec<FakeListerEntry>>,
 }
 
 impl FakeDirectoryLister {
@@ -84,7 +96,12 @@ impl FakeDirectoryLister {
             g
         };
 
-        let mut content = content.iter().map(|n| Directory { path: PathBuf::from(n), is_directory: false }).collect::<Vec<_>>();
+        let mut content = content.iter()
+            .map(|n| FakeListerEntry {
+                name: PathBuf::from(n),
+                is_directory: false,
+            })
+            .collect::<Vec<_>>();
 
         match self.map.entry(path.clone()) {
             Entry::Occupied(mut e) => {
@@ -97,8 +114,8 @@ impl FakeDirectoryLister {
         let mut parent = PathBuf::from(path);
         while let Some(p) = parent.parent() {
             let mut v = vec![
-                Directory {
-                    path: PathBuf::from(parent.components().last().unwrap().as_os_str()),
+                FakeListerEntry {
+                    name: PathBuf::from(parent.components().last().unwrap().as_os_str()),
                     is_directory: true,
                 }];
 
@@ -127,14 +144,23 @@ impl DirectoryLister for FakeDirectoryLister {
     fn list(&self, path: impl Into<PathBuf>) -> CrushResult<Self::DirectoryIter> {
         let mut g = path.into();
         let path = if g.is_relative() {
-            self.cwd.join(g)
+            self.cwd.join(&g)
         } else {
-            g
+            g.clone()
         };
 
         Ok(
             FakeIter {
-                vec: VecDeque::from(mandate(self.map.get(&path), "Unknown directory")?.clone()),
+                vec: VecDeque::from(
+                    mandate(
+                        self.map.get(&path)
+                            .map(|v|
+                            v.iter().map(|f| Directory {
+                                name: f.name.clone(),
+                                full_path: g.join(&f.name),
+                                is_directory: f.is_directory
+                            }).collect::<Vec<_>>()),
+                        "Unknown directory")?.clone()),
             }
         )
     }
@@ -157,13 +183,13 @@ mod tests {
     use super::*;
 
     fn as_strs(it: FakeIter) -> Vec<String> {
-        let mut res = it.map(|d| d.path.to_str().unwrap().to_string()).collect::<Vec<_>>();
+        let mut res = it.map(|d| d.name.to_str().unwrap().to_string()).collect::<Vec<_>>();
         res.sort();
         res
     }
 
     fn as_strs_real(it: RealIter) -> Vec<String> {
-        let mut res = it.map(|d| d.path.to_str().unwrap().to_string()).collect::<Vec<_>>();
+        let mut res = it.map(|d| d.name.to_str().unwrap().to_string()).collect::<Vec<_>>();
         res.sort();
         res
     }
@@ -185,8 +211,7 @@ mod tests {
 
     #[test]
     fn check_real() {
-        let mut f = RealDirectoryLister::new();
+        let mut f = directory_lister();
         assert_eq!(as_strs_real(f.list("example_data/tree").unwrap()), vec!["a", "sub"]);
     }
-
 }

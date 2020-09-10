@@ -90,8 +90,8 @@ fn complete_file(lister: &impl DirectoryLister, prefix: impl Into<PathBuf>, t: V
     let parent = prefix.parent().map(|p| p.to_path_buf()).unwrap_or(PathBuf::from("/"));
 
     out.append(&mut lister.list(parent)?
-        .filter(|k| k.path.to_str().unwrap().starts_with(prefix_str))
-        .map(|k| Completion { completion: k.path.to_str().unwrap()[prefix_str.len()..].to_string(), position: cursor })
+        .filter(|k| k.name.to_str().unwrap().starts_with(prefix_str))
+        .map(|k| Completion { completion: k.name.to_str().unwrap()[prefix_str.len()..].to_string(), position: cursor })
         .collect());
     Ok(())
 }

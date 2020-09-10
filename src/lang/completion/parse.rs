@@ -1,4 +1,4 @@
-use crate::lang::ast::{Node, CommandNode, JobListNode};
+use crate::lang::ast::{Node, CommandNode, JobListNode, JobNode};
 use crate::lang::ast::{TokenNode, TokenType};
 use crate::lang::parser::tokenize;
 use crate::lang::errors::{error, CrushResult, mandate};
@@ -72,14 +72,56 @@ fn simple_path(node: &Node) -> CrushResult<PathBuf> {
     }
 }
 
+fn find_command_in_expression(exp: &Node, cursor: usize) -> CrushResult<Option<CommandNode>> {
+    match exp {
+        Node::Assignment(a, op, b) => {
+            find_command_in_expression(b, cursor)
+        }
+
+        Node::Substitution(j) => {
+            if j.location.contains(cursor) {
+                Ok(Some(find_command_in_job(j.clone(), cursor)?))
+            } else {
+                Ok(None)
+            }
+        }
+
+        Node::Closure(_, joblist) => {
+            if joblist.location.contains(cursor) {
+                Ok(Some(find_command_in_job_list(joblist.clone(), cursor)?))
+            } else {
+                Ok(None)
+            }
+        }
+
+        _ => {
+            Ok(None)
+        }
+    }
+}
+
+fn find_command_in_command(mut ast: CommandNode, cursor: usize) -> CrushResult<CommandNode> {
+    for exp in &ast.expressions {
+        if let Some(res) = find_command_in_expression(exp, cursor)? {
+            return Ok(res);
+        }
+    }
+    Ok(ast)
+}
+
+fn find_command_in_job(mut job: JobNode, cursor: usize) -> CrushResult<CommandNode> {
+    for cmd in &job.commands {
+        if cmd.location.contains(cursor) {
+            return find_command_in_command(cmd.clone(), cursor);
+        }
+    }
+    mandate(job.commands.last(), "Nothing to complete").map(|c| c.clone())
+}
+
 fn find_command_in_job_list(mut ast: JobListNode, cursor: usize) -> CrushResult<CommandNode> {
     for job in &ast.jobs {
         if job.location.contains(cursor) {
-            for cmd in &job.commands {
-                if cmd.location.contains(cursor) {
-                    return Ok(cmd.clone());
-                }
-            }
+            return find_command_in_job(job.clone(), cursor);
         }
     }
     mandate(ast.jobs.last().and_then(|j| j.commands.last().map(|c| c.clone())), "Nothing to complete")
@@ -91,10 +133,10 @@ fn close_command(input: &str) -> CrushResult<String> {
 
     for tok in &tokens {
         match tok.token_type {
-            TokenType::SubStart => {stack.push(")");}
-            TokenType::SubEnd => {stack.pop();}
-            TokenType::JobStart => {stack.push("}");}
-            TokenType::JobEnd => {stack.pop();}
+            TokenType::SubStart => { stack.push(")"); }
+            TokenType::SubEnd => { stack.pop(); }
+            TokenType::JobStart => { stack.push("}"); }
+            TokenType::JobEnd => { stack.pop(); }
             _ => {}
         }
     }
@@ -194,11 +236,40 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::lang::ast::Location;
 
     #[test]
     fn close_command_test() {
         assert_eq!(close_command("x (a").unwrap(), "x (a)");
         assert_eq!(close_command("x {a").unwrap(), "x {a}");
         assert_eq!(close_command("x (a) {b} {c (d) (e").unwrap(), "x (a) {b} {c (d) (e)}");
+    }
+
+    #[test]
+    fn find_command_in_substitution_test() {
+        let ast = crate::lang::parser::ast("a (b)").unwrap();
+        let cmd = find_command_in_job_list(ast, 4).unwrap();
+        assert_eq!(cmd.location, Location::new(3, 4))
+    }
+
+    #[test]
+    fn find_command_in_closure_test() {
+        let ast = crate::lang::parser::ast("a {b}").unwrap();
+        let cmd = find_command_in_job_list(ast, 4).unwrap();
+        assert_eq!(cmd.location, Location::new(3, 4))
+    }
+
+    #[test]
+    fn find_command_in_complicated_mess_test() {
+        let ast = crate::lang::parser::ast("a | b {c:d (e f=g) h=(i j)}").unwrap();
+        let cmd = find_command_in_job_list(ast, 25).unwrap();
+        assert_eq!(cmd.location, Location::new(22, 25))
+    }
+
+    #[test]
+    fn find_command_in_operator() {
+        let ast = crate::lang::parser::ast("ps | where {^cpu == (max_)}").unwrap();
+        let cmd = find_command_in_job_list(ast, 25).unwrap();
+        assert_eq!(cmd.location, Location::new(21, 25))
     }
 }

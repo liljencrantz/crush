@@ -76,7 +76,7 @@ This will eventually require a parser that can parse broken and incomplete input
 
 Long term completion feature list:
 
-* Support for named arguments
+* Support for completing on names of named arguments
 * Support for completions in various types of subcommands
 * Completions for wildcards
 * Completions for external commands

@@ -18,13 +18,21 @@ JobListWithoutSeparator: JobListNode = {
 };
 
 NonEmptyJobList: JobListNode = {
-    <l: @L> <mut lst:NonEmptyJobList> Separator <j:Job> <r: @R> =>  {lst.jobs.push(j); lst.location = Location::new(l, r); lst},
+    <l: @L> <mut lst:NonEmptyJobList> Separator <j:Job> <r: @R> =>  {
+        lst.jobs.push(j);
+        lst.location = Location::new(l, r);
+        lst
+    },
     <l: @L> <j: Job> <r: @R> => JobListNode {jobs: vec![j], location: Location::new(l, r)},
 };
 
 Job: JobNode = {
     <l: @L> <c:Command> <r: @R> => JobNode{commands: vec![c], location: Location::new(l, r)},
-    <mut j:Job> "|" Separator? <c:Command> => {j.commands.push(c); j}
+    <l: @L> <mut j:Job> "|" Separator? <c:Command> <r: @R> => {
+        j.commands.push(c);
+        j.location = Location::new(l, r);
+        j
+    }
 };
 
 Command: CommandNode = {
