@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use std::fmt::{Display, Formatter};
 use std::cmp::{min, max};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct JobListNode {
     pub jobs: Vec<JobNode>,
     pub location: Location,
@@ -24,10 +24,72 @@ impl JobListNode {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct JobNode {
     pub commands: Vec<CommandNode>,
     pub location: Location,
+}
+
+pub fn operator_function(op: &[&str], location: Location, l: Box<Node>, r: Box<Node>) -> Box<Node> {
+    let cmd = attr(op, location);
+    Box::from(
+        Node::Substitution(
+            JobNode {
+                commands: vec![CommandNode {
+                    expressions: vec![
+                        cmd, *l, *r,
+                    ],
+                    location,
+                }],
+                location,
+            }
+        )
+    )
+}
+
+pub fn operator_method(op: &str, location: Location, l: Box<Node>, r: Box<Node>) -> Box<Node> {
+    let cmd = Node::GetAttr(l, TrackedString::from(op, location));
+    Box::from(
+        Node::Substitution(
+            JobNode {
+                commands: vec![CommandNode {
+                    expressions: vec![
+                        cmd, *r,
+                    ],
+                    location,
+                }],
+                location,
+            }
+        )
+    )
+}
+
+pub fn operator(op: TrackedString, l: Box<Node>, r: Box<Node>) -> Box<Node> {
+    let location = op.location.union(&l.location()).union(&r.location());
+    match op.string.as_str() {
+        "<" => operator_function(&vec!["global", "comp", "lt"], op.location, l, r),
+        "<=" => operator_function(&vec!["global", "comp", "lte"], op.location, l, r),
+        ">" => operator_function(&vec!["global", "comp", "gt"], op.location, l, r),
+        ">=" => operator_function(&vec!["global", "comp", "gte"], op.location, l, r),
+        "==" => operator_function(&vec!["global", "comp", "eq"], op.location, l, r),
+        "!=" => operator_function(&vec!["global", "comp", "neq"], op.location, l, r),
+
+        "and" => operator_function(&vec!["global", "cond", "__and__"], op.location, l, r),
+        "or" => operator_function(&vec!["global", "cond", "__or__"], op.location, l, r),
+
+        "+" => operator_method("__add__", op.location, l, r),
+        "-" => operator_method("__sub__", op.location, l, r),
+
+        "*" => operator_method("__mul__", op.location, l, r),
+        "//" => operator_method("__div__", op.location, l, r),
+
+        "=~" => operator_method("match", op.location, r, l),
+        "!~" => operator_method("not_match", op.location, r, l),
+
+        //"" => operator_method("", op.location, l, r),
+
+        _ => panic!("hej"),
+    }
 }
 
 impl JobNode {
@@ -42,7 +104,7 @@ impl JobNode {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CommandNode {
     pub expressions: Vec<Node>,
     pub location: Location,
@@ -122,13 +184,9 @@ impl Location {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Node {
     Assignment(Box<Node>, String, Box<Node>),
-    LogicalOperation(Box<Node>, TrackedString, Box<Node>),
-    Comparison(Box<Node>, TrackedString, Box<Node>),
-    Term(Box<Node>, TrackedString, Box<Node>),
-    Factor(Box<Node>, TrackedString, Box<Node>),
     Unary(TrackedString, Box<Node>),
     Glob(TrackedString),
     Label(TrackedString),
@@ -165,11 +223,7 @@ impl Node {
             Regex(s) =>
                 s.location,
 
-            Assignment(a, _, b) |
-            LogicalOperation(a, _, b) |
-            Comparison(a, _, b) |
-            Term(a, _, b) |
-            Factor(a, _, b) =>
+            Assignment(a, _, b) =>
                 a.location().union(&b.location()),
 
             Unary(s, a) =>
@@ -212,20 +266,11 @@ impl Node {
                          a.location().union(&o.location()),
                 )),
 
-            Node::LogicalOperation(a, o, b)
-            | Node::Comparison(a, o, b)
-            | Node::Term(a, o, b)
-            | Node::Factor(a, o, b) => ValueDefinition::JobDefinition(
-                Job::new(vec![self
-                    .generate_standalone(env)?
-                    .unwrap()],
-                         a.location().union(&b.location()).union(&o.location),
-                )),
             Node::Unary(op, r) => match op.string.as_str() {
                 "neg" | "not" | "typeof" => ValueDefinition::JobDefinition(Job::new(vec![self
                     .generate_standalone(env)?
                     .unwrap()],
-                op.location.union(&r.location()))),
+                                                                                    op.location.union(&r.location()))),
                 "@" => {
                     return Ok(ArgumentDefinition::list(
                         r.generate_argument(env)?.unnamed_value()?,
@@ -341,64 +386,6 @@ impl Node {
         match self {
             Node::Assignment(target, op, value) => {
                 Node::generate_standalone_assignment(target, op, value, env)
-            }
-
-            Node::LogicalOperation(l, op, r) => {
-                let function = env.global_static_cmd(match op.string.as_ref() {
-                    "and" => vec!["global", "cond", "and"],
-                    "or" => vec!["global", "cond", "or"],
-                    _ => return error("Unknown operator"),
-                })?;
-                Node::function_invocation(
-                    function,
-                    op.location,
-                    vec![l.generate_argument(env)?, r.generate_argument(env)?],
-                )
-            }
-
-            Node::Comparison(l, op, r) => {
-                let function = env.global_static_cmd(match op.string.as_ref() {
-                    "<" => vec!["global", "comp", "lt"],
-                    "<=" => vec!["global", "comp", "lte"],
-                    ">" => vec!["global", "comp", "gt"],
-                    ">=" => vec!["global", "comp", "gte"],
-                    "==" => vec!["global", "comp", "eq"],
-                    "!=" => vec!["global", "comp", "neq"],
-                    "=~" => {
-                        return r.method_invocation(&TrackedString::from("match", op.location), vec![l.generate_argument(env)?], env);
-                    }
-                    "!~" => {
-                        return r.method_invocation(
-                            &TrackedString::from("not_match", op.location),
-                            vec![l.generate_argument(env)?],
-                            env,
-                        );
-                    }
-                    _ => return error("Unknown operator"),
-                })?;
-                Node::function_invocation(
-                    function,
-                    op.location,
-                    vec![l.generate_argument(env)?, r.generate_argument(env)?],
-                )
-            }
-
-            Node::Term(l, op, r) => {
-                let method = match op.string.as_ref() {
-                    "+" => "__add__",
-                    "-" => "__sub__",
-                    _ => return error("Unknown operator"),
-                };
-                l.method_invocation(&TrackedString::from(method, op.location), vec![r.generate_argument(env)?], env)
-            }
-
-            Node::Factor(l, op, r) => {
-                let method = match op.string.as_ref() {
-                    "*" => "__mul__",
-                    "//" => "__div__",
-                    _ => return error("Unknown operator"),
-                };
-                l.method_invocation(&TrackedString::from(method, op.location), vec![r.generate_argument(env)?], env)
             }
 
             Node::GetItem(val, key) => {
@@ -578,7 +565,7 @@ pub fn unescape(s: &str) -> String {
     res
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ParameterNode {
     Parameter(TrackedString, Option<Box<Node>>, Option<Node>),
     Named(TrackedString),
@@ -644,10 +631,6 @@ pub enum TokenType {
     Pipe,
     Unnamed,
     Named,
-    /*
-    Missing:
-    |, @, @@ [] () {}
-     */
 }
 
 #[derive(Clone)]

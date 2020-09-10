@@ -53,25 +53,25 @@ Assignment: Box<Node> = {
 Logical: Box<Node> = {
     Comparison,
     <l: Logical> <start: @L> <op: LogicalOperator> <end: @R> <c: Comparison> =>
-        Box::from(Node::LogicalOperation(l, TrackedString::from(op, Location::new(start, end)), c)),
+        operator(TrackedString::from(op, Location::new(start, end)), l, c),
 }
 
 Comparison: Box<Node> = {
     Term,
     <c: Comparison> <start: @L> <op: ComparisonOperator> <end: @R> <t: Term> =>
-        Box::from(Node::Comparison(c, TrackedString::from(op, Location::new(start, end)), t)),
+        operator(TrackedString::from(op, Location::new(start, end)), c, t),
 }
 
 Term: Box<Node> = {
     Factor,
     <t: Term> <start: @L> <op: TermOperator> <end: @R> <f: Factor> =>
-    Box::from(Node::Term(t, TrackedString::from(op, Location::new(start, end)), f)),
+        operator(TrackedString::from(op, Location::new(start, end)), t, f),
 }
 
 Factor: Box<Node> = {
     Unary,
     <f: Factor> <start: @L> <op: FactorOperator> <end: @R> <u: Unary> =>
-        Box::from(Node::Factor(f, TrackedString::from(op, Location::new(start, end)), u)),
+        operator(TrackedString::from(op, Location::new(start, end)), f, u),
 }
 
 Unary: Box<Node> = {

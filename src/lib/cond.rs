@@ -86,9 +86,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "cond",
         Box::new(|env| {
             env.declare_condition_command(
-                "and",
+                "__and__",
                 and,
-                "and condition:(bool|command)... -> boolean",
+                "__and__ condition:(bool|command)... -> boolean",
                 "True if all arguments are true",
                 Some(r#"    Every argument to and must be either a boolean or a command that returns a boolean.
     The and command will check all arguments in order, and if any of them are false, and
@@ -98,9 +98,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     is found to be false, and will not evaluate any remaining closures."#))?;
 
             env.declare_condition_command(
-                "or",
+                "__or__",
                 or,
-                "or condition:(bool|command)... -> boolean",
+                "__or__ condition:(bool|command)... -> boolean",
                 "True if any argument is true",
                 Some(r#"    Every argument to or must be either a boolean or a command that returns a boolean.
     The or command will check all arguments in order, and if any of them are true, or
