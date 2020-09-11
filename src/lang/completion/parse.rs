@@ -1,6 +1,5 @@
 use crate::lang::ast::{Node, CommandNode, JobListNode, JobNode};
-use crate::lang::ast::{TokenNode, TokenType};
-use crate::lang::parser::tokenize;
+use crate::lang::ast::{TokenType};
 use crate::lang::errors::{error, CrushResult, mandate};
 use crate::lang::value::{Field, ValueType};
 use std::path::PathBuf;
@@ -74,7 +73,7 @@ fn simple_path(node: &Node) -> CrushResult<PathBuf> {
 
 fn find_command_in_expression(exp: &Node, cursor: usize) -> CrushResult<Option<CommandNode>> {
     match exp {
-        Node::Assignment(a, op, b) => {
+        Node::Assignment(_, _, b) => {
             find_command_in_expression(b, cursor)
         }
 

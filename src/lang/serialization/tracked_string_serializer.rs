@@ -3,7 +3,6 @@ use crate::lang::serialization::model::{element, Element};
 use crate::lang::serialization::model;
 
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
-use std::collections::hash_map::Entry;
 use crate::lang::ast::{TrackedString, Location};
 
 impl Serializable<TrackedString> for TrackedString {

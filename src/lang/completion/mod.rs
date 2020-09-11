@@ -1,8 +1,7 @@
 use crate::lang::data::scope::Scope;
-use crate::lang::errors::{CrushResult, error, mandate};
+use crate::lang::errors::{CrushResult, mandate};
 use crate::lang::argument::ArgumentDefinition;
-use crate::lang::value::{Field, ValueType, Value};
-use crate::lang::command::Command;
+use crate::lang::value::{ValueType, Value};
 use crate::util::directory_lister::DirectoryLister;
 use std::path::PathBuf;
 use crate::lang::completion::parse::{ParseResult, CompletionCommand, LastArgument, parse};
@@ -83,7 +82,7 @@ fn complete_value(value: Value, prefix: &[String], t: ValueType, cursor: usize, 
     }
 }
 
-fn complete_file(lister: &impl DirectoryLister, prefix: impl Into<PathBuf>, t: ValueType, cursor: usize, out: &mut Vec<Completion>) -> CrushResult<()> {
+fn complete_file(lister: &impl DirectoryLister, prefix: impl Into<PathBuf>, value_type: ValueType, cursor: usize, out: &mut Vec<Completion>) -> CrushResult<()> {
     let prefix = prefix.into();
 
     let prefix_str = mandate(prefix.components().last(), "Invalid file for completion")?.as_os_str().to_str().unwrap();
@@ -144,7 +143,6 @@ pub fn complete(line: &str, cursor: usize, scope: &Scope, lister: &impl Director
 mod tests {
     use super::*;
     use crate::lang::value::Value;
-    use crate::lang::data::scope::ScopeLoader;
     use crate::util::directory_lister::FakeDirectoryLister;
 
     fn lister() -> FakeDirectoryLister {

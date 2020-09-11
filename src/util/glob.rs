@@ -1,7 +1,5 @@
-use crate::lang::errors::{argument_error, to_crush_error, CrushResult, data_error};
+use crate::lang::errors::{CrushResult, data_error};
 use std::collections::VecDeque;
-use std::fs::read_dir;
-use std::io;
 use std::path::{Path, PathBuf};
 use std::fmt::{Display, Formatter};
 use crate::util::directory_lister::{directory_lister, DirectoryLister};
@@ -81,15 +79,6 @@ impl Glob {
 
     pub fn glob_files(&self, cwd: &Path, out: &mut Vec<PathBuf>) -> CrushResult<()> {
         glob_files(&self.pattern, cwd, out, &directory_lister())
-    }
-
-    pub fn glob_to_single_file(&self, cwd: &Path) -> CrushResult<PathBuf> {
-        let mut dirs = Vec::new();
-        self.glob_files(cwd, &mut dirs)?;
-        match dirs.len() {
-            1 => Ok(dirs.remove(0)),
-            _ => argument_error("Glob expanded to wrong number of files"),
-        }
     }
 }
 
