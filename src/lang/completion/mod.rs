@@ -316,7 +316,7 @@ mod tests {
     }
 
     #[test]
-    fn complete_namespaced_command() {
+        fn complete_namespaced_command() {
         let line = "abcd:bc";
         let cursor = 7;
 
@@ -393,5 +393,17 @@ mod tests {
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "ab foo=cdef");
+    }
+
+    #[test]
+    fn check_fake_appended_labels_are_ignored() {
+        let line = "a b=";
+        let cursor = 4;
+
+        let s = Scope::create_root();
+        s.declare("xxxx", Value::Empty()).unwrap();
+        s.declare("aaaa", Value::Empty()).unwrap();
+        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 2);
     }
 }

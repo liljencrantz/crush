@@ -8,19 +8,18 @@ use crate::lang::data::scope::Scope;
 use crate::lang::printer::Printer;
 use crate::lang::stream::ValueSender;
 use crate::lang::threads::ThreadStore;
-use crate::lang::errors::{CrushResult, to_crush_error, CrushError};
+use crate::lang::errors::{CrushResult, to_crush_error};
 use crate::lang::execute;
 
 use rustyline::completion::{Completer, Pair};
 use rustyline_derive::Helper;
 use rustyline::highlight::{MatchingBracketHighlighter, Highlighter};
-use rustyline::validate::{MatchingBracketValidator, Validator, ValidationResult};
+use rustyline::validate::{Validator, ValidationResult};
 use rustyline::hint::{HistoryHinter, Hinter};
 use std::borrow::Cow::{Borrowed, Owned};
 use std::borrow::Cow;
 use crate::util::directory_lister::directory_lister;
 use crate::lang::parser::{ast, close_command};
-use crate::lang::ast::JobListNode;
 
 #[derive(Helper)]
 struct MyHelper {

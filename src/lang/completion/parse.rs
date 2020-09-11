@@ -1,5 +1,4 @@
 use crate::lang::ast::{Node, CommandNode, JobListNode, JobNode};
-use crate::lang::ast::{TokenType};
 use crate::lang::errors::{error, CrushResult, mandate};
 use crate::lang::value::{Field, ValueType, Value};
 use std::path::PathBuf;
@@ -191,42 +190,53 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
             (Box::from(cmd.expressions.last().unwrap().clone()), None)
         };
 
-        match arg.as_ref() {
-            Node::Label(l) => {
-                return Ok(ParseResult::PartialArgument(
-                    PartialCommandResult {
-                        command: c,
-                        previous_arguments: vec![],
-                        last_argument: LastArgument::Field(vec![l.string.clone()]),
-                        last_argument_name,
-                    }));
-            }
+        if arg.location().contains(cursor) {
+            match arg.as_ref() {
+                Node::Label(l) => {
+                    return Ok(ParseResult::PartialArgument(
+                        PartialCommandResult {
+                            command: c,
+                            previous_arguments: vec![],
+                            last_argument: LastArgument::Field(vec![l.string.clone()]),
+                            last_argument_name,
+                        }));
+                }
 
-            Node::GetAttr(_, _) => {
-                return Ok(ParseResult::PartialArgument(
-                    PartialCommandResult {
-                        command: c,
-                        previous_arguments: vec![],
-                        last_argument: LastArgument::Field(simple_attr(arg.as_ref())?),
-                        last_argument_name,
-                    }));
-            }
+                Node::GetAttr(_, _) => {
+                    return Ok(ParseResult::PartialArgument(
+                        PartialCommandResult {
+                            command: c,
+                            previous_arguments: vec![],
+                            last_argument: LastArgument::Field(simple_attr(arg.as_ref())?),
+                            last_argument_name,
+                        }));
+                }
 
-            Node::Path(_, _) => {
-                return Ok(ParseResult::PartialArgument(
-                    PartialCommandResult {
-                        command: c,
-                        previous_arguments: vec![],
-                        last_argument: LastArgument::Path(simple_path(arg.as_ref())?),
-                        last_argument_name,
-                    }));
-            }
+                Node::Path(_, _) => {
+                    return Ok(ParseResult::PartialArgument(
+                        PartialCommandResult {
+                            command: c,
+                            previous_arguments: vec![],
+                            last_argument: LastArgument::Path(simple_path(arg.as_ref())?),
+                            last_argument_name,
+                        }));
+                }
 
-            Node::String(_) => { error("String completions not yet impemented") }
+                Node::String(_) => { error("String completions not yet impemented") }
 
-            _ => {
-                error("Can't extract argument to complete")
+                _ => {
+                    error("Can't extract argument to complete")
+                }
             }
+        } else {
+            return Ok(ParseResult::PartialArgument(
+                PartialCommandResult {
+                    command: c,
+                    previous_arguments: vec![],
+                    last_argument: LastArgument::Unknown,
+                    last_argument_name,
+                }));
+
         }
     }
 }
@@ -235,13 +245,6 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
 mod tests {
     use super::*;
     use crate::lang::ast::Location;
-
-    #[test]
-    fn close_command_test() {
-        assert_eq!(close_command("x (a").unwrap(), "x (a)");
-        assert_eq!(close_command("x {a").unwrap(), "x {a}");
-        assert_eq!(close_command("x (a) {b} {c (d) (e").unwrap(), "x (a) {b} {c (d) (e)}");
-    }
 
     #[test]
     fn find_command_in_substitution_test() {
