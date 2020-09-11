@@ -30,7 +30,7 @@ pub struct JobNode {
     pub location: Location,
 }
 
-pub fn operator_function(op: &[&str], op_location: Location, l: Box<Node>, r: Box<Node>) -> Box<Node> {
+fn operator_function(op: &[&str], op_location: Location, l: Box<Node>, r: Box<Node>) -> Box<Node> {
     let location = op_location.union(l.location()).union(r.location());
     let cmd = attr(op, op_location);
     Box::from(
@@ -48,7 +48,7 @@ pub fn operator_function(op: &[&str], op_location: Location, l: Box<Node>, r: Bo
     )
 }
 
-pub fn operator_method(op: &str, op_location: Location, l: Box<Node>, r: Box<Node>) -> Box<Node> {
+fn operator_method(op: &str, op_location: Location, l: Box<Node>, r: Box<Node>) -> Box<Node> {
     let location = op_location.union(l.location()).union(r.location());
     let cmd = Node::GetAttr(l, TrackedString::from(op, op_location));
     Box::from(
@@ -57,6 +57,42 @@ pub fn operator_method(op: &str, op_location: Location, l: Box<Node>, r: Box<Nod
                 commands: vec![CommandNode {
                     expressions: vec![
                         cmd, *r,
+                    ],
+                    location: location,
+                }],
+                location: location,
+            }
+        )
+    )
+}
+
+fn unary_operator_function(op: &[&str], op_location: Location, n: Box<Node>) -> Box<Node> {
+    let location = op_location.union(n.location());
+    let cmd = attr(op, op_location);
+    Box::from(
+        Node::Substitution(
+            JobNode {
+                commands: vec![CommandNode {
+                    expressions: vec![
+                        cmd, *n,
+                    ],
+                    location: location,
+                }],
+                location: location,
+            }
+        )
+    )
+}
+
+fn unary_operator_method(op: &str, op_location: Location, n: Box<Node>) -> Box<Node> {
+    let location = op_location.union(n.location());
+    let cmd = Node::GetAttr(n, TrackedString::from(op, op_location));
+    Box::from(
+        Node::Substitution(
+            JobNode {
+                commands: vec![CommandNode {
+                    expressions: vec![
+                        cmd,
                     ],
                     location: location,
                 }],
@@ -84,12 +120,21 @@ pub fn operator(op: TrackedString, l: Box<Node>, r: Box<Node>) -> Box<Node> {
         "*" => operator_method("__mul__", op.location, l, r),
         "//" => operator_method("__div__", op.location, l, r),
 
+        // Note that these operators reverse the arguemnts because the method wxists on the second argument!
         "=~" => operator_method("match", op.location, r, l),
         "!~" => operator_method("not_match", op.location, r, l),
 
-        //"" => operator_method("", op.location, l, r),
+        _ => panic!(format!("Unknown operator {}", &op.string)),
+    }
+}
 
-        _ => panic!("invalid operator"),
+pub fn unary_operator(op: TrackedString, n: Box<Node>) -> Box<Node> {
+    match op.string.as_str() {
+        "typeof" => unary_operator_function(&vec!["global", "types", "__typeof__"], op.location, n),
+        "neg" => unary_operator_method("__neg__", op.location, n),
+        "not" => unary_operator_function(&vec!["global", "comp", "__not__"], op.location, n),
+
+        _ => panic!(format!("Unknown operator {}", &op.string)),
     }
 }
 
@@ -268,11 +313,6 @@ impl Node {
                 )),
 
             Node::Unary(op, r) => match op.string.as_str() {
-                "neg" | "not" | "typeof" => ValueDefinition::JobDefinition(Job::new(
-                    vec![self
-                        .generate_standalone(env)?
-                        .unwrap()],
-                    op.location.union(r.location()))),
                 "@" => {
                     return Ok(ArgumentDefinition::list(
                         r.generate_argument(env)?.unnamed_value()?,

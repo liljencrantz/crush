@@ -86,6 +86,6 @@ fn run() -> CrushResult<()> {
 
 fn main() {
     if let Err(err) = run() {
-        eprintln!("Error during initialization: {}", err.message());
+        eprintln!("Error during initialization or shutdown: {}", err.message());
     }
 }

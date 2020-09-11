@@ -151,10 +151,6 @@ impl Struct {
         Row::new(self.data.lock().unwrap().cells.clone())
     }
 
-    pub fn to_vec(&self) -> Vec<Value> {
-        self.data.lock().unwrap().cells.clone()
-    }
-
     pub fn get(&self, name: &str) -> Option<Value> {
         let data = self.data.lock().unwrap();
         match data.lookup.get(name) {

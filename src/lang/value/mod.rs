@@ -135,7 +135,7 @@ impl Value {
         let mut res = Vec::new();
         match self {
             Value::Struct(s) => res.append(&mut s.keys()),
-            Value::Scope(scope) => res.append(&mut scope.dump().unwrap().iter().map(|(k, v)| k.to_string()).collect()),
+            Value::Scope(scope) => res.append(&mut scope.dump().unwrap().iter().map(|(k, _)| k.to_string()).collect()),
             Value::Type(t) => add_keys(t.fields(), &mut res),
             _ => add_keys(self.value_type().fields(), &mut res),
         }

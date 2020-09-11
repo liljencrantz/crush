@@ -11,6 +11,7 @@ mod parse;
 
 pub struct Completion {
     completion: String,
+    display: String,
     position: usize,
 }
 
@@ -22,6 +23,14 @@ impl Completion {
         let mut res = line.to_string();
         res.insert_str(self.position, &self.completion);
         res
+    }
+
+    pub fn display(&self) -> &str {
+        &self.display
+    }
+
+    pub fn replacement(&self) -> &str {
+        &self.completion
     }
 }
 
@@ -46,20 +55,17 @@ impl ParseState {
     pub fn peek(&self) -> Option<&str> {
         self.vec.get(self.idx + 1).map(|t| t.data.as_str())
     }
-
-    pub fn location(&self) -> Option<(usize, usize)> {
-        self.vec.get(self.idx).map(|t| (t.start, t.end))
-    }
 }
 
 fn complete_cmd(cmd: Option<String>, args: Vec<ArgumentDefinition>, arg: TokenNode, scope: Scope) -> CrushResult<Vec<Completion>> {
-    let mut map = scope.dump()?;
+    let map = scope.dump()?;
     let mut res = Vec::new();
 
     for name in map.keys() {
         if name.starts_with(&arg.data) {
             res.push(Completion {
                 completion: name.strip_prefix(&arg.data).unwrap().to_string(),
+                display: name.clone(),
                 position: arg.end,
             })
         }
@@ -73,7 +79,11 @@ fn complete_value(value: Value, prefix: &[String], t: ValueType, cursor: usize, 
         out.append(&mut value.fields()
             .iter()
             .filter(|k| k.starts_with(&prefix[0]))
-            .map(|k| Completion { completion: k[prefix[0].len()..].to_string(), position: cursor })
+            .map(|k| Completion {
+                completion: k[prefix[0].len()..].to_string(),
+                display: k.clone(),
+                position: cursor,
+            })
             .collect());
         Ok(())
     } else {
@@ -88,10 +98,16 @@ fn complete_file(lister: &impl DirectoryLister, prefix: impl Into<PathBuf>, valu
     let prefix_str = mandate(prefix.components().last(), "Invalid file for completion")?.as_os_str().to_str().unwrap();
     let parent = prefix.parent().map(|p| p.to_path_buf()).unwrap_or(PathBuf::from("/"));
 
-    out.append(&mut lister.list(parent)?
-        .filter(|k| k.name.to_str().unwrap().starts_with(prefix_str))
-        .map(|k| Completion { completion: k.name.to_str().unwrap()[prefix_str.len()..].to_string(), position: cursor })
-        .collect());
+    if let Ok(dirs) = lister.list(parent) {
+        out.append(&mut dirs
+            .filter(|k| k.name.to_str().unwrap().starts_with(prefix_str))
+            .map(|k| Completion {
+                completion: k.name.to_str().unwrap()[prefix_str.len()..].to_string(),
+                display: k.name.to_str().unwrap().to_string(),
+                position: cursor,
+            })
+            .collect());
+    }
     Ok(())
 }
 
@@ -127,7 +143,7 @@ pub fn complete(line: &str, cursor: usize, scope: &Scope, lister: &impl Director
                             }
                         }
                         LastArgument::Path(l) => {
-                                complete_file(lister, &l, ValueType::Any, cursor, &mut res)?;
+                            complete_file(lister, &l, ValueType::Any, cursor, &mut res)?;
                         }
                         LastArgument::QuotedString(_) => {}
                     }

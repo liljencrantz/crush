@@ -126,7 +126,7 @@ pub fn convert(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-r#typeof,
+__typeof__,
 can_block = false,
 output = Known(ValueType::Type),
 short = "Return the type of the specified value.",
@@ -136,7 +136,7 @@ struct TypeOf {
     value: Value,
 }
 
-pub fn r#typeof(context: CommandContext) -> CrushResult<()> {
+pub fn __typeof__(context: CommandContext) -> CrushResult<()> {
     let cfg: TypeOf = TypeOf::parse(context.arguments, &context.printer)?;
     context.output.send(Value::Type(cfg.value.value_type()))
 }

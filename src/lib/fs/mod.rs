@@ -77,7 +77,7 @@ pub struct HelpSignature {
     topic: Option<Value>,
 }
 
-pub fn help(mut context: CommandContext) -> CrushResult<()> {
+pub fn help(context: CommandContext) -> CrushResult<()> {
     let cfg: HelpSignature = HelpSignature::parse(context.arguments, &context.printer)?;
     match cfg.topic {
         None => {

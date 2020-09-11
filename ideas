@@ -78,6 +78,7 @@ Long term completion feature list:
 
 * Support for completing on names of named arguments
 * Support for completions in various types of subcommands
+* Support for enabling and disabling completion error printing
 * Completions for wildcards
 * Completions for external commands
 * Command specific completions for arguments with a set of allowed values supported out of the box.

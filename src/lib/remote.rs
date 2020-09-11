@@ -376,7 +376,7 @@ mod host {
 }
 
 pub fn declare(scope: &Scope) -> CrushResult<()> {
-    let e = scope.create_namespace(
+    scope.create_namespace(
         "remote",
         Box::new(move |remote| {
             Exec::declare(remote)?;
@@ -395,6 +395,5 @@ pub fn declare(scope: &Scope) -> CrushResult<()> {
             Ok(())
         }),
     )?;
-    scope.r#use(&e);
     Ok(())
 }

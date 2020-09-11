@@ -114,7 +114,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 Known(ValueType::Bool),
             )?;
             env.declare_command(
-                "not",
+                "__not__",
                 not,
                 false,
                 "not boolean",

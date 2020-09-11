@@ -9,7 +9,10 @@ pub JobList: JobListNode = {
 
 pub TokenList: TokenListNode = {
     => TokenListNode::new(),
-    <mut p:TokenList> <t:Token> => {p.tokens.push(t); p}
+    <mut p:TokenList> <t:Token> => {
+        p.tokens.push(t);
+        p
+    }
 };
 
 JobListWithoutSeparator: JobListNode = {
@@ -77,9 +80,7 @@ Factor: Box<Node> = {
 Unary: Box<Node> = {
     Item,
     <start: @L> <op: UnaryOperator> <end: @R> <u: Unary> =>
-        Box::from(Node::Unary(TrackedString::from(
-            op,
-            Location::new(start, end)), u)),
+        unary_operator(TrackedString::from(op, Location::new(start, end)), u),
     <start: @L> "@" <end: @R> <u: Unary> =>
         Box::from(Node::Unary(TrackedString::from(
             "@",

@@ -5,6 +5,7 @@ use crate::lang::value::{Field, ValueType};
 use std::path::PathBuf;
 use crate::lang::command::Command;
 use crate::lang::data::scope::Scope;
+use crate::lang::parser::close_command;
 
 pub enum CompletionCommand {
     Unknown,
@@ -62,7 +63,7 @@ fn simple_path(node: &Node) -> CrushResult<PathBuf> {
     match node {
         Node::Label(label) => Ok(PathBuf::from(&label.string)),
         Node::Path(p, a) => {
-            let mut res = simple_path(p.as_ref())?;
+            let res = simple_path(p.as_ref())?;
             Ok(res.join(&a.string))
         }
         _ => {
@@ -99,7 +100,7 @@ fn find_command_in_expression(exp: &Node, cursor: usize) -> CrushResult<Option<C
     }
 }
 
-fn find_command_in_command(mut ast: CommandNode, cursor: usize) -> CrushResult<CommandNode> {
+fn find_command_in_command(ast: CommandNode, cursor: usize) -> CrushResult<CommandNode> {
     for exp in &ast.expressions {
         if let Some(res) = find_command_in_expression(exp, cursor)? {
             return Ok(res);
@@ -108,7 +109,7 @@ fn find_command_in_command(mut ast: CommandNode, cursor: usize) -> CrushResult<C
     Ok(ast)
 }
 
-fn find_command_in_job(mut job: JobNode, cursor: usize) -> CrushResult<CommandNode> {
+fn find_command_in_job(job: JobNode, cursor: usize) -> CrushResult<CommandNode> {
     for cmd in &job.commands {
         if cmd.location.contains(cursor) {
             return find_command_in_command(cmd.clone(), cursor);
@@ -117,31 +118,13 @@ fn find_command_in_job(mut job: JobNode, cursor: usize) -> CrushResult<CommandNo
     mandate(job.commands.last(), "Nothing to complete").map(|c| c.clone())
 }
 
-fn find_command_in_job_list(mut ast: JobListNode, cursor: usize) -> CrushResult<CommandNode> {
+fn find_command_in_job_list(ast: JobListNode, cursor: usize) -> CrushResult<CommandNode> {
     for job in &ast.jobs {
         if job.location.contains(cursor) {
             return find_command_in_job(job.clone(), cursor);
         }
     }
     mandate(ast.jobs.last().and_then(|j| j.commands.last().map(|c| c.clone())), "Nothing to complete")
-}
-
-fn close_command(input: &str) -> CrushResult<String> {
-    let tokens = crate::lang::parser::tokenize(input)?;
-    let mut stack = Vec::new();
-
-    for tok in &tokens {
-        match tok.token_type {
-            TokenType::SubStart => { stack.push(")"); }
-            TokenType::SubEnd => { stack.pop(); }
-            TokenType::JobStart => { stack.push("}"); }
-            TokenType::JobEnd => { stack.pop(); }
-            _ => {}
-        }
-    }
-    stack.reverse();
-
-    Ok(format!("{}{}", input, stack.join("")))
 }
 
 pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResult> {

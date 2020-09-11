@@ -1,7 +1,7 @@
 use crate::lang::errors::{to_crush_error, CrushResult};
 use crate::lang::job::Job;
 use crate::lang::data::scope::Scope;
-use crate::lang::ast::{TokenNode, JobListNode};
+use crate::lang::ast::{TokenNode, JobListNode, TokenType};
 
 lalrpop_mod!(pub lalrparser, "/lang/lalrparser.rs");
 
@@ -25,6 +25,24 @@ pub fn ast(s: &str) -> CrushResult<JobListNode> {
 
 pub fn tokenize(s: &str) -> CrushResult<Vec<TokenNode>>{
     Ok(to_crush_error(lalrparser::TokenListParser::new().parse(s))?.tokens)
+}
+
+pub fn close_command(input: &str) -> CrushResult<String> {
+    let tokens = crate::lang::parser::tokenize(input)?;
+    let mut stack = Vec::new();
+
+    for tok in &tokens {
+        match tok.token_type {
+            TokenType::SubStart => { stack.push(")"); }
+            TokenType::SubEnd => { stack.pop(); }
+            TokenType::JobStart => { stack.push("}"); }
+            TokenType::JobEnd => { stack.pop(); }
+            _ => {}
+        }
+    }
+    stack.reverse();
+
+    Ok(format!("{}{}", input, stack.join("")))
 }
 
 #[cfg(test)]
