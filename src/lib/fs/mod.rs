@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
+use crate::lang::errors::{to_crush_error, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::help::Help;
 use crate::lang::printer::Printer;
@@ -77,7 +77,7 @@ pub struct HelpSignature {
     topic: Option<Value>,
 }
 
-pub fn help(mut context: CommandContext) -> CrushResult<()> {
+pub fn help(context: CommandContext) -> CrushResult<()> {
     let cfg: HelpSignature = HelpSignature::parse(context.arguments, &context.printer)?;
     match cfg.topic {
         None => {
@@ -107,7 +107,6 @@ members of a value, write "dir <value>".
             }
             context.output.send(Value::Empty())
         }
-        _ => argument_error("The help command expects at most one argument"),
     }
 }
 

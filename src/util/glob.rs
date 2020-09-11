@@ -1,7 +1,5 @@
-use crate::lang::errors::{argument_error, to_crush_error, CrushResult, data_error};
+use crate::lang::errors::{argument_error, CrushResult, data_error};
 use std::collections::VecDeque;
-use std::fs::read_dir;
-use std::io;
 use std::path::{Path, PathBuf};
 use std::fmt::{Display, Formatter};
 use crate::util::directory_lister::{directory_lister, DirectoryLister};

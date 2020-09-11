@@ -1,8 +1,7 @@
 use crate::lang::data::scope::Scope;
-use crate::lang::errors::{CrushResult, error, mandate};
+use crate::lang::errors::{CrushResult, mandate};
 use crate::lang::argument::ArgumentDefinition;
-use crate::lang::value::{Field, ValueType, Value};
-use crate::lang::command::Command;
+use crate::lang::value::{ValueType, Value};
 use crate::util::directory_lister::DirectoryLister;
 use std::path::PathBuf;
 use crate::lang::completion::parse::{ParseResult, CompletionCommand, LastArgument, parse};
@@ -53,8 +52,8 @@ impl ParseState {
     }
 }
 
-fn complete_cmd(cmd: Option<String>, args: Vec<ArgumentDefinition>, arg: TokenNode, scope: Scope) -> CrushResult<Vec<Completion>> {
-    let mut map = scope.dump()?;
+fn complete_cmd(_cmd: Option<String>, _args: Vec<ArgumentDefinition>, arg: TokenNode, scope: Scope) -> CrushResult<Vec<Completion>> {
+    let map = scope.dump()?;
     let mut res = Vec::new();
 
     for name in map.keys() {
@@ -83,7 +82,7 @@ fn complete_value(value: Value, prefix: &[String], t: ValueType, cursor: usize, 
     }
 }
 
-fn complete_file(lister: &impl DirectoryLister, prefix: impl Into<PathBuf>, t: ValueType, cursor: usize, out: &mut Vec<Completion>) -> CrushResult<()> {
+fn complete_file(lister: &impl DirectoryLister, prefix: impl Into<PathBuf>, _t: ValueType, cursor: usize, out: &mut Vec<Completion>) -> CrushResult<()> {
     let prefix = prefix.into();
 
     let prefix_str = mandate(prefix.components().last(), "Invalid file for completion")?.as_os_str().to_str().unwrap();

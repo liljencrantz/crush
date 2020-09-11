@@ -142,7 +142,7 @@ impl DirectoryLister for FakeDirectoryLister {
     type DirectoryIter = FakeIter;
 
     fn list(&self, path: impl Into<PathBuf>) -> CrushResult<Self::DirectoryIter> {
-        let mut g = path.into();
+        let g = path.into();
         let path = if g.is_relative() {
             self.cwd.join(&g)
         } else {

@@ -1,3 +1,7 @@
+// TODO: There are to many unused parts in code.
+// This disables warnings but a proper fix would be to remove or use them.
+#![allow(unused)]
+
 #[macro_use]
 extern crate lalrpop_util;
 

@@ -1,6 +1,5 @@
 use crate::lang::ast::{Node, CommandNode, JobListNode, JobNode};
-use crate::lang::ast::{TokenNode, TokenType};
-use crate::lang::parser::tokenize;
+use crate::lang::ast::TokenType;
 use crate::lang::errors::{error, CrushResult, mandate};
 use crate::lang::value::{Field, ValueType};
 use std::path::PathBuf;
@@ -63,7 +62,7 @@ fn simple_path(node: &Node) -> CrushResult<PathBuf> {
     match node {
         Node::Label(label) => Ok(PathBuf::from(&label.string)),
         Node::Path(p, a) => {
-            let mut res = simple_path(p.as_ref())?;
+            let res = simple_path(p.as_ref())?;
             Ok(res.join(&a.string))
         }
         _ => {
@@ -74,7 +73,7 @@ fn simple_path(node: &Node) -> CrushResult<PathBuf> {
 
 fn find_command_in_expression(exp: &Node, cursor: usize) -> CrushResult<Option<CommandNode>> {
     match exp {
-        Node::Assignment(a, op, b) => {
+        Node::Assignment(_a, _op, b) => {
             find_command_in_expression(b, cursor)
         }
 
@@ -100,7 +99,7 @@ fn find_command_in_expression(exp: &Node, cursor: usize) -> CrushResult<Option<C
     }
 }
 
-fn find_command_in_command(mut ast: CommandNode, cursor: usize) -> CrushResult<CommandNode> {
+fn find_command_in_command(ast: CommandNode, cursor: usize) -> CrushResult<CommandNode> {
     for exp in &ast.expressions {
         if let Some(res) = find_command_in_expression(exp, cursor)? {
             return Ok(res);
@@ -109,7 +108,7 @@ fn find_command_in_command(mut ast: CommandNode, cursor: usize) -> CrushResult<C
     Ok(ast)
 }
 
-fn find_command_in_job(mut job: JobNode, cursor: usize) -> CrushResult<CommandNode> {
+fn find_command_in_job(job: JobNode, cursor: usize) -> CrushResult<CommandNode> {
     for cmd in &job.commands {
         if cmd.location.contains(cursor) {
             return find_command_in_command(cmd.clone(), cursor);
@@ -118,7 +117,7 @@ fn find_command_in_job(mut job: JobNode, cursor: usize) -> CrushResult<CommandNo
     mandate(job.commands.last(), "Nothing to complete").map(|c| c.clone())
 }
 
-fn find_command_in_job_list(mut ast: JobListNode, cursor: usize) -> CrushResult<CommandNode> {
+fn find_command_in_job_list(ast: JobListNode, cursor: usize) -> CrushResult<CommandNode> {
     for job in &ast.jobs {
         if job.location.contains(cursor) {
             return find_command_in_job(job.clone(), cursor);
@@ -145,7 +144,7 @@ fn close_command(input: &str) -> CrushResult<String> {
     Ok(format!("{}{}", input, stack.join("")))
 }
 
-pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResult> {
+pub fn parse(line: &str, cursor: usize, _scope: &Scope) -> CrushResult<ParseResult> {
     let ast = crate::lang::parser::ast(&close_command(&line[0..cursor])?)?;
 
     if ast.jobs.len() == 0 {
@@ -167,8 +166,8 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
                 Node::Path(_, _) => {
                     return Ok(ParseResult::PartialPath(simple_path(cmd)?));
                 }
-                Node::File(path, _) => { panic!("AAA"); }
-                Node::String(string) => { panic!("AAA"); }
+                Node::File(_path, _) => { panic!("AAA"); }
+                Node::String(_string) => { panic!("AAA"); }
                 Node::GetItem(_, _) => { panic!("AAA"); }
 
                 _ => { return error("Can't extract command to complete"); }
@@ -183,7 +182,7 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
                 }));
         }
     } else {
-        let (arg, last_argument_name) = if let Node::Assignment(name, op, value) = cmd.expressions.last().unwrap() {
+        let (arg, last_argument_name) = if let Node::Assignment(name, _op, value) = cmd.expressions.last().unwrap() {
             if let Node::Label(name) = name.as_ref() {
                 (value.clone(), Some(name.string.clone()))
             } else {

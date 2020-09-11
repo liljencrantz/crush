@@ -795,7 +795,8 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
             let handler = quote! {
 
-            #[allow(unused_parens)] // TODO: don't emit unnecessary parenthesis in the first place
+                // TODO: don't emit unnecessary parenthesis in the first place
+            #[allow(unused_parens)]
             impl #struct_name {
                 pub fn declare(env: &mut crate::lang::data::scope::ScopeLoader) -> crate::lang::errors::CrushResult <()> {
                     env.declare_command(

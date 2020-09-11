@@ -1,3 +1,6 @@
+// TODO: remove unused allowance
+#![allow(unused)]
+
 use crate::lang::argument::{column_names, Argument};
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::*;
@@ -422,7 +425,7 @@ impl DBusArgument {
             }
             DBusType::Array(_) => {}
             DBusType::Variant => {}
-            DBusType::DictEntry{ key_type, value_type } => {}
+            DBusType::DictEntry{ .. } => {}
             DBusType::UnixFd => {}
             DBusType::Struct(_) => {}
             DBusType::ObjectPath => {}
