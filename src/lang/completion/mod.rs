@@ -6,6 +6,7 @@ use crate::util::directory_lister::DirectoryLister;
 use std::path::PathBuf;
 use crate::lang::completion::parse::{ParseResult, CompletionCommand, LastArgument, parse};
 use crate::lang::ast::TokenNode;
+use nix::NixPath;
 
 mod parse;
 
@@ -96,7 +97,10 @@ fn complete_file(lister: &impl DirectoryLister, prefix: impl Into<PathBuf>, valu
     let prefix = prefix.into();
 
     let prefix_str = mandate(prefix.components().last(), "Invalid file for completion")?.as_os_str().to_str().unwrap();
-    let parent = prefix.parent().map(|p| p.to_path_buf()).unwrap_or(PathBuf::from("/"));
+    let parent = prefix.parent()
+        .map(|p| p.to_path_buf())
+        .map(|p| if p.is_empty() {PathBuf::from(".")} else {p})
+        .unwrap_or(PathBuf::from("/"));
 
     if let Ok(dirs) = lister.list(parent) {
         out.append(&mut dirs
