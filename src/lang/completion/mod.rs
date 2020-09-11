@@ -164,6 +164,8 @@ mod tests {
     use super::*;
     use crate::lang::value::Value;
     use crate::util::directory_lister::FakeDirectoryLister;
+    use signature::signature;
+    use crate::lang::execution_context::CommandContext;
 
     fn lister() -> FakeDirectoryLister {
         let mut res = FakeDirectoryLister::new("/home/rabbit");
@@ -178,6 +180,25 @@ mod tests {
         res
     }
 
+    fn my_cmd(_context: CommandContext) -> CrushResult<()> {
+        Ok(())
+    }
+
+    #[signature(my_cmd)]
+    struct MyCmdSignature {
+        super_fancy_argument: bool,
+    }
+
+    fn scope_with_function() -> Scope {
+        let root = Scope::create_root();
+        let chld = root.create_namespace("namespace", Box::new(|env| {
+            MyCmdSignature::declare(env)?;
+            Ok(())
+        })).unwrap();
+        root.r#use(&chld);
+        root
+    }
+
     #[test]
     fn check_empty() {
         let line = "";
@@ -188,6 +209,28 @@ mod tests {
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "abcd");
+    }
+
+    #[test]
+    fn check_argument_completion() {
+        let line = "my_cmd super_";
+        let cursor = 13;
+
+        let s = scope_with_function();
+        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "my_cmd super_fancy_argument=");
+    }
+
+    #[test]
+    fn check_switch_completion() {
+        let line = "my_cmd --super_";
+        let cursor = 15;
+
+        let s = scope_with_function();
+        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "my_cmd --super_fancy_argument");
     }
 
     #[test]
