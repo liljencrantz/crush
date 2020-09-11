@@ -14,6 +14,8 @@ use closure::Closure;
 use ordered_map::OrderedMap;
 use std::fmt::{Formatter, Display};
 use crate::lang::ast::TrackedString;
+use crate::lang::completion::Completion;
+use crate::lang::completion::parse::PartialCommandResult;
 
 pub type Command = Box<dyn CrushCommand + Send + Sync>;
 
@@ -44,6 +46,17 @@ impl OutputType {
     }
 }
 
+#[derive(Clone)]
+pub struct ArgumentDescription {
+    pub name: String,
+    pub value_type: ValueType,
+    pub allowed: Option<Vec<Value>>,
+    pub description: Option<String>,
+    pub complete: Option<fn(cmd: &PartialCommandResult) -> Vec<Completion>>,
+    pub named: bool,
+    pub unnamed: bool,
+}
+
 pub trait CrushCommand: Help {
     fn invoke(&self, context: CommandContext) -> CrushResult<()>;
     fn can_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool;
@@ -57,6 +70,7 @@ pub trait CrushCommand: Help {
     ) -> CrushResult<usize>;
     fn bind(&self, this: Value) -> Command;
     fn output<'a>(&'a self, input: &'a OutputType) -> Option<&'a ValueType>;
+    fn arguments(&self) -> &Vec<ArgumentDescription>;
 }
 
 pub trait TypeMap {
@@ -69,6 +83,7 @@ pub trait TypeMap {
         short_help: &'static str,
         long_help: Option<&'static str>,
         output: OutputType,
+        arguments: Vec<ArgumentDescription>,
     );
 }
 
@@ -82,6 +97,7 @@ impl TypeMap for OrderedMap<String, Command> {
         short_help: &'static str,
         long_help: Option<&'static str>,
         output: OutputType,
+        arguments: Vec<ArgumentDescription>,
     ) {
         self.insert(
             path[path.len() - 1].to_string(),
@@ -93,6 +109,7 @@ impl TypeMap for OrderedMap<String, Command> {
                 short_help,
                 long_help,
                 output,
+                arguments,
             ),
         );
     }
@@ -106,6 +123,7 @@ struct SimpleCommand {
     short_help: &'static str,
     long_help: Option<&'static str>,
     output: OutputType,
+    arguments: Vec<ArgumentDescription>,
 }
 
 struct ConditionCommand {
@@ -114,6 +132,7 @@ struct ConditionCommand {
     signature: &'static str,
     short_help: &'static str,
     long_help: Option<&'static str>,
+    arguments: Vec<ArgumentDescription>,
 }
 
 impl dyn CrushCommand {
@@ -122,8 +141,9 @@ impl dyn CrushCommand {
         signature: Option<Vec<Parameter>>,
         job_definitions: Vec<Job>,
         env: &Scope,
+        arguments: Vec<ArgumentDescription>,
     ) -> Command {
-        Box::from(Closure::new(name, signature, job_definitions, env.clone()))
+        Box::from(Closure::new(name, signature, job_definitions, env.clone(), arguments))
     }
 
     pub fn command(
@@ -134,6 +154,7 @@ impl dyn CrushCommand {
         short_help: &'static str,
         long_help: Option<&'static str>,
         output: OutputType,
+        arguments: Vec<ArgumentDescription>,
     ) -> Command {
         Box::from(SimpleCommand {
             call,
@@ -143,6 +164,7 @@ impl dyn CrushCommand {
             short_help,
             long_help,
             output,
+            arguments,
         })
     }
 
@@ -152,6 +174,7 @@ impl dyn CrushCommand {
         signature: &'static str,
         short_help: &'static str,
         long_help: Option<&'static str>,
+        arguments: Vec<ArgumentDescription>,
     ) -> Command {
         Box::from(ConditionCommand {
             call,
@@ -159,6 +182,7 @@ impl dyn CrushCommand {
             signature,
             short_help,
             long_help,
+            arguments,
         })
     }
 
@@ -198,12 +222,12 @@ impl CrushCommand for SimpleCommand {
         c(context)
     }
 
-    fn name(&self) -> &str {
-        "command"
-    }
-
     fn can_block(&self, _arg: &[ArgumentDefinition], _context: &mut CompileContext) -> bool {
         self.can_block
+    }
+
+    fn name(&self) -> &str {
+        "command"
     }
 
     fn copy(&self) -> Command {
@@ -215,6 +239,7 @@ impl CrushCommand for SimpleCommand {
             short_help: self.short_help,
             long_help: self.long_help,
             output: self.output.clone(),
+            arguments: self.arguments.clone(),
         })
     }
 
@@ -244,6 +269,10 @@ impl CrushCommand for SimpleCommand {
 
     fn output<'a>(&'a self, input: &'a OutputType) -> Option<&'a ValueType> {
         self.output.calculate(input)
+    }
+
+    fn arguments(&self) -> &Vec<ArgumentDescription> {
+        &self.arguments
     }
 }
 
@@ -306,6 +335,7 @@ impl CrushCommand for ConditionCommand {
             signature: self.signature,
             short_help: self.short_help,
             long_help: self.long_help,
+            arguments: self.arguments.clone(),
         })
     }
 
@@ -334,6 +364,10 @@ impl CrushCommand for ConditionCommand {
 
     fn output(&self, _input: &OutputType) -> Option<&ValueType> {
         None
+    }
+
+    fn arguments(&self) -> &Vec<ArgumentDescription> {
+        &self.arguments
     }
 }
 
@@ -447,6 +481,10 @@ impl CrushCommand for BoundCommand {
 
     fn output<'a>(&'a self, input: &'a OutputType) -> Option<&'a ValueType> {
         self.command.output(input)
+    }
+
+    fn arguments(&self) -> &Vec<ArgumentDescription> {
+        self.command.arguments()
     }
 }
 

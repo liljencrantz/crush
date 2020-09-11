@@ -160,6 +160,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "Raise the number to n",
                 None,
                 Known(ValueType::Float),
+                vec![],
             )?;
             env.declare_command(
                 "log",
@@ -169,6 +170,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "The logarithm of number in the specified base",
                 None,
                 Known(ValueType::Float),
+                vec![],
             )?;
             env.declare("pi", Value::Float(std::f64::consts::PI))?;
             env.declare("tau", Value::Float(std::f64::consts::PI * 2.0))?;

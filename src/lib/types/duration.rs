@@ -23,30 +23,42 @@ lazy_static! {
             "duration + (delta:duration | time:time)",
             "Add the specified delta or time to this duration",
             None,
-            Unknown);
+            Unknown,
+            vec![],
+            );
         res.declare(full("__sub__"),
             sub, false,
             "duration - delta:duration",
             "Remove the specified delta from this duration",
             None,
-            Known(ValueType::Duration));
+            Known(ValueType::Duration),
+            vec![],
+            );
         res.declare(full("__mul__"),
             mul, false,
             "duration * factor:integer",
             "Multiply this duration by the specified factor",
             None,
-            Known(ValueType::Duration));
+            Known(ValueType::Duration),
+            vec![],
+            );
         res.declare(full("__div__"),
             div, false,
             "duration / divisor:integer",
             "Divide this duration by the specified divisor",
             None,
-            Known(ValueType::Duration));
+            Known(ValueType::Duration),
+            vec![],
+            );
         Of::declare_method(&mut res, &path);
         res.declare(
             full("__neg__"), neg, false,
-            "neg duration", "Negate this duration", None,
-            Known(ValueType::Duration));
+            "neg duration",
+            "Negate this duration",
+            None,
+            Known(ValueType::Duration),
+            vec![],
+            );
         res
     };
 }

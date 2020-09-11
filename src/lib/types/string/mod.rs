@@ -28,6 +28,7 @@ lazy_static! {
                 "Returns an identical string but in upper case",
                 None,
                 Known(ValueType::String),
+                vec![],
             );
             res.declare(
                 full("lower"),
@@ -37,6 +38,7 @@ lazy_static! {
                 "Returns an identical string but in lower case",
                 None,
                 Known(ValueType::String),
+                vec![],
             );
             res.declare(
                 full("repeat"),
@@ -46,6 +48,7 @@ lazy_static! {
                 "Returns this string repeated times times",
                 None,
                 Known(ValueType::String),
+                vec![],
             );
             res.declare(
                 full("split"),
@@ -55,6 +58,7 @@ lazy_static! {
                 "Splits a string using the specifiec separator",
                 None,
                 Known(ValueType::List(Box::from(ValueType::String))),
+                vec![],
             );
             res.declare(
                 full("trim"),
@@ -64,6 +68,7 @@ lazy_static! {
                 "Returns a string with all whitespace trimmed from both ends",
                 None,
                 Known(ValueType::String),
+                vec![],
             );
             res.declare(
                 full("format"),
@@ -73,6 +78,7 @@ lazy_static! {
                 "Format arguments into a string",
                 None,
                 Known(ValueType::String),
+                vec![],
             );
             LPad::declare_method(&mut res, &path);
             RPad::declare_method(&mut res, &path);
@@ -84,6 +90,7 @@ lazy_static! {
                 "True if this string ends with suffix",
                 None,
                 Known(ValueType::Bool),
+                vec![],
             );
             res.declare(
                 full("starts_with"),
@@ -93,13 +100,16 @@ lazy_static! {
                 "True if this string starts with prefix",
                 None,
                 Known(ValueType::Bool),
+                vec![],
             );
             res.declare(full("is_alphanumeric"),
-            is_alphanumeric, false,
-            "string:is_alphanumeric",
-            "True if every character of this string is alphabetic or numeric (assuming radix 10)",
-            None,
-            Known(ValueType::Bool));
+                is_alphanumeric, false,
+                "string:is_alphanumeric",
+                "True if every character of this string is alphabetic or numeric (assuming radix 10)",
+                None,
+                Known(ValueType::Bool),
+                vec![],
+            );
             res.declare(
                 full("is_alphabetic"),
                 is_alphabetic,
@@ -108,6 +118,7 @@ lazy_static! {
                 "True if every character of this string is alphabetic",
                 None,
                 Known(ValueType::Bool),
+                vec![],
             );
             res.declare(
                 full("is_ascii"),
@@ -117,6 +128,7 @@ lazy_static! {
                 "True if every character of this string is part of the ascii character set",
                 None,
                 Known(ValueType::Bool),
+                vec![],
             );
             res.declare(
                 full("is_lowercase"),
@@ -126,6 +138,7 @@ lazy_static! {
                 "True if every character of this string is lower case",
                 None,
                 Known(ValueType::Bool),
+                vec![],
             );
             res.declare(
                 full("is_uppercase"),
@@ -135,6 +148,7 @@ lazy_static! {
                 "True if every character of this string is upper case",
                 None,
                 Known(ValueType::Bool),
+                vec![],
             );
             res.declare(
                 full("is_whitespace"),
@@ -144,6 +158,7 @@ lazy_static! {
                 "True if every character of this string is a whitespace character",
                 None,
                 Known(ValueType::Bool),
+                vec![],
             );
             res.declare(
                 full("is_control"),
@@ -153,6 +168,7 @@ lazy_static! {
                 "True if every character of this string is a control character",
                 None,
                 Known(ValueType::Bool),
+                vec![],
             );
             res.declare(
                 full("len"),
@@ -162,6 +178,7 @@ lazy_static! {
                 "Returns the length (in number of characters) of the string",
                 None,
                 Known(ValueType::Integer),
+                vec![],
             );
             IsDigit::declare_method(&mut res, &path);
             res

@@ -34,6 +34,7 @@ lazy_static! {
     my_dict := (dict string integer):new"#,
             ),
             Unknown,
+            vec![],
         );
         res.declare(
             full("__setitem__"),
@@ -43,6 +44,7 @@ lazy_static! {
             "Create a new mapping or replace an existing one",
             None,
             Unknown,
+            vec![],
         );
         res.declare(
             full("__getitem__"),
@@ -52,6 +54,7 @@ lazy_static! {
             "Return the value the specified key is mapped to",
             None,
             Unknown,
+            vec![],
         );
         res.declare(
             full("remove"),
@@ -61,6 +64,7 @@ lazy_static! {
             "Remove a mapping from the dict",
             None,
             Unknown,
+            vec![],
         );
         res
     };

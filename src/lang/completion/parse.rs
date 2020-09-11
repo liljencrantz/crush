@@ -1,7 +1,7 @@
 use crate::lang::ast::{Node, CommandNode, JobListNode, JobNode};
 use crate::lang::ast::{TokenType};
 use crate::lang::errors::{error, CrushResult, mandate};
-use crate::lang::value::{Field, ValueType};
+use crate::lang::value::{Field, ValueType, Value};
 use std::path::PathBuf;
 use crate::lang::command::Command;
 use crate::lang::data::scope::Scope;
@@ -156,15 +156,31 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
                 _ => { return error("Can't extract command to complete"); }
             }
         } else {
-            return Ok(ParseResult::PartialArgument(
-                PartialCommandResult {
-                    command: CompletionCommand::Unknown,
-                    previous_arguments: vec![],
-                    last_argument: LastArgument::Unknown,
-                    last_argument_name: None,
-                }));
+            return Ok(
+                ParseResult::PartialArgument(
+                    PartialCommandResult {
+                        command: CompletionCommand::Unknown,
+                        previous_arguments: vec![],
+                        last_argument: LastArgument::Unknown,
+                        last_argument_name: None,
+                    }
+                )
+            );
         }
     } else {
+        let c = match &cmd.expressions[0] {
+            Node::Label(l) => {
+                match scope.get(&l.string)? {
+                    None => CompletionCommand::Unknown,
+                    Some(v) => match v {
+                        Value::Command(cmd) => CompletionCommand::Known(cmd),
+                        _ => CompletionCommand::Unknown,
+                    },
+                }
+            }
+            _ => CompletionCommand::Unknown,
+        };
+
         let (arg, last_argument_name) = if let Node::Assignment(name, op, value) = cmd.expressions.last().unwrap() {
             if let Node::Label(name) = name.as_ref() {
                 (value.clone(), Some(name.string.clone()))
@@ -179,7 +195,7 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
             Node::Label(l) => {
                 return Ok(ParseResult::PartialArgument(
                     PartialCommandResult {
-                        command: CompletionCommand::Unknown,
+                        command: c,
                         previous_arguments: vec![],
                         last_argument: LastArgument::Field(vec![l.string.clone()]),
                         last_argument_name,
@@ -189,7 +205,7 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
             Node::GetAttr(_, _) => {
                 return Ok(ParseResult::PartialArgument(
                     PartialCommandResult {
-                        command: CompletionCommand::Unknown,
+                        command: c,
                         previous_arguments: vec![],
                         last_argument: LastArgument::Field(simple_attr(arg.as_ref())?),
                         last_argument_name,
@@ -199,7 +215,7 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
             Node::Path(_, _) => {
                 return Ok(ParseResult::PartialArgument(
                     PartialCommandResult {
-                        command: CompletionCommand::Unknown,
+                        command: c,
                         previous_arguments: vec![],
                         last_argument: LastArgument::Path(simple_path(arg.as_ref())?),
                         last_argument_name,

@@ -703,6 +703,9 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
             let mut had_unnamed_target = false;
             let struct_name = s.ident.clone();
             let mut had_field_description = false;
+
+            let mut argument_desciptions = quote!{};
+
             for field in &mut s.fields {
                 let mut default_value = None;
                 let mut is_unnamed_target = false;
@@ -726,6 +729,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 }
                 field.attrs = Vec::new();
                 let name = &field.ident.clone().unwrap();
+                let name_string = Literal::string(&name.to_string());
                 let type_data = type_to_value(
                     &field.ty,
                     name,
@@ -775,6 +779,19 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
                 assignments.extend(type_data.assign);
                 had_unnamed_target |= is_unnamed_target;
+
+                argument_desciptions = quote!{
+                    #argument_desciptions
+                    crate::lang::command::ArgumentDescription {
+                        name: #name_string.to_string(),
+                        value_type: crate::lang::value::ValueType::Any,
+                        allowed: None,
+                        description: None,
+                        complete: None,
+                        named: false,
+                        unnamed: false,
+                    },
+                };
             }
 
             if let Some(example) = metadata.example {
@@ -799,20 +816,36 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
             impl #struct_name {
                 pub fn declare(env: &mut crate::lang::data::scope::ScopeLoader) -> crate::lang::errors::CrushResult <()> {
                     env.declare_command(
-                        #command_name, #command_invocation, #can_block,
+                        #command_name,
+                        #command_invocation,
+                        #can_block,
                         #signature_literal,
                         #description,
                         #long_description,
-                        #output)
+                        #output,
+                        vec![
+                            #argument_desciptions
+                        ],
+                    )
                 }
 
                 pub fn declare_method(env: &mut ordered_map::OrderedMap<std::string::String, crate::lang::command::Command>, path: &Vec<&str>) {
                     let mut full = path.clone();
                     full.push(#command_name);
                     env.insert(#command_name.to_string(),
-                                crate::lang::command::CrushCommand::command(
-                                    #command_invocation, #can_block, full.iter().map(|e| e.to_string()).collect(),
-                                    #signature_literal, #description, #long_description, #output));
+                        crate::lang::command::CrushCommand::command(
+                            #command_invocation,
+                            #can_block,
+                            full.iter().map(|e| e.to_string()).collect(),
+                            #signature_literal,
+                            #description,
+                            #long_description,
+                            #output,
+                            vec![
+                                #argument_desciptions
+                            ],
+                        )
+                    );
                 }
 
                 pub fn parse(_arguments: Vec<crate::lang::argument::Argument>, _printer: &crate::lang::printer::Printer) -> crate::lang::errors::CrushResult < # struct_name > {

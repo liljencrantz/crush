@@ -23,6 +23,7 @@ lazy_static! {
             "Add this number by the specified term",
             None,
             Known(ValueType::Integer),
+            vec![],
         );
         res.declare(
             full("__sub__"),
@@ -32,6 +33,7 @@ lazy_static! {
             "Subtract the specified term from this number",
             None,
             Known(ValueType::Integer),
+            vec![],
         );
         res.declare(
             full("__mul__"),
@@ -41,6 +43,7 @@ lazy_static! {
             "Multiply this number with the specified factor",
             None,
             Known(ValueType::Integer),
+            vec![],
         );
         res.declare(
             full("__div__"),
@@ -50,6 +53,7 @@ lazy_static! {
             "Divide this number by the specified factor",
             None,
             Known(ValueType::Integer),
+            vec![],
         );
         res.declare(
             full("mod"),
@@ -59,6 +63,7 @@ lazy_static! {
             "Least positive residue after integer division",
             None,
             Known(ValueType::Integer),
+            vec![],
         );
         res.declare(
             full("rem"),
@@ -68,6 +73,7 @@ lazy_static! {
             "Remainder after integer division",
             None,
             Known(ValueType::Integer),
+            vec![],
         );
         res.declare(
             full("__neg__"),
@@ -77,6 +83,7 @@ lazy_static! {
             "Negate this integer",
             None,
             Known(ValueType::Integer),
+            vec![],
         );
         res
     };

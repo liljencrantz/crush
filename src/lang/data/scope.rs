@@ -1,4 +1,4 @@
-use crate::lang::command::{Command, CrushCommand, OutputType};
+use crate::lang::command::{Command, CrushCommand, OutputType, ArgumentDescription};
 use crate::lang::errors::{error, mandate, CrushResult, argument_error};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::help::Help;
@@ -82,11 +82,19 @@ impl ScopeLoader {
         short_help: &'static str,
         long_help: Option<&'static str>,
         output: OutputType,
+        arguments: Vec<ArgumentDescription>,
     ) -> CrushResult<()> {
         let mut full_name = self.path.clone();
         full_name.push(name.to_string());
         let command = CrushCommand::command(
-            call, can_block, full_name, signature, short_help, long_help, output,
+            call,
+            can_block,
+            full_name,
+            signature,
+            short_help,
+            long_help,
+            output,
+            arguments,
         );
         if self.mapping.contains_key(name) {
             return error(format!("Variable {{{}}} already exists", name).as_str());
@@ -103,10 +111,18 @@ impl ScopeLoader {
         signature: &'static str,
         short_help: &'static str,
         long_help: Option<&'static str>,
+        arguments: Vec<ArgumentDescription>,
     ) -> CrushResult<()> {
         let mut full_name = self.path.clone();
         full_name.push(name.to_string());
-        let command = CrushCommand::condition(call, full_name, signature, short_help, long_help);
+        let command = CrushCommand::condition(
+            call,
+            full_name,
+            signature,
+            short_help,
+            long_help,
+            arguments,
+        );
         if self.mapping.contains_key(name) {
             return error(format!("Variable {{{}}} already exists", name).as_str());
         }

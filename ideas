@@ -70,13 +70,13 @@ recursive chown
 Threads command, shows all threads on the system
 watch command
 Use new location data to display better error messages
+Either stop copying Command instances, or make them pointer to static data.
 
 Time to figure out tab completion.
 This will eventually require a parser that can parse broken and incomplete input and return some kind of best guess.
 
 Long term completion feature list:
 
-* Support for completing on names of named arguments
 * Support for completions in various types of subcommands
 * Support for enabling and disabling completion error printing
 * Completions for wildcards

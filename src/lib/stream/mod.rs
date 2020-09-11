@@ -37,7 +37,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare_command(
                 "join", join::join, true,
                 "join left:field right:field", "Join two streams together on the specified keys", None,
-                Unknown)?;
+                Unknown,
+                vec![],
+            )?;
             sum_avg::Sum::declare(env)?;
             sum_avg::Avg::declare(env)?;
             sum_avg::Min::declare(env)?;
@@ -46,7 +48,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "select", select::select, true,
                 "select copy_fields:field... [%] new_field=definition:command",
                 "Pass on some old fields and calculate new ones for each line of input",
-                example!(r#"ls | select ^user path={"{}/{}":format (pwd) file}"#), Unknown)?;
+                example!(r#"ls | select ^user path={"{}/{}":format (pwd) file}"#), Unknown,
+                vec![],
+            )?;
             seq::Seq::declare(env)?;
             zip::Zip::declare(env)?;
             Ok(())

@@ -1,5 +1,5 @@
 use crate::lang::argument::{Argument, ArgumentDefinition, ArgumentType};
-use crate::lang::command::{BoundCommand, Command, CrushCommand, OutputType, Parameter};
+use crate::lang::command::{BoundCommand, Command, CrushCommand, OutputType, Parameter, ArgumentDescription};
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::data::dict::Dict;
 use crate::lang::errors::{argument_error, error, mandate, CrushResult};
@@ -25,6 +25,7 @@ pub struct Closure {
     env: Scope,
     short_help: String,
     long_help: String,
+    arguments: Vec<ArgumentDescription>,
 }
 
 impl CrushCommand for Closure {
@@ -91,6 +92,7 @@ impl CrushCommand for Closure {
             env: self.env.clone(),
             short_help: self.short_help.clone(),
             long_help: self.long_help.clone(),
+            arguments: self.arguments.clone(),
         })
     }
 
@@ -115,6 +117,10 @@ impl CrushCommand for Closure {
 
     fn output(&self, _input: &OutputType) -> Option<&ValueType> {
         None
+    }
+
+    fn arguments(&self) -> &Vec<ArgumentDescription> {
+        &self.arguments
     }
 }
 
@@ -341,6 +347,7 @@ impl<'a> ClosureDeserializer<'a> {
                     env,
                     short_help: s.short_help.clone(),
                     long_help: s.long_help.clone(),
+                    arguments: vec![],
                 }))
             }
             _ => error("Expected a closure"),
@@ -527,6 +534,7 @@ impl Closure {
         signature: Option<Vec<Parameter>>,
         mut job_definitions: Vec<Job>,
         env: Scope,
+        arguments: Vec<ArgumentDescription>,
     ) -> Closure {
         let short_help = extract_help(&mut job_definitions);
         let long_help = extract_help(&mut job_definitions);
@@ -538,6 +546,7 @@ impl Closure {
             env,
             short_help,
             long_help,
+            arguments,
         }
     }
 

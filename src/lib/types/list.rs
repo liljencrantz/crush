@@ -28,6 +28,7 @@ lazy_static! {
             "Push an element to the end of the list",
             None,
             Unknown,
+            vec![],
         );
         res.declare(
             full("pop"),
@@ -37,6 +38,7 @@ lazy_static! {
             "Remove the last element from the list",
             None,
             Unknown,
+            vec![],
         );
         res.declare(
             full("peek"),
@@ -46,6 +48,7 @@ lazy_static! {
             "Return the last element from the list",
             None,
             Unknown,
+            vec![],
         );
         res.declare(
             full("__setitem__"),
@@ -55,6 +58,7 @@ lazy_static! {
             "Assign a new value to the element at the specified index",
             None,
             Known(ValueType::Empty),
+            vec![],
         );
         res.declare(
             full("remove"),
@@ -64,6 +68,7 @@ lazy_static! {
             "Remove the element at the specified index",
             None,
             Unknown,
+            vec![],
         );
         res.declare(
             full("insert"),
@@ -73,6 +78,7 @@ lazy_static! {
             "Insert a new element at the specified index",
             None,
             Unknown,
+            vec![],
         );
         res.declare(
             full("truncate"),
@@ -82,6 +88,7 @@ lazy_static! {
             "Remove all elements past the specified index",
             None,
             Unknown,
+            vec![],
         );
         res.declare(
             full("clone"),
@@ -91,6 +98,7 @@ lazy_static! {
             "Create a duplicate of the list",
             None,
             Unknown,
+            vec![],
         );
         res.declare(
             full("of"),
@@ -100,6 +108,7 @@ lazy_static! {
             "Create a new list containing the supplied elements",
             Some("    If no elements are supplied as arguments, input must be a stream with\n    exactly one column."),
             Unknown,
+            vec![],
         );
         res.declare(
             full("new"),
@@ -113,6 +122,7 @@ lazy_static! {
     l := ((list string):new)"#,
             ),
             Unknown,
+            vec![],
         );
         res.declare(
             full("__getitem__"),
@@ -122,6 +132,7 @@ lazy_static! {
             "Return a file or subdirectory in the specified base directory",
             None,
             Unknown,
+            vec![],
         );
         Repeat::declare_method(&mut res, &path);
         Call::declare_method(&mut res, &path);

@@ -763,6 +763,7 @@ fn populate_bus(context: CommandContext, dbus: DBusThing) -> CrushResult<()> {
                             "Access object in the specified service",
                             None,
                             Known(ValueType::Empty),
+                            vec![],
                         )),
                     ),
                 ],

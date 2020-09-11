@@ -7,8 +7,9 @@ use std::path::PathBuf;
 use crate::lang::completion::parse::{ParseResult, CompletionCommand, LastArgument, parse};
 use crate::lang::ast::TokenNode;
 use nix::NixPath;
+use crate::lang::command::ArgumentDescription;
 
-mod parse;
+pub mod parse;
 
 pub struct Completion {
     completion: String,
@@ -99,7 +100,7 @@ fn complete_file(lister: &impl DirectoryLister, prefix: impl Into<PathBuf>, valu
     let prefix_str = mandate(prefix.components().last(), "Invalid file for completion")?.as_os_str().to_str().unwrap();
     let parent = prefix.parent()
         .map(|p| p.to_path_buf())
-        .map(|p| if p.is_empty() {PathBuf::from(".")} else {p})
+        .map(|p| if p.is_empty() { PathBuf::from(".") } else { p })
         .unwrap_or(PathBuf::from("/"));
 
     if let Ok(dirs) = lister.list(parent) {
@@ -112,6 +113,19 @@ fn complete_file(lister: &impl DirectoryLister, prefix: impl Into<PathBuf>, valu
             })
             .collect());
     }
+    Ok(())
+}
+
+fn complete_argument(arguments: &Vec<ArgumentDescription>, prefix: &str, cursor: usize, out: &mut Vec<Completion>) -> CrushResult<()> {
+    out.append(&mut arguments
+        .iter()
+        .filter(|a| a.name.starts_with(prefix))
+        .map(|a| Completion {
+            completion: format!("{}=", &a.name[prefix.len()..]),
+            display: a.name.clone(),
+            position: cursor,
+        })
+        .collect());
     Ok(())
 }
 
@@ -134,25 +148,23 @@ pub fn complete(line: &str, cursor: usize, scope: &Scope, lister: &impl Director
             complete_file(lister, &cmd, ValueType::Any, cursor, &mut res)?;
         }
         ParseResult::PartialArgument(p) => {
-            match p.command {
-                CompletionCommand::Unknown => {
-                    match p.last_argument {
-                        LastArgument::Unknown => {
-                            complete_value(Value::Scope(scope.clone()), &vec!["".to_string()], ValueType::Any, cursor, &mut res)?;
+            match p.last_argument {
+                LastArgument::Unknown => {
+                    complete_value(Value::Scope(scope.clone()), &vec!["".to_string()], ValueType::Any, cursor, &mut res)?;
+                }
+                LastArgument::Field(l) => {
+                    complete_value(Value::Scope(scope.clone()), &l, ValueType::Any, cursor, &mut res)?;
+                    if l.len() == 1 {
+                        complete_file(lister, &l[0], ValueType::Any, cursor, &mut res)?;
+                        if let CompletionCommand::Known(cmd) = p.command {
+                            complete_argument(cmd.arguments(), &l[0], cursor, &mut res)?;
                         }
-                        LastArgument::Field(l) => {
-                            complete_value(Value::Scope(scope.clone()), &l, ValueType::Any, cursor, &mut res)?;
-                            if l.len() == 1 {
-                                complete_file(lister, &l[0], ValueType::Any, cursor, &mut res)?;
-                            }
-                        }
-                        LastArgument::Path(l) => {
-                            complete_file(lister, &l, ValueType::Any, cursor, &mut res)?;
-                        }
-                        LastArgument::QuotedString(_) => {}
                     }
                 }
-                CompletionCommand::Known(_) => {}
+                LastArgument::Path(l) => {
+                    complete_file(lister, &l, ValueType::Any, cursor, &mut res)?;
+                }
+                LastArgument::QuotedString(_) => {}
             }
         }
     }

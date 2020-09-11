@@ -67,6 +67,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "True if left side is greater than right side",
                 None,
                 Known(ValueType::Bool),
+                vec![],
             )?;
             env.declare_command(
                 "gte",
@@ -76,6 +77,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "True if left side is greater than or equal to right side",
                 None,
                 Known(ValueType::Bool),
+                vec![],
             )?;
             env.declare_command(
                 "lt",
@@ -85,6 +87,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "True if left side is less than right side",
                 None,
                 Known(ValueType::Bool),
+                vec![],
             )?;
             env.declare_command(
                 "lte",
@@ -94,6 +97,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "True if left side is less than or equal to right side",
                 None,
                 Known(ValueType::Bool),
+                vec![],
             )?;
             env.declare_command(
                 "eq",
@@ -103,6 +107,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "True if left side is equal to right side",
                 None,
                 Known(ValueType::Bool),
+                vec![],
             )?;
             env.declare_command(
                 "neq",
@@ -112,6 +117,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "True if left side is not equal to right side",
                 None,
                 Known(ValueType::Bool),
+                vec![],
             )?;
             env.declare_command(
                 "__not__",
@@ -121,6 +127,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "Negates a boolean value",
                 None,
                 Known(ValueType::Bool),
+                vec![],
             )?;
             Ok(())
         }),

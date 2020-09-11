@@ -134,6 +134,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         echo ("Lap #{}":format value)
     }"#,
                 ),
+                vec![],
             )?;
 
             env.declare_command(
@@ -144,6 +145,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "Execute external commands",
                 None,
                 Known(ValueType::BinaryStream),
+                vec![],
             )?;
             Break::declare(env)?;
             Continue::declare(env)?;

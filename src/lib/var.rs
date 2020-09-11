@@ -77,19 +77,35 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         Box::new(move |ns| {
             ns.declare_command(
                 "let", r#let, false,
-                "name := value", "Declare a new variable", None, Known(ValueType::Empty))?;
+                "name := value",
+                "Declare a new variable",
+                None,
+                Known(ValueType::Empty),
+                vec![],
+            )?;
             ns.declare_command(
                 "set", set, false,
-                "name = value", "Assign a new value to an already existing variable", None, Known(ValueType::Empty))?;
+                "name = value",
+                "Assign a new value to an already existing variable",
+                None,
+                Known(ValueType::Empty),
+                vec![],
+            )?;
             ns.declare_command(
                 "unset", unset, false,
                 "scope name:string",
                 "Removes a variable from the namespace",
-                None, Known(ValueType::Empty))?;
+                None,
+                Known(ValueType::Empty),
+                vec![],
+            )?;
             ns.declare_command(
                 "env", env, false,
                 "env", "Returns a table containing the current namespace",
-                Some(r#"    The columns of the table are the name, and the type of the value."#), Unknown)?;
+                Some(r#"    The columns of the table are the name, and the type of the value."#),
+                Unknown,
+                vec![],
+            )?;
             ns.declare_command(
                 "use", r#use, false,
                 "use scope:scope",
@@ -97,7 +113,10 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 Some(r#"    Example:
 
     use math
-    sqrt 1.0"#), Known(ValueType::Empty))?;
+    sqrt 1.0"#),
+                Known(ValueType::Empty),
+                vec![],
+            )?;
             Ok(())
         }))?;
     Ok(())
