@@ -249,7 +249,7 @@ mod tests {
 
     #[signature(my_cmd)]
     struct MyCmdSignature {
-        super_fancy_argument: bool,
+        super_fancy_argument: ValueType,
     }
 
     fn scope_with_function() -> Scope {
@@ -479,4 +479,18 @@ mod tests {
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 2);
     }
+
+    #[test]
+    fn check_completion_type_filtering() {
+        let line = "my_cmd super_fancy_argument=t";
+        let cursor = 29;
+
+        let s = scope_with_function();
+        s.declare("tumbleweed", Value::Empty()).unwrap();
+        s.declare("type", Value::Type(ValueType::Empty)).unwrap();
+        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "my_cmd super_fancy_argument=type");
+    }
+
 }
