@@ -71,7 +71,7 @@ impl ValueType {
     }
 
     pub fn is_compatible_with(&self, pattern: &ValueType) -> bool {
-        (*self == ValueType::Any) || (*self == pattern)
+        (*self == ValueType::Any) || (self == pattern)
     }
 
     pub fn materialize(&self) -> ValueType {

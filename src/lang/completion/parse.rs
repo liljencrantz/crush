@@ -38,6 +38,23 @@ pub struct PartialCommandResult {
     pub last_argument: LastArgument,
 }
 
+impl PartialCommandResult {
+
+    pub fn last_argument_type(&self) -> ValueType {
+        match (&self.command, &self.last_argument_name) {
+            (CompletionCommand::Known(cmd), Some(name)) => {
+                for arg in cmd.arguments() {
+                    if &arg.name == name {
+                        return arg.value_type.clone();
+                    }
+                }
+                ValueType::Any
+            },
+            _ => ValueType::Any,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub enum ParseResult {
     Nothing,

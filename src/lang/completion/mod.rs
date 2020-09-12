@@ -37,7 +37,7 @@ impl Completion {
 fn complete_value(
     value: Value,
     prefix: &[String],
-    t: ValueType,
+    t: &ValueType,
     cursor: usize,
     out: &mut Vec<Completion>,
 ) -> CrushResult<()> {
@@ -61,10 +61,13 @@ fn complete_value(
 fn complete_file(
     lister: &impl DirectoryLister,
     prefix: impl Into<PathBuf>,
-    value_type: ValueType,
+    value_type: &ValueType,
     cursor: usize,
     out: &mut Vec<Completion>,
 ) -> CrushResult<()> {
+    if !value_type.is_compatible_with(&ValueType::File) {
+        return Ok(());
+    }
     let prefix = prefix.into();
     let (prefix_str, parent) = if prefix.is_empty() {
         (
@@ -122,6 +125,7 @@ pub fn complete_partial_argument(
     lister: &impl DirectoryLister,
     res: &mut Vec<Completion>,
 ) -> CrushResult<()> {
+    let argument_type = parse_result.last_argument_type();
     match parse_result.last_argument {
         LastArgument::Switch(name) => {
             if let CompletionCommand::Known(cmd) = parse_result.command {
@@ -129,23 +133,23 @@ pub fn complete_partial_argument(
             }
         }
         LastArgument::Unknown => {
-            complete_value(Value::Scope(scope.clone()), &vec!["".to_string()], ValueType::Any, cursor, res)?;
-            complete_file(lister, "", ValueType::Any, cursor, res)?;
+            complete_value(Value::Scope(scope.clone()), &vec!["".to_string()], &argument_type, cursor, res)?;
+            complete_file(lister, "", &argument_type, cursor, res)?;
             if let CompletionCommand::Known(cmd) = parse_result.command {
                 complete_argument_name(cmd.arguments(), "", cursor, res, false)?;
             }
         }
         LastArgument::Field(l) => {
-            complete_value(Value::Scope(scope.clone()), &l, ValueType::Any, cursor, res)?;
+            complete_value(Value::Scope(scope.clone()), &l, &argument_type, cursor, res)?;
             if l.len() == 1 {
-                complete_file(lister, &l[0], ValueType::Any, cursor, res)?;
+                complete_file(lister, &l[0], &argument_type, cursor, res)?;
                 if let CompletionCommand::Known(cmd) = parse_result.command {
                     complete_argument_name(cmd.arguments(), &l[0], cursor, res, false)?;
                 }
             }
         }
         LastArgument::Path(l) => {
-            complete_file(lister, &l, ValueType::Any, cursor, res)?;
+            complete_file(lister, &l, &argument_type, cursor, res)?;
         }
         LastArgument::QuotedString(_) => {}
     }
@@ -160,20 +164,19 @@ pub fn complete(
 ) -> CrushResult<Vec<Completion>> {
     let parse_result = parse(line, cursor, scope)?;
     let mut res = Vec::new();
-
     match parse_result {
         ParseResult::Nothing => {
-            complete_value(Value::Scope(scope.clone()), &vec!["".to_string()], ValueType::Any, cursor, &mut res)?;
-            complete_file(lister, "", ValueType::Any, cursor, &mut res)?;
+            complete_value(Value::Scope(scope.clone()), &vec!["".to_string()], &ValueType::Any, cursor, &mut res)?;
+            complete_file(lister, "", &ValueType::Any, cursor, &mut res)?;
         }
         ParseResult::PartialCommand(cmd) => {
-            complete_value(Value::Scope(scope.clone()), &cmd, ValueType::Any, cursor, &mut res)?;
+            complete_value(Value::Scope(scope.clone()), &cmd, &ValueType::Any, cursor, &mut res)?;
             if cmd.len() == 1 {
-                complete_file(lister, &cmd[0], ValueType::Any, cursor, &mut res)?;
+                complete_file(lister, &cmd[0], &ValueType::Any, cursor, &mut res)?;
             }
         }
         ParseResult::PartialPath(cmd) =>
-            complete_file(lister, &cmd, ValueType::Any, cursor, &mut res)?,
+            complete_file(lister, &cmd, &ValueType::Any, cursor, &mut res)?,
 
         ParseResult::PartialArgument(parse_result) =>
             complete_partial_argument(parse_result, cursor, scope, lister, &mut res)?,
