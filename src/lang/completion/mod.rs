@@ -3,7 +3,7 @@ use crate::lang::errors::{CrushResult, mandate};
 use crate::lang::value::{ValueType, Value};
 use crate::util::directory_lister::DirectoryLister;
 use std::path::PathBuf;
-use crate::lang::completion::parse::{ParseResult, CompletionCommand, LastArgument, parse};
+use crate::lang::completion::parse::{ParseResult, CompletionCommand, LastArgument, parse, PartialCommandResult};
 use nix::NixPath;
 use crate::lang::command::ArgumentDescription;
 
@@ -97,6 +97,43 @@ fn complete_argument(arguments: &Vec<ArgumentDescription>, prefix: &str, cursor:
     Ok(())
 }
 
+pub fn complete_partial_argument(
+    parse_result: PartialCommandResult,
+    cursor: usize,
+    scope: &Scope,
+    lister: &impl DirectoryLister,
+    res: &mut Vec<Completion>,
+) -> CrushResult<()> {
+    match parse_result.last_argument {
+        LastArgument::Switch(name) => {
+            if let CompletionCommand::Known(cmd) = parse_result.command {
+                complete_argument(cmd.arguments(), &name, cursor, res, true)?;
+            }
+        }
+        LastArgument::Unknown => {
+            complete_value(Value::Scope(scope.clone()), &vec!["".to_string()], ValueType::Any, cursor, res)?;
+            complete_file(lister, "", ValueType::Any, cursor, res)?;
+            if let CompletionCommand::Known(cmd) = parse_result.command {
+                complete_argument(cmd.arguments(), "", cursor, res, false)?;
+            }
+        }
+        LastArgument::Field(l) => {
+            complete_value(Value::Scope(scope.clone()), &l, ValueType::Any, cursor, res)?;
+            if l.len() == 1 {
+                complete_file(lister, &l[0], ValueType::Any, cursor, res)?;
+                if let CompletionCommand::Known(cmd) = parse_result.command {
+                    complete_argument(cmd.arguments(), &l[0], cursor, res, false)?;
+                }
+            }
+        }
+        LastArgument::Path(l) => {
+            complete_file(lister, &l, ValueType::Any, cursor, res)?;
+        }
+        LastArgument::QuotedString(_) => {}
+    }
+    Ok(())
+}
+
 pub fn complete(line: &str, cursor: usize, scope: &Scope, lister: &impl DirectoryLister) -> CrushResult<Vec<Completion>> {
     let parse_result = parse(line, cursor, scope)?;
 
@@ -117,33 +154,7 @@ pub fn complete(line: &str, cursor: usize, scope: &Scope, lister: &impl Director
             complete_file(lister, &cmd, ValueType::Any, cursor, &mut res)?;
         }
         ParseResult::PartialArgument(parse_result) => {
-            match parse_result.last_argument {
-                LastArgument::Switch(name) => {
-                    if let CompletionCommand::Known(cmd) = parse_result.command {
-                        complete_argument(cmd.arguments(), &name, cursor, &mut res, true)?;
-                    }
-                }
-                LastArgument::Unknown => {
-                    complete_value(Value::Scope(scope.clone()), &vec!["".to_string()], ValueType::Any, cursor, &mut res)?;
-                    complete_file(lister, "", ValueType::Any, cursor, &mut res)?;
-                    if let CompletionCommand::Known(cmd) = parse_result.command {
-                        complete_argument(cmd.arguments(), "", cursor, &mut res, false)?;
-                    }
-                }
-                LastArgument::Field(l) => {
-                    complete_value(Value::Scope(scope.clone()), &l, ValueType::Any, cursor, &mut res)?;
-                    if l.len() == 1 {
-                        complete_file(lister, &l[0], ValueType::Any, cursor, &mut res)?;
-                        if let CompletionCommand::Known(cmd) = parse_result.command {
-                            complete_argument(cmd.arguments(), &l[0], cursor, &mut res, false)?;
-                        }
-                    }
-                }
-                LastArgument::Path(l) => {
-                    complete_file(lister, &l, ValueType::Any, cursor, &mut res)?;
-                }
-                LastArgument::QuotedString(_) => {}
-            }
+            complete_partial_argument(parse_result, cursor, scope, lister, &mut res)?;
         }
     }
     Ok(res)
