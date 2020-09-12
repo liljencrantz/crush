@@ -1,10 +1,11 @@
 use crate::lang::ast::{Node, CommandNode, JobListNode, JobNode};
-use crate::lang::errors::{error, CrushResult, mandate};
+use crate::lang::errors::{error, CrushResult, mandate, argument_error};
 use crate::lang::value::{Field, ValueType, Value};
 use std::path::PathBuf;
 use crate::lang::command::Command;
 use crate::lang::data::scope::Scope;
 use crate::lang::parser::close_command;
+use std::ops::Deref;
 
 pub enum CompletionCommand {
     Unknown,
@@ -26,6 +27,7 @@ pub enum LastArgument {
     Field(Field),
     Path(PathBuf),
     QuotedString(String),
+    Switch(String),
 }
 
 #[derive(Clone)]
@@ -73,7 +75,7 @@ fn simple_path(node: &Node) -> CrushResult<PathBuf> {
 
 fn find_command_in_expression(exp: &Node, cursor: usize) -> CrushResult<Option<CommandNode>> {
     match exp {
-        Node::Assignment(_, _, b) => {
+        Node::Assignment(a, _, b) => {
             find_command_in_expression(b, cursor)
         }
 
@@ -126,6 +128,21 @@ fn find_command_in_job_list(ast: JobListNode, cursor: usize) -> CrushResult<Comm
     mandate(ast.jobs.last().and_then(|j| j.commands.last().map(|c| c.clone())), "Nothing to complete")
 }
 
+fn parse_command(node: &Node, scope: &Scope) -> CrushResult<CompletionCommand> {
+    match node {
+        Node::Label(l) => {
+            match scope.get(&l.string)? {
+                None => Ok(CompletionCommand::Unknown),
+                Some(v) => match v {
+                    Value::Command(cmd) => Ok(CompletionCommand::Known(cmd)),
+                    _ => Ok(CompletionCommand::Unknown),
+                },
+            }
+        }
+        _ => Ok(CompletionCommand::Unknown),
+    }
+}
+
 pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResult> {
     let ast = crate::lang::parser::ast(&close_command(&line[0..cursor])?)?;
 
@@ -158,7 +175,7 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
             return Ok(
                 ParseResult::PartialArgument(
                     PartialCommandResult {
-                        command: CompletionCommand::Unknown,
+                        command: parse_command(cmd, scope)?,
                         previous_arguments: vec![],
                         last_argument: LastArgument::Unknown,
                         last_argument_name: None,
@@ -167,76 +184,85 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
             );
         }
     } else {
-        let c = match &cmd.expressions[0] {
-            Node::Label(l) => {
-                match scope.get(&l.string)? {
-                    None => CompletionCommand::Unknown,
-                    Some(v) => match v {
-                        Value::Command(cmd) => CompletionCommand::Known(cmd),
-                        _ => CompletionCommand::Unknown,
-                    },
+        let c = parse_command(&cmd.expressions[0], scope)?;
+
+        let (arg, last_argument_name, argument_complete) = if let Node::Assignment(name, op, value) = cmd.expressions.last().unwrap() {
+            if name.location().contains(cursor) {
+                (name.clone(), None, true)
+            } else {
+                if let Node::Label(name) = name.as_ref() {
+                    (value.clone(), Some(name.string.clone()), false)
+                } else {
+                    (value.clone(), None, false)
                 }
             }
-            _ => CompletionCommand::Unknown,
-        };
-
-        let (arg, last_argument_name) = if let Node::Assignment(name, op, value) = cmd.expressions.last().unwrap() {
-            if let Node::Label(name) = name.as_ref() {
-                (value.clone(), Some(name.string.clone()))
-            } else {
-                (value.clone(), None)
-            }
         } else {
-            (Box::from(cmd.expressions.last().unwrap().clone()), None)
+            (Box::from(cmd.expressions.last().unwrap().clone()), None, false)
         };
 
-        if arg.location().contains(cursor) {
-            match arg.as_ref() {
+        if argument_complete {
+            match arg.deref() {
                 Node::Label(l) => {
                     return Ok(ParseResult::PartialArgument(
                         PartialCommandResult {
                             command: c,
                             previous_arguments: vec![],
-                            last_argument: LastArgument::Field(vec![l.string.clone()]),
+                            last_argument: LastArgument::Switch(l.string.clone()),
                             last_argument_name,
                         }));
                 }
-
-                Node::GetAttr(_, _) => {
-                    return Ok(ParseResult::PartialArgument(
-                        PartialCommandResult {
-                            command: c,
-                            previous_arguments: vec![],
-                            last_argument: LastArgument::Field(simple_attr(arg.as_ref())?),
-                            last_argument_name,
-                        }));
-                }
-
-                Node::Path(_, _) => {
-                    return Ok(ParseResult::PartialArgument(
-                        PartialCommandResult {
-                            command: c,
-                            previous_arguments: vec![],
-                            last_argument: LastArgument::Path(simple_path(arg.as_ref())?),
-                            last_argument_name,
-                        }));
-                }
-
-                Node::String(_) => { error("String completions not yet impemented") }
-
                 _ => {
-                    error("Can't extract argument to complete")
+                    return argument_error("Invalid argument name");
                 }
             }
         } else {
-            return Ok(ParseResult::PartialArgument(
-                PartialCommandResult {
-                    command: c,
-                    previous_arguments: vec![],
-                    last_argument: LastArgument::Unknown,
-                    last_argument_name,
-                }));
+            if arg.location().contains(cursor) {
+                match arg.as_ref() {
+                    Node::Label(l) => {
+                        return Ok(ParseResult::PartialArgument(
+                            PartialCommandResult {
+                                command: c,
+                                previous_arguments: vec![],
+                                last_argument: LastArgument::Field(vec![l.string.clone()]),
+                                last_argument_name,
+                            }));
+                    }
 
+                    Node::GetAttr(_, _) => {
+                        return Ok(ParseResult::PartialArgument(
+                            PartialCommandResult {
+                                command: c,
+                                previous_arguments: vec![],
+                                last_argument: LastArgument::Field(simple_attr(arg.as_ref())?),
+                                last_argument_name,
+                            }));
+                    }
+
+                    Node::Path(_, _) => {
+                        return Ok(ParseResult::PartialArgument(
+                            PartialCommandResult {
+                                command: c,
+                                previous_arguments: vec![],
+                                last_argument: LastArgument::Path(simple_path(arg.as_ref())?),
+                                last_argument_name,
+                            }));
+                    }
+
+                    Node::String(_) => { error("String completions not yet impemented") }
+
+                    _ => {
+                        error("Can't extract argument to complete")
+                    }
+                }
+            } else {
+                return Ok(ParseResult::PartialArgument(
+                    PartialCommandResult {
+                        command: c,
+                        previous_arguments: vec![],
+                        last_argument: LastArgument::Unknown,
+                        last_argument_name,
+                    }));
+            }
         }
     }
 }

@@ -139,9 +139,9 @@ Item: Box<Node> = {
 
     <start: @L> <l:Flag> <end: @R> =>
         Box::from(
-            Node::Assignment(Box::from(Node::Label(TrackedString::from(&l[2..], Location::new(start, end)))),
+            Node::Assignment(Box::from(Node::Label(TrackedString::from(&l[2..], Location::new(start+2, end)))),
             "=".to_string(),
-            Box::from(Node::Label(TrackedString::from("true", Location::new(start, end)))))),
+            Box::from(Node::Label(TrackedString::from("true", Location::new(start, start+2)))))),
 
     <i: Item> "[" <e: Assignment> "]" => Box::from(Node::GetItem(i, e)),
     <i: Item> Colon <start: @L> <l: AnyLabel> <end: @R> => Box::from(Node::GetAttr(i, TrackedString::from(&l, Location::new(start, end)))),

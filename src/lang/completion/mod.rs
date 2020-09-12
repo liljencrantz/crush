@@ -96,13 +96,17 @@ fn complete_value(value: Value, prefix: &[String], t: ValueType, cursor: usize, 
 
 fn complete_file(lister: &impl DirectoryLister, prefix: impl Into<PathBuf>, value_type: ValueType, cursor: usize, out: &mut Vec<Completion>) -> CrushResult<()> {
     let prefix = prefix.into();
-
-    let prefix_str = mandate(prefix.components().last(), "Invalid file for completion")?.as_os_str().to_str().unwrap();
-    let parent = prefix.parent()
-        .map(|p| p.to_path_buf())
-        .map(|p| if p.is_empty() { PathBuf::from(".") } else { p })
-        .unwrap_or(PathBuf::from("/"));
-
+    let (prefix_str, parent) = if prefix.is_empty() {
+        ("", PathBuf::from("."))
+    } else {
+        (
+            prefix.components().last().and_then(|p| p.as_os_str().to_str()).unwrap_or(""),
+            prefix.parent()
+                .map(|p| p.to_path_buf())
+                .map(|p| if p.is_empty() { PathBuf::from(".") } else { p })
+                .unwrap_or(PathBuf::from("/")),
+        )
+    };
     if let Ok(dirs) = lister.list(parent) {
         out.append(&mut dirs
             .filter(|k| k.name.to_str().unwrap().starts_with(prefix_str))
@@ -116,12 +120,15 @@ fn complete_file(lister: &impl DirectoryLister, prefix: impl Into<PathBuf>, valu
     Ok(())
 }
 
-fn complete_argument(arguments: &Vec<ArgumentDescription>, prefix: &str, cursor: usize, out: &mut Vec<Completion>) -> CrushResult<()> {
+fn complete_argument(arguments: &Vec<ArgumentDescription>, prefix: &str, cursor: usize, out: &mut Vec<Completion>, is_switch: bool) -> CrushResult<()> {
     out.append(&mut arguments
         .iter()
         .filter(|a| a.name.starts_with(prefix))
         .map(|a| Completion {
-            completion: format!("{}=", &a.name[prefix.len()..]),
+            completion: format!(
+                "{}{}",
+                &a.name[prefix.len()..],
+                if is_switch { "" } else { "=" }),
             display: a.name.clone(),
             position: cursor,
         })
@@ -130,11 +137,11 @@ fn complete_argument(arguments: &Vec<ArgumentDescription>, prefix: &str, cursor:
 }
 
 pub fn complete(line: &str, cursor: usize, scope: &Scope, lister: &impl DirectoryLister) -> CrushResult<Vec<Completion>> {
-    let cmd = parse(line, cursor, scope)?;
+    let parse_result = parse(line, cursor, scope)?;
 
     let mut res = Vec::new();
 
-    match cmd {
+    match parse_result {
         ParseResult::Nothing => {
             complete_value(Value::Scope(scope.clone()), &vec!["".to_string()], ValueType::Any, cursor, &mut res)?;
         }
@@ -147,17 +154,26 @@ pub fn complete(line: &str, cursor: usize, scope: &Scope, lister: &impl Director
         ParseResult::PartialPath(cmd) => {
             complete_file(lister, &cmd, ValueType::Any, cursor, &mut res)?;
         }
-        ParseResult::PartialArgument(p) => {
-            match p.last_argument {
+        ParseResult::PartialArgument(parse_result) => {
+            match parse_result.last_argument {
+                LastArgument::Switch(name) => {
+                    if let CompletionCommand::Known(cmd) = parse_result.command {
+                        complete_argument(cmd.arguments(), &name, cursor, &mut res, true)?;
+                    }
+                }
                 LastArgument::Unknown => {
                     complete_value(Value::Scope(scope.clone()), &vec!["".to_string()], ValueType::Any, cursor, &mut res)?;
+                    complete_file(lister, "", ValueType::Any, cursor, &mut res)?;
+                    if let CompletionCommand::Known(cmd) = parse_result.command {
+                        complete_argument(cmd.arguments(), "", cursor, &mut res, false)?;
+                    }
                 }
                 LastArgument::Field(l) => {
                     complete_value(Value::Scope(scope.clone()), &l, ValueType::Any, cursor, &mut res)?;
                     if l.len() == 1 {
                         complete_file(lister, &l[0], ValueType::Any, cursor, &mut res)?;
-                        if let CompletionCommand::Known(cmd) = p.command {
-                            complete_argument(cmd.arguments(), &l[0], cursor, &mut res)?;
+                        if let CompletionCommand::Known(cmd) = parse_result.command {
+                            complete_argument(cmd.arguments(), &l[0], cursor, &mut res, false)?;
                         }
                     }
                 }
@@ -235,11 +251,22 @@ mod tests {
     }
 
     #[test]
+    fn check_argument_completion_when_cursor_isnt_on_anything() {
+        let line = "my_cmd ";
+        let cursor = 7;
+
+        let s = scope_with_function();
+        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 3);
+    }
+
+    #[test]
     fn check_switch_completion() {
         let line = "my_cmd --super_";
         let cursor = 15;
 
         let s = scope_with_function();
+        s.declare("super_confusing_variable", Value::Empty()).unwrap();
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "my_cmd --super_fancy_argument");
@@ -316,7 +343,7 @@ mod tests {
     }
 
     #[test]
-        fn complete_namespaced_command() {
+    fn complete_namespaced_command() {
         let line = "abcd:bc";
         let cursor = 7;
 
