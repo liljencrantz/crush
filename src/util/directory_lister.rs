@@ -211,7 +211,7 @@ mod tests {
 
     #[test]
     fn check_real() {
-        let mut f = directory_lister();
+        let f = directory_lister();
         assert_eq!(as_strs_real(f.list("example_data/tree").unwrap()), vec!["a", "sub"]);
     }
 }

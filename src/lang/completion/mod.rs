@@ -34,6 +34,25 @@ impl Completion {
     }
 }
 
+fn is_or_has_type(value: &Value, pattern: &ValueType, max_depth: i8) -> bool {
+    if max_depth <= 0 {
+        return false;
+    }
+    if pattern.is(value) {
+        return true;
+    }
+    for name in &value.fields() {
+        if value.field( name)
+            .map(|opt| opt.map(|val|
+                is_or_has_type(&val, pattern, max_depth - 1))
+                .unwrap_or(false))
+            .unwrap_or(false) {
+            return true;
+        }
+    }
+    false
+}
+
 fn complete_value(
     value: Value,
     prefix: &[String],
@@ -45,6 +64,11 @@ fn complete_value(
         out.append(&mut value.fields()
             .iter()
             .filter(|k| k.starts_with(&prefix[0]))
+            .filter(|k| value.field( *k)
+                .map(|opt| opt.map(
+                    |val| is_or_has_type(&val, t, 4))
+                    .unwrap_or(false))
+                .unwrap_or(false))
             .map(|k| Completion {
                 completion: k[prefix[0].len()..].to_string(),
                 display: k.clone(),
@@ -127,31 +151,41 @@ pub fn complete_partial_argument(
 ) -> CrushResult<()> {
     let argument_type = parse_result.last_argument_type();
     match parse_result.last_argument {
+
         LastArgument::Switch(name) => {
             if let CompletionCommand::Known(cmd) = parse_result.command {
                 complete_argument_name(cmd.arguments(), &name, cursor, res, true)?;
             }
         }
+
         LastArgument::Unknown => {
             complete_value(Value::Scope(scope.clone()), &vec!["".to_string()], &argument_type, cursor, res)?;
             complete_file(lister, "", &argument_type, cursor, res)?;
-            if let CompletionCommand::Known(cmd) = parse_result.command {
-                complete_argument_name(cmd.arguments(), "", cursor, res, false)?;
+            if parse_result.last_argument_name.is_none() {
+                if let CompletionCommand::Known(cmd) = parse_result.command {
+                    complete_argument_name(cmd.arguments(), "", cursor, res, false)?;
+                }
             }
         }
+
         LastArgument::Field(l) => {
             complete_value(Value::Scope(scope.clone()), &l, &argument_type, cursor, res)?;
             if l.len() == 1 {
                 complete_file(lister, &l[0], &argument_type, cursor, res)?;
-                if let CompletionCommand::Known(cmd) = parse_result.command {
-                    complete_argument_name(cmd.arguments(), &l[0], cursor, res, false)?;
+                if parse_result.last_argument_name.is_none() {
+                    if let CompletionCommand::Known(cmd) = parse_result.command {
+                        complete_argument_name(cmd.arguments(), &l[0], cursor, res, false)?;
+                    }
                 }
             }
         }
+
         LastArgument::Path(l) => {
             complete_file(lister, &l, &argument_type, cursor, res)?;
         }
+
         LastArgument::QuotedString(_) => {}
+
     }
     Ok(())
 }
@@ -165,16 +199,19 @@ pub fn complete(
     let parse_result = parse(line, cursor, scope)?;
     let mut res = Vec::new();
     match parse_result {
+
         ParseResult::Nothing => {
             complete_value(Value::Scope(scope.clone()), &vec!["".to_string()], &ValueType::Any, cursor, &mut res)?;
             complete_file(lister, "", &ValueType::Any, cursor, &mut res)?;
         }
+
         ParseResult::PartialCommand(cmd) => {
             complete_value(Value::Scope(scope.clone()), &cmd, &ValueType::Any, cursor, &mut res)?;
             if cmd.len() == 1 {
                 complete_file(lister, &cmd[0], &ValueType::Any, cursor, &mut res)?;
             }
         }
+
         ParseResult::PartialPath(cmd) =>
             complete_file(lister, &cmd, &ValueType::Any, cursor, &mut res)?,
 

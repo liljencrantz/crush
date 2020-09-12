@@ -210,10 +210,6 @@ pub struct Location {
 }
 
 impl Location {
-    pub fn empty() -> Location {
-        Location { start: 0, end: 0 }
-    }
-
     pub fn new(start: usize, end: usize) -> Location {
         Location { start, end }
     }

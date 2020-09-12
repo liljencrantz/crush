@@ -107,7 +107,6 @@ members of a value, write "dir <value>".
             }
             context.output.send(Value::Empty())
         }
-        _ => argument_error("The help command expects at most one argument"),
     }
 }
 

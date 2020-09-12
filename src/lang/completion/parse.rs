@@ -92,7 +92,7 @@ fn simple_path(node: &Node) -> CrushResult<PathBuf> {
 
 fn find_command_in_expression(exp: &Node, cursor: usize) -> CrushResult<Option<CommandNode>> {
     match exp {
-        Node::Assignment(a, _, b) => {
+        Node::Assignment(_, _, b) => {
             find_command_in_expression(b, cursor)
         }
 
@@ -203,7 +203,7 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
     } else {
         let c = parse_command_node(&cmd.expressions[0], scope)?;
 
-        let (arg, last_argument_name, argument_complete) = if let Node::Assignment(name, op, value) = cmd.expressions.last().unwrap() {
+        let (arg, last_argument_name, argument_complete) = if let Node::Assignment(name, _op, value) = cmd.expressions.last().unwrap() {
             if name.location().contains(cursor) {
                 (name.clone(), None, true)
             } else {
