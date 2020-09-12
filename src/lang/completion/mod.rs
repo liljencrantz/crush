@@ -105,6 +105,7 @@ pub fn complete(line: &str, cursor: usize, scope: &Scope, lister: &impl Director
     match parse_result {
         ParseResult::Nothing => {
             complete_value(Value::Scope(scope.clone()), &vec!["".to_string()], ValueType::Any, cursor, &mut res)?;
+            complete_file(lister, "", ValueType::Any, cursor, &mut res)?;
         }
         ParseResult::PartialCommand(cmd) => {
             complete_value(Value::Scope(scope.clone()), &cmd, ValueType::Any, cursor, &mut res)?;
@@ -198,6 +199,17 @@ mod tests {
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "abcd");
+    }
+
+    #[test]
+    fn check_empty_with_file() {
+        let line = "";
+        let cursor = 0;
+
+        let s = Scope::create_root();
+        let completions = complete(line, cursor, &s, &lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "burrow");
     }
 
     #[test]
