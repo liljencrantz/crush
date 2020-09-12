@@ -1,11 +1,9 @@
 use crate::lang::data::scope::Scope;
 use crate::lang::errors::{CrushResult, mandate};
-use crate::lang::argument::ArgumentDefinition;
 use crate::lang::value::{ValueType, Value};
 use crate::util::directory_lister::DirectoryLister;
 use std::path::PathBuf;
 use crate::lang::completion::parse::{ParseResult, CompletionCommand, LastArgument, parse};
-use crate::lang::ast::TokenNode;
 use nix::NixPath;
 use crate::lang::command::ArgumentDescription;
 
@@ -36,46 +34,6 @@ impl Completion {
     }
 }
 
-struct ParseState {
-    vec: Vec<TokenNode>,
-    idx: usize,
-}
-
-impl ParseState {
-    pub fn new(vec: Vec<TokenNode>) -> ParseState {
-        ParseState {
-            vec,
-            idx: 0,
-        }
-    }
-
-    pub fn next(&mut self) -> Option<&str> {
-        self.idx += 1;
-        self.vec.get(self.idx).map(|t| t.data.as_str())
-    }
-
-    pub fn peek(&self) -> Option<&str> {
-        self.vec.get(self.idx + 1).map(|t| t.data.as_str())
-    }
-}
-
-fn complete_cmd(cmd: Option<String>, args: Vec<ArgumentDefinition>, arg: TokenNode, scope: Scope) -> CrushResult<Vec<Completion>> {
-    let map = scope.dump()?;
-    let mut res = Vec::new();
-
-    for name in map.keys() {
-        if name.starts_with(&arg.data) {
-            res.push(Completion {
-                completion: name.strip_prefix(&arg.data).unwrap().to_string(),
-                display: name.clone(),
-                position: arg.end,
-            })
-        }
-    }
-
-    Ok(res)
-}
-
 fn complete_value(value: Value, prefix: &[String], t: ValueType, cursor: usize, out: &mut Vec<Completion>) -> CrushResult<()> {
     if prefix.len() == 1 {
         out.append(&mut value.fields()
@@ -97,7 +55,10 @@ fn complete_value(value: Value, prefix: &[String], t: ValueType, cursor: usize, 
 fn complete_file(lister: &impl DirectoryLister, prefix: impl Into<PathBuf>, value_type: ValueType, cursor: usize, out: &mut Vec<Completion>) -> CrushResult<()> {
     let prefix = prefix.into();
     let (prefix_str, parent) = if prefix.is_empty() {
-        ("", PathBuf::from("."))
+        (
+            "",
+            PathBuf::from(".")
+        )
     } else {
         (
             prefix.components().last().and_then(|p| p.as_os_str().to_str()).unwrap_or(""),
