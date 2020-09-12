@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
+use crate::lang::errors::{to_crush_error, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::help::Help;
 use crate::lang::printer::Printer;
@@ -10,6 +10,7 @@ use crate::util::file::{cwd, home};
 use signature::signature;
 use crate::lang::files::Files;
 
+mod du;
 mod find;
 
 #[signature(
@@ -18,13 +19,13 @@ can_block=false,
 output = Known(ValueType::Empty),
 short = "Change to the specified working directory.",
 )]
-pub struct Cd {
+struct Cd {
     #[unnamed()]
     #[description("the new working directory.")]
     destination: Files,
 }
 
-pub fn cd(context: CommandContext) -> CrushResult<()> {
+fn cd(context: CommandContext) -> CrushResult<()> {
     let cfg: Cd = Cd::parse(context.arguments, &context.printer)?;
 
     let dir = match cfg.destination.had_entries() {
@@ -42,9 +43,9 @@ can_block=false,
 output = Known(ValueType::File),
 short = "Return the current working directory.",
 )]
-pub struct Pwd {}
+struct Pwd {}
 
-pub fn pwd(context: CommandContext) -> CrushResult<()> {
+fn pwd(context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::File(cwd()?))
 }
 
@@ -118,6 +119,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Cd::declare(env)?;
             Pwd::declare(env)?;
             HelpSignature::declare(env)?;
+            du::Du::declare(env)?;
             Ok(())
         }),
     )?;
