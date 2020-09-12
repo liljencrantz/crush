@@ -42,6 +42,10 @@ lazy_static! {
 }
 
 impl ValueType {
+    pub fn either(_options: Vec<ValueType>) -> ValueType {
+        ValueType::Any
+    }
+
     pub fn fields(&self) -> &OrderedMap<String, Command> {
         match self {
             ValueType::List(_) => &types::list::METHODS,
@@ -64,6 +68,10 @@ impl ValueType {
 
     pub fn is(&self, value: &Value) -> bool {
         (*self == ValueType::Any) || (*self == value.value_type())
+    }
+
+    pub fn is_compatible_with(&self, pattern: &ValueType) -> bool {
+        (*self == ValueType::Any) || (*self == pattern)
     }
 
     pub fn materialize(&self) -> ValueType {

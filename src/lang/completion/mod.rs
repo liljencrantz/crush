@@ -34,7 +34,13 @@ impl Completion {
     }
 }
 
-fn complete_value(value: Value, prefix: &[String], t: ValueType, cursor: usize, out: &mut Vec<Completion>) -> CrushResult<()> {
+fn complete_value(
+    value: Value,
+    prefix: &[String],
+    t: ValueType,
+    cursor: usize,
+    out: &mut Vec<Completion>,
+) -> CrushResult<()> {
     if prefix.len() == 1 {
         out.append(&mut value.fields()
             .iter()
@@ -52,7 +58,13 @@ fn complete_value(value: Value, prefix: &[String], t: ValueType, cursor: usize, 
     }
 }
 
-fn complete_file(lister: &impl DirectoryLister, prefix: impl Into<PathBuf>, value_type: ValueType, cursor: usize, out: &mut Vec<Completion>) -> CrushResult<()> {
+fn complete_file(
+    lister: &impl DirectoryLister,
+    prefix: impl Into<PathBuf>,
+    value_type: ValueType,
+    cursor: usize,
+    out: &mut Vec<Completion>,
+) -> CrushResult<()> {
     let prefix = prefix.into();
     let (prefix_str, parent) = if prefix.is_empty() {
         (
@@ -81,7 +93,13 @@ fn complete_file(lister: &impl DirectoryLister, prefix: impl Into<PathBuf>, valu
     Ok(())
 }
 
-fn complete_argument(arguments: &Vec<ArgumentDescription>, prefix: &str, cursor: usize, out: &mut Vec<Completion>, is_switch: bool) -> CrushResult<()> {
+fn complete_argument_name(
+    arguments: &Vec<ArgumentDescription>,
+    prefix: &str,
+    cursor: usize,
+    out: &mut Vec<Completion>,
+    is_switch: bool,
+) -> CrushResult<()> {
     out.append(&mut arguments
         .iter()
         .filter(|a| a.name.starts_with(prefix))
@@ -107,14 +125,14 @@ pub fn complete_partial_argument(
     match parse_result.last_argument {
         LastArgument::Switch(name) => {
             if let CompletionCommand::Known(cmd) = parse_result.command {
-                complete_argument(cmd.arguments(), &name, cursor, res, true)?;
+                complete_argument_name(cmd.arguments(), &name, cursor, res, true)?;
             }
         }
         LastArgument::Unknown => {
             complete_value(Value::Scope(scope.clone()), &vec!["".to_string()], ValueType::Any, cursor, res)?;
             complete_file(lister, "", ValueType::Any, cursor, res)?;
             if let CompletionCommand::Known(cmd) = parse_result.command {
-                complete_argument(cmd.arguments(), "", cursor, res, false)?;
+                complete_argument_name(cmd.arguments(), "", cursor, res, false)?;
             }
         }
         LastArgument::Field(l) => {
@@ -122,7 +140,7 @@ pub fn complete_partial_argument(
             if l.len() == 1 {
                 complete_file(lister, &l[0], ValueType::Any, cursor, res)?;
                 if let CompletionCommand::Known(cmd) = parse_result.command {
-                    complete_argument(cmd.arguments(), &l[0], cursor, res, false)?;
+                    complete_argument_name(cmd.arguments(), &l[0], cursor, res, false)?;
                 }
             }
         }
@@ -134,9 +152,13 @@ pub fn complete_partial_argument(
     Ok(())
 }
 
-pub fn complete(line: &str, cursor: usize, scope: &Scope, lister: &impl DirectoryLister) -> CrushResult<Vec<Completion>> {
+pub fn complete(
+    line: &str,
+    cursor: usize,
+    scope: &Scope,
+    lister: &impl DirectoryLister,
+) -> CrushResult<Vec<Completion>> {
     let parse_result = parse(line, cursor, scope)?;
-
     let mut res = Vec::new();
 
     match parse_result {
@@ -150,13 +172,13 @@ pub fn complete(line: &str, cursor: usize, scope: &Scope, lister: &impl Director
                 complete_file(lister, &cmd[0], ValueType::Any, cursor, &mut res)?;
             }
         }
-        ParseResult::PartialPath(cmd) => {
-            complete_file(lister, &cmd, ValueType::Any, cursor, &mut res)?;
-        }
-        ParseResult::PartialArgument(parse_result) => {
-            complete_partial_argument(parse_result, cursor, scope, lister, &mut res)?;
-        }
+        ParseResult::PartialPath(cmd) =>
+            complete_file(lister, &cmd, ValueType::Any, cursor, &mut res)?,
+
+        ParseResult::PartialArgument(parse_result) =>
+            complete_partial_argument(parse_result, cursor, scope, lister, &mut res)?,
     }
+
     Ok(res)
 }
 

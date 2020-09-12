@@ -11,6 +11,7 @@ struct TypeData {
     mappings: TokenStream,
     unnamed_mutate: Option<TokenStream>,
     assign: TokenStream,
+    crush_internal_type: TokenStream,
     signature: String,
 }
 
@@ -166,6 +167,25 @@ fn simple_type_to_value(simple_type: &str) -> TokenStream {
     }
 }
 
+fn simple_type_to_value_type(simple_type: &str) -> TokenStream {
+    match simple_type {
+        "String" => quote! {crate::lang::value::ValueType::String},
+        "bool" => quote! {crate::lang::value::ValueType::Bool},
+        "i128" => quote! {crate::lang::value::ValueType::Integer},
+        "usize" => quote! {crate::lang::value::ValueType::Integer},
+        "u64" => quote! {crate::lang::value::ValueType::Integer},
+        "i64" => quote! {crate::lang::value::ValueType::Integer},
+        "ValueType" => quote! {crate::lang::value::ValueType::Type},
+        "f64" => quote! {crate::lang::value::ValueType::Float},
+        "char" => quote! {crate::lang::value::ValueType::String},
+        "Command" => quote! {crate::lang::value::ValueType::Command},
+        "Duration" => quote! {crate::lang::value::ValueType::Duration},
+        "Field" => quote! {crate::lang::value::ValueType::Field},
+        "Struct" => quote! {crate::lang::value::ValueType::Struct},
+        _ => quote! {crate::lang::value::ValueType::Any},
+    }
+}
+
 fn simple_type_to_value_description(simple_type: &str) -> &str {
     match simple_type {
         "String" => "string",
@@ -269,6 +289,7 @@ fn type_to_value(
                 let mutator = simple_type_to_mutator(type_name, &allowed_values_name);
                 let value_type = simple_type_to_value(type_name);
                 Ok(TypeData {
+                    crush_internal_type: simple_type_to_value_type(type_name),
                     signature: if default.is_none() {
                         format!(
                             "{}={}",
@@ -342,6 +363,10 @@ fn type_to_value(
                 fail!(ty.span(), "This type can't be paramterizised")
             } else {
                 Ok(TypeData {
+                    crush_internal_type: quote!{crate::lang::value::ValueType::either(vec![
+                        crate::lang::value::ValueType::Integer,
+                        crate::lang::value::ValueType::Float,
+                    ])},
                     signature: format!(
                         "{}=(float|integer)",
                         name.to_string()
@@ -398,6 +423,7 @@ fn type_to_value(
                         None
                     },
                     assign: quote! { #name, },
+                    crush_internal_type: quote!{crate::lang::value::ValueType::Any},
                 })
             }
         }
@@ -428,6 +454,11 @@ fn type_to_value(
                         None
                     },
                     assign: quote! { #name, },
+                    crush_internal_type: quote!{crate::lang::value::ValueType::either(vec![
+                        crate::lang::value::ValueType::String,
+                        crate::lang::value::ValueType::Glob,
+                        crate::lang::value::ValueType::Regex,
+                    ])},
                 })
             }
         }
@@ -442,8 +473,10 @@ fn type_to_value(
                 let mutator = simple_type_to_mutator(args[0], &None);
                 let dump_all = Ident::new(simple_type_dump_list(args[0]), ty.span().clone());
                 let value_type = simple_type_to_value(args[0]);
+                let sub_type = simple_type_to_value_type(args[0]);
 
                 Ok(TypeData {
+                    crush_internal_type: quote!{crate::lang::value::ValueType::List(Box::from(#sub_type))},
                     signature: format!(
                         "[{}={}...]",
                         name.to_string(),
@@ -483,6 +516,7 @@ fn type_to_value(
             } else {
                 let mutator = simple_type_to_mutator(args[0], &None);
                 let value_type = simple_type_to_value(args[0]);
+                let sub_type = simple_type_to_value_type(args[0]);
 
                 Ok(TypeData {
                     signature: format!(
@@ -495,6 +529,7 @@ fn type_to_value(
                     mappings: quote! { (Some(name), #value_type) => #name.insert(name.to_string(), #mutator), },
                     unnamed_mutate: None,
                     assign: quote! { #name, },
+                    crush_internal_type: sub_type,
                 })
             }
         }
@@ -527,6 +562,7 @@ fn type_to_value(
                     }
                     }),
                     assign: quote! { #name, },
+                    crush_internal_type: simple_type_to_value_type(args[0]),
                 })
             }
         }
@@ -779,12 +815,13 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
                 assignments.extend(type_data.assign);
                 had_unnamed_target |= is_unnamed_target;
+                let crush_internal_type = type_data.crush_internal_type;
 
                 argument_desciptions = quote!{
                     #argument_desciptions
                     crate::lang::command::ArgumentDescription {
                         name: #name_string.to_string(),
-                        value_type: crate::lang::value::ValueType::Any,
+                        value_type: #crush_internal_type,
                         allowed: None,
                         description: None,
                         complete: None,

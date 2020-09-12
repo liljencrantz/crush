@@ -128,7 +128,7 @@ fn find_command_in_job_list(ast: JobListNode, cursor: usize) -> CrushResult<Comm
     mandate(ast.jobs.last().and_then(|j| j.commands.last().map(|c| c.clone())), "Nothing to complete")
 }
 
-fn parse_command(node: &Node, scope: &Scope) -> CrushResult<CompletionCommand> {
+fn parse_command_node(node: &Node, scope: &Scope) -> CrushResult<CompletionCommand> {
     match node {
         Node::Label(l) => {
             match scope.get(&l.string)? {
@@ -175,7 +175,7 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
             return Ok(
                 ParseResult::PartialArgument(
                     PartialCommandResult {
-                        command: parse_command(cmd, scope)?,
+                        command: parse_command_node(cmd, scope)?,
                         previous_arguments: vec![],
                         last_argument: LastArgument::Unknown,
                         last_argument_name: None,
@@ -184,7 +184,7 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
             );
         }
     } else {
-        let c = parse_command(&cmd.expressions[0], scope)?;
+        let c = parse_command_node(&cmd.expressions[0], scope)?;
 
         let (arg, last_argument_name, argument_complete) = if let Node::Assignment(name, op, value) = cmd.expressions.last().unwrap() {
             if name.location().contains(cursor) {
