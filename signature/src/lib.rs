@@ -395,7 +395,7 @@ fn type_to_value(
                 fail!(ty.span(), "This type can't be paramterizised")
             } else {
                 Ok(TypeData {
-                    crush_internal_type: quote!{crate::lang::value::ValueType::either(vec![
+                    crush_internal_type: quote! {crate::lang::value::ValueType::either(vec![
                         crate::lang::value::ValueType::Integer,
                         crate::lang::value::ValueType::Float,
                     ])},
@@ -456,7 +456,7 @@ fn type_to_value(
                         None
                     },
                     assign: quote! { #name, },
-                    crush_internal_type: quote!{crate::lang::value::ValueType::Any},
+                    crush_internal_type: quote! {crate::lang::value::ValueType::Any},
                 })
             }
         }
@@ -487,7 +487,7 @@ fn type_to_value(
                         None
                     },
                     assign: quote! { #name, },
-                    crush_internal_type: quote!{crate::lang::value::ValueType::either(vec![
+                    crush_internal_type: quote! {crate::lang::value::ValueType::either(vec![
                         crate::lang::value::ValueType::String,
                         crate::lang::value::ValueType::Glob,
                         crate::lang::value::ValueType::Regex,
@@ -509,7 +509,7 @@ fn type_to_value(
                 let sub_type = simple_type_to_value_type(args[0]);
 
                 Ok(TypeData {
-                    crush_internal_type: quote!{crate::lang::value::ValueType::List(Box::from(#sub_type))},
+                    crush_internal_type: quote! {crate::lang::value::ValueType::List(Box::from(#sub_type))},
                     signature: format!(
                         "[{}={}...]",
                         name.to_string(),
@@ -786,7 +786,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
             let struct_name = s.ident.clone();
             let mut had_field_description = false;
 
-            let mut argument_desciptions = quote!{};
+            let mut argument_desciptions = quote! {};
 
             for field in &mut s.fields {
                 let mut default_value = None;
@@ -863,7 +863,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 had_unnamed_target |= is_unnamed_target;
                 let crush_internal_type = type_data.crush_internal_type;
 
-                argument_desciptions = quote!{
+                argument_desciptions = quote! {
                     #argument_desciptions
                     crate::lang::command::ArgumentDescription {
                         name: #name_string.to_string(),
@@ -942,7 +942,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                             #named_matchers
                             #named_fallback
                             (None, _value) => _unnamed.push_back((_value, _arg.location)),
-                            _ => return crate::lang::errors::argument_error("Invalid parameter", _location),
+                            (Some(_name), _value) => return crate::lang::errors::argument_error(format!("Unknown argument name \"{}\"", _name), _location),
                         }
                     }
 
@@ -955,9 +955,11 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
             let mut output = s.to_token_stream();
             output.extend(handler.into_token_stream());
-            if struct_name.to_string() == "If" {
-                println!("ABCABC {}", output.to_string());
-            }
+            /*
+                        if struct_name.to_string() == "If" {
+                            println!("ABCABC {}", output.to_string());
+                        }
+             */
             Ok(output)
         }
         _ => fail!(root.span(), "Expected a struct"),
