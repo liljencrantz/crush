@@ -525,10 +525,16 @@ fn type_to_value(
                     unnamed_mutate: if is_unnamed_target {
                         Some(quote! {
                             while !_unnamed.is_empty() {
-                                if let Some((#value_type, _location)) = _unnamed.pop_front() {
-                                    #name.push(#mutator);
-                                } else {
-                                    return crate::lang::errors::argument_error_legacy(format!("Expected argument {} to be of type {}", #name_literal, #type_name).as_str());
+                                match  _unnamed.pop_front() {
+                                    Some((#value_type, _location)) => #name.push(#mutator),
+                                Some((_, _location)) =>
+                                    return crate::lang::errors::argument_error(
+                                        format!("Expected argument {} to be of type {}", #name_literal, #type_name),
+                                        _location,
+                                    ),
+                                _ =>
+                                    return crate::lang::errors::argument_error_legacy(
+                                        format!("Missing argument {}", #name_literal)),
                                 }
                             }
                         })
@@ -590,7 +596,14 @@ fn type_to_value(
                         match _unnamed.pop_front() {
                             None => {}
                             Some((#value_type, _location)) => #name = Some(#mutator),
-                            _ => return crate::lang::errors::argument_error_legacy(format!("Expected argument {} to be of type {}", #name_literal, #sub_type).as_str()),
+                            Some((_, _location)) =>
+                                return crate::lang::errors::argument_error(
+                                    format!("Expected argument {} to be of type {}", #name_literal, #sub_type),
+                                    _location,
+                                ),
+                            _ =>
+                                return crate::lang::errors::argument_error_legacy(
+                                    format!("Missing argument {}", #name_literal)),
                         }
                     }
                     }),
