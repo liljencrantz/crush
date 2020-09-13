@@ -26,9 +26,10 @@ fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
             } else if f.is_i64() {
                 Ok(Value::Integer(f.as_i64().expect("") as i128))
             } else {
-                Ok(Value::Float(f.as_f64().ok_or(CrushError::InvalidData(
-                    "Not a valid number".to_string(),
-                ))?))
+                Ok(Value::Float(
+                    mandate(f.as_f64(),
+                    "Not a valid number")?
+                ))
             }
         }
         serde_yaml::Value::String(s) => Ok(Value::string(s.as_str())),

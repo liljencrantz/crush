@@ -68,10 +68,9 @@ pub fn string(global_env: Scope, s: &str, printer: &Printer, output: &ValueSende
                     threads.clone(),
                 )) {
                     Ok(handle) => {
-                        handle.map(|id| threads.join_one(id, printer));
-
+                        handle.map(|id| threads.join_one(id, &printer.with_source(s, job_definition.location())));
                     }
-                    Err(e) => printer.crush_error(e),
+                    Err(e) => printer.crush_error(e.with_definition(s)),
                 }
             }
         }

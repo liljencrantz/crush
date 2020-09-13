@@ -224,6 +224,10 @@ impl Location {
     pub fn contains(&self, cursor: usize) -> bool {
         cursor >= self.start && cursor <= self.end
     }
+
+    pub fn len(&self) -> usize {
+        self.end - self.start
+    }
 }
 
 #[derive(Clone, Debug)]

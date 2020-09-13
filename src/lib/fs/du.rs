@@ -34,11 +34,15 @@ pub struct Du {
     #[description("do not show directory sizes for subdirectories.")]
     #[default(false)]
     silent: bool,
+    #[description("write sizes for all files, not just directories.")]
+    #[default(false)]
+    all: bool,
 }
 
 fn size(
     path: &Path,
     silent: bool,
+    all: bool,
     is_directory: bool,
     output: &OutputStream,
     lister: &impl DirectoryLister,
@@ -47,8 +51,8 @@ fn size(
     let mut bl = path.metadata().map(|m| m.blocks()).unwrap_or(0);
     Ok(if is_directory {
         for child in lister.list(path)? {
-            let (child_sz, child_bl) = size(&child.full_path, silent, child.is_directory, output, lister)?;
-            if !silent && child.is_directory {
+            let (child_sz, child_bl) = size(&child.full_path, silent, all, child.is_directory, output, lister)?;
+            if (!silent && child.is_directory) || all {
                 output.send(Row::new(
                     vec![
                         Value::Integer(child_sz as i128),
@@ -75,7 +79,7 @@ fn du(context: CommandContext) -> CrushResult<()> {
         vec![PathBuf::from(".")]
     };
     for file in dirs {
-        let (sz, bl) = size(&file, cfg.silent, file.is_dir(), &output, &directory_lister())?;
+        let (sz, bl) = size(&file, cfg.silent, cfg.all, file.is_dir(), &output, &directory_lister())?;
 
         output.send(Row::new(
             vec![

@@ -6,7 +6,7 @@ use crate::{
 use std::io::{BufReader, Write};
 
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{error, mandate, to_crush_error, CrushResult};
+use crate::lang::errors::{error, mandate, to_crush_error, CrushResult, data_error};
 use crate::lang::files::Files;
 use crate::lang::data::scope::ScopeLoader;
 use crate::lang::data::table::ColumnType;
@@ -25,9 +25,9 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
             } else if f.is_i64() {
                 Ok(Value::Integer(f.as_i64().expect("") as i128))
             } else {
-                Ok(Value::Float(f.as_f64().ok_or(CrushError::InvalidData(
-                    "Not a valid number".to_string(),
-                ))?))
+                Ok(Value::Float(mandate(
+                    f.as_f64(),
+                    "Not a valid number")?))
             }
         }
         serde_json::Value::String(s) => Ok(Value::string(s.as_str())),

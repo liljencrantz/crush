@@ -319,6 +319,17 @@ mod tests {
     }
 
     #[test]
+    fn check_empty_switch_completion() {
+        let line = "my_cmd --";
+        let cursor = 9;
+
+        let s = scope_with_function();
+        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "my_cmd --super_fancy_argument");
+    }
+
+    #[test]
     fn check_empty_token() {
         let line = "a ";
         let cursor = 2;

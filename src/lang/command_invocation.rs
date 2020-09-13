@@ -1,4 +1,4 @@
-use crate::lang::errors::{error, CrushError, CrushResult};
+use crate::lang::errors::{error, CrushError, CrushResult, CrushErrorType};
 use crate::lang::execution_context::{CompileContext, JobContext};
 use crate::lang::data::scope::Scope;
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, value::Value};
@@ -128,7 +128,7 @@ impl CommandInvocation {
         {
             Ok((this, value)) => invoke_value(this, value, self.arguments.clone(), context, self.command.location()),
             Err(err) => {
-                if err == CrushError::BlockError {
+                if err.is(CrushErrorType::BlockError) {
                     let cmd = self.command.clone();
                     let arguments = self.arguments.clone();
                     let t = context.threads.clone();

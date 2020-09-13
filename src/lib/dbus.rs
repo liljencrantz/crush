@@ -2,10 +2,7 @@ use crate::lang::argument::{column_names, Argument};
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::*;
 use crate::lang::data::dict::Dict;
-use crate::lang::errors::{
-    argument_error, data_error, eof_error, error, mandate, to_crush_error, CrushError,
-    CrushResult,
-};
+use crate::lang::errors::{argument_error, data_error, eof_error, error, mandate, to_crush_error, CrushError, CrushResult, CrushErrorType};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::data::list::List;
 use crate::lang::data::r#struct::Struct;
@@ -422,7 +419,7 @@ impl DBusArgument {
             }
             DBusType::Array(_) => {}
             DBusType::Variant => {}
-            DBusType::DictEntry{ key_type, value_type } => {}
+            DBusType::DictEntry { key_type, value_type } => {}
             DBusType::UnixFd => {}
             DBusType::Struct(_) => {}
             DBusType::ObjectPath => {}
@@ -459,8 +456,7 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
                             entry.next();
                             value
                         }
-                        Err(CrushError::EOFError) => break,
-                        Err(e) => return Err(e),
+                        Err(e) => if e.is_eof() { break; } else { return Err(e); },
                     };
 
                     let value = match deserialize(&mut entry) {
@@ -469,10 +465,11 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
                             entry.next();
                             value
                         }
-                        Err(CrushError::EOFError) => {
-                            return error("Unexpected EOF in dbus message");
-                        }
-                        Err(e) => return Err(e),
+                        Err(e) => return if e.is_eof() {
+                            error("Unexpected EOF in dbus message")
+                        } else {
+                            Err(e)
+                        },
                     };
 
                     res.push((key, value));
@@ -508,8 +505,7 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
                             res.push(value);
                             sub.next();
                         }
-                        Err(CrushError::EOFError) => break,
-                        Err(e) => return Err(e),
+                        Err(e) => if e.is_eof() { break; } else { return Err(e); },
                     }
                 }
 
@@ -528,8 +524,11 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
                     sub.next();
                     value
                 }
-                Err(CrushError::EOFError) => return error("Unexpected EOF in DBUS message"),
-                Err(e) => return Err(e),
+                Err(e) => return if e.is_eof() {
+                    error("Unexpected EOF in DBUS message")
+                } else {
+                    Err(e)
+                },
             }
         }
         ArgType::Invalid => return eof_error(),
@@ -544,8 +543,7 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
                         res.push(value);
                         sub.next();
                     }
-                    Err(CrushError::EOFError) => break,
-                    Err(e) => return Err(e),
+                    Err(e) => if e.is_eof() { break; } else { return Err(e); },
                 }
             }
             Value::List(List::new(ValueType::Any, res))
@@ -571,8 +569,7 @@ impl DBusMethod {
                     res.push(value);
                     iter.next();
                 }
-                Err(CrushError::EOFError) => break,
-                Err(e) => return Err(e),
+                Err(e) => if e.is_eof() { break; } else { return Err(e); },
             }
         }
         Ok(res)

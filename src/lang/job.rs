@@ -42,7 +42,7 @@ impl Job {
             input = next_input;
         }
         let last_call_def = &self.commands[last_job_idx];
-        last_call_def.invoke(context.with_io(input, context.output.clone()))
+        last_call_def.invoke(context.with_io(input, context.output.clone())).map_err(|e| e.with_location(self.location))
     }
 
     pub fn as_string(&self) -> Option<String> {

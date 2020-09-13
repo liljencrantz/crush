@@ -48,8 +48,17 @@ pub fn close_quote(input: &str) -> String {
     }
 }
 
+pub fn close_switch(input: &str) -> String {
+    if input.ends_with("--") {
+        format!("{}x", input)
+    } else {
+        input.to_string()
+    }
+}
+
+
 pub fn close_command(input: &str) -> CrushResult<String> {
-    let input = close_quote(input);
+    let input = close_switch(&close_quote(input));
     let tokens = crate::lang::parser::tokenize(&input)?;
     let mut stack = Vec::new();
 
