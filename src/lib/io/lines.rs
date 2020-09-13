@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error, data_error, to_crush_error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, data_error, to_crush_error, CrushResult};
 use crate::lang::files::Files;
 use crate::lang::data::scope::ScopeLoader;
 use crate::lang::{
@@ -83,7 +83,7 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
             }
             Ok(())
         }
-        None => argument_error("Expected a stream"),
+        None => argument_error_legacy("Expected a stream"),
     }
 }
 

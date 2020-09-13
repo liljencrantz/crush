@@ -2,7 +2,7 @@ use crate::lang::argument::{Argument, ArgumentDefinition, ArgumentType};
 use crate::lang::command::{BoundCommand, Command, CrushCommand, OutputType, Parameter, ArgumentDescription};
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::data::dict::Dict;
-use crate::lang::errors::{argument_error, error, mandate, CrushResult};
+use crate::lang::errors::{argument_error_legacy, error, mandate, CrushResult};
 use crate::lang::execution_context::{CompileContext, CommandContext, JobContext};
 use crate::lang::help::Help;
 use crate::lang::job::Job;
@@ -239,6 +239,8 @@ impl<'a> ClosureSerializer<'a> {
         Ok(model::ArgumentDefinition {
             value: Some(self.value_definition(&a.value)?),
             argument_type: Some(self.argument_type(&a.argument_type)?),
+            start: a.location.start as u64,
+            end: a.location.end as u64,
         })
     }
 
@@ -424,6 +426,7 @@ impl<'a> ClosureDeserializer<'a> {
                     ArgumentType::ArgumentDict
                 }
             },
+            location: Location::new(s.start as usize, s.end as usize),
         })
     }
 
@@ -576,7 +579,7 @@ impl Closure {
                             if named.contains_key(&name.string) {
                                 let value = named.remove(&name.string).unwrap();
                                 if !value_type.is(&value) {
-                                    return argument_error("Wrong parameter type");
+                                    return argument_error_legacy("Wrong parameter type");
                                 }
                                 context.env.redeclare(&name.string, value)?;
                             } else if !unnamed.is_empty() {
@@ -585,21 +588,21 @@ impl Closure {
                                 let env = context.env.clone();
                                 env.redeclare(&name.string, default.compile_bound(context)?)?;
                             } else {
-                                return argument_error("Missing variable!!!");
+                                return argument_error_legacy("Missing variable!!!");
                             }
                         } else {
-                            return argument_error("Not a type");
+                            return argument_error_legacy("Not a type");
                         }
                     }
                     Parameter::Named(name) => {
                         if named_name.is_some() {
-                            return argument_error("Multiple named argument maps specified");
+                            return argument_error_legacy("Multiple named argument maps specified");
                         }
                         named_name = Some(name);
                     }
                     Parameter::Unnamed(name) => {
                         if unnamed_name.is_some() {
-                            return argument_error("Multiple named argument maps specified");
+                            return argument_error_legacy("Multiple named argument maps specified");
                         }
                         unnamed_name = Some(name);
                     }
@@ -612,7 +615,7 @@ impl Closure {
                     Value::List(List::new(ValueType::Any, unnamed)),
                 )?;
             } else if !unnamed.is_empty() {
-                return argument_error("No target for unnamed arguments");
+                return argument_error_legacy("No target for unnamed arguments");
             }
 
             if let Some(named_name) = named_name {
@@ -622,7 +625,7 @@ impl Closure {
                 }
                 context.env.redeclare(named_name.string.as_ref(), Value::Dict(d))?;
             } else if !named.is_empty() {
-                return argument_error("No target for extra named arguments");
+                return argument_error_legacy("No target for extra named arguments");
             }
         } else {
             for arg in arguments.drain(..) {
@@ -631,7 +634,7 @@ impl Closure {
                         context.env.redeclare(name.as_ref(), arg.value)?;
                     }
                     None => {
-                        return argument_error("No target for unnamed arguments");
+                        return argument_error_legacy("No target for unnamed arguments");
                     }
                 }
             }

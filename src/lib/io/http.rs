@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, to_crush_error, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::{
     data::binary::binary_channel, data::r#struct::Struct, data::table::ColumnType, data::table::Row, data::table::Table,
@@ -19,7 +19,7 @@ fn parse_method(m: &str) -> CrushResult<Method> {
         "connect" => Method::CONNECT,
         "patch" => Method::PATCH,
         "trace" => Method::TRACE,
-        _ => return argument_error(format!("Unknown method {}", m).as_str()),
+        _ => return argument_error_legacy(format!("Unknown method {}", m).as_str()),
     })
 }
 
@@ -61,7 +61,7 @@ fn http(context: CommandContext) -> CrushResult<()> {
                 request = request.header(h[0], h[1].to_string());
             }
             _ => {
-                return argument_error("Bad header format");
+                return argument_error_legacy("Bad header format");
             }
         }
     }

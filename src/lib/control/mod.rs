@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, to_crush_error, CrushResult};
 use crate::lang::data::scope::Scope;
 use crate::lang::{
     data::binary::BinaryReader, execution_context::CommandContext, data::list::List, value::Value,
@@ -45,7 +45,7 @@ pub fn r#continue(context: CommandContext) -> CrushResult<()> {
 
 pub fn cmd(mut context: CommandContext) -> CrushResult<()> {
     if context.arguments.is_empty() {
-        return argument_error("No command given");
+        return argument_error_legacy("No command given");
     }
     match context.arguments.remove(0).value {
         Value::File(f) => {
@@ -82,7 +82,7 @@ pub fn cmd(mut context: CommandContext) -> CrushResult<()> {
                 .output
                 .send(Value::BinaryStream(BinaryReader::vec(&output.stdout)))
         }
-        _ => argument_error("Not a valid command"),
+        _ => argument_error_legacy("Not a valid command"),
     }
 }
 

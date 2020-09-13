@@ -211,13 +211,23 @@ fn simple_type_to_mutator(simple_type: &str, allowed_values: &Option<Ident>) -> 
     match allowed_values {
         None => match simple_type {
             "char" => {
-                quote! { if _value.len() == 1 { _value.chars().next().unwrap()} else {return crate::lang::errors::argument_error("Argument must be exactly one character")}}
+                quote! {
+                    if _value.len() == 1 {
+                        _value.chars().next().unwrap()
+                    } else {
+                        return crate::lang::errors::argument_error("Argument must be exactly one character", _location)
+                    }
+                }
             }
             "usize" => quote! { crate::lang::errors::to_crush_error(usize::try_from(_value))?},
             "u64" => quote! { crate::lang::errors::to_crush_error(u64::try_from(_value))?},
             "i64" => quote! { crate::lang::errors::to_crush_error(i64::try_from(_value))?},
             "Stream" => {
-                quote! { crate::lang::errors::mandate(_value.stream(), "Expected a type that can be streamed")? }
+                quote! {
+                    crate::lang::errors::mandate(
+                        _value.stream(),
+                        "Expected a type that can be streamed")?,
+                    }
             }
             _ => quote! {_value},
         },
@@ -228,24 +238,36 @@ fn simple_type_to_mutator(simple_type: &str, allowed_values: &Option<Ident>) -> 
                     if #allowed.contains(&c) {
                         c
                     } else {
-                        return crate::lang::errors::argument_error(format!("Only the following values are allowed: {:?}", #allowed).as_str())
+                        return crate::lang::errors::argument_error(
+                            format!("Only the following values are allowed: {:?}", #allowed),
+                            _location,
+                        )
                     }
                 } else {
-                    return crate::lang::errors::argument_error("Argument must be exactly one character")
+                    return crate::lang::errors::argument_error(
+                        "Argument must be exactly one character",
+                        _location,
+                    )
                 }
             },
             "String" => quote! {
                 if #allowed.contains(&_value.as_str()) {
                     _value
                 } else {
-                    return crate::lang::errors::argument_error(format!("Only the following values are allowed: {:?}", #allowed).as_str())
+                    return crate::lang::errors::argument_error(
+                        format!("Only the following values are allowed: {:?}", #allowed),
+                        _location,
+                    )
                 }
             },
             _ => quote! {
                 if #allowed.contains(&_value) {
                     _value
                 } else {
-                    return crate::lang::errors::argument_error(format!("Only the following values are allowed: {:?}", #allowed).as_str())
+                    return crate::lang::errors::argument_error(
+                        format!("Only the following values are allowed: {:?}", #allowed),
+                        _location,
+                    )
                 }
             },
         },
@@ -325,26 +347,36 @@ fn type_to_value(
                         None => Some(quote! {
                         if #name.is_none() {
                             match _unnamed.pop_front() {
-                                Some(#value_type) => #name = Some(#mutator),
-                                Some(value) =>
+                                Some((#value_type, _location)) => #name = Some(#mutator),
+                                Some((value, _location)) =>
                                     return crate::lang::errors::argument_error(format!(
                                         "Expected argument \"{}\" to be of type {}, was of type {}",
                                         #name_literal,
                                         #type_name,
-                                        value.value_type().to_string()).as_str()),
+                                        value.value_type().to_string()),
+                                        _location,
+                                    ),
                                 _ =>
-                                    return crate::lang::errors::argument_error(format!(
-                                        "No value provided for argument \"{}\"",
-                                        #name_literal).as_str()),
+                                    return crate::lang::errors::argument_error_legacy(
+                                        format!(
+                                            "No value provided for argument \"{}\"",
+                                            #name_literal),
+                                    ),
                             }
                         }
                                                     }),
                         Some(def) => Some(quote! {
                         if #name.is_none() {
                             match _unnamed.pop_front() {
-                                Some(#value_type) => #name = Some(#mutator),
+                                Some((#value_type, _location)) => #name = Some(#mutator),
                                 None => #name = Some(#native_type::from(#def)),
-                                _ => return crate::lang::errors::argument_error(format!("Expected argument {} to be of type {}", #name_literal, #type_name).as_str()),
+                                Some((_, _location)) => return crate::lang::errors::argument_error(
+                                        format!("Expected argument {} to be of type {}", #name_literal, #type_name),
+                                        _location,
+                                    ),
+                                _ => return crate::lang::errors::argument_error_legacy(
+                                        format!("Expected argument {} to be of type {}", #name_literal, #type_name),
+                                    ),
                                 }
                         }
                                                     }),
@@ -379,15 +411,16 @@ fn type_to_value(
                     unnamed_mutate: Some(quote! {
                         if #name.is_none() {
                             match _unnamed.pop_front() {
-                                Some(crate::lang::value::Value::Float(_value)) => #name = Some(Number::Float(_value)),
-                                Some(crate::lang::value::Value::Integer(_value)) => #name = Some(Number::Integer(_value)),
-                                Some(value) =>
+                                Some((crate::lang::value::Value::Float(_value), _location)) => #name = Some(Number::Float(_value)),
+                                Some((crate::lang::value::Value::Integer(_value), _location)) => #name = Some(Number::Integer(_value)),
+                                Some((value, _location)) =>
                                     return crate::lang::errors::argument_error(format!(
                                         "Expected argument \"{}\" to be a number, was of type {}",
                                         #name_literal,
-                                        value.value_type().to_string()).as_str()),
+                                        value.value_type().to_string()),
+                                        _location),
                                 _ =>
-                                    return crate::lang::errors::argument_error(format!(
+                                    return crate::lang::errors::argument_error_legacy(format!(
                                         "No value provided for argument \"{}\"",
                                         #name_literal).as_str()),
                              }
@@ -416,7 +449,7 @@ fn type_to_value(
                     unnamed_mutate: if is_unnamed_target {
                         Some(quote! {
                             while !_unnamed.is_empty() {
-                                #name.expand(_unnamed.pop_front().unwrap(), _printer)?;
+                                #name.expand(_unnamed.pop_front().unwrap().0, _printer)?;
                             }
                         })
                     } else {
@@ -443,7 +476,7 @@ fn type_to_value(
                     unnamed_mutate: if is_unnamed_target {
                         Some(quote! {
                             while !_unnamed.is_empty() {
-                                match _unnamed.pop_front().unwrap() {
+                                match _unnamed.pop_front().unwrap().0 {
                         crate::lang::value::Value::Glob(value) => #name.expand_glob(value),
                         crate::lang::value::Value::String(value) => #name.expand_string(value),
                         crate::lang::value::Value::Regex(pattern, value) => #name.expand_regex(pattern, value),
@@ -492,10 +525,10 @@ fn type_to_value(
                     unnamed_mutate: if is_unnamed_target {
                         Some(quote! {
                             while !_unnamed.is_empty() {
-                                if let Some(#value_type) = _unnamed.pop_front() {
+                                if let Some((#value_type, _location)) = _unnamed.pop_front() {
                                     #name.push(#mutator);
                                 } else {
-                                    return crate::lang::errors::argument_error(format!("Expected argument {} to be of type {}", #name_literal, #type_name).as_str());
+                                    return crate::lang::errors::argument_error_legacy(format!("Expected argument {} to be of type {}", #name_literal, #type_name).as_str());
                                 }
                             }
                         })
@@ -556,8 +589,8 @@ fn type_to_value(
                     if #name.is_none() {
                         match _unnamed.pop_front() {
                             None => {}
-                            Some(#value_type) => #name = Some(#mutator),
-                            Some(_) => return crate::lang::errors::argument_error(format!("Expected argument {} to be of type {}", #name_literal, #sub_type).as_str()),
+                            Some((#value_type, _location)) => #name = Some(#mutator),
+                            _ => return crate::lang::errors::argument_error_legacy(format!("Expected argument {} to be of type {}", #name_literal, #sub_type).as_str()),
                         }
                     }
                     }),
@@ -890,12 +923,13 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                     # values
                     let mut _unnamed = std::collections::VecDeque::new();
 
-                    for arg in _arguments {
-                        match (arg.argument_type.as_deref(), arg.value) {
+                    for _arg in _arguments {
+                        let _location = _arg.location;
+                        match (_arg.argument_type.as_deref(), _arg.value) {
                             #named_matchers
                             #named_fallback
-                            (None, _value) => _unnamed.push_back(_value),
-                            _ => return crate::lang::errors::argument_error("Invalid parameter"),
+                            (None, _value) => _unnamed.push_back((_value, _arg.location)),
+                            _ => return crate::lang::errors::argument_error("Invalid parameter", _location),
                         }
                     }
 
@@ -908,7 +942,9 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
             let mut output = s.to_token_stream();
             output.extend(handler.into_token_stream());
-            //println!("ABCABC {}", output.to_string());
+            if struct_name.to_string() == "If" {
+                println!("ABCABC {}", output.to_string());
+            }
             Ok(output)
         }
         _ => fail!(root.span(), "Expected a struct"),

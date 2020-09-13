@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error, error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, error, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::stream::Stream;
 use crate::lang::data::table::ColumnVec;
@@ -56,7 +56,7 @@ fn sum(context: CommandContext) -> CrushResult<()> {
                 ValueType::Integer => context.output.send(sum_int(input, column)?),
                 ValueType::Float => context.output.send(sum_float(input, column)?),
                 ValueType::Duration => context.output.send(sum_duration(input, column)?),
-                t => argument_error(
+                t => argument_error_legacy(
                     &format!("Can't calculate sum of elements of type {}", t),
                 ),
             }
@@ -108,7 +108,7 @@ fn avg(context: CommandContext) -> CrushResult<()> {
                 ValueType::Integer => context.output.send(avg_int(input, column)?),
                 ValueType::Float => context.output.send(avg_float(input, column)?),
                 ValueType::Duration => context.output.send(avg_duration(input, column)?),
-                t => argument_error(
+                t => argument_error_legacy(
                     &format!(
                         "Can't calculate average of elements of type {}",
                         t
@@ -174,7 +174,7 @@ fn min(context: CommandContext) -> CrushResult<()> {
                 ValueType::Float => context.output.send(min_float(input, column)?),
                 ValueType::Duration => context.output.send(min_duration(input, column)?),
                 ValueType::Time => context.output.send(min_time(input, column)?),
-                t => argument_error(
+                t => argument_error_legacy(
                     &format!("Can't pick min of elements of type {}", t),
                 ),
             }
@@ -201,7 +201,7 @@ fn max(context: CommandContext) -> CrushResult<()> {
                 ValueType::Float => context.output.send(max_float(input, column)?),
                 ValueType::Duration => context.output.send(max_duration(input, column)?),
                 ValueType::Time => context.output.send(max_time(input, column)?),
-                t => argument_error(
+                t => argument_error_legacy(
                     &format!("Can't pick max of elements of type {}", t),
                 ),
             }

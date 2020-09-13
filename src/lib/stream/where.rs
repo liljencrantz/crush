@@ -6,6 +6,7 @@ use crate::lang::stream::{black_hole, channels, empty_channel};
 use crate::lang::{argument::Argument, data::table::ColumnType};
 use crate::lang::{data::table::Row, value::Value};
 use signature::signature;
+use crate::lang::ast::Location;
 
 #[signature(
 r#where,
@@ -21,6 +22,7 @@ pub struct Where {
 
 fn evaluate(
     condition: Command,
+    location: Location,
     row: &Row,
     input_type: &[ColumnType],
     base_context: &CommandContext,
@@ -30,7 +32,7 @@ fn evaluate(
         .into_vec()
         .drain(..)
         .zip(input_type.iter())
-        .map(|(c, t)| Argument::named(t.name.as_ref(), c))
+        .map(|(c, t)| Argument::named(t.name.as_ref(), c, location))
         .collect();
 
     let (sender, reciever) = channels();
@@ -49,7 +51,8 @@ fn evaluate(
 }
 
 pub fn r#where(context: CommandContext) -> CrushResult<()> {
-    let cfg: Where = Where::parse(context.arguments, &context.printer)?;
+    let cfg: Where = Where::parse(context.arguments.clone(), &context.printer)?;
+    let location = context.arguments[0].location;
 
     match context.input.recv()?.stream() {
         Some(mut input) => {
@@ -65,7 +68,7 @@ pub fn r#where(context: CommandContext) -> CrushResult<()> {
 
             let output = context.output.initialize(input.types().to_vec())?;
             while let Ok(row) = input.read() {
-                match evaluate(cfg.condition.copy(), &row, input.types(), &base_context) {
+                match evaluate(cfg.condition.copy(), location, &row, input.types(), &base_context) {
                     Ok(val) => {
                         if val && output.send(row).is_err() {
                             break;

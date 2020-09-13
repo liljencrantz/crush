@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error, error, CrushError, CrushResult};
+use crate::lang::errors::{argument_error_legacy, error, CrushError, CrushResult};
 use crate::lang::stream::CrushStream;
 use crate::lang::value::ValueType;
 use crate::lang::{data::r#struct::Struct, value::Value};
@@ -159,7 +159,7 @@ impl ColumnVec for &[ColumnType] {
                 return Ok(idx);
             }
         }
-        argument_error(
+        argument_error_legacy(
             format!(
                 "Unknown column {}, available columns are {}",
                 needle,
@@ -174,7 +174,7 @@ impl ColumnVec for &[ColumnType] {
 
     fn find(&self, needle_vec: &[String]) -> CrushResult<usize> {
         if needle_vec.len() != 1 {
-            argument_error("Expected direct field")
+            argument_error_legacy("Expected direct field")
         } else {
             let needle = &needle_vec[0];
             for (idx, field) in self.iter().enumerate() {

@@ -1,6 +1,6 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{to_crush_error, CrushResult, argument_error, mandate};
+use crate::lang::errors::{to_crush_error, CrushResult, argument_error_legacy, mandate};
 use crate::lang::execution_context::{CommandContext, This};
 use crate::lang::data::r#struct::Struct;
 use crate::lang::value::Value;
@@ -165,7 +165,7 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
                         class_done = true;
                     }
                     c => {
-                        return argument_error(format!("Illegal character in class-part of permission: {}", c));
+                        return argument_error_legacy(format!("Illegal character in class-part of permission: {}", c));
                     }
                 }
             }
@@ -175,7 +175,7 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
                     'w' => modes |= WRITE,
                     'x' => modes |= EXECUTE,
                     c => {
-                        return argument_error(format!("Illegal character in mode-part of permission: {}", c));
+                        return argument_error_legacy(format!("Illegal character in mode-part of permission: {}", c));
                     }
                 }
             }
@@ -183,11 +183,11 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
     }
 
     if !class_done {
-        return argument_error("Premature end of permission");
+        return argument_error_legacy("Premature end of permission");
     }
 
     if classes.is_empty() {
-        return argument_error("No user classes specified in permission");
+        return argument_error_legacy("No user classes specified in permission");
     }
 
     for cl in classes {

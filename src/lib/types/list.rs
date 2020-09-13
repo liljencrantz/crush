@@ -1,7 +1,7 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command::TypeMap;
-use crate::lang::errors::{argument_error, data_error, mandate, CrushResult};
+use crate::lang::errors::{argument_error_legacy, data_error, mandate, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, CommandContext, This};
 use crate::lang::value::Value;
 use crate::lang::{command::Command, data::list::List, value::ValueType};
@@ -189,7 +189,7 @@ fn __call__(context: CommandContext) -> CrushResult<()> {
                         .output
                         .send(Value::Type(ValueType::List(Box::from(c))))
                 } else {
-                    argument_error(
+                    argument_error_legacy(
                         format!(
                             "Tried to set subtype on a list that already has the subtype {}",
                             c.to_string()
@@ -199,7 +199,7 @@ fn __call__(context: CommandContext) -> CrushResult<()> {
                 }
             }
         },
-        _ => argument_error("Invalid this, expected type list"),
+        _ => argument_error_legacy("Invalid this, expected type list"),
     }
 }
 
@@ -233,7 +233,7 @@ fn new(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     match context.this.r#type()? {
         ValueType::List(t) => context.output.send(Value::List(List::new(*t, vec![]))),
-        _ => argument_error("Expected this to be a list type"),
+        _ => argument_error_legacy("Expected this to be a list type"),
     }
 }
 
@@ -274,7 +274,7 @@ fn push(mut context: CommandContext) -> CrushResult<()> {
         if el.value.value_type() == l.element_type() || l.element_type() == ValueType::Any {
             new_elements.push(el.value)
         } else {
-            return argument_error("Invalid element type");
+            return argument_error_legacy("Invalid element type");
         }
     }
     if !new_elements.is_empty() {

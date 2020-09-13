@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, to_crush_error, CrushResult};
 use crate::lang::files::Files;
 use crate::lang::data::scope::ScopeLoader;
 use crate::lang::{execution_context::CommandContext, value::Value};
@@ -40,7 +40,7 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
             to_crush_error(std::io::copy(input.as_mut(), out.as_mut()))?;
             Ok(())
         }
-        _ => argument_error("Expected a binary stream"),
+        _ => argument_error_legacy("Expected a binary stream"),
     }
 }
 

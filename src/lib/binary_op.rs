@@ -5,7 +5,7 @@ fn $name(mut context: CommandContext) -> CrushResult<()> {
     let this = context.this.$this_type()?;
     match (context.arguments.value(0)?) {
         $( Value::$input_type(v) => context.output.send(Value::$output_type($operation(this, v))), )*
-        _ => return argument_error("Expected only arguments of the same type"),
+        _ => return argument_error_legacy("Expected only arguments of the same type"),
     }
 }
     }

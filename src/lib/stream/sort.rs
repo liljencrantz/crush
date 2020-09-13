@@ -4,7 +4,7 @@ use crate::lang::execution_context::CommandContext;
 use crate::lang::data::table::ColumnVec;
 use crate::lang::data::table::Row;
 use crate::lang::value::Field;
-use crate::lang::errors::argument_error;
+use crate::lang::errors::argument_error_legacy;
 use signature::signature;
 
 #[signature(
@@ -31,7 +31,7 @@ fn sort(context: CommandContext) -> CrushResult<()> {
                     if input.types().len() == 1 {
                         0
                     } else {
-                        return argument_error("Missing comparison key");
+                        return argument_error_legacy("Missing comparison key");
                     }
                 }
                 Some(field) => input.types().find(&field)?,
@@ -60,7 +60,7 @@ fn sort(context: CommandContext) -> CrushResult<()> {
 
                 Ok(())
             } else {
-                argument_error("Bad comparison key")
+                argument_error_legacy("Bad comparison key")
             }
         }
         None => error("Expected a stream"),

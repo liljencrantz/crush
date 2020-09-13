@@ -1,7 +1,7 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::TypeMap;
-use crate::lang::errors::{argument_error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, This};
 use crate::lang::value::ValueType;
 use crate::lang::{execution_context::CommandContext, value::Value};
@@ -58,7 +58,7 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
     let def = context.arguments.string(0)?;
     let res = match Regex::new(def.as_ref()) {
         Ok(r) => Value::Regex(def, r),
-        Err(e) => return argument_error(e.to_string().as_str()),
+        Err(e) => return argument_error_legacy(e.to_string().as_str()),
     };
     context.output.send(res)
 }

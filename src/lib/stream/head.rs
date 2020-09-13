@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, argument_error_legacy};
 use crate::lang::execution_context::CommandContext;
 use signature::signature;
 use crate::lang::command::OutputType::Passthrough;
@@ -30,6 +30,6 @@ fn head(context: CommandContext) -> CrushResult<()> {
             }
             Ok(())
         }
-        None => argument_error("Expected a stream"),
+        None => argument_error_legacy("Expected a stream"),
     }
 }

@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::data::scope::Scope;
 use crate::lang::stream::{channels, empty_channel};
@@ -33,10 +33,10 @@ pub fn and(mut context: CommandContext) -> CrushResult<()> {
                             break;
                         }
                     }
-                    _ => return argument_error("Expected boolean values"),
+                    _ => return argument_error_legacy("Expected boolean values"),
                 }
             }
-            _ => return argument_error("Expected boolean values"),
+            _ => return argument_error_legacy("Expected boolean values"),
         }
     }
     context.output.send(Value::Bool(res))
@@ -72,10 +72,10 @@ pub fn or(mut context: CommandContext) -> CrushResult<()> {
                             break;
                         }
                     }
-                    _ => return argument_error("Expected boolean values"),
+                    _ => return argument_error_legacy("Expected boolean values"),
                 }
             }
-            _ => return argument_error("Expected boolean values"),
+            _ => return argument_error_legacy("Expected boolean values"),
         }
     }
     context.output.send(Value::Bool(res))

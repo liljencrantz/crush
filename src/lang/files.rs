@@ -1,5 +1,5 @@
 use crate::lang::data::binary::{binary_channel, BinaryReader};
-use crate::lang::errors::{argument_error, error, to_crush_error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, error, to_crush_error, CrushResult};
 use crate::lang::printer::Printer;
 use crate::lang::stream::{ValueReceiver, ValueSender};
 use crate::lang::value::{Value, ValueType};
@@ -44,7 +44,7 @@ impl Files {
             match input.recv()? {
                 Value::BinaryStream(b) => Ok(b),
                 Value::Binary(b) => Ok(BinaryReader::vec(&b)),
-                _ => argument_error("Expected either a file to read or binary pipe io"),
+                _ => argument_error_legacy("Expected either a file to read or binary pipe io"),
             }
         } else {
             BinaryReader::paths(self.files)
@@ -62,7 +62,7 @@ impl Files {
                 self.files[0].clone(),
             ))?))
         } else {
-            argument_error("Expected exactly one desitnation file")
+            argument_error_legacy("Expected exactly one desitnation file")
         }
     }
 
@@ -72,7 +72,7 @@ impl Files {
             Value::Glob(pattern) => pattern.glob_files(&PathBuf::from("."), &mut self.files)?,
             Value::Regex(_, re) => re.match_files(&cwd()?, &mut self.files, printer),
             value => match value.stream() {
-                None => return argument_error("Expected a file name"),
+                None => return argument_error_legacy("Expected a file name"),
                 Some(mut s) => {
                     let t = s.types();
                     if t.len() == 1 && t[0].cell_type == ValueType::File {
@@ -82,7 +82,7 @@ impl Files {
                             }
                         }
                     } else {
-                        return argument_error("Table stream must contain one column of type file");
+                        return argument_error_legacy("Table stream must contain one column of type file");
                     }
                 }
             },

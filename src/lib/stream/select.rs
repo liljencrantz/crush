@@ -4,14 +4,15 @@ use crate::lang::execution_context::CommandContext;
 use crate::lang::stream::{channels, empty_channel, Stream};
 use crate::lang::data::table::ColumnVec;
 use crate::{
-    lang::errors::argument_error,
+    lang::errors::argument_error_legacy,
     lang::errors::CrushResult,
     data::table::ColumnType,
     lang::{argument::Argument, data::table::Row, value::Value},
     util::replace::Replace,
 };
+use crate::lang::ast::Location;
 
-enum Location {
+enum Action {
     Replace(usize),
     Append(String),
 }
@@ -23,7 +24,8 @@ enum Source {
 
 pub struct Config {
     copy: bool,
-    columns: Vec<(Location, Source)>,
+    columns: Vec<(Action, Source)>,
+    location: Location,
 }
 
 pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushResult<()> {
@@ -50,7 +52,7 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
                             .iter()
                             .zip(&input_type)
                             .map(|(cell, cell_type)| {
-                                Argument::named(cell_type.name.as_ref(), cell.clone())
+                                Argument::named(cell_type.name.as_ref(), cell.clone(), config.location)
                             })
                             .collect();
                         closure.invoke(CommandContext {
@@ -68,11 +70,11 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
                 };
 
                 match location {
-                    Location::Append(name) => {
+                    Action::Append(name) => {
                         output_type.push(ColumnType::new(name.as_ref(), value.value_type()));
                         first_result.push(value);
                     }
-                    Location::Replace(idx) => {
+                    Action::Replace(idx) => {
                         output_type.replace(
                             *idx,
                             ColumnType::new(output_type[*idx].name.as_ref(), value.value_type()),
@@ -101,7 +103,7 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
                         .cells()
                         .iter()
                         .zip(&input_type)
-                        .map(|(cell, cell_type)| Argument::named(&cell_type.name, cell.clone()))
+                        .map(|(cell, cell_type)| Argument::named(&cell_type.name, cell.clone(), config.location))
                         .collect();
                     let (sender, receiver) = channels();
                     closure.invoke(CommandContext {
@@ -118,10 +120,10 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
                 Source::Argument(idx) => row.cells()[*idx].clone(),
             };
             match location {
-                Location::Append(_) => {
+                Action::Append(_) => {
                     next_result.push(value);
                 }
-                Location::Replace(idx) => {
+                Action::Replace(idx) => {
                     next_result[*idx] = value;
                 }
             }
@@ -138,7 +140,7 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
             let mut columns = Vec::new();
 
             if context.arguments.len() == 0 {
-                return argument_error("No columns selected");
+                return argument_error_legacy("No columns selected");
             }
 
             if let Value::Glob(g) = &context.arguments[0].value {
@@ -146,43 +148,45 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
                     copy = true;
                     context.arguments.remove(0);
                 } else {
-                    return argument_error("Invalid argument");
+                    return argument_error_legacy("Invalid argument");
                 }
             }
 
+            let mut location = context.arguments[0].location;
             let input_type = input.types();
             for a in &context.arguments {
+                location = location.union(a.location);
                 match (a.argument_type.as_deref(), a.value.clone()) {
                     (Some(name), Value::Command(closure)) => {
                         match (copy, input_type.find_str(name)) {
                             (true, Ok(idx)) => {
-                                columns.push((Location::Replace(idx), Source::Closure(closure)))
+                                columns.push((Action::Replace(idx), Source::Closure(closure)))
                             }
                             _ => columns.push((
-                                Location::Append(name.to_string()),
+                                Action::Append(name.to_string()),
                                 Source::Closure(closure),
                             )),
                         }
                     }
                     (None, Value::Field(name)) => {
                         if name.len() != 1 {
-                            return argument_error("Invalid field");
+                            return argument_error_legacy("Invalid field");
                         }
                         match (copy, input_type.find_str(name[0].as_ref())) {
                             (false, Ok(idx)) => columns
-                                .push((Location::Append(name[0].clone()), Source::Argument(idx))),
+                                .push((Action::Append(name[0].clone()), Source::Argument(idx))),
                             _ => {
-                                return argument_error(
+                                return argument_error_legacy(
                                     format!("Unknown field {}", name[0]).as_str(),
                                 )
                             }
                         }
                     }
-                    _ => return argument_error("Invalid argument"),
+                    _ => return argument_error_legacy("Invalid argument"),
                 }
             }
 
-            run(Config { columns, copy }, input, context)
+            run(Config { columns, copy, location }, input, context)
         }
         _ => error("Expected a stream"),
     }

@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error, data_error, mandate, CrushResult};
+use crate::lang::errors::{argument_error_legacy, data_error, mandate, CrushResult};
 use crate::lang::data::list::List;
 use crate::lang::pretty::PrettyPrinter;
 use crate::lang::data::scope::Scope;
@@ -86,7 +86,7 @@ struct Member {
 fn member(context: CommandContext) -> CrushResult<()> {
     let cfg: Member = Member::parse(context.arguments, &context.printer)?;
     if cfg.field.len() != 1 {
-        return argument_error("Invalid field - should have exactly one element");
+        return argument_error_legacy("Invalid field - should have exactly one element");
     }
     match context.input.recv()? {
         Value::Struct(s) => context.output.send(mandate(

@@ -9,7 +9,7 @@ use std::str::FromStr;
 use chrono::{DateTime, Local};
 use regex::Regex;
 
-use crate::lang::errors::{argument_error, mandate, CrushResult};
+use crate::lang::errors::{argument_error_legacy, mandate, CrushResult};
 use crate::lang::data::r#struct::Struct;
 use crate::lang::data::r#struct::StructReader;
 use crate::lang::data::scope::Scope;
@@ -230,7 +230,7 @@ impl Value {
                             }
                         }
                     } else {
-                        return argument_error("Table stream must contain one column of type file");
+                        return argument_error_legacy("Table stream must contain one column of type file");
                     }
                 }
             },
@@ -243,7 +243,7 @@ impl Value {
             Value::String(s) => Ok(value == s),
             Value::Glob(pattern) => Ok(pattern.matches(value)),
             Value::Regex(_, re) => Ok(re.is_match(value)),
-            _ => return argument_error("Invalid value for match"),
+            _ => return argument_error_legacy("Invalid value for match"),
         }
     }
 

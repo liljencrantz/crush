@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::argument_error;
+use crate::lang::errors::argument_error_legacy;
 use crate::lang::errors::CrushResult;
 use crate::lang::execution_context::ArgumentVector;
 use crate::lang::execution_context::CommandContext;
@@ -26,7 +26,7 @@ macro_rules! math_fun2 {
                 Value::Float(f) => f,
                 Value::Integer(i) => i as f64,
                 v => {
-                    return argument_error(
+                    return argument_error_legacy(
                         &format!("Expected a number, got a {}", v.value_type()),
                     )
                 }
@@ -35,7 +35,7 @@ macro_rules! math_fun2 {
                 Value::Float(f) => f,
                 Value::Integer(i) => i as f64,
                 v => {
-                    return argument_error(
+                    return argument_error_legacy(
                         &format!("Expected a number, got a {}", v.value_type()),
                     )
                 }

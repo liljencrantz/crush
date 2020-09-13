@@ -2,7 +2,7 @@ use crate::lang::argument::{column_names, Argument};
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::*;
 use crate::lang::data::dict::Dict;
-use crate::lang::errors::{argument_error, data_error, eof_error, error, mandate, to_crush_error, CrushError, CrushResult, CrushErrorType};
+use crate::lang::errors::{argument_error_legacy, data_error, eof_error, error, mandate, to_crush_error, CrushError, CrushResult, CrushErrorType};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::data::list::List;
 use crate::lang::data::r#struct::Struct;
@@ -17,6 +17,7 @@ use std::convert::TryFrom;
 use std::iter::Peekable;
 use std::str::Chars;
 use std::time::Duration;
+use crate::lang::ast::Location;
 
 struct DBusThing {
     connection: Connection,
@@ -69,7 +70,8 @@ impl DBusThing {
         let values_as_arguments = values
             .drain(..)
             .zip(output_arguments.drain(..))
-            .map(|(value, arg)| Argument::new(arg.name.clone(), value))
+            // Fake location, only needed to call the column_names function
+            .map(|(value, arg)| Argument::new(arg.name.clone(), value, Location::new(0, 0),))
             .collect::<Vec<_>>();
 
         let mut names = column_names(&values_as_arguments);
@@ -252,7 +254,7 @@ impl DBusType {
         let mut iter = s.chars().peekable();
         match DBusType::parse_internal(&mut iter) {
             Ok(Some(o)) => Ok(o),
-            Ok(None) => argument_error("Missing type"),
+            Ok(None) => argument_error_legacy("Missing type"),
             Err(e) => Err(e),
         }
     }
@@ -321,7 +323,7 @@ impl DBusArgument {
                 if let Value::String(value) = value {
                     a.append(value);
                 } else {
-                    return argument_error(format!(
+                    return argument_error_legacy(format!(
                         "Expected a string value, got a {}",
                         value.value_type().to_string()
                     ));
@@ -331,7 +333,7 @@ impl DBusArgument {
                 if let Value::Bool(value) = value {
                     a.append(value);
                 } else {
-                    return argument_error(format!(
+                    return argument_error_legacy(format!(
                         "Expected a boolean value, got a {}",
                         value.value_type().to_string()
                     ));
@@ -341,7 +343,7 @@ impl DBusArgument {
                 if let Value::Integer(value) = value {
                     a.append(to_crush_error(u8::try_from(value))?);
                 } else {
-                    return argument_error(format!(
+                    return argument_error_legacy(format!(
                         "Expected a number, got a {}",
                         value.value_type().to_string()
                     ));
@@ -351,7 +353,7 @@ impl DBusArgument {
                 if let Value::Integer(value) = value {
                     a.append(to_crush_error(i16::try_from(value))?);
                 } else {
-                    return argument_error(format!(
+                    return argument_error_legacy(format!(
                         "Expected a number, got a {}",
                         value.value_type().to_string()
                     ));
@@ -361,7 +363,7 @@ impl DBusArgument {
                 if let Value::Integer(value) = value {
                     a.append(to_crush_error(u16::try_from(value))?);
                 } else {
-                    return argument_error(format!(
+                    return argument_error_legacy(format!(
                         "Expected a number, got a {}",
                         value.value_type().to_string()
                     ));
@@ -371,7 +373,7 @@ impl DBusArgument {
                 if let Value::Integer(value) = value {
                     a.append(to_crush_error(i32::try_from(value))?);
                 } else {
-                    return argument_error(format!(
+                    return argument_error_legacy(format!(
                         "Expected a number, got a {}",
                         value.value_type().to_string()
                     ));
@@ -381,7 +383,7 @@ impl DBusArgument {
                 if let Value::Integer(value) = value {
                     a.append(to_crush_error(u32::try_from(value))?);
                 } else {
-                    return argument_error(format!(
+                    return argument_error_legacy(format!(
                         "Expected a number, got a {}",
                         value.value_type().to_string()
                     ));
@@ -391,7 +393,7 @@ impl DBusArgument {
                 if let Value::Integer(value) = value {
                     a.append(to_crush_error(i64::try_from(value))?);
                 } else {
-                    return argument_error(format!(
+                    return argument_error_legacy(format!(
                         "Expected a number, got a {}",
                         value.value_type().to_string()
                     ));
@@ -401,7 +403,7 @@ impl DBusArgument {
                 if let Value::Integer(value) = value {
                     a.append(to_crush_error(u64::try_from(value))?);
                 } else {
-                    return argument_error(format!(
+                    return argument_error_legacy(format!(
                         "Expected a number value, got a {}",
                         value.value_type().to_string()
                     ));
@@ -411,7 +413,7 @@ impl DBusArgument {
                 if let Value::Float(value) = value {
                     a.append(value);
                 } else {
-                    return argument_error(format!(
+                    return argument_error_legacy(format!(
                         "Expected a floating point number value, got a {}",
                         value.value_type().to_string()
                     ));
@@ -710,13 +712,13 @@ fn service_call(context: CommandContext) -> CrushResult<()> {
                         dbus.call(&service, &object, &interface, &method, cfg.arguments)?;
                     context.output.send(result)
                 }
-                (None, Some(_)) => argument_error("Missing object"),
+                (None, Some(_)) => argument_error_legacy("Missing object"),
             }
         } else {
-            argument_error("Wrong type of service field")
+            argument_error_legacy("Wrong type of service field")
         }
     } else {
-        argument_error("Wrong type of this object")
+        argument_error_legacy("Wrong type of this object")
     }
 }
 

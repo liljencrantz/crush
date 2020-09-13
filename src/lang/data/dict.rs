@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error, error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, error, CrushResult};
 use crate::lang::stream::CrushStream;
 use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value::ValueType};
 use crate::util::identity_arc::Identity;
@@ -67,10 +67,10 @@ impl Dict {
     pub fn insert(&self, key: Value, value: Value) -> CrushResult<()> {
         let mut entries = self.entries.lock().unwrap();
         if !self.key_type.is(&key) {
-            return argument_error("Invalid key type");
+            return argument_error_legacy("Invalid key type");
         }
         if !self.value_type.is(&value) {
-            return argument_error("Invalid value type");
+            return argument_error_legacy("Invalid value type");
         }
         entries.insert(key, value);
         Ok(())

@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use crate::lang::errors::argument_error;
+use crate::lang::errors::argument_error_legacy;
 use crate::lang::errors::CrushResult;
 use crate::lang::execution_context::CommandContext;
 use crate::lang::data::table::Row;
@@ -34,6 +34,6 @@ fn tail(context: CommandContext) -> CrushResult<()> {
             }
             Ok(())
         }
-        None => argument_error("Expected a stream"),
+        None => argument_error_legacy("Expected a stream"),
     }
 }

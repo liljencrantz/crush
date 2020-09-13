@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error, error, mandate, CrushResult};
+use crate::lang::errors::{argument_error_legacy, error, mandate, CrushResult};
 use crate::lang::stream::CrushStream;
 use crate::lang::{data::table::ColumnType, data::table::Row, value::Field, value::Value, value::ValueType};
 use crate::util::identity_arc::Identity;
@@ -76,7 +76,7 @@ impl List {
 
     pub fn set(&self, idx: usize, value: Value) -> CrushResult<()> {
         if !self.cell_type.is(&value) {
-            return argument_error("Invalid argument type");
+            return argument_error_legacy("Invalid argument type");
         }
         let mut cells = self.cells.lock().unwrap();
         if idx >= cells.len() {
@@ -92,7 +92,7 @@ impl List {
         let mut cells = self.cells.lock().unwrap();
         for v in new_cells.iter() {
             if !self.cell_type.is(v) {
-                return argument_error("Invalid argument type");
+                return argument_error_legacy("Invalid argument type");
             }
         }
         cells.append(new_cells);
@@ -118,7 +118,7 @@ impl List {
     pub fn remove(&self, idx: usize) -> CrushResult<()> {
         let mut cells = self.cells.lock().unwrap();
         if idx >= cells.len() {
-            return argument_error("Index out of bounds");
+            return argument_error_legacy("Index out of bounds");
         }
         cells.remove(idx);
         Ok(())
@@ -127,10 +127,10 @@ impl List {
     pub fn insert(&self, idx: usize, value: Value) -> CrushResult<()> {
         let mut cells = self.cells.lock().unwrap();
         if !self.cell_type.is(&value) {
-            return argument_error("Invalid argument type");
+            return argument_error_legacy("Invalid argument type");
         }
         if idx > cells.len() {
-            return argument_error("Index out of bounds");
+            return argument_error_legacy("Index out of bounds");
         }
         cells.insert(idx, value);
         Ok(())

@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, to_crush_error, argument_error, mandate};
+use crate::lang::errors::{CrushResult, to_crush_error, argument_error_legacy, mandate};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::data::scope::Scope;
 use crate::lang::data::r#struct::Struct;
@@ -54,7 +54,7 @@ fn parse_files(cfg: &JournalSignature) -> CrushResult<JournalFiles> {
         (true, true) => Ok(JournalFiles::All),
         (true, false) => Ok(JournalFiles::System),
         (false, true) => Ok(JournalFiles::CurrentUser),
-        (false, false) => argument_error("No files specified"),
+        (false, false) => argument_error_legacy("No files specified"),
     }
 }
 
@@ -75,7 +75,7 @@ fn journal(context: CommandContext) -> CrushResult<()> {
             }))?;
         }
         Some(v) => {
-            return argument_error(format!("Don't know how to seek to {}", v.value_type()));
+            return argument_error_legacy(format!("Don't know how to seek to {}", v.value_type()));
         }
         None => {}
     }

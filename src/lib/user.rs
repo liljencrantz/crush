@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, argument_error, to_crush_error};
+use crate::lang::errors::{CrushResult, argument_error_legacy, to_crush_error};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::data::scope::Scope;
 use crate::lang::data::r#struct::Struct;
@@ -72,7 +72,7 @@ unsafe fn search(input_name: String) -> CrushResult<Value> {
     loop {
         let passwd = nix::libc::getpwent();
         if passwd.is_null() {
-            return argument_error(format!("Unknown user {}", input_name));
+            return argument_error_legacy(format!("Unknown user {}", input_name));
         }
         let name = parse((*passwd).pw_name)?;
         if name == input_name {

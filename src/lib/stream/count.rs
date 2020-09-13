@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::value::Value;
 use signature::signature;
@@ -25,7 +25,7 @@ pub fn count(context: CommandContext) -> CrushResult<()> {
                 }
                 context.output.send(Value::Integer(res))
             }
-            None => argument_error("Expected a stream"),
+            None => argument_error_legacy("Expected a stream"),
         },
     }
 }

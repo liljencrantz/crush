@@ -1,5 +1,5 @@
 use crate::lang::ast::{Node, CommandNode, JobListNode, JobNode};
-use crate::lang::errors::{error, CrushResult, mandate, argument_error};
+use crate::lang::errors::{error, CrushResult, mandate, argument_error_legacy};
 use crate::lang::value::{Field, ValueType, Value};
 use std::path::PathBuf;
 use crate::lang::command::Command;
@@ -229,7 +229,7 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
                         }));
                 }
                 _ => {
-                    return argument_error("Invalid argument name");
+                    return argument_error_legacy("Invalid argument name");
                 }
             }
         } else {

@@ -123,10 +123,18 @@ pub fn send_error<T>() -> CrushResult<T> {
     })
 }
 
-pub fn argument_error<T>(message: impl Into<String>) -> CrushResult<T> {
+pub fn argument_error_legacy<T>(message: impl Into<String>) -> CrushResult<T> {
     Err(CrushError {
         error_type: InvalidArgument(message.into()),
         location: None,
+        definition: None,
+    })
+}
+
+pub fn argument_error<T>(message: impl Into<String>, location: Location) -> CrushResult<T> {
+    Err(CrushError {
+        error_type: InvalidArgument(message.into()),
+        location: Some(location),
         definition: None,
     })
 }

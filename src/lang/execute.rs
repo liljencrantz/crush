@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error, to_crush_error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, to_crush_error, CrushResult};
 use crate::lang::execution_context::{CommandContext, JobContext};
 use crate::lang::parser::parse;
 use crate::lang::printer::Printer;
@@ -52,7 +52,7 @@ pub fn pup(env: Scope, buf: &Vec<u8>, printer: &Printer, threads: &ThreadStore) 
             threads.join(printer);
             Ok(())
         }
-        _ => argument_error("Expected a command, but found other value"),
+        _ => argument_error_legacy("Expected a command, but found other value"),
     }
 }
 

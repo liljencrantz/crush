@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error, mandate, CrushResult};
+use crate::lang::errors::{argument_error_legacy, mandate, CrushResult};
 use crate::lang::execution_context::{CommandContext, This};
 use crate::lang::{argument::Argument, value::Value};
 use crate::lib::types::string::format::FormatState::*;
@@ -47,7 +47,7 @@ fn do_format(format: &str, param: Vec<Argument>) -> CrushResult<String> {
                     res.push('}');
                     Normal
                 }
-                _ => return argument_error("Unmatched closing brace"),
+                _ => return argument_error_legacy("Unmatched closing brace"),
             },
 
             OpenBrace => match ch {
@@ -62,7 +62,7 @@ fn do_format(format: &str, param: Vec<Argument>) -> CrushResult<String> {
                 }
                 '0'..='9' => Index(ch.to_digit(10).unwrap() as usize),
                 'a'..='z' | 'A'..='Z' => Name(ch.to_string()),
-                _ => return argument_error("Invalid format string"),
+                _ => return argument_error_legacy("Invalid format string"),
             },
 
             Index(idx) => match ch {
@@ -71,7 +71,7 @@ fn do_format(format: &str, param: Vec<Argument>) -> CrushResult<String> {
                     Normal
                 }
                 '0'..='9' => Index(idx * 10 + ch.to_digit(10).unwrap() as usize),
-                _ => return argument_error("Invalid format string"),
+                _ => return argument_error_legacy("Invalid format string"),
             },
 
             Name(name) => match ch {

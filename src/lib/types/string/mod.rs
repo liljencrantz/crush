@@ -1,7 +1,7 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::TypeMap;
-use crate::lang::errors::{argument_error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, This};
 use crate::lang::value::Value;
 use crate::lang::{execution_context::CommandContext, data::list::List, value::ValueType};
@@ -241,7 +241,7 @@ fn lpad(context: CommandContext) -> CrushResult<()> {
     let s = context.this.string()?;
     let len = cfg.length as usize;
     if cfg.padding.len() != 1 {
-        argument_error("Padding string must be exactly one character long")
+        argument_error_legacy("Padding string must be exactly one character long")
     } else if len <= s.len() {
         context.output.send(Value::string(&s[0..len]))
     } else {
@@ -269,7 +269,7 @@ fn rpad(context: CommandContext) -> CrushResult<()> {
     let s = context.this.string()?;
     let len = cfg.length as usize;
     if cfg.padding.len() != 1 {
-        argument_error("Padding string must be exactly one character long")
+        argument_error_legacy("Padding string must be exactly one character long")
     } else if len <= s.len() {
         context.output.send(Value::string(&s[0..len]))
     } else {

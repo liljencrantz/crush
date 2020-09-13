@@ -1,7 +1,7 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::command::TypeMap;
-use crate::lang::errors::{argument_error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, This};
 use crate::lang::value::ValueType;
 use crate::lang::{execution_context::CommandContext, value::Value};
@@ -88,7 +88,7 @@ fn to_duration(a: i64, t: &str) -> CrushResult<chrono::Duration> {
         "hour" | "hours" => Ok(Duration::seconds(a * 3600)),
         "day" | "days" => Ok(Duration::seconds(a * 3600 * 24)),
         "year" | "years" => Ok(Duration::seconds(a * 3600 * 24 * 365)),
-        _ => argument_error("Invalid duration"),
+        _ => argument_error_legacy("Invalid duration"),
     }
 }
 

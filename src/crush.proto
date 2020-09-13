@@ -154,6 +154,8 @@ message ArgumentDefinition {
         bool argument_dict = 4;
     }
     ValueDefinition value = 5;
+    uint64 start = 6;
+    uint64 end = 7;
 }
 
 message Strings {

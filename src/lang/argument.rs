@@ -1,9 +1,9 @@
-use crate::lang::errors::{argument_error, error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, error, CrushResult, argument_error};
 use crate::lang::execution_context::CompileContext;
 use crate::lang::value::Value;
 use crate::lang::value::ValueDefinition;
 use std::collections::HashSet;
-use crate::lang::ast::TrackedString;
+use crate::lang::ast::{TrackedString, Location};
 
 #[derive(Debug, Clone)]
 pub enum ArgumentType {
@@ -31,6 +31,13 @@ impl ArgumentType {
 pub struct BaseArgument<A: Clone, C: Clone> {
     pub argument_type: A,
     pub value: C,
+    pub location: Location,
+}
+
+impl<A: Clone, C: Clone> BaseArgument<A, C> {
+    pub fn error<T>(&self, message: impl Into<String>) -> CrushResult<T> {
+        argument_error(message, self.location)
+    }
 }
 
 pub type ArgumentDefinition = BaseArgument<ArgumentType, ValueDefinition>;
@@ -39,6 +46,7 @@ impl ArgumentDefinition {
     pub fn named(name: &TrackedString, value: ValueDefinition) -> ArgumentDefinition {
         ArgumentDefinition {
             argument_type: ArgumentType::Some(name.clone()),
+            location: name.location.union(value.location()),
             value,
         }
     }
@@ -46,6 +54,7 @@ impl ArgumentDefinition {
     pub fn unnamed(value: ValueDefinition) -> ArgumentDefinition {
         ArgumentDefinition {
             argument_type: ArgumentType::None,
+            location: value.location(),
             value,
         }
     }
@@ -53,6 +62,7 @@ impl ArgumentDefinition {
     pub fn list(value: ValueDefinition) -> ArgumentDefinition {
         BaseArgument {
             argument_type: ArgumentType::ArgumentList,
+            location: value.location(),
             value,
         }
     }
@@ -60,6 +70,7 @@ impl ArgumentDefinition {
     pub fn dict(value: ValueDefinition) -> ArgumentDefinition {
         BaseArgument {
             argument_type: ArgumentType::ArgumentDict,
+            location: value.location(),
             value,
         }
     }
@@ -76,24 +87,27 @@ impl ArgumentDefinition {
 pub type Argument = BaseArgument<Option<String>, Value>;
 
 impl Argument {
-    pub fn new(name: Option<String>, value: Value) -> Argument {
+    pub fn new(name: Option<String>, value: Value, location: Location) -> Argument {
         Argument {
             argument_type: name,
             value,
+            location,
         }
     }
 
-    pub fn unnamed(value: Value) -> Argument {
+    pub fn unnamed(value: Value, location: Location) -> Argument {
         Argument {
             argument_type: None,
             value,
+            location,
         }
     }
 
-    pub fn named(name: &str, value: Value) -> Argument {
+    pub fn named(name: &str, value: Value, location: Location) -> Argument {
         BaseArgument {
             argument_type: Some(name.to_string()),
             value,
+            location,
         }
     }
 }
@@ -112,21 +126,31 @@ impl ArgumentVecCompiler for Vec<ArgumentDefinition> {
             } else {
                 match &a.argument_type {
                     ArgumentType::Some(name) => {
-                        res.push(Argument::named(&name.string, a.value.compile_bound(context)?))
+                        res.push(Argument::named(
+                            &name.string,
+                            a.value.compile_bound(context)?,
+                            a.location,
+                        ))
                     }
 
                     ArgumentType::None => {
-                        res.push(Argument::unnamed(a.value.compile_bound(context)?))
+                        res.push(Argument::unnamed(
+                            a.value.compile_bound(context)?,
+                            a.location,
+                        ))
                     }
 
                     ArgumentType::ArgumentList => match a.value.compile_bound(context)? {
                         Value::List(l) => {
                             let mut copy = l.dump();
                             for v in copy.drain(..) {
-                                res.push(Argument::unnamed(v));
+                                res.push(Argument::unnamed(
+                                    v,
+                                    a.location,
+                                ));
                             }
                         }
-                        _ => return argument_error("Argument list must be of type list"),
+                        _ => return argument_error_legacy("Argument list must be of type list"),
                     },
 
                     ArgumentType::ArgumentDict => match a.value.compile_bound(context)? {
@@ -134,13 +158,17 @@ impl ArgumentVecCompiler for Vec<ArgumentDefinition> {
                             let mut copy = d.elements();
                             for (key, value) in copy.drain(..) {
                                 if let Value::String(name) = key {
-                                    res.push(Argument::named(&name, value));
+                                    res.push(Argument::named(
+                                        &name,
+                                        value,
+                                        a.location,
+                                    ));
                                 } else {
-                                    return argument_error("Argument dict must have string keys");
+                                    return argument_error_legacy("Argument dict must have string keys");
                                 }
                             }
                         }
-                        _ => return argument_error("Argument list must be of type list"),
+                        _ => return argument_error_legacy("Argument list must be of type list"),
                     },
                 }
             }
@@ -215,41 +243,41 @@ mod tests {
     fn allowed_values() {
         let (printer, _) = crate::lang::printer::init();
         let a = AllowedValuesStringSignature::parse(
-            vec![Argument::named("str_val", Value::string("aa"))],
+            vec![Argument::named("str_val", Value::string("aa"), Location::new(0, 0))],
             &printer,
         )
-        .unwrap();
+            .unwrap();
         assert_eq!(a.str_val, "aa");
         assert!(AllowedValuesStringSignature::parse(
-            vec![Argument::named("str_val", Value::string("zz")),],
+            vec![Argument::named("str_val", Value::string("zz"), Location::new(0, 0)), ],
             &printer,
         )
-        .is_err());
+            .is_err());
 
         let a = AllowedValuesCharSignature::parse(
-            vec![Argument::named("char_val", Value::string("a"))],
+            vec![Argument::named("char_val", Value::string("a"), Location::new(0, 0))],
             &printer,
         )
-        .unwrap();
+            .unwrap();
         assert_eq!(a.char_val, 'a');
         assert!(AllowedValuesCharSignature::parse(
-            vec![Argument::named("char_val", Value::string("z")),],
+            vec![Argument::named("char_val", Value::string("z"), Location::new(0, 0)), ],
             &printer,
         )
-        .is_err());
+            .is_err());
 
         let a = AllowedValuesIntSignature::parse(
-            vec![Argument::named("int_val", Value::Integer(1))],
+            vec![Argument::named("int_val", Value::Integer(1), Location::new(0, 0))],
             &printer,
         )
-        .unwrap();
+            .unwrap();
         assert_eq!(a.int_val, 1);
 
         assert!(AllowedValuesIntSignature::parse(
-            vec![Argument::named("int_val", Value::Integer(9)),],
+            vec![Argument::named("int_val", Value::Integer(9), Location::new(0, 0)), ],
             &printer,
         )
-        .is_err());
+            .is_err());
     }
 
     #[signature(x)]
@@ -262,16 +290,16 @@ mod tests {
         let (printer, _) = crate::lang::printer::init();
         assert_eq!(
             OptionSignature::parse(
-                vec![Argument::named("int_val", Value::Integer(9)),],
+                vec![Argument::named("int_val", Value::Integer(9), Location::new(0, 0)), ],
                 &printer,
             )
-            .unwrap()
-            .int_val,
+                .unwrap()
+                .int_val,
             Some(9)
         );
 
         assert_eq!(
-            OptionSignature::parse(vec![], &printer,).unwrap().int_val,
+            OptionSignature::parse(vec![], &printer).unwrap().int_val,
             None
         );
     }
@@ -287,16 +315,16 @@ mod tests {
         let (printer, _) = crate::lang::printer::init();
         assert_eq!(
             DefaultSignature::parse(
-                vec![Argument::named("int_val", Value::Integer(9)),],
+                vec![Argument::named("int_val", Value::Integer(9), Location::new(0, 0)), ],
                 &printer,
             )
-            .unwrap()
-            .int_val,
+                .unwrap()
+                .int_val,
             9
         );
 
         assert_eq!(
-            DefaultSignature::parse(vec![], &printer,).unwrap().int_val,
+            DefaultSignature::parse(vec![], &printer).unwrap().int_val,
             8
         );
     }
@@ -312,39 +340,40 @@ mod tests {
         assert_eq!(
             ListSignature::parse(
                 vec![
-                    Argument::named("list_val", Value::string("a")),
-                    Argument::named("list_val", Value::string("b")),
-                    Argument::named("list_val", Value::string("c")),
+                    Argument::named("list_val", Value::string("a"), Location::new(0, 0)),
+                    Argument::named("list_val", Value::string("b"), Location::new(0, 0)),
+                    Argument::named("list_val", Value::string("c"), Location::new(0, 0)),
                 ],
                 &printer,
             )
-            .unwrap()
-            .list_val,
+                .unwrap()
+                .list_val,
             vec!["a".to_string(), "b".to_string(), "c".to_string()]
         );
 
         assert_eq!(
-            ListSignature::parse(vec![], &printer,).unwrap().list_val,
+            ListSignature::parse(vec![], &printer).unwrap().list_val,
             Vec::<String>::new()
         );
 
         assert_eq!(
             ListSignature::parse(
                 vec![
-                    Argument::named("list_val", Value::string("a")),
+                    Argument::named("list_val", Value::string("a"), Location::new(0, 0)),
                     Argument::named(
                         "list_val",
                         Value::List(List::new(
                             ValueType::String,
-                            vec![Value::string("b"), Value::string("c")]
-                        ))
+                            vec![Value::string("b"), Value::string("c")],
+                        )),
+                        Location::new(0, 0),
                     ),
-                    Argument::named("list_val", Value::string("d")),
+                    Argument::named("list_val", Value::string("d"), Location::new(0, 0)),
                 ],
                 &printer,
             )
-            .unwrap()
-            .list_val,
+                .unwrap()
+                .list_val,
             vec![
                 "a".to_string(),
                 "b".to_string(),
@@ -366,16 +395,16 @@ mod tests {
         assert_eq!(
             NamedSignature::parse(
                 vec![
-                    Argument::named("a", Value::string("A")),
-                    Argument::named("b", Value::string("B")),
-                    Argument::named("c", Value::string("C")),
+                    Argument::named("a", Value::string("A"), Location::new(0, 0)),
+                    Argument::named("b", Value::string("B"), Location::new(0, 0)),
+                    Argument::named("c", Value::string("C"), Location::new(0, 0)),
                 ],
                 &printer,
             )
-            .unwrap()
-            .unnamed_val
-            .into_iter()
-            .collect::<Vec<_>>(),
+                .unwrap()
+                .unnamed_val
+                .into_iter()
+                .collect::<Vec<_>>(),
             vec![
                 ("a".to_string(), "A".to_string()),
                 ("b".to_string(), "B".to_string()),
@@ -395,12 +424,12 @@ mod tests {
     fn named_signature_type_check() {
         let (printer, _) = crate::lang::printer::init();
         let s: NamedSignature2 =
-            NamedSignature2::parse(vec![Argument::named("foo", Value::string("s"))], &printer)
+            NamedSignature2::parse(vec![Argument::named("foo", Value::string("s"), Location::new(0, 0))], &printer)
                 .unwrap();
         assert_eq!(s.foo, None);
         assert_eq!(
             s.unnamed_val.into_iter().collect::<Vec<_>>(),
-            vec![("foo".to_string(), "s".to_string()),]
+            vec![("foo".to_string(), "s".to_string()), ]
         );
     }
 
@@ -408,7 +437,7 @@ mod tests {
     fn named_signature_with_bad_type() {
         let (printer, _) = crate::lang::printer::init();
         assert!(
-            NamedSignature2::parse(vec![Argument::named("foo", Value::Bool(true)),], &printer,)
+            NamedSignature2::parse(vec![Argument::named("foo", Value::Bool(true), Location::new(0, 0)), ], &printer)
                 .is_err()
         );
     }

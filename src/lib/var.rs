@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::{Known, Unknown};
-use crate::lang::errors::{argument_error, mandate, CrushResult};
+use crate::lang::errors::{argument_error_legacy, mandate, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::data::scope::Scope;
 use crate::lang::data::table::{ColumnType, Row};
@@ -29,12 +29,12 @@ pub fn unset(context: CommandContext) -> CrushResult<()> {
     for arg in context.arguments {
         if let Value::String(s) = &arg.value {
             if s.len() == 0 {
-                return argument_error("Illegal variable name");
+                return argument_error_legacy("Illegal variable name");
             } else {
                 context.scope.remove_str(s)?;
             }
         } else {
-            return argument_error("Illegal variable name");
+            return argument_error_legacy("Illegal variable name");
         }
     }
     context.output.send(Value::Empty())
@@ -44,7 +44,7 @@ pub fn r#use(context: CommandContext) -> CrushResult<()> {
     for arg in context.arguments.iter() {
         match (arg.argument_type.is_none(), &arg.value) {
             (true, Value::Scope(e)) => context.scope.r#use(e),
-            _ => return argument_error("Expected all arguments to be scopes"),
+            _ => return argument_error_legacy("Expected all arguments to be scopes"),
         }
     }
     context.output.send(Value::Empty())

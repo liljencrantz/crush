@@ -6,7 +6,7 @@ mod lib;
 mod util;
 
 
-use crate::lang::errors::{to_crush_error, CrushResult, argument_error};
+use crate::lang::errors::{to_crush_error, CrushResult, argument_error_legacy};
 use crate::lang::pretty::create_pretty_printer;
 use crate::lang::{execute, printer};
 use lib::declare;
@@ -39,7 +39,7 @@ fn parse_args() -> CrushResult<Config> {
                 Mode::File(PathBuf::from(&arg))
             }
         }
-        _ => return argument_error("Invalid input parameters"),
+        _ => return argument_error_legacy("Invalid input parameters"),
     };
     Ok(Config { mode })
 }

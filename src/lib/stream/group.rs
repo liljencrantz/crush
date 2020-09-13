@@ -9,7 +9,7 @@ use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::ColumnVec;
 use crate::lang::value::Field;
 use crate::{
-    lang::errors::argument_error,
+    lang::errors::argument_error_legacy,
     lang::stream::{unlimited_streams, OutputStream},
     lang::{data::table::Row, value::Value, value::ValueType},
 };
@@ -157,7 +157,7 @@ pub fn group(context: CommandContext) -> CrushResult<()> {
         .collect::<CrushResult<Vec<_>>>()?;
 
     if indices.is_empty() {
-        return argument_error("No group-by column specified");
+        return argument_error_legacy("No group-by column specified");
     }
 
     let mut output_type = indices

@@ -1,6 +1,6 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::execution_context::{This};
 use crate::lang::value::ValueType;
 use crate::lang::{execution_context::CommandContext, value::Value};
@@ -43,12 +43,12 @@ fn __call__(context: CommandContext) -> CrushResult<()> {
             } else if cfg.columns.is_empty() {
                 context.output.send(Value::Type(ValueType::TableStream(c)))
             } else {
-                argument_error(
+                argument_error_legacy(
                     "Tried to set columns on a table_stream type that already has columns",
                 )
             }
         }
-        _ => argument_error("Invalid this, expected type table_stream"),
+        _ => argument_error_legacy("Invalid this, expected type table_stream"),
     }
 }
 

@@ -1,7 +1,7 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::command::TypeMap;
-use crate::lang::errors::{argument_error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, CommandContext, This};
 use crate::lang::value::Value;
 use crate::lang::{data::dict::Dict, value::ValueType};
@@ -99,11 +99,11 @@ fn __call__(context: CommandContext) -> CrushResult<()> {
                         .output
                         .send(Value::Type(ValueType::Dict(Box::from(t1), Box::from(t2))))
                 } else {
-                    argument_error("Tried to set subtype on a dict that already has a subtype")
+                    argument_error_legacy("Tried to set subtype on a dict that already has a subtype")
                 }
             }
         },
-        _ => argument_error("Invalid this, expected type dict"),
+        _ => argument_error_legacy("Invalid this, expected type dict"),
     }
 }
 
@@ -112,14 +112,14 @@ fn new(context: CommandContext) -> CrushResult<()> {
     let t = context.this.r#type()?;
     if let ValueType::Dict(key_type, value_type) = t {
         if !key_type.is_hashable() {
-            argument_error("Key type is not hashable")
+            argument_error_legacy("Key type is not hashable")
         } else {
             context
                 .output
                 .send(Value::Dict(Dict::new(*key_type, *value_type)))
         }
     } else {
-        argument_error("Expected a dict type as this value")
+        argument_error_legacy("Expected a dict type as this value")
     }
 }
 

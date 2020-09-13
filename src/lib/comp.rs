@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, CommandContext};
 use crate::lang::data::scope::Scope;
 use crate::lang::value::Value;
@@ -15,7 +15,7 @@ macro_rules! cmp {
             match l.partial_cmp(&r) {
                 Some(ordering) => context.output.send(Value::Bool($op(ordering))),
                 None => {
-                    return argument_error(
+                    return argument_error_legacy(
                         format!(
                             "Values of type {} and {} can't be compared with each other",
                             l.value_type().to_string(),

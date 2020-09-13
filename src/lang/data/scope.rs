@@ -1,5 +1,5 @@
 use crate::lang::command::{Command, CrushCommand, OutputType, ArgumentDescription};
-use crate::lang::errors::{error, mandate, CrushResult, argument_error};
+use crate::lang::errors::{error, mandate, CrushResult, argument_error_legacy};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::help::Help;
 use crate::lang::data::r#struct::Struct;
@@ -511,7 +511,7 @@ impl Scope {
 
     pub fn declare(&self, name: &str, value: Value) -> CrushResult<()> {
         if name.starts_with("__") {
-            return argument_error(format!("Illegal operation: Can't declare variables beginning with double underscores. ({})", name));
+            return argument_error_legacy(format!("Illegal operation: Can't declare variables beginning with double underscores. ({})", name));
         }
         let mut data = self.lock()?;
         if data.is_readonly {
@@ -526,7 +526,7 @@ impl Scope {
 
     pub fn redeclare(&self, name: &str, value: Value) -> CrushResult<()> {
         if name.starts_with("__") {
-            return argument_error(format!("Illegal operation: Can't redeclare variables beginning with double underscores. ({})", name));
+            return argument_error_legacy(format!("Illegal operation: Can't redeclare variables beginning with double underscores. ({})", name));
         }
         let mut data = self.lock()?;
         if data.is_readonly {
@@ -538,7 +538,7 @@ impl Scope {
 
     pub fn set(&self, name: &str, value: Value) -> CrushResult<()> {
         if name.starts_with("__") {
-            return argument_error(format!("Illegal operation: Can't set variables beginning with double underscores. ({})", name));
+            return argument_error_legacy(format!("Illegal operation: Can't set variables beginning with double underscores. ({})", name));
         }
         let mut data = self.lock()?;
         if !data.mapping.contains_key(name) {
@@ -584,7 +584,7 @@ impl Scope {
 
     fn remove_here(&self, key: &str) -> CrushResult<Option<Value>> {
         if key.starts_with("__") {
-            return argument_error(format!("Illegal operation: Can't remove variables beginning with double underscores. ({})", key));
+            return argument_error_legacy(format!("Illegal operation: Can't remove variables beginning with double underscores. ({})", key));
         }
         let mut data = self.lock()?;
         if !data.mapping.contains_key(key) {

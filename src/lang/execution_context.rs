@@ -1,12 +1,12 @@
 use crate::lang::argument::Argument;
 use crate::lang::command::Command;
 use crate::lang::data::dict::Dict;
-use crate::lang::errors::{argument_error, error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, error, CrushResult};
 use crate::lang::data::list::List;
 use crate::lang::printer::Printer;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::data::scope::Scope;
-use crate::lang::stream::{InputStream,  ValueReceiver, ValueSender};
+use crate::lang::stream::{InputStream, ValueReceiver, ValueSender};
 use crate::lang::data::table::Table;
 use crate::lang::value::{Value, ValueType};
 use crate::util::glob::Glob;
@@ -48,12 +48,16 @@ macro_rules! argument_getter {
     ($name:ident, $return_type:ty, $value_type:ident, $description:literal) => {
         fn $name(&mut self, idx: usize) -> CrushResult<$return_type> {
             if idx < self.len() {
+                let l = self[idx].location;
                 match self
-                    .replace(idx, Argument::unnamed(Value::Bool(false)))
+                    .replace(idx, Argument::unnamed(
+                        Value::Bool(false),
+                        l,
+                    ))
                     .value
                 {
                     Value::$value_type(s) => Ok(s),
-                    v => argument_error(
+                    v => argument_error_legacy(
                         format!(
                             concat!("Invalid value, expected a ", $description, ", found a {}"),
                             v.value_type().to_string()
@@ -74,7 +78,7 @@ macro_rules! optional_argument_getter {
             match self.len() - idx {
                 0 => Ok(None),
                 1 => Ok(Some(self.$method(idx)?)),
-                _ => argument_error("Wrong number of arguments"),
+                _ => argument_error_legacy("Wrong number of arguments"),
             }
         }
     };
@@ -85,22 +89,22 @@ impl ArgumentVector for Vec<Argument> {
         if self.len() == len {
             Ok(())
         } else {
-            argument_error(format!("Expected {} arguments, got {}", len, self.len()).as_str())
+            argument_error_legacy(format!("Expected {} arguments, got {}", len, self.len()).as_str())
         }
     }
 
     fn check_len_range(&self, min_len: usize, max_len: usize) -> CrushResult<()> {
         if self.len() < min_len {
-            argument_error(
+            argument_error_legacy(
                 format!(
                     "Expected at least {} arguments, got {}",
                     min_len,
                     self.len()
                 )
-                .as_str(),
+                    .as_str(),
             )
         } else if self.len() > max_len {
-            argument_error(
+            argument_error_legacy(
                 format!("Expected at most {} arguments, got {}", max_len, self.len()).as_str(),
             )
         } else {
@@ -112,13 +116,13 @@ impl ArgumentVector for Vec<Argument> {
         if self.len() >= min_len {
             Ok(())
         } else {
-            argument_error(
+            argument_error_legacy(
                 format!(
                     "Expected at least {} arguments, got {}",
                     min_len,
                     self.len()
                 )
-                .as_str(),
+                    .as_str(),
             )
         }
     }
@@ -136,8 +140,9 @@ impl ArgumentVector for Vec<Argument> {
 
     fn value(&mut self, idx: usize) -> CrushResult<Value> {
         if idx < self.len() {
+            let l = self[idx].location;
             Ok(self
-                .replace(idx, Argument::unnamed(Value::Bool(false)))
+                .replace(idx, Argument::unnamed(Value::Bool(false), l))
                 .value)
         } else {
             error("Index out of bounds")
@@ -316,12 +321,12 @@ macro_rules! this_method {
         fn $name(mut self) -> CrushResult<$return_type> {
             match self.take() {
                 Some(Value::$value_type(l)) => Ok(l),
-                None => argument_error(concat!(
+                None => argument_error_legacy(concat!(
                     "Expected this to be a ",
                     $description,
                     ", but this is not set"
                 )),
-                Some(v) => argument_error(
+                Some(v) => argument_error_legacy(
                     format!(
                         concat!("Expected this to be a ", $description, ", but it is a {}"),
                         v.value_type().to_string()
@@ -353,7 +358,7 @@ impl This for Option<Value> {
     fn re(mut self) -> CrushResult<(String, Regex)> {
         match self.take() {
             Some(Value::Regex(s, b)) => Ok((s, b)),
-            _ => argument_error("Expected a regular expression"),
+            _ => argument_error_legacy("Expected a regular expression"),
         }
     }
 }

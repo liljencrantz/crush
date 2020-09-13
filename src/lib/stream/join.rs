@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error, mandate};
+use crate::lang::errors::{argument_error_legacy, mandate};
 use crate::lang::errors::CrushError;
 use crate::lang::errors::CrushResult;
 use crate::lang::execution_context::{ArgumentVector, CommandContext};
@@ -83,6 +83,6 @@ pub fn join(mut context: CommandContext) -> CrushResult<()> {
 
             do_join(left_stream, left_idx, right_stream, right_idx, &output, &context.printer)
         }
-        (_, _, _, _) => argument_error("Invalid inputs for joins"),
+        (_, _, _, _) => argument_error_legacy("Invalid inputs for joins"),
     }
 }

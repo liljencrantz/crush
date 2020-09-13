@@ -9,6 +9,7 @@ pub fn r#for(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Empty())?;
     context.arguments.check_len(2)?;
 
+    let location = context.arguments[0].location;
     let body = context.arguments.command(1)?;
     let iter = context.arguments.remove(0);
     let name = iter.argument_type;
@@ -21,18 +22,20 @@ pub fn r#for(mut context: CommandContext) -> CrushResult<()> {
                 .into_vec()
                 .drain(..)
                 .zip(input.types().iter())
-                .map(|(c, t)| Argument::named(&t.name, c))
+                .map(|(c, t)| Argument::named(&t.name, c, location))
                 .collect(),
             Some(var_name) => {
                 if input.types().len() == 1 {
                     vec![Argument::new(
                         Some(var_name.clone()),
                         line.into_vec().remove(0),
+                        location,
                     )]
                 } else {
                     vec![Argument::new(
                         Some(var_name.clone()),
                         Value::Struct(Struct::from_vec(line.into_vec(), input.types().to_vec())),
+                        location,
                     )]
                 }
             }
