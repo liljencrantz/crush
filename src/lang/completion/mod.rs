@@ -319,6 +319,41 @@ mod tests {
     }
 
     #[test]
+    fn test_that_attribute_component_can_be_completed() {
+        let line = "namespace:my";
+        let cursor = 12;
+
+        let s = scope_with_function();
+        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "namespace:my_cmd");
+    }
+
+    #[test]
+    fn test_that_empty_attribute_component_can_be_completed() {
+        let line = "namespace:";
+        let cursor = 10;
+
+        let s = scope_with_function();
+        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "namespace:my_cmd");
+    }
+
+    #[test]
+    fn test_that_commands_can_be_completed_in_a_pipeline() {
+        let line = "a | ";
+        let cursor = 4;
+
+        let s = Scope::create_root();
+        s.declare("abcd", Value::Empty()).unwrap();
+        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "a | abcd");
+    }
+
+
+    #[test]
     fn check_empty_switch_completion() {
         let line = "my_cmd --";
         let cursor = 9;

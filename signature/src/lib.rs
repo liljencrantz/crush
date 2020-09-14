@@ -1,3 +1,8 @@
+/**
+    This macro is used on command signature structs. It outputs methods that let you
+    parse and declare a command based on its signature.
+*/
+
 use proc_macro2;
 use proc_macro2::Ident;
 use proc_macro2::{Literal, TokenStream, TokenTree};
@@ -224,9 +229,10 @@ fn simple_type_to_mutator(simple_type: &str, allowed_values: &Option<Ident>) -> 
             "i64" => quote! { crate::lang::errors::to_crush_error(i64::try_from(_value))?},
             "Stream" => {
                 quote! {
-                    crate::lang::errors::mandate(
+                    crate::lang::errors::mandate_argument(
                         _value.stream(),
-                        "Expected a type that can be streamed")?,
+                        "Expected a type that can be streamed",
+                        _location)?,
                     }
             }
             _ => quote! {_value},
@@ -287,7 +293,7 @@ fn simple_type_dump_list(simple_type: &str) -> &str {
     }
 }
 
-fn type_to_value(
+fn parse_type_data(
     ty: &Type,
     name: &Ident,
     default: Option<TokenTree>,
@@ -812,7 +818,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 field.attrs = Vec::new();
                 let name = &field.ident.clone().unwrap();
                 let name_string = Literal::string(&name.to_string());
-                let type_data = type_to_value(
+                let type_data = parse_type_data(
                     &field.ty,
                     name,
                     default_value.clone(),

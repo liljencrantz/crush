@@ -168,3 +168,14 @@ pub fn mandate<T>(result: Option<T>, msg: impl Into<String>) -> CrushResult<T> {
         None => data_error(msg),
     }
 }
+
+pub fn mandate_argument<T>(result: Option<T>, message: impl Into<String>, location: Location) -> CrushResult<T> {
+    match result {
+        Some(v) => Ok(v),
+        None => Err(CrushError {
+            error_type: InvalidData(message.into()),
+            location: Some(location),
+            definition: None,
+        }),
+    }
+}

@@ -39,7 +39,6 @@ pub struct PartialCommandResult {
 }
 
 impl PartialCommandResult {
-
     pub fn last_argument_type(&self) -> ValueType {
         match (&self.command, &self.last_argument_name) {
             (CompletionCommand::Known(cmd), Some(name)) => {
@@ -49,7 +48,7 @@ impl PartialCommandResult {
                     }
                 }
                 ValueType::Any
-            },
+            }
             _ => ValueType::Any,
         }
     }
@@ -63,12 +62,20 @@ pub enum ParseResult {
     PartialArgument(PartialCommandResult),
 }
 
-fn simple_attr(node: &Node) -> CrushResult<Field> {
+fn simple_attr(node: &Node, cursor: usize) -> CrushResult<Field> {
     match node {
         Node::Label(label) => Ok(vec![label.string.clone()]),
         Node::GetAttr(p, a) => {
-            let mut res = simple_attr(p.as_ref())?;
-            res.push(a.string.clone());
+            let mut res = simple_attr(p.as_ref(), cursor)?;
+            let tok = if a.location.start >= cursor {
+                "".to_string()
+            } else if a.location.contains(cursor) {
+                a.string[0..(cursor - a.location.start)].to_string()
+            } else {
+                a.string.clone()
+            };
+
+            res.push(tok);
             Ok(res)
         }
         _ => {
@@ -77,11 +84,11 @@ fn simple_attr(node: &Node) -> CrushResult<Field> {
     }
 }
 
-fn simple_path(node: &Node) -> CrushResult<PathBuf> {
+fn simple_path(node: &Node, cursor: usize) -> CrushResult<PathBuf> {
     match node {
         Node::Label(label) => Ok(PathBuf::from(&label.string)),
         Node::Path(p, a) => {
-            let res = simple_path(p.as_ref())?;
+            let res = simple_path(p.as_ref(), cursor)?;
             Ok(res.join(&a.string))
         }
         _ => {
@@ -142,7 +149,10 @@ fn find_command_in_job_list(ast: JobListNode, cursor: usize) -> CrushResult<Comm
             return find_command_in_job(job.clone(), cursor);
         }
     }
-    mandate(ast.jobs.last().and_then(|j| j.commands.last().map(|c| c.clone())), "Nothing to complete")
+    mandate(
+        ast.jobs.last()
+            .and_then(|j| j.commands.last()
+                .map(|c| c.clone())), "Nothing to complete")
 }
 
 fn parse_command_node(node: &Node, scope: &Scope) -> CrushResult<CompletionCommand> {
@@ -169,116 +179,112 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
 
     let cmd = find_command_in_job_list(ast, cursor)?;
 
-    if cmd.expressions.len() == 0 {
-        return Ok(ParseResult::Nothing);
-    } else if cmd.expressions.len() == 1 {
-        let cmd = &cmd.expressions[0];
-        if cmd.location().contains(cursor) {
-            match cmd {
-                Node::Label(_) |
-                Node::GetAttr(_, _) => {
-                    return Ok(ParseResult::PartialCommand(simple_attr(cmd)?));
-                }
-                Node::Path(_, _) => {
-                    return Ok(ParseResult::PartialPath(simple_path(cmd)?));
-                }
-                Node::File(path, _) => { panic!("AAA"); }
-                Node::String(string) => { panic!("AAA"); }
-                Node::GetItem(_, _) => { panic!("AAA"); }
+    match cmd.expressions.len() {
+        0 => Ok(ParseResult::Nothing),
+        1 => {
+            let cmd = &cmd.expressions[0];
+            if cmd.location().contains(cursor) {
+                match cmd {
+                    Node::Label(_) | Node::GetAttr(_, _) =>
+                        Ok(ParseResult::PartialCommand(simple_attr(cmd, cursor)?)),
 
-                _ => { return error("Can't extract command to complete"); }
-            }
-        } else {
-            return Ok(
-                ParseResult::PartialArgument(
+                    Node::Path(_, _) =>
+                        Ok(ParseResult::PartialPath(simple_path(cmd, cursor)?)),
+
+                    Node::File(path, _) => { panic!("AAA"); }
+                    Node::String(string) => { panic!("AAA"); }
+                    Node::GetItem(_, _) => { panic!("AAA"); }
+
+                    _ => error("Can't extract command to complete"),
+                }
+            } else {
+                Ok(ParseResult::PartialArgument(
                     PartialCommandResult {
                         command: parse_command_node(cmd, scope)?,
                         previous_arguments: vec![],
                         last_argument: LastArgument::Unknown,
                         last_argument_name: None,
                     }
-                )
-            );
-        }
-    } else {
-        let c = parse_command_node(&cmd.expressions[0], scope)?;
-
-        let (arg, last_argument_name, argument_complete) = if let Node::Assignment(name, _op, value) = cmd.expressions.last().unwrap() {
-            if name.location().contains(cursor) {
-                (name.clone(), None, true)
-            } else {
-                if let Node::Label(name) = name.as_ref() {
-                    (value.clone(), Some(name.string.clone()), false)
-                } else {
-                    (value.clone(), None, false)
-                }
+                ))
             }
-        } else {
-            (Box::from(cmd.expressions.last().unwrap().clone()), None, false)
-        };
+        }
+        _ => {
+            let c = parse_command_node(&cmd.expressions[0], scope)?;
 
-        if argument_complete {
-            match arg.deref() {
-                Node::Label(l) => {
-                    return Ok(ParseResult::PartialArgument(
+            let (arg, last_argument_name, argument_complete) = if let Node::Assignment(name, _op, value) = cmd.expressions.last().unwrap() {
+                if name.location().contains(cursor) {
+                    (name.clone(), None, true)
+                } else {
+                    if let Node::Label(name) = name.as_ref() {
+                        (value.clone(), Some(name.string.clone()), false)
+                    } else {
+                        (value.clone(), None, false)
+                    }
+                }
+            } else {
+                (Box::from(cmd.expressions.last().unwrap().clone()), None, false)
+            };
+
+            if argument_complete {
+                match arg.deref() {
+                    Node::Label(l) =>
+                        Ok(ParseResult::PartialArgument(
+                            PartialCommandResult {
+                                command: c,
+                                previous_arguments: vec![],
+                                last_argument: LastArgument::Switch(l.string.clone()),
+                                last_argument_name,
+                            }
+                        )),
+
+                    _ => argument_error_legacy("Invalid argument name"),
+                }
+            } else {
+                if arg.location().contains(cursor) {
+                    match arg.as_ref() {
+                        Node::Label(l) =>
+                            Ok(ParseResult::PartialArgument(
+                                PartialCommandResult {
+                                    command: c,
+                                    previous_arguments: vec![],
+                                    last_argument: LastArgument::Field(vec![l.string.clone()]),
+                                    last_argument_name,
+                                }
+                            )),
+
+                        Node::GetAttr(_, _) =>
+                            Ok(ParseResult::PartialArgument(
+                                PartialCommandResult {
+                                    command: c,
+                                    previous_arguments: vec![],
+                                    last_argument: LastArgument::Field(simple_attr(arg.as_ref(), cursor)?),
+                                    last_argument_name,
+                                })),
+
+                        Node::Path(_, _) =>
+                            Ok(ParseResult::PartialArgument(
+                                PartialCommandResult {
+                                    command: c,
+                                    previous_arguments: vec![],
+                                    last_argument: LastArgument::Path(simple_path(arg.as_ref(), cursor)?),
+                                    last_argument_name,
+                                }
+                            )),
+
+                        Node::String(_) => error("String completions not yet impemented"),
+
+                        _ => error("Can't extract argument to complete"),
+                    }
+                } else {
+                    Ok(ParseResult::PartialArgument(
                         PartialCommandResult {
                             command: c,
                             previous_arguments: vec![],
-                            last_argument: LastArgument::Switch(l.string.clone()),
+                            last_argument: LastArgument::Unknown,
                             last_argument_name,
-                        }));
+                        }
+                    ))
                 }
-                _ => {
-                    return argument_error_legacy("Invalid argument name");
-                }
-            }
-        } else {
-            if arg.location().contains(cursor) {
-                match arg.as_ref() {
-                    Node::Label(l) => {
-                        return Ok(ParseResult::PartialArgument(
-                            PartialCommandResult {
-                                command: c,
-                                previous_arguments: vec![],
-                                last_argument: LastArgument::Field(vec![l.string.clone()]),
-                                last_argument_name,
-                            }));
-                    }
-
-                    Node::GetAttr(_, _) => {
-                        return Ok(ParseResult::PartialArgument(
-                            PartialCommandResult {
-                                command: c,
-                                previous_arguments: vec![],
-                                last_argument: LastArgument::Field(simple_attr(arg.as_ref())?),
-                                last_argument_name,
-                            }));
-                    }
-
-                    Node::Path(_, _) => {
-                        return Ok(ParseResult::PartialArgument(
-                            PartialCommandResult {
-                                command: c,
-                                previous_arguments: vec![],
-                                last_argument: LastArgument::Path(simple_path(arg.as_ref())?),
-                                last_argument_name,
-                            }));
-                    }
-
-                    Node::String(_) => { error("String completions not yet impemented") }
-
-                    _ => {
-                        error("Can't extract argument to complete")
-                    }
-                }
-            } else {
-                return Ok(ParseResult::PartialArgument(
-                    PartialCommandResult {
-                        command: c,
-                        previous_arguments: vec![],
-                        last_argument: LastArgument::Unknown,
-                        last_argument_name,
-                    }));
             }
         }
     }

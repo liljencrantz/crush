@@ -2,10 +2,12 @@ Graphs:
 
 Graphs consist of two data types: nodes and edges.
 
-Crush nodes are simply rows in normal tables.
+Crush nodes are simply rows in a single normal table. (Not a TableStream, it has to be a table)
 
-Crush edges are a new type that connect two table rows to each others. Every
-edge contains two index references. Edges can be directed or undirected.
+Crush edges are a new type that connect rows in the same table to each other. Every
+edge contains two index references. Edges can be directed or undirected, and they can
+have a single arbitrary value associated with them.
+
 Edges can point to the same row or other rows in the same table, but allowing
 them to point to rows in other tables would lead to reference cycles and memory
 leaks. One-to-one relationships are simply edge fields. One-to-many, and many-to-many
@@ -68,10 +70,10 @@ recursive chmod
 recursive chown
 Threads command, shows all threads on the system
 watch command
-Use new location data to display better error messages
 Either stop copying Command instances, or make them pointer to static data.
+Syntax highlighting (with more accurate parenthesis matching)
 
-Long term completion feature list:
+Tab completion missing feature list:
 
 * Support for enabling and disabling completion error printing
 * Completion using allowed values from argument data
@@ -81,3 +83,7 @@ Long term completion feature list:
 * General purpose command specific completions are specified as an extra command
 * Command specific completions are specified for the individual argument, as part of the signature.
 * Complete with prior arguments from same command from history
+* Add space, colon or slash at end of completions where appropriate
+* Add command specific completions for ssh hosts
+* Add command specific completions for dbus
+* Add command specific completions for cd to filter only directories

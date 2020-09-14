@@ -70,7 +70,7 @@ pub fn close_command(input: &str) -> CrushResult<String> {
             TokenType::FactorOperator | TokenType::AssignmentOperator |
             TokenType::ComparisonOperator | TokenType::UnaryOperator |
             TokenType::LogicalOperator | TokenType::Named | TokenType::Unnamed |
-            TokenType::TermOperator => { needs_trailing_arg = true }
+            TokenType::TermOperator | TokenType::Pipe | TokenType::Colon => { needs_trailing_arg = true }
             TokenType::SubStart => { stack.push(")"); }
             TokenType::SubEnd => { stack.pop(); }
             TokenType::JobStart => { stack.push("}"); }
