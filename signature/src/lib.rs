@@ -800,6 +800,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 let mut is_named_target = false;
                 let mut allowed_values = None;
                 let mut description = None;
+                let mut completion_command = quote!{None};
                 if !field.attrs.is_empty() {
                     for attr in &field.attrs {
                         if call_is_default(attr) {
@@ -810,6 +811,9 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                             is_named_target = true;
                         } else if call_is_named(attr, "values") {
                             allowed_values = Some(call_literals(attr)?);
+                        } else if call_is_named(attr, "custom_completion") {
+                            let name = call_value(attr)?;
+                            completion_command = quote!{Some(#name)};
                         } else if call_is_named(attr, "description") {
                             description = Some(unescape(&(call_literal(attr)?.to_string())));
                         }
@@ -876,7 +880,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                         value_type: #crush_internal_type,
                         allowed: None,
                         description: None,
-                        complete: None,
+                        complete: #completion_command,
                         named: false,
                         unnamed: false,
                     },

@@ -16,6 +16,7 @@ use std::fmt::{Formatter, Display};
 use crate::lang::ast::TrackedString;
 use crate::lang::completion::Completion;
 use crate::lang::completion::parse::PartialCommandResult;
+use crate::util::directory_lister::DirectoryLister;
 
 pub type Command = Box<dyn CrushCommand + Send + Sync>;
 
@@ -52,7 +53,11 @@ pub struct ArgumentDescription {
     pub value_type: ValueType,
     pub allowed: Option<Vec<Value>>,
     pub description: Option<String>,
-    pub complete: Option<fn(cmd: &PartialCommandResult) -> Vec<Completion>>,
+    pub complete: Option<fn(
+        cmd: &PartialCommandResult,
+        cursor: usize,
+        scope: &Scope,
+        res: &mut Vec<Completion>) -> CrushResult<()>>,
     pub named: bool,
     pub unnamed: bool,
 }
@@ -191,7 +196,6 @@ impl dyn CrushCommand {
         elements: &[Element],
         state: &mut DeserializationState,
     ) -> CrushResult<Command> {
-
         match elements[id].element.as_ref().unwrap() {
             element::Element::Command(_) => {
                 let strings = Vec::deserialize(id, elements, state)?;
@@ -352,7 +356,7 @@ impl CrushCommand for ConditionCommand {
         elements.push(Element {
             element: Some(element::Element::Command(strings_idx as u64)),
         });
-        Ok(elements.len()-1)
+        Ok(elements.len() - 1)
     }
 
     fn bind(&self, this: Value) -> Command {

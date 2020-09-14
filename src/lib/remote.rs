@@ -20,6 +20,10 @@ use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::PathBuf;
 use crate::util::user_map::get_current_username;
+use crate::lang::completion::Completion;
+use crate::lang::completion::parse::{PartialCommandResult, LastArgument};
+use crate::util::directory_lister::DirectoryLister;
+use crate::lang::ast::{unescape, escape, escape_without_quotes};
 
 lazy_static! {
     static ref IDENTITY_OUTPUT_TYPE: Vec<ColumnType> = vec![
@@ -125,6 +129,49 @@ fn run_remote(
     Ok(res)
 }
 
+fn ssh_host_complete(
+    cmd: &PartialCommandResult,
+    _cursor: usize,
+    _scope: &Scope,
+    res: &mut Vec<Completion>,
+) -> CrushResult<()> {
+    let session = to_crush_error(Session::new())?;
+    let mut known_hosts = to_crush_error(session.known_hosts())?;
+    let host_file = home()?.join(".ssh/known_hosts");
+
+    to_crush_error(known_hosts.read_file(&host_file, KnownHostFileKind::OpenSSH))?;
+    for host in to_crush_error(known_hosts.iter())? {
+        match &cmd.last_argument {
+
+            LastArgument::Unknown => {
+                let completion = escape(host.name().unwrap_or(""));
+                res.push(Completion::new(
+                    completion,
+                    host.name().unwrap_or(""),
+                    0,
+                ))
+            }
+
+            LastArgument::QuotedString(prefix) => {
+                let stripped_prefix = unescape(prefix);
+                let completion = host.name().unwrap_or("");
+                if completion.starts_with(&stripped_prefix) {
+                    res.push(Completion::new(
+                        escape_without_quotes(&completion[stripped_prefix.len()-1..]),
+                        host.name().unwrap_or(""),
+                        0,
+                    ));
+                }
+            }
+
+            _ => {}
+
+        }
+    }
+    Ok(())
+}
+
+
 #[signature(
 exec,
 can_block = true,
@@ -134,6 +181,7 @@ long = "    Execute the specified command on the soecified host"
 struct Exec {
     #[description("the command to execute.")]
     command: Command,
+    #[custom_completion(ssh_host_complete)]
     #[description("host to execute the command on.")]
     host: String,
     #[description("username on remote machines.")]
@@ -182,6 +230,7 @@ struct Pexec {
     #[description("the command to execute.")]
     command: Command,
     #[unnamed()]
+    #[custom_completion(ssh_host_complete)]
     #[description("hosts to execute the command on.")]
     host: Vec<String>,
     #[description("maximum number of hosts to run on in parallel.")]

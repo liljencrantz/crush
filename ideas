@@ -52,6 +52,7 @@ All commands declare valid input and output types.
 Input types can be partial, e.g. any iterator or any iterator with some restrictions.
 Checks are performed to validate consistency.
 Syntax for not having to duplicate output type.
+Track location of arguments through signature macro parsing
 
 Commands:
 A simple command for replacing a regex in every line of a file. Implement it in crush, using built in commands.
@@ -75,6 +76,7 @@ Syntax highlighting (with more accurate parenthesis matching)
 
 Tab completion missing feature list:
 
+* support command specific completion of methods
 * Support for enabling and disabling completion error printing
 * Completion using allowed values from argument data
 * Completions for wildcards
@@ -84,6 +86,5 @@ Tab completion missing feature list:
 * Command specific completions are specified for the individual argument, as part of the signature.
 * Complete with prior arguments from same command from history
 * Add space, colon or slash at end of completions where appropriate
-* Add command specific completions for ssh hosts
 * Add command specific completions for dbus
 * Add command specific completions for cd to filter only directories

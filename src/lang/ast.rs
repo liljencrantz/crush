@@ -584,6 +584,27 @@ fn expand_user_path(s: &TrackedString) -> Box<Node> {
     }
 }
 
+pub fn escape_without_quotes(s: &str) -> String {
+    let mut res = "".to_string();
+    for c in s[1..s.len() - 1].chars() {
+        match c {
+            '\"' => res += "\\\"",
+            '\n' => res += "\\n",
+            '\r' => res += "\\r",
+            '\t' => res += "\\t",
+            _ => res.push(c),
+        }
+    }
+    res
+}
+
+pub fn escape(s: &str) -> String {
+    let mut res = "\"".to_string();
+    res += &escape_without_quotes(s);
+    res += "\\";
+    res
+}
+
 pub fn unescape(s: &str) -> String {
     let mut res = "".to_string();
     let mut was_backslash = false;

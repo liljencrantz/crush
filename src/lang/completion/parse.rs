@@ -155,17 +155,28 @@ fn find_command_in_job_list(ast: JobListNode, cursor: usize) -> CrushResult<Comm
                 .map(|c| c.clone())), "Nothing to complete")
 }
 
-fn parse_command_node(node: &Node, scope: &Scope) -> CrushResult<CompletionCommand> {
+fn fetch_value(node: &Node, scope: &Scope) -> CrushResult<Option<Value>> {
     match node {
         Node::Label(l) => {
             match scope.get(&l.string)? {
-                None => Ok(CompletionCommand::Unknown),
-                Some(v) => match v {
-                    Value::Command(cmd) => Ok(CompletionCommand::Known(cmd)),
-                    _ => Ok(CompletionCommand::Unknown),
-                },
+                None => Ok(None),
+                Some(v) => Ok(Some(v)),
             }
         }
+
+        Node::GetAttr(n, l) => {
+            match fetch_value(n, scope)? {
+                Some(parent) => parent.field(&l.string),
+                None => Ok(None),
+            }
+        }
+        _ => Ok(None),
+    }
+}
+
+fn parse_command_node(node: &Node, scope: &Scope) -> CrushResult<CompletionCommand> {
+    match fetch_value(node, scope)? {
+        Some(Value::Command(command)) => Ok(CompletionCommand::Known(command)),
         _ => Ok(CompletionCommand::Unknown),
     }
 }
@@ -271,7 +282,15 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
                                 }
                             )),
 
-                        Node::String(_) => error("String completions not yet impemented"),
+                        Node::String(s) =>
+                            Ok(ParseResult::PartialArgument(
+                                PartialCommandResult {
+                                    command: c,
+                                    previous_arguments: vec![],
+                                    last_argument: LastArgument::QuotedString(s.string.clone()),
+                                    last_argument_name,
+                                }
+                            )),
 
                         _ => error("Can't extract argument to complete"),
                     }

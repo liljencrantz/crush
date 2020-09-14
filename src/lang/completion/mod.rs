@@ -16,6 +16,18 @@ pub struct Completion {
 }
 
 impl Completion {
+    pub fn new(
+        completion: impl Into<String>,
+        display: impl Into<String>,
+        position: usize,
+    ) -> Completion{
+        Completion {
+            completion: completion.into(),
+            display: display.into(),
+            position,
+        }
+    }
+
     pub fn complete(
         &self,
         line: &str,
@@ -149,6 +161,19 @@ pub fn complete_partial_argument(
     lister: &impl DirectoryLister,
     res: &mut Vec<Completion>,
 ) -> CrushResult<()> {
+    if let CompletionCommand::Known(cmd) = &parse_result.command {
+        if let Some(name) = &parse_result.last_argument_name {
+            if let Some(argument_description) = cmd.arguments()
+                .iter()
+                .filter(|a| &a.name == name)
+                .next() {
+                if let Some(cmd) = argument_description.complete {
+                    cmd(&parse_result, cursor, scope, res)?;
+                }
+            }
+        }
+    }
+
     let argument_type = parse_result.last_argument_type();
     match parse_result.last_argument {
 
@@ -294,6 +319,17 @@ mod tests {
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "my_cmd super_fancy_argument=");
+    }
+
+    #[test]
+    fn check_namespaced_argument_completion() {
+        let line = "namespace:my_cmd super_";
+        let cursor = 23;
+
+        let s = scope_with_function();
+        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "namespace:my_cmd super_fancy_argument=");
     }
 
     #[test]
