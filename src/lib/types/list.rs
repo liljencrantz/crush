@@ -212,7 +212,7 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
                 return data_error("Expected input with exactly one column");
             }
             while let Ok(row) = input.read() {
-                lst.push(row.into_vec().remove(0));
+                lst.push(Vec::from(row).remove(0));
             }
             if lst.is_empty() {
                 return data_error("Empty stream!");

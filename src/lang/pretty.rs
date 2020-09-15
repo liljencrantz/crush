@@ -242,7 +242,7 @@ impl PrettyPrinter {
             let mut outputs = Vec::new();
             let mut binaries = Vec::new();
 
-            let mut r_vec = r.into_vec();
+            let mut r_vec = Vec::from(r);
 
             if last_separate {
                 let last = r_vec.remove(r_vec.len()-1);

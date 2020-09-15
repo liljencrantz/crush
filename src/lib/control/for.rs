@@ -18,8 +18,7 @@ pub fn r#for(mut context: CommandContext) -> CrushResult<()> {
     while let Ok(line) = input.read() {
         let env = context.scope.create_child(&context.scope, true);
         let arguments = match &name {
-            None => line
-                .into_vec()
+            None => Vec::from(line)
                 .drain(..)
                 .zip(input.types().iter())
                 .map(|(c, t)| Argument::named(&t.name, c, location))
@@ -28,13 +27,13 @@ pub fn r#for(mut context: CommandContext) -> CrushResult<()> {
                 if input.types().len() == 1 {
                     vec![Argument::new(
                         Some(var_name.clone()),
-                        line.into_vec().remove(0),
+                        Vec::from(line).remove(0),
                         location,
                     )]
                 } else {
                     vec![Argument::new(
                         Some(var_name.clone()),
-                        Value::Struct(Struct::from_vec(line.into_vec(), input.types().to_vec())),
+                        Value::Struct(Struct::from_vec(Vec::from(line), input.types().to_vec())),
                         location,
                     )]
                 }

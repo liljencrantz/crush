@@ -20,7 +20,7 @@ impl Completion {
         completion: impl Into<String>,
         display: impl Into<String>,
         position: usize,
-    ) -> Completion{
+    ) -> Completion {
         Completion {
             completion: completion.into(),
             display: display.into(),
@@ -54,7 +54,7 @@ fn is_or_has_type(value: &Value, pattern: &ValueType, max_depth: i8) -> bool {
         return true;
     }
     for name in &value.fields() {
-        if value.field( name)
+        if value.field(name)
             .map(|opt| opt.map(|val|
                 is_or_has_type(&val, pattern, max_depth - 1))
                 .unwrap_or(false))
@@ -76,7 +76,7 @@ fn complete_value(
         out.append(&mut value.fields()
             .iter()
             .filter(|k| k.starts_with(&prefix[0]))
-            .filter(|k| value.field( *k)
+            .filter(|k| value.field(*k)
                 .map(|opt| opt.map(
                     |val| is_or_has_type(&val, t, 4))
                     .unwrap_or(false))
@@ -176,7 +176,6 @@ pub fn complete_partial_argument(
 
     let argument_type = parse_result.last_argument_type();
     match parse_result.last_argument {
-
         LastArgument::Switch(name) => {
             if let CompletionCommand::Known(cmd) = parse_result.command {
                 complete_argument_name(cmd.arguments(), &name, cursor, res, true)?;
@@ -210,7 +209,6 @@ pub fn complete_partial_argument(
         }
 
         LastArgument::QuotedString(_) => {}
-
     }
     Ok(())
 }
@@ -224,7 +222,6 @@ pub fn complete(
     let parse_result = parse(line, cursor, scope)?;
     let mut res = Vec::new();
     match parse_result {
-
         ParseResult::Nothing => {
             complete_value(Value::Scope(scope.clone()), &vec!["".to_string()], &ValueType::Any, cursor, &mut res)?;
             complete_file(lister, "", &ValueType::Any, cursor, &mut res)?;
@@ -272,15 +269,29 @@ mod tests {
         Ok(())
     }
 
+    fn allowed_cmd(_context: CommandContext) -> CrushResult<()> {
+        Ok(())
+    }
+
     #[signature(my_cmd)]
     struct MyCmdSignature {
         super_fancy_argument: ValueType,
+    }
+
+    #[signature(allowed_cmd)]
+    struct AllowedCmdSignature {
+        #[values("foo", "bar", "baz")]
+        argument: String,
     }
 
     fn scope_with_function() -> Scope {
         let root = Scope::create_root();
         let chld = root.create_namespace("namespace", Box::new(|env| {
             MyCmdSignature::declare(env)?;
+            Ok(())
+        })).unwrap();
+        let chld2 = root.create_namespace("other_namespace", Box::new(|env| {
+            AllowedCmdSignature::declare(env)?;
             Ok(())
         })).unwrap();
         root.r#use(&chld);
@@ -339,7 +350,7 @@ mod tests {
 
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
-        assert_eq!(completions.len(), 3);
+        assert_eq!(completions.len(), 4);
     }
 
     #[test]
@@ -553,7 +564,7 @@ mod tests {
     #[test]
     fn check_fake_appended_labels_are_ignored() {
         let line = "a b=";
-        let cursor = 4;
+        let cursor = line.len();
 
         let s = Scope::create_root();
         s.declare("xxxx", Value::Empty()).unwrap();
@@ -565,7 +576,7 @@ mod tests {
     #[test]
     fn check_completion_type_filtering() {
         let line = "my_cmd super_fancy_argument=t";
-        let cursor = 29;
+        let cursor = line.len();
 
         let s = scope_with_function();
         s.declare("tumbleweed", Value::Empty()).unwrap();
@@ -575,4 +586,14 @@ mod tests {
         assert_eq!(&completions[0].complete(line), "my_cmd super_fancy_argument=type");
     }
 
+    #[test]
+    fn check_allowed_value_completion() {
+        let line = "other_namespace:allowed_cmd argument=\"f";
+        let cursor = line.len();
+
+        let s = scope_with_function();
+        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "other_namespace:allowed_cmd argument=\"foo");
+    }
 }

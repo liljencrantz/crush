@@ -27,9 +27,7 @@ fn evaluate(
     input_type: &[ColumnType],
     base_context: &CommandContext,
 ) -> CrushResult<bool> {
-    let arguments = row
-        .clone()
-        .into_vec()
+    let arguments = Vec::from(row.clone())
         .drain(..)
         .zip(input_type.iter())
         .map(|(c, t)| Argument::named(t.name.as_ref(), c, location))

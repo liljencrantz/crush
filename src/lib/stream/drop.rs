@@ -31,7 +31,7 @@ fn drop(context: CommandContext) -> CrushResult<()> {
             let mut it = inc.iter();
             let output = context.output.initialize(t.to_vec().drain(..).filter(|_| !*(it.next().unwrap())).collect())?;
             while let Ok(row) = input.read() {
-                let mut row = row.into_vec();
+                let mut row = Vec::from(row);
                 let mut it = inc.iter();
                 output.send(
                     Row::new(

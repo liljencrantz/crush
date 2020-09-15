@@ -9,6 +9,8 @@ use crate::lang::value::ValueType;
 use crate::util::file::{cwd, home};
 use signature::signature;
 use crate::lang::files::Files;
+use std::path::PathBuf;
+use std::convert::TryFrom;
 
 mod du;
 mod find;
@@ -29,7 +31,7 @@ fn cd(context: CommandContext) -> CrushResult<()> {
     let cfg: Cd = Cd::parse(context.arguments, &context.printer)?;
 
     let dir = match cfg.destination.had_entries() {
-        true => cfg.destination.into_file(),
+        true => PathBuf::try_from(cfg.destination),
         false => home(),
     }?;
 

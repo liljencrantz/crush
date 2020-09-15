@@ -19,7 +19,7 @@ fn enumerate(context: CommandContext) -> CrushResult<()> {
             let mut line: i128 = 0;
             while let Ok(row) = input.read() {
                 let mut out = vec![Value::Integer(line)];
-                out.extend(row.into_vec());
+                out.extend(Vec::from(row));
                 output.send(Row::new(out))?;
                 line += 1;
             }

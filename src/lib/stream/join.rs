@@ -15,7 +15,7 @@ use signature::signature;
 use crate::lang::command::OutputType::Unknown;
 
 fn combine(mut l: Row, r: Row, right_idx: usize) -> Row {
-    for (idx, c) in r.into_vec().drain(..).enumerate() {
+    for (idx, c) in Vec::from(r).drain(..).enumerate() {
         if idx != right_idx {
             l.push(c);
         }

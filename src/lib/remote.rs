@@ -15,7 +15,7 @@ use lazy_static::lazy_static;
 use signature::signature;
 use ssh2::KnownHostFileKind;
 use ssh2::{CheckResult, HostKeyType, KnownHostKeyFormat, Session};
-use std::cmp::min;
+use std::cmp::{min, max};
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::PathBuf;
@@ -24,6 +24,7 @@ use crate::lang::completion::Completion;
 use crate::lang::completion::parse::{PartialCommandResult, LastArgument};
 use crate::util::directory_lister::DirectoryLister;
 use crate::lang::ast::{unescape, escape, escape_without_quotes};
+use std::convert::TryFrom;
 
 lazy_static! {
     static ref IDENTITY_OUTPUT_TYPE: Vec<ColumnType> = vec![
@@ -155,9 +156,9 @@ fn ssh_host_complete(
             LastArgument::QuotedString(prefix) => {
                 let stripped_prefix = unescape(prefix);
                 let completion = host.name().unwrap_or("");
-                if completion.starts_with(&stripped_prefix) {
+                if completion.starts_with(&stripped_prefix) && completion.len() > 0 {
                     res.push(Completion::new(
-                        escape_without_quotes(&completion[stripped_prefix.len()-1..]),
+                        escape_without_quotes(&completion[stripped_prefix.len()..]),
                         host.name().unwrap_or(""),
                         0,
                     ));
@@ -201,7 +202,7 @@ struct Exec {
 fn exec(context: CommandContext) -> CrushResult<()> {
     let cfg: Exec = Exec::parse(context.arguments, &context.printer)?;
     let host_file = if cfg.host_file.had_entries() {
-        cfg.host_file.into_file()?
+        PathBuf::try_from(cfg.host_file)?
     } else {
         home()?.join(".ssh/known_hosts")
     };
@@ -253,7 +254,7 @@ struct Pexec {
 fn pexec(context: CommandContext) -> CrushResult<()> {
     let cfg: Pexec = Pexec::parse(context.arguments, &context.printer)?;
     let host_file = if cfg.host_file.had_entries() {
-        cfg.host_file.into_file()?
+        PathBuf::try_from(cfg.host_file)?
     } else {
         home()?.join(".ssh/known_hosts")
     };
@@ -343,6 +344,7 @@ fn identity(context: CommandContext) -> CrushResult<()> {
 
 mod host {
     use super::*;
+    use std::convert::TryInto;
 
     #[signature(
     list,
@@ -367,7 +369,7 @@ mod host {
 
         // Initialize the known hosts with a global known hosts file
         let host_file = if cfg.host_file.had_entries() {
-            cfg.host_file.into_file()?
+            PathBuf::try_from(cfg.host_file)?
         } else {
             home()?.join(".ssh/known_hosts")
         };
@@ -400,7 +402,7 @@ mod host {
     fn remove(context: CommandContext) -> CrushResult<()> {
         let cfg: Remove = Remove::parse(context.arguments, &context.printer)?;
         let host_file = if cfg.host_file.had_entries() {
-            cfg.host_file.into_file()?
+            cfg.host_file.clone().try_into()?
         } else {
             home()?.join(".ssh/known_hosts")
         };

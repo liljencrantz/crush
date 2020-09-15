@@ -1,5 +1,5 @@
 use crate::lang::data::binary::{binary_channel, BinaryReader};
-use crate::lang::errors::{argument_error_legacy, error, to_crush_error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, error, to_crush_error, CrushResult, CrushError, data_error};
 use crate::lang::printer::Printer;
 use crate::lang::stream::{ValueReceiver, ValueSender};
 use crate::lang::value::{Value, ValueType};
@@ -8,11 +8,30 @@ use crate::util::regex::RegexFileMatcher;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
+use std::convert::{Into, TryFrom};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Files {
     had_entries: bool,
     files: Vec<PathBuf>,
+}
+
+impl From<Files> for Vec<PathBuf> {
+    fn from(files: Files) -> Vec<PathBuf> {
+        files.files
+    }
+}
+
+impl TryFrom<Files> for PathBuf {
+    type Error = CrushError;
+
+    fn try_from(mut value: Files) -> CrushResult<PathBuf> {
+        if value.files.len() == 1 {
+            Ok(value.files.remove(0))
+        } else {
+            data_error("Invalid file")
+        }
+    }
 }
 
 impl Files {
@@ -25,18 +44,6 @@ impl Files {
 
     pub fn had_entries(&self) -> bool {
         self.had_entries
-    }
-
-    pub fn into_vec(self) -> Vec<PathBuf> {
-        self.files
-    }
-
-    pub fn into_file(&self) -> CrushResult<PathBuf> {
-        if self.files.len() == 1 {
-            Ok(self.files[0].clone())
-        } else {
-            error("Invalid file")
-        }
     }
 
     pub fn reader(self, input: ValueReceiver) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
@@ -77,7 +84,7 @@ impl Files {
                     let t = s.types();
                     if t.len() == 1 && t[0].cell_type == ValueType::File {
                         while let Ok(row) = s.read() {
-                            if let Value::File(f) = row.into_vec().remove(0) {
+                            if let Value::File(f) = Vec::from(row).remove(0) {
                                 self.files.push(f);
                             }
                         }

@@ -12,6 +12,7 @@ use lazy_static::lazy_static;
 use crate::lang::command::OutputType::Known;
 use crate::util::directory_lister::{DirectoryLister, directory_lister};
 use  std::os::unix::fs::MetadataExt;
+use std::convert::TryFrom;
 
 lazy_static! {
     static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
@@ -74,7 +75,7 @@ fn du(context: CommandContext) -> CrushResult<()> {
     let cfg: Du = Du::parse(context.arguments, &context.printer)?;
     let mut output = context.output.initialize(OUTPUT_TYPE.clone())?;
     let dirs = if cfg.directory.had_entries() {
-        cfg.directory.into_vec()
+        Vec::from(cfg.directory)
     } else {
         vec![PathBuf::from(".")]
     };

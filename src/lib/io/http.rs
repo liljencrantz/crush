@@ -9,7 +9,7 @@ use reqwest::{Method, StatusCode};
 use signature::signature;
 
 fn parse_method(m: &str) -> CrushResult<Method> {
-    Ok(match m.to_lowercase().as_str() {
+    Ok(match m {
         "get" => Method::GET,
         "post" => Method::POST,
         "put" => Method::PUT,
@@ -24,21 +24,19 @@ fn parse_method(m: &str) -> CrushResult<Method> {
 }
 
 #[signature(
-    http,
-    short = "Make a http request",
-    long = "Return a struct with the following fields:",
-    long = "* status:integer, the http status of the reply",
-    long = "* header:list, the http headers of the reply",
-    long = "* body:binary_stream, the content of the reply",
-    example = "http \"https://example.com/\" header=(\"Authorization: Bearer {}\":format token)",
-    can_block = true
+http,
+short = "Make a http request",
+long = "Return a struct with the following fields:",
+long = "* status:integer, the http status of the reply",
+long = "* header:list, the http headers of the reply",
+long = "* body:binary_stream, the content of the reply",
+example = "http \"https://example.com/\" header=(\"Authorization: Bearer {}\":format token)",
+can_block = true
 )]
 pub struct Http {
     uri: String,
     #[description("HTTP method.")]
-    #[values(
-        "get", "post", "put", "delete", "head", "options", "connect", "patch", "trace"
-    )]
+    #[values("get", "post", "put", "delete", "head", "options", "connect", "patch", "trace")]
     #[default("get")]
     method: String,
     #[description("form content, if any.")]

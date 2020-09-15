@@ -94,10 +94,6 @@ impl Row {
         Struct::from_vec(self.cells, types.to_vec())
     }
 
-    pub fn into_vec(self) -> Vec<Value> {
-        self.cells
-    }
-
     pub fn push(&mut self, value: Value) {
         self.cells.push(value);
     }
@@ -112,6 +108,13 @@ impl Row {
         })
     }
 }
+
+impl From<Row> for Vec<Value> {
+    fn from(row: Row) -> Vec<Value> {
+        row.cells
+    }
+}
+
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ColumnType {

@@ -586,7 +586,7 @@ fn expand_user_path(s: &TrackedString) -> Box<Node> {
 
 pub fn escape_without_quotes(s: &str) -> String {
     let mut res = "".to_string();
-    for c in s[1..s.len() - 1].chars() {
+    for c in s.chars() {
         match c {
             '\"' => res += "\\\"",
             '\n' => res += "\\n",

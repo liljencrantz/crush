@@ -146,7 +146,7 @@ fn find(context: CommandContext) -> CrushResult<()> {
     let config: Find = Find::parse(context.arguments, &context.printer)?;
 
     let mut dir = if config.directory.had_entries() {
-        config.directory.into_vec()
+        Vec::from(config.directory)
     } else {
         vec![PathBuf::from(".")]
     };

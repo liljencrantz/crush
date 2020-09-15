@@ -102,6 +102,42 @@ fn add_keys<T>(map: &OrderedMap<String, T>, res: &mut Vec<String>) {
     res.append(&mut map.keys().map(|k| k.to_string()).collect());
 }
 
+impl From<&str> for Value {
+    fn from(s: &str) -> Value {
+        Value::string(s)
+    }
+}
+
+impl From<char> for Value {
+    fn from(v: char) -> Value {
+        Value::String(v.to_string())
+    }
+}
+
+impl From<i128> for Value {
+    fn from(v: i128) -> Value {
+        Value::Integer(v)
+    }
+}
+
+impl From<i32> for Value {
+    fn from(v: i32) -> Value {
+        Value::Integer(v as i128)
+    }
+}
+
+impl From<f64> for Value {
+    fn from(v: f64) -> Value {
+        Value::Float(v)
+    }
+}
+
+impl From<bool> for Value {
+    fn from(v: bool) -> Value {
+        Value::Bool(v)
+    }
+}
+
 impl Value {
     pub fn bind(self, this: Value) -> Value {
         match self {
@@ -225,7 +261,7 @@ impl Value {
                     let t = s.types();
                     if t.len() == 1 && t[0].cell_type == ValueType::File {
                         while let Ok(row) = s.read() {
-                            if let Value::File(f) = row.into_vec().remove(0) {
+                            if let Value::File(f) = Vec::from(row).remove(0) {
                                 v.push(f);
                             }
                         }

@@ -18,6 +18,7 @@ struct TypeData {
     assign: TokenStream,
     crush_internal_type: TokenStream,
     signature: String,
+    allowed_values: TokenStream,
 }
 
 type SignatureResult<T> = Result<T, TokenStream>;
@@ -304,7 +305,7 @@ fn parse_type_data(
 
     let allowed_values_name = allowed_values
         .as_ref()
-        .map(|_| Ident::new(&format!("{}_allowed_values", name.to_string()), ty.span()));
+        .map(|_| Ident::new(&format!("_{}_allowed_values", name.to_string()), ty.span()));
 
     let (type_name, args) = extract_type(ty)?;
     match type_name {
@@ -335,7 +336,7 @@ fn parse_type_data(
                                 .to_lowercase()
                         )
                     },
-                    initialize: match allowed_values {
+                    initialize: match &allowed_values {
                         None => quote! { let mut #name = None; },
                         Some(literals) => {
                             let mut literal_params = proc_macro2::TokenStream::new();
@@ -345,6 +346,18 @@ fn parse_type_data(
                             quote! {
                                 let mut #name = None;
                                 let #allowed_values_name = maplit::hashset![#literal_params];
+                            }
+                        }
+                    },
+                    allowed_values: match &allowed_values {
+                        None => quote! { None },
+                        Some(literals) => {
+                            let mut literal_params = proc_macro2::TokenStream::new();
+                            for l in literals {
+                                literal_params.extend(quote! { crate::lang::value::Value::from(#l),});
+                            }
+                            quote! {
+                                Some(vec![#literal_params])
                             }
                         }
                     },
@@ -401,6 +414,7 @@ fn parse_type_data(
                 fail!(ty.span(), "This type can't be paramterizised")
             } else {
                 Ok(TypeData {
+                    allowed_values: quote! { None },
                     crush_internal_type: quote! {crate::lang::value::ValueType::either(vec![
                         crate::lang::value::ValueType::Integer,
                         crate::lang::value::ValueType::Float,
@@ -446,6 +460,7 @@ fn parse_type_data(
                 fail!(ty.span(), "This type can't be paramterizised")
             } else {
                 Ok(TypeData {
+                    allowed_values: quote! { None },
                     signature: format!(
                         "[{}=(file|glob|regex|list|table|table_stream)...]",
                         name.to_string()
@@ -472,6 +487,7 @@ fn parse_type_data(
                 fail!(ty.span(), "This type can't be paramterizised")
             } else {
                 Ok(TypeData {
+                    allowed_values: quote! { None },
                     signature: format!("[{}=(string|glob|regex)...]", name.to_string()),
                     initialize: quote! { let mut #name = crate::lang::patterns::Patterns::new(); },
                     mappings: quote! {
@@ -515,6 +531,7 @@ fn parse_type_data(
                 let sub_type = simple_type_to_value_type(args[0]);
 
                 Ok(TypeData {
+                    allowed_values: quote! { None },
                     crush_internal_type: quote! {crate::lang::value::ValueType::List(Box::from(#sub_type))},
                     signature: format!(
                         "[{}={}...]",
@@ -564,6 +581,7 @@ fn parse_type_data(
                 let sub_type = simple_type_to_value_type(args[0]);
 
                 Ok(TypeData {
+                    allowed_values: quote! { None },
                     signature: format!(
                         "[<any>={}...]",
                         simple_type_to_value_description(args[0])
@@ -588,6 +606,7 @@ fn parse_type_data(
                 let value_type = simple_type_to_value(args[0]);
 
                 Ok(TypeData {
+                    allowed_values: quote! { None },
                     signature: format!(
                         "[{}={}]",
                         name.to_string(),
@@ -873,12 +892,14 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 had_unnamed_target |= is_unnamed_target;
                 let crush_internal_type = type_data.crush_internal_type;
 
+                let allowed_values = type_data.allowed_values;
+
                 argument_desciptions = quote! {
                     #argument_desciptions
                     crate::lang::command::ArgumentDescription {
                         name: #name_string.to_string(),
                         value_type: #crush_internal_type,
-                        allowed: None,
+                        allowed: #allowed_values,
                         description: None,
                         complete: #completion_command,
                         named: false,

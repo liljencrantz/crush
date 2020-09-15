@@ -7,13 +7,15 @@ use crate::lang::{
 };
 use signature::signature;
 use std::io::{BufRead, BufReader};
+use std::convert::From;
 
 #[signature(
     from,
     can_block = true,
     short = "Read specified files (or input) as a table with one line of text per row"
 )]
-struct From {
+
+struct FromSignature {
     #[unnamed()]
     #[description("the files to read from (read from input if no file is specified).")]
     files: Files,
@@ -23,7 +25,7 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
     let output = context
         .output
         .initialize(vec![ColumnType::new("line", ValueType::String)])?;
-    let cfg: From = From::parse(context.arguments, &context.printer)?;
+    let cfg: FromSignature = FromSignature::parse(context.arguments, &context.printer)?;
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
     let mut line = String::new();
 
@@ -71,7 +73,7 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
                 );
             }
             while let Ok(row) = input.read() {
-                match row.into_vec().remove(0) {
+                match Vec::from(row).remove(0) {
                     Value::String(mut s) => {
                         s.push('\n');
                         to_crush_error(out.write(s.as_bytes()))?;
@@ -91,7 +93,7 @@ pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
     root.create_namespace(
         "lines",
         Box::new(move |env| {
-            From::declare(env)?;
+            FromSignature::declare(env)?;
             To::declare(env)?;
             Ok(())
         }),
