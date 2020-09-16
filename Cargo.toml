@@ -52,9 +52,9 @@ sys-info = "0.7.0"
 battery = "0.7.5"
 nix = "0.17.0"
 dns-lookup = "1.0.3"
+psutil = "3.1.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-psutil = "3.1.0"
 dbus = "0.8.4"
 roxmltree = "0.13.0"
 systemd = "0.4.0"

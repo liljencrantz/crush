@@ -16,7 +16,6 @@ use std::fmt::{Formatter, Display};
 use crate::lang::ast::TrackedString;
 use crate::lang::completion::Completion;
 use crate::lang::completion::parse::PartialCommandResult;
-use crate::util::directory_lister::DirectoryLister;
 
 pub type Command = Box<dyn CrushCommand + Send + Sync>;
 

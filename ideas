@@ -73,15 +73,22 @@ Threads command, shows all threads on the system
 watch command
 Either stop copying Command instances, or make them pointer to static data.
 Syntax highlighting (with more accurate parenthesis matching)
-exit command
+
+Every job should have a unique (but reusable, to keep them small) job id, e.g. 1 or 5.
+Every command should have a command id withing that job, e.g. 5:2
+Every thread should have a thread id within that command, e.g. 5:2:3
+
+crush
+  exit
+  jobs
+  commands
+  threads
 
 Tab completion missing feature list:
 
-* support command specific completion of methods
 * Support for enabling and disabling completion error printing
 * Completion using allowed values from argument data
 * Completions for wildcards
-* Completions for external commands
 * Command specific completions for arguments with a set of allowed values supported out of the box.
 * General purpose command specific completions are specified as an extra command
 * Command specific completions are specified for the individual argument, as part of the signature.
@@ -89,3 +96,5 @@ Tab completion missing feature list:
 * Add space, colon or slash at end of completions where appropriate
 * Add command specific completions for dbus
 * Add command specific completions for cd to filter only directories
+* Add previous output type of previous command in pipeline if known to parsed state
+* Add command specific completions for methods

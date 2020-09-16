@@ -56,7 +56,12 @@ pub fn close_switch(input: &str) -> String {
     }
 }
 
-
+/**
+    Takes a string and possibly appends a few characters at the end to make the string
+    into a valid command. The intent of this command is to take a partial command
+    during tab completion and generate a string that can be passed into an abstract
+    syntax tree.
+    */
 pub fn close_command(input: &str) -> CrushResult<String> {
     let input = close_switch(&close_quote(input));
     let tokens = crate::lang::parser::tokenize(&input)?;
@@ -72,9 +77,9 @@ pub fn close_command(input: &str) -> CrushResult<String> {
             TokenType::LogicalOperator | TokenType::Named | TokenType::Unnamed |
             TokenType::TermOperator | TokenType::Pipe | TokenType::Colon => { needs_trailing_arg = true }
             TokenType::SubStart => { stack.push(")"); }
-            TokenType::SubEnd => { stack.pop(); }
             TokenType::JobStart => { stack.push("}"); }
-            TokenType::JobEnd => { stack.pop(); }
+            TokenType::GetItemStart => { stack.push("]"); }
+            TokenType::SubEnd | TokenType::JobEnd | TokenType::GetItemEnd => { stack.pop(); }
             _ => {}
         }
     }
@@ -121,5 +126,4 @@ mod tests {
         assert_eq!(close_command("a +").unwrap(), "a + x");
         assert_eq!(close_command("a \"").unwrap(), "a \"\"");
     }
-
 }

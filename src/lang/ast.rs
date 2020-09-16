@@ -435,17 +435,6 @@ impl Node {
             }
 
             Node::Unary(op, r) => match op.string.as_ref() {
-                "neg" => r.method_invocation(&TrackedString::from("__neg__", op.location), vec![], env),
-                "not" => Node::function_invocation(
-                    env.global_static_cmd(vec!["global", "comp", "not"])?,
-                    op.location,
-                    vec![r.generate_argument(env)?],
-                ),
-                "typeof" => Node::function_invocation(
-                    env.global_static_cmd(vec!["global", "types", "typeof"])?,
-                    op.location,
-                    vec![r.generate_argument(env)?],
-                ),
                 "@" | "@@" => Ok(None),
                 _ => error("Unknown operator"),
             },
@@ -691,6 +680,8 @@ pub enum TokenType {
     SubEnd,
     JobStart,
     JobEnd,
+    GetItemStart,
+    GetItemEnd,
     Pipe,
     Unnamed,
     Named,

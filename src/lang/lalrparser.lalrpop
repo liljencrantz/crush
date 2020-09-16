@@ -183,6 +183,8 @@ Token: TokenNode = {
     @L "|" @R => TokenNode::new(TokenType::Pipe, <>),
     @L "@@" @R => TokenNode::new(TokenType::Named, <>),
     @L "@" @R => TokenNode::new(TokenType::Unnamed, <>),
+    @L "[" @R => TokenNode::new(TokenType::GetItemStart, <>),
+    @L "]" @R => TokenNode::new(TokenType::GetItemEnd, <>),
 }
 
 match {

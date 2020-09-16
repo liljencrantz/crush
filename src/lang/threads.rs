@@ -7,11 +7,22 @@ use crossbeam::channel::Sender;
 use crossbeam::channel::Receiver;
 use crossbeam::channel::unbounded;
 use std::time::Duration;
+use chrono::{DateTime, Local};
+
+struct ThreadData {
+    handle: JoinHandle<CrushResult<()>>,
+    creation_time: DateTime<Local>,
+}
 
 struct ThreadStoreInternal {
-    handles: Vec<JoinHandle<CrushResult<()>>>,
+    threads: Vec<ThreadData>,
     sender: Sender<ThreadId>,
     receiver: Receiver<ThreadId>,
+}
+
+pub struct ThreadDescription {
+    pub name: String,
+    pub creation_time: DateTime<Local>,
 }
 
 fn join_handle(handle: JoinHandle<CrushResult<()>>, printer: &Printer) {
@@ -32,7 +43,7 @@ impl ThreadStore {
 
         ThreadStore {
             data: Arc::from(Mutex::new(ThreadStoreInternal {
-                handles: Vec::new(),
+                threads: Vec::new(),
                 sender,
                 receiver,
             })),
@@ -62,7 +73,10 @@ impl ThreadStore {
             }))?;
         let id = handle.thread().id();
         let mut data = self.data.lock().unwrap();
-        data.handles.push(handle);
+        data.threads.push(ThreadData {
+            handle,
+            creation_time: Local::now(),
+        });
         Ok(id)
     }
 
@@ -72,11 +86,11 @@ impl ThreadStore {
     pub fn join(&self, printer: &Printer) {
         loop {
             let mut data = self.data.lock().unwrap();
-            match data.handles.pop() {
+            match data.threads.pop() {
                 None => break,
                 Some(h) => {
                     drop(data);
-                    join_handle(h, printer);
+                    join_handle(h.handle, printer);
                 }
             }
         }
@@ -103,16 +117,26 @@ impl ThreadStore {
     pub fn join_one(&self, id: ThreadId, printer: &Printer) {
         let mut data = self.data.lock().unwrap();
         let mut kill_idx = None;
-        for idx in 0..data.handles.len() {
-            if data.handles[idx].thread().id() == id {
+        for idx in 0..data.threads.len() {
+            if data.threads[idx].handle.thread().id() == id {
                 kill_idx = Some(idx);
                 break;
             }
         }
         if let Some(idx) = kill_idx {
-            let h = data.handles.remove(idx);
+            let h = data.threads.remove(idx);
             drop(data);
-            join_handle(h, printer);
+            join_handle(h.handle, printer);
         }
+    }
+
+    pub fn current(&self) -> CrushResult<Vec<ThreadDescription>> {
+        let mut data = self.data.lock().unwrap();
+        Ok(data.threads.iter()
+            .map(|t| ThreadDescription {
+                name: t.handle.thread().name().unwrap_or("<unnamed>").to_string(),
+                creation_time: t.creation_time.clone(),
+            })
+            .collect())
     }
 }

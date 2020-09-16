@@ -1,4 +1,4 @@
-use crate::lang::errors::{error, CrushError, CrushResult, CrushErrorType};
+use crate::lang::errors::{error, CrushResult, CrushErrorType};
 use crate::lang::execution_context::{CompileContext, JobContext};
 use crate::lang::data::scope::Scope;
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, value::Value};

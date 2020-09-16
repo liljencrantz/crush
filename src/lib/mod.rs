@@ -14,9 +14,11 @@ mod comp;
 mod cond;
 mod constants;
 mod control;
+mod crush;
 #[cfg(target_os = "linux")]
 mod dbus;
 mod fd;
+mod fs;
 mod host;
 mod io;
 mod math;
@@ -27,7 +29,6 @@ mod remote;
 mod stream;
 #[cfg(target_os = "linux")]
 mod systemd;
-mod fs;
 pub mod types;
 mod user;
 mod var;
@@ -94,26 +95,29 @@ fn load_external_namespace(
 pub fn declare(root: &Scope, printer: &Printer, threads: &ThreadStore, output: &ValueSender) -> CrushResult<()> {
     comp::declare(root)?;
     cond::declare(root)?;
-    fs::declare(root)?;
-    var::declare(root)?;
-    stream::declare(root)?;
-    types::declare(root)?;
-    #[cfg(target_os = "linux")]
-    proc::declare(root)?;
-    io::declare(root)?;
-    control::declare(root)?;
     constants::declare(root)?;
+    control::declare(root)?;
+    crush::declare(root)?;
+    #[cfg(target_os = "linux")]
+        dbus::declare(root)?;
     fd::declare(root)?;
-    math::declare(root)?;
-    user::declare(root)?;
-    remote::declare(root)?;
-    random::declare(root)?;
+    fs::declare(root)?;
     host::declare(root)?;
+    io::declare(root)?;
+    math::declare(root)?;
     #[cfg(target_os = "linux")]
-    dbus::declare(root)?;
+        proc::declare(root)?;
+    random::declare(root)?;
+    remote::declare(root)?;
+    stream::declare(root)?;
     #[cfg(target_os = "linux")]
-    systemd::declare(root)?;
+        systemd::declare(root)?;
+    types::declare(root)?;
+    user::declare(root)?;
+    var::declare(root)?;
+
     declare_external(root, printer, threads, output)?;
+
     root.readonly();
     Ok(())
 }

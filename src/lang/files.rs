@@ -1,5 +1,5 @@
 use crate::lang::data::binary::{binary_channel, BinaryReader};
-use crate::lang::errors::{argument_error_legacy, error, to_crush_error, CrushResult, CrushError, data_error};
+use crate::lang::errors::{argument_error_legacy, to_crush_error, CrushResult, CrushError, data_error};
 use crate::lang::printer::Printer;
 use crate::lang::stream::{ValueReceiver, ValueSender};
 use crate::lang::value::{Value, ValueType};
@@ -8,7 +8,7 @@ use crate::util::regex::RegexFileMatcher;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
-use std::convert::{Into, TryFrom};
+use std::convert::{TryFrom};
 
 #[derive(Debug, Clone)]
 pub struct Files {
