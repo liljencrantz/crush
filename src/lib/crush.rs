@@ -13,7 +13,7 @@ use lazy_static::lazy_static;
 fn make_env() -> Value {
     let e = Dict::new(ValueType::String, ValueType::String);
     for (key, value) in env::vars() {
-        e.insert(Value::String(key), Value::String(value));
+        let _ = e.insert(Value::String(key), Value::String(value));
     }
     Value::Dict(e)
 }

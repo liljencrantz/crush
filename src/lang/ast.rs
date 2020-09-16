@@ -434,7 +434,7 @@ impl Node {
                 val.method_invocation(&TrackedString::from("__getitem__", key.location()), vec![key.generate_argument(env)?], env)
             }
 
-            Node::Unary(op, r) => match op.string.as_ref() {
+            Node::Unary(op, _) => match op.string.as_ref() {
                 "@" | "@@" => Ok(None),
                 _ => error("Unknown operator"),
             },

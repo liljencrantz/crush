@@ -15,14 +15,13 @@ use lazy_static::lazy_static;
 use signature::signature;
 use ssh2::KnownHostFileKind;
 use ssh2::{CheckResult, HostKeyType, KnownHostKeyFormat, Session};
-use std::cmp::{min, max};
+use std::cmp::min;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::PathBuf;
 use crate::util::user_map::get_current_username;
 use crate::lang::completion::Completion;
 use crate::lang::completion::parse::{PartialCommandResult, LastArgument};
-use crate::util::directory_lister::DirectoryLister;
 use crate::lang::ast::{unescape, escape, escape_without_quotes};
 use std::convert::TryFrom;
 

@@ -1,8 +1,5 @@
 use crate::lang::execution_context::CommandContext;
-use crate::{
-    lang::errors::CrushError,
-    lang::{data::table::Row, value::Value, value::ValueType},
-};
+use crate::lang::{data::table::Row, value::Value, value::ValueType};
 use std::io::{BufReader, Write};
 
 use crate::lang::command::OutputType::Unknown;

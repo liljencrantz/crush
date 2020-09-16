@@ -6,7 +6,7 @@ use crate::{
 use std::io::{BufReader, Write};
 
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{error, mandate, to_crush_error, CrushResult, data_error};
+use crate::lang::errors::{error, mandate, to_crush_error, CrushResult};
 use crate::lang::files::Files;
 use crate::lang::data::scope::ScopeLoader;
 use crate::lang::data::table::ColumnType;

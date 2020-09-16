@@ -131,7 +131,7 @@ impl ThreadStore {
     }
 
     pub fn current(&self) -> CrushResult<Vec<ThreadDescription>> {
-        let mut data = self.data.lock().unwrap();
+        let data = self.data.lock().unwrap();
         Ok(data.threads.iter()
             .map(|t| ThreadDescription {
                 name: t.handle.thread().name().unwrap_or("<unnamed>").to_string(),
