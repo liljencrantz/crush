@@ -15,6 +15,7 @@ use std::path::PathBuf;
 use crate::lang::threads::ThreadStore;
 use lang::data;
 use crate::lang::interactive::run_interactive;
+use crate::lang::global_state::GlobalState;
 
 #[derive(PartialEq, Eq)]
 enum Mode {
@@ -48,20 +49,31 @@ fn run() -> CrushResult<()> {
     let global_env = data::scope::Scope::create_root();
     let threads = ThreadStore::new();
     let my_scope = global_env.create_child(&global_env, false);
-
+    let global_state = GlobalState::new()?;
     let config = parse_args()?;
 
     let (printer, print_handle) = if config.mode == Mode::Pup { printer::noop() } else { printer::init() };
-    let pretty_printer = create_pretty_printer(printer.clone());
+    let pretty_printer = create_pretty_printer(printer.clone(), &global_state);
 
-    declare(&global_env, &printer, &threads, &pretty_printer)?;
+    declare(&global_env, &printer, &threads, &global_state, &pretty_printer)?;
 
     match config.mode {
-        Mode::Interactive => run_interactive(my_scope, &printer, &pretty_printer, &threads)?,
+        Mode::Interactive => run_interactive(
+            my_scope,
+            &printer,
+            &pretty_printer,
+            &threads,
+            &global_state, )?,
         Mode::Pup => {
             let mut buff = Vec::new();
             to_crush_error(std::io::stdin().read_to_end(&mut buff))?;
-            execute::pup(my_scope, &buff, &printer, &threads)?;
+            execute::pup(
+                my_scope,
+                &buff,
+                &printer,
+                &threads,
+                &global_state,
+            )?;
         }
         Mode::File(f) => {
             execute::file(
@@ -70,6 +82,7 @@ fn run() -> CrushResult<()> {
                 &printer,
                 &pretty_printer,
                 &threads,
+                &global_state,
             )?
         }
     }

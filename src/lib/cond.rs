@@ -24,6 +24,7 @@ pub fn and(mut context: CommandContext) -> CrushResult<()> {
                     this: None,
                     printer: context.printer.clone(),
                     threads: context.threads.clone(),
+                    global_state: context.global_state.clone(),
                 };
                 c.invoke(cc)?;
                 match receiver.recv()? {
@@ -63,6 +64,7 @@ pub fn or(mut context: CommandContext) -> CrushResult<()> {
                     this: None,
                     printer: context.printer.clone(),
                     threads: context.threads.clone(),
+                    global_state: context.global_state.clone(),
                 };
                 c.invoke(cc)?;
                 match receiver.recv()? {

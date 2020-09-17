@@ -56,6 +56,7 @@ pub fn each(context: CommandContext) -> CrushResult<()> {
                 this: None,
                 printer: context.printer.clone(),
                 threads: context.threads.clone(),
+                global_state: context.global_state.clone(),
             };
 
             while let Ok(row) = input.read() {

@@ -10,6 +10,7 @@ use std::io::Write;
 use std::path::Path;
 use std::{fs};
 use crate::lang::threads::ThreadStore;
+use crate::lang::global_state::GlobalState;
 
 pub fn file(
     global_env: Scope,
@@ -17,13 +18,20 @@ pub fn file(
     printer: &Printer,
     output: &ValueSender,
     threads: &ThreadStore,
+    global_state: &GlobalState,
 ) -> CrushResult<()> {
     let cmd = to_crush_error(fs::read_to_string(filename))?;
-    string(global_env, &cmd.as_str(), printer, output, threads);
+    string(global_env, &cmd.as_str(), printer, output, threads, global_state);
     Ok(())
 }
 
-pub fn pup(env: Scope, buf: &Vec<u8>, printer: &Printer, threads: &ThreadStore) -> CrushResult<()> {
+pub fn pup(
+    env: Scope,
+    buf: &Vec<u8>,
+    printer: &Printer,
+    threads: &ThreadStore,
+    global_state: &GlobalState,
+) -> CrushResult<()> {
     let cmd = deserialize(buf, &env)?;
     match cmd {
         Value::Command(cmd) => {
@@ -48,6 +56,7 @@ pub fn pup(env: Scope, buf: &Vec<u8>, printer: &Printer, threads: &ThreadStore) 
                 this: None,
                 printer: printer.clone(),
                 threads: threads.clone(),
+                global_state: global_state.clone(),
             })?;
             threads.join(printer);
             Ok(())
@@ -56,7 +65,14 @@ pub fn pup(env: Scope, buf: &Vec<u8>, printer: &Printer, threads: &ThreadStore) 
     }
 }
 
-pub fn string(global_env: Scope, s: &str, printer: &Printer, output: &ValueSender, threads: &ThreadStore) {
+pub fn string(
+    global_env: Scope,
+    s: &str,
+    printer: &Printer,
+    output: &ValueSender,
+    threads: &ThreadStore,
+    global_state: &GlobalState,
+) {
     match parse(s, &global_env) {
         Ok(jobs) => {
             for job_definition in jobs {
@@ -66,6 +82,7 @@ pub fn string(global_env: Scope, s: &str, printer: &Printer, output: &ValueSende
                     global_env.clone(),
                     printer.clone(),
                     threads.clone(),
+                    global_state.clone(),
                 )) {
                     Ok(handle) => {
                         handle.map(|id| threads.join_one(id, &printer.with_source(s, job_definition.location())));

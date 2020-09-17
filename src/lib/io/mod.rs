@@ -6,6 +6,7 @@ use crate::lang::data::scope::Scope;
 use crate::lang::value::{Field, ValueType};
 use crate::lang::{execution_context::CommandContext, value::Value};
 use signature::signature;
+use num_format::SystemLocale;
 
 mod bin;
 mod csv;
@@ -65,7 +66,7 @@ struct Echo {
 
 fn echo(context: CommandContext) -> CrushResult<()> {
     let cfg: Echo = Echo::parse(context.arguments, &context.printer)?;
-    let pretty = PrettyPrinter::new(context.printer.clone());
+    let pretty = PrettyPrinter::new(context.printer.clone(), context.global_state.grouping());
     for value in cfg.values {
         pretty.print_value(value);
     }

@@ -15,6 +15,7 @@ use chrono::{DateTime, Duration, Local};
 use regex::Regex;
 use std::path::PathBuf;
 use crate::lang::threads::ThreadStore;
+use crate::lang::global_state::GlobalState;
 
 pub trait ArgumentVector {
     fn check_len(&self, len: usize) -> CrushResult<()>;
@@ -169,19 +170,30 @@ pub struct CompileContext {
     pub env: Scope,
     pub printer: Printer,
     pub threads: ThreadStore,
+    pub global_state: GlobalState,
 }
 
 impl CompileContext {
-    pub fn new(env: Scope, printer: Printer, threads: ThreadStore) -> CompileContext {
+    pub fn new(
+        env: Scope,
+        printer: Printer,
+        threads: ThreadStore,
+        global_state: GlobalState,
+    ) -> CompileContext {
         CompileContext {
             env,
             printer,
             threads,
+            global_state,
         }
     }
 
     pub fn job_context(&self, input: ValueReceiver, output: ValueSender) -> JobContext {
-        JobContext::new(input, output, self.env.clone(), self.printer.clone(), self.threads.clone())
+        JobContext::new(
+            input, output, self.env.clone(),
+            self.printer.clone(), self.threads.clone(),
+            self.global_state.clone(),
+        )
     }
 
     pub fn with_scope(&self, env: &Scope) -> CompileContext {
@@ -189,6 +201,7 @@ impl CompileContext {
             env: env.clone(),
             printer: self.printer.clone(),
             threads: self.threads.clone(),
+            global_state: self.global_state.clone(),
         }
     }
 }
@@ -200,6 +213,7 @@ pub struct JobContext {
     pub env: Scope,
     pub printer: Printer,
     pub threads: ThreadStore,
+    pub global_state: GlobalState,
 }
 
 impl JobContext {
@@ -209,6 +223,7 @@ impl JobContext {
         env: Scope,
         printer: Printer,
         threads: ThreadStore,
+        global_state: GlobalState,
     ) -> JobContext {
         JobContext {
             input,
@@ -216,6 +231,7 @@ impl JobContext {
             env,
             printer,
             threads,
+            global_state,
         }
     }
 
@@ -226,11 +242,17 @@ impl JobContext {
             env: self.env.clone(),
             printer: self.printer.clone(),
             threads: self.threads.clone(),
+            global_state: self.global_state.clone(),
         }
     }
 
     pub fn compile_context(&self) -> CompileContext {
-        CompileContext::new(self.env.clone(), self.printer.clone(), self.threads.clone())
+        CompileContext::new(
+            self.env.clone(),
+            self.printer.clone(),
+            self.threads.clone(),
+            self.global_state.clone(),
+        )
     }
 
     pub fn command_context(
@@ -246,6 +268,7 @@ impl JobContext {
             printer: self.printer.clone(),
             scope: self.env.clone(),
             threads: self.threads.clone(),
+            global_state: self.global_state.clone(),
         }
     }
 }
@@ -259,6 +282,7 @@ pub struct CommandContext {
     pub this: Option<Value>,
     pub printer: Printer,
     pub threads: ThreadStore,
+    pub global_state: GlobalState,
 }
 
 impl CommandContext {
@@ -266,7 +290,12 @@ impl CommandContext {
     Return a compile context with the environemnt from this execution context..
     */
     pub fn compile_context(&self) -> CompileContext {
-        CompileContext::new(self.scope.clone(), self.printer.clone(), self.threads.clone())
+        CompileContext::new(
+            self.scope.clone(),
+            self.printer.clone(),
+            self.threads.clone(),
+            self.global_state.clone(),
+        )
     }
 
     /**
@@ -281,6 +310,7 @@ impl CommandContext {
             arguments,
             this,
             threads: self.threads,
+            global_state: self.global_state,
         }
     }
 
@@ -293,6 +323,7 @@ impl CommandContext {
             arguments: self.arguments,
             this: self.this,
             threads: self.threads,
+            global_state: self.global_state,
         }
     }
 }

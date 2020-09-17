@@ -6,6 +6,7 @@ use crate::lang::{errors::CrushResult, data::scope::Scope};
 use std::fs::read_dir;
 use std::path::Path;
 use crate::lang::threads::ThreadStore;
+use crate::lang::global_state::GlobalState;
 
 #[macro_use]
 pub mod binary_op;
@@ -33,7 +34,13 @@ pub mod types;
 mod user;
 mod var;
 
-fn declare_external(root: &Scope, printer: &Printer, threads: &ThreadStore, output: &ValueSender) -> CrushResult<()> {
+fn declare_external(
+    root: &Scope,
+    printer: &Printer,
+    threads: &ThreadStore,
+    global_state: &GlobalState,
+    output: &ValueSender,
+) -> CrushResult<()> {
     match read_dir("src/crushlib/") {
         Err(_) => Ok(()),
         Ok(dirs) => {
@@ -51,6 +58,7 @@ fn declare_external(root: &Scope, printer: &Printer, threads: &ThreadStore, outp
                                 root,
                                 printer,
                                 threads,
+                                global_state,
                                 output,
                             )?;
                             if name == "lls" {
@@ -72,17 +80,25 @@ fn load_external_namespace(
     root: &Scope,
     printer: &Printer,
     threads: &ThreadStore,
+    global_state: &GlobalState,
     output: &ValueSender,
 ) -> CrushResult<Scope> {
     let local_printer = printer.clone();
     let local_threads = threads.clone();
     let local_output = output.clone();
     let local_file = file.to_path_buf();
+    let local_state = global_state.clone();
     root.create_namespace(
         name,
         Box::new(move |env| {
             let tmp_env: Scope = env.create_temporary_namespace();
-            execute::file(tmp_env.clone(), &local_file, &local_printer, &local_output, &local_threads)?;
+            execute::file(
+                tmp_env.clone(),
+                &local_file,
+                &local_printer,
+                &local_output,
+                &local_threads,
+                &local_state)?;
             let data = tmp_env.export()?;
             for (k, v) in data.mapping {
                 env.declare(&k, v)?;
@@ -92,7 +108,13 @@ fn load_external_namespace(
     )
 }
 
-pub fn declare(root: &Scope, printer: &Printer, threads: &ThreadStore, output: &ValueSender) -> CrushResult<()> {
+pub fn declare(
+    root: &Scope,
+    printer: &Printer,
+    threads: &ThreadStore,
+    global_state: &GlobalState,
+    output: &ValueSender,
+) -> CrushResult<()> {
     comp::declare(root)?;
     cond::declare(root)?;
     constants::declare(root)?;
@@ -116,7 +138,7 @@ pub fn declare(root: &Scope, printer: &Printer, threads: &ThreadStore, output: &
     user::declare(root)?;
     var::declare(root)?;
 
-    declare_external(root, printer, threads, output)?;
+    declare_external(root, printer, threads, global_state, output)?;
 
     root.readonly();
     Ok(())

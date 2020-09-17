@@ -75,7 +75,7 @@ fn battery(context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
-#[signature(mem, can_block = false, short = "name of this host")]
+#[signature(mem, can_block = false, short = "memory usage of this host.")]
 struct Mem {}
 
 fn mem(context: CommandContext) -> CrushResult<()> {

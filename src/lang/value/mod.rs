@@ -36,6 +36,7 @@ use ordered_map::OrderedMap;
 pub use value_definition::ValueDefinition;
 pub use value_type::ValueType;
 use std::fmt::{Display, Formatter};
+use num_format::Grouping;
 
 pub type Field = Vec<String>;
 
@@ -353,6 +354,56 @@ impl Value {
             ValueType::Type => error("invalid convert"),
         }
     }
+
+    pub fn to_formated_string(&self, grouping: Grouping) -> String {
+        match self {
+
+            Value::Integer(i) => match grouping {
+                Grouping::Standard => {
+                    let whole = i.to_string();
+                    let mut rest = whole.as_str();
+                    let mut res = String::new();
+                    if *i < 0 {
+                        res.push('-');
+                        rest = &rest[1..];
+                    }
+                    loop {
+                        if rest.len() <= 3 {
+                            break;
+                        }
+                        let split = ((rest.len()-1)%3)+1;
+                        res.push_str(&rest[0..split]);
+                        res.push('_');
+                        rest = &rest[split..];
+                    }
+                    res.push_str(rest);
+                    res
+                },
+                Grouping::Indian => {
+                    let whole = i.to_string();
+                    let mut rest = whole.as_str();
+                    let mut res = String::new();
+                    if *i < 0 {
+                        res.push('-');
+                        rest = &rest[1..];
+                    }
+                    loop {
+                        if rest.len() <= 3 {
+                            break;
+                        }
+                        let split = 1+rest.len()%2;
+                        res.push_str(&rest[0..split]);
+                        res.push('_');
+                        rest = &rest[split..];
+                    }
+                    res.push_str(rest);
+                    res
+                },
+                Grouping::Posix => i.to_string(),
+            }
+            _ => self.to_string(),
+        }
+    }
 }
 
 impl Clone for Value {
@@ -594,5 +645,32 @@ mod tests {
             )),
             "10y0d0:00:01".to_string()
         );
+    }
+
+    #[test]
+    fn test_number_format() {
+        assert_eq!(Value::Integer(0).to_formated_string(Grouping::Standard), "0");
+        assert_eq!(Value::Integer(123).to_formated_string(Grouping::Standard), "123");
+        assert_eq!(Value::Integer(-123).to_formated_string(Grouping::Standard), "-123");
+        assert_eq!(Value::Integer(1234).to_formated_string(Grouping::Standard), "1_234");
+        assert_eq!(Value::Integer(-1234).to_formated_string(Grouping::Standard), "-1_234");
+        assert_eq!(Value::Integer(123_456_789).to_formated_string(Grouping::Standard), "123_456_789");
+        assert_eq!(Value::Integer(-123_456_789).to_formated_string(Grouping::Standard), "-123_456_789");
+
+        assert_eq!(Value::Integer(0).to_formated_string(Grouping::Indian), "0");
+        assert_eq!(Value::Integer(123).to_formated_string(Grouping::Indian), "123");
+        assert_eq!(Value::Integer(-123).to_formated_string(Grouping::Indian), "-123");
+        assert_eq!(Value::Integer(1234).to_formated_string(Grouping::Indian), "1_234");
+        assert_eq!(Value::Integer(-1234).to_formated_string(Grouping::Indian), "-1_234");
+        assert_eq!(Value::Integer(123_456_789).to_formated_string(Grouping::Indian), "12_34_56_789");
+        assert_eq!(Value::Integer(-123_456_789).to_formated_string(Grouping::Indian), "-12_34_56_789");
+
+        assert_eq!(Value::Integer(0).to_formated_string(Grouping::Posix), "0");
+        assert_eq!(Value::Integer(123).to_formated_string(Grouping::Posix), "123");
+        assert_eq!(Value::Integer(1234).to_formated_string(Grouping::Posix), "1234");
+        assert_eq!(Value::Integer(123_456_789).to_formated_string(Grouping::Posix), "123456789");
+        assert_eq!(Value::Integer(-123).to_formated_string(Grouping::Posix), "-123");
+        assert_eq!(Value::Integer(-1234).to_formated_string(Grouping::Posix), "-1234");
+        assert_eq!(Value::Integer(-123_456_789).to_formated_string(Grouping::Posix), "-123456789");
     }
 }

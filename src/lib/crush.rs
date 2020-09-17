@@ -40,6 +40,51 @@ fn threads(context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
+mod locale {
+    use super::*;
+    use num_format::SystemLocale;
+    use crate::lang::errors::to_crush_error;
+
+    lazy_static! {
+    static ref LIST_OUTPUT_TYPE: Vec<ColumnType> = vec![
+        ColumnType::new("name", ValueType::String),
+    ];
+}
+
+    #[signature(list, output = Known(ValueType::TableStream(LIST_OUTPUT_TYPE.clone())), short = "List all available locales.")]
+    pub struct List {}
+
+    fn list(context: CommandContext) -> CrushResult<()> {
+        let output = context.output.initialize(LIST_OUTPUT_TYPE.clone())?;
+        let mut available = to_crush_error(SystemLocale::available_names())?;
+
+        for name in available {
+            output.send(Row::new(vec![Value::String(name)]))?;
+        }
+        Ok(())
+    }
+
+    #[signature(set, output = Known(ValueType::Empty), short = "Set the current locale.")]
+    pub struct Set {
+        #[description("the new locale.")]
+        locale: String,
+    }
+
+    fn set(context: CommandContext) -> CrushResult<()> {
+        let config: Set = Set::parse(context.arguments, &context.printer)?;
+        let new_locale = to_crush_error(SystemLocale::from_name(config.locale))?;
+        context.global_state.set_locale(new_locale);
+        context.output.send(Value::Empty())
+    }
+
+    #[signature(get, output = Known(ValueType::String), short = "Get the current locale.")]
+    pub struct Get {}
+
+    fn get(context: CommandContext) -> CrushResult<()> {
+        context.output.send(Value::string(context.global_state.locale().name()))
+    }
+}
+
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "crush",
@@ -49,6 +94,15 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             crush.declare("env", make_env())?;
             Threads::declare(crush)?;
 
+            crush.create_namespace(
+                "locale",
+                Box::new(move |env| {
+                    locale::List::declare(env)?;
+                    locale::Get::declare(env)?;
+                    locale::Set::declare(env)?;
+                    Ok(())
+                }),
+            )?;
             Ok(())
         }),
     )?;

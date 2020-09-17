@@ -7,6 +7,7 @@ pub mod errors;
 pub mod execute;
 pub mod execution_context;
 pub mod files;
+pub mod global_state;
 pub mod help;
 pub mod job;
 pub mod number;

@@ -20,6 +20,7 @@ use std::borrow::Cow::{Borrowed, Owned};
 use std::borrow::Cow;
 use crate::util::directory_lister::directory_lister;
 use crate::lang::parser::{ast, close_command};
+use crate::lang::global_state::GlobalState;
 
 #[derive(Helper)]
 struct MyHelper {
@@ -136,6 +137,7 @@ pub fn run_interactive(
     printer: &Printer,
     pretty_printer: &ValueSender,
     threads: &ThreadStore,
+    global_state: &GlobalState,
 ) -> CrushResult<()> {
     printer.line("Welcome to Crush");
     printer.line(r#"Type "help" for... help."#);
@@ -165,7 +167,14 @@ pub fn run_interactive(
             Ok(cmd) => {
                 rl.add_history_entry(&cmd);
                 threads.reap(&printer);
-                execute::string(global_env.clone(), &cmd, &printer, pretty_printer, threads);
+                execute::string(
+                    global_env.clone(),
+                    &cmd,
+                    &printer,
+                    pretty_printer,
+                    threads,
+                    global_state,
+                );
                 threads.reap(&printer);
             }
             Err(ReadlineError::Interrupted) => {

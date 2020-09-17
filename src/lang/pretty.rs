@@ -16,16 +16,39 @@ use std::io::{BufReader, Read};
 use std::thread;
 use chrono::Duration;
 use crate::util::hex::to_hex;
+use crate::lang::global_state::GlobalState;
+use num_format::{SystemLocale, Grouping};
 
-pub fn create_pretty_printer(printer: Printer) -> ValueSender {
+trait Width {
+    fn width(&self) -> usize;
+}
+
+impl Width for String {
+    fn width(&self) -> usize {
+        unicode_width::UnicodeWidthStr::width(self.as_str())
+    }
+}
+
+impl Width for &str {
+    fn width(&self) -> usize {
+        unicode_width::UnicodeWidthStr::width(*self)
+    }
+}
+
+pub fn create_pretty_printer(
+    printer: Printer,
+    global_state: &GlobalState,
+) -> ValueSender {
+    let global_state = global_state.clone();
     let (o, i) = unbounded_channels();
     let printer_clone = printer.clone();
     printer_clone.handle_error(to_crush_error(
         thread::Builder::new()
             .name("output-formater".to_string())
             .spawn(move || {
-                let pp = PrettyPrinter { printer };
+                let mut pp = PrettyPrinter { printer, grouping: global_state.grouping() };
                 while let Ok(val) = i.recv() {
+                    pp.grouping = global_state.grouping();
                     pp.print_value(val);
                 }
             }),
@@ -35,6 +58,7 @@ pub fn create_pretty_printer(printer: Printer) -> ValueSender {
 
 pub struct PrettyPrinter {
     printer: Printer,
+    grouping: Grouping,
 }
 
 fn is_printable(v: u8) -> bool {
@@ -91,8 +115,8 @@ fn is_text(buff: &[u8]) -> bool {
 }
 
 impl PrettyPrinter {
-    pub fn new(printer: Printer) -> PrettyPrinter {
-        PrettyPrinter { printer }
+    pub fn new(printer: Printer, grouping: Grouping) -> PrettyPrinter {
+        PrettyPrinter { printer, grouping }
     }
 
     pub fn print_value(&self, cell: Value) {
@@ -111,7 +135,7 @@ impl PrettyPrinter {
                     self.print_stream(&mut ListReader::new(list, "value"), 0)
                 }
             }
-            _ => self.printer.line(cell.to_string().as_str()),
+            _ => self.printer.line(cell.to_formated_string(self.grouping).as_str()),
         };
     }
 
@@ -155,7 +179,7 @@ impl PrettyPrinter {
 
     fn calculate_header_width(&self, w: &mut [usize], types: &[ColumnType]) {
         for (idx, val) in types.iter().enumerate() {
-            w[idx] = max(w[idx], val.name.len());
+            w[idx] = max(w[idx], val.name.width());
         }
     }
 
@@ -165,7 +189,7 @@ impl PrettyPrinter {
                 if idx == col_count {
                     break;
                 }
-                let l = c.to_string().len();
+                let l = c.to_formated_string(self.grouping).width();
                 w[idx] = max(w[idx], l);
             }
         }
@@ -178,7 +202,7 @@ impl PrettyPrinter {
             let is_last = idx == last_idx;
             header += val.name.as_ref();
             if !is_last {
-                header += &" ".repeat(w[idx] - val.name.len() + 1);
+                header += &" ".repeat(w[idx] - val.name.width() + 1);
             }
         }
         self.printer.line(header.as_str())
@@ -201,25 +225,25 @@ impl PrettyPrinter {
             if idx == col_count {
                 break;
             }
-            let cell = c.to_string();
+            let formated_cell = c.to_formated_string(self.grouping);
             let spaces = if idx == cell_len - 1 {
                 "".to_string()
             } else {
-                " ".repeat(w[idx] - cell.len())
+                " ".repeat(w[idx] - formated_cell.width())
             };
             let is_last = idx == last_idx;
             match c.alignment() {
                 Alignment::Right => {
-                    row += spaces.as_str();
-                    row += cell.as_str();
+                    row += &spaces;
+                    row += &formated_cell;
                     if !is_last {
                         row += " ";
                     }
                 }
                 _ => {
-                    row += cell.as_str();
+                    row += &formated_cell;
                     if !is_last {
-                        row += spaces.as_str();
+                        row += &spaces;
                         row += " ";
                     }
                 }
@@ -232,7 +256,7 @@ impl PrettyPrinter {
                 _ => {}
             }
         }
-        self.printer.line(row.as_str());
+        self.printer.line(&row);
     }
 
     fn print_body(&self, w: &[usize], data: Vec<Row>, indent: usize, last_separate: bool) {
@@ -329,12 +353,13 @@ impl PrettyPrinter {
         if data.len() > 0 {
             let max_name_width = data.keys().map(|n| n.len()).max().unwrap();
             for (name, value) in data.drain() {
-                if indent * 4 + max_name_width + value.to_string().len() + 2 < self.printer.width() {
+                let ss = value.to_formated_string(self.grouping);
+                if indent * 4 + max_name_width + ss.width() + 2 < self.printer.width() {
                     let mut line = " ".repeat(4 * indent);
                     line.push_str(&name);
                     line.push(':');
-                    line.push_str(&" ".repeat(max_name_width - name.len() + 1));
-                    line.push_str(&value.to_string());
+                    line.push_str(&" ".repeat(max_name_width - name.width() + 1));
+                    line.push_str(&ss);
                     self.printer.line(&line);
                 } else {
                     let mut line = " ".repeat(4 * indent);
@@ -348,9 +373,10 @@ impl PrettyPrinter {
     }
 
     fn print_struct_value(&self, value: Value, indent: usize) {
-        if value.to_string().len() + 4 * indent < self.printer.width() {
+        let ss = value.to_formated_string(self.grouping);
+        if ss.width() + 4 * indent < self.printer.width() {
             let mut line = " ".repeat(4 * indent);
-            line.push_str(&value.to_string());
+            line.push_str(&ss);
             self.printer.line(&line);
         } else {
             match value {
@@ -361,7 +387,7 @@ impl PrettyPrinter {
                 Value::List(list) => self.print_stream(&mut ListReader::new(list, "value"), indent),
                 _ => {
                     let mut line = " ".repeat(4 * indent);
-                    line.push_str(&value.to_string());
+                    line.push_str(&ss);
                     self.printer.line(&line);
                 }
             }
@@ -376,7 +402,7 @@ impl PrettyPrinter {
         let mut items_per_column;
         let data = data
             .iter()
-            .map(|s| s.cells()[0].to_string())
+            .map(|s| s.cells()[0].to_formated_string(self.grouping))
             .collect::<Vec<_>>();
 
         for cols in (2..50).rev() {
@@ -399,7 +425,7 @@ impl PrettyPrinter {
             for (off, idx) in (start_idx..data.len()).step_by(lines).enumerate() {
                 line += &data[idx];
                 if off + 1 < widths.len() {
-                    line += &" ".repeat(widths[off] - data[idx].len() + 1);
+                    line += &" ".repeat(widths[off] - data[idx].width() + 1);
                 }
             }
             self.printer.line(&line);

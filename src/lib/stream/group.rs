@@ -17,6 +17,7 @@ use crossbeam::{unbounded, Receiver};
 use signature::signature;
 use std::collections::HashMap;
 use crate::lang::threads::ThreadStore;
+use crate::lang::global_state::GlobalState;
 
 #[signature(
 group,
@@ -37,6 +38,7 @@ fn aggregate(
     commands: Vec<Command>,
     printer: Printer,
     threads: ThreadStore,
+    global_state: GlobalState,
     scope: Scope,
     destination: OutputStream,
     task_input: Receiver<(Vec<Value>, InputStream)>,
@@ -59,6 +61,7 @@ fn aggregate(
                     this: None,
                     printer: printer.clone(),
                     threads: threads.clone(),
+                    global_state: global_state.clone(),
                 })?;
                 let mut result = key;
                 result.push(output_receiver.recv()?);
@@ -76,6 +79,7 @@ fn aggregate(
                     let local_printer = printer.clone();
                     let local_threads = threads.clone();
                     let local_scope = scope.clone();
+                    let local_state = global_state.clone();
                     threads.spawn("group:aggr", move ||
                         local_command.invoke(CommandContext {
                             input: input_receiver,
@@ -85,6 +89,7 @@ fn aggregate(
                             this: None,
                             printer: local_printer,
                             threads: local_threads,
+                            global_state: local_state,
                         }))?;
                     receivers.push(output_receiver);
                 }
@@ -114,6 +119,7 @@ fn create_worker_thread(
     destination: &OutputStream,
     task_input: &Receiver<(Vec<Value>, InputStream)>,
     threads: &ThreadStore,
+    global_state: &GlobalState,
 ) -> CrushResult<()> {
     let my_commands: Vec<Command> = cfg
         .command
@@ -125,6 +131,7 @@ fn create_worker_thread(
     let my_input = task_input.clone();
     let my_destination = destination.clone();
     let my_threads = threads.clone();
+    let my_state = global_state.clone();
     threads.spawn(
         "group:collect",
         move || {
@@ -133,6 +140,7 @@ fn create_worker_thread(
                 my_commands,
                 my_printer,
                 my_threads,
+                my_state,
                 my_scope,
                 my_destination,
                 my_input,
@@ -178,7 +186,8 @@ pub fn group(context: CommandContext) -> CrushResult<()> {
         create_worker_thread(
             &cfg,
             &context.printer, &context.scope, &output,
-            &task_input, &context.threads)?;
+            &task_input, &context.threads,
+            &context.global_state)?;
     }
 
     drop(task_input);
