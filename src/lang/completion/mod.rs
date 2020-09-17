@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use crate::lang::completion::parse::{ParseResult, CompletionCommand, LastArgument, parse, PartialCommandResult};
 use nix::NixPath;
 use crate::lang::command::ArgumentDescription;
-use crate::lang::ast::unescape;
+use crate::lang::ast::{unescape, escape_without_quotes};
 
 pub mod parse;
 
@@ -66,7 +66,7 @@ fn is_or_has_type(value: &Value, pattern: &ValueType, max_depth: i8) -> bool {
     false
 }
 
-fn complete_value(
+fn complete_label(
     value: Value,
     prefix: &[String],
     t: &ValueType,
@@ -83,7 +83,7 @@ fn complete_value(
                     .unwrap_or(false))
                 .unwrap_or(false))
             .map(|k| Completion {
-                completion: k[prefix[0].len()..].to_string(),
+                completion: format!("{} ", &k[prefix[0].len()..]),
                 display: k.clone(),
                 position: cursor,
             })
@@ -91,7 +91,7 @@ fn complete_value(
         Ok(())
     } else {
         let child = mandate(value.field(&prefix[0])?, "Unknown member")?;
-        complete_value(child, &prefix[1..], t, cursor, out)
+        complete_label(child, &prefix[1..], t, cursor, out)
     }
 }
 
@@ -124,7 +124,10 @@ fn complete_file(
         out.append(&mut dirs
             .filter(|k| k.name.to_str().unwrap().starts_with(prefix_str))
             .map(|k| Completion {
-                completion: k.name.to_str().unwrap()[prefix_str.len()..].to_string(),
+                completion: format!(
+                    "{}{}",
+                    &k.name.to_str().unwrap()[prefix_str.len()..],
+                    if k.is_directory { "/" } else { " " }),
                 display: k.name.to_str().unwrap().to_string(),
                 position: cursor,
             })
@@ -147,7 +150,7 @@ fn complete_argument_name(
             completion: format!(
                 "{}{}",
                 &a.name[prefix.len()..],
-                if is_switch { "" } else { "=" }),
+                if is_switch { " " } else { "=" }),
             display: a.name.clone(),
             position: cursor,
         })
@@ -166,7 +169,7 @@ fn complete_argument_values(
             (Value::String(full), LastArgument::QuotedString(prefix)) => {
                 if full.starts_with(prefix) {
                     res.push(Completion::new(
-                        &full[prefix.len()..],
+                        format!("{}\" ", escape_without_quotes(&full[prefix.len()..])),
                         full,
                         cursor,
                     ));
@@ -215,7 +218,7 @@ pub fn complete_partial_argument(
         }
 
         LastArgument::Unknown => {
-            complete_value(Value::Scope(scope.clone()), &vec!["".to_string()], &argument_type, cursor, res)?;
+            complete_label(Value::Scope(scope.clone()), &vec!["".to_string()], &argument_type, cursor, res)?;
             complete_file(lister, "", &argument_type, cursor, res)?;
             if parse_result.last_argument_name.is_none() {
                 if let CompletionCommand::Known(cmd) = parse_result.command {
@@ -225,7 +228,7 @@ pub fn complete_partial_argument(
         }
 
         LastArgument::Field(l) => {
-            complete_value(Value::Scope(scope.clone()), &l, &argument_type, cursor, res)?;
+            complete_label(Value::Scope(scope.clone()), &l, &argument_type, cursor, res)?;
             if l.len() == 1 {
                 complete_file(lister, &l[0], &argument_type, cursor, res)?;
                 if parse_result.last_argument_name.is_none() {
@@ -255,12 +258,12 @@ pub fn complete(
     let mut res = Vec::new();
     match parse_result {
         ParseResult::Nothing => {
-            complete_value(Value::Scope(scope.clone()), &vec!["".to_string()], &ValueType::Any, cursor, &mut res)?;
+            complete_label(Value::Scope(scope.clone()), &vec!["".to_string()], &ValueType::Any, cursor, &mut res)?;
             complete_file(lister, "", &ValueType::Any, cursor, &mut res)?;
         }
 
         ParseResult::PartialCommand(cmd) => {
-            complete_value(Value::Scope(scope.clone()), &cmd, &ValueType::Any, cursor, &mut res)?;
+            complete_label(Value::Scope(scope.clone()), &cmd, &ValueType::Any, cursor, &mut res)?;
             if cmd.len() == 1 {
                 complete_file(lister, &cmd[0], &ValueType::Any, cursor, &mut res)?;
             }
@@ -339,7 +342,7 @@ mod tests {
         s.declare("abcd", Value::Empty()).unwrap();
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "abcd");
+        assert_eq!(&completions[0].complete(line), "abcd ");
     }
 
     #[test]
@@ -350,7 +353,7 @@ mod tests {
         let s = Scope::create_root();
         let completions = complete(line, cursor, &s, &lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "burrow");
+        assert_eq!(&completions[0].complete(line), "burrow/");
     }
 
     #[test]
@@ -394,7 +397,7 @@ mod tests {
         s.declare("super_confusing_variable", Value::Empty()).unwrap();
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "my_cmd --super_fancy_argument");
+        assert_eq!(&completions[0].complete(line), "my_cmd --super_fancy_argument ");
     }
 
     #[test]
@@ -405,7 +408,7 @@ mod tests {
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "namespace:my_cmd");
+        assert_eq!(&completions[0].complete(line), "namespace:my_cmd ");
     }
 
     #[test]
@@ -416,7 +419,7 @@ mod tests {
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "namespace:my_cmd");
+        assert_eq!(&completions[0].complete(line), "namespace:my_cmd ");
     }
 
     #[test]
@@ -428,7 +431,7 @@ mod tests {
         s.declare("abcd", Value::Empty()).unwrap();
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "a | abcd");
+        assert_eq!(&completions[0].complete(line), "a | abcd ");
     }
 
 
@@ -440,7 +443,7 @@ mod tests {
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "my_cmd --super_fancy_argument");
+        assert_eq!(&completions[0].complete(line), "my_cmd --super_fancy_argument ");
     }
 
     #[test]
@@ -452,7 +455,7 @@ mod tests {
         s.declare("abcd", Value::Empty()).unwrap();
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "a abcd");
+        assert_eq!(&completions[0].complete(line), "a abcd ");
     }
 
     #[test]
@@ -464,7 +467,7 @@ mod tests {
         s.declare("abcd", Value::Empty()).unwrap();
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "x (abcd");
+        assert_eq!(&completions[0].complete(line), "x (abcd ");
     }
 
 
@@ -477,7 +480,7 @@ mod tests {
         s.declare("abcd", Value::Empty()).unwrap();
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "abcd");
+        assert_eq!(&completions[0].complete(line), "abcd ");
     }
 
     #[test]
@@ -488,7 +491,7 @@ mod tests {
         let s = Scope::create_root();
         let completions = complete(line, cursor, &s, &lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "burrow");
+        assert_eq!(&completions[0].complete(line), "burrow/");
     }
 
     #[test]
@@ -499,7 +502,7 @@ mod tests {
         let s = Scope::create_root();
         let completions = complete(line, cursor, &s, &lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "./burrow");
+        assert_eq!(&completions[0].complete(line), "./burrow/");
     }
 
     #[test]
@@ -510,7 +513,7 @@ mod tests {
         let s = Scope::create_root();
         let completions = complete(line, cursor, &s, &lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "burrow/carrot");
+        assert_eq!(&completions[0].complete(line), "burrow/carrot ");
     }
 
     #[test]
@@ -526,7 +529,7 @@ mod tests {
 
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "abcd:bcde");
+        assert_eq!(&completions[0].complete(line), "abcd:bcde ");
     }
 
     #[test]
@@ -542,7 +545,7 @@ mod tests {
 
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "xxx abcd:bcde");
+        assert_eq!(&completions[0].complete(line), "xxx abcd:bcde ");
     }
 
     #[test]
@@ -554,7 +557,7 @@ mod tests {
         s.declare("abcd", Value::Empty()).unwrap();
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "abcd abcd");
+        assert_eq!(&completions[0].complete(line), "abcd abcd ");
     }
 
     #[test]
@@ -566,7 +569,7 @@ mod tests {
         s.declare("abcd", Value::Empty()).unwrap();
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "abcdb");
+        assert_eq!(&completions[0].complete(line), "abcd b");
     }
 
     #[test]
@@ -578,7 +581,7 @@ mod tests {
         s.declare("cdef", Value::Empty()).unwrap();
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "ab cdef ef");
+        assert_eq!(&completions[0].complete(line), "ab cdef  ef");
     }
 
     #[test]
@@ -590,7 +593,7 @@ mod tests {
         s.declare("cdef", Value::Empty()).unwrap();
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "ab foo=cdef");
+        assert_eq!(&completions[0].complete(line), "ab foo=cdef ");
     }
 
     #[test]
@@ -615,7 +618,7 @@ mod tests {
         s.declare("type", Value::Type(ValueType::Empty)).unwrap();
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "my_cmd super_fancy_argument=type");
+        assert_eq!(&completions[0].complete(line), "my_cmd super_fancy_argument=type ");
     }
 
     #[test]
@@ -626,6 +629,17 @@ mod tests {
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "other_namespace:allowed_cmd argument=\"foo");
+        assert_eq!(&completions[0].complete(line), "other_namespace:allowed_cmd argument=\"foo\" ");
+    }
+
+    #[test]
+    fn check_method_completion() {
+        let line = "\"\":f";
+        let cursor = line.len();
+
+        let s = Scope::create_root();
+        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "\"\":format ");
     }
 }

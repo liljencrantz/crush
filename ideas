@@ -88,13 +88,8 @@ crush
 Tab completion missing feature list:
 
 * Support for enabling and disabling completion error printing
-* Completion using allowed values from argument data
 * Completions for wildcards
-* Command specific completions for arguments with a set of allowed values supported out of the box.
-* General purpose command specific completions are specified as an extra command
-* Command specific completions are specified for the individual argument, as part of the signature.
 * Complete with prior arguments from same command from history
-* Add space, colon or slash at end of completions where appropriate
 * Add command specific completions for dbus
 * Add command specific completions for cd to filter only directories
 * Add previous output type of previous command in pipeline if known to parsed state

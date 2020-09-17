@@ -156,7 +156,7 @@ fn ssh_host_complete(
                 let completion = host.name().unwrap_or("");
                 if completion.starts_with(stripped_prefix) && completion.len() > 0 {
                     res.push(Completion::new(
-                        escape_without_quotes(&completion[stripped_prefix.len()..]),
+                        format!("{}\" ", escape_without_quotes(&completion[stripped_prefix.len()..])),
                         host.name().unwrap_or(""),
                         0,
                     ));
