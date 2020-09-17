@@ -1,7 +1,7 @@
 use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::data::scope::Scope;
-use crate::lang::stream::{channels, empty_channel};
+use crate::lang::pipe::{pipe, empty_channel};
 use crate::lang::value::Value;
 
 pub fn and(mut context: CommandContext) -> CrushResult<()> {
@@ -15,7 +15,7 @@ pub fn and(mut context: CommandContext) -> CrushResult<()> {
                 }
             }
             Value::Command(c) => {
-                let (sender, receiver) = channels();
+                let (sender, receiver) = pipe();
                 let cc = CommandContext {
                     input: empty_channel(),
                     output: sender,
@@ -53,7 +53,7 @@ pub fn or(mut context: CommandContext) -> CrushResult<()> {
             }
 
             Value::Command(c) => {
-                let (sender, receiver) = channels();
+                let (sender, receiver) = pipe();
                 let cc = CommandContext {
                     input: empty_channel(),
                     output: sender,

@@ -1,6 +1,6 @@
 use crate::lang::errors::{argument_error_legacy, error, CrushResult};
 use crate::lang::execution_context::CommandContext;
-use crate::lang::stream::Stream;
+use crate::lang::pipe::Stream;
 use crate::lang::data::table::ColumnVec;
 use crate::lang::{data::table::ColumnType};
 use crate::lang::{value::Value, value::ValueType};

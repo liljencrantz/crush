@@ -12,7 +12,7 @@ use crate::lang::serialization::model;
 use crate::lang::serialization::model::closure::Name;
 use crate::lang::serialization::model::{element, Element};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
-use crate::lang::stream::{black_hole, empty_channel};
+use crate::lang::pipe::{black_hole, empty_channel};
 use crate::lang::value::{Value, ValueDefinition, ValueType};
 use std::collections::HashMap;
 use std::fmt::Display;
@@ -197,20 +197,26 @@ impl<'a> ClosureSerializer<'a> {
     fn parameter(&mut self, param: &Parameter) -> CrushResult<model::Parameter> {
         Ok(model::Parameter {
             parameter: Some(match param {
-                Parameter::Named(n) => model::parameter::Parameter::Named(n.serialize(self.elements, self.state)? as u64),
+                Parameter::Named(n) =>
+                    model::parameter::Parameter::Named(n.serialize(self.elements, self.state)? as u64),
                 Parameter::Parameter(n, t, d) => {
                     model::parameter::Parameter::Normal(model::NormalParameter {
+
                         name: n.serialize(self.elements, self.state)? as u64,
+
                         r#type: Some(self.value_definition(t)?),
+
                         default: Some(match d {
                             None => model::normal_parameter::Default::HasDefault(false),
-                            Some(dv) => model::normal_parameter::Default::DefaultValue(
-                                self.value_definition(dv)?,
-                            ),
+                            Some(dv) =>
+                                model::normal_parameter::Default::DefaultValue(
+                                    self.value_definition(dv)?,
+                                ),
                         }),
                     })
                 }
-                Parameter::Unnamed(n) => model::parameter::Parameter::Unnamed(n.serialize(self.elements, self.state)? as u64),
+                Parameter::Unnamed(n) =>
+                    model::parameter::Parameter::Unnamed(n.serialize(self.elements, self.state)? as u64),
             }),
         })
     }
@@ -243,9 +249,13 @@ impl<'a> ClosureSerializer<'a> {
         })
     }
 
-    fn argument_type(&mut self, a: &ArgumentType) -> CrushResult<model::argument_definition::ArgumentType> {
+    fn argument_type(
+        &mut self,
+        a: &ArgumentType,
+    ) -> CrushResult<model::argument_definition::ArgumentType> {
         Ok(match a {
-            ArgumentType::Some(s) => model::argument_definition::ArgumentType::Some(s.serialize(self.elements, self.state)? as u64),
+            ArgumentType::Some(s) =>
+                model::argument_definition::ArgumentType::Some(s.serialize(self.elements, self.state)? as u64),
             ArgumentType::None => model::argument_definition::ArgumentType::None(false),
             ArgumentType::ArgumentList => {
                 model::argument_definition::ArgumentType::ArgumentList(false)
@@ -259,14 +269,17 @@ impl<'a> ClosureSerializer<'a> {
     fn value_definition(&mut self, v: &ValueDefinition) -> CrushResult<model::ValueDefinition> {
         Ok(model::ValueDefinition {
             value_definition: Some(match v {
-                ValueDefinition::Value(v, location) => model::value_definition::ValueDefinition::Value(
-                    model::Value {
-                        value: v.serialize(self.elements, self.state)? as u64,
-                        start: location.start as u64,
-                        end: location.end as u64,
-                    },
-                ),
-                ValueDefinition::ClosureDefinition(name, parameters, jobs, location) => {
+                ValueDefinition::Value(v, location) =>
+                    model::value_definition::ValueDefinition::Value(
+                        model::Value {
+                            value: v.serialize(self.elements, self.state)? as u64,
+                            start: location.start as u64,
+                            end: location.end as u64,
+                        },
+                    ),
+
+                ValueDefinition::ClosureDefinition(
+                    name, parameters, jobs, location) => {
                     model::value_definition::ValueDefinition::ClosureDefinition(
                         model::ClosureDefinition {
                             job_definitions: jobs
@@ -285,18 +298,23 @@ impl<'a> ClosureSerializer<'a> {
                         },
                     )
                 }
+
                 ValueDefinition::JobDefinition(j) => {
                     model::value_definition::ValueDefinition::Job(self.job(j)?)
                 }
+
                 ValueDefinition::Label(l) => {
-                    model::value_definition::ValueDefinition::Label(l.serialize(self.elements, self.state)? as u64)
+                    model::value_definition::ValueDefinition::Label(
+                        l.serialize(self.elements, self.state)? as u64)
                 }
+
                 ValueDefinition::GetAttr(parent, element) => {
                     model::value_definition::ValueDefinition::GetAttr(Box::from(model::Attr {
                         parent: Some(Box::from(self.value_definition(parent)?)),
                         element: element.serialize(self.elements, self.state)? as u64,
                     }))
                 }
+
                 ValueDefinition::Path(parent, element) => {
                     model::value_definition::ValueDefinition::Path(Box::from(model::Attr {
                         parent: Some(Box::from(self.value_definition(parent)?)),
@@ -463,7 +481,7 @@ impl<'a> ClosureDeserializer<'a> {
                                 .iter()
                                 .map(|c| self.command(c))
                                 .collect::<CrushResult<Vec<_>>>()?,
-                            Location::new(j.start as usize, j.end as usize)
+                            Location::new(j.start as usize, j.end as usize),
                         ))
                 }
                 model::value_definition::ValueDefinition::Label(s) => {

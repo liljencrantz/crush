@@ -1,7 +1,7 @@
 use crate::lang::command::Command;
 use crate::lang::errors::{error, CrushResult};
 use crate::lang::execution_context::CommandContext;
-use crate::lang::stream::{black_hole, empty_channel};
+use crate::lang::pipe::{black_hole, empty_channel};
 use crate::lang::{argument::Argument, data::table::ColumnType};
 use crate::lang::{data::table::Row, value::Value};
 use signature::signature;

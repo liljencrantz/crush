@@ -325,8 +325,7 @@ fn try_external_command(
                     1,
                     ArgumentDefinition::unnamed(
                         ValueDefinition::Value(
-                            Value::string(
-                                subcmd.string.as_ref()),
+                            Value::string(subcmd.string),
                             subcmd.location,
                         )),
                 );

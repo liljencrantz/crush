@@ -73,6 +73,7 @@ Threads command, shows all threads on the system
 watch command
 Either stop copying Command instances, or make them pointer to static data.
 Syntax highlighting (with more accurate parenthesis matching)
+A command to create a pipe pair.
 
 Every job should have a unique (but reusable, to keep them small) job id, e.g. 1 or 5.
 Every command should have a command id withing that job, e.g. 5:2

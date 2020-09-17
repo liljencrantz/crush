@@ -3,7 +3,7 @@ use crate::lang::files::Files;
 use crate::lang::execution_context::CommandContext;
 use crate::lang::errors::CrushResult;
 use std::path::{Path, PathBuf};
-use crate::lang::stream::OutputStream;
+use crate::lang::pipe::OutputStream;
 use crate::lang::data::table::Row;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;

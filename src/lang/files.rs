@@ -1,7 +1,7 @@
 use crate::lang::data::binary::{binary_channel, BinaryReader};
 use crate::lang::errors::{argument_error_legacy, to_crush_error, CrushResult, CrushError, data_error};
 use crate::lang::printer::Printer;
-use crate::lang::stream::{ValueReceiver, ValueSender};
+use crate::lang::pipe::{ValueReceiver, ValueSender};
 use crate::lang::value::{Value, ValueType};
 use crate::util::file::cwd;
 use crate::util::regex::RegexFileMatcher;

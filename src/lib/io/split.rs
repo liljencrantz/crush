@@ -1,7 +1,7 @@
 use crate::lang::errors::{to_crush_error, CrushResult};
 use crate::lang::files::Files;
 use crate::lang::data::scope::ScopeLoader;
-use crate::lang::stream::OutputStream;
+use crate::lang::pipe::OutputStream;
 use crate::lang::{
     execution_context::CommandContext, data::table::ColumnType, data::table::Row, value::Value,
     value::ValueType,

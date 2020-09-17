@@ -1,5 +1,5 @@
 use crate::lang::errors::{error, CrushError, CrushResult};
-use crate::lang::stream::CrushStream;
+use crate::lang::pipe::CrushStream;
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
 use crate::lang::value::Value;
@@ -289,10 +289,10 @@ impl CrushStream for StructReader {
     fn read_timeout(
         &mut self,
         _timeout: Duration,
-    ) -> Result<Row, crate::lang::stream::RecvTimeoutError> {
+    ) -> Result<Row, crate::lang::pipe::RecvTimeoutError> {
         match self.read() {
             Ok(r) => Ok(r),
-            Err(_) => Err(crate::lang::stream::RecvTimeoutError::Disconnected),
+            Err(_) => Err(crate::lang::pipe::RecvTimeoutError::Disconnected),
         }
     }
 

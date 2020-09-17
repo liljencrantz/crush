@@ -1,3 +1,9 @@
+/**
+This file implements the crush equivalent of a pipe from a regular shell.
+
+Unlike normal pipes, these pipes can send *any* crush value. The most important
+use case is to send a single value of the type TableStream.
+ */
 use crate::lang::errors::{error, send_error, to_crush_error, CrushError, CrushResult};
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
@@ -10,7 +16,7 @@ pub type RecvTimeoutError = crossbeam::channel::RecvTimeoutError;
 
 lazy_static! {
     static ref BLACK_HOLE: ValueSender = {
-        let (o, _) = channels();
+        let (o, _) = pipe();
         o
     };
 }
@@ -128,7 +134,7 @@ impl InputStream {
     }
 }
 
-pub fn channels() -> (ValueSender, ValueReceiver) {
+pub fn pipe() -> (ValueSender, ValueReceiver) {
     let (send, recv) = bounded(1);
     (
         ValueSender { sender: send },
@@ -136,7 +142,7 @@ pub fn channels() -> (ValueSender, ValueReceiver) {
     )
 }
 
-pub fn unbounded_channels() -> (ValueSender, ValueReceiver) {
+pub fn unbounded_pipe() -> (ValueSender, ValueReceiver) {
     let (send, recv) = unbounded();
     (
         ValueSender { sender: send },
@@ -167,7 +173,7 @@ pub fn unlimited_streams(signature: Vec<ColumnType>) -> (OutputStream, InputStre
 }
 
 pub fn empty_channel() -> ValueReceiver {
-    let (o, i) = channels();
+    let (o, i) = pipe();
     let _ = o.send(Value::empty_table_stream());
     i
 }

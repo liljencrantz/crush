@@ -1,7 +1,7 @@
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::CrushResult;
 use crate::lang::execution_context::{CompileContext, JobContext};
-use crate::lang::stream::channels;
+use crate::lang::pipe::pipe;
 use std::thread::ThreadId;
 use std::fmt::{Display, Formatter};
 use crate::lang::ast::Location;
@@ -37,7 +37,7 @@ impl Job {
         let mut input = context.input.clone();
         let last_job_idx = self.commands.len() - 1;
         for call_def in &self.commands[..last_job_idx] {
-            let (output, next_input) = channels();
+            let (output, next_input) = pipe();
             call_def.invoke(context.with_io(input, output))?;
             input = next_input;
         }

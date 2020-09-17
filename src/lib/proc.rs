@@ -34,8 +34,7 @@ can_block = true,
 short = "Return a table stream containing information on all running processes on the system",
 output = Known(ValueType::TableStream(PS_OUTPUT_TYPE.clone())),
 long = "ps accepts no arguments.")]
-struct Ps {
-}
+struct Ps {}
 
 fn state_name(s: Status) -> &'static str {
     match s {
@@ -86,9 +85,8 @@ fn ps_internal(proc: ProcessResult<Process>, users: &HashMap<Uid, String>) -> Pr
         Value::Integer(proc.memory_info()?.rss() as i128),
         Value::Integer(proc.memory_info()?.vms() as i128),
         Value::string(
-            proc.cmdline_vec()?
-                .unwrap_or(vec![format!("[{}]", proc.name()?)])[0]
-                .as_ref(),
+            &proc.cmdline_vec()?
+                .unwrap_or(vec![format!("[{}]", proc.name()?)])[0],
         ),
     ]))
 }

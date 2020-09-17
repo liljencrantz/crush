@@ -1,7 +1,7 @@
 use crate::lang::command::Command;
 use crate::lang::errors::error;
 use crate::lang::execution_context::CommandContext;
-use crate::lang::stream::{channels, empty_channel, Stream};
+use crate::lang::pipe::{pipe, empty_channel, Stream};
 use crate::lang::data::table::ColumnVec;
 use crate::{
     lang::errors::argument_error_legacy,
@@ -46,7 +46,7 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
             for (location, source) in &config.columns {
                 let value = match source {
                     Source::Closure(closure) => {
-                        let (sender, receiver) = channels();
+                        let (sender, receiver) = pipe();
                         let arguments: Vec<Argument> = row
                             .cells()
                             .iter()
@@ -104,7 +104,7 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
                         .zip(&input_type)
                         .map(|(cell, cell_type)| Argument::named(&cell_type.name, cell.clone(), config.location))
                         .collect();
-                    let (sender, receiver) = channels();
+                    let (sender, receiver) = pipe();
                     closure.invoke(CommandContext {
                         input: empty_channel(),
                         output: sender,

@@ -6,7 +6,7 @@ use crate::lang::data::list::List;
 use crate::lang::printer::Printer;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::data::scope::Scope;
-use crate::lang::stream::{InputStream, ValueReceiver, ValueSender};
+use crate::lang::pipe::{InputStream, ValueReceiver, ValueSender};
 use crate::lang::data::table::Table;
 use crate::lang::value::{Value, ValueType};
 use crate::util::glob::Glob;
@@ -14,7 +14,6 @@ use crate::util::replace::Replace;
 use chrono::{DateTime, Duration, Local};
 use regex::Regex;
 use std::path::PathBuf;
-use crate::lang::threads::ThreadStore;
 use crate::lang::global_state::GlobalState;
 
 pub trait ArgumentVector {

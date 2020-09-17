@@ -12,7 +12,7 @@ use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{error, to_crush_error, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::files::Files;
-use crate::lang::stream::OutputStream;
+use crate::lang::pipe::OutputStream;
 use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value::ValueType};
 use crate::util::user_map::{create_user_map, create_group_map};
 use signature::signature;

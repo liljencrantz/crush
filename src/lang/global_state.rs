@@ -3,7 +3,6 @@ use crate::lang::errors::{CrushResult, to_crush_error};
 use std::sync::{Arc, Mutex};
 use crate::lang::threads::ThreadStore;
 use crate::lang::printer::Printer;
-use crate::lang::data::scope::Scope;
 
 struct StateData {
     locale: SystemLocale,

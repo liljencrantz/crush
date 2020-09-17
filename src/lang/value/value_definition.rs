@@ -3,7 +3,7 @@ use crate::lang::errors::{block_error, mandate};
 use crate::lang::execution_context::CompileContext;
 use crate::lang::{argument::ArgumentDefinition, command::CrushCommand, job::Job};
 use crate::{
-    lang::errors::CrushResult, lang::stream::channels, lang::stream::empty_channel,
+    lang::errors::CrushResult, lang::pipe::pipe, lang::pipe::empty_channel,
     lang::value::Value,
 };
 use std::path::PathBuf;
@@ -71,7 +71,7 @@ impl ValueDefinition {
             ValueDefinition::Value(v, _) => (None, v.clone()),
             ValueDefinition::JobDefinition(def) => {
                 let first_input = empty_channel();
-                let (last_output, last_input) = channels();
+                let (last_output, last_input) = pipe();
                 if !can_block {
                     return block_error();
                 }
@@ -103,7 +103,7 @@ impl ValueDefinition {
                         return block_error();
                     }
                     let first_input = empty_channel();
-                    let (last_output, last_input) = channels();
+                    let (last_output, last_input) = pipe();
                     parent_cmd.invoke(
                         context
                             .job_context(first_input, last_output)

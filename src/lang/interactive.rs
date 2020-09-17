@@ -5,9 +5,7 @@ use rustyline::{Editor, Context, validate, Config, CompletionType, EditMode, Out
 use crate::util::file::home;
 use std::path::PathBuf;
 use crate::lang::data::scope::Scope;
-use crate::lang::printer::Printer;
-use crate::lang::stream::ValueSender;
-use crate::lang::threads::ThreadStore;
+use crate::lang::pipe::ValueSender;
 use crate::lang::errors::{CrushResult, to_crush_error};
 use crate::lang::execute;
 
@@ -46,7 +44,6 @@ impl MyHelper {
             }).collect();
         Ok((pos, crunched))
     }
-
 }
 
 impl Completer for MyHelper {
@@ -63,7 +60,7 @@ impl Completer for MyHelper {
             Err(err) => {
                 println!("Error! {}", err.message());
                 Err(ReadlineError::Interrupted)
-            },
+            }
         }
     }
 }
@@ -132,7 +129,7 @@ fn crush_history_file() -> PathBuf {
         .join(".crush_history")
 }
 
-pub fn run_interactive(
+pub fn run(
     global_env: Scope,
     pretty_printer: &ValueSender,
     global_state: &GlobalState,
@@ -165,12 +162,13 @@ pub fn run_interactive(
             Ok(cmd) => {
                 rl.add_history_entry(&cmd);
                 global_state.threads().reap(global_state.printer());
-                execute::string(
-                    global_env.clone(),
-                    &cmd,
-                    pretty_printer,
-                    global_state,
-                );
+                global_state.printer().handle_error(
+                    execute::string(
+                        global_env.clone(),
+                        &cmd,
+                        pretty_printer,
+                        global_state,
+                    ));
                 global_state.threads().reap(global_state.printer());
             }
             Err(ReadlineError::Interrupted) => {

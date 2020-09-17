@@ -1,3 +1,6 @@
+/**
+  The type representing all values in crush.
+*/
 mod value_definition;
 mod value_type;
 
@@ -13,7 +16,7 @@ use crate::lang::errors::{argument_error_legacy, mandate, CrushResult};
 use crate::lang::data::r#struct::Struct;
 use crate::lang::data::r#struct::StructReader;
 use crate::lang::data::scope::Scope;
-use crate::lang::stream::{streams, InputStream, Stream};
+use crate::lang::pipe::{streams, InputStream, Stream};
 use crate::lang::data::{
     binary::BinaryReader, dict::Dict, dict::DictReader, list::List, list::ListReader,
     table::ColumnType, table::TableReader,
@@ -209,8 +212,8 @@ impl Value {
         Value::TableStream(r)
     }
 
-    pub fn string(s: &str) -> Value {
-        Value::String(s.to_string())
+    pub fn string(s: impl Into<String>) -> Value {
+        Value::String(s.into())
     }
 
     pub fn stream(&self) -> Option<Stream> {
@@ -357,7 +360,6 @@ impl Value {
 
     pub fn to_formated_string(&self, grouping: Grouping) -> String {
         match self {
-
             Value::Integer(i) => match grouping {
                 Grouping::Standard => {
                     let whole = i.to_string();
@@ -371,14 +373,14 @@ impl Value {
                         if rest.len() <= 3 {
                             break;
                         }
-                        let split = ((rest.len()-1)%3)+1;
+                        let split = ((rest.len() - 1) % 3) + 1;
                         res.push_str(&rest[0..split]);
                         res.push('_');
                         rest = &rest[split..];
                     }
                     res.push_str(rest);
                     res
-                },
+                }
                 Grouping::Indian => {
                     let whole = i.to_string();
                     let mut rest = whole.as_str();
@@ -391,14 +393,14 @@ impl Value {
                         if rest.len() <= 3 {
                             break;
                         }
-                        let split = 1+rest.len()%2;
+                        let split = 1 + rest.len() % 2;
                         res.push_str(&rest[0..split]);
                         res.push('_');
                         rest = &rest[split..];
                     }
                     res.push_str(rest);
                     res
-                },
+                }
                 Grouping::Posix => i.to_string(),
             }
             _ => self.to_string(),
@@ -648,7 +650,7 @@ mod tests {
     }
 
     #[test]
-    fn test_number_format() {
+    fn test_number_format_standard() {
         assert_eq!(Value::Integer(0).to_formated_string(Grouping::Standard), "0");
         assert_eq!(Value::Integer(123).to_formated_string(Grouping::Standard), "123");
         assert_eq!(Value::Integer(-123).to_formated_string(Grouping::Standard), "-123");
@@ -656,7 +658,10 @@ mod tests {
         assert_eq!(Value::Integer(-1234).to_formated_string(Grouping::Standard), "-1_234");
         assert_eq!(Value::Integer(123_456_789).to_formated_string(Grouping::Standard), "123_456_789");
         assert_eq!(Value::Integer(-123_456_789).to_formated_string(Grouping::Standard), "-123_456_789");
+    }
 
+    #[test]
+    fn test_number_format_indian() {
         assert_eq!(Value::Integer(0).to_formated_string(Grouping::Indian), "0");
         assert_eq!(Value::Integer(123).to_formated_string(Grouping::Indian), "123");
         assert_eq!(Value::Integer(-123).to_formated_string(Grouping::Indian), "-123");
@@ -664,7 +669,10 @@ mod tests {
         assert_eq!(Value::Integer(-1234).to_formated_string(Grouping::Indian), "-1_234");
         assert_eq!(Value::Integer(123_456_789).to_formated_string(Grouping::Indian), "12_34_56_789");
         assert_eq!(Value::Integer(-123_456_789).to_formated_string(Grouping::Indian), "-12_34_56_789");
+    }
 
+    #[test]
+    fn test_number_format_posix() {
         assert_eq!(Value::Integer(0).to_formated_string(Grouping::Posix), "0");
         assert_eq!(Value::Integer(123).to_formated_string(Grouping::Posix), "123");
         assert_eq!(Value::Integer(1234).to_formated_string(Grouping::Posix), "1234");

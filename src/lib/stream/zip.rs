@@ -1,6 +1,6 @@
 use crate::lang::errors::CrushResult;
 use crate::lang::execution_context::CommandContext;
-use crate::lang::stream::Stream;
+use crate::lang::pipe::Stream;
 use signature::signature;
 
 #[signature(zip, can_block = true, short = "Combine two streams of data into one")]

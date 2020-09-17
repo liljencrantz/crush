@@ -17,7 +17,7 @@ pub mod patterns;
 pub mod pretty;
 pub mod printer;
 pub mod serialization;
-pub mod stream;
+pub mod pipe;
 pub mod threads;
 pub mod value;
 pub mod data;

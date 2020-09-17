@@ -5,7 +5,7 @@ use crate::lang::errors::{mandate, CrushResult};
 use crate::lang::execution_context::ArgumentVector;
 use crate::lang::execution_context::{CommandContext, This};
 use crate::lang::data::scope::Scope;
-use crate::lang::stream::black_hole;
+use crate::lang::pipe::black_hole;
 use crate::lang::data::table::ColumnType;
 use crate::lang::value::ValueType;
 use crate::lang::{data::r#struct::Struct, value::Value};

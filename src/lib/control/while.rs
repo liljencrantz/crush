@@ -1,7 +1,7 @@
 use crate::lang::command::Command;
 use crate::lang::errors::{data_error, CrushResult};
 use crate::lang::execution_context::CommandContext;
-use crate::lang::stream::{black_hole, channels, empty_channel};
+use crate::lang::pipe::{black_hole, pipe, empty_channel};
 use crate::lang::value::Value;
 use signature::signature;
 
@@ -24,7 +24,7 @@ fn r#while(context: CommandContext) -> CrushResult<()> {
     let cfg: While = While::parse(context.arguments, &context.global_state.printer())?;
 
     loop {
-        let (sender, receiver) = channels();
+        let (sender, receiver) = pipe();
 
         let cond_env = context.scope.create_child(&context.scope, true);
         cfg.condition.invoke(CommandContext {

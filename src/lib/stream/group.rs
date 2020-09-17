@@ -4,13 +4,13 @@ use crate::lang::execution_context::CommandContext;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::printer::Printer;
 use crate::lang::data::scope::Scope;
-use crate::lang::stream::{channels, InputStream};
+use crate::lang::pipe::{pipe, InputStream};
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::ColumnVec;
 use crate::lang::value::Field;
 use crate::{
     lang::errors::argument_error_legacy,
-    lang::stream::{unlimited_streams, OutputStream},
+    lang::pipe::{unlimited_streams, OutputStream},
     lang::{data::table::Row, value::Value, value::ValueType},
 };
 use crossbeam::{unbounded, Receiver};
@@ -49,8 +49,8 @@ fn aggregate(
                 destination.send(Row::new(key))?;
             }
             1 => {
-                let (input_sender, input_receiver) = channels();
-                let (output_sender, output_receiver) = channels();
+                let (input_sender, input_receiver) = pipe();
+                let (output_sender, output_receiver) = pipe();
                 input_sender.send(Value::TableStream(rows))?;
                 drop(input_sender);
                 commands[0].invoke(CommandContext {
@@ -69,8 +69,8 @@ fn aggregate(
                 let mut receivers = Vec::with_capacity(commands.len());
                 let mut streams = Vec::with_capacity(commands.len());
                 for command in &commands {
-                    let (input_sender, input_receiver) = channels();
-                    let (output_sender, output_receiver) = channels();
+                    let (input_sender, input_receiver) = pipe();
+                    let (output_sender, output_receiver) = pipe();
                     streams.push(input_sender.initialize(rows.types().to_vec())?);
 
                     let local_command = command.copy();

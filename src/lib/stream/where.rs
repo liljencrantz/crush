@@ -2,7 +2,7 @@ use crate::lang::command::Command;
 use crate::lang::command::OutputType::Passthrough;
 use crate::lang::errors::{error, CrushResult};
 use crate::lang::execution_context::CommandContext;
-use crate::lang::stream::{black_hole, channels, empty_channel};
+use crate::lang::pipe::{black_hole, pipe, empty_channel};
 use crate::lang::{argument::Argument, data::table::ColumnType};
 use crate::lang::{data::table::Row, value::Value};
 use signature::signature;
@@ -33,7 +33,7 @@ fn evaluate(
         .map(|(c, t)| Argument::named(t.name.as_ref(), c, location))
         .collect();
 
-    let (sender, reciever) = channels();
+    let (sender, reciever) = pipe();
 
     condition.invoke(
         base_context

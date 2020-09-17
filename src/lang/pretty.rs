@@ -1,8 +1,12 @@
+/**
+    A receiver of values that prints any values sent to it in a pretty, human readable format.
+*/
+
 use crate::lang::data::binary::BinaryReader;
 use crate::lang::errors::to_crush_error;
 use crate::lang::data::list::ListReader;
 use crate::lang::printer::Printer;
-use crate::lang::stream::{CrushStream, InputStream, ValueSender, unbounded_channels};
+use crate::lang::pipe::{CrushStream, InputStream, ValueSender, unbounded_pipe};
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
 use crate::lang::data::table::Table;
@@ -17,7 +21,7 @@ use std::thread;
 use chrono::Duration;
 use crate::util::hex::to_hex;
 use crate::lang::global_state::GlobalState;
-use num_format::{SystemLocale, Grouping};
+use num_format::Grouping;
 
 trait Width {
     fn width(&self) -> usize;
@@ -40,7 +44,7 @@ pub fn create_pretty_printer(
     global_state: &GlobalState,
 ) -> ValueSender {
     let global_state = global_state.clone();
-    let (o, i) = unbounded_channels();
+    let (o, i) = unbounded_pipe();
     let printer_clone = printer.clone();
     printer_clone.handle_error(to_crush_error(
         thread::Builder::new()

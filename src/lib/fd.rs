@@ -14,7 +14,7 @@ use termion::input::TermRead;
 use crate::util::hex::from_hex;
 use dns_lookup::lookup_addr;
 use std::collections::hash_map::Entry;
-use crate::lang::stream::OutputStream;
+use crate::lang::pipe::OutputStream;
 use std::net::Ipv6Addr;
 use crate::lang::printer::Printer;
 use std::path::PathBuf;

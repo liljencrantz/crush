@@ -6,7 +6,6 @@ use crate::lang::data::scope::Scope;
 use crate::lang::value::{Field, ValueType};
 use crate::lang::{execution_context::CommandContext, value::Value};
 use signature::signature;
-use num_format::SystemLocale;
 
 mod bin;
 mod csv;
