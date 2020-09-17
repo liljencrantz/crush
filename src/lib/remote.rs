@@ -152,10 +152,9 @@ fn ssh_host_complete(
                 ))
             }
 
-            LastArgument::QuotedString(prefix) => {
-                let stripped_prefix = unescape(prefix);
+            LastArgument::QuotedString(stripped_prefix) => {
                 let completion = host.name().unwrap_or("");
-                if completion.starts_with(&stripped_prefix) && completion.len() > 0 {
+                if completion.starts_with(stripped_prefix) && completion.len() > 0 {
                     res.push(Completion::new(
                         escape_without_quotes(&completion[stripped_prefix.len()..]),
                         host.name().unwrap_or(""),

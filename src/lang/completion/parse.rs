@@ -1,4 +1,4 @@
-use crate::lang::ast::{Node, CommandNode, JobListNode, JobNode};
+use crate::lang::ast::{Node, CommandNode, JobListNode, JobNode, unescape};
 use crate::lang::errors::{error, CrushResult, mandate, argument_error_legacy};
 use crate::lang::value::{Field, ValueType, Value};
 use std::path::PathBuf;
@@ -222,19 +222,20 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
         _ => {
             let c = parse_command_node(&cmd.expressions[0], scope)?;
 
-            let (arg, last_argument_name, argument_complete) = if let Node::Assignment(name, _op, value) = cmd.expressions.last().unwrap() {
-                if name.location().contains(cursor) {
-                    (name.clone(), None, true)
-                } else {
-                    if let Node::Label(name) = name.as_ref() {
-                        (value.clone(), Some(name.string.clone()), false)
+            let (arg, last_argument_name, argument_complete) =
+                if let Node::Assignment(name, _op, value) = cmd.expressions.last().unwrap() {
+                    if name.location().contains(cursor) {
+                        (Box::from(name.prefix(cursor)?), None, true)
                     } else {
-                        (value.clone(), None, false)
+                        if let Node::Label(name) = name.as_ref() {
+                            (value.clone(), Some(name.string.clone()), false)
+                        } else {
+                            (value.clone(), None, false)
+                        }
                     }
-                }
-            } else {
-                (Box::from(cmd.expressions.last().unwrap().clone()), None, false)
-            };
+                } else {
+                    (Box::from(cmd.expressions.last().unwrap().clone()), None, false)
+                };
 
             if argument_complete {
                 match arg.deref() {
@@ -287,7 +288,7 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
                                 PartialCommandResult {
                                     command: c,
                                     previous_arguments: vec![],
-                                    last_argument: LastArgument::QuotedString(s.string.clone()),
+                                    last_argument: LastArgument::QuotedString(unescape(&s.string)),
                                     last_argument_name,
                                 }
                             )),

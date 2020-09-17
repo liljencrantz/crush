@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use crate::lang::completion::parse::{ParseResult, CompletionCommand, LastArgument, parse, PartialCommandResult};
 use nix::NixPath;
 use crate::lang::command::ArgumentDescription;
+use crate::lang::ast::unescape;
 
 pub mod parse;
 
@@ -154,6 +155,30 @@ fn complete_argument_name(
     Ok(())
 }
 
+fn complete_argument_values(
+    allowed: &Vec<Value>,
+    parse_result: &PartialCommandResult,
+    cursor: usize,
+    res: &mut Vec<Completion>,
+) -> CrushResult<()> {
+    for val in allowed {
+        match (val, &parse_result.last_argument) {
+            (Value::String(full), LastArgument::QuotedString(prefix)) => {
+                if full.starts_with(prefix) {
+                    res.push(Completion::new(
+                        &full[prefix.len()..],
+                        full,
+                        cursor,
+                    ));
+                }
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+
 pub fn complete_partial_argument(
     parse_result: PartialCommandResult,
     cursor: usize,
@@ -167,7 +192,14 @@ pub fn complete_partial_argument(
                 .iter()
                 .filter(|a| &a.name == name)
                 .next() {
-                if let Some(cmd) = argument_description.complete {
+                if let Some(allowed) = &argument_description.allowed {
+                    complete_argument_values(
+                        allowed,
+                        &parse_result,
+                        cursor,
+                        res)?;
+                }
+                if let Some(cmd) = &argument_description.complete {
                     cmd(&parse_result, cursor, scope, res)?;
                 }
             }

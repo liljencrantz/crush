@@ -1,7 +1,7 @@
 use crate::lang::argument::ArgumentDefinition;
 use crate::lang::command::{Command, Parameter};
 use crate::lang::command_invocation::CommandInvocation;
-use crate::lang::errors::{error, to_crush_error, CrushResult};
+use crate::lang::errors::{error, to_crush_error, CrushResult, data_error};
 use crate::lang::job::Job;
 use crate::lang::data::scope::Scope;
 use crate::lang::value::{Value, ValueDefinition, ValueType};
@@ -195,6 +195,18 @@ impl TrackedString {
             location: Location::new(start, end),
         }
     }
+
+    pub fn prefix(&self, pos: usize) -> CrushResult<TrackedString> {
+        if !self.location.contains(pos) {
+            data_error("Invalid tracked string prefix")
+        } else {
+            let len = pos - self.location.start;
+            Ok(TrackedString {
+                string: self.string[0..len].to_string(),
+                location: Location::new(self.location.start, self.location.start+len),
+            })
+        }
+    }
 }
 
 impl Display for TrackedString {
@@ -258,6 +270,13 @@ fn propose_name(name: &TrackedString, v: ValueDefinition) -> ValueDefinition {
 }
 
 impl Node {
+    pub fn prefix(&self, pos: usize) -> CrushResult<Node> {
+        match self {
+            Node::Label(s) => Ok(Node::Label(s.prefix(pos)?)),
+            _ => Ok(self.clone()),
+        }
+    }
+
     pub fn location(&self) -> Location {
         use Node::*;
 
