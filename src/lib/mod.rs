@@ -36,8 +36,6 @@ mod var;
 
 fn declare_external(
     root: &Scope,
-    printer: &Printer,
-    threads: &ThreadStore,
     global_state: &GlobalState,
     output: &ValueSender,
 ) -> CrushResult<()> {
@@ -48,7 +46,7 @@ fn declare_external(
                 match lib {
                     Ok(entry) => match entry.file_name().to_str() {
                         None => {
-                            printer.error("Invalid filename encountered during library loading");
+                            global_state.printer().error("Invalid filename encountered during library loading");
                         }
                         Some(name_with_extension) => {
                             let name = name_with_extension.trim_end_matches(".crush");
@@ -56,8 +54,6 @@ fn declare_external(
                                 name,
                                 &entry.path(),
                                 root,
-                                printer,
-                                threads,
                                 global_state,
                                 output,
                             )?;
@@ -66,7 +62,7 @@ fn declare_external(
                             }
                         }
                     },
-                    err => printer.handle_error(to_crush_error(err)),
+                    err => global_state.printer().handle_error(to_crush_error(err)),
                 }
             }
             Ok(())
@@ -78,13 +74,9 @@ fn load_external_namespace(
     name: &str,
     file: &Path,
     root: &Scope,
-    printer: &Printer,
-    threads: &ThreadStore,
     global_state: &GlobalState,
     output: &ValueSender,
 ) -> CrushResult<Scope> {
-    let local_printer = printer.clone();
-    let local_threads = threads.clone();
     let local_output = output.clone();
     let local_file = file.to_path_buf();
     let local_state = global_state.clone();
@@ -95,9 +87,7 @@ fn load_external_namespace(
             execute::file(
                 tmp_env.clone(),
                 &local_file,
-                &local_printer,
                 &local_output,
-                &local_threads,
                 &local_state)?;
             let data = tmp_env.export()?;
             for (k, v) in data.mapping {
@@ -110,8 +100,6 @@ fn load_external_namespace(
 
 pub fn declare(
     root: &Scope,
-    printer: &Printer,
-    threads: &ThreadStore,
     global_state: &GlobalState,
     output: &ValueSender,
 ) -> CrushResult<()> {
@@ -138,7 +126,7 @@ pub fn declare(
     user::declare(root)?;
     var::declare(root)?;
 
-    declare_external(root, printer, threads, global_state, output)?;
+    declare_external(root, global_state, output)?;
 
     root.readonly();
     Ok(())

@@ -50,7 +50,7 @@ pub struct Sum {
 fn sum(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream() {
         Some(input) => {
-            let cfg: Sum = Sum::parse(context.arguments, &context.printer)?;
+            let cfg: Sum = Sum::parse(context.arguments, &context.global_state.printer())?;
             let column = parse(input.types(), cfg.field)?;
             match &input.types()[column].cell_type {
                 ValueType::Integer => context.output.send(sum_int(input, column)?),
@@ -102,7 +102,7 @@ pub struct Avg {
 fn avg(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream() {
         Some(input) => {
-            let cfg: Avg = Avg::parse(context.arguments, &context.printer)?;
+            let cfg: Avg = Avg::parse(context.arguments, &context.global_state.printer())?;
             let column = parse(input.types(), cfg.field)?;
             match &input.types()[column].cell_type {
                 ValueType::Integer => context.output.send(avg_int(input, column)?),
@@ -167,7 +167,7 @@ pub struct Min {
 fn min(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream() {
         Some(input) => {
-            let cfg: Min = Min::parse(context.arguments, &context.printer)?;
+            let cfg: Min = Min::parse(context.arguments, &context.global_state.printer())?;
             let column = parse(input.types(), cfg.field)?;
             match &input.types()[column].cell_type {
                 ValueType::Integer => context.output.send(min_int(input, column)?),
@@ -194,7 +194,7 @@ pub struct Max {
 fn max(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream() {
         Some(input) => {
-            let cfg: Max = Max::parse(context.arguments, &context.printer)?;
+            let cfg: Max = Max::parse(context.arguments, &context.global_state.printer())?;
             let column = parse(input.types(), cfg.field)?;
             match &input.types()[column].cell_type {
                 ValueType::Integer => context.output.send(max_int(input, column)?),

@@ -237,7 +237,7 @@ struct LPad {
 }
 
 fn lpad(context: CommandContext) -> CrushResult<()> {
-    let cfg: LPad = LPad::parse(context.arguments, &context.printer)?;
+    let cfg: LPad = LPad::parse(context.arguments, &context.global_state.printer())?;
     let s = context.this.string()?;
     let len = cfg.length as usize;
     if cfg.padding.len() != 1 {
@@ -265,7 +265,7 @@ struct RPad {
 }
 
 fn rpad(context: CommandContext) -> CrushResult<()> {
-    let cfg: RPad = RPad::parse(context.arguments, &context.printer)?;
+    let cfg: RPad = RPad::parse(context.arguments, &context.global_state.printer())?;
     let s = context.this.string()?;
     let len = cfg.length as usize;
     if cfg.padding.len() != 1 {
@@ -331,7 +331,7 @@ struct IsDigit {
 }
 
 fn is_digit(context: CommandContext) -> CrushResult<()> {
-    let cfg: IsDigit = IsDigit::parse(context.arguments, &context.printer)?;
+    let cfg: IsDigit = IsDigit::parse(context.arguments, &context.global_state.printer())?;
     let s = context.this.string()?;
     context.output.send(Value::Bool(
         s.chars().all(|ch| ch.is_digit(cfg.radix as u32)),

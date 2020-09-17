@@ -15,21 +15,17 @@ use crate::lang::global_state::GlobalState;
 pub fn file(
     global_env: Scope,
     filename: &Path,
-    printer: &Printer,
     output: &ValueSender,
-    threads: &ThreadStore,
     global_state: &GlobalState,
 ) -> CrushResult<()> {
     let cmd = to_crush_error(fs::read_to_string(filename))?;
-    string(global_env, &cmd.as_str(), printer, output, threads, global_state);
+    string(global_env, &cmd.as_str(), output, global_state);
     Ok(())
 }
 
 pub fn pup(
     env: Scope,
     buf: &Vec<u8>,
-    printer: &Printer,
-    threads: &ThreadStore,
     global_state: &GlobalState,
 ) -> CrushResult<()> {
     let cmd = deserialize(buf, &env)?;
@@ -37,7 +33,7 @@ pub fn pup(
         Value::Command(cmd) => {
             let (snd, recv) = channels();
 
-            threads.spawn(
+            global_state.threads().spawn(
                 "serializer",
                 move || {
                     let val = recv.recv()?;
@@ -54,11 +50,9 @@ pub fn pup(
                 arguments: vec![],
                 scope: env,
                 this: None,
-                printer: printer.clone(),
-                threads: threads.clone(),
                 global_state: global_state.clone(),
             })?;
-            threads.join(printer);
+            global_state.threads().join(global_state.printer());
             Ok(())
         }
         _ => argument_error_legacy("Expected a command, but found other value"),
@@ -68,9 +62,7 @@ pub fn pup(
 pub fn string(
     global_env: Scope,
     s: &str,
-    printer: &Printer,
     output: &ValueSender,
-    threads: &ThreadStore,
     global_state: &GlobalState,
 ) {
     match parse(s, &global_env) {
@@ -80,19 +72,21 @@ pub fn string(
                     empty_channel(),
                     output.clone(),
                     global_env.clone(),
-                    printer.clone(),
-                    threads.clone(),
                     global_state.clone(),
                 )) {
                     Ok(handle) => {
-                        handle.map(|id| threads.join_one(id, &printer.with_source(s, job_definition.location())));
+                        handle.map(|id| global_state.threads()
+                            .join_one(
+                                id,
+                                &global_state.printer().with_source(s, job_definition.location())
+                            ));
                     }
-                    Err(e) => printer.crush_error(e.with_definition(s)),
+                    Err(e) => global_state.printer().crush_error(e.with_definition(s)),
                 }
             }
         }
         Err(error) => {
-            printer.crush_error(error);
+            global_state.printer().crush_error(error);
         }
     }
 }

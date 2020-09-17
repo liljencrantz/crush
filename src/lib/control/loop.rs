@@ -16,7 +16,7 @@ pub struct Loop {
 }
 
 fn r#loop(context: CommandContext) -> CrushResult<()> {
-    let cfg: Loop = Loop::parse(context.arguments.clone(), &context.printer)?;
+    let cfg: Loop = Loop::parse(context.arguments.clone(), &context.global_state.printer())?;
     context.output.initialize(vec![])?;
     loop {
         let env = context.scope.create_child(&context.scope, true);
@@ -26,8 +26,6 @@ fn r#loop(context: CommandContext) -> CrushResult<()> {
             arguments: Vec::new(),
             scope: env.clone(),
             this: None,
-            printer: context.printer.clone(),
-            threads: context.threads.clone(),
             global_state: context.global_state.clone(),
         })?;
         if env.is_stopped() {

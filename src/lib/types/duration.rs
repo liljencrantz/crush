@@ -118,7 +118,7 @@ struct Of {
 }
 
 fn of(context: CommandContext) -> CrushResult<()> {
-    let cfg: Of = Of::parse(context.arguments, &context.printer)?;
+    let cfg: Of = Of::parse(context.arguments, &context.global_state.printer())?;
 
     let res = Duration::nanoseconds(cfg.nanoseconds)
         + Duration::microseconds(cfg.microseconds)

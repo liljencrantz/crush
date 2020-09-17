@@ -143,7 +143,7 @@ pub struct Find {
 
 fn find(context: CommandContext) -> CrushResult<()> {
     let mut output = context.output.initialize(OUTPUT_TYPE.clone())?;
-    let config: Find = Find::parse(context.arguments, &context.printer)?;
+    let config: Find = Find::parse(context.arguments, &context.global_state.printer())?;
 
     let mut dir = if config.directory.had_entries() {
         Vec::from(config.directory)

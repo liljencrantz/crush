@@ -31,7 +31,7 @@ struct Threads {}
 fn threads(context: CommandContext) -> CrushResult<()> {
     let output = context.output.initialize(THREADS_OUTPUT_TYPE.clone())?;
 
-    for t in context.threads.current()? {
+    for t in context.global_state.threads().current()? {
         output.send(Row::new(vec![
             Value::Time(t.creation_time),
             Value::String(t.name),
@@ -71,7 +71,7 @@ mod locale {
     }
 
     fn set(context: CommandContext) -> CrushResult<()> {
-        let config: Set = Set::parse(context.arguments, &context.printer)?;
+        let config: Set = Set::parse(context.arguments, &context.global_state.printer())?;
         let new_locale = to_crush_error(SystemLocale::from_name(config.locale))?;
         context.global_state.set_locale(new_locale);
         context.output.send(Value::Empty())

@@ -134,13 +134,11 @@ fn crush_history_file() -> PathBuf {
 
 pub fn run_interactive(
     global_env: Scope,
-    printer: &Printer,
     pretty_printer: &ValueSender,
-    threads: &ThreadStore,
     global_state: &GlobalState,
 ) -> CrushResult<()> {
-    printer.line("Welcome to Crush");
-    printer.line(r#"Type "help" for... help."#);
+    global_state.printer().line("Welcome to Crush");
+    global_state.printer().line(r#"Type "help" for... help."#);
 
     let config = Config::builder()
         .history_ignore_space(true)
@@ -163,35 +161,33 @@ pub fn run_interactive(
         let readline = rl.readline("crush# ");
 
         match readline {
-            Ok(cmd) if cmd.is_empty() => threads.reap(&printer),
+            Ok(cmd) if cmd.is_empty() => global_state.threads().reap(global_state.printer()),
             Ok(cmd) => {
                 rl.add_history_entry(&cmd);
-                threads.reap(&printer);
+                global_state.threads().reap(global_state.printer());
                 execute::string(
                     global_env.clone(),
                     &cmd,
-                    &printer,
                     pretty_printer,
-                    threads,
                     global_state,
                 );
-                threads.reap(&printer);
+                global_state.threads().reap(global_state.printer());
             }
             Err(ReadlineError::Interrupted) => {
-                printer.line("^C");
+                global_state.printer().line("^C");
             }
             Err(ReadlineError::Eof) => {
-                printer.line("exit");
+                global_state.printer().line("exit");
                 break;
             }
             Err(err) => {
-                printer.handle_error::<()>(to_crush_error(Err(err)));
+                global_state.printer().handle_error::<()>(to_crush_error(Err(err)));
                 break;
             }
         }
 
         if let Err(err) = rl.save_history(&crush_history_file()) {
-            printer.line(&format!("Error: Failed to save history: {}", err))
+            global_state.printer().line(&format!("Error: Failed to save history: {}", err))
         }
     }
     Ok(())

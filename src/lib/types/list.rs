@@ -154,7 +154,7 @@ struct Repeat {
 }
 
 fn repeat(context: CommandContext) -> CrushResult<()> {
-    let cfg: Repeat = Repeat::parse(context.arguments, &context.printer)?;
+    let cfg: Repeat = Repeat::parse(context.arguments, &context.global_state.printer())?;
     let mut l = Vec::with_capacity(cfg.times as usize);
     for _i in 0..cfg.times {
         l.push(cfg.item.clone());
@@ -179,7 +179,7 @@ fn __call__(context: CommandContext) -> CrushResult<()> {
     match context.this.r#type()? {
         ValueType::List(c) => match *c {
             ValueType::Empty => {
-                let cfg: Call = Call::parse(context.arguments, &context.printer)?;
+                let cfg: Call = Call::parse(context.arguments, &context.global_state.printer())?;
                 context.output.send(Value::Type(ValueType::List(Box::new(
                     cfg.value_type))))
             }

@@ -15,7 +15,7 @@ struct From {
 }
 
 pub fn from(context: CommandContext) -> CrushResult<()> {
-    let cfg: From = From::parse(context.arguments, &context.printer)?;
+    let cfg: From = From::parse(context.arguments, &context.global_state.printer())?;
     context
         .output
         .send(Value::BinaryStream(cfg.files.reader(context.input)?))
@@ -32,7 +32,7 @@ struct To {
 }
 
 pub fn to(context: CommandContext) -> CrushResult<()> {
-    let cfg: To = To::parse(context.arguments, &context.printer)?;
+    let cfg: To = To::parse(context.arguments, &context.global_state.printer())?;
 
     match context.input.recv()? {
         Value::BinaryStream(mut input) => {

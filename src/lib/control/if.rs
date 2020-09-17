@@ -19,7 +19,7 @@ pub struct If {
 }
 
 fn r#if(context: CommandContext) -> CrushResult<()> {
-    let cfg: If = If::parse(context.arguments.clone(), &context.printer)?;
+    let cfg: If = If::parse(context.arguments.clone(), &context.global_state.printer())?;
 
     if cfg.condition {
         cfg.true_clause.invoke(context.with_args(vec![], None))

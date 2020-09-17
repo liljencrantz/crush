@@ -31,7 +31,7 @@ struct Val {
 }
 
 pub fn val(context: CommandContext) -> CrushResult<()> {
-    let cfg: Val = Val::parse(context.arguments, &context.printer)?;
+    let cfg: Val = Val::parse(context.arguments, &context.global_state.printer())?;
     context.output.send(cfg.value)
 }
 
@@ -46,7 +46,7 @@ struct Dir {
 }
 
 pub fn dir(context: CommandContext) -> CrushResult<()> {
-    let cfg: Dir = Dir::parse(context.arguments, &context.printer)?;
+    let cfg: Dir = Dir::parse(context.arguments, &context.global_state.printer())?;
     context.output.send(Value::List(List::new(
         ValueType::String,
         cfg.value
@@ -65,8 +65,8 @@ struct Echo {
 }
 
 fn echo(context: CommandContext) -> CrushResult<()> {
-    let cfg: Echo = Echo::parse(context.arguments, &context.printer)?;
-    let pretty = PrettyPrinter::new(context.printer.clone(), context.global_state.grouping());
+    let cfg: Echo = Echo::parse(context.arguments, &context.global_state.printer())?;
+    let pretty = PrettyPrinter::new(context.global_state.printer().clone(), context.global_state.grouping());
     for value in cfg.values {
         pretty.print_value(value);
     }
@@ -85,7 +85,7 @@ struct Member {
 }
 
 fn member(context: CommandContext) -> CrushResult<()> {
-    let cfg: Member = Member::parse(context.arguments, &context.printer)?;
+    let cfg: Member = Member::parse(context.arguments, &context.global_state.printer())?;
     if cfg.field.len() != 1 {
         return argument_error_legacy("Invalid field - should have exactly one element");
     }

@@ -36,7 +36,7 @@ long = "fd:file accepts no arguments.")]
 pub struct File {}
 
 fn file(context: CommandContext) -> CrushResult<()> {
-    File::parse(context.arguments.clone(), &context.printer)?;
+    File::parse(context.arguments.clone(), &context.global_state.printer())?;
     let output = context.output.initialize(FILE_OUTPUT_TYPE.clone())?;
 
     match psutil::process::processes() {
@@ -184,7 +184,7 @@ mod procfs {
     }
 
     fn network(context: CommandContext) -> CrushResult<()> {
-        Network::parse(context.arguments.clone(), &context.printer)?;
+        Network::parse(context.arguments.clone(), &context.global_state.printer())?;
         let users = create_user_map()?;
         let mut hosts = HashMap::new();
         let output = context.output.initialize(NET_OUTPUT_TYPE.clone())?;
@@ -200,10 +200,10 @@ mod procfs {
             Err(_) => return error("Failed to list processes"),
         }
 
-        handle_socket_file(&users, &mut pids, &mut hosts, "tcp", &context.printer, &output)?;
-        handle_socket_file(&users, &mut pids, &mut hosts, "udp", &context.printer, &output)?;
-        handle_socket_file(&users, &mut pids, &mut hosts, "tcp6", &context.printer, &output)?;
-        handle_socket_file(&users, &mut pids, &mut hosts, "udp6", &context.printer, &output)?;
+        handle_socket_file(&users, &mut pids, &mut hosts, "tcp", &context.global_state.printer(), &output)?;
+        handle_socket_file(&users, &mut pids, &mut hosts, "udp", &context.global_state.printer(), &output)?;
+        handle_socket_file(&users, &mut pids, &mut hosts, "tcp6", &context.global_state.printer(), &output)?;
+        handle_socket_file(&users, &mut pids, &mut hosts, "udp6", &context.global_state.printer(), &output)?;
 
         Ok(())
     }
@@ -279,7 +279,7 @@ mod procfs {
     pub struct Unix {}
 
     fn unix(context: CommandContext) -> CrushResult<()> {
-        Unix::parse(context.arguments.clone(), &context.printer)?;
+        Unix::parse(context.arguments.clone(), &context.global_state.printer())?;
         let output = context.output.initialize(UNIX_OUTPUT_TYPE.clone())?;
 
         let mut pids = HashMap::new();
@@ -304,7 +304,7 @@ mod procfs {
                 break;
             }
             if parts.len() < 7 {
-                context.printer.error(&format!("Invalid data in /proc/net/unix:\n{}", &line));
+                context.global_state.printer().error(&format!("Invalid data in /proc/net/unix:\n{}", &line));
                 continue;
             }
 

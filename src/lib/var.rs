@@ -62,7 +62,7 @@ pub fn env(context: CommandContext) -> CrushResult<()> {
     keys.sort();
 
     for k in keys {
-        context.printer.handle_error(output.send(Row::new(vec![
+        context.global_state.printer().handle_error(output.send(Row::new(vec![
             Value::String(k.clone()),
             Value::String(values[k].to_string()),
         ])));

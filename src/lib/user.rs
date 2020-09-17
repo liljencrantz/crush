@@ -107,7 +107,7 @@ struct Find {
 }
 
 fn find(context: CommandContext) -> CrushResult<()> {
-    let cfg: Find = Find::parse(context.arguments, &context.printer)?;
+    let cfg: Find = Find::parse(context.arguments, &context.global_state.printer())?;
     unsafe {
         context.output.send(search(cfg.name)?)
     }

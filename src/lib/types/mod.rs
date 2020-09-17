@@ -97,7 +97,7 @@ struct Class {
 }
 
 fn class(context: CommandContext) -> CrushResult<()> {
-    let cfg: Class = Class::parse(context.arguments, &context.printer)?;
+    let cfg: Class = Class::parse(context.arguments, &context.global_state.printer())?;
     let scope = context.scope;
     let parent = cfg.parent.unwrap_or_else(|| scope.root_object());
     let res = Struct::new(vec![], Some(parent));
@@ -121,7 +121,7 @@ struct Convert {
 }
 
 pub fn convert(context: CommandContext) -> CrushResult<()> {
-    let cfg: Convert = Convert::parse(context.arguments, &context.printer)?;
+    let cfg: Convert = Convert::parse(context.arguments, &context.global_state.printer())?;
     context.output.send(cfg.value.convert(cfg.target_type)?)
 }
 
@@ -137,7 +137,7 @@ struct TypeOf {
 }
 
 pub fn __typeof__(context: CommandContext) -> CrushResult<()> {
-    let cfg: TypeOf = TypeOf::parse(context.arguments, &context.printer)?;
+    let cfg: TypeOf = TypeOf::parse(context.arguments, &context.global_state.printer())?;
     context.output.send(Value::Type(cfg.value.value_type()))
 }
 

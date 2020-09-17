@@ -28,7 +28,7 @@ struct Cd {
 }
 
 fn cd(context: CommandContext) -> CrushResult<()> {
-    let cfg: Cd = Cd::parse(context.arguments, &context.printer)?;
+    let cfg: Cd = Cd::parse(context.arguments, &context.global_state.printer())?;
 
     let dir = match cfg.destination.had_entries() {
         true => PathBuf::try_from(cfg.destination),
@@ -81,10 +81,10 @@ pub struct HelpSignature {
 }
 
 pub fn help(context: CommandContext) -> CrushResult<()> {
-    let cfg: HelpSignature = HelpSignature::parse(context.arguments, &context.printer)?;
+    let cfg: HelpSignature = HelpSignature::parse(context.arguments, &context.global_state.printer())?;
     match cfg.topic {
         None => {
-            context.printer.line(
+            context.global_state.printer().line(
                 r#"
 Welcome to Crush!
 
@@ -104,9 +104,9 @@ members of a value, write "dir <value>".
         }
         Some(v) => {
             match v {
-                Value::Command(cmd) => halp(cmd.help(), &context.printer),
-                Value::Type(t) => halp(&t, &context.printer),
-                v => halp(&v, &context.printer),
+                Value::Command(cmd) => halp(cmd.help(), &context.global_state.printer()),
+                Value::Type(t) => halp(&t, &context.global_state.printer()),
+                v => halp(&v, &context.global_state.printer()),
             }
             context.output.send(Value::Empty())
         }

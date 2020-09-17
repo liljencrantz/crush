@@ -75,7 +75,7 @@ pub fn cmd(mut context: CommandContext) -> CrushResult<()> {
             for e in errors.split('\n') {
                 let err = e.trim();
                 if !err.is_empty() {
-                    context.printer.error(err);
+                    context.global_state.printer().error(err);
                 }
             }
             context
@@ -98,7 +98,7 @@ struct Sleep {
 }
 
 pub fn sleep(context: CommandContext) -> CrushResult<()> {
-    let cfg = Sleep::parse(context.arguments, &context.printer)?;
+    let cfg = Sleep::parse(context.arguments, &context.global_state.printer())?;
     std::thread::sleep(to_crush_error(cfg.duration.to_std())?);
     context.output.send(Value::Empty())?;
     Ok(())

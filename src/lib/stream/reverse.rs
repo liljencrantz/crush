@@ -13,7 +13,7 @@ pub struct Reverse {
 }
 
 fn reverse(context: CommandContext) -> CrushResult<()> {
-    Reverse::parse(context.arguments.clone(), &context.printer)?;
+    Reverse::parse(context.arguments.clone(), &context.global_state.printer())?;
     match context.input.recv()?.stream() {
         Some(mut input) => {
             let output = context.output.initialize(input.types().to_vec())?;

@@ -46,7 +46,7 @@ pub struct Http {
 }
 
 fn http(context: CommandContext) -> CrushResult<()> {
-    let cfg: Http = Http::parse(context.arguments, &context.printer)?;
+    let cfg: Http = Http::parse(context.arguments, &context.global_state.printer())?;
 
     let (mut output, input) = binary_channel();
     let client = reqwest::blocking::Client::new();

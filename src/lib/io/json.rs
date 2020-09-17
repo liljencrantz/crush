@@ -149,7 +149,7 @@ struct From {
 }
 
 pub fn from(context: CommandContext) -> CrushResult<()> {
-    let cfg: From = From::parse(context.arguments, &context.printer)?;
+    let cfg: From = From::parse(context.arguments, &context.global_state.printer())?;
     let reader = BufReader::new(cfg.files.reader(context.input)?);
     let serde_value = to_crush_error(serde_json::from_reader(reader))?;
     let crush_value = from_json(&serde_value)?;
@@ -171,7 +171,7 @@ struct To {
 }
 
 fn to(context: CommandContext) -> CrushResult<()> {
-    let cfg: To = To::parse(context.arguments, &context.printer)?;
+    let cfg: To = To::parse(context.arguments, &context.global_state.printer())?;
     let mut writer = cfg.file.writer(context.output)?;
     let value = context.input.recv()?;
     let json_value = to_json(value)?;

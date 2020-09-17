@@ -87,7 +87,7 @@ fn __call__(context: CommandContext) -> CrushResult<()> {
     match context.this.r#type()? {
         ValueType::Dict(t1, t2) => match (*t1, *t2) {
             (ValueType::Empty, ValueType::Empty) => {
-                let cfg: Call = Call::parse(context.arguments, &context.printer)?;
+                let cfg: Call = Call::parse(context.arguments, &context.global_state.printer())?;
                 context.output.send(Value::Type(ValueType::Dict(
                     Box::new(cfg.key_type),
                     Box::new(cfg.value_type),

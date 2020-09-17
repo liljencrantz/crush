@@ -46,7 +46,7 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
     let output = context
         .output
         .initialize(vec![ColumnType::new("token", ValueType::String)])?;
-    let cfg: From = From::parse(context.arguments, &context.printer)?;
+    let cfg: From = From::parse(context.arguments, &context.global_state.printer())?;
 
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
 

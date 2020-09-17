@@ -71,7 +71,7 @@ fn size(
 }
 
 fn du(context: CommandContext) -> CrushResult<()> {
-    let cfg: Du = Du::parse(context.arguments, &context.printer)?;
+    let cfg: Du = Du::parse(context.arguments, &context.global_state.printer())?;
     let output = context.output.initialize(OUTPUT_TYPE.clone())?;
     let dirs = if cfg.directory.had_entries() {
         Vec::from(cfg.directory)

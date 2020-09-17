@@ -81,7 +81,7 @@ struct Chown {
 }
 
 pub fn chown(context: CommandContext) -> CrushResult<()> {
-    let cfg: Chown = Chown::parse(context.arguments, &context.printer)?;
+    let cfg: Chown = Chown::parse(context.arguments, &context.global_state.printer())?;
     let file = context.this.file()?;
 
     let uid = if let Some(name) = cfg.user {
@@ -213,7 +213,7 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
 }
 
 pub fn chmod(context: CommandContext) -> CrushResult<()> {
-    let cfg: Chmod = Chmod::parse(context.arguments, &context.printer)?;
+    let cfg: Chmod = Chmod::parse(context.arguments, &context.global_state.printer())?;
     let file = context.this.file()?;
     let metadata = to_crush_error(metadata(&file))?;
 
@@ -255,6 +255,6 @@ struct GetItem {
 
 pub fn __getitem__(context: CommandContext) -> CrushResult<()> {
     let base_directory = context.this.file()?;
-    let cfg: GetItem = GetItem::parse(context.arguments, &context.printer)?;
+    let cfg: GetItem = GetItem::parse(context.arguments, &context.global_state.printer())?;
     context.output.send(Value::File(base_directory.join(&cfg.name)))
 }

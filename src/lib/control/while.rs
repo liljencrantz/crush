@@ -21,7 +21,7 @@ pub struct While {
 
 fn r#while(context: CommandContext) -> CrushResult<()> {
     context.output.initialize(vec![])?;
-    let cfg: While = While::parse(context.arguments, &context.printer)?;
+    let cfg: While = While::parse(context.arguments, &context.global_state.printer())?;
 
     loop {
         let (sender, receiver) = channels();
@@ -33,8 +33,6 @@ fn r#while(context: CommandContext) -> CrushResult<()> {
             arguments: Vec::new(),
             scope: cond_env.clone(),
             this: None,
-            printer: context.printer.clone(),
-            threads: context.threads.clone(),
             global_state: context.global_state.clone(),
         })?;
         if cond_env.is_stopped() {
@@ -51,8 +49,6 @@ fn r#while(context: CommandContext) -> CrushResult<()> {
                         arguments: Vec::new(),
                         scope: body_env.clone(),
                         this: None,
-                        printer: context.printer.clone(),
-                        threads: context.threads.clone(),
                         global_state: context.global_state.clone(),
                     })?;
                     if body_env.is_stopped() {

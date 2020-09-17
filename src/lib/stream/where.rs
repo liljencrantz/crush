@@ -49,7 +49,7 @@ fn evaluate(
 }
 
 pub fn r#where(context: CommandContext) -> CrushResult<()> {
-    let cfg: Where = Where::parse(context.arguments.clone(), &context.printer)?;
+    let cfg: Where = Where::parse(context.arguments.clone(), &context.global_state.printer())?;
     let location = context.arguments[0].location;
 
     match context.input.recv()?.stream() {
@@ -60,8 +60,6 @@ pub fn r#where(context: CommandContext) -> CrushResult<()> {
                 arguments: vec![],
                 scope: context.scope.clone(),
                 this: None,
-                printer: context.printer.clone(),
-                threads: context.threads.clone(),
                 global_state: context.global_state.clone(),
             };
 
@@ -73,7 +71,7 @@ pub fn r#where(context: CommandContext) -> CrushResult<()> {
                             break;
                         }
                     }
-                    Err(e) => base_context.printer.crush_error(e),
+                    Err(e) => base_context.global_state.printer().crush_error(e),
                 }
             }
             Ok(())

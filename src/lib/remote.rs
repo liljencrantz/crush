@@ -199,7 +199,7 @@ struct Exec {
 }
 
 fn exec(context: CommandContext) -> CrushResult<()> {
-    let cfg: Exec = Exec::parse(context.arguments, &context.printer)?;
+    let cfg: Exec = Exec::parse(context.arguments, &context.global_state.printer())?;
     let host_file = if cfg.host_file.had_entries() {
         PathBuf::try_from(cfg.host_file)?
     } else {
@@ -251,7 +251,7 @@ struct Pexec {
 }
 
 fn pexec(context: CommandContext) -> CrushResult<()> {
-    let cfg: Pexec = Pexec::parse(context.arguments, &context.printer)?;
+    let cfg: Pexec = Pexec::parse(context.arguments, &context.global_state.printer())?;
     let host_file = if cfg.host_file.had_entries() {
         PathBuf::try_from(cfg.host_file)?
     } else {
@@ -283,7 +283,7 @@ fn pexec(context: CommandContext) -> CrushResult<()> {
         let my_ignore_host_file = cfg.ignore_host_file;
         let my_allow_not_found = cfg.allow_not_found;
 
-        context.threads.spawn(
+        context.global_state.threads().spawn(
             "remote:pexec",
             move || {
                 while let Ok(host) = my_recv.recv() {
@@ -358,7 +358,7 @@ mod host {
     }
 
     fn list(context: CommandContext) -> CrushResult<()> {
-        let cfg: List = List::parse(context.arguments, &context.printer)?;
+        let cfg: List = List::parse(context.arguments, &context.global_state.printer())?;
         let output = context
             .output
             .initialize(super::HOST_LIST_OUTPUT_TYPE.clone())?;
@@ -399,7 +399,7 @@ mod host {
     }
 
     fn remove(context: CommandContext) -> CrushResult<()> {
-        let cfg: Remove = Remove::parse(context.arguments, &context.printer)?;
+        let cfg: Remove = Remove::parse(context.arguments, &context.global_state.printer())?;
         let host_file = if cfg.host_file.had_entries() {
             cfg.host_file.clone().try_into()?
         } else {

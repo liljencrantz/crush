@@ -57,7 +57,7 @@ command invocation, which is done using an invocation like
 
 ```rust
 fn find(context: CommandContext) -> CrushResult<()> {
-    let config: Find = Find::parse(context.arguments, &context.printer)?;
+    let config: Find = Find::parse(context.arguments, &context.global_state.printer())?;
     ...
 }
 ```

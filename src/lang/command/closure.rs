@@ -62,12 +62,10 @@ impl CrushCommand for Closure {
                 input,
                 output,
                 env.clone(),
-                context.printer.clone(),
-                context.threads.clone(),
                 context.global_state.clone(),
             ))?;
-            let local_printer = context.printer.clone();
-            let local_threads = context.threads.clone();
+            let local_printer = context.global_state.printer().clone();
+            let local_threads = context.global_state.threads().clone();
             job.map(|id| local_threads.join_one(id, &local_printer));
 
             if env.is_stopped() {

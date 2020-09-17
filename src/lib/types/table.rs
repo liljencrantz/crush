@@ -36,7 +36,7 @@ struct Call {
 fn __call__(context: CommandContext) -> CrushResult<()> {
     match context.this.r#type()? {
         ValueType::Table(c) => {
-            let cfg: Call = Call::parse(context.arguments, &context.printer)?;
+            let cfg: Call = Call::parse(context.arguments, &context.global_state.printer())?;
             if c.is_empty() {
                 context
                     .output
@@ -78,7 +78,7 @@ struct GetItem {
 }
 
 fn __getitem__(context: CommandContext) -> CrushResult<()> {
-    let cfg: GetItem = GetItem::parse(context.arguments, &context.printer)?;
+    let cfg: GetItem = GetItem::parse(context.arguments, &context.global_state.printer())?;
     let o = context.this.table()?;
     context.output.send(Value::Struct(
         mandate(o.rows().get(cfg.index), "Index out of range")?

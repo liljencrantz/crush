@@ -45,8 +45,6 @@ pub fn r#for(mut context: CommandContext) -> CrushResult<()> {
             arguments,
             scope: env.clone(),
             this: None,
-            printer: context.printer.clone(),
-            threads: context.threads.clone(),
             global_state: context.global_state.clone(),
         })?;
         if env.is_stopped() {

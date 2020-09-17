@@ -59,8 +59,6 @@ fn aggregate(
                     arguments: vec![],
                     scope: scope.clone(),
                     this: None,
-                    printer: printer.clone(),
-                    threads: threads.clone(),
                     global_state: global_state.clone(),
                 })?;
                 let mut result = key;
@@ -87,8 +85,6 @@ fn aggregate(
                             arguments: vec![],
                             scope: local_scope,
                             this: None,
-                            printer: local_printer,
-                            threads: local_threads,
                             global_state: local_state,
                         }))?;
                     receivers.push(output_receiver);
@@ -152,7 +148,7 @@ fn create_worker_thread(
 }
 
 pub fn group(context: CommandContext) -> CrushResult<()> {
-    let cfg: Group = Group::parse(context.arguments, &context.printer)?;
+    let cfg: Group = Group::parse(context.arguments, &context.global_state.printer())?;
     let mut input = mandate(
         context.input.recv()?.stream(),
         "Expected input to be a stream",
@@ -185,8 +181,8 @@ pub fn group(context: CommandContext) -> CrushResult<()> {
     for _ in 0..16 {
         create_worker_thread(
             &cfg,
-            &context.printer, &context.scope, &output,
-            &task_input, &context.threads,
+            &context.global_state.printer(), &context.scope, &output,
+            &task_input, &context.global_state.threads(),
             &context.global_state)?;
     }
 

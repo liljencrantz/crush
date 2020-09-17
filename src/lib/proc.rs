@@ -57,7 +57,7 @@ fn state_name(s: Status) -> &'static str {
 }
 
 fn ps(context: CommandContext) -> CrushResult<()> {
-    Ps::parse(context.arguments.clone(), &context.printer)?;
+    Ps::parse(context.arguments.clone(), &context.global_state.printer())?;
     let output = context.output.initialize(PS_OUTPUT_TYPE.clone())?;
     let users = create_user_map()?;
 
@@ -112,7 +112,7 @@ struct Kill {
 }
 
 fn kill(context: CommandContext) -> CrushResult<()> {
-    let sig: Kill = Kill::parse(context.arguments, &context.printer)?;
+    let sig: Kill = Kill::parse(context.arguments, &context.global_state.printer())?;
     for pid in sig.pid {
         to_crush_error(signal::kill(
             Pid::from_raw(pid as i32),

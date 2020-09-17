@@ -40,7 +40,7 @@ struct From {
 }
 
 fn from(context: CommandContext) -> CrushResult<()> {
-    let cfg: From = From::parse(context.arguments, &context.printer)?;
+    let cfg: From = From::parse(context.arguments, &context.global_state.printer())?;
     let columns = cfg
         .columns
         .iter()

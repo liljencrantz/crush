@@ -42,7 +42,7 @@ fn run(
 }
 
 pub fn each(context: CommandContext) -> CrushResult<()> {
-    let cfg: Each = Each::parse(context.arguments.clone(), &context.printer)?;
+    let cfg: Each = Each::parse(context.arguments.clone(), &context.global_state.printer())?;
     let location = context.arguments[0].location;
     context.output.send(Value::Empty())?;
 
@@ -54,15 +54,13 @@ pub fn each(context: CommandContext) -> CrushResult<()> {
                 arguments: vec![],
                 scope: context.scope.clone(),
                 this: None,
-                printer: context.printer.clone(),
-                threads: context.threads.clone(),
                 global_state: context.global_state.clone(),
             };
 
             while let Ok(row) = input.read() {
                 match run(cfg.body.copy(), location, &row, input.types(), &base_context) {
                     Ok(_) => (),
-                    Err(e) => base_context.printer.crush_error(e),
+                    Err(e) => base_context.global_state.printer().crush_error(e),
                 }
             }
             Ok(())

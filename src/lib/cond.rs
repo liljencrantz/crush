@@ -22,8 +22,6 @@ pub fn and(mut context: CommandContext) -> CrushResult<()> {
                     arguments: vec![],
                     scope: context.scope.clone(),
                     this: None,
-                    printer: context.printer.clone(),
-                    threads: context.threads.clone(),
                     global_state: context.global_state.clone(),
                 };
                 c.invoke(cc)?;
@@ -62,8 +60,6 @@ pub fn or(mut context: CommandContext) -> CrushResult<()> {
                     arguments: vec![],
                     scope: context.scope.clone(),
                     this: None,
-                    printer: context.printer.clone(),
-                    threads: context.threads.clone(),
                     global_state: context.global_state.clone(),
                 };
                 c.invoke(cc)?;

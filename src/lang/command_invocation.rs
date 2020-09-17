@@ -131,13 +131,13 @@ impl CommandInvocation {
                 if err.is(CrushErrorType::BlockError) {
                     let cmd = self.command.clone();
                     let arguments = self.arguments.clone();
-                    let t = context.threads.clone();
+                    let t = context.global_state.threads().clone();
                     let location = self.command.location();
                     Ok(Some(t.spawn(
                         &self.command.to_string(),
                         move || {
                             match cmd.clone().compile_unbound(&mut context.compile_context()) {
-                                Ok((this, value)) => context.printer.handle_error(invoke_value(
+                                Ok((this, value)) => context.global_state.printer().handle_error(invoke_value(
                                     this,
                                     value,
                                     arguments,
@@ -145,7 +145,7 @@ impl CommandInvocation {
                                     location,
                                 )),
 
-                                _ => context.printer.handle_error(try_external_command(
+                                _ => context.global_state.printer().handle_error(try_external_command(
                                     cmd,
                                     arguments,
                                     context.clone(),
@@ -283,10 +283,10 @@ fn invoke_command(
     {
         let new_context =
             CommandInvocation::execution_context(local_arguments, this, context.clone())?;
-        context.printer.handle_error(action.invoke(new_context));
+        context.global_state.printer().handle_error(action.invoke(new_context));
         Ok(None)
     } else {
-        let t = context.threads.clone();
+        let t = context.global_state.threads().clone();
         let name = action.name().to_string();
         Ok(Some(t.spawn(
             &name,

@@ -25,7 +25,7 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
     let output = context
         .output
         .initialize(vec![ColumnType::new("line", ValueType::String)])?;
-    let cfg: FromSignature = FromSignature::parse(context.arguments, &context.printer)?;
+    let cfg: FromSignature = FromSignature::parse(context.arguments, &context.global_state.printer())?;
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
     let mut line = String::new();
 
@@ -62,7 +62,7 @@ struct To {
 }
 
 pub fn to(context: CommandContext) -> CrushResult<()> {
-    let cfg: To = To::parse(context.arguments, &context.printer)?;
+    let cfg: To = To::parse(context.arguments, &context.global_state.printer())?;
 
     match context.input.recv()?.stream() {
         Some(mut input) => {

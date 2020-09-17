@@ -168,22 +168,16 @@ impl ArgumentVector for Vec<Argument> {
 
 pub struct CompileContext {
     pub env: Scope,
-    pub printer: Printer,
-    pub threads: ThreadStore,
     pub global_state: GlobalState,
 }
 
 impl CompileContext {
     pub fn new(
         env: Scope,
-        printer: Printer,
-        threads: ThreadStore,
         global_state: GlobalState,
     ) -> CompileContext {
         CompileContext {
             env,
-            printer,
-            threads,
             global_state,
         }
     }
@@ -191,7 +185,6 @@ impl CompileContext {
     pub fn job_context(&self, input: ValueReceiver, output: ValueSender) -> JobContext {
         JobContext::new(
             input, output, self.env.clone(),
-            self.printer.clone(), self.threads.clone(),
             self.global_state.clone(),
         )
     }
@@ -199,8 +192,6 @@ impl CompileContext {
     pub fn with_scope(&self, env: &Scope) -> CompileContext {
         CompileContext {
             env: env.clone(),
-            printer: self.printer.clone(),
-            threads: self.threads.clone(),
             global_state: self.global_state.clone(),
         }
     }
@@ -211,8 +202,6 @@ pub struct JobContext {
     pub input: ValueReceiver,
     pub output: ValueSender,
     pub env: Scope,
-    pub printer: Printer,
-    pub threads: ThreadStore,
     pub global_state: GlobalState,
 }
 
@@ -221,16 +210,12 @@ impl JobContext {
         input: ValueReceiver,
         output: ValueSender,
         env: Scope,
-        printer: Printer,
-        threads: ThreadStore,
         global_state: GlobalState,
     ) -> JobContext {
         JobContext {
             input,
             output,
             env,
-            printer,
-            threads,
             global_state,
         }
     }
@@ -240,8 +225,6 @@ impl JobContext {
             input,
             output,
             env: self.env.clone(),
-            printer: self.printer.clone(),
-            threads: self.threads.clone(),
             global_state: self.global_state.clone(),
         }
     }
@@ -249,8 +232,6 @@ impl JobContext {
     pub fn compile_context(&self) -> CompileContext {
         CompileContext::new(
             self.env.clone(),
-            self.printer.clone(),
-            self.threads.clone(),
             self.global_state.clone(),
         )
     }
@@ -265,9 +246,7 @@ impl JobContext {
             this,
             input: self.input.clone(),
             output: self.output.clone(),
-            printer: self.printer.clone(),
             scope: self.env.clone(),
-            threads: self.threads.clone(),
             global_state: self.global_state.clone(),
         }
     }
@@ -280,8 +259,6 @@ pub struct CommandContext {
     pub arguments: Vec<Argument>,
     pub scope: Scope,
     pub this: Option<Value>,
-    pub printer: Printer,
-    pub threads: ThreadStore,
     pub global_state: GlobalState,
 }
 
@@ -292,8 +269,6 @@ impl CommandContext {
     pub fn compile_context(&self) -> CompileContext {
         CompileContext::new(
             self.scope.clone(),
-            self.printer.clone(),
-            self.threads.clone(),
             self.global_state.clone(),
         )
     }
@@ -306,10 +281,8 @@ impl CommandContext {
             input: self.input,
             output: self.output,
             scope: self.scope,
-            printer: self.printer,
             arguments,
             this,
-            threads: self.threads,
             global_state: self.global_state,
         }
     }
@@ -319,10 +292,8 @@ impl CommandContext {
             input: self.input,
             output: sender,
             scope: self.scope,
-            printer: self.printer,
             arguments: self.arguments,
             this: self.this,
-            threads: self.threads,
             global_state: self.global_state,
         }
     }

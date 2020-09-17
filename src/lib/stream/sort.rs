@@ -25,7 +25,7 @@ fn sort(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream() {
         Some(mut input) => {
             let output = context.output.initialize(input.types().to_vec())?;
-            let cfg: Sort = Sort::parse(context.arguments, &context.printer)?;
+            let cfg: Sort = Sort::parse(context.arguments, &context.global_state.printer())?;
             let idx = match cfg.field {
                 None => {
                     if input.types().len() == 1 {

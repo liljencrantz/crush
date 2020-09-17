@@ -34,9 +34,9 @@ pub struct Sudo {
     never be run in a loop regardless.
  */
 fn sudo(context: CommandContext) -> CrushResult<()> {
-    let cfg: Sudo = Sudo::parse(context.arguments.clone(), &context.printer)?;
+    let cfg: Sudo = Sudo::parse(context.arguments.clone(), &context.global_state.printer())?;
     let mut cmd = process::Command::new("sudo");
-    let printer = context.printer.clone();
+    let printer = context.global_state.printer().clone();
 
     cmd.arg("--user").arg(&cfg.user);
     cmd.arg("--").arg("crush").arg("--pup");
@@ -48,7 +48,7 @@ fn sudo(context: CommandContext) -> CrushResult<()> {
     let mut stdin = mandate(child.stdin.take(), "Expected stdin stream")?;
     let mut serialized = Vec::new();
     serialize(&Value::Command(cfg.command), &mut serialized)?;
-    let threads = context.threads.clone();
+    let threads = context.global_state.threads().clone();
 
     threads.spawn("sudo:stdin", move || {
         stdin.write(&serialized)?;

@@ -47,31 +47,27 @@ fn parse_args() -> CrushResult<Config> {
 
 fn run() -> CrushResult<()> {
     let global_env = data::scope::Scope::create_root();
-    let threads = ThreadStore::new();
     let my_scope = global_env.create_child(&global_env, false);
-    let global_state = GlobalState::new()?;
     let config = parse_args()?;
 
     let (printer, print_handle) = if config.mode == Mode::Pup { printer::noop() } else { printer::init() };
-    let pretty_printer = create_pretty_printer(printer.clone(), &global_state);
+    let global_state = GlobalState::new(printer)?;
+    let pretty_printer = create_pretty_printer(global_state.printer().clone(), &global_state);
 
-    declare(&global_env, &printer, &threads, &global_state, &pretty_printer)?;
+    declare(&global_env, &global_state, &pretty_printer)?;
 
     match config.mode {
         Mode::Interactive => run_interactive(
             my_scope,
-            &printer,
             &pretty_printer,
-            &threads,
-            &global_state, )?,
+            &global_state,
+        )?,
         Mode::Pup => {
             let mut buff = Vec::new();
             to_crush_error(std::io::stdin().read_to_end(&mut buff))?;
             execute::pup(
                 my_scope,
                 &buff,
-                &printer,
-                &threads,
                 &global_state,
             )?;
         }
@@ -79,18 +75,15 @@ fn run() -> CrushResult<()> {
             execute::file(
                 my_scope,
                 f.as_path(),
-                &printer,
                 &pretty_printer,
-                &threads,
                 &global_state,
             )?
         }
     }
 
-    threads.join(&printer);
+    global_state.threads().join(global_state.printer());
     drop(pretty_printer);
-    drop(printer);
-    drop(threads);
+    drop(global_state);
     global_env.clear()?;
     drop(global_env);
     let _ = print_handle.join();
