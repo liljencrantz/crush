@@ -170,6 +170,9 @@ pub fn run(
                         global_state,
                     ));
                 global_state.threads().reap(global_state.printer());
+                if global_state.exit_status().is_some() {
+                    break;
+                }
             }
             Err(ReadlineError::Interrupted) => {
                 global_state.printer().line("^C");
@@ -187,6 +190,9 @@ pub fn run(
         if let Err(err) = rl.save_history(&crush_history_file()) {
             global_state.printer().line(&format!("Error: Failed to save history: {}", err))
         }
+    }
+    if let Err(err) = rl.save_history(&crush_history_file()) {
+        global_state.printer().line(&format!("Error: Failed to save history: {}", err))
     }
     Ok(())
 }

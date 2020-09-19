@@ -43,7 +43,7 @@ fn parse_args() -> CrushResult<Config> {
     Ok(Config { mode })
 }
 
-fn run() -> CrushResult<()> {
+fn run() -> CrushResult<i32> {
     let config = parse_args()?;
 
     let root_scope = data::scope::Scope::create_root();
@@ -61,7 +61,6 @@ fn run() -> CrushResult<()> {
     declare(&root_scope, &global_state, &pretty_printer)?;
 
     match config.mode {
-
         Mode::Interactive => interactive::run(
             local_scope,
             &pretty_printer,
@@ -86,20 +85,24 @@ fn run() -> CrushResult<()> {
                 &global_state,
             )?
         }
-
     }
-
+    let status = global_state.exit_status().unwrap_or(0);
     global_state.threads().join(global_state.printer());
     drop(pretty_printer);
     drop(global_state);
     root_scope.clear()?;
     drop(root_scope);
     let _ = print_handle.join();
-    Ok(())
+    Ok(status)
 }
 
 fn main() {
-    if let Err(err) = run() {
-        eprintln!("Error during initialization or shutdown: {}", err.message());
-    }
+    let status = match run() {
+        Ok(status) => status,
+        Err(err) => {
+            eprintln!("Error during initialization or shutdown: {}", err.message());
+            1
+        }
+    };
+    std::process::exit(status);
 }

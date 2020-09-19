@@ -64,7 +64,9 @@ fn extract_type(ty: &Type) -> SignatureResult<(&'static str, Vec<&'static str>)>
                         "Option" => "Option",
                         "i128" => "i128",
                         "i64" => "i64",
+                        "i32" => "i32",
                         "u64" => "u64",
+                        "u32" => "u32",
                         "usize" => "usize",
                         "bool" => "bool",
                         "char" => "char",
@@ -160,6 +162,8 @@ fn simple_type_to_value(simple_type: &str) -> TokenStream {
         "usize" => quote! {crate::lang::value::Value::Integer(_value)},
         "u64" => quote! {crate::lang::value::Value::Integer(_value)},
         "i64" => quote! {crate::lang::value::Value::Integer(_value)},
+        "u32" => quote! {crate::lang::value::Value::Integer(_value)},
+        "i32" => quote! {crate::lang::value::Value::Integer(_value)},
         "ValueType" => quote! {crate::lang::value::Value::Type(_value)},
         "f64" => quote! {crate::lang::value::Value::Float(_value)},
         "char" => quote! {crate::lang::value::Value::String(_value)},
@@ -181,6 +185,8 @@ fn simple_type_to_value_type(simple_type: &str) -> TokenStream {
         "usize" => quote! {crate::lang::value::ValueType::Integer},
         "u64" => quote! {crate::lang::value::ValueType::Integer},
         "i64" => quote! {crate::lang::value::ValueType::Integer},
+        "u32" => quote! {crate::lang::value::ValueType::Integer},
+        "i32" => quote! {crate::lang::value::ValueType::Integer},
         "ValueType" => quote! {crate::lang::value::ValueType::Type},
         "f64" => quote! {crate::lang::value::ValueType::Float},
         "char" => quote! {crate::lang::value::ValueType::String},
@@ -200,6 +206,8 @@ fn simple_type_to_value_description(simple_type: &str) -> &str {
         "usize" => "integer",
         "u64" => "integer",
         "i64" => "integer",
+        "u32" => "integer",
+        "i32" => "integer",
         "ValueType" => "type",
         "f64" => "float",
         "char" => "string",
@@ -228,6 +236,8 @@ fn simple_type_to_mutator(simple_type: &str, allowed_values: &Option<Ident>) -> 
             "usize" => quote! { crate::lang::errors::to_crush_error(usize::try_from(_value))?},
             "u64" => quote! { crate::lang::errors::to_crush_error(u64::try_from(_value))?},
             "i64" => quote! { crate::lang::errors::to_crush_error(i64::try_from(_value))?},
+            "u32" => quote! { crate::lang::errors::to_crush_error(u32::try_from(_value))?},
+            "i32" => quote! { crate::lang::errors::to_crush_error(i32::try_from(_value))?},
             "Stream" => {
                 quote! {
                     crate::lang::errors::mandate_argument(
@@ -310,7 +320,7 @@ fn parse_type_data(
     let (type_name, args) = extract_type(ty)?;
     match type_name {
         "i128" | "bool" | "String" | "char" | "ValueType" | "f64" | "Command" | "Duration"
-        | "Field" | "Value" | "usize" | "i64" | "u64" | "Stream" | "Struct" => {
+        | "Field" | "Value" | "usize" | "i64" | "u64" | "i32" | "u32" | "Stream" | "Struct" => {
             if !args.is_empty() {
                 fail!(ty.span(), "This type can't be paramterizised")
             } else {

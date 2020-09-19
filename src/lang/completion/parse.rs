@@ -1,11 +1,13 @@
 use crate::lang::ast::{Node, CommandNode, JobListNode, JobNode, unescape};
-use crate::lang::errors::{error, CrushResult, mandate, argument_error_legacy, CrushError};
+use crate::lang::errors::{error, CrushResult, mandate, argument_error_legacy, CrushError, to_crush_error};
 use crate::lang::value::{Field, ValueType, Value};
 use std::path::PathBuf;
 use crate::lang::command::Command;
 use crate::lang::data::scope::Scope;
 use crate::lang::parser::close_command;
 use std::ops::Deref;
+use regex::Regex;
+use crate::util::glob::Glob;
 
 pub enum CompletionCommand {
     Unknown,
@@ -63,29 +65,7 @@ pub enum ParseResult {
     PartialPath(PathBuf),
     PartialArgument(PartialCommandResult),
 }
-/*
-fn simple_attr(node: &Node, cursor: usize) -> CrushResult<Field> {
-    match node {
-        Node::Label(label) => Ok(vec![label.string.clone()]),
-        Node::GetAttr(p, a) => {
-            let mut res = simple_attr(p.as_ref(), cursor)?;
-            let tok = if a.location.start >= cursor {
-                "".to_string()
-            } else if a.location.contains(cursor) {
-                a.string[0..(cursor - a.location.start)].to_string()
-            } else {
-                a.string.clone()
-            };
 
-            res.push(tok);
-            Ok(res)
-        }
-        _ => {
-            error("Invalid path")
-        }
-    }
-}
-*/
 fn simple_path(node: &Node, cursor: usize) -> CrushResult<PathBuf> {
     match node {
         Node::Label(label) => Ok(PathBuf::from(&label.string)),
@@ -159,23 +139,27 @@ fn find_command_in_job_list(ast: JobListNode, cursor: usize) -> CrushResult<Comm
 
 fn fetch_value(node: &Node, scope: &Scope) -> CrushResult<Option<Value>> {
     match node {
-        Node::Label(l) => {
-            match scope.get(&l.string)? {
-                None => Ok(None),
-                Some(v) => Ok(Some(v)),
-            }
-        }
+        Node::Label(l) => scope.get(&l.string),
 
-        Node::GetAttr(n, l) => {
+        Node::GetAttr(n, l) =>
             match fetch_value(n, scope)? {
                 Some(parent) => parent.field(&l.string),
                 None => Ok(None),
-            }
-        }
+            },
 
-        Node::String(s) => {
-            Ok(Some(Value::string(&s.string)))
-        }
+        Node::String(s) => Ok(Some(Value::string(&s.string))),
+
+        Node::Integer(i, _) => Ok(Some(Value::Integer(*i))),
+
+        Node::Float(f, _) => Ok(Some(Value::Float(*f))),
+
+        Node::Glob(f) =>
+            Ok(Some(Value::Glob(Glob::new(&f.string)))),
+
+        Node::Regex(r) =>
+            Ok(Some(Value::Regex(
+                r.string.clone(),
+                to_crush_error(Regex::new(&r.string))?))),
 
         _ => Ok(None),
     }

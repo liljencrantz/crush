@@ -356,6 +356,19 @@ impl Scope {
         }
     }
 
+    pub fn do_exit(&self) -> CrushResult<()>{
+        let mut data = self.lock()?;
+        if !data.is_readonly {
+            data.is_stopped = true;
+            let caller = data.calling_scope.clone();
+            let parent = data.parent_scope.clone();
+            drop(data);
+            caller.map(|p| p.do_exit());
+            parent.map(|p| p.do_exit());
+        }
+        Ok(())
+    }
+
     pub fn is_stopped(&self) -> bool {
         self.lock().unwrap().is_stopped
     }

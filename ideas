@@ -73,9 +73,9 @@ Threads command, shows all threads on the system
 watch command
 Either stop copying Command instances, or make them pointers to static data.
 Syntax highlighting (with more accurate parenthesis matching)
-A command to create a pipe pair.
+table_stream:pipe A command to create a pipe pair.
 
-Every job should have a unique (but reusable, to keep them small) job id, e.g. 1 or 5.
+Every job invocation should have a unique (but reusable, to keep them small) job id, e.g. 1 or 5.
 Every command should have a command id withing that job, e.g. 5:2
 Every thread should have a thread id within that command, e.g. 5:2:3
 
@@ -88,6 +88,7 @@ crush
 Tab completion missing feature list:
 
 * Support for enabling and disabling completion error printing
+* fall back to "stupid" completion if parsing the AST fails
 * Completions for wildcards
 * Complete with prior arguments from same command from history
 * Add command specific completions for dbus

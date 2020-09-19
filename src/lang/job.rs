@@ -40,7 +40,16 @@ impl Job {
             let (output, next_input) = pipe();
             call_def.invoke(context.with_io(input, output))?;
             input = next_input;
+
+            if context.env.is_stopped() {
+                return Ok(None);
+            }
         }
+
+        if context.env.is_stopped() {
+            return Ok(None);
+        }
+
         let last_call_def = &self.commands[last_job_idx];
         last_call_def.invoke(context.with_io(input, context.output.clone())).map_err(|e| e.with_location(self.location))
     }

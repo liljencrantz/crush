@@ -40,6 +40,19 @@ fn threads(context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
+#[signature(exit, output = Known(ValueType::Empty), short = "Exit the shell")]
+struct Exit {
+    #[default(0)]
+    status: i32,
+}
+
+fn exit(context: CommandContext) -> CrushResult<()> {
+    let cfg: Exit = Exit::parse(context.arguments, &context.global_state.printer())?;
+    context.scope.do_exit()?;
+    context.global_state.set_exit_status(cfg.status as i32);
+    context.output.send(Value::Empty())
+}
+
 mod locale {
     use super::*;
     use num_format::SystemLocale;
@@ -93,6 +106,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             crush.declare("ppid", Value::Integer(Pid::parent().as_raw() as i128))?;
             crush.declare("env", make_env())?;
             Threads::declare(crush)?;
+            Exit::declare(crush)?;
 
             crush.create_namespace(
                 "locale",

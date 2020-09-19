@@ -13,6 +13,7 @@ pub struct GlobalState {
     data: Arc<Mutex<StateData>>,
     threads: ThreadStore,
     printer: Printer,
+    exit_status: Arc<Mutex<Option<i32>>>
 }
 
 impl GlobalState {
@@ -25,6 +26,7 @@ impl GlobalState {
             )),
             threads: ThreadStore::new(),
             printer,
+            exit_status: Arc::from(Mutex::new(None))
         })
     }
 
@@ -44,6 +46,16 @@ impl GlobalState {
     pub fn locale(&self) -> SystemLocale {
         let data = self.data.lock().unwrap();
         data.locale.clone()
+    }
+
+    pub fn set_exit_status(&self, status: i32) {
+        let mut data = self.exit_status.lock().unwrap();
+        *data = Some(status);
+    }
+
+    pub fn exit_status(&self) -> Option<i32> {
+        let mut data = self.exit_status.lock().unwrap();
+        (*data).clone()
     }
 
     pub fn set_locale(&self, new_locale: SystemLocale) {
