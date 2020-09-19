@@ -198,7 +198,14 @@ impl TrackedString {
 
     pub fn prefix(&self, pos: usize) -> TrackedString {
         if !self.location.contains(pos) {
-            self.clone()
+            if self.location.start > pos {
+                TrackedString {
+                    string: "".to_string(),
+                    location: Location::new(self.location.start, self.location.start),
+                }
+            } else {
+                self.clone()
+            }
         } else {
             let len = pos - self.location.start;
             TrackedString {
