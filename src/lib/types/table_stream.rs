@@ -1,14 +1,16 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, CrushResult};
+use crate::lang::errors::{argument_error_legacy, CrushResult, argument_error};
 use crate::lang::execution_context::{This};
 use crate::lang::value::ValueType;
 use crate::lang::{execution_context::CommandContext, value::Value};
-use crate::lib::types::column_types;
+use crate::lib::types::{column_types};
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use signature::signature;
 use crate::lang::ordered_string_map::OrderedStringMap;
+use crate::lang::pipe::streams;
+use crate::lang::data::r#struct::Struct;
 
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
@@ -16,6 +18,7 @@ lazy_static! {
         let path = vec!["global", "types", "table_stream"];
         Call::declare_method(&mut res, &path);
         GetItem::declare_method(&mut res, &path);
+        Pipe::declare_method(&mut res, &path);
         res
     };
 }
@@ -67,4 +70,28 @@ fn __getitem__(context: CommandContext) -> CrushResult<()> {
     let cfg: GetItem = GetItem::parse(context.arguments, &context.global_state.printer())?;
     let o = context.this.table_stream()?;
     context.output.send(Value::Struct(o.get(cfg.index)?.into_struct(o.types())))
+}
+
+#[signature(
+pipe,
+can_block = false,
+output = Known(ValueType::Struct),
+short = "Returns a struct containing a read end and a write end of a pipe of the specified type",
+)]
+struct Pipe {}
+
+fn pipe(context: CommandContext) -> CrushResult<()> {
+    match context.this.r#type()? {
+        ValueType::TableStream(subtype) => {
+            let (output, input) = streams(subtype);
+            context.output.send(Value::Struct(Struct::new(
+                vec![
+                    ("input", Value::TableStream(input)),
+//                    ("output", ),
+                ],
+                None,
+            )))
+        }
+        _ => argument_error_legacy("Wrong type of argument: Expected a table stream type"),
+    }
 }

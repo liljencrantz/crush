@@ -85,11 +85,16 @@ impl PartialOrd for Struct {
 }
 
 impl Struct {
-    pub fn new(mut vec: Vec<(String, Value)>, parent: Option<Struct>) -> Struct {
+    pub fn empty(parent: Option<Struct>) -> Struct {
+        let v:Vec<(String, Value)> = Vec::new();
+        Struct::new(v, parent)
+    }
+
+    pub fn new(mut vec: Vec<(impl Into<String>, Value)>, parent: Option<Struct>) -> Struct {
         let mut lookup = OrderedMap::new();
         let mut cells = Vec::new();
         vec.drain(..).for_each(|(key, value)| {
-            lookup.insert(key, cells.len());
+            lookup.insert(key.into(), cells.len());
             cells.push(value);
         });
         Struct {

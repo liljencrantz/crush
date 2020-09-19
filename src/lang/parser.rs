@@ -119,6 +119,12 @@ mod tests {
 
     #[test]
     fn close_command_test() {
+        assert_eq!(close_command("a --").unwrap(), "a --x");
+        assert_eq!(close_command("a:").unwrap(), "a: x");
+        assert_eq!(close_command("a >").unwrap(), "a > x");
+        assert_eq!(close_command("neg").unwrap(), "neg x");
+        assert_eq!(close_command("a |").unwrap(), "a | x");
+        assert_eq!(close_command("x [a").unwrap(), "x [a]");
         assert_eq!(close_command("x (a").unwrap(), "x (a)");
         assert_eq!(close_command("x {a").unwrap(), "x {a}");
         assert_eq!(close_command("x (a) {b} {c (d) (e").unwrap(), "x (a) {b} {c (d) (e)}");

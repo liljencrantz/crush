@@ -71,7 +71,7 @@ recursive chmod
 recursive chown
 Threads command, shows all threads on the system
 watch command
-Either stop copying Command instances, or make them pointer to static data.
+Either stop copying Command instances, or make them pointers to static data.
 Syntax highlighting (with more accurate parenthesis matching)
 A command to create a pipe pair.
 

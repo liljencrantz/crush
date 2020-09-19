@@ -17,7 +17,7 @@ impl Serializable<Struct> for Struct {
             Entry::Occupied(o) => Ok(o.get().clone()),
             Entry::Vacant(v) => match elements[id].element.as_ref().unwrap() {
                 element::Element::Struct(s) => {
-                    let res = Struct::new(vec![], None);
+                    let res = Struct::empty(None);
                     v.insert(res.clone());
                     let parent = match s.parent {
                         None | Some(model::r#struct::Parent::HasParent(_)) => None,

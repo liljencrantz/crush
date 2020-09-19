@@ -89,12 +89,9 @@ fn http(context: CommandContext) -> CrushResult<()> {
     );
     context.output.send(Value::Struct(Struct::new(
         vec![
-            (
-                "status".to_string(),
-                Value::Integer(status.as_u16() as i128),
-            ),
-            ("headers".to_string(), Value::Table(headers)),
-            ("body".to_string(), Value::BinaryStream(input)),
+            ("status", Value::Integer(status.as_u16() as i128)),
+            ("headers", Value::Table(headers)),
+            ("body", Value::BinaryStream(input)),
         ],
         None,
     )))?;

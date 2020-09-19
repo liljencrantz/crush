@@ -68,31 +68,26 @@ fn is_or_has_type(value: &Value, pattern: &ValueType, max_depth: i8) -> bool {
 
 fn complete_label(
     value: Value,
-    prefix: &[String],
+    prefix: &str,
     t: &ValueType,
     cursor: usize,
     out: &mut Vec<Completion>,
 ) -> CrushResult<()> {
-    if prefix.len() == 1 {
-        out.append(&mut value.fields()
-            .iter()
-            .filter(|k| k.starts_with(&prefix[0]))
-            .filter(|k| value.field(*k)
-                .map(|opt| opt.map(
-                    |val| is_or_has_type(&val, t, 4))
-                    .unwrap_or(false))
+    out.append(&mut value.fields()
+        .iter()
+        .filter(|k| k.starts_with(prefix))
+        .filter(|k| value.field(*k)
+            .map(|opt| opt.map(
+                |val| is_or_has_type(&val, t, 4))
                 .unwrap_or(false))
-            .map(|k| Completion {
-                completion: format!("{} ", &k[prefix[0].len()..]),
-                display: k.clone(),
-                position: cursor,
-            })
-            .collect());
-        Ok(())
-    } else {
-        let child = mandate(value.field(&prefix[0])?, "Unknown member")?;
-        complete_label(child, &prefix[1..], t, cursor, out)
-    }
+            .unwrap_or(false))
+        .map(|k| Completion {
+            completion: format!("{} ", &k[prefix.len()..]),
+            display: k.clone(),
+            position: cursor,
+        })
+        .collect());
+    Ok(())
 }
 
 fn complete_file(
@@ -218,7 +213,7 @@ pub fn complete_partial_argument(
         }
 
         LastArgument::Unknown => {
-            complete_label(Value::Scope(scope.clone()), &vec!["".to_string()], &argument_type, cursor, res)?;
+            complete_label(Value::Scope(scope.clone()), "", &argument_type, cursor, res)?;
             complete_file(lister, "", &argument_type, cursor, res)?;
             if parse_result.last_argument_name.is_none() {
                 if let CompletionCommand::Known(cmd) = parse_result.command {
@@ -227,16 +222,18 @@ pub fn complete_partial_argument(
             }
         }
 
-        LastArgument::Field(l) => {
-            complete_label(Value::Scope(scope.clone()), &l, &argument_type, cursor, res)?;
-            if l.len() == 1 {
-                complete_file(lister, &l[0], &argument_type, cursor, res)?;
-                if parse_result.last_argument_name.is_none() {
-                    if let CompletionCommand::Known(cmd) = parse_result.command {
-                        complete_argument_name(cmd.arguments(), &l[0], cursor, res, false)?;
-                    }
+        LastArgument::Label(label) => {
+            complete_label(Value::Scope(scope.clone()), &label, &argument_type, cursor, res)?;
+            complete_file(lister, &label, &argument_type, cursor, res)?;
+            if parse_result.last_argument_name.is_none() {
+                if let CompletionCommand::Known(cmd) = parse_result.command {
+                    complete_argument_name(cmd.arguments(), &label, cursor, res, false)?;
                 }
             }
+        }
+
+        LastArgument::Field(parent, field) => {
+            complete_label(parent, &field, &argument_type, cursor, res)?;
         }
 
         LastArgument::Path(l) => {
@@ -258,15 +255,17 @@ pub fn complete(
     let mut res = Vec::new();
     match parse_result {
         ParseResult::Nothing => {
-            complete_label(Value::Scope(scope.clone()), &vec!["".to_string()], &ValueType::Any, cursor, &mut res)?;
+            complete_label(Value::Scope(scope.clone()), "", &ValueType::Any, cursor, &mut res)?;
             complete_file(lister, "", &ValueType::Any, cursor, &mut res)?;
         }
 
-        ParseResult::PartialCommand(cmd) => {
-            complete_label(Value::Scope(scope.clone()), &cmd, &ValueType::Any, cursor, &mut res)?;
-            if cmd.len() == 1 {
-                complete_file(lister, &cmd[0], &ValueType::Any, cursor, &mut res)?;
-            }
+        ParseResult::PartialLabel(label) => {
+            complete_label(Value::Scope(scope.clone()), &label, &ValueType::Any, cursor, &mut res)?;
+            complete_file(lister, &label, &ValueType::Any, cursor, &mut res)?;
+        }
+
+        ParseResult::PartialField(parent, label) => {
+            complete_label(parent, &label, &ValueType::Any, cursor, &mut res)?;
         }
 
         ParseResult::PartialPath(cmd) =>

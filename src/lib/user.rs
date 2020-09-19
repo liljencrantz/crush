@@ -79,12 +79,12 @@ unsafe fn search(input_name: String) -> CrushResult<Value> {
             let res = Value::Struct(
                 Struct::new(
                     vec![
-                        ("name".to_string(), Value::String(input_name)),
-                        ("home".to_string(), Value::File(PathBuf::from(parse((*passwd).pw_dir)?))),
-                        ("shell".to_string(), Value::File(PathBuf::from(parse((*passwd).pw_shell)?))),
-                        ("information".to_string(), Value::String(parse((*passwd).pw_gecos)?)),
-                        ("uid".to_string(), Value::Integer((*passwd).pw_uid as i128)),
-                        ("gid".to_string(), Value::Integer((*passwd).pw_gid as i128)),
+                        ("name", Value::String(input_name)),
+                        ("home", Value::File(PathBuf::from(parse((*passwd).pw_dir)?))),
+                        ("shell", Value::File(PathBuf::from(parse((*passwd).pw_shell)?))),
+                        ("information", Value::String(parse((*passwd).pw_gecos)?)),
+                        ("uid", Value::Integer((*passwd).pw_uid as i128)),
+                        ("gid", Value::Integer((*passwd).pw_gid as i128)),
                     ],
                     None,
                 )

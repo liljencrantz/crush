@@ -40,7 +40,7 @@ fn materialize(context: CommandContext) -> CrushResult<()> {
 
 fn new(mut context: CommandContext) -> CrushResult<()> {
     let parent = context.this.clone().r#struct()?;
-    let res = Struct::new(vec![], Some(parent));
+    let res = Struct::empty( Some(parent));
     let o = context.output;
 
     // Call constructor if one exists
@@ -71,11 +71,11 @@ struct Data {
 
 fn data(context: CommandContext) -> CrushResult<()> {
     let mut names = column_names(&context.arguments);
-    let arr: Vec<(String, Value)> = names
+    let arr = names
         .drain(..)
         .zip(context.arguments)
         .map(|(name, arg)| (name, arg.value))
-        .collect::<Vec<(String, Value)>>();
+        .collect::<Vec<_>>();
     context.output.send(Value::Struct(Struct::new(arr, None)))
 }
 
@@ -100,7 +100,7 @@ fn class(context: CommandContext) -> CrushResult<()> {
     let cfg: Class = Class::parse(context.arguments, &context.global_state.printer())?;
     let scope = context.scope;
     let parent = cfg.parent.unwrap_or_else(|| scope.root_object());
-    let res = Struct::new(vec![], Some(parent));
+    let res = Struct::empty( Some(parent));
     context.output.send(Value::Struct(res))
 }
 
@@ -164,7 +164,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         Box::new(move |env| {
             let root =
                 Struct::new(vec![
-                    ("__setattr__".to_string(), Value::Command(CrushCommand::command(
+                    ("__setattr__", Value::Command(CrushCommand::command(
                         class_set, false,
                         vec!["global".to_string(), "types".to_string(), "root".to_string(), "__setattr__".to_string()],
                         "root:__setitem__ name:string value:any",
@@ -173,7 +173,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                         Known(ValueType::Empty),
                         vec![],
                     ))),
-                    ("__getitem__".to_string(), Value::Command(CrushCommand::command(
+                    ("__getitem__", Value::Command(CrushCommand::command(
                         class_get, false,
                         vec!["global".to_string(), "types".to_string(), "root".to_string(), "__getitem__".to_string()],
                         "root:__getitem__ name:string",
@@ -182,7 +182,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                         Unknown,
                         vec![],
                     ))),
-                    ("__setitem__".to_string(), Value::Command(CrushCommand::command(
+                    ("__setitem__", Value::Command(CrushCommand::command(
                         class_set, false,
                         vec!["global".to_string(), "types".to_string(), "root".to_string(), "__setitem__".to_string()],
                         "root:__setitem__ name:string value:any",
@@ -191,7 +191,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                         Unknown,
                         vec![],
                     ))),
-                    ("new".to_string(), Value::Command(CrushCommand::command(
+                    ("new", Value::Command(CrushCommand::command(
                         new, true,
                         vec!["global".to_string(), "types".to_string(), "root".to_string(), "new".to_string()],
                         "root:new @unnamed @@named",

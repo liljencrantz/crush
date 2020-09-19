@@ -93,7 +93,7 @@ fn journal(context: CommandContext) -> CrushResult<()> {
             },
             Some(row) => {
                 let data = Value::Struct(Struct::new(
-                    row.iter().map(|(k, v)| (k.clone(), Value::String(v.clone()))).collect(),
+                    row.iter().map(|(k, v)| (k, Value::String(v.clone()))).collect(),
                     None));
                 output.send(Row::new(vec![
                     Value::Time(DateTime::from(journal.timestamp()?)),

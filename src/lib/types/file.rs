@@ -49,19 +49,13 @@ pub fn stat(context: CommandContext) -> CrushResult<()> {
     let metadata = to_crush_error(metadata(file))?;
     context.output.send(Value::Struct(Struct::new(
         vec![
-            ("is_directory".to_string(), Value::Bool(metadata.is_dir())),
-            ("is_file".to_string(), Value::Bool(metadata.is_file())),
-            (
-                "is_symlink".to_string(),
-                Value::Bool(metadata.file_type().is_symlink()),
-            ),
-            ("inode".to_string(), Value::Integer(metadata.ino() as i128)),
-            (
-                "nlink".to_string(),
-                Value::Integer(metadata.nlink() as i128),
-            ),
-            ("mode".to_string(), Value::Integer(metadata.mode() as i128)),
-            ("len".to_string(), Value::Integer(metadata.len() as i128)),
+            ("is_directory", Value::Bool(metadata.is_dir())),
+            ("is_file", Value::Bool(metadata.is_file())),
+            ("is_symlink", Value::Bool(metadata.file_type().is_symlink())),
+            ("inode", Value::Integer(metadata.ino() as i128)),
+            ("nlink", Value::Integer(metadata.nlink() as i128) ),
+            ("mode", Value::Integer(metadata.mode() as i128)),
+            ("len", Value::Integer(metadata.len() as i128)),
         ],
         None,
     )))

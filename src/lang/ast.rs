@@ -196,15 +196,15 @@ impl TrackedString {
         }
     }
 
-    pub fn prefix(&self, pos: usize) -> CrushResult<TrackedString> {
+    pub fn prefix(&self, pos: usize) -> TrackedString {
         if !self.location.contains(pos) {
-            data_error("Invalid tracked string prefix")
+            self.clone()
         } else {
             let len = pos - self.location.start;
-            Ok(TrackedString {
+            TrackedString {
                 string: self.string[0..len].to_string(),
                 location: Location::new(self.location.start, self.location.start+len),
-            })
+            }
         }
     }
 }
@@ -272,7 +272,7 @@ fn propose_name(name: &TrackedString, v: ValueDefinition) -> ValueDefinition {
 impl Node {
     pub fn prefix(&self, pos: usize) -> CrushResult<Node> {
         match self {
-            Node::Label(s) => Ok(Node::Label(s.prefix(pos)?)),
+            Node::Label(s) => Ok(Node::Label(s.prefix(pos))),
             _ => Ok(self.clone()),
         }
     }

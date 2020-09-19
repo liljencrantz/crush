@@ -82,17 +82,17 @@ fn mem(context: CommandContext) -> CrushResult<()> {
     let mem = to_crush_error(sys_info::mem_info())?;
     context.output.send(Value::Struct(Struct::new(
         vec![
-            ("total".to_string(), Value::Integer(mem.total as i128)),
-            ("free".to_string(), Value::Integer(mem.free as i128)),
-            ("avail".to_string(), Value::Integer(mem.avail as i128)),
-            ("buffers".to_string(), Value::Integer(mem.buffers as i128)),
-            ("cached".to_string(), Value::Integer(mem.cached as i128)),
+            ("total", Value::Integer(mem.total as i128)),
+            ("free", Value::Integer(mem.free as i128)),
+            ("avail", Value::Integer(mem.avail as i128)),
+            ("buffers", Value::Integer(mem.buffers as i128)),
+            ("cached", Value::Integer(mem.cached as i128)),
             (
-                "swap_total".to_string(),
+                "swap_total",
                 Value::Integer(mem.swap_total as i128),
             ),
             (
-                "swap_free".to_string(),
+                "swap_free",
                 Value::Integer(mem.swap_free as i128),
             ),
         ],
@@ -145,9 +145,9 @@ mod cpu {
         let load = to_crush_error(sys_info::loadavg())?;
         context.output.send(Value::Struct(Struct::new(
             vec![
-                ("one".to_string(), Value::Float(load.one)),
-                ("five".to_string(), Value::Float(load.five)),
-                ("fifteen".to_string(), Value::Float(load.fifteen)),
+                ("one", Value::Float(load.one)),
+                ("five", Value::Float(load.five)),
+                ("fifteen", Value::Float(load.fifteen)),
             ],
             None,
         )))

@@ -1,5 +1,5 @@
 use crate::lang::ast::{Node, CommandNode, JobListNode, JobNode, unescape};
-use crate::lang::errors::{error, CrushResult, mandate, argument_error_legacy};
+use crate::lang::errors::{error, CrushResult, mandate, argument_error_legacy, CrushError};
 use crate::lang::value::{Field, ValueType, Value};
 use std::path::PathBuf;
 use crate::lang::command::Command;
@@ -24,7 +24,8 @@ impl Clone for CompletionCommand {
 #[derive(Clone)]
 pub enum LastArgument {
     Unknown,
-    Field(Field),
+    Label(String),
+    Field(Value, String),
     Path(PathBuf),
     QuotedString(String),
     Switch(String),
@@ -57,11 +58,12 @@ impl PartialCommandResult {
 #[derive(Clone)]
 pub enum ParseResult {
     Nothing,
-    PartialCommand(Field),
+    PartialLabel(String),
+    PartialField(Value, String),
     PartialPath(PathBuf),
     PartialArgument(PartialCommandResult),
 }
-
+/*
 fn simple_attr(node: &Node, cursor: usize) -> CrushResult<Field> {
     match node {
         Node::Label(label) => Ok(vec![label.string.clone()]),
@@ -83,7 +85,7 @@ fn simple_attr(node: &Node, cursor: usize) -> CrushResult<Field> {
         }
     }
 }
-
+*/
 fn simple_path(node: &Node, cursor: usize) -> CrushResult<PathBuf> {
     match node {
         Node::Label(label) => Ok(PathBuf::from(&label.string)),
@@ -170,6 +172,11 @@ fn fetch_value(node: &Node, scope: &Scope) -> CrushResult<Option<Value>> {
                 None => Ok(None),
             }
         }
+
+        Node::String(s) => {
+            Ok(Some(Value::string(&s.string)))
+        }
+
         _ => Ok(None),
     }
 }
@@ -196,8 +203,14 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
             let cmd = &cmd.expressions[0];
             if cmd.location().contains(cursor) {
                 match cmd {
-                    Node::Label(_) | Node::GetAttr(_, _) =>
-                        Ok(ParseResult::PartialCommand(simple_attr(cmd, cursor)?)),
+                    Node::Label(label) =>
+                        Ok(ParseResult::PartialLabel(
+                            label.prefix(cursor).string)),
+
+                    Node::GetAttr(parent, field) =>
+                        Ok(ParseResult::PartialField(
+                            mandate(fetch_value(parent, scope)?, "Unknown value")?,
+                            field.prefix(cursor).string)),
 
                     Node::Path(_, _) =>
                         Ok(ParseResult::PartialPath(simple_path(cmd, cursor)?)),
@@ -259,17 +272,19 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
                                 PartialCommandResult {
                                     command: c,
                                     previous_arguments: vec![],
-                                    last_argument: LastArgument::Field(vec![l.string.clone()]),
+                                    last_argument: LastArgument::Label(l.string.clone()),
                                     last_argument_name,
                                 }
                             )),
 
-                        Node::GetAttr(_, _) =>
+                        Node::GetAttr(parent, field) =>
                             Ok(ParseResult::PartialArgument(
                                 PartialCommandResult {
                                     command: c,
                                     previous_arguments: vec![],
-                                    last_argument: LastArgument::Field(simple_attr(arg.as_ref(), cursor)?),
+                                    last_argument: LastArgument::Field(
+                                        mandate(fetch_value(parent, scope)?, "unknown value")?,
+                                        field.prefix(cursor).string),
                                     last_argument_name,
                                 })),
 
