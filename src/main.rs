@@ -14,12 +14,14 @@ use std::path::PathBuf;
 use lang::data;
 use crate::lang::interactive;
 use crate::lang::global_state::GlobalState;
+use crate::lang::printer::Printer;
 
 #[derive(PartialEq, Eq)]
 enum Mode {
     Interactive,
     Pup,
     File(PathBuf),
+    Help,
 }
 
 struct Config {
@@ -28,19 +30,49 @@ struct Config {
 
 fn parse_args() -> CrushResult<Config> {
     let args = std::env::args().collect::<Vec<_>>();
-
-    let mode = match &args[..] {
-        [_exe] => Mode::Interactive,
-        [_exe, arg] => {
-            if arg == "--pup" {
-                Mode::Pup
-            } else {
-                Mode::File(PathBuf::from(&arg))
+    let mut mode = Mode::Interactive;
+    let mut all_files = false;
+    for arg in &args[1..] {
+        if all_files {
+            mode = Mode::File(PathBuf::from(arg))
+        } else {
+            match arg.as_str() {
+                "--pup" | "-p" => mode = Mode::Pup,
+                "--interactive" | "-i" => mode = Mode::Interactive,
+                "--help" | "-h" => mode = Mode::Help,
+                "--" => all_files = true,
+                file => {
+                    if file.starts_with("-") {
+                        return argument_error_legacy(format!("Unknown argument {}", file));
+                    }
+                    mode = Mode::File(PathBuf::from(file))
+                }
             }
         }
-        _ => return argument_error_legacy("Invalid input parameters"),
-    };
+    }
     Ok(Config { mode })
+}
+
+fn print_help(printer: &Printer) {
+    printer.line("Usage: crush [OPTION]... [FILE]...");
+    printer.line("Run the Crush shell");
+    printer.line("");
+    printer.line("  -h, --help        Print this message and exit");
+    printer.line("  -i --interactive  Run in interactive mode (this is the default)");
+    printer.line("  -p --pup          Read pup-serialized closure from standard input,");
+    printer.line("                      execute, and serialize output to pup-format");
+    printer.line("                      and send to standard output");
+    printer.line("");
+    printer.line("Crush can be run in three modes.");
+    printer.line("");
+    printer.line("- With no arguments, Crush starts in interactive mode, and commands will be read from");
+    printer.line("  standard input.");
+    printer.line("- With a filename as the only argument, that file will be executed in non-interactive");
+    printer.line("  mode.");
+    printer.line("- With the argument \"--pup\", a closure serialized to pup format will be read from");
+    printer.line("  standard input, and executed. The output of the closure will be written in pup-format");
+    printer.line("  to standard output. This third mode is used by e.g. sudo and remote:exec to run");
+    printer.line("  closures in a different process.");
 }
 
 fn run() -> CrushResult<i32> {
@@ -84,6 +116,10 @@ fn run() -> CrushResult<i32> {
                 &pretty_printer,
                 &global_state,
             )?
+        }
+
+        Mode::Help => {
+            print_help(&global_state.printer())
         }
     }
     let status = global_state.exit_status().unwrap_or(0);

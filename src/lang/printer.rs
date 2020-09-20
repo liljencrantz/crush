@@ -26,8 +26,8 @@ pub struct Printer {
 }
 
 // Too small terminals mean we can't meaningfully print anything, so assume at least this size
-const TERMiNAL_MIN_WIDTH: usize = 10;
-const TERMiNAL_MIN_HEIGHT: usize = 5;
+const TERMINAL_MIN_WIDTH: usize = 10;
+const TERMINAL_MIN_HEIGHT: usize = 5;
 
 // Terminal size to assume if terminal_size() call fails
 const TERMINAL_FALLBACK_WIDTH: usize = 80;
@@ -132,14 +132,14 @@ impl Printer {
 
     pub fn width(&self) -> usize {
         match terminal_size() {
-            Ok(s) => max(TERMiNAL_MIN_WIDTH, s.0 as usize),
+            Ok(s) => max(TERMINAL_MIN_WIDTH, s.0 as usize),
             Err(_) => TERMINAL_FALLBACK_WIDTH,
         }
     }
 
     pub fn height(&self) -> usize {
         match terminal_size() {
-            Ok(s) => max(TERMiNAL_MIN_HEIGHT, s.1 as usize),
+            Ok(s) => max(TERMINAL_MIN_HEIGHT, s.1 as usize),
             Err(_) => TERMINAL_FALLBACK_HEIGHT,
         }
     }
