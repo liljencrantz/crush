@@ -1,9 +1,11 @@
 use crate::lang::errors::{to_crush_error, CrushError, CrushResult, CrushErrorType};
 use crossbeam::bounded;
 use crossbeam::Sender;
+use crossbeam::Receiver;
 use std::thread;
 
 enum PrinterMessage {
+    Ping,
     CrushError(CrushError),
     Error(String),
     Line(String),
@@ -20,14 +22,25 @@ use crate::lang::ast::Location;
 pub struct Printer {
     source: Option<(String, Location)>,
     sender: Sender<PrinterMessage>,
+    pong_receiver: Receiver<()>,
 }
+
+// Too small terminals mean we can't meaningfully print anything, so assume at least this size
+const TERMiNAL_MIN_WIDTH: usize = 10;
+const TERMiNAL_MIN_HEIGHT: usize = 5;
+
+// Terminal size to assume if terminal_size() call fails
+const TERMINAL_FALLBACK_WIDTH: usize = 80;
+const TERMINAL_FALLBACK_HEIGHT: usize = 30;
 
 pub fn init() -> (Printer, JoinHandle<()>) {
     let (sender, receiver) = bounded(128);
+    let (pong_sender, pong_receiver) = bounded(1);
 
     (
         Printer {
-            sender: sender,
+            sender,
+            pong_receiver,
             source: None,
         },
         thread::Builder::new()
@@ -35,6 +48,7 @@ pub fn init() -> (Printer, JoinHandle<()>) {
             .spawn(move || {
                 while let Ok(message) = receiver.recv() {
                     match message {
+                        Ping => { pong_sender.send(()); }
                         Error(err) => eprintln!("Error: {}", err),
                         CrushError(err) => {
                             eprintln!("Error: {}", err.message());
@@ -53,16 +67,23 @@ pub fn init() -> (Printer, JoinHandle<()>) {
 
 pub fn noop() -> (Printer, JoinHandle<()>) {
     let (sender, receiver) = bounded(128);
+    let (pong_sender, pong_receiver) = bounded(1);
 
     (
         Printer {
-            sender: sender,
+            sender,
             source: None,
+            pong_receiver,
         },
         thread::Builder::new()
             .name("printer:noop".to_string())
             .spawn(move || {
-                while let Ok(_) = receiver.recv() {}
+                while let Ok(message) = receiver.recv() {
+                    match message {
+                        Ping => { pong_sender.send(()); }
+                        _ => {}
+                    }
+                }
             })
             .unwrap(),
     )
@@ -87,10 +108,17 @@ impl Printer {
         }
     }
 
+    pub fn ping(&self) {
+        if let Ok(_) = self.sender.send(PrinterMessage::Ping) {
+            let _ = self.pong_receiver.recv();
+        }
+    }
+
     pub fn with_source(&self, def: &str, location: Location) -> Printer {
         Printer {
             sender: self.sender.clone(),
             source: Some((def.to_string(), location)),
+            pong_receiver: self.pong_receiver.clone(),
         }
     }
 
@@ -104,15 +132,15 @@ impl Printer {
 
     pub fn width(&self) -> usize {
         match terminal_size() {
-            Ok(s) => max(10, s.0 as usize),
-            Err(_) => 80,
+            Ok(s) => max(TERMiNAL_MIN_WIDTH, s.0 as usize),
+            Err(_) => TERMINAL_FALLBACK_WIDTH,
         }
     }
 
     pub fn height(&self) -> usize {
         match terminal_size() {
-            Ok(s) => max(s.1 as usize, 5),
-            Err(_) => 30,
+            Ok(s) => max(TERMiNAL_MIN_HEIGHT, s.1 as usize),
+            Err(_) => TERMINAL_FALLBACK_HEIGHT,
         }
     }
 }

@@ -173,6 +173,7 @@ pub fn run(
                 if global_state.exit_status().is_some() {
                     break;
                 }
+                global_state.printer().ping();
             }
             Err(ReadlineError::Interrupted) => {
                 global_state.printer().line("^C");
