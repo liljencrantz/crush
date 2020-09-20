@@ -62,7 +62,7 @@ mod locale {
     static ref LIST_OUTPUT_TYPE: Vec<ColumnType> = vec![
         ColumnType::new("name", ValueType::String),
     ];
-}
+    }
 
     #[signature(list, output = Known(ValueType::TableStream(LIST_OUTPUT_TYPE.clone())), short = "List all available locales.")]
     pub struct List {}

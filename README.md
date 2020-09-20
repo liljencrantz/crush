@@ -22,9 +22,9 @@ Let's start with two trivial commands; listing files in the current directory,
 and checking how many files are in the current directory:
 
     crush# ll
-    user size modified                  type      file
-    fox  2279 2020-03-07 13:00:33 +0100 file      ideas
-    fox  4096 2019-11-22 21:56:30 +0100 directory target
+    user size  modified                  type      file
+    fox  2_279 2020-03-07 13:00:33 +0100 file      ideas
+    fox  4_096 2019-11-22 21:56:30 +0100 directory target
     ...
     
     crush# ls | count
@@ -45,13 +45,13 @@ aggregate and group rows of data.
     ...
 
     crush# ll | where {type == "directory"}
-    user size modified                  type      file
-    fox  4096 2019-11-22 21:56:30 +0100 directory target
-    fox  4096 2020-02-22 11:50:12 +0100 directory tests
-    fox  4096 2020-03-16 14:11:39 +0100 directory .idea
-    fox  4096 2020-02-15 00:12:18 +0100 directory example_data
-    fox  4096 2020-03-14 17:34:39 +0100 directory src
-    fox  4096 2020-03-14 19:44:54 +0100 directory .git
+    user size  modified                  type      file
+    fox  4_096 2019-11-22 21:56:30 +0100 directory target
+    fox  4_096 2020-02-22 11:50:12 +0100 directory tests
+    fox  4_096 2020-03-16 14:11:39 +0100 directory .idea
+    fox  4_096 2020-02-15 00:12:18 +0100 directory example_data
+    fox  4_096 2020-03-14 17:34:39 +0100 directory src
+    fox  4_096 2020-03-14 19:44:54 +0100 directory .git
 
 Because Crush output is a stream of rows with columns, actions like sorting by
 an arbitrary column or filtering data based on arbitrary logical expressions
@@ -87,7 +87,7 @@ crush# ls | json:to ./listing.json
 crush# toml:from Cargo.toml | member ^dependencies
 
 # Fetch a web page and write it to a file
-(http "https://isitchristmas.com/"):body | bin:to ./isitchristmas.html
+http "https://isitchristmas.com/" | member ^body | bin:to ./isitchristmas.html
 ```
 
 If you don't supply an input file to any of the deserializer commands,
@@ -136,6 +136,8 @@ just like in most languages. All comparisons between values of different types
 are false.
 
     crush# 4 > 5
+    false
+    crush# 40.0 > 5
     false
     
 The `and` and `or` operators are used to combine logical expressions:
@@ -333,9 +335,13 @@ what you'd expect.
     crush# .:exists
     true
     crush# .:stat
-    {is_directory: true, is_file: false, is_symlink: false, inode: 50856186, nlink: 8, mode: 16877, len: 4096}
-    crush# (.:stat):is_file
-    false
+    is_directory: true
+    is_file:      false
+    is_symlink:   false
+    inode:        50_856_186
+    nlink:        11
+    mode:         16_877
+    len:          4_096
 
 ### Semi-lazy stream evaluation:
 
@@ -366,7 +372,7 @@ Crush features many commands to operate om arbitrary streams of data using a
 SQL-like syntax. These commands use field-specifiers like `^foo` to specify
 columns in the data stream that they operate on:
 
-    ps | where {user == "root"} | group ^status proc_per_status={count}
+    ps | where {user == "root"} | group ^status proc_per_status={count} | sort ^proc_per_status
     status   proc_per_status
     Idle     108
     Sleeping 170
@@ -502,59 +508,60 @@ use the same dataset twice.
 
     crush# files := ls
     crush# files
-    user         size  modified                  type      file
-    liljencrantz  1307 2020-03-26 01:08:45 +0100 file      ideas
-    liljencrantz  4096 2019-11-22 21:56:30 +0100 directory target
-    liljencrantz  4096 2020-03-27 09:18:25 +0100 directory tests
-    liljencrantz 95328 2020-03-24 17:20:00 +0100 file      Cargo.lock
-    liljencrantz  4096 2020-02-15 00:12:18 +0100 directory example_data
-    liljencrantz    31 2019-10-03 13:43:12 +0200 file      .gitignore
-    liljencrantz 13355 2020-03-29 03:05:16 +0200 file      README.md
-    liljencrantz  4096 2020-03-27 11:35:25 +0100 directory src
-    liljencrantz   479 2020-03-24 17:20:00 +0100 file      Cargo.toml
-    liljencrantz  4096 2020-03-29 01:29:52 +0100 directory .git
-    liljencrantz  8382 2020-03-29 00:54:13 +0100 file      todo
-    liljencrantz    75 2020-03-07 17:09:15 +0100 file      build.rs
-    liljencrantz   711 2019-10-03 14:19:46 +0200 file      crush.iml
+    user         size   modified                  type      file
+    fox  1_307 2020-03-26 01:08:45 +0100 file      ideas
+    fox  4_096 2019-11-22 21:56:30 +0100 directory target
+    fox  4_096 2020-03-27 09:18:25 +0100 directory tests
+    fox 95_328 2020-03-24 17:20:00 +0100 file      Cargo.lock
+    fox  4_096 2020-02-15 00:12:18 +0100 directory example_data
+    fox     31 2019-10-03 13:43:12 +0200 file      .gitignore
+    fox 13_355 2020-03-29 03:05:16 +0200 file      README.md
+    fox  4_096 2020-03-27 11:35:25 +0100 directory src
+    fox    479 2020-03-24 17:20:00 +0100 file      Cargo.toml
+    fox  4_096 2020-03-29 01:29:52 +0100 directory .git
+    fox  8_382 2020-03-29 00:54:13 +0100 file      todo
+    fox     75 2020-03-07 17:09:15 +0100 file      build.rs
+    fox    711 2019-10-03 14:19:46 +0200 file      crush.iml
     crush# files
 
-Notice how there is no output the second time `files` is displayed, because the
-table_stream has already been consumed.
+Notice how there is no output the second time the content of the `files` variable is
+displayed, because the table_stream has already been consumed.
 
 Enter the materialize command, which takes any value and recursively converts
-all transient components into an equivalent but fully in-memory form.
+all transient (table_stream and binary_stream) components into an equivalent
+in-memory form (stable, and binary, respectively).
 
     crush# materialized_files := (ls|materialize)
     crush# materialized_files
-    user         size  modified                  type      file
-    liljencrantz  1307 2020-03-26 01:08:45 +0100 file      ideas
-    liljencrantz  4096 2019-11-22 21:56:30 +0100 directory target
-    liljencrantz  4096 2020-03-27 09:18:25 +0100 directory tests
-    liljencrantz 95328 2020-03-24 17:20:00 +0100 file      Cargo.lock
-    liljencrantz  4096 2020-02-15 00:12:18 +0100 directory example_data
-    liljencrantz    31 2019-10-03 13:43:12 +0200 file      .gitignore
-    liljencrantz 14420 2020-03-29 03:06:02 +0200 file      README.md
-    liljencrantz  4096 2020-03-27 11:35:25 +0100 directory src
-    liljencrantz   479 2020-03-24 17:20:00 +0100 file      Cargo.toml
-    liljencrantz  4096 2020-03-29 01:29:52 +0100 directory .git
-    liljencrantz  8382 2020-03-29 00:54:13 +0100 file      todo
-    liljencrantz    75 2020-03-07 17:09:15 +0100 file      build.rs
-    liljencrantz   711 2019-10-03 14:19:46 +0200 file      crush.iml
+    user size   modified                  type      file
+    fox   1307  2020-03-26 01:08:45 +0100 file      ideas
+    fox   4096  2019-11-22 21:56:30 +0100 directory target
+    fox   4096  2020-03-27 09:18:25 +0100 directory tests
+    fox  95_328 2020-03-24 17:20:00 +0100 file      Cargo.lock
+    fox   4_096 2020-02-15 00:12:18 +0100 directory example_data
+    fox     31  2019-10-03 13:43:12 +0200 file      .gitignore
+    fox  14_420 2020-03-29 03:06:02 +0200 file      README.md
+    fox   4_096 2020-03-27 11:35:25 +0100 directory src
+    fox    479  2020-03-24 17:20:00 +0100 file      Cargo.toml
+    fox   4_096 2020-03-29 01:29:52 +0100 directory .git
+    fox   8_382 2020-03-29 00:54:13 +0100 file      todo
+    fox     75  2020-03-07 17:09:15 +0100 file      build.rs
+    fox    711  2019-10-03 14:19:46 +0200 file      crush.iml
     crush# materialized_files
-    user         size  modified                  type      file
-    liljencrantz  1307 2020-03-26 01:08:45 +0100 file      ideas
-    liljencrantz  4096 2019-11-22 21:56:30 +0100 directory target
-    liljencrantz  4096 2020-03-27 09:18:25 +0100 directory tests
-    liljencrantz 95328 2020-03-24 17:20:00 +0100 file      Cargo.lock
-    liljencrantz  4096 2020-02-15 00:12:18 +0100 directory example_data
-    liljencrantz    31 2019-10-03 13:43:12 +0200 file      .gitignore
-    liljencrantz 14420 2020-03-29 03:06:02 +0200 file      README.md
-    liljencrantz  4096 2020-03-27 11:35:25 +0100 directory src
-    liljencrantz   479 2020-03-24 17:20:00 +0100 file      Cargo.toml
-    liljencrantz  4096 2020-03-29 01:29:52 +0100 directory .git
-    liljencrantz  8382 2020-03-29 00:54:13 +0100 file      todo
-    liljencrantz    75 2020-03-07 17:09:15 +0100 file      build.rs
-    liljencrantz   711 2019-10-03 14:19:46 +0200 file      crush.iml
+    user size   modified                  type      file
+    fox   1307  2020-03-26 01:08:45 +0100 file      ideas
+    fox   4096  2019-11-22 21:56:30 +0100 directory target
+    fox   4096  2020-03-27 09:18:25 +0100 directory tests
+    fox  95_328 2020-03-24 17:20:00 +0100 file      Cargo.lock
+    fox   4_096 2020-02-15 00:12:18 +0100 directory example_data
+    fox     31  2019-10-03 13:43:12 +0200 file      .gitignore
+    fox  14_420 2020-03-29 03:06:02 +0200 file      README.md
+    fox   4_096 2020-03-27 11:35:25 +0100 directory src
+    fox    479  2020-03-24 17:20:00 +0100 file      Cargo.toml
+    fox   4_096 2020-03-29 01:29:52 +0100 directory .git
+    fox   8_382 2020-03-29 00:54:13 +0100 file      todo
+    fox     75  2020-03-07 17:09:15 +0100 file      build.rs
+    fox    711  2019-10-03 14:19:46 +0200 file      crush.iml
 
 When the `table_stream` is materialized into a `table`, it can be displayed
 multiple times.
@@ -601,7 +608,7 @@ This part of Crush should be considered a proof of concept, but still, most
 non-interactive commands work as expected:
 
     crush# whoami
-    liljencrantz
+    fox
     
 Crush features several shortcuts to make working with external commands easier.
 

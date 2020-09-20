@@ -80,7 +80,6 @@ Every command should have a command id withing that job, e.g. 5:2
 Every thread should have a thread id within that command, e.g. 5:2:3
 
 crush
-  exit
   jobs
   commands
   threads
