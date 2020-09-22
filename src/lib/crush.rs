@@ -9,6 +9,7 @@ use nix::unistd::Pid;
 use crate::lang::data::dict::Dict;
 use std::env;
 use lazy_static::lazy_static;
+use crate::lang::command::Command;
 
 fn make_env() -> Value {
     let e = Dict::new(ValueType::String, ValueType::String);
@@ -50,6 +51,17 @@ fn exit(context: CommandContext) -> CrushResult<()> {
     let cfg: Exit = Exit::parse(context.arguments, &context.global_state.printer())?;
     context.scope.do_exit()?;
     context.global_state.set_exit_status(cfg.status as i32);
+    context.output.send(Value::Empty())
+}
+
+#[signature(prompt, can_block=false, short = "Set or get the prompt")]
+struct Prompt {
+    prompt: Option<Command>,
+}
+
+fn prompt(context: CommandContext) -> CrushResult<()> {
+    let cfg: Prompt = Prompt::parse(context.arguments, &context.global_state.printer())?;
+    context.global_state.set_prompt(cfg.prompt);
     context.output.send(Value::Empty())
 }
 
@@ -105,6 +117,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             crush.declare("pid", Value::Integer(Pid::this().as_raw() as i128))?;
             crush.declare("ppid", Value::Integer(Pid::parent().as_raw() as i128))?;
             crush.declare("env", make_env())?;
+            Prompt::declare(crush)?;
             Threads::declare(crush)?;
             Exit::declare(crush)?;
 

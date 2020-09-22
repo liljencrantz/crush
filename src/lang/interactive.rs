@@ -5,8 +5,8 @@ use rustyline::{Editor, Context, validate, Config, CompletionType, EditMode, Out
 use crate::util::file::home;
 use std::path::PathBuf;
 use crate::lang::data::scope::Scope;
-use crate::lang::pipe::ValueSender;
-use crate::lang::errors::{CrushResult, to_crush_error};
+use crate::lang::pipe::{ValueSender, empty_channel, pipe};
+use crate::lang::errors::{CrushResult, to_crush_error, mandate, data_error, CrushError};
 use crate::lang::execute;
 
 use rustyline::completion::{Completer, Pair};
@@ -19,13 +19,17 @@ use std::borrow::Cow;
 use crate::util::directory_lister::directory_lister;
 use crate::lang::parser::{ast, close_command};
 use crate::lang::global_state::GlobalState;
+use crate::lang::command::{Command, CrushCommand};
+use crate::lang::command_invocation::CommandInvocation;
+use crate::lang::value::{ValueDefinition, Value};
+use crate::lang::ast::Location;
+use crate::lang::execution_context::JobContext;
 
 #[derive(Helper)]
 struct MyHelper {
     scope: Scope,
     highlighter: MatchingBracketHighlighter,
     hinter: HistoryHinter,
-    colored_prompt: String,
 }
 
 impl MyHelper {
@@ -75,13 +79,9 @@ impl Highlighter for MyHelper {
     fn highlight_prompt<'b, 's: 'b, 'p: 'b>(
         &'s self,
         prompt: &'p str,
-        default: bool,
+        _default: bool,
     ) -> Cow<'b, str> {
-        if default {
-            Borrowed(&self.colored_prompt)
-        } else {
-            Borrowed(prompt)
-        }
+        Borrowed(prompt)
     }
 
     fn highlight_hint<'h>(&self, hint: &'h str) -> Cow<'h, str> {
@@ -129,6 +129,29 @@ fn crush_history_file() -> PathBuf {
         .join(".crush_history")
 }
 
+pub fn execute_prompt(prompt: Option<Command>, env: &Scope, global_state: &GlobalState) -> CrushResult<Option<String>> {
+    match prompt {
+        None => Ok(None),
+        Some(prompt) => {
+            let cmd = CommandInvocation::new(
+                ValueDefinition::Value(Value::Command(prompt), Location::new(0, 0)),
+                vec![]);
+            let (snd, recv) = pipe();
+            cmd.invoke(JobContext::new(
+                empty_channel(),
+                snd,
+                env.clone(),
+                global_state.clone(),
+            ))?;
+            let v = recv.recv()?;
+            match v {
+                Value::String(s) => Ok(Some(s)),
+                _ => data_error("Wrong output type of prompt command"),
+            }
+        },
+    }
+}
+
 pub fn run(
     global_env: Scope,
     pretty_printer: &ValueSender,
@@ -144,18 +167,25 @@ pub fn run(
         .output_stream(OutputStreamType::Stdout)
         .build();
 
-    let h = MyHelper {
+    let mut h = MyHelper {
         scope: global_env.clone(),
         highlighter: MatchingBracketHighlighter::new(),
         hinter: HistoryHinter {},
-        colored_prompt: "crush# ".to_owned(),
     };
 
     let mut rl = Editor::with_config(config);
     rl.set_helper(Some(h));
     let _ = rl.load_history(&crush_history_file());
     loop {
-        let readline = rl.readline("crush# ");
+        const DEFAULT_PROMPT: &'static str = "crush# ";
+        let prompt = match execute_prompt(global_state.prompt(), &global_env, global_state) {
+            Ok(s) => s,
+            Err(e) => {
+                global_state.printer().crush_error(e);
+                None
+            },
+        }.unwrap_or_else(|| DEFAULT_PROMPT.to_string());
+        let readline = rl.readline(&prompt);
 
         match readline {
             Ok(cmd) if cmd.is_empty() => global_state.threads().reap(global_state.printer()),

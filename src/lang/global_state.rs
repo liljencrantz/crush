@@ -3,6 +3,7 @@ use crate::lang::errors::{CrushResult, to_crush_error};
 use std::sync::{Arc, Mutex};
 use crate::lang::threads::ThreadStore;
 use crate::lang::printer::Printer;
+use crate::lang::command::Command;
 
 struct StateData {
     locale: SystemLocale,
@@ -13,7 +14,8 @@ pub struct GlobalState {
     data: Arc<Mutex<StateData>>,
     threads: ThreadStore,
     printer: Printer,
-    exit_status: Arc<Mutex<Option<i32>>>
+    exit_status: Arc<Mutex<Option<i32>>>,
+    prompt: Arc<Mutex<Option<Command>>>,
 }
 
 impl GlobalState {
@@ -26,7 +28,8 @@ impl GlobalState {
             )),
             threads: ThreadStore::new(),
             printer,
-            exit_status: Arc::from(Mutex::new(None))
+            exit_status: Arc::from(Mutex::new(None)),
+            prompt: Arc::from(Mutex::new(None)),
         })
     }
 
@@ -61,5 +64,15 @@ impl GlobalState {
     pub fn set_locale(&self, new_locale: SystemLocale) {
         let mut data = self.data.lock().unwrap();
         data.locale = new_locale;
+    }
+
+    pub fn set_prompt(&self, prompt: Option<Command>) {
+        let mut data = self.prompt.lock().unwrap();
+        *data = prompt;
+    }
+
+    pub fn prompt(&self) -> Option<Command> {
+        let data = self.prompt.lock().unwrap();
+        data.as_ref().map(|a| a.copy())
     }
 }

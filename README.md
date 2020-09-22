@@ -281,7 +281,7 @@ Crush comes with a variety of types:
 * floating point numbers,
 * structs, which contain any number of named fields of any type,
 * tables, which are essentially lists where each element is the same type of struct,
-* table streams, which are like tables but can only be traversed once,
+* table input/output streams, which are like tables but can only be traversed once,
 * binary data,
 * binary streams, which are like binary data but can only be traversed once,
 * types, and

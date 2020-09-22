@@ -2,10 +2,9 @@ use crate::lang::errors::{error, CrushResult, CrushErrorType};
 use crate::lang::execution_context::{CompileContext, JobContext};
 use crate::lang::data::scope::Scope;
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, value::Value};
-use crate::lang::{
-    command::Command, execution_context::CommandContext,
-    value::ValueDefinition,
-};
+use crate::lang::command::Command;
+use crate::lang::execution_context::CommandContext;
+use crate::lang::value::ValueDefinition;
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::fmt::{Display, Formatter};
@@ -39,6 +38,7 @@ fn resolve_external_command(name: &str, env: &Scope) -> CrushResult<Option<PathB
 fn arg_can_block(local_arguments: &Vec<ArgumentDefinition>, context: &mut CompileContext) -> bool {
     for arg in local_arguments {
         if arg.value.can_block(local_arguments, context) {
+
             return true;
         }
     }
