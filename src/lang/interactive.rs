@@ -6,7 +6,7 @@ use crate::util::file::home;
 use std::path::PathBuf;
 use crate::lang::data::scope::Scope;
 use crate::lang::pipe::{ValueSender, empty_channel, pipe, black_hole};
-use crate::lang::errors::{CrushResult, to_crush_error, mandate, data_error, CrushError};
+use crate::lang::errors::{CrushResult, to_crush_error, data_error};
 use crate::lang::execute;
 
 use rustyline::completion::{Completer, Pair};
@@ -19,7 +19,7 @@ use std::borrow::Cow;
 use crate::util::directory_lister::directory_lister;
 use crate::lang::parser::{ast, close_command};
 use crate::lang::global_state::GlobalState;
-use crate::lang::command::{Command, CrushCommand};
+use crate::lang::command::Command;
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::value::{ValueDefinition, Value};
 use crate::lang::ast::Location;
@@ -197,7 +197,7 @@ pub fn run(
         .output_stream(OutputStreamType::Stdout)
         .build();
 
-    let mut h = MyHelper {
+    let h = MyHelper {
         scope: global_env.clone(),
         highlighter: MatchingBracketHighlighter::new(),
         hinter: HistoryHinter {},

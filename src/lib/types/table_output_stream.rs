@@ -1,6 +1,6 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, CrushResult, argument_error, mandate};
+use crate::lang::errors::{argument_error_legacy, CrushResult, mandate};
 use crate::lang::execution_context::This;
 use crate::lang::value::ValueType;
 use crate::lang::{execution_context::CommandContext, value::Value};
@@ -9,8 +9,6 @@ use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use signature::signature;
 use crate::lang::ordered_string_map::OrderedStringMap;
-use crate::lang::pipe::streams;
-use crate::lang::data::r#struct::Struct;
 
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {

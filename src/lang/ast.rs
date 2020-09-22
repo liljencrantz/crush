@@ -1,7 +1,7 @@
 use crate::lang::argument::ArgumentDefinition;
 use crate::lang::command::{Command, Parameter};
 use crate::lang::command_invocation::CommandInvocation;
-use crate::lang::errors::{error, to_crush_error, CrushResult, data_error};
+use crate::lang::errors::{error, to_crush_error, CrushResult};
 use crate::lang::job::Job;
 use crate::lang::data::scope::Scope;
 use crate::lang::value::{Value, ValueDefinition, ValueType};

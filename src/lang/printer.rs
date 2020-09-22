@@ -48,7 +48,7 @@ pub fn init() -> (Printer, JoinHandle<()>) {
             .spawn(move || {
                 while let Ok(message) = receiver.recv() {
                     match message {
-                        Ping => { pong_sender.send(()); }
+                        Ping => { let _ = pong_sender.send(()); }
                         Error(err) => eprintln!("Error: {}", err),
                         CrushError(err) => {
                             eprintln!("Error: {}", err.message());
@@ -80,7 +80,7 @@ pub fn noop() -> (Printer, JoinHandle<()>) {
             .spawn(move || {
                 while let Ok(message) = receiver.recv() {
                     match message {
-                        Ping => { pong_sender.send(()); }
+                        Ping => { let _ = pong_sender.send(()); }
                         _ => {}
                     }
                 }

@@ -20,7 +20,7 @@ struct Me {}
 
 fn me(context: CommandContext) -> CrushResult<()> {
     unsafe {
-        context.output.send(search(get_current_username()?.clone())?)
+        context.output.send(search(&get_current_username()?)?)
     }
 }
 
@@ -67,7 +67,7 @@ fn list(context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
-unsafe fn search(input_name: String) -> CrushResult<Value> {
+unsafe fn search(input_name: &str) -> CrushResult<Value> {
     nix::libc::setpwent();
     loop {
         let passwd = nix::libc::getpwent();
@@ -79,7 +79,7 @@ unsafe fn search(input_name: String) -> CrushResult<Value> {
             let res = Value::Struct(
                 Struct::new(
                     vec![
-                        ("name", Value::String(input_name)),
+                        ("name", Value::String(input_name.to_string())),
                         ("home", Value::File(PathBuf::from(parse((*passwd).pw_dir)?))),
                         ("shell", Value::File(PathBuf::from(parse((*passwd).pw_shell)?))),
                         ("information", Value::String(parse((*passwd).pw_gecos)?)),
@@ -109,7 +109,7 @@ struct Find {
 fn find(context: CommandContext) -> CrushResult<()> {
     let cfg: Find = Find::parse(context.arguments, &context.global_state.printer())?;
     unsafe {
-        context.output.send(search(cfg.name)?)
+        context.output.send(search(&cfg.name)?)
     }
 }
 

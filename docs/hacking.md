@@ -34,7 +34,8 @@ pub struct Find {
 ```
 
 The signature macro will use the supplied information to generate efficient code
-to parse your arguments as well as generate suitable output for the help command.
+to parse your arguments as well as generate suitable output for the help command
+and all the metadata required for command specific tab completions.
 
 #### Available types for the argument parser
 

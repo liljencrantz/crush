@@ -1,12 +1,12 @@
 use crate::lang::data::scope::Scope;
-use crate::lang::errors::{CrushResult, mandate};
+use crate::lang::errors::CrushResult;
 use crate::lang::value::{ValueType, Value};
 use crate::util::directory_lister::DirectoryLister;
 use std::path::PathBuf;
 use crate::lang::completion::parse::{ParseResult, CompletionCommand, LastArgument, parse, PartialCommandResult};
 use nix::NixPath;
 use crate::lang::command::ArgumentDescription;
-use crate::lang::ast::{unescape, escape_without_quotes};
+use crate::lang::ast::escape_without_quotes;
 
 pub mod parse;
 

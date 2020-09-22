@@ -22,7 +22,7 @@ use std::path::PathBuf;
 use crate::util::user_map::get_current_username;
 use crate::lang::completion::Completion;
 use crate::lang::completion::parse::{PartialCommandResult, LastArgument};
-use crate::lang::ast::{unescape, escape, escape_without_quotes};
+use crate::lang::ast::{escape, escape_without_quotes};
 use std::convert::TryFrom;
 
 lazy_static! {

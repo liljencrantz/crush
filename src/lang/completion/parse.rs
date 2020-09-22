@@ -1,6 +1,6 @@
 use crate::lang::ast::{Node, CommandNode, JobListNode, JobNode, unescape};
-use crate::lang::errors::{error, CrushResult, mandate, argument_error_legacy, CrushError, to_crush_error};
-use crate::lang::value::{Field, ValueType, Value};
+use crate::lang::errors::{error, CrushResult, mandate, argument_error_legacy, to_crush_error};
+use crate::lang::value::{ValueType, Value};
 use std::path::PathBuf;
 use crate::lang::command::Command;
 use crate::lang::data::scope::Scope;

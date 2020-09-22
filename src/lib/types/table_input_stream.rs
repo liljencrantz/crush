@@ -1,6 +1,6 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, CrushResult, argument_error};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::execution_context::{This};
 use crate::lang::value::ValueType;
 use crate::lang::{execution_context::CommandContext, value::Value};

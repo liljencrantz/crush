@@ -1,5 +1,5 @@
 use crate::lang::command::Command;
-use crate::lang::errors::{error, mandate, to_crush_error, CrushResult, argument_error, argument_error_legacy};
+use crate::lang::errors::{error, mandate, to_crush_error, CrushResult, argument_error_legacy};
 use crate::lang::help::Help;
 use crate::lang::parser::parse_name;
 use crate::lang::{data::table::ColumnType, value::Value};
