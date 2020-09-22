@@ -5,7 +5,7 @@ use rustyline::{Editor, Context, validate, Config, CompletionType, EditMode, Out
 use crate::util::file::home;
 use std::path::PathBuf;
 use crate::lang::data::scope::Scope;
-use crate::lang::pipe::{ValueSender, empty_channel, pipe};
+use crate::lang::pipe::{ValueSender, empty_channel, pipe, black_hole};
 use crate::lang::errors::{CrushResult, to_crush_error, mandate, data_error, CrushError};
 use crate::lang::execute;
 
@@ -24,6 +24,8 @@ use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::value::{ValueDefinition, Value};
 use crate::lang::ast::Location;
 use crate::lang::execution_context::JobContext;
+
+const DEFAULT_PROMPT: &'static str = "crush# ";
 
 #[derive(Helper)]
 struct MyHelper {
@@ -76,6 +78,10 @@ impl Hinter for MyHelper {
 }
 
 impl Highlighter for MyHelper {
+    fn highlight<'l>(&self, line: &'l str, pos: usize) -> Cow<'l, str> {
+        self.highlighter.highlight(line, pos)
+    }
+
     fn highlight_prompt<'b, 's: 'b, 'p: 'b>(
         &'s self,
         prompt: &'p str,
@@ -86,10 +92,6 @@ impl Highlighter for MyHelper {
 
     fn highlight_hint<'h>(&self, hint: &'h str) -> Cow<'h, str> {
         Owned("\x1b[1m".to_owned() + hint + "\x1b[m")
-    }
-
-    fn highlight<'l>(&self, line: &'l str, pos: usize) -> Cow<'l, str> {
-        self.highlighter.highlight(line, pos)
     }
 
     fn highlight_char(&self, line: &str, pos: usize) -> bool {
@@ -129,7 +131,11 @@ fn crush_history_file() -> PathBuf {
         .join(".crush_history")
 }
 
-pub fn execute_prompt(prompt: Option<Command>, env: &Scope, global_state: &GlobalState) -> CrushResult<Option<String>> {
+pub fn execute_prompt(
+    prompt: Option<Command>,
+    env: &Scope,
+    global_state: &GlobalState,
+) -> CrushResult<Option<String>> {
     match prompt {
         None => Ok(None),
         Some(prompt) => {
@@ -152,11 +158,35 @@ pub fn execute_prompt(prompt: Option<Command>, env: &Scope, global_state: &Globa
     }
 }
 
+pub fn load_init(
+    env: &Scope,
+    global_state: &GlobalState,
+) -> CrushResult<()> {
+    let config_dir = to_crush_error(std::env::var("XDG_CONFIG_HOME"))
+        .or_else(|_| match home() {
+            Ok(home) => match home.to_str() {
+                Some(home) => Ok(format!("{}/.config", home)),
+                None => data_error(""),
+            },
+            Err(e) => Err(e),
+        })?;
+    let config = format!("{}/crush/config.crush", config_dir);
+    let file = PathBuf::from(config);
+    if file.exists() {
+        execute::file(env.clone(), &file, &black_hole(), global_state)
+    } else {
+        Ok(())
+    }
+}
+
 pub fn run(
     global_env: Scope,
     pretty_printer: &ValueSender,
     global_state: &GlobalState,
 ) -> CrushResult<()> {
+    let printer = global_state.printer().clone();
+    printer.handle_error(load_init(&global_env, global_state));
+
     global_state.printer().line("Welcome to Crush");
     global_state.printer().line(r#"Type "help" for... help."#);
 
@@ -177,7 +207,6 @@ pub fn run(
     rl.set_helper(Some(h));
     let _ = rl.load_history(&crush_history_file());
     loop {
-        const DEFAULT_PROMPT: &'static str = "crush# ";
         let prompt = match execute_prompt(global_state.prompt(), &global_env, global_state) {
             Ok(s) => s,
             Err(e) => {
