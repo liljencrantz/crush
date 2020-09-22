@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error_legacy, to_crush_error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, to_crush_error, CrushResult, mandate, data_error};
 use crate::lang::data::scope::Scope;
 use crate::lang::{
     data::binary::BinaryReader, execution_context::CommandContext, data::list::List, value::Value,
@@ -10,6 +10,7 @@ use std::env;
 use crate::lang::command::OutputType::Known;
 use chrono::Duration;
 use std::path::PathBuf;
+use crate::lang::data::table::{ColumnType, Row};
 
 mod r#for;
 mod r#if;
@@ -22,10 +23,10 @@ r#break,
 can_block = false,
 short = "Stop execution of a loop.",
 output = Known(ValueType::Empty))]
-pub struct Break {
+struct Break {
 }
 
-pub fn r#break(context: CommandContext) -> CrushResult<()> {
+fn r#break(context: CommandContext) -> CrushResult<()> {
     context.scope.do_break()?;
     context.output.empty()
 }
@@ -35,15 +36,15 @@ r#continue,
 can_block = false,
 short = "Skip execution of the current iteration of a loop.",
 output = Known(ValueType::Empty))]
-pub struct Continue {
+struct Continue {
 }
 
-pub fn r#continue(context: CommandContext) -> CrushResult<()> {
+fn r#continue(context: CommandContext) -> CrushResult<()> {
     context.scope.do_continue()?;
     context.output.empty()
 }
 
-pub fn cmd(mut context: CommandContext) -> CrushResult<()> {
+fn cmd(mut context: CommandContext) -> CrushResult<()> {
     if context.arguments.is_empty() {
         return argument_error_legacy("No command given");
     }
@@ -80,7 +81,7 @@ pub fn cmd(mut context: CommandContext) -> CrushResult<()> {
             }
             context
                 .output
-                .send(Value::BinaryStream(BinaryReader::vec(&output.stdout)))
+                .send(Value::BinaryInputStream(BinaryReader::vec(&output.stdout)))
         }
         _ => argument_error_legacy("Not a valid command"),
     }
@@ -97,11 +98,46 @@ struct Sleep {
     duration: Duration,
 }
 
-pub fn sleep(context: CommandContext) -> CrushResult<()> {
+fn sleep(context: CommandContext) -> CrushResult<()> {
     let cfg = Sleep::parse(context.arguments, &context.global_state.printer())?;
     std::thread::sleep(to_crush_error(cfg.duration.to_std())?);
     context.output.send(Value::Empty())?;
     Ok(())
+}
+
+#[signature(
+bg,
+short = "Run a pipeline in background",
+example = "pipe := ((table_input_stream value=integer):pipe)\n    _1 := (seq 100_000 | pipe:output:write | bg)\n    sum_job_id := (pipe:input | sum | bg)\n    pipe:close\n    sum_job_id | fg"
+)]
+struct Bg {
+}
+
+fn bg(context: CommandContext) -> CrushResult<()> {
+    let output = context.output.initialize(
+        vec![ColumnType::new("value", ValueType::Any)])?;
+    if let Ok(value) = context.input.recv() {
+        output.send(Row::new(vec![value]))?;
+    }
+    Ok(())
+}
+
+#[signature(
+fg,
+short = "Return the output of a background pipeline",
+example = "pipe := ((table_input_stream value=integer):pipe)\n    _1 := (seq 100_000 | pipe:output:write | bg)\n    sum_job_id := (pipe:input | sum | bg)\n    pipe:close\n    sum_job_id | fg"
+)]
+struct Fg {
+}
+
+fn fg(context: CommandContext) -> CrushResult<()> {
+    let mut result_stream = mandate(context.input.recv()?.stream(), "Invalid input")?;
+    let mut result:Vec<Value> = result_stream.read()?.into();
+    if result.len() != 1 {
+        data_error("Expected a single row, single column result")
+    } else {
+        context.output.send(result.remove(0))
+    }
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
@@ -125,7 +161,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare_condition_command(
                 "for",
                 r#for::r#for,
-                "for [name=](table_stream|table|dict|list) body:command",
+                "for [name=](table_input_stream|table|dict|list) body:command",
                 "Execute body once for every element in iterable.",
                 Some(
                     r#"    Example:
@@ -144,12 +180,14 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "cmd external_command:(file|string) @arguments:any",
                 "Execute external commands",
                 None,
-                Known(ValueType::BinaryStream),
+                Known(ValueType::BinaryInputStream),
                 vec![],
             )?;
             Break::declare(env)?;
             Continue::declare(env)?;
             Sleep::declare(env)?;
+            Bg::declare(env)?;
+            Fg::declare(env)?;
             Ok(())
         }),
     )?;

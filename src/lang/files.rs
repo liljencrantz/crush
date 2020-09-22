@@ -49,7 +49,7 @@ impl Files {
     pub fn reader(self, input: ValueReceiver) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
         if !self.had_entries {
             match input.recv()? {
-                Value::BinaryStream(b) => Ok(b),
+                Value::BinaryInputStream(b) => Ok(b),
                 Value::Binary(b) => Ok(BinaryReader::vec(&b)),
                 _ => argument_error_legacy("Expected either a file to read or binary pipe io"),
             }
@@ -61,7 +61,7 @@ impl Files {
     pub fn writer(self, output: ValueSender) -> CrushResult<Box<dyn Write>> {
         if !self.had_entries {
             let (w, r) = binary_channel();
-            output.send(Value::BinaryStream(r))?;
+            output.send(Value::BinaryInputStream(r))?;
             Ok(w)
         } else if self.files.len() == 1 {
             output.send(Value::Empty())?;

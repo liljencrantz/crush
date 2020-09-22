@@ -1,0 +1,21 @@
+# A test to make sure that we can correctly pass the output
+# of multiple commands into the same pipe.
+
+# Create the pipe
+pipe := ((table_input_stream value=integer):pipe)
+
+# Attach the input end to a bunch of seq commands
+_1 := (seq 100_000 | pipe:output:write | bg)
+_2 := (seq 100_000 | pipe:output:write | bg)
+_3 := (seq 100_000 | pipe:output:write | bg)
+_4 := (seq 100_000 | pipe:output:write | bg)
+
+# Attach the output end to the sum command and
+sum_job_id := (pipe:input | sum | bg)
+
+# Close the output and input, so that the input can actually
+# reach EOF once the above 4 invocation exit
+pipe:close
+
+# Wait for the sum command to finish
+sum_job_id | fg

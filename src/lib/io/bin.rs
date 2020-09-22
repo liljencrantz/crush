@@ -18,7 +18,7 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
     let cfg: From = From::parse(context.arguments, &context.global_state.printer())?;
     context
         .output
-        .send(Value::BinaryStream(cfg.files.reader(context.input)?))
+        .send(Value::BinaryInputStream(cfg.files.reader(context.input)?))
 }
 
 #[signature(
@@ -35,7 +35,7 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
     let cfg: To = To::parse(context.arguments, &context.global_state.printer())?;
 
     match context.input.recv()? {
-        Value::BinaryStream(mut input) => {
+        Value::BinaryInputStream(mut input) => {
             let mut out = cfg.file.writer(context.output)?;
             to_crush_error(std::io::copy(input.as_mut(), out.as_mut()))?;
             Ok(())

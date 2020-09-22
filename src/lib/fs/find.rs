@@ -131,7 +131,7 @@ fn run_for_single_directory_or_file(
     Ok(())
 }
 
-#[signature(find, short = "Recursively list files", output = Known(ValueType::TableStream(OUTPUT_TYPE.clone())))]
+#[signature(find, short = "Recursively list files", output = Known(ValueType::TableInputStream(OUTPUT_TYPE.clone())))]
 pub struct Find {
     #[unnamed()]
     #[description("directories and files to list")]

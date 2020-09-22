@@ -51,7 +51,7 @@ fn aggregate(
             1 => {
                 let (input_sender, input_receiver) = pipe();
                 let (output_sender, output_receiver) = pipe();
-                input_sender.send(Value::TableStream(rows))?;
+                input_sender.send(Value::TableInputStream(rows))?;
                 drop(input_sender);
                 commands[0].invoke(CommandContext {
                     input: input_receiver,

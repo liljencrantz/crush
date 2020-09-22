@@ -318,7 +318,7 @@ fn pexec(context: CommandContext) -> CrushResult<()> {
 #[signature(
 identity,
 can_block = true,
-output = Known(ValueType::TableStream(IDENTITY_OUTPUT_TYPE.clone())),
+output = Known(ValueType::TableInputStream(IDENTITY_OUTPUT_TYPE.clone())),
 short = "List all known ssh-agent identities"
 )]
 struct Identity {}
@@ -347,7 +347,7 @@ mod host {
     #[signature(
     list,
     can_block = true,
-    output = super::Known(ValueType::TableStream(super::HOST_LIST_OUTPUT_TYPE.clone())),
+    output = super::Known(ValueType::TableInputStream(super::HOST_LIST_OUTPUT_TYPE.clone())),
     short = "List all known hosts",
     long = "If a given host key has no hostname, the hostname will be the empty string"
     )]

@@ -19,7 +19,7 @@ impl Table {
 
     pub fn materialize(mut self) -> CrushResult<Table> {
         Ok(Table {
-            types: ColumnType::materialize(&self.types),
+            types: ColumnType::materialize(&self.types)?,
             rows: self.rows.drain(..).map(|r| r.materialize()).collect::<CrushResult<Vec<_>>>()?,
         })
     }
@@ -123,14 +123,17 @@ pub struct ColumnType {
 }
 
 impl ColumnType {
-    pub fn materialize(input: &[ColumnType]) -> Vec<ColumnType> {
-        input
-            .iter()
-            .map(|col| ColumnType {
+    pub fn materialize(input: &[ColumnType]) -> CrushResult<Vec<ColumnType>> {
+        let mut res = Vec::new();
+
+        for col in input
+            .iter() {
+            res.push(ColumnType {
                 name: col.name.clone(),
-                cell_type: col.cell_type.materialize(),
-            })
-            .collect()
+                cell_type: col.cell_type.materialize()?,
+            });
+        }
+        Ok(res)
     }
 
     pub fn new(name: &str, cell_type: ValueType) -> ColumnType {

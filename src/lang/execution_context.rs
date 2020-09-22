@@ -6,7 +6,7 @@ use crate::lang::data::list::List;
 use crate::lang::printer::Printer;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::data::scope::Scope;
-use crate::lang::pipe::{InputStream, ValueReceiver, ValueSender};
+use crate::lang::pipe::{InputStream, ValueReceiver, ValueSender, OutputStream};
 use crate::lang::data::table::Table;
 use crate::lang::value::{Value, ValueType};
 use crate::util::glob::Glob;
@@ -312,7 +312,8 @@ pub trait This {
     fn duration(self) -> CrushResult<Duration>;
     fn time(self) -> CrushResult<DateTime<Local>>;
     fn table(self) -> CrushResult<Table>;
-    fn table_stream(self) -> CrushResult<InputStream>;
+    fn table_input_stream(self) -> CrushResult<InputStream>;
+    fn table_output_stream(self) -> CrushResult<OutputStream>;
     fn binary(self) -> CrushResult<Vec<u8>>;
     fn scope(self) -> CrushResult<Scope>;
 }
@@ -354,7 +355,8 @@ impl This for Option<Value> {
     this_method!(duration, Duration, Duration, "duration");
     this_method!(time, DateTime<Local>, Time, "time");
     this_method!(scope, Scope, Scope, "scope");
-    this_method!(table_stream, InputStream, TableStream, "table_stream");
+    this_method!(table_input_stream, InputStream, TableInputStream, "table_input_stream");
+    this_method!(table_output_stream, OutputStream, TableOutputStream, "table_output_stream");
 
     fn re(mut self) -> CrushResult<(String, Regex)> {
         match self.take() {

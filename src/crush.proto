@@ -217,7 +217,8 @@ message Type {
         ListType list_type = 2;
         DictType dict_type = 3;
         TableType table_type = 4;
-        TableType table_stream_type = 5;
+        TableType table_input_stream_type = 5;
+        TableType table_output_stream_type = 6;
     }
 }
 

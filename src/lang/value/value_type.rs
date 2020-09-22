@@ -1,5 +1,5 @@
 use crate::lang::command::Command;
-use crate::lang::errors::{error, mandate, to_crush_error, CrushResult};
+use crate::lang::errors::{error, mandate, to_crush_error, CrushResult, argument_error, argument_error_legacy};
 use crate::lang::help::Help;
 use crate::lang::parser::parse_name;
 use crate::lang::{data::table::ColumnType, value::Value};
@@ -22,7 +22,8 @@ pub enum ValueType {
     Regex,
     Command,
     File,
-    TableStream(Vec<ColumnType>),
+    TableInputStream(Vec<ColumnType>),
+    TableOutputStream(Vec<ColumnType>),
     Table(Vec<ColumnType>),
     Struct,
     List(Box<ValueType>),
@@ -32,7 +33,7 @@ pub enum ValueType {
     Float,
     Empty,
     Any,
-    BinaryStream,
+    BinaryInputStream,
     Binary,
     Type,
 }
@@ -59,7 +60,8 @@ impl ValueType {
             ValueType::Duration => &types::duration::METHODS,
             ValueType::Time => &types::time::METHODS,
             ValueType::Table(_) => &types::table::METHODS,
-            ValueType::TableStream(_) => &types::table_stream::METHODS,
+            ValueType::TableInputStream(_) => &types::table_input_stream::METHODS,
+            ValueType::TableOutputStream(_) => &types::table_output_stream::METHODS,
             ValueType::Binary => &types::binary::METHODS,
             ValueType::Scope => &types::scope::METHODS,
             _ => &EMPTY_METHODS,
@@ -74,8 +76,8 @@ impl ValueType {
         (*self == ValueType::Any) || (self == pattern)
     }
 
-    pub fn materialize(&self) -> ValueType {
-        match self {
+    pub fn materialize(&self) -> CrushResult<ValueType> {
+        Ok(match self {
             ValueType::String
             | ValueType::Integer
             | ValueType::Time
@@ -93,14 +95,15 @@ impl ValueType {
             | ValueType::Type
             | ValueType::Struct
             | ValueType::Bool => self.clone(),
-            ValueType::BinaryStream => ValueType::Binary,
-            ValueType::TableStream(o) => ValueType::Table(ColumnType::materialize(o)),
-            ValueType::Table(r) => ValueType::Table(ColumnType::materialize(r)),
-            ValueType::List(l) => ValueType::List(Box::from(l.materialize())),
+            ValueType::BinaryInputStream => ValueType::Binary,
+            ValueType::TableInputStream(o) => ValueType::Table(ColumnType::materialize(o)?),
+            ValueType::TableOutputStream(o) => return argument_error_legacy("Can't materialize binary_output_stream"),
+            ValueType::Table(r) => ValueType::Table(ColumnType::materialize(r)?),
+            ValueType::List(l) => ValueType::List(Box::from(l.materialize()?)),
             ValueType::Dict(k, v) => {
-                ValueType::Dict(Box::from(k.materialize()), Box::from(v.materialize()))
+                ValueType::Dict(Box::from(k.materialize()?), Box::from(v.materialize()?))
             }
-        }
+        })
     }
 
     pub fn is_hashable(&self) -> bool {
@@ -109,8 +112,8 @@ impl ValueType {
             | ValueType::List(_)
             | ValueType::Dict(_, _)
             | ValueType::Command
-            | ValueType::BinaryStream
-            | ValueType::TableStream(_)
+            | ValueType::BinaryInputStream
+            | ValueType::TableInputStream(_)
             | ValueType::Struct
             | ValueType::Table(_) => false,
             _ => true,
@@ -157,7 +160,8 @@ impl Help for ValueType {
             ValueType::Regex => "An advanced pattern that can be used for matching and replacing",
             ValueType::Command => "A piece fo code that can be called",
             ValueType::File => "Any type of file",
-            ValueType::TableStream(_) => "A stream of table rows",
+            ValueType::TableInputStream(_) => "An input stream of table rows",
+            ValueType::TableOutputStream(_) => "An output stream of table rows",
             ValueType::Table(_) => "A table of rows",
             ValueType::Struct => "A mapping from name to value",
             ValueType::List(_) => "A mutable list of items, usually of the same type",
@@ -169,7 +173,7 @@ impl Help for ValueType {
             }
             ValueType::Empty => "Nothing",
             ValueType::Any => "Any type",
-            ValueType::BinaryStream => "A stream of binary data",
+            ValueType::BinaryInputStream => "A stream of binary data",
             ValueType::Binary => "Binary data",
             ValueType::Type => "A type",
         }
@@ -219,8 +223,16 @@ impl Display for ValueType {
             ValueType::Regex => f.write_str("regex"),
             ValueType::Command => f.write_str("command"),
             ValueType::File => f.write_str("file"),
-            ValueType::TableStream(o) => {
-                f.write_str("table_stream")?;
+            ValueType::TableInputStream(o) => {
+                f.write_str("table_input_stream")?;
+                for i in o.iter() {
+                    f.write_str(" ")?;
+                    i.fmt(f)?;
+                }
+                Ok(())
+            }
+            ValueType::TableOutputStream(o) => {
+                f.write_str("table_output_stream")?;
                 for i in o.iter() {
                     f.write_str(" ")?;
                     i.fmt(f)?;
@@ -251,7 +263,7 @@ impl Display for ValueType {
             ValueType::Float => f.write_str("float"),
             ValueType::Empty => f.write_str("empty"),
             ValueType::Any => f.write_str("any"),
-            ValueType::BinaryStream => f.write_str("binary_stream"),
+            ValueType::BinaryInputStream => f.write_str("binary_stream"),
             ValueType::Binary => f.write_str("binary"),
             ValueType::Type => f.write_str("type"),
         }

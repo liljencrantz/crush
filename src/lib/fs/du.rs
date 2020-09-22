@@ -24,7 +24,7 @@ lazy_static! {
 #[signature(
 du,
 can_block = true,
-output = Known(ValueType::TableStream(OUTPUT_TYPE.clone())),
+output = Known(ValueType::TableInputStream(OUTPUT_TYPE.clone())),
 short = "Calculate the recursive directory size.",
 )]
 pub struct Du {

@@ -32,7 +32,7 @@ lazy_static! {
 ps,
 can_block = true,
 short = "Return a table stream containing information on all running processes on the system",
-output = Known(ValueType::TableStream(PS_OUTPUT_TYPE.clone())),
+output = Known(ValueType::TableInputStream(PS_OUTPUT_TYPE.clone())),
 long = "ps accepts no arguments.")]
 struct Ps {}
 

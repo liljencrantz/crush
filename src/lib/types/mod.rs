@@ -23,7 +23,8 @@ pub mod re;
 pub mod scope;
 pub mod string;
 pub mod table;
-pub mod table_stream;
+pub mod table_input_stream;
+pub mod table_output_stream;
 pub mod time;
 
 #[signature(
@@ -216,7 +217,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare("command", Value::Type(ValueType::Command))?;
             env.declare("scope", Value::Type(ValueType::Scope))?;
             env.declare("binary", Value::Type(ValueType::Binary))?;
-            env.declare("binary_stream", Value::Type(ValueType::BinaryStream))?;
+            env.declare("binary_stream", Value::Type(ValueType::BinaryInputStream))?;
             env.declare("field", Value::Type(ValueType::Field))?;
             env.declare("empty", Value::Type(ValueType::Empty))?;
             env.declare("float", Value::Type(ValueType::Float))?;
@@ -232,7 +233,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 Box::from(ValueType::Empty))))?;
 
             env.declare("table", Value::Type(ValueType::Table(vec![])))?;
-            env.declare("table_stream", Value::Type(ValueType::TableStream(vec![])))?;
+            env.declare("table_input_stream", Value::Type(ValueType::TableInputStream(vec![])))?;
+            env.declare("table_output_stream", Value::Type(ValueType::TableOutputStream(vec![])))?;
             env.declare("struct", Value::Type(ValueType::Struct))?;
             Ok(())
         }))?;

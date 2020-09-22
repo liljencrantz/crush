@@ -105,8 +105,8 @@ impl Dict {
             map.insert(k.materialize()?, v.materialize()?);
         }
         Ok(Dict {
-            key_type: self.key_type.materialize(),
-            value_type: self.value_type.materialize(),
+            key_type: self.key_type.materialize()?,
+            value_type: self.value_type.materialize()?,
             entries: Arc::new(Mutex::new(map)),
         })
     }

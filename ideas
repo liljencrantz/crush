@@ -2,7 +2,7 @@ Graphs:
 
 Graphs consist of two data types: nodes and edges.
 
-Crush nodes are simply rows in a single normal table. (Not a TableStream, it has to be a table)
+Crush nodes are simply rows in a single normal table. (Not a TableInputStream, it has to be a table)
 
 Crush edges are a new type that connect rows in the same table to each other. Every
 edge contains two index references. Edges can be directed or undirected, and they can
@@ -73,7 +73,6 @@ Threads command, shows all threads on the system
 watch command
 Either stop copying Command instances, or make them pointers to static data.
 Syntax highlighting (with more accurate parenthesis matching)
-table_stream:pipe A command to create a pipe pair.
 
 Every job invocation should have a unique (but reusable, to keep them small) job id, e.g. 1 or 5.
 Every command should have a command id withing that job, e.g. 5:2

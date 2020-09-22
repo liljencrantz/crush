@@ -125,9 +125,9 @@ impl PrettyPrinter {
 
     pub fn print_value(&self, cell: Value) {
         match cell {
-            Value::TableStream(mut output) => self.print_stream(&mut output, 0),
+            Value::TableInputStream(mut output) => self.print_stream(&mut output, 0),
             Value::Table(rows) => self.print_stream(&mut TableReader::new(rows), 0),
-            Value::BinaryStream(mut b) => self.print_binary(b.as_mut(), 0),
+            Value::BinaryInputStream(mut b) => self.print_binary(b.as_mut(), 0),
             Value::Empty() => {}
             Value::Struct(data) => {
                 self.print_struct(data, 0)
@@ -149,7 +149,7 @@ impl PrettyPrinter {
 
         for val in stream.types().iter() {
             match val.cell_type {
-                ValueType::TableStream(_) => has_table = true,
+                ValueType::TableInputStream(_) => has_table = true,
                 ValueType::Table(_) => has_table = true,
                 _ => (),
             }
@@ -255,8 +255,8 @@ impl PrettyPrinter {
 
             match c {
                 Value::Table(r) => rows.push(r),
-                Value::TableStream(o) => outputs.push(o),
-                Value::BinaryStream(b) => binaries.push(b),
+                Value::TableInputStream(o) => outputs.push(o),
+                Value::BinaryInputStream(b) => binaries.push(b),
                 _ => {}
             }
         }
@@ -385,9 +385,9 @@ impl PrettyPrinter {
         } else {
             match value {
                 Value::Struct(s) => self.print_struct(s, indent),
-                Value::TableStream(mut output) => self.print_stream(&mut output, indent),
+                Value::TableInputStream(mut output) => self.print_stream(&mut output, indent),
                 Value::Table(rows) => self.print_stream(&mut TableReader::new(rows), indent),
-                Value::BinaryStream(mut b) => self.print_binary(b.as_mut(), indent),
+                Value::BinaryInputStream(mut b) => self.print_binary(b.as_mut(), indent),
                 Value::List(list) => self.print_stream(&mut ListReader::new(list, "value"), indent),
                 _ => {
                     let mut line = " ".repeat(4 * indent);

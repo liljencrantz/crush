@@ -25,7 +25,7 @@ lazy_static! {
     ];
 }
 
-#[signature(threads, output = Known(ValueType::TableStream(THREADS_OUTPUT_TYPE.clone())), short = "All the subthreads crush is currently running")]
+#[signature(threads, output = Known(ValueType::TableInputStream(THREADS_OUTPUT_TYPE.clone())), short = "All the subthreads crush is currently running")]
 struct Threads {}
 
 fn threads(context: CommandContext) -> CrushResult<()> {
@@ -64,7 +64,7 @@ mod locale {
     ];
     }
 
-    #[signature(list, output = Known(ValueType::TableStream(LIST_OUTPUT_TYPE.clone())), short = "List all available locales.")]
+    #[signature(list, output = Known(ValueType::TableInputStream(LIST_OUTPUT_TYPE.clone())), short = "List all available locales.")]
     pub struct List {}
 
     fn list(context: CommandContext) -> CrushResult<()> {

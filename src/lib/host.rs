@@ -37,7 +37,7 @@ lazy_static! {
 #[signature(
 battery,
 can_block = true,
-output = Known(ValueType::TableStream(BATTERY_OUTPUT_TYPE.clone())),
+output = Known(ValueType::TableInputStream(BATTERY_OUTPUT_TYPE.clone())),
 short = "List all batteries in the system and their status")]
 struct Battery {}
 

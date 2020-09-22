@@ -472,7 +472,7 @@ fn parse_type_data(
                 Ok(TypeData {
                     allowed_values: quote! { None },
                     signature: format!(
-                        "[{}=(file|glob|regex|list|table|table_stream)...]",
+                        "[{}=(file|glob|regex|list|table|table_input_stream)...]",
                         name.to_string()
                     ),
                     initialize: quote! { let mut #name = crate::lang::files::Files::new(); },

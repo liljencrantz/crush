@@ -129,9 +129,9 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
 
         Value::Binary(b) => Ok(serde_json::Value::from(b)),
 
-        Value::BinaryStream(_) => panic!("Impossible"),
+        Value::BinaryInputStream(_) => panic!("Impossible"),
 
-        Value::TableStream(_) => panic!("Impossible"),
+        Value::TableInputStream(_) => panic!("Impossible"),
 
         v => error(&format!("Unsupported data type {}", v.value_type())),
     }

@@ -146,9 +146,9 @@ fn to_toml(value: Value) -> CrushResult<toml::Value> {
 
         Value::Binary(b) => Ok(toml::Value::from(b)),
 
-        Value::BinaryStream(_) => panic!("Impossible"),
+        Value::BinaryInputStream(_) => panic!("Impossible"),
 
-        Value::TableStream(_) => panic!("Impossible"),
+        Value::TableInputStream(_) => panic!("Impossible"),
 
         v => error(&format!("Unsupported data type {}", v.value_type())),
     }
@@ -159,7 +159,7 @@ to,
 can_block = true,
 output = Unknown,
 short = "Serialize to toml format",
-long = "If no file is specified, output is returned as a BinaryStream.\n    The following Crush types are supported: File, string, integer, float, bool, list, table,\n    table_stream, struct, time, duration, binary and binary_stream.",
+long = "If no file is specified, output is returned as a BinaryStream.\n    The following Crush types are supported: File, string, integer, float, bool, list, table,\n    table_input_stream, struct, time, duration, binary and binary_stream.",
 example = "ls | toml:to")]
 struct To {
     #[unnamed()]

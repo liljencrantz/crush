@@ -2,7 +2,7 @@
 This file implements the crush equivalent of a pipe from a regular shell.
 
 Unlike normal pipes, these pipes can send *any* crush value. The most important
-use case is to send a single value of the type TableStream.
+use case is to send a single value of the type TableInputStream.
  */
 use crate::lang::errors::{error, send_error, to_crush_error, CrushError, CrushResult};
 use crate::lang::data::table::ColumnType;
@@ -44,7 +44,7 @@ impl ValueSender {
 
     pub fn initialize(&self, signature: Vec<ColumnType>) -> CrushResult<OutputStream> {
         let (output, input) = streams(signature);
-        self.send(Value::TableStream(input))?;
+        self.send(Value::TableInputStream(input))?;
         Ok(output)
     }
 }
@@ -63,6 +63,7 @@ impl ValueReceiver {
 #[derive(Clone)]
 pub struct OutputStream {
     sender: Sender<Row>,
+    types: Vec<ColumnType>,
 }
 
 impl OutputStream {
@@ -71,6 +72,10 @@ impl OutputStream {
             Ok(_) => Ok(()),
             Err(_) => send_error(),
         }
+    }
+
+    pub fn types(&self) -> &[ColumnType] {
+        &self.types
     }
 }
 
@@ -153,7 +158,10 @@ pub fn unbounded_pipe() -> (ValueSender, ValueReceiver) {
 pub fn streams(signature: Vec<ColumnType>) -> (OutputStream, InputStream) {
     let (output, input) = bounded(128);
     (
-        OutputStream { sender: output },
+        OutputStream {
+            sender: output,
+            types: signature.clone(),
+        },
         InputStream {
             receiver: input,
             types: signature,
@@ -164,7 +172,10 @@ pub fn streams(signature: Vec<ColumnType>) -> (OutputStream, InputStream) {
 pub fn unlimited_streams(signature: Vec<ColumnType>) -> (OutputStream, InputStream) {
     let (output, input) = unbounded();
     (
-        OutputStream { sender: output },
+        OutputStream {
+            sender: output,
+            types: signature.clone(),
+        },
         InputStream {
             receiver: input,
             types: signature,
@@ -174,7 +185,7 @@ pub fn unlimited_streams(signature: Vec<ColumnType>) -> (OutputStream, InputStre
 
 pub fn empty_channel() -> ValueReceiver {
     let (o, i) = pipe();
-    let _ = o.send(Value::empty_table_stream());
+    let _ = o.send(Value::empty_table_input_stream());
     i
 }
 

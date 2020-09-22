@@ -38,7 +38,7 @@ lazy_static! {
 #[signature(
 list,
 can_block = true,
-output = Known(ValueType::TableStream(LIST_OUTPUT_TYPE.clone())),
+output = Known(ValueType::TableInputStream(LIST_OUTPUT_TYPE.clone())),
 short = "List all users on the system",
 )]
 struct List {}

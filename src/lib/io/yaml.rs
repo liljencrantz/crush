@@ -126,9 +126,9 @@ fn to_yaml(value: Value) -> CrushResult<serde_yaml::Value> {
 
         Value::Binary(b) => Ok(serde_yaml::Value::from(b)),
 
-        Value::BinaryStream(_) => panic!("Impossible"),
+        Value::BinaryInputStream(_) => panic!("Impossible"),
 
-        Value::TableStream(_) => panic!("Impossible"),
+        Value::TableInputStream(_) => panic!("Impossible"),
 
         v => error(&format!("Unsupported data type {}", v.value_type())),
     }

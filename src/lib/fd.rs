@@ -31,7 +31,7 @@ lazy_static! {
 file,
 can_block = true,
 short = "Return a table stream containing information on all open files",
-output = Known(ValueType::TableStream(FILE_OUTPUT_TYPE.clone())),
+output = Known(ValueType::TableInputStream(FILE_OUTPUT_TYPE.clone())),
 long = "fd:file accepts no arguments.")]
 pub struct File {}
 
@@ -99,7 +99,7 @@ mod procfs {
     network,
     can_block = true,
     short = "Return a table stream containing information on all open network sockets",
-    output = Known(ValueType::TableStream(NET_OUTPUT_TYPE.clone())),
+    output = Known(ValueType::TableInputStream(NET_OUTPUT_TYPE.clone())),
     long = "fd:network accepts no arguments.")]
     pub struct Network {}
 
@@ -274,7 +274,7 @@ mod procfs {
     unix,
     can_block = true,
     short = "Return a table stream containing information on all open unix sockets",
-    output = Known(ValueType::TableStream(UNIX_OUTPUT_TYPE.clone())),
+    output = Known(ValueType::TableInputStream(UNIX_OUTPUT_TYPE.clone())),
     long = "fd:unix accepts no arguments.")]
     pub struct Unix {}
 

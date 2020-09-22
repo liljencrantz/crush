@@ -23,7 +23,7 @@ lazy_static! {
 #[signature(
 journal,
 can_block = true,
-output = Known(ValueType::TableStream(JOURNAL_OUTPUT_TYPE.clone())),
+output = Known(ValueType::TableInputStream(JOURNAL_OUTPUT_TYPE.clone())),
 short = "Show the systemd journal"
 )]
 struct JournalSignature {

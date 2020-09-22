@@ -11,11 +11,23 @@ use signature::signature;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::pipe::streams;
 use crate::lang::data::r#struct::Struct;
+use crate::lang::command::CrushCommand;
 
 lazy_static! {
+    static ref CLOSE: Value =
+        Value::Command(CrushCommand::command(
+            close, false,
+            vec!["global".to_string(), "types".to_string(), "pipe".to_string(), "close".to_string()],
+            "pipe:close",
+            "Close the specified pipe",
+            None,
+            Known(ValueType::Empty),
+            vec![],
+        ));
+
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
-        let path = vec!["global", "types", "table_stream"];
+        let path = vec!["global", "types", "table_input_stream"];
         Call::declare_method(&mut res, &path);
         GetItem::declare_method(&mut res, &path);
         Pipe::declare_method(&mut res, &path);
@@ -27,7 +39,7 @@ lazy_static! {
 __call__,
 can_block = false,
 output = Known(ValueType::Type),
-short = "return the table_stream type with the specified column signature.",
+short = "return the table_input_stream type with the specified column signature.",
 )]
 struct Call {
     #[description("the columns of the stream.")]
@@ -37,21 +49,21 @@ struct Call {
 
 fn __call__(context: CommandContext) -> CrushResult<()> {
     match context.this.r#type()? {
-        ValueType::TableStream(c) => {
+        ValueType::TableInputStream(c) => {
             let cfg: Call = Call::parse(context.arguments, &context.global_state.printer())?;
             if c.is_empty() {
                 context
                     .output
-                    .send(Value::Type(ValueType::TableStream(column_types(&cfg.columns))))
+                    .send(Value::Type(ValueType::TableInputStream(column_types(&cfg.columns))))
             } else if cfg.columns.is_empty() {
-                context.output.send(Value::Type(ValueType::TableStream(c)))
+                context.output.send(Value::Type(ValueType::TableInputStream(c)))
             } else {
                 argument_error_legacy(
-                    "Tried to set columns on a table_stream type that already has columns",
+                    "Tried to set columns on a table_input_stream type that already has columns",
                 )
             }
         }
-        _ => argument_error_legacy("Invalid this, expected type table_stream"),
+        _ => argument_error_legacy("Invalid this, expected type table_input_stream"),
     }
 }
 
@@ -68,7 +80,7 @@ struct GetItem {
 
 fn __getitem__(context: CommandContext) -> CrushResult<()> {
     let cfg: GetItem = GetItem::parse(context.arguments, &context.global_state.printer())?;
-    let o = context.this.table_stream()?;
+    let o = context.this.table_input_stream()?;
     context.output.send(Value::Struct(o.get(cfg.index)?.into_struct(o.types())))
 }
 
@@ -77,21 +89,30 @@ pipe,
 can_block = false,
 output = Known(ValueType::Struct),
 short = "Returns a struct containing a read end and a write end of a pipe of the specified type",
+example = "pipe := ((table_input_stream value=integer):pipe)\n    _1 := (seq 100_000 | pipe:output:write | bg)\n    sum_job_id := (pipe:input | sum | bg)\n    pipe:close\n    sum_job_id | fg"
 )]
 struct Pipe {}
 
 fn pipe(context: CommandContext) -> CrushResult<()> {
     match context.this.r#type()? {
-        ValueType::TableStream(subtype) => {
+        ValueType::TableInputStream(subtype) => {
             let (output, input) = streams(subtype);
             context.output.send(Value::Struct(Struct::new(
                 vec![
-                    ("input", Value::TableStream(input)),
-//                    ("output", ),
+                    ("input", Value::TableInputStream(input)),
+                    ("output", Value::TableOutputStream(output)),
+                    ("close", CLOSE.clone())
                 ],
                 None,
             )))
         }
         _ => argument_error_legacy("Wrong type of argument: Expected a table stream type"),
     }
+}
+
+fn close(context: CommandContext) -> CrushResult<()> {
+    let pipe = context.this.r#struct()?;
+    pipe.set("input", Value::Empty());
+    pipe.set("output", Value::Empty());
+    Ok(())
 }

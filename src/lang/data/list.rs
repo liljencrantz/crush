@@ -158,7 +158,7 @@ impl List {
         let mut cells = self.cells.lock().unwrap();
         let vec: Vec<Value> = cells.drain(..).map(|c| c.materialize()).collect::<CrushResult<Vec<_>>>()?;
         Ok(List {
-            cell_type: self.cell_type.materialize(),
+            cell_type: self.cell_type.materialize()?,
             cells: Arc::new(Mutex::from(vec)),
         })
     }

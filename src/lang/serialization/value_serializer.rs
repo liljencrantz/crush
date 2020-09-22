@@ -144,7 +144,8 @@ impl Serializable<Value> for Value {
             Value::Struct(s) => s.serialize(elements, state),
             Value::Dict(d) => d.serialize(elements, state),
             Value::Scope(s) => s.serialize(elements, state),
-            Value::TableStream(_) | Value::BinaryStream(_) => error("Can't serialize streams"),
+            Value::TableOutputStream(_) | Value::TableInputStream(_) |
+            Value::BinaryInputStream(_) => error("Can't serialize streams"),
         }
     }
 }

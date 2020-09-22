@@ -25,7 +25,7 @@ lazy_static! {
 __call__,
 can_block = false,
 output = Known(ValueType::Type),
-short = "Return the table_stream type with the specified column signature.",
+short = "Return the table_input_stream type with the specified column signature.",
 )]
 struct Call {
     #[description("return the table type with the specified column signature.")]
@@ -40,7 +40,7 @@ fn __call__(context: CommandContext) -> CrushResult<()> {
             if c.is_empty() {
                 context
                     .output
-                    .send(Value::Type(ValueType::TableStream(column_types(&cfg.columns))))
+                    .send(Value::Type(ValueType::TableInputStream(column_types(&cfg.columns))))
             } else if cfg.columns.is_empty() {
                 context.output.send(Value::Type(ValueType::Table(c)))
             } else {

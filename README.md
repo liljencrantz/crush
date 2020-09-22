@@ -525,10 +525,10 @@ use the same dataset twice.
     crush# files
 
 Notice how there is no output the second time the content of the `files` variable is
-displayed, because the table_stream has already been consumed.
+displayed, because the table_input_stream has already been consumed.
 
 Enter the materialize command, which takes any value and recursively converts
-all transient (table_stream and binary_stream) components into an equivalent
+all transient (table_input_stream and binary_stream) components into an equivalent
 in-memory form (stable, and binary, respectively).
 
     crush# materialized_files := (ls|materialize)
@@ -563,7 +563,7 @@ in-memory form (stable, and binary, respectively).
     fox     75  2020-03-07 17:09:15 +0100 file      build.rs
     fox    711  2019-10-03 14:19:46 +0200 file      crush.iml
 
-When the `table_stream` is materialized into a `table`, it can be displayed
+When the `table_input_stream` is materialized into a `table`, it can be displayed
 multiple times.
 
 ### Flow control
@@ -584,7 +584,7 @@ that can be controlled using `break` and `continue`.
         if (./some_file:stat):is_file {echo "It's a file!"} {echo "It's not a file!"}
 
 
-    for [name=]iterable:(table_stream|table|dict|list) body:command
+    for [name=]iterable:(table_input_stream|table|dict|list) body:command
     
         Execute body once for every element in iterable.
     

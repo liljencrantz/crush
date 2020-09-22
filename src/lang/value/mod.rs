@@ -16,7 +16,7 @@ use crate::lang::errors::{argument_error_legacy, mandate, CrushResult};
 use crate::lang::data::r#struct::Struct;
 use crate::lang::data::r#struct::StructReader;
 use crate::lang::data::scope::Scope;
-use crate::lang::pipe::{streams, InputStream, Stream};
+use crate::lang::pipe::{streams, InputStream, Stream, OutputStream};
 use crate::lang::data::{
     binary::BinaryReader, dict::Dict, dict::DictReader, list::List, list::ListReader,
     table::ColumnType, table::TableReader,
@@ -52,7 +52,8 @@ pub enum Value {
     Glob(Glob),
     Regex(String, Regex),
     Command(Command),
-    TableStream(InputStream),
+    TableInputStream(InputStream),
+    TableOutputStream(OutputStream),
     File(PathBuf),
     Table(Table),
     Struct(Struct),
@@ -62,7 +63,7 @@ pub enum Value {
     Bool(bool),
     Float(f64),
     Empty(),
-    BinaryStream(Box<dyn BinaryReader + Send + Sync>),
+    BinaryInputStream(Box<dyn BinaryReader + Send + Sync>),
     Binary(Vec<u8>),
     Type(ValueType),
 }
@@ -207,9 +208,9 @@ impl Value {
         }
     }
 
-    pub fn empty_table_stream() -> Value {
+    pub fn empty_table_input_stream() -> Value {
         let (_s, r) = streams(vec![]);
-        Value::TableStream(r)
+        Value::TableInputStream(r)
     }
 
     pub fn string(s: impl Into<String>) -> Value {
@@ -218,7 +219,7 @@ impl Value {
 
     pub fn stream(&self) -> Option<Stream> {
         match self {
-            Value::TableStream(s) => Some(Box::from(s.clone())),
+            Value::TableInputStream(s) => Some(Box::from(s.clone())),
             Value::Table(r) => Some(Box::from(TableReader::new(r.clone()))),
             Value::List(l) => Some(Box::from(ListReader::new(l.clone(), "value"))),
             Value::Dict(d) => Some(Box::from(DictReader::new(d.clone()))),
@@ -237,7 +238,8 @@ impl Value {
             Value::Regex(_, _) => ValueType::Regex,
             Value::Command(_) => ValueType::Command,
             Value::File(_) => ValueType::File,
-            Value::TableStream(s) => ValueType::TableStream(s.types().to_vec()),
+            Value::TableInputStream(s) => ValueType::TableInputStream(s.types().to_vec()),
+            Value::TableOutputStream(s) => ValueType::TableOutputStream(s.types().to_vec()),
             Value::Table(t) => ValueType::Table(t.types().to_vec()),
             Value::Struct(_) => ValueType::Struct,
             Value::List(l) => l.list_type(),
@@ -247,7 +249,7 @@ impl Value {
             Value::Dict(d) => d.dict_type(),
             Value::Float(_) => ValueType::Float,
             Value::Empty() => ValueType::Empty,
-            Value::BinaryStream(_) => ValueType::BinaryStream,
+            Value::BinaryInputStream(_) => ValueType::BinaryInputStream,
             Value::Binary(_) => ValueType::Binary,
             Value::Type(_) => ValueType::Type,
         }
@@ -289,14 +291,14 @@ impl Value {
 
     pub fn materialize(self) -> CrushResult<Value> {
         Ok(match self {
-            Value::TableStream(output) => {
+            Value::TableInputStream(output) => {
                 let mut rows = Vec::new();
                 while let Ok(r) = output.recv() {
                     rows.push(r.materialize()?);
                 }
-                Value::Table(Table::new(ColumnType::materialize(output.types()), rows))
+                Value::Table(Table::new(ColumnType::materialize(output.types())?, rows))
             }
-            Value::BinaryStream(mut s) => {
+            Value::BinaryInputStream(mut s) => {
                 let mut vec = Vec::new();
                 to_crush_error(std::io::copy(s.as_mut(), &mut vec))?;
                 Value::Binary(vec)
@@ -345,7 +347,8 @@ impl Value {
                 i64::from_str(&str_val),
             )?))),
             ValueType::Command => error("invalid convert"),
-            ValueType::TableStream(_) => error("invalid convert"),
+            ValueType::TableInputStream(_) => error("invalid convert"),
+            ValueType::TableOutputStream(_) => error("invalid convert"),
             ValueType::Table(_) => error("invalid convert"),
             ValueType::Struct => error("invalid convert"),
             ValueType::List(_) => error("invalid convert"),
@@ -353,7 +356,7 @@ impl Value {
             ValueType::Scope => error("Invalid convert"),
             ValueType::Empty => error("Invalid convert"),
             ValueType::Any => error("Invalid convert"),
-            ValueType::BinaryStream => error("invalid convert"),
+            ValueType::BinaryInputStream => error("invalid convert"),
             ValueType::Type => error("invalid convert"),
         }
     }
@@ -421,7 +424,8 @@ impl Clone for Value {
             Value::File(v) => Value::File(v.clone()),
             Value::Table(r) => Value::Table(r.clone()),
             Value::Struct(r) => Value::Struct(r.clone()),
-            Value::TableStream(s) => Value::TableStream(s.clone()),
+            Value::TableInputStream(s) => Value::TableInputStream(s.clone()),
+            Value::TableOutputStream(s) => Value::TableOutputStream(s.clone()),
             Value::List(l) => Value::List(l.clone()),
             Value::Duration(d) => Value::Duration(*d),
             Value::Scope(e) => Value::Scope(e.clone()),
@@ -429,7 +433,7 @@ impl Clone for Value {
             Value::Dict(d) => Value::Dict(d.clone()),
             Value::Float(f) => Value::Float(*f),
             Value::Empty() => Value::Empty(),
-            Value::BinaryStream(v) => Value::BinaryStream(v.as_ref().clone()),
+            Value::BinaryInputStream(v) => Value::BinaryInputStream(v.as_ref().clone()),
             Value::Binary(v) => Value::Binary(v.clone()),
             Value::Type(t) => Value::Type(t.clone()),
         }
@@ -472,8 +476,9 @@ impl std::hash::Hash for Value {
             | Value::Dict(_)
             | Value::Table(_)
             | Value::List(_)
-            | Value::TableStream(_)
-            | Value::BinaryStream(_) => panic!("Can't hash output"),
+            | Value::TableInputStream(_)
+            | Value::TableOutputStream(_)
+            | Value::BinaryInputStream(_) => panic!("Can't hash output"),
             Value::Float(v) => {
                 let (m, x, s) = integer_decode(*v);
                 m.hash(state);

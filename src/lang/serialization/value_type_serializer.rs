@@ -56,7 +56,13 @@ impl Serializable<ValueType> for ValueType {
                         .map(|t| ColumnType::deserialize(*t as usize, elements, state))
                         .collect::<CrushResult<Vec<_>>>()?,
                 )),
-                model::r#type::Type::TableStreamType(tt) => Ok(ValueType::TableStream(
+                model::r#type::Type::TableInputStreamType(tt) => Ok(ValueType::TableInputStream(
+                    tt.column_types
+                        .iter()
+                        .map(|t| ColumnType::deserialize(*t as usize, elements, state))
+                        .collect::<CrushResult<Vec<_>>>()?,
+                )),
+                model::r#type::Type::TableOutputStreamType(tt) => Ok(ValueType::TableOutputStream(
                     tt.column_types
                         .iter()
                         .map(|t| ColumnType::deserialize(*t as usize, elements, state))
@@ -116,7 +122,8 @@ impl Serializable<ValueType> for ValueType {
                 });
                 return Ok(idx);
             }
-            ValueType::Table(col) => {
+            ValueType::TableOutputStream(col) | ValueType::Table(col) |
+            ValueType::TableInputStream(col) => {
                 let d = model::TableType {
                     column_types: col
                         .iter()
@@ -124,29 +131,18 @@ impl Serializable<ValueType> for ValueType {
                         .collect::<CrushResult<Vec<_>>>()?,
                 };
                 let idx = elements.len();
-                elements.push(model::Element {
-                    element: Some(element::Element::Type(model::Type {
-                        r#type: Some(model::r#type::Type::TableType(d)),
-                    })),
-                });
-                return Ok(idx);
-            }
-            ValueType::TableStream(col) => {
-                let d = model::TableType {
-                    column_types: col
-                        .iter()
-                        .map(|t| t.serialize(elements, state).map(|c| c as u64))
-                        .collect::<CrushResult<Vec<_>>>()?,
+                let el = match self {
+                    ValueType::TableOutputStream(_) => Some(model::r#type::Type::TableOutputStreamType(d)),
+                    ValueType::Table(_) => Some(model::r#type::Type::TableType(d)),
+                    ValueType::TableInputStream(_) => Some(model::r#type::Type::TableInputStreamType(d)),
+                    _ => panic!("Unpossible!"),
                 };
-                let idx = elements.len();
                 elements.push(model::Element {
-                    element: Some(element::Element::Type(model::Type {
-                        r#type: Some(model::r#type::Type::TableStreamType(d)),
-                    })),
+                    element: Some(element::Element::Type(model::Type { r#type: el })),
                 });
                 return Ok(idx);
             }
-            ValueType::BinaryStream => SimpleTypeKind::BinaryStream,
+            ValueType::BinaryInputStream => SimpleTypeKind::BinaryStream,
         };
 
         let idx = elements.len();

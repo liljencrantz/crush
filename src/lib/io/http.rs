@@ -91,7 +91,7 @@ fn http(context: CommandContext) -> CrushResult<()> {
         vec![
             ("status", Value::Integer(status.as_u16() as i128)),
             ("headers", Value::Table(headers)),
-            ("body", Value::BinaryStream(input)),
+            ("body", Value::BinaryInputStream(input)),
         ],
         None,
     )))?;
