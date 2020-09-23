@@ -28,6 +28,7 @@ mod remote;
 mod stream;
 #[cfg(target_os = "linux")]
 mod systemd;
+mod term;
 pub mod types;
 mod user;
 mod var;
@@ -120,6 +121,7 @@ pub fn declare(
     stream::declare(root)?;
     #[cfg(target_os = "linux")]
         systemd::declare(root)?;
+    term::declare(root)?;
     types::declare(root)?;
     user::declare(root)?;
     var::declare(root)?;

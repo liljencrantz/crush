@@ -68,8 +68,10 @@ the same namespace as all other variables.
 
 ## Operators
 
-Crush features a small number of operators to enable users to write mathematical
+Crush features a number of operators to enable users to write mathematical
 expressions and a few other operators that are a lot easier to read the code.
+
+These are presented below in order of precedence.
 
 | operator | Example | Description |
 | --- | --- | --- |
@@ -78,7 +80,7 @@ expressions and a few other operators that are a lot easier to read the code.
 | `>` `>=` `<` `<=` `==` `!=`  | `foo > 5` | Compare two values to each other  |
 | `+` `-` | `1+1` | Addition and subtraction  |
 | `*` `//` | `5*5` | Multiplication and division |
-| `typeof` | `typeof foo` | Returns the type of a value |
+| `typeof` | `typeof foo` | The type of a value |
 | `neg` `not` | `neg 5` | Numeric and logical negation |
 
 ## Command substitutions
@@ -103,7 +105,7 @@ all_the_files | head 1
 
 ## Namespaces
 
-Unlike regular shells, Crush relies heavily on namespaces to separate different commands
+Unlike other shells, Crush relies heavily on namespaces to separate different commands
 and avoid name clashes. Crush uses `:` as the namespace operator as well as the member
 access operator. (This is because the content of a namespace is simply its members)
 
