@@ -1,5 +1,6 @@
 use std::str::FromStr;
 use crate::lang::ast::*;
+use std::path::PathBuf;
 
 grammar;
 
@@ -127,7 +128,7 @@ Item: Box<Node> = {
         Box::from(Node::Field(TrackedString::literal(<>))),
 
     <start: @L> <l:QuotedLabel> <end: @R> =>
-        Box::from(Node::Label(TrackedString::from(&l[1..l.len()-1], Location::new(start, end)))),
+        Box::from(Node::File(PathBuf::from(unescape(l)), Location::new(start, end))),
 
     @L QuotedString @R => Box::from(Node::String(TrackedString::literal(<>))),
 
