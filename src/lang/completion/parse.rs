@@ -208,8 +208,12 @@ pub fn parse(
                     Node::Path(_, _) =>
                         Ok(ParseResult::PartialPath(simple_path(cmd, cursor)?)),
 
-                    Node::File(path, _) => { panic!("AAA"); }
-                    Node::String(string) => { panic!("AAA"); }
+                    Node::File(path, _) =>
+                        Ok(ParseResult::PartialPath(path.clone())),
+
+                    Node::String(string) =>
+                        panic!("AAA"),
+
                     Node::GetItem(_, _) => { panic!("AAA"); }
 
                     _ => error("Can't extract command to complete"),
@@ -287,6 +291,16 @@ pub fn parse(
                                     command: c,
                                     previous_arguments: vec![],
                                     last_argument: LastArgument::Path(simple_path(arg.as_ref(), cursor)?),
+                                    last_argument_name,
+                                }
+                            )),
+
+                        Node::File(path, _) =>
+                            Ok(ParseResult::PartialArgument(
+                                PartialCommandResult {
+                                    command: c,
+                                    previous_arguments: vec![],
+                                    last_argument: LastArgument::Path(path.clone()),
                                     last_argument_name,
                                 }
                             )),

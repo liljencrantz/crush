@@ -18,20 +18,25 @@ pub fn parse_name(s: &str) -> Option<Vec<String>> {
 
 fn close_quote(input: &str) -> String {
     let mut was_backslash = false;
-    let mut needs_trailing_quote = false;
+    let mut current_quote = None;
+
     for ch in input.chars() {
         if was_backslash {
             was_backslash = false;
         } else {
-            match ch {
-                '\\' => was_backslash = true,
-                '\"' => needs_trailing_quote = !needs_trailing_quote,
+            match (ch, current_quote) {
+                ('\\', _) => was_backslash = true,
+                ('\"', Some('\"')) => current_quote = None,
+                ('\'', Some('\'')) => current_quote = None,
+                ('\"', None) => current_quote = Some('\"'),
+                ('\'', None) => current_quote = Some('\''),
                 _ => {}
             }
         }
     }
-    if needs_trailing_quote {
-        format!("{}\"", input)
+
+    if let Some(missing_quote) = current_quote {
+        format!("{}{}", input, missing_quote)
     } else {
         input.to_string()
     }

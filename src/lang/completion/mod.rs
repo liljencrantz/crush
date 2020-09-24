@@ -364,7 +364,7 @@ mod tests {
     #[test]
     fn check_argument_completion() {
         let line = "my_cmd super_";
-        let cursor = 13;
+        let cursor = line.len();
 
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
@@ -375,7 +375,7 @@ mod tests {
     #[test]
     fn check_namespaced_argument_completion() {
         let line = "namespace:my_cmd super_";
-        let cursor = 23;
+        let cursor = line.len();
 
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
@@ -386,7 +386,7 @@ mod tests {
     #[test]
     fn check_argument_completion_when_cursor_isnt_on_anything() {
         let line = "my_cmd ";
-        let cursor = 7;
+        let cursor = line.len();
 
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
@@ -396,7 +396,7 @@ mod tests {
     #[test]
     fn check_switch_completion() {
         let line = "my_cmd --super_";
-        let cursor = 15;
+        let cursor = line.len();
 
         let s = scope_with_function();
         s.declare("super_confusing_variable", Value::Empty()).unwrap();
@@ -408,7 +408,7 @@ mod tests {
     #[test]
     fn test_that_attribute_component_can_be_completed() {
         let line = "namespace:my";
-        let cursor = 12;
+        let cursor = line.len();
 
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
@@ -419,7 +419,7 @@ mod tests {
     #[test]
     fn test_that_empty_attribute_component_can_be_completed() {
         let line = "namespace:";
-        let cursor = 10;
+        let cursor = line.len();
 
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
@@ -430,7 +430,7 @@ mod tests {
     #[test]
     fn test_that_commands_can_be_completed_in_a_pipeline() {
         let line = "a | ";
-        let cursor = 4;
+        let cursor = line.len();
 
         let s = Scope::create_root();
         s.declare("abcd", Value::Empty()).unwrap();
@@ -443,7 +443,7 @@ mod tests {
     #[test]
     fn check_empty_switch_completion() {
         let line = "my_cmd --";
-        let cursor = 9;
+        let cursor = line.len();
 
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
@@ -454,7 +454,7 @@ mod tests {
     #[test]
     fn check_empty_token() {
         let line = "a ";
-        let cursor = 2;
+        let cursor = line.len();
 
         let s = Scope::create_root();
         s.declare("abcd", Value::Empty()).unwrap();
@@ -466,7 +466,7 @@ mod tests {
     #[test]
     fn check_subcommand() {
         let line = "x (a";
-        let cursor = 4;
+        let cursor = line.len();
 
         let s = Scope::create_root();
         s.declare("abcd", Value::Empty()).unwrap();
@@ -478,7 +478,7 @@ mod tests {
     #[test]
     fn complete_simple_command() {
         let line = "ab";
-        let cursor = 2;
+        let cursor = line.len();
 
         let s = Scope::create_root();
         s.declare("abcd", Value::Empty()).unwrap();
@@ -490,7 +490,7 @@ mod tests {
     #[test]
     fn complete_simple_file() {
         let line = "bur";
-        let cursor = 3;
+        let cursor = line.len();
 
         let s = Scope::create_root();
         let completions = complete(line, cursor, &s, &parser(), &lister()).unwrap();
@@ -501,12 +501,23 @@ mod tests {
     #[test]
     fn complete_simple_file_with_dot() {
         let line = "./bur";
-        let cursor = 5;
+        let cursor = line.len();
 
         let s = Scope::create_root();
         let completions = complete(line, cursor, &s, &parser(), &lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "./burrow/");
+    }
+
+    #[test]
+    fn complete_file_with_cursor_after_slash() {
+        let line = "./burrow/";
+        let cursor = line.len();
+
+        let s = Scope::create_root();
+        let completions = complete(line, cursor, &s, &parser(), &lister()).unwrap();
+        assert_eq!(completions.len(), 2);
+        assert_eq!(&completions[0].complete(line), "./burrow/carrot");
     }
 
     #[test]
