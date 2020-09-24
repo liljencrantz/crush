@@ -4,6 +4,7 @@ use std::sync::{Arc, Mutex};
 use crate::lang::threads::ThreadStore;
 use crate::lang::printer::Printer;
 use crate::lang::command::Command;
+use crate::lang::parser::Parser;
 
 struct StateData {
     locale: SystemLocale,
@@ -16,6 +17,7 @@ pub struct GlobalState {
     printer: Printer,
     exit_status: Arc<Mutex<Option<i32>>>,
     prompt: Arc<Mutex<Option<Command>>>,
+    parser: Parser,
 }
 
 impl GlobalState {
@@ -30,7 +32,12 @@ impl GlobalState {
             printer,
             exit_status: Arc::from(Mutex::new(None)),
             prompt: Arc::from(Mutex::new(None)),
+            parser: Parser::new(),
         })
+    }
+
+    pub fn parser(&self) -> &Parser {
+        &self.parser
     }
 
     pub fn grouping(&self) -> Grouping {
@@ -57,7 +64,7 @@ impl GlobalState {
     }
 
     pub fn exit_status(&self) -> Option<i32> {
-        let mut data = self.exit_status.lock().unwrap();
+        let data = self.exit_status.lock().unwrap();
         (*data).clone()
     }
 

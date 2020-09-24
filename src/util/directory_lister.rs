@@ -75,11 +75,13 @@ impl Iterator for RealIter {
     }
 }
 
+#[cfg(test)]
 pub struct FakeDirectoryLister {
     cwd: PathBuf,
     map: OrderedMap<PathBuf, Vec<FakeListerEntry>>,
 }
 
+#[cfg(test)]
 impl FakeDirectoryLister {
     pub fn new(cwd: impl Into<PathBuf>) -> FakeDirectoryLister {
         FakeDirectoryLister {
@@ -138,6 +140,7 @@ impl FakeDirectoryLister {
     }
 }
 
+#[cfg(test)]
 impl DirectoryLister for FakeDirectoryLister {
     type DirectoryIter = FakeIter;
 
@@ -166,10 +169,12 @@ impl DirectoryLister for FakeDirectoryLister {
     }
 }
 
+#[cfg(test)]
 pub struct FakeIter {
     vec: VecDeque<Directory>,
 }
 
+#[cfg(test)]
 impl Iterator for FakeIter {
     type Item = Directory;
 

@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::fmt::{Display};
+use std::fmt::Display;
 use crate::lang::ast::Location;
 use CrushErrorType::*;
 

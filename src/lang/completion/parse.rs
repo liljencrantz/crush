@@ -4,10 +4,10 @@ use crate::lang::value::{ValueType, Value};
 use std::path::PathBuf;
 use crate::lang::command::Command;
 use crate::lang::data::scope::Scope;
-use crate::lang::parser::close_command;
 use std::ops::Deref;
 use regex::Regex;
 use crate::util::glob::Glob;
+use crate::lang::parser::Parser;
 
 pub enum CompletionCommand {
     Unknown,
@@ -172,8 +172,13 @@ fn parse_command_node(node: &Node, scope: &Scope) -> CrushResult<CompletionComma
     }
 }
 
-pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResult> {
-    let ast = crate::lang::parser::ast(&close_command(&line[0..cursor])?)?;
+pub fn parse(
+    line: &str,
+    cursor: usize,
+    scope: &Scope,
+    parser: &Parser,
+) -> CrushResult<ParseResult> {
+    let ast = parser.ast(&parser.close_command(&line[0..cursor])?)?;
 
     if ast.jobs.len() == 0 {
         return Ok(ParseResult::Nothing);
@@ -313,31 +318,36 @@ pub fn parse(line: &str, cursor: usize, scope: &Scope) -> CrushResult<ParseResul
 mod tests {
     use super::*;
     use crate::lang::ast::Location;
+    use crate::lang::parser::lalrparser;
+
+    fn ast(s: &str) -> CrushResult<JobListNode> {
+        to_crush_error(lalrparser::JobListParser::new().parse(s))
+    }
 
     #[test]
     fn find_command_in_substitution_test() {
-        let ast = crate::lang::parser::ast("a (b)").unwrap();
+        let ast = ast("a (b)").unwrap();
         let cmd = find_command_in_job_list(ast, 4).unwrap();
         assert_eq!(cmd.location, Location::new(3, 4))
     }
 
     #[test]
     fn find_command_in_closure_test() {
-        let ast = crate::lang::parser::ast("a {b}").unwrap();
+        let ast = ast("a {b}").unwrap();
         let cmd = find_command_in_job_list(ast, 4).unwrap();
         assert_eq!(cmd.location, Location::new(3, 4))
     }
 
     #[test]
     fn find_command_in_complicated_mess_test() {
-        let ast = crate::lang::parser::ast("a | b {c:d (e f=g) h=(i j)}").unwrap();
+        let ast = ast("a | b {c:d (e f=g) h=(i j)}").unwrap();
         let cmd = find_command_in_job_list(ast, 25).unwrap();
         assert_eq!(cmd.location, Location::new(22, 25))
     }
 
     #[test]
     fn find_command_in_operator() {
-        let ast = crate::lang::parser::ast("ps | where {^cpu == (max_)}").unwrap();
+        let ast = ast("ps | where {^cpu == (max_)}").unwrap();
         let cmd = find_command_in_job_list(ast, 25).unwrap();
         assert_eq!(cmd.location, Location::new(21, 25))
     }

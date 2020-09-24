@@ -74,8 +74,6 @@ fn aggregate(
                     streams.push(input_sender.initialize(rows.types().to_vec())?);
 
                     let local_command = command.copy();
-                    let local_printer = printer.clone();
-                    let local_threads = threads.clone();
                     let local_scope = scope.clone();
                     let local_state = global_state.clone();
                     threads.spawn("group:aggr", move ||

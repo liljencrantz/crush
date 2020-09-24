@@ -7,6 +7,7 @@ use crate::lang::completion::parse::{ParseResult, CompletionCommand, LastArgumen
 use nix::NixPath;
 use crate::lang::command::ArgumentDescription;
 use crate::lang::ast::escape_without_quotes;
+use crate::lang::parser::Parser;
 
 pub mod parse;
 
@@ -249,9 +250,10 @@ pub fn complete(
     line: &str,
     cursor: usize,
     scope: &Scope,
+    parser: &Parser,
     lister: &impl DirectoryLister,
 ) -> CrushResult<Vec<Completion>> {
-    let parse_result = parse(line, cursor, scope)?;
+    let parse_result = parse(line, cursor, scope, parser)?;
     let mut res = Vec::new();
     match parse_result {
         ParseResult::Nothing => {
@@ -285,6 +287,10 @@ mod tests {
     use crate::util::directory_lister::FakeDirectoryLister;
     use signature::signature;
     use crate::lang::execution_context::CommandContext;
+
+    fn parser() -> Parser {
+        Parser::new()
+    }
 
     fn lister() -> FakeDirectoryLister {
         let mut res = FakeDirectoryLister::new("/home/rabbit");
@@ -324,7 +330,7 @@ mod tests {
             MyCmdSignature::declare(env)?;
             Ok(())
         })).unwrap();
-        let chld2 = root.create_namespace("other_namespace", Box::new(|env| {
+        let _chld2 = root.create_namespace("other_namespace", Box::new(|env| {
             AllowedCmdSignature::declare(env)?;
             Ok(())
         })).unwrap();
@@ -339,7 +345,7 @@ mod tests {
 
         let s = Scope::create_root();
         s.declare("abcd", Value::Empty()).unwrap();
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "abcd ");
     }
@@ -350,7 +356,7 @@ mod tests {
         let cursor = 0;
 
         let s = Scope::create_root();
-        let completions = complete(line, cursor, &s, &lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "burrow/");
     }
@@ -361,7 +367,7 @@ mod tests {
         let cursor = 13;
 
         let s = scope_with_function();
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "my_cmd super_fancy_argument=");
     }
@@ -372,7 +378,7 @@ mod tests {
         let cursor = 23;
 
         let s = scope_with_function();
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "namespace:my_cmd super_fancy_argument=");
     }
@@ -383,7 +389,7 @@ mod tests {
         let cursor = 7;
 
         let s = scope_with_function();
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 4);
     }
 
@@ -394,7 +400,7 @@ mod tests {
 
         let s = scope_with_function();
         s.declare("super_confusing_variable", Value::Empty()).unwrap();
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "my_cmd --super_fancy_argument ");
     }
@@ -405,7 +411,7 @@ mod tests {
         let cursor = 12;
 
         let s = scope_with_function();
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "namespace:my_cmd ");
     }
@@ -416,7 +422,7 @@ mod tests {
         let cursor = 10;
 
         let s = scope_with_function();
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "namespace:my_cmd ");
     }
@@ -428,7 +434,7 @@ mod tests {
 
         let s = Scope::create_root();
         s.declare("abcd", Value::Empty()).unwrap();
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "a | abcd ");
     }
@@ -440,7 +446,7 @@ mod tests {
         let cursor = 9;
 
         let s = scope_with_function();
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "my_cmd --super_fancy_argument ");
     }
@@ -452,7 +458,7 @@ mod tests {
 
         let s = Scope::create_root();
         s.declare("abcd", Value::Empty()).unwrap();
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "a abcd ");
     }
@@ -464,11 +470,10 @@ mod tests {
 
         let s = Scope::create_root();
         s.declare("abcd", Value::Empty()).unwrap();
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "x (abcd ");
     }
-
 
     #[test]
     fn complete_simple_command() {
@@ -477,7 +482,7 @@ mod tests {
 
         let s = Scope::create_root();
         s.declare("abcd", Value::Empty()).unwrap();
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "abcd ");
     }
@@ -488,7 +493,7 @@ mod tests {
         let cursor = 3;
 
         let s = Scope::create_root();
-        let completions = complete(line, cursor, &s, &lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "burrow/");
     }
@@ -499,7 +504,7 @@ mod tests {
         let cursor = 5;
 
         let s = Scope::create_root();
-        let completions = complete(line, cursor, &s, &lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "./burrow/");
     }
@@ -510,7 +515,7 @@ mod tests {
         let cursor = 10;
 
         let s = Scope::create_root();
-        let completions = complete(line, cursor, &s, &lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "burrow/carrot ");
     }
@@ -526,7 +531,7 @@ mod tests {
             Ok(())
         })).unwrap();
 
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "abcd:bcde ");
     }
@@ -542,7 +547,7 @@ mod tests {
             Ok(())
         })).unwrap();
 
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "xxx abcd:bcde ");
     }
@@ -554,7 +559,7 @@ mod tests {
 
         let s = Scope::create_root();
         s.declare("abcd", Value::Empty()).unwrap();
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "abcd abcd ");
     }
@@ -566,7 +571,7 @@ mod tests {
 
         let s = Scope::create_root();
         s.declare("abcd", Value::Empty()).unwrap();
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "abcd b");
     }
@@ -578,7 +583,7 @@ mod tests {
 
         let s = Scope::create_root();
         s.declare("cdef", Value::Empty()).unwrap();
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "ab cdef  ef");
     }
@@ -590,7 +595,7 @@ mod tests {
 
         let s = Scope::create_root();
         s.declare("cdef", Value::Empty()).unwrap();
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "ab foo=cdef ");
     }
@@ -603,7 +608,7 @@ mod tests {
         let s = Scope::create_root();
         s.declare("xxxx", Value::Empty()).unwrap();
         s.declare("aaaa", Value::Empty()).unwrap();
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 2);
     }
 
@@ -615,7 +620,7 @@ mod tests {
         let s = scope_with_function();
         s.declare("tumbleweed", Value::Empty()).unwrap();
         s.declare("type", Value::Type(ValueType::Empty)).unwrap();
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "my_cmd super_fancy_argument=type ");
     }
@@ -626,7 +631,7 @@ mod tests {
         let cursor = line.len();
 
         let s = scope_with_function();
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "other_namespace:allowed_cmd argument=\"foo\" ");
     }
@@ -637,7 +642,7 @@ mod tests {
         let cursor = line.len();
 
         let s = Scope::create_root();
-        let completions = complete(line, cursor, &s, &empty_lister()).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "\"\":format ");
     }

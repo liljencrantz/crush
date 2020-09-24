@@ -25,6 +25,12 @@ pub fn black_hole() -> ValueSender {
     (*BLACK_HOLE).clone()
 }
 
+pub fn empty_channel() -> ValueReceiver {
+    let (o, i) = pipe();
+    let _ = o.send(Value::Empty());
+    i
+}
+
 #[derive(Clone)]
 pub struct ValueSender {
     sender: Sender<Value>,
@@ -181,12 +187,6 @@ pub fn unlimited_streams(signature: Vec<ColumnType>) -> (OutputStream, InputStre
             types: signature,
         },
     )
-}
-
-pub fn empty_channel() -> ValueReceiver {
-    let (o, i) = pipe();
-    let _ = o.send(Value::empty_table_input_stream());
-    i
 }
 
 pub trait CrushStream {

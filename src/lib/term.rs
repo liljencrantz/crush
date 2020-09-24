@@ -1,4 +1,3 @@
-use lazy_static::lazy_static;
 use crate::lang::data::scope::Scope;
 use crate::lang::errors::CrushResult;
 use crate::lang::value::Value;

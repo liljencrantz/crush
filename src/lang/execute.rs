@@ -1,6 +1,5 @@
 use crate::lang::errors::{argument_error_legacy, to_crush_error, CrushResult};
 use crate::lang::execution_context::{CommandContext, JobContext};
-use crate::lang::parser::parse;
 use crate::lang::data::scope::Scope;
 use crate::lang::serialization::{deserialize, serialize};
 use crate::lang::pipe::{pipe, empty_channel, ValueSender};
@@ -64,7 +63,7 @@ pub fn string(
     output: &ValueSender,
     global_state: &GlobalState,
 ) -> CrushResult<()> {
-    let jobs = parse(command, &global_env)?;
+    let jobs = global_state.parser().parse(command, &global_env)?;
     for job_definition in jobs {
         let handle = job_definition.invoke(JobContext::new(
             empty_channel(),

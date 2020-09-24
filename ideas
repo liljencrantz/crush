@@ -77,25 +77,20 @@ Syntax highlighting (with more accurate parenthesis matching)
 Every job invocation should have a unique (but reusable, to keep them small) job id, e.g. 1 or 5.
 Every command should have a command id withing that job, e.g. 5:2
 Every thread should have a thread id within that command, e.g. 5:2:3
-Colors!
 Make command closing work on file literals
 Make only literals beginning with . or / be files
-Fix file literal completions
-Fix literal completion not to include files
 Add unicode escape sequence support
 Add hex escape sequence support
-Fix syntax highlighting performance
 Make suggestions use completion engine instead of history
 Handle ^Z to put jobs into background. How?
 Handle ^C to cancel jobs. How?
 
-crush
-  jobs
-  commands
-  threads
+crush:jobs
 
 Tab completion missing feature list:
 
+* Fix file literal completions
+* Fix literal completion not to include files
 * Support for enabling and disabling completion error printing
 * fall back to "stupid" completion if parsing the AST fails
 * Completions for wildcards

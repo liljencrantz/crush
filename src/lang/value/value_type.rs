@@ -97,7 +97,7 @@ impl ValueType {
             | ValueType::Bool => self.clone(),
             ValueType::BinaryInputStream => ValueType::Binary,
             ValueType::TableInputStream(o) => ValueType::Table(ColumnType::materialize(o)?),
-            ValueType::TableOutputStream(o) => return argument_error_legacy("Can't materialize binary_output_stream"),
+            ValueType::TableOutputStream(_) => return argument_error_legacy("Can't materialize binary_output_stream"),
             ValueType::Table(r) => ValueType::Table(ColumnType::materialize(r)?),
             ValueType::List(l) => ValueType::List(Box::from(l.materialize()?)),
             ValueType::Dict(k, v) => {

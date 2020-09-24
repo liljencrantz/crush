@@ -1,4 +1,5 @@
 Todo:
+parser should not convert numeric literals to numbers, that should happen in the generate step.
 Allow secondary/tertiary sort keys
 Allow input type specification
 lazy loading of scopes leaks when displaying the help for a scope

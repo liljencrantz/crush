@@ -81,7 +81,7 @@ mod locale {
 
     fn list(context: CommandContext) -> CrushResult<()> {
         let output = context.output.initialize(LIST_OUTPUT_TYPE.clone())?;
-        let mut available = to_crush_error(SystemLocale::available_names())?;
+        let available = to_crush_error(SystemLocale::available_names())?;
 
         for name in available {
             output.send(Row::new(vec![Value::String(name)]))?;
