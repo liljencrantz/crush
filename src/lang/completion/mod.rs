@@ -225,7 +225,6 @@ pub fn complete_partial_argument(
 
         LastArgument::Label(label) => {
             complete_label(Value::Scope(scope.clone()), &label, &argument_type, cursor, res)?;
-            complete_file(lister, &label, &argument_type, cursor, res)?;
             if parse_result.last_argument_name.is_none() {
                 if let CompletionCommand::Known(cmd) = parse_result.command {
                     complete_argument_name(cmd.arguments(), &label, cursor, res, false)?;
@@ -263,7 +262,6 @@ pub fn complete(
 
         ParseResult::PartialLabel(label) => {
             complete_label(Value::Scope(scope.clone()), &label, &ValueType::Any, cursor, &mut res)?;
-            complete_file(lister, &label, &ValueType::Any, cursor, &mut res)?;
         }
 
         ParseResult::PartialField(parent, label) => {
@@ -489,13 +487,13 @@ mod tests {
 
     #[test]
     fn complete_simple_file() {
-        let line = "bur";
+        let line = "'bur";
         let cursor = line.len();
 
         let s = Scope::create_root();
         let completions = complete(line, cursor, &s, &parser(), &lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "burrow/");
+        assert_eq!(&completions[0].complete(line), "'burrow/");
     }
 
     #[test]
@@ -522,13 +520,24 @@ mod tests {
 
     #[test]
     fn complete_long_path() {
-        let line = "burrow/car";
-        let cursor = 10;
+        let line = "./burrow/car";
+        let cursor = line.len();
 
         let s = Scope::create_root();
         let completions = complete(line, cursor, &s, &parser(), &lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "burrow/carrot ");
+        assert_eq!(&completions[0].complete(line), "./burrow/carrot ");
+    }
+
+    #[test]
+    fn complete_long_quoted_path() {
+        let line = "'burrow/car";
+        let cursor = line.len();
+
+        let s = Scope::create_root();
+        let completions = complete(line, cursor, &s, &parser(), &lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "'burrow/carrot' ");
     }
 
     #[test]
