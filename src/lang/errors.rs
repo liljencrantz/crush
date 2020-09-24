@@ -2,6 +2,7 @@ use std::error::Error;
 use std::fmt::Display;
 use crate::lang::ast::Location;
 use CrushErrorType::*;
+use std::cmp::{min, max};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum CrushErrorType {
@@ -18,6 +19,19 @@ pub struct CrushError {
     error_type: CrushErrorType,
     location: Option<Location>,
     definition: Option<String>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct ErrorLine {
+    line_number: usize,
+    line: String,
+    location: Location,
+}
+
+impl ErrorLine {
+    fn format_location(&self) -> String {
+        format!("{}{}", " ".repeat(self.location.start), "^".repeat(self.location.len()))
+    }
 }
 
 impl CrushError {
@@ -80,7 +94,16 @@ impl CrushError {
     pub fn context(&self) -> Option<String> {
         match (&self.definition, self.location) {
             (Some(def), Some(loc)) => {
-                Some(format!("{}\n{}{}", def, " ".repeat(loc.start), "^".repeat(loc.len())))
+                let mut res = String::new();
+                let lines = extract_location(def, loc);
+                if lines.len() == 1 && lines[0].line_number == 1 {
+                    res.push_str(&format!("{}\n{}\n", lines[0].line, lines[0].format_location()));
+                } else {
+                    for line in lines {
+                        res.push_str(&format!("Line {}\n{}\n{}\n", line.line_number, line.line, line.format_location()));
+                    }
+                }
+                Some(res)
             }
             _ => None
         }
@@ -177,5 +200,130 @@ pub fn mandate_argument<T>(result: Option<T>, message: impl Into<String>, locati
             location: Some(location),
             definition: None,
         }),
+    }
+}
+
+fn extract_location(s: &str, loc: Location) -> Vec<ErrorLine> {
+    let mut res = Vec::new();
+
+    let mut line = 1;
+    let mut start = 0;
+    for (off, ch) in s.char_indices().chain(vec![(s.len(), '\n')]) {
+        if ch == '\n' {
+            if off > loc.start && start < loc.end {
+                res.push(
+                    ErrorLine {
+                        line_number: line,
+                        line: s[start..(off)].to_string(),
+                        location: Location::new(
+                            max(start, loc.start) - start,
+                            min(off, loc.end) - start),
+                    }
+                );
+            }
+            start = off + 1;
+            line += 1;
+        }
+    }
+
+    res
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn check_error_location_formation() {
+        let line = ErrorLine {
+            line_number: 1,
+            line: "remote:exec --hsot=foo".to_string(),
+            location: Location::new(12, 22),
+        };
+        assert_eq!(
+            line.format_location(),
+            "            ^^^^^^^^^^".to_string()
+        );
+    }
+
+
+    #[test]
+    fn check_simple_location_extraction() {
+        assert_eq!(
+            extract_location("remote:exec --hsot=foo", Location::new(12, 22)),
+            vec![
+                ErrorLine {
+                    line_number: 1,
+                    line: "remote:exec --hsot=foo".to_string(),
+                    location: Location::new(12, 22),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn check_second_line_location_extraction() {
+        assert_eq!(
+            extract_location("find .\nremote:exec --hsot=foo", Location::new(19, 29)),
+            vec![
+                ErrorLine {
+                    line_number: 2,
+                    line: "remote:exec --hsot=foo".to_string(),
+                    location: Location::new(12, 22),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn check_first_line_location_extraction() {
+        assert_eq!(
+            extract_location("remote:exec --hsot=foo\nfind .", Location::new(12, 22)),
+            vec![
+                ErrorLine {
+                    line_number: 1,
+                    line: "remote:exec --hsot=foo".to_string(),
+                    location: Location::new(12, 22),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn check_whole_line_location_extraction() {
+        assert_eq!(
+            extract_location("echo 1\necho 2\necho 3", Location::new(7, 13)),
+            vec![
+                ErrorLine {
+                    line_number: 2,
+                    line: "echo 2".to_string(),
+                    location: Location::new(0, 6),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn check_multi_line_location_extraction() {
+        assert_eq!(
+            extract_location("echo 1\necho 2\necho 3", Location::new(5, 18)),
+            vec![
+                ErrorLine {
+                    line_number: 1,
+                    line: "echo 1".to_string(),
+                    location: Location::new(5, 6),
+                },
+                ErrorLine {
+                    line_number: 2,
+                    line: "echo 2".to_string(),
+                    location: Location::new(0, 6),
+                },
+                ErrorLine {
+                    line_number: 3,
+                    line: "echo 3".to_string(),
+                    location: Location::new(0, 4),
+                },
+            ]
+        );
     }
 }

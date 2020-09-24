@@ -599,7 +599,7 @@ fn expand_user_path(s: &TrackedString) -> Box<Node> {
 }
 
 pub fn escape_without_quotes(s: &str) -> String {
-    let mut res = "".to_string();
+    let mut res = String::with_capacity(s.len());
     for c in s.chars() {
         match c {
             '\"' => res += "\\\"",
