@@ -6,7 +6,7 @@ use crate::util::file::home;
 use std::path::PathBuf;
 use crate::lang::data::scope::Scope;
 use crate::lang::pipe::{ValueSender, empty_channel, pipe, black_hole};
-use crate::lang::errors::{CrushResult, to_crush_error, data_error};
+use crate::lang::errors::{CrushResult, to_crush_error, data_error, error};
 use crate::lang::execute;
 
 use rustyline::completion::{Completer, Pair};
@@ -17,13 +17,14 @@ use rustyline::hint::{HistoryHinter, Hinter};
 use std::borrow::Cow::{Borrowed, Owned};
 use std::borrow::Cow;
 use crate::util::directory_lister::directory_lister;
-use crate::lang::parser::{ast, close_command};
+use crate::lang::parser::{ast, close_command, tokenize};
 use crate::lang::global_state::GlobalState;
 use crate::lang::command::Command;
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::value::{ValueDefinition, Value};
-use crate::lang::ast::Location;
+use crate::lang::ast::{Location, TokenType};
 use crate::lang::execution_context::JobContext;
+use std::cmp::min;
 
 const DEFAULT_PROMPT: &'static str = "crush# ";
 
@@ -49,6 +50,70 @@ impl MyHelper {
                 replacement: c.replacement().to_string(),
             }).collect();
         Ok((pos, crunched))
+    }
+
+    fn get_color(&self, token_type: TokenType) -> Option<String> {
+        if let Ok(Value::Dict(highlight)) = self.scope.get_absolute_path(
+            vec!["global".to_string(), "crush".to_string(), "highlight".to_string()]) {
+            let res = match token_type {
+                TokenType::QuotedString => highlight.get(&Value::string("string_literal")),
+                TokenType::Regex => highlight.get(&Value::string("string_literal")),
+                TokenType::QuotedLabel => highlight.get(&Value::string("file_literal")),
+                TokenType::Label => highlight.get(&Value::string("label")),
+                TokenType::Integer => highlight.get(&Value::string("numeric_literal")),
+                TokenType::Float => highlight.get(&Value::string("numeric_literal")),
+                TokenType::Pipe |
+                TokenType::LogicalOperator |
+                TokenType::UnaryOperator |
+                TokenType::TermOperator |
+                TokenType::FactorOperator |
+                TokenType::ComparisonOperator |
+                TokenType::AssignmentOperator |
+                TokenType::GetItemEnd |
+                TokenType::GetItemStart |
+                TokenType::SubEnd |
+                TokenType::SubStart |
+                TokenType::JobEnd |
+                TokenType::JobStart => highlight.get(&Value::string("operator")),
+                _ => None,
+            };
+            match res {
+                Some(Value::String(s)) => Some(s),
+                _ => None,
+            }
+        } else {
+            None
+        }
+    }
+
+    fn highlight_internal(&self, line: &str, cursor: usize) -> CrushResult<String> {
+        let mut res = String::new();
+        let mut pos = 0;
+        for tok in tokenize(&close_command(line)?)? {
+            if tok.start >= line.len() {
+                break;
+            }
+            res.push_str(&line[pos..tok.start]);
+            let mut do_reset = true;
+            match self.get_color(tok.token_type) {
+                Some(color) => {
+                    if color.is_empty() {
+                        do_reset = false;
+                    } else {
+                        res.push_str(&color);
+                    }
+                }
+                None => { do_reset = false; }
+            }
+
+            res.push_str(&line[tok.start..min(tok.end, line.len())]);
+
+            if do_reset {
+                res.push_str("\x1b[0m");
+            }
+            pos = tok.end;
+        }
+        Ok(res)
     }
 }
 
@@ -79,7 +144,10 @@ impl Hinter for MyHelper {
 
 impl Highlighter for MyHelper {
     fn highlight<'l>(&self, line: &'l str, pos: usize) -> Cow<'l, str> {
-        self.highlighter.highlight(line, pos)
+        match self.highlight_internal(line, pos) {
+            Ok(s) => Cow::Owned(s),
+            Err(_) => Cow::Borrowed(line)
+        }
     }
 
     fn highlight_prompt<'b, 's: 'b, 'p: 'b>(
@@ -95,7 +163,7 @@ impl Highlighter for MyHelper {
     }
 
     fn highlight_char(&self, line: &str, pos: usize) -> bool {
-        self.highlighter.highlight_char(line, pos)
+        true
     }
 }
 
@@ -154,7 +222,7 @@ pub fn execute_prompt(
                 Value::String(s) => Ok(Some(s)),
                 _ => data_error("Wrong output type of prompt command"),
             }
-        },
+        }
     }
 }
 
@@ -212,7 +280,7 @@ pub fn run(
             Err(e) => {
                 global_state.printer().crush_error(e);
                 None
-            },
+            }
         }.unwrap_or_else(|| DEFAULT_PROMPT.to_string());
         let readline = rl.readline(&prompt);
 

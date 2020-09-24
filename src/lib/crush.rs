@@ -116,6 +116,15 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         Box::new(move |crush| {
             crush.declare("pid", Value::Integer(Pid::this().as_raw() as i128))?;
             crush.declare("ppid", Value::Integer(Pid::parent().as_raw() as i128))?;
+
+            let highlight = Dict::new(ValueType::String, ValueType::String);
+            highlight.insert(Value::string("operator"), Value::string(""))?;
+            highlight.insert(Value::string("string_literal"), Value::string(""))?;
+            highlight.insert(Value::string("file_literal"), Value::string(""))?;
+            highlight.insert(Value::string("label"), Value::string(""))?;
+            highlight.insert(Value::string("numeric_literal"), Value::string(""))?;
+            crush.declare("highlight", Value::Dict(highlight))?;
+
             crush.declare("env", make_env())?;
             Prompt::declare(crush)?;
             Threads::declare(crush)?;
