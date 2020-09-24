@@ -149,9 +149,13 @@ fn fetch_value(node: &Node, scope: &Scope) -> CrushResult<Option<Value>> {
 
         Node::String(s) => Ok(Some(Value::string(&s.string))),
 
-        Node::Integer(i, _) => Ok(Some(Value::Integer(*i))),
+        Node::Integer(s) => Ok(Some(Value::Integer(to_crush_error(
+            s.string.replace("_", "").parse::<i128>()
+        )?))),
 
-        Node::Float(f, _) => Ok(Some(Value::Float(*f))),
+        Node::Float(s) => Ok(Some(Value::Float(to_crush_error(
+            s.string.replace("_", "").parse::<f64>()
+        )?))),
 
         Node::Glob(f) =>
             Ok(Some(Value::Glob(Glob::new(&f.string)))),

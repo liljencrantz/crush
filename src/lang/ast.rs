@@ -210,7 +210,7 @@ impl TrackedString {
             let len = pos - self.location.start;
             TrackedString {
                 string: self.string[0..len].to_string(),
-                location: Location::new(self.location.start, self.location.start+len),
+                location: Location::new(self.location.start, self.location.start + len),
             }
         }
     }
@@ -259,8 +259,8 @@ pub enum Node {
     Field(TrackedString),
     String(TrackedString),
     File(PathBuf, Location),
-    Integer(i128, Location),
-    Float(f64, Location),
+    Integer(TrackedString),
+    Float(TrackedString),
     GetItem(Box<Node>, Box<Node>),
     GetAttr(Box<Node>, TrackedString),
     Path(Box<Node>, TrackedString),
@@ -288,10 +288,8 @@ impl Node {
         use Node::*;
 
         match self {
-            Glob(s) |
-            Label(s) |
-            Field(s) |
-            String(s) |
+            Glob(s) | Label(s) | Field(s) |
+            String(s) | Integer(s) | Float(s) |
             Regex(s) =>
                 s.location,
 
@@ -301,9 +299,7 @@ impl Node {
             Unary(s, a) =>
                 s.location.union(a.location()),
 
-            File(_, l) |
-            Integer(_, l) |
-            Float(_, l) => *l,
+            File(_, l) => *l,
 
             GetItem(a, b) => a.location().union(b.location()),
             GetAttr(p, n) |
@@ -359,8 +355,18 @@ impl Node {
                 l.location,
             ),
             Node::String(t) => ValueDefinition::Value(Value::String(unescape(&t.string)), t.location),
-            Node::Integer(i, location) => ValueDefinition::Value(Value::Integer(*i), *location),
-            Node::Float(f, location) => ValueDefinition::Value(Value::Float(*f), *location),
+            Node::Integer(s) =>
+                ValueDefinition::Value(
+                    Value::Integer(to_crush_error(
+                        s.string.replace("_", "").parse::<i128>()
+                    )?),
+                    s.location),
+            Node::Float(s) =>
+                ValueDefinition::Value(
+                    Value::Float(to_crush_error(
+                        s.string.replace("_", "").parse::<f64>()
+                    )?),
+                    s.location),
             Node::GetAttr(node, label) => {
                 let parent = node.generate_argument(env)?;
                 match parent.unnamed_value()? {
@@ -470,8 +476,8 @@ impl Node {
             | Node::Regex(_)
             | Node::Field(_)
             | Node::String(_)
-            | Node::Integer(_, _)
-            | Node::Float(_, _)
+            | Node::Integer(_)
+            | Node::Float(_)
             | Node::GetAttr(_, _)
             | Node::Path(_, _)
             | Node::Substitution(_)

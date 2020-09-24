@@ -139,11 +139,11 @@ Item: Box<Node> = {
 
     @L QuotedString @R => Box::from(Node::String(TrackedString::literal(<>))),
 
-    <start: @L> <l:Integer> <end: @R> =>
-        Box::from(Node::Integer(i128::from_str(l.replace("_", "").as_str()).unwrap(), Location::new(start, end))),
+    @L Integer @R =>
+        Box::from(Node::Integer(TrackedString::literal(<>))),
 
-    <start: @L> <l:Float> <end: @R> =>
-        Box::from(Node::Float(f64::from_str(l.replace("_", "").as_str()).unwrap(), Location::new(start, end))),
+    @L Float @R =>
+        Box::from(Node::Float(TrackedString::literal(<>))),
 
     <start: @L> <l:Flag> <end: @R> =>
         Box::from(

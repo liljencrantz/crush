@@ -20,7 +20,6 @@ use crate::lang::execution_context::JobContext;
 
 const DEFAULT_PROMPT: &'static str = "crush# ";
 
-
 fn crush_history_file() -> PathBuf {
     home()
         .unwrap_or_else(|_| PathBuf::from("."))
