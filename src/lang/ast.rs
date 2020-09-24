@@ -506,20 +506,19 @@ impl Node {
         )))
     }
 
-    pub fn parse_label(s: &TrackedString) -> Box<Node> {
+    pub fn parse_label_or_wildcard(s: &TrackedString) -> Box<Node> {
         if s.string.contains('%') || s.string.contains('?') {
             Box::from(Node::Glob(s.clone()))
-        } else if s.string.starts_with('~') {
-            expand_user_path(s)
-        } else if s.string.contains('/') {
-            if s.string.starts_with('/') {
-                Box::from(Node::File(PathBuf::from(&s.string), s.location))
-            } else {
-                let parts = s.string.split('/').collect::<Vec<&str>>();
-                Box::from(path(&parts, s.location))
-            }
         } else {
             Box::from(Node::Label(s.clone()))
+        }
+    }
+
+    pub fn parse_file_or_wildcard(s: &TrackedString) -> Box<Node> {
+        if s.string.contains('%') || s.string.contains('?') {
+            Box::from(Node::Glob(s.clone()))
+        } else {
+            Box::from(Node::File(PathBuf::from(&s.string), s.location))
         }
     }
 }
@@ -694,10 +693,11 @@ pub enum TokenType {
     FactorOperator,
     TermOperator,
     QuotedString,
-    Label,
+    LabelOrWildcard,
     Flag,
     Field,
-    QuotedLabel,
+    QuotedFile,
+    FileOrWildcard,
     Regex,
     Separator,
     Integer,

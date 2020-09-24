@@ -104,12 +104,15 @@ ParameterList: Vec<ParameterNode> = {
 }
 
 Parameter: ParameterNode = {
-    <start: @L> <l: Label> <end: @R> <d: Default> =>
+    <start: @L> <l: LabelOrWildcard> <end: @R> <d: Default> =>
         ParameterNode::Parameter(TrackedString::from(l, Location::new(start, end)), None, d),
-    <start: @L> <l: Label> <end: @R> Colon <t: Item> <d: Default> =>
+
+    <start: @L> <l: LabelOrWildcard> <end: @R> Colon <t: Item> <d: Default> =>
         ParameterNode::Parameter(TrackedString::from(l, Location::new(start, end)), Some(t), d),
-    "@" <start: @L> <l: Label> <end: @R> => ParameterNode::Unnamed(TrackedString::from(l, Location::new(start, end))),
-    "@@" <start: @L> <l: Label> <end: @R> => ParameterNode::Named(TrackedString::from(l, Location::new(start, end))),
+
+    "@" <start: @L> <l: LabelOrWildcard> <end: @R> => ParameterNode::Unnamed(TrackedString::from(l, Location::new(start, end))),
+
+    "@@" <start: @L> <l: LabelOrWildcard> <end: @R> => ParameterNode::Named(TrackedString::from(l, Location::new(start, end))),
 }
 
 Default: Option<Node> = {
@@ -118,8 +121,9 @@ Default: Option<Node> = {
 }
 
 Item: Box<Node> = {
-    <start: @L> <l: Label> <end: @R> =>
-        Node::parse_label(&TrackedString::from(l, Location::new(start, end))),
+    <start: @L> <l: LabelOrWildcard> <end: @R> =>
+        Node::parse_label_or_wildcard(&TrackedString::from(l, Location::new(start, end))),
+
 
     <start: @L> <l: Regex> <end: @R> =>
         Box::from(Node::Regex(TrackedString::from(&l[3..l.len()-1], Location::new(start, end)))),
@@ -127,7 +131,10 @@ Item: Box<Node> = {
     @L Field @R =>
         Box::from(Node::Field(TrackedString::literal(<>))),
 
-    <start: @L> <l:QuotedLabel> <end: @R> =>
+    <start: @L> <l: FileOrWildcard> <end: @R> =>
+        Node::parse_file_or_wildcard(&TrackedString::from(l, Location::new(start, end))),
+
+    <start: @L> <l:QuotedFile> <end: @R> =>
         Box::from(Node::File(PathBuf::from(unescape(l)), Location::new(start, end))),
 
     @L QuotedString @R => Box::from(Node::String(TrackedString::literal(<>))),
@@ -145,14 +152,9 @@ Item: Box<Node> = {
             Box::from(Node::Label(TrackedString::from("true", Location::new(start, start+2)))))),
 
     <i: Item> "[" <e: Assignment> "]" => Box::from(Node::GetItem(i, e)),
-    <i: Item> Colon <start: @L> <l: AnyLabel> <end: @R> => Box::from(Node::GetAttr(i, TrackedString::from(&l, Location::new(start, end)))),
+    <i: Item> Colon <start: @L> <l: LabelOrWildcard> <end: @R> => Box::from(Node::GetAttr(i, TrackedString::from(&l, Location::new(start, end)))),
     "{" Separator? <s: Signature> <l: JobListWithoutSeparator> "}" => Box::from(Node::Closure(s, l)),
     "(" <j:Job> ")" => Box::from(Node::Substitution(j)),
-}
-
-AnyLabel: String = {
-    Label => <>.to_string(),
-    <l: QuotedLabel> => l[1..l.len()-1].to_string(),
 }
 
 AssignmentOperator: &'input str = {
@@ -169,10 +171,11 @@ Token: TokenNode = {
     @L FactorOperator @R => TokenNode::new(TokenType::FactorOperator, <>),
     @L TermOperator @R => TokenNode::new(TokenType::TermOperator, <>),
     @L QuotedString @R => TokenNode::new(TokenType::QuotedString, <>),
-    @L Label @R => TokenNode::new(TokenType::Label, <>),
+    @L LabelOrWildcard @R => TokenNode::new(TokenType::LabelOrWildcard, <>),
+    @L QuotedFile @R => TokenNode::new(TokenType::QuotedFile, <>),
+    @L FileOrWildcard @R => TokenNode::new(TokenType::FileOrWildcard, <>),
     @L Flag @R => TokenNode::new(TokenType::Flag, <>),
     @L Field @R => TokenNode::new(TokenType::Field, <>),
-    @L QuotedLabel @R => TokenNode::new(TokenType::QuotedLabel, <>),
     @L Regex @R => TokenNode::new(TokenType::Regex, <>),
     @L Separator @R => TokenNode::new(TokenType::Separator, <>),
     @L Integer @R => TokenNode::new(TokenType::Integer, <>),
@@ -201,10 +204,11 @@ match {
     r"(\*|//)" => FactorOperator,
     r"(\+|-)" => TermOperator,
     r#""([^\\"]|\\.)*""# => QuotedString,
-    r"([\._a-zA-Z%\?~][\._0-9a-zA-Z%\?]*(/[\._0-9a-zA-Z%\?]+)*/?|/[\._0-9a-zA-Z%\?]+(/[\._0-9a-zA-Z%\?]+)*/?|/)" => Label,
+    r"[_a-zA-Z%\?][\._0-9a-zA-Z%\?/]*" => LabelOrWildcard,
+    r"(\.[\./_0-9a-zA-Z%\?]*|/([\._0-9a-zA-Z%\?][\./_0-9a-zA-Z%\?]*)?)" => FileOrWildcard,
     r"--[_0-9a-zA-Z]+" => Flag,
     r"\^[\._a-zA-Z][\._a-zA-Z0-9]*" => Field,
-    r#"'([^\\']|\\.)*'"# => QuotedLabel,
+    r#"'([^\\']|\\.)*'"# => QuotedFile,
     r#"re"([^"]|\\.)*""# => Regex,
     r"(;|\n)( |\t|;|\n|#[^\n]*)*" => Separator,
     r"[0-9][0-9_]*" => Integer,
