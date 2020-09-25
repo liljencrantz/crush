@@ -28,7 +28,7 @@ pub enum LastArgument {
     Unknown,
     Label(String),
     Field(Value, String),
-    Path(PathBuf),
+    File(PathBuf, bool),
     QuotedString(String),
     Switch(String),
 }
@@ -61,8 +61,9 @@ impl PartialCommandResult {
 pub enum ParseResult {
     Nothing,
     PartialLabel(String),
-    PartialField(Value, String),
-    PartialPath(PathBuf),
+    PartialMember(Value, String),
+    PartialFile(PathBuf, bool),
+    PartialQuotedString(String),
     PartialArgument(PartialCommandResult),
 }
 
@@ -201,18 +202,18 @@ pub fn parse(
                             label.prefix(cursor).string)),
 
                     Node::GetAttr(parent, field) =>
-                        Ok(ParseResult::PartialField(
+                        Ok(ParseResult::PartialMember(
                             mandate(fetch_value(parent, scope)?, "Unknown value")?,
                             field.prefix(cursor).string)),
 
                     Node::Path(_, _) =>
-                        Ok(ParseResult::PartialPath(simple_path(cmd, cursor)?)),
+                        Ok(ParseResult::PartialFile(simple_path(cmd, cursor)?, false)),
 
-                    Node::File(path, _) =>
-                        Ok(ParseResult::PartialPath(path.clone())),
+                    Node::File(path, quoted, _) =>
+                        Ok(ParseResult::PartialFile(path.clone(), *quoted)),
 
                     Node::String(string) =>
-                        panic!("AAA"),
+                        Ok(ParseResult::PartialQuotedString(string.prefix(cursor).string)),
 
                     Node::GetItem(_, _) => { panic!("AAA"); }
 
@@ -290,17 +291,17 @@ pub fn parse(
                                 PartialCommandResult {
                                     command: c,
                                     previous_arguments: vec![],
-                                    last_argument: LastArgument::Path(simple_path(arg.as_ref(), cursor)?),
+                                    last_argument: LastArgument::File(simple_path(arg.as_ref(), cursor)?, false),
                                     last_argument_name,
                                 }
                             )),
 
-                        Node::File(path, _) =>
+                        Node::File(path, quoted, _) =>
                             Ok(ParseResult::PartialArgument(
                                 PartialCommandResult {
                                     command: c,
                                     previous_arguments: vec![],
-                                    last_argument: LastArgument::Path(path.clone()),
+                                    last_argument: LastArgument::File(path.clone(), *quoted),
                                     last_argument_name,
                                 }
                             )),

@@ -85,10 +85,11 @@ impl Parser {
     pub fn close_token(&self, input: &str) -> String {
         close_switch(&close_quote(input))
     }
+
     /**
     Takes a string and possibly appends a few characters at the end to make the string
     into a valid command. The intent of this command is to take a partial command
-    during tab completion and generate a string that can be passed into an abstract
+    during e.g. tab completion and generate a string that can be parsed into an abstract
     syntax tree.
     */
     pub fn close_command(&self, input: &str) -> CrushResult<String> {
@@ -153,17 +154,31 @@ mod tests {
 
     #[test]
     fn close_command_test() {
-        assert_eq!(p().close_command("a --").unwrap(), "a --x");
-        assert_eq!(p().close_command("a:").unwrap(), "a: x");
-        assert_eq!(p().close_command("a >").unwrap(), "a > x");
-        assert_eq!(p().close_command("neg").unwrap(), "neg x");
-        assert_eq!(p().close_command("a |").unwrap(), "a | x");
-        assert_eq!(p().close_command("x [a").unwrap(), "x [a]");
-        assert_eq!(p().close_command("x (a").unwrap(), "x (a)");
-        assert_eq!(p().close_command("x {a").unwrap(), "x {a}");
-        assert_eq!(p().close_command("x (a) {b} {c (d) (e").unwrap(), "x (a) {b} {c (d) (e)}");
-        assert_eq!(p().close_command("a b=").unwrap(), "a b= x");
-        assert_eq!(p().close_command("a +").unwrap(), "a + x");
-        assert_eq!(p().close_command("a \"").unwrap(), "a \"\"");
+        let p = Parser::new();
+        assert_eq!(p.close_command("a --").unwrap(), "a --x");
+        assert_eq!(p.close_command("a:").unwrap(), "a: x");
+        assert_eq!(p.close_command("a >").unwrap(), "a > x");
+        assert_eq!(p.close_command("neg").unwrap(), "neg x");
+        assert_eq!(p.close_command("a |").unwrap(), "a | x");
+        assert_eq!(p.close_command("x [a").unwrap(), "x [a]");
+        assert_eq!(p.close_command("x (a").unwrap(), "x (a)");
+        assert_eq!(p.close_command("x {a").unwrap(), "x {a}");
+        assert_eq!(p.close_command("x (a) {b} {c (d) (e").unwrap(), "x (a) {b} {c (d) (e)}");
+        assert_eq!(p.close_command("a b=").unwrap(), "a b= x");
+        assert_eq!(p.close_command("a +").unwrap(), "a + x");
+        assert_eq!(p.close_command("a \"").unwrap(), "a \"\"");
+    }
+
+    #[test]
+    fn close_quote_test() {
+        assert_eq!(close_quote(""), "");
+        assert_eq!(close_quote("a"), "a");
+        assert_eq!(close_quote("\"a"), "\"a\"");
+        assert_eq!(close_quote("\"a'"), "\"a'\"");
+        assert_eq!(close_quote("\"a\\\""), "\"a\\\"\"");
+        assert_eq!(close_quote("'"), "''");
+        assert_eq!(close_quote("'a"), "'a'");
+        assert_eq!(close_quote("'a\""), "'a\"'");
+        assert_eq!(close_quote("'a\\'"), "'a\\''");
     }
 }

@@ -135,7 +135,7 @@ Item: Box<Node> = {
         Node::parse_file_or_wildcard(&TrackedString::from(l, Location::new(start, end))),
 
     <start: @L> <l:QuotedFile> <end: @R> =>
-        Box::from(Node::File(PathBuf::from(unescape(l)), Location::new(start, end))),
+        Box::from(Node::File(PathBuf::from(unescape(l)), true, Location::new(start, end))),
 
     @L QuotedString @R => Box::from(Node::String(TrackedString::literal(<>))),
 

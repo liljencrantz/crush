@@ -258,7 +258,7 @@ pub enum Node {
     Regex(TrackedString),
     Field(TrackedString),
     String(TrackedString),
-    File(PathBuf, Location),
+    File(PathBuf, bool, Location),
     Integer(TrackedString),
     Float(TrackedString),
     GetItem(Box<Node>, Box<Node>),
@@ -299,7 +299,7 @@ impl Node {
             Unary(s, a) =>
                 s.location.union(a.location()),
 
-            File(_, l) => *l,
+            File(_, _, l) => *l,
 
             GetItem(a, b) => a.location().union(b.location()),
             GetAttr(p, n) |
@@ -397,7 +397,7 @@ impl Node {
                 ValueDefinition::ClosureDefinition(None, p, c.generate(env)?, c.location)
             }
             Node::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g.string)), g.location),
-            Node::File(f, location) => ValueDefinition::Value(Value::File(f.clone()), *location),
+            Node::File(f, _, location) => ValueDefinition::Value(Value::File(f.clone()), *location),
         }))
     }
 
@@ -482,7 +482,7 @@ impl Node {
             | Node::Path(_, _)
             | Node::Substitution(_)
             | Node::Closure(_, _)
-            | Node::File(_, _) => Ok(None),
+            | Node::File(_, _, _) => Ok(None),
         }
     }
 
@@ -524,7 +524,7 @@ impl Node {
         if s.string.contains('%') || s.string.contains('?') {
             Box::from(Node::Glob(s.clone()))
         } else {
-            Box::from(Node::File(PathBuf::from(&s.string), s.location))
+            Box::from(Node::File(PathBuf::from(&s.string), false, s.location))
         }
     }
 }

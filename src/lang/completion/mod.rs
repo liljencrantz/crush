@@ -1,3 +1,6 @@
+/**
+Main entrypoint for tab completion code
+*/
 use crate::lang::data::scope::Scope;
 use crate::lang::errors::CrushResult;
 use crate::lang::value::{ValueType, Value};
@@ -94,6 +97,7 @@ fn complete_label(
 fn complete_file(
     lister: &impl DirectoryLister,
     prefix: impl Into<PathBuf>,
+    quoted: bool,
     value_type: &ValueType,
     cursor: usize,
     out: &mut Vec<Completion>,
@@ -107,6 +111,8 @@ fn complete_file(
             "",
             PathBuf::from(".")
         )
+    } else if prefix.to_str().unwrap_or("").ends_with('/') {
+        ("", prefix)
     } else {
         (
             prefix.components().last().and_then(|p| p.as_os_str().to_str()).unwrap_or(""),
@@ -123,7 +129,12 @@ fn complete_file(
                 completion: format!(
                     "{}{}",
                     &k.name.to_str().unwrap()[prefix_str.len()..],
-                    if k.is_directory { "/" } else { " " }),
+                    match (quoted, k.is_directory) {
+                        (_, true) => "/",
+                        (true, false) => "' ",
+                        (false, false) => " ",
+                    },
+                ),
                 display: k.name.to_str().unwrap().to_string(),
                 position: cursor,
             })
@@ -215,7 +226,7 @@ pub fn complete_partial_argument(
 
         LastArgument::Unknown => {
             complete_label(Value::Scope(scope.clone()), "", &argument_type, cursor, res)?;
-            complete_file(lister, "", &argument_type, cursor, res)?;
+            complete_file(lister, "", false, &argument_type, cursor, res)?;
             if parse_result.last_argument_name.is_none() {
                 if let CompletionCommand::Known(cmd) = parse_result.command {
                     complete_argument_name(cmd.arguments(), "", cursor, res, false)?;
@@ -236,8 +247,8 @@ pub fn complete_partial_argument(
             complete_label(parent, &field, &argument_type, cursor, res)?;
         }
 
-        LastArgument::Path(l) => {
-            complete_file(lister, &l, &argument_type, cursor, res)?;
+        LastArgument::File(l, quoted) => {
+            complete_file(lister, &l, quoted, &argument_type, cursor, res)?;
         }
 
         LastArgument::QuotedString(_) => {}
@@ -257,22 +268,24 @@ pub fn complete(
     match parse_result {
         ParseResult::Nothing => {
             complete_label(Value::Scope(scope.clone()), "", &ValueType::Any, cursor, &mut res)?;
-            complete_file(lister, "", &ValueType::Any, cursor, &mut res)?;
+            complete_file(lister, "", false, &ValueType::Any, cursor, &mut res)?;
         }
 
         ParseResult::PartialLabel(label) => {
             complete_label(Value::Scope(scope.clone()), &label, &ValueType::Any, cursor, &mut res)?;
         }
 
-        ParseResult::PartialField(parent, label) => {
+        ParseResult::PartialMember(parent, label) => {
             complete_label(parent, &label, &ValueType::Any, cursor, &mut res)?;
         }
 
-        ParseResult::PartialPath(cmd) =>
-            complete_file(lister, &cmd, &ValueType::Any, cursor, &mut res)?,
+        ParseResult::PartialFile(cmd, quoted) =>
+            complete_file(lister, &cmd, quoted, &ValueType::Any, cursor, &mut res)?,
 
         ParseResult::PartialArgument(parse_result) =>
             complete_partial_argument(parse_result, cursor, scope, lister, &mut res)?,
+
+        ParseResult::PartialQuotedString(_) => {}
     }
 
     Ok(res)
@@ -514,8 +527,8 @@ mod tests {
 
         let s = Scope::create_root();
         let completions = complete(line, cursor, &s, &parser(), &lister()).unwrap();
-        assert_eq!(completions.len(), 2);
-        assert_eq!(&completions[0].complete(line), "./burrow/carrot");
+        assert_eq!(completions.len(), 3);
+        assert_eq!(&completions[0].complete(line), "./burrow/carrot ");
     }
 
     #[test]
