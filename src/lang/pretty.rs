@@ -139,7 +139,7 @@ impl PrettyPrinter {
                     self.print_stream(&mut ListReader::new(list, "value"), 0)
                 }
             }
-            _ => self.printer.line(cell.to_formated_string(self.grouping).as_str()),
+            _ => self.printer.line(cell.to_pretty_string(self.grouping).as_str()),
         };
     }
 
@@ -193,7 +193,7 @@ impl PrettyPrinter {
                 if idx == col_count {
                     break;
                 }
-                let l = c.to_formated_string(self.grouping).width();
+                let l = c.to_pretty_string(self.grouping).width();
                 w[idx] = max(w[idx], l);
             }
         }
@@ -229,7 +229,7 @@ impl PrettyPrinter {
             if idx == col_count {
                 break;
             }
-            let formated_cell = c.to_formated_string(self.grouping);
+            let formated_cell = c.to_pretty_string(self.grouping);
             let spaces = if idx == cell_len - 1 {
                 "".to_string()
             } else {
@@ -357,7 +357,7 @@ impl PrettyPrinter {
         if data.len() > 0 {
             let max_name_width = data.keys().map(|n| n.len()).max().unwrap();
             for (name, value) in data.drain() {
-                let ss = value.to_formated_string(self.grouping);
+                let ss = value.to_pretty_string(self.grouping);
                 if indent * 4 + max_name_width + ss.width() + 2 < self.printer.width() {
                     let mut line = " ".repeat(4 * indent);
                     line.push_str(&name);
@@ -377,7 +377,7 @@ impl PrettyPrinter {
     }
 
     fn print_struct_value(&self, value: Value, indent: usize) {
-        let ss = value.to_formated_string(self.grouping);
+        let ss = value.to_pretty_string(self.grouping);
         if ss.width() + 4 * indent < self.printer.width() {
             let mut line = " ".repeat(4 * indent);
             line.push_str(&ss);
@@ -406,7 +406,7 @@ impl PrettyPrinter {
         let mut items_per_column;
         let data = data
             .iter()
-            .map(|s| s.cells()[0].to_formated_string(self.grouping))
+            .map(|s| s.cells()[0].to_pretty_string(self.grouping))
             .collect::<Vec<_>>();
 
         for cols in (2..50).rev() {

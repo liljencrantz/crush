@@ -38,8 +38,9 @@ use crate::util::regex::RegexFileMatcher;
 use ordered_map::OrderedMap;
 pub use value_definition::ValueDefinition;
 pub use value_type::ValueType;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Display, Formatter, Debug};
 use num_format::Grouping;
+use crate::lang::ast::{escape};
 
 pub type Field = Vec<String>;
 
@@ -71,32 +72,32 @@ pub enum Value {
 impl Display for Value {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Value::String(val) => val.fmt(f),
-            Value::Integer(val) => val.fmt(f),
+            Value::String(val) => std::fmt::Display::fmt(val, f),
+            Value::Integer(val) => std::fmt::Display::fmt(val, f),
             Value::Time(val) => f.write_str(&val.format("%Y-%m-%d %H:%M:%S %z").to_string()),
             Value::Field(val) => {
                 f.write_str("^")?;
                 f.write_str(&val.join(":"))
             }
-            Value::Glob(val) => val.fmt(f),
+            Value::Glob(val) => std::fmt::Display::fmt(val, f),
             Value::Regex(val, _) => {
                 f.write_str("re\"")?;
                 f.write_str(val)?;
                 f.write_str("\"")
             }
-            Value::File(val) => val.to_str().unwrap_or("<invalid filename>").fmt(f),
-            Value::List(l) => l.fmt(f),
+            Value::File(val) => std::fmt::Display::fmt(val.to_str().unwrap_or("<invalid filename>"), f),
+            Value::List(l) => std::fmt::Display::fmt(l, f),
             Value::Duration(d) => f.write_str(&duration_format(d)),
             Value::Scope(env) => env.fmt(f),
-            Value::Bool(v) => (if *v { "true" } else { "false" }).fmt(f),
+            Value::Bool(v) => std::fmt::Display::fmt(if *v { "true" } else { "false" }, f),
             Value::Dict(d) => d.fmt(f),
-            Value::Float(val) => val.fmt(f),
+            Value::Float(val) => std::fmt::Display::fmt(val, f),
             Value::Binary(v) => f.write_str(&format_buffer(v, true)),
-            Value::Type(t) => t.fmt(f),
+            Value::Type(t) => std::fmt::Display::fmt(t, f),
             Value::Struct(s) => s.fmt(f),
             _ => {
                 f.write_str("<")?;
-                self.value_type().fmt(f)?;
+                std::fmt::Display::fmt(&self.value_type(), f)?;
                 f.write_str(">")
             }
         }
@@ -361,8 +362,23 @@ impl Value {
         }
     }
 
-    pub fn to_formated_string(&self, grouping: Grouping) -> String {
+    /**
+        Format this value in a way appropriate for use in the pretty printer.
+
+        * Escape non-printable strings
+        * Respect integer grouping, but use _ intead of whatever number group
+          separator the locale prescribes, so that the number can be copied
+          and pasted into the terminal again.
+    */
+    pub fn to_pretty_string(&self, grouping: Grouping) -> String {
         match self {
+            Value::String(val) =>
+                if has_non_printable(val) {
+                    escape(val)
+                } else {
+                    val.clone()
+                },
+
             Value::Integer(i) => match grouping {
                 Grouping::Standard => {
                     let whole = i.to_string();
@@ -409,6 +425,15 @@ impl Value {
             _ => self.to_string(),
         }
     }
+}
+
+fn has_non_printable(s: &str) -> bool {
+    for c in s.chars() {
+        if c < '\x20' {
+            return true;
+        }
+    }
+    false
 }
 
 impl Clone for Value {
@@ -656,34 +681,34 @@ mod tests {
 
     #[test]
     fn test_number_format_standard() {
-        assert_eq!(Value::Integer(0).to_formated_string(Grouping::Standard), "0");
-        assert_eq!(Value::Integer(123).to_formated_string(Grouping::Standard), "123");
-        assert_eq!(Value::Integer(-123).to_formated_string(Grouping::Standard), "-123");
-        assert_eq!(Value::Integer(1234).to_formated_string(Grouping::Standard), "1_234");
-        assert_eq!(Value::Integer(-1234).to_formated_string(Grouping::Standard), "-1_234");
-        assert_eq!(Value::Integer(123_456_789).to_formated_string(Grouping::Standard), "123_456_789");
-        assert_eq!(Value::Integer(-123_456_789).to_formated_string(Grouping::Standard), "-123_456_789");
+        assert_eq!(Value::Integer(0).to_pretty_string(Grouping::Standard), "0");
+        assert_eq!(Value::Integer(123).to_pretty_string(Grouping::Standard), "123");
+        assert_eq!(Value::Integer(-123).to_pretty_string(Grouping::Standard), "-123");
+        assert_eq!(Value::Integer(1234).to_pretty_string(Grouping::Standard), "1_234");
+        assert_eq!(Value::Integer(-1234).to_pretty_string(Grouping::Standard), "-1_234");
+        assert_eq!(Value::Integer(123_456_789).to_pretty_string(Grouping::Standard), "123_456_789");
+        assert_eq!(Value::Integer(-123_456_789).to_pretty_string(Grouping::Standard), "-123_456_789");
     }
 
     #[test]
     fn test_number_format_indian() {
-        assert_eq!(Value::Integer(0).to_formated_string(Grouping::Indian), "0");
-        assert_eq!(Value::Integer(123).to_formated_string(Grouping::Indian), "123");
-        assert_eq!(Value::Integer(-123).to_formated_string(Grouping::Indian), "-123");
-        assert_eq!(Value::Integer(1234).to_formated_string(Grouping::Indian), "1_234");
-        assert_eq!(Value::Integer(-1234).to_formated_string(Grouping::Indian), "-1_234");
-        assert_eq!(Value::Integer(123_456_789).to_formated_string(Grouping::Indian), "12_34_56_789");
-        assert_eq!(Value::Integer(-123_456_789).to_formated_string(Grouping::Indian), "-12_34_56_789");
+        assert_eq!(Value::Integer(0).to_pretty_string(Grouping::Indian), "0");
+        assert_eq!(Value::Integer(123).to_pretty_string(Grouping::Indian), "123");
+        assert_eq!(Value::Integer(-123).to_pretty_string(Grouping::Indian), "-123");
+        assert_eq!(Value::Integer(1234).to_pretty_string(Grouping::Indian), "1_234");
+        assert_eq!(Value::Integer(-1234).to_pretty_string(Grouping::Indian), "-1_234");
+        assert_eq!(Value::Integer(123_456_789).to_pretty_string(Grouping::Indian), "12_34_56_789");
+        assert_eq!(Value::Integer(-123_456_789).to_pretty_string(Grouping::Indian), "-12_34_56_789");
     }
 
     #[test]
     fn test_number_format_posix() {
-        assert_eq!(Value::Integer(0).to_formated_string(Grouping::Posix), "0");
-        assert_eq!(Value::Integer(123).to_formated_string(Grouping::Posix), "123");
-        assert_eq!(Value::Integer(1234).to_formated_string(Grouping::Posix), "1234");
-        assert_eq!(Value::Integer(123_456_789).to_formated_string(Grouping::Posix), "123456789");
-        assert_eq!(Value::Integer(-123).to_formated_string(Grouping::Posix), "-123");
-        assert_eq!(Value::Integer(-1234).to_formated_string(Grouping::Posix), "-1234");
-        assert_eq!(Value::Integer(-123_456_789).to_formated_string(Grouping::Posix), "-123456789");
+        assert_eq!(Value::Integer(0).to_pretty_string(Grouping::Posix), "0");
+        assert_eq!(Value::Integer(123).to_pretty_string(Grouping::Posix), "123");
+        assert_eq!(Value::Integer(1234).to_pretty_string(Grouping::Posix), "1234");
+        assert_eq!(Value::Integer(123_456_789).to_pretty_string(Grouping::Posix), "123456789");
+        assert_eq!(Value::Integer(-123).to_pretty_string(Grouping::Posix), "-123");
+        assert_eq!(Value::Integer(-1234).to_pretty_string(Grouping::Posix), "-1234");
+        assert_eq!(Value::Integer(-123_456_789).to_pretty_string(Grouping::Posix), "-123456789");
     }
 }

@@ -80,9 +80,12 @@ fn completion_suffix(maybe_scope: CrushResult<Option<Value>>, t: &ValueType) -> 
             match maybe_scope {
                 Ok(Some(Value::Scope(_))) => ":",
                 Ok(Some(Value::Empty())) |
+                Ok(Some(Value::Bool(_))) |
+                Ok(Some(Value::Field(_))) |
                 Ok(Some(Value::Command(_))) => " ",
                 _ => "",
             }
+
         target_type =>
             match maybe_scope {
                 Ok(Some(completion_target)) =>

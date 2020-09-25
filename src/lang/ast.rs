@@ -612,7 +612,11 @@ pub fn escape_without_quotes(s: &str) -> String {
             '\n' => res += "\\n",
             '\r' => res += "\\r",
             '\t' => res += "\\t",
-            _ => res.push(c),
+            _ => if c < '\x20' {
+                res.push_str(&format!("\\x{:02}", u32::from(c)));
+            } else {
+                res.push(c);
+            },
         }
     }
     res
