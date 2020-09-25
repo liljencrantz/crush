@@ -26,7 +26,9 @@ A slightly more colorful version of the above prompt would be:
 
 ```shell script
 crush:prompt {
-    "{green}{user}{normal}@{host} {green}{wd}{normal}# ":format wd=(pwd) user=(user:me:name) host=(host:name) green=term:green normal=term:normal
+    "{green}{user}{normal}@{host} {green}{wd}{normal}# ":format wd=(pwd) \
+        user=(user:me:name) host=(host:name) \
+        green=term:green normal=term:normal
 }
 ```
 
