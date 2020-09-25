@@ -224,7 +224,7 @@ to passing in `foo=true`.
 
 Sometimes you want to use the output of one command as an *argument* to another
 command, just like a subshell in e.g. bash. This is different from using the
-output as the *input*, and is done using `()`:
+output as the *input*, and is done by putting the command within parenthesis (`()`), like so:
 
     crush# echo (pwd)
 
@@ -387,11 +387,11 @@ The `*` operator is used for multiplication, so Crush uses `%` as the wildcard
 operator instead. `?` is still used for single character wildcards.
 
     crush# ls %.txt
-    user         size  modified                  type file
-    liljencrantz 21303 2020-03-30 13:40:37 +0200 file /home/liljencrantz/src/crush/README.md
+    user size  modified                  type file
+    fox  21303 2020-03-30 13:40:37 +0200 file /home/liljencrantz/src/crush/README.md
     crush# ls ????????
-    user         size modified                  type file
-    liljencrantz   75 2020-03-07 17:09:15 +0100 file /home/liljencrantz/src/crush/build.rs
+    user size modified                  type file
+    fox    75 2020-03-07 17:09:15 +0100 file /home/liljencrantz/src/crush/build.rs
 
 The operator `%%` is used for performing globbing recursively into subdirectories.
 Another way of looking ath the same syntax is to say that `%` and `?` match any
@@ -534,34 +534,34 @@ in-memory form (stable, and binary, respectively).
     crush# materialized_files := (ls|materialize)
     crush# materialized_files
     user size   modified                  type      file
-    fox   1307  2020-03-26 01:08:45 +0100 file      ideas
-    fox   4096  2019-11-22 21:56:30 +0100 directory target
-    fox   4096  2020-03-27 09:18:25 +0100 directory tests
+    fox    1307 2020-03-26 01:08:45 +0100 file      ideas
+    fox    4096 2019-11-22 21:56:30 +0100 directory target
+    fox    4096 2020-03-27 09:18:25 +0100 directory tests
     fox  95_328 2020-03-24 17:20:00 +0100 file      Cargo.lock
     fox   4_096 2020-02-15 00:12:18 +0100 directory example_data
-    fox     31  2019-10-03 13:43:12 +0200 file      .gitignore
+    fox      31 2019-10-03 13:43:12 +0200 file      .gitignore
     fox  14_420 2020-03-29 03:06:02 +0200 file      README.md
     fox   4_096 2020-03-27 11:35:25 +0100 directory src
-    fox    479  2020-03-24 17:20:00 +0100 file      Cargo.toml
+    fox     479 2020-03-24 17:20:00 +0100 file      Cargo.toml
     fox   4_096 2020-03-29 01:29:52 +0100 directory .git
     fox   8_382 2020-03-29 00:54:13 +0100 file      todo
-    fox     75  2020-03-07 17:09:15 +0100 file      build.rs
-    fox    711  2019-10-03 14:19:46 +0200 file      crush.iml
+    fox      75 2020-03-07 17:09:15 +0100 file      build.rs
+    fox     711 2019-10-03 14:19:46 +0200 file      crush.iml
     crush# materialized_files
     user size   modified                  type      file
-    fox   1307  2020-03-26 01:08:45 +0100 file      ideas
-    fox   4096  2019-11-22 21:56:30 +0100 directory target
-    fox   4096  2020-03-27 09:18:25 +0100 directory tests
+    fox    1307 2020-03-26 01:08:45 +0100 file      ideas
+    fox    4096 2019-11-22 21:56:30 +0100 directory target
+    fox    4096 2020-03-27 09:18:25 +0100 directory tests
     fox  95_328 2020-03-24 17:20:00 +0100 file      Cargo.lock
     fox   4_096 2020-02-15 00:12:18 +0100 directory example_data
-    fox     31  2019-10-03 13:43:12 +0200 file      .gitignore
+    fox      31 2019-10-03 13:43:12 +0200 file      .gitignore
     fox  14_420 2020-03-29 03:06:02 +0200 file      README.md
     fox   4_096 2020-03-27 11:35:25 +0100 directory src
-    fox    479  2020-03-24 17:20:00 +0100 file      Cargo.toml
+    fox     479 2020-03-24 17:20:00 +0100 file      Cargo.toml
     fox   4_096 2020-03-29 01:29:52 +0100 directory .git
     fox   8_382 2020-03-29 00:54:13 +0100 file      todo
-    fox     75  2020-03-07 17:09:15 +0100 file      build.rs
-    fox    711  2019-10-03 14:19:46 +0200 file      crush.iml
+    fox      75 2020-03-07 17:09:15 +0100 file      build.rs
+    fox     711 2019-10-03 14:19:46 +0200 file      crush.iml
 
 When the `table_input_stream` is materialized into a `table`, it can be displayed
 multiple times.
