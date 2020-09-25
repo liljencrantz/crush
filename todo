@@ -21,8 +21,8 @@ In closures without a signature, put unnamed variables in the variable 'unnamed'
 Make integers overflow to arbitrary precision math
 Run an executable by giving its path
 Add control:source command
-Add String:join command
-Add String:substr command
+Add string:join command
+Add string:substr command
 Data enums + pattern matching syntax
 Add readline command that reads one line of interactive text input from the user via the terminal
 New operators: += increment and friends

@@ -1,5 +1,5 @@
 /**
-Main entrypoint for tab completion code
+  Main entry point for tab completion code
 */
 use crate::lang::data::scope::Scope;
 use crate::lang::errors::CrushResult;
@@ -52,11 +52,15 @@ impl Completion {
 }
 
 fn is_or_has_type(value: &Value, pattern: &ValueType, max_depth: i8) -> bool {
-    if max_depth <= 0 {
-        return false;
-    }
     if pattern.is(value) {
         return true;
+    }
+    has_type(value, pattern, max_depth)
+}
+
+fn has_type(value: &Value, pattern: &ValueType, max_depth: i8) -> bool {
+    if max_depth <= 0 {
+        return false;
     }
     for name in &value.fields() {
         if value.field(name)
@@ -68,6 +72,32 @@ fn is_or_has_type(value: &Value, pattern: &ValueType, max_depth: i8) -> bool {
         }
     }
     false
+}
+
+fn completion_suffix(maybe_scope: CrushResult<Option<Value>>, t: &ValueType) -> &str {
+    match t {
+        ValueType::Any =>
+            match maybe_scope {
+                Ok(Some(Value::Scope(_))) => ":",
+                Ok(Some(Value::Empty())) |
+                Ok(Some(Value::Command(_))) => " ",
+                _ => "",
+            }
+        target_type =>
+            match maybe_scope {
+                Ok(Some(completion_target)) =>
+                    if completion_target.value_type().is_compatible_with(target_type) {
+                        if has_type(&completion_target, target_type, 8) {
+                            ""
+                        } else {
+                            " "
+                        }
+                    } else {
+                        ":"
+                    },
+                _ => "",
+            }
+    }
 }
 
 fn complete_label(
@@ -86,7 +116,10 @@ fn complete_label(
                 .unwrap_or(false))
             .unwrap_or(false))
         .map(|k| Completion {
-            completion: format!("{} ", &k[prefix.len()..]),
+            completion: format!(
+                "{}{}",
+                &k[prefix.len()..],
+                completion_suffix(value.field(k), t)),
             display: k.clone(),
             position: cursor,
         })
@@ -436,6 +469,17 @@ mod tests {
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "namespace:my_cmd ");
+    }
+
+    #[test]
+    fn test_that_scope_completion_appens_colon() {
+        let line = "namespac";
+        let cursor = line.len();
+
+        let s = scope_with_function();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "namespace:");
     }
 
     #[test]

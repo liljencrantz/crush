@@ -89,8 +89,6 @@ crush:jobs
 
 Tab completion missing feature list:
 
-* Fix file literal completions
-* Fix literal completion not to include files
 * Support for enabling and disabling completion error printing
 * fall back to "stupid" completion if parsing the AST fails
 * Completions for wildcards
