@@ -29,7 +29,7 @@ pub enum LastArgument {
     Unknown,
     Label(String),
     Field(Value, String),
-    File(PathBuf, bool),
+    File(String, bool),
     QuotedString(String),
     Switch(String),
 }
@@ -63,17 +63,17 @@ pub enum ParseResult {
     Nothing,
     PartialLabel(String),
     PartialMember(Value, String),
-    PartialFile(PathBuf, bool),
+    PartialFile(String, bool),
     PartialQuotedString(String),
     PartialArgument(PartialCommandResult),
 }
 
-fn simple_path(node: &Node, cursor: usize) -> CrushResult<PathBuf> {
+fn simple_path(node: &Node, cursor: usize) -> CrushResult<String> {
     match node {
-        Node::Label(label) => Ok(PathBuf::from(&label.string)),
+        Node::Label(label) => Ok(label.string.clone()),
         Node::Path(p, a) => {
             let res = simple_path(p.as_ref(), cursor)?;
-            Ok(res.join(&a.string))
+            Ok(format!("{}/{}", res, &a.string))
         }
         _ => {
             error("Invalid path")
@@ -212,7 +212,7 @@ pub fn parse(
 
                     Node::File(path, quoted) =>
                         Ok(ParseResult::PartialFile(
-                            if *quoted {PathBuf::from(&unescape(&path.string)?)} else {PathBuf::from(&path.string)},
+                            if *quoted {unescape(&path.string)?} else {path.string.clone()},
                             *quoted)),
 
                     Node::String(string) =>
@@ -305,7 +305,7 @@ pub fn parse(
                                     command: c,
                                     previous_arguments: vec![],
                                     last_argument: LastArgument::File(
-                                        if *quoted {PathBuf::from(&unescape(&path.string)?)} else {PathBuf::from(&path.string)},
+                                        if *quoted {unescape(&path.string)?} else {path.string.clone()},
                                         *quoted),
                                     last_argument_name,
                                 }
