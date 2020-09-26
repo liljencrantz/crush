@@ -210,8 +210,10 @@ pub fn parse(
                     Node::Path(_, _) =>
                         Ok(ParseResult::PartialFile(simple_path(cmd, cursor)?, false)),
 
-                    Node::File(path, quoted, _) =>
-                        Ok(ParseResult::PartialFile(path.clone(), *quoted)),
+                    Node::File(path, quoted) =>
+                        Ok(ParseResult::PartialFile(
+                            if *quoted {PathBuf::from(&unescape(&path.string)?)} else {PathBuf::from(&path.string)},
+                            *quoted)),
 
                     Node::String(string) =>
                         Ok(ParseResult::PartialQuotedString(string.prefix(cursor).string)),
@@ -297,12 +299,14 @@ pub fn parse(
                                 }
                             )),
 
-                        Node::File(path, quoted, _) =>
+                        Node::File(path, quoted) =>
                             Ok(ParseResult::PartialArgument(
                                 PartialCommandResult {
                                     command: c,
                                     previous_arguments: vec![],
-                                    last_argument: LastArgument::File(path.clone(), *quoted),
+                                    last_argument: LastArgument::File(
+                                        if *quoted {PathBuf::from(&unescape(&path.string)?)} else {PathBuf::from(&path.string)},
+                                        *quoted),
                                     last_argument_name,
                                 }
                             )),

@@ -259,7 +259,7 @@ pub enum Node {
     Regex(TrackedString),
     Field(TrackedString),
     String(TrackedString),
-    File(PathBuf, bool, Location),
+    File(TrackedString, bool),
     Integer(TrackedString),
     Float(TrackedString),
     GetItem(Box<Node>, Box<Node>),
@@ -291,7 +291,7 @@ impl Node {
         match self {
             Glob(s) | Label(s) | Field(s) |
             String(s) | Integer(s) | Float(s) |
-            Regex(s) =>
+            Regex(s) | File(s, _) =>
                 s.location,
 
             Assignment(a, _, b) =>
@@ -299,8 +299,6 @@ impl Node {
 
             Unary(s, a) =>
                 s.location.union(a.location()),
-
-            File(_, _, l) => *l,
 
             GetItem(a, b) => a.location().union(b.location()),
             GetAttr(p, n) |
@@ -398,7 +396,12 @@ impl Node {
                 ValueDefinition::ClosureDefinition(None, p, c.generate(env)?, c.location)
             }
             Node::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g.string)), g.location),
-            Node::File(f, _, location) => ValueDefinition::Value(Value::File(f.clone()), *location),
+            Node::File(s, quoted) => ValueDefinition::Value(
+                Value::File(
+                    if *quoted { PathBuf::from(&unescape(&s.string)?) } else { PathBuf::from(&s.string) }
+                ),
+                s.location,
+            ),
         }))
     }
 
@@ -483,7 +486,7 @@ impl Node {
             | Node::Path(_, _)
             | Node::Substitution(_)
             | Node::Closure(_, _)
-            | Node::File(_, _, _) => Ok(None),
+            | Node::File(_, _) => Ok(None),
         }
     }
 
@@ -525,7 +528,7 @@ impl Node {
         if s.string.contains('%') || s.string.contains('?') {
             Box::from(Node::Glob(s.clone()))
         } else {
-            Box::from(Node::File(PathBuf::from(&s.string), false, s.location))
+            Box::from(Node::File(s.clone(), false))
         }
     }
 }
