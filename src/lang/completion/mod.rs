@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use crate::lang::completion::parse::{ParseResult, CompletionCommand, LastArgument, parse, PartialCommandResult};
 use nix::NixPath;
 use crate::lang::command::ArgumentDescription;
-use crate::lang::ast::escape_without_quotes;
+use crate::util::escape::escape_without_quotes;
 use crate::lang::parser::Parser;
 
 pub mod parse;

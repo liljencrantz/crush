@@ -61,22 +61,30 @@ struct Echo {
     #[description("the values to print.")]
     #[unnamed()]
     values: Vec<Value>,
+    #[description("do not escape unprintable characters in string values")]
+    #[default(false)]
+    raw: bool,
 }
 
 fn echo(context: CommandContext) -> CrushResult<()> {
     let cfg: Echo = Echo::parse(context.arguments, &context.global_state.printer())?;
     let pretty = PrettyPrinter::new(context.global_state.printer().clone(), context.global_state.grouping());
     for value in cfg.values {
-        pretty.print_value(value);
+        match (cfg.raw, &value) {
+            (true, Value::String(s)) =>
+                context.global_state.printer().line(s),
+
+            _ => pretty.print_value(value),
+        }
     }
     context.output.send(Value::Empty())
 }
 
 #[signature(
-    member,
-    can_block = false,
-    short = "Extracts one member from the input struct.",
-    example = "http \"example.com\" | member ^body | json:from"
+member,
+can_block = false,
+short = "Extracts one member from the input struct.",
+example = "http \"example.com\" | member ^body | json:from"
 )]
 struct Member {
     #[description("the member to extract.")]

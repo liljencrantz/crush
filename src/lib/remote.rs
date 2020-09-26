@@ -22,8 +22,8 @@ use std::path::PathBuf;
 use crate::util::user_map::get_current_username;
 use crate::lang::completion::Completion;
 use crate::lang::completion::parse::{PartialCommandResult, LastArgument};
-use crate::lang::ast::{escape, escape_without_quotes};
 use std::convert::TryFrom;
+use crate::util::escape::{escape, escape_without_quotes};
 
 lazy_static! {
     static ref IDENTITY_OUTPUT_TYPE: Vec<ColumnType> = vec![

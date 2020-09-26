@@ -1,4 +1,5 @@
 pub mod directory_lister;
+pub mod escape;
 pub mod file;
 pub mod glob;
 pub mod hex;

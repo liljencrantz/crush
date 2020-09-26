@@ -40,7 +40,7 @@ pub use value_definition::ValueDefinition;
 pub use value_type::ValueType;
 use std::fmt::{Display, Formatter, Debug};
 use num_format::Grouping;
-use crate::lang::ast::{escape};
+use crate::util::escape::escape;
 
 pub type Field = Vec<String>;
 

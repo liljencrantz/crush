@@ -1,4 +1,4 @@
-use crate::lang::ast::{Node, CommandNode, JobListNode, JobNode, unescape};
+use crate::lang::ast::{Node, CommandNode, JobListNode, JobNode};
 use crate::lang::errors::{error, CrushResult, mandate, argument_error_legacy, to_crush_error};
 use crate::lang::value::{ValueType, Value};
 use std::path::PathBuf;
@@ -8,6 +8,7 @@ use std::ops::Deref;
 use regex::Regex;
 use crate::util::glob::Glob;
 use crate::lang::parser::Parser;
+use crate::util::escape::unescape;
 
 pub enum CompletionCommand {
     Unknown,
