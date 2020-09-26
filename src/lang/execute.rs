@@ -10,7 +10,7 @@ use std::{fs};
 use crate::lang::global_state::GlobalState;
 
 pub fn file(
-    global_env: Scope,
+    global_env: &Scope,
     filename: &Path,
     output: &ValueSender,
     global_state: &GlobalState,
@@ -58,7 +58,7 @@ pub fn pup(
 }
 
 pub fn string(
-    global_env: Scope,
+    global_env: &Scope,
     command: &str,
     output: &ValueSender,
     global_state: &GlobalState,

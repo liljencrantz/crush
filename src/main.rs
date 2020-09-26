@@ -111,7 +111,7 @@ fn run() -> CrushResult<i32> {
 
         Mode::File(f) => {
             execute::file(
-                local_scope,
+                &local_scope,
                 f.as_path(),
                 &pretty_printer,
                 &global_state,

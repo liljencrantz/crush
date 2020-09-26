@@ -68,7 +68,7 @@ pub fn load_init(
     let config = format!("{}/crush/config.crush", config_dir);
     let file = PathBuf::from(config);
     if file.exists() {
-        execute::file(env.clone(), &file, &black_hole(), global_state)
+        execute::file(env, &file, &black_hole(), global_state)
     } else {
         Ok(())
     }
@@ -117,7 +117,7 @@ pub fn run(
                 global_state.threads().reap(global_state.printer());
                 global_state.printer().handle_error(
                     execute::string(
-                        global_env.clone(),
+                        &global_env,
                         &cmd,
                         pretty_printer,
                         global_state,
