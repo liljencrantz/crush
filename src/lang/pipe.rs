@@ -16,7 +16,8 @@ pub type RecvTimeoutError = crossbeam::channel::RecvTimeoutError;
 
 lazy_static! {
     static ref BLACK_HOLE: ValueSender = {
-        let (o, _) = pipe();
+        let (mut o, _) = pipe();
+        o.is_pipeline = false;
         o
     };
 }
@@ -26,14 +27,16 @@ pub fn black_hole() -> ValueSender {
 }
 
 pub fn empty_channel() -> ValueReceiver {
-    let (o, i) = pipe();
+    let (o, mut i) = pipe();
     let _ = o.send(Value::Empty());
+    i.is_pipeline = false;
     i
 }
 
 #[derive(Clone)]
 pub struct ValueSender {
     sender: Sender<Value>,
+    is_pipeline: bool,
 }
 
 impl ValueSender {
@@ -53,16 +56,25 @@ impl ValueSender {
         self.send(Value::TableInputStream(input))?;
         Ok(output)
     }
+
+    pub fn is_pipeline(&self) -> bool {
+        self.is_pipeline
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct ValueReceiver {
     receiver: Receiver<Value>,
+    is_pipeline: bool,
 }
 
 impl ValueReceiver {
     pub fn recv(&self) -> CrushResult<Value> {
         to_crush_error(self.receiver.recv())
+    }
+
+    pub fn is_pipeline(&self) -> bool {
+        self.is_pipeline
     }
 }
 
@@ -148,16 +160,24 @@ impl InputStream {
 pub fn pipe() -> (ValueSender, ValueReceiver) {
     let (send, recv) = bounded(1);
     (
-        ValueSender { sender: send },
-        ValueReceiver { receiver: recv },
+        ValueSender { sender: send, is_pipeline: true },
+        ValueReceiver { receiver: recv, is_pipeline: true },
     )
 }
 
 pub fn unbounded_pipe() -> (ValueSender, ValueReceiver) {
     let (send, recv) = unbounded();
     (
-        ValueSender { sender: send },
-        ValueReceiver { receiver: recv },
+        ValueSender { sender: send, is_pipeline: true },
+        ValueReceiver { receiver: recv, is_pipeline: true },
+    )
+}
+
+pub fn pretty_printer_pipe() -> (ValueSender, ValueReceiver) {
+    let (send, recv) = unbounded();
+    (
+        ValueSender { sender: send, is_pipeline: false },
+        ValueReceiver { receiver: recv, is_pipeline: false },
     )
 }
 

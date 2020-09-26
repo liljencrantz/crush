@@ -11,6 +11,8 @@ use crate::lang::command::OutputType::Known;
 use chrono::Duration;
 use std::path::PathBuf;
 use crate::lang::data::table::{ColumnType, Row};
+use std::io::Stdin;
+use std::process::Stdio;
 
 mod r#for;
 mod r#if;
@@ -23,8 +25,7 @@ r#break,
 can_block = false,
 short = "Stop execution of a loop.",
 output = Known(ValueType::Empty))]
-struct Break {
-}
+struct Break {}
 
 fn r#break(context: CommandContext) -> CrushResult<()> {
     context.scope.do_break()?;
@@ -36,8 +37,7 @@ r#continue,
 can_block = false,
 short = "Skip execution of the current iteration of a loop.",
 output = Known(ValueType::Empty))]
-struct Continue {
-}
+struct Continue {}
 
 fn r#continue(context: CommandContext) -> CrushResult<()> {
     context.scope.do_continue()?;
@@ -50,7 +50,14 @@ fn cmd(mut context: CommandContext) -> CrushResult<()> {
     }
     match context.arguments.remove(0).value {
         Value::File(f) => {
+            let use_tty = !context.input.is_pipeline() && !context.output.is_pipeline();
             let mut cmd = std::process::Command::new(f.as_os_str());
+
+            if use_tty {
+                cmd
+                    .stdin(Stdio::inherit())
+                    .stdout(Stdio::inherit());
+            }
             for a in context.arguments.drain(..) {
                 match a.argument_type {
                     None => {
@@ -71,27 +78,33 @@ fn cmd(mut context: CommandContext) -> CrushResult<()> {
                     }
                 }
             }
-            let output = to_crush_error(cmd.output())?;
-            let errors = String::from_utf8_lossy(&output.stderr);
-            for e in errors.split('\n') {
-                let err = e.trim();
-                if !err.is_empty() {
-                    context.global_state.printer().error(err);
+
+            if use_tty {
+                to_crush_error(to_crush_error(cmd.spawn())?.wait())?;
+                Ok(())
+            } else {
+                let output = to_crush_error(cmd.output())?;
+                let errors = String::from_utf8_lossy(&output.stderr);
+                for e in errors.split('\n') {
+                    let err = e.trim();
+                    if !err.is_empty() {
+                        context.global_state.printer().error(err);
+                    }
                 }
+                context
+                    .output
+                    .send(Value::BinaryInputStream(BinaryReader::vec(&output.stdout)))
             }
-            context
-                .output
-                .send(Value::BinaryInputStream(BinaryReader::vec(&output.stdout)))
         }
         _ => argument_error_legacy("Not a valid command"),
     }
 }
 
 #[signature(
-    sleep,
-    can_block = true,
-    short = "Pause execution of commands for the specified amount of time",
-    long = "    Execute the specified command all specified hosts"
+sleep,
+can_block = true,
+short = "Pause execution of commands for the specified amount of time",
+long = "    Execute the specified command all specified hosts"
 )]
 struct Sleep {
     #[description("the time to sleep for.")]
@@ -110,8 +123,7 @@ bg,
 short = "Run a pipeline in background",
 example = "pipe := ((table_input_stream value=integer):pipe)\n    _1 := (seq 100_000 | pipe:output:write | bg)\n    sum_job_id := (pipe:input | sum | bg)\n    pipe:close\n    sum_job_id | fg"
 )]
-struct Bg {
-}
+struct Bg {}
 
 fn bg(context: CommandContext) -> CrushResult<()> {
     let output = context.output.initialize(
@@ -127,12 +139,11 @@ fg,
 short = "Return the output of a background pipeline",
 example = "pipe := ((table_input_stream value=integer):pipe)\n    _1 := (seq 100_000 | pipe:output:write | bg)\n    sum_job_id := (pipe:input | sum | bg)\n    pipe:close\n    sum_job_id | fg"
 )]
-struct Fg {
-}
+struct Fg {}
 
 fn fg(context: CommandContext) -> CrushResult<()> {
     let mut result_stream = mandate(context.input.recv()?.stream(), "Invalid input")?;
-    let mut result:Vec<Value> = result_stream.read()?.into();
+    let mut result: Vec<Value> = result_stream.read()?.into();
     if result.len() != 1 {
         data_error("Expected a single row, single column result")
     } else {

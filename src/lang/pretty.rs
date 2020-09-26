@@ -6,7 +6,7 @@ use crate::lang::data::binary::BinaryReader;
 use crate::lang::errors::to_crush_error;
 use crate::lang::data::list::ListReader;
 use crate::lang::printer::Printer;
-use crate::lang::pipe::{CrushStream, InputStream, ValueSender, unbounded_pipe};
+use crate::lang::pipe::{CrushStream, InputStream, ValueSender, unbounded_pipe, pretty_printer_pipe};
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
 use crate::lang::data::table::Table;
@@ -44,7 +44,7 @@ pub fn create_pretty_printer(
     global_state: &GlobalState,
 ) -> ValueSender {
     let global_state = global_state.clone();
-    let (o, i) = unbounded_pipe();
+    let (o, i) = pretty_printer_pipe();
     let printer_clone = printer.clone();
     printer_clone.handle_error(to_crush_error(
         thread::Builder::new()
