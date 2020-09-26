@@ -355,7 +355,7 @@ impl Node {
                     to_crush_error(Regex::new(&l.string.clone()))?, ),
                 l.location,
             ),
-            Node::String(t) => ValueDefinition::Value(Value::String(unescape(&t.string)), t.location),
+            Node::String(t) => ValueDefinition::Value(Value::String(unescape(&t.string)?), t.location),
             Node::Integer(s) =>
                 ValueDefinition::Value(
                     Value::Integer(to_crush_error(

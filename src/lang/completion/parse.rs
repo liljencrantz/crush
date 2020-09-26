@@ -312,7 +312,7 @@ pub fn parse(
                                 PartialCommandResult {
                                     command: c,
                                     previous_arguments: vec![],
-                                    last_argument: LastArgument::QuotedString(unescape(&s.string)),
+                                    last_argument: LastArgument::QuotedString(unescape(&s.string)?),
                                     last_argument_name,
                                 }
                             )),
