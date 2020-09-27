@@ -224,32 +224,41 @@ fn complete_argument_values(
     Ok(())
 }
 
+fn complete_argument_description(
+    argument_description: &ArgumentDescription,
+    parse_result: &PartialCommandResult,
+    cursor: usize,
+    scope: &Scope,
+    res: &mut Vec<Completion>,
+) -> CrushResult<()> {
+    if let Some(allowed) = &argument_description.allowed {
+        complete_argument_values(
+            allowed,
+            parse_result,
+            cursor,
+            res)?;
+    }
+    if let Some(cmd) = &argument_description.complete {
+        cmd(&parse_result, cursor, scope, res)?;
+    }
+    Ok(())
+}
 
-pub fn complete_partial_argument(
+fn complete_partial_argument(
     parse_result: PartialCommandResult,
     cursor: usize,
     scope: &Scope,
     lister: &impl DirectoryLister,
     res: &mut Vec<Completion>,
 ) -> CrushResult<()> {
-    if let CompletionCommand::Known(cmd) = &parse_result.command {
-        if let Some(name) = &parse_result.last_argument_name {
-            if let Some(argument_description) = cmd.arguments()
-                .iter()
-                .filter(|a| &a.name == name)
-                .next() {
-                if let Some(allowed) = &argument_description.allowed {
-                    complete_argument_values(
-                        allowed,
-                        &parse_result,
-                        cursor,
-                        res)?;
-                }
-                if let Some(cmd) = &argument_description.complete {
-                    cmd(&parse_result, cursor, scope, res)?;
-                }
-            }
-        }
+    if let Some(desc) = parse_result.last_argument_description() {
+        complete_argument_description(
+            desc,
+            &parse_result,
+            cursor,
+            scope,
+            res,
+        )?;
     }
 
     let argument_type = parse_result.last_argument_type();

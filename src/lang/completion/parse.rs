@@ -2,7 +2,7 @@ use crate::lang::ast::{Node, CommandNode, JobListNode, JobNode};
 use crate::lang::errors::{error, CrushResult, mandate, argument_error_legacy, to_crush_error};
 use crate::lang::value::{ValueType, Value};
 use std::path::PathBuf;
-use crate::lang::command::Command;
+use crate::lang::command::{Command, ArgumentDescription};
 use crate::lang::data::scope::Scope;
 use std::ops::Deref;
 use regex::Regex;
@@ -43,17 +43,31 @@ pub struct PartialCommandResult {
 }
 
 impl PartialCommandResult {
-    pub fn last_argument_type(&self) -> ValueType {
-        match (&self.command, &self.last_argument_name) {
-            (CompletionCommand::Known(cmd), Some(name)) => {
+    pub fn last_argument_description(&self) -> Option<&ArgumentDescription> {
+        if let CompletionCommand::Known(cmd) = &self.command {
+            if let Some(name) = &self.last_argument_name {
                 for arg in cmd.arguments() {
                     if &arg.name == name {
-                        return arg.value_type.clone();
+                        return Some(arg);
                     }
                 }
-                ValueType::Any
+                None
+            } else {
+                if cmd.arguments().len() == 1 {
+                    Some(&cmd.arguments()[0])
+                } else {
+                    None
+                }
             }
-            _ => ValueType::Any,
+        } else {
+            None
+        }
+    }
+
+    pub fn last_argument_type(&self) -> ValueType {
+        match self.last_argument_description() {
+            None => ValueType::Any,
+            Some(d) => d.value_type.clone(),
         }
     }
 }
@@ -212,7 +226,7 @@ pub fn parse(
 
                     Node::File(path, quoted) =>
                         Ok(ParseResult::PartialFile(
-                            if *quoted {unescape(&path.string)?} else {path.string.clone()},
+                            if *quoted { unescape(&path.string)? } else { path.string.clone() },
                             *quoted)),
 
                     Node::String(string) =>
@@ -305,7 +319,7 @@ pub fn parse(
                                     command: c,
                                     previous_arguments: vec![],
                                     last_argument: LastArgument::File(
-                                        if *quoted {unescape(&path.string)?} else {path.string.clone()},
+                                        if *quoted { unescape(&path.string)? } else { path.string.clone() },
                                         *quoted),
                                     last_argument_name,
                                 }

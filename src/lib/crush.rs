@@ -69,6 +69,9 @@ mod locale {
     use super::*;
     use num_format::SystemLocale;
     use crate::lang::errors::to_crush_error;
+    use crate::lang::completion::parse::{PartialCommandResult, LastArgument};
+    use crate::lang::completion::Completion;
+    use crate::util::escape::{escape, escape_without_quotes};
 
     lazy_static! {
     static ref LIST_OUTPUT_TYPE: Vec<ColumnType> = vec![
@@ -89,8 +92,43 @@ mod locale {
         Ok(())
     }
 
+    fn locale_complete(
+        cmd: &PartialCommandResult,
+        _cursor: usize,
+        _scope: &Scope,
+        res: &mut Vec<Completion>,
+    ) -> CrushResult<()> {
+        for name in to_crush_error(SystemLocale::available_names())? {
+            match &cmd.last_argument {
+
+                LastArgument::Unknown => {
+                    res.push(Completion::new(
+                        escape(&name),
+                        name,
+                        0,
+                    ))
+                }
+
+                LastArgument::QuotedString(stripped_prefix) => {
+                    if name.starts_with(stripped_prefix) && name.len() > 0 {
+                        res.push(Completion::new(
+                            format!("{}\" ", escape_without_quotes(&name[stripped_prefix.len()..])),
+                            name,
+                            0,
+                        ));
+                    }
+                }
+
+                _ => {}
+
+            }
+        }
+        Ok(())
+    }
+
     #[signature(set, output = Known(ValueType::Empty), short = "Set the current locale.")]
     pub struct Set {
+        #[custom_completion(locale_complete)]
         #[description("the new locale.")]
         locale: String,
     }
