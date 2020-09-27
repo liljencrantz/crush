@@ -9,6 +9,7 @@ use regex::Regex;
 use crate::util::glob::Glob;
 use crate::lang::parser::Parser;
 use crate::util::escape::unescape;
+use std::collections::HashSet;
 
 pub enum CompletionCommand {
     Unknown,
@@ -35,9 +36,21 @@ pub enum LastArgument {
 }
 
 #[derive(Clone)]
+pub enum PreviousArgumentValue {
+    Value(Value),
+    ValueType(ValueType),
+}
+
+#[derive(Clone)]
+pub struct PreviousArgument {
+    pub name: Option<String>,
+    pub value: PreviousArgumentValue,
+}
+
+#[derive(Clone)]
 pub struct PartialCommandResult {
     pub command: CompletionCommand,
-    pub previous_arguments: Vec<(Option<String>, ValueType)>,
+    pub previous_arguments: Vec<PreviousArgument>,
     pub last_argument_name: Option<String>,
     pub last_argument: LastArgument,
 }
@@ -53,9 +66,36 @@ impl PartialCommandResult {
                 }
                 None
             } else {
-                if cmd.arguments().len() == 1 {
+                if false && cmd.arguments().len() == 1 {
                     Some(&cmd.arguments()[0])
                 } else {
+
+                    let mut previous_named = HashSet::new();
+                    let mut previous_unnamed = 0usize;
+                    for arg in &self.previous_arguments {
+                        match &arg.name {
+                            Some(name) => {
+                                previous_named.insert(name.clone());
+                            }
+                            None => previous_unnamed += 1,
+                        }
+                    }
+
+                    let mut unnamed_used = 0usize;
+                    for arg in cmd.arguments() {
+                        if arg.unnamed {
+                            return Some(arg)
+                        }
+                        if previous_named.contains(&arg.name ) {
+                            continue;
+                        } else {
+                            unnamed_used += 1;
+                        }
+                        if previous_unnamed < unnamed_used {
+                            return Some(arg);
+                        }
+                    }
+
                     None
                 }
             }
@@ -192,6 +232,29 @@ fn parse_command_node(node: &Node, scope: &Scope) -> CrushResult<CompletionComma
     }
 }
 
+fn parse_previous_argument(arg: &Node) -> PreviousArgument {
+    match arg {
+        Node::Assignment(key, op, value) => {
+            match (key.as_ref(), op.as_str()) {
+                (Node::Label(name), "=") => {
+                    let inner = parse_previous_argument(value.as_ref());
+                    return PreviousArgument {
+                        name: Some(name.string.clone()),
+                        value: inner.value
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        _ => {},
+    }
+    PreviousArgument {
+        name: None,
+        value: PreviousArgumentValue::ValueType(ValueType::Any),
+    }
+}
+
 pub fn parse(
     line: &str,
     cursor: usize,
@@ -250,6 +313,10 @@ pub fn parse(
         _ => {
             let c = parse_command_node(&cmd.expressions[0], scope)?;
 
+            let previous_arguments = cmd.expressions[1..(cmd.expressions.len() - 1)]
+                .iter()
+                .map(|arg| parse_previous_argument(arg))
+                .collect::<Vec<_>>();
             let (arg, last_argument_name, argument_complete) =
                 if let Node::Assignment(name, _op, value) = cmd.expressions.last().unwrap() {
                     if name.location().contains(cursor) {
@@ -271,7 +338,7 @@ pub fn parse(
                         Ok(ParseResult::PartialArgument(
                             PartialCommandResult {
                                 command: c,
-                                previous_arguments: vec![],
+                                previous_arguments,
                                 last_argument: LastArgument::Switch(l.string.clone()),
                                 last_argument_name,
                             }
@@ -286,7 +353,7 @@ pub fn parse(
                             Ok(ParseResult::PartialArgument(
                                 PartialCommandResult {
                                     command: c,
-                                    previous_arguments: vec![],
+                                    previous_arguments,
                                     last_argument: LastArgument::Label(l.string.clone()),
                                     last_argument_name,
                                 }
@@ -296,7 +363,7 @@ pub fn parse(
                             Ok(ParseResult::PartialArgument(
                                 PartialCommandResult {
                                     command: c,
-                                    previous_arguments: vec![],
+                                    previous_arguments,
                                     last_argument: LastArgument::Field(
                                         mandate(fetch_value(parent, scope)?, "unknown value")?,
                                         field.prefix(cursor).string),
@@ -307,7 +374,7 @@ pub fn parse(
                             Ok(ParseResult::PartialArgument(
                                 PartialCommandResult {
                                     command: c,
-                                    previous_arguments: vec![],
+                                    previous_arguments,
                                     last_argument: LastArgument::File(simple_path(arg.as_ref(), cursor)?, false),
                                     last_argument_name,
                                 }
@@ -317,7 +384,7 @@ pub fn parse(
                             Ok(ParseResult::PartialArgument(
                                 PartialCommandResult {
                                     command: c,
-                                    previous_arguments: vec![],
+                                    previous_arguments,
                                     last_argument: LastArgument::File(
                                         if *quoted { unescape(&path.string)? } else { path.string.clone() },
                                         *quoted),
@@ -329,7 +396,7 @@ pub fn parse(
                             Ok(ParseResult::PartialArgument(
                                 PartialCommandResult {
                                     command: c,
-                                    previous_arguments: vec![],
+                                    previous_arguments,
                                     last_argument: LastArgument::QuotedString(unescape(&s.string)?),
                                     last_argument_name,
                                 }
@@ -341,7 +408,7 @@ pub fn parse(
                     Ok(ParseResult::PartialArgument(
                         PartialCommandResult {
                             command: c,
-                            previous_arguments: vec![],
+                            previous_arguments,
                             last_argument: LastArgument::Unknown,
                             last_argument_name,
                         }

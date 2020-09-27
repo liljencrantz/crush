@@ -369,6 +369,10 @@ mod tests {
         Ok(())
     }
 
+    fn multi_argument_cmd(_context: CommandContext) -> CrushResult<()> {
+        Ok(())
+    }
+
     #[signature(my_cmd)]
     struct MyCmdSignature {
         super_fancy_argument: ValueType,
@@ -380,6 +384,16 @@ mod tests {
         argument: String,
     }
 
+    #[signature(multi_argument_cmd)]
+    struct MultiArgumentCmdSignature {
+        #[values("foo")]
+        argument1: String,
+        #[values("bar")]
+        argument2: String,
+        #[values("baz")]
+        argument3: String,
+    }
+
     fn scope_with_function() -> Scope {
         let root = Scope::create_root();
         let chld = root.create_namespace("namespace", Box::new(|env| {
@@ -388,6 +402,7 @@ mod tests {
         })).unwrap();
         let _chld2 = root.create_namespace("other_namespace", Box::new(|env| {
             AllowedCmdSignature::declare(env)?;
+            MultiArgumentCmdSignature::declare(env)?;
             Ok(())
         })).unwrap();
         root.r#use(&chld);
@@ -446,7 +461,7 @@ mod tests {
 
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
-        assert_eq!(completions.len(), 4);
+        assert_eq!(completions.len(), 1);
     }
 
     #[test]
@@ -723,6 +738,61 @@ mod tests {
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "other_namespace:allowed_cmd argument=\"foo\" ");
+    }
+
+    #[test]
+    fn check_simple_argument_description_tracking() {
+        let line = "other_namespace:allowed_cmd \"f";
+        let cursor = line.len();
+
+        let s = scope_with_function();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "other_namespace:allowed_cmd \"foo\" ");
+    }
+
+    #[test]
+    fn check_unnamed_argument_description_tracking() {
+        let line = "other_namespace:multi_argument_cmd \"foo\" \"";
+        let cursor = line.len();
+
+        let s = scope_with_function();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "other_namespace:multi_argument_cmd \"foo\" \"bar\" ");
+    }
+
+    #[test]
+    fn check_many_unnamed_argument_description_tracking() {
+        let line = "other_namespace:multi_argument_cmd \"foo\" \"bar\" \"";
+        let cursor = line.len();
+
+        let s = scope_with_function();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "other_namespace:multi_argument_cmd \"foo\" \"bar\" \"baz\" ");
+    }
+
+    #[test]
+    fn check_named_argument_description_tracking() {
+        let line = "other_namespace:multi_argument_cmd \"foo\" argument3=\"baz\" \"";
+        let cursor = line.len();
+
+        let s = scope_with_function();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "other_namespace:multi_argument_cmd \"foo\" argument3=\"baz\" \"bar\" ");
+    }
+
+    #[test]
+    fn check_named_and_unnamed_argument_description_tracking() {
+        let line = "other_namespace:multi_argument_cmd argument2=\"bar\" \"foo\" \"";
+        let cursor = line.len();
+
+        let s = scope_with_function();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "other_namespace:multi_argument_cmd argument2=\"bar\" \"foo\" \"baz\" ");
     }
 
     #[test]
