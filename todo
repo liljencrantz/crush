@@ -35,3 +35,5 @@ Add crush:jobs command
 pseudo-tty for cmd command output
 pseudo-tty for cmd command input
 Support __str__ method for string rendering
+Command specific completions for crush:local:set
+Command specific completions for user:find

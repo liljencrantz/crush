@@ -1,5 +1,5 @@
 /**
-    A receiver of values that prints any values sent to it in a pretty, human readable format.
+    A receiver of values that prints any values sent to it in a human readable format.
 */
 
 use crate::lang::data::binary::BinaryReader;

@@ -11,8 +11,12 @@ use crate::lang::command::OutputType::Known;
 use chrono::Duration;
 use std::path::PathBuf;
 use crate::lang::data::table::{ColumnType, Row};
-use std::io::Stdin;
+use std::io::{Stdin, Write, Read};
 use std::process::Stdio;
+use std::borrow::BorrowMut;
+use crate::lang::value::Value::BinaryInputStream;
+use crate::lang::data::binary::binary_channel;
+use os_pipe::PipeReader;
 
 mod r#for;
 mod r#if;
@@ -53,11 +57,6 @@ fn cmd(mut context: CommandContext) -> CrushResult<()> {
             let use_tty = !context.input.is_pipeline() && !context.output.is_pipeline();
             let mut cmd = std::process::Command::new(f.as_os_str());
 
-            if use_tty {
-                cmd
-                    .stdin(Stdio::inherit())
-                    .stdout(Stdio::inherit());
-            }
             for a in context.arguments.drain(..) {
                 match a.argument_type {
                     None => {
@@ -80,23 +79,74 @@ fn cmd(mut context: CommandContext) -> CrushResult<()> {
             }
 
             if use_tty {
+                cmd
+                    .stdin(Stdio::inherit())
+                    .stdout(Stdio::inherit())
+                    .stderr(Stdio::inherit());
+
                 to_crush_error(to_crush_error(cmd.spawn())?.wait())?;
                 Ok(())
             } else {
-                let output = to_crush_error(cmd.output())?;
-                let errors = String::from_utf8_lossy(&output.stderr);
-                for e in errors.split('\n') {
-                    let err = e.trim();
-                    if !err.is_empty() {
-                        context.global_state.printer().error(err);
+                let input = context.input.recv()?;
+
+                let (mut stdout_reader, stdout_writer) = os_pipe::pipe().unwrap();
+                let (mut stderr_reader, stderr_writer) = os_pipe::pipe().unwrap();
+
+                cmd.stdin(Stdio::piped());
+                cmd.stdout(stdout_writer);
+                cmd.stderr(stderr_writer);
+
+                let mut child = to_crush_error(cmd.spawn())?;
+                let mut stdin = mandate(child.stdin.take(), "Expected stdin stream")?;
+
+                let threads = context.global_state.threads().clone();
+
+                match input {
+                    Value::Empty() => {
+                        drop(stdin);
                     }
+                    Value::Binary(v) => {
+                        threads.spawn("cmd:stdin", move || {
+                            stdin.write(&v)?;
+                            Ok(())
+                        })?;
+                    }
+                    Value::BinaryInputStream(mut r) => {
+                        threads.spawn("cmd:stdin", move || {
+                            to_crush_error(std::io::copy(r.as_mut(), stdin.borrow_mut()))?;
+                            Ok(())
+                        })?;
+                    }
+                    _ => return argument_error_legacy("Invalid inpuy: Expected binary data"),
                 }
-                context
-                    .output
-                    .send(Value::BinaryInputStream(BinaryReader::vec(&output.stdout)))
+
+                context.output.send(BinaryInputStream(Box::from(stdout_reader)))?;
+
+                threads.spawn("cmd:stderr", move || {
+                    let mut buff = Vec::new();
+                    to_crush_error(stderr_reader.read_to_end(&mut buff))?;
+                    let errors = to_crush_error(String::from_utf8(buff))?;
+                    for e in errors.split('\n') {
+                        let err = e.trim();
+                        if !err.is_empty() {
+                            context.global_state.printer().error(err);
+                        }
+                    }
+                    Ok(())
+                })?;
+
+                child.wait()?;
+
+                Ok(())
             }
         }
         _ => argument_error_legacy("Not a valid command"),
+    }
+}
+
+impl BinaryReader for PipeReader {
+    fn clone(&self) -> Box<dyn BinaryReader + Send + Sync> {
+        self.clone()
     }
 }
 
@@ -188,7 +238,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "cmd",
                 cmd,
                 true,
-                "cmd external_command:(file|string) @arguments:any",
+                "cmd external_command:file @arguments:any",
                 "Execute external commands",
                 None,
                 Known(ValueType::BinaryInputStream),

@@ -61,7 +61,7 @@ struct Echo {
     #[description("the values to print.")]
     #[unnamed()]
     values: Vec<Value>,
-    #[description("do not escape unprintable characters in string values")]
+    #[description("do not escape control characters in string values")]
     #[default(false)]
     raw: bool,
 }
