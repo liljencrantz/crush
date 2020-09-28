@@ -98,3 +98,13 @@ Tab completion missing feature list:
 * Add previous output type of previous command in pipeline if known to parsed state
 * Add command specific completions for methods
 * GetItem and SetItem completions
+
+Rethink the proc namespace?
+
+* Remove from use list
+* Rename kill to signal
+* Rename ps list
+* Add threads column to proc output
+
+proc:signal and proc:list are more self describing commands
+

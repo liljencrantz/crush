@@ -6,17 +6,18 @@ use crate::lang::data::table::Row;
 use crate::lang::value::Field;
 use crate::lang::errors::argument_error_legacy;
 use signature::signature;
+use std::cmp::Ordering;
 
 #[signature(
-    sort,
-    can_block=true,
-    short="Sort io based on column",
-    long="ps | sort ^cpu",
-    output=Passthrough)]
+sort,
+short = "Sort input based on column",
+example = "ps | sort ^cpu",
+output = Passthrough)]
 pub struct Sort {
-    #[description("the column to sort on. Not required if there is only one column.")]
-    field: Option<Field>,
-    #[description("if true, reverse sort order.")]
+    #[unnamed()]
+    #[description("the columns to sort on. Optional if input only has one column.")]
+    field: Vec<Field>,
+    #[description("reverse the sort order.")]
     #[default(false)]
     reverse: bool,
 }
@@ -26,42 +27,57 @@ fn sort(context: CommandContext) -> CrushResult<()> {
         Some(mut input) => {
             let output = context.output.initialize(input.types().to_vec())?;
             let cfg: Sort = Sort::parse(context.arguments, &context.global_state.printer())?;
-            let idx = match cfg.field {
-                None => {
-                    if input.types().len() == 1 {
-                        0
-                    } else {
-                        return argument_error_legacy("Missing comparison key");
-                    }
+            let indices = if cfg.field.is_empty() {
+                if input.types().len() == 1 {
+                    vec![0]
+                } else {
+                    return argument_error_legacy("Missing comparison key");
                 }
-                Some(field) => input.types().find(&field)?,
+            } else {
+                cfg.field.iter().map(|f| input.types().find(f)).collect::<CrushResult<Vec<_>>>()?
             };
 
-            if input.types()[idx].cell_type.is_comparable() {
-                let mut res: Vec<Row> = Vec::new();
-
-                while let Ok(row) = input.read() {
-                    res.push(row);
+            for idx in &indices {
+                if !input.types()[*idx].cell_type.is_comparable() {
+                    return argument_error_legacy("Bad comparison key");
                 }
-
-                if cfg.reverse {
-                    res.sort_by(|a, b|
-                        b.cells()[idx].partial_cmp(&a.cells()[idx])
-                            .expect("OH NO!"));
-                } else {
-                    res.sort_by(|a, b|
-                        a.cells()[idx].partial_cmp(&b.cells()[idx])
-                            .expect("OH NO!"));
-                }
-
-                for row in res {
-                    output.send(row)?;
-                }
-
-                Ok(())
-            } else {
-                argument_error_legacy("Bad comparison key")
             }
+
+            let mut res: Vec<Row> = Vec::new();
+
+            while let Ok(row) = input.read() {
+                res.push(row);
+            }
+
+            if cfg.reverse {
+                res.sort_by(|a, b| {
+                    for idx in &indices {
+                        match b.cells()[*idx].partial_cmp(&a.cells()[*idx]) {
+                            None => panic!("Unexpcted sort failure"),
+                            Some(Ordering::Equal) => {}
+                            Some(ordering) => return ordering,
+                        }
+                    }
+                    Ordering::Equal
+                });
+            } else {
+                res.sort_by(|b, a| {
+                    for idx in &indices {
+                        match b.cells()[*idx].partial_cmp(&a.cells()[*idx]) {
+                            None => panic!("Unexpcted sort failure"),
+                            Some(Ordering::Equal) => {}
+                            Some(ordering) => return ordering,
+                        }
+                    }
+                    Ordering::Equal
+                });
+            }
+
+            for row in res {
+                output.send(row)?;
+            }
+
+            Ok(())
         }
         None => error("Expected a stream"),
     }

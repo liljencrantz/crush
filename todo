@@ -5,19 +5,13 @@ Add some way to extract the definition from a closure
 Add filename tracking to error handling
 Add command field to printer
 Narrow down location to each command in printer passed in to a command
-Pretty printer should escape control characters
-parser should not convert numeric literals to numbers, that should happen in the generate step.
-Allow secondary/tertiary sort keys
 Allow input type specification
-lazy loading of scopes leaks when displaying the help for a scope
 There should be a scope help message
 Write a command that extracts all help into html
 Tab completion of globs
-multi-line editing
-Rethink join syntax, and refactor code
 Add system tests for binary stream handling
-Binary values can be big. Make them shared behind an Arc. Same with table. Maybe even String?
-In closures without a signature, put unnamed variables in the variable 'unnamed'
+Binary values can be big. Make them shared behind an Arc. Same with tables. Maybe even String?
+In closures without a signature, put unnamed variables in the variable '__unnamed__'
 Make integers overflow to arbitrary precision math
 Run an executable by giving its path
 Add control:source command
@@ -32,6 +26,4 @@ pbuf:from command that takes a protobuf definition and uses it to deserialize pr
 avro:from command that deserializes avro data
 Add history command with all previous interactive invocations, including invocation string, current status, and misc metadata.
 Add crush:jobs command
-pseudo-tty for cmd command output
-pseudo-tty for cmd command input
 Support __str__ method for string rendering
