@@ -20,10 +20,17 @@ use crate::lang::execution_context::JobContext;
 
 const DEFAULT_PROMPT: &'static str = "crush# ";
 
-fn crush_history_file() -> PathBuf {
-    home()
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .join(".crush_history")
+pub fn config_dir() -> CrushResult<PathBuf> {
+    to_crush_error(std::env::var("XDG_CONFIG_HOME"))
+        .map(|s| PathBuf::from(s).join("crush"))
+        .or_else(|_| match home() {
+            Ok(home) => Ok(home.join(".config/crush")),
+            Err(e) => Err(e),
+        })
+}
+
+fn crush_history_file() -> CrushResult<PathBuf> {
+    Ok(config_dir()?.join("history"))
 }
 
 pub fn execute_prompt(
@@ -57,16 +64,7 @@ pub fn load_init(
     env: &Scope,
     global_state: &GlobalState,
 ) -> CrushResult<()> {
-    let config_dir = to_crush_error(std::env::var("XDG_CONFIG_HOME"))
-        .or_else(|_| match home() {
-            Ok(home) => match home.to_str() {
-                Some(home) => Ok(format!("{}/.config", home)),
-                None => data_error(""),
-            },
-            Err(e) => Err(e),
-        })?;
-    let config = format!("{}/crush/config.crush", config_dir);
-    let file = PathBuf::from(config);
+    let file = config_dir()?.join("config.crush");
     if file.exists() {
         execute::file(env, &file, &black_hole(), global_state)
     } else {
@@ -99,7 +97,9 @@ pub fn run(
 
     let mut rl = Editor::with_config(config);
     rl.set_helper(Some(h));
-    let _ = rl.load_history(&crush_history_file());
+    if let Ok(file) = crush_history_file() {
+        let _ = rl.load_history(&file);
+    }
     loop {
         let prompt = match execute_prompt(global_state.prompt(), &global_env, global_state) {
             Ok(s) => s,
@@ -141,12 +141,16 @@ pub fn run(
             }
         }
 
-        if let Err(err) = rl.save_history(&crush_history_file()) {
-            global_state.printer().line(&format!("Error: Failed to save history: {}", err))
+        if let Ok(file) = crush_history_file() {
+            if let Err(err) = rl.save_history(&file) {
+                global_state.printer().line(&format!("Error: Failed to save history: {}", err))
+            }
         }
     }
-    if let Err(err) = rl.save_history(&crush_history_file()) {
-        global_state.printer().line(&format!("Error: Failed to save history: {}", err))
+    if let Ok(file) = crush_history_file() {
+        if let Err(err) = rl.save_history(&file) {
+            global_state.printer().line(&format!("Error: Failed to save history: {}", err))
+        }
     }
     Ok(())
 }

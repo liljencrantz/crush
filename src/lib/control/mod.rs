@@ -11,11 +11,10 @@ use crate::lang::command::OutputType::Known;
 use chrono::Duration;
 use std::path::PathBuf;
 use crate::lang::data::table::{ColumnType, Row};
-use std::io::{Stdin, Write, Read};
+use std::io::{Write, Read};
 use std::process::Stdio;
 use std::borrow::BorrowMut;
 use crate::lang::value::Value::BinaryInputStream;
-use crate::lang::data::binary::binary_channel;
 use os_pipe::PipeReader;
 
 mod r#for;

@@ -6,7 +6,7 @@ use crate::lang::data::binary::BinaryReader;
 use crate::lang::errors::to_crush_error;
 use crate::lang::data::list::ListReader;
 use crate::lang::printer::Printer;
-use crate::lang::pipe::{CrushStream, InputStream, ValueSender, unbounded_pipe, pretty_printer_pipe};
+use crate::lang::pipe::{CrushStream, InputStream, ValueSender, pretty_printer_pipe};
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
 use crate::lang::data::table::Table;

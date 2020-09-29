@@ -1,11 +1,15 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, data_error, mandate, CrushResult};
+use crate::lang::errors::{argument_error_legacy, data_error, mandate, CrushResult, to_crush_error};
 use crate::lang::data::list::List;
 use crate::lang::pretty::PrettyPrinter;
 use crate::lang::data::scope::Scope;
 use crate::lang::value::{Field, ValueType};
 use crate::lang::{execution_context::CommandContext, value::Value};
 use signature::signature;
+use rustyline::Editor;
+use std::path::PathBuf;
+use crate::util::file::home;
+use crate::lang::interactive::config_dir;
 
 mod bin;
 mod csv;
@@ -105,6 +109,46 @@ fn member(context: CommandContext) -> CrushResult<()> {
     }
 }
 
+fn history_file(name: &str) -> CrushResult<PathBuf> {
+    Ok(config_dir()?.join(&format!("{}_history", name)))
+}
+
+#[signature(
+readline,
+short = "Reads a string of input from the user.",
+output = Known(ValueType::String),
+)]
+struct Readline {
+    #[description("the prompt to show the user.")]
+    #[default("crush# ")]
+    prompt: String,
+
+    #[description("load and save history under specified name.")]
+    history: Option<String>,
+}
+
+fn readline(context: CommandContext) -> CrushResult<()> {
+    let cfg: Readline = Readline::parse(context.arguments, &context.global_state.printer())?;
+
+    let mut rl = Editor::<()>::new();
+
+    if let Some(history) = &cfg.history {
+        let _ = rl.load_history(&history_file(&history)?);
+    }
+
+    let line = to_crush_error(rl.readline(&cfg.prompt))?;
+
+    if let Some(history) = &cfg.history {
+        rl.add_history_entry(line.as_str());
+        if let Err(err) = rl.save_history(&history_file(&history)?) {
+            context.global_state.printer().line(&format!("Error: Failed to save history: {}", err))
+        }
+    }
+
+    context.output.send(Value::String(line))
+}
+
+
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
         "io",
@@ -124,6 +168,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Member::declare(env)?;
             Val::declare(env)?;
             Dir::declare(env)?;
+            Readline::declare(env)?;
             Ok(())
         }),
     )?;
