@@ -22,6 +22,7 @@ mod r#for;
 mod r#if;
 mod r#loop;
 mod sudo;
+mod timer;
 mod r#while;
 
 #[signature(
@@ -245,6 +246,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 vec![],
             )?;
             Break::declare(env)?;
+            timer::Timer::declare(env)?;
             Continue::declare(env)?;
             Sleep::declare(env)?;
             Bg::declare(env)?;
