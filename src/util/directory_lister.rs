@@ -9,7 +9,7 @@ you'll need something cleverer.
 */
 
 use std::path::{PathBuf};
-use crate::lang::errors::{CrushResult, to_crush_error, mandate};
+use crate::lang::errors::{CrushResult, to_crush_error};
 use std::fs::{ReadDir, read_dir};
 use ordered_map::{OrderedMap, Entry};
 use std::collections::VecDeque;

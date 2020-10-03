@@ -8,7 +8,6 @@ use crate::lang::{execution_context::CommandContext, value::Value};
 use signature::signature;
 use rustyline::Editor;
 use std::path::PathBuf;
-use crate::util::file::home;
 use crate::lang::interactive::config_dir;
 
 mod bin;

@@ -2,7 +2,6 @@ use crate::lang::errors::{CrushResult, to_crush_error};
 use crate::lang::execution_context::CommandContext;
 use signature::signature;
 use chrono::{Duration, Local};
-use crate::lang::value::Value;
 use crate::lang::data::table::Row;
 
 #[signature(timer, short="Passes a stream of empty rows to act as a reoccurring timer", )]

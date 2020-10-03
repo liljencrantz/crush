@@ -101,10 +101,11 @@ Tab completion missing feature list:
 
 Rethink the proc namespace?
 
-* Remove from use list
+* Remove from the use list
 * Rename kill to signal
-* Rename ps list
+* Rename ps to list
 * Add threads column to proc output
 
 proc:signal and proc:list are more self describing commands
 
+toml:from ./Cargo.toml | semver:bump ^package:version --minor | toml:to ./cargo.toml
