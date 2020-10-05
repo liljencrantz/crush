@@ -5,6 +5,7 @@ use crate::lang::value::Value;
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "term",
+        "Terminal constants",
         Box::new(move |fd| {
             fd.declare("normal", Value::string("\x1b[0m"))?;
             fd.declare("bold", Value::string("\x1b[1m"))?;

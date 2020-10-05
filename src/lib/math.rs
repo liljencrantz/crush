@@ -141,6 +141,7 @@ math_fun2!(log, |x: f64, y: f64| x.log(y));
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "math",
+        "Math commands",
         Box::new(move |env| {
             Sin::declare(env)?;
             Cos::declare(env)?;

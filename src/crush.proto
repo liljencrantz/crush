@@ -189,6 +189,10 @@ message Scope {
         bool has_name = 11;
         uint64 name_value = 12;
     }
+    oneof description {
+        bool has_description = 13;
+        uint64 description_value = 14;
+    }
 }
 
 message Type {

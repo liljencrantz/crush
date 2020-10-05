@@ -166,11 +166,14 @@ mod cpu {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "host",
+        "Metadata about this host",
         Box::new(move |host| {
-            Name::declare(host)?;
             Battery::declare(host)?;
+            Mem::declare(host)?;
+            Name::declare(host)?;
             host.create_namespace(
                 "os",
+                "Metadata about the operating system this host is running",
                 Box::new(move |env| {
                     os::Name::declare(env)?;
                     os::Version::declare(env)?;
@@ -179,6 +182,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             )?;
             host.create_namespace(
                 "cpu",
+                "Metadata about the CPUs of this host",
                 Box::new(move |env| {
                     cpu::Count::declare(env)?;
                     cpu::Speed::declare(env)?;
@@ -186,7 +190,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     Ok(())
                 }),
             )?;
-            Mem::declare(host)?;
             Ok(())
         }),
     )?;

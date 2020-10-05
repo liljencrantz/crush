@@ -23,7 +23,13 @@ impl Serializable<Scope> for Scope {
                             Some(String::deserialize(n as usize, elements, state)?)
                         }
                     };
-                    let res = Scope::create(name, s.is_loop, s.is_stopped, s.is_readonly);
+                    let description = match s.description {
+                        None | Some(model::scope::Description::HasDescription(_)) => None,
+                        Some(model::scope::Description::DescriptionValue(n)) => {
+                            Some(String::deserialize(n as usize, elements, state)?)
+                        }
+                    };
+                    let res = Scope::create(name, description, s.is_loop, s.is_stopped, s.is_readonly);
                     state.scopes.insert(id, res.clone());
                     if let Some(model::scope::Parent::ParentValue(pid)) = s.parent {
                         res.set_parent(Some(Scope::deserialize(pid as usize, elements, state)?));

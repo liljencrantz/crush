@@ -801,6 +801,7 @@ dbus:session:org.gnome.Shell %%/ScreenSaver %.setActive true
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "dbus",
+        "DBus RPC command",
         Box::new(move |dbus| {
             Session::declare(dbus)?;
             System::declare(dbus)?;

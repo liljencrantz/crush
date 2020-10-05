@@ -396,11 +396,11 @@ mod tests {
 
     fn scope_with_function() -> Scope {
         let root = Scope::create_root();
-        let chld = root.create_namespace("namespace", Box::new(|env| {
+        let chld = root.create_namespace("namespace", "bla", Box::new(|env| {
             MyCmdSignature::declare(env)?;
             Ok(())
         })).unwrap();
-        let _chld2 = root.create_namespace("other_namespace", Box::new(|env| {
+        let _chld2 = root.create_namespace("other_namespace", "bla", Box::new(|env| {
             AllowedCmdSignature::declare(env)?;
             MultiArgumentCmdSignature::declare(env)?;
             Ok(())
@@ -630,7 +630,7 @@ mod tests {
         let cursor = 7;
 
         let s = Scope::create_root();
-        s.create_namespace("abcd", Box::new(|env| {
+        s.create_namespace("abcd", "bla", Box::new(|env| {
             env.declare("bcde", Value::Empty()).unwrap();
             Ok(())
         })).unwrap();
@@ -646,7 +646,7 @@ mod tests {
         let cursor = 11;
 
         let s = Scope::create_root();
-        s.create_namespace("abcd", Box::new(|env| {
+        s.create_namespace("abcd", "bla", Box::new(|env| {
             env.declare("bcde", Value::Empty()).unwrap();
             Ok(())
         })).unwrap();

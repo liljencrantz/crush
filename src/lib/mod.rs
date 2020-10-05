@@ -81,6 +81,7 @@ fn load_external_namespace(
     let local_state = global_state.clone();
     root.create_namespace(
         name,
+        "",
         Box::new(move |env| {
             let tmp_env: Scope = env.create_temporary_namespace();
             execute::file(

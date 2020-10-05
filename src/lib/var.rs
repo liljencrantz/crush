@@ -74,6 +74,7 @@ pub fn env(context: CommandContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "var",
+        "Variable related commands",
         Box::new(move |ns| {
             ns.declare_command(
                 "let", r#let, false,

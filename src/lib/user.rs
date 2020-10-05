@@ -121,6 +121,7 @@ unsafe fn parse(s: *const i8) -> CrushResult<String> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "user",
+        "User commands",
         Box::new(move |user| {
             Me::declare(user)?;
             Find::declare(user)?;

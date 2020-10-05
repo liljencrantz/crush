@@ -58,6 +58,7 @@ impl ScopeLoader {
     pub fn create_namespace(
         &mut self,
         name: &str,
+        description: impl Into<String>,
         loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>,
     ) -> CrushResult<Scope> {
         let res = Scope {
@@ -66,6 +67,7 @@ impl ScopeLoader {
                 Some(self.scope.clone()),
                 false,
                 Some(name.to_string()),
+                Some(description.into()),
                 loader,
             ))),
         };
@@ -144,6 +146,7 @@ impl ScopeLoader {
                 Some(self.parent.clone()),
                 false,
                 None,
+                None,
             ))),
         }
     }
@@ -182,6 +185,7 @@ pub struct ScopeData {
     pub is_readonly: bool,
 
     pub name: Option<String>,
+    description: Option<String>,
     is_loaded: bool,
     loader: Option<Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>>,
 }
@@ -192,6 +196,7 @@ impl ScopeData {
         calling_scope: Option<Scope>,
         is_loop: bool,
         name: Option<String>,
+        description: Option<String>,
     ) -> ScopeData {
         ScopeData {
             parent_scope,
@@ -202,6 +207,7 @@ impl ScopeData {
             is_stopped: false,
             is_readonly: false,
             name,
+            description,
             is_loaded: true,
             loader: None,
         }
@@ -212,6 +218,7 @@ impl ScopeData {
         calling_scope: Option<Scope>,
         is_loop: bool,
         name: Option<String>,
+        description: Option<String>,
         loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>,
     ) -> ScopeData {
         ScopeData {
@@ -223,6 +230,7 @@ impl ScopeData {
             is_stopped: false,
             is_readonly: false,
             name,
+            description,
             is_loaded: false,
             loader: Some(loader),
         }
@@ -240,6 +248,7 @@ impl Clone for ScopeData {
             is_stopped: self.is_stopped,
             is_readonly: self.is_readonly,
             name: self.name.clone(),
+            description: self.description.clone(),
             is_loaded: true,
             loader: None,
         }
@@ -262,12 +271,14 @@ impl Scope {
                 None,
                 false,
                 Some("global".to_string()),
+                Some("The root of all namespaces. All namespaces directly or indirectly\ninherit from this one.".to_string()),
             ))),
         }
     }
 
     pub fn create(
         name: Option<String>,
+        description: Option<String>,
         is_loop: bool,
         is_stopped: bool,
         is_readonly: bool,
@@ -282,6 +293,7 @@ impl Scope {
                 is_stopped,
                 is_readonly,
                 name,
+                description,
                 is_loaded: true,
                 loader: None,
             })),
@@ -295,6 +307,7 @@ impl Scope {
                 Some(caller.clone()),
                 is_loop,
                 None,
+                None,
             ))),
         }
     }
@@ -302,6 +315,7 @@ impl Scope {
     pub fn create_namespace(
         &self,
         name: &str,
+        description: impl Into<String>,
         loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>,
     ) -> CrushResult<Scope> {
         let res = Scope {
@@ -310,6 +324,7 @@ impl Scope {
                 Some(self.clone()),
                 false,
                 Some(name.to_string()),
+                Some(description.into()),
                 loader,
             ))),
         };
@@ -356,7 +371,7 @@ impl Scope {
         }
     }
 
-    pub fn do_exit(&self) -> CrushResult<()>{
+    pub fn do_exit(&self) -> CrushResult<()> {
         let mut data = self.lock()?;
         if !data.is_readonly {
             data.is_stopped = true;
@@ -721,22 +736,30 @@ impl Help for Scope {
     }
 
     fn short_help(&self) -> String {
-        "A namespace".to_string()
+        let data = self.lock().unwrap();
+        if let Some(description) = &data.description {
+            description.clone()
+        } else {
+            "Anonymous namespace".to_string()
+        }
     }
 
     fn long_help(&self) -> Option<String> {
         let mut lines = Vec::new();
 
         let data = self.lock().unwrap();
-        let mut keys: Vec<_> = data.mapping.iter().collect();
+        let mut keys: Vec<_> = data.mapping
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
         keys.sort_by(|x, y| x.0.cmp(&y.0));
-
+        drop(data);
         long_help_methods(&mut keys, &mut lines);
         Some(lines.join("\n"))
     }
 }
 
-fn long_help_methods(fields: &mut Vec<(&String, &Value)>, lines: &mut Vec<String>) {
+fn long_help_methods(fields: &mut Vec<(String, Value)>, lines: &mut Vec<String>) {
     let mut max_len = 0;
     for (k, _) in fields.iter() {
         max_len = max(max_len, k.len());

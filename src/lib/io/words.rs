@@ -63,6 +63,7 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
 pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
     root.create_namespace(
         "words",
+        "Word splitting I/O",
         Box::new(move |env| {
             From::declare(env)?;
             Ok(())

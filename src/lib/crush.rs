@@ -151,6 +151,7 @@ mod locale {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "crush",
+        "Metadata about this Crush shell instance",
         Box::new(move |crush| {
             crush.declare("pid", Value::Integer(Pid::this().as_raw() as i128))?;
             crush.declare("ppid", Value::Integer(Pid::parent().as_raw() as i128))?;
@@ -170,6 +171,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
             crush.create_namespace(
                 "locale",
+                "Locale data for Crush",
                 Box::new(move |env| {
                     locale::List::declare(env)?;
                     locale::Get::declare(env)?;

@@ -427,6 +427,7 @@ mod host {
 pub fn declare(scope: &Scope) -> CrushResult<()> {
     scope.create_namespace(
         "remote",
+        "Remote code execution",
         Box::new(move |remote| {
             Exec::declare(remote)?;
             Pexec::declare(remote)?;
@@ -434,6 +435,7 @@ pub fn declare(scope: &Scope) -> CrushResult<()> {
 
             remote.create_namespace(
                 "host",
+                "Known remote hosts",
                 Box::new(move |env| {
                     host::List::declare(env)?;
                     host::Remove::declare(env)?;

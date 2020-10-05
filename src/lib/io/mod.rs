@@ -151,6 +151,7 @@ fn readline(context: CommandContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
         "io",
+        "Data serialization I/O",
         Box::new(move |env| {
             bin::declare(env)?;
             csv::declare(env)?;

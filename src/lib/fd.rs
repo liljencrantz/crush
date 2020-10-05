@@ -343,6 +343,7 @@ mod procfs {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "fd",
+        "Filtering open files and sockets",
         Box::new(move |fd| {
             File::declare(fd)?;
             #[cfg(target_os = "linux")]

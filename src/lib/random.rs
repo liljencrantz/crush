@@ -44,6 +44,7 @@ fn integer(context: CommandContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "random",
+        "Random number generation",
         Box::new(move |env| {
             Float::declare(env)?;
             Integer::declare(env)?;

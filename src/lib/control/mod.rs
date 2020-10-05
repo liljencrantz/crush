@@ -204,6 +204,7 @@ fn fg(context: CommandContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
         "control",
+        "Commands for flow control, (loops, etc)",
         Box::new(move |env| {
             let path = List::new(ValueType::File, vec![]);
             to_crush_error(env::var("PATH").map(|v| {

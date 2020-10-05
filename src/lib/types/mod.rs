@@ -162,6 +162,7 @@ fn class_get(mut context: CommandContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
         "types",
+        "Crush built in types",
         Box::new(move |env| {
             let root =
                 Struct::new(vec![

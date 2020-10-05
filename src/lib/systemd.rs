@@ -108,6 +108,7 @@ fn journal(context: CommandContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "systemd",
+        "Systemd commands",
         Box::new(move |systemd| {
             JournalSignature::declare(systemd)?;
             Ok(())

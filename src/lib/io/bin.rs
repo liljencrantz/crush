@@ -47,6 +47,7 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
 pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
     root.create_namespace(
         "bin",
+        "Binary data I/O",
         Box::new(move |env| {
             From::declare(env)?;
             To::declare(env)?;
