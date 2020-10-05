@@ -3,7 +3,7 @@
 ## Commands
 
 The structure of a Crush command is a space separated list.
-The first element of the list is the argument, the remaining
+The first element of the list is the command, the remaining
 elements are the arguments:
 
 ```shell script
