@@ -80,6 +80,7 @@ lazy_static! {
                 Known(ValueType::String),
                 vec![],
             );
+            Join::declare_method(&mut res, &path);
             LPad::declare_method(&mut res, &path);
             RPad::declare_method(&mut res, &path);
             res.declare(
@@ -221,6 +222,36 @@ fn trim(context: CommandContext) -> CrushResult<()> {
     context
         .output
         .send(Value::string(context.this.string()?.trim()))
+}
+
+#[signature(
+join,
+can_block = false,
+short = "Join all arguments by the specified string",
+example = "\", \":join 1 2 3 4 # 1, 2, 3, 4",
+)]
+struct Join {
+    #[unnamed()]
+    #[description("the elements to join.")]
+    elements: Vec<Value>,
+}
+
+fn join(context: CommandContext) -> CrushResult<()> {
+    let cfg: Join = Join::parse(context.arguments, &context.global_state.printer())?;
+    let s = context.this.string()?;
+    let mut res = String::new();
+    let mut first = true;
+
+    for el in cfg.elements {
+        if first {
+            first = false;
+        } else {
+            res.push_str(&s);
+        }
+        res.push_str(&el.to_string());
+    }
+
+    context.output.send(Value::String(res))
 }
 
 #[signature(
