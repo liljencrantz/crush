@@ -20,56 +20,11 @@ lazy_static! {
         {
             let mut res: OrderedMap<String, Command> = OrderedMap::new();
             let path = vec!["global", "types", "string"];
-            res.declare(
-                full("upper"),
-                upper,
-                false,
-                "string:upper",
-                "Returns an identical string but in upper case",
-                None,
-                Known(ValueType::String),
-                vec![],
-            );
-            res.declare(
-                full("lower"),
-                lower,
-                false,
-                "string:lower",
-                "Returns an identical string but in lower case",
-                None,
-                Known(ValueType::String),
-                vec![],
-            );
-            res.declare(
-                full("repeat"),
-                repeat,
-                false,
-                "string:repeat times:integer",
-                "Returns this string repeated times times",
-                None,
-                Known(ValueType::String),
-                vec![],
-            );
-            res.declare(
-                full("split"),
-                split,
-                false,
-                "string:split separator:string",
-                "Splits a string using the specifiec separator",
-                None,
-                Known(ValueType::List(Box::from(ValueType::String))),
-                vec![],
-            );
-            res.declare(
-                full("trim"),
-                trim,
-                false,
-                "string:trim",
-                "Returns a string with all whitespace trimmed from both ends",
-                None,
-                Known(ValueType::String),
-                vec![],
-            );
+            Lower::declare_method(&mut res, &path);
+            Upper::declare_method(&mut res, &path);
+            Repeat::declare_method(&mut res, &path);
+            Split::declare_method(&mut res, &path);
+            Trim::declare_method(&mut res, &path);
             res.declare(
                 full("format"),
                 format::format,
@@ -83,108 +38,25 @@ lazy_static! {
             Join::declare_method(&mut res, &path);
             LPad::declare_method(&mut res, &path);
             RPad::declare_method(&mut res, &path);
-            res.declare(
-                full("ends_with"),
-                ends_with,
-                false,
-                "string:ends_with suffix:string",
-                "True if this string ends with suffix",
-                None,
-                Known(ValueType::Bool),
-                vec![],
-            );
-            res.declare(
-                full("starts_with"),
-                starts_with,
-                false,
-                "string:starts_with prefix:string",
-                "True if this string starts with prefix",
-                None,
-                Known(ValueType::Bool),
-                vec![],
-            );
-            res.declare(full("is_alphanumeric"),
-                is_alphanumeric, false,
-                "string:is_alphanumeric",
-                "True if every character of this string is alphabetic or numeric (assuming radix 10)",
-                None,
-                Known(ValueType::Bool),
-                vec![],
-            );
-            res.declare(
-                full("is_alphabetic"),
-                is_alphabetic,
-                false,
-                "string:is_alphabetic",
-                "True if every character of this string is alphabetic",
-                None,
-                Known(ValueType::Bool),
-                vec![],
-            );
-            res.declare(
-                full("is_ascii"),
-                is_ascii,
-                false,
-                "string:is_ascii",
-                "True if every character of this string is part of the ascii character set",
-                None,
-                Known(ValueType::Bool),
-                vec![],
-            );
-            res.declare(
-                full("is_lowercase"),
-                is_lowercase,
-                false,
-                "string:is_lowercase",
-                "True if every character of this string is lower case",
-                None,
-                Known(ValueType::Bool),
-                vec![],
-            );
-            res.declare(
-                full("is_uppercase"),
-                is_uppercase,
-                false,
-                "string:is_uppercase",
-                "True if every character of this string is upper case",
-                None,
-                Known(ValueType::Bool),
-                vec![],
-            );
-            res.declare(
-                full("is_whitespace"),
-                is_whitespace,
-                false,
-                "string:is_whitespace",
-                "True if every character of this string is a whitespace character",
-                None,
-                Known(ValueType::Bool),
-                vec![],
-            );
-            res.declare(
-                full("is_control"),
-                is_control,
-                false,
-                "string:is_control",
-                "True if every character of this string is a control character",
-                None,
-                Known(ValueType::Bool),
-                vec![],
-            );
-            res.declare(
-                full("len"),
-                len,
-                false,
-                "string:len",
-                "Returns the length (in number of characters) of the string",
-                None,
-                Known(ValueType::Integer),
-                vec![],
-            );
+            StartsWith::declare_method(&mut res, &path);
+            EndsWith::declare_method(&mut res, &path);
+            IsAlphanumeric::declare_method(&mut res, &path);
+            IsAlphabetic::declare_method(&mut res, &path);
+            IsAscii::declare_method(&mut res, &path);
+            IsLowercase::declare_method(&mut res, &path);
+            IsUppercase::declare_method(&mut res, &path);
+            IsWhitespace::declare_method(&mut res, &path);
+            IsControl::declare_method(&mut res, &path);
+            Len::declare_method(&mut res, &path);
             IsDigit::declare_method(&mut res, &path);
             res
         };
 }
+
+#[signature(
+    len, can_block=false, output=Known(ValueType::Integer),
+    short="Returns the length (in number of characters) of the string")]
+struct Len {}
 
 fn len(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
@@ -193,12 +65,22 @@ fn len(context: CommandContext) -> CrushResult<()> {
         .send(Value::Integer(context.this.string()?.len() as i128))
 }
 
+#[signature(
+    upper, can_block=false, output=Known(ValueType::String),
+    short="Returns an identical string but in upper case")]
+struct Upper {}
+
 fn upper(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
         .send(Value::String(context.this.string()?.to_uppercase()))
 }
+
+#[signature(
+    lower, can_block=false, output=Known(ValueType::String),
+    short="Returns an identical string but in lower case")]
+struct Lower {}
 
 fn lower(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
@@ -207,26 +89,41 @@ fn lower(context: CommandContext) -> CrushResult<()> {
         .send(Value::String(context.this.string()?.to_lowercase()))
 }
 
+#[signature(
+split,
+can_block = false,
+output=Known(ValueType::List(Box::from(ValueType::String))),
+short = "Splits a string using the specified separator",
+)]
+struct Split {
+    #[description("the separator to split on.")]
+    separator: String,
+}
+
 fn split(mut context: CommandContext) -> CrushResult<()> {
-    context.arguments.check_len(1)?;
+    let cfg: Split = Split::parse(context.arguments, &context.global_state.printer())?;
     let this = context.this.string()?;
-    let separator = context.arguments.string(0)?;
+
     context.output.send(Value::List(List::new(
         ValueType::String,
-        this.split(&separator).map(|s| Value::string(s)).collect(),
+        this.split(&cfg.separator).map(|s| Value::string(s)).collect(),
     )))
 }
 
+#[signature(
+trim, can_block=false, output=Known(ValueType::String),
+short="Returns a string with all whitespace trimmed from both ends")]
+struct Trim {}
+
 fn trim(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    context
-        .output
-        .send(Value::string(context.this.string()?.trim()))
+    context.output.send(Value::string(context.this.string()?.trim()))
 }
 
 #[signature(
 join,
 can_block = false,
+output=Known(ValueType::String),
 short = "Join all arguments by the specified string",
 example = "\", \":join 1 2 3 4 # 1, 2, 3, 4",
 )]
@@ -257,6 +154,7 @@ fn join(context: CommandContext) -> CrushResult<()> {
 #[signature(
     lpad,
     can_block = false,
+    output=Known(ValueType::String),
     short = "Returns a string truncated or left-padded to be the exact specified length"
 )]
 struct LPad {
@@ -285,6 +183,7 @@ fn lpad(context: CommandContext) -> CrushResult<()> {
 #[signature(
     rpad,
     can_block = false,
+    output=Known(ValueType::String),
     short = "Returns a string truncated or right-padded to be the exact specified length"
 )]
 struct RPad {
@@ -310,28 +209,57 @@ fn rpad(context: CommandContext) -> CrushResult<()> {
     }
 }
 
+#[signature(
+repeat,
+can_block = false,
+output=Known(ValueType::String),
+short = "Returns this string repeated times times"
+)]
+struct Repeat {
+    #[description("the number of times to repeat the string.")]
+    times: usize,
+}
+
 fn repeat(mut context: CommandContext) -> CrushResult<()> {
-    context.arguments.check_len(1)?;
+    let cfg: Repeat = Repeat::parse(context.arguments, &context.global_state.printer())?;
     let s = context.this.string()?;
-    let times = context.arguments.integer(0)? as usize;
-    context.output.send(Value::string(s.repeat(times).as_str()))
+    context.output.send(Value::string(s.repeat(cfg.times).as_str()))
+}
+
+#[signature(
+ends_with, can_block = false,
+output=Known(ValueType::Bool),
+short = "True if this string ends with the specified suffix",
+)]
+struct EndsWith {
+    #[description("suffix to check for")]
+    suffix: String,
 }
 
 fn ends_with(mut context: CommandContext) -> CrushResult<()> {
-    context.arguments.check_len(1)?;
+    let cfg: EndsWith = EndsWith::parse(context.arguments, &context.global_state.printer())?;
     let s = context.this.string()?;
-    let suff = context.arguments.string(0)?;
-    context.output.send(Value::Bool(s.ends_with(&suff)))
+    context.output.send(Value::Bool(s.ends_with(&cfg.suffix)))
+}
+
+#[signature(
+starts_with, can_block = false,
+output=Known(ValueType::Bool),
+short = "True if this string starts with the specified prefix",
+)]
+struct StartsWith {
+    #[description("prefix to check for")]
+    prefix: String,
 }
 
 fn starts_with(mut context: CommandContext) -> CrushResult<()> {
-    context.arguments.check_len(1)?;
+    let cfg: StartsWith = StartsWith::parse(context.arguments, &context.global_state.printer())?;
     let s = context.this.string()?;
-    let pre = context.arguments.string(0)?;
-    context.output.send(Value::Bool(s.starts_with(&pre)))
+    context.output.send(Value::Bool(s.starts_with(&cfg.prefix)))
 }
 
 macro_rules! per_char_method {
+
     ($name:ident, $test:expr) => {
         fn $name(context: CommandContext) -> CrushResult<()> {
             context.arguments.check_len(0)?;
@@ -341,17 +269,61 @@ macro_rules! per_char_method {
     };
 }
 
+#[signature(
+    is_alphanumeric, can_block = false, output=Known(ValueType::Bool),
+    short = "True if every character of this string is alphabetic or numeric (assuming radix 10)",
+)]
+struct IsAlphanumeric {}
+
 per_char_method!(is_alphanumeric, |ch| ch.is_alphanumeric());
+
+#[signature(
+is_alphabetic, can_block = false, output=Known(ValueType::Bool),
+short = "True if every character of this string is alphabetic
+",
+)]
+struct IsAlphabetic {}
 per_char_method!(is_alphabetic, |ch| ch.is_alphabetic());
+
+#[signature(
+is_ascii, can_block = false, output=Known(ValueType::Bool),
+short = "True if every character of this string is part of the ascii character set",
+)]
+struct IsAscii {}
 per_char_method!(is_ascii, |ch| ch.is_ascii());
+
+#[signature(
+is_lowercase, can_block = false, output=Known(ValueType::Bool),
+short = "True if every character of this string is lower case",
+)]
+struct IsLowercase {}
 per_char_method!(is_lowercase, |ch| ch.is_lowercase());
+
+#[signature(
+is_uppercase, can_block = false, output=Known(ValueType::Bool),
+short = "True if every character of this string is upper case",
+)]
+struct IsUppercase {}
 per_char_method!(is_uppercase, |ch| ch.is_uppercase());
+
+#[signature(
+is_whitespace, can_block = false, output=Known(ValueType::Bool),
+short = "True if every character of this string is a whitespace character",
+)]
+struct IsWhitespace {}
 per_char_method!(is_whitespace, |ch| ch.is_whitespace());
+
+#[signature(
+is_control, can_block = false, output=Known(ValueType::Bool),
+short = "True if every character of this string is a control character",
+)]
+struct IsControl {}
 per_char_method!(is_control, |ch| ch.is_control());
 
 #[signature(
     is_digit,
     can_block = false,
+    output=Known(ValueType::Bool),
     short = "True if every character of this string is a digit in the specified radix",
     long = "\"123\":is_digit # true"
 )]
