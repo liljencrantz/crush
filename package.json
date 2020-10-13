@@ -1,0 +1,23 @@
+{
+	"name": "crush",
+	"version": "0.1.0",
+	"description": "Crush is an attempt to make a command line shell that is also a powerful modern programming language.",
+	"main": "index.js",
+	"directories": {
+		"doc": "docs",
+		"test": "tests"
+	},
+	"scripts": {
+		"postinstall": "node build.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/liljencrantz/crush.git"
+	},
+	"author": "liljencrantz",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/liljencrantz/crush/issues"
+	},
+	"homepage": "https://github.com/liljencrantz/crush#readme"
+}
