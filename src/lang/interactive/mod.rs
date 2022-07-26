@@ -1,5 +1,6 @@
 mod rustyline_helper;
 
+use std::fs;
 use rustyline;
 
 use rustyline::error::ReadlineError;
@@ -8,7 +9,7 @@ use crate::util::file::home;
 use std::path::PathBuf;
 use crate::lang::data::scope::Scope;
 use crate::lang::pipe::{ValueSender, empty_channel, pipe, black_hole};
-use crate::lang::errors::{CrushResult, to_crush_error, data_error};
+use crate::lang::errors::{CrushResult, to_crush_error, data_error, CrushError, error};
 use crate::lang::execute;
 
 use crate::lang::global_state::GlobalState;
@@ -142,8 +143,12 @@ pub fn run(
         }
 
         if let Ok(file) = crush_history_file() {
+            ensure_parent_exists(&file);
             if let Err(err) = rl.save_history(&file) {
-                global_state.printer().line(&format!("Error: Failed to save history: {}", err))
+                global_state.printer().line(&format!(
+                    "Error: Failed to save history to {}: {}",
+                    file.as_os_str().to_str().unwrap_or("???"),
+                    err))
             }
         }
     }
@@ -153,4 +158,13 @@ pub fn run(
         }
     }
     Ok(())
+}
+
+fn ensure_parent_exists(file: &PathBuf) -> CrushResult<()>{
+    if let Some(dir) = file.parent() {
+        to_crush_error(fs::create_dir_all(dir))
+    } else
+    {
+        error("Missing parent directory")
+    }
 }
