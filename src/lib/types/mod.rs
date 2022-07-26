@@ -166,7 +166,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         Box::new(move |env| {
             let root =
                 Struct::new(vec![
-                    ("__setattr__", Value::Command(CrushCommand::command(
+                    ("__setattr__", Value::Command(<dyn CrushCommand>::command(
                         class_set, false,
                         vec!["global".to_string(), "types".to_string(), "root".to_string(), "__setattr__".to_string()],
                         "root:__setitem__ name:string value:any",
@@ -175,7 +175,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                         Known(ValueType::Empty),
                         vec![],
                     ))),
-                    ("__getitem__", Value::Command(CrushCommand::command(
+                    ("__getitem__", Value::Command(<dyn CrushCommand>::command(
                         class_get, false,
                         vec!["global".to_string(), "types".to_string(), "root".to_string(), "__getitem__".to_string()],
                         "root:__getitem__ name:string",
@@ -184,7 +184,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                         Unknown,
                         vec![],
                     ))),
-                    ("__setitem__", Value::Command(CrushCommand::command(
+                    ("__setitem__", Value::Command(<dyn CrushCommand>::command(
                         class_set, false,
                         vec!["global".to_string(), "types".to_string(), "root".to_string(), "__setitem__".to_string()],
                         "root:__setitem__ name:string value:any",
@@ -193,7 +193,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                         Unknown,
                         vec![],
                     ))),
-                    ("new", Value::Command(CrushCommand::command(
+                    ("new", Value::Command(<dyn CrushCommand>::command(
                         new, true,
                         vec!["global".to_string(), "types".to_string(), "root".to_string(), "new".to_string()],
                         "root:new @unnamed @@named",

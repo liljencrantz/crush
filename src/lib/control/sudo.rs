@@ -58,6 +58,7 @@ fn sudo(context: CommandContext) -> CrushResult<()> {
     let mut stdout = mandate(child.stdout.take(), "Expected output stream")?;
     let env = context.scope.clone();
     threads.spawn("sudo:stdout", move || {
+        let _ = &context;
         let mut buff = Vec::new();
         to_crush_error(stdout.read_to_end(&mut buff))?;
         if buff.len() == 0 {

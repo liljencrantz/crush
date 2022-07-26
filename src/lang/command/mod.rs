@@ -105,7 +105,7 @@ impl TypeMap for OrderedMap<String, Command> {
     ) {
         self.insert(
             path[path.len() - 1].to_string(),
-            CrushCommand::command(
+            <dyn CrushCommand>::command(
                 call,
                 can_block,
                 path.iter().map(|e| e.to_string()).collect(),
@@ -210,7 +210,7 @@ impl dyn CrushCommand {
             element::Element::BoundCommand(bound_command) => {
                 let this = Value::deserialize(bound_command.this as usize, elements, state)?;
                 let command =
-                    CrushCommand::deserialize(bound_command.command as usize, elements, state)?;
+                    <dyn CrushCommand>::deserialize(bound_command.command as usize, elements, state)?;
                 Ok(command.bind(this))
             }
             element::Element::Closure(_) => Closure::deserialize(id, elements, state),

@@ -125,7 +125,7 @@ pub fn operator(op: TrackedString, l: Box<Node>, r: Box<Node>) -> Box<Node> {
         "=~" => operator_method("match", op.location, r, l),
         "!~" => operator_method("not_match", op.location, r, l),
 
-        _ => panic!(format!("Unknown operator {}", &op.string)),
+        _ => panic!("Unknown operator {}", &op.string),
     }
 }
 
@@ -135,7 +135,7 @@ pub fn unary_operator(op: TrackedString, n: Box<Node>) -> Box<Node> {
         "neg" => unary_operator_method("__neg__", op.location, n),
         "not" => unary_operator_function(&vec!["global", "comp", "__not__"], op.location, n),
 
-        _ => panic!(format!("Unknown operator {}", &op.string)),
+        _ => panic!("Unknown operator {}", &op.string),
     }
 }
 

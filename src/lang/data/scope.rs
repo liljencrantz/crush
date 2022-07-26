@@ -88,7 +88,7 @@ impl ScopeLoader {
     ) -> CrushResult<()> {
         let mut full_name = self.path.clone();
         full_name.push(name.to_string());
-        let command = CrushCommand::command(
+        let command = <dyn CrushCommand>::command(
             call,
             can_block,
             full_name,
@@ -117,7 +117,7 @@ impl ScopeLoader {
     ) -> CrushResult<()> {
         let mut full_name = self.path.clone();
         full_name.push(name.to_string());
-        let command = CrushCommand::condition(
+        let command = <dyn CrushCommand>::condition(
             call,
             full_name,
             signature,

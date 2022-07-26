@@ -84,7 +84,7 @@ impl Serializable<Value> for Value {
 
             element::Element::Command(_)
             | element::Element::BoundCommand(_)
-            | element::Element::Closure(_) => Ok(Value::Command(CrushCommand::deserialize(
+            | element::Element::Closure(_) => Ok(Value::Command(<dyn CrushCommand>::deserialize(
                 id, elements, state,
             )?)),
 

@@ -50,11 +50,11 @@ impl Files {
         if !self.had_entries {
             match input.recv()? {
                 Value::BinaryInputStream(b) => Ok(b),
-                Value::Binary(b) => Ok(BinaryReader::vec(&b)),
+                Value::Binary(b) => Ok(<dyn BinaryReader>::vec(&b)),
                 _ => argument_error_legacy("Expected either a file to read or binary pipe io"),
             }
         } else {
-            BinaryReader::paths(self.files)
+            <dyn BinaryReader>::paths(self.files)
         }
     }
 

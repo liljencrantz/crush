@@ -80,7 +80,7 @@ impl ValueDefinition {
             }
             ValueDefinition::ClosureDefinition(name, p, c, _) => (
                 None,
-                Value::Command(CrushCommand::closure(
+                Value::Command(<dyn CrushCommand>::closure(
                     name.clone(),
                     p.clone(),
                     c.clone(),

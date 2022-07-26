@@ -123,6 +123,7 @@ fn cmd(mut context: CommandContext) -> CrushResult<()> {
                 context.output.send(BinaryInputStream(Box::from(stdout_reader)))?;
 
                 threads.spawn("cmd:stderr", move || {
+                    let _ = &context;
                     let mut buff = Vec::new();
                     to_crush_error(stderr_reader.read_to_end(&mut buff))?;
                     let errors = to_crush_error(String::from_utf8(buff))?;

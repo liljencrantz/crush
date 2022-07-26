@@ -15,7 +15,7 @@ use crate::lang::command::CrushCommand;
 
 lazy_static! {
     static ref CLOSE: Value =
-        Value::Command(CrushCommand::command(
+        Value::Command(<dyn CrushCommand>::command(
             close, false,
             vec!["global".to_string(), "types".to_string(), "pipe".to_string(), "close".to_string()],
             "pipe:close",
