@@ -21,7 +21,6 @@ mod fs;
 mod host;
 mod io;
 mod math;
-#[cfg(target_os = "linux")]
 mod proc;
 mod random;
 mod remote;
@@ -115,8 +114,7 @@ pub fn declare(
     host::declare(root)?;
     io::declare(root)?;
     math::declare(root)?;
-    #[cfg(target_os = "linux")]
-        proc::declare(root)?;
+    proc::declare(root)?;
     random::declare(root)?;
     remote::declare(root)?;
     stream::declare(root)?;

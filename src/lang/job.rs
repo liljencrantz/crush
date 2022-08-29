@@ -4,12 +4,29 @@ use crate::lang::execution_context::{CompileContext, JobContext};
 use crate::lang::pipe::pipe;
 use std::thread::ThreadId;
 use std::fmt::{Display, Formatter};
+use crate::GlobalState;
 use crate::lang::ast::Location;
+use crate::lang::global_state::JobHandle;
 
 #[derive(Clone)]
 pub struct Job {
     commands: Vec<CommandInvocation>,
     location: Location,
+}
+
+#[derive(Clone, Copy)]
+pub struct JobId(usize);
+
+impl From<usize> for JobId {
+    fn from(id: usize) -> Self {
+        JobId(id)
+    }
+}
+
+impl From<JobId> for usize {
+    fn from(id: JobId) -> Self {
+        id.0
+    }
 }
 
 impl Job {
@@ -34,6 +51,7 @@ impl Job {
     }
 
     pub fn invoke(&self, context: JobContext) -> CrushResult<Option<ThreadId>> {
+        let handle = context.global_state.job_begin(self.to_string());
         let mut input = context.input.clone();
         let last_job_idx = self.commands.len() - 1;
         for call_def in &self.commands[..last_job_idx] {
