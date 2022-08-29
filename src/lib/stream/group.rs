@@ -53,14 +53,11 @@ fn aggregate(
                 let (output_sender, output_receiver) = pipe();
                 input_sender.send(Value::TableInputStream(rows))?;
                 drop(input_sender);
-                commands[0].invoke(CommandContext {
-                    input: input_receiver,
-                    output: output_sender,
-                    arguments: vec![],
-                    scope: scope.clone(),
-                    this: None,
-                    global_state: global_state.clone(),
-                })?;
+                commands[0].invoke(
+                    CommandContext::new(&scope, &global_state)
+                        .with_input(input_receiver)
+                        .with_output(output_sender)
+                )?;
                 let mut result = key;
                 result.push(output_receiver.recv()?);
                 destination.send(Row::new(result))?;
@@ -77,14 +74,10 @@ fn aggregate(
                     let local_scope = scope.clone();
                     let local_state = global_state.clone();
                     threads.spawn("group:aggr", move ||
-                        local_command.invoke(CommandContext {
-                            input: input_receiver,
-                            output: output_sender,
-                            arguments: vec![],
-                            scope: local_scope,
-                            this: None,
-                            global_state: local_state,
-                        }))?;
+                        local_command.invoke(
+                            CommandContext::new(&local_scope, &local_state)
+                                .with_input(input_receiver)
+                                .with_output(output_sender)))?;
                     receivers.push(output_receiver);
                 }
 

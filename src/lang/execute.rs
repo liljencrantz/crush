@@ -40,14 +40,7 @@ pub fn pup(
                 },
             )?;
 
-            cmd.invoke(CommandContext {
-                input: empty_channel(),
-                output: snd,
-                arguments: vec![],
-                scope: env,
-                this: None,
-                global_state: global_state.clone(),
-            })?;
+            cmd.invoke(CommandContext::new(&env, global_state));
             global_state.threads().join(global_state.printer());
 
             Ok(())

@@ -54,14 +54,7 @@ pub fn r#where(context: CommandContext) -> CrushResult<()> {
 
     match context.input.recv()?.stream() {
         Some(mut input) => {
-            let base_context = CommandContext {
-                input: empty_channel(),
-                output: black_hole(),
-                arguments: vec![],
-                scope: context.scope.clone(),
-                this: None,
-                global_state: context.global_state.clone(),
-            };
+            let base_context = context.empty();
 
             let output = context.output.initialize(input.types().to_vec())?;
             while let Ok(row) = input.read() {

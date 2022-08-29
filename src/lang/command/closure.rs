@@ -34,7 +34,7 @@ impl CrushCommand for Closure {
         let parent_env = self.env.clone();
         let env = parent_env.create_child(&context.scope, false);
 
-        let mut cc = context.compile_context().with_scope(&env);
+        let mut cc = CompileContext::from(&context).with_scope(&env);
         if let Some(this) = context.this {
             env.redeclare("this", this)?;
         }

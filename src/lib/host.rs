@@ -34,6 +34,17 @@ lazy_static! {
     ];
 }
 
+#[signature(uptime, can_block = false, short = "uptime of this host")]
+struct Uptime {}
+
+fn uptime(context: CommandContext) -> CrushResult<()> {
+Ok(())
+//    context
+//        .output
+//        .send(Value::Duration(Duration::seconds(to_crush_error(psutil::host::uptime()))))
+}
+
+
 #[signature(
 battery,
 can_block = true,
@@ -171,6 +182,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Battery::declare(host)?;
             Mem::declare(host)?;
             Name::declare(host)?;
+            Uptime::declare(host)?;
             host.create_namespace(
                 "os",
                 "Metadata about the operating system this host is running",

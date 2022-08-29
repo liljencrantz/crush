@@ -55,14 +55,7 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
                                 Argument::named(cell_type.name.as_ref(), cell.clone(), config.location)
                             })
                             .collect();
-                        closure.invoke(CommandContext {
-                            input: empty_channel(),
-                            output: sender,
-                            arguments,
-                            scope: context.scope.clone(),
-                            this: None,
-                            global_state: context.global_state.clone(),
-                        })?;
+                        closure.invoke(context.empty().with_output(sender))?;
                         receiver.recv()?
                     }
                     Source::Argument(idx) => row.cells()[*idx].clone(),
@@ -105,14 +98,7 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
                         .map(|(cell, cell_type)| Argument::named(&cell_type.name, cell.clone(), config.location))
                         .collect();
                     let (sender, receiver) = pipe();
-                    closure.invoke(CommandContext {
-                        input: empty_channel(),
-                        output: sender,
-                        arguments,
-                        scope: context.scope.clone(),
-                        this: None,
-                        global_state: context.global_state.clone(),
-                    })?;
+                    closure.invoke(context.empty().with_output(sender))?;
                     receiver.recv()?
                 }
                 Source::Argument(idx) => row.cells()[*idx].clone(),
@@ -176,7 +162,7 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
                             _ => {
                                 return argument_error_legacy(
                                     format!("Unknown field {}", name[0]).as_str(),
-                                )
+                                );
                             }
                         }
                     }

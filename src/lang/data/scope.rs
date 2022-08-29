@@ -11,29 +11,29 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::fmt::{Display, Formatter};
 
 /**
-  This is where we store variables, including functions.
+This is where we store variables, including functions.
 
-  The Scope type is both used to implement namespaces and as the function stack.
+The Scope type is both used to implement namespaces and as the function stack.
 
-  The data is protected by a mutex, in order to make sure that all threads can read and write
-  concurrently.
+The data is protected by a mutex, in order to make sure that all threads can read and write
+concurrently.
 
-  The data is protected by an Arc, in order to make sure that it gets deallocated and can be shared
-  across threads.
+The data is protected by an Arc, in order to make sure that it gets deallocated and can be shared
+across threads.
 
-  In order to ensure that there are no deadlocks, a given thread will only ever lock one scope at a
-  time. This forces us to manually drop some variables making some of the code in this file look a
-  little wonky and cumbersome.
-*/
+In order to ensure that there are no deadlocks, a given thread will only ever lock one scope at a
+time. This forces us to manually drop some variables making some of the code in this file look a
+little wonky and cumbersome.
+ */
 #[derive(Clone)]
 pub struct Scope {
     data: Arc<Mutex<ScopeData>>,
 }
 
 /**
-    The ScopeLoader type allows us to lazy-load namespaces.
-    Without it, every single library in Crush would be loaded on startup.
-*/
+The ScopeLoader type allows us to lazy-load namespaces.
+Without it, every single library in Crush would be loaded on startup.
+ */
 pub struct ScopeLoader {
     mapping: OrderedMap<String, Value>,
     path: Vec<String>,
@@ -51,10 +51,10 @@ impl ScopeLoader {
     }
 
     /**
-        Create a namespace. Namespaces are lazily loaded, so on creating, only a stub is created,
-        and the first time a namespace is used, the loader function will be called, and that will
-        load the namespace.
-    */
+    Create a namespace. Namespaces are lazily loaded, so on creating, only a stub is created,
+    and the first time a namespace is used, the loader function will be called, and that will
+    load the namespace.
+     */
     pub fn create_namespace(
         &mut self,
         name: &str,
@@ -154,20 +154,20 @@ impl ScopeLoader {
 
 pub struct ScopeData {
     /** This is the parent scope used to perform variable name resolution. If a variable lookup
-    fails in the current scope, it proceeds to this scope. This is usually the scope in which this
-    scope was *created*.
+       fails in the current scope, it proceeds to this scope. This is usually the scope in which this
+       scope was *created*.
 
-    Not that when scopes are used as namespaces, they do not use this scope.
-    */
+       Not that when scopes are used as namespaces, they do not use this scope.
+     */
     pub parent_scope: Option<Scope>,
 
     /** This is the scope in which the current scope was called. Since a closure can be called
-    from inside any scope, it need not be the same as the parent scope. This scope is the one used
-    for break/continue loop control, and it is also the scope that builds up the namespace hierarchy. */
+       from inside any scope, it need not be the same as the parent scope. This scope is the one used
+       for break/continue loop control, and it is also the scope that builds up the namespace hierarchy. */
     pub calling_scope: Option<Scope>,
 
     /** This is a list of scopes that are imported into the current scope. Anything directly inside
-    one of these scopes is also considered part of this scope. */
+       one of these scopes is also considered part of this scope. */
     pub uses: Vec<Scope>,
 
     /** The actual data of this scope. */
@@ -177,11 +177,11 @@ pub struct ScopeData {
     pub is_loop: bool,
 
     /** True if this scope should stop execution, i.e. if the continue or break commands have been
-    called.  */
+       called.  */
     pub is_stopped: bool,
 
     /** True if this scope can not be further modified. Note that mutable variables in it, e.g.
-    lists can still be modified. */
+       lists can still be modified. */
     pub is_readonly: bool,
 
     pub name: Option<String>,
@@ -440,8 +440,8 @@ impl Scope {
     }
 
     /**
-        Returns the "root" object, which is the object that classes inherit from.
-    */
+    Returns the "root" object, which is the object that classes inherit from.
+     */
     pub fn root_object(&self) -> Struct {
         match self.get_absolute_path(vec![
             "global".to_string(),
@@ -462,8 +462,8 @@ impl Scope {
     }
 
     /**
-        Resolve the given path from the root of the namespace
-    */
+    Resolve the given path from the root of the namespace
+     */
     pub fn get_absolute_path(&self, absolute_path: Vec<String>) -> CrushResult<Value> {
         let data = self.lock()?;
         match data.calling_scope.clone() {
@@ -580,7 +580,10 @@ impl Scope {
         } else if data.is_readonly {
             error(format!("Tried to modify {}, a member of a read-only scope", name))
         } else if data.mapping[name].value_type() != value.value_type() {
-            error(format!("Type mismatch when reassigning variable {{{}}}. Use `var:unset \"{}\"` to remove old variable.", name, name).as_str())
+            error(format!(
+                "Type mismatch when reassigning variable {}. Use `var:unset \"{}\"` to remove the old variable if you want to reassign it.",
+                name,
+                name).as_str())
         } else {
             data.mapping.insert(name.to_string(), value);
             Ok(())

@@ -34,6 +34,7 @@ impl Job {
     }
 
     pub fn invoke(&self, context: JobContext) -> CrushResult<Option<ThreadId>> {
+        let context = context.running(self.to_string());
         let mut input = context.input.clone();
         let last_job_idx = self.commands.len() - 1;
         for call_def in &self.commands[..last_job_idx] {
@@ -41,12 +42,12 @@ impl Job {
             call_def.invoke(context.with_io(input, output))?;
             input = next_input;
 
-            if context.env.is_stopped() {
+            if context.scope.is_stopped() {
                 return Ok(None);
             }
         }
 
-        if context.env.is_stopped() {
+        if context.scope.is_stopped() {
             return Ok(None);
         }
 

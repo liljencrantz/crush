@@ -1,4 +1,4 @@
-    /**
+/**
 This file implements the crush equivalent of a pipe from a regular shell.
 
 Unlike normal pipes, these pipes can send *any* crush value. The most important
@@ -14,24 +14,6 @@ use lazy_static::lazy_static;
 
 pub type RecvTimeoutError = crossbeam::channel::RecvTimeoutError;
 
-lazy_static! {
-    static ref BLACK_HOLE: ValueSender = {
-        let (mut o, _) = pipe();
-        o.is_pipeline = false;
-        o
-    };
-}
-
-pub fn black_hole() -> ValueSender {
-    (*BLACK_HOLE).clone()
-}
-
-pub fn empty_channel() -> ValueReceiver {
-    let (o, mut i) = pipe();
-    let _ = o.send(Value::Empty());
-    i.is_pipeline = false;
-    i
-}
 
 #[derive(Clone)]
 pub struct ValueSender {
@@ -76,6 +58,30 @@ impl ValueReceiver {
     pub fn is_pipeline(&self) -> bool {
         self.is_pipeline
     }
+}
+
+lazy_static! {
+    static ref BLACK_HOLE: ValueSender = {
+        let (mut o, _) = pipe();
+        o.is_pipeline = false;
+        o
+    };
+}
+/**
+A Sender that will drop any data sent to it at once.
+ */
+pub fn black_hole() -> ValueSender {
+    (*BLACK_HOLE).clone()
+}
+
+/**
+A receiver that when read will return a single instance of Value::Empty
+ */
+pub fn empty_channel() -> ValueReceiver {
+    let (o, mut i) = pipe();
+    let _ = o.send(Value::Empty());
+    i.is_pipeline = false;
+    i
 }
 
 #[derive(Clone)]
@@ -146,7 +152,7 @@ impl InputStream {
                                 c.value_type(),
                                 ct.cell_type
                             )
-                            .as_str(),
+                                .as_str(),
                         );
                     }
                 }
@@ -157,27 +163,14 @@ impl InputStream {
     }
 }
 
+/**
+A Sender/Receiver pair that is bounded to only one Value on the wire before blocking.
+ */
 pub fn pipe() -> (ValueSender, ValueReceiver) {
     let (send, recv) = bounded(1);
     (
         ValueSender { sender: send, is_pipeline: true },
         ValueReceiver { receiver: recv, is_pipeline: true },
-    )
-}
-
-pub fn unbounded_pipe() -> (ValueSender, ValueReceiver) {
-    let (send, recv) = unbounded();
-    (
-        ValueSender { sender: send, is_pipeline: true },
-        ValueReceiver { receiver: recv, is_pipeline: true },
-    )
-}
-
-pub fn pretty_printer_pipe() -> (ValueSender, ValueReceiver) {
-    let (send, recv) = unbounded();
-    (
-        ValueSender { sender: send, is_pipeline: false },
-        ValueReceiver { receiver: recv, is_pipeline: false },
     )
 }
 

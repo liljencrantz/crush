@@ -9,7 +9,7 @@ use crate::util::file::home;
 use std::path::PathBuf;
 use crate::lang::data::scope::Scope;
 use crate::lang::pipe::{ValueSender, empty_channel, pipe, black_hole};
-use crate::lang::errors::{CrushResult, to_crush_error, data_error, CrushError, error};
+use crate::lang::errors::{CrushResult, to_crush_error, data_error, error};
 use crate::lang::execute;
 
 use crate::lang::global_state::GlobalState;

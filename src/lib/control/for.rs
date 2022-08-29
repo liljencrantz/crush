@@ -1,7 +1,6 @@
 use crate::lang::argument::Argument;
 use crate::lang::errors::{mandate, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, CommandContext};
-use crate::lang::pipe::{black_hole, empty_channel};
 use crate::lang::value::Value;
 use crate::lang::data::r#struct::Struct;
 
@@ -39,14 +38,7 @@ pub fn r#for(mut context: CommandContext) -> CrushResult<()> {
                 }
             }
         };
-        body.invoke(CommandContext {
-            input: empty_channel(),
-            output: black_hole(),
-            arguments,
-            scope: env.clone(),
-            this: None,
-            global_state: context.global_state.clone(),
-        })?;
+        body.invoke(context.empty())?;
         if env.is_stopped() {
             break;
         }

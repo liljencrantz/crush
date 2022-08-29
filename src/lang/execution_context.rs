@@ -1,20 +1,23 @@
 use crate::lang::argument::Argument;
 use crate::lang::command::Command;
 use crate::lang::data::dict::Dict;
-use crate::lang::errors::{argument_error_legacy, error, CrushResult};
 use crate::lang::data::list::List;
-use crate::lang::printer::Printer;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::data::scope::Scope;
-use crate::lang::pipe::{InputStream, ValueReceiver, ValueSender, OutputStream};
 use crate::lang::data::table::Table;
+use crate::lang::errors::{argument_error_legacy, error, CrushResult};
+use crate::lang::global_state::{GlobalState, JobHandle};
+use crate::lang::pipe::{
+    black_hole, empty_channel, InputStream, OutputStream, ValueReceiver, ValueSender,
+};
+use crate::lang::printer::Printer;
 use crate::lang::value::{Value, ValueType};
 use crate::util::glob::Glob;
 use crate::util::replace::Replace;
 use chrono::{DateTime, Duration, Local};
 use regex::Regex;
+use std::mem::swap;
 use std::path::PathBuf;
-use crate::lang::global_state::GlobalState;
 
 pub trait ArgumentVector {
     fn check_len(&self, len: usize) -> CrushResult<()>;
@@ -50,10 +53,7 @@ macro_rules! argument_getter {
             if idx < self.len() {
                 let l = self[idx].location;
                 match self
-                    .replace(idx, Argument::unnamed(
-                        Value::Bool(false),
-                        l,
-                    ))
+                    .replace(idx, Argument::unnamed(Value::Bool(false), l))
                     .value
                 {
                     Value::$value_type(s) => Ok(s),
@@ -89,7 +89,9 @@ impl ArgumentVector for Vec<Argument> {
         if self.len() == len {
             Ok(())
         } else {
-            argument_error_legacy(format!("Expected {} arguments, got {}", len, self.len()).as_str())
+            argument_error_legacy(
+                format!("Expected {} arguments, got {}", len, self.len()).as_str(),
+            )
         }
     }
 
@@ -101,7 +103,7 @@ impl ArgumentVector for Vec<Argument> {
                     min_len,
                     self.len()
                 )
-                    .as_str(),
+                .as_str(),
             )
         } else if self.len() > max_len {
             argument_error_legacy(
@@ -122,7 +124,7 @@ impl ArgumentVector for Vec<Argument> {
                     min_len,
                     self.len()
                 )
-                    .as_str(),
+                .as_str(),
             )
         }
     }
@@ -165,27 +167,21 @@ impl ArgumentVector for Vec<Argument> {
     optional_argument_getter!(optional_value, Value, value);
 }
 
+/**
+The data needed to be passed around while parsing and compiling code.
+*/
 pub struct CompileContext {
     pub env: Scope,
     pub global_state: GlobalState,
 }
 
 impl CompileContext {
-    pub fn new(
-        env: Scope,
-        global_state: GlobalState,
-    ) -> CompileContext {
-        CompileContext {
-            env,
-            global_state,
-        }
+    pub fn new(env: Scope, global_state: GlobalState) -> CompileContext {
+        CompileContext { env, global_state }
     }
 
     pub fn job_context(&self, input: ValueReceiver, output: ValueSender) -> JobContext {
-        JobContext::new(
-            input, output, self.env.clone(),
-            self.global_state.clone(),
-        )
+        JobContext::new(input, output, self.env.clone(), self.global_state.clone())
     }
 
     pub fn with_scope(&self, env: &Scope) -> CompileContext {
@@ -196,12 +192,28 @@ impl CompileContext {
     }
 }
 
+impl From<&JobContext> for CompileContext {
+    fn from(c: &JobContext) -> Self {
+        CompileContext::new(c.scope.clone(), c.global_state.clone())
+    }
+}
+
+impl From<&CommandContext> for CompileContext {
+    fn from(c: &CommandContext) -> Self {
+        CompileContext::new(c.scope.clone(), c.global_state.clone())
+    }
+}
+
+/**
+The data needed to be passed around while executing a job.
+ */
 #[derive(Clone)]
 pub struct JobContext {
     pub input: ValueReceiver,
     pub output: ValueSender,
-    pub env: Scope,
+    pub scope: Scope,
     pub global_state: GlobalState,
+    pub handle: Option<JobHandle>,
 }
 
 impl JobContext {
@@ -214,8 +226,19 @@ impl JobContext {
         JobContext {
             input,
             output,
-            env,
+            scope: env,
             global_state,
+            handle: None,
+        }
+    }
+
+    pub fn running(&self, desc: String) -> JobContext {
+        JobContext {
+            input: self.input.clone(),
+            output: self.output.clone(),
+            scope: self.scope.clone(),
+            global_state: self.global_state.clone(),
+            handle: Some(self.global_state.job_begin(desc)),
         }
     }
 
@@ -223,34 +246,30 @@ impl JobContext {
         JobContext {
             input,
             output,
-            env: self.env.clone(),
+            scope: self.scope.clone(),
             global_state: self.global_state.clone(),
+            handle: self.handle.clone(),
         }
     }
 
-    pub fn compile_context(&self) -> CompileContext {
-        CompileContext::new(
-            self.env.clone(),
-            self.global_state.clone(),
-        )
-    }
-
-    pub fn command_context(
-        &self,
-        arguments: Vec<Argument>,
-        this: Option<Value>,
-    ) -> CommandContext {
+    pub fn command_context(&self, arguments: Vec<Argument>, this: Option<Value>) -> CommandContext {
         CommandContext {
             arguments,
             this,
             input: self.input.clone(),
             output: self.output.clone(),
-            scope: self.env.clone(),
+            scope: self.scope.clone(),
             global_state: self.global_state.clone(),
+            handle: self.handle.clone(),
         }
     }
 }
 
+
+
+/**
+The data needed to be passed into a command when executing it.
+ */
 #[derive(Clone)]
 pub struct CommandContext {
     pub input: ValueReceiver,
@@ -259,22 +278,52 @@ pub struct CommandContext {
     pub scope: Scope,
     pub this: Option<Value>,
     pub global_state: GlobalState,
+    handle: Option<JobHandle>,
 }
 
 impl CommandContext {
     /**
-    Return a compile context with the environemnt from this execution context..
-    */
-    pub fn compile_context(&self) -> CompileContext {
-        CompileContext::new(
-            self.scope.clone(),
-            self.global_state.clone(),
-        )
+    Return a new Command context with the same scope and state, but empty I/O and arguments.
+     */
+    pub fn new(scope: &Scope, state: &GlobalState) -> CommandContext {
+        CommandContext {
+            input: empty_channel(),
+            output: black_hole(),
+            arguments: Vec::new(),
+            scope: scope.clone(),
+            this: None,
+            global_state: state.clone(),
+            handle: None,
+        }
     }
 
     /**
-    Return a new Command context with different arguments.
-    */
+    Clear the argument vector and return the original.
+     */
+    pub fn remove_arguments(&mut self) -> Vec<Argument> {
+        let mut tmp = Vec::new(); // This does not cause a memory allocation
+        swap(&mut self.arguments, &mut tmp);
+        tmp
+    }
+
+    /**
+    Return a new Command context with the same scope and state, but otherwise empty.
+     */
+    pub fn empty(&self) -> CommandContext {
+        CommandContext {
+            input: empty_channel(),
+            output: black_hole(),
+            arguments: Vec::new(),
+            scope: self.scope.clone(),
+            this: None,
+            global_state: self.global_state.clone(),
+            handle: self.handle.clone(),
+        }
+    }
+
+    /**
+    Return a new Command context that is identical to this one but with a different argument vector.
+     */
     pub fn with_args(self, arguments: Vec<Argument>, this: Option<Value>) -> CommandContext {
         CommandContext {
             input: self.input,
@@ -283,9 +332,13 @@ impl CommandContext {
             arguments,
             this,
             global_state: self.global_state,
+            handle: self.handle.clone(),
         }
     }
 
+    /**
+    Return a new Command context that is identical to this one but with a different output sender.
+     */
     pub fn with_output(self, sender: ValueSender) -> CommandContext {
         CommandContext {
             input: self.input,
@@ -294,6 +347,22 @@ impl CommandContext {
             arguments: self.arguments,
             this: self.this,
             global_state: self.global_state,
+            handle: self.handle.clone(),
+        }
+    }
+
+    /**
+    Return a new Command context that is identical to this one but with a different input receiver.
+     */
+    pub fn with_input(self, input: ValueReceiver) -> CommandContext {
+        CommandContext {
+            input: input,
+            output: self.output,
+            scope: self.scope,
+            arguments: self.arguments,
+            this: self.this,
+            global_state: self.global_state,
+            handle: self.handle.clone(),
         }
     }
 }
@@ -355,8 +424,18 @@ impl This for Option<Value> {
     this_method!(duration, Duration, Duration, "duration");
     this_method!(time, DateTime<Local>, Time, "time");
     this_method!(scope, Scope, Scope, "scope");
-    this_method!(table_input_stream, InputStream, TableInputStream, "table_input_stream");
-    this_method!(table_output_stream, OutputStream, TableOutputStream, "table_output_stream");
+    this_method!(
+        table_input_stream,
+        InputStream,
+        TableInputStream,
+        "table_input_stream"
+    );
+    this_method!(
+        table_output_stream,
+        OutputStream,
+        TableOutputStream,
+        "table_output_stream"
+    );
 
     fn re(mut self) -> CrushResult<(String, Regex)> {
         match self.take() {

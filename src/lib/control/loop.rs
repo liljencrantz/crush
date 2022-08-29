@@ -1,7 +1,6 @@
 use crate::lang::command::Command;
 use crate::lang::errors::CrushResult;
 use crate::lang::execution_context::CommandContext;
-use crate::lang::pipe::{black_hole, empty_channel};
 use signature::signature;
 
 #[signature(
@@ -20,14 +19,7 @@ fn r#loop(context: CommandContext) -> CrushResult<()> {
     context.output.initialize(vec![])?;
     loop {
         let env = context.scope.create_child(&context.scope, true);
-        cfg.body.invoke(CommandContext {
-            input: empty_channel(),
-            output: black_hole(),
-            arguments: Vec::new(),
-            scope: env.clone(),
-            this: None,
-            global_state: context.global_state.clone(),
-        })?;
+        cfg.body.invoke(context.empty())?;
         if env.is_stopped() {
             break;
         }

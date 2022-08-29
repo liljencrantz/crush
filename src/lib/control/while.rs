@@ -1,9 +1,9 @@
 use crate::lang::command::Command;
 use crate::lang::errors::{data_error, CrushResult};
 use crate::lang::execution_context::CommandContext;
-use crate::lang::pipe::{black_hole, pipe, empty_channel};
 use crate::lang::value::Value;
 use signature::signature;
+use crate::lang::pipe::pipe;
 
 #[signature(
     r#while,
@@ -19,22 +19,15 @@ pub struct While {
     body: Option<Command>,
 }
 
-fn r#while(context: CommandContext) -> CrushResult<()> {
+fn r#while(mut context: CommandContext) -> CrushResult<()> {
     context.output.initialize(vec![])?;
-    let cfg: While = While::parse(context.arguments, &context.global_state.printer())?;
+    let cfg: While = While::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     loop {
         let (sender, receiver) = pipe();
 
         let cond_env = context.scope.create_child(&context.scope, true);
-        cfg.condition.invoke(CommandContext {
-            input: empty_channel(),
-            output: sender,
-            arguments: Vec::new(),
-            scope: cond_env.clone(),
-            this: None,
-            global_state: context.global_state.clone(),
-        })?;
+        cfg.condition.invoke(context.empty().with_output(sender))?;
         if cond_env.is_stopped() {
             break;
         }
@@ -43,14 +36,7 @@ fn r#while(context: CommandContext) -> CrushResult<()> {
             Value::Bool(true) => match &cfg.body {
                 Some(body) => {
                     let body_env = context.scope.create_child(&context.scope, true);
-                    body.invoke(CommandContext {
-                        input: empty_channel(),
-                        output: black_hole(),
-                        arguments: Vec::new(),
-                        scope: body_env.clone(),
-                        this: None,
-                        global_state: context.global_state.clone(),
-                    })?;
+                    body.invoke(context.empty())?;
                     if body_env.is_stopped() {
                         break;
                     }

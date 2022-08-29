@@ -1,12 +1,12 @@
 use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::data::scope::Scope;
-use crate::lang::pipe::{pipe, empty_channel};
+use crate::lang::pipe::pipe;
 use crate::lang::value::Value;
 
 pub fn and(mut context: CommandContext) -> CrushResult<()> {
     let mut res = true;
-    for arg in context.arguments.drain(..) {
+    for arg in context.remove_arguments().drain(..) {
         match arg.value {
             Value::Bool(b) => {
                 if !b {
@@ -16,14 +16,7 @@ pub fn and(mut context: CommandContext) -> CrushResult<()> {
             }
             Value::Command(c) => {
                 let (sender, receiver) = pipe();
-                let cc = CommandContext {
-                    input: empty_channel(),
-                    output: sender,
-                    arguments: vec![],
-                    scope: context.scope.clone(),
-                    this: None,
-                    global_state: context.global_state.clone(),
-                };
+                let cc = context.empty().with_output(sender);
                 c.invoke(cc)?;
                 match receiver.recv()? {
                     Value::Bool(b) => {
@@ -43,7 +36,7 @@ pub fn and(mut context: CommandContext) -> CrushResult<()> {
 
 pub fn or(mut context: CommandContext) -> CrushResult<()> {
     let mut res = false;
-    for arg in context.arguments.drain(..) {
+    for arg in context.remove_arguments().drain(..) {
         match arg.value {
             Value::Bool(b) => {
                 if b {
@@ -54,14 +47,7 @@ pub fn or(mut context: CommandContext) -> CrushResult<()> {
 
             Value::Command(c) => {
                 let (sender, receiver) = pipe();
-                let cc = CommandContext {
-                    input: empty_channel(),
-                    output: sender,
-                    arguments: vec![],
-                    scope: context.scope.clone(),
-                    this: None,
-                    global_state: context.global_state.clone(),
-                };
+                let cc = context.empty().with_output(sender);
                 c.invoke(cc)?;
                 match receiver.recv()? {
                     Value::Bool(b) => {

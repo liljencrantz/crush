@@ -102,7 +102,7 @@ impl CommandInvocation {
         mut this: Option<Value>,
         job_context: JobContext,
     ) -> CrushResult<CommandContext> {
-        let (arguments, arg_this) = local_arguments.compile(&mut job_context.compile_context())?;
+        let (arguments, arg_this) = local_arguments.compile(&mut CompileContext::from(&job_context))?;
 
         if arg_this.is_some() {
             this = arg_this;
@@ -124,7 +124,7 @@ impl CommandInvocation {
     pub fn invoke(&self, context: JobContext) -> CrushResult<Option<ThreadId>> {
         match self
             .command
-            .compile_internal(&mut context.compile_context(), false)
+            .compile_internal(&mut CompileContext::from(&context), false)
         {
             Ok((this, value)) => invoke_value(this, value, self.arguments.clone(), context, self.command.location()),
             Err(err) => {
@@ -136,7 +136,7 @@ impl CommandInvocation {
                     Ok(Some(t.spawn(
                         &self.command.to_string(),
                         move || {
-                            match cmd.clone().compile_unbound(&mut context.compile_context()) {
+                            match cmd.clone().compile_unbound(&mut CompileContext::from(&context)) {
                                 Ok((this, value)) => context.global_state.printer().handle_error(invoke_value(
                                     this,
                                     value,
@@ -177,7 +177,7 @@ fn invoke_value(
                 if meta.is_ok() && meta.unwrap().is_dir() {
                     invoke_command(
                         context
-                            .env
+                            .scope
                             .global_static_cmd(vec!["global", "fs", "cd"])?,
                         None,
                         vec![ArgumentDefinition::unnamed(ValueDefinition::Value(
@@ -188,7 +188,7 @@ fn invoke_value(
                     )
                 } else {
                     invoke_command(
-                        context.env.global_static_cmd(vec!["global", "io", "val"])?,
+                        context.scope.global_static_cmd(vec!["global", "io", "val"])?,
                         None,
                         vec![ArgumentDefinition::unnamed(ValueDefinition::Value(
                             Value::File(f),
@@ -209,7 +209,7 @@ fn invoke_value(
         }
         Value::Type(t) => match t.fields().get("__call__") {
             None => invoke_command(
-                context.env.global_static_cmd(vec!["global", "io", "val"])?,
+                context.scope.global_static_cmd(vec!["global", "io", "val"])?,
                 None,
                 vec![ArgumentDefinition::unnamed(ValueDefinition::Value(
                     Value::Type(t),
@@ -238,7 +238,7 @@ fn invoke_value(
             _ => {
                 if local_arguments.len() == 0 {
                     invoke_command(
-                        context.env.global_static_cmd(vec!["global", "io", "val"])?,
+                        context.scope.global_static_cmd(vec!["global", "io", "val"])?,
                         None,
                         vec![ArgumentDefinition::unnamed(ValueDefinition::Value(
                             Value::Struct(s),
@@ -260,7 +260,7 @@ fn invoke_value(
         _ => {
             if local_arguments.len() == 0 {
                 invoke_command(
-                    context.env.global_static_cmd(vec!["global", "io", "val"])?,
+                    context.scope.global_static_cmd(vec!["global", "io", "val"])?,
                     None,
                     vec![ArgumentDefinition::unnamed(ValueDefinition::Value(value, location))],
                     context,
@@ -278,8 +278,8 @@ fn invoke_command(
     local_arguments: Vec<ArgumentDefinition>,
     context: JobContext,
 ) -> CrushResult<Option<ThreadId>> {
-    if !action.can_block(&local_arguments, &mut context.compile_context())
-        && !arg_can_block(&local_arguments, &mut context.compile_context())
+    if !action.can_block(&local_arguments, &mut CompileContext::from(&context))
+        && !arg_can_block(&local_arguments, &mut CompileContext::from(&context))
     {
         let new_context =
             CommandInvocation::execution_context(local_arguments, this, context.clone())?;
@@ -313,7 +313,7 @@ fn try_external_command(
         _ => return error("Not a command"),
     };
 
-    match resolve_external_command(&cmd.string, &context.env)? {
+    match resolve_external_command(&cmd.string, &context.scope)? {
         None => error(format!("Unknown command name {}", cmd).as_str()),
         Some(path) => {
             arguments.insert(
@@ -334,7 +334,7 @@ fn try_external_command(
                 command: ValueDefinition::Value(
                     Value::Command(
                         context
-                            .env
+                            .scope
                             .global_static_cmd(vec!["global", "control", "cmd"])?,
                     ),
                     def_location,
