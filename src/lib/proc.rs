@@ -27,6 +27,9 @@ mod macos {
         ColumnType::new("pid", ValueType::Integer),
         ColumnType::new("ppid", ValueType::Integer),
         ColumnType::new("user", ValueType::String),
+        ColumnType::new("rss", ValueType::Integer),
+        ColumnType::new("vms", ValueType::Integer),
+        ColumnType::new("cpu", ValueType::Duration),
         ColumnType::new("name", ValueType::String),
     ];
 }
@@ -62,7 +65,6 @@ mod macos {
     long = "ps accepts no arguments.")]
     pub struct Ps {}
 
-    //use libc::{c_int, c_void, size_t};
     use libproc::libproc::bsd_info::BSDInfo;
     use libproc::libproc::file_info::{pidfdinfo, ListFDs, ProcFDType};
     use libproc::libproc::net_info::{InSockInfo, SocketFDInfo, SocketInfoKind, TcpSockInfo};
@@ -72,6 +74,7 @@ mod macos {
     use libproc::libproc::thread_info::ThreadInfo;
     use std::path::PathBuf;
     use std::time::Instant;
+    use libc::mach_timebase_info;
 
     fn clone_task_all_info(src: &TaskAllInfo) -> TaskAllInfo {
         let pbsd = BSDInfo {
@@ -127,6 +130,11 @@ mod macos {
 
         let output = context.output.initialize(PS_OUTPUT_TYPE.clone())?;
         let users = create_user_map()?;
+
+        let mut info: mach_timebase_info = mach_timebase_info{numer: 0, denom: 0};
+        unsafe {
+            mach_timebase_info(std::ptr::addr_of_mut!(info));
+        }
 
         if let Ok(procs) = listpids(ProcType::ProcAllPIDS) {
             for p in procs {
@@ -201,14 +209,14 @@ mod macos {
             output.send(Row::new(vec![
                 Value::Integer(pid as i128),
                 Value::Integer(ppid as i128),
-//            Value::string(name),
                 users.get(&nix::unistd::Uid::from_raw(curr_task.pbsd.pbi_uid)).map(|s| Value::string(s)).unwrap_or_else(|| Value::string("?")),
-                //Value::Duration(Duration::microseconds(
-                //    proc.cpu_times()?.busy().as_micros() as i64
-                //)),
-                //Value::Integer(proc.memory_info()?.rss() as i128),
-                //Value::Integer(proc.memory_info()?.vms() as i128),
-                Value::string(name),
+                Value::Integer(i128::from(curr_task.ptinfo.pti_resident_size)),
+                Value::Integer(i128::from(curr_task.ptinfo.pti_virtual_size)),
+                Value::Duration(Duration::nanoseconds(
+                    i64::try_from(curr_task.ptinfo.pti_total_user + curr_task.ptinfo.pti_total_system)? *
+                        i64::try_from(info.numer)? /
+                        i64::try_from(info.denom)?)),
+                Value::String(name)
             ]));
         }
 
