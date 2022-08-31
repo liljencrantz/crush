@@ -39,7 +39,7 @@ impl Job {
         let last_job_idx = self.commands.len() - 1;
         for call_def in &self.commands[..last_job_idx] {
             let (output, next_input) = pipe();
-            call_def.invoke(context.with_io(input, output))?;
+            call_def.eval(context.with_io(input, output))?;
             input = next_input;
 
             if context.scope.is_stopped() {
@@ -52,15 +52,16 @@ impl Job {
         }
 
         let last_call_def = &self.commands[last_job_idx];
-        last_call_def.invoke(context.with_io(input, context.output.clone())).map_err(|e| e.with_location(self.location))
+        last_call_def.eval(context.with_io(input, context.output.clone())).map_err(|e| e.with_location(self.location))
     }
 
-    pub fn as_string(&self) -> Option<String> {
+    /** Extracts the help message from a closure definition */
+    pub fn extract_help_message(&self) -> Option<String> {
         if self.commands.len() != 1 {
             return None;
         }
 
-        self.commands[0].as_string()
+        self.commands[0].extract_help_message()
     }
 }
 

@@ -38,7 +38,7 @@ pub fn r#for(mut context: CommandContext) -> CrushResult<()> {
                 }
             }
         };
-        body.invoke(context.empty())?;
+        body.invoke(context.empty().with_scope(env.clone()).with_args(arguments, None))?;
         if env.is_stopped() {
             break;
         }

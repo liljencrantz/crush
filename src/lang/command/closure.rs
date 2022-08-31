@@ -16,6 +16,8 @@ use crate::lang::pipe::{black_hole, empty_channel};
 use crate::lang::value::{Value, ValueDefinition, ValueType};
 use std::collections::HashMap;
 use std::fmt::Display;
+use std::io;
+use std::io::Write;
 use crate::lang::ast::{TrackedString, Location};
 
 pub struct Closure {
@@ -201,7 +203,6 @@ impl<'a> ClosureSerializer<'a> {
                     model::parameter::Parameter::Named(n.serialize(self.elements, self.state)? as u64),
                 Parameter::Parameter(n, t, d) => {
                     model::parameter::Parameter::Normal(model::NormalParameter {
-
                         name: n.serialize(self.elements, self.state)? as u64,
 
                         r#type: Some(self.value_definition(t)?),
@@ -531,13 +532,14 @@ impl Help for Closure {
     }
 }
 
+/** Extracts the help message from a closure definition */
 fn extract_help(jobs: &mut Vec<Job>) -> String {
     if jobs.is_empty() {
         return "".to_string();
     }
 
     let j = &jobs[0];
-    match j.as_string() {
+    match j.extract_help_message() {
         Some(help) => {
             if jobs.len() > 1 {
                 jobs.remove(0);
@@ -570,80 +572,89 @@ impl Closure {
         }
     }
 
+    fn push_arguments_to_env_with_signature(
+        signature: &Vec<Parameter>,
+        mut arguments: Vec<Argument>,
+        context: &mut CompileContext,
+    ) -> CrushResult<()> {
+        let mut named = HashMap::new();
+        let mut unnamed = Vec::new();
+        for arg in arguments.drain(..) {
+            match arg.argument_type {
+                Some(name) => {
+                    named.insert(name.clone(), arg.value);
+                }
+                None => unnamed.push(arg.value),
+            };
+        }
+        let mut unnamed_name = None;
+        let mut named_name = None;
+
+        for param in signature {
+            match param {
+                Parameter::Parameter(name, value_type, default) => {
+                    if let Value::Type(value_type) = value_type.eval_and_bind(context)? {
+                        if named.contains_key(&name.string) {
+                            let value = named.remove(&name.string).unwrap();
+                            if !value_type.is(&value) {
+                                return argument_error_legacy("Wrong parameter type");
+                            }
+                            context.env.redeclare(&name.string, value)?;
+                        } else if !unnamed.is_empty() {
+                            context.env.redeclare(&name.string, unnamed.remove(0))?;
+                        } else if let Some(default) = default {
+                            let env = context.env.clone();
+                            env.redeclare(&name.string, default.eval_and_bind(context)?)?;
+                        } else {
+                            return argument_error_legacy("Missing variable!!!");
+                        }
+                    } else {
+                        return argument_error_legacy("Not a type");
+                    }
+                }
+                Parameter::Named(name) => {
+                    if named_name.is_some() {
+                        return argument_error_legacy("Multiple named argument maps specified");
+                    }
+                    named_name = Some(name);
+                }
+                Parameter::Unnamed(name) => {
+                    if unnamed_name.is_some() {
+                        return argument_error_legacy("Multiple named argument maps specified");
+                    }
+                    unnamed_name = Some(name);
+                }
+            }
+        }
+
+        if let Some(unnamed_name) = unnamed_name {
+            context.env.redeclare(
+                unnamed_name.string.as_ref(),
+                Value::List(List::new(ValueType::Any, unnamed)),
+            )?;
+        } else if !unnamed.is_empty() {
+            return argument_error_legacy("No target for unnamed arguments");
+        }
+
+        if let Some(named_name) = named_name {
+            let d = Dict::new(ValueType::String, ValueType::Any);
+            for (k, v) in named {
+                d.insert(Value::string(&k), v)?;
+            }
+            context.env.redeclare(named_name.string.as_ref(), Value::Dict(d))?;
+        } else if !named.is_empty() {
+            return argument_error_legacy("No target for extra named arguments");
+        }
+        Ok(())
+    }
+
     fn push_arguments_to_env(
         signature: &Option<Vec<Parameter>>,
         mut arguments: Vec<Argument>,
         context: &mut CompileContext,
     ) -> CrushResult<()> {
         if let Some(signature) = signature {
-            let mut named = HashMap::new();
-            let mut unnamed = Vec::new();
-            for arg in arguments.drain(..) {
-                match arg.argument_type {
-                    Some(name) => {
-                        named.insert(name.clone(), arg.value);
-                    }
-                    None => unnamed.push(arg.value),
-                };
-            }
-            let mut unnamed_name = None;
-            let mut named_name = None;
-
-            for param in signature {
-                match param {
-                    Parameter::Parameter(name, value_type, default) => {
-                        if let Value::Type(value_type) = value_type.compile_bound(context)? {
-                            if named.contains_key(&name.string) {
-                                let value = named.remove(&name.string).unwrap();
-                                if !value_type.is(&value) {
-                                    return argument_error_legacy("Wrong parameter type");
-                                }
-                                context.env.redeclare(&name.string, value)?;
-                            } else if !unnamed.is_empty() {
-                                context.env.redeclare(&name.string, unnamed.remove(0))?;
-                            } else if let Some(default) = default {
-                                let env = context.env.clone();
-                                env.redeclare(&name.string, default.compile_bound(context)?)?;
-                            } else {
-                                return argument_error_legacy("Missing variable!!!");
-                            }
-                        } else {
-                            return argument_error_legacy("Not a type");
-                        }
-                    }
-                    Parameter::Named(name) => {
-                        if named_name.is_some() {
-                            return argument_error_legacy("Multiple named argument maps specified");
-                        }
-                        named_name = Some(name);
-                    }
-                    Parameter::Unnamed(name) => {
-                        if unnamed_name.is_some() {
-                            return argument_error_legacy("Multiple named argument maps specified");
-                        }
-                        unnamed_name = Some(name);
-                    }
-                }
-            }
-
-            if let Some(unnamed_name) = unnamed_name {
-                context.env.redeclare(
-                    unnamed_name.string.as_ref(),
-                    Value::List(List::new(ValueType::Any, unnamed)),
-                )?;
-            } else if !unnamed.is_empty() {
-                return argument_error_legacy("No target for unnamed arguments");
-            }
-
-            if let Some(named_name) = named_name {
-                let d = Dict::new(ValueType::String, ValueType::Any);
-                for (k, v) in named {
-                    d.insert(Value::string(&k), v)?;
-                }
-                context.env.redeclare(named_name.string.as_ref(), Value::Dict(d))?;
-            } else if !named.is_empty() {
-                return argument_error_legacy("No target for extra named arguments");
-            }
+            Self::push_arguments_to_env_with_signature(signature, arguments, context)
         } else {
             for arg in arguments.drain(..) {
                 match arg.argument_type {
@@ -655,8 +666,8 @@ impl Closure {
                     }
                 }
             }
+            Ok(())
         }
-        Ok(())
     }
 
     pub fn deserialize(

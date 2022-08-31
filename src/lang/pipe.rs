@@ -174,6 +174,17 @@ pub fn pipe() -> (ValueSender, ValueReceiver) {
     )
 }
 
+/**
+A Sender/Receiver pair that is bounded to only one Value on the wire before blocking.
+ */
+pub fn printer_pipe() -> (ValueSender, ValueReceiver) {
+    let (send, recv) = bounded(1);
+    (
+        ValueSender { sender: send, is_pipeline: false },
+        ValueReceiver { receiver: recv, is_pipeline: false },
+    )
+}
+
 pub fn streams(signature: Vec<ColumnType>) -> (OutputStream, InputStream) {
     let (output, input) = bounded(128);
     (

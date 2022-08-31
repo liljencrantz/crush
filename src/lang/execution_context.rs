@@ -332,7 +332,7 @@ impl CommandContext {
             arguments,
             this,
             global_state: self.global_state,
-            handle: self.handle.clone(),
+            handle: self.handle,
         }
     }
 
@@ -347,7 +347,22 @@ impl CommandContext {
             arguments: self.arguments,
             this: self.this,
             global_state: self.global_state,
-            handle: self.handle.clone(),
+            handle: self.handle,
+        }
+    }
+
+    /**
+    Return a new Command context that is identical to this one but with a different output sender.
+     */
+    pub fn with_scope(self, scope : Scope) -> CommandContext {
+        CommandContext {
+            input: self.input,
+            output: self.output,
+            scope,
+            arguments: self.arguments,
+            this: self.this,
+            global_state: self.global_state,
+            handle: self.handle,
         }
     }
 

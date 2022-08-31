@@ -214,8 +214,8 @@ mod macos {
                 Value::Integer(i128::from(curr_task.ptinfo.pti_virtual_size)),
                 Value::Duration(Duration::nanoseconds(
                     i64::try_from(curr_task.ptinfo.pti_total_user + curr_task.ptinfo.pti_total_system)? *
-                        i64::try_from(info.numer)? /
-                        i64::try_from(info.denom)?)),
+                        i64::from(info.numer) /
+                        i64::from(info.denom))),
                 Value::String(name)
             ]));
         }

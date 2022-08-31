@@ -19,7 +19,7 @@ fn r#loop(context: CommandContext) -> CrushResult<()> {
     context.output.initialize(vec![])?;
     loop {
         let env = context.scope.create_child(&context.scope, true);
-        cfg.body.invoke(context.empty())?;
+        cfg.body.invoke(context.empty().with_scope(env.clone()))?;
         if env.is_stopped() {
             break;
         }

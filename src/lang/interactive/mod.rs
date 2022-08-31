@@ -46,7 +46,7 @@ pub fn execute_prompt(
                 ValueDefinition::Value(Value::Command(prompt), Location::new(0, 0)),
                 vec![]);
             let (snd, recv) = pipe();
-            cmd.invoke(JobContext::new(
+            cmd.eval(JobContext::new(
                 empty_channel(),
                 snd,
                 env.clone(),

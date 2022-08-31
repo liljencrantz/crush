@@ -27,7 +27,7 @@ fn r#while(mut context: CommandContext) -> CrushResult<()> {
         let (sender, receiver) = pipe();
 
         let cond_env = context.scope.create_child(&context.scope, true);
-        cfg.condition.invoke(context.empty().with_output(sender))?;
+        cfg.condition.invoke(context.empty().with_scope(cond_env.clone()).with_output(sender))?;
         if cond_env.is_stopped() {
             break;
         }

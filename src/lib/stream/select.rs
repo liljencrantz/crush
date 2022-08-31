@@ -55,7 +55,7 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
                                 Argument::named(cell_type.name.as_ref(), cell.clone(), config.location)
                             })
                             .collect();
-                        closure.invoke(context.empty().with_output(sender))?;
+                        closure.invoke(context.empty().with_args(arguments, None).with_output(sender))?;
                         receiver.recv()?
                     }
                     Source::Argument(idx) => row.cells()[*idx].clone(),
@@ -98,7 +98,7 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
                         .map(|(cell, cell_type)| Argument::named(&cell_type.name, cell.clone(), config.location))
                         .collect();
                     let (sender, receiver) = pipe();
-                    closure.invoke(context.empty().with_output(sender))?;
+                    closure.invoke(context.empty().with_args(arguments, None).with_output(sender))?;
                     receiver.recv()?
                 }
                 Source::Argument(idx) => row.cells()[*idx].clone(),

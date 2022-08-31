@@ -49,20 +49,12 @@ impl ValueDefinition {
         }
     }
 
-    pub fn compile_unbound(
-        &self,
-        context: &mut CompileContext,
-    ) -> CrushResult<(Option<Value>, Value)> {
-        self.compile_internal(context, true)
-    }
-
-    pub fn compile_bound(&self, context: &mut CompileContext) -> CrushResult<Value> {
-        let (t, v) = self.compile_internal(context, true)?;
-
+    pub fn eval_and_bind(&self, context: &mut CompileContext) -> CrushResult<Value> {
+        let (t, v) = self.eval(context, true)?;
         Ok(t.map(|tt| v.clone().bind(tt)).unwrap_or(v))
     }
 
-    pub fn compile_internal(
+    pub fn eval(
         &self,
         context: &mut CompileContext,
         can_block: bool,
@@ -97,7 +89,7 @@ impl ValueDefinition {
             ),
 
             ValueDefinition::GetAttr(parent_def, entry) => {
-                let (grand_parent, mut parent) = parent_def.compile_internal(context, can_block)?;
+                let (grand_parent, mut parent) = parent_def.eval(context, can_block)?;
                 parent = if let Value::Command(parent_cmd) = &parent {
                     if !can_block {
                         return block_error();
@@ -125,7 +117,7 @@ impl ValueDefinition {
             }
 
             ValueDefinition::Path(parent_def, entry) => {
-                let parent = parent_def.compile_internal(context, can_block)?.1;
+                let parent = parent_def.eval(context, can_block)?.1;
                 let val = mandate(
                     parent.path(&entry.string),
                     &format!("Missing path entry {} in {}", entry, parent_def),

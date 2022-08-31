@@ -122,25 +122,25 @@ impl ArgumentVecCompiler for Vec<ArgumentDefinition> {
         let mut res = Vec::new();
         for a in self {
             if a.argument_type.is_this() {
-                this = Some(a.value.compile_bound(context)?);
+                this = Some(a.value.eval_and_bind(context)?);
             } else {
                 match &a.argument_type {
                     ArgumentType::Some(name) => {
                         res.push(Argument::named(
                             &name.string,
-                            a.value.compile_bound(context)?,
+                            a.value.eval_and_bind(context)?,
                             a.location,
                         ))
                     }
 
                     ArgumentType::None => {
                         res.push(Argument::unnamed(
-                            a.value.compile_bound(context)?,
+                            a.value.eval_and_bind(context)?,
                             a.location,
                         ))
                     }
 
-                    ArgumentType::ArgumentList => match a.value.compile_bound(context)? {
+                    ArgumentType::ArgumentList => match a.value.eval_and_bind(context)? {
                         Value::List(l) => {
                             let mut copy = l.dump();
                             for v in copy.drain(..) {
@@ -153,7 +153,7 @@ impl ArgumentVecCompiler for Vec<ArgumentDefinition> {
                         _ => return argument_error_legacy("Argument list must be of type list"),
                     },
 
-                    ArgumentType::ArgumentDict => match a.value.compile_bound(context)? {
+                    ArgumentType::ArgumentDict => match a.value.eval_and_bind(context)? {
                         Value::Dict(d) => {
                             let mut copy = d.elements();
                             for (key, value) in copy.drain(..) {

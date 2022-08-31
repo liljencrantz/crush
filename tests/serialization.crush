@@ -1,6 +1,6 @@
 rm ./.test_file
 # Pipe output of find into a file
-find example_data/tree|select ^file ^type | pup:to ./.test_file
+find example_data/tree|select ^file ^type | sort ^file | pup:to ./.test_file
 # And read it back out again
 pup:from ./.test_file
 
