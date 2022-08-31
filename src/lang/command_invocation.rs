@@ -95,39 +95,32 @@ impl CommandInvocation {
     }
 
     pub fn eval(&self, context: JobContext) -> CrushResult<Option<ThreadId>> {
-        match self.command.eval(&mut CompileContext::from(&context), false)
-        {
-            Ok((this, value)) => eval_internal(this, value, self.arguments.clone(), context, self.command.location()),
-            Err(err) => {
-                if err.is(CrushErrorType::BlockError) {
-                    let cmd = self.command.clone();
-                    let arguments = self.arguments.clone();
-                    let t = context.global_state.threads().clone();
-                    let location = self.command.location();
-                    Ok(Some(t.spawn(
-                        &self.command.to_string(),
-                        move || {
-                            match cmd.clone().eval(&mut CompileContext::from(&context), true) {
-                                Ok((this, value)) => context.global_state.printer().handle_error(eval_internal(
-                                    this,
-                                    value,
-                                    arguments,
-                                    context.clone(),
-                                    location,
-                                )),
+        eval(&self.command, &self.arguments, context, false)
+    }
+}
 
-                                _ => context.global_state.printer().handle_error(try_external_command(
-                                    cmd,
-                                    arguments,
-                                    context.clone(),
-                                )),
-                            }
-                            Ok(())
-                        },
-                    )?))
-                } else {
-                    try_external_command(self.command.clone(), self.arguments.clone(), context)
-                }
+pub fn eval(command: &ValueDefinition, arguments: &Vec<ArgumentDefinition>, context: JobContext, can_block: bool) -> CrushResult<Option<ThreadId>> {
+    match command.eval(&mut CompileContext::from(&context), can_block)
+    {
+        // Try to find the command in this thread. This may fail if the command is found via a subshell, in which case we need to spawn a thread
+        Ok((this, value)) => eval_internal(this, value, arguments.clone(), context, command.location()),
+        Err(err) => {
+            // There was an error. Was it because of blocking?
+            if err.is(CrushErrorType::BlockError) && !can_block {
+                // The error was because blocking. Spawn a thread and call ourself recursively in the thread!
+                let command = command.clone();
+                let arguments = arguments.clone();
+                let t = context.global_state.threads().clone();
+                Ok(Some(t.spawn(
+                    &command.to_string(),
+                    move || {
+                        context.global_state.printer().handle_error(eval(&command, &arguments, context.clone(), true));
+                        Ok(())
+                    },
+                )?))
+            } else {
+                // No, there was some other error. Try to see if this si an external command.
+                try_external_command(command.clone(), arguments.clone(), context)
             }
         }
     }
@@ -141,64 +134,28 @@ fn eval_internal(
     location: Location,
 ) -> CrushResult<Option<ThreadId>> {
     match value {
-        Value::Command(command) => invoke_command(command, this, local_arguments, context),
-        Value::File(f) => eval_file(f, local_arguments, context, location),
+        Value::Command(command) => eval_command(command, this, local_arguments, context),
         Value::Type(t) => eval_type(t, local_arguments, context, location),
-        Value::Struct(s) => invoke_struct(s, local_arguments, context, location),
-        _ => {
-            if local_arguments.len() == 0 {
-                invoke_command(
-                    context.scope.global_static_cmd(vec!["global", "io", "val"])?,
-                    None,
-                    vec![ArgumentDefinition::unnamed(ValueDefinition::Value(value, location))],
-                    context,
-                )
-            } else {
-                error(&format!("Not a command {}", value))
-            }
-        }
+        Value::Struct(s) => eval_struct(s, local_arguments, context, location),
+        v => eval_other(v, local_arguments, context, location),
     }
 }
 
-fn eval_file(
-    file: PathBuf,
+fn eval_other(
+    value: Value,
     local_arguments: Vec<ArgumentDefinition>,
     context: JobContext,
     location: Location,
 ) -> CrushResult<Option<ThreadId>> {
     if local_arguments.len() == 0 {
-        let meta = file.metadata();
-        if meta.is_ok() && meta.unwrap().is_dir() {
-            invoke_command(
-                context
-                    .scope
-                    .global_static_cmd(vec!["global", "fs", "cd"])?,
-                None,
-                vec![ArgumentDefinition::unnamed(ValueDefinition::Value(
-                    Value::File(file),
-                    location,
-                ))],
-                context,
-            )
-        } else {
-            invoke_command(
-                context.scope.global_static_cmd(vec!["global", "io", "val"])?,
-                None,
-                vec![ArgumentDefinition::unnamed(ValueDefinition::Value(
-                    Value::File(file),
-                    location,
-                ))],
-                context,
-            )
-        }
-    } else {
-        error(
-            format!(
-                "Not a command {}",
-                file.to_str().unwrap_or("<invalid filename>")
-            )
-                .as_str(),
+        eval_command(
+            context.scope.global_static_cmd(vec!["global", "io", "val"])?,
+            None,
+            vec![ArgumentDefinition::unnamed(ValueDefinition::Value(value, location))],
+            context,
         )
+    } else {
+        error(&format!("{} is not a command.", value))
     }
 }
 
@@ -209,7 +166,7 @@ fn eval_type(
     location: Location,
 ) -> CrushResult<Option<ThreadId>> {
     match value_type.fields().get("__call__") {
-        None => invoke_command(
+        None => eval_command(
             context.scope.global_static_cmd(vec!["global", "io", "val"])?,
             None,
             vec![ArgumentDefinition::unnamed(ValueDefinition::Value(
@@ -218,7 +175,7 @@ fn eval_type(
             ))],
             context,
         ),
-        Some(call) => invoke_command(
+        Some(call) => eval_command(
             call.as_ref().copy(),
             Some(Value::Type(value_type)),
             local_arguments,
@@ -227,7 +184,7 @@ fn eval_type(
     }
 }
 
-fn invoke_struct(
+fn eval_struct(
     struct_value: Struct,
     local_arguments: Vec<ArgumentDefinition>,
     context: JobContext,
@@ -235,7 +192,7 @@ fn invoke_struct(
 ) -> CrushResult<Option<ThreadId>> {
     match struct_value.get("__call__") {
         Some(Value::Command(call)) => {
-            invoke_command(call, Some(Value::Struct(struct_value)), local_arguments, context)
+            eval_command(call, Some(Value::Struct(struct_value)), local_arguments, context)
         }
         Some(v) => error(
             format!(
@@ -246,7 +203,7 @@ fn invoke_struct(
         ),
         _ => {
             if local_arguments.len() == 0 {
-                invoke_command(
+                eval_command(
                     context.scope.global_static_cmd(vec!["global", "io", "val"])?,
                     None,
                     vec![ArgumentDefinition::unnamed(ValueDefinition::Value(
@@ -268,7 +225,7 @@ fn invoke_struct(
     }
 }
 
-fn invoke_command(
+fn eval_command(
     command: Command,
     this: Option<Value>,
     local_arguments: Vec<ArgumentDefinition>,
