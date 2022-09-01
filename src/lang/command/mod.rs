@@ -328,7 +328,7 @@ impl CrushCommand for ConditionCommand {
     fn can_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool {
         arguments
             .iter()
-            .any(|arg| arg.value.can_block(arguments, context))
+            .any(|arg| arg.value.can_block(context))
     }
 
     fn copy(&self) -> Command {

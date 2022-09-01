@@ -16,8 +16,6 @@ use crate::lang::pipe::{black_hole, empty_channel};
 use crate::lang::value::{Value, ValueDefinition, ValueType};
 use std::collections::HashMap;
 use std::fmt::Display;
-use std::io;
-use std::io::Write;
 use crate::lang::ast::{TrackedString, Location};
 
 pub struct Closure {
@@ -60,7 +58,7 @@ impl CrushCommand for Closure {
                 black_hole()
             };
 
-            let job = job_definition.invoke(JobContext::new(
+            let job = job_definition.eval(JobContext::new(
                 input,
                 output,
                 env.clone(),

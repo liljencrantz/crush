@@ -58,7 +58,7 @@ pub fn string(
 ) -> CrushResult<()> {
     let jobs = global_state.parser().parse(command, &global_env)?;
     for job_definition in jobs {
-        let handle = job_definition.invoke(JobContext::new(
+        let handle = job_definition.eval(JobContext::new(
             empty_channel(),
             output.clone(),
             global_env.clone(),

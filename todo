@@ -13,7 +13,6 @@ Add system tests for binary stream handling
 Binary values can be big. Make them shared behind an Arc. Same with tables. Maybe even String?
 In closures without a signature, put unnamed variables in the variable '__unnamed__'
 Make integers overflow to arbitrary precision math
-Run an executable by giving its path
 Add control:source command
 Add string:join command
 Add string:substr command

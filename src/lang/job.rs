@@ -23,7 +23,7 @@ impl Job {
 
     pub fn can_block(&self, context: &mut CompileContext) -> bool {
         if self.commands.len() == 1 {
-            self.commands[0].can_block(self.commands[0].arguments(), context)
+            self.commands[0].can_block(context)
         } else {
             true
         }
@@ -33,7 +33,7 @@ impl Job {
         &self.commands
     }
 
-    pub fn invoke(&self, context: JobContext) -> CrushResult<Option<ThreadId>> {
+    pub fn eval(&self, context: JobContext) -> CrushResult<Option<ThreadId>> {
         let context = context.running(self.to_string());
         let mut input = context.input.clone();
         let last_job_idx = self.commands.len() - 1;

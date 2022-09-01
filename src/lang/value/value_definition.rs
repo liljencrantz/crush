@@ -41,7 +41,7 @@ impl ValueDefinition {
         }
     }
 
-    pub fn can_block(&self, _arg: &[ArgumentDefinition], context: &mut CompileContext) -> bool {
+    pub fn can_block(&self, context: &mut CompileContext) -> bool {
         match self {
             ValueDefinition::JobDefinition(j) => j.can_block(context),
             ValueDefinition::GetAttr(_inner1, _inner2) => true,
@@ -50,24 +50,20 @@ impl ValueDefinition {
     }
 
     pub fn eval_and_bind(&self, context: &mut CompileContext) -> CrushResult<Value> {
-        let (t, v) = self.eval(context, true)?;
+        let (t, v) = self.eval(context)?;
         Ok(t.map(|tt| v.clone().bind(tt)).unwrap_or(v))
     }
 
     pub fn eval(
         &self,
         context: &mut CompileContext,
-        can_block: bool,
     ) -> CrushResult<(Option<Value>, Value)> {
         Ok(match self {
             ValueDefinition::Value(v, _) => (None, v.clone()),
             ValueDefinition::JobDefinition(def) => {
                 let first_input = empty_channel();
                 let (last_output, last_input) = pipe();
-                if !can_block {
-                    return block_error();
-                }
-                def.invoke(context.job_context(first_input, last_output))?;
+                def.eval(context.job_context(first_input, last_output))?;
                 (None, last_input.recv()?)
             }
             ValueDefinition::ClosureDefinition(name, p, c, _) => (
@@ -89,11 +85,8 @@ impl ValueDefinition {
             ),
 
             ValueDefinition::GetAttr(parent_def, entry) => {
-                let (grand_parent, mut parent) = parent_def.eval(context, can_block)?;
+                let (grand_parent, mut parent) = parent_def.eval(context)?;
                 parent = if let Value::Command(parent_cmd) = &parent {
-                    if !can_block {
-                        return block_error();
-                    }
                     let first_input = empty_channel();
                     let (last_output, last_input) = pipe();
                     parent_cmd.invoke(
@@ -117,7 +110,7 @@ impl ValueDefinition {
             }
 
             ValueDefinition::Path(parent_def, entry) => {
-                let parent = parent_def.eval(context, can_block)?.1;
+                let parent = parent_def.eval(context)?.1;
                 let val = mandate(
                     parent.path(&entry.string),
                     &format!("Missing path entry {} in {}", entry, parent_def),
@@ -134,7 +127,7 @@ impl Display for ValueDefinition {
             ValueDefinition::Value(v, _location) => v.fmt(f),
             ValueDefinition::Label(v) => v.fmt(f),
             ValueDefinition::ClosureDefinition(_, _, _, _location) => f.write_str("<closure>"),
-            ValueDefinition::JobDefinition(_) => f.write_str("<job>"),
+            ValueDefinition::JobDefinition(j) => j.fmt(f),
             ValueDefinition::GetAttr(v, l) => {
                 v.fmt(f)?;
                 f.write_str(":")?;

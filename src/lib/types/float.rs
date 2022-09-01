@@ -85,6 +85,46 @@ lazy_static! {
             Known(ValueType::Bool),
             vec![],
         );
+        res.declare(
+            full("max"),
+            max,
+            false,
+            "float:max",
+            "Largest finite float value",
+            None,
+            Known(ValueType::Float),
+            vec![],
+        );
+        res.declare(
+            full("min"),
+            min,
+            false,
+            "float:min",
+            "Smallest finite float value",
+            None,
+            Known(ValueType::Float),
+            vec![],
+        );
+        res.declare(
+            full("nan"),
+            nan,
+            false,
+            "float:nan",
+            "Not a Number",
+            None,
+            Known(ValueType::Float),
+            vec![],
+        );
+        res.declare(
+            full("infinity"),
+            infinity,
+            false,
+            "float:infinity",
+            "Infinity",
+            None,
+            Known(ValueType::Float),
+            vec![],
+        );
         res
     };
 }
@@ -147,4 +187,32 @@ fn is_infinite(context: CommandContext) -> CrushResult<()> {
     context
         .output
         .send(Value::Bool(context.this.float()?.is_infinite()))
+}
+
+fn max(context: CommandContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
+    context
+        .output
+        .send(Value::Float(f64::MAX))
+}
+
+fn min(context: CommandContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
+    context
+        .output
+        .send(Value::Float(f64::MIN))
+}
+
+fn nan(context: CommandContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
+    context
+        .output
+        .send(Value::Float(f64::NAN))
+}
+
+fn infinity(context: CommandContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
+    context
+        .output
+        .send(Value::Float(f64::INFINITY))
 }

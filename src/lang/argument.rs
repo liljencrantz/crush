@@ -3,6 +3,7 @@ use crate::lang::execution_context::CompileContext;
 use crate::lang::value::Value;
 use crate::lang::value::ValueDefinition;
 use std::collections::HashSet;
+use std::fmt::{Display, Formatter};
 use crate::lang::ast::{TrackedString, Location};
 
 #[derive(Debug, Clone)]
@@ -176,6 +177,13 @@ impl ArgumentVecCompiler for Vec<ArgumentDefinition> {
         Ok((res, this))
     }
 }
+
+impl Display for ArgumentDefinition {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        self.value.fmt(f)
+    }
+}
+
 
 pub fn column_names(arguments: &Vec<Argument>) -> Vec<String> {
     let mut taken = HashSet::new();

@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use std::fmt::{Display, Formatter};
 use std::thread::ThreadId;
 use crate::data::r#struct::Struct;
-use crate::lang::ast::Location;
+use crate::lang::ast::{Location, TrackedString};
 
 #[derive(Clone)]
 pub struct CommandInvocation {
@@ -38,7 +38,7 @@ fn resolve_external_command(name: &str, env: &Scope) -> CrushResult<Option<PathB
 
 fn arg_can_block(local_arguments: &Vec<ArgumentDefinition>, context: &mut CompileContext) -> bool {
     for arg in local_arguments {
-        if arg.value.can_block(local_arguments, context) {
+        if arg.value.can_block(context) {
             return true;
         }
     }
@@ -84,45 +84,69 @@ impl CommandInvocation {
         Ok(job_context.command_context(arguments, this))
     }
 
-    pub fn can_block(&self, arg: &[ArgumentDefinition], context: &mut CompileContext) -> bool {
-        let cmd = self.command.eval(context, false);
-        match cmd {
-            Ok((_, Value::Command(command))) => {
-                command.can_block(arg, context) || arg_can_block(&self.arguments, context)
-            }
+    pub fn can_block(&self, context: &mut CompileContext) -> bool {
+        if self.command.can_block(context) {
+            return true;
+        }
+        match self.command.eval(context) {
+            Ok((_, Value::Command(command))) =>
+                command.can_block(&self.arguments, context) || arg_can_block(&self.arguments, context),
             _ => true,
         }
     }
 
     pub fn eval(&self, context: JobContext) -> CrushResult<Option<ThreadId>> {
-        eval(&self.command, &self.arguments, context, false)
+        eval(&self.command, &self.arguments, context)
     }
 }
 
-pub fn eval(command: &ValueDefinition, arguments: &Vec<ArgumentDefinition>, context: JobContext, can_block: bool) -> CrushResult<Option<ThreadId>> {
-    match command.eval(&mut CompileContext::from(&context), can_block)
+pub fn eval_non_blocking(command: &ValueDefinition, arguments: &Vec<ArgumentDefinition>, context: JobContext) -> CrushResult<Option<ThreadId>> {
+    match command.eval(&mut CompileContext::from(&context))
     {
         // Try to find the command in this thread. This may fail if the command is found via a subshell, in which case we need to spawn a thread
-        Ok((this, value)) => eval_internal(this, value, arguments.clone(), context, command.location()),
-        Err(err) => {
-            // There was an error. Was it because of blocking?
-            if err.is(CrushErrorType::BlockError) && !can_block {
-                // The error was because blocking. Spawn a thread and call ourself recursively in the thread!
-                let command = command.clone();
-                let arguments = arguments.clone();
-                let t = context.global_state.threads().clone();
-                Ok(Some(t.spawn(
-                    &command.to_string(),
-                    move || {
-                        context.global_state.printer().handle_error(eval(&command, &arguments, context.clone(), true));
-                        Ok(())
-                    },
-                )?))
-            } else {
-                // No, there was some other error. Try to see if this si an external command.
-                try_external_command(command.clone(), arguments.clone(), context)
-            }
+        Ok((this, value)) => {
+            eval_internal(this, value, arguments.clone(), context, command.location())
         }
+        Err(err) => {
+            let (cmd, sub) = match command {
+                ValueDefinition::Label(str) => (str, None),
+                ValueDefinition::GetAttr(parent, sub) => match parent.deref() {
+                    ValueDefinition::Label(str) => if context.scope.get(str.string.as_str())?.is_none() {
+                        (str, Some(sub))
+                    } else {
+                        return Err(err);
+                    },
+                    _ => return Err(err),
+                },
+                _ => return Err(err),
+            };
+
+            try_external_command(cmd, sub, arguments.clone(), context)
+        }
+    }
+}
+
+pub fn eval(command: &ValueDefinition, arguments: &Vec<ArgumentDefinition>, context: JobContext) -> CrushResult<Option<ThreadId>> {
+    if command.can_block(&mut CompileContext::from(&context)) {
+        eval_non_blocking(command, arguments, context)
+    } else {
+        let command = command.clone();
+        let arguments = arguments.clone();
+        let t = context.global_state.threads().clone();
+        Ok(Some(t.spawn(
+            &command.to_string(),
+            move || {
+                match eval_non_blocking(&command, &arguments, context.clone()) {
+                    Ok(Some(id)) => context.global_state.threads().join_one(
+                        id,
+                        &context.global_state.printer(),
+                    ),
+                    Err(e) => context.global_state.printer().crush_error(e),
+                    _ => {}
+                }
+                Ok(())
+            },
+        )?))
     }
 }
 
@@ -252,19 +276,11 @@ fn eval_command(
 }
 
 fn try_external_command(
-    def: ValueDefinition,
+    cmd: &TrackedString,
+    sub: Option<&TrackedString>,
     mut arguments: Vec<ArgumentDefinition>,
     context: JobContext,
 ) -> CrushResult<Option<ThreadId>> {
-    let def_location = def.location();
-    let (cmd, sub) = match def {
-        ValueDefinition::Label(str) => (str, None),
-        ValueDefinition::GetAttr(parent, sub) => match parent.deref() {
-            ValueDefinition::Label(str) => (str.clone(), Some(sub)),
-            _ => return error("Not a command"),
-        },
-        _ => return error("Not a command"),
-    };
 
     match resolve_external_command(&cmd.string, &context.scope)? {
         None => error(format!("Unknown command name {}", cmd).as_str()),
@@ -278,7 +294,7 @@ fn try_external_command(
                     1,
                     ArgumentDefinition::unnamed(
                         ValueDefinition::Value(
-                            Value::string(subcmd.string),
+                            Value::string(subcmd.string.clone()),
                             subcmd.location,
                         )),
                 );
@@ -290,7 +306,7 @@ fn try_external_command(
                             .scope
                             .global_static_cmd(vec!["global", "control", "cmd"])?,
                     ),
-                    def_location,
+                    cmd.location,
                 ),
                 arguments,
             };
@@ -301,6 +317,11 @@ fn try_external_command(
 
 impl Display for CommandInvocation {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        self.command.fmt(f)
+        self.command.fmt(f)?;
+        for a in &self.arguments {
+            f.write_str(" ")?;
+            a.fmt(f)?;
+        }
+        Ok(())
     }
 }

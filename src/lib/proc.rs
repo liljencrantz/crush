@@ -349,32 +349,6 @@ fn kill(context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Empty())
 }
 
-lazy_static! {
-    static ref JOBS_OUTPUT_TYPE: Vec<ColumnType> = vec![
-        ColumnType::new("id", ValueType::Integer),
-        ColumnType::new("description", ValueType::String),
-    ];
-}
-
-
-#[signature(
-jobs,
-can_block = false,
-short = "List running jobs",
-output = Known(ValueType::TableInputStream(JOBS_OUTPUT_TYPE.clone())),
-long = "All currently running jobs")]
-struct Jobs {}
-
-fn jobs(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(JOBS_OUTPUT_TYPE.clone())?;
-    for job in context.global_state.jobs() {
-        output.send(Row::new(vec![
-            Value::Integer(usize::from(job.id) as i128),
-            Value::string(job.description),
-        ]))?;
-    }
-    Ok(())
-}
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
@@ -382,11 +356,10 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "Process related commands",
         Box::new(move |env| {
             #[cfg(target_os = "linux")]
-            macos::Ps::declare(env)?;
+            linux::Ps::declare(env)?;
             #[cfg(target_os = "macos")]
             macos::Ps::declare(env)?;
             Kill::declare(env)?;
-            Jobs::declare(env)?;
             Ok(())
         }))?;
     root.r#use(&e);

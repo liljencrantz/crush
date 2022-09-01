@@ -1,4 +1,4 @@
-use crate::lang::errors::{to_crush_error, CrushResult};
+use crate::lang::errors::{to_crush_error, CrushResult, error};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::data::scope::Scope;
@@ -11,6 +11,8 @@ use lazy_static::lazy_static;
 use battery::State;
 use chrono::Duration;
 use crate::lang::command::OutputType::Known;
+
+extern crate uptime_lib;
 
 #[signature(name, can_block = false, short = "name of this host")]
 struct Name {}
@@ -38,10 +40,10 @@ lazy_static! {
 struct Uptime {}
 
 fn uptime(context: CommandContext) -> CrushResult<()> {
-Ok(())
-//    context
-//        .output
-//        .send(Value::Duration(Duration::seconds(to_crush_error(psutil::host::uptime()))))
+    match uptime_lib::get() {
+        Ok(d) => context.output.send(Value::Duration(Duration::nanoseconds(i64::try_from(d.as_nanos()).unwrap()))),
+        Err(e) => error(e),
+    }
 }
 
 
@@ -86,10 +88,10 @@ fn battery(context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
-#[signature(mem, can_block = false, short = "memory usage of this host.")]
-struct Mem {}
+#[signature(memory, can_block = false, short = "memory usage of this host.")]
+struct Memory {}
 
-fn mem(context: CommandContext) -> CrushResult<()> {
+fn memory(context: CommandContext) -> CrushResult<()> {
     let mem = to_crush_error(sys_info::mem_info())?;
     context.output.send(Value::Struct(Struct::new(
         vec![
@@ -124,9 +126,9 @@ mod os {
     }
 
     #[signature(
-        version,
-        can_block = false,
-        short = "version of the operating system kernel"
+    version,
+    can_block = false,
+    short = "version of the operating system kernel"
     )]
     pub struct Version {}
 
@@ -180,7 +182,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "Metadata about this host",
         Box::new(move |host| {
             Battery::declare(host)?;
-            Mem::declare(host)?;
+            Memory::declare(host)?;
             Name::declare(host)?;
             Uptime::declare(host)?;
             host.create_namespace(

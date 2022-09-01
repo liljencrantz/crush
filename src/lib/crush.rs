@@ -9,6 +9,7 @@ use nix::unistd::Pid;
 use crate::lang::data::dict::Dict;
 use std::env;
 use lazy_static::lazy_static;
+use crate::data::list::List;
 use crate::lang::command::Command;
 
 fn make_env() -> Value {
@@ -18,6 +19,11 @@ fn make_env() -> Value {
     }
     Value::Dict(e)
 }
+
+fn make_arguments() -> Value {
+    Value::List(List::new(ValueType::String, env::args().map(|a| {Value::string(a)}).collect()))
+}
+
 
 lazy_static! {
     static ref THREADS_OUTPUT_TYPE: Vec<ColumnType> = vec![
@@ -63,6 +69,33 @@ fn prompt(context: CommandContext) -> CrushResult<()> {
     let cfg: Prompt = Prompt::parse(context.arguments, &context.global_state.printer())?;
     context.global_state.set_prompt(cfg.prompt);
     context.output.send(Value::Empty())
+}
+
+lazy_static! {
+    static ref JOBS_OUTPUT_TYPE: Vec<ColumnType> = vec![
+        ColumnType::new("id", ValueType::Integer),
+        ColumnType::new("description", ValueType::String),
+    ];
+}
+
+
+#[signature(
+jobs,
+can_block = false,
+short = "List running jobs",
+output = Known(ValueType::TableInputStream(JOBS_OUTPUT_TYPE.clone())),
+long = "All currently running jobs")]
+struct Jobs {}
+
+fn jobs(context: CommandContext) -> CrushResult<()> {
+    let output = context.output.initialize(JOBS_OUTPUT_TYPE.clone())?;
+    for job in context.global_state.jobs() {
+        output.send(Row::new(vec![
+            Value::Integer(usize::from(job.id) as i128),
+            Value::string(job.description),
+        ]))?;
+    }
+    Ok(())
 }
 
 mod locale {
@@ -165,9 +198,11 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             crush.declare("highlight", Value::Dict(highlight))?;
 
             crush.declare("env", make_env())?;
+            crush.declare("arguments", make_arguments())?;
             Prompt::declare(crush)?;
             Threads::declare(crush)?;
             Exit::declare(crush)?;
+            Jobs::declare(crush)?;
 
             crush.create_namespace(
                 "locale",
