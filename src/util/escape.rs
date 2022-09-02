@@ -1,6 +1,7 @@
 use crate::util::hex::from_hex;
-use crate::lang::errors::{CrushResult, to_crush_error, mandate, data_error};
+use crate::lang::errors::{to_crush_error, data_error};
 use std::convert::TryFrom;
+use crate::CrushResult;
 
 pub fn escape_without_quotes(s: &str) -> String {
     let mut res = String::with_capacity(s.len());
@@ -41,7 +42,6 @@ enum State {
 
 pub fn unescape(s: &str) -> CrushResult<String> {
     use State::*;
-    use crate::lang::errors::CrushResult;
 
     let mut res = "".to_string();
     let mut state = Normal;

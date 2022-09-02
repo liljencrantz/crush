@@ -1,10 +1,8 @@
-use lazy_static::lazy_static;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{to_crush_error, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::data::scope::Scope;
-use crate::lang::data::table::ColumnType;
-use crate::{data::table::Row, lang::value::Value, lang::value::ValueType};
+use crate::{lang::value::Value, lang::value::ValueType};
 use nix::sys::signal;
 use nix::unistd::Pid;
 use signature::signature;
@@ -23,7 +21,7 @@ mod macos {
     use signature::signature;
 
     lazy_static! {
-    static ref PS_OUTPUT_TYPE: Vec<ColumnType> = vec![
+    static ref LIST_OUTPUT_TYPE: Vec<ColumnType> = vec![
         ColumnType::new("pid", ValueType::Integer),
         ColumnType::new("ppid", ValueType::Integer),
         ColumnType::new("user", ValueType::String),
@@ -58,12 +56,12 @@ mod macos {
     }
 
     #[signature(
-    ps,
+    list,
     can_block = true,
     short = "Return a table stream containing information on all running processes on the system",
-    output = Known(ValueType::TableInputStream(PS_OUTPUT_TYPE.clone())),
-    long = "ps accepts no arguments.")]
-    pub struct Ps {}
+    output = Known(ValueType::TableInputStream(LIST_OUTPUT_TYPE.clone())),
+    long = "proc:list accepts no arguments.")]
+    pub struct List {}
 
     use libproc::libproc::bsd_info::BSDInfo;
     use libproc::libproc::file_info::{pidfdinfo, ListFDs, ProcFDType};
@@ -124,11 +122,11 @@ mod macos {
         TaskAllInfo { pbsd, ptinfo }
     }
 
-    fn ps(context: CommandContext) -> CrushResult<()> {
+    fn list(context: CommandContext) -> CrushResult<()> {
         let mut base_procs = Vec::new();
         let arg_max = 2048;//get_arg_max();
 
-        let output = context.output.initialize(PS_OUTPUT_TYPE.clone())?;
+        let output = context.output.initialize(LIST_OUTPUT_TYPE.clone())?;
         let users = create_user_map()?;
 
         let mut info: mach_timebase_info = mach_timebase_info{numer: 0, denom: 0};
@@ -243,7 +241,7 @@ mod linux {
     use std::collections::HashMap;
 
     lazy_static! {
-    static ref PS_OUTPUT_TYPE: Vec<ColumnType> = vec![
+    static ref LIST_OUTPUT_TYPE: Vec<ColumnType> = vec![
         ColumnType::new("pid", ValueType::Integer),
         ColumnType::new("ppid", ValueType::Integer),
         ColumnType::new("status", ValueType::String),
@@ -276,16 +274,16 @@ mod linux {
 
 
     #[signature(
-    ps,
+    list,
     can_block = true,
     short = "Return a table stream containing information on all running processes on the system",
-    output = Known(ValueType::TableInputStream(PS_OUTPUT_TYPE.clone())),
-    long = "ps accepts no arguments.")]
-    pub struct Ps {}
+    output = Known(ValueType::TableInputStream(LIST_OUTPUT_TYPE.clone())),
+    long = "proc:list accepts no arguments.")]
+    pub struct List {}
 
-    fn ps(context: CommandContext) -> CrushResult<()> {
-        Ps::parse(context.arguments.clone(), &context.global_state.printer())?;
-        let output = context.output.initialize(PS_OUTPUT_TYPE.clone())?;
+    fn list(context: CommandContext) -> CrushResult<()> {
+        List::parse(context.arguments.clone(), &context.global_state.printer())?;
+        let output = context.output.initialize(LIST_OUTPUT_TYPE.clone())?;
         let users = create_user_map()?;
 
         match psutil::process::processes() {
@@ -356,12 +354,11 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "Process related commands",
         Box::new(move |env| {
             #[cfg(target_os = "linux")]
-            linux::Ps::declare(env)?;
+            linux::List::declare(env)?;
             #[cfg(target_os = "macos")]
-            macos::Ps::declare(env)?;
+            macos::List::declare(env)?;
             Kill::declare(env)?;
             Ok(())
         }))?;
-    root.r#use(&e);
     Ok(())
 }

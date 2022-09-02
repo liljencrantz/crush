@@ -36,7 +36,7 @@ a Rush channel. It is not understood by the command as a series of bytes, but as
 a table of rows, and Crush provides you with SQL-like commands to sort, filter,
 aggregate and group rows of data.
 
-    crush# ll | sort ^size
+    crush# ll | sort size
     user size modified                  type      file
     fox    31 2019-10-03 13:43:12 +0200 file      .gitignore
     fox    75 2020-03-07 17:09:15 +0100 file      build.rs
@@ -44,7 +44,7 @@ aggregate and group rows of data.
     fox   711 2019-10-03 14:19:46 +0200 file      crush.iml
     ...
 
-    crush# ll | where {type == "directory"}
+    crush# ll | where {$type == "directory"}
     user size  modified                  type      file
     fox  4_096 2019-11-22 21:56:30 +0100 directory target
     fox  4_096 2020-02-22 11:50:12 +0100 directory tests
@@ -84,10 +84,10 @@ commands all work like you'd expect:
 crush# ls | json:to ./listing.json
 
 # Read the file Cargo.toml as a toml file, and extract the dependencies-field
-crush# toml:from Cargo.toml | member ^dependencies
+crush# toml:from Cargo.toml | member dependencies
 
 # Fetch a web page and write it to a file
-http "https://isitchristmas.com/" | member ^body | bin:to ./isitchristmas.html
+http "https://isitchristmas.com/" | member body | bin:to ./isitchristmas.html
 ```
 
 If you don't supply an input file to any of the deserializer commands,
@@ -302,7 +302,7 @@ former displays a help messages, the latter lists the content of a value.
     
         Example:
     
-        ps | sort ^cpu
+        ps | sort cpu
     crush# dir list
     [type, truncate, remove, clone, of, __call__, __setitem__, pop, push, empty, len, peek, new, clear]
 
@@ -369,10 +369,10 @@ re-executed until the stream is empty.
 ### More SQL-like data stream operations
 
 Crush features many commands to operate om arbitrary streams of data using a
-SQL-like syntax. These commands use field-specifiers like `^foo` to specify
+SQL-like syntax. These commands use field-specifiers like `foo` to specify
 columns in the data stream that they operate on:
 
-    ps | where {user == "root"} | group ^status proc_per_status={count} | sort ^proc_per_status
+    ps | where {$user == "root"} | group status proc_per_status={count} | sort proc_per_status
     status   proc_per_status
     Idle     108
     Sleeping 170

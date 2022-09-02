@@ -6,9 +6,16 @@ use signature::signature;
 
 #[signature(enumerate, short = "Prepend a column containing the row number to each row of the input.")]
 pub struct Enumerate {
+    #[description("the index to use for the first row.")]
+    #[default(0)]
+    start_index: i128,
+    #[description("the step between rows.")]
+    #[default(1)]
+    step: i128,
 }
 
 fn enumerate(context: CommandContext) -> CrushResult<()> {
+    let cfg: Enumerate = Enumerate::parse(context.arguments, &context.global_state.printer())?;
     match context.input.recv()?.stream() {
         Some(mut input) => {
             let mut output_type = vec![
@@ -16,12 +23,12 @@ fn enumerate(context: CommandContext) -> CrushResult<()> {
             output_type.extend(input.types().to_vec());
             let output = context.output.initialize(output_type)?;
 
-            let mut line: i128 = 0;
+            let mut line: i128 = cfg.start_index;
             while let Ok(row) = input.read() {
                 let mut out = vec![Value::Integer(line)];
                 out.extend(Vec::from(row));
                 output.send(Row::new(out))?;
-                line += 1;
+                line += cfg.step;
             }
             Ok(())
         }

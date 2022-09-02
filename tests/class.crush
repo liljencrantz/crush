@@ -1,22 +1,23 @@
-Point := (class)
-Point:__init__ = {
-    |x:float y:float|
-    this:x = x
-    this:y = y
+$Point := (class)
+$Point:__init__ = {
+    |$x:$float $y:$float|
+    this:x = $x
+    this:y = $y
 }
 
-Point:len = {
+$Point:len = {
     ||
-    math:sqrt this:x*this:x + this:y*this:y
+    math:sqrt $this:x*$this:x + $this:y*$this:y
 }
 
-Point:__add__ = {
-    |@unnamed|
-    other := unnamed[0]
-    Point:new x=(this:x + other:x) y=(this:y + other:y)
+$Point:__add__ = {
+    |@ $unnamed|
+    $other := $unnamed[0]
+    Point:new x=($this:x + $other:x) y=($this:y + $other:y)
 }
 
-p1 := (Point:new x=0.0 y=4.0)
-p2 := (Point:new x=3.0 y=0.0)
-p3 := p1 + p2
-p3:len
+
+$p1 := (Point:new x=0.0 y=4.0)
+$p2 := (Point:new x=3.0 y=0.0)
+$p3 := $p1 + $p2
+$p3:len

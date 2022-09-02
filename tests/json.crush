@@ -1,8 +1,8 @@
 json:from example_data/din%.json |
-    sort ^name
+    sort name
 
 json:from example_data/din%.json |
-    where {name =~ re"Tri.*"}
+    where {$name =~ re"Tri.*"}
 
 # Check serialisation and deserialisation, including field order
-seq 5|select ^value half={0.5 * value} str={convert value string} struct={data value=value} | json:to |json:from
+seq 5|select value half={0.5 * $value} str={convert $value $string} struct={data value=$value} | json:to |json:from

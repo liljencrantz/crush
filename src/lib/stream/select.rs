@@ -1,7 +1,7 @@
 use crate::lang::command::Command;
 use crate::lang::errors::error;
 use crate::lang::execution_context::CommandContext;
-use crate::lang::pipe::{pipe, empty_channel, Stream};
+use crate::lang::pipe::{pipe, Stream};
 use crate::lang::data::table::ColumnVec;
 use crate::{
     lang::errors::argument_error_legacy,

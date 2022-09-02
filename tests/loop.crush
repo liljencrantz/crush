@@ -4,10 +4,10 @@ loop {
     echo "NO"
 }
 
-a := false
+$a := $false
 loop {
-    if a break
-    a = true
+    if $a $break
+    $a = $true
     echo 2
     continue
     echo "NO"

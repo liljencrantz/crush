@@ -12,7 +12,7 @@ use crate::lang::value::Field;
 uniq,
 output = Passthrough,
 short = "Only output the first row if multiple rows has the same value for the specified column",
-example = "ps | uniq ^user")]
+example = "ps | uniq user")]
 pub struct Uniq {
     field: Option<Field>,
 }

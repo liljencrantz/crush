@@ -9,6 +9,7 @@ use crate::util::glob::Glob;
 use crate::lang::parser::Parser;
 use crate::util::escape::unescape;
 use std::collections::HashSet;
+use std::fmt::{Display, Formatter};
 
 pub enum CompletionCommand {
     Unknown,
@@ -28,7 +29,8 @@ impl Clone for CompletionCommand {
 pub enum LastArgument {
     Unknown,
     Label(String),
-    Field(Value, String),
+    Field(String),
+    Member(Value, String),
     File(String, bool),
     QuotedString(String),
     Switch(String),
@@ -68,9 +70,9 @@ impl PartialCommandResult {
                 if false && cmd.arguments().len() == 1 {
                     Some(&cmd.arguments()[0])
                 } else {
-
                     let mut previous_named = HashSet::new();
                     let mut previous_unnamed = 0usize;
+
                     for arg in &self.previous_arguments {
                         match &arg.name {
                             Some(name) => {
@@ -83,9 +85,9 @@ impl PartialCommandResult {
                     let mut unnamed_used = 0usize;
                     for arg in cmd.arguments() {
                         if arg.unnamed {
-                            return Some(arg)
+                            return Some(arg);
                         }
-                        if previous_named.contains(&arg.name ) {
+                        if previous_named.contains(&arg.name) {
                             continue;
                         } else {
                             unnamed_used += 1;
@@ -115,10 +117,42 @@ impl PartialCommandResult {
 pub enum ParseResult {
     Nothing,
     PartialLabel(String),
+    PartialField(String),
     PartialMember(Value, String),
     PartialFile(String, bool),
     PartialQuotedString(String),
     PartialArgument(PartialCommandResult),
+}
+
+impl Display for ParseResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParseResult::Nothing => f.write_str("nothing"),
+            ParseResult::PartialLabel(l) => {
+                f.write_str("label ")?;
+                f.write_str(l)
+            }
+            ParseResult::PartialField(l) => {
+                f.write_str("field ")?;
+                f.write_str(l)
+            }
+            ParseResult::PartialMember(_p, m) => {
+                f.write_str("member ")?;
+                f.write_str(m)
+            }
+            ParseResult::PartialFile(p, _q) => {
+                f.write_str("file ")?;
+                f.write_str(p)
+            }
+            ParseResult::PartialQuotedString(s) => {
+                f.write_str("string ")?;
+                f.write_str(s)
+            }
+            ParseResult::PartialArgument(_a) => {
+                f.write_str("command")
+            }
+        }
+    }
 }
 
 fn simple_path(node: &Node, cursor: usize) -> CrushResult<String> {
@@ -192,12 +226,19 @@ fn find_command_in_job_list(ast: JobListNode, cursor: usize) -> CrushResult<Comm
                 .map(|c| c.clone())), "Nothing to complete")
 }
 
-fn fetch_value(node: &Node, scope: &Scope) -> CrushResult<Option<Value>> {
+fn fetch_value(node: &Node, scope: &Scope, is_command: bool) -> CrushResult<Option<Value>> {
     match node {
         Node::Label(l) => scope.get(&l.string),
 
+        Node::Field(l) =>
+            if is_command {
+                scope.get(&l.string)
+            } else {
+                Ok(None)
+            },
+
         Node::GetAttr(n, l) =>
-            match fetch_value(n, scope)? {
+            match fetch_value(n, scope, is_command)? {
                 Some(parent) => parent.field(&l.string),
                 None => Ok(None),
             },
@@ -225,7 +266,7 @@ fn fetch_value(node: &Node, scope: &Scope) -> CrushResult<Option<Value>> {
 }
 
 fn parse_command_node(node: &Node, scope: &Scope) -> CrushResult<CompletionCommand> {
-    match fetch_value(node, scope)? {
+    match fetch_value(node, scope, true)? {
         Some(Value::Command(command)) => Ok(CompletionCommand::Known(command)),
         _ => Ok(CompletionCommand::Unknown),
     }
@@ -235,18 +276,18 @@ fn parse_previous_argument(arg: &Node) -> PreviousArgument {
     match arg {
         Node::Assignment(key, op, value) => {
             match (key.as_ref(), op.as_str()) {
-                (Node::Label(name), "=") => {
+                (Node::Field(name), "=") => {
                     let inner = parse_previous_argument(value.as_ref());
                     return PreviousArgument {
                         name: Some(name.string.clone()),
-                        value: inner.value
-                    }
+                        value: inner.value,
+                    };
                 }
                 _ => {}
             }
         }
 
-        _ => {},
+        _ => {}
     }
     PreviousArgument {
         name: None,
@@ -278,9 +319,13 @@ pub fn parse(
                         Ok(ParseResult::PartialLabel(
                             label.prefix(cursor).string)),
 
+                    Node::Field(label) =>
+                        Ok(ParseResult::PartialField(
+                            label.prefix(cursor).string)),
+
                     Node::GetAttr(parent, field) =>
                         Ok(ParseResult::PartialMember(
-                            mandate(fetch_value(parent, scope)?, "Unknown value")?,
+                            mandate(fetch_value(parent, scope, true)?, "Unknown value")?,
                             field.prefix(cursor).string)),
 
                     Node::Path(_, _) =>
@@ -296,7 +341,7 @@ pub fn parse(
 
                     Node::GetItem(_, _) => { panic!("AAA"); }
 
-                    _ => error("Can't extract command to complete"),
+                    _ => error(format!("Can't extract command to complete. Unknown node type {}", cmd.type_name())),
                 }
             } else {
                 Ok(ParseResult::PartialArgument(
@@ -358,13 +403,23 @@ pub fn parse(
                                 }
                             )),
 
+                        Node::Field(l) =>
+                            Ok(ParseResult::PartialArgument(
+                                PartialCommandResult {
+                                    command: c,
+                                    previous_arguments,
+                                    last_argument: LastArgument::Field(l.string.clone()),
+                                    last_argument_name,
+                                }
+                            )),
+
                         Node::GetAttr(parent, field) =>
                             Ok(ParseResult::PartialArgument(
                                 PartialCommandResult {
                                     command: c,
                                     previous_arguments,
-                                    last_argument: LastArgument::Field(
-                                        mandate(fetch_value(parent, scope)?, "unknown value")?,
+                                    last_argument: LastArgument::Member(
+                                        mandate(fetch_value(parent, scope, false)?, "unknown value")?,
                                         field.prefix(cursor).string),
                                     last_argument_name,
                                 })),
@@ -451,8 +506,8 @@ mod tests {
 
     #[test]
     fn find_command_in_operator() {
-        let ast = ast("ps | where {^cpu == (max_)}").unwrap();
-        let cmd = find_command_in_job_list(ast, 25).unwrap();
-        assert_eq!(cmd.location, Location::new(21, 25))
+        let ast = ast("ps | where {cpu == (max_)}").unwrap();
+        let cmd = find_command_in_job_list(ast, 24).unwrap();
+        assert_eq!(cmd.location, Location::new(20, 24))
     }
 }

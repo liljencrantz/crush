@@ -57,7 +57,7 @@ impl RustylineHelper {
                 QuotedString => highlight.get(&Value::string("string_literal")),
                 Regex => highlight.get(&Value::string("string_literal")),
                 QuotedFile => highlight.get(&Value::string("file_literal")),
-                LabelOrWildcard => highlight.get(&Value::string("label")),
+                StringOrWildcard => highlight.get(&Value::string("label")),
                 Integer => highlight.get(&Value::string("numeric_literal")),
                 Float => highlight.get(&Value::string("numeric_literal")),
                 Field => highlight.get(&Value::string("field")),

@@ -166,7 +166,7 @@ impl CommandNode {
                 error("Stray arguments")
             }
         } else {
-            let cmd = self.expressions[0].generate_argument(env)?;
+            let cmd = self.expressions[0].generate_command(env)?;
             let arguments = self.expressions[1..]
                 .iter()
                 .map(|e| e.generate_argument(env))
@@ -259,7 +259,7 @@ pub enum Node {
     Regex(TrackedString),
     Field(TrackedString),
     String(TrackedString),
-    File(TrackedString, bool),
+    File(TrackedString, bool), // true if filename is quoted
     Integer(TrackedString),
     Float(TrackedString),
     GetItem(Box<Node>, Box<Node>),
@@ -311,16 +311,44 @@ impl Node {
         }
     }
 
+    pub fn generate_command(&self, env: &Scope) -> CrushResult<ArgumentDefinition> {
+        self.generate(env, true)
+    }
+
     pub fn generate_argument(&self, env: &Scope) -> CrushResult<ArgumentDefinition> {
+        self.generate(env, false)
+    }
+
+    pub fn type_name(&self) -> &str {
+        match self {
+            Node::Assignment(_, _, _) => "assignment",
+            Node::Unary(_, _) => "unary operator",
+            Node::Glob(_) => "glob",
+            Node::Label(_) => "label",
+            Node::Regex(_) => "regular expression literal",
+            Node::Field(_) => "field",
+            Node::String(_) => "quoted string literal",
+            Node::File(_, _) => "file literal",
+            Node::Integer(_) => "integer literal",
+            Node::Float(_) => "floating point number literal",
+            Node::GetItem(_, _) => "subscript",
+            Node::GetAttr(_, _) => "member access",
+            Node::Path(_, _) => "path segment",
+            Node::Substitution(_) => "command substitution",
+            Node::Closure(_, _) => "closure",
+        }
+    }
+
+    pub fn generate(&self, env: &Scope, is_command: bool) -> CrushResult<ArgumentDefinition> {
         Ok(ArgumentDefinition::unnamed(match self {
             Node::Assignment(target, op, value) => match op.deref() {
                 "=" => {
                     return match target.as_ref() {
-                        Node::Label(t) => Ok(ArgumentDefinition::named(
+                        Node::Field(t) => Ok(ArgumentDefinition::named(
                             t.deref(),
                             propose_name(&t, value.generate_argument(env)?.unnamed_value()?),
                         )),
-                        _ => error("Invalid left side in named argument"),
+                        _ => error(format!("Invalid left side in named argument. Expected a field, got a {}", target.type_name())),
                     };
                 }
                 _ => return error("Invalid assignment operator"),
@@ -367,7 +395,7 @@ impl Node {
                     )?),
                     s.location),
             Node::GetAttr(node, label) => {
-                let parent = node.generate_argument(env)?;
+                let parent = node.generate(env, is_command)?;
                 match parent.unnamed_value()? {
                     ValueDefinition::Value(Value::Field(mut f), location) => {
                         f.push(label.string.clone());
@@ -380,7 +408,12 @@ impl Node {
                 Box::new(node.generate_argument(env)?.unnamed_value()?),
                 label.clone(),
             ),
-            Node::Field(f) => ValueDefinition::Value(Value::Field(vec![f.string[1..].to_string()]), f.location),
+            Node::Field(f) =>
+                if is_command {
+                    ValueDefinition::Label(f.clone())
+                } else {
+                    ValueDefinition::Value(Value::Field(vec![f.string.to_string()]), f.location)
+                },
             Node::Substitution(s) => ValueDefinition::JobDefinition(s.generate(env)?),
             Node::Closure(s, c) => {
                 let param = s.as_ref().map(|v| {
@@ -429,6 +462,7 @@ impl Node {
                         ArgumentDefinition::unnamed(value.generate_argument(env)?.unnamed_value()?),
                     ],
                     env,
+                    true,
                 ),
 
                 Node::GetAttr(container, attr) => container.method_invocation(
@@ -441,6 +475,7 @@ impl Node {
                         ArgumentDefinition::unnamed(value.generate_argument(env)?.unnamed_value()?),
                     ],
                     env,
+                    true,
                 ),
 
                 _ => error("Invalid left side in assignment"),
@@ -467,7 +502,7 @@ impl Node {
             }
 
             Node::GetItem(val, key) => {
-                val.method_invocation(&TrackedString::from("__getitem__", key.location()), vec![key.generate_argument(env)?], env)
+                val.method_invocation(&TrackedString::from("__getitem__", key.location()), vec![key.generate_argument(env)?], env, true)
             }
 
             Node::Unary(op, _) => match op.string.as_ref() {
@@ -506,22 +541,29 @@ impl Node {
         name: &TrackedString,
         arguments: Vec<ArgumentDefinition>,
         env: &Scope,
+        as_command: bool,
     ) -> CrushResult<Option<CommandInvocation>> {
         Ok(Some(CommandInvocation::new(
             ValueDefinition::GetAttr(
-                Box::from(self.generate_argument(env)?.unnamed_value()?),
+                Box::from(self.generate(env, as_command)?.unnamed_value()?),
                 name.clone(),
             ),
             arguments,
         )))
     }
 
-    pub fn parse_label_or_wildcard(s: &TrackedString) -> Box<Node> {
+    pub fn parse_string_or_wildcard(s: &TrackedString) -> Box<Node> {
         if s.string.contains('%') || s.string.contains('?') {
             Box::from(Node::Glob(s.clone()))
+        } else if s.string.contains('/') || s.string.contains('.') {
+                Box::from(Node::File(s.clone(), false))
         } else {
-            Box::from(Node::Label(s.clone()))
+            Box::from(Node::Field(s.clone()))
         }
+    }
+
+    pub fn parse_label(s: &TrackedString) -> Box<Node> {
+        Box::from(Node::Label(TrackedString::from(&s.string[1..], s.location)))
     }
 
     pub fn parse_file_or_wildcard(s: &TrackedString) -> Box<Node> {
@@ -584,7 +626,7 @@ fn expand_user(s: &str, location: Location) -> Box<Node> {
                 simple_substitution(
                     vec![
                         attr(&vec!["global", "user", "find"], location),
-                        Node::String(TrackedString::from(&format!("\"{}\"", &s[1..]), location))
+                        Node::String(TrackedString::from(&format!("\"{}\"", &s[1..]), location)),
                     ],
                     location,
                 ),
@@ -660,7 +702,8 @@ pub enum TokenType {
     FactorOperator,
     TermOperator,
     QuotedString,
-    LabelOrWildcard,
+    StringOrWildcard,
+    Label,
     Flag,
     Field,
     QuotedFile,

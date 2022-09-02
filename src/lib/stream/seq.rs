@@ -1,3 +1,4 @@
+use std::mem;
 use crate::lang::errors::CrushResult;
 use crate::lang::execution_context::CommandContext;
 use crate::lang::data::table::ColumnType;
@@ -22,9 +23,7 @@ pub fn seq(context: CommandContext) -> CrushResult<()> {
         .initialize(vec![ColumnType::new("value", ValueType::Integer)])?;
 
     if (cfg.to > cfg.from) != (cfg.step > 0) {
-        let tmp = cfg.to;
-        cfg.to = cfg.from;
-        cfg.from = tmp;
+        mem::swap(&mut cfg.to, &mut cfg.from);
     }
 
     let mut idx = cfg.from;

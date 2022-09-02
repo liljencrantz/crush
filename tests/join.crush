@@ -1,4 +1,4 @@
-home:=(csv:from example_data/home.csv name=string country=string)
-age:=(csv:from example_data/age.csv name=string age=integer)
+$home:=(csv:from ./example_data/home.csv name=$string country=$string)
+$age:=(csv:from ./example_data/age.csv name=$string age=$integer)
 
-join name=home name=age | sort ^name
+join name=$home name=$age | sort name

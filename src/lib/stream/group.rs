@@ -23,7 +23,7 @@ use crate::lang::global_state::GlobalState;
 group,
 can_block = true,
 short = "Group stream by the specified column(s)",
-example = "find . | group ^user ^type file_count={count} size={sum ^size}"
+example = "find . | group user type file_count={count} size={sum size}"
 )]
 pub struct Group {
     #[unnamed()]

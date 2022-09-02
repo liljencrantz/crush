@@ -45,11 +45,12 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             sum_avg::Avg::declare(env)?;
             sum_avg::Min::declare(env)?;
             sum_avg::Max::declare(env)?;
+            sum_avg::Mul::declare(env)?;
             env.declare_command(
                 "select", select::select, true,
                 "select copy_fields:field... [%] new_field=definition:command",
                 "Pass on some old fields and calculate new ones for each line of input",
-                example!(r#"ls | select ^user path={"{}/{}":format (pwd) file}"#), Unknown,
+                example!(r#"ls | select user path={"{}/{}":format (pwd) file}"#), Unknown,
                 vec![],
             )?;
             seq::Seq::declare(env)?;

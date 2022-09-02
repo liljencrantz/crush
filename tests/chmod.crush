@@ -1,7 +1,4 @@
 touch ./foo
-touch ./foo
-touch ./foo
-touch ./foo
-foo:chmod "a=" "o+xr" "u+w" "g-r"
-find ./foo | select ^permissions
-#rm ./foo
+./foo:chmod "a=" "o+xr" "u+w" "g-r"
+find ./foo | select permissions
+rm ./foo

@@ -1,4 +1,4 @@
-convert 1.0 integer
-convert 0.5 integer
-convert 5 string
-typeof (convert 5 string)
+convert 1.0 $integer
+convert 0.5 $integer
+convert 5 $string
+typeof (convert 5 $string)

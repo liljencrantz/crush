@@ -41,14 +41,14 @@
 
 "Time comparisons"
 
-t1 := (time:now)
-t2 := (time:now + (duration:of seconds=1))
-t1 > t2
-t1 < t2
-t1 >= t2
-t1 <= t2
-t1 != t2
-t1 == t2
+$t1 := (time:now)
+$t2 := (time:now + (duration:of seconds=1))
+$t1 > $t2
+$t1 < $t2
+$t1 >= $t2
+$t1 <= $t2
+$t1 != $t2
+$t1 == $t2
 
 "String comparisons"
 "a" > "b"

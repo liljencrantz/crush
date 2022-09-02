@@ -38,7 +38,7 @@ use crate::util::regex::RegexFileMatcher;
 use ordered_map::OrderedMap;
 pub use value_definition::ValueDefinition;
 pub use value_type::ValueType;
-use std::fmt::{Display, Formatter, Debug};
+use std::fmt::{Display, Formatter};
 use num_format::Grouping;
 use crate::util::escape::escape;
 
@@ -75,10 +75,7 @@ impl Display for Value {
             Value::String(val) => std::fmt::Display::fmt(val, f),
             Value::Integer(val) => std::fmt::Display::fmt(val, f),
             Value::Time(val) => f.write_str(&val.format("%Y-%m-%d %H:%M:%S %z").to_string()),
-            Value::Field(val) => {
-                f.write_str("^")?;
-                f.write_str(&val.join(":"))
-            }
+            Value::Field(val) => f.write_str(&val.join(":")),
             Value::Glob(val) => std::fmt::Display::fmt(val, f),
             Value::Regex(val, _) => {
                 f.write_str("re\"")?;

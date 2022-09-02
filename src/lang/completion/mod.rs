@@ -281,6 +281,9 @@ fn complete_partial_argument(
 
         LastArgument::Label(label) => {
             complete_label(Value::Scope(scope.clone()), &label, &argument_type, cursor, res)?;
+        }
+
+        LastArgument::Field(label) => {
             if parse_result.last_argument_name.is_none() {
                 if let CompletionCommand::Known(cmd) = parse_result.command {
                     complete_argument_name(cmd.arguments(), &label, cursor, res, false)?;
@@ -288,7 +291,7 @@ fn complete_partial_argument(
             }
         }
 
-        LastArgument::Field(parent, field) => {
+        LastArgument::Member(parent, field) => {
             complete_label(parent, &field, &argument_type, cursor, res)?;
         }
 
@@ -317,6 +320,10 @@ pub fn complete(
         }
 
         ParseResult::PartialLabel(label) => {
+            complete_label(Value::Scope(scope.clone()), &label, &ValueType::Any, cursor, &mut res)?;
+        }
+
+        ParseResult::PartialField(label) => {
             complete_label(Value::Scope(scope.clone()), &label, &ValueType::Any, cursor, &mut res)?;
         }
 
@@ -642,8 +649,8 @@ mod tests {
 
     #[test]
     fn complete_namespaced_argument() {
-        let line = "xxx abcd:bc";
-        let cursor = 11;
+        let line = "xxx $abcd:bc";
+        let cursor = line.len();
 
         let s = Scope::create_root();
         s.create_namespace("abcd", "bla", Box::new(|env| {
@@ -653,19 +660,19 @@ mod tests {
 
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "xxx abcd:bcde ");
+        assert_eq!(&completions[0].complete(line), "xxx $abcd:bcde ");
     }
 
     #[test]
     fn complete_simple_argument() {
-        let line = "abcd ab";
-        let cursor = 7;
+        let line = "abcd $ab";
+        let cursor = line.len();
 
         let s = Scope::create_root();
         s.declare("abcd", Value::Empty()).unwrap();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "abcd abcd ");
+        assert_eq!(&completions[0].complete(line), "abcd $abcd ");
     }
 
     #[test]
@@ -682,26 +689,26 @@ mod tests {
 
     #[test]
     fn check_multiple_token() {
-        let line = "ab cd ef";
-        let cursor = 5;
+        let line = "ab $cd ef";
+        let cursor = 6;
 
         let s = Scope::create_root();
         s.declare("cdef", Value::Empty()).unwrap();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "ab cdef  ef");
+        assert_eq!(&completions[0].complete(line), "ab $cdef  ef");
     }
 
     #[test]
     fn check_named_argument() {
-        let line = "ab foo=cd";
-        let cursor = 9;
+        let line = "ab foo=$cd";
+        let cursor = 10;
 
         let s = Scope::create_root();
         s.declare("cdef", Value::Empty()).unwrap();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "ab foo=cdef ");
+        assert_eq!(&completions[0].complete(line), "ab foo=$cdef ");
     }
 
     #[test]
@@ -718,7 +725,7 @@ mod tests {
 
     #[test]
     fn check_completion_type_filtering() {
-        let line = "my_cmd super_fancy_argument=t";
+        let line = "my_cmd super_fancy_argument=$t";
         let cursor = line.len();
 
         let s = scope_with_function();
@@ -726,7 +733,7 @@ mod tests {
         s.declare("type", Value::Type(ValueType::Empty)).unwrap();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "my_cmd super_fancy_argument=type ");
+        assert_eq!(&completions[0].complete(line), "my_cmd super_fancy_argument=$type ");
     }
 
     #[test]

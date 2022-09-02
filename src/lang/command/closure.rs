@@ -2,7 +2,7 @@ use crate::lang::argument::{Argument, ArgumentDefinition, ArgumentType};
 use crate::lang::command::{BoundCommand, Command, CrushCommand, OutputType, Parameter, ArgumentDescription};
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::data::dict::Dict;
-use crate::lang::errors::{argument_error_legacy, error, mandate, CrushResult};
+use crate::lang::errors::{argument_error_legacy, error, mandate, CrushResult, argument_error};
 use crate::lang::execution_context::{CompileContext, CommandContext, JobContext};
 use crate::lang::help::Help;
 use crate::lang::job::Job;
@@ -595,7 +595,11 @@ impl Closure {
                         if named.contains_key(&name.string) {
                             let value = named.remove(&name.string).unwrap();
                             if !value_type.is(&value) {
-                                return argument_error_legacy("Wrong parameter type");
+                                return argument_error(
+                                    format!(
+                                        "Wrong parameter type {}, expected {}",
+                                        value.value_type(), value_type),
+                                    name.location);
                             }
                             context.env.redeclare(&name.string, value)?;
                         } else if !unnamed.is_empty() {
@@ -604,7 +608,12 @@ impl Closure {
                             let env = context.env.clone();
                             env.redeclare(&name.string, default.eval_and_bind(context)?)?;
                         } else {
-                            return argument_error_legacy("Missing variable!!!");
+                            return argument_error(
+                                format!(
+                                    "Missing variable {}. Options are {}!!!",
+                                        name.string,
+                                    named.keys().map(|a|{a.to_string()}).collect::<Vec<String>>().join(", ")),
+                                name.location);
                         }
                     } else {
                         return argument_error_legacy("Not a type");

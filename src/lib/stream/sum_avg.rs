@@ -42,7 +42,7 @@ sum_function!(sum_duration, Duration, Duration::seconds(0), Duration);
 #[signature(
 sum,
 short = "Calculate the sum for the specific column across all rows.",
-example = "ps | sum ^cpu")]
+example = "proc:list | sum cpu")]
 pub struct Sum {
     field: Option<Field>,
 }
@@ -94,7 +94,7 @@ avg_function!(avg_duration, Duration, Duration::seconds(0), Duration, i32);
 #[signature(
 avg,
 short = "Calculate the average for the specific column across all rows.",
-example = "ps | avg ^cpu")]
+example = "proc:list | avg cpu")]
 pub struct Avg {
     field: Option<Field>,
 }
@@ -159,7 +159,7 @@ aggr_function!(max_time, Time, |a, b| std::cmp::max(a, b));
 #[signature(
 min,
 short = "Calculate the minimum for the specific column across all rows.",
-example = "ps | min ^cpu")]
+example = "proc:list | min cpu")]
 pub struct Min {
     field: Option<Field>,
 }
@@ -186,7 +186,7 @@ fn min(context: CommandContext) -> CrushResult<()> {
 #[signature(
 max,
 short = "Calculate the maximum for the specific column across all rows.",
-example = "ps | max ^cpu")]
+example = "proc:list | max cpu")]
 pub struct Max {
     field: Option<Field>,
 }
@@ -203,6 +203,49 @@ fn max(context: CommandContext) -> CrushResult<()> {
                 ValueType::Time => context.output.send(max_time(input, column)?),
                 t => argument_error_legacy(
                     &format!("Can't pick max of elements of type {}", t),
+                ),
+            }
+        }
+        _ => error("Expected a stream"),
+    }
+}
+
+macro_rules! mul_function {
+    ($name:ident, $var_type:ident, $var_initializer:expr, $value_type:ident) => {
+        fn $name(mut s: Stream, column: usize) -> CrushResult<Value> {
+            let mut res: $var_type = $var_initializer;
+            while let Ok(row) = s.read() {
+                match row.cells()[column] {
+                    Value::$value_type(i) => res = res * i,
+                    _ => return error("Invalid cell value"),
+                }
+            }
+            Ok(Value::$value_type(res))
+        }
+    };
+}
+
+mul_function!(mul_int, i128, 1, Integer);
+mul_function!(mul_float, f64, 1.0, Float);
+
+#[signature(
+mul,
+short = "Calculate the product for the specific column across all rows.",
+example = "seq 5 10 | mul")]
+pub struct Mul {
+    field: Option<Field>,
+}
+
+fn mul(context: CommandContext) -> CrushResult<()> {
+    match context.input.recv()?.stream() {
+        Some(input) => {
+            let cfg: Sum = Sum::parse(context.arguments, &context.global_state.printer())?;
+            let column = parse(input.types(), cfg.field)?;
+            match &input.types()[column].cell_type {
+                ValueType::Integer => context.output.send(mul_int(input, column)?),
+                ValueType::Float => context.output.send(mul_float(input, column)?),
+                t => argument_error_legacy(
+                    &format!("Can't calculate product of elements of type {}", t),
                 ),
             }
         }

@@ -1,11 +1,10 @@
-use crate::lang::errors::{error, CrushResult, CrushErrorType};
+use crate::lang::errors::{error, CrushResult};
 use crate::lang::execution_context::{CompileContext, JobContext};
 use crate::lang::data::scope::Scope;
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, value::Value};
 use crate::lang::command::Command;
 use crate::lang::execution_context::CommandContext;
 use crate::lang::value::{ValueDefinition, ValueType};
-use std::ops::Deref;
 use std::path::PathBuf;
 use std::fmt::{Display, Formatter};
 use std::thread::ThreadId;
@@ -16,24 +15,6 @@ use crate::lang::ast::{Location, TrackedString};
 pub struct CommandInvocation {
     command: ValueDefinition,
     arguments: Vec<ArgumentDefinition>,
-}
-
-fn resolve_external_command(name: &str, env: &Scope) -> CrushResult<Option<PathBuf>> {
-    if let Some(Value::List(path)) = env.get("cmd_path")? {
-        let path_vec = path.dump();
-        for val in path_vec {
-            match val {
-                Value::File(el) => {
-                    let full = el.join(name);
-                    if full.exists() {
-                        return Ok(Some(full));
-                    }
-                }
-                _ => {}
-            }
-        }
-    }
-    Ok(None)
 }
 
 fn arg_can_block(local_arguments: &Vec<ArgumentDefinition>, context: &mut CompileContext) -> bool {
@@ -107,22 +88,12 @@ pub fn eval_non_blocking(command: &ValueDefinition, arguments: &Vec<ArgumentDefi
         Ok((this, value)) => {
             eval_internal(this, value, arguments.clone(), context, command.location())
         }
-        Err(err) => {
-            let (cmd, sub) = match command {
-                ValueDefinition::Label(str) => (str, None),
-                ValueDefinition::GetAttr(parent, sub) => match parent.deref() {
-                    ValueDefinition::Label(str) => if context.scope.get(str.string.as_str())?.is_none() {
-                        (str, Some(sub))
-                    } else {
-                        return Err(err);
-                    },
-                    _ => return Err(err),
-                },
-                _ => return Err(err),
-            };
-
-            try_external_command(cmd, sub, arguments.clone(), context)
-        }
+        Err(err) =>
+            if let ValueDefinition::Label(str) = command {
+                try_external_command(str, arguments.clone(), context)
+            } else {
+                return Err(err);
+            }
     }
 }
 
@@ -275,13 +246,29 @@ fn eval_command(
     }
 }
 
+fn resolve_external_command(name: &str, env: &Scope) -> CrushResult<Option<PathBuf>> {
+    if let Some(Value::List(path)) = env.get("cmd_path")? {
+        let path_vec = path.dump();
+        for val in path_vec {
+            match val {
+                Value::File(el) => {
+                    let full = el.join(name);
+                    if full.exists() {
+                        return Ok(Some(full));
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    Ok(None)
+}
+
 fn try_external_command(
     cmd: &TrackedString,
-    sub: Option<&TrackedString>,
     mut arguments: Vec<ArgumentDefinition>,
     context: JobContext,
 ) -> CrushResult<Option<ThreadId>> {
-
     match resolve_external_command(&cmd.string, &context.scope)? {
         None => error(format!("Unknown command name {}", cmd).as_str()),
         Some(path) => {
@@ -289,16 +276,6 @@ fn try_external_command(
                 0,
                 ArgumentDefinition::unnamed(ValueDefinition::Value(Value::File(path), cmd.location)),
             );
-            if let Some(subcmd) = sub {
-                arguments.insert(
-                    1,
-                    ArgumentDefinition::unnamed(
-                        ValueDefinition::Value(
-                            Value::string(subcmd.string.clone()),
-                            subcmd.location,
-                        )),
-                );
-            }
             let call = CommandInvocation {
                 command: ValueDefinition::Value(
                     Value::Command(

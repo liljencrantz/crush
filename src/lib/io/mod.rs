@@ -87,7 +87,7 @@ fn echo(context: CommandContext) -> CrushResult<()> {
 member,
 can_block = false,
 short = "Extracts one member from the input struct.",
-example = "http \"example.com\" | member ^body | json:from"
+example = "http \"example.com\" | member body | json:from"
 )]
 struct Member {
     #[description("the member to extract.")]

@@ -2,19 +2,19 @@
 # of a command between multiple commands via the same pipe.
 
 # Create the pipe
-pipe := ((table_input_stream value=integer):pipe)
+$pipe := ((table_input_stream value=$integer):pipe)
 
 # Attach the input end to a bunch of seq commands
-input := (seq 10_000 | pipe:output:write | bg)
+$input := (seq 10_000 | pipe:output:write | bg)
 
 # Attach the output end to the sum command and
-sum_job_id1 := (pipe:input | sum | bg)
-sum_job_id2 := (pipe:input | sum | bg)
-sum_job_id3 := (pipe:input | sum | bg)
-sum_job_id4 := (pipe:input | sum | bg)
+$sum_job_id1 := (pipe:input | sum | bg)
+$sum_job_id2 := (pipe:input | sum | bg)
+$sum_job_id3 := (pipe:input | sum | bg)
+$sum_job_id4 := (pipe:input | sum | bg)
 
 # Close the output and input, so that the input can actually
 # reach EOF once the above 4 invocation exit
 pipe:close
 # Wait for the sum command to finish
-val (sum_job_id1 | fg) + (sum_job_id2 | fg) + (sum_job_id3 | fg) + (sum_job_id4 | fg)
+val ($sum_job_id1 | fg) + ($sum_job_id2 | fg) + ($sum_job_id3 | fg) + ($sum_job_id4 | fg)

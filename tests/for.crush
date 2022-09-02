@@ -1,33 +1,33 @@
 for i=(list:of 1 2) {
-    echo i
+    echo $i
 }
 
-d := ((dict string integer):new)
-d["fooo"] = 3
+$d := ((dict $string $integer):new)
+$d["fooo"] = 3
 
-for d {
-    echo key value
+for $d {
+    echo $key $value
 }
 
-for i=d {
-    echo i:key i:value
+for i=$d {
+    echo $i:key $i:value
 }
 
-table := (seq 3 | materialize)
+$table := (seq 3 | materialize)
 
-for table {
-    echo value
+for $table {
+    echo $value
 }
 
-for i=table {
-    echo i
+for i=$table {
+    echo $i
 }
 
 
 for (seq 3) {
-    echo value
+    echo $value
 }
 
 for i=(seq 3) {
-    echo i
+    echo $i
 }
