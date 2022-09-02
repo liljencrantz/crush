@@ -1,6 +1,6 @@
 /**
-  The type representing all values in crush.
-*/
+The type representing all values in crush.
+ */
 mod value_definition;
 mod value_type;
 
@@ -12,11 +12,11 @@ use std::str::FromStr;
 use chrono::{DateTime, Local};
 use regex::Regex;
 
-use crate::lang::errors::{argument_error_legacy, mandate, CrushResult};
+use crate::lang::errors::{argument_error_legacy, mandate, CrushResult, data_error, eof_error};
 use crate::lang::data::r#struct::Struct;
 use crate::lang::data::r#struct::StructReader;
 use crate::lang::data::scope::Scope;
-use crate::lang::pipe::{streams, InputStream, Stream, OutputStream};
+use crate::lang::pipe::{streams, InputStream, Stream, OutputStream, CrushStream};
 use crate::lang::data::{
     binary::BinaryReader, dict::Dict, dict::DictReader, list::List, list::ListReader,
     table::ColumnType, table::TableReader,
@@ -40,7 +40,9 @@ pub use value_definition::ValueDefinition;
 pub use value_type::ValueType;
 use std::fmt::{Display, Formatter};
 use num_format::Grouping;
+use crate::data::table::Row;
 use crate::util::escape::escape;
+use crate::util::replace::Replace;
 
 pub type Field = Vec<String>;
 
@@ -141,6 +143,49 @@ impl From<bool> for Value {
     }
 }
 
+pub struct VecReader {
+    vec: Vec<Value>,
+    types: Vec<ColumnType>,
+    idx: usize,
+}
+
+impl VecReader {
+    pub fn new(
+        vec: Vec<Value>,
+        column_type: ValueType,
+    ) -> VecReader {
+        VecReader {
+            vec,
+            types: vec![ColumnType::new("value", column_type)],
+            idx: 0,
+        }
+    }
+}
+
+impl CrushStream for VecReader {
+    fn read(&mut self) -> CrushResult<Row> {
+        self.idx += 1;
+        if self.idx > self.vec.len() {
+            return eof_error()
+        }
+        Ok(Row::new(vec![self.vec.replace(self.idx - 1, Value::Empty())]))
+    }
+
+    fn read_timeout(
+        &mut self,
+        _timeout: Duration,
+    ) -> Result<Row, crate::lang::pipe::RecvTimeoutError> {
+        match self.read() {
+            Ok(r) => Ok(r),
+            Err(_) => Err(crate::lang::pipe::RecvTimeoutError::Disconnected),
+        }
+    }
+
+    fn types(&self) -> &[ColumnType] {
+        &self.types
+    }
+}
+
 impl Value {
     pub fn bind(self, this: Value) -> Value {
         match self {
@@ -215,15 +260,22 @@ impl Value {
         Value::String(s.into())
     }
 
-    pub fn stream(&self) -> Option<Stream> {
-        match self {
+    pub fn stream(&self) -> CrushResult<Option<Stream>> {
+        Ok(match self {
             Value::TableInputStream(s) => Some(Box::from(s.clone())),
             Value::Table(r) => Some(Box::from(TableReader::new(r.clone()))),
-            Value::List(l) => Some(Box::from(ListReader::new(l.clone(), "value"))),
+            Value::List(l) => Some(l.stream()),
             Value::Dict(d) => Some(Box::from(DictReader::new(d.clone()))),
             Value::Struct(s) => Some(Box::from(StructReader::new(s.clone()))),
+            Value::Glob(l) => {
+                let mut paths = Vec::<PathBuf>::new();
+                l.glob_files(&cwd()?, &mut paths)?;
+                Some(Box::from(VecReader::new(
+                    paths.iter().map(|e| { Value::File(e.to_path_buf()) }).collect(),
+                    ValueType::File)))
+            }
             _ => None,
-        }
+        })
     }
 
     pub fn value_type(&self) -> ValueType {
@@ -259,7 +311,7 @@ impl Value {
             Value::File(p) => v.push(p.clone()),
             Value::Glob(pattern) => pattern.glob_files(&PathBuf::from("."), v)?,
             Value::Regex(_, re) => re.match_files(&cwd()?, v, printer),
-            val => match val.stream() {
+            val => match val.stream()? {
                 None => return error("Expected a file name"),
                 Some(mut s) => {
                     let t = s.types();
@@ -360,13 +412,13 @@ impl Value {
     }
 
     /**
-        Format this value in a way appropriate for use in the pretty printer.
+    Format this value in a way appropriate for use in the pretty printer.
 
-        * Escape non-printable strings
-        * Respect integer grouping, but use _ intead of whatever number group
-          separator the locale prescribes, so that the number can be copied
-          and pasted into the terminal again.
-    */
+    * Escape non-printable strings
+    * Respect integer grouping, but use _ intead of whatever number group
+      separator the locale prescribes, so that the number can be copied
+      and pasted into the terminal again.
+     */
     pub fn to_pretty_string(&self, grouping: Grouping) -> String {
         match self {
             Value::String(val) =>

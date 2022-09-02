@@ -241,7 +241,7 @@ fn simple_type_to_mutator(simple_type: &str, allowed_values: &Option<Ident>) -> 
             "Stream" => {
                 quote! {
                     crate::lang::errors::mandate_argument(
-                        _value.stream(),
+                        _value.stream()?,
                         "Expected a type that can be streamed",
                         _location)?,
                     }

@@ -207,7 +207,7 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
     match context.arguments.len() {
         0 => {
             let mut lst = Vec::new();
-            let mut input = mandate(context.input.recv()?.stream(), "Expected a stream")?;
+            let mut input = mandate(context.input.recv()?.stream()?, "Expected a stream")?;
             if input.types().len() != 1 {
                 return data_error("Expected input with exactly one column");
             }

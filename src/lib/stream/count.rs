@@ -17,7 +17,7 @@ pub fn count(context: CommandContext) -> CrushResult<()> {
         Value::Table(r) => context.output.send(Value::Integer(r.rows().len() as i128)),
         Value::List(r) => context.output.send(Value::Integer(r.len() as i128)),
         Value::Dict(r) => context.output.send(Value::Integer(r.len() as i128)),
-        v => match v.stream() {
+        v => match v.stream()? {
             Some(mut input) => {
                 let mut res: i128 = 0;
                 while let Ok(_) = input.read() {

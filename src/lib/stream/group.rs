@@ -141,7 +141,7 @@ fn create_worker_thread(
 pub fn group(context: CommandContext) -> CrushResult<()> {
     let cfg: Group = Group::parse(context.arguments, &context.global_state.printer())?;
     let mut input = mandate(
-        context.input.recv()?.stream(),
+        context.input.recv()?.stream()?,
         "Expected input to be a stream",
     )?;
     let input_type = input.types().to_vec();

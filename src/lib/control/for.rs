@@ -12,7 +12,7 @@ pub fn r#for(mut context: CommandContext) -> CrushResult<()> {
     let body = context.arguments.command(1)?;
     let iter = context.arguments.remove(0);
     let name = iter.argument_type;
-    let mut input = mandate(iter.value.stream(), "Expected a stream")?;
+    let mut input = mandate(iter.value.stream()?, "Expected a stream")?;
 
     while let Ok(line) = input.read() {
         let env = context.scope.create_child(&context.scope, true);

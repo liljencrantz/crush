@@ -1,5 +1,5 @@
 use crate::lang::errors::{argument_error_legacy, error, mandate, CrushResult};
-use crate::lang::pipe::CrushStream;
+use crate::lang::pipe::{CrushStream, Stream};
 use crate::lang::{data::table::ColumnType, data::table::Row, value::Field, value::Value, value::ValueType};
 use crate::util::identity_arc::Identity;
 use chrono::Duration;
@@ -8,6 +8,7 @@ use std::collections::HashSet;
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::fmt::{Display, Formatter};
+use crate::lang::value::VecReader;
 
 #[derive(Clone)]
 pub struct List {
@@ -179,6 +180,12 @@ impl List {
         Ok(())
     }
 
+    pub fn stream(&self) -> Stream {
+        let mut vec = Vec::new();
+        self.dump_value(&mut vec);
+        Box::new(VecReader::new(vec, self.cell_type.clone()))
+    }
+
     dump_to!(dump_string, String, String, |e: &String| e.to_string());
     dump_to!(dump_integer, i128, Integer, |v: &i128| *v);
     dump_to!(dump_bool, bool, Bool, |v: &bool| *v);
@@ -229,7 +236,7 @@ impl std::cmp::PartialEq for List {
     }
 }
 
-impl std::cmp::PartialOrd for List {
+impl PartialOrd for List {
     fn partial_cmp(&self, other: &List) -> Option<Ordering> {
         let us = self.cells.lock().unwrap().clone();
         let them = other.cells.lock().unwrap().clone();
@@ -244,42 +251,5 @@ impl std::cmp::PartialOrd for List {
             return us.len().partial_cmp(&them.len());
         }
         Some(Ordering::Equal)
-    }
-}
-
-pub struct ListReader {
-    list: List,
-    idx: usize,
-    types: Vec<ColumnType>,
-}
-
-impl ListReader {
-    pub fn new(list: List, name: &str) -> ListReader {
-        ListReader {
-            types: vec![ColumnType::new(name, list.element_type())],
-            list,
-            idx: 0usize,
-        }
-    }
-}
-
-impl CrushStream for ListReader {
-    fn read(&mut self) -> CrushResult<Row> {
-        self.idx += 1;
-        Ok(Row::new(vec![self.list.get(self.idx - 1)?]))
-    }
-
-    fn read_timeout(
-        &mut self,
-        _timeout: Duration,
-    ) -> Result<Row, crate::lang::pipe::RecvTimeoutError> {
-        match self.read() {
-            Ok(r) => Ok(r),
-            Err(_) => Err(crate::lang::pipe::RecvTimeoutError::Disconnected),
-        }
-    }
-
-    fn types(&self) -> &[ColumnType] {
-        &self.types
     }
 }

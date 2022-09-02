@@ -45,7 +45,7 @@ pub fn each(context: CommandContext) -> CrushResult<()> {
     let location = context.arguments[0].location;
     context.output.send(Value::Empty())?;
 
-    match context.input.recv()?.stream() {
+    match context.input.recv()?.stream()? {
         Some(mut input) => {
             let base_context = context.empty();
 

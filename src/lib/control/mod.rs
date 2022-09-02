@@ -193,7 +193,7 @@ example = "pipe := ((table_input_stream value=integer):pipe)\n    _1 := (seq 100
 struct Fg {}
 
 fn fg(context: CommandContext) -> CrushResult<()> {
-    let mut result_stream = mandate(context.input.recv()?.stream(), "Invalid input")?;
+    let mut result_stream = mandate(context.input.recv()?.stream()?, "Invalid input")?;
     let mut result: Vec<Value> = result_stream.read()?.into();
     if result.len() != 1 {
         data_error("Expected a single row, single column result")

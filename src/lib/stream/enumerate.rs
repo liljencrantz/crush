@@ -16,7 +16,7 @@ pub struct Enumerate {
 
 fn enumerate(context: CommandContext) -> CrushResult<()> {
     let cfg: Enumerate = Enumerate::parse(context.arguments, &context.global_state.printer())?;
-    match context.input.recv()?.stream() {
+    match context.input.recv()?.stream()? {
         Some(mut input) => {
             let mut output_type = vec![
                 ColumnType::new("idx", ValueType::Integer)];

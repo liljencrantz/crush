@@ -52,7 +52,7 @@ pub fn r#where(context: CommandContext) -> CrushResult<()> {
     let cfg: Where = Where::parse(context.arguments.clone(), &context.global_state.printer())?;
     let location = context.arguments[0].location;
 
-    match context.input.recv()?.stream() {
+    match context.input.recv()?.stream()? {
         Some(mut input) => {
             let base_context = context.empty();
 

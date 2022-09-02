@@ -18,7 +18,7 @@ pub struct Uniq {
 }
 
 pub fn uniq(context: CommandContext) -> CrushResult<()> {
-    match context.input.recv()?.stream() {
+    match context.input.recv()?.stream()? {
         Some(mut input) => {
             let cfg: Uniq = Uniq::parse(context.arguments, &context.global_state.printer())?;
             let output = context.output.initialize(input.types().to_vec())?;

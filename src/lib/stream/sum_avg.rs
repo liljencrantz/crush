@@ -48,7 +48,7 @@ pub struct Sum {
 }
 
 fn sum(context: CommandContext) -> CrushResult<()> {
-    match context.input.recv()?.stream() {
+    match context.input.recv()?.stream()? {
         Some(input) => {
             let cfg: Sum = Sum::parse(context.arguments, &context.global_state.printer())?;
             let column = parse(input.types(), cfg.field)?;
@@ -100,7 +100,7 @@ pub struct Avg {
 }
 
 fn avg(context: CommandContext) -> CrushResult<()> {
-    match context.input.recv()?.stream() {
+    match context.input.recv()?.stream()? {
         Some(input) => {
             let cfg: Avg = Avg::parse(context.arguments, &context.global_state.printer())?;
             let column = parse(input.types(), cfg.field)?;
@@ -165,7 +165,7 @@ pub struct Min {
 }
 
 fn min(context: CommandContext) -> CrushResult<()> {
-    match context.input.recv()?.stream() {
+    match context.input.recv()?.stream()? {
         Some(input) => {
             let cfg: Min = Min::parse(context.arguments, &context.global_state.printer())?;
             let column = parse(input.types(), cfg.field)?;
@@ -192,7 +192,7 @@ pub struct Max {
 }
 
 fn max(context: CommandContext) -> CrushResult<()> {
-    match context.input.recv()?.stream() {
+    match context.input.recv()?.stream()? {
         Some(input) => {
             let cfg: Max = Max::parse(context.arguments, &context.global_state.printer())?;
             let column = parse(input.types(), cfg.field)?;
@@ -237,7 +237,7 @@ pub struct Mul {
 }
 
 fn mul(context: CommandContext) -> CrushResult<()> {
-    match context.input.recv()?.stream() {
+    match context.input.recv()?.stream()? {
         Some(input) => {
             let cfg: Sum = Sum::parse(context.arguments, &context.global_state.printer())?;
             let column = parse(input.types(), cfg.field)?;

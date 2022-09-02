@@ -79,7 +79,7 @@ impl Files {
             Value::Glob(pattern) => pattern.glob_files(&PathBuf::from("."), &mut self.files)?,
             Value::Regex(_, re) => re.match_files(&cwd()?, &mut self.files, printer),
             Value::Field(f) => self.files.push(PathBuf::from(f.join(":"))),
-            value => match value.stream() {
+            value => match value.stream()? {
                 None => return argument_error_legacy("Expected a file name"),
                 Some(mut s) => {
                     let t = s.types();
