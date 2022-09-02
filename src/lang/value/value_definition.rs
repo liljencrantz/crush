@@ -20,15 +20,6 @@ pub enum ValueDefinition {
     Path(Box<ValueDefinition>, TrackedString),
 }
 
-fn file_get(f: &str) -> Option<Value> {
-    let p = PathBuf::from(f);
-    if p.exists() {
-        Some(Value::File(p))
-    } else {
-        None
-    }
-}
-
 impl ValueDefinition {
     pub fn location(&self) -> Location {
         match self {
@@ -79,7 +70,7 @@ impl ValueDefinition {
             ValueDefinition::Label(s) => (
                 None,
                 mandate(
-                    context.env.get(&s.string)?.or_else(|| file_get(&s.string)),
+                    context.env.get(&s.string)?,
                     &format!("Unknown variable {}", self),
                 )?,
             ),
