@@ -40,7 +40,7 @@ pub fn pup(
                 },
             )?;
 
-            cmd.invoke(CommandContext::new(&env, global_state));
+            cmd.invoke(CommandContext::new(&env, global_state).with_output(snd));
             global_state.threads().join(global_state.printer());
 
             Ok(())

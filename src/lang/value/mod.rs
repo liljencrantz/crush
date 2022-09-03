@@ -18,7 +18,7 @@ use crate::lang::data::r#struct::StructReader;
 use crate::lang::data::scope::Scope;
 use crate::lang::pipe::{streams, InputStream, Stream, OutputStream, CrushStream};
 use crate::lang::data::{
-    binary::BinaryReader, dict::Dict, dict::DictReader, list::List, list::ListReader,
+    binary::BinaryReader, dict::Dict, dict::DictReader, list::List,
     table::ColumnType, table::TableReader,
 };
 use crate::util::time::duration_format;

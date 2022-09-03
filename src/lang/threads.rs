@@ -73,10 +73,10 @@ impl ThreadStore {
             }))?;
         let id = handle.thread().id();
         let mut data = self.data.lock().unwrap();
-        data.threads.push(ThreadData {
-            handle,
-            creation_time: Local::now(),
-        });
+            data.threads.push(ThreadData {
+                handle,
+                creation_time: Local::now(),
+            });
         Ok(id)
     }
 

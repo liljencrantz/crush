@@ -4,9 +4,8 @@
 
 use crate::lang::data::binary::BinaryReader;
 use crate::lang::errors::to_crush_error;
-use crate::lang::data::list::ListReader;
 use crate::lang::printer::Printer;
-use crate::lang::pipe::{CrushStream, InputStream, ValueSender, printer_pipe};
+use crate::lang::pipe::{CrushStream, InputStream, ValueSender, printer_pipe, Stream};
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
 use crate::lang::data::table::Table;
@@ -17,6 +16,7 @@ use crate::lang::value::ValueType;
 use crate::lang::data::r#struct::Struct;
 use std::cmp::max;
 use std::io::{BufReader, Read};
+use std::ops::Deref;
 use std::thread;
 use chrono::Duration;
 use crate::util::hex::to_hex;
@@ -136,14 +136,14 @@ impl PrettyPrinter {
                 if list.len() < 8 {
                     self.printer.line(list.to_string().as_str())
                 } else {
-                    self.print_stream(&mut ListReader::new(list, "value"), 0)
+                    self.print_stream(list.stream().as_mut(), 0)
                 }
             }
             _ => self.printer.line(cell.to_pretty_string(self.grouping).as_str()),
         };
     }
 
-    fn print_stream(&self, stream: &mut impl CrushStream, indent: usize) {
+    fn print_stream(&self, stream: &mut dyn CrushStream, indent: usize) {
         let mut data: Vec<Row> = Vec::new();
         let mut has_table = false;
 
@@ -388,7 +388,7 @@ impl PrettyPrinter {
                 Value::TableInputStream(mut output) => self.print_stream(&mut output, indent),
                 Value::Table(rows) => self.print_stream(&mut TableReader::new(rows), indent),
                 Value::BinaryInputStream(mut b) => self.print_binary(b.as_mut(), indent),
-                Value::List(list) => self.print_stream(&mut ListReader::new(list, "value"), indent),
+                Value::List(list) => self.print_stream(list.stream().as_mut(), indent),
                 _ => {
                     let mut line = " ".repeat(4 * indent);
                     line.push_str(&ss);
