@@ -7,9 +7,9 @@ use crate::lang::{value::Value, value::ValueType};
 use chrono::Duration;
 use float_ord::FloatOrd;
 use signature::signature;
-use crate::lang::value::Field;
+use crate::lang::value::Symbol;
 
-fn parse(input_type: &[ColumnType], field: Option<Field>) -> CrushResult<usize> {
+fn parse(input_type: &[ColumnType], field: Option<Symbol>) -> CrushResult<usize> {
     field.map(|f| input_type.find(&f))
         .unwrap_or_else(||
             if input_type.len() == 1 {
@@ -44,7 +44,7 @@ sum,
 short = "Calculate the sum for the specific column across all rows.",
 example = "proc:list | sum cpu")]
 pub struct Sum {
-    field: Option<Field>,
+    field: Option<Symbol>,
 }
 
 fn sum(context: CommandContext) -> CrushResult<()> {
@@ -96,7 +96,7 @@ avg,
 short = "Calculate the average for the specific column across all rows.",
 example = "proc:list | avg cpu")]
 pub struct Avg {
-    field: Option<Field>,
+    field: Option<Symbol>,
 }
 
 fn avg(context: CommandContext) -> CrushResult<()> {
@@ -161,7 +161,7 @@ min,
 short = "Calculate the minimum for the specific column across all rows.",
 example = "proc:list | min cpu")]
 pub struct Min {
-    field: Option<Field>,
+    field: Option<Symbol>,
 }
 
 fn min(context: CommandContext) -> CrushResult<()> {
@@ -188,7 +188,7 @@ max,
 short = "Calculate the maximum for the specific column across all rows.",
 example = "proc:list | max cpu")]
 pub struct Max {
-    field: Option<Field>,
+    field: Option<Symbol>,
 }
 
 fn max(context: CommandContext) -> CrushResult<()> {
@@ -233,7 +233,7 @@ mul,
 short = "Calculate the product for the specific column across all rows.",
 example = "seq 5 10 | mul")]
 pub struct Mul {
-    field: Option<Field>,
+    field: Option<Symbol>,
 }
 
 fn mul(context: CommandContext) -> CrushResult<()> {

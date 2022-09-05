@@ -104,7 +104,7 @@ members of a value, write "dir <value>".
         }
         Some(v) => {
             match v {
-                Value::Field(f) => match &context.scope.get_calling_scope()?.get(&f[0])? {
+                Value::Symbol(f) => match &context.scope.get_calling_scope()?.get(&f[0])? {
                     None => error(format!("Unknown identifier {}", &f[0]))?,
                     Some(v) => halp(v, &context.global_state.printer()),
                 },

@@ -1,6 +1,6 @@
 use crate::lang::errors::{argument_error_legacy, error, mandate, CrushResult};
 use crate::lang::pipe::{CrushStream, Stream};
-use crate::lang::{data::table::ColumnType, data::table::Row, value::Field, value::Value, value::ValueType};
+use crate::lang::{data::table::ColumnType, data::table::Row, value::Symbol, value::Value, value::ValueType};
 use crate::util::identity_arc::Identity;
 use chrono::Duration;
 use std::cmp::Ordering;
@@ -191,7 +191,7 @@ impl List {
     dump_to!(dump_bool, bool, Bool, |v: &bool| *v);
     dump_to!(dump_type, ValueType, Type, |v: &ValueType| v.clone());
     dump_to!(dump_float, f64, Float, |v: &f64| *v);
-    dump_to!(dump_field, Field, Field, |e: &Field| e.clone());
+    dump_to!(dump_symbol, Symbol, Symbol, |e: &Symbol| e.clone());
 }
 
 impl Display for List {
@@ -220,7 +220,7 @@ impl std::hash::Hash for List {
     }
 }
 
-impl std::cmp::PartialEq for List {
+impl PartialEq for List {
     fn eq(&self, other: &List) -> bool {
         let us = self.cells.lock().unwrap().clone();
         let them = other.cells.lock().unwrap().clone();

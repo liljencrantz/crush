@@ -79,7 +79,7 @@ fn extract_type(ty: &Type) -> SignatureResult<(&'static str, Vec<&'static str>)>
                         "Command" => "Command",
                         "Duration" => "Duration",
                         "Struct" => "Struct",
-                        "Field" => "Field",
+                        "Symbol" => "Symbol",
                         "Value" => "Value",
                         "Stream" => "Stream",
                         "Number" => "Number",
@@ -169,7 +169,7 @@ fn simple_type_to_value(simple_type: &str) -> TokenStream {
         "char" => quote! {crate::lang::value::Value::String(_value)},
         "Command" => quote! {crate::lang::value::Value::Command(_value)},
         "Duration" => quote! {crate::lang::value::Value::Duration(_value)},
-        "Field" => quote! {crate::lang::value::Value::Field(_value)},
+        "Symbol" => quote! {crate::lang::value::Value::Symbol(_value)},
         "Struct" => quote! {crate::lang::value::Value::Struct(_value)},
         "Stream" => quote! {_value},
         "Value" => quote! {_value},
@@ -192,7 +192,7 @@ fn simple_type_to_value_type(simple_type: &str) -> TokenStream {
         "char" => quote! {crate::lang::value::ValueType::String},
         "Command" => quote! {crate::lang::value::ValueType::Command},
         "Duration" => quote! {crate::lang::value::ValueType::Duration},
-        "Field" => quote! {crate::lang::value::ValueType::Field},
+        "Symbol" => quote! {crate::lang::value::ValueType::Symbol},
         "Struct" => quote! {crate::lang::value::ValueType::Struct},
         _ => quote! {crate::lang::value::ValueType::Any},
     }
@@ -213,7 +213,7 @@ fn simple_type_to_value_description(simple_type: &str) -> &str {
         "char" => "string",
         "Command" => "command",
         "Duration" => "duration",
-        "Field" => "field",
+        "Symbol" => "symbol",
         "Value" => "any value",
         "Stream" => "stream",
         "Struct" => "Struct",
@@ -299,7 +299,7 @@ fn simple_type_dump_list(simple_type: &str) -> &str {
         "ValueType" => "dump_type",
         "f64" => "dump_float",
         "Value" => "dump_value",
-        "Field" => "dump_field",
+        "Symbol" => "dump_symbol",
         _ => panic!("Unknown type"),
     }
 }
@@ -320,7 +320,7 @@ fn parse_type_data(
     let (type_name, args) = extract_type(ty)?;
     match type_name {
         "i128" | "bool" | "String" | "char" | "ValueType" | "f64" | "Command" | "Duration"
-        | "Field" | "Value" | "usize" | "i64" | "u64" | "i32" | "u32" | "Stream" | "Struct" => {
+        | "Symbol" | "Value" | "usize" | "i64" | "u64" | "i32" | "u32" | "Stream" | "Struct" => {
             if !args.is_empty() {
                 fail!(ty.span(), "This type can't be paramterizised")
             } else {

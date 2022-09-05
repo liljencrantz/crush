@@ -219,7 +219,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare("scope", Value::Type(ValueType::Scope))?;
             env.declare("binary", Value::Type(ValueType::Binary))?;
             env.declare("binary_stream", Value::Type(ValueType::BinaryInputStream))?;
-            env.declare("field", Value::Type(ValueType::Field))?;
+            env.declare("field", Value::Type(ValueType::Symbol))?;
             env.declare("empty", Value::Type(ValueType::Empty))?;
             env.declare("float", Value::Type(ValueType::Float))?;
             env.declare("integer", Value::Type(ValueType::Integer))?;

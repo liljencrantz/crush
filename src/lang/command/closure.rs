@@ -303,7 +303,7 @@ impl<'a> ClosureSerializer<'a> {
                     model::value_definition::ValueDefinition::Job(self.job(j)?)
                 }
 
-                ValueDefinition::Label(l) => {
+                ValueDefinition::Identifier(l) => {
                     model::value_definition::ValueDefinition::Label(
                         l.serialize(self.elements, self.state)? as u64)
                 }
@@ -485,7 +485,7 @@ impl<'a> ClosureDeserializer<'a> {
                         ))
                 }
                 model::value_definition::ValueDefinition::Label(s) => {
-                    ValueDefinition::Label(TrackedString::deserialize(*s as usize, self.elements, self.state)?)
+                    ValueDefinition::Identifier(TrackedString::deserialize(*s as usize, self.elements, self.state)?)
                 }
                 model::value_definition::ValueDefinition::GetAttr(a) => ValueDefinition::GetAttr(
                     Box::from(self.value_definition(mandate(

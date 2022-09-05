@@ -94,7 +94,7 @@ pub fn eval_non_blocking(command: &ValueDefinition, arguments: &Vec<ArgumentDefi
             eval_internal(this, value, arguments.clone(), context, command.location())
         }
         Err(err) =>
-            if let ValueDefinition::Label(str) = command {
+            if let ValueDefinition::Identifier(str) = command {
                 try_external_command(str, arguments.clone(), context)
             } else {
                 return Err(err);

@@ -26,7 +26,7 @@ pub enum Node {
     Assignment(Box<Node>, String, Box<Node>),
     Unary(TrackedString, Box<Node>),
     Glob(TrackedString),
-    Label(TrackedString),
+    Identifier(TrackedString),
     Regex(TrackedString),
     Field(TrackedString),
     String(TrackedString),
@@ -214,7 +214,7 @@ fn propose_name(name: &TrackedString, v: ValueDefinition) -> ValueDefinition {
 impl Node {
     pub fn prefix(&self, pos: usize) -> CrushResult<Node> {
         match self {
-            Node::Label(s) => Ok(Node::Label(s.prefix(pos))),
+            Node::Identifier(s) => Ok(Node::Identifier(s.prefix(pos))),
             _ => Ok(self.clone()),
         }
     }
@@ -223,7 +223,7 @@ impl Node {
         use Node::*;
 
         match self {
-            Glob(s) | Label(s) | Field(s) |
+            Glob(s) | Identifier(s) | Field(s) |
             String(s) | Integer(s) | Float(s) |
             Regex(s) | File(s, _) =>
                 s.location,
@@ -258,7 +258,7 @@ impl Node {
             Node::Assignment(_, _, _) => "assignment",
             Node::Unary(_, _) => "unary operator",
             Node::Glob(_) => "glob",
-            Node::Label(_) => "label",
+            Node::Identifier(_) => "identifier",
             Node::Regex(_) => "regular expression literal",
             Node::Field(_) => "field",
             Node::String(_) => "quoted string literal",
@@ -308,7 +308,7 @@ impl Node {
                 }
                 _ => return error("Unknown operator"),
             },
-            Node::Label(l) => ValueDefinition::Label(l.clone()),
+            Node::Identifier(l) => ValueDefinition::Identifier(l.clone()),
             Node::Regex(l) => ValueDefinition::Value(
                 Value::Regex(
                     l.string.clone(),
@@ -328,25 +328,25 @@ impl Node {
                         s.string.replace("_", "").parse::<f64>()
                     )?),
                     s.location),
-            Node::GetAttr(node, label) => {
+            Node::GetAttr(node, identifier) => {
                 let parent = node.generate(env, is_command)?;
                 match parent.unnamed_value()? {
-                    ValueDefinition::Value(Value::Field(mut f), location) => {
-                        f.push(label.string.clone());
-                        ValueDefinition::Value(Value::Field(f), location)
+                    ValueDefinition::Value(Value::Symbol(mut f), location) => {
+                        f.push(identifier.string.clone());
+                        ValueDefinition::Value(Value::Symbol(f), location)
                     }
-                    value => ValueDefinition::GetAttr(Box::new(value), label.clone()),
+                    value => ValueDefinition::GetAttr(Box::new(value), identifier.clone()),
                 }
             }
-            Node::Path(node, label) => ValueDefinition::Path(
+            Node::Path(node, identifier) => ValueDefinition::Path(
                 Box::new(node.generate_argument(env)?.unnamed_value()?),
-                label.clone(),
+                identifier.clone(),
             ),
             Node::Field(f) =>
                 if is_command {
-                    ValueDefinition::Label(f.clone())
+                    ValueDefinition::Identifier(f.clone())
                 } else {
-                    ValueDefinition::Value(Value::Field(vec![f.string.to_string()]), f.location)
+                    ValueDefinition::Value(Value::Symbol(vec![f.string.to_string()]), f.location)
                 },
             Node::Substitution(s) => ValueDefinition::JobDefinition(s.generate(env)?),
             Node::Closure(s, c) => {
@@ -380,7 +380,7 @@ impl Node {
     ) -> CrushResult<Option<CommandInvocation>> {
         match op.deref() {
             "=" => match target.as_ref() {
-                Node::Label(t) => Node::function_invocation(
+                Node::Identifier(t) => Node::function_invocation(
                     env.global_static_cmd(vec!["global", "var", "set"])?,
                     t.location,
                     vec![ArgumentDefinition::named(
@@ -415,7 +415,7 @@ impl Node {
                 _ => error("Invalid left side in assignment"),
             },
             ":=" => match target.as_ref() {
-                Node::Label(t) => Node::function_invocation(
+                Node::Identifier(t) => Node::function_invocation(
                     env.global_static_cmd(vec!["global", "var", "let"])?,
                     t.location,
                     vec![ArgumentDefinition::named(
@@ -445,7 +445,7 @@ impl Node {
             },
 
             Node::Glob(_)
-            | Node::Label(_)
+            | Node::Identifier(_)
             | Node::Regex(_)
             | Node::Field(_)
             | Node::String(_)
@@ -496,8 +496,8 @@ impl Node {
         }
     }
 
-    pub fn parse_label(s: &TrackedString) -> Box<Node> {
-        Box::from(Node::Label(TrackedString::from(&s.string[1..], s.location)))
+    pub fn parse_identifier(s: &TrackedString) -> Box<Node> {
+        Box::from(Node::Identifier(TrackedString::from(&s.string[1..], s.location)))
     }
 
     pub fn parse_file_or_wildcard(s: &TrackedString) -> Box<Node> {
@@ -510,7 +510,7 @@ impl Node {
 }
 
 fn path(parts: &[&str], location: Location) -> Node {
-    let mut res = Node::Label(TrackedString::from(parts[0], location));
+    let mut res = Node::Identifier(TrackedString::from(parts[0], location));
     for part in &parts[1..] {
         res = Node::Path(Box::from(res), TrackedString::from(part, location));
     }
@@ -518,7 +518,7 @@ fn path(parts: &[&str], location: Location) -> Node {
 }
 
 fn attr(parts: &[&str], location: Location) -> Node {
-    let mut res = Node::Label(TrackedString::from(parts[0], location));
+    let mut res = Node::Identifier(TrackedString::from(parts[0], location));
     for part in &parts[1..] {
         res = Node::GetAttr(Box::from(res), TrackedString::from(part, location));
     }
@@ -637,7 +637,7 @@ pub enum TokenType {
     TermOperator,
     QuotedString,
     StringOrWildcard,
-    Label,
+    Identifier,
     Flag,
     Field,
     QuotedFile,

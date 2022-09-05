@@ -132,7 +132,7 @@ impl ArgumentVector for Vec<Argument> {
     argument_getter!(string, String, String, "string");
     argument_getter!(integer, i128, Integer, "integer");
     argument_getter!(float, f64, Float, "float");
-    argument_getter!(field, Vec<String>, Field, "field");
+    argument_getter!(field, Vec<String>, Symbol, "field");
     argument_getter!(command, Command, Command, "command");
     argument_getter!(r#type, ValueType, Type, "type");
     argument_getter!(glob, Glob, Glob, "glob");

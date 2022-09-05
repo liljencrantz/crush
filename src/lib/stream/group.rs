@@ -7,7 +7,7 @@ use crate::lang::data::scope::Scope;
 use crate::lang::pipe::{pipe, InputStream};
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::ColumnVec;
-use crate::lang::value::Field;
+use crate::lang::value::Symbol;
 use crate::{
     lang::errors::argument_error_legacy,
     lang::pipe::{unlimited_streams, OutputStream},
@@ -28,7 +28,7 @@ example = "find . | group user type file_count={count} size={sum size}"
 pub struct Group {
     #[unnamed()]
     #[description("the column(s) to group by and copy into the output stream.")]
-    group_by: Vec<Field>,
+    group_by: Vec<Symbol>,
     #[named()]
     #[description("create these additional columns by aggregating the grouped rows using the supplied aggregation command.")]
     command: OrderedStringMap<Command>,

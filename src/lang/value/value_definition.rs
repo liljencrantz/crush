@@ -16,7 +16,7 @@ pub enum ValueDefinition {
     Value(Value, Location),
     ClosureDefinition(Option<TrackedString>, Option<Vec<Parameter>>, Vec<Job>, Location),
     JobDefinition(Job),
-    Label(TrackedString),
+    Identifier(TrackedString),
     GetAttr(Box<ValueDefinition>, TrackedString),
     Path(Box<ValueDefinition>, TrackedString),
 }
@@ -27,7 +27,7 @@ impl ValueDefinition {
             ValueDefinition::Value(_, l) => *l,
             ValueDefinition::ClosureDefinition(_, _, _, l) => *l,
             ValueDefinition::JobDefinition(j) => j.location(),
-            ValueDefinition::Label(l) => l.location,
+            ValueDefinition::Identifier(l) => l.location,
             ValueDefinition::GetAttr(p, a) |
             ValueDefinition::Path(p, a)=> p.location().union(a.location),
         }
@@ -68,7 +68,7 @@ impl ValueDefinition {
                     vec![],
                 )),
             ),
-            ValueDefinition::Label(s) => (
+            ValueDefinition::Identifier(s) => (
                 None,
                 mandate(
                     context.env.get(&s.string)?,
@@ -117,7 +117,7 @@ impl Display for ValueDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
             ValueDefinition::Value(v, _location) => v.fmt(f),
-            ValueDefinition::Label(v) => v.fmt(f),
+            ValueDefinition::Identifier(v) => v.fmt(f),
             ValueDefinition::ClosureDefinition(_, _, _, _location) => f.write_str("<closure>"),
             ValueDefinition::JobDefinition(j) => j.fmt(f),
             ValueDefinition::GetAttr(v, l) => {

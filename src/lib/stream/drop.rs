@@ -3,7 +3,7 @@ use crate::lang::execution_context::CommandContext;
 use crate::lang::data::table::{Row, ColumnVec};
 use signature::signature;
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::value::Field;
+use crate::lang::value::Symbol;
 use std::collections::HashSet;
 
 #[signature(
@@ -16,7 +16,7 @@ output = Unknown,
 )]
 pub struct Drop {
     #[unnamed()]
-    drop: Vec<Field>,
+    drop: Vec<Symbol>,
 }
 
 fn drop(context: CommandContext) -> CrushResult<()> {

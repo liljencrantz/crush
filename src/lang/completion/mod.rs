@@ -81,7 +81,7 @@ fn completion_suffix(maybe_scope: CrushResult<Option<Value>>, t: &ValueType) -> 
                 Ok(Some(Value::Scope(_))) => ":",
                 Ok(Some(Value::Empty())) |
                 Ok(Some(Value::Bool(_))) |
-                Ok(Some(Value::Field(_))) |
+                Ok(Some(Value::Symbol(_))) |
                 Ok(Some(Value::Command(_))) => " ",
                 _ => "",
             }

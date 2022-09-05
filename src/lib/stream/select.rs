@@ -152,7 +152,7 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
                             )),
                         }
                     }
-                    (None, Value::Field(name)) => {
+                    (None, Value::Symbol(name)) => {
                         if name.len() != 1 {
                             return argument_error_legacy("Invalid field");
                         }

@@ -104,15 +104,15 @@ ParameterList: Vec<ParameterNode> = {
 }
 
 Parameter: ParameterNode = {
-    <start: @L> <l: Label> <end: @R> <d: Default> =>
+    <start: @L> <l: Identifier> <end: @R> <d: Default> =>
         ParameterNode::Parameter(TrackedString::from(&l[1..], Location::new(start, end)), None, d),
 
-    <start: @L> <l: Label> <end: @R> Colon <t: Item> <d: Default> =>
+    <start: @L> <l: Identifier> <end: @R> Colon <t: Item> <d: Default> =>
         ParameterNode::Parameter(TrackedString::from(&l[1..], Location::new(start, end)), Some(t), d),
 
-    "@" <start: @L> <l: Label> <end: @R> => ParameterNode::Unnamed(TrackedString::from(&l[1..], Location::new(start, end))),
+    "@" <start: @L> <l: Identifier> <end: @R> => ParameterNode::Unnamed(TrackedString::from(&l[1..], Location::new(start, end))),
 
-    "@@" <start: @L> <l: Label> <end: @R> => ParameterNode::Named(TrackedString::from(&l[1..], Location::new(start, end))),
+    "@@" <start: @L> <l: Identifier> <end: @R> => ParameterNode::Named(TrackedString::from(&l[1..], Location::new(start, end))),
 }
 
 Default: Option<Node> = {
@@ -124,8 +124,8 @@ Item: Box<Node> = {
     <start: @L> <l: StringOrWildcard> <end: @R> =>
         Node::parse_string_or_wildcard(&TrackedString::from(l, Location::new(start, end))),
 
-    <start: @L> <l: Label> <end: @R> =>
-        Node::parse_label(&TrackedString::from(l, Location::new(start, end))),
+    <start: @L> <l: Identifier> <end: @R> =>
+        Node::parse_identifier(&TrackedString::from(l, Location::new(start, end))),
 
     <start: @L> <l: Regex> <end: @R> =>
         Box::from(Node::Regex(TrackedString::from(&l[3..l.len()-1], Location::new(start, end)))),
@@ -151,7 +151,7 @@ Item: Box<Node> = {
         Box::from(
             Node::Assignment(Box::from(Node::Field(TrackedString::from(&l[2..], Location::new(start+2, end)))),
             "=".to_string(),
-            Box::from(Node::Label(TrackedString::from("true", Location::new(start, start+2)))))),
+            Box::from(Node::Identifier(TrackedString::from("true", Location::new(start, start+2)))))),
 
     <i: Item> "[" <e: Assignment> "]" => Box::from(Node::GetItem(i, e)),
     <i: Item> Colon <start: @L> <l: StringOrWildcard> <end: @R> => Box::from(Node::GetAttr(i, TrackedString::from(&l, Location::new(start, end)))),
@@ -173,7 +173,7 @@ Token: TokenNode = {
     @L FactorOperator @R => TokenNode::new(TokenType::FactorOperator, <>),
     @L TermOperator @R => TokenNode::new(TokenType::TermOperator, <>),
     @L QuotedString @R => TokenNode::new(TokenType::QuotedString, <>),
-    @L Label @R => TokenNode::new(TokenType::Label, <>),
+    @L Identifier @R => TokenNode::new(TokenType::Identifier, <>),
     @L StringOrWildcard @R => TokenNode::new(TokenType::StringOrWildcard, <>),
     @L QuotedFile @R => TokenNode::new(TokenType::QuotedFile, <>),
     @L FileOrWildcard @R => TokenNode::new(TokenType::FileOrWildcard, <>),
@@ -208,7 +208,7 @@ match {
     r"(\+|-)" => TermOperator,
     r#""([^\\"]|\\.)*""# => QuotedString,
     r"[_a-zA-Z%\?][\._0-9a-zA-Z%\?/]*" => StringOrWildcard,
-    r"\$[_0-9a-zA-Z][_0-9a-zA-Z]*" => Label,
+    r"\$[_0-9a-zA-Z][_0-9a-zA-Z]*" => Identifier,
     r"(\.[\./_0-9a-zA-Z%\?]*|/([\._0-9a-zA-Z%\?][\./_0-9a-zA-Z%\?]*)?)" => FileOrWildcard,
     r"--[_0-9a-zA-Z]+" => Flag,
     r"\^[\._a-zA-Z][\._a-zA-Z0-9]*" => Field,

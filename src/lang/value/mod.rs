@@ -44,14 +44,14 @@ use crate::data::table::Row;
 use crate::util::escape::escape;
 use crate::util::replace::Replace;
 
-pub type Field = Vec<String>;
+pub type Symbol = Vec<String>;
 
 pub enum Value {
     String(String),
     Integer(i128),
     Time(DateTime<Local>),
     Duration(Duration),
-    Field(Field),
+    Symbol(Symbol),
     Glob(Glob),
     Regex(String, Regex),
     Command(Command),
@@ -77,7 +77,7 @@ impl Display for Value {
             Value::String(val) => std::fmt::Display::fmt(val, f),
             Value::Integer(val) => std::fmt::Display::fmt(val, f),
             Value::Time(val) => f.write_str(&val.format("%Y-%m-%d %H:%M:%S %z").to_string()),
-            Value::Field(val) => f.write_str(&val.join(":")),
+            Value::Symbol(val) => f.write_str(&val.join(":")),
             Value::Glob(val) => std::fmt::Display::fmt(val, f),
             Value::Regex(val, _) => {
                 f.write_str("re\"")?;
@@ -283,7 +283,7 @@ impl Value {
             Value::String(_) => ValueType::String,
             Value::Integer(_) => ValueType::Integer,
             Value::Time(_) => ValueType::Time,
-            Value::Field(_) => ValueType::Field,
+            Value::Symbol(_) => ValueType::Symbol,
             Value::Glob(_) => ValueType::Glob,
             Value::Regex(_, _) => ValueType::Regex,
             Value::Command(_) => ValueType::Command,
@@ -378,7 +378,7 @@ impl Value {
             ValueType::File => Ok(Value::File(PathBuf::from(str_val.as_str()))),
             ValueType::Glob => Ok(Value::Glob(Glob::new(str_val.as_str()))),
             ValueType::Integer => to_crush_error(str_val.parse::<i128>()).map(Value::Integer),
-            ValueType::Field => Ok(Value::Field(vec![str_val])),
+            ValueType::Symbol => Ok(Value::Symbol(vec![str_val])),
             ValueType::Regex => {
                 to_crush_error(Regex::new(str_val.as_str()).map(|v| Value::Regex(str_val, v)))
             }
@@ -491,7 +491,7 @@ impl Clone for Value {
             Value::String(v) => Value::String(v.clone()),
             Value::Integer(v) => Value::Integer(*v),
             Value::Time(v) => Value::Time(*v),
-            Value::Field(v) => Value::Field(v.clone()),
+            Value::Symbol(v) => Value::Symbol(v.clone()),
             Value::Glob(v) => Value::Glob(v.clone()),
             Value::Regex(v, r) => Value::Regex(v.clone(), r.clone()),
             Value::Command(v) => Value::Command(v.as_ref().copy()),
@@ -537,7 +537,7 @@ impl std::hash::Hash for Value {
             Value::String(v) => v.hash(state),
             Value::Integer(v) => v.hash(state),
             Value::Time(v) => v.hash(state),
-            Value::Field(v) => v.hash(state),
+            Value::Symbol(v) => v.hash(state),
             Value::Glob(v) => v.hash(state),
             Value::Regex(v, _) => v.hash(state),
             Value::Command(_) => {}
@@ -579,7 +579,7 @@ impl std::cmp::PartialEq for Value {
             (Value::Integer(val1), Value::Integer(val2)) => val1 == val2,
             (Value::Time(val1), Value::Time(val2)) => val1 == val2,
             (Value::Duration(val1), Value::Duration(val2)) => val1 == val2,
-            (Value::Field(val1), Value::Field(val2)) => val1 == val2,
+            (Value::Symbol(val1), Value::Symbol(val2)) => val1 == val2,
             (Value::Glob(val1), Value::Glob(val2)) => val1 == val2,
             (Value::Regex(val1, _), Value::Regex(val2, _)) => val1 == val2,
             (Value::File(val1), Value::String(val2)) => {
@@ -618,7 +618,7 @@ impl std::cmp::PartialOrd for Value {
             (Value::Integer(val1), Value::Integer(val2)) => Some(val1.cmp(val2)),
             (Value::Time(val1), Value::Time(val2)) => Some(val1.cmp(val2)),
             (Value::Duration(val1), Value::Duration(val2)) => Some(val1.cmp(val2)),
-            (Value::Field(val1), Value::Field(val2)) => Some(val1.cmp(val2)),
+            (Value::Symbol(val1), Value::Symbol(val2)) => Some(val1.cmp(val2)),
             (Value::Glob(val1), Value::Glob(val2)) => Some(val1.cmp(val2)),
             (Value::Regex(val1, _), Value::Regex(val2, _)) => Some(val1.cmp(val2)),
             (Value::File(val1), Value::File(val2)) => Some(val1.cmp(val2)),
@@ -680,7 +680,7 @@ mod tests {
         assert_eq!(Value::string("1d").convert(ValueType::File).is_err(), false);
         assert_eq!(Value::string("1d").convert(ValueType::Time).is_err(), true);
         assert_eq!(
-            Value::string("fad").convert(ValueType::Field).is_err(),
+            Value::string("fad").convert(ValueType::Symbol).is_err(),
             false
         );
     }

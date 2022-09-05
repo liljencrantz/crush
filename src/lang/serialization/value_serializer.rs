@@ -36,7 +36,7 @@ fn serialize_simple(
             Value::Bool(b) => element::Element::Bool(*b),
             Value::Empty() => element::Element::Empty(false),
             Value::Time(d) => element::Element::Time(d.timestamp_nanos()),
-            Value::Field(f) => element::Element::Field(f.serialize(elements, state)? as u64),
+            Value::Symbol(f) => element::Element::Field(f.serialize(elements, state)? as u64),
             _ => return error("Expected simple value"),
         }),
     };
@@ -88,7 +88,7 @@ impl Serializable<Value> for Value {
                 id, elements, state,
             )?)),
 
-            element::Element::Field(f) => Ok(Value::Field(Vec::deserialize(*f as usize, elements, state)?)),
+            element::Element::Field(f) => Ok(Value::Symbol(Vec::deserialize(*f as usize, elements, state)?)),
             element::Element::UserScope(_) | element::Element::InternalScope(_) => {
                 Ok(Value::Scope(Scope::deserialize(id, elements, state)?))
             }
@@ -121,7 +121,7 @@ impl Serializable<Value> for Value {
             | Value::Bool(_)
             | Value::Empty()
             | Value::Time(_)
-            | Value::Field(_) => serialize_simple(self, elements, state),
+            | Value::Symbol(_) => serialize_simple(self, elements, state),
 
             Value::Integer(s) => s.serialize(elements, state),
 

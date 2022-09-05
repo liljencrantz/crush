@@ -157,7 +157,7 @@ impl Display for ParseResult {
 
 fn simple_path(node: &Node, cursor: usize) -> CrushResult<String> {
     match node {
-        Node::Label(label) => Ok(label.string.clone()),
+        Node::Identifier(label) => Ok(label.string.clone()),
         Node::Path(p, a) => {
             let res = simple_path(p.as_ref(), cursor)?;
             Ok(format!("{}/{}", res, &a.string))
@@ -228,7 +228,7 @@ fn find_command_in_job_list(ast: JobListNode, cursor: usize) -> CrushResult<Comm
 
 fn fetch_value(node: &Node, scope: &Scope, is_command: bool) -> CrushResult<Option<Value>> {
     match node {
-        Node::Label(l) => scope.get(&l.string),
+        Node::Identifier(l) => scope.get(&l.string),
 
         Node::Field(l) =>
             if is_command {
@@ -315,7 +315,7 @@ pub fn parse(
             let cmd = &cmd.expressions[0];
             if cmd.location().contains(cursor) {
                 match cmd {
-                    Node::Label(label) =>
+                    Node::Identifier(label) =>
                         Ok(ParseResult::PartialLabel(
                             label.prefix(cursor).string)),
 
@@ -366,7 +366,7 @@ pub fn parse(
                     if name.location().contains(cursor) {
                         (Box::from(name.prefix(cursor)?), None, true)
                     } else {
-                        if let Node::Label(name) = name.as_ref() {
+                        if let Node::Identifier(name) = name.as_ref() {
                             (value.clone(), Some(name.string.clone()), false)
                         } else {
                             (value.clone(), None, false)
@@ -378,7 +378,7 @@ pub fn parse(
 
             if argument_complete {
                 match arg.deref() {
-                    Node::Label(l) =>
+                    Node::Identifier(l) =>
                         Ok(ParseResult::PartialArgument(
                             PartialCommandResult {
                                 command: c,
@@ -393,7 +393,7 @@ pub fn parse(
             } else {
                 if arg.location().contains(cursor) {
                     match arg.as_ref() {
-                        Node::Label(l) =>
+                        Node::Identifier(l) =>
                             Ok(ParseResult::PartialArgument(
                                 PartialCommandResult {
                                     command: c,

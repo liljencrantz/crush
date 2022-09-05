@@ -3,7 +3,7 @@ use crate::lang::errors::{error, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::data::table::ColumnVec;
 use crate::lang::data::table::Row;
-use crate::lang::value::Field;
+use crate::lang::value::Symbol;
 use crate::lang::errors::argument_error_legacy;
 use signature::signature;
 use std::cmp::Ordering;
@@ -16,7 +16,7 @@ output = Passthrough)]
 pub struct Sort {
     #[unnamed()]
     #[description("the columns to sort on. Optional if input only has one column.")]
-    field: Vec<Field>,
+    field: Vec<Symbol>,
     #[description("reverse the sort order.")]
     #[default(false)]
     reverse: bool,
