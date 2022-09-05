@@ -2,12 +2,24 @@ use crate::lang::command::Command;
 use crate::lang::errors::{data_error, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::value::Value;
+use crate::lang::value::ValueType;
+use crate::lang::data::table::ColumnType;
+use lazy_static::lazy_static;
+use crate::data::table::Row;
 use signature::signature;
+use crate::lang::command::OutputType::Known;
 use crate::lang::pipe::pipe;
+
+lazy_static! {
+    static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
+        ColumnType::new("value", ValueType::Any),
+    ];
+}
 
 #[signature(
     r#while,
     condition = true,
+    output = Known(ValueType::TableInputStream(OUTPUT_TYPE.clone())),
     short = "Repeatedly execute the body for as long the condition is met.",
     long = "The loop body is optional. If not specified, the condition is executed until it returns false.\n    This effectively means that the condition becomes the body, and the loop break check comes at\n    the end of the loop.",
     example = "while {./some_file:exists} {echo \"hello\"}"
@@ -20,14 +32,15 @@ pub struct While {
 }
 
 fn r#while(mut context: CommandContext) -> CrushResult<()> {
-    context.output.initialize(vec![])?;
+    let output = context.output.initialize(OUTPUT_TYPE.clone())?;
+    let (body_sender, body_receiver) = pipe();
     let cfg: While = While::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     loop {
         let (sender, receiver) = pipe();
 
         let cond_env = context.scope.create_child(&context.scope, true);
-        cfg.condition.invoke(context.empty().with_scope(cond_env.clone()).with_output(sender))?;
+        cfg.condition.eval(context.empty().with_scope(cond_env.clone()).with_output(sender))?;
         if cond_env.is_stopped() {
             break;
         }
@@ -36,7 +49,8 @@ fn r#while(mut context: CommandContext) -> CrushResult<()> {
             Value::Bool(true) => match &cfg.body {
                 Some(body) => {
                     let body_env = context.scope.create_child(&context.scope, true);
-                    body.invoke(context.empty())?;
+                    body.eval(context.empty().with_scope(body_env.clone()).with_output(body_sender.clone()))?;
+                    output.send(Row::new(vec![body_receiver.recv()?]))?;
                     if body_env.is_stopped() {
                         break;
                     }

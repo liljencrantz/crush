@@ -1,7 +1,7 @@
-use crate::lang::errors::{error, CrushResult};
+use crate::lang::errors::{CrushResult, error};
 use crate::lang::execution_context::{CompileContext, JobContext};
 use crate::lang::data::scope::Scope;
-use crate::lang::{argument::ArgumentDefinition, argument::ArgumentVecCompiler, value::Value};
+use crate::lang::{argument::ArgumentDefinition, argument::ArgumentEvaluator, value::Value};
 use crate::lang::command::Command;
 use crate::lang::execution_context::CommandContext;
 use crate::lang::value::{ValueDefinition, ValueType};
@@ -9,7 +9,8 @@ use std::path::PathBuf;
 use std::fmt::{Display, Formatter};
 use std::thread::ThreadId;
 use crate::data::r#struct::Struct;
-use crate::lang::ast::{Location, TrackedString};
+use crate::lang::ast::tracked_string::TrackedString;
+use crate::lang::ast::location::Location;
 
 #[derive(Clone)]
 pub struct CommandInvocation {
@@ -51,12 +52,16 @@ impl CommandInvocation {
         &self.command
     }
 
+    /**
+    Evaluates all the arguments into values, and puts them into a CommandContext,
+    ready to be exacuted by the main command.
+    */
     fn execution_context(
         local_arguments: Vec<ArgumentDefinition>,
         mut this: Option<Value>,
         job_context: JobContext,
     ) -> CrushResult<CommandContext> {
-        let (arguments, arg_this) = local_arguments.compile(&mut CompileContext::from(&job_context))?;
+        let (arguments, arg_this) = local_arguments.eval(&mut CompileContext::from(&job_context))?;
 
         if arg_this.is_some() {
             this = arg_this;
@@ -71,7 +76,7 @@ impl CommandInvocation {
         }
         match self.command.eval(context) {
             Ok((_, Value::Command(command))) =>
-                command.can_block(&self.arguments, context) || arg_can_block(&self.arguments, context),
+                command.might_block(&self.arguments, context) || arg_can_block(&self.arguments, context),
             _ => true,
         }
     }
@@ -226,12 +231,12 @@ fn eval_command(
     local_arguments: Vec<ArgumentDefinition>,
     context: JobContext,
 ) -> CrushResult<Option<ThreadId>> {
-    if !command.can_block(&local_arguments, &mut CompileContext::from(&context))
+    if !command.might_block(&local_arguments, &mut CompileContext::from(&context))
         && !arg_can_block(&local_arguments, &mut CompileContext::from(&context))
     {
         let new_context =
             CommandInvocation::execution_context(local_arguments, this, context.clone())?;
-        context.global_state.printer().handle_error(command.invoke(new_context));
+        context.global_state.printer().handle_error(command.eval(new_context));
         Ok(None)
     } else {
         let t = context.global_state.threads().clone();
@@ -240,7 +245,7 @@ fn eval_command(
             &name,
             move || {
                 let res = CommandInvocation::execution_context(local_arguments, this, context.clone())?;
-                command.invoke(res)
+                command.eval(res)
             },
         )?))
     }

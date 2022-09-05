@@ -17,7 +17,7 @@ use std::convert::TryFrom;
 use std::iter::Peekable;
 use std::str::Chars;
 use std::time::Duration;
-use crate::lang::ast::Location;
+use crate::lang::ast::location::Location;
 
 struct DBusThing {
     connection: Connection,

@@ -1,7 +1,7 @@
 use crate::lang::argument::ArgumentDefinition;
 use crate::lang::command::{Command, Parameter};
 use crate::lang::command_invocation::CommandInvocation;
-use crate::lang::errors::{error, to_crush_error, CrushResult};
+use crate::lang::errors::{CrushResult, error, to_crush_error};
 use crate::lang::job::Job;
 use crate::lang::data::scope::Scope;
 use crate::lang::value::{Value, ValueDefinition, ValueType};
@@ -10,8 +10,35 @@ use regex::Regex;
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::fmt::{Display, Formatter};
-use std::cmp::{min, max};
+use std::cmp::{max, min};
+use location::Location;
+use tracked_string::TrackedString;
 use crate::util::escape::unescape;
+
+pub mod location;
+pub mod tracked_string;
+
+/**
+A type representing a node in the abstract syntax tree that is the output of parsing a Crush script.
+ */
+#[derive(Clone, Debug)]
+pub enum Node {
+    Assignment(Box<Node>, String, Box<Node>),
+    Unary(TrackedString, Box<Node>),
+    Glob(TrackedString),
+    Label(TrackedString),
+    Regex(TrackedString),
+    Field(TrackedString),
+    String(TrackedString),
+    File(TrackedString, bool), // true if filename is quoted
+    Integer(TrackedString),
+    Float(TrackedString),
+    GetItem(Box<Node>, Box<Node>),
+    GetAttr(Box<Node>, TrackedString),
+    Path(Box<Node>, TrackedString),
+    Substitution(JobNode),
+    Closure(Option<Vec<ParameterNode>>, JobListNode),
+}
 
 #[derive(Clone, Debug)]
 pub struct JobListNode {
@@ -174,99 +201,6 @@ impl CommandNode {
             Ok(CommandInvocation::new(cmd.unnamed_value()?, arguments))
         }
     }
-}
-
-#[derive(Clone, Debug)]
-pub struct TrackedString {
-    pub string: String,
-    pub location: Location,
-}
-
-impl TrackedString {
-    pub fn from(string: &str, location: Location) -> TrackedString {
-        TrackedString {
-            string: string.to_string(),
-            location,
-        }
-    }
-
-    pub fn literal(start: usize, string: &str, end: usize) -> TrackedString {
-        TrackedString {
-            string: string.to_string(),
-            location: Location::new(start, end),
-        }
-    }
-
-    pub fn prefix(&self, pos: usize) -> TrackedString {
-        if !self.location.contains(pos) {
-            if self.location.start > pos {
-                TrackedString {
-                    string: "".to_string(),
-                    location: Location::new(self.location.start, self.location.start),
-                }
-            } else {
-                self.clone()
-            }
-        } else {
-            let len = pos - self.location.start;
-            TrackedString {
-                string: self.string[0..len].to_string(),
-                location: Location::new(self.location.start, self.location.start + len),
-            }
-        }
-    }
-}
-
-impl Display for TrackedString {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.string)
-    }
-}
-
-#[derive(Clone, Debug, Copy, PartialEq, Eq)]
-pub struct Location {
-    pub start: usize,
-    pub end: usize,
-}
-
-impl Location {
-    pub fn new(start: usize, end: usize) -> Location {
-        Location { start, end }
-    }
-
-    pub fn union(&self, other: Location) -> Location {
-        Location {
-            start: min(self.start, other.start),
-            end: max(self.end, other.end),
-        }
-    }
-
-    pub fn contains(&self, cursor: usize) -> bool {
-        cursor >= self.start && cursor <= self.end
-    }
-
-    pub fn len(&self) -> usize {
-        self.end - self.start
-    }
-}
-
-#[derive(Clone, Debug)]
-pub enum Node {
-    Assignment(Box<Node>, String, Box<Node>),
-    Unary(TrackedString, Box<Node>),
-    Glob(TrackedString),
-    Label(TrackedString),
-    Regex(TrackedString),
-    Field(TrackedString),
-    String(TrackedString),
-    File(TrackedString, bool), // true if filename is quoted
-    Integer(TrackedString),
-    Float(TrackedString),
-    GetItem(Box<Node>, Box<Node>),
-    GetAttr(Box<Node>, TrackedString),
-    Path(Box<Node>, TrackedString),
-    Substitution(JobNode),
-    Closure(Option<Vec<ParameterNode>>, JobListNode),
 }
 
 fn propose_name(name: &TrackedString, v: ValueDefinition) -> ValueDefinition {

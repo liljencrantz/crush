@@ -14,7 +14,11 @@ use crate::lang::command::OutputType::Known;
 
 extern crate uptime_lib;
 
-#[signature(name, can_block = false, short = "name of this host")]
+#[signature(
+name,
+can_block = false,
+output = Known(ValueType::String),
+short = "name of this host")]
 struct Name {}
 
 fn name(context: CommandContext) -> CrushResult<()> {
@@ -36,7 +40,11 @@ lazy_static! {
     ];
 }
 
-#[signature(uptime, can_block = false, short = "uptime of this host")]
+#[signature(
+uptime,
+can_block = false,
+output = Known(ValueType::Duration),
+short = "uptime of this host")]
 struct Uptime {}
 
 fn uptime(context: CommandContext) -> CrushResult<()> {
@@ -88,7 +96,11 @@ fn battery(context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
-#[signature(memory, can_block = false, short = "memory usage of this host.")]
+#[signature(
+memory,
+can_block = false,
+output = Known(ValueType::Struct),
+short = "memory usage of this host.")]
 struct Memory {}
 
 fn memory(context: CommandContext) -> CrushResult<()> {
@@ -116,7 +128,11 @@ fn memory(context: CommandContext) -> CrushResult<()> {
 mod os {
     use super::*;
 
-    #[signature(name, can_block = false, short = "name of the operating system")]
+    #[signature(
+    name,
+    can_block = false,
+    output = Known(ValueType::String),
+    short = "name of the operating system")]
     pub struct Name {}
 
     fn name(context: CommandContext) -> CrushResult<()> {
@@ -128,6 +144,7 @@ mod os {
     #[signature(
     version,
     can_block = false,
+    output = Known(ValueType::String),
     short = "version of the operating system kernel"
     )]
     pub struct Version {}
@@ -142,7 +159,11 @@ mod os {
 mod cpu {
     use super::*;
 
-    #[signature(count, can_block = false, short = "number of CPU cores")]
+    #[signature(
+    count,
+    can_block = false,
+    output = Known(ValueType::Integer),
+    short = "number of CPU cores")]
     pub struct Count {}
 
     fn count(context: CommandContext) -> CrushResult<()> {
@@ -151,7 +172,11 @@ mod cpu {
             .send(Value::Integer(to_crush_error(sys_info::cpu_num())? as i128))
     }
 
-    #[signature(load, can_block = false, short = "current CPU load")]
+    #[signature(
+    load,
+    can_block = false,
+    output = Known(ValueType::Struct),
+    short = "current CPU load")]
     pub struct Load {}
 
     fn load(context: CommandContext) -> CrushResult<()> {
@@ -166,7 +191,11 @@ mod cpu {
         )))
     }
 
-    #[signature(speed, can_block = false, short = "current CPU frequency")]
+    #[signature(
+    speed,
+    can_block = false,
+    output = Known(ValueType::Integer),
+    short = "current CPU frequency")]
     pub struct Speed {}
 
     fn speed(context: CommandContext) -> CrushResult<()> {

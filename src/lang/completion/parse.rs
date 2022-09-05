@@ -476,7 +476,7 @@ pub fn parse(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lang::ast::Location;
+    use crate::lang::ast::location::Location;
     use crate::lang::parser::lalrparser;
 
     fn ast(s: &str) -> CrushResult<JobListNode> {

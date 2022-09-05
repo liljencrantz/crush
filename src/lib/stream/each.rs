@@ -6,7 +6,7 @@ use crate::lang::{data::table::Row, value::Value};
 use signature::signature;
 use crate::lang::value::ValueType::Empty;
 use crate::lang::command::OutputType::Known;
-use crate::lang::ast::Location;
+use crate::lang::ast::location::Location;
 
 #[signature(
 r#each,
@@ -33,7 +33,7 @@ fn run(
         .map(|(c, t)| Argument::named(t.name.as_ref(), c, location))
         .collect();
 
-    condition.invoke(
+    condition.eval(
         base_context
             .clone()
             .with_args(arguments, None)

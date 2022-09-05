@@ -53,7 +53,7 @@ fn aggregate(
                 let (output_sender, output_receiver) = pipe();
                 input_sender.send(Value::TableInputStream(rows))?;
                 drop(input_sender);
-                commands[0].invoke(
+                commands[0].eval(
                     CommandContext::new(&scope, &global_state)
                         .with_input(input_receiver)
                         .with_output(output_sender)
@@ -74,7 +74,7 @@ fn aggregate(
                     let local_scope = scope.clone();
                     let local_state = global_state.clone();
                     threads.spawn("group:aggr", move ||
-                        local_command.invoke(
+                        local_command.eval(
                             CommandContext::new(&local_scope, &local_state)
                                 .with_input(input_receiver)
                                 .with_output(output_sender)))?;

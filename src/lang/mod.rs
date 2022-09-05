@@ -1,3 +1,6 @@
+/**
+Core language implementation lives in this crate
+*/
 pub mod argument;
 pub mod ast;
 pub mod command;

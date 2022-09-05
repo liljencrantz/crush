@@ -16,7 +16,7 @@ use crate::lang::printer::PrinterMessage::*;
 use std::thread::JoinHandle;
 use termion::terminal_size;
 use std::cmp::max;
-use crate::lang::ast::Location;
+use crate::lang::ast::location::Location;
 
 #[derive(Clone)]
 pub struct Printer {

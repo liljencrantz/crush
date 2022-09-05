@@ -1,10 +1,14 @@
-use crate::lang::errors::{argument_error_legacy, error, CrushResult, argument_error};
+/**
+Code for managing arguments passed in to commands
+*/
+use crate::lang::errors::{argument_error, argument_error_legacy, CrushResult, error};
 use crate::lang::execution_context::CompileContext;
 use crate::lang::value::Value;
 use crate::lang::value::ValueDefinition;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
-use crate::lang::ast::{TrackedString, Location};
+use crate::lang::ast::tracked_string::TrackedString;
+use crate::lang::ast::location::Location;
 
 #[derive(Debug, Clone)]
 pub enum ArgumentType {
@@ -113,12 +117,12 @@ impl Argument {
     }
 }
 
-pub trait ArgumentVecCompiler {
-    fn compile(&self, context: &mut CompileContext) -> CrushResult<(Vec<Argument>, Option<Value>)>;
+pub trait ArgumentEvaluator {
+    fn eval(&self, context: &mut CompileContext) -> CrushResult<(Vec<Argument>, Option<Value>)>;
 }
 
-impl ArgumentVecCompiler for Vec<ArgumentDefinition> {
-    fn compile(&self, context: &mut CompileContext) -> CrushResult<(Vec<Argument>, Option<Value>)> {
+impl ArgumentEvaluator for Vec<ArgumentDefinition> {
+    fn eval(&self, context: &mut CompileContext) -> CrushResult<(Vec<Argument>, Option<Value>)> {
         let mut this = None;
         let mut res = Vec::new();
         for a in self {

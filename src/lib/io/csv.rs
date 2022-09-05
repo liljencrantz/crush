@@ -66,7 +66,7 @@ fn from(context: CommandContext) -> CrushResult<()> {
             skipped += 1;
             continue;
         }
-        let line_without_newline = &line[0..line.len() - 1];
+        let line_without_newline = if line.ends_with('\n') {&line[0..line.len() - 1]} else {&line};
         let mut split: Vec<&str> = line_without_newline
             .split(separator)
             .map(|s| trim.map(|c| s.trim_matches(c)).unwrap_or(s))

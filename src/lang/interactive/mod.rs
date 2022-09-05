@@ -16,7 +16,7 @@ use crate::lang::global_state::GlobalState;
 use crate::lang::command::Command;
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::value::{ValueDefinition, Value};
-use crate::lang::ast::Location;
+use crate::lang::ast::location::Location;
 use crate::lang::execution_context::JobContext;
 
 const DEFAULT_PROMPT: &'static str = "crush# ";

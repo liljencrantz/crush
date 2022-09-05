@@ -22,10 +22,10 @@ fn r#if(context: CommandContext) -> CrushResult<()> {
     let cfg: If = If::parse(context.arguments.clone(), &context.global_state.printer())?;
 
     if cfg.condition {
-        cfg.true_clause.invoke(context.with_args(vec![], None))
+        cfg.true_clause.eval(context.with_args(vec![], None))
     } else {
         cfg.false_clause
-            .map(|v| v.invoke(context.with_args(vec![], None)))
+            .map(|v| v.eval(context.with_args(vec![], None)))
             .unwrap_or(Ok(()))
     }
 }

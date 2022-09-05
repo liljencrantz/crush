@@ -19,9 +19,7 @@ Add string:substr command
 Data enums + pattern matching syntax
 Add readline command that reads one line of interactive text input from the user via the terminal
 Add package command to create a new namespace
-Make it possible to use the pipe operator with the for command
 pbuf:from command that takes a protobuf definition and uses it to deserialize protobuf data
 avro:from command that deserializes avro data
 Add history command with all previous interactive invocations, including invocation string, current status, and misc metadata.
-Add crush:jobs command
 Support __str__ method for string rendering

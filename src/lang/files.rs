@@ -10,6 +10,10 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::convert::{TryFrom};
 
+/**
+A type representing a set of files. It is used in the signature of builtin commands that
+accept files, including globs, regexes, etc.
+ */
 #[derive(Debug, Clone)]
 pub struct Files {
     had_entries: bool,
@@ -51,6 +55,7 @@ impl Files {
             match input.recv()? {
                 Value::BinaryInputStream(b) => Ok(b),
                 Value::Binary(b) => Ok(<dyn BinaryReader>::vec(&b)),
+                Value::String(s) => Ok(<dyn BinaryReader>::vec(s.as_bytes())),
                 _ => argument_error_legacy("Expected either a file to read or binary pipe io"),
             }
         } else {
@@ -69,7 +74,7 @@ impl Files {
                 self.files[0].clone(),
             ))?))
         } else {
-            argument_error_legacy("Expected exactly one desitnation file")
+            argument_error_legacy("Expected at most one destination file")
         }
     }
 

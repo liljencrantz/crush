@@ -3,12 +3,13 @@ use crate::lang::errors::mandate;
 use crate::lang::execution_context::CompileContext;
 use crate::lang::{command::CrushCommand, job::Job};
 use crate::{
-    lang::errors::CrushResult, lang::pipe::pipe, lang::pipe::empty_channel,
+    lang::errors::CrushResult, lang::pipe::empty_channel, lang::pipe::pipe,
     lang::value::Value,
 };
 use std::path::PathBuf;
 use std::fmt::{Display, Formatter};
-use crate::lang::ast::{Location, TrackedString};
+use crate::lang::ast::tracked_string::TrackedString;
+use crate::lang::ast::location::Location;
 
 #[derive(Clone)]
 pub enum ValueDefinition {
@@ -80,7 +81,7 @@ impl ValueDefinition {
                 parent = if let Value::Command(parent_cmd) = &parent {
                     let first_input = empty_channel();
                     let (last_output, last_input) = pipe();
-                    parent_cmd.invoke(
+                    parent_cmd.eval(
                         context
                             .job_context(first_input, last_output)
                             .command_context(vec![], grand_parent),

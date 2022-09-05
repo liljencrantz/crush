@@ -2,12 +2,15 @@ use crate::lang::errors::CrushResult;
 use crate::lang::execution_context::CommandContext;
 use crate::lang::data::scope::Scope;
 use crate::lang::value::Value;
+use crate::lang::value::ValueType;
+use crate::lang::command::OutputType::Known;
 use signature::signature;
 
 #[signature(
     float,
     can_block = false,
-    short = "generate a random floating point number between 0 (inclusive) and 1 (exclusive)"
+    short = "generate a random floating point number between 0 (inclusive) and 1 (exclusive)",
+    output = Known(ValueType::Float),
 )]
 struct Float {
     #[default(1.0)]
@@ -26,7 +29,8 @@ fn float(context: CommandContext) -> CrushResult<()> {
 #[signature(
     integer,
     can_block = false,
-    short = "generate a random integer between 0 and 1 (or some other specified number)"
+    short = "generate a random integer between 0 and 1 (or some other specified number)",
+    output = Known(ValueType::Integer),
 )]
 struct Integer {
     #[default(2)]

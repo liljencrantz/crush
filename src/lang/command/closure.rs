@@ -1,9 +1,9 @@
 use crate::lang::argument::{Argument, ArgumentDefinition, ArgumentType};
-use crate::lang::command::{BoundCommand, Command, CrushCommand, OutputType, Parameter, ArgumentDescription};
+use crate::lang::command::{ArgumentDescription, BoundCommand, Command, CrushCommand, OutputType, Parameter};
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::data::dict::Dict;
-use crate::lang::errors::{argument_error_legacy, error, mandate, CrushResult, argument_error};
-use crate::lang::execution_context::{CompileContext, CommandContext, JobContext};
+use crate::lang::errors::{argument_error, argument_error_legacy, CrushResult, error, mandate};
+use crate::lang::execution_context::{CommandContext, CompileContext, JobContext};
 use crate::lang::help::Help;
 use crate::lang::job::Job;
 use crate::lang::data::list::List;
@@ -16,7 +16,8 @@ use crate::lang::pipe::{black_hole, empty_channel};
 use crate::lang::value::{Value, ValueDefinition, ValueType};
 use std::collections::HashMap;
 use std::fmt::Display;
-use crate::lang::ast::{TrackedString, Location};
+use crate::lang::ast::tracked_string::TrackedString;
+use crate::lang::ast::location::Location;
 
 pub struct Closure {
     name: Option<TrackedString>,
@@ -29,7 +30,7 @@ pub struct Closure {
 }
 
 impl CrushCommand for Closure {
-    fn invoke(&self, context: CommandContext) -> CrushResult<()> {
+    fn eval(&self, context: CommandContext) -> CrushResult<()> {
         let job_definitions = self.job_definitions.clone();
         let parent_env = self.env.clone();
         let env = parent_env.create_child(&context.scope, false);
@@ -75,7 +76,7 @@ impl CrushCommand for Closure {
         Ok(())
     }
 
-    fn can_block(&self, _arg: &[ArgumentDefinition], _context: &mut CompileContext) -> bool {
+    fn might_block(&self, _arg: &[ArgumentDefinition], _context: &mut CompileContext) -> bool {
         true
     }
 
@@ -114,7 +115,7 @@ impl CrushCommand for Closure {
         })
     }
 
-    fn output(&self, _input: &OutputType) -> Option<&ValueType> {
+    fn output_type(&self, _input: &OutputType) -> Option<&ValueType> {
         None
     }
 

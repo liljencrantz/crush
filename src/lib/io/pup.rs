@@ -12,7 +12,7 @@ to,
 can_block = true,
 output = Unknown,
 short = "Serialize to pup format",
-long = "Pup is the native crush serialization format. All pup types, including",
+long = "Pup is the native crush serialization format. All Crush types, including",
 long = "lambdas can be serialized to this format.",
 example = "ls | pup:to")]
 struct To {

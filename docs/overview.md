@@ -109,7 +109,7 @@ crush# list:of "carrot" "carrot" "acorn" | json:to
 
 One of the Crush serializers, Pup, is a native file format for Crush. The
 Pup-format is protobuf-based, and its schema is available
-[here](src/crush.proto). The advantage of Pup is that all crush types,
+[here](../src/crush.proto). The advantage of Pup is that all crush types,
 including classes and closures, can be losslessly serialized into this format.
 But because Pup is Crush-specific, it's useless for data sharing to
 other languages.
@@ -142,7 +142,7 @@ are false.
     
 The `and` and `or` operators are used to combine logical expressions:
     
-    crush# false or true
+    crush# $false or $true
     true
     crush# if (./tree:exists) and ((./tree:stat):is_file) {echo "yay"}
     
@@ -183,16 +183,17 @@ current working directory as a single element of the `file` type.
 
 ### Variables of any type
 
-Variables must be declared (using the `:=` operator) before use.
+Use the $ sigil to refer to variables. Variables must be declared
+(using the `:=` operator) before use.
 
-    crush# some_number := 4      # The := operator declares a new variable
-    crush# some_number * 5
+    crush# $some_number := 4      # The := operator declares a new variable
+    crush# $some_number * 5
     20
 
 Once declared, a variable can be reassigned to using the `=` operator.
 
-    crush# some_number = 6
-    crush# some_number * 5
+    crush# $some_number = 6
+    crush# $some_number * 5
     30
 
 Like in any sane programming language, variables can be of any type supported by
@@ -218,13 +219,14 @@ the other or a combination of both. The following three invocations are equivale
 
 It is quite common to want to pass boolean arguments to commands, which is why
 Crush has a special shorthand syntax for it. Passing in `--foo` is equivalent
-to passing in `foo=true`.
+to passing in `foo=$true`.
 
 ### Subshells
 
 Sometimes you want to use the output of one command as an *argument* to another
-command, just like a subshell in e.g. bash. This is different from using the
-output as the *input*, and is done by putting the command within parenthesis (`()`), like so:
+command, just like a subshell in e.g. bash. This is different from what a pipe does,
+which is using the output as the *input*, and is done by putting the command within
+parenthesis (`()`), like so:
 
     crush# echo (pwd)
 
@@ -233,14 +235,14 @@ output as the *input*, and is done by putting the command within parenthesis (`(
 In Crush, braces (`{}`) are used to create a closure. Assigning a closure to a
 variable is how you create a function.
 
-    crush# print_greeting := {echo "Hello"}
+    crush# $print_greeting := {echo "Hello"}
     crush# print_greeting
     Hello
 
 Any named arguments passed when calling a closure and added to the local scope
 of the invocation:
 
-    crush# print_a := {echo a}
+    crush# $print_a := {echo $a}
     crush# print_a a="Greetings"
     Greetings
 
@@ -251,13 +253,13 @@ The following closure requires the caller to supply the argument `a`, and allows
 the caller to specify the argument `b`, which must by of type integer. If the
 caller does not specify it, it falls back to a default value of 7.
 
-    crush# print_things := {|a b: integer = 7|}
+    crush# print_things := {|a b: $integer = 7|}
 
 Additionally, the `@` operator can be used to create a list of all unnamed
 arguments, and the `@@` operator can be used to create a list of all named
 arguments not mentioned elsewhere in the parameter list.
 
-    crush# print_everything := {|@unnamed @@named| echo "Named" named "Unnamed" unnamed}
+    crush# print_everything := {|@unnamed @@named| echo "Named" $named "Unnamed" $unnamed}
 
 The `@` and `@@` operators are also used during command invocation to perform
 the mirrored operation. The following code creates an `lss` function that calls
@@ -271,7 +273,7 @@ the `select` command to only show one column from the output.
 Crush comes with a variety of types:
 
 * lists of any type,
-* dicts of any pair of types type, (Some types can not be used as keys!)
+* dicts of a pair of types, (Some types can not be used as keys!)
 * strings,
 * regular expressions,
 * globs,
@@ -295,7 +297,7 @@ commands.
 When playing around with Crush, the `help` and `dir`commands are useful. The
 former displays a help messages, the latter lists the content of a value.
 
-    crush# help
+    crush# help $sort
     sort column:field
     
         Sort input based on column
@@ -303,7 +305,7 @@ former displays a help messages, the latter lists the content of a value.
         Example:
     
         ps | sort cpu
-    crush# dir list
+    crush# dir $list
     [type, truncate, remove, clone, of, __call__, __setitem__, pop, push, empty, len, peek, new, clear]
 
 ### The content of your current working directory lives in your namespace
@@ -347,21 +349,21 @@ what you'd expect.
 
 If you assign the output of the find command to a variable like so:
 
-    crush# all_the_files := (find /)
+    crush# $all_the_files := (find /)
 
 What will really be stored in the `all_the_files` variable is simply a stream. A
 small number of lines of output will be eagerly evaluated, before the thread
 executing the find command will start blocking. If the stream is consumed, for
 example by writing
 
-    crush# all_the_files
+    crush# $all_the_files
 
 then all hell will break loose on your screen as tens of thousands of lines are
 printed to your screen.
 
 Another option would be to pipe the output via the head command
 
-    crush# all_the_files | head 1
+    crush# $all_the_files | head 1
 
 Which will consume one line of output from the stream. This command can be
 re-executed until the stream is empty.
@@ -395,7 +397,7 @@ operator instead. `?` is still used for single character wildcards.
 
 The operator `%%` is used for performing globbing recursively into subdirectories.
 Another way of looking ath the same syntax is to say that `%` and `?` match any
-character except `/`, whereas `%%` also matches `/`.
+character except `/`, whereas `%%` matches any character including `/`.
 
     # Count the number of lines of rust code in the crush source code
     crush# lines src/%%.rs|count
@@ -506,8 +508,8 @@ computers memory, and even infinite data sets.
 But sometimes, streaming data sets are inconvenient, especially if one wants to
 use the same dataset twice.
 
-    crush# files := ls
-    crush# files
+    crush# $files := ls
+    crush# $files
     user         size   modified                  type      file
     fox  1_307 2020-03-26 01:08:45 +0100 file      ideas
     fox  4_096 2019-11-22 21:56:30 +0100 directory target
@@ -522,17 +524,17 @@ use the same dataset twice.
     fox  8_382 2020-03-29 00:54:13 +0100 file      todo
     fox     75 2020-03-07 17:09:15 +0100 file      build.rs
     fox    711 2019-10-03 14:19:46 +0200 file      crush.iml
-    crush# files
+    crush# $files
 
 Notice how there is no output the second time the content of the `files` variable is
 displayed, because the table_input_stream has already been consumed.
 
 Enter the materialize command, which takes any value and recursively converts
 all transient (table_input_stream and binary_stream) components into an equivalent
-in-memory form (stable, and binary, respectively).
+in-memory form (table, and binary, respectively).
 
-    crush# materialized_files := (ls|materialize)
-    crush# materialized_files
+    crush# $materialized_files := (ls|materialize)
+    crush# $materialized_files
     user size   modified                  type      file
     fox    1307 2020-03-26 01:08:45 +0100 file      ideas
     fox    4096 2019-11-22 21:56:30 +0100 directory target
@@ -547,7 +549,7 @@ in-memory form (stable, and binary, respectively).
     fox   8_382 2020-03-29 00:54:13 +0100 file      todo
     fox      75 2020-03-07 17:09:15 +0100 file      build.rs
     fox     711 2019-10-03 14:19:46 +0200 file      crush.iml
-    crush# materialized_files
+    crush# $materialized_files
     user size   modified                  type      file
     fox    1307 2020-03-26 01:08:45 +0100 file      ideas
     fox    4096 2019-11-22 21:56:30 +0100 directory target
@@ -563,7 +565,7 @@ in-memory form (stable, and binary, respectively).
     fox      75 2020-03-07 17:09:15 +0100 file      build.rs
     fox     711 2019-10-03 14:19:46 +0200 file      crush.iml
 
-When the `table_input_stream` is materialized into a `table`, it can be displayed
+When the `table_input_stream` is materialized into a `table`, it can be accessed
 multiple times.
 
 ### Flow control
@@ -612,13 +614,10 @@ non-interactive commands work as expected:
     
 Crush features several shortcuts to make working with external commands easier.
 
-* Firstly, subcommands like `git status` are mapped into method calls like
-`git:status`. That way you do not have to quote the subcommand name, e.g.
-`git "status"`.
-* Secondly, named arguments are transparently translated into options. Single
+* Named arguments are transparently translated into options. Single
   character argument names are turned into options with a single hyphen, and
   multi-character argument names are turned into GNU style long options with
-  two hyphens, e.g. `git:commit m="hello"` is converted into 
+  two hyphens, e.g. `git commit m="hello"` is converted into 
   `git commit -m "hello"` and `git:commit message="hello"` is converted into
   `git commit --message "hello"`.
 * Thirdly, named arguments with a value of boolean true are simply turned into
@@ -661,26 +660,26 @@ To run a closure on multiple remote hosts, use `remote:pexec` instead.
 
 You can create custom types in Crush, by using the class command:
 
-    Point := (class)
+    $Point := (class)
 
-    Point:__init__ = {
-        |x:float y:float|
-        this:x = x
-        this:y = y
+    $Point:__init__ = {
+        |$x:$float $y:$float|
+        $this:x = $x
+        $this:y = $y
     }
 
-    Point:len = {
+    $Point:len = {
         ||
-        math:sqrt this:x*this:x + this:y*this:y
+        math:sqrt $this:x*$this:x + $this:y*$this:y
     }
 
-    Point:__add__ = {
-        |other|
-        Point:new x=(this:x + other:x) y=(this:y + other:y)        
+    $Point:__add__ = {
+        |$other|
+        Point:new x=($this:x + $other:x) y=($this:y + $other:y)        
     }
 
-    p := (Point:new x=1.0 y=2.0)
-    p:len
+    $p := (Point:new x=1.0 y=2.0)
+    $p:len
 
 Crush supports single inheritance (by passing in the parent to the class
 command). The class command will create a new struct, that contains a method

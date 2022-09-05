@@ -13,7 +13,7 @@ use crate::lang::value::{Value, ValueDefinition, ValueType};
 use closure::Closure;
 use ordered_map::OrderedMap;
 use std::fmt::{Formatter, Display};
-use crate::lang::ast::TrackedString;
+use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::completion::Completion;
 use crate::lang::completion::parse::PartialCommandResult;
 
@@ -62,8 +62,8 @@ pub struct ArgumentDescription {
 }
 
 pub trait CrushCommand: Help {
-    fn invoke(&self, context: CommandContext) -> CrushResult<()>;
-    fn can_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool;
+    fn eval(&self, context: CommandContext) -> CrushResult<()>;
+    fn might_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool;
     fn name(&self) -> &str;
     fn copy(&self) -> Command;
     fn help(&self) -> &dyn Help;
@@ -73,7 +73,7 @@ pub trait CrushCommand: Help {
         state: &mut SerializationState,
     ) -> CrushResult<usize>;
     fn bind(&self, this: Value) -> Command;
-    fn output<'a>(&'a self, input: &'a OutputType) -> Option<&'a ValueType>;
+    fn output_type<'a>(&'a self, input: &'a OutputType) -> Option<&'a ValueType>;
     fn arguments(&self) -> &Vec<ArgumentDescription>;
 }
 
@@ -220,12 +220,12 @@ impl dyn CrushCommand {
 }
 
 impl CrushCommand for SimpleCommand {
-    fn invoke(&self, context: CommandContext) -> CrushResult<()> {
+    fn eval(&self, context: CommandContext) -> CrushResult<()> {
         let c = self.call;
         c(context)
     }
 
-    fn can_block(&self, _arg: &[ArgumentDefinition], _context: &mut CompileContext) -> bool {
+    fn might_block(&self, _arg: &[ArgumentDefinition], _context: &mut CompileContext) -> bool {
         self.can_block
     }
 
@@ -270,7 +270,7 @@ impl CrushCommand for SimpleCommand {
         })
     }
 
-    fn output<'a>(&'a self, input: &'a OutputType) -> Option<&'a ValueType> {
+    fn output_type<'a>(&'a self, input: &'a OutputType) -> Option<&'a ValueType> {
         self.output.calculate(input)
     }
 
@@ -315,7 +315,7 @@ impl std::fmt::Debug for SimpleCommand {
 }
 
 impl CrushCommand for ConditionCommand {
-    fn invoke(&self, context: CommandContext) -> CrushResult<()> {
+    fn eval(&self, context: CommandContext) -> CrushResult<()> {
         let c = self.call;
         c(context)?;
         Ok(())
@@ -325,7 +325,7 @@ impl CrushCommand for ConditionCommand {
         "conditional command"
     }
 
-    fn can_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool {
+    fn might_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool {
         arguments
             .iter()
             .any(|arg| arg.value.can_block(context))
@@ -365,7 +365,7 @@ impl CrushCommand for ConditionCommand {
         })
     }
 
-    fn output(&self, _input: &OutputType) -> Option<&ValueType> {
+    fn output_type(&self, _input: &OutputType) -> Option<&ValueType> {
         None
     }
 
@@ -388,13 +388,13 @@ impl Help for ConditionCommand {
     }
 }
 
-impl std::cmp::PartialEq for ConditionCommand {
+impl PartialEq for ConditionCommand {
     fn eq(&self, _other: &ConditionCommand) -> bool {
         false
     }
 }
 
-impl std::cmp::Eq for ConditionCommand {}
+impl Eq for ConditionCommand {}
 
 #[derive(Clone)]
 pub enum Parameter {
@@ -434,13 +434,13 @@ pub struct BoundCommand {
 }
 
 impl CrushCommand for BoundCommand {
-    fn invoke(&self, mut context: CommandContext) -> CrushResult<()> {
+    fn eval(&self, mut context: CommandContext) -> CrushResult<()> {
         context.this = Some(self.this.clone());
-        self.command.invoke(context)
+        self.command.eval(context)
     }
 
-    fn can_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool {
-        self.command.can_block(arguments, context)
+    fn might_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool {
+        self.command.might_block(arguments, context)
     }
 
     fn name(&self) -> &str {
@@ -482,8 +482,8 @@ impl CrushCommand for BoundCommand {
         })
     }
 
-    fn output<'a>(&'a self, input: &'a OutputType) -> Option<&'a ValueType> {
-        self.command.output(input)
+    fn output_type<'a>(&'a self, input: &'a OutputType) -> Option<&'a ValueType> {
+        self.command.output_type(input)
     }
 
     fn arguments(&self) -> &Vec<ArgumentDescription> {

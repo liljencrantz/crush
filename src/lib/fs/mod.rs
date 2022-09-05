@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{to_crush_error, CrushResult};
+use crate::lang::errors::{to_crush_error, CrushResult, error};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::help::Help;
 use crate::lang::printer::Printer;
@@ -104,6 +104,10 @@ members of a value, write "dir <value>".
         }
         Some(v) => {
             match v {
+                Value::Field(f) => match &context.scope.get_calling_scope()?.get(&f[0])? {
+                    None => error(format!("Unknown identifier {}", &f[0]))?,
+                    Some(v) => halp(v, &context.global_state.printer()),
+                },
                 Value::Command(cmd) => halp(cmd.help(), &context.global_state.printer()),
                 Value::Type(t) => halp(&t, &context.global_state.printer()),
                 v => halp(&v, &context.global_state.printer()),

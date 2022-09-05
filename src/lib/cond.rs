@@ -17,7 +17,7 @@ pub fn and(mut context: CommandContext) -> CrushResult<()> {
             Value::Command(c) => {
                 let (sender, receiver) = pipe();
                 let cc = context.empty().with_output(sender);
-                c.invoke(cc)?;
+                c.eval(cc)?;
                 match receiver.recv()? {
                     Value::Bool(b) => {
                         if !b {
@@ -48,7 +48,7 @@ pub fn or(mut context: CommandContext) -> CrushResult<()> {
             Value::Command(c) => {
                 let (sender, receiver) = pipe();
                 let cc = context.empty().with_output(sender);
-                c.invoke(cc)?;
+                c.eval(cc)?;
                 match receiver.recv()? {
                     Value::Bool(b) => {
                         if b {

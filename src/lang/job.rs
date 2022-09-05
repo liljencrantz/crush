@@ -4,7 +4,7 @@ use crate::lang::execution_context::{CompileContext, JobContext};
 use crate::lang::pipe::pipe;
 use std::thread::ThreadId;
 use std::fmt::{Display, Formatter};
-use crate::lang::ast::Location;
+use crate::lang::ast::location::Location;
 
 #[derive(Clone)]
 pub struct Job {

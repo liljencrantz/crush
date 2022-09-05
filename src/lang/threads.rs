@@ -8,7 +8,9 @@ use crossbeam::channel::Receiver;
 use crossbeam::channel::unbounded;
 use std::time::Duration;
 use chrono::{DateTime, Local};
-
+/**
+A thread management utility. Spawn, track and join on threads.
+*/
 struct ThreadData {
     handle: JoinHandle<CrushResult<()>>,
     creation_time: DateTime<Local>,

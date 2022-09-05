@@ -13,8 +13,8 @@ what I felt was a more suitable type system.
 
 ## Similarity to Nushell
 
-On the surface, Crush looks identical to nushell, but less polished. Crush lacks
-syntax highlighting, tab completion and has a worse screen rendering. But that
+On the surface, Crush looks identical to nushell, but less polished. Crush has 
+less polished syntax highlighting, tab completion and screen rendering. But that
 is because the focus of Crush right now is to create a well defined, powerful
 and convenient language that supports things like arithmetic operations,
 closures, loops and flow control while remaining useful for interactive use.

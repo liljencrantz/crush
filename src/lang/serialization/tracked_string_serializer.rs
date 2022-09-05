@@ -1,9 +1,10 @@
-use crate::lang::errors::{error, CrushResult};
+use crate::lang::errors::{CrushResult, error};
 use crate::lang::serialization::model::{element, Element};
 use crate::lang::serialization::model;
 
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
-use crate::lang::ast::{TrackedString, Location};
+use crate::lang::ast::tracked_string::TrackedString;
+use crate::lang::ast::location::Location;
 
 impl Serializable<TrackedString> for TrackedString {
     fn deserialize(

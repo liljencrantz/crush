@@ -6,9 +6,10 @@ use crate::lang::threads::ThreadStore;
 use num_format::{Grouping, SystemLocale};
 use std::sync::{Arc, Mutex};
 
-struct StateData {
-    locale: SystemLocale,
-}
+/**
+A type representing the shared crush state, such as the printer, the running jobs, the running
+threads, etc.
+ */
 
 #[derive(Clone)]
 pub struct GlobalState {
@@ -19,6 +20,10 @@ pub struct GlobalState {
     prompt: Arc<Mutex<Option<Command>>>,
     jobs: Arc<Mutex<Vec<Option<LiveJob>>>>,
     parser: Parser,
+}
+
+struct StateData {
+    locale: SystemLocale,
 }
 
 #[derive(Clone, Copy)]
@@ -47,7 +52,7 @@ pub struct LiveJob {
 }
 
 /**
-  A resource counter. Once it reaches zero, the job is done, and it is removed from the global job
+  A resource tracker. Once it reaches zero, the job is done, and it is removed from the global job
   table.
 */
 #[derive(Clone)]

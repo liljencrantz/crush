@@ -23,22 +23,6 @@ use crate::util::hex::to_hex;
 use crate::lang::global_state::GlobalState;
 use num_format::Grouping;
 
-trait Width {
-    fn width(&self) -> usize;
-}
-
-impl Width for String {
-    fn width(&self) -> usize {
-        unicode_width::UnicodeWidthStr::width(self.as_str())
-    }
-}
-
-impl Width for &str {
-    fn width(&self) -> usize {
-        unicode_width::UnicodeWidthStr::width(*self)
-    }
-}
-
 pub fn create_pretty_printer(
     printer: Printer,
     global_state: &GlobalState,
@@ -59,6 +43,23 @@ pub fn create_pretty_printer(
     ));
     o
 }
+
+trait Width {
+    fn width(&self) -> usize;
+}
+
+impl Width for String {
+    fn width(&self) -> usize {
+        unicode_width::UnicodeWidthStr::width(self.as_str())
+    }
+}
+
+impl Width for &str {
+    fn width(&self) -> usize {
+        unicode_width::UnicodeWidthStr::width(*self)
+    }
+}
+
 
 pub struct PrettyPrinter {
     printer: Printer,

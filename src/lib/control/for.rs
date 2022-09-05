@@ -3,9 +3,23 @@ use crate::lang::errors::{mandate, CrushResult};
 use crate::lang::execution_context::{ArgumentVector, CommandContext};
 use crate::lang::value::Value;
 use crate::lang::data::r#struct::Struct;
+use crate::lang::value::ValueType;
+use crate::lang::data::table::ColumnType;
+use lazy_static::lazy_static;
+use crate::data::table::Row;
+use crate::lang::command::OutputType::Known;
+use crate::lang::pipe::pipe;
+
+lazy_static! {
+    static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
+        ColumnType::new("value", ValueType::Any),
+    ];
+}
 
 pub fn r#for(mut context: CommandContext) -> CrushResult<()> {
-    context.output.send(Value::Empty())?;
+    let output = context.output.initialize(OUTPUT_TYPE.clone())?;
+    let (sender, receiver) = pipe();
+
     context.arguments.check_len(2)?;
 
     let location = context.arguments[0].location;
@@ -38,7 +52,8 @@ pub fn r#for(mut context: CommandContext) -> CrushResult<()> {
                 }
             }
         };
-        body.invoke(context.empty().with_scope(env.clone()).with_args(arguments, None))?;
+        body.eval(context.empty().with_scope(env.clone()).with_args(arguments, None).with_output(sender.clone()))?;
+        output.send(Row::new(vec![receiver.recv()?]))?;
         if env.is_stopped() {
             break;
         }

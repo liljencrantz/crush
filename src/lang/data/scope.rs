@@ -1,5 +1,5 @@
 use crate::lang::command::{Command, CrushCommand, OutputType, ArgumentDescription};
-use crate::lang::errors::{error, mandate, CrushResult, argument_error_legacy};
+use crate::lang::errors::{error, mandate, CrushResult, argument_error_legacy, CrushError};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::help::Help;
 use crate::lang::data::r#struct::Struct;
@@ -9,6 +9,7 @@ use ordered_map::OrderedMap;
 use std::cmp::max;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::fmt::{Display, Formatter};
+use crate::lang::errors::CrushErrorType::GenericError;
 
 /**
 This is where we store variables, including functions.
@@ -154,20 +155,20 @@ impl ScopeLoader {
 
 pub struct ScopeData {
     /** This is the parent scope used to perform variable name resolution. If a variable lookup
-       fails in the current scope, it proceeds to this scope. This is usually the scope in which this
-       scope was *created*.
+          fails in the current scope, it proceeds to this scope. This is usually the scope in which this
+          scope was *created*.
 
-       Not that when scopes are used as namespaces, they do not use this scope.
+          Not that when scopes are used as namespaces, they do not use this scope.
      */
     pub parent_scope: Option<Scope>,
 
     /** This is the scope in which the current scope was called. Since a closure can be called
-       from inside any scope, it need not be the same as the parent scope. This scope is the one used
-       for break/continue loop control, and it is also the scope that builds up the namespace hierarchy. */
+          from inside any scope, it need not be the same as the parent scope. This scope is the one used
+          for break/continue loop control, and it is also the scope that builds up the namespace hierarchy. */
     pub calling_scope: Option<Scope>,
 
     /** This is a list of scopes that are imported into the current scope. Anything directly inside
-       one of these scopes is also considered part of this scope. */
+          one of these scopes is also considered part of this scope. */
     pub uses: Vec<Scope>,
 
     /** The actual data of this scope. */
@@ -177,11 +178,11 @@ pub struct ScopeData {
     pub is_loop: bool,
 
     /** True if this scope should stop execution, i.e. if the continue or break commands have been
-       called.  */
+          called.  */
     pub is_stopped: bool,
 
     /** True if this scope can not be further modified. Note that mutable variables in it, e.g.
-       lists can still be modified. */
+          lists can still be modified. */
     pub is_readonly: bool,
 
     pub name: Option<String>,
@@ -348,6 +349,15 @@ impl Scope {
                 self.lock().unwrap().is_stopped = true;
                 Ok(true)
             }
+        }
+    }
+
+    pub fn get_calling_scope(&self) -> CrushResult<Scope> {
+        let data = self.lock()?;
+        if let Some(scope) = &data.calling_scope {
+            Ok(scope.clone())
+        } else {
+            error("Scope not found")
         }
     }
 

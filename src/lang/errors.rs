@@ -1,6 +1,6 @@
 use std::error::Error;
 use std::fmt::Display;
-use crate::lang::ast::Location;
+use crate::lang::ast::location::Location;
 use CrushErrorType::*;
 use std::cmp::{min, max};
 

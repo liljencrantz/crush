@@ -5,7 +5,7 @@ use crate::lang::execution_context::CommandContext;
 use crate::lang::{argument::Argument, data::table::ColumnType};
 use crate::lang::{data::table::Row, value::Value};
 use signature::signature;
-use crate::lang::ast::Location;
+use crate::lang::ast::location::Location;
 use crate::lang::pipe::pipe;
 
 #[signature(
@@ -35,7 +35,7 @@ fn evaluate(
 
     let (sender, reciever) = pipe();
 
-    condition.invoke(
+    condition.eval(
         base_context
             .clone()
             .with_args(arguments, None)

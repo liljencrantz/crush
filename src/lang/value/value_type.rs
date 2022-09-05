@@ -184,8 +184,8 @@ impl Help for ValueType {
         let mut lines = match self {
             ValueType::Time => {
                 vec!["    All time instances use the local time zone.\n".to_string()]
-            },
-            _ => {Vec::new()}
+            }
+            _ => { Vec::new() }
         };
 
         let mut keys: Vec<_> = self.fields().into_iter().collect();

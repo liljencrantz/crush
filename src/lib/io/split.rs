@@ -12,7 +12,7 @@ use std::io::{BufRead, BufReader};
 #[signature(
     from,
     can_block = true,
-    short = "Read specified files (or input) as a table, split on the specified separator"
+    short = "Read specified files (or input) as a table, split on the specified separator characters.",
 )]
 struct From {
     #[unnamed()]
@@ -22,7 +22,8 @@ struct From {
     separator: String,
     #[description("characters to trim from start and end of each token.")]
     trim: Option<String>,
-    #[description("if false, discard empty tokens.")]
+    #[default(false)]
+    #[description("allow empty tokens.")]
     allow_empty: bool,
 }
 

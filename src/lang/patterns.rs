@@ -3,6 +3,11 @@ use crate::util::glob::Glob;
 use regex::Regex;
 use std::fmt::{Display, Formatter};
 
+/**
+A type representing a set of text patterns. The test method can be used to check if the patterns
+match.
+ */
+
 pub struct Patterns {
     patterns: Vec<Value>,
 }

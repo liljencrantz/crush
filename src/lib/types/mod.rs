@@ -48,7 +48,7 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
     if let Some(Value::Command(c)) = res.get("__init__") {
         context.output = black_hole();
         context.this = Some(Value::Struct(res.clone()));
-        c.invoke(context)?;
+        c.eval(context)?;
     }
     o.send(Value::Struct(res))
 }
