@@ -9,7 +9,7 @@ use float_ord::FloatOrd;
 use signature::signature;
 use crate::lang::value::Symbol;
 
-fn parse(input_type: &[ColumnType], field: Option<Symbol>) -> CrushResult<usize> {
+fn parse(input_type: &[ColumnType], field: Option<String>) -> CrushResult<usize> {
     field.map(|f| input_type.find(&f))
         .unwrap_or_else(||
             if input_type.len() == 1 {

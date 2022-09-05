@@ -2,11 +2,10 @@ use crate::lang::errors::{error, CrushResult};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::data::table::ColumnVec;
 use crate::lang::data::table::Row;
-use crate::lang::value::Value;
+use crate::lang::value::{Symbol, Value};
 use std::collections::HashSet;
 use signature::signature;
 use crate::lang::command::OutputType::Passthrough;
-use crate::lang::value::Symbol;
 
 #[signature(
 uniq,

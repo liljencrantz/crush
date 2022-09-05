@@ -1,3 +1,4 @@
+use std::cmp::min;
 use crate::lang::ast::{Node, CommandNode, JobListNode, JobNode};
 use crate::lang::errors::{error, CrushResult, mandate, argument_error_legacy, to_crush_error};
 use crate::lang::value::{ValueType, Value};
@@ -378,17 +379,19 @@ pub fn parse(
 
             if argument_complete {
                 match arg.deref() {
-                    Node::Identifier(l) =>
+                    Node::Field(l) => {
+                        let substring = &l.string[0..min(l.string.len(), cursor - l.location.start)];
                         Ok(ParseResult::PartialArgument(
                             PartialCommandResult {
                                 command: c,
                                 previous_arguments,
-                                last_argument: LastArgument::Switch(l.string.clone()),
+                                last_argument: LastArgument::Switch(substring.to_string()),
                                 last_argument_name,
                             }
-                        )),
+                        ))
+                    }
 
-                    _ => argument_error_legacy("Invalid argument name"),
+                    _ => argument_error_legacy(format!("Invalid argument name {}", arg.type_name()))
                 }
             } else {
                 if arg.location().contains(cursor) {

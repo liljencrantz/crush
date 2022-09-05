@@ -44,7 +44,7 @@ use crate::data::table::Row;
 use crate::util::escape::escape;
 use crate::util::replace::Replace;
 
-pub type Symbol = Vec<String>;
+pub type Symbol = String;
 
 pub enum Value {
     String(String),
@@ -77,7 +77,7 @@ impl Display for Value {
             Value::String(val) => std::fmt::Display::fmt(val, f),
             Value::Integer(val) => std::fmt::Display::fmt(val, f),
             Value::Time(val) => f.write_str(&val.format("%Y-%m-%d %H:%M:%S %z").to_string()),
-            Value::Symbol(val) => f.write_str(&val.join(":")),
+            Value::Symbol(val) => std::fmt::Display::fmt(val, f),
             Value::Glob(val) => std::fmt::Display::fmt(val, f),
             Value::Regex(val, _) => {
                 f.write_str("re\"")?;
@@ -378,7 +378,7 @@ impl Value {
             ValueType::File => Ok(Value::File(PathBuf::from(str_val.as_str()))),
             ValueType::Glob => Ok(Value::Glob(Glob::new(str_val.as_str()))),
             ValueType::Integer => to_crush_error(str_val.parse::<i128>()).map(Value::Integer),
-            ValueType::Symbol => Ok(Value::Symbol(vec![str_val])),
+            ValueType::Symbol => Ok(Value::Symbol(str_val)),
             ValueType::Regex => {
                 to_crush_error(Regex::new(str_val.as_str()).map(|v| Value::Regex(str_val, v)))
             }

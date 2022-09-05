@@ -147,19 +147,18 @@ impl ColumnType {
 impl Display for ColumnType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         self.name.fmt(f)?;
-        f.write_str("=(")?;
+        f.write_str("=($")?;
         self.cell_type.fmt(f)?;
         f.write_str(")")
     }
 }
 
 pub trait ColumnVec {
-    fn find_str(&self, needle: &str) -> CrushResult<usize>;
-    fn find(&self, needle: &[String]) -> CrushResult<usize>;
+    fn find(&self, needle: &str) -> CrushResult<usize>;
 }
 
 impl ColumnVec for &[ColumnType] {
-    fn find_str(&self, needle: &str) -> CrushResult<usize> {
+    fn find(&self, needle: &str) -> CrushResult<usize> {
         for (idx, field) in self.iter().enumerate() {
             if field.name == needle {
                 return Ok(idx);
@@ -176,30 +175,5 @@ impl ColumnVec for &[ColumnType] {
             )
                 .as_str(),
         )
-    }
-
-    fn find(&self, needle_vec: &[String]) -> CrushResult<usize> {
-        if needle_vec.len() != 1 {
-            argument_error_legacy("Expected direct field")
-        } else {
-            let needle = &needle_vec[0];
-            for (idx, field) in self.iter().enumerate() {
-                if &field.name == needle {
-                    return Ok(idx);
-                }
-            }
-
-            error(
-                format!(
-                    "Unknown column {}, available columns are {}",
-                    needle,
-                    self.iter()
-                        .map(|t| t.name.to_string())
-                        .collect::<Vec<String>>()
-                        .join(", "),
-                )
-                    .as_str(),
-            )
-        }
     }
 }

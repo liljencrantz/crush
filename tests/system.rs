@@ -14,6 +14,7 @@ fn run_all_tests() {
             .to_str()
             .expect("Failed to convert entry to string")
             .to_string();
+        println!("WOOO {}", name);
         if name.ends_with(".crush") {
             let output = Command::new("./target/debug/crush")
                 .args(&[name.as_str()])

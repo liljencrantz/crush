@@ -3,7 +3,7 @@ use crate::lang::errors::{argument_error_legacy, data_error, mandate, CrushResul
 use crate::lang::data::list::List;
 use crate::lang::pretty::PrettyPrinter;
 use crate::lang::data::scope::Scope;
-use crate::lang::value::{Symbol, ValueType};
+use crate::lang::value::ValueType;
 use crate::lang::{execution_context::CommandContext, value::Value};
 use signature::signature;
 use rustyline::Editor;
@@ -91,7 +91,7 @@ example = "http \"example.com\" | member body | json:from"
 )]
 struct Member {
     #[description("the member to extract.")]
-    field: Symbol,
+    field: String,
 }
 
 fn member(context: CommandContext) -> CrushResult<()> {
@@ -101,8 +101,8 @@ fn member(context: CommandContext) -> CrushResult<()> {
     }
     match context.input.recv()? {
         Value::Struct(s) => context.output.send(mandate(
-            s.get(&cfg.field[0]),
-            format!("Unknown field \"{}\"", cfg.field[0]).as_str(),
+            s.get(&cfg.field),
+            format!("Unknown field \"{}\"", cfg.field).as_str(),
         )?),
         _ => data_error("Expected a struct"),
     }

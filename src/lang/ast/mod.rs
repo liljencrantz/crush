@@ -328,16 +328,9 @@ impl Node {
                         s.string.replace("_", "").parse::<f64>()
                     )?),
                     s.location),
-            Node::GetAttr(node, identifier) => {
-                let parent = node.generate(env, is_command)?;
-                match parent.unnamed_value()? {
-                    ValueDefinition::Value(Value::Symbol(mut f), location) => {
-                        f.push(identifier.string.clone());
-                        ValueDefinition::Value(Value::Symbol(f), location)
-                    }
-                    value => ValueDefinition::GetAttr(Box::new(value), identifier.clone()),
-                }
-            }
+            Node::GetAttr(node, identifier) =>
+                    ValueDefinition::GetAttr(Box::new(node.generate(env, is_command)?.unnamed_value()?), identifier.clone()),
+
             Node::Path(node, identifier) => ValueDefinition::Path(
                 Box::new(node.generate_argument(env)?.unnamed_value()?),
                 identifier.clone(),
@@ -346,7 +339,7 @@ impl Node {
                 if is_command {
                     ValueDefinition::Identifier(f.clone())
                 } else {
-                    ValueDefinition::Value(Value::Symbol(vec![f.string.to_string()]), f.location)
+                    ValueDefinition::Value(Value::Symbol(f.string.to_string()), f.location)
                 },
             Node::Substitution(s) => ValueDefinition::JobDefinition(s.generate(env)?),
             Node::Closure(s, c) => {

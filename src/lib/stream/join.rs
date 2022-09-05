@@ -75,8 +75,8 @@ pub fn join(mut context: CommandContext) -> CrushResult<()> {
     match (l.argument_type, mandate(l.value.stream()?, "Expected a stream")?,
            r.argument_type, mandate(r.value.stream()?, "Expected a stream")?) {
         (Some(left_name), left_stream, Some(right_name), right_stream) => {
-            let left_idx = left_stream.types().find_str(&left_name)?;
-            let right_idx = right_stream.types().find_str(&right_name)?;
+            let left_idx = left_stream.types().find(&left_name)?;
+            let right_idx = right_stream.types().find(&right_name)?;
 
             let output_type = get_output_type(left_stream.types(), right_stream.types(), right_idx)?;
             let output = context.output.initialize(output_type)?;

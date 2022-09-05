@@ -142,7 +142,7 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
                 location = location.union(a.location);
                 match (a.argument_type.as_deref(), a.value.clone()) {
                     (Some(name), Value::Command(closure)) => {
-                        match (copy, input_type.find_str(name)) {
+                        match (copy, input_type.find(name)) {
                             (true, Ok(idx)) => {
                                 columns.push((Action::Replace(idx), Source::Closure(closure)))
                             }
@@ -156,12 +156,12 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
                         if name.len() != 1 {
                             return argument_error_legacy("Invalid field");
                         }
-                        match (copy, input_type.find_str(name[0].as_ref())) {
+                        match (copy, input_type.find(name.as_ref())) {
                             (false, Ok(idx)) => columns
-                                .push((Action::Append(name[0].clone()), Source::Argument(idx))),
+                                .push((Action::Append(name.clone()), Source::Argument(idx))),
                             _ => {
                                 return argument_error_legacy(
-                                    format!("Unknown field {}", name[0]).as_str(),
+                                    format!("Unknown field {}", name).as_str(),
                                 );
                             }
                         }

@@ -24,7 +24,7 @@ message Element {
         Closure closure = 9; // A Value::Command that is a closure
         bytes binary = 10; // A Value::binary
         Duration duration = 11; // A Value::Duration
-        uint64 field = 12; // A Value::Field
+        string symbol = 12; // A Value::Symbol
         string glob = 13; // A Value::Glob
         string regex = 14; // A Value::RegEx
         Scope user_scope = 15; // A Value::Scope
@@ -204,7 +204,7 @@ message Type {
         COMMAND = 4;
         BINARY = 5;
         DURATION = 6;
-        FIELD = 7;
+        SYMBOL = 7;
         GLOB = 8;
         REGEX = 9;
         SCOPE = 10;

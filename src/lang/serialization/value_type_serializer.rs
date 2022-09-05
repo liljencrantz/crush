@@ -84,7 +84,7 @@ impl Serializable<ValueType> for ValueType {
             ValueType::Integer => SimpleTypeKind::Integer,
             ValueType::Time => SimpleTypeKind::Time,
             ValueType::Duration => SimpleTypeKind::Duration,
-            ValueType::Symbol => SimpleTypeKind::Field,
+            ValueType::Symbol => SimpleTypeKind::Symbol,
             ValueType::Glob => SimpleTypeKind::Glob,
             ValueType::Regex => SimpleTypeKind::Regex,
             ValueType::Command => SimpleTypeKind::Command,

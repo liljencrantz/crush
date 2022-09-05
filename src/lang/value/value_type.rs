@@ -131,7 +131,7 @@ impl ValueType {
                 Ok(n) => Ok(Value::Integer(n)),
                 Err(e) => error(e.to_string().as_str()),
             },
-            ValueType::Symbol => Ok(Value::Symbol(mandate(parse_name(s), "Invalid field name")?)),
+            ValueType::Symbol => Ok(Value::Symbol(s.to_string())),
             ValueType::Glob => Ok(Value::Glob(Glob::new(s))),
             ValueType::Regex => Ok(Value::Regex(s.to_string(), to_crush_error(Regex::new(s))?)),
             ValueType::File => Ok(Value::string(s)),
