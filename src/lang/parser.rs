@@ -6,16 +6,6 @@ use std::sync::{Arc, Mutex};
 
 lalrpop_mod!(pub lalrparser, "/lang/lalrparser.rs");
 
-pub fn parse_name(s: &str) -> Option<Vec<String>> {
-    let res = s.split('/').collect::<Vec<&str>>();
-    for i in res.iter() {
-        if i.is_empty() {
-            return None;
-        }
-    }
-    Some(res.iter().map(|e| e.to_string()).collect())
-}
-
 fn close_quote(input: &str) -> String {
     let mut was_backslash = false;
     let mut current_quote = None;

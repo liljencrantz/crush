@@ -35,6 +35,17 @@ impl Dict {
         }
     }
 
+    pub fn new_with_data(key_type: ValueType, value_type: ValueType, entries: OrderedMap<Value, Value>) -> Dict {
+        if !key_type.is_hashable() {
+            panic!("Tried to create dict with unhashable key type");
+        }
+        Dict {
+            key_type,
+            value_type,
+            entries: Arc::new(Mutex::new(entries)),
+        }
+    }
+
     pub fn len(&self) -> usize {
         let entries = self.entries.lock().unwrap();
         entries.len()
@@ -57,6 +68,11 @@ impl Dict {
     pub fn get(&self, key: &Value) -> Option<Value> {
         let entries = self.entries.lock().unwrap();
         entries.get(key).map(|c| c.clone())
+    }
+
+    pub fn contains(&self, key: &Value) -> bool {
+        let entries = self.entries.lock().unwrap();
+        entries.contains_key(key)
     }
 
     pub fn remove(&self, key: &Value) -> Option<Value> {

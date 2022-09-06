@@ -239,7 +239,7 @@ pub struct Mul {
 fn mul(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream()? {
         Some(input) => {
-            let cfg: Sum = Sum::parse(context.arguments, &context.global_state.printer())?;
+            let cfg = Mul::parse(context.arguments, &context.global_state.printer())?;
             let column = parse(input.types(), cfg.field)?;
             match &input.types()[column].cell_type {
                 ValueType::Integer => context.output.send(mul_int(input, column)?),

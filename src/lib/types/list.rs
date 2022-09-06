@@ -1,13 +1,15 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command::TypeMap;
-use crate::lang::errors::{argument_error_legacy, data_error, mandate, CrushResult};
+use crate::lang::errors::{argument_error_legacy, data_error, mandate, CrushResult, argument_error};
 use crate::lang::execution_context::{ArgumentVector, CommandContext, This};
 use crate::lang::value::Value;
 use crate::lang::{command::Command, data::list::List, value::ValueType};
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use signature::signature;
+use crate::data::table::ColumnVec;
+use crate::util::replace::Replace;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "list", name]
@@ -106,6 +108,16 @@ lazy_static! {
             true,
             "list:of element:any...",
             "Create a new list containing the supplied elements",
+            None,
+            Unknown,
+            vec![],
+        );
+        res.declare(
+            full("collect"),
+            collect,
+            true,
+            "list:collect [column]",
+            "Create a new list by reading a column from the input",
             Some("    If no elements are supplied as arguments, input must be a stream with\n    exactly one column."),
             Unknown,
             vec![],
@@ -205,27 +217,54 @@ fn __call__(context: CommandContext) -> CrushResult<()> {
 
 fn of(mut context: CommandContext) -> CrushResult<()> {
     match context.arguments.len() {
+        0 => argument_error_legacy("Expected at least one argument"),
+        _ => context.output.send(
+            Value::List(List::new_without_type(
+                context.arguments
+                    .drain(..)
+                    .map(|a| a.value)
+                    .collect()
+            ))
+        ),
+
+    }
+}
+
+fn collect(mut context: CommandContext) -> CrushResult<()> {
+    let mut input = mandate(context.input.recv()?.stream()?, "Expected a stream")?;
+    let input_type = input.types().to_vec();
+    let mut lst = Vec::new();
+    match context.arguments.len() {
         0 => {
-            let mut lst = Vec::new();
-            let mut input = mandate(context.input.recv()?.stream()?, "Expected a stream")?;
-            if input.types().len() != 1 {
+            if input_type.len() != 1 {
                 return data_error("Expected input with exactly one column");
             }
             while let Ok(row) = input.read() {
                 lst.push(Vec::from(row).remove(0));
             }
-            if lst.is_empty() {
-                return data_error("Empty stream!");
-            }
             context
                 .output
-                .send(Value::List(List::new_without_type(lst)))
+                .send(Value::List(List::new(input_type[0].cell_type.clone(), lst)))
         }
-        _ => {
-            let lst =
-                List::new_without_type(context.arguments.drain(..).map(|a| a.value).collect());
-            context.output.send(Value::List(lst))
+        1 => {
+            match &context.arguments[0].value {
+                Value::Symbol(s) => {
+                    match input_type.as_slice().find(s) {
+                        Ok(idx) => {
+                            while let Ok(row) = input.read() {
+                                lst.push(Vec::from(row).replace(idx, Value::Empty()));
+                            }
+                            context
+                                .output
+                                .send(Value::List(List::new(input_type[idx].cell_type.clone(), lst)))
+                        }
+                        _ => argument_error("Column not found", context.arguments[0].location)
+                    }
+                }
+                _ => argument_error("Expected argument of type symbol", context.arguments[0].location),
+            }
         }
+        _ => argument_error("Expected a single argument", context.arguments[0].location),
     }
 }
 

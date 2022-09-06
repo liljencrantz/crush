@@ -37,7 +37,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             uniq::Uniq::declare(env)?;
             env.declare_command(
                 "join", join::join, true,
-                "join left:field right:field", "Join two streams together on the specified keys", None,
+                "join left:field right:field", "Join two streams together on the specified keys",
+                example!("join pid=(proc:list) pid=(proc:threads| group pid tid={list:collect tid})"),
                 Unknown,
                 vec![],
             )?;

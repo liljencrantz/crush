@@ -89,7 +89,7 @@ fn cmd(mut context: CommandContext) -> CrushResult<()> {
             } else {
                 let input = context.input.recv()?;
 
-                let (mut stdout_reader, stdout_writer) = os_pipe::pipe().unwrap();
+                let (stdout_reader, stdout_writer) = os_pipe::pipe().unwrap();
                 let (mut stderr_reader, stderr_writer) = os_pipe::pipe().unwrap();
 
                 cmd.stdin(Stdio::piped());
@@ -147,7 +147,7 @@ fn cmd(mut context: CommandContext) -> CrushResult<()> {
 
 impl BinaryReader for PipeReader {
     fn clone(&self) -> Box<dyn BinaryReader + Send + Sync> {
-        self.clone()
+        Box::new(self.try_clone().unwrap())
     }
 }
 

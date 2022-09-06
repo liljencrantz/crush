@@ -1,5 +1,5 @@
 use crate::lang::command::{Command, CrushCommand, OutputType, ArgumentDescription};
-use crate::lang::errors::{error, mandate, CrushResult, argument_error_legacy, CrushError};
+use crate::lang::errors::{error, mandate, CrushResult, argument_error_legacy};
 use crate::lang::execution_context::CommandContext;
 use crate::lang::help::Help;
 use crate::lang::data::r#struct::Struct;
@@ -9,7 +9,6 @@ use ordered_map::OrderedMap;
 use std::cmp::max;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::fmt::{Display, Formatter};
-use crate::lang::errors::CrushErrorType::GenericError;
 
 /**
 This is where we store variables, including functions.

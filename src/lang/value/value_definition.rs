@@ -6,7 +6,6 @@ use crate::{
     lang::errors::CrushResult, lang::pipe::empty_channel, lang::pipe::pipe,
     lang::value::Value,
 };
-use std::path::PathBuf;
 use std::fmt::{Display, Formatter};
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::ast::location::Location;

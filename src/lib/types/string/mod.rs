@@ -100,7 +100,7 @@ struct Split {
     separator: String,
 }
 
-fn split(mut context: CommandContext) -> CrushResult<()> {
+fn split(context: CommandContext) -> CrushResult<()> {
     let cfg: Split = Split::parse(context.arguments, &context.global_state.printer())?;
     let this = context.this.string()?;
 
@@ -220,7 +220,7 @@ struct Repeat {
     times: usize,
 }
 
-fn repeat(mut context: CommandContext) -> CrushResult<()> {
+fn repeat(context: CommandContext) -> CrushResult<()> {
     let cfg: Repeat = Repeat::parse(context.arguments, &context.global_state.printer())?;
     let s = context.this.string()?;
     context.output.send(Value::string(s.repeat(cfg.times).as_str()))
@@ -236,7 +236,7 @@ struct EndsWith {
     suffix: String,
 }
 
-fn ends_with(mut context: CommandContext) -> CrushResult<()> {
+fn ends_with(context: CommandContext) -> CrushResult<()> {
     let cfg: EndsWith = EndsWith::parse(context.arguments, &context.global_state.printer())?;
     let s = context.this.string()?;
     context.output.send(Value::Bool(s.ends_with(&cfg.suffix)))
@@ -252,7 +252,7 @@ struct StartsWith {
     prefix: String,
 }
 
-fn starts_with(mut context: CommandContext) -> CrushResult<()> {
+fn starts_with(context: CommandContext) -> CrushResult<()> {
     let cfg: StartsWith = StartsWith::parse(context.arguments, &context.global_state.printer())?;
     let s = context.this.string()?;
     context.output.send(Value::Bool(s.starts_with(&cfg.prefix)))

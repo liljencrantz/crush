@@ -153,15 +153,12 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
                         }
                     }
                     (None, Value::Symbol(name)) => {
-                        if name.len() != 1 {
-                            return argument_error_legacy("Invalid field");
-                        }
                         match (copy, input_type.find(name.as_ref())) {
                             (false, Ok(idx)) => columns
                                 .push((Action::Append(name.clone()), Source::Argument(idx))),
                             _ => {
                                 return argument_error_legacy(
-                                    format!("Unknown field {}", name).as_str(),
+                                    format!("Unknown column {}", name).as_str(),
                                 );
                             }
                         }

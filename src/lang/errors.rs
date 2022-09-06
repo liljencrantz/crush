@@ -9,7 +9,6 @@ pub enum CrushErrorType {
     InvalidArgument(String),
     InvalidData(String),
     GenericError(String),
-    BlockError,
     SendError,
     EOFError,
 }
@@ -48,7 +47,6 @@ impl CrushError {
             InvalidArgument(s)
             | InvalidData(s)
             | GenericError(s) => s.clone(),
-            BlockError => "Block error".to_string(),
             SendError => "Send error".to_string(),
             EOFError => "EOF error".to_string(),
         }
@@ -121,14 +119,6 @@ impl<T: Display> From<T> for CrushError {
 }
 
 pub type CrushResult<T> = Result<T, CrushError>;
-
-pub fn block_error<T>() -> Result<T, CrushError> {
-    Err(CrushError {
-        error_type: BlockError,
-        location: None,
-        definition: None,
-    })
-}
 
 pub fn eof_error<T>() -> CrushResult<T> {
     Err(CrushError {

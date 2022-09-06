@@ -2,12 +2,13 @@ use crate::lang::command::Command;
 use crate::lang::errors::CrushResult;
 use crate::lang::execution_context::CommandContext;
 use signature::signature;
+use crate::lang::value::Value;
 
 #[signature(
-    r#if,
-    condition = true,
-    short = "Conditionally execute a command once.",
-    example = "if a > 10 {echo \"big\"} {echo \"small\"}"
+r#if,
+condition = true,
+short = "Conditionally execute a command once.",
+example = "if a > 10 {echo \"big\"} {echo \"small\"}"
 )]
 pub struct If {
     #[description("the condition to filter on.")]
@@ -24,8 +25,9 @@ fn r#if(context: CommandContext) -> CrushResult<()> {
     if cfg.condition {
         cfg.true_clause.eval(context.with_args(vec![], None))
     } else {
-        cfg.false_clause
-            .map(|v| v.eval(context.with_args(vec![], None)))
-            .unwrap_or(Ok(()))
+        match cfg.false_clause {
+            None => context.output.send(Value::Empty()),
+            Some(v) => v.eval(context.with_args(vec![], None)),
+        }
     }
 }

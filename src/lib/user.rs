@@ -1,15 +1,13 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, argument_error_legacy, to_crush_error};
+use crate::lang::errors::CrushResult;
 use crate::lang::execution_context::CommandContext;
 use crate::lang::data::scope::Scope;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::value::{Value, ValueType};
 use signature::signature;
-use std::ffi::CStr;
-use std::path::PathBuf;
 use crate::lang::{data::table::ColumnType, data::table::Row};
 use lazy_static::lazy_static;
-use crate::util::user_map::get_current_username;
+use crate::util::user_map::{get_all_users, get_current_username, get_user};
 
 #[signature(
 me,
@@ -19,9 +17,7 @@ short = "current user",
 struct Me {}
 
 fn me(context: CommandContext) -> CrushResult<()> {
-    unsafe {
-        context.output.send(search(&get_current_username()?)?)
-    }
+    context.output.send(get_user_value(&get_current_username()?)?)
 }
 
 lazy_static! {
@@ -45,56 +41,19 @@ struct List {}
 
 fn list(context: CommandContext) -> CrushResult<()> {
     let output = context.output.initialize(LIST_OUTPUT_TYPE.clone())?;
-    unsafe {
-        nix::libc::setpwent();
-        loop {
-            let passwd = nix::libc::getpwent();
-            if passwd.is_null() {
-                break;
-            }
-            output.send(Row::new(
-                vec![
-                    Value::String(parse((*passwd).pw_name)?),
-                    Value::File(PathBuf::from(parse((*passwd).pw_dir)?)),
-                    Value::File(PathBuf::from(parse((*passwd).pw_shell)?)),
-                    Value::String(parse((*passwd).pw_gecos)?),
-                    Value::Integer((*passwd).pw_uid as i128),
-                    Value::Integer((*passwd).pw_gid as i128),
-                ]))?;
-        }
-        nix::libc::endpwent();
+    for u in get_all_users()? {
+        output.send(Row::new(
+            vec![
+                Value::String(u.name),
+                Value::File(u.home),
+                Value::File(u.shell),
+                Value::String(u.information),
+                Value::Integer(u.uid as i128),
+                Value::Integer(u.gid as i128),
+            ]))?;
     }
     Ok(())
 }
-
-unsafe fn search(input_name: &str) -> CrushResult<Value> {
-    nix::libc::setpwent();
-    loop {
-        let passwd = nix::libc::getpwent();
-        if passwd.is_null() {
-            return argument_error_legacy(format!("Unknown user {}", input_name));
-        }
-        let name = parse((*passwd).pw_name)?;
-        if name == input_name {
-            let res = Value::Struct(
-                Struct::new(
-                    vec![
-                        ("name", Value::String(input_name.to_string())),
-                        ("home", Value::File(PathBuf::from(parse((*passwd).pw_dir)?))),
-                        ("shell", Value::File(PathBuf::from(parse((*passwd).pw_shell)?))),
-                        ("information", Value::String(parse((*passwd).pw_gecos)?)),
-                        ("uid", Value::Integer((*passwd).pw_uid as i128)),
-                        ("gid", Value::Integer((*passwd).pw_gid as i128)),
-                    ],
-                    None,
-                )
-            );
-            nix::libc::endpwent();
-            return Ok(res);
-        }
-    }
-}
-
 
 #[signature(
 find,
@@ -108,15 +67,26 @@ struct Find {
 
 fn find(context: CommandContext) -> CrushResult<()> {
     let cfg: Find = Find::parse(context.arguments, &context.global_state.printer())?;
-    unsafe {
-        context.output.send(search(&cfg.name)?)
+    context.output.send(get_user_value(&cfg.name)?)
+}
+
+fn get_user_value(input_name: &str) -> CrushResult<Value> {
+    match get_user(input_name) {
+        Ok(user) =>
+            Ok(Value::Struct(Struct::new(
+                vec![
+                    ("name", Value::String(user.name)),
+                    ("home", Value::File(user.home)),
+                    ("shell", Value::File(user.shell)),
+                    ("information", Value::String(user.information)),
+                    ("uid", Value::Integer(user.uid as i128)),
+                    ("gid", Value::Integer(user.gid as i128)),
+                ],
+                None,
+            ))),
+        Err(e) => Err(e),
     }
 }
-
-unsafe fn parse(s: *const i8) -> CrushResult<String> {
-    Ok(to_crush_error(CStr::from_ptr(s).to_str())?.to_string())
-}
-
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(

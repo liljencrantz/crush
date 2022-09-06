@@ -9,7 +9,7 @@ use crate::lang::command::OutputType::Known;
     count,
     short = "Count the number of rows in the input.",
     output = Known(ValueType::Integer),
-    example = "ps | count # Number of processes on the system")]
+    example = "proc:list | count # Number of processes on the system")]
 pub struct Count {}
 
 pub fn count(context: CommandContext) -> CrushResult<()> {

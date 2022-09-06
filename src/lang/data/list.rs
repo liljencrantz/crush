@@ -1,8 +1,7 @@
 use crate::lang::errors::{argument_error_legacy, error, mandate, CrushResult};
-use crate::lang::pipe::{CrushStream, Stream};
-use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value::ValueType};
+use crate::lang::pipe::Stream;
+use crate::lang::{value::Value, value::ValueType};
 use crate::util::identity_arc::Identity;
-use chrono::Duration;
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::hash::Hasher;

@@ -1,7 +1,7 @@
 use crate::lang::argument::ArgumentDefinition;
 use crate::lang::command::{Command, Parameter};
 use crate::lang::command_invocation::CommandInvocation;
-use crate::lang::errors::{CrushResult, error, to_crush_error};
+use crate::lang::errors::{CrushResult, error, mandate, to_crush_error};
 use crate::lang::job::Job;
 use crate::lang::data::scope::Scope;
 use crate::lang::value::{Value, ValueDefinition, ValueType};
@@ -9,11 +9,11 @@ use crate::util::glob::Glob;
 use regex::Regex;
 use std::ops::Deref;
 use std::path::PathBuf;
-use std::fmt::{Display, Formatter};
-use std::cmp::{max, min};
 use location::Location;
 use tracked_string::TrackedString;
 use crate::util::escape::unescape;
+use crate::util::user_map::get_user;
+use crate::util::user_map::get_current_username;
 
 pub mod location;
 pub mod tracked_string;
@@ -30,7 +30,8 @@ pub enum Node {
     Regex(TrackedString),
     Field(TrackedString),
     String(TrackedString),
-    File(TrackedString, bool), // true if filename is quoted
+    File(TrackedString, bool),
+    // true if filename is quoted
     Integer(TrackedString),
     Float(TrackedString),
     GetItem(Box<Node>, Box<Node>),
@@ -329,7 +330,7 @@ impl Node {
                     )?),
                     s.location),
             Node::GetAttr(node, identifier) =>
-                    ValueDefinition::GetAttr(Box::new(node.generate(env, is_command)?.unnamed_value()?), identifier.clone()),
+                ValueDefinition::GetAttr(Box::new(node.generate(env, is_command)?.unnamed_value()?), identifier.clone()),
 
             Node::Path(node, identifier) => ValueDefinition::Path(
                 Box::new(node.generate_argument(env)?.unnamed_value()?),
@@ -480,12 +481,14 @@ impl Node {
     }
 
     pub fn parse_string_or_wildcard(s: &TrackedString) -> Box<Node> {
-        if s.string.contains('%') || s.string.contains('?') {
-            Box::from(Node::Glob(s.clone()))
+        let path = expand_user(s.string.clone()).unwrap_or_else(|_| { s.string.clone() });
+        let ts = TrackedString::from(&path, s.location);
+        if path.contains('%') || path.contains('?') {
+            Box::from(Node::Glob(ts))
         } else if s.string.contains('/') || s.string.contains('.') {
-                Box::from(Node::File(s.clone(), false))
+            Box::from(Node::File(ts, false))
         } else {
-            Box::from(Node::Field(s.clone()))
+            Box::from(Node::Field(ts))
         }
     }
 
@@ -494,20 +497,14 @@ impl Node {
     }
 
     pub fn parse_file_or_wildcard(s: &TrackedString) -> Box<Node> {
-        if s.string.contains('%') || s.string.contains('?') {
-            Box::from(Node::Glob(s.clone()))
+        let path = expand_user(s.string.clone()).unwrap_or_else(|_| { s.string.clone() });
+        let ts = TrackedString::from(&path, s.location);
+        if ts.string.contains('%') || ts.string.contains('?') {
+            Box::from(Node::Glob(ts.clone()))
         } else {
-            Box::from(Node::File(s.clone(), false))
+            Box::from(Node::File(ts.clone(), false))
         }
     }
-}
-
-fn path(parts: &[&str], location: Location) -> Node {
-    let mut res = Node::Identifier(TrackedString::from(parts[0], location));
-    for part in &parts[1..] {
-        res = Node::Path(Box::from(res), TrackedString::from(part, location));
-    }
-    res
 }
 
 fn attr(parts: &[&str], location: Location) -> Node {
@@ -518,65 +515,23 @@ fn attr(parts: &[&str], location: Location) -> Node {
     res
 }
 
-fn simple_substitution(cmd: Vec<Node>, location: Location) -> Box<Node> {
-    Box::from(
-        Node::Substitution(
-            JobNode {
-                commands: vec![
-                    CommandNode {
-                        expressions: cmd,
-                        location,
-                    }
-                ],
-                location,
-            }
-        )
-    )
+fn home_as_string(user: &str) -> CrushResult<String> {
+    mandate(get_user(user)?.home.to_str(), "Bad home directory").map(|s| { s.to_string() })
 }
 
-fn expand_user(s: &str, location: Location) -> Box<Node> {
-    if s.len() == 1 {
-        Box::from(
-            Node::GetAttr(
-                simple_substitution(
-                    vec![
-                        attr(&vec!["global", "user", "me"], location)
-                    ],
-                    location,
-                ),
-                TrackedString::from("home", location),
-            )
-        )
+fn expand_user(s: String) -> CrushResult<String> {
+    if !s.starts_with('~') {
+        Ok(s)
     } else {
-        Box::from(
-            Node::GetAttr(
-                simple_substitution(
-                    vec![
-                        attr(&vec!["global", "user", "find"], location),
-                        Node::String(TrackedString::from(&format!("\"{}\"", &s[1..]), location)),
-                    ],
-                    location,
-                ),
-                TrackedString::from("home", location),
-            )
-        )
+        let parts: Vec<&str> = s[1..].splitn(2, '/').collect();
+        let home = if parts[0].len() > 0 {home_as_string(parts[0])} else {home_as_string(&get_current_username()?)};
+        if parts.len() == 1 {
+            home
+        } else {
+            home.map(|home| { format!("{}/{}", home, parts[1]) })
+        }
     }
 }
-
-fn expand_user_path(s: &TrackedString) -> Box<Node> {
-    if s.string.contains('/') {
-        let (user, path) = s.string.split_at(s.string.find('/').unwrap());
-        Box::from(
-            Node::Path(
-                expand_user(user, s.location),
-                TrackedString::from(&path[1..], s.location),
-            )
-        )
-    } else {
-        expand_user(&s.string, s.location)
-    }
-}
-
 
 #[derive(Clone, Debug)]
 pub enum ParameterNode {

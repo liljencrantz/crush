@@ -128,7 +128,6 @@ mod macos {
 
         let output = context.output.initialize(LIST_OUTPUT_TYPE.clone())?;
         let users = create_user_map()?;
-
         let mut info: mach_timebase_info = mach_timebase_info{numer: 0, denom: 0};
         unsafe {
             mach_timebase_info(std::ptr::addr_of_mut!(info));
@@ -194,7 +193,7 @@ mod macos {
 
             let curr_res = pidrusage::<RUsageInfoV2>(pid).ok();
 
-            let ppid = curr_task.pbsd.pbi_ppid as i32;
+            let ppid = curr_task.pbsd.pbi_ppid as i128;
             let name =
                 String::from_utf8(
                     curr_task.pbsd.pbi_name
@@ -203,10 +202,9 @@ mod macos {
                         .filter(|c| { *c > 0u8 })
                         .collect()
                 ).unwrap_or_else(|g| { "<Invalid>".to_string() });
-
             output.send(Row::new(vec![
                 Value::Integer(pid as i128),
-                Value::Integer(ppid as i128),
+                Value::Integer(ppid),
                 users.get(&nix::unistd::Uid::from_raw(curr_task.pbsd.pbi_uid)).map(|s| Value::string(s)).unwrap_or_else(|| Value::string("?")),
                 Value::Integer(i128::from(curr_task.ptinfo.pti_resident_size)),
                 Value::Integer(i128::from(curr_task.ptinfo.pti_virtual_size)),
@@ -215,9 +213,8 @@ mod macos {
                         i64::from(info.numer) /
                         i64::from(info.denom))),
                 Value::String(name)
-            ]));
+            ]))?;
         }
-
         Ok(())
     }
 

@@ -67,8 +67,7 @@ pub fn env(context: CommandContext) -> CrushResult<()> {
             Value::String(values[k].to_string()),
         ])));
     }
-
-    Ok(())
+    context.output.send(Value::Empty())
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {

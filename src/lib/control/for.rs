@@ -7,7 +7,6 @@ use crate::lang::value::ValueType;
 use crate::lang::data::table::ColumnType;
 use lazy_static::lazy_static;
 use crate::data::table::Row;
-use crate::lang::command::OutputType::Known;
 use crate::lang::pipe::pipe;
 
 lazy_static! {

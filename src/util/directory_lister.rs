@@ -1,4 +1,3 @@
-use std::collections::VecDeque;
 /**
 A simple wrapper around std::fs::read_dir to allow for unit testing via fakes.
 
@@ -10,9 +9,8 @@ you'll need something cleverer.
 */
 
 use std::path::{PathBuf};
-use crate::lang::errors::{CrushResult, mandate, to_crush_error};
+use crate::lang::errors::{CrushResult, to_crush_error};
 use std::fs::{ReadDir, read_dir};
-use ordered_map::{Entry, OrderedMap};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Directory {

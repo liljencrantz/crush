@@ -5,7 +5,7 @@
 use crate::lang::data::binary::BinaryReader;
 use crate::lang::errors::to_crush_error;
 use crate::lang::printer::Printer;
-use crate::lang::pipe::{CrushStream, InputStream, ValueSender, printer_pipe, Stream};
+use crate::lang::pipe::{CrushStream, InputStream, ValueSender, printer_pipe};
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
 use crate::lang::data::table::Table;
@@ -16,7 +16,6 @@ use crate::lang::value::ValueType;
 use crate::lang::data::r#struct::Struct;
 use std::cmp::max;
 use std::io::{BufReader, Read};
-use std::ops::Deref;
 use std::thread;
 use chrono::Duration;
 use crate::util::hex::to_hex;

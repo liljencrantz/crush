@@ -12,7 +12,7 @@ use std::str::FromStr;
 use chrono::{DateTime, Local};
 use regex::Regex;
 
-use crate::lang::errors::{argument_error_legacy, mandate, CrushResult, data_error, eof_error};
+use crate::lang::errors::{argument_error_legacy, mandate, CrushResult, eof_error};
 use crate::lang::data::r#struct::Struct;
 use crate::lang::data::r#struct::StructReader;
 use crate::lang::data::scope::Scope;

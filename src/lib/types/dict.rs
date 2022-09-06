@@ -1,13 +1,16 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::command::TypeMap;
-use crate::lang::errors::{argument_error_legacy, CrushResult};
+use crate::lang::errors::{argument_error, argument_error_legacy, CrushResult, mandate};
 use crate::lang::execution_context::{ArgumentVector, CommandContext, This};
 use crate::lang::value::Value;
 use crate::lang::{data::dict::Dict, value::ValueType};
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use signature::signature;
+use crate::data::table::ColumnVec;
+use crate::util::replace::Replace;
+
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "dict", name]
 }
@@ -37,6 +40,16 @@ lazy_static! {
             vec![],
         );
         res.declare(
+            full("collect"),
+            collect,
+            true,
+            "dict:collect key_column _value_column",
+            "Create a new dict by reading the specified columns from the input",
+            None,
+            Unknown,
+            vec![],
+        );
+        res.declare(
             full("__setitem__"),
             setitem,
             false,
@@ -52,6 +65,16 @@ lazy_static! {
             false,
             "dict[key]",
             "Return the value the specified key is mapped to",
+            None,
+            Unknown,
+            vec![],
+        );
+        res.declare(
+            full("contains"),
+            contains,
+            false,
+            "dict:contains",
+            "Returns true if the key is in the dict",
             None,
             Unknown,
             vec![],
@@ -136,8 +159,15 @@ fn getitem(mut context: CommandContext) -> CrushResult<()> {
     let dict = context.this.dict()?;
     let key = context.arguments.value(0)?;
     let o = context.output;
-    dict.get(&key).map(|c| o.send(c));
-    Ok(())
+    o.send(dict.get(&key).unwrap_or(Value::Empty()))
+}
+
+fn contains(mut context: CommandContext) -> CrushResult<()> {
+    context.arguments.check_len(1)?;
+    let dict = context.this.dict()?;
+    let key = context.arguments.value(0)?;
+    let o = context.output;
+    o.send(Value::Bool(dict.contains(&key)))
 }
 
 fn remove(mut context: CommandContext) -> CrushResult<()> {
@@ -238,4 +268,32 @@ fn value_type(context: CommandContext) -> CrushResult<()> {
     context
         .output
         .send(Value::Type(context.this.dict()?.value_type()))
+}
+
+fn collect(mut context: CommandContext) -> CrushResult<()> {
+    let mut input = mandate(context.input.recv()?.stream()?, "Expected a stream")?;
+    let input_type = input.types().to_vec();
+    let mut res = OrderedMap::new();
+    match context.arguments.len() {
+        2 => {
+            match (&context.arguments[0].value, &context.arguments[1].value) {
+                (Value::Symbol(key), Value::Symbol(value)) => {
+                    match (input_type.as_slice().find(key), input_type.as_slice().find(value)) {
+                        (Ok(key_idx), Ok(value_idx)) => {
+                            while let Ok(row) = input.read() {
+                                let mut row = Vec::from(row);
+                                res.insert(row.replace(key_idx, Value::Empty()), row.replace(value_idx, Value::Empty()));
+                            }
+                            context
+                                .output
+                                .send(Value::Dict(Dict::new_with_data(input_type[key_idx].cell_type.clone(), input_type[value_idx].cell_type.clone(), res)))
+                        }
+                        _ => argument_error("Columns not found", context.arguments[0].location)
+                    }
+                }
+                _ => argument_error("Expected arguments of type symbol", context.arguments[0].location),
+            }
+        }
+        _ => argument_error("Expected two arguments", context.arguments[0].location),
+    }
 }

@@ -143,12 +143,13 @@ pub fn run(
         }
 
         if let Ok(file) = crush_history_file() {
-            ensure_parent_exists(&file);
-            if let Err(err) = rl.save_history(&file) {
-                global_state.printer().line(&format!(
-                    "Error: Failed to save history to {}: {}",
-                    file.as_os_str().to_str().unwrap_or("???"),
-                    err))
+            if ensure_parent_exists(&file).is_ok() {
+                if let Err(err) = rl.save_history(&file) {
+                    global_state.printer().line(&format!(
+                        "Error: Failed to save history to {}: {}",
+                        file.as_os_str().to_str().unwrap_or("???"),
+                        err))
+                }
             }
         }
     }

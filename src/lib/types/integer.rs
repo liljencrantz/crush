@@ -85,6 +85,26 @@ lazy_static! {
             Known(ValueType::Integer),
             vec![],
         );
+        res.declare(
+            full("max"),
+            max,
+            false,
+            "integer:max",
+            "Largest integer value",
+            None,
+            Known(ValueType::Integer),
+            vec![],
+        );
+        res.declare(
+            full("min"),
+            min,
+            false,
+            "float:min",
+            "Smallest integer value",
+            None,
+            Known(ValueType::Integer),
+            vec![],
+        );
         res
     };
 }
@@ -137,4 +157,18 @@ fn neg(context: CommandContext) -> CrushResult<()> {
     context
         .output
         .send(Value::Integer(-context.this.integer()?))
+}
+
+fn max(context: CommandContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
+    context
+        .output
+        .send(Value::Integer(i128::MAX))
+}
+
+fn min(context: CommandContext) -> CrushResult<()> {
+    context.arguments.check_len(0)?;
+    context
+        .output
+        .send(Value::Integer(i128::MIN))
 }

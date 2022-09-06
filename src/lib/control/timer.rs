@@ -39,5 +39,4 @@ fn timer(context: CommandContext) -> CrushResult<()> {
             std::thread::sleep(to_crush_error(cfg.interval.to_std())?);
         }
     }
-    Ok(())
 }

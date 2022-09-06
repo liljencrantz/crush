@@ -36,7 +36,6 @@ pub struct Group {
 
 fn aggregate(
     commands: Vec<Command>,
-    printer: Printer,
     threads: ThreadStore,
     global_state: GlobalState,
     scope: Scope,
@@ -125,7 +124,6 @@ fn create_worker_thread(
             let local_printer = my_printer.clone();
             local_printer.handle_error(aggregate(
                 my_commands,
-                my_printer,
                 my_threads,
                 my_state,
                 my_scope,

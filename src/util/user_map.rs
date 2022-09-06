@@ -6,6 +6,10 @@ use lazy_static::lazy_static;
 use nix::unistd::{Uid, Gid, getuid};
 use crate::lang::errors::{CrushResult, to_crush_error, error};
 use std::ffi::CStr;
+use std::os::unix::raw::gid_t;
+use std::path::PathBuf;
+use libc::{passwd, uid_t};
+use crate::argument_error_legacy;
 
 lazy_static! {
     static ref USER_MUTEX: Mutex<i32> = Mutex::new(0i32);
@@ -42,6 +46,67 @@ pub fn create_user_map() -> CrushResult<HashMap<Uid, String>> {
         nix::libc::endpwent();
     }
     Ok(res)
+}
+
+pub struct UserData {
+    pub name: String,
+    pub home: PathBuf,
+    pub shell: PathBuf,
+    pub information: String,
+    pub uid: uid_t,
+    pub gid: gid_t,
+}
+
+pub fn get_all_users() -> CrushResult<Vec<UserData>> {
+    let _user_lock = USER_MUTEX.lock().unwrap();
+    let mut res = Vec::new();
+    unsafe {
+        libc::setpwent();
+        loop {
+            let passwd = nix::libc::getpwent();
+            if passwd.is_null() {
+                break;
+            }
+            match  UserData::new(&*passwd){
+                Ok(d) => res.push(d),
+                Err(e) => return Err(e),
+            }
+        }
+        libc::endpwent();
+    }
+    Ok(res)
+}
+
+impl UserData {
+    unsafe fn new(data: &passwd) -> CrushResult<UserData> {
+        Ok(UserData {
+            name: parse(data.pw_name)?,
+            home: PathBuf::from(parse(data.pw_dir)?),
+            shell: PathBuf::from(parse(data.pw_shell)?),
+            information: parse(data.pw_gecos)?,
+            uid: data.pw_uid,
+            gid: data.pw_gid,
+        })
+    }
+}
+
+pub fn get_user(input_name: &str) -> CrushResult<UserData> {
+    let _user_lock = USER_MUTEX.lock().unwrap();
+    unsafe {
+        libc::setpwent();
+        loop {
+            let passwd = libc::getpwent();
+            if passwd.is_null() {
+                return argument_error_legacy(format!("Unknown user {}", input_name));
+            }
+            let name = parse((*passwd).pw_name)?;
+            if name == input_name {
+                let res = UserData::new(&*passwd);
+                libc::endpwent();
+                return res;
+            }
+        }
+    }
 }
 
 pub fn create_group_map() -> CrushResult<HashMap<Gid, String>> {
