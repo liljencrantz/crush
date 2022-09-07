@@ -230,7 +230,7 @@ impl CrushCommand for SimpleCommand {
     }
 
     fn name(&self) -> &str {
-        "command"
+        &self.full_name[self.full_name.len()-1]
     }
 
     fn copy(&self) -> Command {

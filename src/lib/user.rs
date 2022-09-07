@@ -65,8 +65,8 @@ struct Find {
     name: String,
 }
 
-fn find(context: CommandContext) -> CrushResult<()> {
-    let cfg: Find = Find::parse(context.arguments, &context.global_state.printer())?;
+fn find(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Find = Find::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(get_user_value(&cfg.name)?)
 }
 

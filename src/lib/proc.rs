@@ -32,28 +32,16 @@ mod macos {
     ];
 }
 
-    pub struct ProcessInfo {
-        pub pid: i32,
-        pub ppid: i32,
-        pub curr_task: TaskAllInfo,
-        pub prev_task: TaskAllInfo,
-        pub curr_path: Option<PathInfo>,
-        pub curr_threads: Vec<ThreadInfo>,
-        pub curr_udps: Vec<InSockInfo>,
-        pub curr_tcps: Vec<TcpSockInfo>,
-        pub curr_res: Option<RUsageInfoV2>,
-        pub prev_res: Option<RUsageInfoV2>,
-        pub interval: Duration,
-    }
-
-
-    pub struct PathInfo {
-        pub name: String,
-        pub exe: PathBuf,
-        pub root: PathBuf,
-        pub cmd: Vec<String>,
-        pub env: Vec<String>,
-    }
+    lazy_static! {
+    static ref THREADS_OUTPUT_TYPE: Vec<ColumnType> = vec![
+        ColumnType::new("tid", ValueType::Integer),
+        ColumnType::new("pid", ValueType::Integer),
+        ColumnType::new("priority", ValueType::Integer),
+        ColumnType::new("user", ValueType::Duration),
+        ColumnType::new("system", ValueType::Duration),
+        ColumnType::new("name", ValueType::String),
+    ];
+}
 
     #[signature(
     list,
@@ -74,54 +62,6 @@ mod macos {
     use std::time::Instant;
     use libc::mach_timebase_info;
 
-    fn clone_task_all_info(src: &TaskAllInfo) -> TaskAllInfo {
-        let pbsd = BSDInfo {
-            pbi_flags: src.pbsd.pbi_flags,
-            pbi_status: src.pbsd.pbi_status,
-            pbi_xstatus: src.pbsd.pbi_xstatus,
-            pbi_pid: src.pbsd.pbi_pid,
-            pbi_ppid: src.pbsd.pbi_ppid,
-            pbi_uid: src.pbsd.pbi_uid,
-            pbi_gid: src.pbsd.pbi_gid,
-            pbi_ruid: src.pbsd.pbi_ruid,
-            pbi_rgid: src.pbsd.pbi_rgid,
-            pbi_svuid: src.pbsd.pbi_svuid,
-            pbi_svgid: src.pbsd.pbi_svgid,
-            rfu_1: src.pbsd.rfu_1,
-            pbi_comm: src.pbsd.pbi_comm,
-            pbi_name: src.pbsd.pbi_name,
-            pbi_nfiles: src.pbsd.pbi_nfiles,
-            pbi_pgid: src.pbsd.pbi_pgid,
-            pbi_pjobc: src.pbsd.pbi_pjobc,
-            e_tdev: src.pbsd.e_tdev,
-            e_tpgid: src.pbsd.e_tpgid,
-            pbi_nice: src.pbsd.pbi_nice,
-            pbi_start_tvsec: src.pbsd.pbi_start_tvsec,
-            pbi_start_tvusec: src.pbsd.pbi_start_tvusec,
-        };
-        let ptinfo = TaskInfo {
-            pti_virtual_size: src.ptinfo.pti_virtual_size,
-            pti_resident_size: src.ptinfo.pti_resident_size,
-            pti_total_user: src.ptinfo.pti_total_user,
-            pti_total_system: src.ptinfo.pti_total_system,
-            pti_threads_user: src.ptinfo.pti_threads_user,
-            pti_threads_system: src.ptinfo.pti_threads_system,
-            pti_policy: src.ptinfo.pti_policy,
-            pti_faults: src.ptinfo.pti_faults,
-            pti_pageins: src.ptinfo.pti_pageins,
-            pti_cow_faults: src.ptinfo.pti_cow_faults,
-            pti_messages_sent: src.ptinfo.pti_messages_sent,
-            pti_messages_received: src.ptinfo.pti_messages_received,
-            pti_syscalls_mach: src.ptinfo.pti_syscalls_mach,
-            pti_syscalls_unix: src.ptinfo.pti_syscalls_unix,
-            pti_csw: src.ptinfo.pti_csw,
-            pti_threadnum: src.ptinfo.pti_threadnum,
-            pti_numrunning: src.ptinfo.pti_numrunning,
-            pti_priority: src.ptinfo.pti_priority,
-        };
-        TaskAllInfo { pbsd, ptinfo }
-    }
-
     fn list(context: CommandContext) -> CrushResult<()> {
         let mut base_procs = Vec::new();
         let arg_max = 2048;//get_arg_max();
@@ -136,84 +76,101 @@ mod macos {
         if let Ok(procs) = listpids(ProcType::ProcAllPIDS) {
             for p in procs {
                 if let Ok(task) = pidinfo::<TaskAllInfo>(p as i32, 0) {
-                    let res = pidrusage::<RUsageInfoV2>(p as i32).ok();
-                    let time = Instant::now();
-                    base_procs.push((p as i32, task, res, time));
+                    base_procs.push(p);
                 }
             }
         }
 
-        for (pid, prev_task, prev_res, prev_time) in base_procs {
-            let curr_task = if let Ok(task) = pidinfo::<TaskAllInfo>(pid, 0) {
-                task
-            } else {
-                clone_task_all_info(&prev_task)
-            };
+        for pid in base_procs {
+            if let Ok(curr_task) = pidinfo::<TaskAllInfo>(pid as i32, 0) {
+                let ppid = curr_task.pbsd.pbi_ppid as i128;
+                let name =
+                    String::from_utf8(
+                        curr_task.pbsd.pbi_name
+                            .iter()
+                            .map(|c| unsafe { std::mem::transmute::<i8, u8>(*c) })
+                            .filter(|c| { *c > 0u8 })
+                            .collect()
+                    ).unwrap_or_else(|g| { "<Invalid>".to_string() });
+                output.send(Row::new(vec![
+                    Value::Integer(pid as i128),
+                    Value::Integer(ppid),
+                    users.get(&nix::unistd::Uid::from_raw(curr_task.pbsd.pbi_uid)).map(|s| Value::string(s)).unwrap_or_else(|| Value::string("?")),
+                    Value::Integer(i128::from(curr_task.ptinfo.pti_resident_size)),
+                    Value::Integer(i128::from(curr_task.ptinfo.pti_virtual_size)),
+                    Value::Duration(Duration::nanoseconds(
+                        i64::try_from(curr_task.ptinfo.pti_total_user + curr_task.ptinfo.pti_total_system)? *
+                            i64::from(info.numer) /
+                            i64::from(info.denom))),
+                    Value::String(name)
+                ]))?;
+            }
+        }
+        Ok(())
+    }
 
-            let curr_path: Option<PathInfo> = None;//get_path_info(pid, arg_max);
+    #[signature(
+    threads,
+    can_block = true,
+    short = "Return a table stream containing information on all running threads on the system",
+    output = Known(ValueType::TableInputStream(THREADS_OUTPUT_TYPE.clone())),
+    long = "proc:threads accepts no arguments.")]
+    pub struct Threads {}
 
-            let threadids = listpidinfo::<ListThreads>(pid, curr_task.ptinfo.pti_threadnum as usize);
-            let mut curr_threads = Vec::new();
-            if let Ok(threadids) = threadids {
-                for t in threadids {
-                    if let Ok(thread) = pidinfo::<ThreadInfo>(pid, t) {
-                        curr_threads.push(thread);
-                    }
+    fn threads(context: CommandContext) -> CrushResult<()> {
+        let mut base_procs = Vec::new();
+
+        let output = context.output.initialize(THREADS_OUTPUT_TYPE.clone())?;
+        let mut info: mach_timebase_info = mach_timebase_info{numer: 0, denom: 0};
+        unsafe {
+            mach_timebase_info(std::ptr::addr_of_mut!(info));
+        }
+
+        if let Ok(procs) = listpids(ProcType::ProcAllPIDS) {
+            for p in procs {
+                if let Ok(task) = pidinfo::<TaskAllInfo>(p as i32, 0) {
+                    base_procs.push(p);
                 }
             }
+        }
 
-            let mut curr_tcps = Vec::new();
-            let mut curr_udps = Vec::new();
+        for pid in base_procs {
+            if let Ok(curr_task) = pidinfo::<TaskAllInfo>(pid as i32, 0) {
+                let threadids = listpidinfo::<ListThreads>(pid as i32, curr_task.ptinfo.pti_threadnum as usize);
+                let mut curr_threads = Vec::new();
+                if let Ok(threadids) = threadids {
+                    for t in threadids {
+                        if let Ok(thread) = pidinfo::<ThreadInfo>(pid as i32, t) {
+                            let name =
+                                String::from_utf8(
+                                    thread.pth_name
+                                        .iter()
+                                        .map(|c| unsafe { std::mem::transmute::<i8, u8>(*c) })
+                                        .filter(|c| { *c > 0u8 })
+                                        .collect()
+                                ).unwrap_or_else(|g| { "<Invalid>".to_string() });
+                            output.send(Row::new(vec![
+                                Value::Integer(t as i128),
+                                Value::Integer(pid as i128),
+                                Value::Integer(thread.pth_priority as i128),
+                                Value::Duration(Duration::nanoseconds(
+                                    i64::try_from(thread.pth_user_time)? *
+                                        i64::from(info.numer) /
+                                        i64::from(info.denom))),
+                                Value::Duration(Duration::nanoseconds(
+                                    i64::try_from(thread.pth_system_time)? *
+                                        i64::from(info.numer) /
+                                        i64::from(info.denom))),
+                                Value::String(name)
+                            ]))?;
 
-            let fds = listpidinfo::<ListFDs>(pid, curr_task.pbsd.pbi_nfiles as usize);
-            if let Ok(fds) = fds {
-                for fd in fds {
-                    match fd.proc_fdtype.into() {
-                        ProcFDType::Socket => {
-                            if let Ok(socket) = pidfdinfo::<SocketFDInfo>(pid, fd.proc_fd) {
-                                match socket.psi.soi_kind.into() {
-                                    SocketInfoKind::In => {
-                                        if socket.psi.soi_protocol == libc::IPPROTO_UDP {
-                                            let info = unsafe { socket.psi.soi_proto.pri_in };
-                                            curr_udps.push(info);
-                                        }
-                                    }
-                                    SocketInfoKind::Tcp => {
-                                        let info = unsafe { socket.psi.soi_proto.pri_tcp };
-                                        curr_tcps.push(info);
-                                    }
-                                    _ => (),
-                                }
-                            }
+                            curr_threads.push(thread);
                         }
-                        _ => (),
                     }
                 }
+
+//                let curr_res = pidrusage::<RUsageInfoV2>(pid).ok();
             }
-
-            let curr_res = pidrusage::<RUsageInfoV2>(pid).ok();
-
-            let ppid = curr_task.pbsd.pbi_ppid as i128;
-            let name =
-                String::from_utf8(
-                    curr_task.pbsd.pbi_name
-                        .iter()
-                        .map(|c| unsafe { std::mem::transmute::<i8, u8>(*c) })
-                        .filter(|c| { *c > 0u8 })
-                        .collect()
-                ).unwrap_or_else(|g| { "<Invalid>".to_string() });
-            output.send(Row::new(vec![
-                Value::Integer(pid as i128),
-                Value::Integer(ppid),
-                users.get(&nix::unistd::Uid::from_raw(curr_task.pbsd.pbi_uid)).map(|s| Value::string(s)).unwrap_or_else(|| Value::string("?")),
-                Value::Integer(i128::from(curr_task.ptinfo.pti_resident_size)),
-                Value::Integer(i128::from(curr_task.ptinfo.pti_virtual_size)),
-                Value::Duration(Duration::nanoseconds(
-                    i64::try_from(curr_task.ptinfo.pti_total_user + curr_task.ptinfo.pti_total_system)? *
-                        i64::from(info.numer) /
-                        i64::from(info.denom))),
-                Value::String(name)
-            ]))?;
         }
         Ok(())
     }
@@ -316,7 +273,7 @@ mod linux {
 }
 
 #[signature(
-kill,
+signal,
 can_block = false,
 short = "Send a signal to a set of processes",
 output = Known(ValueType::Empty),
@@ -324,7 +281,7 @@ long = "The set of existing signals is platform dependent, but common signals
     include SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGTRAP, SIGABRT, SIGBUS, SIGFPE,
     SIGKILL, SIGUSR1, SIGSEGV, SIGUSR2, SIGPIPE, SIGALRM, SIGTERM, SIGCHLD,
     SIGCONT and SIGWINCH.")]
-struct Kill {
+struct Signal {
     #[unnamed("id of a process to signal")]
     #[description("the name of the signal to send.")]
     pid: Vec<i128>,
@@ -333,8 +290,8 @@ struct Kill {
     signal: String,
 }
 
-fn kill(context: CommandContext) -> CrushResult<()> {
-    let sig: Kill = Kill::parse(context.arguments, &context.global_state.printer())?;
+fn signal(mut context: CommandContext) -> CrushResult<()> {
+    let sig: Signal = Signal::parse(context.remove_arguments(), &context.global_state.printer())?;
     for pid in sig.pid {
         to_crush_error(signal::kill(
             Pid::from_raw(pid as i32),
@@ -343,7 +300,6 @@ fn kill(context: CommandContext) -> CrushResult<()> {
     }
     context.output.send(Value::Empty())
 }
-
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
@@ -354,7 +310,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             linux::List::declare(env)?;
             #[cfg(target_os = "macos")]
             macos::List::declare(env)?;
-            Kill::declare(env)?;
+            #[cfg(target_os = "macos")]
+            macos::Threads::declare(env)?;
+            Signal::declare(env)?;
             Ok(())
         }))?;
     Ok(())

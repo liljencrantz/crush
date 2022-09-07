@@ -27,6 +27,7 @@ fn make_arguments() -> Value {
 
 lazy_static! {
     static ref THREADS_OUTPUT_TYPE: Vec<ColumnType> = vec![
+        ColumnType::new("jid", ValueType::Any),
         ColumnType::new("created", ValueType::Time),
         ColumnType::new("name", ValueType::String),
     ];
@@ -40,6 +41,7 @@ fn threads(context: CommandContext) -> CrushResult<()> {
 
     for t in context.global_state.threads().current()? {
         output.send(Row::new(vec![
+            t.job_id.map(|i|{Value::from(i)}).unwrap_or(Value::Empty()),
             Value::Time(t.creation_time),
             Value::String(t.name),
         ]))?;
@@ -91,7 +93,7 @@ fn jobs(context: CommandContext) -> CrushResult<()> {
     let output = context.output.initialize(JOBS_OUTPUT_TYPE.clone())?;
     for job in context.global_state.jobs() {
         output.send(Row::new(vec![
-            Value::Integer(usize::from(job.id) as i128),
+            Value::from(job.id),
             Value::string(job.description),
         ]))?;
     }

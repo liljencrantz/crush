@@ -99,20 +99,18 @@ fn cmd(mut context: CommandContext) -> CrushResult<()> {
                 let mut child = to_crush_error(cmd.spawn())?;
                 let mut stdin = mandate(child.stdin.take(), "Expected stdin stream")?;
 
-                let threads = context.global_state.threads().clone();
-
                 match input {
                     Value::Empty() => {
                         drop(stdin);
                     }
                     Value::Binary(v) => {
-                        threads.spawn("cmd:stdin", move || {
+                        context.spawn("cmd:stdin", move || {
                             stdin.write(&v)?;
                             Ok(())
                         })?;
                     }
                     Value::BinaryInputStream(mut r) => {
-                        threads.spawn("cmd:stdin", move || {
+                        context.spawn("cmd:stdin", move || {
                             to_crush_error(std::io::copy(r.as_mut(), stdin.borrow_mut()))?;
                             Ok(())
                         })?;
@@ -121,16 +119,16 @@ fn cmd(mut context: CommandContext) -> CrushResult<()> {
                 }
 
                 context.output.send(BinaryInputStream(Box::from(stdout_reader)))?;
-
-                threads.spawn("cmd:stderr", move || {
-                    let _ = &context;
+                let my_context = context.clone();
+                context.spawn("cmd:stderr", move || {
+                    let _ = &my_context;
                     let mut buff = Vec::new();
                     to_crush_error(stderr_reader.read_to_end(&mut buff))?;
                     let errors = to_crush_error(String::from_utf8(buff))?;
                     for e in errors.split('\n') {
                         let err = e.trim();
                         if !err.is_empty() {
-                            context.global_state.printer().error(err);
+                            my_context.global_state.printer().error(err);
                         }
                     }
                     Ok(())

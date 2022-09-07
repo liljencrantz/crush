@@ -3,6 +3,7 @@ use crate::lang::execution_context::CommandContext;
 use crate::lang::data::table::ColumnType;
 use crate::lang::{data::table::Row, value::Value, value::ValueType};
 use signature::signature;
+use crate::lang::value::Symbol;
 
 #[signature(enumerate, short = "Prepend a column containing the row number to each row of the input.")]
 pub struct Enumerate {
@@ -12,6 +13,9 @@ pub struct Enumerate {
     #[description("the step between rows.")]
     #[default(1)]
     step: i128,
+    #[description("the name for the added column.")]
+    #[default("idx")]
+    name: Symbol,
 }
 
 fn enumerate(context: CommandContext) -> CrushResult<()> {
@@ -19,7 +23,7 @@ fn enumerate(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream()? {
         Some(mut input) => {
             let mut output_type = vec![
-                ColumnType::new("idx", ValueType::Integer)];
+                ColumnType::new(&cfg.name, ValueType::Integer)];
             output_type.extend(input.types().to_vec());
             let output = context.output.initialize(output_type)?;
 

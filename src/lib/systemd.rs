@@ -64,8 +64,8 @@ fn usec_since_epoch(tm: DateTime<Local>) -> CrushResult<u64> {
     to_crush_error(u64::try_from(mandate(duration.num_microseconds(), "Time overflow")?))
 }
 
-fn journal(context: CommandContext) -> CrushResult<()> {
-    let cfg: JournalSignature = JournalSignature::parse(context.arguments, &context.global_state.printer())?;
+fn journal(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: JournalSignature = JournalSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
     let mut journal = to_crush_error(Journal::open(parse_files(&cfg)?, cfg.runtime_only, cfg.local_only))?;
 
     match cfg.seek {

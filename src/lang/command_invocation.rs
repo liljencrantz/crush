@@ -108,16 +108,16 @@ pub fn eval(command: &ValueDefinition, arguments: &Vec<ArgumentDefinition>, cont
     } else {
         let command = command.clone();
         let arguments = arguments.clone();
-        let t = context.global_state.threads().clone();
-        Ok(Some(t.spawn(
+        let my_context = context.clone();
+        Ok(Some(context.spawn(
             &command.to_string(),
             move || {
-                match eval_non_blocking(&command, &arguments, context.clone()) {
-                    Ok(Some(id)) => context.global_state.threads().join_one(
+                match eval_non_blocking(&command, &arguments, my_context.clone()) {
+                    Ok(Some(id)) => my_context.global_state.threads().join_one(
                         id,
-                        &context.global_state.printer(),
+                        &my_context.global_state.printer(),
                     ),
-                    Err(e) => context.global_state.printer().crush_error(e),
+                    Err(e) => my_context.global_state.printer().crush_error(e),
                     _ => {}
                 }
                 Ok(())
@@ -239,12 +239,12 @@ fn eval_command(
         context.global_state.printer().handle_error(command.eval(new_context));
         Ok(None)
     } else {
-        let t = context.global_state.threads().clone();
         let name = command.name().to_string();
-        Ok(Some(t.spawn(
+        let my_context = context.clone();
+        Ok(Some(context.spawn(
             &name,
             move || {
-                let res = CommandInvocation::execution_context(local_arguments, this, context.clone())?;
+                let res = CommandInvocation::execution_context(local_arguments, this, my_context.clone())?;
                 command.eval(res)
             },
         )?))

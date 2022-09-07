@@ -60,12 +60,12 @@ short = "write input to this output stream",
 struct Write {}
 
 fn write(context: CommandContext) -> CrushResult<()> {
-    context.output.send(Value::Empty())?;
     let real_output = context.this.table_output_stream()?;
     let mut stream = mandate(context.input.recv()?.stream()?, "Expected a stream")?;
 
     while let Ok(row) = stream.read() {
         real_output.send(row)?;
     }
+    context.output.send(Value::Empty())?;
     Ok(())
 }

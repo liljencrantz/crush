@@ -2,7 +2,6 @@ Todo:
 Add saner default prompt
 Add default syntax highlighting config
 Add some way to extract the definition from a closure
-Add filename tracking to error handling
 Add command field to printer
 Narrow down location to each command in printer passed in to a command
 Allow input type specification

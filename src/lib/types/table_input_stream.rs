@@ -1,6 +1,6 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, CrushResult};
+use crate::lang::errors::{argument_error_legacy, CrushResult, mandate};
 use crate::lang::execution_context::{This};
 use crate::lang::value::ValueType;
 use crate::lang::{execution_context::CommandContext, value::Value};
@@ -20,6 +20,17 @@ lazy_static! {
             vec!["global".to_string(), "types".to_string(), "pipe".to_string(), "close".to_string()],
             "pipe:close",
             "Close the specified pipe",
+            None,
+            Known(ValueType::Empty),
+            vec![],
+        ));
+
+        static ref WRITE: Value =
+        Value::Command(<dyn CrushCommand>::command(
+            write, true,
+            vec!["global".to_string(), "types".to_string(), "pipe".to_string(), "write".to_string()],
+            "pipe:write",
+            "Write sink for this pipe",
             None,
             Known(ValueType::Empty),
             vec![],
@@ -89,7 +100,7 @@ pipe,
 can_block = false,
 output = Known(ValueType::Struct),
 short = "Returns a struct containing a read end and a write end of a pipe of the specified type",
-example = "pipe := ((table_input_stream value=integer):pipe)\n    _1 := (seq 100_000 | pipe:output:write | bg)\n    sum_job_id := (pipe:input | sum | bg)\n    pipe:close\n    sum_job_id | fg"
+example = "$pipe := ((table_input_stream value=$integer):pipe)\n    $_1 := (seq 100_000 | $pipe:write | bg)\n    $sum_job_id := ($pipe:read | sum | bg)\n    $pipe:close\n    $sum_job_id | fg"
 )]
 struct Pipe {}
 
@@ -99,9 +110,10 @@ fn pipe(context: CommandContext) -> CrushResult<()> {
             let (output, input) = streams(subtype);
             context.output.send(Value::Struct(Struct::new(
                 vec![
-                    ("input", Value::TableInputStream(input)),
+                    ("read", Value::TableInputStream(input)),
                     ("output", Value::TableOutputStream(output)),
-                    ("close", CLOSE.clone())
+                    ("write", WRITE.clone()),
+                    ("close", CLOSE.clone()),
                 ],
                 None,
             )))
@@ -112,7 +124,23 @@ fn pipe(context: CommandContext) -> CrushResult<()> {
 
 fn close(context: CommandContext) -> CrushResult<()> {
     let pipe = context.this.r#struct()?;
-    pipe.set("input", Value::Empty());
+    pipe.set("read", Value::Empty());
     pipe.set("output", Value::Empty());
     Ok(())
+}
+
+fn write(context: CommandContext) -> CrushResult<()> {
+    let pipe = context.this.r#struct()?;
+    match mandate(pipe.get("output"), "Missing field")? {
+        Value::TableOutputStream(output_stream) => {
+            let mut stream = mandate(context.input.recv()?.stream()?, "Expected a stream")?;
+
+            while let Ok(row) = stream.read() {
+                output_stream.send(row)?;
+            }
+            context.output.send(Value::Empty())?;
+            Ok(())
+        }
+        _ => argument_error_legacy("Expected an output stream")
+    }
 }

@@ -27,17 +27,17 @@ pub struct Loop {
     body: Command,
 }
 
-fn r#loop(context: CommandContext) -> CrushResult<()> {
-    let cfg: Loop = Loop::parse(context.arguments.clone(), &context.global_state.printer())?;
-    let output = context.output.initialize(OUTPUT_TYPE.clone())?;
+fn r#loop(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Loop = Loop::parse(context.remove_arguments(), &context.global_state.printer())?;
     let (sender, receiver) = pipe();
     loop {
         let env = context.scope.create_child(&context.scope, true);
         cfg.body.eval(context.empty().with_scope(env.clone()).with_output(sender.clone()))?;
-        output.send(Row::new(vec![receiver.recv()?]))?;
         if env.is_stopped() {
+            context.output.send(receiver.recv()?)?;
             break;
         }
+        receiver.recv()?;
     }
     Ok(())
 }

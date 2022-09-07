@@ -18,8 +18,8 @@ struct Float {
     to: f64,
 }
 
-fn float(context: CommandContext) -> CrushResult<()> {
-    let cfg: Float = Float::parse(context.arguments, &context.global_state.printer())?;
+fn float(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Float = Float::parse(context.remove_arguments(), &context.global_state.printer())?;
     context
         .output
         .send(Value::Float(rand::random::<f64>() * cfg.to))?;
@@ -38,8 +38,8 @@ struct Integer {
     to: i128,
 }
 
-fn integer(context: CommandContext) -> CrushResult<()> {
-    let cfg: Integer = Integer::parse(context.arguments, &context.global_state.printer())?;
+fn integer(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Integer = Integer::parse(context.remove_arguments(), &context.global_state.printer())?;
     let n = rand::random::<f64>() * (cfg.to as f64);
     context.output.send(Value::Integer(n as i128))?;
     Ok(())

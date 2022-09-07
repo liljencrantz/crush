@@ -80,7 +80,7 @@ fn echo(context: CommandContext) -> CrushResult<()> {
             _ => pretty.print_value(value),
         }
     }
-    context.output.send(Value::Empty())
+    context.output.empty()
 }
 
 #[signature(

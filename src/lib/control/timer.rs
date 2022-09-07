@@ -1,10 +1,19 @@
-use crate::lang::errors::{CrushResult, to_crush_error};
+use std::mem::swap;
+use crate::lang::errors::{CrushResult, mandate, to_crush_error};
 use crate::lang::execution_context::CommandContext;
 use signature::signature;
 use chrono::{Duration, Local};
+use crate::data::table::ColumnType;
+use crate::lang::command::Command;
 use crate::lang::data::table::Row;
+use crate::lang::pipe::pipe;
+use crate::lang::value::ValueType;
 
-#[signature(timer, short="Passes a stream of empty rows to act as a reoccurring timer", )]
+#[signature(
+timer,
+short = "Schedule recurring events",
+long = "If a command is specified, timer will run the command at the specified cadence.\n    Otherwise, if timer is used inside a pipeline, it will read one row of input at the specified cadence and write it out again.\n    Otherwise, timer will simply write an empty row at the specified cadence."
+)]
 pub struct Timer {
     #[description("the interval between heartbeats")]
     interval: Duration,
@@ -13,20 +22,48 @@ pub struct Timer {
     #[description("if heart beat delivery starts blocking, catch up by sending more heartbeats afterwards.")]
     #[default(false)]
     schedule_at_fixed_rate: bool,
+    #[description("a command to run")]
+    command: Option<Command>,
 }
 
-fn timer(context: CommandContext) -> CrushResult<()> {
-    let cfg: Timer = Timer::parse(context.arguments.clone(), &context.global_state.printer())?;
-    let output = context.output.initialize(vec![])?;
+fn timer(mut context: CommandContext) -> CrushResult<()> {
+    let mut cfg: Timer = Timer::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     if let Some(initial_delay) = &cfg.initial_delay {
         std::thread::sleep(to_crush_error(initial_delay.to_std())?);
     }
 
+    let mut cmd = None;
+    swap(&mut cmd, &mut cfg.command);
+    match cmd {
+        None => {
+            if context.input.is_pipeline() {
+                let mut input = mandate(context.input.recv()?.stream()?, "Expected a stream")?;
+                let output = context.output.initialize(input.types().to_vec())?;
+                schedule(cfg, || { output.send(input.read()?) })
+            } else {
+                let output = context.output.initialize(vec![])?;
+                schedule(cfg, || { output.send(Row::new(vec![])) })
+            }
+        }
+        Some(cmd) => {
+            let output = context.output.initialize(vec![ColumnType::new("value", ValueType::Any)])?;
+            let base_context = context.empty();
+            let env = context.scope.clone();
+            let (sender, receiver) = pipe();
+            schedule(cfg, || {
+                cmd.eval(base_context.clone().with_scope(env.clone()).with_output(sender.clone()))?;
+                output.send(Row::new(vec![receiver.recv()?]))
+            })
+        }
+    }
+}
+
+fn schedule(cfg: Timer, mut f: impl FnMut() -> CrushResult<()>) -> CrushResult<()>{
     if cfg.schedule_at_fixed_rate {
         let mut last_time = Local::now();
         loop {
-            output.send(Row::new(vec![]))?;
+            f()?;
             last_time = last_time + cfg.interval.clone();
             let next_duration = last_time - Local::now();
             if next_duration > Duration::seconds(0) {
@@ -35,7 +72,7 @@ fn timer(context: CommandContext) -> CrushResult<()> {
         }
     } else {
         loop {
-            output.send(Row::new(vec![]))?;
+            f()?;
             std::thread::sleep(to_crush_error(cfg.interval.to_std())?);
         }
     }

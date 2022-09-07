@@ -59,7 +59,7 @@ A simple command for replacing a regex in every line of a file. Implement it in 
 Extra columns for ps: tty, current CPU usage.
 A grep-command.
 read equivalent
-Allow simpler column renaming via select, e.g. 'ps|select time=^cpu'
+Allow simpler column renaming via select, e.g. 'ps|select time=cpu'
 xml:from/to using html5ever under the hood
 html:from/to using html5ever under the hood
 Add hex and base64 en/decoding methods to the binary/string types
@@ -69,23 +69,18 @@ Maybe unset should only be able to delete members of the current scope
 sticky bits support for chmod
 recursive chmod
 recursive chown
-Threads command, shows all threads on the system
 watch command
 Either stop copying Command instances, or make them pointers to static data.
 Syntax highlighting (with more accurate parenthesis matching)
 
-Every job invocation should have a unique (but reusable, to keep them small) job id, e.g. 1 or 5.
 Every command should have a command id withing that job, e.g. 5:2
 Every thread should have a thread id within that command, e.g. 5:2:3
 Make command closing work on file literals
-Make only literals beginning with . or / be files
 Add unicode escape sequence support
 Add hex escape sequence support
 Make suggestions use completion engine instead of history
 Handle ^Z to put jobs into background. How?
 Handle ^C to cancel jobs. How?
-
-crush:jobs
 
 Tab completion missing feature list:
 
@@ -98,14 +93,5 @@ Tab completion missing feature list:
 * Add previous output type of previous command in pipeline if known to parsed state
 * Add command specific completions for methods
 * GetItem and SetItem completions
-
-Rethink the proc namespace?
-
-* Remove from the use list
-* Rename kill to signal
-* Rename ps to list
-* Add threads column to proc output
-
-proc:signal and proc:list are more self describing commands
 
 toml:from ./Cargo.toml | semver:bump ^package:version --minor | toml:to ./cargo.toml

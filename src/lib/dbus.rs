@@ -674,8 +674,8 @@ fn filter_method(
     }
 }
 
-fn service_call(context: CommandContext) -> CrushResult<()> {
-    let cfg: ServiceCall = ServiceCall::parse(context.arguments, &context.global_state.printer())?;
+fn service_call(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: ServiceCall = ServiceCall::parse(context.remove_arguments(), &context.global_state.printer())?;
     if let Value::Struct(service_obj) = mandate(context.this, "Missing this parameter for method")?
     {
         if let Value::String(service) = mandate(

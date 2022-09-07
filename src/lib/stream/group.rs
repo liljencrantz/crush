@@ -36,7 +36,7 @@ pub struct Group {
 
 fn aggregate(
     commands: Vec<Command>,
-    threads: ThreadStore,
+    context: &CommandContext,
     global_state: GlobalState,
     scope: Scope,
     destination: OutputStream,
@@ -72,7 +72,7 @@ fn aggregate(
                     let local_command = command.copy();
                     let local_scope = scope.clone();
                     let local_state = global_state.clone();
-                    threads.spawn("group:aggr", move ||
+                    context.spawn("group:aggr", move ||
                         local_command.eval(
                             CommandContext::new(&local_scope, &local_state)
                                 .with_input(input_receiver)
@@ -104,7 +104,7 @@ fn create_worker_thread(
     scope: &Scope,
     destination: &OutputStream,
     task_input: &Receiver<(Vec<Value>, InputStream)>,
-    threads: &ThreadStore,
+    context: &CommandContext,
     global_state: &GlobalState,
 ) -> CrushResult<()> {
     let my_commands: Vec<Command> = cfg
@@ -116,15 +116,15 @@ fn create_worker_thread(
     let my_scope = scope.clone();
     let my_input = task_input.clone();
     let my_destination = destination.clone();
-    let my_threads = threads.clone();
+    let my_context = context.clone();
     let my_state = global_state.clone();
-    threads.spawn(
+    context.spawn(
         "group:collect",
         move || {
             let local_printer = my_printer.clone();
             local_printer.handle_error(aggregate(
                 my_commands,
-                my_threads,
+                &my_context,
                 my_state,
                 my_scope,
                 my_destination,
@@ -136,8 +136,8 @@ fn create_worker_thread(
     Ok(())
 }
 
-pub fn group(context: CommandContext) -> CrushResult<()> {
-    let cfg: Group = Group::parse(context.arguments, &context.global_state.printer())?;
+pub fn group(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Group = Group::parse((context.remove_arguments()), &context.global_state.printer())?;
     let mut input = mandate(
         context.input.recv()?.stream()?,
         "Expected input to be a stream",
@@ -171,7 +171,7 @@ pub fn group(context: CommandContext) -> CrushResult<()> {
         create_worker_thread(
             &cfg,
             &context.global_state.printer(), &context.scope, &output,
-            &task_input, &context.global_state.threads(),
+            &task_input, &context,
             &context.global_state)?;
     }
 

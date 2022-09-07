@@ -5,6 +5,7 @@ use crate::lang::printer::Printer;
 use crate::lang::threads::ThreadStore;
 use num_format::{Grouping, SystemLocale};
 use std::sync::{Arc, Mutex};
+use crate::lang::value::Value;
 
 /**
 A type representing the shared crush state, such as the printer, the running jobs, the running
@@ -40,6 +41,13 @@ impl From<JobId> for usize {
         id.0
     }
 }
+
+impl From<JobId> for Value {
+    fn from(id: JobId) -> Self {
+        Value::Integer(id.0 as i128)
+    }
+}
+
 pub struct JobHandleInternal {
     id: JobId,
     state: GlobalState,
@@ -58,6 +66,13 @@ pub struct LiveJob {
 #[derive(Clone)]
 pub struct JobHandle {
     internal: Arc<Mutex<JobHandleInternal>>,
+}
+
+impl JobHandle {
+
+    pub fn id(&self) -> JobId {
+        self.internal.lock().unwrap().id
+    }
 }
 
 impl Drop for JobHandleInternal {

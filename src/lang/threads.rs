@@ -8,12 +8,15 @@ use crossbeam::channel::Receiver;
 use crossbeam::channel::unbounded;
 use std::time::Duration;
 use chrono::{DateTime, Local};
+use crate::lang::global_state::JobId;
+
 /**
 A thread management utility. Spawn, track and join on threads.
 */
 struct ThreadData {
     handle: JoinHandle<CrushResult<()>>,
     creation_time: DateTime<Local>,
+    job_id: Option<JobId>,
 }
 
 struct ThreadStoreInternal {
@@ -25,6 +28,7 @@ struct ThreadStoreInternal {
 pub struct ThreadDescription {
     pub name: String,
     pub creation_time: DateTime<Local>,
+    pub job_id: Option<JobId>,
 }
 
 fn join_handle(handle: JoinHandle<CrushResult<()>>, printer: &Printer) {
@@ -60,7 +64,7 @@ impl ThreadStore {
     /**
     Spawn a new thread
     */
-    pub fn spawn<F>(&self, name: &str, f: F) -> CrushResult<ThreadId>
+    pub fn spawn<F>(&self, name: &str, job_id: Option<JobId>, f: F) -> CrushResult<ThreadId>
         where
             F: FnOnce() -> CrushResult<()>,
             F: Send + 'static,
@@ -78,6 +82,7 @@ impl ThreadStore {
             data.threads.push(ThreadData {
                 handle,
                 creation_time: Local::now(),
+                job_id,
             });
         Ok(id)
     }
@@ -138,6 +143,7 @@ impl ThreadStore {
             .map(|t| ThreadDescription {
                 name: t.handle.thread().name().unwrap_or("<unnamed>").to_string(),
                 creation_time: t.creation_time.clone(),
+                job_id: t.job_id,
             })
             .collect())
     }

@@ -249,8 +249,8 @@ struct Pexec {
     allow_not_found: bool,
 }
 
-fn pexec(context: CommandContext) -> CrushResult<()> {
-    let cfg: Pexec = Pexec::parse(context.arguments, &context.global_state.printer())?;
+fn pexec(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Pexec = Pexec::parse(context.remove_arguments(), &context.global_state.printer())?;
     let host_file = if cfg.host_file.had_entries() {
         PathBuf::try_from(cfg.host_file)?
     } else {
@@ -282,7 +282,7 @@ fn pexec(context: CommandContext) -> CrushResult<()> {
         let my_ignore_host_file = cfg.ignore_host_file;
         let my_allow_not_found = cfg.allow_not_found;
 
-        context.global_state.threads().spawn(
+        context.spawn(
             "remote:pexec",
             move || {
                 while let Ok(host) = my_recv.recv() {

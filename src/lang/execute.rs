@@ -31,6 +31,7 @@ pub fn pup(
 
             global_state.threads().spawn(
                 "serializer",
+                None,
                 move || {
                     let val = recv.recv()?;
                     let mut buf = Vec::new();

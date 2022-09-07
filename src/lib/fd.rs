@@ -35,8 +35,8 @@ output = Known(ValueType::TableInputStream(FILE_OUTPUT_TYPE.clone())),
 long = "fd:file accepts no arguments.")]
 pub struct File {}
 
-fn file(context: CommandContext) -> CrushResult<()> {
-    File::parse(context.arguments.clone(), &context.global_state.printer())?;
+fn file(mut context: CommandContext) -> CrushResult<()> {
+    File::parse(context.remove_arguments(), &context.global_state.printer())?;
     let output = context.output.initialize(FILE_OUTPUT_TYPE.clone())?;
 
     match psutil::process::processes() {

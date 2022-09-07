@@ -19,8 +19,8 @@ pub struct If {
     false_clause: Option<Command>,
 }
 
-fn r#if(context: CommandContext) -> CrushResult<()> {
-    let cfg: If = If::parse(context.arguments.clone(), &context.global_state.printer())?;
+fn r#if(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: If = If::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     if cfg.condition {
         cfg.true_clause.eval(context.with_args(vec![], None))

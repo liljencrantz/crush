@@ -18,6 +18,7 @@ use chrono::{DateTime, Duration, Local};
 use regex::Regex;
 use std::mem::swap;
 use std::path::PathBuf;
+use std::thread::ThreadId;
 
 pub trait ArgumentVector {
     fn check_len(&self, len: usize) -> CrushResult<()>;
@@ -263,9 +264,15 @@ impl JobContext {
             handle: self.handle.clone(),
         }
     }
+
+    pub fn spawn<F>(&self, name: &str, f: F) -> CrushResult<ThreadId>
+        where
+            F: FnOnce() -> CrushResult<()>,
+            F: Send + 'static,
+    {
+        self.global_state.threads().spawn(name, self.handle.clone().map(|h|{h.id()}), f)
+    }
 }
-
-
 
 /**
 The data needed to be passed into a command when executing it.
@@ -379,6 +386,14 @@ impl CommandContext {
             global_state: self.global_state,
             handle: self.handle.clone(),
         }
+    }
+
+    pub fn spawn<F>(&self, name: &str, f: F) -> CrushResult<ThreadId>
+        where
+            F: FnOnce() -> CrushResult<()>,
+            F: Send + 'static,
+    {
+        self.global_state.threads().spawn(name, self.handle.clone().map(|h|{h.id()}), f)
     }
 }
 

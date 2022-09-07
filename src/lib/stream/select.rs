@@ -127,6 +127,8 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
                 return argument_error_legacy("No columns selected");
             }
 
+            let mut location = context.arguments[0].location;
+
             if let Value::Glob(g) = &context.arguments[0].value {
                 if context.arguments[0].argument_type.is_none() && &g.to_string() == "%" {
                     copy = true;
@@ -136,7 +138,6 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
                 }
             }
 
-            let mut location = context.arguments[0].location;
             let input_type = input.types();
             for a in &context.arguments {
                 location = location.union(a.location);

@@ -16,7 +16,6 @@ lazy_static! {
 }
 
 pub fn r#for(mut context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(OUTPUT_TYPE.clone())?;
     let (sender, receiver) = pipe();
 
     context.arguments.check_len(2)?;
@@ -52,10 +51,11 @@ pub fn r#for(mut context: CommandContext) -> CrushResult<()> {
             }
         };
         body.eval(context.empty().with_scope(env.clone()).with_args(arguments, None).with_output(sender.clone()))?;
-        output.send(Row::new(vec![receiver.recv()?]))?;
         if env.is_stopped() {
+            context.output.send(receiver.recv()?)?;
             break;
         }
+        receiver.recv()?;
     }
     Ok(())
 }

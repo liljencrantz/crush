@@ -70,7 +70,7 @@ impl CrushCommand for Closure {
             job.map(|id| local_threads.join_one(id, &local_printer));
 
             if env.is_stopped() {
-                return Ok(());
+                return context.output.empty();
             }
         }
         Ok(())
