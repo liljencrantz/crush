@@ -7,12 +7,13 @@ use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
-use std::fs::metadata;
+use std::fs::{File, metadata};
 use std::os::unix::fs::MetadataExt;
 use signature::signature;
 use std::collections::HashSet;
 use crate::lib::types::file::PermissionAdjustment::{Add, Remove, Set};
 use std::os::unix::fs::PermissionsExt;
+use crate::data::binary::BinaryReader;
 use crate::util::user_map::{get_uid, get_gid};
 
 lazy_static! {
@@ -24,6 +25,8 @@ lazy_static! {
         Chmod::declare_method(&mut res, &path);
         Exists::declare_method(&mut res, &path);
         GetItem::declare_method(&mut res, &path);
+        Write::declare_method(&mut res, &path);
+        Read::declare_method(&mut res, &path);
         res
     };
 }
@@ -251,4 +254,42 @@ pub fn __getitem__(context: CommandContext) -> CrushResult<()> {
     let base_directory = context.this.file()?;
     let cfg: GetItem = GetItem::parse(context.arguments, &context.global_state.printer())?;
     context.output.send(Value::File(base_directory.join(&cfg.name)))
+}
+
+
+#[signature(
+write,
+can_block = true,
+output = Known(ValueType::Empty),
+short = "A write sink for binary_stream values",
+)]
+struct Write {
+}
+
+fn write(context: CommandContext) -> CrushResult<()> {
+
+    match context.input.recv()? {
+        Value::BinaryInputStream(mut input) => {
+            let mut out = to_crush_error(File::create(
+                context.this.file()?))?;
+            to_crush_error(std::io::copy(input.as_mut(), &mut out))?;
+            Ok(())
+        }
+        _ => argument_error_legacy("Expected a binary stream"),
+    }
+}
+
+#[signature(
+read,
+can_block = true,
+output = Known(ValueType::BinaryInputStream),
+short = "A read source for binary_stream values",
+)]
+struct Read {
+}
+
+fn read(context: CommandContext) -> CrushResult<()> {
+    context
+        .output
+        .send(Value::BinaryInputStream(<dyn BinaryReader>::paths(vec![context.this.file()?])?))
 }

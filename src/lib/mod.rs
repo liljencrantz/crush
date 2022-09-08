@@ -21,7 +21,6 @@ mod fs;
 mod host;
 mod io;
 mod math;
-mod proc;
 mod random;
 mod remote;
 mod stream;
@@ -114,7 +113,6 @@ pub fn declare(
     host::declare(root)?;
     io::declare(root)?;
     math::declare(root)?;
-    proc::declare(root)?;
     random::declare(root)?;
     remote::declare(root)?;
     stream::declare(root)?;

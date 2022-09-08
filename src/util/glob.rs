@@ -419,6 +419,14 @@ mod tests {
         assert_eq!(out.len(), 1);
         out.clear();
         let _ = glob_files(
+            &compile("./tree/s%"),
+            &PathBuf::from("example_data"),
+            &mut out,
+            &lister(),
+        );
+        assert_eq!(out.len(), 1);
+        out.clear();
+        let _ = glob_files(
             &compile("%%/%"),
             &PathBuf::from("example_data/tree"),
             &mut out,

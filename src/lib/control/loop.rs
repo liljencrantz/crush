@@ -4,7 +4,6 @@ use crate::lang::execution_context::CommandContext;
 use crate::lang::value::ValueType;
 use crate::lang::data::table::ColumnType;
 use lazy_static::lazy_static;
-use crate::data::table::Row;
 use crate::lang::pipe::pipe;
 use crate::lang::command::OutputType::Known;
 use signature::signature;

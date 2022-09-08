@@ -1,7 +1,7 @@
 /**
-    This macro is used on command signature structs. It outputs methods that let you
-    parse and declare a command based on its signature.
-*/
+This macro is used on command signature structs. It outputs methods that let you
+parse and declare a command based on its signature.
+ */
 
 use proc_macro2;
 use proc_macro2::Ident;
@@ -438,7 +438,9 @@ fn parse_type_data(
                         (Some(#name_literal), crate::lang::value::Value::Float(_value)) => #name = Some(Number::Float(_value)),
                         (Some(#name_literal), crate::lang::value::Value::Integer(_value)) => #name = Some(Number::Integer(_value)),
                     },
-                    unnamed_mutate: Some(quote! {
+                    unnamed_mutate:
+                    if default.is_none() {
+                        Some(quote! {
                         if #name.is_none() {
                             match _unnamed.pop_front() {
                                 Some((crate::lang::value::Value::Float(_value), _location)) => #name = Some(Number::Float(_value)),
@@ -455,12 +457,35 @@ fn parse_type_data(
                                         #name_literal).as_str()),
                              }
                         }
-                    }),
-                    assign: quote! {
+                    })
+                    } else {
+                        Some(quote! {
+                        if #name.is_none() {
+                            match _unnamed.pop_front() {
+                                Some((crate::lang::value::Value::Float(_value), _location)) => #name = Some(Number::Float(_value)),
+                                Some((crate::lang::value::Value::Integer(_value), _location)) => #name = Some(Number::Integer(_value)),
+                                Some((value, _location)) =>
+                                    return crate::lang::errors::argument_error(format!(
+                                        "Expected argument \"{}\" to be a number, was of type {}",
+                                        #name_literal,
+                                        value.value_type().to_string()),
+                                        _location),
+                                _ => {}
+                             }
+                        }
+                    })
+                    },
+                    assign: default
+                        .map(|default| {
+                            quote! {
+                        #name: #name.unwrap_or(#default),
+                    }
+                        }).unwrap_or(
+                        quote! {
                     #name: crate::lang::errors::mandate(
                         #name,
                         format!("Missing value for parameter {}", #name_literal).as_str())?,
-                    },
+                    }),
                 })
             }
         }
@@ -829,7 +854,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 let mut is_named_target = false;
                 let mut allowed_values = None;
                 let mut description = None;
-                let mut completion_command = quote!{None};
+                let mut completion_command = quote! {None};
                 if !field.attrs.is_empty() {
                     for attr in &field.attrs {
                         if call_is_default(attr) {
@@ -842,7 +867,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                             allowed_values = Some(call_literals(attr)?);
                         } else if call_is_named(attr, "custom_completion") {
                             let name = call_value(attr)?;
-                            completion_command = quote!{Some(#name)};
+                            completion_command = quote! {Some(#name)};
                         } else if call_is_named(attr, "description") {
                             description = Some(unescape(&(call_literal(attr)?.to_string())));
                         }
@@ -996,11 +1021,11 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
             let mut output = s.to_token_stream();
             output.extend(handler.into_token_stream());
-            /*
-                        if struct_name.to_string() == "If" {
-                            println!("ABCABC {}", output.to_string());
-                        }
-             */
+
+            if struct_name.to_string() == "Float" {
+                println!("ABCABC {}", output.to_string());
+            }
+
             Ok(output)
         }
         _ => fail!(root.span(), "Expected a struct"),

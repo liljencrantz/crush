@@ -28,11 +28,11 @@ use crate::util::escape::{escape, escape_without_quotes};
 lazy_static! {
     static ref IDENTITY_OUTPUT_TYPE: Vec<ColumnType> = vec![
         ColumnType::new("identity", ValueType::String),
-        ColumnType::new("key", ValueType::Binary),
+        ColumnType::new("public_key", ValueType::Binary),
     ];
     static ref HOST_LIST_OUTPUT_TYPE: Vec<ColumnType> = vec![
         ColumnType::new("host", ValueType::String),
-        ColumnType::new("key", ValueType::String),
+        ColumnType::new("public_key", ValueType::String),
     ];
 }
 
@@ -174,7 +174,7 @@ fn ssh_host_complete(
 #[signature(
 exec,
 can_block = true,
-short = "Execute a command on a host",
+short = "Execute a command on a remote host",
 long = "    Execute the specified command on the soecified host"
 )]
 struct Exec {
@@ -386,7 +386,7 @@ mod host {
     can_block = true,
     short = "Remove hosts from known_hosts file",
     output = Known(ValueType::Integer),
-    long = "Remove all hosts that match both the host and the key filters."
+    long = "Remove all hosts that match both the host and the key filters.\n    Returns the number of host entries deleted."
     )]
     pub struct Remove {
         #[description("(~/.ssh/known_hosts) known hosts file.")]

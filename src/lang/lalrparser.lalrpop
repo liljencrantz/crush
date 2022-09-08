@@ -149,9 +149,9 @@ Item: Box<Node> = {
 
     <start: @L> <l:Flag> <end: @R> =>
         Box::from(
-            Node::Assignment(Box::from(Node::Field(TrackedString::from(&l[2..], Location::new(start+2, end)))),
+            Node::Assignment(Box::from(Node::Field(TrackedString::from(&l[if l.starts_with("--") {2} else {1}..], Location::new(start, end)))),
             "=".to_string(),
-            Box::from(Node::Identifier(TrackedString::from("true", Location::new(start, start+2)))))),
+            Box::from(Node::Identifier(TrackedString::from("true", Location::new(start, end)))))),
 
     <i: Item> "[" <e: Assignment> "]" => Box::from(Node::GetItem(i, e)),
     <i: Item> Colon <start: @L> <l: StringOrWildcard> <end: @R> => Box::from(Node::GetAttr(i, TrackedString::from(&l, Location::new(start, end)))),
@@ -210,7 +210,7 @@ match {
     r"[_a-zA-Z%\?][\._0-9a-zA-Z%\?/]*" => StringOrWildcard,
     r"\$[_0-9a-zA-Z][_0-9a-zA-Z]*" => Identifier,
     r"([\.~][\./_0-9a-zA-Z%\?]*|/([\._0-9a-zA-Z%\?][\./_0-9a-zA-Z%\?]*)?)" => FileOrWildcard,
-    r"--[_0-9a-zA-Z]*" => Flag,
+    r"--?[0-9a-zA-Z][-_0-9a-zA-Z]*" => Flag,
     r"\^[\._a-zA-Z][\._a-zA-Z0-9]*" => Field,
     r#"'([^\\']|\\.)*'"# => QuotedFile,
     r#"re"([^"]|\\.)*""# => Regex,
