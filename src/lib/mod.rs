@@ -16,6 +16,7 @@ mod control;
 mod crush;
 #[cfg(target_os = "linux")]
 mod dbus;
+mod dns;
 mod fd;
 mod fs;
 mod host;
@@ -108,6 +109,7 @@ pub fn declare(
     crush::declare(root)?;
     #[cfg(target_os = "linux")]
         dbus::declare(root)?;
+    dns::declare(root)?;
     fd::declare(root)?;
     fs::declare(root)?;
     host::declare(root)?;
