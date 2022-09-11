@@ -58,7 +58,7 @@ lazy_static! {
     short="Returns the length (in number of characters) of the string")]
 struct Len {}
 
-fn len(context: CommandContext) -> CrushResult<()> {
+fn len(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
@@ -70,7 +70,7 @@ fn len(context: CommandContext) -> CrushResult<()> {
     short="Returns an identical string but in upper case")]
 struct Upper {}
 
-fn upper(context: CommandContext) -> CrushResult<()> {
+fn upper(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
@@ -82,7 +82,7 @@ fn upper(context: CommandContext) -> CrushResult<()> {
     short="Returns an identical string but in lower case")]
 struct Lower {}
 
-fn lower(context: CommandContext) -> CrushResult<()> {
+fn lower(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
@@ -100,7 +100,7 @@ struct Split {
     separator: String,
 }
 
-fn split(context: CommandContext) -> CrushResult<()> {
+fn split(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Split = Split::parse(context.arguments, &context.global_state.printer())?;
     let this = context.this.string()?;
 
@@ -115,7 +115,7 @@ trim, can_block=false, output=Known(ValueType::String),
 short="Returns a string with all whitespace trimmed from both ends")]
 struct Trim {}
 
-fn trim(context: CommandContext) -> CrushResult<()> {
+fn trim(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context.output.send(Value::string(context.this.string()?.trim()))
 }
@@ -133,7 +133,7 @@ struct Join {
     elements: Vec<Value>,
 }
 
-fn join(context: CommandContext) -> CrushResult<()> {
+fn join(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Join = Join::parse(context.arguments, &context.global_state.printer())?;
     let s = context.this.string()?;
     let mut res = String::new();
@@ -165,7 +165,7 @@ struct LPad {
     padding: String,
 }
 
-fn lpad(context: CommandContext) -> CrushResult<()> {
+fn lpad(mut context: CommandContext) -> CrushResult<()> {
     let cfg: LPad = LPad::parse(context.arguments, &context.global_state.printer())?;
     let s = context.this.string()?;
     let len = cfg.length as usize;
@@ -194,7 +194,7 @@ struct RPad {
     padding: String,
 }
 
-fn rpad(context: CommandContext) -> CrushResult<()> {
+fn rpad(mut context: CommandContext) -> CrushResult<()> {
     let cfg: RPad = RPad::parse(context.arguments, &context.global_state.printer())?;
     let s = context.this.string()?;
     let len = cfg.length as usize;
@@ -220,7 +220,7 @@ struct Repeat {
     times: usize,
 }
 
-fn repeat(context: CommandContext) -> CrushResult<()> {
+fn repeat(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Repeat = Repeat::parse(context.arguments, &context.global_state.printer())?;
     let s = context.this.string()?;
     context.output.send(Value::string(s.repeat(cfg.times).as_str()))
@@ -236,7 +236,7 @@ struct EndsWith {
     suffix: String,
 }
 
-fn ends_with(context: CommandContext) -> CrushResult<()> {
+fn ends_with(mut context: CommandContext) -> CrushResult<()> {
     let cfg: EndsWith = EndsWith::parse(context.arguments, &context.global_state.printer())?;
     let s = context.this.string()?;
     context.output.send(Value::Bool(s.ends_with(&cfg.suffix)))
@@ -252,7 +252,7 @@ struct StartsWith {
     prefix: String,
 }
 
-fn starts_with(context: CommandContext) -> CrushResult<()> {
+fn starts_with(mut context: CommandContext) -> CrushResult<()> {
     let cfg: StartsWith = StartsWith::parse(context.arguments, &context.global_state.printer())?;
     let s = context.this.string()?;
     context.output.send(Value::Bool(s.starts_with(&cfg.prefix)))
@@ -261,7 +261,7 @@ fn starts_with(context: CommandContext) -> CrushResult<()> {
 macro_rules! per_char_method {
 
     ($name:ident, $test:expr) => {
-        fn $name(context: CommandContext) -> CrushResult<()> {
+        fn $name(mut context: CommandContext) -> CrushResult<()> {
             context.arguments.check_len(0)?;
             let s = context.this.string()?;
             context.output.send(Value::Bool(s.chars().all($test)))
@@ -333,7 +333,7 @@ struct IsDigit {
     radix: usize,
 }
 
-fn is_digit(context: CommandContext) -> CrushResult<()> {
+fn is_digit(mut context: CommandContext) -> CrushResult<()> {
     let cfg: IsDigit = IsDigit::parse(context.arguments, &context.global_state.printer())?;
     let s = context.this.string()?;
     context.output.send(Value::Bool(

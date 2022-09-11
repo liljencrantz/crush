@@ -170,19 +170,19 @@ binary_op!(
     |a, b| a / b
 );
 
-fn neg(context: CommandContext) -> CrushResult<()> {
+fn neg(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context.output.send(Value::Float(-context.this.float()?))
 }
 
-fn is_nan(context: CommandContext) -> CrushResult<()> {
+fn is_nan(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
         .send(Value::Bool(context.this.float()?.is_nan()))
 }
 
-fn is_infinite(context: CommandContext) -> CrushResult<()> {
+fn is_infinite(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output

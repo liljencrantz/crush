@@ -398,29 +398,31 @@ impl CommandContext {
 }
 
 pub trait This {
-    fn list(self) -> CrushResult<List>;
-    fn dict(self) -> CrushResult<Dict>;
-    fn string(self) -> CrushResult<String>;
-    fn r#struct(self) -> CrushResult<Struct>;
-    fn file(self) -> CrushResult<PathBuf>;
-    fn re(self) -> CrushResult<(String, Regex)>;
-    fn glob(self) -> CrushResult<Glob>;
-    fn integer(self) -> CrushResult<i128>;
-    fn float(self) -> CrushResult<f64>;
-    fn r#type(self) -> CrushResult<ValueType>;
-    fn duration(self) -> CrushResult<Duration>;
-    fn time(self) -> CrushResult<DateTime<Local>>;
-    fn table(self) -> CrushResult<Table>;
-    fn table_input_stream(self) -> CrushResult<InputStream>;
-    fn table_output_stream(self) -> CrushResult<OutputStream>;
-    fn binary(self) -> CrushResult<Vec<u8>>;
-    fn scope(self) -> CrushResult<Scope>;
+    fn list(&mut self) -> CrushResult<List>;
+    fn dict(&mut self) -> CrushResult<Dict>;
+    fn string(&mut self) -> CrushResult<String>;
+    fn r#struct(&mut self) -> CrushResult<Struct>;
+    fn file(&mut self) -> CrushResult<PathBuf>;
+    fn re(&mut self) -> CrushResult<(String, Regex)>;
+    fn glob(&mut self) -> CrushResult<Glob>;
+    fn integer(&mut self) -> CrushResult<i128>;
+    fn float(&mut self) -> CrushResult<f64>;
+    fn r#type(&mut self) -> CrushResult<ValueType>;
+    fn duration(&mut self) -> CrushResult<Duration>;
+    fn time(&mut self) -> CrushResult<DateTime<Local>>;
+    fn table(&mut self) -> CrushResult<Table>;
+    fn table_input_stream(&mut self) -> CrushResult<InputStream>;
+    fn table_output_stream(&mut self) -> CrushResult<OutputStream>;
+    fn binary(&mut self) -> CrushResult<Vec<u8>>;
+    fn scope(&mut self) -> CrushResult<Scope>;
 }
 
 macro_rules! this_method {
     ($name:ident, $return_type:ty, $value_type:ident, $description:literal) => {
-        fn $name(mut self) -> CrushResult<$return_type> {
-            match self.take() {
+        fn $name(&mut self) -> CrushResult<$return_type> {
+            let mut this = None;
+            swap(self, &mut this);
+            match this {
                 Some(Value::$value_type(l)) => Ok(l),
                 None => argument_error_legacy(concat!(
                     "Expected this to be a ",
@@ -467,8 +469,11 @@ impl This for Option<Value> {
         "table_output_stream"
     );
 
-    fn re(mut self) -> CrushResult<(String, Regex)> {
-        match self.take() {
+    fn re(&mut self) -> CrushResult<(String, Regex)> {
+        let mut this = None;
+        swap(self, &mut this);
+
+        match this {
             Some(Value::Regex(s, b)) => Ok((s, b)),
             _ => argument_error_legacy("Expected a regular expression"),
         }

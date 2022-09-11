@@ -130,7 +130,7 @@ fn of(context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Duration(res))
 }
 
-fn neg(context: CommandContext) -> CrushResult<()> {
+fn neg(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output

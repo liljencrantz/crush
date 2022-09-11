@@ -187,7 +187,7 @@ struct Call {
     value_type: ValueType,
 }
 
-fn __call__(context: CommandContext) -> CrushResult<()> {
+fn __call__(mut context: CommandContext) -> CrushResult<()> {
     match context.this.r#type()? {
         ValueType::List(c) => match *c {
             ValueType::Empty => {
@@ -268,7 +268,7 @@ fn collect(mut context: CommandContext) -> CrushResult<()> {
     }
 }
 
-fn new(context: CommandContext) -> CrushResult<()> {
+fn new(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     match context.this.r#type()? {
         ValueType::List(t) => context.output.send(Value::List(List::new(*t, vec![]))),
@@ -284,7 +284,7 @@ short = "The number of values in the list.",
 )]
 struct Len {}
 
-fn len(context: CommandContext) -> CrushResult<()> {
+fn len(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
@@ -299,7 +299,7 @@ short = "True if there are no values in the list.",
 )]
 struct Empty {}
 
-fn empty(context: CommandContext) -> CrushResult<()> {
+fn empty(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
@@ -322,14 +322,14 @@ fn push(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::List(l))
 }
 
-fn pop(context: CommandContext) -> CrushResult<()> {
+fn pop(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     let o = context.output;
     context.this.list()?.pop().map(|c| o.send(c));
     Ok(())
 }
 
-fn peek(context: CommandContext) -> CrushResult<()> {
+fn peek(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     let o = context.output;
     context.this.list()?.peek().map(|c| o.send(c));
@@ -345,7 +345,7 @@ short = "Remove all values from this list.",
 struct Clear {
 }
 
-fn clear(context: CommandContext) -> CrushResult<()> {
+fn clear(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     let l = context.this.list()?;
     l.clear();
@@ -384,7 +384,7 @@ fn truncate(mut context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
-fn clone(context: CommandContext) -> CrushResult<()> {
+fn clone(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output

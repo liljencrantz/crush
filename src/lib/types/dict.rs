@@ -106,7 +106,7 @@ struct Call {
     value_type: ValueType,
 }
 
-fn __call__(context: CommandContext) -> CrushResult<()> {
+fn __call__(mut context: CommandContext) -> CrushResult<()> {
     match context.this.r#type()? {
         ValueType::Dict(t1, t2) => match (*t1, *t2) {
             (ValueType::Empty, ValueType::Empty) => {
@@ -130,7 +130,7 @@ fn __call__(context: CommandContext) -> CrushResult<()> {
     }
 }
 
-fn new(context: CommandContext) -> CrushResult<()> {
+fn new(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     let t = context.this.r#type()?;
     if let ValueType::Dict(key_type, value_type) = t {
@@ -187,7 +187,7 @@ short = "The number of mappings in the dict.",
 )]
 struct Len {}
 
-fn len(context: CommandContext) -> CrushResult<()> {
+fn len(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
@@ -203,7 +203,7 @@ short = "Remove all mappings from this dict.",
 struct Clear {
 }
 
-fn clear(context: CommandContext) -> CrushResult<()> {
+fn clear(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     let d = context.this.dict()?;
     d.clear();
@@ -219,7 +219,7 @@ short = "Create a new dict with the same set of mappings as this one.",
 struct Clone {
 }
 
-fn clone(context: CommandContext) -> CrushResult<()> {
+fn clone(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     let d = context.this.dict()?;
     context.output.send(Value::Dict(d.copy()))
@@ -233,7 +233,7 @@ short = "True if there are no mappings in the dict.",
 )]
 struct Empty {}
 
-fn empty(context: CommandContext) -> CrushResult<()> {
+fn empty(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
@@ -248,7 +248,7 @@ short = "the type of the keys in this dict.",
 )]
 struct KeyType {}
 
-fn key_type(context: CommandContext) -> CrushResult<()> {
+fn key_type(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
@@ -263,7 +263,7 @@ short = "the type of the values in this dict.",
 )]
 struct ValueTypeMethod {}
 
-fn value_type(context: CommandContext) -> CrushResult<()> {
+fn value_type(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output

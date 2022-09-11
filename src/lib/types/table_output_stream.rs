@@ -32,7 +32,7 @@ struct Call {
     columns: OrderedStringMap<ValueType>,
 }
 
-fn __call__(context: CommandContext) -> CrushResult<()> {
+fn __call__(mut context: CommandContext) -> CrushResult<()> {
     match context.this.r#type()? {
         ValueType::TableOutputStream(c) => {
             let cfg: Call = Call::parse(context.arguments, &context.global_state.printer())?;
@@ -59,7 +59,7 @@ short = "write input to this output stream",
 )]
 struct Write {}
 
-fn write(context: CommandContext) -> CrushResult<()> {
+fn write(mut context: CommandContext) -> CrushResult<()> {
     let real_output = context.this.table_output_stream()?;
     let mut stream = mandate(context.input.recv()?.stream()?, "Expected a stream")?;
 

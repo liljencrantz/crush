@@ -47,7 +47,7 @@ long = "* len: integer the size of the file"
 )]
 struct Stat {}
 
-pub fn stat(context: CommandContext) -> CrushResult<()> {
+pub fn stat(mut context: CommandContext) -> CrushResult<()> {
     let file = context.this.file()?;
     let metadata = to_crush_error(metadata(file))?;
     context.output.send(Value::Struct(Struct::new(
@@ -77,7 +77,7 @@ struct Chown {
     group: Option<String>,
 }
 
-pub fn chown(context: CommandContext) -> CrushResult<()> {
+pub fn chown(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Chown = Chown::parse(context.arguments, &context.global_state.printer())?;
     let file = context.this.file()?;
 
@@ -209,7 +209,7 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
     Ok(current)
 }
 
-pub fn chmod(context: CommandContext) -> CrushResult<()> {
+pub fn chmod(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Chmod = Chmod::parse(context.arguments, &context.global_state.printer())?;
     let file = context.this.file()?;
     let metadata = to_crush_error(metadata(&file))?;
@@ -234,7 +234,7 @@ short = "True if the file exists.",
 )]
 struct Exists {}
 
-pub fn exists(context: CommandContext) -> CrushResult<()> {
+pub fn exists(mut context: CommandContext) -> CrushResult<()> {
     context
         .output
         .send(Value::Bool(context.this.file()?.exists()))
@@ -250,7 +250,7 @@ struct GetItem {
     name: String,
 }
 
-pub fn __getitem__(context: CommandContext) -> CrushResult<()> {
+pub fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     let base_directory = context.this.file()?;
     let cfg: GetItem = GetItem::parse(context.arguments, &context.global_state.printer())?;
     context.output.send(Value::File(base_directory.join(&cfg.name)))
@@ -266,7 +266,7 @@ short = "A write sink for binary_stream values",
 struct Write {
 }
 
-fn write(context: CommandContext) -> CrushResult<()> {
+fn write(mut context: CommandContext) -> CrushResult<()> {
 
     match context.input.recv()? {
         Value::BinaryInputStream(mut input) => {
@@ -288,7 +288,7 @@ short = "A read source for binary_stream values",
 struct Read {
 }
 
-fn read(context: CommandContext) -> CrushResult<()> {
+fn read(mut context: CommandContext) -> CrushResult<()> {
     context
         .output
         .send(Value::BinaryInputStream(<dyn BinaryReader>::paths(vec![context.this.file()?])?))

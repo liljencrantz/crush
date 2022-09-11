@@ -26,7 +26,7 @@ short = "The number of bytes in the binary.",
 )]
 struct Len {}
 
-fn len(context: CommandContext) -> CrushResult<()> {
+fn len(mut context: CommandContext) -> CrushResult<()> {
     let val = context.this.binary()?;
     context.output.send(Value::Integer(val.len() as i128))
 }
@@ -42,7 +42,7 @@ struct GetItem {
     index: usize,
 }
 
-fn __getitem__(context: CommandContext) -> CrushResult<()> {
+fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     let cfg: GetItem = GetItem::parse(context.arguments, &context.global_state.printer())?;
     let val = context.this.binary()?;
     context.output.send(Value::Integer(

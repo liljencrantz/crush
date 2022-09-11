@@ -33,7 +33,7 @@ struct Call {
     columns: OrderedStringMap<ValueType>,
 }
 
-fn __call__(context: CommandContext) -> CrushResult<()> {
+fn __call__(mut context: CommandContext) -> CrushResult<()> {
     match context.this.r#type()? {
         ValueType::Table(c) => {
             let cfg: Call = Call::parse(context.arguments, &context.global_state.printer())?;
@@ -59,7 +59,7 @@ short = "The number of rows in the table.",
 )]
 struct Len {}
 
-fn len(context: CommandContext) -> CrushResult<()> {
+fn len(mut context: CommandContext) -> CrushResult<()> {
     let table = context.this.table()?;
     context
         .output
@@ -77,7 +77,7 @@ struct GetItem {
     index: usize,
 }
 
-fn __getitem__(context: CommandContext) -> CrushResult<()> {
+fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     let cfg: GetItem = GetItem::parse(context.arguments, &context.global_state.printer())?;
     let o = context.this.table()?;
     context.output.send(Value::Struct(

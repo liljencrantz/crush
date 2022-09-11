@@ -86,7 +86,7 @@ fn do_format(format: &str, param: Vec<Argument>) -> CrushResult<String> {
     Ok(res)
 }
 
-pub fn format(context: CommandContext) -> CrushResult<()> {
+pub fn format(mut context: CommandContext) -> CrushResult<()> {
     let format = context.this.string()?;
     context
         .output

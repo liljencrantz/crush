@@ -101,7 +101,7 @@ struct ReplaceAllSignature {
     replacement: String,
 }
 
-fn replace(context: CommandContext) -> CrushResult<()> {
+fn replace(mut context: CommandContext) -> CrushResult<()> {
     let re = context.this.re()?.1;
     let args: ReplaceSignature = ReplaceSignature::parse(context.arguments, &context.global_state.printer())?;
     context.output.send(Value::string(
@@ -109,7 +109,7 @@ fn replace(context: CommandContext) -> CrushResult<()> {
     ))
 }
 
-fn replace_all(context: CommandContext) -> CrushResult<()> {
+fn replace_all(mut context: CommandContext) -> CrushResult<()> {
     let re = context.this.re()?.1;
     let args: ReplaceAllSignature =
         ReplaceAllSignature::parse(context.arguments, &context.global_state.printer())?;

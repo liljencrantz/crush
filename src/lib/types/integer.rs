@@ -152,7 +152,7 @@ binary_op!(
 binary_op!(rem, integer, Integer, Integer, |a, b| a % b);
 binary_op!(r#mod, integer, Integer, Integer, |a, b| (a % b + b) % b);
 
-fn neg(context: CommandContext) -> CrushResult<()> {
+fn neg(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output

@@ -58,7 +58,7 @@ struct Call {
     columns: OrderedStringMap<ValueType>,
 }
 
-fn __call__(context: CommandContext) -> CrushResult<()> {
+fn __call__(mut context: CommandContext) -> CrushResult<()> {
     match context.this.r#type()? {
         ValueType::TableInputStream(c) => {
             let cfg: Call = Call::parse(context.arguments, &context.global_state.printer())?;
@@ -89,7 +89,7 @@ struct GetItem {
     index: i128,
 }
 
-fn __getitem__(context: CommandContext) -> CrushResult<()> {
+fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     let cfg: GetItem = GetItem::parse(context.arguments, &context.global_state.printer())?;
     let o = context.this.table_input_stream()?;
     context.output.send(Value::Struct(o.get(cfg.index)?.into_struct(o.types())))
@@ -104,7 +104,7 @@ example = "$pipe := ((table_input_stream value=$integer):pipe)\n    $_1 := (seq 
 )]
 struct Pipe {}
 
-fn pipe(context: CommandContext) -> CrushResult<()> {
+fn pipe(mut context: CommandContext) -> CrushResult<()> {
     match context.this.r#type()? {
         ValueType::TableInputStream(subtype) => {
             let (output, input) = streams(subtype);
@@ -122,14 +122,14 @@ fn pipe(context: CommandContext) -> CrushResult<()> {
     }
 }
 
-fn close(context: CommandContext) -> CrushResult<()> {
+fn close(mut context: CommandContext) -> CrushResult<()> {
     let pipe = context.this.r#struct()?;
     pipe.set("read", Value::Empty());
     pipe.set("output", Value::Empty());
     Ok(())
 }
 
-fn write(context: CommandContext) -> CrushResult<()> {
+fn write(mut context: CommandContext) -> CrushResult<()> {
     let pipe = context.this.r#struct()?;
     match mandate(pipe.get("output"), "Missing field")? {
         Value::TableOutputStream(output_stream) => {

@@ -12,6 +12,7 @@ use crate::data::scope::Scope;
 use std::process;
 use std::process::Stdio;
 use std::io::{Write, Read};
+use crossbeam::bounded;
 use crate::lang::errors::{argument_error, mandate};
 use crate::lib::io::json::{json_to_value, value_to_json};
 
@@ -65,7 +66,7 @@ impl Grpc {
         }
     }
 
-    fn call(&self, data: Option<String>, args: &[String]) -> CrushResult<(bool, String, String)> {
+    fn call(&self, context: &CommandContext, data: Option<String>, args: &[String]) -> CrushResult<String> {
         let mut cmd = process::Command::new("grpcurl");
 
         if self.plaintext {
@@ -90,23 +91,23 @@ impl Grpc {
         let mut child = to_crush_error(cmd.spawn())?;
 
         let mut stdout = mandate(child.stdout.take(), "Expected output stream")?;
-        //  context.spawn("grpcurl:stdout", move || {
         let mut buff = Vec::new();
         to_crush_error(stdout.read_to_end(&mut buff))?;
         let output = to_crush_error(String::from_utf8(buff))?;
-        //    Ok(())
-        //})?;
-        /*
-    let mut stderr = mandate(child.stderr.take(), "Expected error stream")?;
-    context.spawn("grpcurl:stderr", move || {
-        let mut buff = Vec::new();
-        to_crush_error(stderr.read_to_end(&mut buff))?;
-        let errors = to_crush_error(String::from_utf8(buff))?;
-        Ok(())
-    })?;
-*/
-        let res = child.wait()?.success();
-        Ok((res, output, "".to_string()))
+        let (send_err, recv_err) = bounded(1);
+        let mut stderr = mandate(child.stderr.take(), "Expected error stream")?;
+        context.spawn("grpcurl:stderr", move || {
+            let mut buff = Vec::new();
+            to_crush_error(stderr.read_to_end(&mut buff))?;
+            let errors = to_crush_error(String::from_utf8(buff))?;
+            send_err.send(errors);
+            Ok(())
+        })?;
+
+        match  child.wait()?.success() {
+            true => Ok(output),
+            false => argument_error_legacy(to_crush_error(recv_err.recv())?),
+        }
     }
 }
 
@@ -133,12 +134,8 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
         None);
 
     let g = Grpc::new(Value::Struct(tmp))?;
-    let (ok, out, err) = g.call(None, &vec!["list".to_string(), cfg.service.clone()])?;
-    if !ok {
-        return argument_error_legacy(err);
-    }
+    let out = g.call(&context, None, &vec!["list".to_string(), cfg.service.clone()])?;
     let s = Struct::from_vec(vec![], vec![]);
-
     for line in out.lines() {
         let stripped = line.strip_prefix(&format!("{}.", &cfg.service));
         if let Some(method) = stripped {
@@ -189,7 +186,7 @@ fn grpc_method_call(mut context: CommandContext) -> CrushResult<()> {
                 if let Some(name) = a.argument_type {
                     fields.push((name, a.value));
                 } else {
-                    return argument_error_legacy("gRPC method invocations can only use named arguments")
+                    return argument_error_legacy("gRPC method invocations can only use named arguments");
                 }
             }
             let s = Struct::new(
@@ -204,8 +201,8 @@ fn grpc_method_call(mut context: CommandContext) -> CrushResult<()> {
     let this = context.this.r#struct()?;
     if let Some(Value::String(method)) = this.get("method") {
         let grpc = Grpc::new(Value::Struct(this))?;
-        let (ok, out, err) =
-            grpc.call(data, &vec![method])?;
+        let out =
+            grpc.call(&context, data, &vec![method])?;
         return context.output.send(json_to_value(&out)?);
     }
     return argument_error_legacy("Invalid method field");

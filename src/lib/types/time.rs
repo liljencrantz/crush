@@ -178,7 +178,7 @@ struct Format {
     format: String,
 }
 
-fn format(context: CommandContext) -> CrushResult<()> {
+fn format(mut context: CommandContext) -> CrushResult<()> {
     let time = context.this.time()?;
     let cfg: Format = Format::parse(context.arguments, &context.global_state.printer())?;
     context.output.send(Value::String(time.format(&cfg.format).to_string()))
