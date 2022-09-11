@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 use crate::{argument_error_legacy, CrushResult, to_crush_error};
 use crate::data::scope::Scope;
 use crate::lang::execution_context::CommandContext;
-use crate::lang::value::{Value, ValueType};
+use crate::lang::value::{Symbol, Value, ValueType};
 use signature::signature;
 use crate::data::table::{ColumnType, Row};
 use crate::lang::command::OutputType::Known;
@@ -16,6 +16,7 @@ use trust_dns_client::udp::UdpClientConnection;
 use trust_dns_client::op::DnsResponse;
 use trust_dns_client::rr::{DNSClass, Name, RData, Record, RecordType};
 use trust_dns_client::tcp::TcpClientConnection;
+use crate::data::list::List;
 use crate::lang::errors::data_error;
 
 lazy_static! {
@@ -36,8 +37,6 @@ lazy_static! {
     ];
 }
 
-
-
 #[signature(
 query,
 can_block = true,
@@ -48,7 +47,7 @@ struct Query {
     name: String,
     #[description("DNS record type. Currently, A, AAAA and SRV are supported.")]
     #[default("A")]
-    record_type: String,
+    record_type: Symbol,
     #[default(false)]
     tcp: bool,
     nameserver: Option<String>,
@@ -127,12 +126,67 @@ fn query(mut context: CommandContext) -> CrushResult<()> {
     }
 }
 
+#[signature(
+nameserver,
+can_block = true,
+short = "Default nameservers",
+)]
+struct Nameserver {}
+
+fn nameserver(mut context: CommandContext) -> CrushResult<()> {
+    let rc = resolv_conf()?;
+    context.output.send(
+        Value::List(List::new(
+            ValueType::String,
+            rc.nameservers.iter().map(|n| {Value::String(n.to_string())}).collect()
+        )))
+
+}
+
+#[signature(
+search,
+can_block = true,
+short = "DNS search paths",
+)]
+struct Search {}
+
+fn search(mut context: CommandContext) -> CrushResult<()> {
+    let rc = resolv_conf()?;
+    context.output.send(
+        Value::List(List::new(
+            ValueType::String,
+            rc.get_search()
+                .map(|s|{s.iter().map(|n| {Value::String(n.to_string())}).collect()})
+                .unwrap_or(vec![])
+        ))
+    )
+}
+
+#[signature(
+domain,
+can_block = true,
+short = "DNS domain, if any",
+output = Known(ValueType::Any),
+)]
+struct Domain {}
+
+fn domain(mut context: CommandContext) -> CrushResult<()> {
+    let rc = resolv_conf()?;
+    context.output.send(
+        rc.get_domain()
+            .map(|d| {Value::string(d)})
+            .unwrap_or(Value::Empty()))
+}
+
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "dns",
         "DNS querying and metadata",
         Box::new(move |dns| {
             Query::declare(dns)?;
+            Nameserver::declare(dns)?;
+            Search::declare(dns)?;
+            Domain::declare(dns)?;
             Ok(())
         }))?;
     Ok(())

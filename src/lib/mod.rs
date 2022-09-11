@@ -19,6 +19,7 @@ mod dbus;
 mod dns;
 mod fd;
 mod fs;
+mod grpc;
 mod host;
 mod io;
 mod math;
@@ -112,6 +113,7 @@ pub fn declare(
     dns::declare(root)?;
     fd::declare(root)?;
     fs::declare(root)?;
+    grpc::declare(root)?;
     host::declare(root)?;
     io::declare(root)?;
     math::declare(root)?;

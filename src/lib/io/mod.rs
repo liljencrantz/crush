@@ -13,7 +13,7 @@ use crate::lang::interactive::config_dir;
 mod bin;
 mod csv;
 mod http;
-mod json;
+pub mod json;
 mod lines;
 mod pup;
 mod split;

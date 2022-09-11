@@ -749,7 +749,7 @@ fn populate_bus(context: CommandContext, dbus: DBusThing) -> CrushResult<()> {
                     ("service".to_string(), Value::String(service)),
                     (
                         "__call__".to_string(),
-                        Value::Command(CrushCommand::command(
+                        Value::Command(<dyn CrushCommand>::command(
                             service_call,
                             true,
                             vec![

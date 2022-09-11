@@ -89,6 +89,7 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
         )?)),
 
         Value::String(s) => Ok(serde_json::Value::from(s)),
+        Value::Symbol(s) => Ok(serde_json::Value::from(s)),
 
         Value::Integer(i) => Ok(serde_json::Value::from(to_crush_error(i64::try_from(i))?)),
 
@@ -134,6 +135,16 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
 
         v => error(&format!("Unsupported data type {}", v.value_type())),
     }
+}
+
+pub fn json_to_value(s: &str) -> CrushResult<Value> {
+    let serde_value = to_crush_error(serde_json::from_str(s))?;
+    from_json(&serde_value)
+}
+
+pub fn value_to_json(v: Value) -> CrushResult<String> {
+    let json_value = to_json(v)?;
+    Ok(json_value.to_string())
 }
 
 #[signature(
