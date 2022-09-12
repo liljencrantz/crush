@@ -2,7 +2,7 @@ use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command::TypeMap;
 use crate::lang::errors::{argument_error_legacy, data_error, mandate, CrushResult, argument_error};
-use crate::lang::execution_context::{ArgumentVector, CommandContext, This};
+use crate::lang::state::contexts::{ArgumentVector, CommandContext, This};
 use crate::lang::value::Value;
 use crate::lang::{command::Command, data::list::List, value::ValueType};
 use lazy_static::lazy_static;
@@ -248,7 +248,7 @@ fn collect(mut context: CommandContext) -> CrushResult<()> {
         }
         1 => {
             match &context.arguments[0].value {
-                Value::Symbol(s) => {
+                Value::String(s) => {
                     match input_type.as_slice().find(s) {
                         Ok(idx) => {
                             while let Ok(row) = input.read() {

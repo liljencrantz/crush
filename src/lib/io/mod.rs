@@ -1,14 +1,15 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, data_error, mandate, CrushResult, to_crush_error};
+use crate::lang::errors::{argument_error_legacy, CrushResult, data_error, mandate, to_crush_error};
 use crate::lang::data::list::List;
 use crate::lang::pretty::PrettyPrinter;
-use crate::lang::data::scope::Scope;
+use crate::lang::state::scope::Scope;
 use crate::lang::value::ValueType;
-use crate::lang::{execution_context::CommandContext, value::Value};
+use crate::lang::value::Value;
 use signature::signature;
 use rustyline::Editor;
 use std::path::PathBuf;
 use crate::lang::interactive::config_dir;
+use crate::lang::state::contexts::CommandContext;
 
 mod bin;
 mod csv;

@@ -115,6 +115,7 @@ impl Dict {
     }
 
     pub fn materialize(self) -> CrushResult<Dict> {
+
         let mut entries = self.entries.lock().unwrap();
         let mut map = OrderedMap::with_capacity(entries.len());
         for (k, v) in entries.drain() {

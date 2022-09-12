@@ -1,13 +1,13 @@
 use crate::lang::errors::{argument_error_legacy, to_crush_error, CrushResult};
-use crate::lang::execution_context::{CommandContext, JobContext};
-use crate::lang::data::scope::Scope;
+use crate::lang::state::contexts::{CommandContext, JobContext};
+use crate::lang::state::scope::Scope;
 use crate::lang::serialization::{deserialize, serialize};
 use crate::lang::pipe::{pipe, empty_channel, ValueSender};
 use crate::lang::value::Value;
 use std::io::Write;
 use std::path::Path;
 use std::{fs};
-use crate::lang::global_state::GlobalState;
+use crate::lang::state::global_state::GlobalState;
 
 pub fn file(
     global_env: &Scope,

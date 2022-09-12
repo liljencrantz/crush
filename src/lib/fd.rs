@@ -1,7 +1,7 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{error, to_crush_error, CrushResult, data_error};
-use crate::lang::execution_context::{CommandContext};
-use crate::lang::data::scope::Scope;
+use crate::lang::state::contexts::{CommandContext};
+use crate::lang::state::scope::Scope;
 use crate::lang::data::table::ColumnType;
 use crate::util::user_map::create_user_map;
 use crate::{data::table::Row, lang::value::Value, lang::value::ValueType};

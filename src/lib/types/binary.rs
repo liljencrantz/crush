@@ -1,9 +1,9 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{mandate, CrushResult};
-use crate::lang::execution_context::This;
+use crate::lang::errors::{CrushResult, mandate};
+use crate::lang::state::contexts::{CommandContext, This};
 use crate::lang::value::ValueType;
-use crate::lang::{execution_context::CommandContext, value::Value};
+use crate::lang::value::Value;
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use signature::signature;

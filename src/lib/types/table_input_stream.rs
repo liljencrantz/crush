@@ -1,10 +1,10 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{argument_error_legacy, CrushResult, mandate};
-use crate::lang::execution_context::{This};
+use crate::lang::state::contexts::{CommandContext, This};
 use crate::lang::value::ValueType;
-use crate::lang::{execution_context::CommandContext, value::Value};
-use crate::lib::types::{column_types};
+use crate::lang::value::Value;
+use crate::lib::types::column_types;
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use signature::signature;
@@ -17,7 +17,7 @@ lazy_static! {
     static ref CLOSE: Value =
         Value::Command(<dyn CrushCommand>::command(
             close, false,
-            vec!["global".to_string(), "types".to_string(), "pipe".to_string(), "close".to_string()],
+            vec!["global", "types", "pipe", "close"],
             "pipe:close",
             "Close the specified pipe",
             None,
@@ -28,7 +28,7 @@ lazy_static! {
         static ref WRITE: Value =
         Value::Command(<dyn CrushCommand>::command(
             write, true,
-            vec!["global".to_string(), "types".to_string(), "pipe".to_string(), "write".to_string()],
+            vec!["global", "types", "pipe", "write"],
             "pipe:write",
             "Write sink for this pipe",
             None,

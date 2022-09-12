@@ -3,11 +3,11 @@ use crate::lang::command::{ArgumentDescription, BoundCommand, Command, CrushComm
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::data::dict::Dict;
 use crate::lang::errors::{argument_error, argument_error_legacy, CrushResult, error, mandate};
-use crate::lang::execution_context::{CommandContext, CompileContext, JobContext};
+use crate::lang::state::contexts::{CommandContext, CompileContext, JobContext};
 use crate::lang::help::Help;
 use crate::lang::job::Job;
 use crate::lang::data::list::List;
-use crate::lang::data::scope::Scope;
+use crate::lang::state::scope::Scope;
 use crate::lang::serialization::model;
 use crate::lang::serialization::model::closure::Name;
 use crate::lang::serialization::model::{element, Element};

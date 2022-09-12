@@ -1,4 +1,4 @@
-use crate::lang::execution_context::CommandContext;
+use crate::lang::state::contexts::CommandContext;
 use crate::{
     lang::errors::CrushError,
     lang::{data::table::Row, value::Value, value::ValueType},
@@ -7,8 +7,8 @@ use std::io::{BufReader, Read, Write};
 
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::errors::{error, mandate, to_crush_error, CrushResult};
-use crate::lang::files::Files;
-use crate::lang::data::scope::ScopeLoader;
+use crate::lang::signature::files::Files;
+use crate::lang::state::scope::ScopeLoader;
 use crate::lang::data::table::ColumnType;
 use crate::lang::{data::list::List, data::r#struct::Struct, data::table::Table};
 use signature::signature;

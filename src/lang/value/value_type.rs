@@ -16,7 +16,6 @@ pub enum ValueType {
     Integer,
     Time,
     Duration,
-    Symbol,
     Glob,
     Regex,
     Command,
@@ -81,7 +80,6 @@ impl ValueType {
             | ValueType::Integer
             | ValueType::Time
             | ValueType::Duration
-            | ValueType::Symbol
             | ValueType::Glob
             | ValueType::Regex
             | ValueType::Command
@@ -130,7 +128,6 @@ impl ValueType {
                 Ok(n) => Ok(Value::Integer(n)),
                 Err(e) => error(e.to_string().as_str()),
             },
-            ValueType::Symbol => Ok(Value::Symbol(s.to_string())),
             ValueType::Glob => Ok(Value::Glob(Glob::new(s))),
             ValueType::Regex => Ok(Value::Regex(s.to_string(), to_crush_error(Regex::new(s))?)),
             ValueType::File => Ok(Value::string(s)),
@@ -154,7 +151,6 @@ impl Help for ValueType {
             ValueType::Integer => "A numeric type representing an integer number.",
             ValueType::Time => "A point in time with nanosecond precision",
             ValueType::Duration => "A difference between two points in time",
-            ValueType::Symbol => "A symbol is used to represent a path into a datastructure",
             ValueType::Glob => "A pattern containing wildcards",
             ValueType::Regex => "An advanced pattern that can be used for matching and replacing",
             ValueType::Command => "A piece fo code that can be called",
@@ -217,7 +213,6 @@ impl Display for ValueType {
             ValueType::Integer => f.write_str("integer"),
             ValueType::Time => f.write_str("time"),
             ValueType::Duration => f.write_str("duration"),
-            ValueType::Symbol => f.write_str("symbol"),
             ValueType::Glob => f.write_str("glob"),
             ValueType::Regex => f.write_str("regex"),
             ValueType::Command => f.write_str("command"),

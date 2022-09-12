@@ -3,7 +3,7 @@ use crate::lang::command::{Command, Parameter};
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::{CrushResult, error, mandate, to_crush_error};
 use crate::lang::job::Job;
-use crate::lang::data::scope::Scope;
+use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueDefinition, ValueType};
 use crate::util::glob::Glob;
 use regex::Regex;
@@ -28,7 +28,7 @@ pub enum Node {
     Glob(TrackedString),
     Identifier(TrackedString),
     Regex(TrackedString),
-    Field(TrackedString),
+    Symbol(TrackedString),
     String(TrackedString),
     File(TrackedString, bool),
     // true if filename is quoted
@@ -224,7 +224,7 @@ impl Node {
         use Node::*;
 
         match self {
-            Glob(s) | Identifier(s) | Field(s) |
+            Glob(s) | Identifier(s) | Symbol(s) |
             String(s) | Integer(s) | Float(s) |
             Regex(s) | File(s, _) =>
                 s.location,
@@ -261,7 +261,7 @@ impl Node {
             Node::Glob(_) => "glob",
             Node::Identifier(_) => "identifier",
             Node::Regex(_) => "regular expression literal",
-            Node::Field(_) => "field",
+            Node::Symbol(_) => "symbol",
             Node::String(_) => "quoted string literal",
             Node::File(_, _) => "file literal",
             Node::Integer(_) => "integer literal",
@@ -279,11 +279,11 @@ impl Node {
             Node::Assignment(target, op, value) => match op.deref() {
                 "=" => {
                     return match target.as_ref() {
-                        Node::Field(t) => Ok(ArgumentDefinition::named(
+                        Node::Symbol(t) => Ok(ArgumentDefinition::named(
                             t.deref(),
                             propose_name(&t, value.generate_argument(env)?.unnamed_value()?),
                         )),
-                        _ => error(format!("Invalid left side in named argument. Expected a field, got a {}", target.type_name())),
+                        _ => error(format!("Invalid left side in named argument. Expected a symbol, got a {}", target.type_name())),
                     };
                 }
                 _ => return error("Invalid assignment operator"),
@@ -336,11 +336,11 @@ impl Node {
                 Box::new(node.generate_argument(env)?.unnamed_value()?),
                 identifier.clone(),
             ),
-            Node::Field(f) =>
+            Node::Symbol(f) =>
                 if is_command {
                     ValueDefinition::Identifier(f.clone())
                 } else {
-                    ValueDefinition::Value(Value::Symbol(f.string.to_string()), f.location)
+                    ValueDefinition::Value(Value::String(f.string.to_string()), f.location)
                 },
             Node::Substitution(s) => ValueDefinition::JobDefinition(s.generate(env)?),
             Node::Closure(s, c) => {
@@ -441,7 +441,7 @@ impl Node {
             Node::Glob(_)
             | Node::Identifier(_)
             | Node::Regex(_)
-            | Node::Field(_)
+            | Node::Symbol(_)
             | Node::String(_)
             | Node::Integer(_)
             | Node::Float(_)
@@ -480,7 +480,7 @@ impl Node {
         )))
     }
 
-    pub fn parse_string_or_wildcard(s: &TrackedString) -> Box<Node> {
+    pub fn parse_symbol_or_glob(s: &TrackedString) -> Box<Node> {
         let path = expand_user(s.string.clone()).unwrap_or_else(|_| { s.string.clone() });
         let ts = TrackedString::from(&path, s.location);
         if path.contains('%') || path.contains('?') {
@@ -488,7 +488,7 @@ impl Node {
         } else if s.string.contains('/') || s.string.contains('.') {
             Box::from(Node::File(ts, false))
         } else {
-            Box::from(Node::Field(ts))
+            Box::from(Node::Symbol(ts))
         }
     }
 
@@ -496,7 +496,7 @@ impl Node {
         Box::from(Node::Identifier(TrackedString::from(&s.string[1..], s.location)))
     }
 
-    pub fn parse_file_or_wildcard(s: &TrackedString) -> Box<Node> {
+    pub fn parse_file_or_glob(s: &TrackedString) -> Box<Node> {
         let path = expand_user(s.string.clone()).unwrap_or_else(|_| { s.string.clone() });
         let ts = TrackedString::from(&path, s.location);
         if ts.string.contains('%') || ts.string.contains('?') {
@@ -584,12 +584,11 @@ pub enum TokenType {
     FactorOperator,
     TermOperator,
     QuotedString,
-    StringOrWildcard,
+    StringOrGlob,
     Identifier,
     Flag,
-    Field,
     QuotedFile,
-    FileOrWildcard,
+    FileOrGlob,
     Regex,
     Separator,
     Integer,

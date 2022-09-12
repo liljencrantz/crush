@@ -1,13 +1,14 @@
-use crate::lang::errors::{argument_error_legacy, data_error, to_crush_error, CrushResult};
-use crate::lang::files::Files;
-use crate::lang::data::scope::ScopeLoader;
+use crate::lang::errors::{argument_error_legacy, CrushResult, data_error, to_crush_error};
+use crate::lang::signature::files::Files;
+use crate::lang::state::scope::ScopeLoader;
 use crate::lang::{
-    execution_context::CommandContext, data::table::ColumnType, data::table::Row, value::Value,
+    data::table::ColumnType, data::table::Row, value::Value,
     value::ValueType,
 };
 use signature::signature;
 use std::io::{BufRead, BufReader};
 use std::convert::From;
+use crate::lang::state::contexts::CommandContext;
 
 #[signature(
     from,

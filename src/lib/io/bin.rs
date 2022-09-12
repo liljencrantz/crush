@@ -1,8 +1,9 @@
-use crate::lang::errors::{argument_error_legacy, to_crush_error, CrushResult};
-use crate::lang::files::Files;
-use crate::lang::data::scope::ScopeLoader;
-use crate::lang::{execution_context::CommandContext, value::Value};
+use crate::lang::errors::{argument_error_legacy, CrushResult, to_crush_error};
+use crate::lang::signature::files::Files;
+use crate::lang::state::scope::ScopeLoader;
+use crate::lang::value::Value;
 use signature::signature;
+use crate::lang::state::contexts::CommandContext;
 
 #[signature(
     from,

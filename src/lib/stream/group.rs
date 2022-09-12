@@ -1,13 +1,12 @@
 use crate::lang::command::Command;
 use crate::lang::errors::{mandate, CrushResult};
-use crate::lang::execution_context::CommandContext;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::printer::Printer;
-use crate::lang::data::scope::Scope;
+use crate::lang::state::scope::Scope;
 use crate::lang::pipe::{pipe, InputStream};
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::ColumnVec;
-use crate::lang::value::Symbol;
 use crate::{
     lang::errors::argument_error_legacy,
     lang::pipe::{unlimited_streams, OutputStream},
@@ -17,7 +16,7 @@ use crossbeam::{unbounded, Receiver};
 use signature::signature;
 use std::collections::HashMap;
 use crate::lang::threads::ThreadStore;
-use crate::lang::global_state::GlobalState;
+use crate::lang::state::global_state::GlobalState;
 
 #[signature(
 group,
@@ -28,7 +27,7 @@ example = "find . | group user type file_count={count} size={sum size}"
 pub struct Group {
     #[unnamed()]
     #[description("the column(s) to group by and copy into the output stream.")]
-    group_by: Vec<Symbol>,
+    group_by: Vec<String>,
     #[named()]
     #[description("create these additional columns by aggregating the grouped rows using the supplied aggregation command.")]
     command: OrderedStringMap<Command>,

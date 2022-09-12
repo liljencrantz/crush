@@ -1,8 +1,8 @@
 use crate::lang::command::{Command, CrushCommand, OutputType, ArgumentDescription};
 use crate::lang::errors::{error, mandate, CrushResult, argument_error_legacy};
-use crate::lang::execution_context::CommandContext;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::help::Help;
-use crate::lang::data::r#struct::Struct;
+use crate::data::r#struct::Struct;
 use crate::lang::{value::Value, value::ValueType};
 use crate::util::identity_arc::Identity;
 use ordered_map::OrderedMap;

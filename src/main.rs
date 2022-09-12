@@ -5,15 +5,15 @@ mod lang;
 mod lib;
 mod util;
 
-use crate::lang::errors::{to_crush_error, CrushResult, argument_error_legacy};
+use crate::lang::errors::{argument_error_legacy, CrushResult, to_crush_error};
 use crate::lang::pretty::create_pretty_printer;
 use crate::lang::{execute, printer};
 use lib::declare;
 use std::io::Read;
 use std::path::PathBuf;
-use lang::data;
+use lang::{data, state};
 use crate::lang::interactive;
-use crate::lang::global_state::GlobalState;
+use lang::state::global_state::GlobalState;
 use crate::lang::printer::Printer;
 
 #[derive(PartialEq, Eq)]
@@ -78,7 +78,7 @@ fn print_help(printer: &Printer) {
 fn run() -> CrushResult<i32> {
     let config = parse_args()?;
 
-    let root_scope = data::scope::Scope::create_root();
+    let root_scope = state::scope::Scope::create_root();
     let local_scope = root_scope.create_child(&root_scope, false);
 
     let (printer, print_handle) = if config.mode == Mode::Pup {

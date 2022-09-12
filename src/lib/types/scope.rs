@@ -2,8 +2,8 @@ use crate::lang::command::Command;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command::TypeMap;
 use crate::lang::errors::{mandate, CrushResult};
-use crate::lang::execution_context::CommandContext;
-use crate::lang::execution_context::{ArgumentVector, This};
+use crate::lang::state::contexts::CommandContext;
+use crate::lang::state::contexts::{ArgumentVector, This};
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 

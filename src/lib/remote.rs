@@ -1,10 +1,10 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{error, mandate, to_crush_error, CrushResult};
-use crate::lang::execution_context::CommandContext;
-use crate::lang::files::Files;
-use crate::lang::patterns::Patterns;
-use crate::lang::data::scope::Scope;
+use crate::lang::state::contexts::CommandContext;
+use crate::lang::signature::files::Files;
+use crate::lang::signature::patterns::Patterns;
+use crate::lang::state::scope::Scope;
 use crate::lang::serialization::{deserialize, serialize};
 use crate::lang::data::table::{ColumnType, Row};
 use crate::lang::value::Value;

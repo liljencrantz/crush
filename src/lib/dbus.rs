@@ -3,10 +3,10 @@ use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::*;
 use crate::lang::data::dict::Dict;
 use crate::lang::errors::{argument_error_legacy, data_error, eof_error, error, mandate, to_crush_error, CrushResult};
-use crate::lang::execution_context::CommandContext;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::data::list::List;
 use crate::lang::data::r#struct::Struct;
-use crate::lang::data::scope::Scope;
+use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
 use dbus::arg::{ArgType, IterAppend};
 use dbus::blocking::{BlockingSender, Connection, Proxy};
@@ -746,18 +746,13 @@ fn populate_bus(context: CommandContext, dbus: DBusThing) -> CrushResult<()> {
             service.clone(),
             Value::Struct(Struct::new(
                 vec![
-                    ("service".to_string(), Value::String(service)),
+                    ("service", Value::String(service)),
                     (
-                        "__call__".to_string(),
+                        "__call__",
                         Value::Command(<dyn CrushCommand>::command(
                             service_call,
                             true,
-                            vec![
-                                "global".to_string(),
-                                "dbus".to_string(),
-                                "service".to_string(),
-                                "__call__".to_string(),
-                            ],
+                            vec!["global", "dbus", "service", "__call__"],
                             "service",
                             "Access object in the specified service",
                             None,

@@ -1,7 +1,7 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{argument_error_legacy, CrushResult};
-use crate::lang::execution_context::{ArgumentVector, CommandContext};
-use crate::lang::data::scope::Scope;
+use crate::lang::state::contexts::{ArgumentVector, CommandContext};
+use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use std::cmp::Ordering;

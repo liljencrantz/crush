@@ -1,13 +1,13 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::argument_error_legacy;
 use crate::lang::errors::CrushResult;
-use crate::lang::execution_context::ArgumentVector;
-use crate::lang::execution_context::CommandContext;
-use crate::lang::data::scope::Scope;
+use crate::lang::state::contexts::ArgumentVector;
+use crate::lang::state::contexts::CommandContext;
+use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use signature::signature;
-use crate::lang::number::Number;
+use crate::lang::signature::number::Number;
 
 macro_rules! math_fun {
     ($name:ident, $Signature: ident, $op:expr) => {

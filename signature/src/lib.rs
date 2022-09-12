@@ -500,7 +500,7 @@ fn parse_type_data(
                         "[{}=(file|glob|regex|list|table|table_input_stream)...]",
                         name.to_string()
                     ),
-                    initialize: quote! { let mut #name = crate::lang::files::Files::new(); },
+                    initialize: quote! { let mut #name = crate::lang::signature::files::Files::new(); },
                     mappings: quote! { (Some(#name_literal), value) => #name.expand(value, _printer)?, },
                     unnamed_mutate: if is_unnamed_target {
                         Some(quote! {
@@ -524,7 +524,7 @@ fn parse_type_data(
                 Ok(TypeData {
                     allowed_values: quote! { None },
                     signature: format!("[{}=(string|glob|regex)...]", name.to_string()),
-                    initialize: quote! { let mut #name = crate::lang::patterns::Patterns::new(); },
+                    initialize: quote! { let mut #name = crate::lang::signature::patterns::Patterns::new(); },
                     mappings: quote! {
                         (Some(#name_literal), crate::lang::value::Value::Glob(value)) => #name.expand_glob(value),
                         (Some(#name_literal), crate::lang::value::Value::String(value)) => #name.expand_string(value),
@@ -963,7 +963,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
             #[allow(unused_parens)] // TODO: don't emit unnecessary parenthesis in the first place
             impl #struct_name {
-                pub fn declare(env: &mut crate::lang::data::scope::ScopeLoader) -> crate::lang::errors::CrushResult <()> {
+                pub fn declare(env: &mut crate::lang::state::scope::ScopeLoader) -> crate::lang::errors::CrushResult <()> {
                     env.declare_command(
                         #command_name,
                         #command_invocation,

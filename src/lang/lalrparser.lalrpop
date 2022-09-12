@@ -121,8 +121,8 @@ Default: Option<Node> = {
 }
 
 Item: Box<Node> = {
-    <start: @L> <l: StringOrWildcard> <end: @R> =>
-        Node::parse_string_or_wildcard(&TrackedString::from(l, Location::new(start, end))),
+    <start: @L> <l: StringOrGlob> <end: @R> =>
+        Node::parse_symbol_or_glob(&TrackedString::from(l, Location::new(start, end))),
 
     <start: @L> <l: Identifier> <end: @R> =>
         Node::parse_identifier(&TrackedString::from(l, Location::new(start, end))),
@@ -130,11 +130,8 @@ Item: Box<Node> = {
     <start: @L> <l: Regex> <end: @R> =>
         Box::from(Node::Regex(TrackedString::from(&l[3..l.len()-1], Location::new(start, end)))),
 
-    @L Field @R =>
-        Box::from(Node::Field(TrackedString::literal(<>))),
-
-    <start: @L> <l: FileOrWildcard> <end: @R> =>
-        Node::parse_file_or_wildcard(&TrackedString::from(l, Location::new(start, end))),
+    <start: @L> <l: FileOrGlob> <end: @R> =>
+        Node::parse_file_or_glob(&TrackedString::from(l, Location::new(start, end))),
 
     <start: @L> <l:QuotedFile> <end: @R> =>
         Box::from(Node::File(TrackedString::literal(<>), true)),
@@ -149,12 +146,12 @@ Item: Box<Node> = {
 
     <start: @L> <l:Flag> <end: @R> =>
         Box::from(
-            Node::Assignment(Box::from(Node::Field(TrackedString::from(&l[if l.starts_with("--") {2} else {1}..], Location::new(start, end)))),
+            Node::Assignment(Box::from(Node::Symbol(TrackedString::from(&l[if l.starts_with("--") {2} else {1}..], Location::new(start, end)))),
             "=".to_string(),
             Box::from(Node::Identifier(TrackedString::from("true", Location::new(start, end)))))),
 
     <i: Item> "[" <e: Assignment> "]" => Box::from(Node::GetItem(i, e)),
-    <i: Item> Colon <start: @L> <l: StringOrWildcard> <end: @R> => Box::from(Node::GetAttr(i, TrackedString::from(&l, Location::new(start, end)))),
+    <i: Item> Colon <start: @L> <l: StringOrGlob> <end: @R> => Box::from(Node::GetAttr(i, TrackedString::from(&l, Location::new(start, end)))),
     "{" Separator? <s: Signature> <l: JobListWithoutSeparator> "}" => Box::from(Node::Closure(s, l)),
     "(" <j:Job> ")" => Box::from(Node::Substitution(j)),
 }
@@ -174,11 +171,10 @@ Token: TokenNode = {
     @L TermOperator @R => TokenNode::new(TokenType::TermOperator, <>),
     @L QuotedString @R => TokenNode::new(TokenType::QuotedString, <>),
     @L Identifier @R => TokenNode::new(TokenType::Identifier, <>),
-    @L StringOrWildcard @R => TokenNode::new(TokenType::StringOrWildcard, <>),
+    @L StringOrGlob @R => TokenNode::new(TokenType::StringOrGlob, <>),
     @L QuotedFile @R => TokenNode::new(TokenType::QuotedFile, <>),
-    @L FileOrWildcard @R => TokenNode::new(TokenType::FileOrWildcard, <>),
+    @L FileOrGlob @R => TokenNode::new(TokenType::FileOrGlob, <>),
     @L Flag @R => TokenNode::new(TokenType::Flag, <>),
-    @L Field @R => TokenNode::new(TokenType::Field, <>),
     @L Regex @R => TokenNode::new(TokenType::Regex, <>),
     @L Separator @R => TokenNode::new(TokenType::Separator, <>),
     @L Integer @R => TokenNode::new(TokenType::Integer, <>),
@@ -207,12 +203,11 @@ match {
     r"(\*|//)" => FactorOperator,
     r"(\+|-)" => TermOperator,
     r#""([^\\"]|\\.)*""# => QuotedString,
-    r"[_a-zA-Z%\?][\._0-9a-zA-Z%\?/]*" => StringOrWildcard,
+    r"[_a-zA-Z%\?][\._0-9a-zA-Z%\?/]*" => StringOrGlob,
     r"\$[_0-9a-zA-Z][_0-9a-zA-Z]*" => Identifier,
-    r"([\.~][\./_0-9a-zA-Z%\?]*|/([\._0-9a-zA-Z%\?][\./_0-9a-zA-Z%\?]*)?)" => FileOrWildcard,
+    r"([\.~][\./_0-9a-zA-Z%\?]*|/([\._0-9a-zA-Z%\?][\./_0-9a-zA-Z%\?]*)?)" => FileOrGlob,
     r"--?[0-9a-zA-Z][-_0-9a-zA-Z]*" => Flag,
-    r"\^[\._a-zA-Z][\._a-zA-Z0-9]*" => Field,
-    r#"'([^\\']|\\.)*'"# => QuotedFile,
+    r#"'([^\\']|\\.)+'"# => QuotedFile,
     r#"re"([^"]|\\.)*""# => Regex,
     r"(;|\n)( |\t|;|\n|#[^\n]*)*" => Separator,
     r"[0-9][0-9_]*" => Integer,

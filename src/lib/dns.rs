@@ -2,9 +2,9 @@ use std::fs::File;
 use std::io::Read;
 use lazy_static::lazy_static;
 use crate::{argument_error_legacy, CrushResult, to_crush_error};
-use crate::data::scope::Scope;
-use crate::lang::execution_context::CommandContext;
-use crate::lang::value::{Symbol, Value, ValueType};
+use crate::lang::state::scope::Scope;
+use crate::lang::state::contexts::CommandContext;
+use crate::lang::value::{Value, ValueType};
 use signature::signature;
 use crate::data::table::{ColumnType, Row};
 use crate::lang::command::OutputType::Known;
@@ -47,7 +47,7 @@ struct Query {
     name: String,
     #[description("DNS record type. Currently, A, AAAA and SRV are supported.")]
     #[default("A")]
-    record_type: Symbol,
+    record_type: String,
     #[default(false)]
     tcp: bool,
     nameserver: Option<String>,

@@ -3,7 +3,7 @@ use crate::lang::data::dict::Dict;
 use crate::lang::errors::{error, to_crush_error, CrushResult};
 use crate::lang::data::list::List;
 use crate::lang::data::r#struct::Struct;
-use crate::lang::data::scope::Scope;
+use crate::lang::state::scope::Scope;
 use crate::lang::serialization::model;
 use crate::lang::serialization::model::{element, Element};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
@@ -36,7 +36,6 @@ fn serialize_simple(
             Value::Bool(b) => element::Element::Bool(*b),
             Value::Empty() => element::Element::Empty(false),
             Value::Time(d) => element::Element::Time(d.timestamp_nanos()),
-            Value::Symbol(f) => element::Element::Symbol(f.to_string()),
             _ => return error("Expected simple value"),
         }),
     };
@@ -88,7 +87,6 @@ impl Serializable<Value> for Value {
                 id, elements, state,
             )?)),
 
-            element::Element::Symbol(s) => Ok(Value::Symbol(s.to_string())),
             element::Element::UserScope(_) | element::Element::InternalScope(_) => {
                 Ok(Value::Scope(Scope::deserialize(id, elements, state)?))
             }
@@ -120,8 +118,7 @@ impl Serializable<Value> for Value {
             | Value::Float(_)
             | Value::Bool(_)
             | Value::Empty()
-            | Value::Time(_)
-            | Value::Symbol(_) => serialize_simple(self, elements, state),
+            | Value::Time(_) => serialize_simple(self, elements, state),
 
             Value::Integer(s) => s.serialize(elements, state),
 

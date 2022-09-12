@@ -8,7 +8,7 @@ use crossbeam::channel::Receiver;
 use crossbeam::channel::unbounded;
 use std::time::Duration;
 use chrono::{DateTime, Local};
-use crate::lang::global_state::JobId;
+use crate::lang::state::global_state::JobId;
 
 /**
 A thread management utility. Spawn, track and join on threads.

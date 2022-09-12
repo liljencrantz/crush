@@ -1,7 +1,7 @@
 /**
   Main entry point for tab completion code
 */
-use crate::lang::data::scope::Scope;
+use crate::lang::state::scope::Scope;
 use crate::lang::errors::CrushResult;
 use crate::lang::value::{ValueType, Value};
 use crate::util::directory_lister::DirectoryLister;
@@ -81,7 +81,7 @@ fn completion_suffix(maybe_scope: CrushResult<Option<Value>>, t: &ValueType) -> 
                 Ok(Some(Value::Scope(_))) => ":",
                 Ok(Some(Value::Empty())) |
                 Ok(Some(Value::Bool(_))) |
-                Ok(Some(Value::Symbol(_))) |
+                Ok(Some(Value::String(_))) |
                 Ok(Some(Value::Command(_))) => " ",
                 _ => "",
             }
@@ -349,7 +349,7 @@ mod tests {
     use crate::lang::value::Value;
     use crate::util::directory_lister::FakeDirectoryLister;
     use signature::signature;
-    use crate::lang::execution_context::CommandContext;
+    use crate::lang::state::contexts::CommandContext;
 
     fn parser() -> Parser {
         Parser::new()

@@ -1,7 +1,7 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::CrushResult;
-use crate::lang::execution_context::CommandContext;
-use crate::lang::data::scope::Scope;
+use crate::lang::state::contexts::CommandContext;
+use crate::lang::state::scope::Scope;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::value::{Value, ValueType};
 use signature::signature;

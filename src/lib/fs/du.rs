@@ -1,6 +1,6 @@
 use signature::signature;
-use crate::lang::files::Files;
-use crate::lang::execution_context::CommandContext;
+use crate::lang::signature::files::Files;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::errors::CrushResult;
 use std::path::{Path, PathBuf};
 use crate::lang::pipe::OutputStream;

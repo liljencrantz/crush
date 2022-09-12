@@ -2,10 +2,10 @@ mod closure;
 
 use crate::lang::argument::ArgumentDefinition;
 use crate::lang::errors::{error, CrushResult};
-use crate::lang::execution_context::{CompileContext, CommandContext};
+use crate::lang::state::contexts::{CompileContext, CommandContext};
 use crate::lang::help::Help;
 use crate::lang::job::Job;
-use crate::lang::data::scope::Scope;
+use crate::lang::state::scope::Scope;
 use crate::lang::serialization::model;
 use crate::lang::serialization::model::{element, Element};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
@@ -108,7 +108,7 @@ impl TypeMap for OrderedMap<String, Command> {
             <dyn CrushCommand>::command(
                 call,
                 can_block,
-                path.iter().map(|e| e.to_string()).collect(),
+                path,
                 signature,
                 short_help,
                 long_help,
@@ -153,7 +153,7 @@ impl dyn CrushCommand {
     pub fn command(
         call: fn(context: CommandContext) -> CrushResult<()>,
         can_block: bool,
-        full_name: Vec<String>,
+        mut full_name: Vec<impl Into<String>>,
         signature: &'static str,
         short_help: &'static str,
         long_help: Option<&'static str>,
@@ -163,7 +163,7 @@ impl dyn CrushCommand {
         Box::from(SimpleCommand {
             call,
             can_block,
-            full_name,
+            full_name: full_name.drain(..).map(|a| {a.into()}).collect(),
             signature,
             short_help,
             long_help,

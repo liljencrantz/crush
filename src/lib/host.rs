@@ -1,7 +1,7 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{to_crush_error, CrushResult};
-use crate::lang::execution_context::CommandContext;
-use crate::lang::data::scope::Scope;
+use crate::lang::state::contexts::CommandContext;
+use crate::lang::state::scope::Scope;
 use crate::{lang::value::Value, lang::value::ValueType};
 use nix::sys::signal;
 use nix::unistd::Pid;
@@ -14,7 +14,6 @@ use sys_info;
 use lazy_static::lazy_static;
 use battery::State;
 use chrono::Duration;
-use crate::lang::value::Symbol;
 
 extern crate uptime_lib;
 
@@ -214,7 +213,7 @@ mod macos {
     use lazy_static::lazy_static;
     use crate::lang::command::OutputType::Known;
     use crate::lang::errors::{CrushResult};
-    use crate::lang::execution_context::CommandContext;
+    use crate::lang::state::contexts::CommandContext;
     use crate::lang::data::table::ColumnType;
     use crate::util::user_map::create_user_map;
     use crate::{data::table::Row, lang::value::Value, lang::value::ValueType};
@@ -374,7 +373,7 @@ mod linux {
     use lazy_static::lazy_static;
     use crate::lang::command::OutputType::Known;
     use crate::lang::errors::{error, to_crush_error, CrushResult};
-    use crate::lang::execution_context::CommandContext;
+    use crate::lang::state::contexts::CommandContext;
     use crate::lang::data::table::ColumnType;
     use crate::util::user_map::create_user_map;
     use crate::{data::table::Row, lang::value::Value, lang::value::ValueType};
@@ -478,7 +477,7 @@ struct Signal {
     pid: Vec<i128>,
     #[default("SIGTERM")]
     #[description("the name of the signal to send.")]
-    signal: Symbol,
+    signal: String,
 }
 
 fn signal(mut context: CommandContext) -> CrushResult<()> {

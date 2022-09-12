@@ -190,7 +190,6 @@ impl List {
     dump_to!(dump_bool, bool, Bool, |v: &bool| *v);
     dump_to!(dump_type, ValueType, Type, |v: &ValueType| v.clone());
     dump_to!(dump_float, f64, Float, |v: &f64| *v);
-    dump_to!(dump_symbol, String, Symbol, |e: &String| e.clone());
 }
 
 impl Display for List {

@@ -1,6 +1,6 @@
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::errors::CrushResult;
-use crate::lang::data::scope::Scope;
+use crate::lang::state::scope::Scope;
 
 mod count;
 mod drop;

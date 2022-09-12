@@ -1,9 +1,8 @@
 use crate::lang::errors::{error, CrushResult};
-use crate::lang::execution_context::CommandContext;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::data::table::ColumnType;
 use crate::lang::{data::table::Row, value::Value, value::ValueType};
 use signature::signature;
-use crate::lang::value::Symbol;
 
 #[signature(enumerate, short = "Prepend a column containing the row number to each row of the input.")]
 pub struct Enumerate {
@@ -15,7 +14,7 @@ pub struct Enumerate {
     step: i128,
     #[description("the name for the added column.")]
     #[default("idx")]
-    name: Symbol,
+    name: String,
 }
 
 fn enumerate(context: CommandContext) -> CrushResult<()> {

@@ -2,9 +2,9 @@ use crate::lang::argument::column_names;
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::errors::{mandate, CrushResult};
-use crate::lang::execution_context::ArgumentVector;
-use crate::lang::execution_context::{CommandContext, This};
-use crate::lang::data::scope::Scope;
+use crate::lang::state::contexts::ArgumentVector;
+use crate::lang::state::contexts::{CommandContext, This};
+use crate::lang::state::scope::Scope;
 use crate::lang::pipe::black_hole;
 use crate::lang::data::table::ColumnType;
 use crate::lang::value::ValueType;
@@ -168,7 +168,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 Struct::new(vec![
                     ("__setattr__", Value::Command(<dyn CrushCommand>::command(
                         class_set, false,
-                        vec!["global".to_string(), "types".to_string(), "root".to_string(), "__setattr__".to_string()],
+                        vec!["global", "types", "root", "__setattr__"],
                         "root:__setitem__ name:string value:any",
                         "Modify the specified field to hold the specified value",
                         None,
@@ -177,7 +177,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     ))),
                     ("__getitem__", Value::Command(<dyn CrushCommand>::command(
                         class_get, false,
-                        vec!["global".to_string(), "types".to_string(), "root".to_string(), "__getitem__".to_string()],
+                        vec!["global", "types", "root", "__getitem__"],
                         "root:__getitem__ name:string",
                         "Return the value of the specified field",
                         None,
@@ -186,7 +186,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     ))),
                     ("__setitem__", Value::Command(<dyn CrushCommand>::command(
                         class_set, false,
-                        vec!["global".to_string(), "types".to_string(), "root".to_string(), "__setitem__".to_string()],
+                        vec!["global", "types", "root", "__setitem__"],
                         "root:__setitem__ name:string value:any",
                         "Modify the specified field to hold the specified value",
                         None,
@@ -195,7 +195,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     ))),
                     ("new", Value::Command(<dyn CrushCommand>::command(
                         new, true,
-                        vec!["global".to_string(), "types".to_string(), "root".to_string(), "new".to_string()],
+                        vec!["global", "types", "root", "new"],
                         "root:new @unnamed @@named",
                         "Create a new instance of the specified type",
                         None,
@@ -219,7 +219,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare("scope", Value::Type(ValueType::Scope))?;
             env.declare("binary", Value::Type(ValueType::Binary))?;
             env.declare("binary_stream", Value::Type(ValueType::BinaryInputStream))?;
-            env.declare("field", Value::Type(ValueType::Symbol))?;
             env.declare("empty", Value::Type(ValueType::Empty))?;
             env.declare("float", Value::Type(ValueType::Float))?;
             env.declare("integer", Value::Type(ValueType::Integer))?;

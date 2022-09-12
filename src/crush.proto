@@ -24,7 +24,6 @@ message Element {
         Closure closure = 9; // A Value::Command that is a closure
         bytes binary = 10; // A Value::binary
         Duration duration = 11; // A Value::Duration
-        string symbol = 12; // A Value::Symbol
         string glob = 13; // A Value::Glob
         string regex = 14; // A Value::RegEx
         Scope user_scope = 15; // A Value::Scope

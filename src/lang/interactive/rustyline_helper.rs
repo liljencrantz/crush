@@ -11,9 +11,9 @@ use std::cmp::min;
 use crate::lang::ast::TokenType;
 use crate::lang::value::Value;
 use crate::util::directory_lister::directory_lister;
-use crate::lang::data::scope::Scope;
+use crate::lang::state::scope::Scope;
 use rustyline_derive::Helper;
-use crate::lang::global_state::GlobalState;
+use crate::lang::state::global_state::GlobalState;
 
 #[derive(Helper)]
 pub struct RustylineHelper {

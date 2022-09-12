@@ -1,9 +1,8 @@
 use crate::lang::errors::{error, CrushResult};
-use crate::lang::execution_context::CommandContext;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::data::table::{Row, ColumnVec};
 use signature::signature;
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::value::Symbol;
 use std::collections::HashSet;
 
 #[signature(
@@ -16,7 +15,7 @@ output = Unknown,
 )]
 pub struct Drop {
     #[unnamed()]
-    drop: Vec<Symbol>,
+    drop: Vec<String>,
 }
 
 fn drop(context: CommandContext) -> CrushResult<()> {

@@ -1,6 +1,6 @@
 use crate::lang::errors::{to_crush_error, CrushResult};
 use crate::lang::job::Job;
-use crate::lang::data::scope::Scope;
+use crate::lang::state::scope::Scope;
 use crate::lang::ast::{TokenNode, JobListNode, TokenType};
 use std::sync::{Arc, Mutex};
 

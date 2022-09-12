@@ -1,10 +1,11 @@
 use crate::lang::errors::to_crush_error;
 use crate::lang::execute;
 use crate::lang::pipe::ValueSender;
-use crate::lang::{errors::CrushResult, data::scope::Scope};
+use crate::lang::errors::CrushResult;
 use std::fs::read_dir;
 use std::path::Path;
-use crate::lang::global_state::GlobalState;
+use crate::lang::state::global_state::GlobalState;
+use crate::lang::state::scope::Scope;
 
 #[macro_use]
 pub mod binary_op;

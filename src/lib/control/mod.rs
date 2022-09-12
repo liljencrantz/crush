@@ -1,7 +1,7 @@
-use crate::lang::errors::{argument_error_legacy, to_crush_error, CrushResult, mandate, data_error};
-use crate::lang::data::scope::Scope;
+use crate::lang::errors::{argument_error_legacy, CrushResult, data_error, mandate, to_crush_error};
+use crate::lang::state::scope::Scope;
 use crate::lang::{
-    data::binary::BinaryReader, execution_context::CommandContext, data::list::List, value::Value,
+    data::binary::BinaryReader, data::list::List, value::Value,
     value::ValueType,
 };
 use signature::signature;
@@ -11,11 +11,12 @@ use crate::lang::command::OutputType::Known;
 use chrono::Duration;
 use std::path::PathBuf;
 use crate::lang::data::table::{ColumnType, Row};
-use std::io::{Write, Read};
+use std::io::{Read, Write};
 use std::process::Stdio;
 use std::borrow::BorrowMut;
 use crate::lang::value::Value::BinaryInputStream;
 use os_pipe::PipeReader;
+use crate::lang::state::contexts::CommandContext;
 
 mod r#for;
 mod r#if;

@@ -1,8 +1,8 @@
 use crate::lang::errors::{error, CrushResult};
-use crate::lang::execution_context::CommandContext;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::data::table::ColumnVec;
 use crate::lang::data::table::Row;
-use crate::lang::value::{Symbol, Value};
+use crate::lang::value::Value;
 use std::collections::HashSet;
 use signature::signature;
 use crate::lang::command::OutputType::Passthrough;
@@ -13,7 +13,7 @@ output = Passthrough,
 short = "Only output the first row if multiple rows has the same value for the specified column",
 example = "ps | uniq user")]
 pub struct Uniq {
-    field: Option<Symbol>,
+    field: Option<String>,
 }
 
 pub fn uniq(context: CommandContext) -> CrushResult<()> {

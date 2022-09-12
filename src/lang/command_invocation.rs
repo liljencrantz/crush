@@ -1,9 +1,9 @@
 use crate::lang::errors::{CrushResult, error};
-use crate::lang::execution_context::{CompileContext, JobContext};
-use crate::lang::data::scope::Scope;
+use crate::lang::state::contexts::{CompileContext, JobContext};
+use crate::lang::state::scope::Scope;
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentEvaluator, value::Value};
 use crate::lang::command::Command;
-use crate::lang::execution_context::CommandContext;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::{ValueDefinition, ValueType};
 use std::path::PathBuf;
 use std::fmt::{Display, Formatter};

@@ -19,7 +19,7 @@ use std::io::{BufReader, Read};
 use std::thread;
 use chrono::Duration;
 use crate::util::hex::to_hex;
-use crate::lang::global_state::GlobalState;
+use crate::lang::state::global_state::GlobalState;
 use num_format::Grouping;
 
 pub fn create_pretty_printer(

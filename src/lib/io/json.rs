@@ -1,12 +1,12 @@
-use crate::lang::execution_context::CommandContext;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::errors::CrushError;
 use crate::lang::{data::table::Row, value::Value, value::ValueType};
 use std::io::{BufReader, Write};
 
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::errors::{error, mandate, to_crush_error, CrushResult};
-use crate::lang::files::Files;
-use crate::lang::data::scope::ScopeLoader;
+use crate::lang::signature::files::Files;
+use crate::lang::state::scope::ScopeLoader;
 use crate::lang::data::table::ColumnType;
 use crate::lang::{data::list::List, data::r#struct::Struct, data::table::Table};
 use signature::signature;
@@ -89,7 +89,6 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
         )?)),
 
         Value::String(s) => Ok(serde_json::Value::from(s)),
-        Value::Symbol(s) => Ok(serde_json::Value::from(s)),
 
         Value::Integer(i) => Ok(serde_json::Value::from(to_crush_error(i64::try_from(i))?)),
 

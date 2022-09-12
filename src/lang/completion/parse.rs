@@ -3,7 +3,7 @@ use crate::lang::ast::{Node, CommandNode, JobListNode, JobNode};
 use crate::lang::errors::{error, CrushResult, mandate, argument_error_legacy, to_crush_error};
 use crate::lang::value::{ValueType, Value};
 use crate::lang::command::{Command, ArgumentDescription};
-use crate::lang::data::scope::Scope;
+use crate::lang::state::scope::Scope;
 use std::ops::Deref;
 use regex::Regex;
 use crate::util::glob::Glob;
@@ -231,7 +231,7 @@ fn fetch_value(node: &Node, scope: &Scope, is_command: bool) -> CrushResult<Opti
     match node {
         Node::Identifier(l) => scope.get(&l.string),
 
-        Node::Field(l) =>
+        Node::Symbol(l) =>
             if is_command {
                 scope.get(&l.string)
             } else {
@@ -277,7 +277,7 @@ fn parse_previous_argument(arg: &Node) -> PreviousArgument {
     match arg {
         Node::Assignment(key, op, value) => {
             match (key.as_ref(), op.as_str()) {
-                (Node::Field(name), "=") => {
+                (Node::Symbol(name), "=") => {
                     let inner = parse_previous_argument(value.as_ref());
                     return PreviousArgument {
                         name: Some(name.string.clone()),
@@ -320,7 +320,7 @@ pub fn parse(
                         Ok(ParseResult::PartialLabel(
                             label.prefix(cursor).string)),
 
-                    Node::Field(label) =>
+                    Node::Symbol(label) =>
                         Ok(ParseResult::PartialField(
                             label.prefix(cursor).string)),
 
@@ -379,7 +379,7 @@ pub fn parse(
 
             if argument_complete {
                 match arg.deref() {
-                    Node::Field(l) => {
+                    Node::Symbol(l) => {
                         let substring = &l.string[0..min(l.string.len(), cursor - l.location.start)];
                         Ok(ParseResult::PartialArgument(
                             PartialCommandResult {
@@ -406,7 +406,7 @@ pub fn parse(
                                 }
                             )),
 
-                        Node::Field(l) =>
+                        Node::Symbol(l) =>
                             Ok(ParseResult::PartialArgument(
                                 PartialCommandResult {
                                     command: c,

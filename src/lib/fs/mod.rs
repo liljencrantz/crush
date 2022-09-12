@@ -1,14 +1,14 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{to_crush_error, CrushResult, error};
-use crate::lang::execution_context::CommandContext;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::help::Help;
 use crate::lang::printer::Printer;
-use crate::lang::data::scope::Scope;
+use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use crate::util::file::{cwd, home};
 use signature::signature;
-use crate::lang::files::Files;
+use crate::lang::signature::files::Files;
 use std::path::PathBuf;
 use std::convert::TryFrom;
 
@@ -104,7 +104,7 @@ members of a value, write "dir <value>".
         }
         Some(v) => {
             match v {
-                Value::Symbol(f) => match &context.scope.get_calling_scope()?.get(&f)? {
+                Value::String(f) => match &context.scope.get_calling_scope()?.get(&f)? {
                     None => error(format!("Unknown identifier {}", &f))?,
                     Some(v) => halp(v, &context.global_state.printer()),
                 },

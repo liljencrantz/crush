@@ -2,16 +2,16 @@ use crate::lang::argument::Argument;
 use crate::lang::command::Command;
 use crate::lang::data::dict::Dict;
 use crate::lang::data::list::List;
-use crate::lang::data::r#struct::Struct;
-use crate::lang::data::scope::Scope;
+use crate::data::r#struct::Struct;
+use crate::lang::state::scope::Scope;
 use crate::lang::data::table::Table;
 use crate::lang::errors::{argument_error_legacy, error, CrushResult};
-use crate::lang::global_state::{GlobalState, JobHandle};
+use crate::lang::state::global_state::{GlobalState, JobHandle};
 use crate::lang::pipe::{
     black_hole, empty_channel, InputStream, OutputStream, ValueReceiver, ValueSender,
 };
 use crate::lang::printer::Printer;
-use crate::lang::value::{Symbol, Value, ValueType};
+use crate::lang::value::{Value, ValueType};
 use crate::util::glob::Glob;
 use crate::util::replace::Replace;
 use chrono::{DateTime, Duration, Local};
@@ -27,7 +27,6 @@ pub trait ArgumentVector {
     fn string(&mut self, idx: usize) -> CrushResult<String>;
     fn integer(&mut self, idx: usize) -> CrushResult<i128>;
     fn float(&mut self, idx: usize) -> CrushResult<f64>;
-    fn symbol(&mut self, idx: usize) -> CrushResult<Symbol>;
     fn file(&mut self, idx: usize) -> CrushResult<PathBuf>;
     fn command(&mut self, idx: usize) -> CrushResult<Command>;
     fn r#type(&mut self, idx: usize) -> CrushResult<ValueType>;
@@ -40,7 +39,6 @@ pub trait ArgumentVector {
     fn optional_integer(&mut self, idx: usize) -> CrushResult<Option<i128>>;
     fn optional_string(&mut self, idx: usize) -> CrushResult<Option<String>>;
     fn optional_command(&mut self, idx: usize) -> CrushResult<Option<Command>>;
-    fn optional_symbol(&mut self, idx: usize) -> CrushResult<Option<Symbol>>;
     fn optional_value(&mut self, idx: usize) -> CrushResult<Option<Value>>;
 }
 
@@ -133,7 +131,6 @@ impl ArgumentVector for Vec<Argument> {
     argument_getter!(string, String, String, "string");
     argument_getter!(integer, i128, Integer, "integer");
     argument_getter!(float, f64, Float, "float");
-    argument_getter!(symbol, Symbol, Symbol, "field");
     argument_getter!(command, Command, Command, "command");
     argument_getter!(r#type, ValueType, Type, "type");
     argument_getter!(glob, Glob, Glob, "glob");
@@ -163,7 +160,6 @@ impl ArgumentVector for Vec<Argument> {
     optional_argument_getter!(optional_bool, bool, bool);
     optional_argument_getter!(optional_integer, i128, integer);
     optional_argument_getter!(optional_string, String, string);
-    optional_argument_getter!(optional_symbol, Symbol, symbol);
     optional_argument_getter!(optional_command, Command, command);
     optional_argument_getter!(optional_value, Value, value);
 }

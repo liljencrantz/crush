@@ -69,7 +69,6 @@ pub struct JobHandle {
 }
 
 impl JobHandle {
-
     pub fn id(&self) -> JobId {
         self.internal.lock().unwrap().id
     }

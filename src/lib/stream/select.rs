@@ -1,6 +1,6 @@
 use crate::lang::command::Command;
 use crate::lang::errors::error;
-use crate::lang::execution_context::CommandContext;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::pipe::{pipe, Stream};
 use crate::lang::data::table::ColumnVec;
 use crate::{
@@ -153,7 +153,7 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
                             )),
                         }
                     }
-                    (None, Value::Symbol(name)) => {
+                    (None, Value::String(name)) => {
                         match (copy, input_type.find(name.as_ref())) {
                             (false, Ok(idx)) => columns
                                 .push((Action::Append(name.clone()), Source::Argument(idx))),

@@ -1,13 +1,13 @@
 use lazy_static::lazy_static;
 use crate::lang::errors::CrushResult;
-use crate::lang::execution_context::CommandContext;
-use crate::lang::data::scope::Scope;
+use crate::lang::state::contexts::CommandContext;
+use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use crate::lang::command::OutputType::Known;
 use signature::signature;
 use crate::data::table::{ColumnType, Row};
-use crate::lang::number::Number;
+use crate::lang::signature::number::Number;
 
 #[signature(
 float,
