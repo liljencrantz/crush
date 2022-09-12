@@ -291,7 +291,7 @@ fn collect(mut context: CommandContext) -> CrushResult<()> {
                         _ => argument_error("Columns not found", context.arguments[0].location)
                     }
                 }
-                _ => argument_error("Expected arguments of type symbol", context.arguments[0].location),
+                _ => argument_error("Expected arguments of type string", context.arguments[0].location),
             }
         }
         _ => argument_error("Expected two arguments", context.arguments[0].location),

@@ -203,7 +203,6 @@ message Type {
         COMMAND = 4;
         BINARY = 5;
         DURATION = 6;
-        SYMBOL = 7;
         GLOB = 8;
         REGEX = 9;
         SCOPE = 10;
