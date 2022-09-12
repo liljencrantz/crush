@@ -26,7 +26,7 @@ lazy_static! {
             "Return a new glob",
             None,
             Known(ValueType::Glob),
-            vec![],
+            [],
         );
         res.declare(
             full("match"),
@@ -36,7 +36,7 @@ lazy_static! {
             "True if the io matches the pattern",
             None,
             Known(ValueType::Bool),
-            vec![],
+            [],
         );
         res.declare(
             full("not_match"),
@@ -46,7 +46,7 @@ lazy_static! {
             "True if the io does not match the pattern",
             None,
             Known(ValueType::Bool),
-            vec![],
+            [],
         );
         res.declare(
             full("files"),
@@ -56,7 +56,7 @@ lazy_static! {
             "Perform file matching of this glob",
             None,
             Known(ValueType::List(Box::from(ValueType::File))),
-            vec![],
+            [],
         );
         res
     };

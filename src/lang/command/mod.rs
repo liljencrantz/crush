@@ -87,7 +87,7 @@ pub trait TypeMap {
         short_help: &'static str,
         long_help: Option<&'static str>,
         output: OutputType,
-        arguments: Vec<ArgumentDescription>,
+        arguments: impl Into<Vec<ArgumentDescription>>,
     );
 }
 
@@ -101,14 +101,14 @@ impl TypeMap for OrderedMap<String, Command> {
         short_help: &'static str,
         long_help: Option<&'static str>,
         output: OutputType,
-        arguments: Vec<ArgumentDescription>,
+        arguments: impl Into<Vec<ArgumentDescription>>,
     ) {
         self.insert(
             path[path.len() - 1].to_string(),
             <dyn CrushCommand>::command(
                 call,
                 can_block,
-                path,
+                &path,
                 signature,
                 short_help,
                 long_help,
@@ -153,22 +153,22 @@ impl dyn CrushCommand {
     pub fn command(
         call: fn(context: CommandContext) -> CrushResult<()>,
         can_block: bool,
-        mut full_name: Vec<impl Into<String>>,
+        full_name: impl IntoIterator<Item = impl AsRef<str>>,
         signature: &'static str,
         short_help: &'static str,
         long_help: Option<&'static str>,
         output: OutputType,
-        arguments: Vec<ArgumentDescription>,
+        arguments: impl Into<Vec<ArgumentDescription>>,
     ) -> Command {
         Box::from(SimpleCommand {
             call,
             can_block,
-            full_name: full_name.drain(..).map(|a| {a.into()}).collect(),
+            full_name: full_name.into_iter().map(|a| {a.as_ref().to_string()}).collect(),
             signature,
             short_help,
             long_help,
             output,
-            arguments,
+            arguments: arguments.into(),
         })
     }
 

@@ -985,14 +985,12 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                         crate::lang::command::CrushCommand::command(
                             #command_invocation,
                             #can_block,
-                            full.iter().map(|e| e.to_string()).collect(),
+                            full,
                             #signature_literal,
                             #description,
                             #long_description,
                             #output,
-                            vec![
-                                #argument_desciptions
-                            ],
+                            [#argument_desciptions],
                         )
                     );
                 }

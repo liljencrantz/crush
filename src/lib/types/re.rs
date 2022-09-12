@@ -26,7 +26,7 @@ lazy_static! {
             "True if the io matches the pattern",
             None,
             Known(ValueType::Bool),
-            vec![],
+            [],
         );
         res.declare(
             full("not_match"),
@@ -36,7 +36,7 @@ lazy_static! {
             "True if the io does not match the pattern",
             None,
             Known(ValueType::Bool),
-            vec![],
+            [],
         );
         ReplaceSignature::declare_method(&mut res, &path);
         ReplaceAllSignature::declare_method(&mut res, &path);
@@ -48,7 +48,7 @@ lazy_static! {
             "Create a new regular expression instance",
             None,
             Known(ValueType::Regex),
-            vec![],
+            [],
         );
         res
     };

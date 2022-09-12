@@ -37,7 +37,7 @@ lazy_static! {
     my_dict := (dict string integer):new"#,
             ),
             Unknown,
-            vec![],
+            [],
         );
         res.declare(
             full("collect"),
@@ -47,7 +47,7 @@ lazy_static! {
             "Create a new dict by reading the specified columns from the input",
             None,
             Unknown,
-            vec![],
+            [],
         );
         res.declare(
             full("__setitem__"),
@@ -57,7 +57,7 @@ lazy_static! {
             "Create a new mapping or replace an existing one",
             None,
             Unknown,
-            vec![],
+            [],
         );
         res.declare(
             full("__getitem__"),
@@ -67,7 +67,7 @@ lazy_static! {
             "Return the value the specified key is mapped to",
             None,
             Unknown,
-            vec![],
+            [],
         );
         res.declare(
             full("contains"),
@@ -77,7 +77,7 @@ lazy_static! {
             "Returns true if the key is in the dict",
             None,
             Unknown,
-            vec![],
+            [],
         );
         res.declare(
             full("remove"),
@@ -87,7 +87,7 @@ lazy_static! {
             "Remove a mapping from the dict",
             None,
             Unknown,
-            vec![],
+            [],
         );
         res
     };

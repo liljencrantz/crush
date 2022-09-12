@@ -22,7 +22,7 @@ lazy_static! {
             "Return the specified member",
             None,
             Unknown,
-            vec![],
+            [],
         );
         res
     };

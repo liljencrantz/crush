@@ -24,7 +24,7 @@ lazy_static! {
             "Add the specified delta or time to this duration",
             None,
             Unknown,
-            vec![],
+            [],
             );
         res.declare(full("__sub__"),
             sub, false,
@@ -32,7 +32,7 @@ lazy_static! {
             "Remove the specified delta from this duration",
             None,
             Known(ValueType::Duration),
-            vec![],
+            [],
             );
         res.declare(full("__mul__"),
             mul, false,
@@ -40,7 +40,7 @@ lazy_static! {
             "Multiply this duration by the specified factor",
             None,
             Known(ValueType::Duration),
-            vec![],
+            [],
             );
         res.declare(full("__div__"),
             div, false,
@@ -48,7 +48,7 @@ lazy_static! {
             "Divide this duration by the specified divisor",
             None,
             Known(ValueType::Duration),
-            vec![],
+            [],
             );
         Of::declare_method(&mut res, &path);
         res.declare(
@@ -57,7 +57,7 @@ lazy_static! {
             "Negate this duration",
             None,
             Known(ValueType::Duration),
-            vec![],
+            [],
             );
         res
     };

@@ -23,7 +23,7 @@ lazy_static! {
             "Add this number and the specified term",
             None,
             Known(ValueType::Float),
-            vec![],
+            [],
         );
         res.declare(
             full("__sub__"),
@@ -33,7 +33,7 @@ lazy_static! {
             "Subtract the specified term from this number",
             None,
             Known(ValueType::Float),
-            vec![],
+            [],
         );
         res.declare(
             full("__mul__"),
@@ -43,7 +43,7 @@ lazy_static! {
             "Multiply this number by the specified factor",
             None,
             Known(ValueType::Float),
-            vec![],
+            [],
         );
         res.declare(
             full("__div__"),
@@ -53,7 +53,7 @@ lazy_static! {
             "Divide this number by the specified factor",
             None,
             Known(ValueType::Float),
-            vec![],
+            [],
         );
         res.declare(
             full("__neg__"),
@@ -63,7 +63,7 @@ lazy_static! {
             "Negate this integer",
             None,
             Known(ValueType::Float),
-            vec![],
+            [],
         );
         res.declare(
             full("is_finite"),
@@ -73,7 +73,7 @@ lazy_static! {
             "True if this float is positive or negative infinity",
             None,
             Known(ValueType::Bool),
-            vec![],
+            [],
         );
         res.declare(
             full("is_nan"),
@@ -83,7 +83,7 @@ lazy_static! {
             "True if this float is NaN",
             None,
             Known(ValueType::Bool),
-            vec![],
+            [],
         );
         res.declare(
             full("max"),
@@ -93,7 +93,7 @@ lazy_static! {
             "Largest finite float value",
             None,
             Known(ValueType::Float),
-            vec![],
+            [],
         );
         res.declare(
             full("min"),
@@ -103,7 +103,7 @@ lazy_static! {
             "Smallest finite float value",
             None,
             Known(ValueType::Float),
-            vec![],
+            [],
         );
         res.declare(
             full("nan"),
@@ -113,7 +113,7 @@ lazy_static! {
             "Not a Number",
             None,
             Known(ValueType::Float),
-            vec![],
+            [],
         );
         res.declare(
             full("infinity"),
@@ -123,7 +123,7 @@ lazy_static! {
             "Infinity",
             None,
             Known(ValueType::Float),
-            vec![],
+            [],
         );
         res
     };

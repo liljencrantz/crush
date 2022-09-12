@@ -26,7 +26,7 @@ lazy_static! {
             "Add the specified delta to this time",
             None,
             Known(ValueType::Time),
-            vec![],
+            [],
         );
         res.declare(
             full("__sub__"),
@@ -36,7 +36,7 @@ lazy_static! {
             "Remove the specified delta from this time",
             None,
             Known(ValueType::Time),
-            vec![],
+            [],
         );
         Now::declare_method(&mut res, &path);
         Parse::declare_method(&mut res, &path);

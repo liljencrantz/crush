@@ -133,15 +133,15 @@ fn unary_operator_method(op: &str, op_location: Location, n: Box<Node>) -> Box<N
 
 pub fn operator(op: TrackedString, l: Box<Node>, r: Box<Node>) -> Box<Node> {
     match op.string.as_str() {
-        "<" => operator_function(&vec!["global", "comp", "lt"], op.location, l, r),
-        "<=" => operator_function(&vec!["global", "comp", "lte"], op.location, l, r),
-        ">" => operator_function(&vec!["global", "comp", "gt"], op.location, l, r),
-        ">=" => operator_function(&vec!["global", "comp", "gte"], op.location, l, r),
-        "==" => operator_function(&vec!["global", "comp", "eq"], op.location, l, r),
-        "!=" => operator_function(&vec!["global", "comp", "neq"], op.location, l, r),
+        "<" => operator_function(&["global", "comp", "lt"], op.location, l, r),
+        "<=" => operator_function(&["global", "comp", "lte"], op.location, l, r),
+        ">" => operator_function(&["global", "comp", "gt"], op.location, l, r),
+        ">=" => operator_function(&["global", "comp", "gte"], op.location, l, r),
+        "==" => operator_function(&["global", "comp", "eq"], op.location, l, r),
+        "!=" => operator_function(&["global", "comp", "neq"], op.location, l, r),
 
-        "and" => operator_function(&vec!["global", "cond", "__and__"], op.location, l, r),
-        "or" => operator_function(&vec!["global", "cond", "__or__"], op.location, l, r),
+        "and" => operator_function(&["global", "cond", "__and__"], op.location, l, r),
+        "or" => operator_function(&["global", "cond", "__or__"], op.location, l, r),
 
         "+" => operator_method("__add__", op.location, l, r),
         "-" => operator_method("__sub__", op.location, l, r),
@@ -159,9 +159,9 @@ pub fn operator(op: TrackedString, l: Box<Node>, r: Box<Node>) -> Box<Node> {
 
 pub fn unary_operator(op: TrackedString, n: Box<Node>) -> Box<Node> {
     match op.string.as_str() {
-        "typeof" => unary_operator_function(&vec!["global", "types", "__typeof__"], op.location, n),
+        "typeof" => unary_operator_function(&["global", "types", "__typeof__"], op.location, n),
         "neg" => unary_operator_method("__neg__", op.location, n),
-        "not" => unary_operator_function(&vec!["global", "comp", "__not__"], op.location, n),
+        "not" => unary_operator_function(&["global", "comp", "__not__"], op.location, n),
 
         _ => panic!("Unknown operator {}", &op.string),
     }

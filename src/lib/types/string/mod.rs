@@ -33,7 +33,7 @@ lazy_static! {
                 "Format arguments into a string",
                 None,
                 Known(ValueType::String),
-                vec![],
+                [],
             );
             Join::declare_method(&mut res, &path);
             LPad::declare_method(&mut res, &path);

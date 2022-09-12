@@ -17,23 +17,23 @@ lazy_static! {
     static ref CLOSE: Value =
         Value::Command(<dyn CrushCommand>::command(
             close, false,
-            vec!["global", "types", "pipe", "close"],
+            &["global", "types", "pipe", "close"],
             "pipe:close",
             "Close the specified pipe",
             None,
             Known(ValueType::Empty),
-            vec![],
+            [],
         ));
 
         static ref WRITE: Value =
         Value::Command(<dyn CrushCommand>::command(
             write, true,
-            vec!["global", "types", "pipe", "write"],
+            &["global", "types", "pipe", "write"],
             "pipe:write",
             "Write sink for this pipe",
             None,
             Known(ValueType::Empty),
-            vec![],
+            [],
         ));
 
     pub static ref METHODS: OrderedMap<String, Command> = {

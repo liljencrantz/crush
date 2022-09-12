@@ -84,14 +84,14 @@ impl ScopeLoader {
         short_help: &'static str,
         long_help: Option<&'static str>,
         output: OutputType,
-        arguments: Vec<ArgumentDescription>,
+        arguments: impl Into<Vec<ArgumentDescription>>,
     ) -> CrushResult<()> {
         let mut full_name = self.path.clone();
         full_name.push(name.to_string());
         let command = <dyn CrushCommand>::command(
             call,
             can_block,
-            full_name,
+            &full_name,
             signature,
             short_help,
             long_help,
