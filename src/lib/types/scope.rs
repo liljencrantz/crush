@@ -104,9 +104,9 @@ struct All {}
 
 fn __all__(mut context: CommandContext) -> CrushResult<()> {
     let scope = context.this.scope()?;
-    context.output.send(Value::List(
+    context.output.send(
         List::new(ValueType::String,
-        scope.dump()?.iter().map(|e| {Value::string(e.0)}).collect())))
+        scope.dump()?.iter().map(|e| {Value::string(e.0)}).collect::<Vec<_>>()).into())
 }
 
 #[signature(
@@ -119,9 +119,9 @@ struct Local {}
 
 fn __local__(mut context: CommandContext) -> CrushResult<()> {
     let scope = context.this.scope()?;
-    context.output.send(Value::List(
+    context.output.send(
         List::new(ValueType::String,
-                  scope.dump_local()?.iter().map(|e| {Value::string(e.0)}).collect())))
+                  scope.dump_local()?.iter().map(|e| {Value::string(e.0)}).collect::<Vec<_>>()).into())
 }
 
 #[signature(
@@ -163,5 +163,5 @@ struct Use {}
 fn __use__(mut context: CommandContext) -> CrushResult<()> {
     let scope = context.this.scope()?;
     context.output.send(
-        Value::List(List::new(ValueType::Scope, scope.get_use().drain(..).map(|s| {Value::Scope(s)}).collect())))
+        List::new(ValueType::Scope, scope.get_use().drain(..).map(|s| {Value::Scope(s)}).collect::<Vec<_>>()).into())
 }

@@ -136,11 +136,10 @@ struct Nameserver {}
 fn nameserver(mut context: CommandContext) -> CrushResult<()> {
     let rc = resolv_conf()?;
     context.output.send(
-        Value::List(List::new(
+        List::new(
             ValueType::String,
-            rc.nameservers.iter().map(|n| {Value::String(n.to_string())}).collect()
-        )))
-
+            rc.nameservers.iter().map(|n| {Value::String(n.to_string())}).collect::<Vec<_>>()
+        ).into())
 }
 
 #[signature(
@@ -153,12 +152,12 @@ struct Search {}
 fn search(mut context: CommandContext) -> CrushResult<()> {
     let rc = resolv_conf()?;
     context.output.send(
-        Value::List(List::new(
+        List::new(
             ValueType::String,
             rc.get_search()
                 .map(|s|{s.iter().map(|n| {Value::String(n.to_string())}).collect()})
                 .unwrap_or(vec![])
-        ))
+        ).into()
     )
 }
 

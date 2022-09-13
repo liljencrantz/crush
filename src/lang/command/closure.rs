@@ -638,7 +638,7 @@ impl Closure {
         if let Some(unnamed_name) = unnamed_name {
             context.env.redeclare(
                 unnamed_name.string.as_ref(),
-                Value::List(List::new(ValueType::Any, unnamed)),
+                List::new(ValueType::Any, unnamed).into(),
             )?;
         } else if !unnamed.is_empty() {
             return argument_error_legacy("No target for unnamed arguments");

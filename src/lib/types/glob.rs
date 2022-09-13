@@ -83,8 +83,8 @@ fn files(mut context: CommandContext) -> CrushResult<()> {
     let g = context.this.glob()?;
     let mut files = Vec::new();
     g.glob_files(&cwd()?, &mut files)?;
-    context.output.send(Value::List(List::new(
+    context.output.send(List::new(
         ValueType::File,
-        files.drain(..).map(|f| Value::File(f)).collect(),
-    )))
+        files.drain(..).map(|f| Value::File(f)).collect::<Vec<_>>(),
+    ).into())
 }

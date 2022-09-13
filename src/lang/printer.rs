@@ -3,6 +3,11 @@ use crossbeam::bounded;
 use crossbeam::Sender;
 use crossbeam::Receiver;
 use std::thread;
+use crate::lang::printer::PrinterMessage::*;
+use std::thread::JoinHandle;
+use termion::terminal_size;
+use std::cmp::max;
+use crate::lang::ast::location::Location;
 
 enum PrinterMessage {
     Ping,
@@ -11,12 +16,6 @@ enum PrinterMessage {
     Line(String),
     //    Lines(Vec<String>),
 }
-
-use crate::lang::printer::PrinterMessage::*;
-use std::thread::JoinHandle;
-use termion::terminal_size;
-use std::cmp::max;
-use crate::lang::ast::location::Location;
 
 #[derive(Clone)]
 pub struct Printer {

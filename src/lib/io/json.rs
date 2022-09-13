@@ -61,10 +61,10 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
                                 row_list,
                             )))
                         }
-                        _ => Ok(Value::List(List::new(list_type.clone(), lst))),
+                        _ => Ok(List::new(list_type.clone(), lst).into()),
                     }
                 }
-                _ => Ok(Value::List(List::new(ValueType::Any, lst))),
+                _ => Ok(List::new(ValueType::Any, lst).into()),
             }
         }
         serde_json::Value::Object(o) => Ok(Value::Struct(Struct::new(

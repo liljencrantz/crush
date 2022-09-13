@@ -19,7 +19,7 @@ impl Serializable<List> for List {
                 if let element::Element::List(l) = elements[id].element.as_ref().unwrap() {
                     let element_type =
                         ValueType::deserialize(l.element_type as usize, elements, state)?;
-                    let list = List::new(element_type, vec![]);
+                    let list = List::new(element_type, []);
                     state.lists.insert(id, list.clone());
 
                     for el_id in &l.elements {

@@ -104,10 +104,10 @@ fn split(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Split = Split::parse(context.arguments, &context.global_state.printer())?;
     let this = context.this.string()?;
 
-    context.output.send(Value::List(List::new(
+    context.output.send(List::new(
         ValueType::String,
-        this.split(&cfg.separator).map(|s| Value::string(s)).collect(),
-    )))
+        this.split(&cfg.separator).map(|s| Value::string(s)).collect::<Vec<_>>(),
+    ).into())
 }
 
 #[signature(

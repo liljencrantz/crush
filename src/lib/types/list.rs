@@ -173,7 +173,7 @@ fn repeat(context: CommandContext) -> CrushResult<()> {
     }
     context
         .output
-        .send(Value::List(List::new(cfg.item.value_type(), l)))
+        .send(List::new(cfg.item.value_type(), l).into())
 }
 
 #[signature(
@@ -244,7 +244,7 @@ fn collect(mut context: CommandContext) -> CrushResult<()> {
             }
             context
                 .output
-                .send(Value::List(List::new(input_type[0].cell_type.clone(), lst)))
+                .send(List::new(input_type[0].cell_type.clone(), lst).into())
         }
         1 => {
             match &context.arguments[0].value {
@@ -256,7 +256,7 @@ fn collect(mut context: CommandContext) -> CrushResult<()> {
                             }
                             context
                                 .output
-                                .send(Value::List(List::new(input_type[idx].cell_type.clone(), lst)))
+                                .send(List::new(input_type[idx].cell_type.clone(), lst).into())
                         }
                         _ => argument_error("Column not found", context.arguments[0].location)
                     }
@@ -271,7 +271,7 @@ fn collect(mut context: CommandContext) -> CrushResult<()> {
 fn new(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     match context.this.r#type()? {
-        ValueType::List(t) => context.output.send(Value::List(List::new(*t, vec![]))),
+        ValueType::List(t) => context.output.send(List::new(*t, []).into()),
         _ => argument_error_legacy("Expected this to be a list type"),
     }
 }

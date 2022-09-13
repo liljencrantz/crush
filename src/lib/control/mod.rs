@@ -206,7 +206,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "control",
         "Commands for flow control, (loops, etc)",
         Box::new(move |env| {
-            let path = List::new(ValueType::File, vec![]);
+            let path = List::new(ValueType::File, []);
             to_crush_error(env::var("PATH").map(|v| {
                 let mut dirs: Vec<Value> = v
                     .split(':')

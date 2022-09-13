@@ -516,7 +516,7 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
                 } else {
                     ValueType::Any
                 };
-                Value::List(List::new(list_type, res))
+                List::new(list_type, res).into()
             }
         }
         ArgType::Variant => {
@@ -548,7 +548,7 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
                     Err(e) => if e.is_eof() { break; } else { return Err(e); },
                 }
             }
-            Value::List(List::new(ValueType::Any, res))
+            List::new(ValueType::Any, res).into()
         }
         ArgType::ObjectPath => panic!("unimplemented"),
         ArgType::Signature => panic!("unimplemented"),
@@ -685,13 +685,13 @@ fn service_call(mut context: CommandContext) -> CrushResult<()> {
             let dbus = DBusThing::new(to_crush_error(Connection::new_session())?);
             let mut objects = dbus.list_objects(&service)?;
             match (cfg.object, cfg.method) {
-                (None, None) => context.output.send(Value::List(List::new(
+                (None, None) => context.output.send(List::new(
                     ValueType::String,
-                    objects.drain(..).map(|d| Value::String(d.path)).collect(),
-                ))),
+                    objects.drain(..).map(|d| Value::String(d.path)).collect::<Vec<_>>(),
+                ).into()),
                 (Some(object), None) => {
                     let mut object = filter_object(objects, object)?;
-                    context.output.send(Value::List(List::new(
+                    context.output.send(List::new(
                         ValueType::String,
                         object
                             .interfaces
@@ -702,8 +702,8 @@ fn service_call(mut context: CommandContext) -> CrushResult<()> {
                                     .map(|m| Value::String(format!("{}.{}", &i.name, &m.name)))
                                     .collect::<Vec<_>>()
                             })
-                            .collect(),
-                    )))
+                            .collect::Vec<_>(),
+                    ).into())
                 }
                 (Some(object), Some(method)) => {
                     let object = filter_object(objects, object)?;

@@ -21,7 +21,7 @@ fn make_env() -> Value {
 }
 
 fn make_arguments() -> Value {
-    Value::List(List::new(ValueType::String, env::args().map(|a| {Value::string(a)}).collect()))
+    List::new(ValueType::String, env::args().map(|a| {Value::string(a)}).collect::<Vec<_>>()).into()
 }
 
 

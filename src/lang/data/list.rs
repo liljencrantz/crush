@@ -42,10 +42,10 @@ macro_rules! dump_to {
 }
 
 impl List {
-    pub fn new(cell_type: ValueType, cells: Vec<Value>) -> List {
+    pub fn new(cell_type: ValueType, cells: impl Into<Vec<Value>>) -> List {
         List {
             cell_type,
-            cells: Arc::from(Mutex::new(cells)),
+            cells: Arc::from(Mutex::new(cells.into())),
         }
     }
 
@@ -249,5 +249,11 @@ impl PartialOrd for List {
             return us.len().partial_cmp(&them.len());
         }
         Some(Ordering::Equal)
+    }
+}
+
+impl Into<Value> for List {
+    fn into(self) -> Value {
+        Value::List(self)
     }
 }

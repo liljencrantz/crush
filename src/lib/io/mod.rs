@@ -50,14 +50,14 @@ struct Dir {
 
 pub fn dir(context: CommandContext) -> CrushResult<()> {
     let cfg: Dir = Dir::parse(context.arguments, &context.global_state.printer())?;
-    context.output.send(Value::List(List::new(
+    context.output.send(List::new(
         ValueType::String,
         cfg.value
             .fields()
             .drain(..)
             .map(|n| Value::String(n))
-            .collect(),
-    )))
+            .collect::<Vec<_>>(),
+    ).into())
 }
 
 #[signature(echo, can_block = false, short = "Prints all arguments directly to the screen", output = Known(ValueType::Empty), example = "echo \"Hello, world!\"")]

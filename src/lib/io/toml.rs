@@ -53,10 +53,10 @@ fn from_toml(toml_value: &toml::Value) -> CrushResult<Value> {
                                 row_list,
                             )))
                         }
-                        _ => Ok(Value::List(List::new(list_type.clone(), lst))),
+                        _ => Ok(List::new(list_type.clone(), lst).into()),
                     }
                 }
-                _ => Ok(Value::List(List::new(ValueType::Any, lst))),
+                _ => Ok(List::new(ValueType::Any, lst).into()),
             }
         }
         toml::Value::Table(t) => Ok(Value::Struct(Struct::new(

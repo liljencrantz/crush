@@ -374,10 +374,10 @@ mod tests {
                     Argument::named("list_val", Value::string("a"), Location::new(0, 0)),
                     Argument::named(
                         "list_val",
-                        Value::List(List::new(
+                        List::new(
                             ValueType::String,
-                            vec![Value::string("b"), Value::string("c")],
-                        )),
+                            [Value::string("b"), Value::string("c")],
+                        ).into(),
                         Location::new(0, 0),
                     ),
                     Argument::named("list_val", Value::string("d"), Location::new(0, 0)),
