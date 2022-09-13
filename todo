@@ -22,5 +22,8 @@ pbuf:from command that takes a protobuf definition and uses it to deserialize pr
 avro:from command that deserializes avro data
 Add history command with all previous interactive invocations, including invocation string, current status, and misc metadata.
 Support __str__ method for string rendering
-dict:of
+dict:of?
 Avoid infinite loops when printing structs that reference each other
+getattr support?
+fix dynamic loading deadlocks
+Eager method evaluation in arguments?

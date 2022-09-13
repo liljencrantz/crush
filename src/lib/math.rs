@@ -18,33 +18,6 @@ macro_rules! math_fun {
     };
 }
 
-macro_rules! math_fun2 {
-    ($name:ident, $op:expr) => {
-        fn $name(mut context: CommandContext) -> CrushResult<()> {
-            context.arguments.check_len(2)?;
-            let x = match context.arguments.value(0)? {
-                Value::Float(f) => f,
-                Value::Integer(i) => i as f64,
-                v => {
-                    return argument_error_legacy(
-                        &format!("Expected a number, got a {}", v.value_type()),
-                    )
-                }
-            };
-            let y = match context.arguments.value(1)? {
-                Value::Float(f) => f,
-                Value::Integer(i) => i as f64,
-                v => {
-                    return argument_error_legacy(
-                        &format!("Expected a number, got a {}", v.value_type()),
-                    )
-                }
-            };
-            context.output.send(Value::Float($op(x, y)))
-        }
-    };
-}
-
 #[signature(
 sin,
 output = Known(ValueType::Float),
@@ -93,7 +66,7 @@ math_fun!(asin, ASin, |x: f64| x.asin());
 #[signature(
 acos,
 output = Known(ValueType::Float),
-short = "The arc cosineof  number.")]
+short = "The arc cosine of number.")]
 pub struct ACos {
     number: Number,
 }
@@ -135,8 +108,33 @@ pub struct Ln {
 }
 math_fun!(ln, Ln, |x: f64| x.ln());
 
-math_fun2!(pow, |x: f64, y: f64| x.powf(y));
-math_fun2!(log, |x: f64, y: f64| x.log(y));
+#[signature(
+log,
+output = Known(ValueType::Float),
+short = "The logarithm of number in base.")]
+pub struct Log {
+    number: Number,
+    base: Number,
+}
+
+fn log(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Log = Log::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.output.send(Value::Float(cfg.number.as_float().log(cfg.base.as_float())))
+}
+
+#[signature(
+pow,
+output = Known(ValueType::Float),
+short = "Raise the number to n.")]
+pub struct Pow {
+    base: Number,
+    n: Number,
+}
+
+fn pow(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Pow = Pow::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.output.send(Value::Float(cfg.base.as_float().powf(cfg.n.as_float())))
+}
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
@@ -153,26 +151,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Ln::declare(env)?;
             Floor::declare(env)?;
             Ceil::declare(env)?;
-            env.declare_command(
-                "pow",
-                pow,
-                false,
-                "math:pow number:float n:float",
-                "Raise the number to n",
-                None,
-                Known(ValueType::Float),
-                vec![],
-            )?;
-            env.declare_command(
-                "log",
-                log,
-                false,
-                "math:log number:float base:float",
-                "The logarithm of number in the specified base",
-                None,
-                Known(ValueType::Float),
-                vec![],
-            )?;
+            Log::declare(env)?;
+            Pow::declare(env)?;
             env.declare("pi", Value::Float(std::f64::consts::PI))?;
             env.declare("tau", Value::Float(std::f64::consts::PI * 2.0))?;
             env.declare("e", Value::Float(std::f64::consts::E))?;

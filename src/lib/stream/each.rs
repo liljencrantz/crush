@@ -14,14 +14,14 @@ can_block = true,
 output = Known(Empty),
 short = "Runs a command one for each row of input",
 long = "The columns of the row are exported to the environment using the column names.",
-example = "ps | where {status != \"Sleeping\"} | each {echo (\"{} is sleepy\":format $name)}")]
+example = "ps | where {$status != \"Sleeping\"} | each {echo (\"{} is sleepy\":format $name)}")]
 pub struct Each {
     #[description("the command to run.")]
     body: Command,
 }
 
 fn run(
-    condition: Command,
+    condition: &Command,
     location: Location,
     row: &Row,
     input_type: &[ColumnType],
@@ -50,7 +50,7 @@ pub fn each(context: CommandContext) -> CrushResult<()> {
             let base_context = context.empty();
 
             while let Ok(row) = input.read() {
-                match run(cfg.body.copy(), location, &row, input.types(), &base_context) {
+                match run(&cfg.body, location, &row, input.types(), &base_context) {
                     Ok(_) => (),
                     Err(e) => base_context.global_state.printer().crush_error(e),
                 }

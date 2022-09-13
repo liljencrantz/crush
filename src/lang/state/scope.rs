@@ -9,6 +9,7 @@ use ordered_map::OrderedMap;
 use std::cmp::max;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::fmt::{Display, Formatter};
+use ssh2::OpenType;
 
 /**
 This is where we store variables, including functions.
@@ -154,20 +155,20 @@ impl ScopeLoader {
 
 pub struct ScopeData {
     /** This is the parent scope used to perform variable name resolution. If a variable lookup
-          fails in the current scope, it proceeds to this scope. This is usually the scope in which this
-          scope was *created*.
+             fails in the current scope, it proceeds to this scope. This is usually the scope in which this
+             scope was *created*.
 
-          Not that when scopes are used as namespaces, they do not use this scope.
+             Not that when scopes are used as namespaces, they do not use this scope.
      */
     pub parent_scope: Option<Scope>,
 
     /** This is the scope in which the current scope was called. Since a closure can be called
-          from inside any scope, it need not be the same as the parent scope. This scope is the one used
-          for break/continue loop control, and it is also the scope that builds up the namespace hierarchy. */
+             from inside any scope, it need not be the same as the parent scope. This scope is the one used
+             for break/continue loop control, and it is also the scope that builds up the namespace hierarchy. */
     pub calling_scope: Option<Scope>,
 
     /** This is a list of scopes that are imported into the current scope. Anything directly inside
-          one of these scopes is also considered part of this scope. */
+             one of these scopes is also considered part of this scope. */
     pub uses: Vec<Scope>,
 
     /** The actual data of this scope. */
@@ -177,11 +178,11 @@ pub struct ScopeData {
     pub is_loop: bool,
 
     /** True if this scope should stop execution, i.e. if the continue or break commands have been
-          called.  */
+             called.  */
     pub is_stopped: bool,
 
     /** True if this scope can not be further modified. Note that mutable variables in it, e.g.
-          lists can still be modified. */
+             lists can still be modified. */
     pub is_readonly: bool,
 
     pub name: Option<String>,
@@ -669,27 +670,42 @@ impl Scope {
         }
     }
 
+    pub fn get_local(&self, name: &str) -> CrushResult<Option<Value>> {
+        let data = self.lock()?;
+        match lookup(name, self, &data) {
+            Some(v) => Ok(Some(v)),
+            None => Ok(None),
+        }
+    }
+
     pub fn r#use(&self, other: &Scope) {
         self.lock().unwrap().uses.push(other.clone());
     }
 
     pub fn dump(&self) -> CrushResult<OrderedMap<String, ValueType>> {
         let mut res = OrderedMap::new();
-        self.dump_internal(&mut res)?;
+        self.dump_internal(&mut res, true)?;
         Ok(res)
     }
 
-    fn dump_internal(&self, map: &mut OrderedMap<String, ValueType>) -> CrushResult<()> {
-        let p = self.lock()?.parent_scope.clone();
-        if let Some(p) = p {
-            p.dump_internal(map)?;
-        }
+    pub fn dump_local(&self) -> CrushResult<OrderedMap<String, ValueType>> {
+        let mut res = OrderedMap::new();
+        self.dump_internal(&mut res, false)?;
+        Ok(res)
+    }
 
-        let u = self.lock()?.uses.clone();
-        for u in u.iter().rev() {
-            u.dump_internal(map)?;
-        }
+    fn dump_internal(&self, map: &mut OrderedMap<String, ValueType>, recurse: bool) -> CrushResult<()> {
+        if recurse {
+            let p = self.lock()?.parent_scope.clone();
+            if let Some(p) = p {
+                p.dump_internal(map, true)?;
+            }
 
+            let u = self.lock()?.uses.clone();
+            for u in u.iter().rev() {
+                u.dump_internal(map, true)?;
+            }
+        }
         let data = self.lock()?;
         for (k, v) in data.mapping.iter() {
             map.insert(k.to_string(), v.value_type());
@@ -697,8 +713,20 @@ impl Scope {
         Ok(())
     }
 
-    pub fn readonly(&self) {
+    pub fn read_only(&self) {
         self.lock().unwrap().is_readonly = true;
+    }
+
+    pub fn is_read_only(&self) -> bool{
+        self.lock().unwrap().is_readonly
+    }
+
+    pub fn name(&self) -> Option<String> {
+        self.lock().unwrap().name.clone()
+    }
+
+    pub fn get_use(&self) -> Vec<Scope> {
+        self.lock().unwrap().uses.clone()
     }
 
     pub fn export(&self) -> CrushResult<ScopeData> {
@@ -709,6 +737,10 @@ impl Scope {
         self.lock().unwrap().parent_scope = parent;
     }
 
+    pub fn parent(&self) -> Option<Scope> {
+        self.lock().unwrap().parent_scope.clone()
+    }
+
     pub fn set_calling(&self, calling: Option<Scope>) {
         self.lock().unwrap().calling_scope = calling;
     }
@@ -717,7 +749,7 @@ impl Scope {
 impl Display for Scope {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut map = OrderedMap::new();
-        if let Err(_) = self.dump_internal(&mut map) {
+        if let Err(_) = self.dump_internal(&mut map, false) {
             return Err(std::fmt::Error {});
         }
 

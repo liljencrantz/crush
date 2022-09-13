@@ -122,14 +122,14 @@ pub fn declare(
     remote::declare(root)?;
     stream::declare(root)?;
     #[cfg(target_os = "linux")]
-        systemd::declare(root)?;
+    systemd::declare(root)?;
     term::declare(root)?;
     types::declare(root)?;
     user::declare(root)?;
     var::declare(root)?;
 
-    declare_external(root, global_state, output)?;
+//    declare_external(root, global_state, output)?;
 
-    root.readonly();
+    root.read_only();
     Ok(())
 }
