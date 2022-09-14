@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::command::TypeMap;
@@ -6,10 +7,12 @@ use crate::lang::state::contexts::{ArgumentVector, CommandContext, This};
 use crate::lang::value::Value;
 use crate::lang::{data::dict::Dict, value::ValueType};
 use lazy_static::lazy_static;
-use ordered_map::OrderedMap;
+use trust_dns_client::proto::xfer::FirstAnswer;
+use ordered_map::{Entry, OrderedMap};
 use signature::signature;
 use crate::data::table::ColumnVec;
 use crate::util::replace::Replace;
+use itertools::Itertools;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "dict", name]
@@ -26,6 +29,8 @@ lazy_static! {
         Clear::declare_method(&mut res, &path);
         KeyType::declare_method(&mut res, &path);
         ValueTypeMethod::declare_method(&mut res, &path);
+        Of::declare_method(&mut res, &path);
+        Join::declare_method(&mut res, &path);
         res.declare(
             full("new"),
             new,
@@ -146,6 +151,43 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
     }
 }
 
+#[signature(
+of,
+can_block = false,
+output = Unknown,
+short = "Create a new dict with the specified elements.",
+)]
+struct Of {}
+
+fn of(mut context: CommandContext) -> CrushResult<()> {
+    if context.arguments.len() % 2 == 1 {
+        return argument_error_legacy("Expected an even number of arguments");
+    }
+    if context.arguments.len() == 0 {
+        return argument_error_legacy("Expected at least one pair of arguments");
+    }
+
+    let mut key_types = HashSet::new();
+    let mut value_types = HashSet::new();
+    let mut entries = OrderedMap::new();
+
+    let mut arg = context.remove_arguments().into_iter();
+
+    while let Some((key, value)) = arg.next_tuple() {
+        key_types.insert(key.value.value_type());
+        value_types.insert(value.value.value_type());
+        entries.insert(key.value, value.value);
+    }
+
+    if key_types.len() != 1 {
+        return argument_error_legacy("Multiple key types specified in dict");
+    }
+    let key_type = key_types.drain().next().unwrap();
+    let value_type = if value_types.len() == 1 {value_types.drain().next().unwrap() } else {ValueType::Any};
+
+    context.output.send(Value::Dict(Dict::new_with_data(key_type, value_type, entries)))
+}
+
 fn setitem(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(2)?;
     let dict = context.this.dict()?;
@@ -200,8 +242,7 @@ can_block = false,
 output = Unknown,
 short = "Remove all mappings from this dict.",
 )]
-struct Clear {
-}
+struct Clear {}
 
 fn clear(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
@@ -216,8 +257,7 @@ can_block = false,
 output = Unknown,
 short = "Create a new dict with the same set of mappings as this one.",
 )]
-struct Clone {
-}
+struct Clone {}
 
 fn clone(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
@@ -295,5 +335,50 @@ fn collect(mut context: CommandContext) -> CrushResult<()> {
             }
         }
         _ => argument_error("Expected two arguments", context.arguments[0].location),
+    }
+}
+
+#[signature(
+join,
+can_block = false,
+output = Unknown,
+short = "Create a new dict with the same set of mappings as this one.",
+)]
+struct Join {
+    #[description("the dict instances to join.")]
+    #[unnamed()]
+    dicts: Vec<Dict>
+}
+
+fn join(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Join = Join::parse(context.remove_arguments(), context.global_state.printer())?;
+    let mut dicts = cfg.dicts;
+
+    if let Some(Value::Dict(this)) = context.this {
+        dicts.insert(0, this);
+    }
+    let mut key_types = HashSet::new();
+    let mut value_types = HashSet::new();
+
+    let mut out = OrderedMap::new();
+
+    for d in dicts.into_iter() {
+        key_types.insert(d.key_type());
+        value_types.insert(d.value_type());
+        for e in d.elements() {
+            match out.entry(e.0) {
+                Entry::Occupied(_) => {}
+                Entry::Vacant(v) => { v.insert(e.1) }
+            }
+        }
+    }
+
+    if key_types.len() != 1 {
+        argument_error_legacy("Multiple key types specified in dict")
+    } else {
+        let key_type = key_types.drain().next().unwrap();
+        let value_type = if value_types.len() == 1 { value_types.drain().next().unwrap() } else { ValueType::Any };
+
+        context.output.send(Value::Dict(Dict::new_with_data(key_type, value_type, out)))
     }
 }

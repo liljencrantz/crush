@@ -7,6 +7,7 @@ use std::collections::HashSet;
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::fmt::{Display, Formatter};
+use crate::data::dict::Dict;
 use crate::lang::value::VecReader;
 
 #[derive(Clone)]
@@ -183,6 +184,17 @@ impl List {
         let mut vec = Vec::new();
         self.dump_value(&mut vec);
         Box::new(VecReader::new(vec, self.cell_type.clone()))
+    }
+
+    pub fn dump_dict(&self, destination: &mut Vec<Dict>) -> CrushResult<()> {
+            let cells = self.cells.lock().unwrap();
+            for el in cells.iter() {
+                match el {
+                    Value::Dict(s) => destination.push(s.clone()),
+                    _ => return error("Wrong element type"),
+                }
+            }
+            Ok(())
     }
 
     dump_to!(dump_string, String, String, |e: &String| e.to_string());
