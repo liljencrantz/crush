@@ -1,5 +1,9 @@
+use std::io::{Read, Write};
+use std::process;
+use std::process::Stdio;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::CrushResult;
+use crate::lang::command::OutputType::Unknown;
+use crate::lang::errors::{argument_error, CrushResult, error, mandate};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::data::r#struct::Struct;
@@ -8,6 +12,10 @@ use signature::signature;
 use crate::lang::{data::table::ColumnType, data::table::Row};
 use lazy_static::lazy_static;
 use crate::util::user_map::{get_all_users, get_current_username, get_user};
+use crate::lang::command::{Command, CrushCommand};
+use crate::lang::serialization::{deserialize, serialize};
+use crate::state::contexts::This;
+use crate::{argument_error_legacy, to_crush_error};
 
 #[signature(
 me,
@@ -30,6 +38,110 @@ lazy_static! {
         ColumnType::new("gid", ValueType::Integer),
     ];
 }
+
+lazy_static! {
+    pub static ref USER: Struct = {
+        let do_cmd = <dyn CrushCommand>::command(
+                sudo,
+                true,
+                &["global", "user"],
+                "do command",
+                "Run specified closure or command as another user",
+                None,
+                Unknown,
+                [],
+            );
+            Struct::new(
+                vec![
+                    ("do", Value::Command(do_cmd)),
+                ],
+                None,
+            )
+    };
+}
+
+#[signature(
+sudo,
+can_block = true,
+short = "Execute a lambda as another user.",
+)]
+pub struct Do {
+    #[description("the command to run as another user.")]
+    command: Command,
+}
+
+/**
+Current implementation is crude and grossly inefficient.
+
+Firstly, it just shells out to the sudo command - which leads to potential visual problems with
+the terminal.
+
+Secondly, it creates 3 separate subthreads just to deal with stdin, stdout and stderr without
+blocking while the main thread waits for the command to exit. It is easy to do this much more
+efficiently, but this was the most straight forward implementation and the sudo command should
+never be run in a loop regardless.
+ */
+fn sudo(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Do = Do::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let this = context.this.r#struct()?;
+    if let Some(Value::String(username)) = this.get("username") {
+        let mut cmd = process::Command::new("sudo");
+        let printer = context.global_state.printer().clone();
+
+        cmd.arg("--user").arg(&username);
+        cmd.arg("--").arg("crush").arg("--pup");
+        cmd.stdin(Stdio::piped());
+        cmd.stdout(Stdio::piped());
+        cmd.stderr(Stdio::piped());
+
+        let mut child = to_crush_error(cmd.spawn())?;
+        let mut stdin = mandate(child.stdin.take(), "Expected stdin stream")?;
+        let mut serialized = Vec::new();
+        serialize(&Value::Command(cfg.command), &mut serialized)?;
+
+        context.spawn("sudo:stdin", move || {
+            stdin.write(&serialized)?;
+            Ok(())
+        })?;
+
+        let mut stdout = mandate(child.stdout.take(), "Expected output stream")?;
+        let env = context.scope.clone();
+        let my_context = context.clone();
+        context.spawn("sudo:stdout", move || {
+            let mut buff = Vec::new();
+            to_crush_error(stdout.read_to_end(&mut buff))?;
+            if buff.len() == 0 {
+                error("No value returned")
+            } else {
+                my_context
+                    .output
+                    .send(deserialize(&buff, &env)?)
+            }
+        })?;
+
+        let mut stderr = mandate(child.stderr.take(), "Expected error stream")?;
+        context.spawn("sudo:stderr", move || {
+            let mut buff = Vec::new();
+            to_crush_error(stderr.read_to_end(&mut buff))?;
+            let errors = to_crush_error(String::from_utf8(buff))?;
+            for e in errors.split('\n') {
+                let err = e.trim();
+                if !err.is_empty() {
+                    printer.error(err);
+                }
+            }
+            Ok(())
+        })?;
+
+        child.wait()?;
+        Ok(())
+    }   else {
+        argument_error_legacy("Invalid user")
+    }
+}
+
+
+
 
 #[signature(
 list,
@@ -56,17 +168,17 @@ fn list(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-find,
+__getitem__,
 can_block = false,
 short = "find a user by name",
 )]
-struct Find {
-    #[description("the of the user to find.")]
+struct GetItem {
+    #[description("the name of the user to find.")]
     name: String,
 }
 
-fn find(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Find = Find::parse(context.remove_arguments(), &context.global_state.printer())?;
+fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(get_user_value(&cfg.name)?)
 }
 
@@ -75,6 +187,7 @@ fn get_user_value(input_name: &str) -> CrushResult<Value> {
         Ok(user) =>
             Ok(Value::Struct(Struct::new(
                 vec![
+                    ("username", Value::string(input_name)),
                     ("name", Value::String(user.name)),
                     ("home", Value::File(user.home)),
                     ("shell", Value::File(user.shell)),
@@ -82,7 +195,7 @@ fn get_user_value(input_name: &str) -> CrushResult<Value> {
                     ("uid", Value::Integer(user.uid as i128)),
                     ("gid", Value::Integer(user.gid as i128)),
                 ],
-                None,
+                Some(USER.clone()),
             ))),
         Err(e) => Err(e),
     }
@@ -94,8 +207,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "User commands",
         Box::new(move |user| {
             Me::declare(user)?;
-            Find::declare(user)?;
             List::declare(user)?;
+            GetItem::declare(user)?;
             Ok(())
         }),
     )?;
