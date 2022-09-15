@@ -130,20 +130,18 @@ impl ArgumentEvaluator for Vec<ArgumentDefinition> {
                 this = Some(a.value.eval_and_bind(context)?);
             } else {
                 match &a.argument_type {
-                    ArgumentType::Some(name) => {
+                    ArgumentType::Some(name) =>
                         res.push(Argument::named(
                             &name.string,
                             a.value.eval_and_bind(context)?,
                             a.location,
-                        ))
-                    }
+                        )),
 
-                    ArgumentType::None => {
+                    ArgumentType::None =>
                         res.push(Argument::unnamed(
                             a.value.eval_and_bind(context)?,
                             a.location,
-                        ))
-                    }
+                        )),
 
                     ArgumentType::ArgumentList => match a.value.eval_and_bind(context)? {
                         Value::List(l) => {

@@ -48,8 +48,8 @@ fn evaluate(
     }
 }
 
-pub fn r#where(context: CommandContext) -> CrushResult<()> {
-    let cfg: Where = Where::parse(context.arguments.clone(), &context.global_state.printer())?;
+pub fn r#where(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Where = Where::parse(context.remove_arguments(), &context.global_state.printer())?;
     let location = context.arguments[0].location;
 
     match context.input.recv()?.stream()? {

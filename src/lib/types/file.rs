@@ -27,6 +27,8 @@ lazy_static! {
         GetItem::declare_method(&mut res, &path);
         Write::declare_method(&mut res, &path);
         Read::declare_method(&mut res, &path);
+        Parent::declare_method(&mut res, &path);
+        Name::declare_method(&mut res, &path);
         res
     };
 }
@@ -56,7 +58,7 @@ pub fn stat(mut context: CommandContext) -> CrushResult<()> {
             ("is_file", Value::Bool(metadata.is_file())),
             ("is_symlink", Value::Bool(metadata.file_type().is_symlink())),
             ("inode", Value::Integer(metadata.ino() as i128)),
-            ("nlink", Value::Integer(metadata.nlink() as i128) ),
+            ("nlink", Value::Integer(metadata.nlink() as i128)),
             ("mode", Value::Integer(metadata.mode() as i128)),
             ("len", Value::Integer(metadata.len() as i128)),
         ],
@@ -142,9 +144,9 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
         match class_done {
             false => {
                 match c {
-                    'u' => {classes.insert(OWNER);}
-                    'g' => {classes.insert(GROUP);}
-                    'o' => {classes.insert(OTHER);}
+                    'u' => { classes.insert(OWNER); }
+                    'g' => { classes.insert(GROUP); }
+                    'o' => { classes.insert(OTHER); }
                     'a' => {
                         classes.insert(OWNER);
                         classes.insert(GROUP);
@@ -192,17 +194,17 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
             Add => {
                 // Add new bits
                 current |= modes << cl;
-            },
+            }
             Remove => {
                 // Remove bits
                 current = current & !(modes << cl);
-            },
+            }
             Set => {
                 // Clear current bits
                 current = current & !(7 << cl);
                 // Add new bits
                 current |= modes << cl;
-            },
+            }
         }
     }
 
@@ -263,11 +265,9 @@ can_block = true,
 output = Known(ValueType::Empty),
 short = "A write sink for binary_stream values",
 )]
-struct Write {
-}
+struct Write {}
 
 fn write(mut context: CommandContext) -> CrushResult<()> {
-
     match context.input.recv()? {
         Value::BinaryInputStream(mut input) => {
             let mut out = to_crush_error(File::create(
@@ -285,11 +285,48 @@ can_block = true,
 output = Known(ValueType::BinaryInputStream),
 short = "A read source for binary_stream values",
 )]
-struct Read {
-}
+struct Read {}
 
 fn read(mut context: CommandContext) -> CrushResult<()> {
     context
         .output
         .send(Value::BinaryInputStream(<dyn BinaryReader>::paths(vec![context.this.file()?])?))
+}
+
+#[signature(
+name,
+can_block = false,
+output = Known(ValueType::String),
+short = "The name (excluding path) of this file, as a string",
+)]
+struct Name {}
+
+fn name(mut context: CommandContext) -> CrushResult<()> {
+    context
+        .output
+        .send(Value::string(
+            mandate(
+                mandate(
+                    context.this.file()?
+                        .file_name(),
+                    "Invalid file path")?
+                    .to_str(),
+                "Invalid file name")?))
+}
+
+#[signature(
+parent,
+can_block = false,
+output = Known(ValueType::File),
+short = "The parent directory of this file",
+)]
+struct Parent {}
+
+fn parent(mut context: CommandContext) -> CrushResult<()> {
+    context
+        .output
+        .send(Value::File(
+                mandate(
+                    context.this.file()?.parent(),
+                    "Invalid file path")?.to_path_buf()))
 }

@@ -15,7 +15,6 @@ use crate::{
 use crossbeam::{unbounded, Receiver};
 use signature::signature;
 use std::collections::HashMap;
-use crate::lang::threads::ThreadStore;
 use crate::lang::state::global_state::GlobalState;
 
 #[signature(
@@ -136,7 +135,7 @@ fn create_worker_thread(
 }
 
 pub fn group(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Group = Group::parse((context.remove_arguments()), &context.global_state.printer())?;
+    let cfg: Group = Group::parse(context.remove_arguments(), &context.global_state.printer())?;
     let mut input = mandate(
         context.input.recv()?.stream()?,
         "Expected input to be a stream",

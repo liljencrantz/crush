@@ -137,8 +137,8 @@ pub struct Find {
     #[description("directories and files to list")]
     directory: Files,
     #[description("recurse into subdirectories")]
-    #[default(true)]
-    recursive: bool,
+    #[default(false)]
+    recurse: bool,
 }
 
 fn find(context: CommandContext) -> CrushResult<()> {
@@ -160,7 +160,7 @@ fn find(context: CommandContext) -> CrushResult<()> {
         }
         let dir = q.pop_front().unwrap();
         let _ =
-            run_for_single_directory_or_file(dir, &users, &groups, config.recursive, &mut q, &mut output);
+            run_for_single_directory_or_file(dir, &users, &groups, config.recurse, &mut q, &mut output);
     }
     Ok(())
 }

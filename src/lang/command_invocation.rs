@@ -55,7 +55,7 @@ impl CommandInvocation {
     /**
     Evaluates all the arguments into values, and puts them into a CommandContext,
     ready to be exacuted by the main command.
-    */
+     */
     fn execution_context(
         local_arguments: Vec<ArgumentDefinition>,
         mut this: Option<Value>,
@@ -191,9 +191,9 @@ fn eval_struct(
     location: Location,
 ) -> CrushResult<Option<ThreadId>> {
     match struct_value.get("__call__") {
-        Some(Value::Command(call)) => {
-            eval_command(call, Some(Value::Struct(struct_value)), local_arguments, context)
-        }
+        Some(Value::Command(call)) =>
+            eval_command(call, Some(Value::Struct(struct_value)), local_arguments, context),
+
         Some(v) => error(
             format!(
                 "__call__ should be a command, was of type {}",
@@ -201,7 +201,7 @@ fn eval_struct(
             )
                 .as_str(),
         ),
-        _ => {
+        _ =>
             if local_arguments.len() == 0 {
                 eval_command(
                     context.scope.global_static_cmd(vec!["global", "io", "val"])?,
@@ -221,7 +221,6 @@ fn eval_struct(
                         .as_str(),
                 )
             }
-        }
     }
 }
 

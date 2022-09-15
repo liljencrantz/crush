@@ -7,10 +7,9 @@ use proc_macro2;
 use proc_macro2::Ident;
 use proc_macro2::{Literal, TokenStream, TokenTree};
 use quote::{quote, quote_spanned, ToTokens};
-use syn::{Attribute, Item, Type};
+use syn::{Attribute, Item};
 use simple_signature::SimpleSignature;
-use std::convert::TryFrom;
-use crate::signature::{Signature, SignatureType, TypeData};
+use crate::signature::Signature;
 use syn::spanned::Spanned;
 
 mod simple_signature;
@@ -82,18 +81,6 @@ fn call_value(attr: &Attribute) -> SignatureResult<TokenTree> {
     } else {
         fail!(attr.span(), "Expected exactly one literal")
     }
-}
-
-
-fn parse_type_data(
-    ty: &Type,
-    name: &Ident,
-    default: Option<TokenTree>,
-    is_unnamed_target: bool,
-    allowed_values: Option<Vec<Literal>>,
-) -> SignatureResult<TypeData> {
-    let signature = Signature::new(ty, name, default, is_unnamed_target, allowed_values)?;
-    signature.type_data()
 }
 
 struct Metadata {
@@ -295,13 +282,14 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 field.attrs = Vec::new();
                 let name = &field.ident.clone().unwrap();
                 let name_string = Literal::string(&name.to_string());
-                let type_data = parse_type_data(
-                    &field.ty,
-                    name,
-                    default_value.clone(),
-                    is_unnamed_target,
-                    allowed_values,
-                )?;
+
+                let type_data =
+                    Signature::new(
+                        &field.ty,
+                        name,
+                        default_value.clone(),
+                        is_unnamed_target,
+                        allowed_values)?.type_data()?;
 
                 signature.push(type_data.signature);
 
@@ -438,9 +426,9 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
             let mut output = s.to_token_stream();
             output.extend(handler.into_token_stream());
-            if struct_name.to_string() == "Joinn" {
-                                println!("{}", output.to_string());
-                            }
+            if struct_name.to_string() == "Filter" {
+                println!("{}", output.to_string());
+            }
             Ok(output)
         }
         _ => fail!(root.span(), "Expected a struct"),

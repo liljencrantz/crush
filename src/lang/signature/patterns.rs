@@ -4,9 +4,9 @@ use regex::Regex;
 use std::fmt::{Display, Formatter};
 
 /**
-A type representing a set of text patterns. The test method can be used to check if the patterns
-match.
- */
+  A type representing a set of text patterns. It accepts any number of strings (exact match) as well
+  as globs and regexes. The test method can be used to check if the patterns match.
+*/
 
 pub struct Patterns {
     patterns: Vec<Value>,

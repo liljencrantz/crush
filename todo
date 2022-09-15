@@ -4,7 +4,7 @@ Add default syntax highlighting config
 Add some way to extract the definition from a closure
 Add command field to printer
 Narrow down location to each command in printer passed in to a command
-Allow input type specification
+Allow commans to specify the type of input they expect
 There should be a scope help message
 Write a command that extracts all help into html
 Tab completion of globs
@@ -22,8 +22,14 @@ pbuf:from command that takes a protobuf definition and uses it to deserialize pr
 avro:from command that deserializes avro data
 Add history command with all previous interactive invocations, including invocation string, current status, and misc metadata.
 Support __str__ method for string rendering
-dict:of?
 Avoid infinite loops when printing structs that reference each other
 getattr support?
 fix dynamic loading deadlocks
 Eager method evaluation in arguments?
+read methods in binary_stream
+user:by_name[root]:sudo {...}
+tab completions for external commands
+more file info: size, permissions, user, group, modified, created, type. Move to methods or add more to stat?
+Rename len to size in file:stat
+Bad error message when trying to mutate constant
+Use the __call__ method on regexes and wildcards to filter streams, e.g `host:procs|re"Spotify"` or `find|%.rs file`.

@@ -5,7 +5,6 @@ use signature::signature;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::command::TypeMap;
 use crate::lang::errors::{mandate, CrushResult};
 use crate::data::list::List;
 use crate::lang::state::contexts::CommandContext;
@@ -91,7 +90,7 @@ struct Parent {}
 
 fn __parent__(mut context: CommandContext) -> CrushResult<()> {
     let scope = context.this.scope()?;
-    context.output.send(Value::Scope(scope.parent().unwrap_or(context.scope)))
+    context.output.send(Value::Scope(scope.parent().unwrap_or(scope)))
 }
 
 #[signature(

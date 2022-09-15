@@ -139,7 +139,7 @@ impl std::hash::Hash for Dict {
     }
 }
 
-impl std::cmp::PartialEq for Dict {
+impl PartialEq for Dict {
     fn eq(&self, other: &Dict) -> bool {
         let us = self.entries.lock().unwrap().clone();
         let them = other.entries.lock().unwrap().clone();
@@ -181,7 +181,7 @@ impl Display for Dict {
     }
 }
 
-impl std::cmp::PartialOrd for Dict {
+impl PartialOrd for Dict {
     fn partial_cmp(&self, _other: &Dict) -> Option<Ordering> {
         None
     }

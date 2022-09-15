@@ -129,16 +129,13 @@ impl PrettyPrinter {
             Value::Table(rows) => self.print_stream(&mut TableReader::new(rows), 0),
             Value::BinaryInputStream(mut b) => self.print_binary(b.as_mut(), 0),
             Value::Empty() => {}
-            Value::Struct(data) => {
-                self.print_struct(data, 0)
-            }
-            Value::List(list) => {
+            Value::Struct(data) => self.print_struct(data, 0),
+            Value::List(list) =>
                 if list.len() < 8 {
                     self.printer.line(list.to_string().as_str())
                 } else {
                     self.print_stream(list.stream().as_mut(), 0)
                 }
-            }
             _ => self.printer.line(cell.to_pretty_string(self.grouping).as_str()),
         };
     }
@@ -151,7 +148,7 @@ impl PrettyPrinter {
             match val.cell_type {
                 ValueType::TableInputStream(_) => has_table = true,
                 ValueType::Table(_) => has_table = true,
-                _ => (),
+                _ => {}
             }
         }
 
@@ -165,7 +162,7 @@ impl PrettyPrinter {
                         data.drain(..);
                     }
                 }
-                Err(e) => {
+                Err(e) =>
                     if e.is_disconnected() {
                         break;
                     } else {
@@ -173,7 +170,6 @@ impl PrettyPrinter {
                         data = Vec::new();
                         data.drain(..);
                     }
-                }
             }
         }
         if !data.is_empty() {
@@ -276,9 +272,7 @@ impl PrettyPrinter {
                 let last = r_vec.remove(r_vec.len()-1);
                 self.print_row(w, r_vec, indent, &mut rows, &mut outputs, &mut binaries, col_count);
                 match last {
-                    Value::Struct(s) => {
-                        self.print_struct(s, indent+1);
-                    }
+                    Value::Struct(s) => self.print_struct(s, indent+1),
                     _ => panic!("Invalid data"),
                 }
             } else {

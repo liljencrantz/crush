@@ -177,7 +177,7 @@ fn simple_type_data(
     allowed_values: Option<Vec<Literal>>,
     span: Span,
 ) -> SignatureResult<TypeData> {
-    let native_type = simple_type.ident();
+    let native_type = simple_type.ident(span);
     let allowed_values_name = allowed_values_name(&allowed_values, &name.to_string(), span);
     let mutator = simple_type.mutator(&allowed_values_name);
     let value_type = simple_type.value();

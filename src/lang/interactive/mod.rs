@@ -1,4 +1,4 @@
-mod rustyline_helper;
+pub mod rustyline_helper;
 
 use std::fs;
 use rustyline;
@@ -98,8 +98,10 @@ pub fn run(
 
     let mut rl = Editor::with_config(config);
     rl.set_helper(Some(h));
+    global_state.set_editor(Some(rl));
+
     if let Ok(file) = crush_history_file() {
-        let _ = rl.load_history(&file);
+        let _ = global_state.editor().as_mut().map(|rl| { rl.load_history(&file) });
     }
     loop {
         let prompt = match execute_prompt(global_state.prompt(), &global_env, global_state) {
@@ -109,63 +111,79 @@ pub fn run(
                 None
             }
         }.unwrap_or_else(|| DEFAULT_PROMPT.to_string());
-        let readline = rl.readline(&prompt);
+        let readline = global_state.editor().as_mut().map(|rl| { rl.readline(&prompt) });
 
         match readline {
-            Ok(cmd) if cmd.is_empty() => global_state.threads().reap(global_state.printer()),
-            Ok(cmd) => {
-                rl.add_history_entry(&cmd);
-                global_state.threads().reap(global_state.printer());
-                global_state.printer().handle_error(
-                    execute::string(
-                        &global_env,
-                        &cmd,
-                        pretty_printer,
-                        global_state,
-                    ));
-                global_state.threads().reap(global_state.printer());
-                if global_state.exit_status().is_some() {
-                    break;
+            Some(Ok(cmd)) =>
+                if cmd.is_empty() {
+                    global_state.threads().reap(global_state.printer())
+                } else {
+                    if cmd.starts_with('!') {}
+                    global_state.editor().as_mut().map(|rl| { rl.add_history_entry(&cmd) });
+                    global_state.threads().reap(global_state.printer());
+                    global_state
+                        .printer()
+                        .handle_error(
+                            execute::string(
+                                &global_env,
+                                &cmd,
+                                pretty_printer,
+                                global_state,
+                            ));
+                    global_state.threads().reap(global_state.printer());
+                    if global_state.exit_status().is_some() {
+                        break;
+                    }
+                    global_state.printer().ping();
                 }
-                global_state.printer().ping();
-            }
-            Err(ReadlineError::Interrupted) => {
+            Some(Err(ReadlineError::Interrupted)) => {
                 global_state.printer().line("^C");
             }
-            Err(ReadlineError::Eof) => {
+            Some(Err(ReadlineError::Eof)) => {
                 global_state.printer().line("exit");
                 break;
             }
-            Err(err) => {
+            Some(Err(err)) => {
                 global_state.printer().handle_error::<()>(to_crush_error(Err(err)));
+                break;
+            }
+            None => {
+                global_state.printer().line("no editor!");
                 break;
             }
         }
 
         if let Ok(file) = crush_history_file() {
             if ensure_parent_exists(&file).is_ok() {
-                if let Err(err) = rl.save_history(&file) {
-                    global_state.printer().line(&format!(
-                        "Error: Failed to save history to {}: {}",
-                        file.as_os_str().to_str().unwrap_or("???"),
-                        err))
+                match global_state.editor().as_mut().map(|rl| { rl.save_history(&file) }) {
+                    Some(Err(err)) =>
+                        global_state.printer().line(&format!(
+                            "Error: Failed to save history to {}: {}",
+                            file.as_os_str().to_str().unwrap_or("???"),
+                            err)),
+                    None => {
+                        global_state.printer().line("no editor!");
+                        break;
+                    }
+                    _ => {}
                 }
             }
         }
     }
+
     if let Ok(file) = crush_history_file() {
-        if let Err(err) = rl.save_history(&file) {
+        if let Some(Err(err)) = global_state.editor().as_mut().map(|rl| { rl.save_history(&file) }) {
             global_state.printer().line(&format!("Error: Failed to save history: {}", err))
         }
     }
+    global_state.set_editor(None);
     Ok(())
 }
 
-fn ensure_parent_exists(file: &PathBuf) -> CrushResult<()>{
+fn ensure_parent_exists(file: &PathBuf) -> CrushResult<()> {
     if let Some(dir) = file.parent() {
         to_crush_error(fs::create_dir_all(dir))
-    } else
-    {
+    } else {
         error("Missing parent directory")
     }
 }

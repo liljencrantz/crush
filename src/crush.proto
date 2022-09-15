@@ -2,266 +2,266 @@ syntax = "proto3";
 package model;
 
 /*
-This is the root of a serialized value.
- */
+  This is the root of a serialized value.
+*/
 message SerializedValue {
-    uint64 root = 1; // The index in the elements array that contains the value we're serializing
-    repeated Element elements = 2; // An array of all sub-parts of the value we're serializing
+  uint64 root = 1; // The index in the elements array that contains the value we're serializing
+  repeated Element elements = 2; // An array of all sub-parts of the value we're serializing
 }
 
 /*
-    A value is serialized into an arbitrarily large number of Element-values.
- */
+  A value is serialized into an arbitrarily large number of Element-values.
+*/
 message Element {
-    oneof element {
-        string string = 2; // A Value::String
-        int64 small_integer = 3; // A Value::Integer that fits into a signed 64-bit integer
-        string large_integer = 4; // A Value::Integer that does not fit into a signed 64-bit integer
-        Struct struct = 5; // A Value::Struct
-        bytes file = 6; // A Value::File
-        double float = 7; // A Value::Float
-        Dict dict = 8; // A Value::Dict
-        Closure closure = 9; // A Value::Command that is a closure
-        bytes binary = 10; // A Value::binary
-        Duration duration = 11; // A Value::Duration
-        string glob = 13; // A Value::Glob
-        string regex = 14; // A Value::RegEx
-        Scope user_scope = 15; // A Value::Scope
-        bool bool = 16; // A Value::Bool
-        bool empty = 17; // A Value::Empty
-        Type type = 18; // A Value::Type
-        int64 time = 19; // A Value::Time
-        Table table = 20; // A Value::Table
-        List list = 21; // A Value::List
-        ColumnType column_type = 22; // A description of a single column of a table, including name and type.
-        Row row = 23; // A single row of a table
-        Member member = 24; // A single member of a struct
-        uint64 command = 26; // A command invocation
-        BoundCommand bound_command = 27; // A rebinding of the this-value of a command
-        // A Value::Scope instance that is in fact a namespace, e.g. global:io.
-        // These aren't serialised, they are passed by name.
-        uint64 internal_scope = 28;
-        Strings strings = 29;
-        TrackedString tracked_string = 30; // A Value::String
-    }
+  oneof element {
+    string string = 2; // A Value::String
+    int64 small_integer = 3; // A Value::Integer that fits into a signed 64-bit integer
+    string large_integer = 4; // A Value::Integer that does not fit into a signed 64-bit integer
+    Struct struct = 5; // A Value::Struct
+    bytes file = 6; // A Value::File
+    double float = 7; // A Value::Float
+    Dict dict = 8; // A Value::Dict
+    Closure closure = 9; // A Value::Command that is a closure
+    bytes binary = 10; // A Value::binary
+    Duration duration = 11; // A Value::Duration
+    string glob = 13; // A Value::Glob
+    string regex = 14; // A Value::RegEx
+    Scope user_scope = 15; // A Value::Scope
+    bool bool = 16; // A Value::Bool
+    bool empty = 17; // A Value::Empty
+    Type type = 18; // A Value::Type
+    int64 time = 19; // A Value::Time
+    Table table = 20; // A Value::Table
+    List list = 21; // A Value::List
+    ColumnType column_type = 22; // A description of a single column of a table, including name and type.
+    Row row = 23; // A single row of a table
+    Member member = 24; // A single member of a struct
+    uint64 command = 26; // A command invocation
+    BoundCommand bound_command = 27; // A rebinding of the this-value of a command
+    // A Value::Scope instance that is in fact a namespace, e.g. global:io.
+    // These aren't serialised, they are passed by name.
+    uint64 internal_scope = 28;
+    Strings strings = 29;
+    TrackedString tracked_string = 30; // A Value::String
+  }
 }
 
 message Duration {
-    int64 secs = 1;
-    int32 nanos = 2;
+  int64 secs = 1;
+  int32 nanos = 2;
 }
 
 message TrackedString {
-    uint64 start = 1;
-    uint64 end = 2;
-    uint64 string = 3;
+  uint64 start = 1;
+  uint64 end = 2;
+  uint64 string = 3;
 }
 
 message BoundCommand {
-    uint64 this = 1;
-    uint64 command = 2;
+  uint64 this = 1;
+  uint64 command = 2;
 }
 
 message Closure {
-    oneof name {
-        bool has_name = 1;
-        uint64 name_value = 2;
-    }
-    repeated Job job_definitions = 3;
-    oneof signature {
-        bool has_signature = 4;
-        Signature signature_value = 5;
-    }
-    uint64 env = 6;
-    string short_help = 7;
-    string long_help = 8;
+  oneof name {
+    bool has_name = 1;
+    uint64 name_value = 2;
+  }
+  repeated Job job_definitions = 3;
+  oneof signature {
+    bool has_signature = 4;
+    Signature signature_value = 5;
+  }
+  uint64 env = 6;
+  string short_help = 7;
+  string long_help = 8;
 }
 
 message ClosureDefinition {
-    oneof name {
-        bool has_name = 1;
-        uint64 name_value = 2;
-    }
-    oneof signature {
-        bool has_signature = 3;
-        Signature signature_value = 4;
-    }
-    repeated Job job_definitions = 5;
-    uint64 start = 6;
-    uint64 end = 7;
+  oneof name {
+    bool has_name = 1;
+    uint64 name_value = 2;
+  }
+  oneof signature {
+    bool has_signature = 3;
+    Signature signature_value = 4;
+  }
+  repeated Job job_definitions = 5;
+  uint64 start = 6;
+  uint64 end = 7;
 }
 
 message Signature {
-    repeated Parameter parameter = 1;
+  repeated Parameter parameter = 1;
 }
 
 message Parameter {
-    oneof parameter {
-        NormalParameter normal = 1;
-        uint64 named = 2;
-        uint64 unnamed = 3;
-    }
+  oneof parameter {
+    NormalParameter normal = 1;
+    uint64 named = 2;
+    uint64 unnamed = 3;
+  }
 }
 
 message NormalParameter {
-    uint64 name = 1;
-    ValueDefinition type = 2;
-    oneof default {
-        bool has_default = 3;
-        ValueDefinition default_value = 4;
-    }
+  uint64 name = 1;
+  ValueDefinition type = 2;
+  oneof default {
+    bool has_default = 3;
+    ValueDefinition default_value = 4;
+  }
 }
 
 message ValueDefinition {
-    oneof value_definition {
-        Value value = 1;
-        ClosureDefinition closure_definition = 2;
-        Job job = 3;
-        uint64 label = 4;
-        Attr get_attr = 5;
-        Attr path = 6;
-    }
+  oneof value_definition {
+    Value value = 1;
+    ClosureDefinition closure_definition = 2;
+    Job job = 3;
+    uint64 label = 4;
+    Attr get_attr = 5;
+    Attr path = 6;
+  }
 }
 
 message Value {
-    uint64 value = 1;
-    uint64 start = 2;
-    uint64 end = 3;
+  uint64 value = 1;
+  uint64 start = 2;
+  uint64 end = 3;
 }
 
 message Attr {
-    ValueDefinition parent = 1;
-    uint64 element = 2;
+  ValueDefinition parent = 1;
+  uint64 element = 2;
 }
 
 message Job {
-    repeated CommandInvocation commands = 1;
-    uint64 start = 2;
-    uint64 end = 3;
+  repeated CommandInvocation commands = 1;
+  uint64 start = 2;
+  uint64 end = 3;
 }
 
 message CommandInvocation {
-    ValueDefinition command = 1;
-    repeated ArgumentDefinition arguments = 2;
+  ValueDefinition command = 1;
+  repeated ArgumentDefinition arguments = 2;
 }
 
 message ArgumentDefinition {
-    oneof argument_type {
-        uint64 some = 1;
-        bool none = 2;
-        bool argument_list = 3;
-        bool argument_dict = 4;
-    }
-    ValueDefinition value = 5;
-    uint64 start = 6;
-    uint64 end = 7;
+  oneof argument_type {
+    uint64 some = 1;
+    bool none = 2;
+    bool argument_list = 3;
+    bool argument_dict = 4;
+  }
+  ValueDefinition value = 5;
+  uint64 start = 6;
+  uint64 end = 7;
 }
 
 message Strings {
-    repeated uint64 elements = 1;
+  repeated uint64 elements = 1;
 }
 
 message Table {
-    repeated uint64 column_types = 1;
-    repeated uint64 rows = 2;
+  repeated uint64 column_types = 1;
+  repeated uint64 rows = 2;
 }
 
 message Row {
-    repeated uint64 cells = 1;
+  repeated uint64 cells = 1;
 }
 
 message Scope {
-    oneof parent {
-        bool has_parent = 2;
-        uint64 parent_value = 3;
-    }
-    oneof calling {
-        bool has_calling = 4;
-        uint64 calling_value = 5;
-    }
-    repeated uint64 uses = 6;
-    repeated uint64 members = 7;
-    bool is_loop = 8;
-    bool is_stopped = 9;
-    bool is_readonly = 10;
-    oneof name {
-        bool has_name = 11;
-        uint64 name_value = 12;
-    }
-    oneof description {
-        bool has_description = 13;
-        uint64 description_value = 14;
-    }
+  oneof parent {
+    bool has_parent = 2;
+    uint64 parent_value = 3;
+  }
+  oneof calling {
+    bool has_calling = 4;
+    uint64 calling_value = 5;
+  }
+  repeated uint64 uses = 6;
+  repeated uint64 members = 7;
+  bool is_loop = 8;
+  bool is_stopped = 9;
+  bool is_readonly = 10;
+  oneof name {
+    bool has_name = 11;
+    uint64 name_value = 12;
+  }
+  oneof description {
+    bool has_description = 13;
+    uint64 description_value = 14;
+  }
 }
 
 message Type {
-    enum SimpleTypeKind {
-        STRING = 0;
-        INTEGER = 1;
-        FILE = 2;
-        FLOAT = 3;
-        COMMAND = 4;
-        BINARY = 5;
-        DURATION = 6;
-        GLOB = 8;
-        REGEX = 9;
-        SCOPE = 10;
-        BOOL = 11;
-        EMPTY = 12;
-        TYPE = 13;
-        TIME = 14;
-        STRUCT = 15;
-        ANY = 16;
-        BINARY_STREAM = 17;
-    }
-    oneof type {
-        SimpleTypeKind simple_type = 1;
-        ListType list_type = 2;
-        DictType dict_type = 3;
-        TableType table_type = 4;
-        TableType table_input_stream_type = 5;
-        TableType table_output_stream_type = 6;
-    }
+  enum SimpleTypeKind {
+    STRING = 0;
+    INTEGER = 1;
+    FILE = 2;
+    FLOAT = 3;
+    COMMAND = 4;
+    BINARY = 5;
+    DURATION = 6;
+    GLOB = 8;
+    REGEX = 9;
+    SCOPE = 10;
+    BOOL = 11;
+    EMPTY = 12;
+    TYPE = 13;
+    TIME = 14;
+    STRUCT = 15;
+    ANY = 16;
+    BINARY_STREAM = 17;
+  }
+  oneof type {
+    SimpleTypeKind simple_type = 1;
+    ListType list_type = 2;
+    DictType dict_type = 3;
+    TableType table_type = 4;
+    TableType table_input_stream_type = 5;
+    TableType table_output_stream_type = 6;
+  }
 }
 
 message TableType {
-    repeated uint64 column_types = 1;
+  repeated uint64 column_types = 1;
 }
 
 message ColumnType {
-    uint64 name = 1;
-    uint64 type = 2;
+  uint64 name = 1;
+  uint64 type = 2;
 }
 
 message ListType {
-    uint64 element_type = 1;
+  uint64 element_type = 1;
 }
 
 message DictType {
-    uint64 key_type = 1;
-    uint64 value_type = 2;
+  uint64 key_type = 1;
+  uint64 value_type = 2;
 }
 
 message List {
-    uint64 element_type = 1;
-    repeated uint64 elements = 2;
+  uint64 element_type = 1;
+  repeated uint64 elements = 2;
 }
 
 message Dict {
-    uint64 key_type = 1;
-    uint64 value_type = 2;
-    repeated uint64 elements = 3;
+  uint64 key_type = 1;
+  uint64 value_type = 2;
+  repeated uint64 elements = 3;
 }
 
 message Struct {
-    oneof parent {
-        bool has_parent = 1;
-        uint64 parent_value = 2;
-    }
-    repeated uint64 members = 3;
+  oneof parent {
+    bool has_parent = 1;
+    uint64 parent_value = 2;
+  }
+  repeated uint64 members = 3;
 }
 
 message Member {
-    uint64 name = 1;
-    uint64 value = 2;
+  uint64 name = 1;
+  uint64 value = 2;
 }

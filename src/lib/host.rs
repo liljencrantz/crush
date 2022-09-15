@@ -275,7 +275,7 @@ mod macos {
                                 .map(|c| unsafe { std::mem::transmute::<i8, u8>(*c) })
                                 .filter(|c| { *c > 0u8 })
                                 .collect()
-                        ).unwrap_or_else(|g| { "<Invalid>".to_string() });
+                        ).unwrap_or_else(|_| { "<Invalid>".to_string() });
                     output.send(Row::new(vec![
                         Value::Integer(pid as i128),
                         Value::Integer(ppid),
@@ -313,9 +313,7 @@ mod macos {
 
         if let Ok(procs) = listpids(ProcType::ProcAllPIDS) {
             for p in procs {
-                if let Ok(task) = pidinfo::<TaskAllInfo>(p as i32, 0) {
-                    base_procs.push(p);
-                }
+                base_procs.push(p);
             }
         }
 
@@ -333,7 +331,7 @@ mod macos {
                                         .map(|c| unsafe { std::mem::transmute::<i8, u8>(*c) })
                                         .filter(|c| { *c > 0u8 })
                                         .collect()
-                                ).unwrap_or_else(|g| { "<Invalid>".to_string() });
+                                ).unwrap_or_else(|_| { "<Invalid>".to_string() });
                             output.send(Row::new(vec![
                                 Value::Integer(t as i128),
                                 Value::Integer(pid as i128),
@@ -362,10 +360,8 @@ mod macos {
 
     fn fds() {
 
-     //   let fds = listpidinfo::<ListFDs>(pid, curr_task.pbsd.pbi_nfiles as usize);
-
+        //   let fds = listpidinfo::<ListFDs>(pid, curr_task.pbsd.pbi_nfiles as usize);
     }
-
 }
 
 #[cfg(target_os = "linux")]

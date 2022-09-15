@@ -21,9 +21,8 @@ fn make_env() -> Value {
 }
 
 fn make_arguments() -> Value {
-    List::new(ValueType::String, env::args().map(|a| {Value::string(a)}).collect::<Vec<_>>()).into()
+    List::new(ValueType::String, env::args().map(|a| { Value::string(a) }).collect::<Vec<_>>()).into()
 }
-
 
 lazy_static! {
     static ref THREADS_OUTPUT_TYPE: Vec<ColumnType> = vec![
@@ -41,7 +40,7 @@ fn threads(context: CommandContext) -> CrushResult<()> {
 
     for t in context.global_state.threads().current()? {
         output.send(Row::new(vec![
-            t.job_id.map(|i|{Value::from(i)}).unwrap_or(Value::Empty()),
+            t.job_id.map(|i| { Value::from(i) }).unwrap_or(Value::Empty()),
             Value::Time(t.creation_time),
             Value::String(t.name),
         ]))?;
@@ -62,7 +61,7 @@ fn exit(context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Empty())
 }
 
-#[signature(prompt, can_block=false, short = "Set or get the prompt")]
+#[signature(prompt, can_block = false, short = "Set or get the prompt")]
 struct Prompt {
     prompt: Option<Command>,
 }
@@ -100,6 +99,42 @@ fn jobs(context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
+lazy_static! {
+    static ref HISTORY_OUTPUT_TYPE: Vec<ColumnType> = vec![
+        ColumnType::new("idx", ValueType::Integer),
+        ColumnType::new("command", ValueType::String),
+    ];
+}
+
+#[signature(
+history,
+can_block = true,
+short = "List previous commands",
+output = Known(ValueType::TableInputStream(HISTORY_OUTPUT_TYPE.clone())),
+long = "All previous invocation")]
+struct History {}
+
+fn history(context: CommandContext) -> CrushResult<()> {
+    let output = context.output.initialize(HISTORY_OUTPUT_TYPE.clone())?;
+    let mut res = Vec::new();
+    context.global_state.editor().as_mut().map(|editor| {
+        let history = editor.history();
+        for i in 0..(history.len()) {
+            if let Some(c) = history.get(i) {
+                res.push(c.to_string());
+            }
+        }
+    });
+    let len = res.len();
+    for (idx, c) in res.into_iter().enumerate() {
+        output.send(Row::new(vec![
+            Value::Integer((len - idx) as i128),
+            Value::string(c),
+        ]))?;
+    }
+    Ok(())
+}
+
 mod locale {
     use super::*;
     use num_format::SystemLocale;
@@ -114,7 +149,11 @@ mod locale {
     ];
     }
 
-    #[signature(list, output = Known(ValueType::TableInputStream(LIST_OUTPUT_TYPE.clone())), short = "List all available locales.")]
+    #[signature(
+    list,
+    output = Known(ValueType::TableInputStream(LIST_OUTPUT_TYPE.clone())),
+    short = "List all available locales."
+    )]
     pub struct List {}
 
     fn list(context: CommandContext) -> CrushResult<()> {
@@ -135,7 +174,6 @@ mod locale {
     ) -> CrushResult<()> {
         for name in to_crush_error(SystemLocale::available_names())? {
             match &cmd.last_argument {
-
                 LastArgument::Unknown => {
                     res.push(Completion::new(
                         escape(&name),
@@ -155,7 +193,6 @@ mod locale {
                 }
 
                 _ => {}
-
             }
         }
         Ok(())
@@ -205,6 +242,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Threads::declare(crush)?;
             Exit::declare(crush)?;
             Jobs::declare(crush)?;
+            History::declare(crush)?;
 
             crush.create_namespace(
                 "locale",

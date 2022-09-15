@@ -27,7 +27,7 @@ impl BinaryReader for ChannelReader {
     }
 }
 
-impl std::io::Read for ChannelReader {
+impl Read for ChannelReader {
     fn read(&mut self, mut dst: &mut [u8]) -> Result<usize, Error> {
         match &self.buff {
             None => match self.receiver.recv() {
@@ -62,7 +62,7 @@ struct ChannelWriter {
     sender: Sender<Box<[u8]>>,
 }
 
-impl std::io::Write for ChannelWriter {
+impl Write for ChannelWriter {
     fn write(&mut self, buf: &[u8]) -> Result<usize, Error> {
         let boxed_slice: Box<[u8]> = buf.into();
         let _ = self.sender.send(boxed_slice);

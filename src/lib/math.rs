@@ -1,7 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::argument_error_legacy;
 use crate::lang::errors::CrushResult;
-use crate::lang::state::contexts::ArgumentVector;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;

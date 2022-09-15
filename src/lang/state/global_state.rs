@@ -4,7 +4,9 @@ use crate::lang::parser::Parser;
 use crate::lang::printer::Printer;
 use crate::lang::threads::ThreadStore;
 use num_format::{Grouping, SystemLocale};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
+use rustyline::Editor;
+use crate::interactive::rustyline_helper::RustylineHelper;
 use crate::lang::value::Value;
 
 /**
@@ -21,6 +23,7 @@ pub struct GlobalState {
     prompt: Arc<Mutex<Option<Command>>>,
     jobs: Arc<Mutex<Vec<Option<LiveJob>>>>,
     parser: Parser,
+    editor: Arc<Mutex<Option<Editor<RustylineHelper>>>>,
 }
 
 struct StateData {
@@ -99,6 +102,7 @@ impl GlobalState {
             prompt: Arc::from(Mutex::new(None)),
             parser: Parser::new(),
             jobs: Arc::from(Mutex::new(Vec::new())),
+            editor: Arc::from(Mutex::new(None)),
         })
     }
 
@@ -165,4 +169,14 @@ impl GlobalState {
         let jobs = self.jobs.lock().unwrap();
         jobs.iter().flat_map(|a| a.clone()).collect()
     }
+
+    pub fn set_editor(&self, editor: Option<Editor<RustylineHelper>>) {
+        let mut data = self.editor.lock().unwrap();
+        *data = editor;
+    }
+
+    pub fn editor(&self) -> MutexGuard<Option<Editor<RustylineHelper>>> {
+        self.editor.lock().unwrap()
+    }
+
 }

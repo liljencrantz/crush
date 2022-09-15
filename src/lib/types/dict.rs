@@ -7,7 +7,6 @@ use crate::lang::state::contexts::{ArgumentVector, CommandContext, This};
 use crate::lang::value::Value;
 use crate::lang::{data::dict::Dict, value::ValueType};
 use lazy_static::lazy_static;
-use trust_dns_client::proto::xfer::FirstAnswer;
 use ordered_map::{Entry, OrderedMap};
 use signature::signature;
 use crate::data::table::ColumnVec;

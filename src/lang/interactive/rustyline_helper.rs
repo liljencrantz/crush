@@ -54,14 +54,11 @@ impl RustylineHelper {
             vec!["global".to_string(), "crush".to_string(), "highlight".to_string()]) {
             use TokenType::*;
             let res = match token_type {
-                QuotedString => highlight.get(&Value::string("string_literal")),
+                Flag | StringOrGlob | QuotedString => highlight.get(&Value::string("string_literal")),
                 Regex => highlight.get(&Value::string("string_literal")),
-                QuotedFile => highlight.get(&Value::string("file_literal")),
-                StringOrWildcard => highlight.get(&Value::string("label")),
-                Integer => highlight.get(&Value::string("numeric_literal")),
-                Float => highlight.get(&Value::string("numeric_literal")),
-                Field => highlight.get(&Value::string("field")),
-                Pipe | LogicalOperator | UnaryOperator | TermOperator | FactorOperator |
+                FileOrGlob | QuotedFile => highlight.get(&Value::string("file_literal")),
+                Float | Integer => highlight.get(&Value::string("numeric_literal")),
+                Unnamed | Named | Pipe | LogicalOperator | UnaryOperator | TermOperator | FactorOperator |
                 ComparisonOperator | AssignmentOperator | GetItemEnd | GetItemStart | SubEnd |
                 SubStart | JobEnd | JobStart =>
                     highlight.get(&Value::string("operator")),
