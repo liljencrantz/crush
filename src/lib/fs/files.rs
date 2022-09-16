@@ -131,8 +131,8 @@ fn run_for_single_directory_or_file(
     Ok(())
 }
 
-#[signature(find, short = "Recursively list files", output = Known(ValueType::TableInputStream(OUTPUT_TYPE.clone())))]
-pub struct Find {
+#[signature(files, short = "Recursively list files", output = Known(ValueType::TableInputStream(OUTPUT_TYPE.clone())))]
+pub struct FilesSignature {
     #[unnamed()]
     #[description("directories and files to list")]
     directory: Files,
@@ -141,9 +141,9 @@ pub struct Find {
     recurse: bool,
 }
 
-fn find(context: CommandContext) -> CrushResult<()> {
+fn files(context: CommandContext) -> CrushResult<()> {
     let mut output = context.output.initialize(OUTPUT_TYPE.clone())?;
-    let config: Find = Find::parse(context.arguments, &context.global_state.printer())?;
+    let config: FilesSignature = FilesSignature::parse(context.arguments, &context.global_state.printer())?;
 
     let mut dir = if config.directory.had_entries() {
         Vec::from(config.directory)

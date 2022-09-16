@@ -49,6 +49,7 @@ lazy_static! {
             IsControl::declare_method(&mut res, &path);
             Len::declare_method(&mut res, &path);
             IsDigit::declare_method(&mut res, &path);
+            Substr::declare_method(&mut res, &path);
             res
         };
 }
@@ -339,4 +340,35 @@ fn is_digit(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Bool(
         s.chars().all(|ch| ch.is_digit(cfg.radix as u32)),
     ))
+}
+
+#[signature(
+substr,
+can_block = false,
+output=Known(ValueType::String),
+short = "Extract a substring from this string.",
+long = "If only one index is specified, ",
+)]
+struct Substr {
+    #[description("Starting index (inclusive).")]
+    #[default(0usize)]
+    from: usize,
+    #[description("ending index (exclusive). If unspecified, to end of string.")]
+    to: Option<usize>,
+}
+
+fn substr(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Substr = Substr::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let s = context.this.string()?;
+    let to = cfg.to.unwrap_or(s.len());
+
+    if to < cfg.from {
+        return argument_error_legacy("From larger than to");
+    }
+    if to > s.len() {
+        return argument_error_legacy("Substring beyond end of string");
+    }
+    context
+        .output
+        .send(Value::string(&s[cfg.from..to]))
 }

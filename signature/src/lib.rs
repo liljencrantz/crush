@@ -426,7 +426,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
             let mut output = s.to_token_stream();
             output.extend(handler.into_token_stream());
-            if struct_name.to_string() == "Filter" {
+            if struct_name.to_string() == "Substr" {
                 println!("{}", output.to_string());
             }
             Ok(output)

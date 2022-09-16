@@ -13,14 +13,11 @@ Binary values can be big. Make them shared behind an Arc. Same with tables. Mayb
 In closures without a signature, put unnamed variables in the variable '__unnamed__'
 Make integers overflow to arbitrary precision math
 Add control:source command
-Add string:join command
-Add string:substr command
 Data enums + pattern matching syntax
 Add readline command that reads one line of interactive text input from the user via the terminal
 Add package command to create a new namespace
 pbuf:from command that takes a protobuf definition and uses it to deserialize protobuf data
 avro:from command that deserializes avro data
-Add history command with all previous interactive invocations, including invocation string, current status, and misc metadata.
 Support __str__ method for string rendering
 Avoid infinite loops when printing structs that reference each other
 getattr support?
@@ -29,5 +26,5 @@ Eager method evaluation in arguments?
 read methods in binary_stream
 tab completions for external commands
 more file info: size, permissions, user, group, modified, created, type. Move to methods or add more to stat?
-Rename len to size in file:stat
+Rename len to size in file:stat?
 Bad error message when trying to mutate constant

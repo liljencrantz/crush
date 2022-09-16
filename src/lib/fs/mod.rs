@@ -12,8 +12,8 @@ use crate::lang::signature::files::Files;
 use std::path::PathBuf;
 use std::convert::TryFrom;
 
-mod du;
-mod find;
+mod usage;
+mod files;
 
 #[signature(
 cd,
@@ -71,9 +71,9 @@ help,
 can_block=false,
 output = Known(ValueType::Empty),
 short = "Show help about the specified thing.",
-example = "help ls",
-example = "help integer",
-example = "help help",
+example = "help $ls",
+example = "help $integer",
+example = "help $help",
 )]
 pub struct HelpSignature {
     #[description("the topic you want help on.")]
@@ -122,11 +122,11 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "fs",
         "File system introspection",
         Box::new(move |env| {
-            find::Find::declare(env)?;
+            files::FilesSignature::declare(env)?;
             Cd::declare(env)?;
             Pwd::declare(env)?;
             HelpSignature::declare(env)?;
-            du::Du::declare(env)?;
+            usage::Usage::declare(env)?;
             Ok(())
         }),
     )?;
