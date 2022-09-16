@@ -148,6 +148,7 @@ lazy_static! {
         );
         Repeat::declare_method(&mut res, &path);
         Call::declare_method(&mut res, &path);
+        Slice::declare_method(&mut res, &path);
 
         res
     };
@@ -396,4 +397,34 @@ fn getitem(mut context: CommandContext) -> CrushResult<()> {
     let list = context.this.list()?;
     let idx = context.arguments.integer(0)?;
     context.output.send(list.get(idx as usize)?)
+}
+
+#[signature(
+slice,
+can_block = false,
+output=Unknown,
+short = "Extract a slice from this list.",
+)]
+struct Slice {
+    #[description("Starting index (inclusive).")]
+    #[default(0usize)]
+    from: usize,
+    #[description("ending index (exclusive). If unspecified, to end of string.")]
+    to: Option<usize>,
+}
+
+fn slice(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Slice = Slice::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let s = context.this.list()?;
+    let to = cfg.to.unwrap_or(s.len());
+
+    if to < cfg.from {
+        return argument_error_legacy("From larger than to");
+    }
+    if to > s.len() {
+        return argument_error_legacy("Substring beyond end of string");
+    }
+    context
+        .output
+        .send(Value::List(s.slice(cfg.from,to)?))
 }

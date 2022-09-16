@@ -7,6 +7,7 @@ use std::collections::HashSet;
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::fmt::{Display, Formatter};
+use num_format::Locale::ce;
 use crate::data::dict::Dict;
 use crate::lang::value::VecReader;
 
@@ -135,6 +136,12 @@ impl List {
         }
         cells.insert(idx, value);
         Ok(())
+    }
+
+    pub fn slice(&self, from: usize, to: usize) -> CrushResult<List> {
+        let mut cells = self.cells.lock().unwrap();
+        let res = cells[from..to].to_vec();
+        Ok(List::new(self.cell_type.clone(), res))
     }
 
     pub fn truncate(&self, idx: usize) {

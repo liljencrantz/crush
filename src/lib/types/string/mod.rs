@@ -348,7 +348,6 @@ substr,
 can_block = false,
 output=Known(ValueType::String),
 short = "Extract a substring from this string.",
-long = "If only one index is specified, ",
 )]
 struct Substr {
     #[description("Starting index (inclusive).")]
