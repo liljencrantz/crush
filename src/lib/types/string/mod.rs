@@ -50,6 +50,7 @@ lazy_static! {
             Len::declare_method(&mut res, &path);
             IsDigit::declare_method(&mut res, &path);
             Substr::declare_method(&mut res, &path);
+            GetItem::declare_method(&mut res, &path);
             res
         };
 }
@@ -371,4 +372,26 @@ fn substr(mut context: CommandContext) -> CrushResult<()> {
     context
         .output
         .send(Value::string(&s[cfg.from..to]))
+}
+
+#[signature(
+__getitem__,
+can_block = false,
+output=Known(ValueType::String),
+short = "Extract a one character substring from this string.",
+)]
+struct GetItem {
+    #[description("index.")]
+    idx: usize,
+}
+
+fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let s = context.this.string()?;
+    if cfg.idx >= s.len() {
+        return argument_error_legacy("Index beyond end of string");
+    }
+    context
+        .output
+        .send(Value::string(&s[cfg.idx..(cfg.idx+1)]))
 }
