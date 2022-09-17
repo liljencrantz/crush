@@ -132,7 +132,7 @@ impl ArgumentVector for Vec<Argument> {
         if idx < self.len() {
             let l = self[idx].location;
             match self
-                .replace(idx, Argument::unnamed(Value::Empty(), l))
+                .replace(idx, Argument::unnamed(Value::Empty, l))
                 .value
             {
                 Value::String(s) => Ok(s.to_string()),

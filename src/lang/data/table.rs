@@ -58,7 +58,7 @@ impl CrushStream for TableReader {
         Ok(self
             .rows
             .rows
-            .replace(self.idx - 1, Row::new(vec![Value::Empty()])))
+            .replace(self.idx - 1, Row::new(vec![Value::Empty])))
     }
 
     fn read_timeout(

@@ -48,7 +48,7 @@ use crate::util::escape::escape;
 use crate::util::replace::Replace;
 
 pub enum Value {
-    Empty(),
+    Empty,
     String(Arc<str>),
     Integer(i128),
     Time(DateTime<Local>),
@@ -191,7 +191,7 @@ impl CrushStream for VecReader {
         if self.idx > self.vec.len() {
             return eof_error()
         }
-        Ok(Row::new(vec![self.vec.replace(self.idx - 1, Value::Empty())]))
+        Ok(Row::new(vec![self.vec.replace(self.idx - 1, Value::Empty)]))
     }
 
     fn read_timeout(
@@ -319,7 +319,7 @@ impl Value {
             Value::Bool(_) => ValueType::Bool,
             Value::Dict(d) => d.dict_type(),
             Value::Float(_) => ValueType::Float,
-            Value::Empty() => ValueType::Empty,
+            Value::Empty => ValueType::Empty,
             Value::BinaryInputStream(_) => ValueType::BinaryInputStream,
             Value::Binary(_) => ValueType::Binary,
             Value::Type(_) => ValueType::Type,
@@ -525,7 +525,7 @@ impl Clone for Value {
             Value::Bool(v) => Value::Bool(*v),
             Value::Dict(d) => Value::Dict(d.clone()),
             Value::Float(f) => Value::Float(*f),
-            Value::Empty() => Value::Empty(),
+            Value::Empty => Value::Empty,
             Value::BinaryInputStream(v) => Value::BinaryInputStream(v.as_ref().clone()),
             Value::Binary(v) => Value::Binary(v.clone()),
             Value::Type(t) => Value::Type(t.clone()),
@@ -577,7 +577,7 @@ impl std::hash::Hash for Value {
                 x.hash(state);
                 s.hash(state);
             }
-            Value::Empty() => {}
+            Value::Empty => {}
             Value::Type(v) => v.to_string().hash(state),
         }
     }

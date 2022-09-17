@@ -128,7 +128,7 @@ impl PrettyPrinter {
             Value::TableInputStream(mut output) => self.print_stream(&mut output, 0),
             Value::Table(rows) => self.print_stream(&mut TableReader::new(rows), 0),
             Value::BinaryInputStream(mut b) => self.print_binary(b.as_mut(), 0),
-            Value::Empty() => {}
+            Value::Empty => {}
             Value::Struct(data) => self.print_struct(data, 0),
             Value::List(list) =>
                 if list.len() < 8 {

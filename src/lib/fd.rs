@@ -262,7 +262,7 @@ mod procfs {
                         Value::Integer(remote_port as i128),
                         Value::Integer(inode as i128),
                         users.get(&nix::unistd::Uid::from_raw(uid)).map(|s| Value::from(s)).unwrap_or_else(|| Value::from("?")),
-                        Value::Empty(),
+                        Value::Empty,
                     ]))?;
                 }
             }
@@ -313,7 +313,7 @@ mod procfs {
             let path = if parts.len() >= 8 {
                 Value::File(PathBuf::from(parts[7]))
             } else {
-                Value::Empty()
+                Value::Empty
             };
 
             match pids.entry(inode) {
@@ -330,7 +330,7 @@ mod procfs {
                     output.send(Row::new(vec![
                         Value::Integer(inode as i128),
                         path,
-                        Value::Empty(),
+                        Value::Empty,
                     ]))?;
                 }
             }

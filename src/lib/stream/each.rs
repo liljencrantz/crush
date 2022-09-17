@@ -43,7 +43,7 @@ fn run(
 pub fn each(context: CommandContext) -> CrushResult<()> {
     let cfg: Each = Each::parse(context.arguments.clone(), &context.global_state.printer())?;
     let location = context.arguments[0].location;
-    context.output.send(Value::Empty())?;
+    context.output.send(Value::Empty)?;
 
     match context.input.recv()?.stream()? {
         Some(mut input) => {

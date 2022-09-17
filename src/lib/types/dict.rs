@@ -200,7 +200,7 @@ fn getitem(mut context: CommandContext) -> CrushResult<()> {
     let dict = context.this.dict()?;
     let key = context.arguments.value(0)?;
     let o = context.output;
-    o.send(dict.get(&key).unwrap_or(Value::Empty()))
+    o.send(dict.get(&key).unwrap_or(Value::Empty))
 }
 
 fn contains(mut context: CommandContext) -> CrushResult<()> {
@@ -321,7 +321,7 @@ fn collect(mut context: CommandContext) -> CrushResult<()> {
                         (Ok(key_idx), Ok(value_idx)) => {
                             while let Ok(row) = input.read() {
                                 let mut row = Vec::from(row);
-                                res.insert(row.replace(key_idx, Value::Empty()), row.replace(value_idx, Value::Empty()));
+                                res.insert(row.replace(key_idx, Value::Empty), row.replace(value_idx, Value::Empty));
                             }
                             context
                                 .output

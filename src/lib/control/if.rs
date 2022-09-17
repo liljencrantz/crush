@@ -26,7 +26,7 @@ fn r#if(mut context: CommandContext) -> CrushResult<()> {
         cfg.true_clause.eval(context.with_args(vec![], None))
     } else {
         match cfg.false_clause {
-            None => context.output.send(Value::Empty()),
+            None => context.output.send(Value::Empty),
             Some(v) => v.eval(context.with_args(vec![], None)),
         }
     }

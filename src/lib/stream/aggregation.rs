@@ -123,12 +123,12 @@ fn avg(context: CommandContext) -> CrushResult<()> {
 macro_rules! aggr_function {
     ($name:ident, $value_type:ident, $desc:literal, $op:expr) => {
         fn $name(mut s: Stream, column: usize) -> CrushResult<Value> {
-            let mut res = match s.read()?.into_cells().replace(column, Value::Empty()) {
+            let mut res = match s.read()?.into_cells().replace(column, Value::Empty) {
                 Value::$value_type(i) => i,
                 _ => return error(concat!("Invalid cell value, expected ", $desc)),
             };
             while let Ok(row) = s.read() {
-                match row.into_cells().replace(column, Value::Empty()) {
+                match row.into_cells().replace(column, Value::Empty) {
                     Value::$value_type(i) => res = $op(i, res),
                     _ => return error(concat!("Invalid cell value, expected ", $desc)),
                 }
@@ -279,7 +279,7 @@ fn first(context: CommandContext) -> CrushResult<()> {
             let column = parse(input.types(), cfg.field)?;
 
             if let Ok(mut row) = input.read() {
-                context.output.send(row.into_cells().replace(column, Value::Empty()).clone())
+                context.output.send(row.into_cells().replace(column, Value::Empty).clone())
             } else {
                 error("Empty stream")
             }
@@ -307,7 +307,7 @@ fn last(context: CommandContext) -> CrushResult<()> {
                 rr = Some(row)
             }
             rr
-                .map(|r| {context.output.send(r.into_cells().replace(column, Value::Empty()))})
+                .map(|r| {context.output.send(r.into_cells().replace(column, Value::Empty))})
                 .unwrap_or_else(|| {argument_error_legacy("Empty stream")})
         }
         _ => error("Expected a stream"),

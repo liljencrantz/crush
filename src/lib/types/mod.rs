@@ -147,7 +147,7 @@ fn class_set(mut context: CommandContext) -> CrushResult<()> {
     let value = context.arguments.value(1)?;
     let name = context.arguments.string(0)?;
     this.set(&name, value);
-    context.output.send(Value::Empty())
+    context.output.send(Value::Empty)
 }
 
 fn class_get(mut context: CommandContext) -> CrushResult<()> {

@@ -100,7 +100,7 @@ fn cmd(mut context: CommandContext) -> CrushResult<()> {
                 let mut stdin = mandate(child.stdin.take(), "Expected stdin stream")?;
 
                 match input {
-                    Value::Empty() => {
+                    Value::Empty => {
                         drop(stdin);
                     }
                     Value::Binary(v) => {
@@ -163,7 +163,7 @@ struct Sleep {
 fn sleep(context: CommandContext) -> CrushResult<()> {
     let cfg = Sleep::parse(context.arguments, &context.global_state.printer())?;
     std::thread::sleep(to_crush_error(cfg.duration.to_std())?);
-    context.output.send(Value::Empty())?;
+    context.output.send(Value::Empty)?;
     Ok(())
 }
 

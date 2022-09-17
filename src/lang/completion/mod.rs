@@ -80,7 +80,7 @@ fn completion_suffix(maybe_scope: CrushResult<Option<Value>>, t: &ValueType) -> 
         ValueType::Any =>
             match maybe_scope {
                 Ok(Some(Value::Scope(_))) => ":",
-                Ok(Some(Value::Empty())) |
+                Ok(Some(Value::Empty)) |
                 Ok(Some(Value::Bool(_))) |
                 Ok(Some(Value::String(_))) |
                 Ok(Some(Value::Command(_))) => " ",
@@ -423,7 +423,7 @@ mod tests {
         let cursor = 0;
 
         let s = Scope::create_root();
-        s.declare("abcd", Value::Empty()).unwrap();
+        s.declare("abcd", Value::Empty).unwrap();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "abcd ");
@@ -478,7 +478,7 @@ mod tests {
         let cursor = line.len();
 
         let s = scope_with_function();
-        s.declare("super_confusing_variable", Value::Empty()).unwrap();
+        s.declare("super_confusing_variable", Value::Empty).unwrap();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "my_cmd --super_fancy_argument ");
@@ -523,7 +523,7 @@ mod tests {
         let cursor = line.len();
 
         let s = Scope::create_root();
-        s.declare("abcd", Value::Empty()).unwrap();
+        s.declare("abcd", Value::Empty).unwrap();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "a | abcd ");
@@ -547,7 +547,7 @@ mod tests {
         let cursor = line.len();
 
         let s = Scope::create_root();
-        s.declare("abcd", Value::Empty()).unwrap();
+        s.declare("abcd", Value::Empty).unwrap();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "a abcd ");
@@ -559,7 +559,7 @@ mod tests {
         let cursor = line.len();
 
         let s = Scope::create_root();
-        s.declare("abcd", Value::Empty()).unwrap();
+        s.declare("abcd", Value::Empty).unwrap();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "x (abcd ");
@@ -571,7 +571,7 @@ mod tests {
         let cursor = line.len();
 
         let s = Scope::create_root();
-        s.declare("abcd", Value::Empty()).unwrap();
+        s.declare("abcd", Value::Empty).unwrap();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "abcd ");
@@ -639,7 +639,7 @@ mod tests {
 
         let s = Scope::create_root();
         s.create_namespace("abcd", "bla", Box::new(|env| {
-            env.declare("bcde", Value::Empty()).unwrap();
+            env.declare("bcde", Value::Empty).unwrap();
             Ok(())
         })).unwrap();
 
@@ -655,7 +655,7 @@ mod tests {
 
         let s = Scope::create_root();
         s.create_namespace("abcd", "bla", Box::new(|env| {
-            env.declare("bcde", Value::Empty()).unwrap();
+            env.declare("bcde", Value::Empty).unwrap();
             Ok(())
         })).unwrap();
 
@@ -670,7 +670,7 @@ mod tests {
         let cursor = line.len();
 
         let s = Scope::create_root();
-        s.declare("abcd", Value::Empty()).unwrap();
+        s.declare("abcd", Value::Empty).unwrap();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "abcd $abcd ");
@@ -682,7 +682,7 @@ mod tests {
         let cursor = 1;
 
         let s = Scope::create_root();
-        s.declare("abcd", Value::Empty()).unwrap();
+        s.declare("abcd", Value::Empty).unwrap();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "abcd b");
@@ -694,7 +694,7 @@ mod tests {
         let cursor = 6;
 
         let s = Scope::create_root();
-        s.declare("cdef", Value::Empty()).unwrap();
+        s.declare("cdef", Value::Empty).unwrap();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "ab $cdef  ef");
@@ -706,7 +706,7 @@ mod tests {
         let cursor = 10;
 
         let s = Scope::create_root();
-        s.declare("cdef", Value::Empty()).unwrap();
+        s.declare("cdef", Value::Empty).unwrap();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "ab foo=$cdef ");
@@ -718,8 +718,8 @@ mod tests {
         let cursor = line.len();
 
         let s = Scope::create_root();
-        s.declare("xxxx", Value::Empty()).unwrap();
-        s.declare("aaaa", Value::Empty()).unwrap();
+        s.declare("xxxx", Value::Empty).unwrap();
+        s.declare("aaaa", Value::Empty).unwrap();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 2);
     }
@@ -730,7 +730,7 @@ mod tests {
         let cursor = line.len();
 
         let s = scope_with_function();
-        s.declare("tumbleweed", Value::Empty()).unwrap();
+        s.declare("tumbleweed", Value::Empty).unwrap();
         s.declare("type", Value::Type(ValueType::Empty)).unwrap();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);

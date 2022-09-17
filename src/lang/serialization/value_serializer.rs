@@ -34,7 +34,7 @@ fn serialize_simple(
             Value::Binary(b) => element::Element::Binary(b.clone()),
             Value::Float(f) => element::Element::Float(*f),
             Value::Bool(b) => element::Element::Bool(*b),
-            Value::Empty() => element::Element::Empty(false),
+            Value::Empty => element::Element::Empty(false),
             Value::Time(d) => element::Element::Time(d.timestamp_nanos()),
             _ => return error("Expected simple value"),
         }),
@@ -59,7 +59,7 @@ impl Serializable<Value> for Value {
                 Ok(Value::Regex(v.clone(), to_crush_error(Regex::new(v))?))
             }
             element::Element::Bool(v) => Ok(Value::Bool(*v)),
-            element::Element::Empty(_) => Ok(Value::Empty()),
+            element::Element::Empty(_) => Ok(Value::Empty),
 
             element::Element::SmallInteger(_) | element::Element::LargeInteger(_) => {
                 Ok(Value::Integer(i128::deserialize(id, elements, state)?))
@@ -117,7 +117,7 @@ impl Serializable<Value> for Value {
             | Value::Binary(_)
             | Value::Float(_)
             | Value::Bool(_)
-            | Value::Empty()
+            | Value::Empty
             | Value::Time(_) => serialize_simple(self, elements, state),
 
             Value::Integer(s) => s.serialize(elements, state),

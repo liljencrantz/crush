@@ -40,7 +40,7 @@ fn threads(context: CommandContext) -> CrushResult<()> {
 
     for t in context.global_state.threads().current()? {
         output.send(Row::new(vec![
-            t.job_id.map(|i| { Value::from(i) }).unwrap_or(Value::Empty()),
+            t.job_id.map(|i| { Value::from(i) }).unwrap_or(Value::Empty),
             Value::Time(t.creation_time),
             Value::from(t.name),
         ]))?;
@@ -58,7 +58,7 @@ fn exit(context: CommandContext) -> CrushResult<()> {
     let cfg: Exit = Exit::parse(context.arguments, &context.global_state.printer())?;
     context.scope.do_exit()?;
     context.global_state.set_exit_status(cfg.status as i32);
-    context.output.send(Value::Empty())
+    context.output.send(Value::Empty)
 }
 
 #[signature(prompt, can_block = false, short = "Set or get the prompt")]
@@ -69,7 +69,7 @@ struct Prompt {
 fn prompt(context: CommandContext) -> CrushResult<()> {
     let cfg: Prompt = Prompt::parse(context.arguments, &context.global_state.printer())?;
     context.global_state.set_prompt(cfg.prompt);
-    context.output.send(Value::Empty())
+    context.output.send(Value::Empty)
 }
 
 lazy_static! {
@@ -209,7 +209,7 @@ mod locale {
         let config: Set = Set::parse(context.arguments, &context.global_state.printer())?;
         let new_locale = to_crush_error(SystemLocale::from_name(config.locale))?;
         context.global_state.set_locale(new_locale);
-        context.output.send(Value::Empty())
+        context.output.send(Value::Empty)
     }
 
     #[signature(get, output = Known(ValueType::String), short = "Get the current locale.")]

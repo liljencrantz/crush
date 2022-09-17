@@ -66,6 +66,6 @@ fn write(mut context: CommandContext) -> CrushResult<()> {
     while let Ok(row) = stream.read() {
         real_output.send(row)?;
     }
-    context.output.send(Value::Empty())?;
+    context.output.send(Value::Empty)?;
     Ok(())
 }

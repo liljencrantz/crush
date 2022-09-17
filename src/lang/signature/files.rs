@@ -70,7 +70,7 @@ impl Files {
             output.send(Value::BinaryInputStream(r))?;
             Ok(w)
         } else if self.files.len() == 1 {
-            output.send(Value::Empty())?;
+            output.send(Value::Empty)?;
             Ok(Box::from(to_crush_error(File::create(
                 self.files[0].clone(),
             ))?))

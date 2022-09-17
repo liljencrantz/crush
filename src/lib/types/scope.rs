@@ -148,7 +148,7 @@ struct Name {}
 fn __name__(mut context: CommandContext) -> CrushResult<()> {
     let scope = context.this.scope()?;
     context.output.send(
-        scope.name().map(|n| {Value::from(n)}).unwrap_or(Value::Empty()))
+        scope.name().map(|n| {Value::from(n)}).unwrap_or(Value::Empty))
 }
 
 #[signature(

@@ -12,7 +12,7 @@ pub fn r#let(context: CommandContext) -> CrushResult<()> {
             arg.value,
         )?;
     }
-    context.output.send(Value::Empty())
+    context.output.send(Value::Empty)
 }
 
 pub fn set(context: CommandContext) -> CrushResult<()> {
@@ -22,7 +22,7 @@ pub fn set(context: CommandContext) -> CrushResult<()> {
             arg.value,
         )?;
     }
-    context.output.send(Value::Empty())
+    context.output.send(Value::Empty)
 }
 
 pub fn unset(context: CommandContext) -> CrushResult<()> {
@@ -37,7 +37,7 @@ pub fn unset(context: CommandContext) -> CrushResult<()> {
             return argument_error_legacy("Illegal variable name");
         }
     }
-    context.output.send(Value::Empty())
+    context.output.send(Value::Empty)
 }
 
 pub fn r#use(context: CommandContext) -> CrushResult<()> {
@@ -47,7 +47,7 @@ pub fn r#use(context: CommandContext) -> CrushResult<()> {
             _ => return argument_error_legacy("Expected all arguments to be scopes"),
         }
     }
-    context.output.send(Value::Empty())
+    context.output.send(Value::Empty)
 }
 
 pub fn env(context: CommandContext) -> CrushResult<()> {
@@ -67,7 +67,7 @@ pub fn env(context: CommandContext) -> CrushResult<()> {
             Value::from(values[k].to_string()),
         ])));
     }
-    context.output.send(Value::Empty())
+    context.output.send(Value::Empty)
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {

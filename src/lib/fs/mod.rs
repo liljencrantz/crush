@@ -36,7 +36,7 @@ fn cd(context: CommandContext) -> CrushResult<()> {
     }?;
 
     to_crush_error(std::env::set_current_dir(dir))?;
-    context.output.send(Value::Empty())
+    context.output.send(Value::Empty)
 }
 
 #[signature(
@@ -100,7 +100,7 @@ To get a list of everything in your namespace, write "var:env". To list the
 members of a value, write "dir <value>".
 "#,
             );
-            context.output.send(Value::Empty())
+            context.output.send(Value::Empty)
         }
         Some(v) => {
             match v {
@@ -112,7 +112,7 @@ members of a value, write "dir <value>".
                 Value::Type(t) => halp(&t, &context.global_state.printer()),
                 v => halp(&v, &context.global_state.printer()),
             }
-            context.output.send(Value::Empty())
+            context.output.send(Value::Empty)
         }
     }
 }

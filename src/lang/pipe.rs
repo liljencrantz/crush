@@ -30,7 +30,7 @@ impl ValueSender {
     }
 
     pub fn empty(&self) -> CrushResult<()> {
-        self.send(Value::Empty())
+        self.send(Value::Empty)
     }
 
     pub fn initialize(&self, signature: Vec<ColumnType>) -> CrushResult<OutputStream> {
@@ -79,7 +79,7 @@ A receiver that when read will return a single instance of Value::Empty
  */
 pub fn empty_channel() -> ValueReceiver {
     let (o, mut i) = pipe();
-    let _ = o.send(Value::Empty());
+    let _ = o.send(Value::Empty);
     i.is_pipeline = false;
     i
 }

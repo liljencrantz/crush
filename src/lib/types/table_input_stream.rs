@@ -124,8 +124,8 @@ fn pipe(mut context: CommandContext) -> CrushResult<()> {
 
 fn close(mut context: CommandContext) -> CrushResult<()> {
     let pipe = context.this.r#struct()?;
-    pipe.set("read", Value::Empty());
-    pipe.set("output", Value::Empty());
+    pipe.set("read", Value::Empty);
+    pipe.set("output", Value::Empty);
     Ok(())
 }
 
@@ -138,7 +138,7 @@ fn write(mut context: CommandContext) -> CrushResult<()> {
             while let Ok(row) = stream.read() {
                 output_stream.send(row)?;
             }
-            context.output.send(Value::Empty())?;
+            context.output.send(Value::Empty)?;
             Ok(())
         }
         _ => argument_error_legacy("Expected an output stream")

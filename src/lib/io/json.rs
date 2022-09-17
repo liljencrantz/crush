@@ -15,7 +15,7 @@ use std::convert::TryFrom;
 
 fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
     match json_value {
-        serde_json::Value::Null => Ok(Value::Empty()),
+        serde_json::Value::Null => Ok(Value::Empty),
         serde_json::Value::Bool(b) => Ok(Value::Bool(*b)),
         serde_json::Value::Number(f) => {
             if f.is_u64() {
@@ -44,7 +44,7 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
                 .collect();
 
             match types.len() {
-                0 => Ok(Value::Empty()),
+                0 => Ok(Value::Empty),
                 1 => {
                     let list_type = types.iter().next().unwrap();
                     match (list_type, struct_types.len()) {

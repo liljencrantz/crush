@@ -99,7 +99,7 @@ pub fn chown(mut context: CommandContext) -> CrushResult<()> {
 
     context
         .output
-        .send(Value::Empty())
+        .send(Value::Empty)
 }
 
 #[signature(
@@ -225,7 +225,7 @@ pub fn chmod(mut context: CommandContext) -> CrushResult<()> {
     to_crush_error(std::fs::set_permissions(&file, std::fs::Permissions::from_mode(current)))?;
     context
         .output
-        .send(Value::Empty())
+        .send(Value::Empty)
 }
 
 #[signature(

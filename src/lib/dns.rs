@@ -172,7 +172,7 @@ fn domain(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(
         rc.get_domain()
             .map(|d| {Value::from(d)})
-            .unwrap_or(Value::Empty()))
+            .unwrap_or(Value::Empty))
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {

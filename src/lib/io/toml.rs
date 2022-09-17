@@ -36,7 +36,7 @@ fn from_toml(toml_value: &toml::Value) -> CrushResult<Value> {
                 .collect();
 
             match types.len() {
-                0 => Ok(Value::Empty()),
+                0 => Ok(Value::Empty),
                 1 => {
                     let list_type = types.iter().next().unwrap();
                     match (list_type, struct_types.len()) {

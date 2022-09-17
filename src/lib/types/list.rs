@@ -253,7 +253,7 @@ fn collect(mut context: CommandContext) -> CrushResult<()> {
                     match input_type.as_slice().find(s) {
                         Ok(idx) => {
                             while let Ok(row) = input.read() {
-                                lst.push(Vec::from(row).replace(idx, Value::Empty()));
+                                lst.push(Vec::from(row).replace(idx, Value::Empty));
                             }
                             context
                                 .output

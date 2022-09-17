@@ -287,7 +287,7 @@ impl CrushStream for StructReader {
         self.idx += 1;
         let (k, v) = self
             .rows
-            .replace(self.idx - 1, ("".to_string(), Value::Empty()));
+            .replace(self.idx - 1, ("".to_string(), Value::Empty));
         Ok(Row::new(vec![Value::from(k), v]))
     }
 
