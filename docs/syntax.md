@@ -37,7 +37,7 @@ input and produce a single value as output. The input and output of a command
 is passed down via a so called pipeline:
 
 ```shell script
-ps | sort cpu
+host:procs | sort cpu
 ```
 
 Many commands consume and produce table streams as input and output. These commands

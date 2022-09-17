@@ -170,7 +170,7 @@ The individual cells in this table stream can be any of a variety of types,
 including strings, integers, floating point numbers, lists, binary data or
 another table stream.
 
-    crush# ps | head 5
+    crush# host:procs | head 5
     pid ppid status   user cpu  name
       1    0 Sleeping root 4.73 /sbin/init
       2    0 Sleeping root    0 [kthreadd]
@@ -304,7 +304,7 @@ former displays a help messages, the latter lists the content of a value.
     
         Example:
     
-        ps | sort cpu
+        host:procs | sort cpu
     crush# dir $list
     [type, truncate, remove, clone, of, __call__, __setitem__, pop, push, empty, len, peek, new, clear]
 
@@ -374,7 +374,7 @@ Crush features many commands to operate om arbitrary streams of data using a
 SQL-like syntax. These commands use field-specifiers like `foo` to specify
 columns in the data stream that they operate on:
 
-    ps | where {$user == "root"} | group status proc_per_status={count} | sort proc_per_status
+    host:procs | where {$user == "root"} | group status proc_per_status={count} | sort proc_per_status
     status   proc_per_status
     Idle     108
     Sleeping 170

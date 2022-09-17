@@ -10,7 +10,7 @@ use std::cmp::Ordering;
 #[signature(
 sort,
 short = "Sort input based on column",
-example = "ps | sort cpu",
+example = "host:procs | sort cpu",
 output = Passthrough)]
 pub struct Sort {
     #[unnamed()]

@@ -14,7 +14,7 @@ can_block = true,
 output = Known(Empty),
 short = "Runs a command one for each row of input",
 long = "The columns of the row are exported to the environment using the column names.",
-example = "ps | where {$status != \"Sleeping\"} | each {echo (\"{} is sleepy\":format $name)}")]
+example = "host:procs | where {$status != \"Sleeping\"} | each {echo (\"{} is sleepy\":format $name)}")]
 pub struct Each {
     #[description("the command to run.")]
     body: Command,

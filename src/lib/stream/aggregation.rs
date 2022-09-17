@@ -125,12 +125,12 @@ macro_rules! aggr_function {
         fn $name(mut s: Stream, column: usize) -> CrushResult<Value> {
             let mut res = match s.read()?.into_cells().replace(column, Value::Empty()) {
                 Value::$value_type(i) => i,
-                _ => return error(format!("Invalid cell value, expected {}", $desc)),
+                _ => return error(concat!("Invalid cell value, expected ", $desc)),
             };
             while let Ok(row) = s.read() {
                 match row.into_cells().replace(column, Value::Empty()) {
                     Value::$value_type(i) => res = $op(i, res),
-                    _ => return error(format!("Invalid cell value, expected {}", $desc)),
+                    _ => return error(concat!("Invalid cell value, expected ", $desc)),
                 }
             }
             Ok(Value::$value_type(res))

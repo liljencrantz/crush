@@ -14,7 +14,7 @@ can_block = true,
 output = Passthrough,
 short = "Filter out rows from io based on condition",
 long = "The columns of the row are exported to the environment using the column names.",
-example = "ps | where {status != \"Sleeping\"}")]
+example = "host:procs | where {status != \"Sleeping\"}")]
 pub struct Where {
     #[description("the condition to filter on.")]
     condition: Command,
