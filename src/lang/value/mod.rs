@@ -39,13 +39,17 @@ use ordered_map::OrderedMap;
 pub use value_definition::ValueDefinition;
 pub use value_type::ValueType;
 use std::fmt::{Display, Formatter};
+use std::ops::Deref;
+use std::sync::Arc;
 use num_format::Grouping;
 use crate::data::table::Row;
+use crate::lang::ast::tracked_string::TrackedString;
 use crate::util::escape::escape;
 use crate::util::replace::Replace;
 
 pub enum Value {
-    String(String),
+    Empty(),
+    String(Arc<str>),
     Integer(i128),
     Time(DateTime<Local>),
     Duration(Duration),
@@ -62,7 +66,6 @@ pub enum Value {
     Scope(Scope),
     Bool(bool),
     Float(f64),
-    Empty(),
     BinaryInputStream(Box<dyn BinaryReader + Send + Sync>),
     Binary(Vec<u8>),
     Type(ValueType),
@@ -105,13 +108,37 @@ fn add_keys<T>(map: &OrderedMap<String, T>, res: &mut Vec<String>) {
 
 impl From<&str> for Value {
     fn from(s: &str) -> Value {
-        Value::string(s)
+        Value::String(Arc::from(s))
+    }
+}
+
+impl From<&String> for Value {
+    fn from(s: &String) -> Value {
+        Value::String(Arc::from(s.as_str()))
+    }
+}
+
+impl From<&TrackedString> for Value {
+    fn from(s: &TrackedString) -> Value {
+        Value::String(Arc::from(s.string.as_str()))
+    }
+}
+
+impl From<TrackedString> for Value {
+    fn from(s: TrackedString) -> Value {
+        Value::String(Arc::from(s.string))
+    }
+}
+
+impl From<String> for Value {
+    fn from(s: String) -> Value {
+        Value::String(Arc::from(s))
     }
 }
 
 impl From<char> for Value {
     fn from(v: char) -> Value {
-        Value::String(v.to_string())
+        Value::String(Arc::from(v.to_string()))
     }
 }
 
@@ -255,10 +282,6 @@ impl Value {
         Value::TableInputStream(r)
     }
 
-    pub fn string(s: impl Into<String>) -> Value {
-        Value::String(s.into())
-    }
-
     pub fn stream(&self) -> CrushResult<Option<Stream>> {
         Ok(match self {
             Value::TableInputStream(s) => Some(Box::from(s.clone())),
@@ -305,7 +328,7 @@ impl Value {
 
     pub fn file_expand(&self, v: &mut Vec<PathBuf>, printer: &Printer) -> CrushResult<()> {
         match self {
-            Value::String(s) => v.push(PathBuf::from(s)),
+            Value::String(s) => v.push(PathBuf::from(s.to_string())),
             Value::File(p) => v.push(p.clone()),
             Value::Glob(pattern) => pattern.glob_files(&PathBuf::from("."), v)?,
             Value::Regex(_, re) => re.match_files(&cwd()?, v, printer),
@@ -330,7 +353,7 @@ impl Value {
 
     pub fn matches(&self, value: &str) -> CrushResult<bool> {
         match self {
-            Value::String(s) => Ok(value == s),
+            Value::String(s) => Ok(*value == **s),
             Value::Glob(pattern) => Ok(pattern.matches(value)),
             Value::Regex(_, re) => Ok(re.is_match(value)),
             _ => return argument_error_legacy("Invalid value for match"),
@@ -388,7 +411,7 @@ impl Value {
                     return error(format!("Can't convert value '{}' to boolean", str_val).as_str());
                 }
             })),
-            ValueType::String => Ok(Value::String(str_val)),
+            ValueType::String => Ok(Value::from(str_val)),
             ValueType::Time => error("invalid convert"),
             ValueType::Duration => Ok(Value::Duration(Duration::seconds(to_crush_error(
                 i64::from_str(&str_val),
@@ -422,7 +445,7 @@ impl Value {
                 if has_non_printable(val) {
                     escape(val)
                 } else {
-                    val.clone()
+                    val.to_string()
                 },
 
             Value::Integer(i) => match grouping {
@@ -662,16 +685,16 @@ mod tests {
     #[test]
     fn text_casts() {
         assert_eq!(
-            Value::string("112432").convert(ValueType::Integer).is_err(),
+            Value::from("112432").convert(ValueType::Integer).is_err(),
             false
         );
         assert_eq!(
-            Value::string("1d").convert(ValueType::Integer).is_err(),
+            Value::from("1d").convert(ValueType::Integer).is_err(),
             true
         );
-        assert_eq!(Value::string("1d").convert(ValueType::Glob).is_err(), false);
-        assert_eq!(Value::string("1d").convert(ValueType::File).is_err(), false);
-        assert_eq!(Value::string("1d").convert(ValueType::Time).is_err(), true);
+        assert_eq!(Value::from("1d").convert(ValueType::Glob).is_err(), false);
+        assert_eq!(Value::from("1d").convert(ValueType::File).is_err(), false);
+        assert_eq!(Value::from("1d").convert(ValueType::Time).is_err(), true);
     }
 
     #[test]

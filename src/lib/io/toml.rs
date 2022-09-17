@@ -20,7 +20,7 @@ fn from_toml(toml_value: &toml::Value) -> CrushResult<Value> {
         toml::Value::Boolean(b) => Ok(Value::Bool(*b)),
         toml::Value::Float(f) => Ok(Value::Float(*f)),
         toml::Value::Integer(f) => Ok(Value::Integer(*f as i128)),
-        toml::Value::String(s) => Ok(Value::string(s.as_str())),
+        toml::Value::String(s) => Ok(Value::from(s.as_str())),
         toml::Value::Array(arr) => {
             let mut lst = arr
                 .iter()

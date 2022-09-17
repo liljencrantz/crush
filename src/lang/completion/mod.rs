@@ -1,3 +1,4 @@
+use std::ops::Deref;
 /**
   Main entry point for tab completion code
 */
@@ -213,7 +214,7 @@ fn complete_argument_values(
                 if full.starts_with(prefix) {
                     res.push(Completion::new(
                         format!("{}\" ", escape_without_quotes(&full[prefix.len()..])),
-                        full,
+                        full.deref(),
                         cursor,
                     ));
                 }

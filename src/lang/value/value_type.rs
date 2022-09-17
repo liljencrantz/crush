@@ -123,14 +123,14 @@ impl ValueType {
 
     pub fn parse(&self, s: &str) -> CrushResult<Value> {
         match self {
-            ValueType::String => Ok(Value::string(s)),
+            ValueType::String => Ok(Value::from(s)),
             ValueType::Integer => match s.parse::<i128>() {
                 Ok(n) => Ok(Value::Integer(n)),
                 Err(e) => error(e.to_string().as_str()),
             },
             ValueType::Glob => Ok(Value::Glob(Glob::new(s))),
             ValueType::Regex => Ok(Value::Regex(s.to_string(), to_crush_error(Regex::new(s))?)),
-            ValueType::File => Ok(Value::string(s)),
+            ValueType::File => Ok(Value::from(s)),
             ValueType::Float => Ok(Value::Float(to_crush_error(s.parse::<f64>())?)),
             ValueType::Bool => Ok(Value::Bool(to_crush_error(s.parse::<bool>())?)),
             _ => error("Failed to parse cell"),

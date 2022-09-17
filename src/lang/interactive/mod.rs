@@ -54,7 +54,7 @@ pub fn execute_prompt(
             ))?;
             let v = recv.recv()?;
             match v {
-                Value::String(s) => Ok(Some(s)),
+                Value::String(s) => Ok(Some(s.to_string())),
                 _ => data_error("Wrong output type of prompt command"),
             }
         }

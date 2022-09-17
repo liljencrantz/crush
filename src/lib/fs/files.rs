@@ -81,12 +81,12 @@ fn insert_entity(
     };
 
     output.send(Row::new(vec![
-        Value::String(permissions),
-        users.get(&Uid::from_raw(meta.uid())).map(|n| Value::string(n)).unwrap_or_else(|| Value::string("?")),
-        groups.get(&Gid::from_raw(meta.gid())).map(|n| Value::string(n)).unwrap_or_else(|| Value::string("?")),
+        Value::from(permissions),
+        users.get(&Uid::from_raw(meta.uid())).map(|n| Value::from(n)).unwrap_or_else(|| Value::from("?")),
+        groups.get(&Gid::from_raw(meta.gid())).map(|n| Value::from(n)).unwrap_or_else(|| Value::from("?")),
         Value::Integer(i128::from(meta.len())),
         Value::Time(modified_datetime),
-        Value::string(type_str),
+        Value::from(type_str),
         Value::File(f),
     ]))?;
     Ok(())

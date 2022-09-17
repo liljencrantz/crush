@@ -394,7 +394,7 @@ fn patterns_type_data(
         initialize: quote! { let mut #name = crate::lang::signature::patterns::Patterns::new(); },
         mappings: quote! {
                         (Some(#name_literal), crate::lang::value::Value::Glob(value)) => #name.expand_glob(value),
-                        (Some(#name_literal), crate::lang::value::Value::String(value)) => #name.expand_string(value),
+                        (Some(#name_literal), crate::lang::value::Value::String(value)) => #name.expand_string(value.to_string()),
                         (Some(#name_literal), crate::lang::value::Value::Regex(pattern, value)) => #name.expand_regex(pattern, value),
                     },
         unnamed_mutate: if is_unnamed_target {
@@ -402,7 +402,7 @@ fn patterns_type_data(
                             while !_unnamed.is_empty() {
                                 match _unnamed.pop_front().unwrap().0 {
                         crate::lang::value::Value::Glob(value) => #name.expand_glob(value),
-                        crate::lang::value::Value::String(value) => #name.expand_string(value),
+                        crate::lang::value::Value::String(value) => #name.expand_string(value.to_string()),
                         crate::lang::value::Value::Regex(pattern, value) => #name.expand_regex(pattern, value),
                                 }
                             }

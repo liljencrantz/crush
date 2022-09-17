@@ -28,7 +28,7 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
                     "Not a valid number")?))
             }
         }
-        serde_json::Value::String(s) => Ok(Value::string(s.as_str())),
+        serde_json::Value::String(s) => Ok(Value::from(s.as_str())),
         serde_json::Value::Array(arr) => {
             let mut lst = arr
                 .iter()
@@ -88,7 +88,7 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
             "Invalid filename",
         )?)),
 
-        Value::String(s) => Ok(serde_json::Value::from(s)),
+        Value::String(s) => Ok(serde_json::Value::from(s.to_string())),
 
         Value::Integer(i) => Ok(serde_json::Value::from(to_crush_error(i64::try_from(i))?)),
 

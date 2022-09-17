@@ -76,7 +76,7 @@ fn upper(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
-        .send(Value::String(context.this.string()?.to_uppercase()))
+        .send(Value::from(context.this.string()?.to_uppercase()))
 }
 
 #[signature(
@@ -88,7 +88,7 @@ fn lower(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
-        .send(Value::String(context.this.string()?.to_lowercase()))
+        .send(Value::from(context.this.string()?.to_lowercase()))
 }
 
 #[signature(
@@ -108,7 +108,7 @@ fn split(mut context: CommandContext) -> CrushResult<()> {
 
     context.output.send(List::new(
         ValueType::String,
-        this.split(&cfg.separator).map(|s| Value::string(s)).collect::<Vec<_>>(),
+        this.split(&cfg.separator).map(|s| Value::from(s)).collect::<Vec<_>>(),
     ).into())
 }
 
@@ -119,7 +119,7 @@ struct Trim {}
 
 fn trim(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    context.output.send(Value::string(context.this.string()?.trim()))
+    context.output.send(Value::from(context.this.string()?.trim()))
 }
 
 #[signature(
@@ -150,7 +150,7 @@ fn join(mut context: CommandContext) -> CrushResult<()> {
         res.push_str(&el.to_string());
     }
 
-    context.output.send(Value::String(res))
+    context.output.send(Value::from(res))
 }
 
 #[signature(
@@ -174,11 +174,11 @@ fn lpad(mut context: CommandContext) -> CrushResult<()> {
     if cfg.padding.len() != 1 {
         argument_error_legacy("Padding string must be exactly one character long")
     } else if len <= s.len() {
-        context.output.send(Value::string(&s[0..len]))
+        context.output.send(Value::from(&s[0..len]))
     } else {
         let mut res = cfg.padding.repeat(len - s.len());
         res += s.as_ref();
-        context.output.send(Value::string(res.as_str()))
+        context.output.send(Value::from(res.as_str()))
     }
 }
 
@@ -203,11 +203,11 @@ fn rpad(mut context: CommandContext) -> CrushResult<()> {
     if cfg.padding.len() != 1 {
         argument_error_legacy("Padding string must be exactly one character long")
     } else if len <= s.len() {
-        context.output.send(Value::string(&s[0..len]))
+        context.output.send(Value::from(&s[0..len]))
     } else {
         let mut res = s.to_string();
         res += cfg.padding.repeat(len - s.len()).as_str();
-        context.output.send(Value::string(res.as_str()))
+        context.output.send(Value::from(res.as_str()))
     }
 }
 
@@ -225,7 +225,7 @@ struct Repeat {
 fn repeat(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Repeat = Repeat::parse(context.arguments, &context.global_state.printer())?;
     let s = context.this.string()?;
-    context.output.send(Value::string(s.repeat(cfg.times).as_str()))
+    context.output.send(Value::from(s.repeat(cfg.times).as_str()))
 }
 
 #[signature(
@@ -370,7 +370,7 @@ fn substr(mut context: CommandContext) -> CrushResult<()> {
     }
     context
         .output
-        .send(Value::string(&s[cfg.from..to]))
+        .send(Value::from(&s[cfg.from..to]))
 }
 
 #[signature(
@@ -392,5 +392,5 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     }
     context
         .output
-        .send(Value::string(&s[cfg.idx..(cfg.idx+1)]))
+        .send(Value::from(&s[cfg.idx..(cfg.idx+1)]))
 }

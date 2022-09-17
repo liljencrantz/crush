@@ -58,7 +58,7 @@ impl Serializable<String> for String {
         elements: &mut Vec<Element>,
         state: &mut SerializationState,
     ) -> CrushResult<usize> {
-        match state.values.entry(Value::string(self)) {
+        match state.values.entry(Value::from(self)) {
             Entry::Occupied(o) => Ok(*o.get()),
             Entry::Vacant(v) => {
                 let idx = elements.len();

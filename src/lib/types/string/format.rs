@@ -90,5 +90,5 @@ pub fn format(mut context: CommandContext) -> CrushResult<()> {
     let format = context.this.string()?;
     context
         .output
-        .send(Value::String(do_format(&format, context.arguments)?))
+        .send(Value::from(do_format(&format, context.arguments)?))
 }

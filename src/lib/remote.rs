@@ -309,7 +309,7 @@ fn pexec(mut context: CommandContext) -> CrushResult<()> {
     ])?;
 
     while let Ok((host, val)) = result_recv.recv() {
-        output.send(Row::new(vec![Value::String(host), val]))?;
+        output.send(Row::new(vec![Value::from(host), val]))?;
     }
 
     Ok(())
@@ -333,7 +333,7 @@ fn identity(context: CommandContext) -> CrushResult<()> {
 
     for identity in to_crush_error(agent.identities())? {
         output.send(Row::new(vec![
-            Value::String(identity.comment().to_string()),
+            Value::from(identity.comment().to_string()),
             Value::Binary(identity.blob().to_vec()),
         ]))?;
     }
@@ -374,8 +374,8 @@ mod host {
         to_crush_error(known_hosts.read_file(&host_file, KnownHostFileKind::OpenSSH))?;
         for host in to_crush_error(known_hosts.iter())? {
             output.send(Row::new(vec![
-                Value::String(host.name().unwrap_or("").to_string()),
-                Value::String(host.key().to_string()),
+                Value::from(host.name().unwrap_or("")),
+                Value::from(host.key()),
             ]))?;
         }
         Ok(())

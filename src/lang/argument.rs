@@ -253,25 +253,25 @@ mod tests {
     fn allowed_values() {
         let (printer, _) = crate::lang::printer::init();
         let a = AllowedValuesStringSignature::parse(
-            vec![Argument::named("str_val", Value::string("aa"), Location::new(0, 0))],
+            vec![Argument::named("str_val", Value::from("aa"), Location::new(0, 0))],
             &printer,
         )
             .unwrap();
         assert_eq!(a.str_val, "aa");
         assert!(AllowedValuesStringSignature::parse(
-            vec![Argument::named("str_val", Value::string("zz"), Location::new(0, 0)), ],
+            vec![Argument::named("str_val", Value::from("zz"), Location::new(0, 0)), ],
             &printer,
         )
             .is_err());
 
         let a = AllowedValuesCharSignature::parse(
-            vec![Argument::named("char_val", Value::string("a"), Location::new(0, 0))],
+            vec![Argument::named("char_val", Value::from("a"), Location::new(0, 0))],
             &printer,
         )
             .unwrap();
         assert_eq!(a.char_val, 'a');
         assert!(AllowedValuesCharSignature::parse(
-            vec![Argument::named("char_val", Value::string("z"), Location::new(0, 0)), ],
+            vec![Argument::named("char_val", Value::from("z"), Location::new(0, 0)), ],
             &printer,
         )
             .is_err());
@@ -350,9 +350,9 @@ mod tests {
         assert_eq!(
             ListSignature::parse(
                 vec![
-                    Argument::named("list_val", Value::string("a"), Location::new(0, 0)),
-                    Argument::named("list_val", Value::string("b"), Location::new(0, 0)),
-                    Argument::named("list_val", Value::string("c"), Location::new(0, 0)),
+                    Argument::named("list_val", Value::from("a"), Location::new(0, 0)),
+                    Argument::named("list_val", Value::from("b"), Location::new(0, 0)),
+                    Argument::named("list_val", Value::from("c"), Location::new(0, 0)),
                 ],
                 &printer,
             )
@@ -369,16 +369,16 @@ mod tests {
         assert_eq!(
             ListSignature::parse(
                 vec![
-                    Argument::named("list_val", Value::string("a"), Location::new(0, 0)),
+                    Argument::named("list_val", Value::from("a"), Location::new(0, 0)),
                     Argument::named(
                         "list_val",
                         List::new(
                             ValueType::String,
-                            [Value::string("b"), Value::string("c")],
+                            [Value::from("b"), Value::from("c")],
                         ).into(),
                         Location::new(0, 0),
                     ),
-                    Argument::named("list_val", Value::string("d"), Location::new(0, 0)),
+                    Argument::named("list_val", Value::from("d"), Location::new(0, 0)),
                 ],
                 &printer,
             )
@@ -405,9 +405,9 @@ mod tests {
         assert_eq!(
             NamedSignature::parse(
                 vec![
-                    Argument::named("a", Value::string("A"), Location::new(0, 0)),
-                    Argument::named("b", Value::string("B"), Location::new(0, 0)),
-                    Argument::named("c", Value::string("C"), Location::new(0, 0)),
+                    Argument::named("a", Value::from("A"), Location::new(0, 0)),
+                    Argument::named("b", Value::from("B"), Location::new(0, 0)),
+                    Argument::named("c", Value::from("C"), Location::new(0, 0)),
                 ],
                 &printer,
             )
@@ -434,7 +434,7 @@ mod tests {
     fn named_signature_type_check() {
         let (printer, _) = crate::lang::printer::init();
         let s: NamedSignature2 =
-            NamedSignature2::parse(vec![Argument::named("foo", Value::string("s"), Location::new(0, 0))], &printer)
+            NamedSignature2::parse(vec![Argument::named("foo", Value::from("s"), Location::new(0, 0))], &printer)
                 .unwrap();
         assert_eq!(s.foo, None);
         assert_eq!(

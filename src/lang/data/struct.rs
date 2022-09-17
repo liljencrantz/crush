@@ -288,7 +288,7 @@ impl CrushStream for StructReader {
         let (k, v) = self
             .rows
             .replace(self.idx - 1, ("".to_string(), Value::Empty()));
-        Ok(Row::new(vec![Value::String(k), v]))
+        Ok(Row::new(vec![Value::from(k), v]))
     }
 
     fn read_timeout(

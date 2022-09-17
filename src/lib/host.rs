@@ -27,7 +27,7 @@ struct Name {}
 fn name(context: CommandContext) -> CrushResult<()> {
     context
         .output
-        .send(Value::String(to_crush_error(sys_info::hostname())?))
+        .send(Value::from(to_crush_error(sys_info::hostname())?))
 }
 
 lazy_static! {
@@ -86,11 +86,11 @@ fn battery(context: CommandContext) -> CrushResult<()> {
     for battery in to_crush_error(manager.batteries())? {
         let battery = to_crush_error(battery)?;
         output.send(Row::new(vec![
-            Value::String(battery.vendor().unwrap_or("").to_string()),
-            Value::String(battery.model().unwrap_or("").to_string()),
+            Value::from(battery.vendor().unwrap_or("").to_string()),
+            Value::from(battery.model().unwrap_or("").to_string()),
             Value::Integer(battery.cycle_count().unwrap_or(0) as i128),
             Value::Integer((100.0 * battery.energy_full().value / battery.energy_full_design().value) as i128),
-            Value::String(state_name(battery.state())),
+            Value::from(state_name(battery.state())),
             Value::Integer((100.0 * battery.energy().value / battery.energy_full().value) as i128),
             Value::Duration(time_to_duration(battery.time_to_full())),
             Value::Duration(time_to_duration(battery.time_to_empty())),
@@ -141,7 +141,7 @@ mod os {
     fn name(context: CommandContext) -> CrushResult<()> {
         context
             .output
-            .send(Value::String(to_crush_error(sys_info::os_type())?))
+            .send(Value::from(to_crush_error(sys_info::os_type())?))
     }
 
     #[signature(
@@ -155,7 +155,7 @@ mod os {
     fn version(context: CommandContext) -> CrushResult<()> {
         context
             .output
-            .send(Value::String(to_crush_error(sys_info::os_release())?))
+            .send(Value::from(to_crush_error(sys_info::os_release())?))
     }
 }
 
@@ -279,14 +279,14 @@ mod macos {
                     output.send(Row::new(vec![
                         Value::Integer(pid as i128),
                         Value::Integer(ppid),
-                        users.get(&nix::unistd::Uid::from_raw(curr_task.pbsd.pbi_uid)).map(|s| Value::string(s)).unwrap_or_else(|| Value::string("?")),
+                        users.get(&nix::unistd::Uid::from_raw(curr_task.pbsd.pbi_uid)).map(|s| Value::from(s)).unwrap_or_else(|| Value::from("?")),
                         Value::Integer(i128::from(curr_task.ptinfo.pti_resident_size)),
                         Value::Integer(i128::from(curr_task.ptinfo.pti_virtual_size)),
                         Value::Duration(Duration::nanoseconds(
                             i64::try_from(curr_task.ptinfo.pti_total_user + curr_task.ptinfo.pti_total_system)? *
                                 i64::from(info.numer) /
                                 i64::from(info.denom))),
-                        Value::String(name),
+                        Value::from(name),
                     ]))?;
                 }
             }
@@ -344,7 +344,7 @@ mod macos {
                                     i64::try_from(thread.pth_system_time)? *
                                         i64::from(info.numer) /
                                         i64::from(info.denom))),
-                                Value::String(name),
+                                Value::from(name),
                             ]))?;
 
                             curr_threads.push(thread);
@@ -443,14 +443,14 @@ mod linux {
         Ok(Row::new(vec![
             Value::Integer(proc.pid() as i128),
             Value::Integer(proc.ppid()?.unwrap_or(0) as i128),
-            Value::string(state_name(proc.status()?)),
-            users.get(&nix::unistd::Uid::from_raw(proc.uids()?.effective)).map(|s| Value::string(s)).unwrap_or_else(|| Value::string("?")),
+            Value::from(state_name(proc.status()?)),
+            users.get(&nix::unistd::Uid::from_raw(proc.uids()?.effective)).map(|s| Value::from(s)).unwrap_or_else(|| Value::from("?")),
             Value::Duration(Duration::microseconds(
                 proc.cpu_times()?.busy().as_micros() as i64
             )),
             Value::Integer(proc.memory_info()?.rss() as i128),
             Value::Integer(proc.memory_info()?.vms() as i128),
-            Value::string(
+            Value::from(
                 &proc.cmdline_vec()?
                     .unwrap_or(vec![format!("[{}]", proc.name()?)])[0],
             ),

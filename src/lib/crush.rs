@@ -15,13 +15,13 @@ use crate::lang::command::Command;
 fn make_env() -> Value {
     let e = Dict::new(ValueType::String, ValueType::String);
     for (key, value) in env::vars() {
-        let _ = e.insert(Value::String(key), Value::String(value));
+        let _ = e.insert(Value::from(key), Value::from(value));
     }
     Value::Dict(e)
 }
 
 fn make_arguments() -> Value {
-    List::new(ValueType::String, env::args().map(|a| { Value::string(a) }).collect::<Vec<_>>()).into()
+    List::new(ValueType::String, env::args().map(|a| { Value::from(a) }).collect::<Vec<_>>()).into()
 }
 
 lazy_static! {
@@ -42,7 +42,7 @@ fn threads(context: CommandContext) -> CrushResult<()> {
         output.send(Row::new(vec![
             t.job_id.map(|i| { Value::from(i) }).unwrap_or(Value::Empty()),
             Value::Time(t.creation_time),
-            Value::String(t.name),
+            Value::from(t.name),
         ]))?;
     }
     Ok(())
@@ -93,7 +93,7 @@ fn jobs(context: CommandContext) -> CrushResult<()> {
     for job in context.global_state.jobs() {
         output.send(Row::new(vec![
             Value::from(job.id),
-            Value::string(job.description),
+            Value::from(job.description),
         ]))?;
     }
     Ok(())
@@ -129,7 +129,7 @@ fn history(context: CommandContext) -> CrushResult<()> {
     for (idx, c) in res.into_iter().enumerate() {
         output.send(Row::new(vec![
             Value::Integer((len - idx) as i128),
-            Value::string(c),
+            Value::from(c),
         ]))?;
     }
     Ok(())
@@ -161,7 +161,7 @@ mod locale {
         let available = to_crush_error(SystemLocale::available_names())?;
 
         for name in available {
-            output.send(Row::new(vec![Value::String(name)]))?;
+            output.send(Row::new(vec![Value::from(name)]))?;
         }
         Ok(())
     }
@@ -216,7 +216,7 @@ mod locale {
     pub struct Get {}
 
     fn get(context: CommandContext) -> CrushResult<()> {
-        context.output.send(Value::string(context.global_state.locale().name()))
+        context.output.send(Value::from(context.global_state.locale().name()))
     }
 }
 
@@ -229,11 +229,11 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             crush.declare("ppid", Value::Integer(Pid::parent().as_raw() as i128))?;
 
             let highlight = Dict::new(ValueType::String, ValueType::String);
-            highlight.insert(Value::string("operator"), Value::string(""))?;
-            highlight.insert(Value::string("string_literal"), Value::string(""))?;
-            highlight.insert(Value::string("file_literal"), Value::string(""))?;
-            highlight.insert(Value::string("label"), Value::string(""))?;
-            highlight.insert(Value::string("numeric_literal"), Value::string(""))?;
+            highlight.insert(Value::from("operator"), Value::from(""))?;
+            highlight.insert(Value::from("string_literal"), Value::from(""))?;
+            highlight.insert(Value::from("file_literal"), Value::from(""))?;
+            highlight.insert(Value::from("label"), Value::from(""))?;
+            highlight.insert(Value::from("numeric_literal"), Value::from(""))?;
             crush.declare("highlight", Value::Dict(highlight))?;
 
             crush.declare("env", make_env())?;

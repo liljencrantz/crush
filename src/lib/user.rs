@@ -88,7 +88,7 @@ fn sudo(mut context: CommandContext) -> CrushResult<()> {
         let mut cmd = process::Command::new("sudo");
         let printer = context.global_state.printer().clone();
 
-        cmd.arg("--user").arg(&username);
+        cmd.arg("--user").arg(&username.to_string());
         cmd.arg("--").arg("crush").arg("--pup");
         cmd.stdin(Stdio::piped());
         cmd.stdout(Stdio::piped());
@@ -156,10 +156,10 @@ fn list(context: CommandContext) -> CrushResult<()> {
     for u in get_all_users()? {
         output.send(Row::new(
             vec![
-                Value::String(u.name),
+                Value::from(u.name),
                 Value::File(u.home),
                 Value::File(u.shell),
-                Value::String(u.information),
+                Value::from(u.information),
                 Value::Integer(u.uid as i128),
                 Value::Integer(u.gid as i128),
             ]))?;
@@ -187,11 +187,11 @@ fn get_user_value(input_name: &str) -> CrushResult<Value> {
         Ok(user) =>
             Ok(Value::Struct(Struct::new(
                 vec![
-                    ("username", Value::string(input_name)),
-                    ("name", Value::String(user.name)),
+                    ("username", Value::from(input_name)),
+                    ("name", Value::from(user.name)),
                     ("home", Value::File(user.home)),
                     ("shell", Value::File(user.shell)),
-                    ("information", Value::String(user.information)),
+                    ("information", Value::from(user.information)),
                     ("uid", Value::Integer(user.uid as i128)),
                     ("gid", Value::Integer(user.gid as i128)),
                 ],

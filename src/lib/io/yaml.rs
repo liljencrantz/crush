@@ -29,7 +29,7 @@ fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
                 ))
             }
         }
-        serde_yaml::Value::String(s) => Ok(Value::string(s.as_str())),
+        serde_yaml::Value::String(s) => Ok(Value::from(s.as_str())),
         serde_yaml::Value::Sequence(arr) => {
             let mut lst = arr
                 .iter()
@@ -86,7 +86,7 @@ fn to_yaml(value: Value) -> CrushResult<serde_yaml::Value> {
             "Invalid filename",
         )?)),
 
-        Value::String(s) => Ok(serde_yaml::Value::from(s)),
+        Value::String(s) => Ok(serde_yaml::Value::from(s.to_string())),
 
         Value::Integer(i) => Ok(serde_yaml::Value::from(to_crush_error(i64::try_from(i))?)),
 
@@ -115,7 +115,7 @@ fn to_yaml(value: Value) -> CrushResult<serde_yaml::Value> {
         Value::Struct(s) => {
             let mut map = serde_yaml::Mapping::new();
             for (k, v) in s.local_elements() {
-                map.insert(to_yaml(Value::String(k))?, to_yaml(v)?);
+                map.insert(to_yaml(Value::from(k))?, to_yaml(v)?);
             }
             Ok(serde_yaml::Value::Mapping(map))
         }

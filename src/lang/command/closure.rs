@@ -647,7 +647,7 @@ impl Closure {
         if let Some(named_name) = named_name {
             let d = Dict::new(ValueType::String, ValueType::Any);
             for (k, v) in named {
-                d.insert(Value::string(&k), v)?;
+                d.insert(Value::from(k), v)?;
             }
             context.env.redeclare(named_name.string.as_ref(), Value::Dict(d))?;
         } else if !named.is_empty() {

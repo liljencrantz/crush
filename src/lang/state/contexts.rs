@@ -102,7 +102,7 @@ impl ArgumentVector for Vec<Argument> {
                     min_len,
                     self.len()
                 )
-                .as_str(),
+                    .as_str(),
             )
         } else if self.len() > max_len {
             argument_error_legacy(
@@ -123,12 +123,32 @@ impl ArgumentVector for Vec<Argument> {
                     min_len,
                     self.len()
                 )
-                .as_str(),
+                    .as_str(),
             )
         }
     }
 
-    argument_getter!(string, String, String, "string");
+    fn string(&mut self, idx: usize) -> CrushResult<String> {
+        if idx < self.len() {
+            let l = self[idx].location;
+            match self
+                .replace(idx, Argument::unnamed(Value::Empty(), l))
+                .value
+            {
+                Value::String(s) => Ok(s.to_string()),
+                v => argument_error_legacy(
+                    format!(
+                        concat!("Invalid value, expected a string found a {}"),
+                        v.value_type().to_string()
+                    )
+                        .as_str(),
+                ),
+            }
+        } else {
+            error("Index out of bounds")
+        }
+    }
+
     argument_getter!(integer, i128, Integer, "integer");
     argument_getter!(float, f64, Float, "float");
     argument_getter!(command, Command, Command, "command");
@@ -166,7 +186,7 @@ impl ArgumentVector for Vec<Argument> {
 
 /**
 The data needed to be passed around while parsing and compiling code.
-*/
+ */
 pub struct CompileContext {
     pub env: Scope,
     pub global_state: GlobalState,
@@ -266,7 +286,7 @@ impl JobContext {
             F: FnOnce() -> CrushResult<()>,
             F: Send + 'static,
     {
-        self.global_state.threads().spawn(name, self.handle.clone().map(|h|{h.id()}), f)
+        self.global_state.threads().spawn(name, self.handle.clone().map(|h| { h.id() }), f)
     }
 }
 
@@ -357,7 +377,7 @@ impl CommandContext {
     /**
     Return a new Command context that is identical to this one but with a different output sender.
      */
-    pub fn with_scope(self, scope : Scope) -> CommandContext {
+    pub fn with_scope(self, scope: Scope) -> CommandContext {
         CommandContext {
             input: self.input,
             output: self.output,
@@ -389,7 +409,7 @@ impl CommandContext {
             F: FnOnce() -> CrushResult<()>,
             F: Send + 'static,
     {
-        self.global_state.threads().spawn(name, self.handle.clone().map(|h|{h.id()}), f)
+        self.global_state.threads().spawn(name, self.handle.clone().map(|h| { h.id() }), f)
     }
 }
 
@@ -440,7 +460,22 @@ macro_rules! this_method {
 impl This for Option<Value> {
     this_method!(list, List, List, "list");
     this_method!(dict, Dict, Dict, "dict");
-    this_method!(string, String, String, "string");
+
+    fn string(&mut self) -> CrushResult<String> {
+        let mut this = None;
+        swap(self, &mut this);
+        match this {
+            Some(Value::String(l)) => Ok(l.to_string()),
+            None => argument_error_legacy(concat!("Expected this to be a string, but this is not set")),
+            Some(v) => argument_error_legacy(
+                format!(
+                    concat!("Expected this to be a string, but it is a {}"),
+                    v.value_type().to_string()
+                ).as_str(),
+            ),
+        }
+    }
+
     this_method!(r#struct, Struct, Struct, "struct");
     this_method!(file, PathBuf, File, "file");
     this_method!(table, Table, Table, "table");

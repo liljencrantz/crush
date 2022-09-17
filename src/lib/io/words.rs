@@ -24,7 +24,7 @@ struct From {
 fn send(output: &OutputStream, mut ptr: &str) -> CrushResult<()> {
     ptr = ptr.trim_matches(|c: char| c.is_ascii_punctuation());
     if !ptr.is_empty() {
-        output.send(Row::new(vec![Value::String(ptr.to_string())]))
+        output.send(Row::new(vec![Value::from(ptr)]))
     } else {
         Ok(())
     }

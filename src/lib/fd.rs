@@ -240,28 +240,28 @@ mod procfs {
                 Entry::Occupied(e) => {
                     for pid in e.get().iter() {
                         output.send(Row::new(vec![
-                            Value::string(file_type),
-                            Value::string(&local_ip),
+                            Value::from(file_type),
+                            Value::from(&local_ip),
                             Value::Integer(local_port as i128),
                             Value::String(lookup(&remote_ip, hosts)?),
-                            Value::string(&remote_ip),
+                            Value::from(&remote_ip),
                             Value::Integer(remote_port as i128),
                             Value::Integer(inode as i128),
-                            users.get(&nix::unistd::Uid::from_raw(uid)).map(|s| Value::string(s)).unwrap_or_else(|| Value::string("?")),
+                            users.get(&nix::unistd::Uid::from_raw(uid)).map(|s| Value::from(s)).unwrap_or_else(|| Value::from("?")),
                             Value::Integer(*pid as i128),
                         ]))?;
                     }
                 }
                 Entry::Vacant(_) => {
                     output.send(Row::new(vec![
-                        Value::string(file_type),
+                        Value::from(file_type),
                         Value::String(local_ip),
                         Value::Integer(local_port as i128),
                         Value::String(lookup(&remote_ip, hosts)?),
                         Value::String(remote_ip),
                         Value::Integer(remote_port as i128),
                         Value::Integer(inode as i128),
-                        users.get(&nix::unistd::Uid::from_raw(uid)).map(|s| Value::string(s)).unwrap_or_else(|| Value::string("?")),
+                        users.get(&nix::unistd::Uid::from_raw(uid)).map(|s| Value::from(s)).unwrap_or_else(|| Value::from("?")),
                         Value::Empty(),
                     ]))?;
                 }

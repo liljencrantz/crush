@@ -55,7 +55,7 @@ pub fn dir(context: CommandContext) -> CrushResult<()> {
         cfg.value
             .fields()
             .drain(..)
-            .map(|n| Value::String(n))
+            .map(|n| Value::from(n))
             .collect::<Vec<_>>(),
     ).into())
 }
@@ -145,7 +145,7 @@ fn readline(context: CommandContext) -> CrushResult<()> {
         }
     }
 
-    context.output.send(Value::String(line))
+    context.output.send(Value::from(line))
 }
 
 

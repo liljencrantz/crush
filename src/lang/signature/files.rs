@@ -9,6 +9,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 use std::convert::{TryFrom};
+use std::ops::Deref;
 
 /**
 A type representing a set of files. It is used in the signature of builtin commands that
@@ -83,7 +84,7 @@ impl Files {
             Value::File(p) => self.files.push(p),
             Value::Glob(pattern) => pattern.glob_files(&PathBuf::from("."), &mut self.files)?,
             Value::Regex(_, re) => re.match_files(&cwd()?, &mut self.files, printer),
-            Value::String(f) => self.files.push(PathBuf::from(f)),
+            Value::String(f) => self.files.push(PathBuf::from(f.deref())),
             value => match value.stream()? {
                 None => return argument_error_legacy("Expected a file name"),
                 Some(mut s) => {

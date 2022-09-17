@@ -20,7 +20,7 @@ impl Patterns {
     }
 
     pub fn expand_string(&mut self, string: String) {
-        self.patterns.push(Value::String(string));
+        self.patterns.push(Value::from(string));
     }
 
     pub fn expand_glob(&mut self, glob: Glob) {

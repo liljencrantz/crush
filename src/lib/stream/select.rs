@@ -156,7 +156,7 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
                     (None, Value::String(name)) => {
                         match (copy, input_type.find(name.as_ref())) {
                             (false, Ok(idx)) => columns
-                                .push((Action::Append(name.clone()), Source::Argument(idx))),
+                                .push((Action::Append(name.to_string()), Source::Argument(idx))),
                             _ => {
                                 return argument_error_legacy(
                                     format!("Unknown column {}", name).as_str(),

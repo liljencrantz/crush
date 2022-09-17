@@ -105,7 +105,7 @@ fn __all__(mut context: CommandContext) -> CrushResult<()> {
     let scope = context.this.scope()?;
     context.output.send(
         List::new(ValueType::String,
-        scope.dump()?.iter().map(|e| {Value::string(e.0)}).collect::<Vec<_>>()).into())
+        scope.dump()?.iter().map(|e| {Value::from(e.0)}).collect::<Vec<_>>()).into())
 }
 
 #[signature(
@@ -120,7 +120,7 @@ fn __local__(mut context: CommandContext) -> CrushResult<()> {
     let scope = context.this.scope()?;
     context.output.send(
         List::new(ValueType::String,
-                  scope.dump_local()?.iter().map(|e| {Value::string(e.0)}).collect::<Vec<_>>()).into())
+                  scope.dump_local()?.iter().map(|e| {Value::from(e.0)}).collect::<Vec<_>>()).into())
 }
 
 #[signature(
@@ -148,7 +148,7 @@ struct Name {}
 fn __name__(mut context: CommandContext) -> CrushResult<()> {
     let scope = context.this.scope()?;
     context.output.send(
-        scope.name().map(|n| {Value::string(n)}).unwrap_or(Value::Empty()))
+        scope.name().map(|n| {Value::from(n)}).unwrap_or(Value::Empty()))
 }
 
 #[signature(

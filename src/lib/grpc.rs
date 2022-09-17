@@ -50,7 +50,7 @@ impl Grpc {
                         if let Some(Value::Duration(timeout)) = s.get("timeout") {
                             if let Some(Value::Integer(port)) = s.get("port") {
                                 return Ok(Grpc {
-                                    host,
+                                    host: host.to_string(),
                                     plaintext,
                                     timeout,
                                     port,
@@ -114,7 +114,7 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
 
     let tmp = Struct::new(
         vec![
-            ("host", Value::String(cfg.host.clone())),
+            ("host", Value::from(cfg.host.clone())),
             ("plaintext", Value::Bool(cfg.plaintext)),
             ("timeout", Value::Duration(cfg.timeout)),
             ("port", Value::Integer(cfg.port)),
@@ -137,12 +137,12 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
                     method, Value::Struct(
                     Struct::new(
                         vec![
-                            ("host", Value::String(cfg.host.clone())),
-                            ("service", Value::String(service.to_string())),
+                            ("host", Value::from(cfg.host.clone())),
+                            ("service", Value::from(service.to_string())),
                             ("plaintext", Value::Bool(cfg.plaintext)),
                             ("timeout", Value::Duration(cfg.timeout)),
                             ("port", Value::Integer(cfg.port)),
-                            ("method", Value::string(line)),
+                            ("method", Value::from(line)),
                             (
                                 "__call__",
                                 Value::Command(<dyn CrushCommand>::command(
@@ -193,7 +193,7 @@ fn grpc_method_call(mut context: CommandContext) -> CrushResult<()> {
     if let Some(Value::String(method)) = this.get("method") {
         let grpc = Grpc::new(Value::Struct(this))?;
         let out =
-            grpc.call(&context, data, vec![method])?;
+            grpc.call(&context, data, vec![method.to_string()])?;
         return context.output.send(json_to_value(&out)?);
     }
     return argument_error_legacy("Invalid method field");

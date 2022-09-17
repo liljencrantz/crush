@@ -69,7 +69,7 @@ fn query_internal(cfg: Query, context: CommandContext, client: SyncClient<impl C
             for answer in response.answers() {
                 match answer.data() {
                     Some(RData::A(ip)) => output.send(Row::new(vec![
-                        Value::String(ip.to_string()),
+                        Value::from(ip.to_string()),
                         Value::Duration(Duration::seconds(answer.ttl() as i64))]))?,
                     _ => return data_error("Missing A record"),
                 }
@@ -82,7 +82,7 @@ fn query_internal(cfg: Query, context: CommandContext, client: SyncClient<impl C
             for answer in response.answers() {
                 match answer.data() {
                     Some(RData::AAAA(ip)) => output.send(Row::new(vec![
-                        Value::String(ip.to_string()),
+                        Value::from(ip.to_string()),
                         Value::Duration(Duration::seconds(answer.ttl() as i64))]))?,
                     _ => return data_error("Missing A record"),
                 }
@@ -95,7 +95,7 @@ fn query_internal(cfg: Query, context: CommandContext, client: SyncClient<impl C
             for answer in response.answers() {
                 match answer.data() {
                     Some(RData::SRV(srv)) => output.send(Row::new(vec![
-                        Value::String(srv.target().to_string()),
+                        Value::from(srv.target().to_string()),
                         Value::Integer(srv.priority() as i128),
                         Value::Integer(srv.weight() as i128),
                         Value::Integer(srv.port() as i128),
@@ -136,7 +136,7 @@ fn nameserver(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(
         List::new(
             ValueType::String,
-            rc.nameservers.iter().map(|n| {Value::String(n.to_string())}).collect::<Vec<_>>()
+            rc.nameservers.iter().map(|n| {Value::from(n.to_string())}).collect::<Vec<_>>()
         ).into())
 }
 
@@ -153,7 +153,7 @@ fn search(mut context: CommandContext) -> CrushResult<()> {
         List::new(
             ValueType::String,
             rc.get_search()
-                .map(|s|{s.iter().map(|n| {Value::String(n.to_string())}).collect()})
+                .map(|s|{s.iter().map(|n| {Value::from(n.to_string())}).collect()})
                 .unwrap_or(vec![])
         ).into()
     )
@@ -171,7 +171,7 @@ fn domain(mut context: CommandContext) -> CrushResult<()> {
     let rc = resolv_conf()?;
     context.output.send(
         rc.get_domain()
-            .map(|d| {Value::string(d)})
+            .map(|d| {Value::from(d)})
             .unwrap_or(Value::Empty()))
 }
 

@@ -50,7 +50,7 @@ impl Serializable<Value> for Value {
         state: &mut DeserializationState,
     ) -> CrushResult<Value> {
         match elements[id].element.as_ref().unwrap() {
-            element::Element::String(s) => Ok(Value::string(s.as_str())),
+            element::Element::String(s) => Ok(Value::from(s.as_str())),
             element::Element::File(f) => Ok(Value::File(PathBuf::from(OsStr::from_bytes(&f[..])))),
             element::Element::Float(v) => Ok(Value::Float(*v)),
             element::Element::Binary(v) => Ok(Value::Binary(v.clone())),

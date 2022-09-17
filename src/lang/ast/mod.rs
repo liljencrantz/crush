@@ -316,7 +316,7 @@ impl Node {
                     to_crush_error(Regex::new(&l.string.clone()))?, ),
                 l.location,
             ),
-            Node::String(t) => ValueDefinition::Value(Value::String(unescape(&t.string)?), t.location),
+            Node::String(t) => ValueDefinition::Value(Value::from(unescape(&t.string)?), t.location),
             Node::Integer(s) =>
                 ValueDefinition::Value(
                     Value::Integer(to_crush_error(
@@ -340,7 +340,7 @@ impl Node {
                 if is_command {
                     ValueDefinition::Identifier(f.clone())
                 } else {
-                    ValueDefinition::Value(Value::String(f.string.to_string()), f.location)
+                    ValueDefinition::Value(Value::from(f), f.location)
                 },
             Node::Substitution(s) => ValueDefinition::JobDefinition(s.generate(env)?),
             Node::Closure(s, c) => {
@@ -396,9 +396,7 @@ impl Node {
                 Node::GetAttr(container, attr) => container.method_invocation(
                     &TrackedString::from("__setattr__", attr.location),
                     vec![
-                        ArgumentDefinition::unnamed(ValueDefinition::Value(Value::String(
-                            attr.string.to_string(),
-                        ),
+                        ArgumentDefinition::unnamed(ValueDefinition::Value(Value::from(attr),
                                                                            attr.location)),
                         ArgumentDefinition::unnamed(value.generate_argument(env)?.unnamed_value()?),
                     ],

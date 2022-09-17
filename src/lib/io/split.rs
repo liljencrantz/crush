@@ -38,7 +38,7 @@ fn send(
         ptr = ptr.trim_matches(|ch| t.contains(ch));
     }
     if allow_empty || !ptr.is_empty() {
-        output.send(Row::new(vec![Value::String(ptr.to_string())]))
+        output.send(Row::new(vec![Value::from(ptr)]))
     } else {
         Ok(())
     }

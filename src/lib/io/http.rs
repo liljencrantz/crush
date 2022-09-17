@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use crate::lang::errors::{argument_error_legacy, to_crush_error, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{
@@ -81,8 +82,8 @@ fn http(context: CommandContext) -> CrushResult<()> {
             .iter()
             .map(|(n, v)| {
                 Row::new(vec![
-                    Value::string(n.as_str()),
-                    Value::string(v.to_str().unwrap()),
+                    Value::from(n.as_str()),
+                    Value::from(v.to_str().unwrap()),
                 ])
             })
             .collect(),

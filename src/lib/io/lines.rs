@@ -46,7 +46,7 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
         while s.ends_with('\r') {
             s = &s[0..line.len() - 1];
         }
-        output.send(Row::new(vec![Value::string(s)]))?;
+        output.send(Row::new(vec![Value::from(s)]))?;
         line.clear();
     }
     Ok(())
@@ -75,7 +75,8 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
             }
             while let Ok(row) = input.read() {
                 match Vec::from(row).remove(0) {
-                    Value::String(mut s) => {
+                    Value::String(s) => {
+                        let mut s = s.to_string();
                         s.push('\n');
                         to_crush_error(out.write(s.as_bytes()))?;
                     }

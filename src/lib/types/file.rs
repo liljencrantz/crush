@@ -304,7 +304,7 @@ struct Name {}
 fn name(mut context: CommandContext) -> CrushResult<()> {
     context
         .output
-        .send(Value::string(
+        .send(Value::from(
             mandate(
                 mandate(
                     context.this.file()?

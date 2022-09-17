@@ -244,7 +244,7 @@ fn fetch_value(node: &Node, scope: &Scope, is_command: bool) -> CrushResult<Opti
                 None => Ok(None),
             },
 
-        Node::String(s) => Ok(Some(Value::string(&s.string))),
+        Node::String(s) => Ok(Some(Value::from(s))),
 
         Node::Integer(s) => Ok(Some(Value::Integer(to_crush_error(
             s.string.replace("_", "").parse::<i128>()
