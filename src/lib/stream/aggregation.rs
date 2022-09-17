@@ -7,6 +7,7 @@ use crate::lang::{value::Value, value::ValueType};
 use chrono::Duration;
 use float_ord::FloatOrd;
 use signature::signature;
+use crate::util::replace::Replace;
 
 fn parse(input_type: &[ColumnType], field: Option<String>) -> CrushResult<usize> {
     field.map(|f| input_type.find(&f))
@@ -120,16 +121,16 @@ fn avg(context: CommandContext) -> CrushResult<()> {
 }
 
 macro_rules! aggr_function {
-    ($name:ident, $value_type:ident, $op:expr) => {
+    ($name:ident, $value_type:ident, $desc:literal, $op:expr) => {
         fn $name(mut s: Stream, column: usize) -> CrushResult<Value> {
-            let mut res = match s.read()?.cells()[column] {
+            let mut res = match s.read()?.into_cells().replace(column, Value::Empty()) {
                 Value::$value_type(i) => i,
-                _ => return error("Invalid cell value, expected an integer"),
+                _ => return error(format!("Invalid cell value, expected {}", $desc)),
             };
             while let Ok(row) = s.read() {
-                match row.cells()[column] {
-                    Value::$value_type(i) => res = $op(res, i),
-                    _ => return error("Invalid cell value, expected an integer"),
+                match row.into_cells().replace(column, Value::Empty()) {
+                    Value::$value_type(i) => res = $op(i, res),
+                    _ => return error(format!("Invalid cell value, expected {}", $desc)),
                 }
             }
             Ok(Value::$value_type(res))
@@ -137,28 +138,34 @@ macro_rules! aggr_function {
     };
 }
 
-aggr_function!(min_int, Integer, |a, b| std::cmp::min(a, b));
-aggr_function!(min_float, Float, |a, b| std::cmp::min(
+aggr_function!(min_int, Integer, "integer", |a, b| std::cmp::min(a, b));
+aggr_function!(min_float, Float, "float", |a, b| std::cmp::min(
     FloatOrd(a),
     FloatOrd(b)
 )
 .0);
-aggr_function!(min_duration, Duration, |a, b| std::cmp::min(a, b));
-aggr_function!(min_time, Time, |a, b| std::cmp::min(a, b));
+aggr_function!(min_duration, Duration, "duration", |a, b| std::cmp::min(a, b));
+aggr_function!(min_time, Time, "time", |a, b| std::cmp::min(a, b));
+aggr_function!(min_string, String, "string", |a, b| std::cmp::min(a, b));
+aggr_function!(min_file, File, "file", |a, b| std::cmp::min(a, b));
 
-aggr_function!(max_int, Integer, |a, b| std::cmp::max(a, b));
-aggr_function!(max_float, Float, |a, b| std::cmp::max(
+
+aggr_function!(max_int, Integer, "integer", |a, b| std::cmp::max(a, b));
+aggr_function!(max_float, Float, "float", |a, b| std::cmp::max(
     FloatOrd(a),
     FloatOrd(b)
 )
 .0);
-aggr_function!(max_duration, Duration, |a, b| std::cmp::max(a, b));
-aggr_function!(max_time, Time, |a, b| std::cmp::max(a, b));
+aggr_function!(max_duration, Duration, "duration", |a, b| std::cmp::max(a, b));
+aggr_function!(max_time, Time, "time", |a, b| std::cmp::max(a, b));
+aggr_function!(max_string, String, "string", |a, b| std::cmp::max(a, b));
+aggr_function!(max_file, File, "file", |a, b| std::cmp::max(a, b));
 
 #[signature(
 min,
 short = "Calculate the minimum for the specific column across all rows.",
-example = "proc:list | min cpu")]
+long = "If the input only has one column, the column name is optional.\n\n    The column can be numeric, temporal, a string or a file.",
+example = "host:procs | min cpu")]
 pub struct Min {
     field: Option<String>,
 }
@@ -173,6 +180,8 @@ fn min(context: CommandContext) -> CrushResult<()> {
                 ValueType::Float => context.output.send(min_float(input, column)?),
                 ValueType::Duration => context.output.send(min_duration(input, column)?),
                 ValueType::Time => context.output.send(min_time(input, column)?),
+                ValueType::String => context.output.send(min_string(input, column)?),
+                ValueType::File => context.output.send(min_file(input, column)?),
                 t => argument_error_legacy(
                     &format!("Can't pick min of elements of type {}", t),
                 ),
@@ -185,7 +194,8 @@ fn min(context: CommandContext) -> CrushResult<()> {
 #[signature(
 max,
 short = "Calculate the maximum for the specific column across all rows.",
-example = "proc:list | max cpu")]
+long = "If the input only has one column, the column name is optional.\n\n    The column can be numeric, temporal, a string or a file.",
+example = "host:procs | max cpu")]
 pub struct Max {
     field: Option<String>,
 }
@@ -200,6 +210,8 @@ fn max(context: CommandContext) -> CrushResult<()> {
                 ValueType::Float => context.output.send(max_float(input, column)?),
                 ValueType::Duration => context.output.send(max_duration(input, column)?),
                 ValueType::Time => context.output.send(max_time(input, column)?),
+                ValueType::String => context.output.send(max_string(input, column)?),
+                ValueType::File => context.output.send(max_file(input, column)?),
                 t => argument_error_legacy(
                     &format!("Can't pick max of elements of type {}", t),
                 ),
@@ -247,6 +259,56 @@ fn mul(context: CommandContext) -> CrushResult<()> {
                     &format!("Can't calculate product of elements of type {}", t),
                 ),
             }
+        }
+        _ => error("Expected a stream"),
+    }
+}
+
+# [signature(
+first,
+short = "Return the value of the specified column from the first row of the stream.",
+)]
+pub struct First {
+    field: Option<String>,
+}
+
+fn first(context: CommandContext) -> CrushResult<()> {
+    match context.input.recv()?.stream()? {
+        Some(mut input) => {
+            let cfg: First = First::parse(context.arguments, &context.global_state.printer())?;
+            let column = parse(input.types(), cfg.field)?;
+
+            if let Ok(mut row) = input.read() {
+                context.output.send(row.into_cells().replace(column, Value::Empty()).clone())
+            } else {
+                error("Empty stream")
+            }
+        }
+        _ => error("Expected a stream"),
+    }
+}
+
+# [signature(
+last,
+short = "Return the value of the specified column from the last row of the stream.",
+)]
+pub struct Last {
+    field: Option<String>,
+}
+
+fn last(context: CommandContext) -> CrushResult<()> {
+    match context.input.recv()?.stream()? {
+        Some(mut input) => {
+            let cfg: First = First::parse(context.arguments, &context.global_state.printer())?;
+            let column = parse(input.types(), cfg.field)?;
+
+            let mut rr = None;
+            while let Ok(mut row) = input.read() {
+                rr = Some(row)
+            }
+            rr
+                .map(|r| {context.output.send(r.into_cells().replace(column, Value::Empty()))})
+                .unwrap_or_else(|| {argument_error_legacy("Empty stream")})
         }
         _ => error("Expected a stream"),
     }

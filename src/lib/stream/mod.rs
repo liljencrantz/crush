@@ -13,7 +13,7 @@ mod reverse;
 mod select;
 mod seq;
 mod sort;
-mod sum_avg;
+mod aggregation;
 mod tail;
 mod uniq;
 mod r#where;
@@ -38,20 +38,22 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare_command(
                 "join", join::join, true,
                 "join left:field right:field", "Join two streams together on the specified keys",
-                example!("join pid=(proc:list) pid=(proc:threads| group pid tid={list:collect tid})"),
+                example!("join pid=(host:procs) pid=(host:threads| group pid tid={list:collect tid})"),
                 Unknown,
                 vec![],
             )?;
-            sum_avg::Sum::declare(env)?;
-            sum_avg::Avg::declare(env)?;
-            sum_avg::Min::declare(env)?;
-            sum_avg::Max::declare(env)?;
-            sum_avg::Mul::declare(env)?;
+            aggregation::Sum::declare(env)?;
+            aggregation::Avg::declare(env)?;
+            aggregation::Min::declare(env)?;
+            aggregation::Max::declare(env)?;
+            aggregation::Mul::declare(env)?;
+            aggregation::First::declare(env)?;
+            aggregation::Last::declare(env)?;
             env.declare_command(
                 "select", select::select, true,
                 "select copy_fields:field... [%] new_field=definition:command",
                 "Pass on some old fields and calculate new ones for each line of input",
-                example!(r#"ls | select user path={"{}/{}":format (pwd) file}"#), Unknown,
+                example!(r#"files | select user path={"{}/{}":format (pwd) file}"#), Unknown,
                 vec![],
             )?;
             seq::Seq::declare(env)?;

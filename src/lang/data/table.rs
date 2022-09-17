@@ -90,6 +90,10 @@ impl Row {
         &self.cells
     }
 
+    pub fn into_cells(self) -> Vec<Value> {
+        self.cells
+    }
+
     pub fn into_struct(self, types: &[ColumnType]) -> Struct {
         Struct::from_vec(self.cells, types.to_vec())
     }
