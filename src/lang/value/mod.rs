@@ -67,7 +67,7 @@ pub enum Value {
     Bool(bool),
     Float(f64),
     BinaryInputStream(Box<dyn BinaryReader + Send + Sync>),
-    Binary(Vec<u8>),
+    Binary(Arc<[u8]>),
     Type(ValueType),
 }
 
@@ -109,6 +109,24 @@ fn add_keys<T>(map: &OrderedMap<String, T>, res: &mut Vec<String>) {
 impl From<&str> for Value {
     fn from(s: &str) -> Value {
         Value::String(Arc::from(s))
+    }
+}
+
+impl From<Vec<u8>> for Value {
+    fn from(s: Vec<u8>) -> Value {
+        Value::Binary(Arc::from(s))
+    }
+}
+
+impl From<&Vec<u8>> for Value {
+    fn from(s: &Vec<u8>) -> Value {
+        Value::Binary(Arc::from(s.as_ref()))
+    }
+}
+
+impl From<&[u8]> for Value {
+    fn from(s: &[u8]) -> Value {
+        Value::Binary(Arc::from(s))
     }
 }
 
@@ -372,7 +390,7 @@ impl Value {
             Value::BinaryInputStream(mut s) => {
                 let mut vec = Vec::new();
                 to_crush_error(std::io::copy(s.as_mut(), &mut vec))?;
-                Value::Binary(vec)
+                Value::from(vec)
             }
             Value::Table(r) => Value::Table(r.materialize()?),
             Value::Dict(d) => Value::Dict(d.materialize()?),

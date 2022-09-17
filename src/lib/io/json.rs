@@ -126,7 +126,7 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
 
         Value::Time(t) => Ok(serde_json::Value::from(t.to_rfc3339())),
 
-        Value::Binary(b) => Ok(serde_json::Value::from(b)),
+        Value::Binary(b) => Ok(serde_json::Value::from(b.to_vec())),
 
         Value::BinaryInputStream(_) => panic!("Impossible"),
 

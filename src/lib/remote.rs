@@ -334,7 +334,7 @@ fn identity(context: CommandContext) -> CrushResult<()> {
     for identity in to_crush_error(agent.identities())? {
         output.send(Row::new(vec![
             Value::from(identity.comment().to_string()),
-            Value::Binary(identity.blob().to_vec()),
+            Value::from(identity.blob()),
         ]))?;
     }
     Ok(())

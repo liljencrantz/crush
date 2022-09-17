@@ -124,7 +124,7 @@ fn to_yaml(value: Value) -> CrushResult<serde_yaml::Value> {
 
         Value::Time(t) => Ok(serde_yaml::Value::from(t.to_rfc3339())),
 
-        Value::Binary(b) => Ok(serde_yaml::Value::from(b)),
+        Value::Binary(b) => Ok(serde_yaml::Value::from(b.to_vec())),
 
         Value::BinaryInputStream(_) => panic!("Impossible"),
 

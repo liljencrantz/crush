@@ -476,10 +476,24 @@ impl This for Option<Value> {
         }
     }
 
+    fn binary(&mut self) -> CrushResult<Vec<u8>> {
+        let mut this = None;
+        swap(self, &mut this);
+        match this {
+            Some(Value::Binary(l)) => Ok(l.to_vec()),
+            None => argument_error_legacy(concat!("Expected this to be a string, but this is not set")),
+            Some(v) => argument_error_legacy(
+                format!(
+                    concat!("Expected this to be a string, but it is a {}"),
+                    v.value_type().to_string()
+                ).as_str(),
+            ),
+        }
+    }
+
     this_method!(r#struct, Struct, Struct, "struct");
     this_method!(file, PathBuf, File, "file");
     this_method!(table, Table, Table, "table");
-    this_method!(binary, Vec<u8>, Binary, "binary");
     this_method!(glob, Glob, Glob, "glob");
     this_method!(integer, i128, Integer, "integer");
     this_method!(float, f64, Float, "float");

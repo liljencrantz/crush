@@ -17,6 +17,7 @@ use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt;
 use std::os::unix::ffi::OsStringExt;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 fn serialize_simple(
     value: &Value,
@@ -31,7 +32,7 @@ fn serialize_simple(
             Value::Glob(s) => element::Element::Glob(s.to_string()),
             Value::Regex(s, _) => element::Element::Regex(s.to_string()),
             Value::File(b) => element::Element::File(b.as_os_str().to_os_string().into_vec()),
-            Value::Binary(b) => element::Element::Binary(b.clone()),
+            Value::Binary(b) => element::Element::Binary(b.to_vec()),
             Value::Float(f) => element::Element::Float(*f),
             Value::Bool(b) => element::Element::Bool(*b),
             Value::Empty => element::Element::Empty(false),
@@ -53,7 +54,7 @@ impl Serializable<Value> for Value {
             element::Element::String(s) => Ok(Value::from(s.as_str())),
             element::Element::File(f) => Ok(Value::File(PathBuf::from(OsStr::from_bytes(&f[..])))),
             element::Element::Float(v) => Ok(Value::Float(*v)),
-            element::Element::Binary(v) => Ok(Value::Binary(v.clone())),
+            element::Element::Binary(v) => Ok(Value::from(v)),
             element::Element::Glob(v) => Ok(Value::Glob(Glob::new(v))),
             element::Element::Regex(v) => {
                 Ok(Value::Regex(v.clone(), to_crush_error(Regex::new(v))?))

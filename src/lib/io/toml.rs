@@ -144,7 +144,7 @@ fn to_toml(value: Value) -> CrushResult<toml::Value> {
 
         Value::Time(t) => Ok(toml::Value::from(t.to_rfc3339())),
 
-        Value::Binary(b) => Ok(toml::Value::from(b)),
+        Value::Binary(b) => Ok(toml::Value::from(b.to_vec())),
 
         Value::BinaryInputStream(_) => panic!("Impossible"),
 
