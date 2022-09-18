@@ -21,16 +21,16 @@ they are quite different, and nearly everything beyond that is different.
 Let's start with two trivial commands; listing files in the current directory,
 and checking how many files are in the current directory:
 
-    crush# ll
+    crush# files
     user size  modified                  type      file
     fox  2_279 2020-03-07 13:00:33 +0100 file      ideas
     fox  4_096 2019-11-22 21:56:30 +0100 directory target
     ...
     
-    crush# ls | count
+    crush# files | count
     14
 
-This all looks familiar. But appearances are deceiving. The `ll` command being
+This all looks familiar. But appearances are deceiving. The `files` command being
 called is a Crush builtin, and the output is not sent over a unix pipe but over
 a Rush channel. It is not understood by the command as a series of bytes, but as
 a table of rows, and Crush provides you with SQL-like commands to sort, filter,
@@ -44,7 +44,7 @@ aggregate and group rows of data.
     fox   711 2019-10-03 14:19:46 +0200 file      crush.iml
     ...
 
-    crush# ll | where {$type == "directory"}
+    crush# ll | where {$type == directory}
     user size  modified                  type      file
     fox  4_096 2019-11-22 21:56:30 +0100 directory target
     fox  4_096 2020-02-22 11:50:12 +0100 directory tests
@@ -81,7 +81,7 @@ commands all work like you'd expect:
 
 ```shell script
 # Dump the output of the ls command to the file listing.json in json format
-crush# ls | json:to ./listing.json
+crush# files | json:to ./listing.json
 
 # Read the file Cargo.toml as a toml file, and extract the dependencies-field
 crush# toml:from Cargo.toml | member dependencies
@@ -374,7 +374,7 @@ Crush features many commands to operate om arbitrary streams of data using a
 SQL-like syntax. These commands use field-specifiers like `foo` to specify
 columns in the data stream that they operate on:
 
-    host:procs | where {$user == "root"} | group status proc_per_status={count} | sort proc_per_status
+    host:procs | where {$user == root} | group status proc_per_status={count} | sort proc_per_status
     status   proc_per_status
     Idle     108
     Sleeping 170
