@@ -13,17 +13,29 @@ use crate::lang::value::{Value, ValueDefinition, ValueType};
 use closure::Closure;
 use ordered_map::OrderedMap;
 use std::fmt::{Formatter, Display};
+use std::rc::Weak;
+use std::sync::Arc;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::completion::Completion;
 use crate::lang::completion::parse::PartialCommandResult;
 
-pub type Command = Box<dyn CrushCommand + Send + Sync>;
+pub type Command = Arc<dyn CrushCommand + Send + Sync>;
 
 #[derive(Clone, Debug)]
 pub enum OutputType {
     Unknown,
     Known(ValueType),
     Passthrough,
+}
+
+pub trait CommandBinder {
+    fn bind(&self, value: Value) -> Command;
+}
+
+impl CommandBinder for Command {
+    fn bind(&self, value: Value) -> Command {
+        self.bind_helper(self, value)
+    }
 }
 
 impl OutputType {
@@ -65,14 +77,14 @@ pub trait CrushCommand: Help {
     fn eval(&self, context: CommandContext) -> CrushResult<()>;
     fn might_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool;
     fn name(&self) -> &str;
-    fn copy(&self) -> Command;
+    //fn copy(&self) -> Command;
     fn help(&self) -> &dyn Help;
     fn serialize(
         &self,
         elements: &mut Vec<Element>,
         state: &mut SerializationState,
     ) -> CrushResult<usize>;
-    fn bind(&self, this: Value) -> Command;
+    fn bind_helper(&self, wrapped: &Command, this: Value) -> Command;
     fn output_type<'a>(&'a self, input: &'a OutputType) -> Option<&'a ValueType>;
     fn arguments(&self) -> &Vec<ArgumentDescription>;
 }
@@ -147,7 +159,7 @@ impl dyn CrushCommand {
         env: &Scope,
         arguments: Vec<ArgumentDescription>,
     ) -> Command {
-        Box::from(Closure::new(name, signature, job_definitions, env.clone(), arguments))
+        Arc::from(Closure::new(name, signature, job_definitions, env.clone(), arguments))
     }
 
     pub fn command(
@@ -160,7 +172,7 @@ impl dyn CrushCommand {
         output: OutputType,
         arguments: impl Into<Vec<ArgumentDescription>>,
     ) -> Command {
-        Box::from(SimpleCommand {
+        Arc::from(SimpleCommand {
             call,
             can_block,
             full_name: full_name.into_iter().map(|a| {a.as_ref().to_string()}).collect(),
@@ -180,7 +192,7 @@ impl dyn CrushCommand {
         long_help: Option<&'static str>,
         arguments: Vec<ArgumentDescription>,
     ) -> Command {
-        Box::from(ConditionCommand {
+        Arc::from(ConditionCommand {
             call,
             full_name,
             signature,
@@ -232,7 +244,7 @@ impl CrushCommand for SimpleCommand {
     fn name(&self) -> &str {
         &self.full_name[self.full_name.len()-1]
     }
-
+/*
     fn copy(&self) -> Command {
         Box::from(SimpleCommand {
             call: self.call,
@@ -245,7 +257,7 @@ impl CrushCommand for SimpleCommand {
             arguments: self.arguments.clone(),
         })
     }
-
+*/
     fn help(&self) -> &dyn Help {
         self
     }
@@ -263,9 +275,9 @@ impl CrushCommand for SimpleCommand {
         Ok(idx)
     }
 
-    fn bind(&self, this: Value) -> Command {
-        Box::from(BoundCommand {
-            command: self.copy(),
+    fn bind_helper(&self, wrapped: &Command, this: Value) -> Command {
+        Arc::from(BoundCommand {
+            command: wrapped.clone(),
             this,
         })
     }
@@ -330,7 +342,7 @@ impl CrushCommand for ConditionCommand {
             .iter()
             .any(|arg| arg.value.can_block(context))
     }
-
+/*
     fn copy(&self) -> Command {
         Box::from(ConditionCommand {
             call: self.call,
@@ -341,7 +353,7 @@ impl CrushCommand for ConditionCommand {
             arguments: self.arguments.clone(),
         })
     }
-
+*/
     fn help(&self) -> &dyn Help {
         self
     }
@@ -358,9 +370,9 @@ impl CrushCommand for ConditionCommand {
         Ok(elements.len() - 1)
     }
 
-    fn bind(&self, this: Value) -> Command {
-        Box::from(BoundCommand {
-            command: self.copy(),
+    fn bind_helper(&self, wrapped: &Command, this: Value) -> Command {
+        Arc::from(BoundCommand {
+            command: wrapped.clone(),
             this,
         })
     }
@@ -446,14 +458,14 @@ impl CrushCommand for BoundCommand {
     fn name(&self) -> &str {
         self.command.name()
     }
-
+/*
     fn copy(&self) -> Command {
         Box::from(BoundCommand {
             command: self.command.copy(),
             this: self.this.clone(),
         })
     }
-
+*/
     fn help(&self) -> &dyn Help {
         self.command.help()
     }
@@ -475,9 +487,9 @@ impl CrushCommand for BoundCommand {
         Ok(idx)
     }
 
-    fn bind(&self, this: Value) -> Command {
-        Box::from(BoundCommand {
-            command: self.command.copy(),
+    fn bind_helper(&self, wrapped: &Command, this: Value) -> Command {
+        Arc::from(BoundCommand {
+            command: self.command.clone(),
             this: this.clone(),
         })
     }

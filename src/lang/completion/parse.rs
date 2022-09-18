@@ -21,7 +21,7 @@ impl Clone for CompletionCommand {
     fn clone(&self) -> Self {
         match self {
             CompletionCommand::Unknown => CompletionCommand::Unknown,
-            CompletionCommand::Known(c) => CompletionCommand::Known(c.copy()),
+            CompletionCommand::Known(c) => CompletionCommand::Known(c.clone()),
         }
     }
 }

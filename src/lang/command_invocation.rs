@@ -176,7 +176,7 @@ fn eval_type(
             context,
         ),
         Some(call) => eval_command(
-            call.as_ref().copy(),
+            call.clone(),
             Some(Value::Type(value_type)),
             local_arguments,
             context,

@@ -162,7 +162,7 @@ impl GlobalState {
 
     pub fn prompt(&self) -> Option<Command> {
         let data = self.prompt.lock().unwrap();
-        data.as_ref().map(|a| a.copy())
+        data.as_ref().map(|a| a.clone())
     }
 
     pub fn jobs(&self) -> Vec<LiveJob> {

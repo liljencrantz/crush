@@ -67,7 +67,7 @@ fn aggregate(
                     let (output_sender, output_receiver) = pipe();
                     streams.push(input_sender.initialize(rows.types().to_vec())?);
 
-                    let local_command = command.copy();
+                    let local_command = command.clone();
                     let local_scope = scope.clone();
                     let local_state = global_state.clone();
                     context.spawn("group:aggr", move ||
@@ -108,7 +108,7 @@ fn create_worker_thread(
     let my_commands: Vec<Command> = cfg
         .command
         .iter()
-        .map(|(_name, cmd)| cmd.copy())
+        .map(|(_name, cmd)| cmd.clone())
         .collect::<Vec<_>>();
     let my_printer = printer.clone();
     let my_scope = scope.clone();

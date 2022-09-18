@@ -58,7 +58,7 @@ pub fn r#where(mut context: CommandContext) -> CrushResult<()> {
 
             let output = context.output.initialize(input.types().to_vec())?;
             while let Ok(row) = input.read() {
-                match evaluate(cfg.condition.copy(), location, &row, input.types(), &base_context) {
+                match evaluate(cfg.condition.clone(), location, &row, input.types(), &base_context) {
                     Ok(val) => {
                         if val && output.send(row).is_err() {
                             break;

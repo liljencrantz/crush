@@ -457,7 +457,7 @@ impl Node {
         arguments: Vec<ArgumentDefinition>,
     ) -> CrushResult<Option<CommandInvocation>> {
         Ok(Some(CommandInvocation::new(
-            ValueDefinition::Value(Value::Command(function), location),
+            ValueDefinition::Value(Value::from(function), location),
             arguments,
         )))
     }

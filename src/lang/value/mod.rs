@@ -30,7 +30,7 @@ use crate::{
 };
 use chrono::Duration;
 
-use crate::lang::command::Command;
+use crate::lang::command::{Command, CommandBinder};
 use crate::lang::help::Help;
 use crate::lang::pretty::format_buffer;
 use crate::lang::printer::Printer;
@@ -190,6 +190,12 @@ impl From<Struct> for Value {
     }
 }
 
+impl From<Command> for Value {
+    fn from(v: Command) -> Value {
+        Value::Command(Arc::from(v))
+    }
+}
+
 pub struct VecReader {
     vec: Vec<Value>,
     types: Vec<ColumnType>,
@@ -248,17 +254,17 @@ impl Value {
                 self.value_type()
                     .fields()
                     .get(name)
-                    .map(|m| Value::Command(m.as_ref().copy()))
+                    .map(|m| Value::Command(m.clone()))
             }),
             Value::Type(t) => t
                 .fields()
                 .get(name)
-                .map(|m| Value::Command(m.as_ref().copy())),
+                .map(|m| Value::Command(m.clone())),
             _ => self
                 .value_type()
                 .fields()
                 .get(name)
-                .map(|m| Value::Command(m.as_ref().copy())),
+                .map(|m| Value::Command(m.clone())),
         })
     }
 
@@ -537,7 +543,7 @@ impl Clone for Value {
             Value::Time(v) => Value::Time(*v),
             Value::Glob(v) => Value::Glob(v.clone()),
             Value::Regex(v, r) => Value::Regex(v.clone(), r.clone()),
-            Value::Command(v) => Value::Command(v.as_ref().copy()),
+            Value::Command(v) => Value::Command(v.clone()),
             Value::File(v) => Value::File(v.clone()),
             Value::Table(r) => Value::Table(r.clone()),
             Value::Struct(r) => Value::Struct(r.clone()),

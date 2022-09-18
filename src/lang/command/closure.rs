@@ -16,6 +16,7 @@ use crate::lang::pipe::{black_hole, empty_channel};
 use crate::lang::value::{Value, ValueDefinition, ValueType};
 use std::collections::HashMap;
 use std::fmt::Display;
+use std::sync::Arc;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::ast::location::Location;
 
@@ -83,7 +84,7 @@ impl CrushCommand for Closure {
     fn name(&self) -> &str {
         "closure"
     }
-
+/*
     fn copy(&self) -> Command {
         Box::from(Closure {
             name: self.name.clone(),
@@ -95,7 +96,7 @@ impl CrushCommand for Closure {
             arguments: self.arguments.clone(),
         })
     }
-
+*/
     fn help(&self) -> &dyn Help {
         self
     }
@@ -108,9 +109,9 @@ impl CrushCommand for Closure {
         ClosureSerializer::new(elements, state).closure(self)
     }
 
-    fn bind(&self, this: Value) -> Command {
-        Box::from(BoundCommand {
-            command: self.copy(),
+    fn bind_helper(&self, wrapped: &Command, this: Value) -> Command {
+        Arc::from(BoundCommand {
+            command:wrapped.clone(),
             this,
         })
     }
@@ -343,7 +344,7 @@ impl<'a> ClosureDeserializer<'a> {
         match self.elements[id].element.as_ref().unwrap() {
             element::Element::Closure(s) => {
                 let env = Scope::deserialize(s.env as usize, self.elements, self.state)?;
-                Ok(Box::from(Closure {
+                Ok(Arc::from(Closure {
                     name: match s.name {
                         None | Some(Name::HasName(_)) => None,
                         Some(Name::NameValue(idx)) => Some(TrackedString::deserialize(
