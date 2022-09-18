@@ -98,7 +98,7 @@ impl Grpc {
             let mut buff = Vec::new();
             to_crush_error(stderr.read_to_end(&mut buff))?;
             let errors = to_crush_error(String::from_utf8(buff))?;
-            send_err.send(errors);
+            let _ = send_err.send(errors);
             Ok(())
         })?;
 

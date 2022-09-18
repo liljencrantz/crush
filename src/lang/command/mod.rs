@@ -13,7 +13,6 @@ use crate::lang::value::{Value, ValueDefinition, ValueType};
 use closure::Closure;
 use ordered_map::OrderedMap;
 use std::fmt::{Formatter, Display};
-use std::rc::Weak;
 use std::sync::Arc;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::completion::Completion;
@@ -77,7 +76,6 @@ pub trait CrushCommand: Help {
     fn eval(&self, context: CommandContext) -> CrushResult<()>;
     fn might_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool;
     fn name(&self) -> &str;
-    //fn copy(&self) -> Command;
     fn help(&self) -> &dyn Help;
     fn serialize(
         &self,
@@ -244,20 +242,7 @@ impl CrushCommand for SimpleCommand {
     fn name(&self) -> &str {
         &self.full_name[self.full_name.len()-1]
     }
-/*
-    fn copy(&self) -> Command {
-        Box::from(SimpleCommand {
-            call: self.call,
-            can_block: self.can_block,
-            full_name: self.full_name.clone(),
-            signature: self.signature,
-            short_help: self.short_help,
-            long_help: self.long_help,
-            output: self.output.clone(),
-            arguments: self.arguments.clone(),
-        })
-    }
-*/
+
     fn help(&self) -> &dyn Help {
         self
     }
@@ -342,18 +327,7 @@ impl CrushCommand for ConditionCommand {
             .iter()
             .any(|arg| arg.value.can_block(context))
     }
-/*
-    fn copy(&self) -> Command {
-        Box::from(ConditionCommand {
-            call: self.call,
-            full_name: self.full_name.clone(),
-            signature: self.signature,
-            short_help: self.short_help,
-            long_help: self.long_help,
-            arguments: self.arguments.clone(),
-        })
-    }
-*/
+
     fn help(&self) -> &dyn Help {
         self
     }
@@ -458,14 +432,7 @@ impl CrushCommand for BoundCommand {
     fn name(&self) -> &str {
         self.command.name()
     }
-/*
-    fn copy(&self) -> Command {
-        Box::from(BoundCommand {
-            command: self.command.copy(),
-            this: self.this.clone(),
-        })
-    }
-*/
+
     fn help(&self) -> &dyn Help {
         self.command.help()
     }

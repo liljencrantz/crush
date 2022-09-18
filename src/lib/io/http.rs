@@ -1,4 +1,3 @@
-use std::ops::Deref;
 use crate::lang::errors::{argument_error_legacy, to_crush_error, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{
@@ -35,6 +34,7 @@ example = "http \"https://example.com/\" header=(\"Authorization: Bearer {}\":fo
 can_block = true
 )]
 pub struct Http {
+    #[description("URI to request")]
     uri: String,
     #[description("HTTP method.")]
     #[values("get", "post", "put", "delete", "head", "options", "connect", "patch", "trace")]

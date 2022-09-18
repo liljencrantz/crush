@@ -1,6 +1,6 @@
 /**
 Code for managing arguments passed in to commands
-*/
+ */
 use crate::lang::errors::{argument_error, argument_error_legacy, CrushResult, error};
 use crate::lang::state::contexts::CompileContext;
 use crate::lang::value::Value;
@@ -259,7 +259,7 @@ mod tests {
             .unwrap();
         assert_eq!(a.str_val, "aa");
         assert!(AllowedValuesStringSignature::parse(
-            vec![Argument::named("str_val", Value::from("zz"), Location::new(0, 0)), ],
+            vec![Argument::named("str_val", Value::from("zz"), Location::new(0, 0))],
             &printer,
         )
             .is_err());
@@ -271,7 +271,7 @@ mod tests {
             .unwrap();
         assert_eq!(a.char_val, 'a');
         assert!(AllowedValuesCharSignature::parse(
-            vec![Argument::named("char_val", Value::from("z"), Location::new(0, 0)), ],
+            vec![Argument::named("char_val", Value::from("z"), Location::new(0, 0))],
             &printer,
         )
             .is_err());
@@ -284,7 +284,7 @@ mod tests {
         assert_eq!(a.int_val, 1);
 
         assert!(AllowedValuesIntSignature::parse(
-            vec![Argument::named("int_val", Value::Integer(9), Location::new(0, 0)), ],
+            vec![Argument::named("int_val", Value::Integer(9), Location::new(0, 0))],
             &printer,
         )
             .is_err());
@@ -300,7 +300,7 @@ mod tests {
         let (printer, _) = crate::lang::printer::init();
         assert_eq!(
             OptionSignature::parse(
-                vec![Argument::named("int_val", Value::Integer(9), Location::new(0, 0)), ],
+                vec![Argument::named("int_val", Value::Integer(9), Location::new(0, 0))],
                 &printer,
             )
                 .unwrap()
@@ -325,7 +325,7 @@ mod tests {
         let (printer, _) = crate::lang::printer::init();
         assert_eq!(
             DefaultSignature::parse(
-                vec![Argument::named("int_val", Value::Integer(9), Location::new(0, 0)), ],
+                vec![Argument::named("int_val", Value::Integer(9), Location::new(0, 0))],
                 &printer,
             )
                 .unwrap()
@@ -388,7 +388,7 @@ mod tests {
                 "a".to_string(),
                 "b".to_string(),
                 "c".to_string(),
-                "d".to_string()
+                "d".to_string(),
             ]
         );
     }
@@ -439,7 +439,7 @@ mod tests {
         assert_eq!(s.foo, None);
         assert_eq!(
             s.unnamed_val.into_iter().collect::<Vec<_>>(),
-            vec![("foo".to_string(), "s".to_string()), ]
+            vec![("foo".to_string(), "s".to_string())]
         );
     }
 
@@ -447,7 +447,7 @@ mod tests {
     fn named_signature_with_bad_type() {
         let (printer, _) = crate::lang::printer::init();
         assert!(
-            NamedSignature2::parse(vec![Argument::named("foo", Value::Bool(true), Location::new(0, 0)), ], &printer)
+            NamedSignature2::parse(vec![Argument::named("foo", Value::Bool(true), Location::new(0, 0))], &printer)
                 .is_err()
         );
     }

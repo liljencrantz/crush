@@ -84,19 +84,7 @@ impl CrushCommand for Closure {
     fn name(&self) -> &str {
         "closure"
     }
-/*
-    fn copy(&self) -> Command {
-        Box::from(Closure {
-            name: self.name.clone(),
-            signature: self.signature.clone(),
-            job_definitions: self.job_definitions.clone(),
-            env: self.env.clone(),
-            short_help: self.short_help.clone(),
-            long_help: self.long_help.clone(),
-            arguments: self.arguments.clone(),
-        })
-    }
-*/
+
     fn help(&self) -> &dyn Help {
         self
     }
