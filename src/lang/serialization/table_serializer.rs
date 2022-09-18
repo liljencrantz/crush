@@ -1,4 +1,4 @@
-use crate::lang::errors::{error, CrushResult};
+use crate::lang::errors::{CrushResult, error};
 use crate::lang::serialization::model;
 use crate::lang::serialization::model::{element, Element};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
@@ -65,48 +65,6 @@ impl Serializable<Row> for Row {
             srow.cells.push(r.serialize(elements, state)? as u64);
         }
         elements[idx].element = Some(element::Element::Row(srow));
-        Ok(idx)
-    }
-}
-
-impl Serializable<Table> for Table {
-    fn deserialize(
-        id: usize,
-        elements: &[Element],
-        state: &mut DeserializationState,
-    ) -> CrushResult<Table> {
-        if let element::Element::Table(lt) = elements[id].element.as_ref().unwrap() {
-            let mut column_types = Vec::new();
-            let mut rows = Vec::new();
-            for ct in &lt.column_types {
-                column_types.push(ColumnType::deserialize(*ct as usize, elements, state)?);
-            }
-            for r in &lt.rows {
-                rows.push(Row::deserialize(*r as usize, elements, state)?);
-            }
-            Ok(Table::new(column_types, rows))
-        } else {
-            error("Expected a table")
-        }
-    }
-
-    fn serialize(
-        &self,
-        elements: &mut Vec<Element>,
-        state: &mut SerializationState,
-    ) -> CrushResult<usize> {
-        let idx = elements.len();
-        elements.push(model::Element::default());
-        let mut stable = model::Table::default();
-        for t in self.types() {
-            stable
-                .column_types
-                .push(t.serialize(elements, state)? as u64);
-        }
-        for r in self.rows() {
-            stable.rows.push(r.serialize(elements, state)? as u64);
-        }
-        elements[idx].element = Some(element::Element::Table(stable));
         Ok(idx)
     }
 }

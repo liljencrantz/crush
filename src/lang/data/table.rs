@@ -1,49 +1,72 @@
-use crate::lang::errors::{argument_error_legacy, error, CrushError, CrushResult};
+use crate::lang::errors::{argument_error_legacy, CrushError, CrushResult, error};
 use crate::lang::pipe::CrushStream;
 use crate::lang::value::ValueType;
 use crate::lang::{data::r#struct::Struct, value::Value};
 use crate::util::replace::Replace;
 use chrono::Duration;
 use std::fmt::{Display, Formatter};
+use std::sync::Arc;
+use crate::lang::serialization::{DeserializationState, model, Serializable, SerializationState};
+use crate::lang::serialization::model::{element, Element};
 
 #[derive(PartialEq, PartialOrd, Clone)]
 pub struct Table {
     types: Vec<ColumnType>,
-    rows: Vec<Row>,
+    pub rows: Arc<[Row]>,
+    len: usize,
+    materialized: bool,
+}
+
+impl From<(Vec<ColumnType>, Vec<Row>)> for Table {
+    fn from((types, rows): (Vec<ColumnType>, Vec<Row>)) -> Self {
+        Table { types, len: rows.len(), rows: Arc::from(rows), materialized: false }
+    }
 }
 
 impl Table {
-    pub fn new(types: Vec<ColumnType>, rows: Vec<Row>) -> Table {
-        Table { types, rows }
-    }
-
     pub fn materialize(mut self) -> CrushResult<Table> {
-        Ok(Table {
-            types: ColumnType::materialize(&self.types)?,
-            rows: self.rows.drain(..).map(|r| r.materialize()).collect::<CrushResult<Vec<_>>>()?,
-        })
+        if self.materialized {
+            Ok(self.clone())
+        } else {
+            let rows: Vec<Row> = self.rows.to_vec()
+                .drain(..)
+                .map(|r| r.materialize())
+                .collect::<CrushResult<Vec<_>>>()?;
+            Ok(Table {
+                types: ColumnType::materialize(&self.types)?,
+                len: rows.len(),
+                materialized: true,
+                rows: Arc::from(rows),
+            })
+        }
     }
 
     pub fn types(&self) -> &[ColumnType] {
         &self.types
     }
 
-    pub fn rows(&self) -> &Vec<Row> {
-        &self.rows
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    pub fn row(&self, idx: usize) -> CrushResult<Row> {
+        if idx >= self.len {
+            error("Index out of bounds")
+        } else {
+            Ok(self.rows[idx].clone())
+        }
     }
 }
 
 pub struct TableReader {
     idx: usize,
     rows: Table,
-    row_type: Vec<ColumnType>,
 }
 
 impl TableReader {
     pub fn new(rows: Table) -> TableReader {
         TableReader {
             idx: 0,
-            row_type: rows.types().to_vec(),
             rows,
         }
     }
@@ -51,14 +74,14 @@ impl TableReader {
 
 impl CrushStream for TableReader {
     fn read(&mut self) -> Result<Row, CrushError> {
-        if self.idx >= self.rows.rows().len() {
+        if self.idx >= self.rows.len() {
             return error("EOF");
         }
         self.idx += 1;
         Ok(self
             .rows
-            .rows
-            .replace(self.idx - 1, Row::new(vec![Value::Empty])))
+            .rows[self.idx-1]
+            .clone())
     }
 
     fn read_timeout(
@@ -72,7 +95,7 @@ impl CrushStream for TableReader {
     }
 
     fn types(&self) -> &[ColumnType] {
-        &self.row_type
+        self.rows.types()
     }
 }
 
@@ -179,5 +202,47 @@ impl ColumnVec for &[ColumnType] {
             )
                 .as_str(),
         )
+    }
+}
+
+impl Serializable<Table> for Table {
+    fn deserialize(
+        id: usize,
+        elements: &[Element],
+        state: &mut DeserializationState,
+    ) -> CrushResult<Table> {
+        if let element::Element::Table(lt) = elements[id].element.as_ref().unwrap() {
+            let mut column_types = Vec::new();
+            let mut rows = Vec::new();
+            for ct in &lt.column_types {
+                column_types.push(ColumnType::deserialize(*ct as usize, elements, state)?);
+            }
+            for r in &lt.rows {
+                rows.push(Row::deserialize(*r as usize, elements, state)?);
+            }
+            Ok(Table::from((column_types, rows)))
+        } else {
+            error("Expected a table")
+        }
+    }
+
+    fn serialize(
+        &self,
+        elements: &mut Vec<Element>,
+        state: &mut SerializationState,
+    ) -> CrushResult<usize> {
+        let idx = elements.len();
+        elements.push(model::Element::default());
+        let mut stable = model::Table::default();
+        for t in self.types() {
+            stable
+                .column_types
+                .push(t.serialize(elements, state)? as u64);
+        }
+        for r in self.rows.iter() {
+            stable.rows.push(r.serialize(elements, state)? as u64);
+        }
+        elements[idx].element = Some(element::Element::Table(stable));
+        Ok(idx)
     }
 }

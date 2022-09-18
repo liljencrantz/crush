@@ -63,7 +63,7 @@ fn len(mut context: CommandContext) -> CrushResult<()> {
     let table = context.this.table()?;
     context
         .output
-        .send(Value::Integer(table.rows().len() as i128))
+        .send(Value::Integer(table.len() as i128))
 }
 
 #[signature(
@@ -81,8 +81,7 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     let cfg: GetItem = GetItem::parse(context.arguments, &context.global_state.printer())?;
     let o = context.this.table()?;
     context.output.send(Value::Struct(
-        mandate(o.rows().get(cfg.index), "Index out of range")?
-            .clone()
+        o.row(cfg.index)?
             .into_struct(o.types()),
     ))
 }

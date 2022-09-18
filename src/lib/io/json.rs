@@ -11,7 +11,7 @@ use crate::lang::data::table::ColumnType;
 use crate::lang::{data::list::List, data::r#struct::Struct, data::table::Table};
 use signature::signature;
 use std::collections::HashSet;
-use std::convert::TryFrom;
+use std::convert::{From, TryFrom};
 
 fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
     match json_value {
@@ -56,10 +56,10 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
                                     _ => error("Impossible!"),
                                 })
                                 .collect::<CrushResult<Vec<Row>>>()?;
-                            Ok(Value::Table(Table::new(
+                            Ok(Value::Table(Table::from((
                                 struct_types.iter().next().unwrap().clone(),
                                 row_list,
-                            )))
+                            ))))
                         }
                         _ => Ok(List::new(list_type.clone(), lst).into()),
                     }
@@ -101,13 +101,12 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
 
         Value::Table(t) => {
             let types = t.types().to_vec();
-            let structs = t
-                .rows()
-                .iter()
-                .map(|r| r.clone().into_struct(&types))
-                .map(|s| to_json(Value::Struct(s)))
-                .collect::<CrushResult<Vec<_>>>()?;
-            Ok(serde_json::Value::Array(structs))
+            let structs: CrushResult<Vec<serde_json::Value>> =
+                t.rows
+                    .iter()
+                    .map(|r| {to_json(Value::from(r.clone().into_struct(&types)))})
+                    .collect();
+            Ok(serde_json::Value::Array(structs?))
         }
 
         Value::Bool(b) => Ok(serde_json::Value::from(b)),
@@ -152,13 +151,13 @@ can_block = true,
 output = Unknown,
 short = "Parse json format",
 example = "(http \"https://jsonplaceholder.typicode.com/todos/3\"):body | json:from")]
-struct From {
+struct FromSignature {
     #[unnamed()]
     files: Files,
 }
 
 pub fn from(context: CommandContext) -> CrushResult<()> {
-    let cfg: From = From::parse(context.arguments, &context.global_state.printer())?;
+    let cfg: FromSignature = FromSignature::parse(context.arguments, &context.global_state.printer())?;
     let reader = BufReader::new(cfg.files.reader(context.input)?);
     let serde_value = to_crush_error(serde_json::from_reader(reader))?;
     let crush_value = from_json(&serde_value)?;
@@ -198,7 +197,7 @@ pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
         "json",
         "JSON I/O",
         Box::new(move |env| {
-            From::declare(env)?;
+            FromSignature::declare(env)?;
             To::declare(env)?;
             Ok(())
         }),

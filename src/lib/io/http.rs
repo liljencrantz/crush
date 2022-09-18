@@ -73,7 +73,7 @@ fn http(context: CommandContext) -> CrushResult<()> {
 
     let status: StatusCode = b.status();
     let header_map: &HeaderMap = b.headers();
-    let headers = Table::new(
+    let headers = Table::from((
         vec![
             ColumnType::new("name", ValueType::String),
             ColumnType::new("value", ValueType::String),
@@ -87,7 +87,7 @@ fn http(context: CommandContext) -> CrushResult<()> {
                 ])
             })
             .collect(),
-    );
+    ));
     context.output.send(Value::Struct(Struct::new(
         vec![
             ("status", Value::Integer(status.as_u16() as i128)),

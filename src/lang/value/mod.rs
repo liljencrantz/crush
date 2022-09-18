@@ -184,6 +184,12 @@ impl From<bool> for Value {
     }
 }
 
+impl From<Struct> for Value {
+    fn from(v: Struct) -> Value {
+        Value::Struct(v)
+    }
+}
+
 pub struct VecReader {
     vec: Vec<Value>,
     types: Vec<ColumnType>,
@@ -385,7 +391,7 @@ impl Value {
                 while let Ok(r) = output.recv() {
                     rows.push(r.materialize()?);
                 }
-                Value::Table(Table::new(ColumnType::materialize(output.types())?, rows))
+                Value::Table(Table::from((ColumnType::materialize(output.types())?, rows)))
             }
             Value::BinaryInputStream(mut s) => {
                 let mut vec = Vec::new();

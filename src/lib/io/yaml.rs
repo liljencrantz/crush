@@ -57,10 +57,10 @@ fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
                                     _ => error("Impossible!"),
                                 })
                                 .collect::<CrushResult<Vec<Row>>>()?;
-                            Ok(Value::Table(Table::new(
+                            Ok(Value::Table(Table::from((
                                 struct_types.iter().next().unwrap().clone(),
                                 row_list,
-                            )))
+                            ))))
                         }
                         _ => Ok(List::new(list_type.clone(), lst).into()),
                     }
@@ -100,7 +100,7 @@ fn to_yaml(value: Value) -> CrushResult<serde_yaml::Value> {
         Value::Table(t) => {
             let types = t.types().to_vec();
             let structs = t
-                .rows()
+                .rows
                 .iter()
                 .map(|r| r.clone().into_struct(&types))
                 .map(|s| to_yaml(Value::Struct(s)))
@@ -140,13 +140,13 @@ can_block = true,
 output = Unknown,
 short = "Parse yaml format",
 example = "(http \"https://jsonplaceholder.typicode.com/todos/3\"):body | yaml:from")]
-struct From {
+struct FromSignature {
     #[unnamed()]
     files: Files,
 }
 
 pub fn from(context: CommandContext) -> CrushResult<()> {
-    let cfg: From = From::parse(context.arguments, &context.global_state.printer())?;
+    let cfg: FromSignature = FromSignature::parse(context.arguments, &context.global_state.printer())?;
     let reader = BufReader::new(cfg.files.reader(context.input)?);
     let serde_value = to_crush_error(serde_yaml::from_reader(reader))?;
     let crush_value = from_yaml(&serde_value)?;
@@ -178,7 +178,7 @@ pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
         "yaml",
         "YAML I/O",
         Box::new(move |env| {
-            From::declare(env)?;
+            FromSignature::declare(env)?;
             To::declare(env)?;
             Ok(())
         }),

@@ -13,7 +13,7 @@ use crate::lang::data::table::ColumnType;
 use crate::lang::{data::list::List, data::r#struct::Struct, data::table::Table};
 use signature::signature;
 use std::collections::HashSet;
-use std::convert::TryFrom;
+use std::convert::{From, TryFrom};
 
 fn from_toml(toml_value: &toml::Value) -> CrushResult<Value> {
     match toml_value {
@@ -48,10 +48,10 @@ fn from_toml(toml_value: &toml::Value) -> CrushResult<Value> {
                                     _ => error("Impossible!"),
                                 })
                                 .collect::<CrushResult<Vec<Row>>>()?;
-                            Ok(Value::Table(Table::new(
+                            Ok(Value::Table(Table::from((
                                 struct_types.iter().next().unwrap().clone(),
                                 row_list,
-                            )))
+                            ))))
                         }
                         _ => Ok(List::new(list_type.clone(), lst).into()),
                     }
@@ -84,13 +84,13 @@ output = Unknown,
 short = "Parse toml format",
 long = "Input can either be a binary stream or a file. All Toml types except\n    datetime are supported. Datetime is not supported because the rust toml\n    currently doesn't support accessing the internal state of a datetime.",
 example = "toml:from Cargo.toml")]
-struct From {
+struct FromSignature {
     #[unnamed()]
     files: Files,
 }
 
 fn from(context: CommandContext) -> CrushResult<()> {
-    let cfg: From = From::parse(context.arguments, &context.global_state.printer())?;
+    let cfg: FromSignature = FromSignature::parse(context.arguments, &context.global_state.printer())?;
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
     let mut v = Vec::new();
 
@@ -120,8 +120,7 @@ fn to_toml(value: Value) -> CrushResult<toml::Value> {
         Value::Table(t) => {
             let types = t.types().to_vec();
             let structs = t
-                .rows()
-                .iter()
+                .rows.iter()
                 .map(|r| r.clone().into_struct(&types))
                 .map(|s| to_toml(Value::Struct(s)))
                 .collect::<CrushResult<Vec<_>>>()?;
@@ -180,7 +179,7 @@ pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
         "toml",
         "TOML I/O",
         Box::new(move |env| {
-            From::declare(env)?;
+            FromSignature::declare(env)?;
             To::declare(env)?;
             Ok(())
         }),
