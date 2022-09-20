@@ -143,7 +143,7 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
         } else {
             context
                 .output
-                .send(Value::Dict(Dict::new(*key_type, *value_type)))
+                .send(Dict::new(*key_type, *value_type).into())
         }
     } else {
         argument_error_legacy("Expected a dict type as this value")
@@ -184,7 +184,7 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
     let key_type = key_types.drain().next().unwrap();
     let value_type = if value_types.len() == 1 {value_types.drain().next().unwrap() } else {ValueType::Any};
 
-    context.output.send(Value::Dict(Dict::new_with_data(key_type, value_type, entries)))
+    context.output.send(Dict::new_with_data(key_type, value_type, entries).into())
 }
 
 fn setitem(mut context: CommandContext) -> CrushResult<()> {
@@ -247,7 +247,7 @@ fn clear(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     let d = context.this.dict()?;
     d.clear();
-    context.output.send(Value::Dict(d))
+    context.output.send(d.into())
 }
 
 #[signature(
@@ -261,7 +261,7 @@ struct Clone {}
 fn clone(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     let d = context.this.dict()?;
-    context.output.send(Value::Dict(d.copy()))
+    context.output.send(d.copy().into())
 }
 
 #[signature(
@@ -325,7 +325,7 @@ fn collect(mut context: CommandContext) -> CrushResult<()> {
                             }
                             context
                                 .output
-                                .send(Value::Dict(Dict::new_with_data(input_type[key_idx].cell_type.clone(), input_type[value_idx].cell_type.clone(), res)))
+                                .send(Dict::new_with_data(input_type[key_idx].cell_type.clone(), input_type[value_idx].cell_type.clone(), res).into())
                         }
                         _ => argument_error("Columns not found", context.arguments[0].location)
                     }
@@ -378,6 +378,6 @@ fn join(mut context: CommandContext) -> CrushResult<()> {
         let key_type = key_types.drain().next().unwrap();
         let value_type = if value_types.len() == 1 { value_types.drain().next().unwrap() } else { ValueType::Any };
 
-        context.output.send(Value::Dict(Dict::new_with_data(key_type, value_type, out)))
+        context.output.send(Dict::new_with_data(key_type, value_type, out).into())
     }
 }

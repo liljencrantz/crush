@@ -7,7 +7,6 @@ use std::collections::HashSet;
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::fmt::{Display, Formatter};
-use num_format::Locale::ce;
 use crate::data::dict::Dict;
 use crate::lang::value::VecReader;
 
@@ -139,7 +138,7 @@ impl List {
     }
 
     pub fn slice(&self, from: usize, to: usize) -> CrushResult<List> {
-        let mut cells = self.cells.lock().unwrap();
+        let cells = self.cells.lock().unwrap();
         let res = cells[from..to].to_vec();
         Ok(List::new(self.cell_type.clone(), res))
     }
@@ -189,7 +188,7 @@ impl List {
 
     pub fn stream(&self) -> Stream {
         let mut vec = Vec::new();
-        self.dump_value(&mut vec);
+        let _ = self.dump_value(&mut vec);
         Box::new(VecReader::new(vec, self.cell_type.clone()))
     }
 

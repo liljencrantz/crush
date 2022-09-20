@@ -1,8 +1,10 @@
+/**
+Code related to Table, TableInputStream and
+*/
 use crate::lang::errors::{argument_error_legacy, CrushError, CrushResult, error};
 use crate::lang::pipe::CrushStream;
 use crate::lang::value::ValueType;
 use crate::lang::{data::r#struct::Struct, value::Value};
-use crate::util::replace::Replace;
 use chrono::Duration;
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
@@ -24,7 +26,7 @@ impl From<(Vec<ColumnType>, Vec<Row>)> for Table {
 }
 
 impl Table {
-    pub fn materialize(mut self) -> CrushResult<Table> {
+    pub fn materialize(self) -> CrushResult<Table> {
         if self.materialized {
             Ok(self.clone())
         } else {

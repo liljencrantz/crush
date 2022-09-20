@@ -17,7 +17,6 @@ use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt;
 use std::os::unix::ffi::OsStringExt;
 use std::path::PathBuf;
-use std::sync::Arc;
 
 fn serialize_simple(
     value: &Value,
@@ -71,7 +70,7 @@ impl Serializable<Value> for Value {
             )),
 
             element::Element::Time(t) => Ok(Value::Time(Local.timestamp_nanos(*t))),
-            element::Element::List(_) => Ok(Value::List(List::deserialize(id, elements, state)?)),
+            element::Element::List(_) => Ok(List::deserialize(id, elements, state)?.into()),
             element::Element::Type(_) => {
                 Ok(Value::Type(ValueType::deserialize(id, elements, state)?))
             }
@@ -91,7 +90,7 @@ impl Serializable<Value> for Value {
             element::Element::UserScope(_) | element::Element::InternalScope(_) => {
                 Ok(Value::Scope(Scope::deserialize(id, elements, state)?))
             }
-            element::Element::Dict(_) => Ok(Value::Dict(Dict::deserialize(id, elements, state)?)),
+            element::Element::Dict(_) => Ok(Dict::deserialize(id, elements, state)?.into()),
 
             element::Element::TrackedString(_)
             | element::Element::Strings(_)

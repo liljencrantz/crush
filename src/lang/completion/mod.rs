@@ -104,6 +104,13 @@ fn completion_suffix(maybe_scope: CrushResult<Option<Value>>, t: &ValueType) -> 
     }
 }
 
+fn prefix_match(prefix: &str, whole: &str) -> bool {
+    if prefix.is_empty() && whole.starts_with('_') {
+        return false;
+    }
+    whole.starts_with(prefix)
+}
+
 fn complete_label(
     value: Value,
     prefix: &str,
@@ -113,7 +120,7 @@ fn complete_label(
 ) -> CrushResult<()> {
     out.append(&mut value.fields()
         .iter()
-        .filter(|k| k.starts_with(prefix))
+        .filter(|k| prefix_match(prefix, k))
         .filter(|k| value.field(*k)
             .map(|opt| opt.map(
                 |val| is_or_has_type(&val, t, 4))
@@ -189,7 +196,7 @@ fn complete_argument_name(
 ) -> CrushResult<()> {
     out.append(&mut arguments
         .iter()
-        .filter(|a| a.name.starts_with(prefix))
+        .filter(|a| prefix_match(prefix, a.name.as_str()))
         .map(|a| Completion {
             completion: format!(
                 "{}{}",
@@ -211,7 +218,7 @@ fn complete_argument_values(
     for val in allowed {
         match (val, &parse_result.last_argument) {
             (Value::String(full), LastArgument::QuotedString(prefix)) => {
-                if full.starts_with(prefix) {
+                if prefix_match(prefix, full) {
                     res.push(Completion::new(
                         format!("{}\" ", escape_without_quotes(&full[prefix.len()..])),
                         full.deref(),

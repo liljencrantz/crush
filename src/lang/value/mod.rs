@@ -39,7 +39,6 @@ use ordered_map::OrderedMap;
 pub use value_definition::ValueDefinition;
 pub use value_type::ValueType;
 use std::fmt::{Display, Formatter};
-use std::ops::Deref;
 use std::sync::Arc;
 use num_format::Grouping;
 use crate::data::table::Row;
@@ -405,9 +404,9 @@ impl Value {
                 Value::from(vec)
             }
             Value::Table(r) => Value::Table(r.materialize()?),
-            Value::Dict(d) => Value::Dict(d.materialize()?),
+            Value::Dict(d) => d.materialize()?.into(),
             Value::Struct(r) => Value::Struct(r.materialize()?),
-            Value::List(l) => Value::List(l.materialize()?),
+            Value::List(l) => l.materialize()?.into(),
             _ => self,
         })
     }
@@ -549,11 +548,11 @@ impl Clone for Value {
             Value::Struct(r) => Value::Struct(r.clone()),
             Value::TableInputStream(s) => Value::TableInputStream(s.clone()),
             Value::TableOutputStream(s) => Value::TableOutputStream(s.clone()),
-            Value::List(l) => Value::List(l.clone()),
+            Value::List(l) => l.clone().into(),
             Value::Duration(d) => Value::Duration(*d),
             Value::Scope(e) => Value::Scope(e.clone()),
             Value::Bool(v) => Value::Bool(*v),
-            Value::Dict(d) => Value::Dict(d.clone()),
+            Value::Dict(d) => d.clone().into(),
             Value::Float(f) => Value::Float(*f),
             Value::Empty => Value::Empty,
             Value::BinaryInputStream(v) => Value::BinaryInputStream(v.as_ref().clone()),

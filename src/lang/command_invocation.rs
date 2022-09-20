@@ -250,7 +250,7 @@ fn eval_command(
     }
 }
 
-fn resolve_external_command(name: &str, env: &Scope) -> CrushResult<Option<PathBuf>> {
+pub fn resolve_external_command(name: &str, env: &Scope) -> CrushResult<Option<PathBuf>> {
     if let Some(Value::List(path)) = env.get("cmd_path")? {
         let path_vec = path.dump();
         for val in path_vec {

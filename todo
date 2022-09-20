@@ -28,3 +28,4 @@ tab completions for external commands
 more file info: size, permissions, user, group, modified, created, type. Move to methods or add more to stat?
 Rename len to size in file:stat?
 Bad error message when trying to mutate constant
+Proper syntax for background jobs

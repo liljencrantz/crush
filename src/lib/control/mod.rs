@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error_legacy, CrushResult, data_error, mandate, to_crush_error};
+use crate::lang::errors::{ CrushResult, data_error, mandate, to_crush_error};
 use crate::lang::state::scope::Scope;
 use crate::lang::{
     data::binary::BinaryReader, data::list::List, value::Value,
@@ -11,10 +11,6 @@ use crate::lang::command::OutputType::Known;
 use chrono::Duration;
 use std::path::PathBuf;
 use crate::lang::data::table::{ColumnType, Row};
-use std::io::{Read, Write};
-use std::process::Stdio;
-use std::borrow::BorrowMut;
-use crate::lang::value::Value::BinaryInputStream;
 use os_pipe::PipeReader;
 use crate::lang::state::contexts::CommandContext;
 
@@ -23,6 +19,7 @@ mod r#if;
 mod r#loop;
 mod timer;
 mod r#while;
+mod cmd;
 
 #[signature(
 r#break,
@@ -46,101 +43,6 @@ struct Continue {}
 fn r#continue(context: CommandContext) -> CrushResult<()> {
     context.scope.do_continue()?;
     context.output.empty()
-}
-
-fn cmd(mut context: CommandContext) -> CrushResult<()> {
-    if context.arguments.is_empty() {
-        return argument_error_legacy("No command given");
-    }
-    match context.arguments.remove(0).value {
-        Value::File(f) => {
-            let use_tty = !context.input.is_pipeline() && !context.output.is_pipeline();
-            let mut cmd = std::process::Command::new(f.as_os_str());
-
-            for a in context.arguments.drain(..) {
-                match a.argument_type {
-                    None => {
-                        cmd.arg(a.value.to_string());
-                    }
-                    Some(name) => {
-                        if name.len() == 1 {
-                            cmd.arg(format!("-{}", name));
-                        } else {
-                            cmd.arg(format!("--{}", name));
-                        }
-                        match a.value {
-                            Value::Bool(true) => {}
-                            _ => {
-                                cmd.arg(a.value.to_string());
-                            }
-                        }
-                    }
-                }
-            }
-
-            if use_tty {
-                cmd
-                    .stdin(Stdio::inherit())
-                    .stdout(Stdio::inherit())
-                    .stderr(Stdio::inherit());
-
-                to_crush_error(to_crush_error(cmd.spawn())?.wait())?;
-                Ok(())
-            } else {
-                let input = context.input.recv()?;
-
-                let (stdout_reader, stdout_writer) = os_pipe::pipe().unwrap();
-                let (mut stderr_reader, stderr_writer) = os_pipe::pipe().unwrap();
-
-                cmd.stdin(Stdio::piped());
-                cmd.stdout(stdout_writer);
-                cmd.stderr(stderr_writer);
-
-                let mut child = to_crush_error(cmd.spawn())?;
-                let mut stdin = mandate(child.stdin.take(), "Expected stdin stream")?;
-
-                match input {
-                    Value::Empty => {
-                        drop(stdin);
-                    }
-                    Value::Binary(v) => {
-                        context.spawn("cmd:stdin", move || {
-                            stdin.write(&v)?;
-                            Ok(())
-                        })?;
-                    }
-                    Value::BinaryInputStream(mut r) => {
-                        context.spawn("cmd:stdin", move || {
-                            to_crush_error(std::io::copy(r.as_mut(), stdin.borrow_mut()))?;
-                            Ok(())
-                        })?;
-                    }
-                    _ => return argument_error_legacy("Invalid inpuy: Expected binary data"),
-                }
-
-                context.output.send(BinaryInputStream(Box::from(stdout_reader)))?;
-                let my_context = context.clone();
-                context.spawn("cmd:stderr", move || {
-                    let _ = &my_context;
-                    let mut buff = Vec::new();
-                    to_crush_error(stderr_reader.read_to_end(&mut buff))?;
-                    let errors = to_crush_error(String::from_utf8(buff))?;
-                    for e in errors.split('\n') {
-                        let err = e.trim();
-                        if !err.is_empty() {
-                            my_context.global_state.printer().error(err);
-                        }
-                    }
-                    Ok(())
-                })?;
-
-                child.wait()?;
-
-                Ok(())
-            }
-        }
-        _ => argument_error_legacy("Not a valid command"),
-    }
 }
 
 impl BinaryReader for PipeReader {
@@ -213,7 +115,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     .collect();
                 let _ = path.append(&mut dirs);
             }))?;
-            env.declare("cmd_path", Value::List(path))?;
+            env.declare("cmd_path", path.into())?;
             r#if::If::declare(env)?;
             r#while::While::declare(env)?;
             r#loop::Loop::declare(env)?;
@@ -233,16 +135,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 vec![],
             )?;
 
-            env.declare_command(
-                "cmd",
-                cmd,
-                true,
-                "cmd external_command:file @arguments:any",
-                "Execute external commands",
-                None,
-                Known(ValueType::BinaryInputStream),
-                vec![],
-            )?;
+            cmd::Cmd::declare(env)?;
             Break::declare(env)?;
             timer::Timer::declare(env)?;
             Continue::declare(env)?;

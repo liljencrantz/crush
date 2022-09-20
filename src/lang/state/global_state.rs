@@ -94,7 +94,7 @@ impl GlobalState {
     pub fn new(printer: Printer) -> CrushResult<GlobalState> {
         Ok(GlobalState {
             data: Arc::from(Mutex::new(StateData {
-                locale: to_crush_error(SystemLocale::default().or_else(|e| {SystemLocale::from_name("C")}))?,
+                locale: to_crush_error(SystemLocale::default().or_else(|_| {SystemLocale::from_name("C")}))?,
             })),
             threads: ThreadStore::new(),
             printer,

@@ -220,12 +220,12 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
     match context.arguments.len() {
         0 => argument_error_legacy("Expected at least one argument"),
         _ => context.output.send(
-            Value::List(List::new_without_type(
+            List::new_without_type(
                 context.arguments
                     .drain(..)
                     .map(|a| a.value)
                     .collect()
-            ))
+            ).into()
         ),
 
     }
@@ -320,7 +320,7 @@ fn push(mut context: CommandContext) -> CrushResult<()> {
     if !new_elements.is_empty() {
         l.append(&mut new_elements)?;
     }
-    context.output.send(Value::List(l))
+    context.output.send(l.into())
 }
 
 fn pop(mut context: CommandContext) -> CrushResult<()> {
@@ -350,7 +350,7 @@ fn clear(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     let l = context.this.list()?;
     l.clear();
-    context.output.send(Value::List(l))
+    context.output.send(l.into())
 }
 
 fn setitem(mut context: CommandContext) -> CrushResult<()> {
@@ -389,7 +389,7 @@ fn clone(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
-        .send(Value::List(context.this.list()?.copy()))
+        .send(context.this.list()?.copy().into())
 }
 
 fn getitem(mut context: CommandContext) -> CrushResult<()> {
@@ -426,5 +426,5 @@ fn slice(mut context: CommandContext) -> CrushResult<()> {
     }
     context
         .output
-        .send(Value::List(s.slice(cfg.from,to)?))
+        .send(s.slice(cfg.from,to)?.into())
 }

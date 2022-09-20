@@ -454,7 +454,7 @@ impl CrushCommand for BoundCommand {
         Ok(idx)
     }
 
-    fn bind_helper(&self, wrapped: &Command, this: Value) -> Command {
+    fn bind_helper(&self, _: &Command, this: Value) -> Command {
         Arc::from(BoundCommand {
             command: self.command.clone(),
             this: this.clone(),

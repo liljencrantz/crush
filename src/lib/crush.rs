@@ -17,7 +17,7 @@ fn make_env() -> Value {
     for (key, value) in env::vars() {
         let _ = e.insert(Value::from(key), Value::from(value));
     }
-    Value::Dict(e)
+    e.into()
 }
 
 fn make_arguments() -> Value {
@@ -78,7 +78,6 @@ lazy_static! {
         ColumnType::new("description", ValueType::String),
     ];
 }
-
 
 #[signature(
 jobs,
@@ -234,7 +233,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             highlight.insert(Value::from("file_literal"), Value::from(""))?;
             highlight.insert(Value::from("label"), Value::from(""))?;
             highlight.insert(Value::from("numeric_literal"), Value::from(""))?;
-            crush.declare("highlight", Value::Dict(highlight))?;
+            crush.declare("highlight", highlight.into())?;
 
             crush.declare("env", make_env())?;
             crush.declare("arguments", make_arguments())?;

@@ -140,20 +140,20 @@ fn find_string_columns(input: &[ColumnType], mut cfg: Vec<String>) -> Vec<usize>
         input
             .iter()
             .enumerate()
-            .filter(|(idx, column)| {
+            .filter(|(_, column)| {
                 match column.cell_type {
                     ValueType::File | ValueType::String => true,
                     _ => false,
                 }
             })
-            .map(|(idx, c)| {idx})
+            .map(|(idx, _)| {idx})
             .collect()
     } else {
         let yas: HashSet<String> = cfg.drain(..).collect();
         input
             .iter()
             .enumerate()
-            .filter(|(idx, column)| {
+            .filter(|(_, column)| {
                 yas.contains(&column.name)
             })
             .map(|(idx, c)| {idx})

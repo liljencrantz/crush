@@ -638,7 +638,7 @@ impl Closure {
             for (k, v) in named {
                 d.insert(Value::from(k), v)?;
             }
-            context.env.redeclare(named_name.string.as_ref(), Value::Dict(d))?;
+            context.env.redeclare(named_name.string.as_ref(), d.into())?;
         } else if !named.is_empty() {
             return argument_error_legacy("No target for extra named arguments");
         }

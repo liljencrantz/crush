@@ -73,7 +73,7 @@ fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
             for (k, v) in o.into_iter() {
                 d.insert(from_yaml(k)?, from_yaml(v)?)?;
             }
-            Ok(Value::Dict(d))
+            Ok(d.into())
         }
 
     }

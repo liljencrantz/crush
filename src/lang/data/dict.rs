@@ -232,3 +232,9 @@ impl CrushStream for DictReader {
         &self.types
     }
 }
+
+impl Into<Value> for Dict {
+    fn into(self) -> Value {
+        Value::Dict(self)
+    }
+}
