@@ -389,7 +389,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                     let mut full = path.clone();
                     full.push(#command_name);
                     env.insert(#command_name.to_string(),
-                        crate::lang::command::CrushCommand::command(
+                        <dyn crate::lang::command::CrushCommand>::command(
                             #command_invocation,
                             #can_block,
                             full,
