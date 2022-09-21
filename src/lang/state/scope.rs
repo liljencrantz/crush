@@ -1,5 +1,5 @@
 use crate::lang::command::{Command, CrushCommand, OutputType, ArgumentDescription};
-use crate::lang::errors::{error, mandate, CrushResult, argument_error_legacy};
+use crate::lang::errors::{error, mandate, CrushResult, argument_error_legacy, CrushError};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::help::Help;
 use crate::data::r#struct::Struct;
@@ -9,6 +9,11 @@ use ordered_map::OrderedMap;
 use std::cmp::max;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::fmt::{Display, Formatter};
+use chrono::Duration;
+use lazy_static::lazy_static;
+use crate::data::table::{ColumnType, Row};
+use crate::lang::pipe::CrushStream;
+use crate::util::replace::Replace;
 
 /**
 This is where we store variables, including functions.
@@ -154,20 +159,20 @@ impl ScopeLoader {
 
 pub struct ScopeData {
     /** This is the parent scope used to perform variable name resolution. If a variable lookup
-                fails in the current scope, it proceeds to this scope. This is usually the scope in which this
-                scope was *created*.
+                   fails in the current scope, it proceeds to this scope. This is usually the scope in which this
+                   scope was *created*.
 
-                Not that when scopes are used as namespaces, they do not use this scope.
+                   Not that when scopes are used as namespaces, they do not use this scope.
      */
     pub parent_scope: Option<Scope>,
 
     /** This is the scope in which the current scope was called. Since a closure can be called
-                from inside any scope, it need not be the same as the parent scope. This scope is the one used
-                for break/continue loop control, and it is also the scope that builds up the namespace hierarchy. */
+                   from inside any scope, it need not be the same as the parent scope. This scope is the one used
+                   for break/continue loop control, and it is also the scope that builds up the namespace hierarchy. */
     pub calling_scope: Option<Scope>,
 
     /** This is a list of scopes that are imported into the current scope. Anything directly inside
-                one of these scopes is also considered part of this scope. */
+                   one of these scopes is also considered part of this scope. */
     pub uses: Vec<Scope>,
 
     /** The actual data of this scope. */
@@ -177,11 +182,11 @@ pub struct ScopeData {
     pub is_loop: bool,
 
     /** True if this scope should stop execution, i.e. if the continue or break commands have been
-                called.  */
+                   called.  */
     pub is_stopped: bool,
 
     /** True if this scope can not be further modified. Note that mutable variables in it, e.g.
-                lists can still be modified. */
+                   lists can still be modified. */
     pub is_readonly: bool,
 
     pub name: Option<String>,
@@ -810,5 +815,62 @@ fn long_help_methods(fields: &mut Vec<(String, Value)>, lines: &mut Vec<String>)
             " ".repeat(max_len - k.len()),
             v.short_help()
         ));
+    }
+}
+
+lazy_static! {
+    pub static ref SCOPE_STREAM_TYPE: Vec<ColumnType> = vec![
+        ColumnType::new("name", ValueType::String),
+        ColumnType::new("value", ValueType::Any),
+    ];
+}
+
+pub struct ScopeReader {
+    idx: usize,
+    rows: Vec<(String, Value)>,
+}
+
+impl ScopeReader {
+    pub fn new(s: Scope) -> ScopeReader {
+        ScopeReader {
+            idx: 0,
+            rows: s
+                .dump_local()
+                .unwrap()
+                .drain()
+                .map(|(k, t)| { (k.clone(), s.get_local(&k)) })
+                .filter(|(k, v)| {
+                    if let Ok(Some(v)) = v { true } else { false }
+                })
+                .map(|(k, v)| { (k, v.unwrap().unwrap()) })
+                .collect(),
+        }
+    }
+}
+
+impl CrushStream for ScopeReader {
+    fn read(&mut self) -> Result<Row, CrushError> {
+        if self.idx >= self.rows.len() {
+            return error("EOF");
+        }
+        self.idx += 1;
+        let (k, v) = self
+            .rows
+            .replace(self.idx - 1, ("".to_string(), Value::Empty));
+        Ok(Row::new(vec![Value::from(k), v]))
+    }
+
+    fn read_timeout(
+        &mut self,
+        _timeout: Duration,
+    ) -> Result<Row, crate::lang::pipe::RecvTimeoutError> {
+        match self.read() {
+            Ok(r) => Ok(r),
+            Err(_) => Err(crate::lang::pipe::RecvTimeoutError::Disconnected),
+        }
+    }
+
+    fn types(&self) -> &[ColumnType] {
+        &SCOPE_STREAM_TYPE
     }
 }

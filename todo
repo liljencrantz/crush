@@ -20,7 +20,7 @@ pbuf:from command that takes a protobuf definition and uses it to deserialize pr
 avro:from command that deserializes avro data
 Support __str__ method for string rendering
 Avoid infinite loops when printing structs that reference each other
-getattr support?
+__getattr__ support?
 fix dynamic loading deadlocks
 Eager method evaluation in arguments?
 read methods in binary_stream

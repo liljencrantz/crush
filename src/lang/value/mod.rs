@@ -43,6 +43,7 @@ use std::sync::Arc;
 use num_format::Grouping;
 use crate::data::table::Row;
 use crate::lang::ast::tracked_string::TrackedString;
+use crate::state::scope::ScopeReader;
 use crate::util::escape::escape;
 use crate::util::replace::Replace;
 
@@ -92,7 +93,8 @@ impl Display for Value {
             Value::Binary(v) => f.write_str(&format_buffer(v, true)),
             Value::Type(t) => std::fmt::Display::fmt(t, f),
             Value::Struct(s) => s.fmt(f),
-            _ => {
+            Value::Command(_) | Value::TableInputStream(_) | Value::TableOutputStream(_) |
+            Value::Table(_) | Value::BinaryInputStream(_) | Value::Empty => {
                 f.write_str("<")?;
                 std::fmt::Display::fmt(&self.value_type(), f)?;
                 f.write_str(">")
@@ -318,6 +320,7 @@ impl Value {
             Value::List(l) => Some(l.stream()),
             Value::Dict(d) => Some(Box::from(DictReader::new(d.clone()))),
             Value::Struct(s) => Some(Box::from(StructReader::new(s.clone()))),
+            Value::Scope(s) => Some(Box::from(ScopeReader::new(s.clone()))),
             Value::Glob(l) => {
                 let mut paths = Vec::<PathBuf>::new();
                 l.glob_files(&cwd()?, &mut paths)?;
@@ -407,7 +410,15 @@ impl Value {
             Value::Dict(d) => d.materialize()?.into(),
             Value::Struct(r) => Value::Struct(r.materialize()?),
             Value::List(l) => l.materialize()?.into(),
-            _ => self,
+            Value::TableOutputStream(_) =>
+                return error(
+                    "Value of type table_output_stream can't be materialized"),
+            Value::Empty | Value::String(_) | Value::Integer(_) |
+            Value::Time(_) | Value::Duration(_) | Value::Glob(_) |
+            Value::Regex(_, _) | Value::Command(_) | Value::File(_) |
+            Value::Scope(_) | Value::Bool(_) | Value::Float(_) |
+            Value::Binary(_) | Value::Type(_) =>
+                self,
         })
     }
 
@@ -619,7 +630,7 @@ fn file_result_compare(f1: &Path, f2: &Path) -> bool {
     }
 }
 
-impl std::cmp::PartialEq for Value {
+impl PartialEq for Value {
     fn eq(&self, other: &Value) -> bool {
         match (self, other) {
             (Value::String(val1), Value::String(val2)) => val1 == val2,
@@ -679,7 +690,7 @@ impl std::cmp::PartialOrd for Value {
     }
 }
 
-impl std::cmp::Eq for Value {}
+impl Eq for Value {}
 
 impl Help for Value {
     fn signature(&self) -> String {

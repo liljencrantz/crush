@@ -48,30 +48,24 @@ The separation of concerns between arguments and input to command is that comman
 arguments configure how a the data should be processed, the input is the data
 to process and the output is where the processed data ends up.
 
-## String literals, variables, fields and file literals
+## String literals, variables, file literals
 
 A character sequence enclosed within double quotes become a string literal value,
-e.g. `"hello"`.
+e.g. `"hello"`. Unquoted character sequences containing only A-Z, a-z, 0-9 and _
+are also strings, e.g. `user` or `hat`.
+
+Unquoted character sequences containing a the letters `%` or `?` are a glob,
+which is an object that can be used for matching strings.
 
 A character sequence enclosed within single quotes become a file literal, e.g.
-`'Cargo.yaml'`, i.e. a value of the type `file`. An unquoted character sequence 
+`'Cargo.yaml'`, i.e. a value of the type `file`. An unquoted character sequence
 that contains a dot (`.`) or a slash ('/'), or begins with a tilde (`~`) is also
 interpreted as a file literal, e.g. `Cargo.yaml` or `~/.ssh`.
 
 A character sequence starting with a caret (`$`) is intepreted as a variable
-lookup. The first sequewnce in a command (i.e. the command name) is interpreted
+lookup. The first sequence in a command (i.e. the command name) is interpreted
 as a variable lookup even without the leading `$`. Commands live in
 the same namespace as all other variables.
-
-All other unquoted character sequences are field literals, e.g.
-`user` or `hat`. Field literals are basically short strings. They
-are used by some Crush commands to specify specific columns
-in a stream. For example, to tell the sort command to sort the
-input stream by the column `user`, one would write `sort user`.
-Commands that expect files as argument, like `cd` or `find`,
-generally accept fields as files. They also accept globs and 
-regular expression literals (see below), and expand them into
-file names.
 
 ## Operators
 
@@ -80,15 +74,15 @@ expressions and a few other operators that are a lot easier to read the code.
 
 These are presented below in order of precedence.
 
-| operator | Example | Description |
-| --- | --- | --- |
-| `:=` `=` | `foo := 7` | Declare a new variable, reassign an existing variable  |
-| `and` `or` | `foo:is_file and foo:stat:len > 4096` | Logical operators |
-| `>` `>=` `<` `<=` `==` `!=`  | `foo > 5` | Compare two values to each other  |
-| `+` `-` | `1+1` | Addition and subtraction  |
-| `*` `//` | `5*5` | Multiplication and division |
-| `typeof` | `typeof foo` | The type of a value |
-| `neg` `not` | `neg 5` | Numeric and logical negation |
+| operator                    | Example                               | Description                                           |
+|-----------------------------|---------------------------------------|-------------------------------------------------------|
+| `:=` `=`                    | `foo := 7`                            | Declare a new variable, reassign an existing variable |
+| `and` `or`                  | `foo:is_file and foo:stat:len > 4096` | Logical operators                                     |
+| `>` `>=` `<` `<=` `==` `!=` | `foo > 5`                             | Compare two values to each other                      |
+| `+` `-`                     | `1+1`                                 | Addition and subtraction                              |
+| `*` `//`                    | `5*5`                                 | Multiplication and division                           |
+| `typeof`                    | `typeof foo`                          | The type of a value                                   |
+| `neg` `not`                 | `neg 5`                               | Numeric and logical negation                          |
 
 ## Command substitutions
 
@@ -120,9 +114,9 @@ access operator. (This is because the content of a namespace is simply its membe
 A few of the namespaces in Crush are:
 
 * the `crush` namespace, which contains runtime information about the current shell
-as well as methods and variables that allow you to reconfigure it,
+  as well as methods and variables that allow you to reconfigure it,
 * the `user` namespace which contains information about all the users of this system,
 * the `fd` namespace, which contains information about open file descriptors, e.g. all
-open network sockets, unix sockets and open files, and
+  open network sockets, unix sockets and open files, and
 * the `host` namespace, which contains information about the current host, including
-host name, CPU status, memory usage and operating system.
+  host name, CPU status, memory usage and operating system.

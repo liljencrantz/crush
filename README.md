@@ -15,9 +15,29 @@ a syntax geared toward both batch and interactive shell usage.
 
 ## Building and installing Crush
 
-Crush should work on any modern Unix system. Install rust,
- 
+### OS X dependencies
+
+* Install [Brew](https://brew.sh/).
+* Install openssl `brew install openssl`
+* Install protobuf `brew install protobuf`
+* Install git `xcode-select --install`
+
+### Ubuntu dependencies
+
+* Update apt index `apt update`
+* Install dependencies `apt install build-essential git curl pkg-config libssl-dev libdbus-1-dev libsystemd-dev`
+
+### Install Rust
+
+Install Rust
+
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+Add it to your path
+
+    PATH=$PATH:$HOME/.cargo/bin
+
+### Compile and install crush
 
 clone this repository,
 
@@ -25,8 +45,10 @@ clone this repository,
  
 and run
 
-    cd crush; cargo build
+    cd crush && cargo build --release && cargo install --path .
 
-and you should have a working binary to try out.
+and you should have a working binary to try out in `~/.cargo/bin`.
+That directory should already be in your path, so just write `crush` to run
+the shell.
 
 Have fun!

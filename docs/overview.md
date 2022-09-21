@@ -67,20 +67,20 @@ for serializing and deserializing various file formats. Use e.g. `json:from`
 and `json:to` to deserialize and serialize json data, respectively. These
 commands all work like you'd expect:
 
-| Namespace | Description |
-| --- | --- |
-| `bin` | Binary stream, i.e. no encoding at all. |
-| `csv` | Comma separated values. Only decoding supported. |
-| `json` | JSON file format. |
-| `lines` | Lines of text files. |
-| `pup` | The native file format of Crush.  |
-| `split` | Split text file on custom separators. Only decoding supported. |
-| `toml` | TOML file format. |
-| `words` | Word split text files. Only decoding supported. |
-| `yaml` | YAML file format. |
+| Namespace | Description                                                    |
+|-----------|----------------------------------------------------------------|
+| `bin`     | Binary stream, i.e. no encoding at all.                        |
+| `csv`     | Comma separated values. Only decoding supported.               |
+| `json`    | JSON file format.                                              |
+| `lines`   | Lines of text files.                                           |
+| `pup`     | The native file format of Crush.                               |
+| `split`   | Split text file on custom separators. Only decoding supported. |
+| `toml`    | TOML file format.                                              |
+| `words`   | Word split text files. Only decoding supported.                |
+| `yaml`    | YAML file format.                                              |
 
 ```shell script
-# Dump the output of the ls command to the file listing.json in json format
+# Dump the output of the files command to the file listing.json in json format
 crush# files | json:to ./listing.json
 
 # Read the file Cargo.toml as a toml file, and extract the dependencies-field
@@ -213,9 +213,9 @@ use by Crush. They can not be assigned to.
 Crush supports named and unnamed arguments. It is often possible to use one,
 the other or a combination of both. The following three invocations are equivalent.
 
-    http uri="http://example.com" method="get"
-    http "http://example.com" "get"
-    http "http://example.com" method="get"
+    http uri="http://example.com" method=get
+    http "http://example.com" get
+    http "http://example.com" method=get
 
 It is quite common to want to pass boolean arguments to commands, which is why
 Crush has a special shorthand syntax for it. Passing in `--foo` is equivalent
