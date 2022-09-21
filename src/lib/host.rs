@@ -421,8 +421,8 @@ mod linux {
     long = "host:procs accepts no arguments.")]
     pub struct Procs {}
 
-    fn procs(context: CommandContext) -> CrushResult<()> {
-        List::parse(context.arguments.clone(), &context.global_state.printer())?;
+    fn procs(mut context: CommandContext) -> CrushResult<()> {
+        Procs::parse(context.remove_arguments(), &context.global_state.printer())?;
         let output = context.output.initialize(LIST_OUTPUT_TYPE.clone())?;
         let users = create_user_map()?;
 
@@ -497,7 +497,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Name::declare(host)?;
             Uptime::declare(host)?;
             #[cfg(target_os = "linux")]
-            linux::Procs::declare(env)?;
+            linux::Procs::declare(host)?;
             #[cfg(target_os = "macos")]
             macos::Procs::declare(host)?;
             #[cfg(target_os = "macos")]

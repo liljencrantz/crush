@@ -1,3 +1,4 @@
+use lazy_static::__Deref;
 use crate::lang::argument::{column_names, Argument};
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::*;
@@ -321,7 +322,7 @@ impl DBusArgument {
         match t {
             DBusType::String => {
                 if let Value::String(value) = value {
-                    a.append(value);
+                    a.append(value.to_string());
                 } else {
                     return argument_error_legacy(format!(
                         "Expected a string value, got a {}",
@@ -433,7 +434,7 @@ impl DBusArgument {
 
 fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
     Ok(match iter.arg_type() {
-        ArgType::String => Value::String(mandate(iter.get(), "Unexpected type")?),
+        ArgType::String => Value::from(mandate(iter.get::<String>(), "Unexpected type")?),
         ArgType::Boolean => Value::Bool(mandate(iter.get(), "Unexpected type")?),
         ArgType::Byte => Value::Integer(mandate(iter.get::<u8>(), "Unexpected type")? as i128),
         ArgType::Int16 => Value::Integer(mandate(iter.get::<i16>(), "Unexpected type")? as i128),
@@ -647,7 +648,7 @@ fn filter_method(
         Value::String(p) => {
             res = flattened
                 .drain(..)
-                .filter(|(i, m)| &format!("{}.{}", &i.name, &m.name) == p)
+                .filter(|(i, m)| &format!("{}.{}", &i.name, &m.name) == p.deref())
                 .collect()
         }
         Value::Glob(p) => {
@@ -687,7 +688,7 @@ fn service_call(mut context: CommandContext) -> CrushResult<()> {
             match (cfg.object, cfg.method) {
                 (None, None) => context.output.send(List::new(
                     ValueType::String,
-                    objects.drain(..).map(|d| Value::String(d.path)).collect::<Vec<_>>(),
+                    objects.drain(..).map(|d| Value::from(d.path)).collect::<Vec<_>>(),
                 ).into()),
                 (Some(object), None) => {
                     let mut object = filter_object(objects, object)?;
@@ -699,10 +700,10 @@ fn service_call(mut context: CommandContext) -> CrushResult<()> {
                             .flat_map(|i| {
                                 i.methods
                                     .iter()
-                                    .map(|m| Value::String(format!("{}.{}", &i.name, &m.name)))
+                                    .map(|m| Value::from(format!("{}.{}", &i.name, &m.name)))
                                     .collect::<Vec<_>>()
                             })
-                            .collect::Vec<_>(),
+                            .collect::<Vec<Value>>(),
                     ).into())
                 }
                 (Some(object), Some(method)) => {
@@ -746,7 +747,7 @@ fn populate_bus(context: CommandContext, dbus: DBusThing) -> CrushResult<()> {
             service.clone(),
             Value::Struct(Struct::new(
                 vec![
-                    ("service", Value::String(service)),
+                    ("service", Value::from(service)),
                     (
                         "__call__",
                         Value::Command(<dyn CrushCommand>::command(
@@ -757,7 +758,7 @@ fn populate_bus(context: CommandContext, dbus: DBusThing) -> CrushResult<()> {
                             "Access object in the specified service",
                             None,
                             Known(ValueType::Empty),
-                            &[],
+                            [],
                         )),
                     ),
                 ],
