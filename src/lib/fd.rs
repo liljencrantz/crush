@@ -61,7 +61,7 @@ fn file_internal(proc: ProcessResult<Process>) -> ProcessResult<Vec<Row>> {
                 if f.path.starts_with("/") {
                     res.push(Row::new(vec![
                         Value::Integer(f.fd.unwrap_or(0) as i128),
-                        Value::File(f.path),
+                        Value::from(f.path),
                         Value::Integer(proc.pid() as i128),
                     ]));
                 }

@@ -60,8 +60,7 @@ macro_rules! argument_getter {
                         format!(
                             concat!("Invalid value, expected a ", $description, ", found a {}"),
                             v.value_type().to_string()
-                        )
-                        .as_str(),
+                        ),
                     ),
                 }
             } else {
@@ -140,8 +139,27 @@ impl ArgumentVector for Vec<Argument> {
                     format!(
                         concat!("Invalid value, expected a string found a {}"),
                         v.value_type().to_string()
-                    )
-                        .as_str(),
+                    ),
+                ),
+            }
+        } else {
+            error("Index out of bounds")
+        }
+    }
+
+    fn file(&mut self, idx: usize) -> CrushResult<PathBuf> {
+        if idx < self.len() {
+            let l = self[idx].location;
+            match self
+                .replace(idx, Argument::unnamed(Value::Empty, l))
+                .value
+            {
+                Value::File(s) => Ok(s.to_path_buf()),
+                v => argument_error_legacy(
+                    format!(
+                        concat!("Invalid value, expected a file found a {}"),
+                        v.value_type().to_string()
+                    ),
                 ),
             }
         } else {
@@ -156,7 +174,6 @@ impl ArgumentVector for Vec<Argument> {
     argument_getter!(glob, Glob, Glob, "glob");
     argument_getter!(r#struct, Struct, Struct, "struct");
     argument_getter!(bool, bool, Bool, "bool");
-    argument_getter!(file, PathBuf, File, "file");
 
     fn value(&mut self, idx: usize) -> CrushResult<Value> {
         if idx < self.len() {
@@ -491,8 +508,22 @@ impl This for Option<Value> {
         }
     }
 
+    fn file(&mut self) -> CrushResult<PathBuf> {
+        let mut this = None;
+        swap(self, &mut this);
+        match this {
+            Some(Value::File(l)) => Ok(l.to_path_buf()),
+            None => argument_error_legacy(concat!("Expected this to be a file, but this is not set")),
+            Some(v) => argument_error_legacy(
+                format!(
+                    concat!("Expected this to be a file, but it is a {}"),
+                    v.value_type().to_string()
+                ).as_str(),
+            ),
+        }
+    }
+
     this_method!(r#struct, Struct, Struct, "struct");
-    this_method!(file, PathBuf, File, "file");
     this_method!(table, Table, Table, "table");
     this_method!(glob, Glob, Glob, "glob");
     this_method!(integer, i128, Integer, "integer");

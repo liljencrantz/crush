@@ -358,7 +358,7 @@ impl Node {
             }
             Node::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g.string)), g.location),
             Node::File(s, quoted) => ValueDefinition::Value(
-                Value::File(
+                Value::from(
                     if *quoted { PathBuf::from(&unescape(&s.string)?) } else { PathBuf::from(&s.string) }
                 ),
                 s.location,

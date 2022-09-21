@@ -51,7 +51,7 @@ impl Serializable<Value> for Value {
     ) -> CrushResult<Value> {
         match elements[id].element.as_ref().unwrap() {
             element::Element::String(s) => Ok(Value::from(s.as_str())),
-            element::Element::File(f) => Ok(Value::File(PathBuf::from(OsStr::from_bytes(&f[..])))),
+            element::Element::File(f) => Ok(Value::from(PathBuf::from(OsStr::from_bytes(&f[..])))),
             element::Element::Float(v) => Ok(Value::Float(*v)),
             element::Element::Binary(v) => Ok(Value::from(v)),
             element::Element::Glob(v) => Ok(Value::Glob(Glob::new(v))),

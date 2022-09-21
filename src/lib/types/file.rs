@@ -255,7 +255,7 @@ struct GetItem {
 pub fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     let base_directory = context.this.file()?;
     let cfg: GetItem = GetItem::parse(context.arguments, &context.global_state.printer())?;
-    context.output.send(Value::File(base_directory.join(&cfg.name)))
+    context.output.send(Value::from(base_directory.join(&cfg.name)))
 }
 
 
@@ -325,8 +325,8 @@ struct Parent {}
 fn parent(mut context: CommandContext) -> CrushResult<()> {
     context
         .output
-        .send(Value::File(
+        .send(Value::from(
                 mandate(
                     context.this.file()?.parent(),
-                    "Invalid file path")?.to_path_buf()))
+                    "Invalid file path")?))
 }

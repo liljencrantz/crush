@@ -160,6 +160,7 @@ impl SimpleSignature {
                 }
                 }
                 SimpleSignature::String => quote! { _value.to_string()},
+                SimpleSignature::PathBuf => quote! { _value.to_path_buf()},
                 SimpleSignature::Usize => quote! { crate::lang::errors::to_crush_error(usize::try_from(_value))?},
                 SimpleSignature::U64 => quote! { crate::lang::errors::to_crush_error(u64::try_from(_value))?},
                 SimpleSignature::I64 => quote! { crate::lang::errors::to_crush_error(i64::try_from(_value))?},

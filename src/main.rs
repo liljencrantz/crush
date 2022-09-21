@@ -90,7 +90,7 @@ fn run() -> CrushResult<i32> {
     let global_state = GlobalState::new(printer)?;
     let pretty_printer = create_pretty_printer(global_state.printer().clone(), &global_state);
 
-    declare(&root_scope, &global_state, &pretty_printer)?;
+    declare(&root_scope)?;
 
     match config.mode {
         Mode::Interactive => interactive::run(

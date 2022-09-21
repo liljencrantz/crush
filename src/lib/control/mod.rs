@@ -9,7 +9,7 @@ use std::env;
 
 use crate::lang::command::OutputType::Known;
 use chrono::Duration;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use crate::lang::data::table::{ColumnType, Row};
 use os_pipe::PipeReader;
 use crate::lang::state::contexts::CommandContext;
@@ -111,7 +111,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             to_crush_error(env::var("PATH").map(|v| {
                 let mut dirs: Vec<Value> = v
                     .split(':')
-                    .map(|s| Value::File(PathBuf::from(s)))
+                    .map(|s| Value::from(PathBuf::from(s)))
                     .collect();
                 let _ = path.append(&mut dirs);
             }))?;

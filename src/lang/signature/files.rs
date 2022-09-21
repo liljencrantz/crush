@@ -81,7 +81,7 @@ impl Files {
 
     pub fn expand(&mut self, value: Value, printer: &Printer) -> CrushResult<()> {
         match value {
-            Value::File(p) => self.files.push(p),
+            Value::File(p) => self.files.push(p.to_path_buf()),
             Value::Glob(pattern) => pattern.glob_files(&PathBuf::from("."), &mut self.files)?,
             Value::Regex(_, re) => re.match_files(&cwd()?, &mut self.files, printer),
             Value::String(f) => self.files.push(PathBuf::from(f.deref())),
@@ -92,7 +92,7 @@ impl Files {
                     if t.len() == 1 && t[0].cell_type == ValueType::File {
                         while let Ok(row) = s.read() {
                             if let Value::File(f) = Vec::from(row).remove(0) {
-                                self.files.push(f);
+                                self.files.push(f.to_path_buf());
                             }
                         }
                     } else {

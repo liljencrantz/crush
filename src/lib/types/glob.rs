@@ -174,6 +174,6 @@ fn files(mut context: CommandContext) -> CrushResult<()> {
     g.glob_files(&cfg.directory.unwrap_or(cwd()?), &mut files)?;
     context.output.send(List::new(
         ValueType::File,
-        files.drain(..).map(|f| Value::File(f)).collect::<Vec<_>>(),
+        files.drain(..).map(|f| Value::from(f)).collect::<Vec<_>>(),
     ).into())
 }

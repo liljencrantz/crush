@@ -87,7 +87,7 @@ fn insert_entity(
         Value::Integer(i128::from(meta.len())),
         Value::Time(modified_datetime),
         Value::from(type_str),
-        Value::File(f),
+        Value::from(f),
     ]))?;
     Ok(())
 }

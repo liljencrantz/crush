@@ -157,8 +157,8 @@ fn list(context: CommandContext) -> CrushResult<()> {
         output.send(Row::new(
             vec![
                 Value::from(u.name),
-                Value::File(u.home),
-                Value::File(u.shell),
+                Value::from(u.home),
+                Value::from(u.shell),
                 Value::from(u.information),
                 Value::Integer(u.uid as i128),
                 Value::Integer(u.gid as i128),
@@ -189,8 +189,8 @@ fn get_user_value(input_name: &str) -> CrushResult<Value> {
                 vec![
                     ("username", Value::from(input_name)),
                     ("name", Value::from(user.name)),
-                    ("home", Value::File(user.home)),
-                    ("shell", Value::File(user.shell)),
+                    ("home", Value::from(user.home)),
+                    ("shell", Value::from(user.shell)),
                     ("information", Value::from(user.information)),
                     ("uid", Value::Integer(user.uid as i128)),
                     ("gid", Value::Integer(user.gid as i128)),

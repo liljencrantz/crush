@@ -58,7 +58,7 @@ pub enum Value {
     Command(Command),
     TableInputStream(InputStream),
     TableOutputStream(OutputStream),
-    File(PathBuf),
+    File(Arc<Path>),
     Table(Table),
     Struct(Struct),
     List(List),
@@ -197,6 +197,24 @@ impl From<Command> for Value {
     }
 }
 
+impl From<PathBuf> for Value {
+    fn from(s: PathBuf) -> Value {
+        Value::File(Arc::from(s))
+    }
+}
+
+impl From<&PathBuf> for Value {
+    fn from(s: &PathBuf) -> Value {
+        Value::File(Arc::from(s.as_path()))
+    }
+}
+
+impl From<&Path> for Value {
+    fn from(s: &Path) -> Value {
+        Value::File(Arc::from(s))
+    }
+}
+
 pub struct VecReader {
     vec: Vec<Value>,
     types: Vec<ColumnType>,
@@ -296,7 +314,7 @@ impl Value {
 
     pub fn path(&self, name: &str) -> Option<Value> {
         match self {
-            Value::File(s) => Some(Value::File(s.join(name))),
+            Value::File(s) => Some(Value::from(s.join(name))),
             _ => None,
         }
     }
@@ -325,7 +343,7 @@ impl Value {
                 let mut paths = Vec::<PathBuf>::new();
                 l.glob_files(&cwd()?, &mut paths)?;
                 Some(Box::from(VecReader::new(
-                    paths.iter().map(|e| { Value::File(e.to_path_buf()) }).collect(),
+                    paths.iter().map(|e| { Value::from(e.to_path_buf()) }).collect(),
                     ValueType::File)))
             }
             _ => None,
@@ -361,7 +379,7 @@ impl Value {
     pub fn file_expand(&self, v: &mut Vec<PathBuf>, printer: &Printer) -> CrushResult<()> {
         match self {
             Value::String(s) => v.push(PathBuf::from(s.to_string())),
-            Value::File(p) => v.push(p.clone()),
+            Value::File(p) => v.push(p.to_path_buf()),
             Value::Glob(pattern) => pattern.glob_files(&PathBuf::from("."), v)?,
             Value::Regex(_, re) => re.match_files(&cwd()?, v, printer),
             val => match val.stream()? {
@@ -371,7 +389,7 @@ impl Value {
                     if t.len() == 1 && t[0].cell_type == ValueType::File {
                         while let Ok(row) = s.read() {
                             if let Value::File(f) = Vec::from(row).remove(0) {
-                                v.push(f);
+                                v.push(f.to_path_buf());
                             }
                         }
                     } else {
@@ -436,7 +454,7 @@ impl Value {
         let str_val = self.to_string();
 
         match new_type {
-            ValueType::File => Ok(Value::File(PathBuf::from(str_val.as_str()))),
+            ValueType::File => Ok(Value::from(PathBuf::from(str_val.as_str()))),
             ValueType::Glob => Ok(Value::Glob(Glob::new(str_val.as_str()))),
             ValueType::Integer => to_crush_error(str_val.parse::<i128>()).map(Value::Integer),
             ValueType::Regex => {

@@ -151,7 +151,7 @@ fn cmd(mut context: CommandContext) -> CrushResult<()> {
     match arguments.remove(0).value {
         Value::File(f) => {
             let file = if f.exists() {
-                Some(f.clone())
+                Some(f.to_path_buf())
             } else {
                 resolve_external_command(mandate(f.to_str(), "Invalid command name")?, &context.scope)?
             };

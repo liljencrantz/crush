@@ -15,13 +15,12 @@ use crate::lang::serialization::model::{element, Element};
 pub struct Table {
     types: Vec<ColumnType>,
     pub rows: Arc<[Row]>,
-    len: usize,
     materialized: bool,
 }
 
 impl From<(Vec<ColumnType>, Vec<Row>)> for Table {
     fn from((types, rows): (Vec<ColumnType>, Vec<Row>)) -> Self {
-        Table { types, len: rows.len(), rows: Arc::from(rows), materialized: false }
+        Table { types, rows: Arc::from(rows), materialized: false }
     }
 }
 
@@ -36,7 +35,6 @@ impl Table {
                 .collect::<CrushResult<Vec<_>>>()?;
             Ok(Table {
                 types: ColumnType::materialize(&self.types)?,
-                len: rows.len(),
                 materialized: true,
                 rows: Arc::from(rows),
             })
@@ -48,11 +46,11 @@ impl Table {
     }
 
     pub fn len(&self) -> usize {
-        self.len
+        self.rows.len()
     }
 
     pub fn row(&self, idx: usize) -> CrushResult<Row> {
-        if idx >= self.len {
+        if idx >= self.rows.len() {
             error("Index out of bounds")
         } else {
             Ok(self.rows[idx].clone())

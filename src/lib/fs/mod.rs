@@ -48,7 +48,7 @@ short = "Return the current working directory.",
 struct Pwd {}
 
 fn pwd(context: CommandContext) -> CrushResult<()> {
-    context.output.send(Value::File(cwd()?))
+    context.output.send(Value::from(cwd()?))
 }
 
 fn halp(o: &dyn Help, printer: &Printer) {

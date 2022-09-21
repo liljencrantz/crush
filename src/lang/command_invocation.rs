@@ -278,7 +278,7 @@ fn try_external_command(
         Some(path) => {
             arguments.insert(
                 0,
-                ArgumentDefinition::unnamed(ValueDefinition::Value(Value::File(path), cmd.location)),
+                ArgumentDefinition::unnamed(ValueDefinition::Value(Value::from(path), cmd.location)),
             );
             let call = CommandInvocation {
                 command: ValueDefinition::Value(

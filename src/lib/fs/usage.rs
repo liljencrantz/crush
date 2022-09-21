@@ -57,7 +57,7 @@ fn size(
                     vec![
                         Value::Integer(child_sz as i128),
                         Value::Integer(child_bl as i128),
-                        Value::File(child.full_path),
+                        Value::from(child.full_path),
                     ]
                 ))?;
             }
@@ -85,7 +85,7 @@ fn usage(context: CommandContext) -> CrushResult<()> {
             vec![
                 Value::Integer(sz as i128),
                 Value::Integer(bl as i128),
-                Value::File(file),
+                Value::from(file),
             ]
         ))?
     }
