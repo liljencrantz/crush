@@ -243,7 +243,7 @@ mod procfs {
                             Value::from(file_type),
                             Value::from(&local_ip),
                             Value::Integer(local_port as i128),
-                            Value::String(lookup(&remote_ip, hosts)?),
+                            Value::from(lookup(&remote_ip, hosts)?),
                             Value::from(&remote_ip),
                             Value::Integer(remote_port as i128),
                             Value::Integer(inode as i128),
@@ -255,10 +255,10 @@ mod procfs {
                 Entry::Vacant(_) => {
                     output.send(Row::new(vec![
                         Value::from(file_type),
-                        Value::String(local_ip),
+                        Value::from(local_ip),
                         Value::Integer(local_port as i128),
-                        Value::String(lookup(&remote_ip, hosts)?),
-                        Value::String(remote_ip),
+                        Value::from(lookup(&remote_ip, hosts)?),
+                        Value::from(remote_ip),
                         Value::Integer(remote_port as i128),
                         Value::Integer(inode as i128),
                         users.get(&nix::unistd::Uid::from_raw(uid)).map(|s| Value::from(s)).unwrap_or_else(|| Value::from("?")),

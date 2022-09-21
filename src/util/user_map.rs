@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
+use std::os::raw::c_char;
 
 use lazy_static::lazy_static;
 
@@ -126,7 +127,7 @@ pub fn create_group_map() -> CrushResult<HashMap<Gid, String>> {
     Ok(res)
 }
 
-unsafe fn parse(s: *const i8) -> CrushResult<String> {
+unsafe fn parse(s: *const c_char) -> CrushResult<String> {
     Ok(to_crush_error(CStr::from_ptr(s).to_str())?.to_string())
 }
 
