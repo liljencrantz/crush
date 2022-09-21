@@ -91,8 +91,7 @@ fn to_yaml(value: Value) -> CrushResult<serde_yaml::Value> {
         Value::Integer(i) => Ok(serde_yaml::Value::from(to_crush_error(i64::try_from(i))?)),
 
         Value::List(l) => Ok(serde_yaml::Value::Sequence(
-            l.dump()
-                .drain(..)
+            l.iter()
                 .map(to_yaml)
                 .collect::<CrushResult<Vec<_>>>()?,
         )),
@@ -100,7 +99,6 @@ fn to_yaml(value: Value) -> CrushResult<serde_yaml::Value> {
         Value::Table(t) => {
             let types = t.types().to_vec();
             let structs = t
-                .rows
                 .iter()
                 .map(|r| r.clone().into_struct(&types))
                 .map(|s| to_yaml(Value::Struct(s)))

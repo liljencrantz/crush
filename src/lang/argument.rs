@@ -145,7 +145,7 @@ impl ArgumentEvaluator for Vec<ArgumentDefinition> {
 
                     ArgumentType::ArgumentList => match a.value.eval_and_bind(context)? {
                         Value::List(l) => {
-                            let mut copy = l.dump();
+                            let mut copy: Vec<_> = l.iter().collect();
                             for v in copy.drain(..) {
                                 res.push(Argument::unnamed(
                                     v,

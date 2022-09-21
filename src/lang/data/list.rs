@@ -7,13 +7,33 @@ use std::collections::HashSet;
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::fmt::{Display, Formatter};
+use std::ops::Deref;
 use crate::data::dict::Dict;
 use crate::lang::value::VecReader;
+use crate::util::replace::Replace;
 
 #[derive(Clone)]
 pub struct List {
     cell_type: ValueType,
     cells: Arc<Mutex<Vec<Value>>>,
+}
+
+pub struct Iter {
+    list: Vec<Value>,
+    idx: usize,
+}
+
+impl Iterator for Iter {
+    type Item = Value;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.idx += 1;
+        if self.idx < self.list.len() {
+            Some(self.list.replace(self.idx - 1, Value::Empty))
+        } else {
+            None
+        }
+    }
 }
 
 impl Identity for List {
@@ -89,6 +109,10 @@ impl List {
         Ok(())
     }
 
+    pub fn iter(&self) -> Iter {
+        Iter { list: self.cells.lock().unwrap().to_vec(), idx: 0 }
+    }
+
     pub fn append(&self, new_cells: &mut Vec<Value>) -> CrushResult<()> {
         let mut cells = self.cells.lock().unwrap();
         for v in new_cells.iter() {
@@ -98,12 +122,6 @@ impl List {
         }
         cells.append(new_cells);
         Ok(())
-    }
-
-    pub fn dump(&self) -> Vec<Value> {
-        let mut res = Vec::new();
-        res.append(&mut self.cells.lock().unwrap().clone());
-        res
     }
 
     pub fn pop(&self) -> Option<Value> {
@@ -187,9 +205,7 @@ impl List {
     }
 
     pub fn stream(&self) -> Stream {
-        let mut vec = Vec::new();
-        let _ = self.dump_value(&mut vec);
-        Box::new(VecReader::new(vec, self.cell_type.clone()))
+        Box::new(VecReader::new(self.iter().collect(), self.cell_type.clone()))
     }
 
     pub fn dump_dict(&self, destination: &mut Vec<Dict>) -> CrushResult<()> {

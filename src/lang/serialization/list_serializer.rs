@@ -53,7 +53,7 @@ impl Serializable<List> for List {
                 let type_idx = Value::Type(self.element_type()).serialize(elements, state)?;
                 let mut ll = model::List::default();
                 ll.elements.reserve(self.len());
-                for el in self.dump() {
+                for el in self.iter() {
                     ll.elements.push(el.serialize(elements, state)? as u64)
                 }
                 ll.element_type = type_idx as u64;

@@ -252,7 +252,7 @@ fn eval_command(
 
 pub fn resolve_external_command(name: &str, env: &Scope) -> CrushResult<Option<PathBuf>> {
     if let Some(Value::List(path)) = env.get("cmd_path")? {
-        let path_vec = path.dump();
+        let path_vec: Vec<_> = path.iter().collect();
         for val in path_vec {
             match val {
                 Value::File(el) => {

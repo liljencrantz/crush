@@ -93,8 +93,7 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
         Value::Integer(i) => Ok(serde_json::Value::from(to_crush_error(i64::try_from(i))?)),
 
         Value::List(l) => Ok(serde_json::Value::Array(
-            l.dump()
-                .drain(..)
+            l.iter()
                 .map(to_json)
                 .collect::<CrushResult<Vec<_>>>()?,
         )),
@@ -102,9 +101,8 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
         Value::Table(t) => {
             let types = t.types().to_vec();
             let structs: CrushResult<Vec<serde_json::Value>> =
-                t.rows
-                    .iter()
-                    .map(|r| {to_json(Value::from(r.clone().into_struct(&types)))})
+                t.iter()
+                    .map(|r| { to_json(Value::from(r.clone().into_struct(&types))) })
                     .collect();
             Ok(serde_json::Value::Array(structs?))
         }

@@ -111,16 +111,14 @@ fn to_toml(value: Value) -> CrushResult<toml::Value> {
         Value::Integer(i) => Ok(toml::Value::from(to_crush_error(i64::try_from(i))?)),
 
         Value::List(l) => Ok(toml::Value::Array(
-            l.dump()
-                .drain(..)
-                .map(to_toml)
+            l.iter().map(to_toml)
                 .collect::<CrushResult<Vec<_>>>()?,
         )),
 
         Value::Table(t) => {
             let types = t.types().to_vec();
             let structs = t
-                .rows.iter()
+                .iter()
                 .map(|r| r.clone().into_struct(&types))
                 .map(|s| to_toml(Value::Struct(s)))
                 .collect::<CrushResult<Vec<_>>>()?;

@@ -1,6 +1,6 @@
 /**
 Code related to Table, TableInputStream and
-*/
+ */
 use crate::lang::errors::{argument_error_legacy, CrushError, CrushResult, error};
 use crate::lang::pipe::CrushStream;
 use crate::lang::value::ValueType;
@@ -14,8 +14,26 @@ use crate::lang::serialization::model::{element, Element};
 #[derive(PartialEq, PartialOrd, Clone)]
 pub struct Table {
     types: Vec<ColumnType>,
-    pub rows: Arc<[Row]>,
+    rows: Arc<[Row]>,
     materialized: bool,
+}
+
+pub struct Iter {
+    table: Table,
+    idx: usize,
+}
+
+impl Iterator for Iter {
+    type Item = Row;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.idx += 1;
+        if let Ok(v) = self.table.row(self.idx - 1) {
+            Some(v)
+        } else {
+            None
+        }
+    }
 }
 
 impl From<(Vec<ColumnType>, Vec<Row>)> for Table {
@@ -38,6 +56,13 @@ impl Table {
                 materialized: true,
                 rows: Arc::from(rows),
             })
+        }
+    }
+
+    pub fn iter(&self) -> Iter {
+        Iter {
+            table: self.clone(),
+            idx: 0
         }
     }
 
@@ -80,7 +105,7 @@ impl CrushStream for TableReader {
         self.idx += 1;
         Ok(self
             .rows
-            .rows[self.idx-1]
+            .rows[self.idx - 1]
             .clone())
     }
 
