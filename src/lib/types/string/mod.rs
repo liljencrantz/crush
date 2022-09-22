@@ -350,7 +350,7 @@ output=Known(ValueType::String),
 short = "Extract a substring from this string.",
 )]
 struct Substr {
-    #[description("Starting index (inclusive).")]
+    #[description("Starting index (inclusive). If unspecified, from start of string.")]
     #[default(0usize)]
     from: usize,
     #[description("ending index (exclusive). If unspecified, to end of string.")]

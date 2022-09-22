@@ -406,10 +406,10 @@ output=Unknown,
 short = "Extract a slice from this list.",
 )]
 struct Slice {
-    #[description("Starting index (inclusive).")]
+    #[description("Starting index (inclusive). If unspecified, from start of list.")]
     #[default(0usize)]
     from: usize,
-    #[description("ending index (exclusive). If unspecified, to end of string.")]
+    #[description("ending index (exclusive). If unspecified, to end of list.")]
     to: Option<usize>,
 }
 
