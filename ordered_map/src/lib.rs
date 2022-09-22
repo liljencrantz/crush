@@ -115,6 +115,13 @@ impl<'a, K: Eq + Hash, V> OccupiedEntry<'a, K, V> {
             Element::Tombstone(_) => panic!("AAAA"),
         }
     }
+
+    pub fn into_mut(self) -> &'a mut V {
+        match &mut self.map.values[self.index] {
+            Element::Node(n) => &mut n.value,
+            Element::Tombstone(_) => panic!("AAAA"),
+        }
+    }
 }
 
 #[derive(Debug)]

@@ -8,7 +8,7 @@ use chrono::{DateTime, Local};
 
 use lazy_static::lazy_static;
 
-use crate::lang::command::OutputType::Known;
+use crate::lang::command::OutputType::Unknown;
 use crate::lang::errors::{error, to_crush_error, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::signature::files::Files;
@@ -19,16 +19,18 @@ use signature::signature;
 use std::os::unix::fs::PermissionsExt;
 use nix::unistd::{Uid, Gid};
 
-lazy_static! {
-    static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
-        ColumnType::new("permissions", ValueType::String),
-        ColumnType::new("user", ValueType::String),
-        ColumnType::new("group", ValueType::String),
-        ColumnType::new("size", ValueType::Integer),
-        ColumnType::new("modified", ValueType::Time),
-        ColumnType::new("type", ValueType::String),
-        ColumnType::new("file", ValueType::File),
-    ];
+enum Column {
+    Permissions,
+    Inode,
+    Links,
+    User,
+    Group,
+    Size,
+    Blocks,
+    Modified,
+    Accessed,
+    Type,
+    File,
 }
 
 fn format_permissions(mode: u32) -> String {
@@ -59,37 +61,52 @@ fn insert_entity(
     file: PathBuf,
     users: &HashMap<Uid, String>,
     groups: &HashMap<Gid, String>,
+    cols: &[Column],
     output: &mut OutputStream,
 ) -> CrushResult<()> {
-    let mode = meta.permissions().mode();
-    let permissions = format_permissions(mode);
-    let modified_system = to_crush_error(meta.modified())?;
-    let modified_datetime: DateTime<Local> = DateTime::from(modified_system);
-    let f = if file.starts_with("./") {
-        let b = file.to_str().map(|s| PathBuf::from(&s[2..]));
-        b.unwrap_or(file)
-    } else {
-        file
-    };
-    let file_type = meta.file_type();
-    let type_str = if file_type.is_dir() {
-        "directory"
-    } else if file_type.is_symlink() {
-        "symlink"
-    } else {
-        "file"
-    };
-
-    output.send(Row::new(vec![
-        Value::from(permissions),
-        users.get(&Uid::from_raw(meta.uid())).map(|n| Value::from(n)).unwrap_or_else(|| Value::from("?")),
-        groups.get(&Gid::from_raw(meta.gid())).map(|n| Value::from(n)).unwrap_or_else(|| Value::from("?")),
-        Value::Integer(i128::from(meta.len())),
-        Value::Time(modified_datetime),
-        Value::from(type_str),
-        Value::from(f),
-    ]))?;
-    Ok(())
+    let mut row = Vec::new();
+    for col in cols.iter() {
+        row.push(match col {
+            Column::Permissions => {
+                let permissions = format_permissions(meta.permissions().mode());
+                Value::from(permissions)
+            }
+            Column::Inode => Value::Integer(i128::from(meta.ino())),
+            Column::Links => Value::Integer(i128::from(meta.nlink())),
+            Column::User => users.get(&Uid::from_raw(meta.uid())).map(|n| Value::from(n)).unwrap_or_else(|| Value::from("?")),
+            Column::Group => groups.get(&Gid::from_raw(meta.gid())).map(|n| Value::from(n)).unwrap_or_else(|| Value::from("?")),
+            Column::Size => Value::Integer(i128::from(meta.len())),
+            Column::Blocks => Value::Integer(i128::from(meta.blocks())),
+            Column::Modified => {
+                let modified_system = to_crush_error(meta.modified())?;
+                let modified_datetime: DateTime<Local> = DateTime::from(modified_system);
+                Value::Time(modified_datetime)
+            }
+            Column::Accessed => {
+                let accessed_system = to_crush_error(meta.accessed())?;
+                let accessed_datetime: DateTime<Local> = DateTime::from(accessed_system);
+                Value::Time(accessed_datetime)
+            }
+            Column::Type => {
+                let file_type = meta.file_type();
+                Value::from(if file_type.is_dir() {
+                    "directory"
+                } else if file_type.is_symlink() {
+                    "symlink"
+                } else {
+                    "file"
+                })
+            },
+            Column::File =>
+                Value::from(if file.starts_with("./") {
+                    let b = file.to_str().map(|s| PathBuf::from(&s[2..]));
+                    b.unwrap_or(file.clone())
+                } else {
+                    file.clone()
+                }),
+        });
+    }
+    output.send(Row::new(row))
 }
 
 fn run_for_single_directory_or_file(
@@ -97,6 +114,7 @@ fn run_for_single_directory_or_file(
     users: &HashMap<Uid, String>,
     groups: &HashMap<Gid, String>,
     recursive: bool,
+    cols: &[Column],
     q: &mut VecDeque<PathBuf>,
     output: &mut OutputStream,
 ) -> CrushResult<()> {
@@ -109,19 +127,20 @@ fn run_for_single_directory_or_file(
                 entry.path(),
                 users,
                 groups,
+                cols,
                 output,
             )?;
             if recursive
                 && entry.path().is_dir()
                 && (!(entry.file_name().eq(".") || entry.file_name().eq("..")))
-                {
+            {
                 q.push_back(entry.path());
             }
         }
     } else {
         match path.file_name() {
             Some(_) => {
-                insert_entity(&to_crush_error(path.metadata())?, path, users, groups, output)?;
+                insert_entity(&to_crush_error(path.metadata())?, path, users, groups, cols, output)?;
             }
             None => {
                 return error("Invalid file name");
@@ -131,7 +150,7 @@ fn run_for_single_directory_or_file(
     Ok(())
 }
 
-#[signature(files, short = "Recursively list files", output = Known(ValueType::TableInputStream(OUTPUT_TYPE.clone())))]
+#[signature(files, short = "Recursively list files", output = Unknown)]
 pub struct FilesSignature {
     #[unnamed()]
     #[description("directories and files to list")]
@@ -139,11 +158,100 @@ pub struct FilesSignature {
     #[description("recurse into subdirectories")]
     #[default(false)]
     recurse: bool,
+    #[description("show permissions")]
+    #[default(true)]
+    permissions: bool,
+    #[description("show inode number")]
+    #[default(false)]
+    inode: bool,
+    #[description("show link count")]
+    #[default(true)]
+    links: bool,
+    #[description("show username")]
+    #[default(true)]
+    user: bool,
+    #[description("show group name")]
+    #[default(true)]
+    group: bool,
+    #[description("show file size")]
+    #[default(true)]
+    size: bool,
+    #[description("show block count")]
+    #[default(false)]
+    blocks: bool,
+    #[description("show modification time")]
+    #[default(true)]
+    modified: bool,
+    #[description("show time of last file access")]
+    #[default(false)]
+    accessed: bool,
+    #[description("show file type")]
+    #[default(true)]
+    r#type: bool,
+    #[description("show file name")]
+    #[default(true)]
+    file: bool,
+
+}
+
+fn column_data(config: &FilesSignature) -> (Vec<ColumnType>, Vec<Column>) {
+    let mut types = Vec::new();
+    let mut cols = Vec::new();
+
+    if config.permissions {
+        types.push(ColumnType::new("permissions", ValueType::String));
+        cols.push(Column::Permissions);
+    }
+    if config.inode {
+        types.push(ColumnType::new("inode", ValueType::Integer));
+        cols.push(Column::Inode);
+    }
+    if config.links {
+        types.push(ColumnType::new("links", ValueType::Integer));
+        cols.push(Column::Links);
+    }
+    if config.user {
+        types.push(ColumnType::new("user", ValueType::String));
+        cols.push(Column::User);
+    }
+    if config.group {
+        types.push(ColumnType::new("group", ValueType::String));
+        cols.push(Column::User);
+    }
+    if config.size {
+        types.push(ColumnType::new("size", ValueType::Integer));
+        cols.push(Column::Size);
+    }
+    if config.blocks {
+        types.push(ColumnType::new("blocks", ValueType::Integer));
+        cols.push(Column::Blocks);
+    }
+    if config.modified {
+        types.push(ColumnType::new("modified", ValueType::Time));
+        cols.push(Column::Modified);
+    }
+    if config.accessed {
+        types.push(ColumnType::new("accessed", ValueType::Time));
+        cols.push(Column::Accessed);
+    }
+    if config.r#type {
+        types.push(ColumnType::new("type", ValueType::String));
+        cols.push(Column::Type);
+    }
+    if config.file {
+        types.push(ColumnType::new("file", ValueType::File));
+        cols.push(Column::File);
+    }
+
+    (types, cols)
 }
 
 fn files(context: CommandContext) -> CrushResult<()> {
-    let mut output = context.output.initialize(OUTPUT_TYPE.clone())?;
     let config: FilesSignature = FilesSignature::parse(context.arguments, &context.global_state.printer())?;
+
+    let (types, cols) = column_data(&config);
+
+    let mut output = context.output.initialize(types)?;
 
     let mut dir = if config.directory.had_entries() {
         Vec::from(config.directory)
@@ -160,7 +268,7 @@ fn files(context: CommandContext) -> CrushResult<()> {
         }
         let dir = q.pop_front().unwrap();
         let _ =
-            run_for_single_directory_or_file(dir, &users, &groups, config.recurse, &mut q, &mut output);
+            run_for_single_directory_or_file(dir, &users, &groups, config.recurse, &cols, &mut q, &mut output);
     }
     Ok(())
 }

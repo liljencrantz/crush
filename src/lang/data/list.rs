@@ -28,7 +28,7 @@ impl Iterator for Iter {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.idx += 1;
-        if self.idx < self.list.len() {
+        if self.idx <= self.list.len() {
             Some(self.list.replace(self.idx - 1, Value::Empty))
         } else {
             None

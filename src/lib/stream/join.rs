@@ -1,3 +1,4 @@
+use std::borrow::BorrowMut;
 use crate::lang::errors::{argument_error_legacy, mandate};
 use crate::lang::errors::CrushError;
 use crate::lang::errors::CrushResult;
@@ -9,15 +10,18 @@ use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::ColumnVec;
 use crate::lang::data::table::Row;
 use crate::lang::value::Value;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use ordered_map::{Entry, OrderedMap};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use signature::signature;
+use crate::data::list::List;
 use crate::lang::command::OutputType::Unknown;
 
-fn combine(mut l: Row, r: Row, right_idx: usize) -> Row {
-    for (idx, c) in Vec::from(r).drain(..).enumerate() {
+fn combine(l: &Row, r: &Row, right_idx: usize) -> Row {
+    let mut l = l.clone();
+    for (idx, c) in r.cells().iter().enumerate() {
         if idx != right_idx {
-            l.push(c);
+            l.push(c.clone());
         }
     }
     l
@@ -31,27 +35,50 @@ fn do_join(
     output: &OutputStream,
     printer: &Printer,
 ) -> CrushResult<()> {
-    let mut l_data: HashMap<Value, Row> = HashMap::new();
+    let mut l_data: OrderedMap<Value, Vec<Row>> = OrderedMap::new();
 
+    // Read left table into memory
     while let Ok(row) = l.read() {
-        l_data.insert(row.cells()[left_idx].clone(), row);
+        match l_data.entry(row.cells()[left_idx].clone()) {
+            Entry::Occupied(o) =>
+                o.into_mut().push(row),
+            Entry::Vacant(v) =>
+                v.insert(vec![row]),
+        }
     }
 
+    // Read one row at a time of right table, and join on the left table.
     while let Ok(r_row) = r.read() {
         l_data
-            .remove(&r_row.cells()[right_idx])
-            .map(|l_row| {
-                printer.handle_error(output.send(combine(l_row, r_row, right_idx)));
+            .get(&r_row.cells()[right_idx])
+            .map(|l_rows| {
+                for l_row in l_rows {
+                    printer.handle_error(output.send(combine(l_row, &r_row, right_idx)));
+                }
             });
     }
     Ok(())
 }
 
 fn get_output_type(left_type: &[ColumnType], right_type: &[ColumnType], right_key_idx: usize) -> Result<Vec<ColumnType>, CrushError> {
+    let mut seen =
+        left_type.iter()
+            .map(|c| {c.name.clone()})
+            .collect::<HashSet<_>>();
     let mut res = left_type.to_vec();
+
     for (idx, c) in right_type.iter().enumerate() {
+        let mut name = c.name.clone();
+        let mut version = 1;
+        while seen.contains(&name) {
+            version += 1;
+            name = format!("{}_{}", c.name, version);
+        }
+
+        let column = ColumnType::new(name.as_str(), c.cell_type.clone());
+
         if idx != right_key_idx {
-            res.push(c.clone());
+            res.push(column);
         }
     }
     Ok(res)
@@ -61,7 +88,7 @@ fn get_output_type(left_type: &[ColumnType], right_type: &[ColumnType], right_ke
 join,
 output = Unknown,
 short = "Join two streams together on the specified keys.",
-example = "join user=(ll) name=(user:list)")]
+example = "join user=(files) name=(user:list)")]
 pub struct Join {
     #[named()]
     #[description("Field to join")]
