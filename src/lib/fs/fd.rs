@@ -339,19 +339,3 @@ mod procfs {
         Ok(())
     }
 }
-
-pub fn declare(root: &Scope) -> CrushResult<()> {
-    root.create_namespace(
-        "fd",
-        "Open files and sockets",
-        Box::new(move |fd| {
-            File::declare(fd)?;
-            #[cfg(target_os = "linux")]
-            procfs::Network::declare(fd)?;
-            #[cfg(target_os = "linux")]
-            procfs::Unix::declare(fd)?;
-            Ok(())
-        }),
-    )?;
-    Ok(())
-}

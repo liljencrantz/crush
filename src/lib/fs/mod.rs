@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{to_crush_error, CrushResult, error};
+use crate::lang::errors::{CrushResult, error, to_crush_error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::help::Help;
 use crate::lang::printer::Printer;
@@ -14,6 +14,7 @@ use std::convert::TryFrom;
 
 mod usage;
 mod files;
+pub mod fd;
 
 #[signature(
 cd,
@@ -121,12 +122,24 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
         "fs",
         "File system introspection",
-        Box::new(move |env| {
-            files::FilesSignature::declare(env)?;
-            Cd::declare(env)?;
-            Pwd::declare(env)?;
-            HelpSignature::declare(env)?;
-            usage::Usage::declare(env)?;
+        Box::new(move |fs| {
+            files::FilesSignature::declare(fs)?;
+            Cd::declare(fs)?;
+            Pwd::declare(fs)?;
+            HelpSignature::declare(fs)?;
+            usage::Usage::declare(fs)?;
+            fs.create_namespace(
+                "fd",
+                "Open files and sockets",
+                Box::new(move |fd| {
+                    fd::File::declare(fd)?;
+                    #[cfg(target_os = "linux")]
+                    fd::procfs::Network::declare(fd)?;
+                    #[cfg(target_os = "linux")]
+                    fd::procfs::Unix::declare(fd)?;
+                    Ok(())
+                }),
+            )?;
             Ok(())
         }),
     )?;
