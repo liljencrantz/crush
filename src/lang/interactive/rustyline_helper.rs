@@ -160,6 +160,9 @@ impl Validator for RustylineHelper {
         ctx: &mut validate::ValidationContext,
     ) -> rustyline::Result<validate::ValidationResult> {
         let input = ctx.input().to_string();
+        if input.trim() == "!!" {
+            return Ok(ValidationResult::Valid(None));
+        }
         if let Ok(closed) = self.state.parser().close_command(&input) {
             match self.state.parser().ast(&closed) {
                 Ok(_) => Ok(

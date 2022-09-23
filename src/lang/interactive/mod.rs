@@ -114,11 +114,16 @@ pub fn run(
         let readline = global_state.editor().as_mut().map(|rl| { rl.readline(&prompt) });
 
         match readline {
-            Some(Ok(cmd)) =>
+            Some(Ok(mut cmd)) =>
                 if cmd.is_empty() {
                     global_state.threads().reap(global_state.printer())
                 } else {
-                    if cmd.starts_with('!') {}
+                    if cmd.trim() == "!!" {
+                        cmd = global_state
+                            .editor().as_mut()
+                            .map(|rl| { rl.history().last().map(|s| {s.to_string()})})
+                                .unwrap_or(None).unwrap_or(cmd);
+                    }
                     global_state.editor().as_mut().map(|rl| { rl.add_history_entry(&cmd) });
                     global_state.threads().reap(global_state.printer());
                     global_state

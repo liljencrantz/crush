@@ -130,7 +130,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             usage::Usage::declare(fs)?;
             fs.create_namespace(
                 "fd",
-                "Open files and sockets",
+                "Information on currently open files and sockets",
                 Box::new(move |fd| {
                     fd::File::declare(fd)?;
                     #[cfg(target_os = "linux")]
