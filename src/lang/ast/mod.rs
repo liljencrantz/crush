@@ -36,7 +36,6 @@ pub enum Node {
     Float(TrackedString),
     GetItem(Box<Node>, Box<Node>),
     GetAttr(Box<Node>, TrackedString),
-    Path(Box<Node>, TrackedString),
     Substitution(JobNode),
     Closure(Option<Vec<ParameterNode>>, JobListNode),
 }
@@ -236,8 +235,7 @@ impl Node {
                 s.location.union(a.location()),
 
             GetItem(a, b) => a.location().union(b.location()),
-            GetAttr(p, n) |
-            Path(p, n) => p.location().union(n.location),
+            GetAttr(p, n) => p.location().union(n.location),
             Substitution(j) => j.location,
             Closure(_, j) => {
                 // Fixme: Can't tab complete or error report on parameters because they're not currently tracked
@@ -268,7 +266,6 @@ impl Node {
             Node::Float(_) => "floating point number literal",
             Node::GetItem(_, _) => "subscript",
             Node::GetAttr(_, _) => "member access",
-            Node::Path(_, _) => "path segment",
             Node::Substitution(_) => "command substitution",
             Node::Closure(_, _) => "closure",
         }
@@ -332,10 +329,6 @@ impl Node {
             Node::GetAttr(node, identifier) =>
                 ValueDefinition::GetAttr(Box::new(node.generate(env, is_command)?.unnamed_value()?), identifier.clone()),
 
-            Node::Path(node, identifier) => ValueDefinition::Path(
-                Box::new(node.generate_argument(env)?.unnamed_value()?),
-                identifier.clone(),
-            ),
             Node::Symbol(f) =>
                 if is_command {
                     ValueDefinition::Identifier(f.clone())
@@ -444,7 +437,6 @@ impl Node {
             | Node::Integer(_)
             | Node::Float(_)
             | Node::GetAttr(_, _)
-            | Node::Path(_, _)
             | Node::Substitution(_)
             | Node::Closure(_, _)
             | Node::File(_, _) => Ok(None),

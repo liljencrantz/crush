@@ -17,7 +17,6 @@ pub enum ValueDefinition {
     JobDefinition(Job),
     Identifier(TrackedString),
     GetAttr(Box<ValueDefinition>, TrackedString),
-    Path(Box<ValueDefinition>, TrackedString),
 }
 
 impl ValueDefinition {
@@ -27,8 +26,7 @@ impl ValueDefinition {
             ValueDefinition::ClosureDefinition(_, _, _, l) => *l,
             ValueDefinition::JobDefinition(j) => j.location(),
             ValueDefinition::Identifier(l) => l.location,
-            ValueDefinition::GetAttr(p, a) |
-            ValueDefinition::Path(p, a)=> p.location().union(a.location),
+            ValueDefinition::GetAttr(p, a) => p.location().union(a.location),
         }
     }
 
@@ -99,15 +97,6 @@ impl ValueDefinition {
                 )?;
                 (Some(parent), val)
             }
-
-            ValueDefinition::Path(parent_def, entry) => {
-                let parent = parent_def.eval(context)?.1;
-                let val = mandate(
-                    parent.path(&entry.string),
-                    &format!("Missing path entry {} in {}", entry, parent_def),
-                )?;
-                (Some(parent), val)
-            }
         })
     }
 }
@@ -122,11 +111,6 @@ impl Display for ValueDefinition {
             ValueDefinition::GetAttr(v, l) => {
                 v.fmt(f)?;
                 f.write_str(":")?;
-                l.fmt(f)
-            }
-            ValueDefinition::Path(v, l) => {
-                v.fmt(f)?;
-                f.write_str("/")?;
                 l.fmt(f)
             }
         }

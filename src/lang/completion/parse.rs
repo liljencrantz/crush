@@ -159,10 +159,6 @@ impl Display for ParseResult {
 fn simple_path(node: &Node, cursor: usize) -> CrushResult<String> {
     match node {
         Node::Identifier(label) => Ok(label.string.clone()),
-        Node::Path(p, a) => {
-            let res = simple_path(p.as_ref(), cursor)?;
-            Ok(format!("{}/{}", res, &a.string))
-        }
         _ => {
             error("Invalid path")
         }
@@ -329,9 +325,6 @@ pub fn parse(
                             mandate(fetch_value(parent, scope, true)?, "Unknown value")?,
                             field.prefix(cursor).string)),
 
-                    Node::Path(_, _) =>
-                        Ok(ParseResult::PartialFile(simple_path(cmd, cursor)?, false)),
-
                     Node::File(path, quoted) =>
                         Ok(ParseResult::PartialFile(
                             if *quoted { unescape(&path.string)? } else { path.string.clone() },
@@ -426,16 +419,6 @@ pub fn parse(
                                         field.prefix(cursor).string),
                                     last_argument_name,
                                 })),
-
-                        Node::Path(_, _) =>
-                            Ok(ParseResult::PartialArgument(
-                                PartialCommandResult {
-                                    command: c,
-                                    previous_arguments,
-                                    last_argument: LastArgument::File(simple_path(arg.as_ref(), cursor)?, false),
-                                    last_argument_name,
-                                }
-                            )),
 
                         Node::File(path, quoted) =>
                             Ok(ParseResult::PartialArgument(

@@ -119,7 +119,6 @@ message ValueDefinition {
     Job job = 3;
     uint64 label = 4;
     Attr get_attr = 5;
-    Attr path = 6;
   }
 }
 

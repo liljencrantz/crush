@@ -303,13 +303,6 @@ impl<'a> ClosureSerializer<'a> {
                         element: element.serialize(self.elements, self.state)? as u64,
                     }))
                 }
-
-                ValueDefinition::Path(parent, element) => {
-                    model::value_definition::ValueDefinition::Path(Box::from(model::Attr {
-                        parent: Some(Box::from(self.value_definition(parent)?)),
-                        element: element.serialize(self.elements, self.state)? as u64,
-                    }))
-                }
             }),
         })
     }
@@ -477,13 +470,6 @@ impl<'a> ClosureDeserializer<'a> {
                     ValueDefinition::Identifier(TrackedString::deserialize(*s as usize, self.elements, self.state)?)
                 }
                 model::value_definition::ValueDefinition::GetAttr(a) => ValueDefinition::GetAttr(
-                    Box::from(self.value_definition(mandate(
-                        a.parent.as_ref(),
-                        "Invalid value definition",
-                    )?)?),
-                    TrackedString::deserialize(a.element as usize, self.elements, self.state)?,
-                ),
-                model::value_definition::ValueDefinition::Path(a) => ValueDefinition::Path(
                     Box::from(self.value_definition(mandate(
                         a.parent.as_ref(),
                         "Invalid value definition",
