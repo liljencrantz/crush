@@ -4,7 +4,7 @@ use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Passthrough;
 use crate::lang::command::TypeMap;
 use crate::lang::errors::{argument_error_legacy, CrushResult, error};
-use crate::lang::state::contexts::{ArgumentVector, CommandContext, This};
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ValueType;
 use crate::lang::value::Value;
 use lazy_static::lazy_static;
@@ -12,6 +12,8 @@ use ordered_map::OrderedMap;
 use regex::Regex;
 use signature::signature;
 use crate::data::table::ColumnType;
+use crate::lang::state::argument_vector::ArgumentVector;
+use crate::lang::state::this::This;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "re", name]

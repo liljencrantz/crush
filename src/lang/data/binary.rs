@@ -128,7 +128,7 @@ impl dyn BinaryReader {
     }
 
     pub fn vec(bytes: &[u8]) -> Box<dyn BinaryReader + Send + Sync> {
-        Box::from(VecReader {
+        Box::from(BinaryVecReader {
             vec: Vec::from(bytes),
             offset: 0,
         })
@@ -185,21 +185,21 @@ impl Debug for MultiReader {
     }
 }
 
-struct VecReader {
+struct BinaryVecReader {
     vec: Vec<u8>,
     offset: usize,
 }
 
-impl BinaryReader for VecReader {
+impl BinaryReader for BinaryVecReader {
     fn clone(&self) -> Box<dyn BinaryReader + Send + Sync> {
-        Box::new(VecReader {
+        Box::new(BinaryVecReader {
             vec: self.vec.clone(),
             offset: 0,
         })
     }
 }
 
-impl Read for VecReader {
+impl Read for BinaryVecReader {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
         let len = min(buf.len(), self.vec.len() - self.offset);
         buf[0..len].copy_from_slice(&self.vec[self.offset..self.offset + len]);
@@ -208,7 +208,7 @@ impl Read for VecReader {
     }
 }
 
-impl Debug for VecReader {
+impl Debug for BinaryVecReader {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         f.write_str("<vec reader>")
     }

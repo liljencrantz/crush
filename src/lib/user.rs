@@ -14,7 +14,7 @@ use lazy_static::lazy_static;
 use crate::util::user_map::{get_all_users, get_current_username, get_user};
 use crate::lang::command::{Command, CrushCommand};
 use crate::lang::serialization::{deserialize, serialize};
-use crate::state::contexts::This;
+use crate::lang::state::this::This;
 use crate::{argument_error_legacy, to_crush_error};
 
 #[signature(

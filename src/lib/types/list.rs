@@ -1,14 +1,16 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command::TypeMap;
-use crate::lang::errors::{argument_error_legacy, data_error, mandate, CrushResult, argument_error};
-use crate::lang::state::contexts::{ArgumentVector, CommandContext, This};
+use crate::lang::errors::{argument_error, argument_error_legacy, CrushResult, data_error, mandate};
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
 use crate::lang::{command::Command, data::list::List, value::ValueType};
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use signature::signature;
 use crate::data::table::ColumnVec;
+use crate::lang::state::argument_vector::ArgumentVector;
+use crate::lang::state::this::This;
 use crate::util::replace::Replace;
 
 fn full(name: &'static str) -> Vec<&'static str> {

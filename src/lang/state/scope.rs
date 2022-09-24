@@ -37,7 +37,7 @@ pub struct Scope {
 
 /**
 The ScopeLoader type allows us to lazy-load namespaces.
-Without it, every single library in Crush would be loaded on startup.
+Without it, every single module in Crush would be loaded on startup.
  */
 pub struct ScopeLoader {
     mapping: OrderedMap<String, Value>,

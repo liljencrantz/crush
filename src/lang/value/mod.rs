@@ -3,6 +3,7 @@ The type representing all values in crush.
  */
 mod value_definition;
 mod value_type;
+pub mod vec_reader;
 
 use std::cmp::Ordering;
 use std::hash::Hasher;
@@ -12,19 +13,19 @@ use std::str::FromStr;
 use chrono::{DateTime, Local};
 use regex::Regex;
 
-use crate::lang::errors::{argument_error_legacy, mandate, CrushResult, eof_error};
+use crate::lang::errors::{argument_error_legacy, CrushResult, eof_error, mandate};
 use crate::lang::data::r#struct::Struct;
 use crate::lang::data::r#struct::StructReader;
 use crate::lang::state::scope::Scope;
-use crate::lang::pipe::{streams, InputStream, Stream, OutputStream, CrushStream};
+use crate::lang::pipe::{CrushStream, InputStream, OutputStream, Stream, streams};
 use crate::lang::data::{
     binary::BinaryReader, dict::Dict, dict::DictReader, list::List,
     table::ColumnType, table::TableReader,
 };
 use crate::util::time::duration_format;
 use crate::{
-    lang::errors::{error, to_crush_error},
     lang::data::table::Table,
+    lang::errors::{error, to_crush_error},
     util::file::cwd,
     util::glob::Glob,
 };
@@ -41,6 +42,7 @@ pub use value_type::ValueType;
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
 use num_format::Grouping;
+use vec_reader::VecReader;
 use crate::data::table::Row;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::state::scope::ScopeReader;
@@ -215,49 +217,6 @@ impl From<&Path> for Value {
     }
 }
 
-pub struct VecReader {
-    vec: Vec<Value>,
-    types: Vec<ColumnType>,
-    idx: usize,
-}
-
-impl VecReader {
-    pub fn new(
-        vec: Vec<Value>,
-        column_type: ValueType,
-    ) -> VecReader {
-        VecReader {
-            vec,
-            types: vec![ColumnType::new("value", column_type)],
-            idx: 0,
-        }
-    }
-}
-
-impl CrushStream for VecReader {
-    fn read(&mut self) -> CrushResult<Row> {
-        self.idx += 1;
-        if self.idx > self.vec.len() {
-            return eof_error()
-        }
-        Ok(Row::new(vec![self.vec.replace(self.idx - 1, Value::Empty)]))
-    }
-
-    fn read_timeout(
-        &mut self,
-        _timeout: Duration,
-    ) -> Result<Row, crate::lang::pipe::RecvTimeoutError> {
-        match self.read() {
-            Ok(r) => Ok(r),
-            Err(_) => Err(crate::lang::pipe::RecvTimeoutError::Disconnected),
-        }
-    }
-
-    fn types(&self) -> &[ColumnType] {
-        &self.types
-    }
-}
-
 impl Value {
     pub fn bind(self, this: Value) -> Value {
         match self {
@@ -338,7 +297,7 @@ impl Value {
             Value::List(l) => Some(l.stream()),
             Value::Dict(d) => Some(Box::from(DictReader::new(d.clone()))),
             Value::Struct(s) => Some(Box::from(StructReader::new(s.clone()))),
-            Value::Scope(s) => Some(Box::from(ScopeReader::new(s.clone()))),
+            Value   ::Scope(s) => Some(Box::from(ScopeReader::new(s.clone()))),
             Value::Glob(l) => {
                 let mut paths = Vec::<PathBuf>::new();
                 l.glob_files(&cwd()?, &mut paths)?;

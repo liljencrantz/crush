@@ -5,10 +5,11 @@ use signature::signature;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{mandate, CrushResult};
+use crate::lang::errors::{CrushResult, mandate};
 use crate::data::list::List;
 use crate::lang::state::contexts::CommandContext;
-use crate::lang::state::contexts::{ArgumentVector, This};
+use crate::lang::state::argument_vector::ArgumentVector;
+use crate::lang::state::this::This;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 

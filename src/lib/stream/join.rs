@@ -2,7 +2,7 @@ use std::borrow::BorrowMut;
 use crate::lang::errors::{argument_error_legacy, mandate};
 use crate::lang::errors::CrushError;
 use crate::lang::errors::CrushResult;
-use crate::lang::state::contexts::{ArgumentVector, CommandContext};
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::printer::Printer;
 use crate::lang::pipe::Stream;
 use crate::lang::pipe::OutputStream;
@@ -16,6 +16,7 @@ use crate::lang::ordered_string_map::OrderedStringMap;
 use signature::signature;
 use crate::data::list::List;
 use crate::lang::command::OutputType::Unknown;
+use crate::lang::state::argument_vector::ArgumentVector;
 
 fn combine(l: &Row, r: &Row, right_idx: usize) -> Row {
     let mut l = l.clone();

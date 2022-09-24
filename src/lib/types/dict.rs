@@ -3,7 +3,7 @@ use crate::lang::command::Command;
 use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::command::TypeMap;
 use crate::lang::errors::{argument_error, argument_error_legacy, CrushResult, mandate};
-use crate::lang::state::contexts::{ArgumentVector, CommandContext, This};
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
 use crate::lang::{data::dict::Dict, value::ValueType};
 use lazy_static::lazy_static;
@@ -12,6 +12,8 @@ use signature::signature;
 use crate::data::table::ColumnVec;
 use crate::util::replace::Replace;
 use itertools::Itertools;
+use crate::lang::state::argument_vector::ArgumentVector;
+use crate::lang::state::this::This;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "dict", name]

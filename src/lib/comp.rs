@@ -1,10 +1,11 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{argument_error_legacy, CrushResult};
-use crate::lang::state::contexts::{ArgumentVector, CommandContext};
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use std::cmp::Ordering;
+use crate::lang::state::argument_vector::ArgumentVector;
 
 macro_rules! cmp {
     ($name:ident, $op:expr) => {

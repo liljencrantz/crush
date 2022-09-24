@@ -1,6 +1,6 @@
 use crate::lang::command::CrushCommand;
 use crate::{argument_error_legacy, CrushResult, to_crush_error};
-use crate::lang::state::contexts::{CommandContext, This};
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
 use signature::signature;
 use crate::lang::command::OutputType::Unknown;
@@ -13,6 +13,7 @@ use std::io::Read;
 use crossbeam::bounded;
 use crate::lang::errors::mandate;
 use crate::lang::signature::patterns::Patterns;
+use crate::lang::state::this::This;
 use crate::lib::io::json::{json_to_value, value_to_json};
 
 #[signature(

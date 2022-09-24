@@ -1,9 +1,9 @@
 use crate::lang::argument::column_names;
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::{Known, Unknown};
-use crate::lang::errors::{mandate, CrushResult};
-use crate::lang::state::contexts::ArgumentVector;
-use crate::lang::state::contexts::{CommandContext, This};
+use crate::lang::errors::{CrushResult, mandate};
+use crate::lang::state::argument_vector::ArgumentVector;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::pipe::black_hole;
 use crate::lang::data::table::ColumnType;
@@ -11,6 +11,8 @@ use crate::lang::value::ValueType;
 use crate::lang::{data::r#struct::Struct, value::Value};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use signature::signature;
+use crate::lang::state::this::This;
+
 pub mod binary;
 pub mod dict;
 pub mod duration;

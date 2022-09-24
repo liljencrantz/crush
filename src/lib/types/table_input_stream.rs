@@ -1,7 +1,7 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{argument_error_legacy, CrushResult, mandate};
-use crate::lang::state::contexts::{CommandContext, This};
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ValueType;
 use crate::lang::value::Value;
 use crate::lib::types::column_types;
@@ -12,6 +12,7 @@ use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::pipe::streams;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::command::CrushCommand;
+use crate::lang::state::this::This;
 
 lazy_static! {
     static ref CLOSE: Value =

@@ -1,7 +1,7 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{to_crush_error, CrushResult, argument_error_legacy, mandate};
-use crate::lang::state::contexts::{CommandContext, This};
+use crate::lang::errors::{argument_error_legacy, CrushResult, mandate, to_crush_error};
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
@@ -14,7 +14,8 @@ use std::collections::HashSet;
 use crate::lib::types::file::PermissionAdjustment::{Add, Remove, Set};
 use std::os::unix::fs::PermissionsExt;
 use crate::data::binary::BinaryReader;
-use crate::util::user_map::{get_uid, get_gid};
+use crate::lang::state::this::This;
+use crate::util::user_map::{get_gid, get_uid};
 
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {

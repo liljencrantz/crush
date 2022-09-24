@@ -1,12 +1,13 @@
 use crate::lang::argument::Argument;
-use crate::lang::errors::{mandate, CrushResult};
-use crate::lang::state::contexts::{ArgumentVector, CommandContext};
+use crate::lang::errors::{CrushResult, mandate};
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::value::ValueType;
 use crate::lang::data::table::ColumnType;
 use lazy_static::lazy_static;
 use crate::lang::pipe::pipe;
+use crate::lang::state::argument_vector::ArgumentVector;
 
 lazy_static! {
     static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
