@@ -69,7 +69,7 @@ fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
             }
         }
         serde_yaml::Value::Mapping(o) => {
-            let d = Dict::new(ValueType::Any, ValueType::Any);
+            let d = Dict::new(ValueType::Any, ValueType::Any)?;
             for (k, v) in o.into_iter() {
                 d.insert(from_yaml(k)?, from_yaml(v)?)?;
             }

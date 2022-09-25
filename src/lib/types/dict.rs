@@ -145,7 +145,7 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
         } else {
             context
                 .output
-                .send(Dict::new(*key_type, *value_type).into())
+                .send(Dict::new(*key_type, *value_type)?.into())
         }
     } else {
         argument_error_legacy("Expected a dict type as this value")
@@ -186,7 +186,7 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
     let key_type = key_types.drain().next().unwrap();
     let value_type = if value_types.len() == 1 {value_types.drain().next().unwrap() } else {ValueType::Any};
 
-    context.output.send(Dict::new_with_data(key_type, value_type, entries).into())
+    context.output.send(Dict::new_with_data(key_type, value_type, entries)?.into())
 }
 
 fn setitem(mut context: CommandContext) -> CrushResult<()> {
@@ -327,7 +327,7 @@ fn collect(mut context: CommandContext) -> CrushResult<()> {
                             }
                             context
                                 .output
-                                .send(Dict::new_with_data(input_type[key_idx].cell_type.clone(), input_type[value_idx].cell_type.clone(), res).into())
+                                .send(Dict::new_with_data(input_type[key_idx].cell_type.clone(), input_type[value_idx].cell_type.clone(), res)?.into())
                         }
                         _ => argument_error("Columns not found", context.arguments[0].location)
                     }
@@ -380,6 +380,6 @@ fn join(mut context: CommandContext) -> CrushResult<()> {
         let key_type = key_types.drain().next().unwrap();
         let value_type = if value_types.len() == 1 { value_types.drain().next().unwrap() } else { ValueType::Any };
 
-        context.output.send(Dict::new_with_data(key_type, value_type, out).into())
+        context.output.send(Dict::new_with_data(key_type, value_type, out)?.into())
     }
 }

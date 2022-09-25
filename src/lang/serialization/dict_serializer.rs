@@ -20,7 +20,7 @@ impl Serializable<Dict> for Dict {
                     let key_type = ValueType::deserialize(d.key_type as usize, elements, state)?;
                     let value_type =
                         ValueType::deserialize(d.value_type as usize, elements, state)?;
-                    let dict = Dict::new(key_type, value_type);
+                    let dict = Dict::new(key_type, value_type)?;
                     state.dicts.insert(id, dict.clone());
 
                     for pair in d.elements[..].chunks(2) {

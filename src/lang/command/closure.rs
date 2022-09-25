@@ -620,7 +620,7 @@ impl Closure {
         }
 
         if let Some(named_name) = named_name {
-            let d = Dict::new(ValueType::String, ValueType::Any);
+            let d = Dict::new(ValueType::String, ValueType::Any)?;
             for (k, v) in named {
                 d.insert(Value::from(k), v)?;
             }

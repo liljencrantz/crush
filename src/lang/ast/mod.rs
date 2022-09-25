@@ -18,7 +18,7 @@ use crate::util::user_map::get_current_username;
 
 pub mod location;
 pub mod tracked_string;
-mod parameter_node;
+pub mod parameter_node;
 
 /**
 A type representing a node in the abstract syntax tree that is the output of parsing a Crush script.

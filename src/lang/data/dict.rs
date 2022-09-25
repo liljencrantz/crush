@@ -24,25 +24,27 @@ impl Identity for Dict {
 }
 
 impl Dict {
-    pub fn new(key_type: ValueType, value_type: ValueType) -> Dict {
+    pub fn new(key_type: ValueType, value_type: ValueType) -> CrushResult<Dict> {
         if !key_type.is_hashable() {
-            panic!("Tried to create dict with unhashable key type");
-        }
-        Dict {
-            key_type,
-            value_type,
-            entries: Arc::new(Mutex::new(OrderedMap::new())),
+            error("Tried to create dict with unhashable key type")
+        } else {
+            Ok(Dict {
+                key_type,
+                value_type,
+                entries: Arc::new(Mutex::new(OrderedMap::new())),
+            })
         }
     }
 
-    pub fn new_with_data(key_type: ValueType, value_type: ValueType, entries: OrderedMap<Value, Value>) -> Dict {
+    pub fn new_with_data(key_type: ValueType, value_type: ValueType, entries: OrderedMap<Value, Value>) -> CrushResult<Dict> {
         if !key_type.is_hashable() {
-            panic!("Tried to create dict with unhashable key type");
-        }
-        Dict {
-            key_type,
-            value_type,
-            entries: Arc::new(Mutex::new(entries)),
+            error("Tried to create dict with unhashable key type")
+        } else {
+            Ok(Dict {
+                key_type,
+                value_type,
+                entries: Arc::new(Mutex::new(entries)),
+            })
         }
     }
 

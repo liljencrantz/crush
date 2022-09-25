@@ -12,12 +12,12 @@ use lazy_static::lazy_static;
 use crate::data::list::List;
 use crate::lang::command::Command;
 
-fn make_env() -> Value {
-    let e = Dict::new(ValueType::String, ValueType::String);
+fn make_env() -> CrushResult<Value> {
+    let e = Dict::new(ValueType::String, ValueType::String)?;
     for (key, value) in env::vars() {
         let _ = e.insert(Value::from(key), Value::from(value));
     }
-    e.into()
+    Ok(e.into())
 }
 
 fn make_arguments() -> Value {
@@ -227,7 +227,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             crush.declare("pid", Value::Integer(Pid::this().as_raw() as i128))?;
             crush.declare("ppid", Value::Integer(Pid::parent().as_raw() as i128))?;
 
-            let highlight = Dict::new(ValueType::String, ValueType::String);
+            let highlight = Dict::new(ValueType::String, ValueType::String)?;
             highlight.insert(Value::from("operator"), Value::from(""))?;
             highlight.insert(Value::from("string_literal"), Value::from(""))?;
             highlight.insert(Value::from("file_literal"), Value::from(""))?;
@@ -235,7 +235,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             highlight.insert(Value::from("numeric_literal"), Value::from(""))?;
             crush.declare("highlight", highlight.into())?;
 
-            crush.declare("env", make_env())?;
+            crush.declare("env", make_env()?)?;
             crush.declare("arguments", make_arguments())?;
             Prompt::declare(crush)?;
             Threads::declare(crush)?;
