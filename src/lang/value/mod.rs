@@ -43,7 +43,7 @@ use std::fmt::{Display, Formatter};
 use std::sync::Arc;
 use num_format::Grouping;
 use vec_reader::VecReader;
-use crate::data::table::Row;
+use crate::data::table::{ColumnFormat, Row};
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::state::scope::ScopeReader;
 use crate::util::escape::escape;
@@ -169,6 +169,18 @@ impl From<i128> for Value {
     }
 }
 
+impl From<usize> for Value {
+    fn from(v: usize) -> Value {
+        Value::Integer(v as i128)
+    }
+}
+
+impl From<u64> for Value {
+    fn from(v: u64) -> Value {
+        Value::Integer(v as i128)
+    }
+}
+
 impl From<i32> for Value {
     fn from(v: i32) -> Value {
         Value::Integer(v as i128)
@@ -280,7 +292,7 @@ impl Value {
 
     pub fn alignment(&self) -> Alignment {
         match self {
-            Value::Time(_) | Value::Duration(_) | Value::Integer(_) => Alignment::Right,
+            Value::Time(_) | Value::Duration(_) | Value::Integer(_) | Value::Float(_) => Alignment::Right,
             _ => Alignment::Left,
         }
     }
@@ -456,7 +468,7 @@ impl Value {
       separator the locale prescribes, so that the number can be copied
       and pasted into the terminal again.
      */
-    pub fn to_pretty_string(&self, grouping: Grouping) -> String {
+    pub fn to_pretty_string(&self, grouping: Grouping, format: &ColumnFormat) -> String {
         match self {
             Value::String(val) =>
                 if has_non_printable(val) {
@@ -465,7 +477,15 @@ impl Value {
                     val.to_string()
                 },
 
-            Value::Integer(i) => match grouping {
+            Value::Float(f) => match format {
+                ColumnFormat::None => f.to_string(),
+                ColumnFormat::Percentage =>
+                    format!("{:.2}%",f*100.0),
+                ColumnFormat::Temperature =>
+                    format!("{:.1} C",f-273.0),
+            }
+
+                Value::Integer(i) => match grouping {
                 Grouping::Standard => {
                     let whole = i.to_string();
                     let mut rest = whole.as_str();

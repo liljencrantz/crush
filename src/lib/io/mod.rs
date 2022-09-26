@@ -8,6 +8,7 @@ use crate::lang::value::Value;
 use signature::signature;
 use rustyline::Editor;
 use std::path::PathBuf;
+use crate::data::table::ColumnFormat;
 use crate::lang::interactive::config_dir;
 use crate::lang::state::contexts::CommandContext;
 
@@ -78,7 +79,7 @@ fn echo(context: CommandContext) -> CrushResult<()> {
             (true, Value::String(s)) =>
                 context.global_state.printer().line(s),
 
-            _ => pretty.print_value(value),
+            _ => pretty.print_value(value, &ColumnFormat::None),
         }
     }
     context.output.empty()

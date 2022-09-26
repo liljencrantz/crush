@@ -459,6 +459,7 @@ dependencies = [
  "libc",
  "libproc",
  "maplit",
+ "mountpoints",
  "nix 0.17.0",
  "num-format",
  "ordered_map",
@@ -1312,6 +1313,14 @@ dependencies = [
  "log",
  "wasi 0.11.0+wasi-snapshot-preview1",
  "windows-sys",
+]
+
+[[package]]
+name = "mountpoints"
+version = "0.1.1"
+dependencies = [
+ "libc",
+ "winapi",
 ]
 
 [[package]]

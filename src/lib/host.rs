@@ -9,7 +9,7 @@ use signature::signature;
 use std::str::FromStr;
 use crate::lang::errors::error;
 use crate::lang::data::r#struct::Struct;
-use crate::lang::data::table::{ColumnType, Row};
+use crate::lang::data::table::{ColumnType, Row, ColumnFormat};
 use sys_info;
 use lazy_static::lazy_static;
 use battery::State;
@@ -34,10 +34,13 @@ lazy_static! {
     static ref BATTERY_OUTPUT_TYPE: Vec<ColumnType> = vec![
         ColumnType::new("vendor", ValueType::String),
         ColumnType::new("model", ValueType::String),
+        ColumnType::new("technology", ValueType::String),
         ColumnType::new("cycle_count", ValueType::Integer),
-        ColumnType::new("health", ValueType::Integer),
+        ColumnType::new_with_format("temperature", ColumnFormat::Temperature, ValueType::Float),
+        ColumnType::new("voltage", ValueType::Float),
+        ColumnType::new_with_format("health", ColumnFormat::Percentage, ValueType::Float),
         ColumnType::new("state", ValueType::String),
-        ColumnType::new("charge", ValueType::Integer),
+        ColumnType::new_with_format("charge", ColumnFormat::Percentage, ValueType::Float),
         ColumnType::new("time_to_full", ValueType::Duration),
         ColumnType::new("time_to_empty", ValueType::Duration),
     ];
@@ -88,10 +91,13 @@ fn battery(context: CommandContext) -> CrushResult<()> {
         output.send(Row::new(vec![
             Value::from(battery.vendor().unwrap_or("").to_string()),
             Value::from(battery.model().unwrap_or("").to_string()),
+            Value::from(battery.technology().to_string()),
             Value::Integer(battery.cycle_count().unwrap_or(0) as i128),
-            Value::Integer((100.0 * battery.energy_full().value / battery.energy_full_design().value) as i128),
+            Value::Float(battery.temperature().map(|t|{t.value as f64}).unwrap_or(0.0)),
+            Value::Float( battery.voltage().value as f64),
+            Value::Float( battery.state_of_health().value as f64),
             Value::from(state_name(battery.state())),
-            Value::Integer((100.0 * battery.energy().value / battery.energy_full().value) as i128),
+            Value::Float(battery.state_of_charge().value as f64),
             Value::Duration(time_to_duration(battery.time_to_full())),
             Value::Duration(time_to_duration(battery.time_to_empty())),
         ]))?;

@@ -9,12 +9,10 @@ There should be a scope help message
 Write a command that extracts all help into html
 Tab completion of globs
 Add system tests for binary stream handling
-Binary values can be big. Make them shared behind an Arc. Same with tables. Maybe even String?
 In closures without a signature, put unnamed variables in the variable '__unnamed__'
 Make integers overflow to arbitrary precision math
 Add control:source command
 Data enums + pattern matching syntax
-Add readline command that reads one line of interactive text input from the user via the terminal
 Add package command to create a new namespace
 pbuf:from command that takes a protobuf definition and uses it to deserialize protobuf data
 avro:from command that deserializes avro data
@@ -29,5 +27,7 @@ more file info: size, permissions, user, group, modified, created, type. Move to
 Rename len to size in file:stat?
 Bad error message when trying to mutate constant
 Proper syntax for background jobs
-Multiple matches in join aren't handled correctly
-Figure out better column name mangling for join
+ColumnFormat::Bytes, configurable to either kibi or kilo
+ColumnFormat::Temperature should be configurable for C or F
+Nicer looking formatting of floats
+Track -, -- vs foo=true arguments

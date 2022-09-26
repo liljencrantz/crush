@@ -14,6 +14,7 @@ use std::convert::TryFrom;
 
 mod usage;
 mod files;
+mod mounts;
 pub mod fd;
 
 #[signature(
@@ -28,8 +29,8 @@ struct Cd {
     destination: Files,
 }
 
-fn cd(context: CommandContext) -> CrushResult<()> {
-    let cfg: Cd = Cd::parse(context.arguments, &context.global_state.printer())?;
+fn cd(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Cd = Cd::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     let dir = match cfg.destination.had_entries() {
         true => PathBuf::try_from(cfg.destination),
@@ -81,8 +82,8 @@ pub struct HelpSignature {
     topic: Option<Value>,
 }
 
-pub fn help(context: CommandContext) -> CrushResult<()> {
-    let cfg: HelpSignature = HelpSignature::parse(context.arguments, &context.global_state.printer())?;
+pub fn help(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: HelpSignature = HelpSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
     match cfg.topic {
         None => {
             context.global_state.printer().line(
@@ -125,6 +126,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         Box::new(move |fs| {
             files::FilesSignature::declare(fs)?;
             Cd::declare(fs)?;
+            mounts::Mounts::declare(fs)?;
             Pwd::declare(fs)?;
             HelpSignature::declare(fs)?;
             usage::Usage::declare(fs)?;

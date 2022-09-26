@@ -63,13 +63,13 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
 
                 match location {
                     Action::Append(name) => {
-                        output_type.push(ColumnType::new(name.as_ref(), value.value_type()));
+                        output_type.push(ColumnType::new(name, value.value_type()));
                         first_result.push(value);
                     }
                     Action::Replace(idx) => {
                         output_type.replace(
                             *idx,
-                            ColumnType::new(output_type[*idx].name.as_ref(), value.value_type()),
+                            ColumnType::new(&output_type[*idx].name, value.value_type()),
                         );
                         first_result[*idx] = value;
                     }

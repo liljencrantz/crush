@@ -14,6 +14,7 @@ use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 use std::fmt::{Formatter, Display};
+use std::ops::Deref;
 
 lazy_static! {
     pub static ref STRUCT_STREAM_TYPE: Vec<ColumnType> = vec![
@@ -132,7 +133,7 @@ impl Struct {
         }
         for (idx, value) in data.cells.iter().enumerate() {
             res.push(ColumnType::new(
-                reverse_lookup.get(&idx).unwrap(),
+                reverse_lookup.get(&idx).unwrap().deref(),
                 value.value_type(),
             ));
         }

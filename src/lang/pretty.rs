@@ -21,6 +21,7 @@ use chrono::Duration;
 use crate::util::hex::to_hex;
 use crate::lang::state::global_state::GlobalState;
 use num_format::Grouping;
+use crate::data::table::ColumnFormat;
 
 pub fn create_pretty_printer(
     printer: Printer,
@@ -36,7 +37,7 @@ pub fn create_pretty_printer(
                 let mut pp = PrettyPrinter { printer, grouping: global_state.grouping() };
                 while let Ok(val) = i.recv() {
                     pp.grouping = global_state.grouping();
-                    pp.print_value(val);
+                    pp.print_value(val, &ColumnFormat::None);
                 }
             }),
     ));
@@ -123,7 +124,7 @@ impl PrettyPrinter {
         PrettyPrinter { printer, grouping }
     }
 
-    pub fn print_value(&self, cell: Value) {
+    pub fn print_value(&self, cell: Value, format: &ColumnFormat) {
         match cell {
             Value::TableInputStream(mut output) => self.print_stream(&mut output, 0),
             Value::Table(rows) => self.print_stream(&mut TableReader::new(rows), 0),
@@ -136,7 +137,7 @@ impl PrettyPrinter {
                 } else {
                     self.print_stream(list.stream().as_mut(), 0)
                 }
-            _ => self.printer.line(cell.to_pretty_string(self.grouping).as_str()),
+            _ => self.printer.line(cell.to_pretty_string(self.grouping, format).as_str()),
         };
     }
 
@@ -183,13 +184,13 @@ impl PrettyPrinter {
         }
     }
 
-    fn calculate_body_width(&self, w: &mut [usize], data: &[Row], col_count: usize) {
+    fn calculate_body_width(&self, w: &mut [usize], data: &[Row], col_count: usize, columns: &[ColumnType]) {
         for r in data {
             for (idx, c) in r.cells().iter().enumerate() {
                 if idx == col_count {
                     break;
                 }
-                let l = c.to_pretty_string(self.grouping).width();
+                let l = c.to_pretty_string(self.grouping, &columns[idx].format).width();
                 w[idx] = max(w[idx], l);
             }
         }
@@ -216,6 +217,7 @@ impl PrettyPrinter {
         rows: &mut Vec<Table>,
         outputs: &mut Vec<InputStream>,
         binaries: &mut Vec<Box<dyn BinaryReader>>,
+        columns: &[ColumnType],
         col_count: usize,
     ) {
         let cell_len = r.len();
@@ -225,7 +227,7 @@ impl PrettyPrinter {
             if idx == col_count {
                 break;
             }
-            let formated_cell = c.to_pretty_string(self.grouping);
+            let formated_cell = c.to_pretty_string(self.grouping, &columns[idx].format);
             let spaces = if idx == cell_len - 1 {
                 "".to_string()
             } else {
@@ -259,7 +261,7 @@ impl PrettyPrinter {
         self.printer.line(&row);
     }
 
-    fn print_body(&self, w: &[usize], data: Vec<Row>, indent: usize, last_separate: bool) {
+    fn print_body(&self, w: &[usize], columns: &[ColumnType], data: Vec<Row>, indent: usize, last_separate: bool) {
         let col_count = w.len();
         for r in data.into_iter() {
             let mut rows = Vec::new();
@@ -270,13 +272,13 @@ impl PrettyPrinter {
 
             if last_separate {
                 let last = r_vec.remove(r_vec.len()-1);
-                self.print_row(w, r_vec, indent, &mut rows, &mut outputs, &mut binaries, col_count);
+                self.print_row(w, r_vec, indent, &mut rows, &mut outputs, &mut binaries, columns, col_count);
                 match last {
                     Value::Struct(s) => self.print_struct(s, indent+1),
                     _ => panic!("Invalid data"),
                 }
             } else {
-                self.print_row(w, r_vec, indent, &mut rows, &mut outputs, &mut binaries, col_count);
+                self.print_row(w, r_vec, indent, &mut rows, &mut outputs, &mut binaries,  columns, col_count);
             }
 
             for r in rows {
@@ -339,10 +341,10 @@ impl PrettyPrinter {
             let mut w = vec![0; types.len()];
 
             self.calculate_header_width(&mut w, types);
-            self.calculate_body_width(&mut w, &data, types.len());
+            self.calculate_body_width(&mut w, &data, types.len(), types);
 
             self.print_header(&w, types, indent);
-            self.print_body(&w, data, indent, last_separate)
+            self.print_body(&w, types, data, indent, last_separate)
         }
     }
 
@@ -351,7 +353,7 @@ impl PrettyPrinter {
         if data.len() > 0 {
             let max_name_width = data.keys().map(|n| n.len()).max().unwrap();
             for (name, value) in data.drain() {
-                let ss = value.to_pretty_string(self.grouping);
+                let ss = value.to_pretty_string(self.grouping, &ColumnFormat::None);
                 if indent * 4 + max_name_width + ss.width() + 2 < self.printer.width() {
                     let mut line = " ".repeat(4 * indent);
                     line.push_str(&name);
@@ -371,7 +373,7 @@ impl PrettyPrinter {
     }
 
     fn print_struct_value(&self, value: Value, indent: usize) {
-        let ss = value.to_pretty_string(self.grouping);
+        let ss = value.to_pretty_string(self.grouping, &ColumnFormat::None);
         if ss.width() + 4 * indent < self.printer.width() {
             let mut line = " ".repeat(4 * indent);
             line.push_str(&ss);
@@ -400,7 +402,8 @@ impl PrettyPrinter {
         let mut items_per_column;
         let data = data
             .iter()
-            .map(|s| s.cells()[0].to_pretty_string(self.grouping))
+            .enumerate()
+            .map(|(idx, s)| s.cells()[0].to_pretty_string(self.grouping, &types[idx].format))
             .collect::<Vec<_>>();
 
         for cols in (2..50).rev() {

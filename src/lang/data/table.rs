@@ -167,10 +167,17 @@ impl From<Row> for Vec<Value> {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ColumnFormat {
+    None,
+    Percentage,
+    Temperature,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ColumnType {
     pub name: String,
+    pub format: ColumnFormat,
     pub cell_type: ValueType,
 }
 
@@ -182,15 +189,25 @@ impl ColumnType {
             .iter() {
             res.push(ColumnType {
                 name: col.name.clone(),
+                format: ColumnFormat::None,
                 cell_type: col.cell_type.materialize()?,
             });
         }
         Ok(res)
     }
 
-    pub fn new(name: &str, cell_type: ValueType) -> ColumnType {
+    pub fn new(name: impl Into<String>, cell_type: ValueType) -> ColumnType {
         ColumnType {
-            name: name.to_string(),
+            name: name.into(),
+            format: ColumnFormat::None,
+            cell_type,
+        }
+    }
+
+    pub fn new_with_format(name: impl Into<String>, format: ColumnFormat, cell_type: ValueType) -> ColumnType {
+        ColumnType {
+            name: name.into(),
+            format,
             cell_type,
         }
     }
