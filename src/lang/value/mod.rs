@@ -479,14 +479,14 @@ impl Value {
                 },
 
             Value::Float(f) => match format {
-                ColumnFormat::None => f.to_string(),
+                ColumnFormat::None => format!("{:.*}", format_data.float_precision() ,f),
                 ColumnFormat::Percentage =>
-                    format!("{:.2}%", f * 100.0),
+                    format!("{:.*}%", format_data.percentage_precision(),  f * 100.0),
                 ColumnFormat::Temperature =>
-                    format!("{:.1} {}", format_data.temperature().format(*f), format_data.temperature().unit()),
+                    format!("{:.*} {}", format_data.temperature_precision(), format_data.temperature().format(*f), format_data.temperature().unit()),
             }
 
-            Value::Integer(i) => match format_data.locale.grouping() {
+            Value::Integer(i) => match format_data.grouping() {
                 Grouping::Standard => {
                     let whole = i.to_string();
                     let mut rest = whole.as_str();

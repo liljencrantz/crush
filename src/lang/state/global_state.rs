@@ -17,8 +17,11 @@ threads, etc.
 
 #[derive(Clone)]
 pub struct FormatData {
-    pub locale: SystemLocale,
+    locale: SystemLocale,
     temperature: Option<Temperature>,
+    float_precision: u8,
+    temperature_precision: u8,
+    percentage_precision: u8,
 }
 
 fn country(locale: & str) -> Option<&str> {
@@ -32,16 +35,38 @@ fn country(locale: & str) -> Option<&str> {
 }
 
 impl FormatData {
+
+    pub fn grouping(&self) -> Grouping {
+        self.locale.grouping()
+    }
+
+    pub fn locale(&self) -> &SystemLocale {
+        &self.locale
+    }
+
     pub fn temperature(&self) -> Temperature {
         self.temperature.unwrap_or_else(||{
             match country(self.locale.name()) {
+                // Countries that use Fahrenheit
                 Some("US") | Some("BS") | Some("PW") |
                 Some("BZ") | Some("KY") | Some("FM") |
                 Some("MH") => Temperature::Fahrenheit,
+                // All other countries use Celsius
                 Some(_) => Temperature::Celsius,
+                // You didn't bother setting a locale, YOU GET KELVIN AS PUNISHMENT
                 None => Temperature::Kelvin,
             }
         })
+    }
+
+    pub fn float_precision(&self) -> usize {
+        self.float_precision as usize
+    }
+    pub fn percentage_precision(&self) -> usize {
+        self.percentage_precision as usize
+    }
+    pub fn temperature_precision(&self) -> usize {
+        self.temperature_precision as usize
     }
 }
 
@@ -130,6 +155,9 @@ impl GlobalState {
                 format_data: FormatData {
                     locale,
                     temperature: None,
+                    float_precision: 4,
+                    temperature_precision: 1,
+                    percentage_precision: 2,
                 },
                 exit_status: None,
                 prompt: None,

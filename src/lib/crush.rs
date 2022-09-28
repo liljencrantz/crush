@@ -215,7 +215,7 @@ mod locale {
     pub struct Get {}
 
     fn get(context: CommandContext) -> CrushResult<()> {
-        context.output.send(Value::from(context.global_state.format_data().locale.name()))
+        context.output.send(Value::from(context.global_state.format_data().locale().name()))
     }
 }
 
