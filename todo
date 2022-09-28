@@ -28,5 +28,4 @@ Rename len to size in file:stat?
 Bad error message when trying to mutate constant
 Proper syntax for background jobs
 ColumnFormat::Bytes, configurable to either kibi or kilo
-ColumnFormat::Temperature should be configurable for C or F
 Nicer looking formatting of floats

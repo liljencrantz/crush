@@ -45,6 +45,7 @@ use num_format::Grouping;
 use vec_reader::VecReader;
 use crate::data::table::{ColumnFormat, Row};
 use crate::lang::ast::tracked_string::TrackedString;
+use crate::state::global_state::FormatData;
 use crate::state::scope::ScopeReader;
 use crate::util::escape::escape;
 use crate::util::replace::Replace;
@@ -265,7 +266,7 @@ impl Value {
             Value::Scope(scope) => {
                 res.append(&mut scope.dump_local().unwrap().iter().map(|(k, _)| k.to_string()).collect());
                 add_keys(self.value_type().fields(), &mut res);
-            },
+            }
             Value::Type(t) => add_keys(t.fields(), &mut res),
             _ => add_keys(self.value_type().fields(), &mut res),
         }
@@ -309,7 +310,7 @@ impl Value {
             Value::List(l) => Some(l.stream()),
             Value::Dict(d) => Some(Box::from(DictReader::new(d.clone()))),
             Value::Struct(s) => Some(Box::from(StructReader::new(s.clone()))),
-            Value   ::Scope(s) => Some(Box::from(ScopeReader::new(s.clone()))),
+            Value::Scope(s) => Some(Box::from(ScopeReader::new(s.clone()))),
             Value::Glob(l) => {
                 let mut paths = Vec::<PathBuf>::new();
                 l.glob_files(&cwd()?, &mut paths)?;
@@ -468,7 +469,7 @@ impl Value {
       separator the locale prescribes, so that the number can be copied
       and pasted into the terminal again.
      */
-    pub fn to_pretty_string(&self, grouping: Grouping, format: &ColumnFormat) -> String {
+    pub fn to_pretty_string(&self, format_data: &FormatData, format: &ColumnFormat) -> String {
         match self {
             Value::String(val) =>
                 if has_non_printable(val) {
@@ -480,12 +481,12 @@ impl Value {
             Value::Float(f) => match format {
                 ColumnFormat::None => f.to_string(),
                 ColumnFormat::Percentage =>
-                    format!("{:.2}%",f*100.0),
+                    format!("{:.2}%", f * 100.0),
                 ColumnFormat::Temperature =>
-                    format!("{:.1} °C",f-273.0),
+                    format!("{:.1} {}", format_data.temperature().format(*f), format_data.temperature().unit()),
             }
 
-                Value::Integer(i) => match grouping {
+            Value::Integer(i) => match format_data.locale.grouping() {
                 Grouping::Standard => {
                     let whole = i.to_string();
                     let mut rest = whole.as_str();

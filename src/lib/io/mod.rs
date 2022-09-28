@@ -73,7 +73,9 @@ struct Echo {
 
 fn echo(context: CommandContext) -> CrushResult<()> {
     let cfg: Echo = Echo::parse(context.arguments, &context.global_state.printer())?;
-    let pretty = PrettyPrinter::new(context.global_state.printer().clone(), context.global_state.grouping());
+    let pretty = PrettyPrinter::new(
+        context.global_state.printer().clone(),
+        context.global_state.format_data());
     for value in cfg.values {
         match (cfg.raw, &value) {
             (true, Value::String(s)) =>

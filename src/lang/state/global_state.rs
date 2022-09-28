@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use rustyline::Editor;
 use crate::interactive::rustyline_helper::RustylineHelper;
 use crate::lang::value::Value;
+use crate::util::temperature::Temperature;
 
 /**
 A type representing the shared crush state, such as the printer, the running jobs, the running
@@ -15,19 +16,49 @@ threads, etc.
  */
 
 #[derive(Clone)]
+pub struct FormatData {
+    pub locale: SystemLocale,
+    temperature: Option<Temperature>,
+}
+
+fn country(locale: & str) -> Option<&str> {
+    let dot_split = locale.splitn(2, '.').collect::<Vec<_>>();
+    let under_split = dot_split[0].splitn(2, '_').collect::<Vec<_>>();
+    if under_split.len() == 2 {
+        Some(under_split[1])
+    } else {
+        None
+    }
+}
+
+impl FormatData {
+    pub fn temperature(&self) -> Temperature {
+        self.temperature.unwrap_or_else(||{
+            match country(self.locale.name()) {
+                Some("US") | Some("BS") | Some("PW") |
+                Some("BZ") | Some("KY") | Some("FM") |
+                Some("MH") => Temperature::Fahrenheit,
+                Some(_) => Temperature::Celsius,
+                None => Temperature::Kelvin,
+            }
+        })
+    }
+}
+
+#[derive(Clone)]
 pub struct GlobalState {
     data: Arc<Mutex<StateData>>,
     threads: ThreadStore,
     printer: Printer,
-    exit_status: Arc<Mutex<Option<i32>>>,
-    prompt: Arc<Mutex<Option<Command>>>,
-    jobs: Arc<Mutex<Vec<Option<LiveJob>>>>,
     parser: Parser,
     editor: Arc<Mutex<Option<Editor<RustylineHelper>>>>,
 }
 
 struct StateData {
-    locale: SystemLocale,
+    format_data: FormatData,
+    prompt: Option<Command>,
+    jobs: Vec<Option<LiveJob>>,
+    exit_status: Option<i32>,
 }
 
 #[derive(Clone, Copy)]
@@ -79,11 +110,11 @@ impl JobHandle {
 
 impl Drop for JobHandleInternal {
     fn drop(&mut self) {
-        let mut data = self.state.jobs.lock().unwrap();
-        data[usize::from(self.id)] = None;
+        let mut data = self.state.data.lock().unwrap();
+        data.jobs[usize::from(self.id)] = None;
         loop {
-            match data.last() {
-                Some(None) => data.pop(),
+            match data.jobs.last() {
+                Some(None) => data.jobs.pop(),
                 _ => break,
             };
         }
@@ -91,28 +122,28 @@ impl Drop for JobHandleInternal {
 }
 
 impl GlobalState {
+
     pub fn new(printer: Printer) -> CrushResult<GlobalState> {
+        let locale = to_crush_error(SystemLocale::default().or_else(|_| {SystemLocale::from_name("C")}))?;
         Ok(GlobalState {
             data: Arc::from(Mutex::new(StateData {
-                locale: to_crush_error(SystemLocale::default().or_else(|_| {SystemLocale::from_name("C")}))?,
+                format_data: FormatData {
+                    locale,
+                    temperature: None,
+                },
+                exit_status: None,
+                prompt: None,
+                jobs: Vec::new(),
             })),
             threads: ThreadStore::new(),
             printer,
-            exit_status: Arc::from(Mutex::new(None)),
-            prompt: Arc::from(Mutex::new(None)),
             parser: Parser::new(),
-            jobs: Arc::from(Mutex::new(Vec::new())),
             editor: Arc::from(Mutex::new(None)),
         })
     }
 
     pub fn parser(&self) -> &Parser {
         &self.parser
-    }
-
-    pub fn grouping(&self) -> Grouping {
-        let data = self.data.lock().unwrap();
-        data.locale.grouping()
     }
 
     pub fn threads(&self) -> &ThreadStore {
@@ -123,15 +154,14 @@ impl GlobalState {
         &self.printer
     }
 
-    pub fn locale(&self) -> SystemLocale {
-        let data = self.data.lock().unwrap();
-        data.locale.clone()
+    pub fn format_data(&self) -> FormatData {
+        self.data.lock().unwrap().format_data.clone()
     }
 
     pub fn job_begin(&self, description: String) -> JobHandle {
-        let mut jobs = self.jobs.lock().unwrap();
-        let id = JobId::from(jobs.len());
-        jobs.push(Some(LiveJob { id, description }));
+        let mut data = self.data.lock().unwrap();
+        let id = JobId::from(data.jobs.len());
+        data.jobs.push(Some(LiveJob { id, description }));
         JobHandle {
             internal: Arc::new(Mutex::new(JobHandleInternal {
                 id,
@@ -141,33 +171,33 @@ impl GlobalState {
     }
 
     pub fn set_exit_status(&self, status: i32) {
-        let mut data = self.exit_status.lock().unwrap();
-        *data = Some(status);
+        let mut data = self.data.lock().unwrap();
+        data.exit_status = Some(status);
     }
 
     pub fn exit_status(&self) -> Option<i32> {
-        let data = self.exit_status.lock().unwrap();
-        (*data).clone()
-    }
+        let data = self.data.lock().unwrap();
+        data.exit_status
+        }
 
     pub fn set_locale(&self, new_locale: SystemLocale) {
         let mut data = self.data.lock().unwrap();
-        data.locale = new_locale;
+        data.format_data.locale = new_locale;
     }
 
     pub fn set_prompt(&self, prompt: Option<Command>) {
-        let mut data = self.prompt.lock().unwrap();
-        *data = prompt;
+        let mut data = self.data.lock().unwrap();
+        data.prompt = prompt;
     }
 
     pub fn prompt(&self) -> Option<Command> {
-        let data = self.prompt.lock().unwrap();
-        data.as_ref().map(|a| a.clone())
+        let data = self.data.lock().unwrap();
+        data.prompt.as_ref().map(|a| a.clone())
     }
 
     pub fn jobs(&self) -> Vec<LiveJob> {
-        let jobs = self.jobs.lock().unwrap();
-        jobs.iter().flat_map(|a| a.clone()).collect()
+        let data = self.data.lock().unwrap();
+        data.jobs.iter().flat_map(|a| a.clone()).collect()
     }
 
     pub fn set_editor(&self, editor: Option<Editor<RustylineHelper>>) {
