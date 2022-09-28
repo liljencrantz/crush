@@ -1,4 +1,4 @@
-use crate::lang::argument::ArgumentDefinition;
+use crate::lang::argument::{ArgumentDefinition, SwitchStyle};
 use crate::lang::command::{Command, Parameter};
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::{CrushResult, error, mandate, to_crush_error};
@@ -25,7 +25,7 @@ A type representing a node in the abstract syntax tree that is the output of par
  */
 #[derive(Clone, Debug)]
 pub enum Node {
-    Assignment(Box<Node>, String, Box<Node>),
+    Assignment(Box<Node>, SwitchStyle, String, Box<Node>),
     Unary(TrackedString, Box<Node>),
     Glob(TrackedString),
     Identifier(TrackedString),
@@ -230,7 +230,7 @@ impl Node {
             Regex(s) | File(s, _) =>
                 s.location,
 
-            Assignment(a, _, b) =>
+            Assignment(a, _, _, b) =>
                 a.location().union(b.location()),
 
             Unary(s, a) =>
@@ -256,7 +256,7 @@ impl Node {
 
     pub fn type_name(&self) -> &str {
         match self {
-            Node::Assignment(_, _, _) => "assignment",
+            Node::Assignment(_, _, _, _) => "assignment",
             Node::Unary(_, _) => "unary operator",
             Node::Glob(_) => "glob",
             Node::Identifier(_) => "identifier",
@@ -275,11 +275,12 @@ impl Node {
 
     pub fn generate(&self, env: &Scope, is_command: bool) -> CrushResult<ArgumentDefinition> {
         Ok(ArgumentDefinition::unnamed(match self {
-            Node::Assignment(target, op, value) => match op.deref() {
+            Node::Assignment(target, style, op, value) => match op.deref() {
                 "=" => {
                     return match target.as_ref() {
-                        Node::Symbol(t) => Ok(ArgumentDefinition::named(
+                        Node::Symbol(t) => Ok(ArgumentDefinition::named_with_style(
                             t.deref(),
+                            *style,
                             propose_name(&t, value.generate_argument(env)?.unnamed_value()?),
                         )),
                         _ => error(format!("Invalid left side in named argument. Expected a symbol, got a {}", target.type_name())),
@@ -418,7 +419,7 @@ impl Node {
 
     pub fn generate_standalone(&self, env: &Scope) -> CrushResult<Option<CommandInvocation>> {
         match self {
-            Node::Assignment(target, op, value) => {
+            Node::Assignment(target, style, op, value) => {
                 Node::generate_standalone_assignment(target, op, value, env)
             }
 

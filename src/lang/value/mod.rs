@@ -482,7 +482,7 @@ impl Value {
                 ColumnFormat::Percentage =>
                     format!("{:.2}%",f*100.0),
                 ColumnFormat::Temperature =>
-                    format!("{:.1} C",f-273.0),
+                    format!("{:.1} °C",f-273.0),
             }
 
                 Value::Integer(i) => match grouping {

@@ -1,7 +1,7 @@
 /**
 Code for managing arguments passed in to commands
  */
-use crate::lang::errors::{argument_error, argument_error_legacy, CrushResult, error};
+use crate::lang::errors::{argument_error, argument_error_legacy, CrushError, CrushResult, error};
 use crate::lang::state::contexts::CompileContext;
 use crate::lang::value::Value;
 use crate::lang::value::ValueDefinition;
@@ -9,6 +9,7 @@ use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::ast::location::Location;
+use crate::lang::serialization::model;
 
 #[derive(Debug, Clone)]
 pub enum ArgumentType {
@@ -16,6 +17,36 @@ pub enum ArgumentType {
     None,
     ArgumentList,
     ArgumentDict,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum SwitchStyle {
+    None,
+    Single,
+    Double,
+}
+
+impl TryFrom<i32> for SwitchStyle {
+    type Error = CrushError;
+
+    fn try_from(s: i32) -> Result<Self, Self::Error> {
+        match s {
+            x if x == model::SwitchStyle::None as i32 => Ok(SwitchStyle::None),
+            x if x == model::SwitchStyle::Single as i32 => Ok(SwitchStyle::Double),
+            x if x == model::SwitchStyle::Double as i32 => Ok(SwitchStyle::Double),
+            _ => error("Invalid switch style"),
+        }
+    }
+}
+
+impl Into<i32> for SwitchStyle {
+    fn into(self) -> i32 {
+        match self {
+            SwitchStyle::None => model::SwitchStyle::None.into(),
+            SwitchStyle::Single => model::SwitchStyle::Single.into(),
+            SwitchStyle::Double => model::SwitchStyle::Double.into(),
+        }
+    }
 }
 
 impl ArgumentType {
@@ -35,6 +66,7 @@ impl ArgumentType {
 #[derive(Debug, Clone)]
 pub struct BaseArgument<A: Clone, C: Clone> {
     pub argument_type: A,
+    pub switch_style: SwitchStyle,
     pub value: C,
     pub location: Location,
 }
@@ -51,6 +83,16 @@ impl ArgumentDefinition {
     pub fn named(name: &TrackedString, value: ValueDefinition) -> ArgumentDefinition {
         ArgumentDefinition {
             argument_type: ArgumentType::Some(name.clone()),
+            switch_style: SwitchStyle::None,
+            location: name.location.union(value.location()),
+            value,
+        }
+    }
+
+    pub fn named_with_style(name: &TrackedString, switch_style: SwitchStyle, value: ValueDefinition) -> ArgumentDefinition {
+        ArgumentDefinition {
+            argument_type: ArgumentType::Some(name.clone()),
+            switch_style,
             location: name.location.union(value.location()),
             value,
         }
@@ -59,22 +101,25 @@ impl ArgumentDefinition {
     pub fn unnamed(value: ValueDefinition) -> ArgumentDefinition {
         ArgumentDefinition {
             argument_type: ArgumentType::None,
+            switch_style: SwitchStyle::None,
             location: value.location(),
             value,
         }
     }
 
     pub fn list(value: ValueDefinition) -> ArgumentDefinition {
-        BaseArgument {
+        ArgumentDefinition {
             argument_type: ArgumentType::ArgumentList,
+            switch_style: SwitchStyle::None,
             location: value.location(),
             value,
         }
     }
 
     pub fn dict(value: ValueDefinition) -> ArgumentDefinition {
-        BaseArgument {
+        ArgumentDefinition {
             argument_type: ArgumentType::ArgumentDict,
+            switch_style: SwitchStyle::None,
             location: value.location(),
             value,
         }
@@ -95,6 +140,7 @@ impl Argument {
     pub fn new(name: Option<String>, value: Value, location: Location) -> Argument {
         Argument {
             argument_type: name,
+            switch_style: SwitchStyle::None,
             value,
             location,
         }
@@ -103,14 +149,25 @@ impl Argument {
     pub fn unnamed(value: Value, location: Location) -> Argument {
         Argument {
             argument_type: None,
+            switch_style: SwitchStyle::None,
             value,
             location,
         }
     }
 
     pub fn named(name: &str, value: Value, location: Location) -> Argument {
-        BaseArgument {
+        Argument {
             argument_type: Some(name.to_string()),
+            switch_style: SwitchStyle::None,
+            value,
+            location,
+        }
+    }
+
+    pub fn named_with_style(name: &str, switch_style: SwitchStyle, value: Value, location: Location) -> Argument {
+        Argument {
+            argument_type: Some(name.to_string()),
+            switch_style,
             value,
             location,
         }
@@ -131,8 +188,9 @@ impl ArgumentEvaluator for Vec<ArgumentDefinition> {
             } else {
                 match &a.argument_type {
                     ArgumentType::Some(name) =>
-                        res.push(Argument::named(
+                        res.push(Argument::named_with_style(
                             &name.string,
+                            a.switch_style,
                             a.value.eval_and_bind(context)?,
                             a.location,
                         )),

@@ -1,4 +1,4 @@
-use crate::lang::argument::{Argument, ArgumentDefinition, ArgumentType};
+use crate::lang::argument::{Argument, ArgumentDefinition, ArgumentType, SwitchStyle};
 use crate::lang::command::{ArgumentDescription, BoundCommand, Command, CrushCommand, OutputType, Parameter};
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::data::dict::Dict;
@@ -233,6 +233,7 @@ impl<'a> ClosureSerializer<'a> {
         Ok(model::ArgumentDefinition {
             value: Some(self.value_definition(&a.value)?),
             argument_type: Some(self.argument_type(&a.argument_type)?),
+            switch_style: a.switch_style.into(),
             start: a.location.start as u64,
             end: a.location.end as u64,
         })
@@ -425,6 +426,7 @@ impl<'a> ClosureDeserializer<'a> {
                     ArgumentType::ArgumentDict
                 }
             },
+            switch_style: SwitchStyle::try_from(s.switch_style )?,
             location: Location::new(s.start as usize, s.end as usize),
         })
     }

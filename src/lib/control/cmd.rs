@@ -5,7 +5,7 @@ use std::borrow::BorrowMut;
 use std::path::PathBuf;
 use ordered_map::OrderedMap;
 use crate::{argument_error_legacy, CrushResult, to_crush_error};
-use crate::lang::argument::Argument;
+use crate::lang::argument::{Argument, SwitchStyle};
 use crate::lang::errors::mandate;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::value::Value;
@@ -36,7 +36,7 @@ fn cmd_internal(
     mut context: CommandContext,
     file: PathBuf,
     mut arguments: Vec<Argument>)
-    -> CrushResult<()>  {
+    -> CrushResult<()> {
     let use_tty = !context.input.is_pipeline() && !context.output.is_pipeline();
     let mut cmd = std::process::Command::new(file.as_os_str());
 
@@ -51,17 +51,23 @@ fn cmd_internal(
                             cmd.arg(file);
                         }
                     }
-                    _ => {cmd.arg(a.value.to_string());}
+                    _ => { cmd.arg(a.value.to_string()); }
                 }
             }
             Some(name) => {
                 let switch =
-                    if name.len() == 1 {
-                        format!("-{}", name)
-                    } else {
-                        format!("--{}", name)
+                    match a.switch_style {
+                        SwitchStyle::None =>
+                            if name.len() == 1 {
+                                format!("-{}", name)
+                            } else {
+                                format!("--{}", name)
+                            },
+                        SwitchStyle::Single =>
+                            format!("-{}", name),
+                        SwitchStyle::Double =>
+                            format!("--{}", name),
                     };
-
                 match a.value {
                     Value::Bool(true) => {
                         cmd.arg(switch);

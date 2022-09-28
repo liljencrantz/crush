@@ -144,6 +144,12 @@ message CommandInvocation {
   repeated ArgumentDefinition arguments = 2;
 }
 
+enum SwitchStyle {
+  NONE = 0;
+  SINGLE = 1;
+  DOUBLE = 2;
+}
+
 message ArgumentDefinition {
   oneof argument_type {
     uint64 some = 1;
@@ -154,6 +160,7 @@ message ArgumentDefinition {
   ValueDefinition value = 5;
   uint64 start = 6;
   uint64 end = 7;
+  SwitchStyle switch_style = 8;
 }
 
 message Strings {

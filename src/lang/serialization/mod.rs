@@ -20,10 +20,10 @@ mod table_serializer;
 mod tracked_string_serializer;
 mod value_serializer;
 mod value_type_serializer;
-
-pub mod model {
-    include!(concat!(env!("OUT_DIR"), "/model.rs"));
-}
+pub mod model;
+//pub mod model {
+    //include!(concat!(env!("OUT_DIR"), "/model.rs"));
+//}
 
 pub struct SerializationState {
     pub with_id: HashMap<u64, usize>,

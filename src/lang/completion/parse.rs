@@ -167,7 +167,7 @@ fn simple_path(node: &Node, cursor: usize) -> CrushResult<String> {
 
 fn find_command_in_expression(exp: &Node, cursor: usize) -> CrushResult<Option<CommandNode>> {
     match exp {
-        Node::Assignment(_, _, b) => {
+        Node::Assignment(_, _, _, b) => {
             find_command_in_expression(b, cursor)
         }
 
@@ -271,7 +271,7 @@ fn parse_command_node(node: &Node, scope: &Scope) -> CrushResult<CompletionComma
 
 fn parse_previous_argument(arg: &Node) -> PreviousArgument {
     match arg {
-        Node::Assignment(key, op, value) => {
+        Node::Assignment(key, _, op, value) => {
             match (key.as_ref(), op.as_str()) {
                 (Node::Symbol(name), "=") => {
                     let inner = parse_previous_argument(value.as_ref());
@@ -356,7 +356,7 @@ pub fn parse(
                 .map(|arg| parse_previous_argument(arg))
                 .collect::<Vec<_>>();
             let (arg, last_argument_name, argument_complete) =
-                if let Node::Assignment(name, _op, value) = cmd.expressions.last().unwrap() {
+                if let Node::Assignment(name, _, _op, value) = cmd.expressions.last().unwrap() {
                     if name.location().contains(cursor) {
                         (Box::from(name.prefix(cursor)?), None, true)
                     } else {
