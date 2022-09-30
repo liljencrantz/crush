@@ -1,5 +1,6 @@
 # A simple test to make sure that multiple commands
 # can use a single pipe both for input and output.
+crush:locale:set "en_US.UTF-8"
 
 # Create the pipe
 $pipe := ((table_input_stream value=$integer):pipe)

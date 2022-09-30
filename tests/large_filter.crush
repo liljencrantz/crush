@@ -1,1 +1,2 @@
+crush:locale:set "en_US.UTF-8"
 seq 10000| yaml:to | yaml:from|count

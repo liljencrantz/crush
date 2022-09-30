@@ -1,5 +1,6 @@
 # A test to make sure that we can correctly share the output
 # of a command between multiple commands via the same pipe.
+crush:locale:set "en_US.UTF-8"
 
 # Create the pipe
 $pipe := ((table_input_stream value=$integer):pipe)

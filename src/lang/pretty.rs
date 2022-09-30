@@ -139,7 +139,7 @@ impl PrettyPrinter {
                 } else {
                     self.print_stream(list.stream().as_mut(), 0)
                 }
-            _ => self.printer.line(cell.to_pretty_string(&self.format_data, format).as_str()),
+            _ => self.printer.line(cell.to_pretty_string(&self.format_data, format, false).as_str()),
         };
     }
 
@@ -192,7 +192,7 @@ impl PrettyPrinter {
                 if idx == col_count {
                     break;
                 }
-                let l = c.to_pretty_string(&self.format_data, &columns[idx].format).width();
+                let l = c.to_pretty_string(&self.format_data, &columns[idx].format, true).width();
                 w[idx] = max(w[idx], l);
             }
         }
@@ -229,7 +229,7 @@ impl PrettyPrinter {
             if idx == col_count {
                 break;
             }
-            let formated_cell = c.to_pretty_string(&self.format_data, &columns[idx].format);
+            let formated_cell = c.to_pretty_string(&self.format_data, &columns[idx].format, true);
             let spaces = if idx == cell_len - 1 {
                 "".to_string()
             } else {
@@ -355,7 +355,7 @@ impl PrettyPrinter {
         if data.len() > 0 {
             let max_name_width = data.keys().map(|n| n.len()).max().unwrap();
             for (name, value) in data.drain() {
-                let ss = value.to_pretty_string(&self.format_data, &ColumnFormat::None);
+                let ss = value.to_pretty_string(&self.format_data, &ColumnFormat::None, false);
                 if indent * 4 + max_name_width + ss.width() + 2 < self.printer.width() {
                     let mut line = " ".repeat(4 * indent);
                     line.push_str(&name);
@@ -375,13 +375,13 @@ impl PrettyPrinter {
     }
 
     fn print_struct_value(&self, value: Value, indent: usize) {
-        let ss = value.to_pretty_string(&self.format_data, &ColumnFormat::None);
+        let ss = value.to_pretty_string(&self.format_data, &ColumnFormat::None, false);
         if ss.width() + 4 * indent < self.printer.width() {
             let mut line = " ".repeat(4 * indent);
             line.push_str(&ss);
             self.printer.line(&line);
         } else {
-            match value {
+                match value {
                 Value::Struct(s) => self.print_struct(s, indent),
                 Value::TableInputStream(mut output) => self.print_stream(&mut output, indent),
                 Value::Table(rows) => self.print_stream(&mut TableReader::new(rows), indent),
@@ -404,7 +404,7 @@ impl PrettyPrinter {
         let mut items_per_column;
         let data = data
             .iter()
-            .map(| s| s.cells()[0].to_pretty_string(&self.format_data, &types[0].format))
+            .map(| s| s.cells()[0].to_pretty_string(&self.format_data, &types[0].format, true))
             .collect::<Vec<_>>();
 
         for cols in (2..50).rev() {

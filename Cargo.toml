@@ -18,8 +18,12 @@ features = ["lexer"]
 [workspace]
 members = [
     "signature",
+    "test_finder",
     "ordered_map",
 ]
+
+[dependencies.test_finder]
+path = "test_finder"
 
 [dependencies.signature]
 path = "signature"
@@ -61,7 +65,7 @@ trust-dns-client = "0.22.0"
 resolv-conf = "0.7.0"
 itertools = "0.10.4"
 libc = "0.2"
-mountpoints = "0.1.1"
+mountpoints = "0.2.1"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 dbus = "0.8.4"
@@ -70,6 +74,3 @@ systemd = "0.4.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 libproc = "0.10.0"
-
-[patch.crates-io]
-mountpoints = { path = "../mountpoints-rs" }

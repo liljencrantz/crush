@@ -1,0 +1,13 @@
+[package]
+name = "test_finder"
+version = "0.1.0"
+authors = ["Axel Liljencrantz <liljencranz@gmail.com>"]
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "1.0.98", features = [ "full"] }
+quote = "1.0.3"
+proc-macro2 = "1.0.10"

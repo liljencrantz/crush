@@ -469,7 +469,7 @@ impl Value {
       separator the locale prescribes, so that the number can be copied
       and pasted into the terminal again.
      */
-    pub fn to_pretty_string(&self, format_data: &FormatData, format: &ColumnFormat) -> String {
+    pub fn to_pretty_string(&self, format_data: &FormatData, format: &ColumnFormat, table: bool) -> String {
         match self {
             Value::String(val) =>
                 if has_non_printable(val) {
@@ -479,7 +479,7 @@ impl Value {
                 },
 
             Value::Float(f) => match format {
-                ColumnFormat::None => format!("{:.*}", format_data.float_precision() ,f),
+                ColumnFormat::None => if table {format!("{:.*}", format_data.float_precision() ,f)} else {format!("{}", f)},
                 ColumnFormat::Percentage =>
                     format!("{:.*}%", format_data.percentage_precision(),  f * 100.0),
                 ColumnFormat::Temperature =>
@@ -776,6 +776,10 @@ mod tests {
             )),
             "10y0d0:00:01".to_string()
         );
+    }
+
+    fn format_data() -> FormatData {
+
     }
 
     #[test]

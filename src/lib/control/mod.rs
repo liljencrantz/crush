@@ -14,12 +14,13 @@ use crate::lang::data::table::{ColumnType, Row};
 use os_pipe::PipeReader;
 use crate::lang::state::contexts::CommandContext;
 
+mod cmd;
+mod help;
 mod r#for;
 mod r#if;
 mod r#loop;
 mod timer;
 mod r#while;
-mod cmd;
 
 #[signature(
 r#break,
@@ -142,6 +143,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Sleep::declare(env)?;
             Bg::declare(env)?;
             Fg::declare(env)?;
+            help::HelpSignature::declare(env)?;
             Ok(())
         }),
     )?;

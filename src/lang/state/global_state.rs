@@ -36,6 +36,16 @@ fn country(locale: & str) -> Option<&str> {
 
 impl FormatData {
 
+    pub fn new() -> FormatData {
+        FormatData {
+            locale: (),
+            temperature: None,
+            float_precision: 0,
+            temperature_precision: 0,
+            percentage_precision: 0
+        }
+    }
+
     pub fn grouping(&self) -> Grouping {
         self.locale.grouping()
     }
