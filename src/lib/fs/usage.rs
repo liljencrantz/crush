@@ -12,10 +12,11 @@ use lazy_static::lazy_static;
 use crate::lang::command::OutputType::Known;
 use crate::util::directory_lister::{DirectoryLister, directory_lister};
 use  std::os::unix::fs::MetadataExt;
+use crate::lang::data::table::ColumnFormat;
 
 lazy_static! {
     static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
-        ColumnType::new("size", ValueType::Integer),
+        ColumnType::new_with_format("size", ColumnFormat::ByteUnit, ValueType::Integer),
         ColumnType::new("blocks", ValueType::Integer),
         ColumnType::new("file", ValueType::File),
     ];

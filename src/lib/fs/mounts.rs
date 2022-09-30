@@ -11,8 +11,8 @@ use crate::lang::data::table::ColumnFormat;
 
 lazy_static! {
     static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
-        ColumnType::new("size", ValueType::Integer),
-        ColumnType::new("availble", ValueType::Integer),
+        ColumnType::new_with_format("size", ColumnFormat::ByteUnit, ValueType::Integer),
+        ColumnType::new_with_format("availble", ColumnFormat::ByteUnit, ValueType::Integer),
         ColumnType::new_with_format("usage", ColumnFormat::Percentage, ValueType::Float),
         ColumnType::new("format", ValueType::String),
         ColumnType::new("readonly", ValueType::Any),

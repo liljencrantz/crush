@@ -9,11 +9,13 @@ use signature::signature;
 use std::str::FromStr;
 use crate::lang::errors::error;
 use crate::lang::data::r#struct::Struct;
-use crate::lang::data::table::{ColumnType, Row, ColumnFormat};
 use sys_info;
 use lazy_static::lazy_static;
 use battery::State;
 use chrono::Duration;
+use crate::lang::data::table::ColumnFormat;
+use crate::lang::data::table::ColumnType;
+use crate::lang::data::table::Row;
 
 extern crate uptime_lib;
 
@@ -225,14 +227,15 @@ mod macos {
     use crate::{data::table::Row, lang::value::Value, lang::value::ValueType};
     use chrono::Duration;
     use signature::signature;
+    use crate::lang::data::table::{ColumnFormat};
 
     lazy_static! {
     static ref LIST_OUTPUT_TYPE: Vec<ColumnType> = vec![
         ColumnType::new("pid", ValueType::Integer),
         ColumnType::new("ppid", ValueType::Integer),
         ColumnType::new("user", ValueType::String),
-        ColumnType::new("rss", ValueType::Integer),
-        ColumnType::new("vms", ValueType::Integer),
+        ColumnType::new_with_format("rss", ColumnFormat::ByteUnit, ValueType::Integer),
+        ColumnType::new_with_format("vms", ColumnFormat::ByteUnit, ValueType::Integer),
         ColumnType::new("cpu", ValueType::Duration),
         ColumnType::new("name", ValueType::String),
     ];
@@ -385,6 +388,7 @@ mod linux {
     use psutil::process::{Process, ProcessResult, Status};
     use signature::signature;
     use std::collections::HashMap;
+    use crate::lang::data::table::{ColumnType, Row, ColumnFormat};
 
     lazy_static! {
     static ref LIST_OUTPUT_TYPE: Vec<ColumnType> = vec![
@@ -393,8 +397,8 @@ mod linux {
         ColumnType::new("status", ValueType::String),
         ColumnType::new("user", ValueType::String),
         ColumnType::new("cpu", ValueType::Duration),
-        ColumnType::new("rss", ValueType::Integer),
-        ColumnType::new("vms", ValueType::Integer),
+        ColumnType::new_with_format("rss", ColumnFormat::ByteUnit, ValueType::Integer),
+        ColumnType::new_with_format("vms", ColumnFormat::ByteUnit, ValueType::Integer),
         ColumnType::new("name", ValueType::String),
     ];
     }
