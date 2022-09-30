@@ -48,6 +48,7 @@ use crate::lang::ast::tracked_string::TrackedString;
 use crate::state::global_state::FormatData;
 use crate::state::scope::ScopeReader;
 use crate::util::escape::escape;
+use crate::util::integer_formater::format_integer;
 use crate::util::replace::Replace;
 
 pub enum Value {
@@ -479,56 +480,21 @@ impl Value {
                 },
 
             Value::Float(f) => match format {
-                ColumnFormat::None => if table {format!("{:.*}", format_data.float_precision() ,f)} else {format!("{}", f)},
+                ColumnFormat::ByteUnit |
+                ColumnFormat::None => if table { format!("{:.*}", format_data.float_precision(), f) } else { format!("{}", f) },
                 ColumnFormat::Percentage =>
-                    format!("{:.*}%", format_data.percentage_precision(),  f * 100.0),
+                    format!("{:.*}%", format_data.percentage_precision(), f * 100.0),
                 ColumnFormat::Temperature =>
                     format!("{:.*} {}", format_data.temperature_precision(), format_data.temperature().format(*f), format_data.temperature().unit()),
             }
 
-            Value::Integer(i) => match format_data.grouping() {
-                Grouping::Standard => {
-                    let whole = i.to_string();
-                    let mut rest = whole.as_str();
-                    let mut res = String::new();
-                    if *i < 0 {
-                        res.push('-');
-                        rest = &rest[1..];
-                    }
-                    loop {
-                        if rest.len() <= 3 {
-                            break;
-                        }
-                        let split = ((rest.len() - 1) % 3) + 1;
-                        res.push_str(&rest[0..split]);
-                        res.push('_');
-                        rest = &rest[split..];
-                    }
-                    res.push_str(rest);
-                    res
-                }
-                Grouping::Indian => {
-                    let whole = i.to_string();
-                    let mut rest = whole.as_str();
-                    let mut res = String::new();
-                    if *i < 0 {
-                        res.push('-');
-                        rest = &rest[1..];
-                    }
-                    loop {
-                        if rest.len() <= 3 {
-                            break;
-                        }
-                        let split = 1 + rest.len() % 2;
-                        res.push_str(&rest[0..split]);
-                        res.push('_');
-                        rest = &rest[split..];
-                    }
-                    res.push_str(rest);
-                    res
-                }
-                Grouping::Posix => i.to_string(),
-            }
+            Value::Integer(i) => match format {
+                ColumnFormat::Percentage |
+                ColumnFormat::Temperature |
+                ColumnFormat::None => format_integer(*i, format_data.grouping()),
+                ColumnFormat::ByteUnit => format_data.byte_unit().format(*i, format_data.grouping()),
+            },
+
             _ => self.to_string(),
         }
     }
@@ -776,10 +742,6 @@ mod tests {
             )),
             "10y0d0:00:01".to_string()
         );
-    }
-
-    fn format_data() -> FormatData {
-
     }
 
     #[test]

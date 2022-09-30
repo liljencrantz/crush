@@ -172,6 +172,7 @@ pub enum ColumnFormat {
     None,
     Percentage,
     Temperature,
+    ByteUnit,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]

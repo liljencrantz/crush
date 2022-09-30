@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use rustyline::Editor;
 use crate::interactive::rustyline_helper::RustylineHelper;
 use crate::lang::value::Value;
+use crate::util::byte_unit::ByteUnit;
 use crate::util::temperature::Temperature;
 
 /**
@@ -22,6 +23,7 @@ pub struct FormatData {
     float_precision: u8,
     temperature_precision: u8,
     percentage_precision: u8,
+    byte_unit: ByteUnit,
 }
 
 fn country(locale: & str) -> Option<&str> {
@@ -36,22 +38,16 @@ fn country(locale: & str) -> Option<&str> {
 
 impl FormatData {
 
-    pub fn new() -> FormatData {
-        FormatData {
-            locale: (),
-            temperature: None,
-            float_precision: 0,
-            temperature_precision: 0,
-            percentage_precision: 0
-        }
-    }
-
     pub fn grouping(&self) -> Grouping {
         self.locale.grouping()
     }
 
     pub fn locale(&self) -> &SystemLocale {
         &self.locale
+    }
+
+    pub fn byte_unit(&self) -> ByteUnit {
+        self.byte_unit
     }
 
     pub fn temperature(&self) -> Temperature {
@@ -168,6 +164,7 @@ impl GlobalState {
                     float_precision: 4,
                     temperature_precision: 1,
                     percentage_precision: 2,
+                    byte_unit: ByteUnit::Binary,
                 },
                 exit_status: None,
                 prompt: None,
@@ -247,4 +244,19 @@ impl GlobalState {
         self.editor.lock().unwrap()
     }
 
+    pub fn set_byte_unit(&self, b: ByteUnit) {
+        self.data.lock().unwrap().format_data.byte_unit = b;
+    }
+
+    pub fn set_float_precision(&self, p: u8) {
+        self.data.lock().unwrap().format_data.float_precision = p;
+    }
+
+    pub fn set_percentage_precision(&self, p: u8) {
+        self.data.lock().unwrap().format_data.percentage_precision = p;
+    }
+
+    pub fn set_temperature_precision(&self, p: u8) {
+        self.data.lock().unwrap().format_data.temperature_precision = p;
+    }
 }

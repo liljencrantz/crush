@@ -219,6 +219,60 @@ mod locale {
     }
 }
 
+mod byte_unit {
+    use super::*;
+    use num_format::SystemLocale;
+    use crate::lang::errors::to_crush_error;
+    use crate::lang::completion::parse::{PartialCommandResult, LastArgument};
+    use crate::lang::completion::Completion;
+    use crate::util::byte_unit::ByteUnit;
+    use crate::util::escape::{escape, escape_without_quotes};
+
+    lazy_static! {
+    static ref LIST_OUTPUT_TYPE: Vec<ColumnType> = vec![
+        ColumnType::new("name", ValueType::String),
+    ];
+    }
+
+    #[signature(
+    list,
+    output = Known(ValueType::TableInputStream(LIST_OUTPUT_TYPE.clone())),
+    short = "List all available locales."
+    )]
+    pub struct List {}
+
+    fn list(context: CommandContext) -> CrushResult<()> {
+        let output = context.output.initialize(LIST_OUTPUT_TYPE.clone())?;
+
+        for name in ByteUnit::units() {
+            output.send(Row::new(vec![Value::from(name.to_string())]))?;
+        }
+        Ok(())
+    }
+
+    #[signature(set, output = Known(ValueType::Empty), short = "Set the current byte unit.")]
+    pub struct Set {
+        #[description("the new byte unit.")]
+        byte_unit: String,
+    }
+
+    fn set(context: CommandContext) -> CrushResult<()> {
+
+use std::io::Error;
+        let config: Set = Set::parse(context.arguments, &context.global_state.printer())?;
+        let new = to_crush_error(ByteUnit::try_from(config.byte_unit.as_str()))?;
+        context.global_state.set_byte_unit(new);
+        context.output.send(Value::Empty)
+    }
+
+    #[signature(get, output = Known(ValueType::String), short = "Get the current byte unit.")]
+    pub struct Get {}
+
+    fn get(context: CommandContext) -> CrushResult<()> {
+        context.output.send(Value::from(context.global_state.format_data().byte_unit().to_string()))
+    }
+}
+
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "crush",
@@ -250,6 +304,16 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     locale::List::declare(env)?;
                     locale::Get::declare(env)?;
                     locale::Set::declare(env)?;
+                    Ok(())
+                }),
+            )?;
+            crush.create_namespace(
+                "byte_unit",
+                "Formating style for table columns containing byte size",
+                Box::new(move |env| {
+                    byte_unit::List::declare(env)?;
+                    byte_unit::Get::declare(env)?;
+                    byte_unit::Set::declare(env)?;
                     Ok(())
                 }),
             )?;

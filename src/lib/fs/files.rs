@@ -18,6 +18,7 @@ use crate::util::user_map::{create_user_map, create_group_map};
 use signature::signature;
 use std::os::unix::fs::PermissionsExt;
 use nix::unistd::{Uid, Gid};
+use crate::data::table::ColumnFormat;
 
 enum Column {
     Permissions,
@@ -219,7 +220,7 @@ fn column_data(config: &FilesSignature) -> (Vec<ColumnType>, Vec<Column>) {
         cols.push(Column::User);
     }
     if config.size {
-        types.push(ColumnType::new("size", ValueType::Integer));
+        types.push(ColumnType::new_with_format("size", ColumnFormat::ByteUnit, ValueType::Integer));
         cols.push(Column::Size);
     }
     if config.blocks {

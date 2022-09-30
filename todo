@@ -27,5 +27,3 @@ more file info: size, permissions, user, group, modified, created, type. Move to
 Rename len to size in file:stat?
 Bad error message when trying to mutate constant
 Proper syntax for background jobs
-ColumnFormat::Bytes, configurable to either kibi or kilo
-Nicer looking formatting of floats
