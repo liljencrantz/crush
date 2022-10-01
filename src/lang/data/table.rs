@@ -167,7 +167,7 @@ impl From<Row> for Vec<Value> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ColumnFormat {
     None,
     Percentage,
@@ -190,7 +190,7 @@ impl ColumnType {
             .iter() {
             res.push(ColumnType {
                 name: col.name.clone(),
-                format: ColumnFormat::None,
+                format: col.format,
                 cell_type: col.cell_type.materialize()?,
             });
         }

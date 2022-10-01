@@ -3,14 +3,12 @@ Add saner default prompt
 Add default syntax highlighting config
 Add some way to extract the definition from a closure
 Add command field to printer
-Narrow down location to each command in printer passed in to a command
 Allow commands to specify the type of input they expect
 There should be a scope help message
 Write a command that extracts all help into html
 Tab completion of globs
 Add system tests for binary stream handling
 In closures without a signature, put unnamed variables in the variable '__unnamed__'
-Make integers overflow to arbitrary precision math
 Add control:source command
 Data enums + pattern matching syntax
 Add package command to create a new namespace
@@ -20,8 +18,6 @@ Support __str__ method for string rendering
 Avoid infinite loops when printing structs that reference each other
 __getattr__ support?
 fix dynamic loading deadlocks
-Eager method evaluation in arguments?
-read methods in binary_stream
 tab completions for external commands
 more file info: size, permissions, user, group, modified, created, type. Move to methods or add more to stat?
 Rename len to size in file:stat?

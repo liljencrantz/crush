@@ -237,6 +237,14 @@ message TableType {
 message ColumnType {
   uint64 name = 1;
   uint64 type = 2;
+  ColumnFormat format = 3;
+}
+
+enum ColumnFormat {
+    None = 0;
+    Percentage = 1;
+    Temperature = 2;
+    ByteUnit = 3;
 }
 
 message ListType {
