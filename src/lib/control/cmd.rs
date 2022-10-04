@@ -44,7 +44,7 @@ fn format_value(v: &Value) -> CrushResult<Vec<String>> {
 }
 
 fn cmd_internal(
-    mut context: CommandContext,
+    context: CommandContext,
     file: PathBuf,
     mut arguments: Vec<Argument>)
     -> CrushResult<()> {

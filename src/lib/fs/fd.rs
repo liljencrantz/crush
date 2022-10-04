@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{error, to_crush_error, CrushResult, data_error};
+use crate::lang::errors::{error, to_crush_error, CrushResult};
 use crate::lang::state::contexts::{CommandContext};
 use crate::lang::data::table::ColumnType;
 use crate::{data::table::Row, lang::value::Value, lang::value::ValueType};

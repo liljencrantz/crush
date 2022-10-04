@@ -7,7 +7,6 @@ use std::collections::HashSet;
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::fmt::{Display, Formatter};
-use std::ops::Deref;
 use crate::data::dict::Dict;
 use crate::lang::value::vec_reader::VecReader;
 use crate::util::replace::Replace;

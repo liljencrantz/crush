@@ -3,7 +3,7 @@ use std::process;
 use std::process::Stdio;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{argument_error, CrushResult, error, mandate};
+use crate::lang::errors::{CrushResult, error, mandate};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::data::r#struct::Struct;
@@ -50,7 +50,7 @@ struct Current {}
 fn current(context: CommandContext) -> CrushResult<()> {
     let output = context.output.initialize(CURRENT_OUTPUT_TYPE.clone())?;
 
-    for mut l in logins::list()? {
+    for l in logins::list()? {
         output.send(Row::new(vec![
             Value::from(l.user),
             Value::from(l.tty),

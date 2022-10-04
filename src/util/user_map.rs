@@ -7,14 +7,15 @@ use lazy_static::lazy_static;
 use nix::unistd::{Uid, Gid, getuid};
 use crate::lang::errors::{CrushResult, to_crush_error, error};
 use std::ffi::CStr;
-use std::os::unix::raw::gid_t;
+use libc::gid_t;
 use std::path::PathBuf;
 use libc::{passwd, uid_t};
 use crate::argument_error_legacy;
 
+static USER_MUTEX: Mutex<i32> = Mutex::new(0i32);
+static GROUP_MUTEX: Mutex<i32> = Mutex::new(0i32);
+
 lazy_static! {
-    static ref USER_MUTEX: Mutex<i32> = Mutex::new(0i32);
-    static ref GROUP_MUTEX: Mutex<i32> = Mutex::new(0i32);
     static ref CURRENT_USERNAME: CrushResult<String> = {
         match create_user_map() {
             Ok(mut map) => {

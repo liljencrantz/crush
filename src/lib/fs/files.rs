@@ -3,11 +3,7 @@ use std::fs;
 use std::fs::Metadata;
 use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
-
 use chrono::{DateTime, Local};
-
-use lazy_static::lazy_static;
-
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::errors::{error, to_crush_error, CrushResult};
 use crate::lang::state::contexts::CommandContext;
@@ -217,7 +213,7 @@ fn column_data(config: &FilesSignature) -> (Vec<ColumnType>, Vec<Column>) {
     }
     if config.group {
         types.push(ColumnType::new("group", ValueType::String));
-        cols.push(Column::User);
+        cols.push(Column::Group);
     }
     if config.size {
         types.push(ColumnType::new_with_format("size", ColumnFormat::ByteUnit, ValueType::Integer));

@@ -20,10 +20,8 @@ use std::thread;
 use chrono::Duration;
 use crate::util::hex::to_hex;
 use crate::lang::state::global_state::GlobalState;
-use num_format::Grouping;
 use crate::data::table::ColumnFormat;
 use crate::state::global_state::FormatData;
-use crate::util::temperature::Temperature;
 
 pub fn create_pretty_printer(
     printer: Printer,

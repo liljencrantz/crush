@@ -402,6 +402,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                     );
                 }
 
+                #[allow(unreachable_patterns)]
                 pub fn parse(_arguments: Vec<crate::lang::argument::Argument>, _printer: &crate::lang::printer::Printer) -> crate::lang::errors::CrushResult < # struct_name > {
                     use std::convert::TryFrom;
                     use std::ops::Deref;

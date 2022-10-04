@@ -4,7 +4,7 @@ use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::{CrushResult, error, mandate, to_crush_error};
 use crate::lang::job::Job;
 use crate::lang::state::scope::Scope;
-use crate::lang::value::{Value, ValueDefinition, ValueType};
+use crate::lang::value::{Value, ValueDefinition};
 use crate::util::glob::Glob;
 use regex::Regex;
 use std::ops::Deref;
@@ -419,7 +419,7 @@ impl Node {
 
     pub fn generate_standalone(&self, env: &Scope) -> CrushResult<Option<CommandInvocation>> {
         match self {
-            Node::Assignment(target, style, op, value) => {
+            Node::Assignment(target, _style, op, value) => {
                 Node::generate_standalone_assignment(target, op, value, env)
             }
 

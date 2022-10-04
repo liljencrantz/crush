@@ -9,7 +9,7 @@ use std::env;
 
 use crate::lang::command::OutputType::Known;
 use chrono::Duration;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use crate::lang::data::table::{ColumnType, Row};
 use os_pipe::PipeReader;
 use crate::lang::state::contexts::CommandContext;

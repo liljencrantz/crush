@@ -1,4 +1,3 @@
-use std::borrow::BorrowMut;
 use crate::lang::errors::{argument_error_legacy, mandate};
 use crate::lang::errors::CrushError;
 use crate::lang::errors::CrushResult;
@@ -10,11 +9,10 @@ use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::ColumnVec;
 use crate::lang::data::table::Row;
 use crate::lang::value::Value;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use ordered_map::{Entry, OrderedMap};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use signature::signature;
-use crate::data::list::List;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::state::argument_vector::ArgumentVector;
 
@@ -62,7 +60,7 @@ fn do_join(
 }
 
 fn get_output_type(left_type: &[ColumnType], right_type: &[ColumnType], right_key_idx: usize) -> Result<Vec<ColumnType>, CrushError> {
-    let mut seen =
+    let seen =
         left_type.iter()
             .map(|c| {c.name.clone()})
             .collect::<HashSet<_>>();

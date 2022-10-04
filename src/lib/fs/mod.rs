@@ -1,8 +1,6 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, error, to_crush_error};
+use crate::lang::errors::{CrushResult, to_crush_error};
 use crate::lang::state::contexts::CommandContext;
-use crate::lang::help::Help;
-use crate::lang::printer::Printer;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;

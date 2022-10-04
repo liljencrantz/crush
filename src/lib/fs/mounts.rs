@@ -1,9 +1,9 @@
 use lazy_static::lazy_static;
 use signature::signature;
 use crate::state::contexts::CommandContext;
-use crate::lang::errors::{CrushResult, error, to_crush_error};
+use crate::lang::errors::{CrushResult, to_crush_error};
 use crate::lang::command::OutputType::Known;
-use mountpoints::{mountinfos, mountpaths};
+use mountpoints::mountinfos;
 use crate::data::table::Row;
 use crate::lang::value::{Value, ValueType};
 use crate::lang::data::table::ColumnType;
@@ -30,7 +30,7 @@ short = "List mount points",
 pub struct Mounts {}
 
 fn mounts(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Mounts = Mounts::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let _cfg: Mounts = Mounts::parse(context.remove_arguments(), &context.global_state.printer())?;
     let output = context.output.initialize(OUTPUT_TYPE.clone())?;
 
     for m in to_crush_error(mountinfos())? {
@@ -47,7 +47,7 @@ fn mounts(mut context: CommandContext) -> CrushResult<()> {
                 Value::from(m.name.unwrap_or("".to_string())),
                 Value::from(m.path),
             ]
-        ));
+        ))?;
     }
 
     Ok(())

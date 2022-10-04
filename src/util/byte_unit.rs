@@ -1,5 +1,4 @@
-use std::fmt::{Debug, Display, Formatter, Write};
-use std::ops::Deref;
+use std::fmt::{Debug, Display, Formatter};
 use num_format::Grouping;
 use crate::util::byte_unit::ByteUnit::{Binary, Decimal, Raw};
 use crate::util::integer_formater::format_integer;
