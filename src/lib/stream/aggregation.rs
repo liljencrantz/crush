@@ -278,7 +278,7 @@ fn first(context: CommandContext) -> CrushResult<()> {
             let cfg: First = First::parse(context.arguments, &context.global_state.printer())?;
             let column = parse(input.types(), cfg.field)?;
 
-            if let Ok(mut row) = input.read() {
+            if let Ok(row) = input.read() {
                 context.output.send(row.into_cells().replace(column, Value::Empty).clone())
             } else {
                 error("Empty stream")
@@ -303,7 +303,7 @@ fn last(context: CommandContext) -> CrushResult<()> {
             let column = parse(input.types(), cfg.field)?;
 
             let mut rr = None;
-            while let Ok(mut row) = input.read() {
+            while let Ok(row) = input.read() {
                 rr = Some(row)
             }
             rr

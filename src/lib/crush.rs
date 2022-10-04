@@ -221,12 +221,8 @@ mod locale {
 
 mod byte_unit {
     use super::*;
-    use num_format::SystemLocale;
     use crate::lang::errors::to_crush_error;
-    use crate::lang::completion::parse::{PartialCommandResult, LastArgument};
-    use crate::lang::completion::Completion;
     use crate::util::byte_unit::ByteUnit;
-    use crate::util::escape::{escape, escape_without_quotes};
 
     lazy_static! {
     static ref LIST_OUTPUT_TYPE: Vec<ColumnType> = vec![
@@ -257,8 +253,6 @@ mod byte_unit {
     }
 
     fn set(context: CommandContext) -> CrushResult<()> {
-
-use std::io::Error;
         let config: Set = Set::parse(context.arguments, &context.global_state.printer())?;
         let new = to_crush_error(ByteUnit::try_from(config.byte_unit.as_str()))?;
         context.global_state.set_byte_unit(new);

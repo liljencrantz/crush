@@ -13,11 +13,11 @@ use std::str::FromStr;
 use chrono::{DateTime, Local};
 use regex::Regex;
 
-use crate::lang::errors::{argument_error_legacy, CrushResult, eof_error, mandate};
+use crate::lang::errors::{argument_error_legacy, CrushResult, mandate};
 use crate::lang::data::r#struct::Struct;
 use crate::lang::data::r#struct::StructReader;
 use crate::lang::state::scope::Scope;
-use crate::lang::pipe::{CrushStream, InputStream, OutputStream, Stream, streams};
+use crate::lang::pipe::{InputStream, OutputStream, Stream, streams};
 use crate::lang::data::{
     binary::BinaryReader, dict::Dict, dict::DictReader, list::List,
     table::ColumnType, table::TableReader,
@@ -41,15 +41,13 @@ pub use value_definition::ValueDefinition;
 pub use value_type::ValueType;
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
-use num_format::Grouping;
 use vec_reader::VecReader;
-use crate::data::table::{ColumnFormat, Row};
+use crate::data::table::ColumnFormat;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::state::global_state::FormatData;
 use crate::state::scope::ScopeReader;
 use crate::util::escape::escape;
 use crate::util::integer_formater::format_integer;
-use crate::util::replace::Replace;
 
 pub enum Value {
     Empty,

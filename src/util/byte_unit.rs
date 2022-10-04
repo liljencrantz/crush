@@ -11,14 +11,9 @@ pub enum ByteUnit {
     Raw,
 }
 
+#[derive(Debug)]
 pub struct Error {
     msg: String,
-}
-
-impl Debug for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        todo!()
-    }
 }
 
 impl Display for Error {
@@ -79,4 +74,3 @@ fn format_size(numerator: i128, denominator: i128, multiplier: i128, prefixes: &
         }
     }
 }
-

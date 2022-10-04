@@ -131,7 +131,7 @@ short = "Default nameservers",
 )]
 struct Nameserver {}
 
-fn nameserver(mut context: CommandContext) -> CrushResult<()> {
+fn nameserver(context: CommandContext) -> CrushResult<()> {
     let rc = resolv_conf()?;
     context.output.send(
         List::new(
@@ -147,7 +147,7 @@ short = "DNS search paths",
 )]
 struct Search {}
 
-fn search(mut context: CommandContext) -> CrushResult<()> {
+fn search(context: CommandContext) -> CrushResult<()> {
     let rc = resolv_conf()?;
     context.output.send(
         List::new(
@@ -167,7 +167,7 @@ output = Known(ValueType::Any),
 )]
 struct Domain {}
 
-fn domain(mut context: CommandContext) -> CrushResult<()> {
+fn domain(context: CommandContext) -> CrushResult<()> {
     let rc = resolv_conf()?;
     context.output.send(
         rc.get_domain()

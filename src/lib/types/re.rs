@@ -158,7 +158,7 @@ fn find_string_columns(input: &[ColumnType], mut cfg: Vec<String>) -> Vec<usize>
             .filter(|(_, column)| {
                 yas.contains(&column.name)
             })
-            .map(|(idx, c)| {idx})
+            .map(|(idx, _c)| {idx})
             .collect()
     }
 }

@@ -233,7 +233,7 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
     }
 }
 
-fn collect(mut context: CommandContext) -> CrushResult<()> {
+fn collect(context: CommandContext) -> CrushResult<()> {
     let mut input = mandate(context.input.recv()?.stream()?, "Expected a stream")?;
     let input_type = input.types().to_vec();
     let mut lst = Vec::new();

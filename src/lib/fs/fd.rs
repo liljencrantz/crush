@@ -1,23 +1,11 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{error, to_crush_error, CrushResult, data_error};
 use crate::lang::state::contexts::{CommandContext};
-use crate::lang::state::scope::Scope;
 use crate::lang::data::table::ColumnType;
-use crate::util::user_map::create_user_map;
 use crate::{data::table::Row, lang::value::Value, lang::value::ValueType};
 use lazy_static::lazy_static;
-use nix::unistd::{Uid};
 use psutil::process::{Process, ProcessResult};
 use signature::signature;
-use std::collections::HashMap;
-use termion::input::TermRead;
-use crate::util::hex::from_hex;
-use dns_lookup::lookup_addr;
-use std::collections::hash_map::Entry;
-use crate::lang::pipe::OutputStream;
-use std::net::Ipv6Addr;
-use crate::lang::printer::Printer;
-use std::path::PathBuf;
 
 lazy_static! {
     static ref FILE_OUTPUT_TYPE: Vec<ColumnType> = vec![
@@ -74,6 +62,18 @@ fn file_internal(proc: ProcessResult<Process>) -> ProcessResult<Vec<Row>> {
 
 #[cfg(target_os = "linux")]
 mod procfs {
+    use crate::lang::state::scope::Scope;
+    use crate::util::user_map::create_user_map;
+    use nix::unistd::{Uid};
+    use std::collections::HashMap;
+    use termion::input::TermRead;
+    use crate::util::hex::from_hex;
+    use dns_lookup::lookup_addr;
+    use std::collections::hash_map::Entry;
+    use crate::lang::pipe::OutputStream;
+    use std::net::Ipv6Addr;
+    use crate::lang::printer::Printer;
+    use std::path::PathBuf;
     use super::*;
 
     lazy_static! {

@@ -838,9 +838,9 @@ impl ScopeReader {
                 .dump_local()
                 .unwrap()
                 .drain()
-                .map(|(k, t)| { (k.clone(), s.get_local(&k)) })
-                .filter(|(k, v)| {
-                    if let Ok(Some(v)) = v { true } else { false }
+                .map(|(k, _t)| { (k.clone(), s.get_local(&k)) })
+                .filter(|(_k, v)| {
+                    if let Ok(Some(_v)) = v { true } else { false }
                 })
                 .map(|(k, v)| { (k, v.unwrap().unwrap()) })
                 .collect(),

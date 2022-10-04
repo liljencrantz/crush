@@ -263,7 +263,7 @@ mod macos {
     use libproc::libproc::proc_pid::{listpidinfo, listpids, pidinfo, ListThreads, ProcType};
     use libproc::libproc::task_info::TaskAllInfo;
     use libproc::libproc::thread_info::ThreadInfo;
-    use libc::mach_timebase_info;
+    use mach2::mach_time::mach_timebase_info;
 
     fn procs(context: CommandContext) -> CrushResult<()> {
         let output = context.output.initialize(LIST_OUTPUT_TYPE.clone())?;
@@ -367,10 +367,6 @@ mod macos {
         Ok(())
     }
 
-    fn fds() {
-
-        //   let fds = listpidinfo::<ListFDs>(pid, curr_task.pbsd.pbi_nfiles as usize);
-    }
 }
 
 #[cfg(target_os = "linux")]

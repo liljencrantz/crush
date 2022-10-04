@@ -16,6 +16,7 @@ use crate::lang::command::{Command, CrushCommand};
 use crate::lang::serialization::{deserialize, serialize};
 use crate::lang::state::this::This;
 use crate::{argument_error_legacy, to_crush_error};
+use crate::util::logins;
 
 #[signature(
 me,
@@ -26,6 +27,39 @@ struct Me {}
 
 fn me(context: CommandContext) -> CrushResult<()> {
     context.output.send(get_user_value(&get_current_username()?)?)
+}
+
+lazy_static! {
+    static ref CURRENT_OUTPUT_TYPE: Vec<ColumnType> = vec![
+        ColumnType::new("name", ValueType::String),
+        ColumnType::new("tty", ValueType::String),
+        ColumnType::new("host", ValueType::String),
+        ColumnType::new("time", ValueType::Time),
+        ColumnType::new("pid", ValueType::Integer),
+    ];
+}
+
+#[signature(
+current,
+can_block = true,
+output = Known(ValueType::TableInputStream(CURRENT_OUTPUT_TYPE.clone())),
+short = "Currently logged in users",
+)]
+struct Current {}
+
+fn current(context: CommandContext) -> CrushResult<()> {
+    let output = context.output.initialize(CURRENT_OUTPUT_TYPE.clone())?;
+
+    for mut l in logins::list()? {
+        output.send(Row::new(vec![
+            Value::from(l.user),
+            Value::from(l.tty),
+            Value::Time(l.time),
+            Value::from(l.pid),
+            Value::from(l.host.unwrap_or_else(||{"".to_string()})),
+        ]))?;
+    }
+    Ok(())
 }
 
 lazy_static! {
@@ -207,6 +241,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "User commands",
         Box::new(move |user| {
             Me::declare(user)?;
+            Current::declare(user)?;
             List::declare(user)?;
             GetItem::declare(user)?;
             Ok(())

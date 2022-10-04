@@ -311,7 +311,7 @@ fn value_type(mut context: CommandContext) -> CrushResult<()> {
         .send(Value::Type(context.this.dict()?.value_type()))
 }
 
-fn collect(mut context: CommandContext) -> CrushResult<()> {
+fn collect(context: CommandContext) -> CrushResult<()> {
     let mut input = mandate(context.input.recv()?.stream()?, "Expected a stream")?;
     let input_type = input.types().to_vec();
     let mut res = OrderedMap::new();

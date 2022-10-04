@@ -1,23 +1,12 @@
 use crate::lang::argument::Argument;
-use crate::lang::command::Command;
-use crate::lang::data::dict::Dict;
-use crate::lang::data::list::List;
-use crate::data::r#struct::Struct;
 use crate::lang::state::scope::Scope;
-use crate::lang::data::table::Table;
-use crate::lang::errors::{argument_error_legacy, CrushResult, error};
+use crate::lang::errors::CrushResult;
 use crate::lang::state::global_state::{GlobalState, JobHandle};
 use crate::lang::pipe::{
-    black_hole, empty_channel, InputStream, OutputStream, ValueReceiver, ValueSender,
+    black_hole, empty_channel, ValueReceiver, ValueSender,
 };
-use crate::lang::printer::Printer;
-use crate::lang::value::{Value, ValueType};
-use crate::util::glob::Glob;
-use crate::util::replace::Replace;
-use chrono::{DateTime, Duration, Local};
-use regex::Regex;
+use crate::lang::value::Value;
 use std::mem::swap;
-use std::path::PathBuf;
 use std::thread::ThreadId;
 
 /**

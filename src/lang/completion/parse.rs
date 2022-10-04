@@ -156,15 +156,6 @@ impl Display for ParseResult {
     }
 }
 
-fn simple_path(node: &Node, cursor: usize) -> CrushResult<String> {
-    match node {
-        Node::Identifier(label) => Ok(label.string.clone()),
-        _ => {
-            error("Invalid path")
-        }
-    }
-}
-
 fn find_command_in_expression(exp: &Node, cursor: usize) -> CrushResult<Option<CommandNode>> {
     match exp {
         Node::Assignment(_, _, _, b) => {

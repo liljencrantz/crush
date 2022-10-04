@@ -3,13 +3,12 @@ use std::process::Stdio;
 use std::io::{Read, Write};
 use std::borrow::BorrowMut;
 use std::path::PathBuf;
-use ordered_map::OrderedMap;
 use crate::{argument_error_legacy, CrushResult, to_crush_error};
 use crate::lang::argument::{Argument, SwitchStyle};
 use crate::lang::errors::mandate;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::value::Value;
-use crate::lang::value::Value::BinaryInputStream;
+use crate::lang::value::Value::{Binary, BinaryInputStream};
 use crate::state::contexts::CommandContext;
 use crate::lang::value::ValueType;
 use crate::lang::command::OutputType::Known;
@@ -21,6 +20,7 @@ cmd,
 short = "Execute an external command",
 long = "Globs are expanded. Argument and switch order is preserved.",
 output = Known(ValueType::BinaryInputStream),
+can_block = true,
 )]
 pub struct Cmd {
     command: PathBuf,
@@ -30,6 +30,17 @@ pub struct Cmd {
     #[unnamed()]
     #[description("Arguments to pass in to the command")]
     arguments: Vec<Value>,
+}
+
+fn format_value(v: &Value) -> CrushResult<Vec<String>> {
+    Ok(v.clone()
+        .materialize()?
+        .to_string()
+        .split("\n")
+        .filter(|s| { !s.is_empty() })
+        .map(|s| { s.to_string() })
+        .collect()
+    )
 }
 
 fn cmd_internal(
@@ -51,9 +62,12 @@ fn cmd_internal(
                             cmd.arg(file);
                         }
                     }
-                    _ => { cmd.arg(a.value.to_string()); }
+                    _ => for s in format_value(&a.value)? {
+                        cmd.arg(s);
+                    }
                 }
             }
+
             Some(name) => {
                 let switch =
                     match a.switch_style {
@@ -80,7 +94,9 @@ fn cmd_internal(
                         }
                     }
                     _ => {
-                        cmd.arg(format!("{}={}", switch, a.value.to_string()));
+                        for s in format_value(&a.value)? {
+                            cmd.arg(format!("{}={}", switch, s));
+                        }
                     }
                 }
             }
@@ -112,19 +128,19 @@ fn cmd_internal(
             Value::Empty => {
                 drop(stdin);
             }
-            Value::Binary(v) => {
+            Binary(v) => {
                 context.spawn("cmd:stdin", move || {
                     stdin.write(&v)?;
                     Ok(())
                 })?;
             }
-            Value::BinaryInputStream(mut r) => {
+            BinaryInputStream(mut r) => {
                 context.spawn("cmd:stdin", move || {
                     to_crush_error(std::io::copy(r.as_mut(), stdin.borrow_mut()))?;
                     Ok(())
                 })?;
             }
-            _ => return argument_error_legacy("Invalid inpuy: Expected binary data"),
+            _ => return argument_error_legacy("Invalid input: Expected binary data"),
         }
 
         context.output.send(BinaryInputStream(Box::from(stdout_reader)))?;

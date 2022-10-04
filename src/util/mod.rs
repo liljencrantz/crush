@@ -6,6 +6,7 @@ pub mod glob;
 pub mod hex;
 pub mod identity_arc;
 pub mod integer_formater;
+pub mod logins;
 pub mod regex;
 pub mod replace;
 pub mod time;

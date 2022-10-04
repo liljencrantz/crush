@@ -74,3 +74,4 @@ systemd = "0.4.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 libproc = "0.10.0"
+mach2 = "0.4.1"
