@@ -25,7 +25,7 @@ pub struct File {}
 
 fn file(mut context: CommandContext) -> CrushResult<()> {
     File::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let output = context.output.initialize(FILE_OUTPUT_TYPE.clone())?;
+    let output = context.output.initialize(&FILE_OUTPUT_TYPE)?;
 
     match psutil::process::processes() {
         Ok(procs) => {

@@ -21,7 +21,7 @@ fn tail(context: CommandContext) -> CrushResult<()> {
     let cfg: Tail = Tail::parse(context.arguments, &context.global_state.printer())?;
     match context.input.recv()?.stream()? {
         Some(mut input) => {
-            let output = context.output.initialize(input.types().to_vec())?;
+            let output = context.output.initialize(input.types())?;
             let mut q: VecDeque<Row> = VecDeque::new();
             while let Ok(row) = input.read() {
                 if q.len() >= cfg.rows as usize {

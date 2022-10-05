@@ -28,7 +28,7 @@ fn drop(context: CommandContext) -> CrushResult<()> {
                 .collect::<CrushResult<HashSet<usize>>>()?;
             let inc: Vec<bool> = (0..t.len()).into_iter().map(|idx| drop.contains(&idx)).collect();
             let mut it = inc.iter();
-            let output = context.output.initialize(t.to_vec().drain(..).filter(|_| !*(it.next().unwrap())).collect())?;
+            let output = context.output.initialize(&t.to_vec().drain(..).filter(|_| !*(it.next().unwrap())).collect::<Vec<_>>())?;
             while let Ok(row) = input.read() {
                 let mut row = Vec::from(row);
                 let mut it = inc.iter();

@@ -105,7 +105,7 @@ pub fn join(mut context: CommandContext) -> CrushResult<()> {
             let right_idx = right_stream.types().find(&right_name)?;
 
             let output_type = get_output_type(left_stream.types(), right_stream.types(), right_idx)?;
-            let output = context.output.initialize(output_type)?;
+            let output = context.output.initialize(&output_type)?;
 
             do_join(left_stream, left_idx, right_stream, right_idx, &output, &context.global_state.printer())
         }

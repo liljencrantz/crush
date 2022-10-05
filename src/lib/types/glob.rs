@@ -107,7 +107,7 @@ pub fn filter(mut context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream()? {
         Some(mut input) => {
             let columns = find_string_columns(input.types(), cfg.columns);
-            let output = context.output.initialize(input.types().to_vec())?;
+            let output = context.output.initialize(input.types())?;
             while let Ok(row) = input.read() {
                 let mut found = false;
                 for idx in &columns {

@@ -222,7 +222,8 @@ fn exec(context: CommandContext) -> CrushResult<()> {
 pexec,
 can_block = true,
 short = "Execute a command on a set of hosts",
-long = "    Execute the specified command all specified hosts"
+long = "    Execute the specified command all specified hosts",
+output = Known(ValueType::TableInputStream(PEXEC_OUTPUT_TYPE.clone())),
 )]
 struct Pexec {
     #[description("the command to execute.")]
@@ -247,6 +248,13 @@ struct Pexec {
     #[description("allow missing hosts in the known hosts file. Missing hosts will be automatically added to the file.")]
     #[default(false)]
     allow_not_found: bool,
+}
+
+lazy_static! {
+    static ref PEXEC_OUTPUT_TYPE: Vec<ColumnType> = vec![
+    ColumnType::new("host", ValueType::String),
+    ColumnType::new("result", ValueType::Any),
+    ];
 }
 
 fn pexec(mut context: CommandContext) -> CrushResult<()> {
@@ -303,10 +311,7 @@ fn pexec(mut context: CommandContext) -> CrushResult<()> {
     }
 
     drop(result_send);
-    let output = context.output.initialize(vec![
-        ColumnType::new("host", ValueType::String),
-        ColumnType::new("result", ValueType::Any),
-    ])?;
+    let output = context.output.initialize(&PEXEC_OUTPUT_TYPE)?;
 
     while let Ok((host, val)) = result_recv.recv() {
         output.send(Row::new(vec![Value::from(host), val]))?;
@@ -324,7 +329,7 @@ short = "List all known ssh-agent identities"
 struct Identity {}
 
 fn identity(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(IDENTITY_OUTPUT_TYPE.clone())?;
+    let output = context.output.initialize(&IDENTITY_OUTPUT_TYPE)?;
     let sess = to_crush_error(Session::new())?;
     let mut agent = to_crush_error(sess.agent())?;
 
@@ -360,7 +365,7 @@ mod host {
         let cfg: List = List::parse(context.arguments, &context.global_state.printer())?;
         let output = context
             .output
-            .initialize(super::HOST_LIST_OUTPUT_TYPE.clone())?;
+            .initialize(&super::HOST_LIST_OUTPUT_TYPE)?;
         let session = to_crush_error(Session::new())?;
 
         let mut known_hosts = to_crush_error(session.known_hosts())?;

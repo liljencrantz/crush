@@ -24,7 +24,7 @@ fn enumerate(context: CommandContext) -> CrushResult<()> {
             let mut output_type = vec![
                 ColumnType::new(&cfg.name, ValueType::Integer)];
             output_type.extend(input.types().to_vec());
-            let output = context.output.initialize(output_type)?;
+            let output = context.output.initialize(&output_type)?;
 
             let mut line: i128 = cfg.start_index;
             while let Ok(row) = input.read() {

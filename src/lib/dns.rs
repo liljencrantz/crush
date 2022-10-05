@@ -64,7 +64,7 @@ fn query_internal(cfg: Query, context: CommandContext, client: SyncClient<impl C
     match cfg.record_type.as_ref() {
         "A" => {
             let response = to_crush_error(client.query(&to_crush_error(Name::from_str(&cfg.name))?, DNSClass::IN, RecordType::A))?;
-            let output = context.output.initialize(A_STREAM_OUTPUT_TYPE.clone())?;
+            let output = context.output.initialize(&A_STREAM_OUTPUT_TYPE)?;
 
             for answer in response.answers() {
                 match answer.data() {
@@ -77,7 +77,7 @@ fn query_internal(cfg: Query, context: CommandContext, client: SyncClient<impl C
         }
         "AAAA" => {
             let response = to_crush_error(client.query(&to_crush_error(Name::from_str(&cfg.name))?, DNSClass::IN, RecordType::AAAA))?;
-            let output = context.output.initialize(AAAA_STREAM_OUTPUT_TYPE.clone())?;
+            let output = context.output.initialize(&AAAA_STREAM_OUTPUT_TYPE)?;
 
             for answer in response.answers() {
                 match answer.data() {
@@ -90,7 +90,7 @@ fn query_internal(cfg: Query, context: CommandContext, client: SyncClient<impl C
         }
         "SRV" => {
             let response = to_crush_error(client.query(&to_crush_error(Name::from_str(&cfg.name))?, DNSClass::IN, RecordType::SRV))?;
-            let output = context.output.initialize(SRV_STREAM_OUTPUT_TYPE.clone())?;
+            let output = context.output.initialize(&SRV_STREAM_OUTPUT_TYPE)?;
 
             for answer in response.answers() {
                 match answer.data() {

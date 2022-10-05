@@ -20,7 +20,7 @@ pub fn seq(context: CommandContext) -> CrushResult<()> {
     let mut cfg: Seq = Seq::parse(context.arguments, &context.global_state.printer())?;
     let output = context
         .output
-        .initialize(vec![ColumnType::new("value", ValueType::Integer)])?;
+        .initialize(&[ColumnType::new("value", ValueType::Integer)])?;
 
     if (cfg.to > cfg.from) != (cfg.step > 0) {
         mem::swap(&mut cfg.to, &mut cfg.from);

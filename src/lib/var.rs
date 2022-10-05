@@ -51,7 +51,7 @@ pub fn r#use(context: CommandContext) -> CrushResult<()> {
 }
 
 pub fn env(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(vec![
+    let output = context.output.initialize(&[
         ColumnType::new("name", ValueType::String),
         ColumnType::new("type", ValueType::String),
     ])?;

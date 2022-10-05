@@ -33,7 +33,7 @@ fn send(output: &OutputStream, mut ptr: &str) -> CrushResult<()> {
 pub fn from(context: CommandContext) -> CrushResult<()> {
     let output = context
         .output
-        .initialize(vec![ColumnType::new("word", ValueType::String)])?;
+        .initialize(&[ColumnType::new("word", ValueType::String)])?;
     let cfg: From = From::parse(context.arguments, &context.global_state.printer())?;
 
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);

@@ -48,7 +48,7 @@ short = "Currently logged in users",
 struct Current {}
 
 fn current(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(CURRENT_OUTPUT_TYPE.clone())?;
+    let output = context.output.initialize(&CURRENT_OUTPUT_TYPE)?;
 
     for l in logins::list()? {
         output.send(Row::new(vec![
@@ -186,7 +186,7 @@ short = "List all users on the system",
 struct List {}
 
 fn list(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(LIST_OUTPUT_TYPE.clone())?;
+    let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
     for u in get_all_users()? {
         output.send(Row::new(
             vec![

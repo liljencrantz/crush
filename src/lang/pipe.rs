@@ -33,8 +33,8 @@ impl ValueSender {
         self.send(Value::Empty)
     }
 
-    pub fn initialize(&self, signature: Vec<ColumnType>) -> CrushResult<OutputStream> {
-        let (output, input) = streams(signature);
+    pub fn initialize(&self, signature: &[ColumnType]) -> CrushResult<OutputStream> {
+        let (output, input) = streams(signature.to_vec());
         self.send(Value::TableInputStream(input))?;
         Ok(output)
     }

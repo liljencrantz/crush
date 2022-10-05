@@ -248,7 +248,7 @@ fn files(context: CommandContext) -> CrushResult<()> {
 
     let (types, cols) = column_data(&config);
 
-    let mut output = context.output.initialize(types)?;
+    let mut output = context.output.initialize(&types)?;
 
     let mut dir = if config.directory.had_entries() {
         Vec::from(config.directory)

@@ -87,7 +87,7 @@ fn time_to_duration(tm: Option<battery::units::Time>) -> Duration {
 
 fn battery(context: CommandContext) -> CrushResult<()> {
     let manager = battery::Manager::new()?;
-    let output = context.output.initialize(BATTERY_OUTPUT_TYPE.clone())?;
+    let output = context.output.initialize(&BATTERY_OUTPUT_TYPE)?;
     for battery in to_crush_error(manager.batteries())? {
         let battery = to_crush_error(battery)?;
         output.send(Row::new(vec![
@@ -266,7 +266,7 @@ mod macos {
     use mach2::mach_time::mach_timebase_info;
 
     fn procs(context: CommandContext) -> CrushResult<()> {
-        let output = context.output.initialize(LIST_OUTPUT_TYPE.clone())?;
+        let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
         let users = create_user_map()?;
         let mut info: mach_timebase_info = mach_timebase_info { numer: 0, denom: 0 };
         unsafe {
@@ -314,7 +314,7 @@ mod macos {
     fn threads(context: CommandContext) -> CrushResult<()> {
         let mut base_procs = Vec::new();
 
-        let output = context.output.initialize(THREADS_OUTPUT_TYPE.clone())?;
+        let output = context.output.initialize(&THREADS_OUTPUT_TYPE)?;
         let mut info: mach_timebase_info = mach_timebase_info { numer: 0, denom: 0 };
         unsafe {
             mach_timebase_info(std::ptr::addr_of_mut!(info));

@@ -36,7 +36,7 @@ lazy_static! {
 struct Threads {}
 
 fn threads(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(THREADS_OUTPUT_TYPE.clone())?;
+    let output = context.output.initialize(&THREADS_OUTPUT_TYPE)?;
 
     for t in context.global_state.threads().current()? {
         output.send(Row::new(vec![
@@ -88,7 +88,7 @@ long = "All currently running jobs")]
 struct Jobs {}
 
 fn jobs(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(JOBS_OUTPUT_TYPE.clone())?;
+    let output = context.output.initialize(&JOBS_OUTPUT_TYPE)?;
     for job in context.global_state.jobs() {
         output.send(Row::new(vec![
             Value::from(job.id),
@@ -114,7 +114,7 @@ long = "All previous invocation")]
 struct History {}
 
 fn history(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(HISTORY_OUTPUT_TYPE.clone())?;
+    let output = context.output.initialize(&HISTORY_OUTPUT_TYPE)?;
     let mut res = Vec::new();
     context.global_state.editor().as_mut().map(|editor| {
         let history = editor.history();
@@ -156,7 +156,7 @@ mod locale {
     pub struct List {}
 
     fn list(context: CommandContext) -> CrushResult<()> {
-        let output = context.output.initialize(LIST_OUTPUT_TYPE.clone())?;
+        let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
         let available = to_crush_error(SystemLocale::available_names())?;
 
         for name in available {
@@ -238,7 +238,7 @@ mod byte_unit {
     pub struct List {}
 
     fn list(context: CommandContext) -> CrushResult<()> {
-        let output = context.output.initialize(LIST_OUTPUT_TYPE.clone())?;
+        let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
 
         for name in ByteUnit::units() {
             output.send(Row::new(vec![Value::from(name.to_string())]))?;

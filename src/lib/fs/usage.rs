@@ -73,7 +73,7 @@ fn size(
 
 fn usage(context: CommandContext) -> CrushResult<()> {
     let cfg: Usage = Usage::parse(context.arguments, &context.global_state.printer())?;
-    let output = context.output.initialize(OUTPUT_TYPE.clone())?;
+    let output = context.output.initialize(&OUTPUT_TYPE)?;
     let dirs = if cfg.directory.had_entries() {
         Vec::from(cfg.directory)
     } else {

@@ -1,79 +1,39 @@
-use std::mem::swap;
-use crate::lang::errors::{CrushResult, mandate, to_crush_error};
+use chrono::{Duration, Local};
+use crate::lang::command::Command;
+use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use signature::signature;
-use chrono::{Duration, Local};
-use crate::data::table::ColumnType;
-use crate::lang::command::Command;
-use crate::lang::data::table::Row;
 use crate::lang::pipe::pipe;
-use crate::lang::value::ValueType;
+use crate::lang::value::Value;
 
 #[signature(
 timer,
-short = "Schedule recurring events",
-long = "If a command is specified, timer will run the command at the specified cadence.\n    Otherwise, if timer is used inside a pipeline, it will read one row of input at the specified cadence and write it out again.\n    Otherwise, timer will simply write an empty row at the specified cadence."
+short = "Execute a command and return the execution time.",
+example = "timer {files|sort size}"
 )]
 pub struct Timer {
-    #[description("the interval between heartbeats")]
-    interval: Duration,
-    #[description("the delay for the first heartbeat")]
-    initial_delay: Option<Duration>,
-    #[description("if heart beat delivery starts blocking, catch up by sending more heartbeats afterwards.")]
-    #[default(false)]
-    schedule_at_fixed_rate: bool,
-    #[description("a command to run")]
-    command: Option<Command>,
+    #[description("the command to time.")]
+    it: Command,
 }
 
 fn timer(mut context: CommandContext) -> CrushResult<()> {
-    let mut cfg: Timer = Timer::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: Timer = Timer::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let output = context.output.clone();
+    let mut times = Vec::new();
 
-    if let Some(initial_delay) = &cfg.initial_delay {
-        std::thread::sleep(to_crush_error(initial_delay.to_std())?);
+    for _ in 0..cfg.repeats {
+        let start_time = Local::now();
+        let (sender, reciever) = pipe();
+        cfg.it.eval(context.clone().with_args(vec![], None).with_output(sender));
+        let res = reciever.recv()?;
+        if let (Ok(Some(mut stream))) = res.stream() {
+            while let Ok(_) = stream.read() {}
+        }
+        let end_time = Local::now();
+        times.push(end_time - start_time);
     }
+    let sum: Duration = times.iter().fold(Duration::seconds(0), |a, b| {a+*b});
+    let avg = sum / (times.len() as i32);
 
-    let mut cmd = None;
-    swap(&mut cmd, &mut cfg.command);
-    match cmd {
-        None => {
-            if context.input.is_pipeline() {
-                let mut input = mandate(context.input.recv()?.stream()?, "Expected a stream")?;
-                let output = context.output.initialize(input.types().to_vec())?;
-                schedule(cfg, || { output.send(input.read()?) })
-            } else {
-                let output = context.output.initialize(vec![])?;
-                schedule(cfg, || { output.send(Row::new(vec![])) })
-            }
-        }
-        Some(cmd) => {
-            let output = context.output.initialize(vec![ColumnType::new("value", ValueType::Any)])?;
-            let base_context = context.empty();
-            let env = context.scope.clone();
-            let (sender, receiver) = pipe();
-            schedule(cfg, || {
-                cmd.eval(base_context.clone().with_scope(env.clone()).with_output(sender.clone()))?;
-                output.send(Row::new(vec![receiver.recv()?]))
-            })
-        }
-    }
-}
-
-fn schedule(cfg: Timer, mut f: impl FnMut() -> CrushResult<()>) -> CrushResult<()>{
-    if cfg.schedule_at_fixed_rate {
-        let mut last_time = Local::now();
-        loop {
-            f()?;
-            last_time = last_time + cfg.interval.clone();
-            let next_duration = last_time - Local::now();
-            if next_duration > Duration::seconds(0) {
-                std::thread::sleep(to_crush_error(next_duration.to_std())?);
-            }
-        }
-    } else {
-        loop {
-            f()?;
-            std::thread::sleep(to_crush_error(cfg.interval.to_std())?);
-        }
-    }
+    output.send(Value::Duration(avg))
 }

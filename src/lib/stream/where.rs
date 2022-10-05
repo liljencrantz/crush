@@ -56,7 +56,7 @@ pub fn r#where(mut context: CommandContext) -> CrushResult<()> {
         Some(mut input) => {
             let base_context = context.empty();
 
-            let output = context.output.initialize(input.types().to_vec())?;
+            let output = context.output.initialize(input.types())?;
             while let Ok(row) = input.read() {
                 match evaluate(cfg.condition.clone(), location, &row, input.types(), &base_context) {
                     Ok(val) => {

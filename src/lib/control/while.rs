@@ -32,7 +32,7 @@ pub struct While {
 }
 
 fn r#while(mut context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(OUTPUT_TYPE.clone())?;
+    let output = context.output.initialize(&OUTPUT_TYPE)?;
     let (body_sender, body_receiver) = pipe();
     let cfg: While = While::parse(context.remove_arguments(), &context.global_state.printer())?;
 

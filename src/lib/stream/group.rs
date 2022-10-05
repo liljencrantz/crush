@@ -65,7 +65,7 @@ fn aggregate(
                 for command in &commands {
                     let (input_sender, input_receiver) = pipe();
                     let (output_sender, output_receiver) = pipe();
-                    streams.push(input_sender.initialize(rows.types().to_vec())?);
+                    streams.push(input_sender.initialize(rows.types())?);
 
                     let local_command = command.clone();
                     let local_scope = scope.clone();
@@ -160,7 +160,7 @@ pub fn group(mut context: CommandContext) -> CrushResult<()> {
         output_type.push(ColumnType::new(name, ValueType::Any));
     }
 
-    let output = context.output.initialize(output_type)?;
+    let output = context.output.initialize(&output_type)?;
     let mut groups: HashMap<Vec<Value>, OutputStream> = HashMap::new();
 
     let (task_output, task_input) = unbounded::<(Vec<Value>, InputStream)>();

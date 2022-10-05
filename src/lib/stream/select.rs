@@ -79,7 +79,7 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
         Err(_) => return Ok(()),
     }
 
-    let output = context.output.initialize(output_type)?;
+    let output = context.output.initialize(&output_type)?;
     output.send(Row::new(first_result))?;
 
     while let Ok(row) = input.read() {

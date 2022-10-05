@@ -19,7 +19,7 @@ fn head(context: CommandContext) -> CrushResult<()> {
     let cfg: Head = Head::parse(context.arguments, &context.global_state.printer())?;
     match context.input.recv()?.stream()? {
         Some(mut input) => {
-            let output = context.output.initialize(input.types().to_vec())?;
+            let output = context.output.initialize(input.types())?;
             let mut count = 0;
             while let Ok(row) = input.read() {
                 if count >= cfg.rows {

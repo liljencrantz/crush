@@ -20,6 +20,7 @@ mod r#for;
 mod r#if;
 mod r#loop;
 mod timer;
+mod schedule;
 mod r#while;
 
 #[signature(
@@ -79,7 +80,7 @@ struct Bg {}
 
 fn bg(context: CommandContext) -> CrushResult<()> {
     let output = context.output.initialize(
-        vec![ColumnType::new("value", ValueType::Any)])?;
+        &[ColumnType::new("value", ValueType::Any)])?;
     if let Ok(value) = context.input.recv() {
         output.send(Row::new(vec![value]))?;
     }
@@ -139,6 +140,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             cmd::Cmd::declare(env)?;
             Break::declare(env)?;
             timer::Timer::declare(env)?;
+            schedule::Schedule::declare(env)?;
             Continue::declare(env)?;
             Sleep::declare(env)?;
             Bg::declare(env)?;
