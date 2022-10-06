@@ -491,7 +491,7 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
                     ValueType::Any
                 };
 
-                let dict = Dict::new(key_type, value_type);
+                let dict = Dict::new(key_type, value_type)?;
                 for (key, value) in res {
                     dict.insert(key, value)?;
                 }

@@ -61,7 +61,7 @@ fn file_internal(proc: ProcessResult<Process>) -> ProcessResult<Vec<Row>> {
 }
 
 #[cfg(target_os = "linux")]
-mod procfs {
+pub mod procfs {
     use crate::lang::state::scope::Scope;
     use crate::util::user_map::create_user_map;
     use nix::unistd::{Uid};
@@ -106,7 +106,7 @@ mod procfs {
     fn parse_addr(addr: &str) -> CrushResult<(String, u16)> {
         let parts = addr.split(':').collect::<Vec<_>>();
         if parts.len() != 2 {
-            return data_error("Invalid address");
+            return error("Invalid address");
         }
         let port_bytes = from_hex(parts[1])?;
         let port = (port_bytes[0] as u16) << 8 | port_bytes[1] as u16;
@@ -133,7 +133,7 @@ mod procfs {
                 let ip = to_crush_error(obtuse.parse::<Ipv6Addr>())?;
                 ip.to_string()
             }
-            _ => return data_error(format!("Invalid ip address {}", parts[0])),
+            _ => return error(format!("Invalid ip address {}", parts[0])),
         };
 
         Ok((ip, port))
@@ -187,7 +187,7 @@ mod procfs {
         Network::parse(context.arguments.clone(), &context.global_state.printer())?;
         let users = create_user_map()?;
         let mut hosts = HashMap::new();
-        let output = context.output.initialize(NET_OUTPUT_TYPE.clone())?;
+        let output = context.output.initialize(&NET_OUTPUT_TYPE)?;
 
         let mut pids = HashMap::new();
 
@@ -280,7 +280,7 @@ mod procfs {
 
     fn unix(context: CommandContext) -> CrushResult<()> {
         Unix::parse(context.arguments.clone(), &context.global_state.printer())?;
-        let output = context.output.initialize(UNIX_OUTPUT_TYPE.clone())?;
+        let output = context.output.initialize(&UNIX_OUTPUT_TYPE)?;
 
         let mut pids = HashMap::new();
 
@@ -311,7 +311,7 @@ mod procfs {
             let inode = to_crush_error(parts[6].parse::<u32>())?;
 
             let path = if parts.len() >= 8 {
-                Value::File(PathBuf::from(parts[7]))
+                Value::from(PathBuf::from(parts[7]))
             } else {
                 Value::Empty
             };

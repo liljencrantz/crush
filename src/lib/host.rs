@@ -377,14 +377,14 @@ mod linux {
     use crate::lang::state::contexts::CommandContext;
     use crate::lang::data::table::ColumnType;
     use crate::util::user_map::create_user_map;
-    use crate::{data::table::Row, lang::value::Value, lang::value::ValueType};
+    use crate::{lang::value::Value, lang::value::ValueType};
     use chrono::Duration;
     use nix::unistd::Uid;
     use psutil::process::os::unix::ProcessExt;
     use psutil::process::{Process, ProcessResult, Status};
     use signature::signature;
     use std::collections::HashMap;
-    use crate::lang::data::table::{ColumnType, Row, ColumnFormat};
+    use crate::lang::data::table::{Row, ColumnFormat};
 
     lazy_static! {
     static ref LIST_OUTPUT_TYPE: Vec<ColumnType> = vec![
@@ -429,7 +429,7 @@ mod linux {
 
     fn procs(mut context: CommandContext) -> CrushResult<()> {
         Procs::parse(context.remove_arguments(), &context.global_state.printer())?;
-        let output = context.output.initialize(LIST_OUTPUT_TYPE.clone())?;
+        let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
         let users = create_user_map()?;
 
         match psutil::process::processes() {

@@ -84,7 +84,7 @@ fn journal(mut context: CommandContext) -> CrushResult<()> {
         to_crush_error(journal.match_add(key, value.as_bytes()))?;
     }
 
-    let output = context.output.initialize(JOURNAL_OUTPUT_TYPE.clone())?;
+    let output = context.output.initialize(&JOURNAL_OUTPUT_TYPE)?;
 
     loop {
         match to_crush_error(if cfg.follow { journal.await_next_record(None) } else { journal.next_record() })? {

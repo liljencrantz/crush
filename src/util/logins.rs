@@ -8,7 +8,7 @@ use std::sync::Mutex;
 use std::os::raw::c_short;
 use chrono::{DateTime, Local, TimeZone};
 use libc::{endutxent, getutxent, timeval};
-use UtmpxType::{BootTime, DeadProcess, Empty, InitProcess, LoginProcess, NewTime, OldTime, ShutdownTime, UserProcess};
+use UtmpxType::{BootTime, DeadProcess, Empty, InitProcess, LoginProcess, NewTime, OldTime, UserProcess};
 
 #[derive(Debug)]
 pub struct Error {
@@ -84,7 +84,6 @@ impl ParseStringRecord for [u8] {
 enum UtmpxType {
     Empty,
     BootTime,
-    ShutdownTime,
     OldTime,
     NewTime,
     UserProcess,
@@ -104,7 +103,6 @@ impl TryFrom<c_short> for UtmpxType {
         match value {
             libc::EMPTY => Ok(Empty),
             libc::BOOT_TIME => Ok(BootTime),
-            libc::SHUTDOWN_TIME => Ok(ShutdownTime),
             libc::OLD_TIME => Ok(OldTime),
             libc::NEW_TIME => Ok(NewTime),
             libc::USER_PROCESS => Ok(UserProcess),
