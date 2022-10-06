@@ -51,15 +51,34 @@ pub struct Login {
     pub time: DateTime<Local>,
 }
 
-fn parse_string_record(s: &[i8]) -> LoginResult<String> {
-    let mut res = String::with_capacity(s.len());
-    for c in s {
-        if *c == 0 {
-            break;
+trait ParseStringRecord {
+    fn parse(&self) -> LoginResult<String>;
+}
+
+impl ParseStringRecord for [i8] {
+    fn parse(&self) -> LoginResult<String> {
+        let mut res = String::with_capacity(self.len());
+        for c in self {
+            if *c == 0 {
+                break;
+            }
+            res.push(*c as u8 as char)
         }
-        res.push(unsafe { transmute::<i8, u8>(*c) as char })
+        Ok(res)
     }
-    Ok(res)
+}
+
+impl ParseStringRecord for [u8] {
+    fn parse(&self) -> LoginResult<String> {
+        let mut res = String::with_capacity(self.len());
+        for c in self {
+            if *c == 0 {
+                break;
+            }
+            res.push(*c as char)
+        }
+        Ok(res)
+    }
 }
 
 enum UtmpxType {
@@ -106,12 +125,12 @@ pub fn list() -> LoginResult<Vec<Login>> {
             break;
         }
         let record = unsafe { &*record_ptr };
-        let host = parse_string_record(&record.ut_host)?;
+        let host = record.ut_host.parse()?;
         match UtmpxType::try_from(record.ut_type) {
             Ok(UserProcess) | Ok(InitProcess) | Ok(LoginProcess) =>
                 res.push(Login {
-                    tty: format!("/dev/{}", parse_string_record(&record.ut_line)?),
-                    user: parse_string_record(&record.ut_user)?,
+                    tty: format!("/dev/{}", record.ut_line.parse()?),
+                    user: record.ut_user.parse()?,
                     time: parse_timeval(&record.ut_tv),
                     host: if host.is_empty() { None } else { Some(host) },
                     pid: record.ut_pid as i128,

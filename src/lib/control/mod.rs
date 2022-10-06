@@ -1,4 +1,4 @@
-use crate::lang::errors::{ CrushResult, data_error, mandate, to_crush_error};
+use crate::lang::errors::{CrushResult, data_error, mandate, to_crush_error};
 use crate::lang::state::scope::Scope;
 use crate::lang::{
     data::binary::BinaryReader, data::list::List, value::Value,
@@ -19,6 +19,7 @@ mod help;
 mod r#for;
 mod r#if;
 mod r#loop;
+mod timeit;
 mod timer;
 mod schedule;
 mod r#while;
@@ -139,6 +140,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
             cmd::Cmd::declare(env)?;
             Break::declare(env)?;
+            timeit::TimeIt::declare(env)?;
             timer::Timer::declare(env)?;
             schedule::Schedule::declare(env)?;
             Continue::declare(env)?;

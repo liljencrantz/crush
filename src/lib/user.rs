@@ -76,7 +76,7 @@ lazy_static! {
 lazy_static! {
     pub static ref USER: Struct = {
         let do_cmd = <dyn CrushCommand>::command(
-                sudo,
+                r#do,
                 true,
                 &["global", "user"],
                 "do command",
@@ -95,7 +95,7 @@ lazy_static! {
 }
 
 #[signature(
-sudo,
+r#do,
 can_block = true,
 short = "Execute a lambda as another user.",
 )]
@@ -115,7 +115,7 @@ blocking while the main thread waits for the command to exit. It is easy to do t
 efficiently, but this was the most straight forward implementation and the sudo command should
 never be run in a loop regardless.
  */
-fn sudo(mut context: CommandContext) -> CrushResult<()> {
+fn r#do(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Do = Do::parse(context.remove_arguments(), &context.global_state.printer())?;
     let this = context.this.r#struct()?;
     if let Some(Value::String(username)) = this.get("username") {

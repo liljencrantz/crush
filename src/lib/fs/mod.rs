@@ -54,7 +54,7 @@ fn pwd(context: CommandContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
         "fs",
-        "File system introspection",
+        "File system functionality",
         Box::new(move |fs| {
             files::FilesSignature::declare(fs)?;
             Cd::declare(fs)?;
