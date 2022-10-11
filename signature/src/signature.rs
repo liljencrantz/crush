@@ -173,7 +173,7 @@ fn simple_type_data(
     simple_type: &SimpleSignature,
     name: &Ident,
     default: Option<TokenTree>,
-    is_unnamed_target: bool,
+    _is_unnamed_target: bool,
     allowed_values: Option<Vec<Literal>>,
     span: Span,
 ) -> SignatureResult<TypeData> {
@@ -279,9 +279,9 @@ fn simple_type_data(
 fn number_type_data(
     name: &Ident,
     default: Option<TokenTree>,
-    is_unnamed_target: bool,
-    allowed_values: Option<Vec<Literal>>,
-    span: Span,
+    _is_unnamed_target: bool,
+    _allowed_values: Option<Vec<Literal>>,
+    _span: Span,
 ) -> SignatureResult<TypeData> {
     let name_literal = proc_macro2::Literal::string(&name.to_string());
     Ok(TypeData {
@@ -352,10 +352,10 @@ fn number_type_data(
 
 fn files_type_data(
     name: &Ident,
-    default: Option<TokenTree>,
+    _default: Option<TokenTree>,
     is_unnamed_target: bool,
-    allowed_values: Option<Vec<Literal>>,
-    span: Span,
+    _allowed_values: Option<Vec<Literal>>,
+    _span: Span,
 ) -> SignatureResult<TypeData> {
     let name_literal = proc_macro2::Literal::string(&name.to_string());
     Ok(TypeData {
@@ -382,10 +382,10 @@ fn files_type_data(
 
 fn patterns_type_data(
     name: &Ident,
-    default: Option<TokenTree>,
+    _default: Option<TokenTree>,
     is_unnamed_target: bool,
-    allowed_values: Option<Vec<Literal>>,
-    span: Span,
+    _allowed_values: Option<Vec<Literal>>,
+    _span: Span,
 ) -> SignatureResult<TypeData> {
     let name_literal = proc_macro2::Literal::string(&name.to_string());
     Ok(TypeData {
@@ -422,9 +422,9 @@ fn patterns_type_data(
 fn option_type_data(
     simple_type: &SimpleSignature,
     name: &Ident,
-    default: Option<TokenTree>,
-    is_unnamed_target: bool,
-    allowed_values: Option<Vec<Literal>>,
+    _default: Option<TokenTree>,
+    _is_unnamed_target: bool,
+    _allowed_values: Option<Vec<Literal>>,
     span: Span,
 ) -> SignatureResult<TypeData> {
     let sub_type = simple_type.literal();
@@ -467,8 +467,8 @@ fn option_type_data(
 fn ordered_string_map_type_data(
     simple_type: &SimpleSignature,
     name: &Ident,
-    default: Option<TokenTree>,
-    is_unnamed_target: bool,
+    _default: Option<TokenTree>,
+    _is_unnamed_target: bool,
     allowed_values: Option<Vec<Literal>>,
     span: Span,
 ) -> SignatureResult<TypeData> {
@@ -498,7 +498,7 @@ fn ordered_string_map_type_data(
 fn vec_type_data(
     simple_type: &SimpleSignature,
     name: &Ident,
-    default: Option<TokenTree>,
+    _default: Option<TokenTree>,
     is_unnamed_target: bool,
     allowed_values: Option<Vec<Literal>>,
     span: Span,

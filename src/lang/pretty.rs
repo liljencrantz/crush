@@ -24,12 +24,11 @@ use crate::data::table::ColumnFormat;
 use crate::state::global_state::FormatData;
 
 pub fn create_pretty_printer(
-    printer: Printer,
     global_state: &GlobalState,
 ) -> ValueSender {
     let global_state = global_state.clone();
     let (o, i) = printer_pipe();
-    let printer_clone = printer.clone();
+    let printer_clone = global_state.printer().clone();
     printer_clone.handle_error(to_crush_error(
         thread::Builder::new()
             .name("output-formater".to_string())

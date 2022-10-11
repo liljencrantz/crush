@@ -1,5 +1,6 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
+use crate::lang::command::OutputType::Unknown;
 use crate::lang::command::TypeMap;
 use crate::lang::errors::{argument_error_legacy, CrushResult, to_crush_error};
 use crate::lang::state::contexts::CommandContext;
@@ -24,7 +25,7 @@ lazy_static! {
             full("__add__"),
             add,
             false,
-            "time + delta:duration",
+            "time + duration",
             "Add the specified delta to this time",
             None,
             Known(ValueType::Time),
@@ -34,10 +35,10 @@ lazy_static! {
             full("__sub__"),
             sub,
             false,
-            "time - delta:duration",
-            "Remove the specified delta from this time",
+            "time - duration | time",
+            "Remove the specified duration from this time to produce an earlier time,\n    or calculate the difference between two points in time.",
             None,
-            Known(ValueType::Time),
+            Unknown,
             [],
         );
         Now::declare_method(&mut res, &path);

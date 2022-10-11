@@ -2,7 +2,6 @@
 Read login records from utmp/utmpx database.
  */
 use std::fmt::{Display, Formatter};
-use std::mem::transmute;
 use std::str::Utf8Error;
 use std::sync::Mutex;
 use std::os::raw::c_short;

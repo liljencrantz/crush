@@ -23,4 +23,4 @@ more file info: size, permissions, user, group, modified, created, type. Move to
 Rename len to size in file:stat?
 Proper syntax for background jobs
 Make IFS configurable for cmd command
-timeit command
+Fix ^C and ^Z

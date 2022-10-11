@@ -1,9 +1,7 @@
-use chrono::Local;
 use crate::lang::command::Command;
 use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use signature::signature;
-use crate::lang::pipe::pipe;
 use crate::lang::value::Value;
 use crate::lib::control::timeit::time_run;
 
