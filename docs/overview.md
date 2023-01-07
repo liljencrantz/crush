@@ -91,8 +91,8 @@ http "https://isitchristmas.com/" | member body | bin:to ./isitchristmas.html
 ```
 
 If you don't supply an input file to any of the deserializer commands,
-the command will read from the input, which must be a binary or binary
-stream, e.g. `(http "https://jsonplaceholder.typicode.com/posts/1"):body | json:from`.
+the command will read from the input, which in that case must be of type binary
+or binary stream, e.g. `(http "https://jsonplaceholder.typicode.com/posts/1"):body | json:from`.
 
 If you don't supply an output file to one of the serializer commands,
 the command will serialize the output to a binary stream as the pipeline
@@ -132,14 +132,14 @@ paths (more on that later), so division is done using the `//` operator.
     1.4000000000000001
 
 Comparisons between values are done using `>`, `<`, `<=`, `>=`, `==` and `!=`,
-just like in most languages. All comparisons between values of different types
-are false.
+just like in most languages. All comparisons between values of different types result in an error.
 
     crush# 4 > 5
     false
     crush# 40.0 > 5
-    false
-    
+    Error: Values of type float and integer can't be compared with each other
+    Error: receiving on an empty and disconnected channel
+
 The `and` and `or` operators are used to combine logical expressions:
     
     crush# $false or $true
