@@ -1,6 +1,6 @@
 /**
-    A receiver of values that prints any values sent to it in a human readable format.
-*/
+A receiver of values that prints any values sent to it in a human readable format.
+ */
 
 use crate::lang::data::binary::BinaryReader;
 use crate::lang::errors::to_crush_error;
@@ -24,6 +24,7 @@ use crate::data::table::ColumnFormat;
 use crate::state::global_state::FormatData;
 
 pub fn create_pretty_printer(
+    printer: Printer,
     global_state: &GlobalState,
 ) -> ValueSender {
     let global_state = global_state.clone();
@@ -33,7 +34,7 @@ pub fn create_pretty_printer(
         thread::Builder::new()
             .name("output-formater".to_string())
             .spawn(move || {
-                let mut pp = PrettyPrinter { printer, format_data: global_state.format_data()};
+                let mut pp = PrettyPrinter { printer, format_data: global_state.format_data() };
                 while let Ok(val) = i.recv() {
                     pp.format_data = global_state.format_data();
                     pp.print_value(val, &ColumnFormat::None);
@@ -196,6 +197,9 @@ impl PrettyPrinter {
     }
 
     fn print_header(&self, w: &[usize], types: &[ColumnType], indent: usize) {
+        if types.is_empty() {
+            return;
+        }
         let mut header = " ".repeat(indent * 4);
         let last_idx = types.len() - 1;
         for (idx, val) in types.iter().enumerate() {
@@ -219,6 +223,9 @@ impl PrettyPrinter {
         columns: &[ColumnType],
         col_count: usize,
     ) {
+        if col_count == 0 {
+            return;
+        }
         let cell_len = r.len();
         let mut row = " ".repeat(indent * 4);
         let last_idx = col_count - 1;
@@ -270,14 +277,14 @@ impl PrettyPrinter {
             let mut r_vec = Vec::from(r);
 
             if last_separate {
-                let last = r_vec.remove(r_vec.len()-1);
+                let last = r_vec.remove(r_vec.len() - 1);
                 self.print_row(w, r_vec, indent, &mut rows, &mut outputs, &mut binaries, columns, col_count);
                 match last {
-                    Value::Struct(s) => self.print_struct(s, indent+1),
+                    Value::Struct(s) => self.print_struct(s, indent + 1),
                     _ => panic!("Invalid data"),
                 }
             } else {
-                self.print_row(w, r_vec, indent, &mut rows, &mut outputs, &mut binaries,  columns, col_count);
+                self.print_row(w, r_vec, indent, &mut rows, &mut outputs, &mut binaries, columns, col_count);
             }
 
             for r in rows {
@@ -329,10 +336,10 @@ impl PrettyPrinter {
         if types.len() == 1 && indent == 0 && !has_table {
             self.print_single_column_table(data, types)
         } else {
-            let last_separate = types.len() > 0 && indent == 0 && !has_table && types[types.len()-1].cell_type == ValueType::Struct;
+            let last_separate = types.len() > 0 && indent == 0 && !has_table && types[types.len() - 1].cell_type == ValueType::Struct;
 
             let types = if last_separate {
-                &types[0..types.len()-1]
+                &types[0..types.len() - 1]
             } else {
                 types
             };
@@ -365,7 +372,7 @@ impl PrettyPrinter {
                     line.push_str(&name);
                     line.push(':');
                     self.printer.line(&line);
-                    self.print_struct_value(value, indent+1);
+                    self.print_struct_value(value, indent + 1);
                 }
             }
         }
@@ -378,7 +385,7 @@ impl PrettyPrinter {
             line.push_str(&ss);
             self.printer.line(&line);
         } else {
-                match value {
+            match value {
                 Value::Struct(s) => self.print_struct(s, indent),
                 Value::TableInputStream(mut output) => self.print_stream(&mut output, indent),
                 Value::Table(rows) => self.print_stream(&mut TableReader::new(rows), indent),
@@ -401,7 +408,7 @@ impl PrettyPrinter {
         let mut items_per_column;
         let data = data
             .iter()
-            .map(| s| s.cells()[0].to_pretty_string(&self.format_data, &types[0].format, true))
+            .map(|s| s.cells()[0].to_pretty_string(&self.format_data, &types[0].format, true))
             .collect::<Vec<_>>();
 
         for cols in (2..50).rev() {

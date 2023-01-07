@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use crate::lang::command::CrushCommand;
 use crate::{argument_error_legacy, CrushResult, to_crush_error};
 use crate::lang::state::contexts::CommandContext;
@@ -11,10 +12,22 @@ use std::process;
 use std::process::Stdio;
 use std::io::Read;
 use crossbeam::bounded;
-use crate::lang::errors::mandate;
+use lazy_static::lazy_static;
+use crate::lang::ast::TokenType::Regex;
+use crate::lang::data::list::List;
+use crate::lang::data::table::{Row, Table};
+use crate::lang::errors::{error, mandate};
 use crate::lang::signature::patterns::Patterns;
 use crate::lang::state::this::This;
 use crate::lib::io::json::{json_to_value, value_to_json};
+use crate::lang::value::ValueType;
+use crate::lang::data::table::ColumnType;
+
+lazy_static! {
+    static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
+        ColumnType::new("value", ValueType::Any),
+    ];
+}
 
 #[signature(
 connect,
@@ -136,31 +149,31 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
             if let Some(method) = stripped {
                 s.set(
                     method, Value::Struct(
-                    Struct::new(
-                        vec![
-                            ("host", Value::from(cfg.host.clone())),
-                            ("service", Value::from(service.to_string())),
-                            ("plaintext", Value::Bool(cfg.plaintext)),
-                            ("timeout", Value::Duration(cfg.timeout)),
-                            ("port", Value::Integer(cfg.port)),
-                            ("method", Value::from(line)),
-                            (
-                                "__call__",
-                                Value::Command(<dyn CrushCommand>::command(
-                                    grpc_method_call,
-                                    true,
-                                    &["global", "grpc", "connect", method, "__call__"],
-                                    "",
-                                    "Call gRPC method",
-                                    None,
-                                    Unknown,
-                                    [],
-                                )),
-                            ),
-                        ],
-                        None
-                    )
-                ));
+                        Struct::new(
+                            vec![
+                                ("host", Value::from(cfg.host.clone())),
+                                ("service", Value::from(service.to_string())),
+                                ("plaintext", Value::Bool(cfg.plaintext)),
+                                ("timeout", Value::Duration(cfg.timeout)),
+                                ("port", Value::Integer(cfg.port)),
+                                ("method", Value::from(line)),
+                                (
+                                    "__call__",
+                                    Value::Command(<dyn CrushCommand>::command(
+                                        grpc_method_call,
+                                        true,
+                                        &["global", "grpc", "connect", method, "__call__"],
+                                        "",
+                                        "Call gRPC method",
+                                        None,
+                                        Unknown,
+                                        [],
+                                    )),
+                                ),
+                            ],
+                            None,
+                        )
+                    ));
             }
         }
     }
@@ -195,7 +208,57 @@ fn grpc_method_call(mut context: CommandContext) -> CrushResult<()> {
         let grpc = Grpc::new(Value::Struct(this))?;
         let out =
             grpc.call(&context, data, vec![method.to_string()])?;
-        return context.output.send(json_to_value(&out)?);
+
+        let split = out.split("\n}\n{\n");
+
+        let mut lst = split.into_iter()
+            .map(|i| {
+                let stripped = i.trim();
+                match (stripped.starts_with("{"), stripped.ends_with("}")) {
+                    (true, true) => json_to_value(i),
+                    (true, false) => json_to_value(&format!("{}}}", i)),
+                    (false, false) => json_to_value(&format!("{{{}}}", i)),
+                    (false, true) => json_to_value(&format!("{{{}", i)),
+                }
+            })
+            .collect::<CrushResult<Vec<_>>>()?;
+
+        let types: HashSet<ValueType> = lst.iter().map(|v| v.value_type()).collect();
+        let struct_types: HashSet<Vec<ColumnType>> = lst
+            .iter()
+            .flat_map(|v| match v {
+                Value::Struct(r) => vec![r.local_signature()],
+                _ => vec![],
+            })
+            .collect();
+
+        let res = match types.len() {
+            0 => Value::Empty,
+            1 => {
+                let list_type = types.iter().next().unwrap();
+                match (list_type, struct_types.len()) {
+                    (ValueType::Struct, 1) => {
+                        let row_list = lst
+                            .drain(..)
+                            .map(|v| match v {
+                                Value::Struct(r) => Ok(r.to_row()),
+                                _ => error("Impossible!"),
+                            })
+                            .collect::<CrushResult<Vec<Row>>>()?;
+                        Value::Table(Table::from((
+                            struct_types.iter().next().unwrap().clone(),
+                            row_list,
+                        )))
+                    }
+                    _ => List::new(list_type.clone(), lst).into(),
+                }
+            }
+            _ => List::new(ValueType::Any, lst).into(),
+        };
+
+        context.output.send(res);
+
+        return Ok(());
     }
     return argument_error_legacy("Invalid method field");
 }

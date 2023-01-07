@@ -88,7 +88,7 @@ fn run() -> CrushResult<i32> {
     };
 
     let global_state = GlobalState::new(printer)?;
-    let pretty_printer = create_pretty_printer(&global_state);
+    let pretty_printer = create_pretty_printer(global_state.printer().clone(), &global_state);
 
     declare(&root_scope)?;
 
