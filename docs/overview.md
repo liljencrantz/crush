@@ -36,7 +36,7 @@ a Rush channel. It is not understood by the command as a series of bytes, but as
 a table of rows, and Crush provides you with SQL-like commands to sort, filter,
 aggregate and group rows of data.
 
-    crush# ll | sort size
+    crush# files | sort size
     user size modified                  type      file
     fox    31 2019-10-03 13:43:12 +0200 file      .gitignore
     fox    75 2020-03-07 17:09:15 +0100 file      build.rs
@@ -44,7 +44,7 @@ aggregate and group rows of data.
     fox   711 2019-10-03 14:19:46 +0200 file      crush.iml
     ...
 
-    crush# ll | where {$type == directory}
+    crush# files | where {$type == directory}
     user size  modified                  type      file
     fox  4_096 2019-11-22 21:56:30 +0100 directory target
     fox  4_096 2020-02-22 11:50:12 +0100 directory tests
@@ -107,7 +107,7 @@ crush# list:of "carrot" "carrot" "acorn" | json:to
 ]
 ```
 
-One of the Crush serializers, Pup, is a native file format for Crush. The
+One of the Crush serializers, `pup`, is a native file format for Crush. The
 Pup-format is protobuf-based, and its schema is available
 [here](../src/crush.proto). The advantage of Pup is that all crush types,
 including classes and closures, can be losslessly serialized into this format.
@@ -210,7 +210,7 @@ use by Crush. They can not be assigned to.
 
 ### Named and unnamed arguments
 
-Crush supports named and unnamed arguments. It is often possible to use one,
+Crush commands support named and unnamed arguments. It is often possible to use one,
 the other or a combination of both. The following three invocations are equivalent.
 
     http uri="http://example.com" method=get
@@ -218,22 +218,22 @@ the other or a combination of both. The following three invocations are equivale
     http "http://example.com" method=get
 
 It is quite common to want to pass boolean arguments to commands, which is why
-Crush has a special shorthand syntax for it. Passing in `--foo` is equivalent
-to passing in `foo=$true`.
+Crush has a special shorthand syntax for it. Using one or two leading dashes, like `--foo` or `-foo`
+is equivalent to `foo=$true`.
 
 ### Subshells
 
 Sometimes you want to use the output of one command as an *argument* to another
 command, just like a subshell in e.g. bash. This is different from what a pipe does,
-which is using the output as the *input*, and is done by putting the command within
-parenthesis (`()`), like so:
+which is using the output as the *input*. To do this, use the so called subshell syntax by putting
+the command within parenthesis (`()`), like so:
 
     crush# echo (pwd)
 
 ### Closures
 
 In Crush, braces (`{}`) are used to create a closure. Assigning a closure to a
-variable is how you create a function.
+variable is how you create your own functions.
 
     crush# $print_greeting := {echo "Hello"}
     crush# print_greeting
@@ -246,7 +246,7 @@ of the invocation:
     crush# print_a a="Greetings"
     Greetings
 
-For added type safety, you can declare what parameters a closure expects at the
+For added type safety, you may optionally declare what parameters a closure expects at the
 start of a closure.
 
 The following closure requires the caller to supply the argument `a`, and allows
@@ -266,7 +266,7 @@ the mirrored operation. The following code creates an `lss` function that calls
 the `ls` command and passes on any arguments to it, and pipes the output through
 the `select` command to only show one column from the output.
 
-    lss := {|@args @@kwargs| ls @args @@kwargs | select %file}
+    lss := {|@args @@kwargs| ls @args @@kwargs | select file}
 
 ### Types
 
@@ -298,15 +298,21 @@ When playing around with Crush, the `help` and `dir`commands are useful. The
 former displays a help messages, the latter lists the content of a value.
 
     crush# help $sort
-    sort column:field
-    
+    sort [field=string...] [reverse=bool]
+
         Sort input based on column
-    
-        Example:
-    
+
+        Output: A stream with the same columns as the input
+
+        This command accepts the following arguments:
+
+        * field, the columns to sort on. Optional if input only has one column.
+
+        * reverse (false), reverse the sort order.
+
+        Example
+
         host:procs | sort cpu
-    crush# dir $list
-    [type, truncate, remove, clone, of, __call__, __setitem__, pop, push, empty, len, peek, new, clear]
 
 ### The content of your current working directory lives in your namespace
 
@@ -320,10 +326,6 @@ convenient.
 
     crush# cd .. # This does what you'd think
     crush# cd /  # As does this
-
-The right hand side of the / operator is a label, not a value, so `./foo` refers
-to a file named foo in the current working directory, and is unrelated to the
-contents of any variable named `foo`.
 
 ### Namespaces, members and methods
 
@@ -503,7 +505,8 @@ output a binary stream.
 
 These streams can not be rewound and can only be consumed once. This is
 sometimes vital, as it means that one can work on data sets larger than your
-computers memory, and even infinite data sets.
+computers memory, and even infinite data sets. It also allows for parallel execution
+of different steps in the pipeline, which improves performance.
 
 But sometimes, streaming data sets are inconvenient, especially if one wants to
 use the same dataset twice.
@@ -646,9 +649,10 @@ process, and run the closure remotely. The output of this remote
 execution is then serialized and passed back to
 the calling process.
 
-To execute a command as another user, use the `sudo` command:
+To execute a command as another user, use the `do` method of the
+user you want to do something as:
 
-    sudo {./carrot:chown group="rabbit"}
+    user[root]:do {./carrot:chown group="rabbit"}
 
 To execute a command on a remote host, use the `remote:exec` command:
 
