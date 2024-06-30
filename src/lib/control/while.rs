@@ -10,16 +10,16 @@ use signature::signature;
 use crate::lang::command::OutputType::Known;
 use crate::lang::pipe::pipe;
 
-lazy_static! {
-    static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
+fn while_output_type() -> Vec<ColumnType> {
+    vec![
         ColumnType::new("value", ValueType::Any),
-    ];
+    ]
 }
 
 #[signature(
     r#while,
     condition = true,
-    output = Known(ValueType::TableInputStream(OUTPUT_TYPE.clone())),
+    output = Known(ValueType::TableInputStream(while_output_type())),
     short = "Repeatedly execute the body for as long the condition is met.",
     long = "The loop body is optional. If not specified, the condition is executed until it returns false.\n    This effectively means that the condition becomes the body, and the loop break check comes at\n    the end of the loop.",
     example = "while {./some_file:exists} {echo \"hello\"}"

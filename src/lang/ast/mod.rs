@@ -279,7 +279,7 @@ impl Node {
                 "=" => {
                     return match target.as_ref() {
                         Node::Symbol(t) => Ok(ArgumentDefinition::named_with_style(
-                            t.deref(),
+                            t,
                             *style,
                             propose_name(&t, value.generate_argument(env)?.unnamed_value()?),
                         )),

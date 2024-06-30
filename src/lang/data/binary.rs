@@ -1,5 +1,5 @@
 use crate::lang::errors::{to_crush_error, CrushResult};
-use crossbeam::{bounded, Receiver, Sender};
+use crossbeam::channel::{bounded, Receiver, Sender};
 use std::cmp::min;
 use std::collections::VecDeque;
 use std::fmt::{Debug, Formatter};

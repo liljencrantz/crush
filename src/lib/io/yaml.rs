@@ -76,6 +76,7 @@ fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
             Ok(d.into())
         }
 
+        serde_yaml::Value::Tagged(t) => {from_yaml(&t.value)}
     }
 }
 

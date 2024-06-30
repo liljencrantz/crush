@@ -35,13 +35,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             reverse::Reverse::declare(env)?;
             group::Group::declare(env)?;
             uniq::Uniq::declare(env)?;
-            env.declare_command(
-                "join", join::join, true,
-                "join left:field right:field", "Join two streams together on the specified keys",
-                example!("join pid=(host:procs) pid=(host:threads| group pid tid={list:collect tid})"),
-                Unknown,
-                vec![],
-            )?;
+            join::Join::declare(env)?;
             aggregation::Sum::declare(env)?;
             aggregation::Avg::declare(env)?;
             aggregation::Min::declare(env)?;

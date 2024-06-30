@@ -6,6 +6,7 @@ use crate::lang::threads::ThreadStore;
 use num_format::{Grouping, SystemLocale};
 use std::sync::{Arc, Mutex, MutexGuard};
 use rustyline::Editor;
+use rustyline::history::DefaultHistory;
 use crate::interactive::rustyline_helper::RustylineHelper;
 use crate::lang::value::Value;
 use crate::util::byte_unit::ByteUnit;
@@ -82,7 +83,7 @@ pub struct GlobalState {
     threads: ThreadStore,
     printer: Printer,
     parser: Parser,
-    editor: Arc<Mutex<Option<Editor<RustylineHelper>>>>,
+    editor: Arc<Mutex<Option<Editor<RustylineHelper, DefaultHistory>>>>,
 }
 
 struct StateData {
@@ -235,12 +236,12 @@ impl GlobalState {
         data.jobs.iter().flat_map(|a| a.clone()).collect()
     }
 
-    pub fn set_editor(&self, editor: Option<Editor<RustylineHelper>>) {
+    pub fn set_editor(&self, editor: Option<Editor<RustylineHelper, DefaultHistory>>) {
         let mut data = self.editor.lock().unwrap();
         *data = editor;
     }
 
-    pub fn editor(&self) -> MutexGuard<Option<Editor<RustylineHelper>>> {
+    pub fn editor(&self) -> MutexGuard<Option<Editor<RustylineHelper, DefaultHistory>>> {
         self.editor.lock().unwrap()
     }
 

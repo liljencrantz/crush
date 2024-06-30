@@ -135,7 +135,7 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
     if v.len() == 0 {
         return fail!(location, "No name specified");
     }
-    let (name, identifier) = match v[0].clone() {
+    let (name, identifier) = match v[0] {
         [TokenTree::Ident(i)] => {
             let as_str = i.to_string();
             if as_str.starts_with("r#") {

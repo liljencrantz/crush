@@ -1,6 +1,6 @@
 use crate::lang::command::CrushCommand;
 use crate::lang::data::dict::Dict;
-use crate::lang::errors::{error, to_crush_error, CrushResult};
+use crate::lang::errors::{error, to_crush_error, CrushResult, mandate};
 use crate::lang::data::list::List;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::state::scope::Scope;
@@ -35,7 +35,7 @@ fn serialize_simple(
             Value::Float(f) => element::Element::Float(*f),
             Value::Bool(b) => element::Element::Bool(*b),
             Value::Empty => element::Element::Empty(false),
-            Value::Time(d) => element::Element::Time(d.timestamp_nanos()),
+            Value::Time(d) => element::Element::Time(mandate(d.timestamp_nanos_opt(), "Failed to get current time")?),
             _ => return error("Expected simple value"),
         }),
     };

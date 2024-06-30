@@ -12,7 +12,7 @@ use crate::{
     lang::pipe::{unlimited_streams, OutputStream},
     lang::{data::table::Row, value::Value, value::ValueType},
 };
-use crossbeam::{unbounded, Receiver};
+use crossbeam::channel::{unbounded, Receiver};
 use signature::signature;
 use std::collections::HashMap;
 use crate::lang::state::global_state::GlobalState;

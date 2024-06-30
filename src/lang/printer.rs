@@ -1,7 +1,7 @@
 use crate::lang::errors::{to_crush_error, CrushError, CrushResult, CrushErrorType};
-use crossbeam::bounded;
-use crossbeam::Sender;
-use crossbeam::Receiver;
+use crossbeam::channel::bounded;
+use crossbeam::channel::Sender;
+use crossbeam::channel::Receiver;
 use std::thread;
 use crate::lang::printer::PrinterMessage::*;
 use std::thread::JoinHandle;

@@ -1,23 +1,23 @@
+use std::sync::OnceLock;
 use crate::lang::command::Command;
 use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ValueType;
 use crate::lang::data::table::ColumnType;
-use lazy_static::lazy_static;
 use crate::lang::pipe::pipe;
 use crate::lang::command::OutputType::Known;
 use signature::signature;
 
-lazy_static! {
-    static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
+fn loop_output_type() -> Vec<ColumnType> {
+    vec![
         ColumnType::new("value", ValueType::Any),
-    ];
+    ]
 }
 
 #[signature(
     r#loop,
     condition = true,
-    output = Known(ValueType::TableInputStream(OUTPUT_TYPE.clone())),
+    output = Known(ValueType::TableInputStream(loop_output_type())),
     short = "Repeatedly execute the body until the break command is called.",
     example = "loop {\n        if (i_am_tired) {\n            break\n        }\n        echo \"Working\"\n    }"
 )]

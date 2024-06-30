@@ -1,6 +1,5 @@
 use std::fs::File;
 use std::io::Read;
-use lazy_static::lazy_static;
 use crate::{argument_error_legacy, CrushResult, to_crush_error};
 use crate::lang::state::scope::Scope;
 use crate::lang::state::contexts::CommandContext;
@@ -17,22 +16,25 @@ use trust_dns_client::tcp::TcpClientConnection;
 use crate::data::list::List;
 use crate::lang::errors::data_error;
 
-lazy_static! {
-    static ref A_STREAM_OUTPUT_TYPE: Vec<ColumnType> = vec![
+use std::sync::OnceLock;
+
+fn a_stream_output_type() -> &'static Vec<ColumnType> {
+    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
+    CELL.get_or_init(|| vec![
         ColumnType::new("target", ValueType::String),
         ColumnType::new("ttl", ValueType::Duration),
-    ];
-    static ref AAAA_STREAM_OUTPUT_TYPE: Vec<ColumnType> = vec![
-        ColumnType::new("target", ValueType::String),
-        ColumnType::new("ttl", ValueType::Duration),
-    ];
-    static ref SRV_STREAM_OUTPUT_TYPE: Vec<ColumnType> = vec![
+    ])
+}
+
+fn srv_stream_output_type() -> &'static Vec<ColumnType> {
+    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
+    CELL.get_or_init(|| vec![
         ColumnType::new("target", ValueType::String),
         ColumnType::new("priority", ValueType::Integer),
         ColumnType::new("weight", ValueType::Integer),
         ColumnType::new("port", ValueType::Integer),
         ColumnType::new("ttl", ValueType::Duration),
-    ];
+    ])
 }
 
 #[signature(
@@ -64,7 +66,7 @@ fn query_internal(cfg: Query, context: CommandContext, client: SyncClient<impl C
     match cfg.record_type.as_ref() {
         "A" => {
             let response = to_crush_error(client.query(&to_crush_error(Name::from_str(&cfg.name))?, DNSClass::IN, RecordType::A))?;
-            let output = context.output.initialize(&A_STREAM_OUTPUT_TYPE)?;
+            let output = context.output.initialize(&a_stream_output_type())?;
 
             for answer in response.answers() {
                 match answer.data() {
@@ -77,20 +79,20 @@ fn query_internal(cfg: Query, context: CommandContext, client: SyncClient<impl C
         }
         "AAAA" => {
             let response = to_crush_error(client.query(&to_crush_error(Name::from_str(&cfg.name))?, DNSClass::IN, RecordType::AAAA))?;
-            let output = context.output.initialize(&AAAA_STREAM_OUTPUT_TYPE)?;
+            let output = context.output.initialize(&a_stream_output_type())?;
 
             for answer in response.answers() {
                 match answer.data() {
                     Some(RData::AAAA(ip)) => output.send(Row::new(vec![
                         Value::from(ip.to_string()),
                         Value::Duration(Duration::seconds(answer.ttl() as i64))]))?,
-                    _ => return data_error("Missing A record"),
+                    _ => return data_error("Missing AAAA record"),
                 }
             }
         }
         "SRV" => {
             let response = to_crush_error(client.query(&to_crush_error(Name::from_str(&cfg.name))?, DNSClass::IN, RecordType::SRV))?;
-            let output = context.output.initialize(&SRV_STREAM_OUTPUT_TYPE)?;
+            let output = context.output.initialize(&srv_stream_output_type())?;
 
             for answer in response.answers() {
                 match answer.data() {
@@ -127,7 +129,7 @@ fn query(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
 nameserver,
 can_block = true,
-short = "Default nameservers",
+short = "List of default nameservers",
 )]
 struct Nameserver {}
 
@@ -143,7 +145,7 @@ fn nameserver(context: CommandContext) -> CrushResult<()> {
 #[signature(
 search,
 can_block = true,
-short = "DNS search paths",
+short = "List of DNS search paths",
 )]
 struct Search {}
 

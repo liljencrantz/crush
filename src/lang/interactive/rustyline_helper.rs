@@ -124,6 +124,7 @@ impl Completer for RustylineHelper {
 }
 
 impl Hinter for RustylineHelper {
+    type Hint = String;
     fn hint(&self, line: &str, pos: usize, ctx: &Context<'_>) -> Option<String> {
         self.hinter.hint(line, pos, ctx)
     }
@@ -149,7 +150,7 @@ impl Highlighter for RustylineHelper {
         Owned("\x1b[1m".to_owned() + hint + "\x1b[m")
     }
 
-    fn highlight_char(&self, _line: &str, _pos: usize) -> bool {
+    fn highlight_char(&self, _line: &str, _pos: usize, forced: bool) -> bool {
         true
     }
 }

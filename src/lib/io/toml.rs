@@ -14,6 +14,7 @@ use crate::lang::{data::list::List, data::r#struct::Struct, data::table::Table};
 use signature::signature;
 use std::collections::HashSet;
 use std::convert::{From, TryFrom};
+use crate::lib::types::convert;
 
 fn from_toml(toml_value: &toml::Value) -> CrushResult<Value> {
     match toml_value {
@@ -95,8 +96,11 @@ fn from(context: CommandContext) -> CrushResult<()> {
     let mut v = Vec::new();
 
     to_crush_error(reader.read_to_end(&mut v))?;
-
-    let v = to_crush_error(toml::from_slice(&v))?;
+    let v =
+        match std::str::from_utf8(&v) {
+            Ok(s) => to_crush_error(toml::from_str(s)),
+            Err(e) => Err(CrushError::from(e))
+        }?;
     let crush_value = from_toml(&v)?;
     context.output.send(crush_value)?;
     Ok(())

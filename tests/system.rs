@@ -8,7 +8,7 @@ fn run_system_test(name: &Path) {
         .args(&[name.to_str().unwrap()])
         .output()
         .expect("failed to execute process");
-    let output_name = name.clone().with_extension("crush.output");
+    let output_name = name.with_extension("crush.output");
     let expected_output = fs::read_to_string(output_name.to_str().unwrap())
         .expect(format!("failed to read output file {}", output_name.to_str().unwrap()).as_str());
     assert_eq!(

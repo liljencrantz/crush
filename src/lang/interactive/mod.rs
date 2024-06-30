@@ -4,9 +4,10 @@ use std::fs;
 use rustyline;
 
 use rustyline::error::ReadlineError;
-use rustyline::{Editor, Config, CompletionType, EditMode, OutputStreamType};
+use rustyline::{Editor, Config, CompletionType, EditMode};
 use crate::util::file::home;
 use std::path::PathBuf;
+use rustyline::history::DefaultHistory;
 use crate::lang::state::scope::Scope;
 use crate::lang::pipe::{ValueSender, empty_channel, pipe, black_hole};
 use crate::lang::errors::{CrushResult, to_crush_error, data_error, error};
@@ -88,7 +89,6 @@ pub fn run(
         .history_ignore_space(true)
         .completion_type(CompletionType::List)
         .edit_mode(EditMode::Emacs)
-        .output_stream(OutputStreamType::Stdout)
         .build();
 
     let h = rustyline_helper::RustylineHelper::new(
@@ -96,7 +96,7 @@ pub fn run(
         global_env.clone(),
     );
 
-    let mut rl = Editor::with_config(config);
+    let mut rl = Editor::with_config(config)?;
     rl.set_helper(Some(h));
     global_state.set_editor(Some(rl));
 
@@ -118,10 +118,11 @@ pub fn run(
                 if cmd.is_empty() {
                     global_state.threads().reap(global_state.printer())
                 } else {
+
                     if cmd.trim() == "!!" {
                         cmd = global_state
                             .editor().as_mut()
-                            .map(|rl| { rl.history().last().map(|s| {s.to_string()})})
+                            .map(|rl| { rl.history().into_iter().last().map(|s| {s.to_string()})})
                                 .unwrap_or(None).unwrap_or(cmd);
                     }
                     global_state.editor().as_mut().map(|rl| { rl.add_history_entry(&cmd) });

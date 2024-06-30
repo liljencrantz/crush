@@ -8,7 +8,8 @@ use crate::lang::command::OutputType::Known;
 use nix::unistd::Pid;
 use crate::lang::data::dict::Dict;
 use std::env;
-use lazy_static::lazy_static;
+use std::sync::OnceLock;
+use rustyline::history::{History, SearchDirection};
 use crate::data::list::List;
 use crate::lang::command::Command;
 
@@ -24,19 +25,20 @@ fn make_arguments() -> Value {
     List::new(ValueType::String, env::args().map(|a| { Value::from(a) }).collect::<Vec<_>>()).into()
 }
 
-lazy_static! {
-    static ref THREADS_OUTPUT_TYPE: Vec<ColumnType> = vec![
+fn threads_output_type() -> &'static Vec<ColumnType> {
+    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
+    CELL.get_or_init(|| vec![
         ColumnType::new("jid", ValueType::Any),
         ColumnType::new("created", ValueType::Time),
         ColumnType::new("name", ValueType::String),
-    ];
+    ])
 }
 
-#[signature(threads, output = Known(ValueType::TableInputStream(THREADS_OUTPUT_TYPE.clone())), short = "All the subthreads crush is currently running")]
+#[signature(threads, output = Known(ValueType::TableInputStream(threads_output_type().clone())), short = "All the subthreads crush is currently running")]
 struct Threads {}
 
 fn threads(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(&THREADS_OUTPUT_TYPE)?;
+    let output = context.output.initialize(threads_output_type())?;
 
     for t in context.global_state.threads().current()? {
         output.send(Row::new(vec![
@@ -72,23 +74,24 @@ fn prompt(context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Empty)
 }
 
-lazy_static! {
-    static ref JOBS_OUTPUT_TYPE: Vec<ColumnType> = vec![
+fn job_output_type() -> &'static Vec<ColumnType> {
+    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
+    CELL.get_or_init(|| vec![
         ColumnType::new("id", ValueType::Integer),
         ColumnType::new("description", ValueType::String),
-    ];
+    ])
 }
 
 #[signature(
 jobs,
 can_block = false,
 short = "List running jobs",
-output = Known(ValueType::TableInputStream(JOBS_OUTPUT_TYPE.clone())),
+output = Known(ValueType::TableInputStream(job_output_type().clone())),
 long = "All currently running jobs")]
 struct Jobs {}
 
 fn jobs(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(&JOBS_OUTPUT_TYPE)?;
+    let output = context.output.initialize(job_output_type())?;
     for job in context.global_state.jobs() {
         output.send(Row::new(vec![
             Value::from(job.id),
@@ -98,29 +101,30 @@ fn jobs(context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
-lazy_static! {
-    static ref HISTORY_OUTPUT_TYPE: Vec<ColumnType> = vec![
+fn history_output_type() -> &'static Vec<ColumnType> {
+    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
+    CELL.get_or_init(|| vec![
         ColumnType::new("idx", ValueType::Integer),
         ColumnType::new("command", ValueType::String),
-    ];
+    ])
 }
 
 #[signature(
 history,
 can_block = true,
 short = "List previous commands",
-output = Known(ValueType::TableInputStream(HISTORY_OUTPUT_TYPE.clone())),
+output = Known(ValueType::TableInputStream(history_output_type().clone())),
 long = "All previous invocation")]
-struct History {}
+struct HistoryCommand {}
 
 fn history(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(&HISTORY_OUTPUT_TYPE)?;
+    let output = context.output.initialize(history_output_type())?;
     let mut res = Vec::new();
     context.global_state.editor().as_mut().map(|editor| {
         let history = editor.history();
         for i in 0..(history.len()) {
-            if let Some(c) = history.get(i) {
-                res.push(c.to_string());
+            if let Ok(Some(c)) = history.get(i, SearchDirection::Reverse) {
+                res.push(c.entry.to_string());
             }
         }
     });
@@ -142,21 +146,22 @@ mod locale {
     use crate::lang::completion::Completion;
     use crate::util::escape::{escape, escape_without_quotes};
 
-    lazy_static! {
-    static ref LIST_OUTPUT_TYPE: Vec<ColumnType> = vec![
-        ColumnType::new("name", ValueType::String),
-    ];
+    fn list_output_type() -> &'static Vec<ColumnType> {
+        static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
+        CELL.get_or_init(|| vec![
+            ColumnType::new("name", ValueType::String),
+        ])
     }
 
     #[signature(
     list,
-    output = Known(ValueType::TableInputStream(LIST_OUTPUT_TYPE.clone())),
+    output = Known(ValueType::TableInputStream(list_output_type().clone())),
     short = "List all available locales."
     )]
     pub struct List {}
 
     fn list(context: CommandContext) -> CrushResult<()> {
-        let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
+        let output = context.output.initialize(list_output_type())?;
         let available = to_crush_error(SystemLocale::available_names())?;
 
         for name in available {
@@ -224,21 +229,22 @@ mod byte_unit {
     use crate::lang::errors::to_crush_error;
     use crate::util::byte_unit::ByteUnit;
 
-    lazy_static! {
-    static ref LIST_OUTPUT_TYPE: Vec<ColumnType> = vec![
-        ColumnType::new("name", ValueType::String),
-    ];
+    fn list_output_type() -> &'static Vec<ColumnType> {
+        static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
+        CELL.get_or_init(|| vec![
+            ColumnType::new("name", ValueType::String),
+        ])
     }
 
     #[signature(
     list,
-    output = Known(ValueType::TableInputStream(LIST_OUTPUT_TYPE.clone())),
+    output = Known(ValueType::TableInputStream(list_output_type().clone())),
     short = "List all available locales."
     )]
     pub struct List {}
 
     fn list(context: CommandContext) -> CrushResult<()> {
-        let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
+        let output = context.output.initialize(list_output_type())?;
 
         for name in ByteUnit::units() {
             output.send(Row::new(vec![Value::from(name.to_string())]))?;
@@ -289,7 +295,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Threads::declare(crush)?;
             Exit::declare(crush)?;
             Jobs::declare(crush)?;
-            History::declare(crush)?;
+            HistoryCommand::declare(crush)?;
 
             crush.create_namespace(
                 "locale",

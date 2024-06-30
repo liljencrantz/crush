@@ -7,20 +7,20 @@ use crate::lang::value::ValueType;
 use crate::util::identity_arc::Identity;
 use crate::util::replace::Replace;
 use chrono::Duration;
-use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::fmt::{Formatter, Display};
 use std::ops::Deref;
 
-lazy_static! {
-    pub static ref STRUCT_STREAM_TYPE: Vec<ColumnType> = vec![
+fn struct_stream_type() -> &'static Vec<ColumnType> {
+    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
+    CELL.get_or_init(|| vec![
         ColumnType::new("name", ValueType::String),
         ColumnType::new("value", ValueType::Any),
-    ];
+    ])
 }
 
 #[derive(Clone)]
@@ -303,6 +303,6 @@ impl CrushStream for StructReader {
     }
 
     fn types(&self) -> &[ColumnType] {
-        &STRUCT_STREAM_TYPE
+        struct_stream_type()
     }
 }

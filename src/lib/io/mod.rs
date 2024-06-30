@@ -8,6 +8,7 @@ use crate::lang::value::Value;
 use signature::signature;
 use rustyline::Editor;
 use std::path::PathBuf;
+use rustyline::history::DefaultHistory;
 use crate::data::table::ColumnFormat;
 use crate::lang::interactive::config_dir;
 use crate::lang::state::contexts::CommandContext;
@@ -133,7 +134,7 @@ struct Readline {
 fn readline(context: CommandContext) -> CrushResult<()> {
     let cfg: Readline = Readline::parse(context.arguments, &context.global_state.printer())?;
 
-    let mut rl = Editor::<()>::new();
+    let mut rl = Editor::<(),DefaultHistory>::new()?;
 
     if let Some(history) = &cfg.history {
         let _ = rl.load_history(&history_file(&history)?);

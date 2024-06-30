@@ -32,10 +32,11 @@ and checking how many files are in the current directory:
 
 This all looks familiar. But appearances are deceiving. The `files` command being
 called is a Crush builtin, and the output is not sent over a unix pipe but over
-a Rush channel. It is not understood by the command as a series of bytes, but as
+a Crush channel. It is not understood by the command as a series of bytes, but as
 a table of rows, and Crush provides you with SQL-like commands to sort, filter,
 aggregate and group rows of data.
 
+    # Sort by size
     crush# files | sort size
     user size modified                  type      file
     fox    31 2019-10-03 13:43:12 +0200 file      .gitignore
@@ -44,6 +45,7 @@ aggregate and group rows of data.
     fox   711 2019-10-03 14:19:46 +0200 file      crush.iml
     ...
 
+    # Filter only directories
     crush# files | where {$type == directory}
     user size  modified                  type      file
     fox  4_096 2019-11-22 21:56:30 +0100 directory target
@@ -86,7 +88,7 @@ crush# files | json:to ./listing.json
 # Read the file Cargo.toml as a toml file, and extract the dependencies-field
 crush# toml:from Cargo.toml | member dependencies
 
-# Fetch a web page and write it to a file
+# Fetch a web page and write the body verbatim to a file
 http "https://isitchristmas.com/" | member body | bin:to ./isitchristmas.html
 ```
 
@@ -245,6 +247,8 @@ of the invocation:
     crush# $print_a := {echo $a}
     crush# print_a a="Greetings"
     Greetings
+
+#### Passing arguments to a closure
 
 For added type safety, you may optionally declare what parameters a closure expects at the
 start of a closure.

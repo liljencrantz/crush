@@ -9,7 +9,7 @@ use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
 use crate::lang::value::Value;
 use chrono::Duration;
-use crossbeam::{bounded, unbounded, Receiver, Sender};
+use crossbeam::channel::{bounded, unbounded, Receiver, Sender};
 use lazy_static::lazy_static;
 
 pub type RecvTimeoutError = crossbeam::channel::RecvTimeoutError;

@@ -58,7 +58,7 @@ struct Uptime {}
 fn uptime(context: CommandContext) -> CrushResult<()> {
     match uptime_lib::get() {
         Ok(d) => context.output.send(Value::Duration(Duration::nanoseconds(i64::try_from(d.as_nanos()).unwrap()))),
-        Err(e) => error(e),
+        Err(e) => error(e.to_string()),
     }
 }
 

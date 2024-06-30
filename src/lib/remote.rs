@@ -10,7 +10,7 @@ use crate::lang::data::table::{ColumnType, Row};
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use crate::util::file::home;
-use crossbeam::unbounded;
+use crossbeam::channel::unbounded;
 use lazy_static::lazy_static;
 use signature::signature;
 use ssh2::KnownHostFileKind;
