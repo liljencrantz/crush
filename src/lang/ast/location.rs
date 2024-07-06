@@ -26,3 +26,12 @@ impl Location {
         self.end - self.start
     }
 }
+
+impl From<usize> for Location {
+    fn from(value: usize) -> Self {
+        Location{
+            start: value,
+            end: value+1
+        }
+    }
+}

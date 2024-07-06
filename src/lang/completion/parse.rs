@@ -156,7 +156,7 @@ impl Display for ParseResult {
     }
 }
 
-fn find_command_in_expression(exp: &Node, cursor: usize) -> CrushResult<Option<CommandNode>> {
+fn find_command_in_expression<'input>(exp: &Node, cursor: usize) -> CrushResult<Option<CommandNode>> {
     match exp {
         Node::Assignment(_, _, _, b) => {
             find_command_in_expression(b, cursor)
@@ -457,7 +457,8 @@ mod tests {
     use crate::lang::parser::lalrparser;
 
     fn ast(s: &str) -> CrushResult<JobListNode> {
-        to_crush_error(lalrparser::JobListParser::new().parse(s))
+        panic!()
+//        to_crush_error(lalrparser::JobListParser::new().parse(s))
     }
 
     #[test]

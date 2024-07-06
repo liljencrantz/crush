@@ -13,8 +13,8 @@ impl Serializable<TrackedString> for TrackedString {
         state: &mut DeserializationState,
     ) -> CrushResult<TrackedString> {
         match elements[id].element.as_ref().unwrap() {
-            element::Element::TrackedString(s) => Ok(TrackedString::from(&String::deserialize(s.string as usize, elements, state)?,
-                                                                         Location::new(s.start as usize, s.end as usize))),
+            element::Element::TrackedString(s) => Ok(TrackedString::new(&String::deserialize(s.string as usize, elements, state)?,
+                                                                        Location::new(s.start as usize, s.end as usize))),
             _ => error("Expected string"),
         }
     }

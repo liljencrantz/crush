@@ -8,7 +8,7 @@ use rustyline::error::ReadlineError;
 use rustyline::completion::{Pair, Completer};
 use crate::lang::errors::CrushResult;
 use std::cmp::min;
-use crate::lang::ast::TokenType;
+use crate::lang::ast::Token;
 use crate::lang::value::Value;
 use crate::util::directory_lister::directory_lister;
 use crate::lang::state::scope::Scope;
@@ -49,20 +49,22 @@ impl RustylineHelper {
         Ok((pos, crunched))
     }
 
-    fn get_color(&self, token_type: TokenType) -> Option<String> {
+    fn get_color(&self, token_type: Token) -> Option<String> {
         if let Ok(Value::Dict(highlight)) = self.scope.get_absolute_path(
             vec!["global".to_string(), "crush".to_string(), "highlight".to_string()]) {
-            use TokenType::*;
+            use Token::*;
             let res = match token_type {
-                Flag | StringOrGlob | QuotedString => highlight.get(&Value::from("string_literal")),
-                Regex => highlight.get(&Value::from("string_literal")),
-                FileOrGlob | QuotedFile => highlight.get(&Value::from("file_literal")),
-                Float | Integer => highlight.get(&Value::from("numeric_literal")),
-                Unnamed | Named | Pipe | LogicalOperator | UnaryOperator | TermOperator | FactorOperator |
-                ComparisonOperator | AssignmentOperator | GetItemEnd | GetItemStart | SubEnd |
-                SubStart | JobEnd | JobStart =>
+                Flag(_, _) | StringOrGlob(_, _) | QuotedString(_, _) => highlight.get(&Value::from("string_literal")),
+                Regex(_, _) => highlight.get(&Value::from("string_literal")),
+                FileOrGlob(_, _) | QuotedFile(_, _) => highlight.get(&Value::from("file_literal")),
+                Float(_, _) | Integer(_, _) => highlight.get(&Value::from("numeric_literal")),
+                Unnamed(_) | Named( _) | Pipe( _) | LogicalOperator(_, _) | UnaryOperator(_, _) |
+                ComparisonOperator(_, _) | Equals( _) | Declare( _) | GetItemEnd( _) | GetItemStart( _) | SubEnd( _) |
+                Bang(_) | Plus(_) | Minus(_) | Star(_) | Slash(_) | MemberOperator(_) | ExprModeStart(_) |
+                SubStart( _) | JobEnd( _) | JobStart( _) =>
                     highlight.get(&Value::from("operator")),
-                _ => None,
+                Identifier(_, _) => None,
+                Separator(_, _) => None,
             };
             match res {
                 Some(Value::String(s)) => Some(s.to_string()),
@@ -78,12 +80,15 @@ impl RustylineHelper {
         let mut pos = 0;
         for tok in self.state.parser().tokenize(
             &self.state.parser().close_token(line))? {
-            if tok.start >= line.len() {
+            if pos >= line.len() {
                 break;
             }
-            res.push_str(&line[pos..tok.start]);
+            if tok.location().start >= line.len() {
+                break;
+            }
+            res.push_str(&line[pos..min(tok.location().start, line.len())]);
             let mut do_reset = false;
-            match self.get_color(tok.token_type) {
+            match self.get_color(tok) {
                 Some(color) => {
                     if !color.is_empty() {
                         do_reset = true;
@@ -93,12 +98,12 @@ impl RustylineHelper {
                 None => {}
             }
 
-            res.push_str(&line[tok.start..min(tok.end, line.len())]);
+            res.push_str(&line[tok.location().start..min(tok.location().end, line.len())]);
 
             if do_reset {
                 res.push_str("\x1b[0m");
             }
-            pos = tok.end;
+            pos = tok.location().end;
         }
         Ok(res)
     }
@@ -160,6 +165,8 @@ impl Validator for RustylineHelper {
         &self,
         ctx: &mut validate::ValidationContext,
     ) -> rustyline::Result<validate::ValidationResult> {
+        Ok(ValidationResult::Valid(None))
+/*
         let input = ctx.input().to_string();
         if input.trim() == "!!" {
             return Ok(ValidationResult::Valid(None));
@@ -176,7 +183,7 @@ impl Validator for RustylineHelper {
             }
         } else {
             Ok(ValidationResult::Invalid(None))
-        }
+        }*/
     }
 
     fn validate_while_typing(&self) -> bool {

@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter, Pointer, Write};
 use crate::lang::argument::{ArgumentDefinition, SwitchStyle};
 use crate::lang::command::{Command, Parameter};
 use crate::lang::command_invocation::CommandInvocation;
@@ -19,6 +20,7 @@ use crate::util::user_map::get_current_username;
 pub mod location;
 pub mod tracked_string;
 pub mod parameter_node;
+pub mod lexer;
 
 /**
 A type representing a node in the abstract syntax tree that is the output of parsing a Crush script.
@@ -32,14 +34,29 @@ pub enum Node {
     Regex(TrackedString),
     Symbol(TrackedString),
     String(TrackedString),
-    File(TrackedString, bool),
     // true if filename is quoted
+    File(TrackedString, bool),
     Integer(TrackedString),
     Float(TrackedString),
     GetItem(Box<Node>, Box<Node>),
     GetAttr(Box<Node>, TrackedString),
     Substitution(JobNode),
     Closure(Option<Vec<ParameterNode>>, JobListNode),
+}
+
+impl Node {
+    pub fn to_command(self) -> CommandNode {
+        let l = self.location();
+        match self {
+            Node::Substitution(n) if n.commands.len() == 1 => {
+                n.commands[0].clone()
+            }
+            _ => CommandNode {
+                expressions: vec![self],
+                location: l,
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -49,8 +66,8 @@ pub struct JobListNode {
 }
 
 impl JobListNode {
-    pub fn generate(&self, env: &Scope) -> CrushResult<Vec<Job>> {
-        self.jobs.iter().map(|j| j.generate(env)).collect()
+    pub fn compile(&self, env: &Scope) -> CrushResult<Vec<Job>> {
+        self.jobs.iter().map(|j| j.compile(env)).collect()
     }
 }
 
@@ -78,9 +95,9 @@ fn operator_function(op: &[&str], op_location: Location, l: Box<Node>, r: Box<No
     )
 }
 
-fn operator_method(op: &str, op_location: Location, l: Box<Node>, r: Box<Node>) -> Box<Node> {
+pub fn operator_method(op: &str, op_location: Location, l: Box<Node>, r: Box<Node>) -> Box<Node> {
     let location = op_location.union(l.location()).union(r.location());
-    let cmd = Node::GetAttr(l, TrackedString::from(op, op_location));
+    let cmd = Node::GetAttr(l, TrackedString::new(op, op_location));
     Box::from(
         Node::Substitution(
             JobNode {
@@ -114,9 +131,9 @@ fn unary_operator_function(op: &[&str], op_location: Location, n: Box<Node>) -> 
     )
 }
 
-fn unary_operator_method(op: &str, op_location: Location, n: Box<Node>) -> Box<Node> {
+pub fn unary_operator_method(op: &str, op_location: Location, n: Box<Node>) -> Box<Node> {
     let location = op_location.union(n.location());
-    let cmd = Node::GetAttr(n, TrackedString::from(op, op_location));
+    let cmd = Node::GetAttr(n, TrackedString::new(op, op_location));
     Box::from(
         Node::Substitution(
             JobNode {
@@ -132,7 +149,8 @@ fn unary_operator_method(op: &str, op_location: Location, n: Box<Node>) -> Box<N
     )
 }
 
-pub fn operator(op: TrackedString, l: Box<Node>, r: Box<Node>) -> Box<Node> {
+pub fn operator(iop: impl Into<TrackedString>, l: Box<Node>, r: Box<Node>) -> Box<Node> {
+    let op = iop.into();
     match op.string.as_str() {
         "<" => operator_function(&["global", "comp", "lt"], op.location, l, r),
         "<=" => operator_function(&["global", "comp", "lte"], op.location, l, r),
@@ -158,22 +176,22 @@ pub fn operator(op: TrackedString, l: Box<Node>, r: Box<Node>) -> Box<Node> {
     }
 }
 
-pub fn unary_operator(op: TrackedString, n: Box<Node>) -> Box<Node> {
+pub fn unary_operator(iop: impl Into<TrackedString>, n: Box<Node>) -> Box<Node> {
+    let op = iop.into();
     match op.string.as_str() {
-        "typeof" => unary_operator_function(&["global", "types", "__typeof__"], op.location, n),
-        "neg" => unary_operator_method("__neg__", op.location, n),
-        "not" => unary_operator_function(&["global", "comp", "__not__"], op.location, n),
-
+        "-" => unary_operator_method("__neg__", op.location, n),
+        "@" => Box::from(Node::Unary(op, n)),
+        "@@" => Box::from(Node::Unary(op, n)),
         _ => panic!("Unknown operator {}", &op.string),
     }
 }
 
 impl JobNode {
-    pub fn generate(&self, env: &Scope) -> CrushResult<Job> {
+    pub fn compile(&self, env: &Scope) -> CrushResult<Job> {
         Ok(Job::new(
             self.commands
                 .iter()
-                .map(|c| c.generate(env))
+                .map(|c| c.compile(env))
                 .collect::<CrushResult<Vec<CommandInvocation>>>()?,
             self.location,
         ))
@@ -187,21 +205,13 @@ pub struct CommandNode {
 }
 
 impl CommandNode {
-    pub fn generate(&self, env: &Scope) -> CrushResult<CommandInvocation> {
-        if let Some(c) = self.expressions[0].generate_standalone(env)? {
-            if self.expressions.len() == 1 {
-                Ok(c)
-            } else {
-                error("Stray arguments")
-            }
-        } else {
-            let cmd = self.expressions[0].generate_command(env)?;
-            let arguments = self.expressions[1..]
-                .iter()
-                .map(|e| e.generate_argument(env))
-                .collect::<CrushResult<Vec<ArgumentDefinition>>>()?;
-            Ok(CommandInvocation::new(cmd.unnamed_value()?, arguments))
-        }
+    pub fn compile(&self, env: &Scope) -> CrushResult<CommandInvocation> {
+        let cmd = self.expressions[0].compile_command(env)?;
+        let arguments = self.expressions[1..]
+            .iter()
+            .map(|e| e.compile_argument(env))
+            .collect::<CrushResult<Vec<ArgumentDefinition>>>()?;
+        Ok(CommandInvocation::new(cmd.unnamed_value()?, arguments))
     }
 }
 
@@ -246,12 +256,12 @@ impl Node {
         }
     }
 
-    pub fn generate_command(&self, env: &Scope) -> CrushResult<ArgumentDefinition> {
-        self.generate(env, true)
+    pub fn compile_command(&self, env: &Scope) -> CrushResult<ArgumentDefinition> {
+        self.compile(env, true)
     }
 
-    pub fn generate_argument(&self, env: &Scope) -> CrushResult<ArgumentDefinition> {
-        self.generate(env, false)
+    pub fn compile_argument(&self, env: &Scope) -> CrushResult<ArgumentDefinition> {
+        self.compile(env, false)
     }
 
     pub fn type_name(&self) -> &str {
@@ -273,7 +283,7 @@ impl Node {
         }
     }
 
-    pub fn generate(&self, env: &Scope, is_command: bool) -> CrushResult<ArgumentDefinition> {
+    pub fn compile(&self, env: &Scope, is_command: bool) -> CrushResult<ArgumentDefinition> {
         Ok(ArgumentDefinition::unnamed(match self {
             Node::Assignment(target, style, op, value) => match op.deref() {
                 "=" => {
@@ -281,7 +291,7 @@ impl Node {
                         Node::Symbol(t) => Ok(ArgumentDefinition::named_with_style(
                             t,
                             *style,
-                            propose_name(&t, value.generate_argument(env)?.unnamed_value()?),
+                            propose_name(&t, value.compile_argument(env)?.unnamed_value()?),
                         )),
                         _ => error(format!("Invalid left side in named argument. Expected a symbol, got a {}", target.type_name())),
                     };
@@ -291,7 +301,7 @@ impl Node {
 
             Node::GetItem(a, o) => ValueDefinition::JobDefinition(
                 Job::new(vec![self
-                    .generate_standalone(env)?
+                    .compile_as_command(env)?
                     .unwrap()],
                          a.location().union(o.location()),
                 )),
@@ -299,12 +309,12 @@ impl Node {
             Node::Unary(op, r) => match op.string.as_str() {
                 "@" => {
                     return Ok(ArgumentDefinition::list(
-                        r.generate_argument(env)?.unnamed_value()?,
+                        r.compile_argument(env)?.unnamed_value()?,
                     ));
                 }
                 "@@" => {
                     return Ok(ArgumentDefinition::dict(
-                        r.generate_argument(env)?.unnamed_value()?,
+                        r.compile_argument(env)?.unnamed_value()?,
                     ));
                 }
                 _ => return error("Unknown operator"),
@@ -330,7 +340,7 @@ impl Node {
                     )?),
                     s.location),
             Node::GetAttr(node, identifier) =>
-                ValueDefinition::GetAttr(Box::new(node.generate(env, is_command)?.unnamed_value()?), identifier.clone()),
+                ValueDefinition::GetAttr(Box::new(node.compile(env, is_command)?.unnamed_value()?), identifier.clone()),
 
             Node::Symbol(f) =>
                 if is_command {
@@ -338,7 +348,7 @@ impl Node {
                 } else {
                     ValueDefinition::Value(Value::from(f), f.location)
                 },
-            Node::Substitution(s) => ValueDefinition::JobDefinition(s.generate(env)?),
+            Node::Substitution(s) => ValueDefinition::JobDefinition(s.compile(env)?),
             Node::Closure(s, c) => {
                 let param = s.as_ref().map(|v| {
                     v.iter()
@@ -350,7 +360,7 @@ impl Node {
                     Some(Ok(p)) => Some(p),
                     Some(Err(e)) => return Err(e),
                 };
-                ValueDefinition::ClosureDefinition(None, p, c.generate(env)?, c.location)
+                ValueDefinition::ClosureDefinition(None, p, c.compile(env)?, c.location)
             }
             Node::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g.string)), g.location),
             Node::File(s, quoted) => ValueDefinition::Value(
@@ -362,7 +372,7 @@ impl Node {
         }))
     }
 
-    fn generate_standalone_assignment(
+    fn compile_standalone_assignment(
         target: &Box<Node>,
         op: &String,
         value: &Node,
@@ -375,26 +385,26 @@ impl Node {
                     t.location,
                     vec![ArgumentDefinition::named(
                         t,
-                        propose_name(&t, value.generate_argument(env)?.unnamed_value()?),
+                        propose_name(&t, value.compile_argument(env)?.unnamed_value()?),
                     )],
                 ),
 
                 Node::GetItem(container, key) => container.method_invocation(
-                    &TrackedString::from("__setitem__", key.location()),
+                    &TrackedString::new("__setitem__", key.location()),
                     vec![
-                        ArgumentDefinition::unnamed(key.generate_argument(env)?.unnamed_value()?),
-                        ArgumentDefinition::unnamed(value.generate_argument(env)?.unnamed_value()?),
+                        ArgumentDefinition::unnamed(key.compile_argument(env)?.unnamed_value()?),
+                        ArgumentDefinition::unnamed(value.compile_argument(env)?.unnamed_value()?),
                     ],
                     env,
                     true,
                 ),
 
                 Node::GetAttr(container, attr) => container.method_invocation(
-                    &TrackedString::from("__setattr__", attr.location),
+                    &TrackedString::new("__setattr__", attr.location),
                     vec![
                         ArgumentDefinition::unnamed(ValueDefinition::Value(Value::from(attr),
                                                                            attr.location)),
-                        ArgumentDefinition::unnamed(value.generate_argument(env)?.unnamed_value()?),
+                        ArgumentDefinition::unnamed(value.compile_argument(env)?.unnamed_value()?),
                     ],
                     env,
                     true,
@@ -408,7 +418,7 @@ impl Node {
                     t.location,
                     vec![ArgumentDefinition::named(
                         t,
-                        propose_name(&t, value.generate_argument(env)?.unnamed_value()?),
+                        propose_name(&t, value.compile_argument(env)?.unnamed_value()?),
                     )],
                 ),
                 _ => error("Invalid left side in declaration"),
@@ -417,14 +427,14 @@ impl Node {
         }
     }
 
-    pub fn generate_standalone(&self, env: &Scope) -> CrushResult<Option<CommandInvocation>> {
+    pub fn compile_as_command(&self, env: &Scope) -> CrushResult<Option<CommandInvocation>> {
         match self {
             Node::Assignment(target, _style, op, value) => {
-                Node::generate_standalone_assignment(target, op, value, env)
+                Node::compile_standalone_assignment(target, op, value, env)
             }
 
             Node::GetItem(val, key) => {
-                val.method_invocation(&TrackedString::from("__getitem__", key.location()), vec![key.generate_argument(env)?], env, true)
+                val.method_invocation(&TrackedString::new("__getitem__", key.location()), vec![key.compile_argument(env)?], env, true)
             }
 
             Node::Unary(op, _) => match op.string.as_ref() {
@@ -466,16 +476,17 @@ impl Node {
     ) -> CrushResult<Option<CommandInvocation>> {
         Ok(Some(CommandInvocation::new(
             ValueDefinition::GetAttr(
-                Box::from(self.generate(env, as_command)?.unnamed_value()?),
+                Box::from(self.compile(env, as_command)?.unnamed_value()?),
                 name.clone(),
             ),
             arguments,
         )))
     }
 
-    pub fn parse_symbol_or_glob(s: &TrackedString) -> Box<Node> {
+    pub fn parse_symbol_or_glob(is: impl Into<TrackedString>) -> Box<Node> {
+        let s = is.into();
         let path = expand_user(s.string.clone()).unwrap_or_else(|_| { s.string.clone() });
-        let ts = TrackedString::from(&path, s.location);
+        let ts = TrackedString::new(&path, s.location);
         if path.contains('%') || path.contains('?') {
             Box::from(Node::Glob(ts))
         } else if s.string.contains('/') || s.string.contains('.') {
@@ -485,25 +496,53 @@ impl Node {
         }
     }
 
-    pub fn parse_identifier(s: &TrackedString) -> Box<Node> {
-        Box::from(Node::Identifier(TrackedString::from(&s.string[1..], s.location)))
+    pub fn identifier(is: impl Into<TrackedString>) -> Box<Node> {
+        let s = is.into();
+        if (s.string.starts_with("$")) {
+            Box::from(Node::Identifier(s.slice_to_end(1)))
+        } else {
+            Box::from(Node::Identifier(s))
+        }
     }
 
-    pub fn parse_file_or_glob(s: &TrackedString) -> Box<Node> {
+    pub fn parse_file_or_glob(is: impl Into<TrackedString>) -> Box<Node> {
+        let s = is.into();
         let path = expand_user(s.string.clone()).unwrap_or_else(|_| { s.string.clone() });
-        let ts = TrackedString::from(&path, s.location);
+        let ts = TrackedString::new(&path, s.location);
         if ts.string.contains('%') || ts.string.contains('?') {
             Box::from(Node::Glob(ts.clone()))
         } else {
             Box::from(Node::File(ts.clone(), false))
         }
     }
+
+    pub fn file(is: impl Into<TrackedString>, quoted: bool) -> Box<Node> {
+        Box::from(Node::File(is.into(), quoted))
+    }
+
+    pub fn string(is: impl Into<TrackedString>) -> Box<Node> {
+        Box::from(Node::String(is.into()))
+    }
+
+    pub fn integer(is: impl Into<TrackedString>) -> Box<Node> {
+        Box::from(Node::Integer(is.into()))
+    }
+
+    pub fn float(is: impl Into<TrackedString>) -> Box<Node> {
+        Box::from(Node::Float(is.into()))
+    }
+
+    pub fn regex(is: impl Into<TrackedString>) -> Box<Node> {
+        let ts = is.into();
+        let s = ts.string;
+        Box::from(Node::Regex(TrackedString::new(&s[3..s.len() - 1], ts.location)))
+    }
 }
 
 fn attr(parts: &[&str], location: Location) -> Node {
-    let mut res = Node::Identifier(TrackedString::from(parts[0], location));
+    let mut res = Node::Identifier(TrackedString::new(parts[0], location));
     for part in &parts[1..] {
-        res = Node::GetAttr(Box::from(res), TrackedString::from(part, location));
+        res = Node::GetAttr(Box::from(res), TrackedString::new(part, location));
     }
     res
 }
@@ -517,7 +556,7 @@ fn expand_user(s: String) -> CrushResult<String> {
         Ok(s)
     } else {
         let parts: Vec<&str> = s[1..].splitn(2, '/').collect();
-        let home = if parts[0].len() > 0 {home_as_string(parts[0])} else {home_as_string(&get_current_username()?)};
+        let home = if parts[0].len() > 0 { home_as_string(parts[0]) } else { home_as_string(&get_current_username()?) };
         if parts.len() == 1 {
             home
         } else {
@@ -526,67 +565,200 @@ fn expand_user(s: String) -> CrushResult<String> {
     }
 }
 
-pub struct TokenListNode {
-    pub tokens: Vec<TokenNode>,
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum Token<'input> {
+    LogicalOperator(&'input str, Location),
+    UnaryOperator(&'input str, Location),
+    ComparisonOperator(&'input str, Location),
+    Bang(Location),
+    Plus(Location),
+    Minus(Location),
+    Star(Location),
+    Slash(Location),
+    QuotedString(&'input str, Location),
+    StringOrGlob(&'input str, Location),
+    Identifier(&'input str, Location),
+    Flag(&'input str, Location),
+    QuotedFile(&'input str, Location),
+    FileOrGlob(&'input str, Location),
+    Regex(&'input str, Location),
+    Integer(&'input str, Location),
+    Float(&'input str, Location),
+    MemberOperator(Location),
+    Equals(Location),
+    Declare(Location),
+    Separator(&'input str, Location),
+    SubStart(Location),
+    SubEnd(Location),
+    JobStart(Location),
+    JobEnd(Location),
+    GetItemStart(Location),
+    GetItemEnd(Location),
+    Pipe(Location),
+    Unnamed(Location),
+    Named(Location),
+    ExprModeStart(Location),
 }
 
-impl TokenListNode {
-    pub fn new() -> TokenListNode {
-        TokenListNode {
-            tokens: Vec::new(),
+impl Token<'_> {
+    pub fn location(&self) -> Location {
+        match self {
+            Token::LogicalOperator(_, l) |
+            Token::UnaryOperator(_, l) |
+            Token::ComparisonOperator(_, l) |
+            Token::QuotedString(_, l) |
+            Token::StringOrGlob(_, l) |
+            Token::Identifier(_, l) |
+            Token::Flag(_, l) |
+            Token::QuotedFile(_, l) |
+            Token::FileOrGlob(_, l) |
+            Token::Regex(_, l) |
+            Token::Integer(_, l) |
+            Token::Float(_, l) |
+            Token::MemberOperator(l) |
+            Token::Equals(l) |
+            Token::Declare(l) |
+            Token::Separator(_, l) |
+            Token::SubStart(l) |
+            Token::SubEnd(l) |
+            Token::JobStart(l) |
+            Token::JobEnd(l) |
+            Token::GetItemStart(l) |
+            Token::GetItemEnd(l) |
+            Token::Pipe(l) |
+            Token::Unnamed(l) |
+            Token::Named(l) |
+            Token::Bang(l) |
+            Token::Plus(l) |
+            Token::Minus(l) |
+            Token::Star(l) |
+            Token::Slash(l) |
+            Token::ExprModeStart(l) => *l,
+        }
+    }
+
+    pub fn as_string(&self) -> &str {
+        match self {
+            Token::LogicalOperator(s, _) |
+            Token::UnaryOperator(s, _) |
+            Token::ComparisonOperator(s, _) |
+            Token::QuotedString(s, _) |
+            Token::StringOrGlob(s, _) |
+            Token::Identifier(s, _) |
+            Token::Flag(s, _) |
+            Token::QuotedFile(s, _) |
+            Token::FileOrGlob(s, _) |
+            Token::Regex(s, _) |
+            Token::Integer(s, _) |
+            Token::Separator(s, _) |
+            Token::Float(s, _) => s,
+            Token::MemberOperator(_) => ":",
+            Token::Equals(_) => "=",
+            Token::Declare(_) => ":=",
+            Token::SubStart(_) => "(",
+            Token::SubEnd(_) => "_",
+            Token::JobStart(_) => "{",
+            Token::JobEnd(_) => "}",
+            Token::GetItemStart(_) => "[",
+            Token::GetItemEnd(_) => "]",
+            Token::Pipe(_) => "|",
+            Token::Unnamed(_) => "@",
+            Token::Named(_) => "@@",
+            Token::ExprModeStart(_) => "m(",
+            Token::Bang(_) => "!",
+            Token::Plus(_) => "+",
+            Token::Minus(_) => "-",
+            Token::Star(_) => "*",
+            Token::Slash(_) => "/",
         }
     }
 }
 
-#[derive(Clone)]
-pub enum TokenType {
-    LogicalOperator,
-    UnaryOperator,
-    Colon,
-    AssignmentOperator,
-    ComparisonOperator,
-    FactorOperator,
-    TermOperator,
-    QuotedString,
-    StringOrGlob,
-    Identifier,
-    Flag,
-    QuotedFile,
-    FileOrGlob,
-    Regex,
-    Separator,
-    Integer,
-    Float,
-    SubStart,
-    SubEnd,
-    JobStart,
-    JobEnd,
-    GetItemStart,
-    GetItemEnd,
-    Pipe,
-    Unnamed,
-    Named,
+impl Display for Token<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&TrackedString::from(self.clone()).string)
+    }
+}
+impl From<Token<'_>> for String {
+    fn from(token: Token) -> String {
+        TrackedString::from(token).string
+    }
+}
+impl<'a> Into<Spanned<'a>> for Token<'a> {
+    fn into(self) -> Spanned<'a> {
+        let loc = match &self {
+            Token::LogicalOperator(_, l) |
+            Token::UnaryOperator(_, l) |
+            Token::QuotedString(_, l) |
+            Token::StringOrGlob(_, l) |
+            Token::Identifier(_, l) |
+            Token::Flag(_, l) |
+            Token::QuotedFile(_, l) |
+            Token::FileOrGlob(_, l) |
+            Token::Regex(_, l) |
+            Token::Integer(_, l) |
+            Token::ComparisonOperator(_, l) |
+            Token::Float(_, l) |
+            Token::MemberOperator(l) |
+            Token::Equals(l) |
+            Token::Declare(l) |
+            Token::Separator(_, l) |
+            Token::SubStart(l) |
+            Token::SubEnd(l) |
+            Token::JobStart(l) |
+            Token::JobEnd(l) |
+            Token::GetItemStart(l) |
+            Token::GetItemEnd(l) |
+            Token::Pipe(l) |
+            Token::Unnamed(l) |
+            Token::Named(l) |
+            Token::Bang(l) |
+            Token::Plus(l) |
+            Token::Minus(l) |
+            Token::Star(l) |
+            Token::Slash(l) |
+            Token::ExprModeStart(l) => { l }
+        };
+        Ok((loc.start, self, loc.end))
+    }
 }
 
-#[derive(Clone)]
-pub struct TokenNode {
-    pub token_type: TokenType,
-    pub start: usize,
-    pub end: usize,
-    pub data: String,
+#[derive(Default, Debug, Clone, PartialEq)]
+pub enum LexicalError {
+    #[default]
+    MismatchedSubEnd,
+    MismatchedDoubleQuote,
+    MismatchedSingleQuote,
+    UnexpectedCharacter(char),
+    UnexpectedCharacterWithSuggestion(char, char),
+    UnexpectedEOF,
+    UnexpectedEOFWithSuggestion(char),
 }
 
-impl TokenNode {
-    pub fn new(token_type: TokenType, start: usize, data: &str, end: usize) -> TokenNode {
-        TokenNode {
-            token_type,
-            start,
-            end,
-            data: data.to_string(),
+impl Display for LexicalError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LexicalError::MismatchedSubEnd => f.write_str("Mismatched ) (ending parenthesis)"),
+            LexicalError::MismatchedDoubleQuote => f.write_str("Mismatched \" (double quote)"),
+            LexicalError::MismatchedSingleQuote => f.write_str("Mismatched ' (single quote)"),
+            LexicalError::UnexpectedCharacter(c) => {
+                f.write_str("Unexpected character ")?;
+                f.write_char(*c)
+            }
+            LexicalError::UnexpectedCharacterWithSuggestion(actual, expected) => {
+                f.write_str("Unexpected character ")?;
+                f.write_char(*actual)?;
+                f.write_str(", expected ")?;
+                f.write_char(*expected)
+            }
+            LexicalError::UnexpectedEOF => f.write_str("Unexpected end of input"),
+            LexicalError::UnexpectedEOFWithSuggestion(expected) => {
+                f.write_str("Unexpected end of input, expected ")?;
+                f.write_char(*expected)
+            }
         }
     }
-
-    pub fn location(&self) -> (usize, usize) {
-        (self.start, self.end)
-    }
 }
+
+pub type Spanned<'input> = Result<(usize, Token<'input>, usize), LexicalError>;
+

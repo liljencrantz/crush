@@ -4,18 +4,10 @@ use crate::lang::ast::location::Location;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::argument::SwitchStyle;
 
-grammar;
+grammar<'input>(input: &'input str);
 
 pub JobList: JobListNode = {
     Separator? <l:JobListWithoutSeparator> => l,
-};
-
-pub TokenList: TokenListNode = {
-    => TokenListNode::new(),
-    <mut p:TokenList> <t:Token> => {
-        p.tokens.push(t);
-        p
-    }
 };
 
 JobListWithoutSeparator: JobListNode = {
@@ -34,12 +26,117 @@ NonEmptyJobList: JobListNode = {
 
 Job: JobNode = {
     <l: @L> <c:Command> <r: @R> => JobNode{commands: vec![c], location: Location::new(l, r)},
-    <l: @L> <mut j:Job> "|" Separator? <c:Command> <r: @R> => {
+    <l: @L> <mut j:Job> Pipe Separator? <c:Command> <r: @R> => {
         j.commands.push(c);
         j.location = Location::new(l, r);
         j
     }
 };
+
+Expr: Box<Node> = {
+    <j:JobExpr> => Box::from(Node::Substitution(*j))
+};
+
+JobExpr: Box<JobNode> = {
+    <c:AssignmentExpr> => {
+        let l = c.location();
+        Box::from(JobNode{
+            commands: vec![c.to_command()],
+            location: l,
+        })
+    },
+    <mut j:JobExpr> Pipe <c:AssignmentExpr> => {
+        j.commands.push(c.to_command());
+        j
+    },
+}
+
+AssignmentExpr: Box<Node> = {
+    LogicalExpr,
+    <i: ItemExpr> <op: Equals> <e: AssignmentExpr> =>
+        Box::from(Node::Assignment(i, SwitchStyle::None, "=".to_string(), e)),
+    <i: ItemExpr> <op: Declare> <e: AssignmentExpr> =>
+        Box::from(Node::Assignment(i, SwitchStyle::None, ":=".to_string(), e)),
+}
+
+LogicalExpr: Box<Node> = {
+    ComparisonExpr,
+    <l: LogicalExpr> <op: LogicalOperator> <c: ComparisonExpr> => operator(op, l, c),
+}
+
+ComparisonExpr: Box<Node> = {
+    CommandExpr,
+    <c: ComparisonExpr> <op: ComparisonOperator> <t: CommandExpr> =>operator(op, c, t),
+}
+
+CommandExpr: Box<Node> = {
+               <c:TermExpr> => c,
+               <lt:TermExpr> <t:Plus> <rt:TermExpr> => {
+                   operator_method("__add__", t, lt, rt)
+               },
+               <lt:TermExpr> <t:Minus> <rt:TermExpr> => {
+                   operator_method("__sub__", t, lt, rt)
+               },
+           };
+
+TermExpr: Box<Node> = {
+    FactorExpr,
+    <l: @L> <lt:FactorExpr> <op:Star> <rt:FactorExpr> <r: @R> => {
+        operator_method("__mul__", op, lt, rt)
+    },
+    <l: @L> <lt:FactorExpr> <op:Slash> <rt:FactorExpr> <r: @R> => {
+        operator_method("__div__", op, lt, rt)
+    },
+}
+
+FactorExpr: Box<Node> = {
+    UnaryExpr,
+    SubStart <e:Expr> SubEnd => e,
+}
+
+UnaryExpr: Box<Node> = {
+    ItemExpr,
+    <op:Minus> <u: UnaryExpr> => unary_operator_method("__neg__", op, u),
+}
+
+ItemExpr: Box<Node> = {
+    <l: Identifier> => Node::identifier(l),
+    <l: Regex> => Node::regex(l),
+    <l:QuotedFile> => Node::file(l, true),
+    <s:QuotedString> => Node::string(s),
+    <i:Integer> => Node::integer(i),
+    <f:Float> => Node::float(f),
+    <i: ItemExpr> GetItemStart <e: Assignment> GetItemEnd => Box::from(Node::GetItem(i, e)),
+    <i: ItemExpr> MemberOperator <l: Identifier> => Box::from(Node::GetAttr(i, l.into())),
+    <i: ItemExpr> ExprModeStart <mut v: OptExpressionList> SubEnd => {
+        let l = i.location();
+        v.insert(0, *i);
+        let c = CommandNode {
+            expressions: v,
+            location: l,
+        };
+
+        Box::from(Node::Substitution(
+            JobNode{
+                commands: vec![c],
+                location: l,
+            }
+        ))
+        },
+}
+
+OptExpressionList: Vec<Node> = {
+    => vec![],
+    ExpressionList,
+}
+
+ExpressionList: Vec<Node> = {
+    <e: Expr> => vec![*e],
+    <mut l: ExpressionList> Separator <e: Expr> => {
+        l.push(*e);
+        l
+    },
+}
 
 Command: CommandNode = {
     <start: @L> <a: Assignment> <end: @R> => CommandNode{expressions: vec![*a], location: Location::new(start, end)},
@@ -48,56 +145,34 @@ Command: CommandNode = {
         c.location = c.location.union(Location::new(start, end));
         c
     }
-};
+}
 
 Assignment: Box<Node> = {
     Logical,
     <i: Item> <op: AssignmentOperator> <e: Assignment> =>
-        Box::from(Node::Assignment(i, SwitchStyle::None, op.to_string(), e)),
+        Box::from(Node::Assignment(i, SwitchStyle::None, String::from(op), e)),
 }
 
 Logical: Box<Node> = {
     Comparison,
-    <l: Logical> <start: @L> <op: LogicalOperator> <end: @R> <c: Comparison> =>
-        operator(TrackedString::from(op, Location::new(start, end)), l, c),
+    <l: Logical> <op: LogicalOperator> <c: Comparison> => operator(op, l, c),
 }
 
 Comparison: Box<Node> = {
-    Term,
-    <c: Comparison> <start: @L> <op: ComparisonOperator> <end: @R> <t: Term> =>
-        operator(TrackedString::from(op, Location::new(start, end)), c, t),
-}
-
-Term: Box<Node> = {
-    Factor,
-    <t: Term> <start: @L> <op: TermOperator> <end: @R> <f: Factor> =>
-        operator(TrackedString::from(op, Location::new(start, end)), t, f),
-}
-
-Factor: Box<Node> = {
     Unary,
-    <f: Factor> <start: @L> <op: FactorOperator> <end: @R> <u: Unary> =>
-        operator(TrackedString::from(op, Location::new(start, end)), f, u),
+    <c: Comparison> <op: ComparisonOperator> <t: Unary> =>operator(op, c, t),
 }
 
 Unary: Box<Node> = {
     Item,
-    <start: @L> <op: UnaryOperator> <end: @R> <u: Unary> =>
-        unary_operator(TrackedString::from(op, Location::new(start, end)), u),
-    <start: @L> "@" <end: @R> <u: Unary> =>
-        Box::from(Node::Unary(TrackedString::from(
-            "@",
-            Location::new(start, end)), u)),
-    <start: @L> "@@" <end: @R> <u: Unary> =>
-        Box::from(Node::Unary(TrackedString::from(
-            "@@",
-            Location::new(start, end)), u)),
+    <op:Unnamed> <u: Unary> => Box::from(Node::Unary(TrackedString::new("@", op), u)),
+    <op:Named>   <u: Unary> => Box::from(Node::Unary(TrackedString::new("@@", op), u)),
 }
 
 Signature: Option<Vec<ParameterNode>> = {
     => None,
-    "|" "|" Separator? => Some(vec![]),
-    "|" <s: ParameterList> "|" Separator? => Some(s),
+    Pipe Pipe Separator? => Some(vec![]),
+    Pipe <s: ParameterList> Pipe Separator? => Some(s),
 }
 
 ParameterList: Vec<ParameterNode> = {
@@ -107,14 +182,14 @@ ParameterList: Vec<ParameterNode> = {
 
 Parameter: ParameterNode = {
     <start: @L> <l: Identifier> <end: @R> <d: Default> =>
-        ParameterNode::Parameter(TrackedString::from(&l[1..], Location::new(start, end)), None, d),
+    ParameterNode::parameter(l, None, d),
 
-    <start: @L> <l: Identifier> <end: @R> Colon <t: Item> <d: Default> =>
-        ParameterNode::Parameter(TrackedString::from(&l[1..], Location::new(start, end)), Some(t), d),
+    <start: @L> <l: Identifier> <end: @R> MemberOperator <t: Item> <d: Default> =>
+        ParameterNode::parameter(l, Some(t), d),
 
-    "@" <start: @L> <l: Identifier> <end: @R> => ParameterNode::Unnamed(TrackedString::from(&l[1..], Location::new(start, end))),
+    Unnamed <start: @L> <l: Identifier> <end: @R> => ParameterNode::unnamed(l),
 
-    "@@" <start: @L> <l: Identifier> <end: @R> => ParameterNode::Named(TrackedString::from(&l[1..], Location::new(start, end))),
+    Named <start: @L> <l: Identifier> <end: @R> => ParameterNode::named(l),
 }
 
 Default: Option<Node> = {
@@ -123,103 +198,84 @@ Default: Option<Node> = {
 }
 
 Item: Box<Node> = {
-    <start: @L> <l: StringOrGlob> <end: @R> =>
-        Node::parse_symbol_or_glob(&TrackedString::from(l, Location::new(start, end))),
+    <l: StringOrGlob> => Node::parse_symbol_or_glob(l),
+    <l: Identifier> => Node::identifier(l),
+    <l: Regex> => Node::regex(l),
+    <l: FileOrGlob> => Node::parse_file_or_glob(l),
+    <l:QuotedFile> => Node::file(l, true),
+    <l:QuotedString> => Node::string(l),
+    <l:Integer> => Node::integer(l),
+    <l:Float> => Node::float(l),
 
-    <start: @L> <l: Identifier> <end: @R> =>
-        Node::parse_identifier(&TrackedString::from(l, Location::new(start, end))),
-
-    <start: @L> <l: Regex> <end: @R> =>
-        Box::from(Node::Regex(TrackedString::from(&l[3..l.len()-1], Location::new(start, end)))),
-
-    <start: @L> <l: FileOrGlob> <end: @R> =>
-        Node::parse_file_or_glob(&TrackedString::from(l, Location::new(start, end))),
-
-    <start: @L> <l:QuotedFile> <end: @R> =>
-        Box::from(Node::File(TrackedString::literal(<>), true)),
-
-    @L QuotedString @R => Box::from(Node::String(TrackedString::literal(<>))),
-
-    @L Integer @R =>
-        Box::from(Node::Integer(TrackedString::literal(<>))),
-
-    @L Float @R =>
-        Box::from(Node::Float(TrackedString::literal(<>))),
-
-    <start: @L> <l:Flag> <end: @R> =>
+    <l:Flag> => {
+    let ts = TrackedString::from(l);
         Box::from(
-if l.starts_with("--") {
-            Node::Assignment(Box::from(Node::Symbol(TrackedString::from(&l[2..], Location::new(start, end)))),
-            SwitchStyle::Double,
-            "=".to_string(),
-            Box::from(Node::Identifier(TrackedString::from("true", Location::new(start, end)))))
-} else {
-            Node::Assignment(Box::from(Node::Symbol(TrackedString::from(&l[1..], Location::new(start, end)))),
+            if ts.string.starts_with("--") {
+                Node::Assignment(Box::from(Node::Symbol(ts.slice_to_end(2))),
+                SwitchStyle::Double,
+                "=".to_string(),
+                Box::from(Node::Identifier(TrackedString::new("true", ts.location()))))
+            } else {
+            Node::Assignment(Box::from(Node::Symbol(ts.slice_to_end(1))),
             SwitchStyle::Single,
             "=".to_string(),
-            Box::from(Node::Identifier(TrackedString::from("true", Location::new(start, end)))))
-}),
-    <i: Item> "[" <e: Assignment> "]" => Box::from(Node::GetItem(i, e)),
-    <i: Item> Colon <start: @L> <l: StringOrGlob> <end: @R> => Box::from(Node::GetAttr(i, TrackedString::from(&l, Location::new(start, end)))),
-    "{" Separator? <s: Signature> <l: JobListWithoutSeparator> "}" => Box::from(Node::Closure(s, l)),
-    "(" <j:Job> ")" => Box::from(Node::Substitution(j)),
+            Box::from(Node::Identifier(TrackedString::new("true", ts.location()))))
+})
+},
+    <i: Item> GetItemStart <e: Assignment> GetItemEnd => Box::from(Node::GetItem(i, e)),
+    <i: Item> MemberOperator <start: @L> <l: StringOrGlob> <end: @R> => Box::from(Node::GetAttr(i, TrackedString::from(l))),
+    JobStart Separator? <s: Signature> <l: JobListWithoutSeparator> JobEnd => Box::from(Node::Closure(s, l)),
+    SubStart <j:Job> SubEnd => Box::from(Node::Substitution(j)),
+    <l: @L>ExprModeStart <e:Expr> SubEnd <r: @R> => Box::from(
+        Node::Substitution(
+            JobNode{
+                commands: vec![
+                    CommandNode{
+                        expressions: vec![*e],
+                        location: Location::new(l, r)
+                    }],
+                location: Location::new(l, r)})),
 }
 
-AssignmentOperator: &'input str = {
-    Equals => <>,
-    Declare => <>,
+AssignmentOperator: TrackedString = {
+    <l:Equals> => TrackedString::new("=", l),
+    <l:Declare> => TrackedString::new(":=", l),
 }
 
-Token: TokenNode = {
-    @L LogicalOperator @R => TokenNode::new(TokenType::LogicalOperator, <>),
-    @L UnaryOperator @R => TokenNode::new(TokenType::UnaryOperator, <>),
-    @L Colon @R => TokenNode::new(TokenType::Colon, <>),
-    @L AssignmentOperator @R => TokenNode::new(TokenType::AssignmentOperator, <>),
-    @L ComparisonOperator @R => TokenNode::new(TokenType::ComparisonOperator, <>),
-    @L FactorOperator @R => TokenNode::new(TokenType::FactorOperator, <>),
-    @L TermOperator @R => TokenNode::new(TokenType::TermOperator, <>),
-    @L QuotedString @R => TokenNode::new(TokenType::QuotedString, <>),
-    @L Identifier @R => TokenNode::new(TokenType::Identifier, <>),
-    @L StringOrGlob @R => TokenNode::new(TokenType::StringOrGlob, <>),
-    @L QuotedFile @R => TokenNode::new(TokenType::QuotedFile, <>),
-    @L FileOrGlob @R => TokenNode::new(TokenType::FileOrGlob, <>),
-    @L Flag @R => TokenNode::new(TokenType::Flag, <>),
-    @L Regex @R => TokenNode::new(TokenType::Regex, <>),
-    @L Separator @R => TokenNode::new(TokenType::Separator, <>),
-    @L Integer @R => TokenNode::new(TokenType::Integer, <>),
-    @L Float @R => TokenNode::new(TokenType::Float, <>),
-    @L "(" @R => TokenNode::new(TokenType::SubStart, <>),
-    @L ")" @R => TokenNode::new(TokenType::SubEnd, <>),
-    @L "{" @R => TokenNode::new(TokenType::JobStart, <>),
-    @L "}" @R => TokenNode::new(TokenType::JobEnd, <>),
-    @L "|" @R => TokenNode::new(TokenType::Pipe, <>),
-    @L "@@" @R => TokenNode::new(TokenType::Named, <>),
-    @L "@" @R => TokenNode::new(TokenType::Unnamed, <>),
-    @L "[" @R => TokenNode::new(TokenType::GetItemStart, <>),
-    @L "]" @R => TokenNode::new(TokenType::GetItemEnd, <>),
-}
+extern {
+    type Location = usize;
+    type Error = LexicalError;
 
-match {
-    r"(and|or)" => LogicalOperator,
-    r"(typeof|neg|not)" => UnaryOperator,
-} else {
-    r"=" => Equals,
-    r":=" => Declare,
-    ":" => Colon,
-    r"( |\t|\\\n)+" => {},
-    r"#[^\n]*" => {},
-    r"(>=|<=|>|<|==|!=|=~|!~)" => ComparisonOperator,
-    r"(\*|//)" => FactorOperator,
-    r"(\+|-)" => TermOperator,
-    r#""([^\\"]|\\.)*""# => QuotedString,
-    r"[_a-zA-Z%\?][\._0-9a-zA-Z%\?/]*" => StringOrGlob,
-    r"\$[_0-9a-zA-Z][_0-9a-zA-Z]*" => Identifier,
-    r"([\.~][\./_0-9a-zA-Z%\?]*|/([\._0-9a-zA-Z%\?][\./_0-9a-zA-Z%\?]*)?)" => FileOrGlob,
-    r"--?[0-9a-zA-Z][-_0-9a-zA-Z]*" => Flag,
-    r#"'([^\\']|\\.)+'"# => QuotedFile,
-    r#"re"([^"]|\\.)*""# => Regex,
-    r"(;|\n)( |\t|;|\n|#[^\n]*)*" => Separator,
-    r"[0-9][0-9_]*" => Integer,
-    r"[0-9][0-9_]*\.[0-9_]+" => Float,
-    _
+    enum Token<'input> {
+        LogicalOperator=> Token::LogicalOperator(<&'input str>, <Location>),
+        UnaryOperator=> Token::UnaryOperator(<&'input str>, <Location>),
+        MemberOperator => Token::MemberOperator(<Location>),
+        Equals=> Token::Equals(<Location>),
+        Declare=> Token::Declare(<Location>),
+        ComparisonOperator=> Token::ComparisonOperator(<&'input str>, <Location>),
+        Slash=> Token::Slash(<Location>),
+        Star=> Token::Star(<Location>),
+        Plus=> Token::Plus(<Location>),
+        Minus=> Token::Minus(<Location>),
+        QuotedString=> Token::QuotedString(<&'input str>, <Location>),
+        StringOrGlob=> Token::StringOrGlob(<&'input str>, <Location>),
+        Identifier=> Token::Identifier(<&'input str>, <Location>),
+        Flag=> Token::Flag(<&'input str>, <Location>),
+        QuotedFile=> Token::QuotedFile(<&'input str>, <Location>),
+        FileOrGlob=> Token::FileOrGlob(<&'input str>, <Location>),
+        Regex=> Token::Regex(<&'input str>, <Location>),
+        Separator=> Token::Separator(<&'input str>, <Location>),
+        Integer=> Token::Integer(<&'input str>, <Location>),
+        Float=> Token::Float(<&'input str>, <Location>),
+        SubStart=> Token::SubStart(<Location>),
+        SubEnd=> Token::SubEnd(<Location>),
+        JobStart=> Token::JobStart(<Location>),
+        JobEnd=> Token::JobEnd(<Location>),
+        GetItemStart=> Token::GetItemStart(<Location>),
+        GetItemEnd=> Token::GetItemEnd(<Location>),
+        Pipe=> Token::Pipe(<Location>),
+        Unnamed=> Token::Unnamed(<Location>),
+        Named=> Token::Named(<Location>),
+        ExprModeStart=> Token::ExprModeStart(<Location>),
+    }
 }

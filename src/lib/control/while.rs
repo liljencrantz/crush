@@ -1,3 +1,4 @@
+use std::sync::OnceLock;
 use crate::lang::command::Command;
 use crate::lang::errors::{data_error, CrushResult};
 use crate::lang::state::contexts::CommandContext;
@@ -10,16 +11,17 @@ use signature::signature;
 use crate::lang::command::OutputType::Known;
 use crate::lang::pipe::pipe;
 
-fn while_output_type() -> Vec<ColumnType> {
-    vec![
+fn while_output_type() -> &'static Vec<ColumnType> {
+    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
+    CELL.get_or_init(|| vec![
         ColumnType::new("value", ValueType::Any),
-    ]
+    ])
 }
 
 #[signature(
     r#while,
     condition = true,
-    output = Known(ValueType::TableInputStream(while_output_type())),
+    output = Known(ValueType::TableInputStream(while_output_type().clone())),
     short = "Repeatedly execute the body for as long the condition is met.",
     long = "The loop body is optional. If not specified, the condition is executed until it returns false.\n    This effectively means that the condition becomes the body, and the loop break check comes at\n    the end of the loop.",
     example = "while {./some_file:exists} {echo \"hello\"}"
@@ -32,7 +34,7 @@ pub struct While {
 }
 
 fn r#while(mut context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(&OUTPUT_TYPE)?;
+    let output = context.output.initialize(while_output_type())?;
     let (body_sender, body_receiver) = pipe();
     let cfg: While = While::parse(context.remove_arguments(), &context.global_state.printer())?;
 

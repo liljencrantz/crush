@@ -49,7 +49,7 @@ pub struct ScopeLoader {
 impl ScopeLoader {
     pub fn declare(&mut self, name: &str, value: Value) -> CrushResult<()> {
         if self.mapping.contains_key(name) {
-            return error(format!("Variable {{{}}} already exists", name).as_str());
+            return error(format!("Tried to declare variable {}, but it already exists", name).as_str());
         }
         self.mapping.insert(name.to_string(), value);
         Ok(())
@@ -104,7 +104,7 @@ impl ScopeLoader {
             arguments,
         );
         if self.mapping.contains_key(name) {
-            return error(format!("Variable {{{}}} already exists", name).as_str());
+            return error(format!("Tried to declare command {}, but it already exists", name).as_str());
         }
         self.mapping
             .insert(name.to_string(), Value::Command(command));
@@ -131,7 +131,7 @@ impl ScopeLoader {
             arguments,
         );
         if self.mapping.contains_key(name) {
-            return error(format!("Variable {{{}}} already exists", name).as_str());
+            return error(format!("Tried to declare command {}, but it already exists", name).as_str());
         }
         self.mapping
             .insert(name.to_string(), Value::Command(command));
@@ -556,7 +556,7 @@ impl Scope {
             return error("Scope is read only");
         }
         if data.mapping.contains_key(name) {
-            return error(format!("Variable {{{}}} already exists", name).as_str());
+            return error(format!("Tried to declare variable {}, but it already exists", name).as_str());
         }
         data.mapping.insert(name.to_string(), value);
         Ok(())

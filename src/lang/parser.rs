@@ -1,7 +1,7 @@
-use crate::lang::errors::{to_crush_error, CrushResult};
+use crate::lang::errors::{to_crush_error, CrushResult, CrushError};
 use crate::lang::job::Job;
 use crate::lang::state::scope::Scope;
-use crate::lang::ast::{TokenNode, JobListNode, TokenType};
+use crate::lang::ast::{Token, JobListNode, lexer::Lexer};
 use std::sync::{Arc, Mutex};
 
 lalrpop_mod!(pub lalrparser, "/lang/lalrparser.rs");
@@ -43,27 +43,26 @@ fn close_switch(input: &str) -> String {
 #[derive(Clone)]
 pub struct Parser {
     parser: Arc<Mutex<lalrparser::JobListParser>>,
-    tokenizer: Arc<Mutex<lalrparser::TokenListParser>>,
 }
 
 impl Parser {
     pub fn new() -> Parser {
         Parser {
             parser: Arc::from(Mutex::new(lalrparser::JobListParser::new())),
-            tokenizer: Arc::from(Mutex::new(lalrparser::TokenListParser::new())),
         }
     }
 
     pub fn parse(&self, s: &str, env: &Scope) -> CrushResult<Vec<Job>> {
-        self.ast(s)?.generate(env)
+        self.ast(s)?.compile(env)
     }
 
     pub fn ast(&self, s: &str) -> CrushResult<JobListNode> {
-        to_crush_error(self.parser.lock().unwrap().parse(s))
+        let lex = Lexer::new(s);
+        to_crush_error(self.parser.lock().unwrap().parse(s, lex))
     }
-
-    pub fn tokenize(&self, s: &str) -> CrushResult<Vec<TokenNode>> {
-        Ok(to_crush_error(self.tokenizer.lock().unwrap().parse(s))?.tokens)
+    pub fn tokenize<'a>(&self, s: &'a str) -> CrushResult<Vec<Token<'a>>> {
+        let l = Lexer::new(s);
+        l.into_iter().map(|item| item.map(|it| it.1).map_err(|e| CrushError::from(e)) ).collect()
     }
 
     /**
@@ -91,16 +90,31 @@ impl Parser {
 
         for tok in &tokens {
             needs_trailing_arg = false;
-            match tok.token_type {
-                TokenType::FactorOperator | TokenType::AssignmentOperator |
-                TokenType::ComparisonOperator | TokenType::UnaryOperator |
-                TokenType::LogicalOperator | TokenType::Named | TokenType::Unnamed |
-                TokenType::TermOperator | TokenType::Pipe | TokenType::Colon => { needs_trailing_arg = true }
-                TokenType::SubStart => { stack.push(")"); }
-                TokenType::JobStart => { stack.push("}"); }
-                TokenType::GetItemStart => { stack.push("]"); }
-                TokenType::SubEnd | TokenType::JobEnd | TokenType::GetItemEnd => { stack.pop(); }
-                _ => {}
+            match tok {
+                Token::Plus(_) |
+                Token::Minus(_) |
+                Token::Star(_) |
+                Token::Slash(_) |
+                Token::Bang(_) |
+                Token::Equals( _) | Token::Declare( _) |
+                Token::ComparisonOperator(_, _) | Token::UnaryOperator(_, _) |
+                Token::LogicalOperator(_, _) | Token::Named( _) | Token::Unnamed( _) |
+                Token::Pipe( _) | Token::MemberOperator(_) => { needs_trailing_arg = true }
+                Token::SubStart( _) => { stack.push(")"); }
+                Token::ExprModeStart(_) => {stack.push(")");}
+                Token::JobStart( _) => { stack.push("}"); }
+                Token::GetItemStart( _) => { stack.push("]"); }
+                Token::SubEnd( _) | Token::JobEnd( _) | Token::GetItemEnd( _) => { stack.pop(); }
+                Token::QuotedString(_, _) => {}
+                Token::StringOrGlob(_, _) => {}
+                Token::Identifier(_, _) => {}
+                Token::Flag(_, _) => {}
+                Token::QuotedFile(_, _) => {}
+                Token::FileOrGlob(_, _) => {}
+                Token::Regex(_, _) => {}
+                Token::Integer(_, _) => {}
+                Token::Float(_, _) => {}
+                Token::Separator(_, _) => {}
             }
         }
         stack.reverse();
@@ -115,6 +129,7 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
+    use crate::lang::ast::location::Location;
     use super::*;
 
     fn p() -> Parser {
@@ -122,24 +137,51 @@ mod tests {
     }
 
     #[test]
+    fn check_simple_tokens() {
+        let tok = p().tokenize("{aaa}\n").unwrap();
+        assert_eq!(tok, vec![
+            Token::JobStart(Location::from(0)),
+            Token::StringOrGlob("aaa", Location::new(1,4)),
+            Token::JobEnd(Location::from(4)),
+            Token::Separator("\n", Location::from(5)),
+        ]);
+    }
+
+    #[test]
+    fn check_expression_tokens() {
+        let tok = p().tokenize("e(foo(5, 3.3))\n").unwrap();
+        assert_eq!(tok, vec![
+            Token::ExprModeStart(Location::new(0, 2)),
+            Token::Identifier("foo", Location::new(2,5)),
+            Token::ExprModeStart(Location::from(5)),
+            Token::Integer("5", Location::from(6)),
+            Token::Separator(",", Location::from(7)),
+            Token::Float("3.3", Location::new(9, 12)),
+            Token::SubEnd(Location::from(12)),
+            Token::SubEnd(Location::from(13)),
+            Token::Separator("\n", Location::from(14)),
+        ]);
+    }
+
+    #[test]
     fn check_token_offsets() {
         let tok = p().tokenize("123:123.4 foo=\"bar\"").unwrap();
         assert_eq!(tok.len(), 6);
-        assert_eq!(tok[0].location(), (0usize, 3usize));
-        assert_eq!(tok[1].location(), (3usize, 4usize));
-        assert_eq!(tok[2].location(), (4usize, 9usize));
-        assert_eq!(tok[3].location(), (10usize, 13usize));
-        assert_eq!(tok[4].location(), (13usize, 14usize));
-        assert_eq!(tok[5].location(), (14usize, 19usize));
+        assert_eq!(tok[0].location(), Location::new(0, 3));
+        assert_eq!(tok[1].location(), Location::new(3usize, 4usize));
+        assert_eq!(tok[2].location(), Location::new(4usize, 9usize));
+        assert_eq!(tok[3].location(), Location::new(10usize, 13usize));
+        assert_eq!(tok[4].location(), Location::new(13usize, 14usize));
+        assert_eq!(tok[5].location(), Location::new(14usize, 19usize));
     }
 
     #[test]
     fn check_token_newline() {
         let tok = p().tokenize("123# comment\nggg").unwrap();
         assert_eq!(tok.len(), 3);
-        assert_eq!(tok[0].location(), (0usize, 3usize));
-        assert_eq!(tok[1].location(), (12usize, 13usize));
-        assert_eq!(tok[2].location(), (13usize, 16usize));
+        assert_eq!(tok[0].location(), Location::new(0usize, 3usize));
+        assert_eq!(tok[1].location(), Location::new(12usize, 13usize));
+        assert_eq!(tok[2].location(), Location::new(13usize, 16usize));
     }
 
     #[test]

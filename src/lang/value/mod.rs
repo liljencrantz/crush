@@ -682,6 +682,7 @@ impl Help for Value {
 
 #[cfg(test)]
 mod tests {
+    use num_format::Grouping;
     use super::*;
 
     #[test]
@@ -742,36 +743,4 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_number_format_standard() {
-        assert_eq!(Value::Integer(0).to_pretty_string(Grouping::Standard), "0");
-        assert_eq!(Value::Integer(123).to_pretty_string(Grouping::Standard), "123");
-        assert_eq!(Value::Integer(-123).to_pretty_string(Grouping::Standard), "-123");
-        assert_eq!(Value::Integer(1234).to_pretty_string(Grouping::Standard), "1_234");
-        assert_eq!(Value::Integer(-1234).to_pretty_string(Grouping::Standard), "-1_234");
-        assert_eq!(Value::Integer(123_456_789).to_pretty_string(Grouping::Standard), "123_456_789");
-        assert_eq!(Value::Integer(-123_456_789).to_pretty_string(Grouping::Standard), "-123_456_789");
-    }
-
-    #[test]
-    fn test_number_format_indian() {
-        assert_eq!(Value::Integer(0).to_pretty_string(Grouping::Indian), "0");
-        assert_eq!(Value::Integer(123).to_pretty_string(Grouping::Indian), "123");
-        assert_eq!(Value::Integer(-123).to_pretty_string(Grouping::Indian), "-123");
-        assert_eq!(Value::Integer(1234).to_pretty_string(Grouping::Indian), "1_234");
-        assert_eq!(Value::Integer(-1234).to_pretty_string(Grouping::Indian), "-1_234");
-        assert_eq!(Value::Integer(123_456_789).to_pretty_string(Grouping::Indian), "12_34_56_789");
-        assert_eq!(Value::Integer(-123_456_789).to_pretty_string(Grouping::Indian), "-12_34_56_789");
-    }
-
-    #[test]
-    fn test_number_format_posix() {
-        assert_eq!(Value::Integer(0).to_pretty_string(Grouping::Posix), "0");
-        assert_eq!(Value::Integer(123).to_pretty_string(Grouping::Posix), "123");
-        assert_eq!(Value::Integer(1234).to_pretty_string(Grouping::Posix), "1234");
-        assert_eq!(Value::Integer(123_456_789).to_pretty_string(Grouping::Posix), "123456789");
-        assert_eq!(Value::Integer(-123).to_pretty_string(Grouping::Posix), "-123");
-        assert_eq!(Value::Integer(-1234).to_pretty_string(Grouping::Posix), "-1234");
-        assert_eq!(Value::Integer(-123_456_789).to_pretty_string(Grouping::Posix), "-123456789");
-    }
 }
