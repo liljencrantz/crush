@@ -10,6 +10,7 @@ use crate::util::glob::Glob;
 use regex::Regex;
 use std::ops::Deref;
 use std::path::PathBuf;
+use num_format::Locale::se;
 use location::Location;
 use parameter_node::ParameterNode;
 use tracked_string::TrackedString;
@@ -75,6 +76,27 @@ impl JobListNode {
 pub struct JobNode {
     pub commands: Vec<CommandNode>,
     pub location: Location,
+}
+
+impl JobNode {
+    pub fn compile(&self, env: &Scope) -> CrushResult<Job> {
+        Ok(Job::new(
+            self.commands
+                .iter()
+                .map(|c| c.compile(env))
+                .collect::<CrushResult<Vec<CommandInvocation>>>()?,
+            self.location,
+        ))
+    }
+
+    pub fn to_node(mut self) -> Box<Node> {
+        if self.commands.len() == 1 {
+            if self.commands[0].expressions.len() == 1 {
+                return Box::from(self.commands[0].expressions.remove(0));
+            }
+        }
+        Box::from(Node::Substitution(self))
+    }
 }
 
 fn operator_function(op: &[&str], op_location: Location, l: Box<Node>, r: Box<Node>) -> Box<Node> {
@@ -186,17 +208,6 @@ pub fn unary_operator(iop: impl Into<TrackedString>, n: Box<Node>) -> Box<Node> 
     }
 }
 
-impl JobNode {
-    pub fn compile(&self, env: &Scope) -> CrushResult<Job> {
-        Ok(Job::new(
-            self.commands
-                .iter()
-                .map(|c| c.compile(env))
-                .collect::<CrushResult<Vec<CommandInvocation>>>()?,
-            self.location,
-        ))
-    }
-}
 
 #[derive(Clone, Debug)]
 pub struct CommandNode {
@@ -206,12 +217,20 @@ pub struct CommandNode {
 
 impl CommandNode {
     pub fn compile(&self, env: &Scope) -> CrushResult<CommandInvocation> {
-        let cmd = self.expressions[0].compile_command(env)?;
-        let arguments = self.expressions[1..]
-            .iter()
-            .map(|e| e.compile_argument(env))
-            .collect::<CrushResult<Vec<ArgumentDefinition>>>()?;
-        Ok(CommandInvocation::new(cmd.unnamed_value()?, arguments))
+        if let Some(c) = self.expressions[0].compile_as_command(env)? {
+            if self.expressions.len() == 1 {
+                Ok(c)
+            } else {
+                error("Stray arguments")
+            }
+        } else {
+            let cmd = self.expressions[0].compile_command(env)?;
+            let arguments = self.expressions[1..]
+                .iter()
+                .map(|e| e.compile_argument(env))
+                .collect::<CrushResult<Vec<ArgumentDefinition>>>()?;
+            Ok(CommandInvocation::new(cmd.unnamed_value()?, arguments))
+        }
     }
 }
 
@@ -288,12 +307,12 @@ impl Node {
             Node::Assignment(target, style, op, value) => match op.deref() {
                 "=" => {
                     return match target.as_ref() {
-                        Node::Symbol(t) => Ok(ArgumentDefinition::named_with_style(
+                        Node::Symbol(t) | Node::Identifier(t) => Ok(ArgumentDefinition::named_with_style(
                             t,
                             *style,
                             propose_name(&t, value.compile_argument(env)?.unnamed_value()?),
                         )),
-                        _ => error(format!("Invalid left side in named argument. Expected a symbol, got a {}", target.type_name())),
+                        _ => error(format!("Invalid left side in named argument. Expected a string or identifier, got a {}", target.type_name())),
                     };
                 }
                 _ => return error("Invalid assignment operator"),
@@ -487,7 +506,7 @@ impl Node {
         let s = is.into();
         let path = expand_user(s.string.clone()).unwrap_or_else(|_| { s.string.clone() });
         let ts = TrackedString::new(&path, s.location);
-        if path.contains('%') || path.contains('?') {
+        if path.contains('*') || path.contains('?') {
             Box::from(Node::Glob(ts))
         } else if s.string.contains('/') || s.string.contains('.') {
             Box::from(Node::File(ts, false))
@@ -509,7 +528,7 @@ impl Node {
         let s = is.into();
         let path = expand_user(s.string.clone()).unwrap_or_else(|_| { s.string.clone() });
         let ts = TrackedString::new(&path, s.location);
-        if ts.string.contains('%') || ts.string.contains('?') {
+        if ts.string.contains('*') || ts.string.contains('?') {
             Box::from(Node::Glob(ts.clone()))
         } else {
             Box::from(Node::File(ts.clone(), false))

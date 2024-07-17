@@ -34,7 +34,7 @@ Job: JobNode = {
 };
 
 Expr: Box<Node> = {
-    <j:JobExpr> => Box::from(Node::Substitution(*j))
+    <j:JobExpr> => j.to_node()
 };
 
 JobExpr: Box<JobNode> = {

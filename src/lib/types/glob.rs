@@ -19,44 +19,13 @@ use crate::data::table::ColumnType;
 use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::this::This;
 
-fn full(name: &'static str) -> Vec<&'static str> {
-    vec!["global", "types", "glob", name]
-}
-
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
         let path = vec!["global", "types", "glob"];
-        res.declare(
-            full("new"),
-            new,
-            false,
-            "glob:new pattern:string",
-            "Return a new glob",
-            None,
-            Known(ValueType::Glob),
-            [],
-        );
-        res.declare(
-            full("match"),
-            r#match,
-            false,
-            "glob:match io:string",
-            "True if the io matches the pattern",
-            None,
-            Known(ValueType::Bool),
-            [],
-        );
-        res.declare(
-            full("not_match"),
-            not_match,
-            false,
-            "glob:not_match io:string",
-            "True if the io does not match the pattern",
-            None,
-            Known(ValueType::Bool),
-            [],
-        );
+        New::declare_method(&mut res, &path);
+        Match::declare_method(&mut res, &path);
+        NotMatch::declare_method(&mut res, &path);
         Files::declare_method(&mut res, &path);
         Filter::declare_method(&mut res, &path);
         res
@@ -141,21 +110,54 @@ pub fn filter(mut context: CommandContext) -> CrushResult<()> {
     }
 }
 
+#[signature(
+    new,
+    can_block = false,
+    output = Known(ValueType::Glob),
+    short = "Create a glob from a string",
+)]
+struct New {
+    #[description("the string representation of the glob.")]
+    glob: String,
+}
+
 fn new(mut context: CommandContext) -> CrushResult<()> {
-    let def = context.arguments.string(0)?;
-    context.output.send(Value::Glob(Glob::new(&def)))
+    let cfg: New = New::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.output.send(Value::Glob(Glob::new(&cfg.glob)))
+}
+
+#[signature(
+    r#match,
+    can_block = false,
+    output = Known(ValueType::Bool),
+    short = "True if the needle matches the pattern",
+)]
+struct Match {
+    #[description("the sting to match this glob against.")]
+    needle: String,
 }
 
 fn r#match(mut context: CommandContext) -> CrushResult<()> {
     let g = context.this.glob()?;
-    let needle = context.arguments.string(0)?;
-    context.output.send(Value::Bool(g.matches(&needle)))
+    let cfg: Match = Match::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.output.send(Value::Bool(g.matches(&cfg.needle)))
+}
+
+#[signature(
+    not_match,
+    can_block = false,
+    output = Known(ValueType::Bool),
+    short = "True if the needle does not match the pattern",
+)]
+struct NotMatch {
+    #[description("the sting to match this glob against.")]
+    needle: String,
 }
 
 fn not_match(mut context: CommandContext) -> CrushResult<()> {
     let g = context.this.glob()?;
-    let needle = context.arguments.string(0)?;
-    context.output.send(Value::Bool(!g.matches(&needle)))
+    let cfg: NotMatch = NotMatch::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.output.send(Value::Bool(!g.matches(&cfg.needle)))
 }
 
 #[signature(

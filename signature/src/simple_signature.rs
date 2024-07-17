@@ -139,7 +139,7 @@ impl SimpleSignature {
             SimpleSignature::F64 => "float",
             SimpleSignature::Command => "command",
             SimpleSignature::Duration => "duration",
-            SimpleSignature::Value => "any value",
+            SimpleSignature::Value => "any",
             SimpleSignature::Stream => "stream",
             SimpleSignature::Struct => "struct",
             SimpleSignature::Dict => "dict",

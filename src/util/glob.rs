@@ -36,7 +36,7 @@ fn compile(s: &str) -> Vec<Tile> {
     for c in s.chars() {
         if was_any {
             match c {
-                '%' => res.push(Tile::Recursive),
+                '*' => res.push(Tile::Recursive),
                 '?' => {
                     res.push(Tile::Any);
                     res.push(Tile::Single);
@@ -49,7 +49,7 @@ fn compile(s: &str) -> Vec<Tile> {
             was_any = false;
         } else {
             match c {
-                '%' => was_any = true,
+                '*' => was_any = true,
                 '?' => {
                     res.push(Tile::Single);
                 }

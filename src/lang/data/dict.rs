@@ -85,10 +85,10 @@ impl Dict {
     pub fn insert(&self, key: Value, value: Value) -> CrushResult<()> {
         let mut entries = self.entries.lock().unwrap();
         if !self.key_type.is(&key) {
-            return argument_error_legacy("Invalid key type");
+            return argument_error_legacy(format!("Invalid key type, expected {}, got {}.", self.key_type.to_string(), key.value_type().to_string()));
         }
         if !self.value_type.is(&value) {
-            return argument_error_legacy("Invalid value type");
+            return argument_error_legacy(format!("Invalid value type, expected {}, got {}.", self.value_type.to_string(), value.value_type().to_string()));
         }
         entries.insert(key, value);
         Ok(())
