@@ -133,13 +133,12 @@ impl List {
         cells.clear();
     }
 
-    pub fn remove(&self, idx: usize) -> CrushResult<()> {
+    pub fn remove(&self, idx: usize) -> CrushResult<Value> {
         let mut cells = self.cells.lock().unwrap();
         if idx >= cells.len() {
             return argument_error_legacy("Index out of bounds");
         }
-        cells.remove(idx);
-        Ok(())
+        Ok(cells.remove(idx))
     }
 
     pub fn insert(&self, idx: usize, value: Value) -> CrushResult<()> {

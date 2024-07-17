@@ -23,6 +23,7 @@ output = Known(ValueType::BinaryInputStream),
 can_block = true,
 )]
 pub struct Cmd {
+    #[description("The file path to the command to execute")]
     command: PathBuf,
     #[named()]
     #[description("Switches to pass in to the command. The name will be prepended with a double dash '--', unless it is a single character name, in which case a single dash '-' will be prepended")]
