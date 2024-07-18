@@ -32,6 +32,10 @@ lazy_static! {
         Remove::declare_method(&mut res, &path);
         Insert::declare_method(&mut res, &path);
         Truncate::declare_method(&mut res, &path);
+        CloneCmd::declare_method(&mut res, &path);
+        Of::declare_method(&mut res, &path);
+        Collect::declare_method(&mut res, &path);
+        New::declare_method(&mut res, &path);
         res.declare(
             full("__setitem__"),
             setitem,
@@ -40,23 +44,6 @@ lazy_static! {
             "Assign a new value to the element at the specified index",
             None,
             Known(ValueType::Empty),
-            [],
-        );
-        CloneCmd::declare_method(&mut res, &path);
-        Of::declare_method(&mut res, &path);
-        Collect::declare_method(&mut res, &path);
-        res.declare(
-            full("new"),
-            new,
-            false,
-            "list:new",
-            "Create a new list with the specified element type",
-            Some(
-                r#"    Example:
-
-    l := ((list string):new)"#,
-            ),
-            Unknown,
             [],
         );
         res.declare(
@@ -196,6 +183,15 @@ fn collect(context: CommandContext) -> CrushResult<()> {
         _ =>  data_error("Expected either input with exactly one column or an argument specifying which column to pick"),
     }
 }
+
+#[signature(
+    new,
+    can_block = false,
+    output = Known(ValueType::List(Box::from(ValueType::Empty))),
+    short = "Create a new list with the specified element type.",
+    example = "l := ((list string):new)"
+)]
+struct New {}
 
 fn new(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;

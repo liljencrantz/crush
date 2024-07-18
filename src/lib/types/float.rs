@@ -7,6 +7,7 @@ use crate::lang::value::ValueType;
 use crate::lang::value::Value;
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
+use signature::signature;
 use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::this::This;
 
@@ -17,6 +18,7 @@ fn full(name: &'static str) -> Vec<&'static str> {
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
+        let path = vec!["global", "types", "float"];
         res.declare(
             full("__add__"),
             add,
@@ -67,16 +69,7 @@ lazy_static! {
             Known(ValueType::Float),
             [],
         );
-        res.declare(
-            full("is_finite"),
-            is_infinite,
-            false,
-            "float:is_infinite",
-            "True if this float is positive or negative infinity",
-            None,
-            Known(ValueType::Bool),
-            [],
-        );
+        IsInfinite::declare_method(&mut res, &path);
         res.declare(
             full("is_nan"),
             is_nan,
@@ -183,6 +176,14 @@ fn is_nan(mut context: CommandContext) -> CrushResult<()> {
         .output
         .send(Value::Bool(context.this.float()?.is_nan()))
 }
+
+#[signature(
+    is_infinite,
+    can_block = false,
+    output = Known(ValueType::Bool),
+    short = "True if this float is positive or negative infinity.",
+)]
+struct IsInfinite {}
 
 fn is_infinite(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
