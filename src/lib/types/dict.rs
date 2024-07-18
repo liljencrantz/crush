@@ -15,48 +15,27 @@ use itertools::Itertools;
 use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::this::This;
 
-fn full(name: &'static str) -> Vec<&'static str> {
-    vec!["global", "types", "dict", name]
-}
-
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
-        let path = vec!["global", "types", "dict"];
-        Len::declare_method(&mut res, &path);
-        Empty::declare_method(&mut res, &path);
-        Call::declare_method(&mut res, &path);
-        Clone::declare_method(&mut res, &path);
-        Clear::declare_method(&mut res, &path);
-        KeyType::declare_method(&mut res, &path);
-        ValueTypeMethod::declare_method(&mut res, &path);
-        Of::declare_method(&mut res, &path);
-        Join::declare_method(&mut res, &path);
-        Join::declare_method(&mut res, &path);
-        New::declare_method(&mut res, &path);
-        Collect::declare_method(&mut res, &path);
-        Remove::declare_method(&mut res, &path);
-        Contains::declare_method(&mut res, &path);
-        res.declare(
-            full("__setitem__"),
-            setitem,
-            false,
-            "dict[key] = value",
-            "Create a new mapping or replace an existing one",
-            None,
-            Unknown,
-            [],
-        );
-        res.declare(
-            full("__getitem__"),
-            getitem,
-            false,
-            "dict[key]",
-            "Return the value the specified key is mapped to",
-            None,
-            Unknown,
-            [],
-        );
+
+        Len::declare_method(&mut res);
+        Empty::declare_method(&mut res);
+        Call::declare_method(&mut res);
+        Clone::declare_method(&mut res);
+        Clear::declare_method(&mut res);
+        KeyType::declare_method(&mut res);
+        ValueTypeMethod::declare_method(&mut res);
+        Of::declare_method(&mut res);
+        Join::declare_method(&mut res);
+        Join::declare_method(&mut res);
+        New::declare_method(&mut res);
+        Collect::declare_method(&mut res);
+        Remove::declare_method(&mut res);
+        Contains::declare_method(&mut res);
+        SetItem::declare_method(&mut res);
+        GetItem::declare_method(&mut res);
+
         res
     };
 }
@@ -66,6 +45,7 @@ lazy_static! {
     can_block = false,
     output = Known(ValueType::Type),
     short = "Returns a dict type with the specified key and value types.",
+    path = ("types", "dict"),
 )]
 struct Call {
     #[description("the type of the keys in the dict.")]
@@ -104,6 +84,7 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
     short = "Create an empty new dict.",
     long = "This method takes no arguments, but must not be called on a raw dict type. You must call it on a parametrized dict type, like $(dict $string $string)",
     example = "my_dict := $($(dict $string $integer):new)",
+    path = ("types", "dict"),
 )]
 struct New {}
 
@@ -128,6 +109,7 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Unknown,
     short = "Create a new dict with the specified elements.",
+    path = ("types", "dict"),
 )]
 struct Of {}
 
@@ -160,7 +142,22 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Dict::new_with_data(key_type, value_type, entries)?.into())
 }
 
-fn setitem(mut context: CommandContext) -> CrushResult<()> {
+#[signature(
+    __setitem__,
+    can_block = false,
+    output = Known(ValueType::Empty),
+    short = "Create a new mapping or replace an existing one.",
+    path = ("types", "dict"),
+)]
+struct SetItem {
+    #[description("the key of the value to set.")]
+    key: Value,
+    #[description("the new value.")]
+    value: Value,
+}
+
+
+fn __setitem__(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(2)?;
     let dict = context.this.dict()?;
     let value = context.arguments.value(1)?;
@@ -168,7 +165,19 @@ fn setitem(mut context: CommandContext) -> CrushResult<()> {
     dict.insert(key, value)
 }
 
-fn getitem(mut context: CommandContext) -> CrushResult<()> {
+#[signature(
+    __getitem__,
+    can_block = false,
+    output = Known(ValueType::Empty),
+    short = "Return the value mapped to the specified key of the dict.",
+    path = ("types", "dict"),
+)]
+struct GetItem {
+    #[description("the key of the value to get.")]
+    key: Value,
+}
+
+fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     let dict = context.this.dict()?;
     let key = context.arguments.value(0)?;
@@ -181,6 +190,7 @@ fn getitem(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Bool),
     short = "Returns whether the given key is in the dict",
+    path = ("types", "dict"),
 )]
 struct Contains {
     #[description("the value to check.")]
@@ -198,6 +208,7 @@ fn contains(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Unknown,
     short = "Remove a mapping from the dict and return the value, or nothing if there was no value in the dict",
+    path = ("types", "dict"),
 )]
 struct Remove {
     #[description("the value to remove.")]
@@ -218,6 +229,7 @@ fn remove(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Integer),
     short = "The number of mappings in the dict.",
+    path = ("types", "dict"),
 )]
 struct Len {}
 
@@ -233,6 +245,7 @@ fn len(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Unknown,
     short = "Remove all mappings from this dict.",
+    path = ("types", "dict"),
 )]
 struct Clear {}
 
@@ -248,6 +261,7 @@ fn clear(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Unknown,
     short = "Create a new dict with the same set of mappings as this one.",
+    path = ("types", "dict"),
 )]
 struct Clone {}
 
@@ -262,6 +276,7 @@ fn clone(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Bool),
     short = "True if there are no mappings in the dict.",
+    path = ("types", "dict"),
 )]
 struct Empty {}
 
@@ -277,6 +292,7 @@ fn empty(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Type),
     short = "the type of the keys in this dict.",
+    path = ("types", "dict"),
 )]
 struct KeyType {}
 
@@ -292,6 +308,7 @@ fn key_type(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Type),
     short = "the type of the values in this dict.",
+    path = ("types", "dict"),
 )]
 struct ValueTypeMethod {}
 
@@ -307,6 +324,7 @@ fn value_type(mut context: CommandContext) -> CrushResult<()> {
     can_block = true,
     output = Known(ValueType::Dict(Box::from(ValueType::Empty), Box::from(ValueType::Empty))),
     short = "Create a new dict by reading the specified columns from the input.",
+    path = ("types", "dict"),
 )]
 struct Collect {
     #[description("the name of the column to use as key")]
@@ -339,6 +357,7 @@ fn collect(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Unknown,
     short = "Create a new dict with the same set of mappings as this one.",
+    path = ("types", "dict"),
 )]
 struct Join {
     #[description("the dict instances to join.")]
