@@ -7,8 +7,11 @@ use crate::lang::value::ValueType;
 use crate::lang::value::Value;
 use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
+use signature::signature;
+use crate::lang::signature::number::Number;
 use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::this::This;
+use crate::lang::command::OutputType::Unknown;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "integer", name]
@@ -17,46 +20,10 @@ fn full(name: &'static str) -> Vec<&'static str> {
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
-        res.declare(
-            full("__add__"),
-            add,
-            false,
-            "integer + term:(integer|float)",
-            "Add this number by the specified term",
-            None,
-            Known(ValueType::Integer),
-            [],
-        );
-        res.declare(
-            full("__sub__"),
-            sub,
-            false,
-            "integer - term:(integer|float)",
-            "Subtract the specified term from this number",
-            None,
-            Known(ValueType::Integer),
-            [],
-        );
-        res.declare(
-            full("__mul__"),
-            mul,
-            false,
-            "integer * factor:(integer|float)",
-            "Multiply this number with the specified factor",
-            None,
-            Known(ValueType::Integer),
-            [],
-        );
-        res.declare(
-            full("__div__"),
-            div,
-            false,
-            "integer / factor:(integer|float)",
-            "Divide this number by the specified factor",
-            None,
-            Known(ValueType::Integer),
-            [],
-        );
+        Add::declare_method(&mut res);
+        Sub::declare_method(&mut res);
+        Mul::declare_method(&mut res);
+        Div::declare_method(&mut res);
         res.declare(
             full("mod"),
             r#mod,
@@ -111,8 +78,20 @@ lazy_static! {
     };
 }
 
+#[signature(
+    __add__,
+    can_block = false,
+    output = Unknown,
+    short = "Add this number and the specified term and return the result",
+    path = ("types", "integer"),
+)]
+struct Add {
+    #[description("the number to add")]
+    term: Number
+}
+
 binary_op!(
-    add,
+    __add__,
     integer,
     Integer,
     Integer,
@@ -121,8 +100,20 @@ binary_op!(
     Float,
     |a, b| a as f64 + b
 );
+
+#[signature(
+    __sub__,
+    can_block = false,
+    output = Unknown,
+    short = "Subtract the specified term from this number and return the result",
+    path = ("types", "integer"),
+)]
+struct Sub {
+    #[description("the number to subtract")]
+    term: Number
+}
 binary_op!(
-    sub,
+    __sub__,
     integer,
     Integer,
     Integer,
@@ -131,8 +122,21 @@ binary_op!(
     Float,
     |a, b| a as f64 - b
 );
+
+#[signature(
+    __mul__,
+    can_block = false,
+    output = Unknown,
+    short = "multiply this number and the specified factor and return the result",
+    path = ("types", "integer"),
+)]
+struct Mul {
+    #[description("the number to multiply")]
+    term: Number
+}
+
 binary_op!(
-    mul,
+    __mul__,
     integer,
     Integer,
     Integer,
@@ -141,8 +145,20 @@ binary_op!(
     Float,
     |a, b| a as f64 * b
 );
+
+#[signature(
+    __div__,
+    can_block = false,
+    output = Unknown,
+    short = "Divide this number by the specified factor",
+    path = ("types", "integer"),
+)]
+struct Div {
+    #[description("the number to divide by")]
+    term: Number
+}
 binary_op!(
-    div,
+    __div__,
     integer,
     Integer,
     Integer,

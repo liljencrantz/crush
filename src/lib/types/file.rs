@@ -20,16 +20,15 @@ use crate::util::user_map::{get_gid, get_uid};
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
-        let path = vec!["global", "types", "file"];
-        Stat::declare_method(&mut res, &path);
-        Chown::declare_method(&mut res, &path);
-        Chmod::declare_method(&mut res, &path);
-        Exists::declare_method(&mut res, &path);
-        GetItem::declare_method(&mut res, &path);
-        Write::declare_method(&mut res, &path);
-        Read::declare_method(&mut res, &path);
-        Parent::declare_method(&mut res, &path);
-        Name::declare_method(&mut res, &path);
+        Stat::declare_method(&mut res);
+        Chown::declare_method(&mut res);
+        Chmod::declare_method(&mut res);
+        Exists::declare_method(&mut res);
+        GetItem::declare_method(&mut res);
+        Write::declare_method(&mut res);
+        Read::declare_method(&mut res);
+        Parent::declare_method(&mut res);
+        Name::declare_method(&mut res);
         res
     };
 }
@@ -46,7 +45,8 @@ long = "* is_symlink:bool is the file a symbolic link",
 long = "* inode:integer the inode number of the file",
 long = "* nlink:integer the number of hardlinks to the file",
 long = "* mode:integer the permission bits for the file",
-long = "* len: integer the size of the file"
+long = "* len: integer the size of the file",
+path = ("types", "file"),
 )]
 struct Stat {}
 
@@ -72,6 +72,7 @@ chown,
 can_block = false,
 output = Known(ValueType::Empty),
 short = "Change owner of this file.",
+path = ("types", "file"),
 )]
 struct Chown {
     #[description("the owning user for the file.")]
@@ -113,6 +114,7 @@ long = "* A class is one of u, g, o, a, signifying file owner, file group, other
 long = "* The adjustment must be one of +, -, and =, signifying added permissions, removed permissions and set permissions, respectively.",
 long = "* A mode is one of r w, x, signifying read, write and execute permissions.",
 example = "./foo:chmod \"a=\" \"u+r\" # First strip all rights for all users, then re-add read rights for the owner",
+path = ("types", "file"),
 )]
 struct Chmod {
     #[description("the set of permissions to add.")]
@@ -234,6 +236,7 @@ exists,
 can_block = false,
 output = Known(ValueType::Bool),
 short = "True if the file exists.",
+path = ("types", "file"),
 )]
 struct Exists {}
 
@@ -248,6 +251,7 @@ __getitem__,
 can_block = false,
 output = Known(ValueType::Bool),
 short = "Return a file or subdirectory in the specified base directory.",
+path = ("types", "file"),
 )]
 struct GetItem {
     name: String,
@@ -265,6 +269,7 @@ write,
 can_block = true,
 output = Known(ValueType::Empty),
 short = "A write sink for binary_stream values",
+path = ("types", "file"),
 )]
 struct Write {}
 
@@ -285,6 +290,7 @@ read,
 can_block = true,
 output = Known(ValueType::BinaryInputStream),
 short = "A read source for binary_stream values",
+path = ("types", "file"),
 )]
 struct Read {}
 
@@ -299,6 +305,7 @@ name,
 can_block = false,
 output = Known(ValueType::String),
 short = "The name (excluding path) of this file, as a string",
+path = ("types", "file"),
 )]
 struct Name {}
 
@@ -320,6 +327,7 @@ parent,
 can_block = false,
 output = Known(ValueType::File),
 short = "The parent directory of this file",
+path = ("types", "file"),
 )]
 struct Parent {}
 

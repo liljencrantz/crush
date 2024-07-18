@@ -4,7 +4,7 @@ parse and declare a command based on its signature.
  */
 
 use proc_macro2;
-use proc_macro2::Ident;
+use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing};
 use proc_macro2::{Literal, TokenStream, TokenTree};
 use quote::{quote, quote_spanned, ToTokens};
 use syn::{Attribute, Item};
@@ -93,6 +93,7 @@ struct Metadata {
     output: Option<TokenStream>,
     #[allow(unused)]
     condition: bool,
+    path: Vec<String>,
 }
 
 fn unescape(s: &str) -> String {
@@ -123,6 +124,7 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
     let mut long_description = Vec::new();
     let mut output: Option<TokenStream> = None;
     let mut condition = false;
+    let mut path = Vec::new();
 
     let location = metadata.span().clone();
     let metadata_iter = metadata.into_iter().collect::<Vec<_>>();
@@ -163,9 +165,25 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
                     tmp.extend(s.into_token_stream());
                 }
                 output = Some(tmp);
+            } else if name.to_string().as_str() == "path" && meta.len() == 3 {
+                if let TokenTree::Group(path_tokens) = &meta[2] {
+                    for el in path_tokens.stream().into_iter() {
+                        match el {
+                            TokenTree::Group(_) |
+                            TokenTree::Ident(_) =>
+                                return fail!(el.span(), "Expected string literals"),
+                            TokenTree::Punct(_) => {}
+                            TokenTree::Literal(l) => {
+                                path.push(unescape(&l.to_string()));
+                            }
+                        }
+                    }
+                } else {
+                    return fail!(meta[2].span(), "Expected a group");
+                }
             } else {
                 if meta.len() != 3 {
-                    return fail!(meta[0].span(), "Invalid parameter format");
+                    return fail!(meta[0].span(), "Invalid parameter formattt");
                 }
                 match (&meta[1], &meta[2]) {
                     (TokenTree::Punct(p), TokenTree::Literal(l)) => {
@@ -196,7 +214,7 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
                             _ => return fail!(l.span(), "Unknown argument"),
                         }
                     }
-                    _ => return fail!(meta[0].span(), "Invalid parameter format"),
+                    _ => return fail!(meta[0].span(), "Invalid parameter formatt"),
                 }
             }
         }
@@ -211,7 +229,18 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
         example,
         output,
         condition,
+        path,
     })
+}
+
+fn generate_signature(path: &[String], signature: Vec<String>) -> String {
+    match (signature[0].as_str(), signature.len()) {
+        ("__add__", 2) => format!("{} + {} # Only available in math mode", path.join(":"), signature[1]),
+        ("__sub__", 2) => format!("{} - {} # Only available in math mode", path.join(":"), signature[1]),
+        ("__mul__", 2) => format!("{} * {} # Only available in math mode", path.join(":"), signature[1]),
+        ("__div__", 2) => format!("{} / {} # Only available in math mode", path.join(":"), signature[1]),
+        _ => format!("{}:{}", path.join(":"), signature.join(" "))
+    }
 }
 
 fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<TokenStream> {
@@ -355,7 +384,14 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 long_description.push(example);
             }
 
+            let has_path = metadata.path.len() > 0;
             let signature_literal = Literal::string(&signature.join(" "));
+            let full_signature_literal = if has_path {
+                Literal::string(&generate_signature(&metadata.path, signature))
+            } else {
+                signature_literal.clone()
+            };
+
 
             let long_description = if !long_description.is_empty() {
                 let mut s = "    ".to_string();
@@ -366,7 +402,72 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 quote! {None}
             };
 
-            let handler = quote! {
+            let handler =
+                if has_path {
+                    let mut vec_stream = TokenStream::new();
+                    vec_stream.extend(metadata.path.iter().flat_map(|e| vec![TokenTree::Literal(Literal::string(e)),
+                                                                             TokenTree::Punct(Punct::new(',', Spacing::Alone))]));
+                    let path = TokenTree::Group(Group::new(Delimiter::None, vec_stream));
+                    quote! {
+
+            #[allow(unused_parens)] // TODO: don't emit unnecessary parenthesis in the first place
+            impl #struct_name {
+                pub fn declare(env: &mut crate::lang::state::scope::ScopeLoader) -> crate::lang::errors::CrushResult <()> {
+                    env.declare_command(
+                        #command_name,
+                        #command_invocation,
+                        #can_block,
+                        #full_signature_literal,
+                        #description,
+                        #long_description,
+                        #output,
+                        vec![
+                            #argument_desciptions
+                        ],
+                    )
+                }
+
+                pub fn declare_method(env: &mut ordered_map::OrderedMap<std::string::String, crate::lang::command::Command>) {
+                    let mut full = vec!["global", #path];
+                    full.push(#command_name);
+                    env.insert(#command_name.to_string(),
+                        <dyn crate::lang::command::CrushCommand>::command(
+                            #command_invocation,
+                            #can_block,
+                            full,
+                            #full_signature_literal,
+                            #description,
+                            #long_description,
+                            #output,
+                            [#argument_desciptions],
+                        )
+                    );
+                }
+
+                #[allow(unreachable_patterns)]
+                pub fn parse(_arguments: Vec<crate::lang::argument::Argument>, _printer: &crate::lang::printer::Printer) -> crate::lang::errors::CrushResult < # struct_name > {
+                    use std::convert::TryFrom;
+                    use std::ops::Deref;
+                    # values
+                    let mut _unnamed = std::collections::VecDeque::new();
+
+                    for _arg in _arguments {
+                        let _location = _arg.location;
+                        match (_arg.argument_type.as_deref(), _arg.value) {
+                            #named_matchers
+                            #named_fallback
+                            (None, _value) => _unnamed.push_back((_value, _arg.location)),
+                            (Some(_name), _value) => return crate::lang::errors::argument_error(format!("Unknown argument name \"{}\"", _name), _location),
+                        }
+                    }
+
+                    #unnamed_mutations
+
+                    Ok( #struct_name { #assignments })
+                }
+            }}
+                } else {
+                    quote! {
 
             #[allow(unused_parens)] // TODO: don't emit unnecessary parenthesis in the first place
             impl #struct_name {
@@ -393,7 +494,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                             #command_invocation,
                             #can_block,
                             full,
-                            #signature_literal,
+                            #full_signature_literal,
                             #description,
                             #long_description,
                             #output,
@@ -424,7 +525,8 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                     Ok( #struct_name { #assignments })
                 }
             }
-            };
+            }
+                };
 
             let mut output = s.to_token_stream();
             output.extend(handler.into_token_stream());
