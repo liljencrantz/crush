@@ -183,7 +183,7 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
                 }
             } else {
                 if meta.len() != 3 {
-                    return fail!(meta[0].span(), "Invalid parameter formattt");
+                    return fail!(meta[0].span(), "Invalid parameter format");
                 }
                 match (&meta[1], &meta[2]) {
                     (TokenTree::Punct(p), TokenTree::Literal(l)) => {
@@ -214,7 +214,7 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
                             _ => return fail!(l.span(), "Unknown argument"),
                         }
                     }
-                    _ => return fail!(meta[0].span(), "Invalid parameter formatt"),
+                    _ => return fail!(meta[0].span(), "Invalid parameter format"),
                 }
             }
         }
@@ -239,6 +239,8 @@ fn generate_signature(path: &[String], signature: Vec<String>) -> String {
         ("__sub__", 2) => format!("{} - {} # Only available in math mode", path.join(":"), signature[1]),
         ("__mul__", 2) => format!("{} * {} # Only available in math mode", path.join(":"), signature[1]),
         ("__div__", 2) => format!("{} / {} # Only available in math mode", path.join(":"), signature[1]),
+        ("__getitem__", 2) => format!("{}[{}]", path.join(":"), signature[1]),
+        ("__setitem__", 3) => format!("{}[{}] = {}", path.join(":"), signature[1], signature[2]),
         _ => format!("{}:{}", path.join(":"), signature.join(" "))
     }
 }

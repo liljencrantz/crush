@@ -13,67 +13,20 @@ use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::this::This;
 use crate::lang::command::OutputType::Unknown;
 
-fn full(name: &'static str) -> Vec<&'static str> {
-    vec!["global", "types", "integer", name]
-}
-
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
+
         Add::declare_method(&mut res);
         Sub::declare_method(&mut res);
         Mul::declare_method(&mut res);
         Div::declare_method(&mut res);
-        res.declare(
-            full("mod"),
-            r#mod,
-            false,
-            "integer:mod factor:integer",
-            "Least positive residue after integer division",
-            None,
-            Known(ValueType::Integer),
-            [],
-        );
-        res.declare(
-            full("rem"),
-            rem,
-            false,
-            "integer:rem factor:integer",
-            "Remainder after integer division",
-            None,
-            Known(ValueType::Integer),
-            [],
-        );
-        res.declare(
-            full("__neg__"),
-            neg,
-            false,
-            "neg integer",
-            "Negate this integer",
-            None,
-            Known(ValueType::Integer),
-            [],
-        );
-        res.declare(
-            full("max"),
-            max,
-            false,
-            "integer:max",
-            "Largest integer value",
-            None,
-            Known(ValueType::Integer),
-            [],
-        );
-        res.declare(
-            full("min"),
-            min,
-            false,
-            "float:min",
-            "Smallest integer value",
-            None,
-            Known(ValueType::Integer),
-            [],
-        );
+        Mod::declare_method(&mut res);
+        Rem::declare_method(&mut res);
+        Neg::declare_method(&mut res);
+        Max::declare_method(&mut res);
+        Min::declare_method(&mut res);
+
         res
     };
 }
@@ -167,14 +120,60 @@ binary_op!(
     Float,
     |a, b| a as f64 / b
 );
+
+#[signature(
+    rem,
+    can_block = false,
+    output = Known(ValueType::Integer),
+    short = "Remainder after integer division",
+    path = ("types", "integer"),
+)]
+struct Rem {
+    #[description("the number to divide by")]
+    term: i128
+}
+
 binary_op!(rem, integer, Integer, Integer, |a, b| a % b);
+
+#[signature(
+    r#mod,
+    can_block = false,
+    output = Known(ValueType::Integer),
+    short = "Least positive residue after integer division",
+    path = ("types", "integer"),
+)]
+struct Mod {
+    #[description("the number to divide by")]
+    term: i128
+}
+
 binary_op!(r#mod, integer, Integer, Integer, |a, b| (a % b + b) % b);
 
-fn neg(mut context: CommandContext) -> CrushResult<()> {
+#[signature(
+    __neg__,
+    can_block = false,
+    output = Known(ValueType::Integer),
+    short = "Negate this integer",
+    path = ("types", "integer"),
+)]
+struct Neg {
+}
+
+fn __neg__(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
         .send(Value::Integer(-context.this.integer()?))
+}
+
+#[signature(
+    max,
+    can_block = false,
+    output = Known(ValueType::Integer),
+    short = "Largest integer value",
+    path = ("types", "integer"),
+)]
+struct Max {
 }
 
 fn max(context: CommandContext) -> CrushResult<()> {
@@ -182,6 +181,16 @@ fn max(context: CommandContext) -> CrushResult<()> {
     context
         .output
         .send(Value::Integer(i128::MAX))
+}
+
+#[signature(
+    min,
+    can_block = false,
+    output = Known(ValueType::Integer),
+    short = "Smallest integer value",
+    path = ("types", "integer"),
+)]
+struct Min {
 }
 
 fn min(context: CommandContext) -> CrushResult<()> {

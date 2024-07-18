@@ -15,50 +15,28 @@ use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::this::This;
 use crate::util::replace::Replace;
 
-fn full(name: &'static str) -> Vec<&'static str> {
-    vec!["global", "types", "list", name]
-}
-
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
-        let path = vec!["global", "types", "list"];
-        Len::declare_method(&mut res, &path);
-        Empty::declare_method(&mut res, &path);
-        Clear::declare_method(&mut res, &path);
-        Push::declare_method(&mut res, &path);
-        Pop::declare_method(&mut res, &path);
-        Peek::declare_method(&mut res, &path);
-        Remove::declare_method(&mut res, &path);
-        Insert::declare_method(&mut res, &path);
-        Truncate::declare_method(&mut res, &path);
-        CloneCmd::declare_method(&mut res, &path);
-        Of::declare_method(&mut res, &path);
-        Collect::declare_method(&mut res, &path);
-        New::declare_method(&mut res, &path);
-        res.declare(
-            full("__setitem__"),
-            setitem,
-            false,
-            "list[idx:integer] = value:any",
-            "Assign a new value to the element at the specified index",
-            None,
-            Known(ValueType::Empty),
-            [],
-        );
-        res.declare(
-            full("__getitem__"),
-            getitem,
-            true,
-            "name[idx:index]",
-            "Return a file or subdirectory in the specified base directory",
-            None,
-            Unknown,
-            [],
-        );
-        Repeat::declare_method(&mut res, &path);
-        Call::declare_method(&mut res, &path);
-        Slice::declare_method(&mut res, &path);
+
+        Len::declare_method(&mut res);
+        Empty::declare_method(&mut res);
+        Clear::declare_method(&mut res);
+        Push::declare_method(&mut res);
+        Pop::declare_method(&mut res);
+        Peek::declare_method(&mut res);
+        Remove::declare_method(&mut res);
+        Insert::declare_method(&mut res);
+        Truncate::declare_method(&mut res);
+        CloneCmd::declare_method(&mut res);
+        Of::declare_method(&mut res);
+        Collect::declare_method(&mut res);
+        New::declare_method(&mut res);
+        GetItem::declare_method(&mut res);
+        SetItem::declare_method(&mut res);
+        Repeat::declare_method(&mut res);
+        Call::declare_method(&mut res);
+        Slice::declare_method(&mut res);
 
         res
     };
@@ -67,7 +45,8 @@ lazy_static! {
 #[signature(
     repeat,
     can_block = false,
-    short = "Create a list containing the same value multiple times"
+    short = "Create a list containing the same value multiple times",
+    path = ("types", "list"),
 )]
 struct Repeat {
     #[description("the value to put into the list.")]
@@ -92,6 +71,7 @@ __call__,
 can_block = false,
 output = Known(ValueType::Type),
 short = "Returns a list type with the specified value type.",
+path = ("types", "list"),
 )]
 struct Call {
     #[description("the type of the values in the list.")]
@@ -130,6 +110,7 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::List(Box::from(ValueType::Empty))),
     short = "Create a new list containing the supplied elements.",
+    path = ("types", "list"),
 )]
 struct Of {
     #[description("the elements of the new list.")]
@@ -150,7 +131,8 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::List(Box::from(ValueType::Empty))),
     short = "Create a new list by reading a column from the input.",
-    long= "If no elements are supplied as arguments, input must be a stream with exactly one column."
+    long= "If no elements are supplied as arguments, input must be a stream with exactly one column.",
+    path = ("types", "list"),
 )]
 struct Collect {
     column: Option<String>,
@@ -189,7 +171,8 @@ fn collect(context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::List(Box::from(ValueType::Empty))),
     short = "Create a new list with the specified element type.",
-    example = "l := ((list string):new)"
+    example = "l := ((list string):new)",
+    path = ("types", "list"),
 )]
 struct New {}
 
@@ -206,6 +189,7 @@ len,
 can_block = false,
 output = Known(ValueType::Integer),
 short = "The number of values in the list.",
+path = ("types", "list"),
 )]
 struct Len {}
 
@@ -221,6 +205,7 @@ empty,
 can_block = false,
 output = Known(ValueType::Bool),
 short = "True if there are no values in the list.",
+path = ("types", "list"),
 )]
 struct Empty {}
 
@@ -236,6 +221,7 @@ fn empty(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::List(Box::from(ValueType::Empty))),
     short = "Push elements to the end of the list.",
+    path = ("types", "list"),
 )]
 struct Push {
     #[unnamed()]
@@ -263,6 +249,7 @@ fn push(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Empty),
     short = "Remove the last element from the list.",
+    path = ("types", "list"),
 )]
 struct Pop {
 }
@@ -279,6 +266,7 @@ fn pop(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Empty),
     short = "Return the last element from the list without removing it.",
+    path = ("types", "list"),
 )]
 struct Peek {
 }
@@ -295,6 +283,7 @@ clear,
 can_block = false,
 output = Unknown,
 short = "Remove all values from this list.",
+path = ("types", "list"),
 )]
 struct Clear {
 }
@@ -306,7 +295,21 @@ fn clear(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(l.into())
 }
 
-fn setitem(mut context: CommandContext) -> CrushResult<()> {
+#[signature(
+    __setitem__,
+    can_block = false,
+    output = Known(ValueType::Empty),
+    short = "Assign a new value to the element at the specified index.",
+    path = ("types", "list"),
+)]
+struct SetItem {
+    #[description("the index of the item to set.")]
+    idx: usize,
+    #[description("the new value.")]
+    value: Value,
+}
+
+fn __setitem__(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(2)?;
     let list = context.this.list()?;
     let key = context.arguments.integer(0)?;
@@ -320,6 +323,7 @@ fn setitem(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Empty),
     short = "Remove the element at the specified index and return it.",
+    path = ("types", "list"),
 )]
 struct Remove {
     idx: usize,
@@ -336,6 +340,7 @@ fn remove(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Unknown,
     short = "Insert a new element at the specified index. Following values will be shifted forward.",
+    path = ("types", "list"),
 )]
 struct Insert {
     idx: usize,
@@ -353,6 +358,7 @@ fn insert(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Unknown,
     short = "Remove all elements past the specified index.",
+    path = ("types", "list"),
 )]
 struct Truncate {
     idx: Option<usize>,
@@ -370,6 +376,7 @@ fn truncate(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::List(Box::from(ValueType::Empty))),
     short = "Create a duplicate of the list.",
+    path = ("types", "list"),
 )]
 struct CloneCmd {}
 
@@ -380,7 +387,20 @@ fn clone(mut context: CommandContext) -> CrushResult<()> {
         .send(context.this.list()?.copy().into())
 }
 
-fn getitem(mut context: CommandContext) -> CrushResult<()> {
+
+#[signature(
+    __getitem__,
+    can_block = false,
+    output = Known(ValueType::Empty),
+    short = "Return the value at the specified index of the list.",
+    path = ("types", "list"),
+)]
+struct GetItem {
+    #[description("the index of the item to get.")]
+    idx: usize,
+}
+
+fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     let list = context.this.list()?;
     let idx = context.arguments.integer(0)?;
@@ -392,6 +412,7 @@ slice,
 can_block = false,
 output=Unknown,
 short = "Extract a slice from this list.",
+path = ("types", "list"),
 )]
 struct Slice {
     #[description("Starting index (inclusive). If unspecified, from start of list.")]

@@ -22,12 +22,11 @@ use crate::lang::state::this::This;
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
-        let path = vec!["global", "types", "glob"];
-        New::declare_method(&mut res, &path);
-        Match::declare_method(&mut res, &path);
-        NotMatch::declare_method(&mut res, &path);
-        Files::declare_method(&mut res, &path);
-        Filter::declare_method(&mut res, &path);
+        New::declare_method(&mut res);
+        Match::declare_method(&mut res);
+        NotMatch::declare_method(&mut res);
+        Files::declare_method(&mut res);
+        Filter::declare_method(&mut res);
         res
     };
 }
@@ -37,6 +36,7 @@ filter,
 can_block = true,
 output = Passthrough,
 short = "Filter stream based on this glob.",
+path = ("types", "glob"),
 )]
 struct Filter {
     #[unnamed()]
@@ -115,6 +115,7 @@ pub fn filter(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Glob),
     short = "Create a glob from a string",
+    path = ("types", "glob"),
 )]
 struct New {
     #[description("the string representation of the glob.")]
@@ -131,6 +132,7 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Bool),
     short = "True if the needle matches the pattern",
+    path = ("types", "glob"),
 )]
 struct Match {
     #[description("the sting to match this glob against.")]
@@ -148,6 +150,7 @@ fn r#match(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Bool),
     short = "True if the needle does not match the pattern",
+    path = ("types", "glob"),
 )]
 struct NotMatch {
     #[description("the sting to match this glob against.")]
@@ -165,6 +168,7 @@ files,
 can_block = true,
 output = Known(ValueType::List(Box::from(ValueType::File))),
 short = "Perform file matching of this glob.",
+path = ("types", "glob"),
 )]
 struct Files {
     #[description("the directory to match in. Use current working directory if unspecified.")]
