@@ -7,7 +7,6 @@ use rustyline::error::ReadlineError;
 use rustyline::{Editor, Config, CompletionType, EditMode};
 use crate::util::file::home;
 use std::path::PathBuf;
-use rustyline::history::DefaultHistory;
 use crate::lang::state::scope::Scope;
 use crate::lang::pipe::{ValueSender, empty_channel, pipe, black_hole};
 use crate::lang::errors::{CrushResult, to_crush_error, data_error, error};

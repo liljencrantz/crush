@@ -4,7 +4,7 @@ parse and declare a command based on its signature.
  */
 
 use proc_macro2;
-use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing};
+use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing, Span};
 use proc_macro2::{Literal, TokenStream, TokenTree};
 use quote::{quote, quote_spanned, ToTokens};
 use syn::{Attribute, Item};
@@ -117,6 +117,37 @@ fn unescape(s: &str) -> String {
     res
 }
 
+fn parse_full_name(location: Span, name_tree: &[TokenTree]) -> SignatureResult<(String, Ident, Vec<String>)> {
+    let mut res = vec![];
+    for el in name_tree.into_iter() {
+        match el {
+            TokenTree::Ident(l) =>
+                res.push(l),
+            TokenTree::Punct(p) => {
+                if p.as_char() != '.' {
+                    return fail!(el.span(), "Unbexpected punctuation");
+                }
+            }
+            TokenTree::Group(_) | TokenTree::Literal(_) => {
+                return fail!(el.span(), "Expected identifier");
+            }
+        }
+    }
+
+    if res.len() < 1 {
+        return fail!(location.span(), "Expected identifier");
+    }
+
+    let i = res.pop().unwrap();
+    let as_str = i.to_string();
+    let mut ch = as_str.chars();
+    if as_str.starts_with("r#") {
+        ch.next();
+        ch.next();
+    }
+    return Ok((ch.as_str().to_string(), i.clone(), res.iter().map(|id| id.to_string()).collect()));
+}
+
 fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
     let mut can_block = true;
     let mut example = None;
@@ -124,7 +155,6 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
     let mut long_description = Vec::new();
     let mut output: Option<TokenStream> = None;
     let mut condition = false;
-    let mut path = Vec::new();
 
     let location = metadata.span().clone();
     let metadata_iter = metadata.into_iter().collect::<Vec<_>>();
@@ -137,22 +167,8 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
     if v.len() == 0 {
         return fail!(location, "No name specified");
     }
-    let (name, identifier) = match v[0] {
-        [TokenTree::Ident(i)] => {
-            let as_str = i.to_string();
-            if as_str.starts_with("r#") {
-                let mut ch = as_str.chars();
-                ch.next();
-                ch.next();
-                (ch.as_str().to_string(), i.clone())
-            } else {
-                (as_str, i.clone())
-            }
-        }
-        _ => {
-            return fail!(location, "Invalid name");
-        }
-    };
+
+    let (name, identifier, path) = parse_full_name(location, v[0])?;
 
     for meta in &v[1..] {
         if meta.len() == 0 {
@@ -165,22 +181,6 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
                     tmp.extend(s.into_token_stream());
                 }
                 output = Some(tmp);
-            } else if name.to_string().as_str() == "path" && meta.len() == 3 {
-                if let TokenTree::Group(path_tokens) = &meta[2] {
-                    for el in path_tokens.stream().into_iter() {
-                        match el {
-                            TokenTree::Group(_) |
-                            TokenTree::Ident(_) =>
-                                return fail!(el.span(), "Expected string literals"),
-                            TokenTree::Punct(_) => {}
-                            TokenTree::Literal(l) => {
-                                path.push(unescape(&l.to_string()));
-                            }
-                        }
-                    }
-                } else {
-                    return fail!(meta[2].span(), "Expected a group");
-                }
             } else {
                 if meta.len() != 3 {
                     return fail!(meta[0].span(), "Invalid parameter format");

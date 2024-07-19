@@ -34,19 +34,18 @@ lazy_static! {
 }
 
 #[signature(
-stat,
-can_block = false,
-output = Known(ValueType::Struct),
-short = "Return a struct with information about a file.",
-long = "The return value contains the following fields:",
-long = "* is_directory:bool is the file is a directory",
-long = "* is_file:bool is the file a regular file",
-long = "* is_symlink:bool is the file a symbolic link",
-long = "* inode:integer the inode number of the file",
-long = "* nlink:integer the number of hardlinks to the file",
-long = "* mode:integer the permission bits for the file",
-long = "* len: integer the size of the file",
-path = ("types", "file"),
+    types.file.stat,
+    can_block = false,
+    output = Known(ValueType::Struct),
+    short = "Return a struct with information about a file.",
+    long = "The return value contains the following fields:",
+    long = "* is_directory:bool is the file is a directory",
+    long = "* is_file:bool is the file a regular file",
+    long = "* is_symlink:bool is the file a symbolic link",
+    long = "* inode:integer the inode number of the file",
+    long = "* nlink:integer the number of hardlinks to the file",
+    long = "* mode:integer the permission bits for the file",
+    long = "* len: integer the size of the file",
 )]
 struct Stat {}
 
@@ -68,11 +67,10 @@ pub fn stat(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-chown,
-can_block = false,
-output = Known(ValueType::Empty),
-short = "Change owner of this file.",
-path = ("types", "file"),
+    types.file.chown,
+    can_block = false,
+    output = Known(ValueType::Empty),
+    short = "Change owner of this file.",
 )]
 struct Chown {
     #[description("the owning user for the file.")]
@@ -105,16 +103,15 @@ pub fn chown(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-chmod,
-can_block = false,
-output = Known(ValueType::Empty),
-short = "Change permissions of this file.",
-long = "Permissions are strings of the form [classes...][adjustment][modes..].",
-long = "* A class is one of u, g, o, a, signifying file owner, file group, other users and all users, respectively.",
-long = "* The adjustment must be one of +, -, and =, signifying added permissions, removed permissions and set permissions, respectively.",
-long = "* A mode is one of r w, x, signifying read, write and execute permissions.",
-example = "./foo:chmod \"a=\" \"u+r\" # First strip all rights for all users, then re-add read rights for the owner",
-path = ("types", "file"),
+    types.file.chmod,
+    can_block = false,
+    output = Known(ValueType::Empty),
+    short = "Change permissions of this file.",
+    long = "Permissions are strings of the form [classes...][adjustment][modes..].",
+    long = "* A class is one of u, g, o, a, signifying file owner, file group, other users and all users, respectively.",
+    long = "* The adjustment must be one of +, -, and =, signifying added permissions, removed permissions and set permissions, respectively.",
+    long = "* A mode is one of r w, x, signifying read, write and execute permissions.",
+    example = "./foo:chmod \"a=\" \"u+r\" # First strip all rights for all users, then re-add read rights for the owner",
 )]
 struct Chmod {
     #[description("the set of permissions to add.")]
@@ -232,11 +229,10 @@ pub fn chmod(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-exists,
-can_block = false,
-output = Known(ValueType::Bool),
-short = "True if the file exists.",
-path = ("types", "file"),
+    types.file.exists,
+    can_block = false,
+    output = Known(ValueType::Bool),
+    short = "True if the file exists.",
 )]
 struct Exists {}
 
@@ -247,11 +243,10 @@ pub fn exists(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-__getitem__,
-can_block = false,
-output = Known(ValueType::Bool),
-short = "Return a file or subdirectory in the specified base directory.",
-path = ("types", "file"),
+    types.file.__getitem__,
+    can_block = false,
+    output = Known(ValueType::Bool),
+    short = "Return a file or subdirectory in the specified base directory.",
 )]
 struct GetItem {
     name: String,
@@ -265,11 +260,10 @@ pub fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
 
 
 #[signature(
-write,
-can_block = true,
-output = Known(ValueType::Empty),
-short = "A write sink for binary_stream values",
-path = ("types", "file"),
+    types.file.write,
+    can_block = true,
+    output = Known(ValueType::Empty),
+    short = "A write sink for binary_stream values",
 )]
 struct Write {}
 
@@ -286,11 +280,10 @@ fn write(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-read,
-can_block = true,
-output = Known(ValueType::BinaryInputStream),
-short = "A read source for binary_stream values",
-path = ("types", "file"),
+    types.file.read,
+    can_block = true,
+    output = Known(ValueType::BinaryInputStream),
+    short = "A read source for binary_stream values",
 )]
 struct Read {}
 
@@ -301,11 +294,10 @@ fn read(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-name,
-can_block = false,
-output = Known(ValueType::String),
-short = "The name (excluding path) of this file, as a string",
-path = ("types", "file"),
+    types.file.name,
+    can_block = false,
+    output = Known(ValueType::String),
+    short = "The name (excluding path) of this file, as a string",
 )]
 struct Name {}
 
@@ -323,11 +315,10 @@ fn name(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-parent,
-can_block = false,
-output = Known(ValueType::File),
-short = "The parent directory of this file",
-path = ("types", "file"),
+    types.file.parent,
+    can_block = false,
+    output = Known(ValueType::File),
+    short = "The parent directory of this file",
 )]
 struct Parent {}
 
@@ -335,7 +326,7 @@ fn parent(mut context: CommandContext) -> CrushResult<()> {
     context
         .output
         .send(Value::from(
-                mandate(
-                    context.this.file()?.parent(),
-                    "Invalid file path")?))
+            mandate(
+                context.this.file()?.parent(),
+                "Invalid file path")?))
 }

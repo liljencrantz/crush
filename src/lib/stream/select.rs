@@ -1,4 +1,3 @@
-use signature::signature;
 use crate::lang::command::Command;
 use crate::lang::errors::error;
 use crate::lang::state::contexts::CommandContext;

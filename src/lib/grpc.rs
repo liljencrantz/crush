@@ -255,7 +255,7 @@ fn grpc_method_call(mut context: CommandContext) -> CrushResult<()> {
             _ => List::new(ValueType::Any, lst).into(),
         };
 
-        context.output.send(res);
+        context.output.send(res)?;
 
         return Ok(());
     }

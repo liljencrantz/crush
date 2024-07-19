@@ -1,6 +1,5 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::command::TypeMap;
 use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ValueType;
@@ -32,11 +31,10 @@ lazy_static! {
 }
 
 #[signature(
-    __add__,
+    types.integer.__add__,
     can_block = false,
     output = Unknown,
     short = "Add this number and the specified term and return the result",
-    path = ("types", "integer"),
 )]
 struct Add {
     #[description("the number to add")]
@@ -55,11 +53,10 @@ binary_op!(
 );
 
 #[signature(
-    __sub__,
+    types.integer.__sub__,
     can_block = false,
     output = Unknown,
     short = "Subtract the specified term from this number and return the result",
-    path = ("types", "integer"),
 )]
 struct Sub {
     #[description("the number to subtract")]
@@ -77,11 +74,10 @@ binary_op!(
 );
 
 #[signature(
-    __mul__,
+    types.integer.__mul__,
     can_block = false,
     output = Unknown,
     short = "multiply this number and the specified factor and return the result",
-    path = ("types", "integer"),
 )]
 struct Mul {
     #[description("the number to multiply")]
@@ -100,11 +96,10 @@ binary_op!(
 );
 
 #[signature(
-    __div__,
+    types.integer.__div__,
     can_block = false,
     output = Unknown,
     short = "Divide this number by the specified factor",
-    path = ("types", "integer"),
 )]
 struct Div {
     #[description("the number to divide by")]
@@ -122,11 +117,10 @@ binary_op!(
 );
 
 #[signature(
-    rem,
+    types.integer.rem,
     can_block = false,
     output = Known(ValueType::Integer),
     short = "Remainder after integer division",
-    path = ("types", "integer"),
 )]
 struct Rem {
     #[description("the number to divide by")]
@@ -136,11 +130,10 @@ struct Rem {
 binary_op!(rem, integer, Integer, Integer, |a, b| a % b);
 
 #[signature(
-    r#mod,
+    types.integer.r#mod,
     can_block = false,
     output = Known(ValueType::Integer),
     short = "Least positive residue after integer division",
-    path = ("types", "integer"),
 )]
 struct Mod {
     #[description("the number to divide by")]
@@ -150,11 +143,10 @@ struct Mod {
 binary_op!(r#mod, integer, Integer, Integer, |a, b| (a % b + b) % b);
 
 #[signature(
-    __neg__,
+    types.integer.__neg__,
     can_block = false,
     output = Known(ValueType::Integer),
     short = "Negate this integer",
-    path = ("types", "integer"),
 )]
 struct Neg {
 }
@@ -167,11 +159,10 @@ fn __neg__(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    max,
+    types.integer.max,
     can_block = false,
     output = Known(ValueType::Integer),
     short = "Largest integer value",
-    path = ("types", "integer"),
 )]
 struct Max {
 }
@@ -184,11 +175,10 @@ fn max(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    min,
+    types.integer.min,
     can_block = false,
     output = Known(ValueType::Integer),
     short = "Smallest integer value",
-    path = ("types", "integer"),
 )]
 struct Min {
 }

@@ -21,11 +21,10 @@ lazy_static! {
 }
 
 #[signature(
-len,
-can_block = false,
-output = Known(ValueType::Integer),
-short = "The number of bytes in the binary.",
-path = ("types", "binary"),
+    types.binary.len,
+    can_block = false,
+    output = Known(ValueType::Integer),
+    short = "The number of bytes in the binary.",
 )]
 struct Len {}
 
@@ -35,12 +34,11 @@ fn len(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-__getitem__,
-can_block = false,
-output = Known(ValueType::Integer),
-short = "Returns the byte at the specified offset.",
-example = "$(bin:from Cargo.toml)[4]",
-path = ("types", "binary"),
+    types.binary.__getitem__,
+    can_block = false,
+    output = Known(ValueType::Integer),
+    short = "Returns the byte at the specified offset.",
+    example = "$(bin:from Cargo.toml)[4]",
 )]
 struct GetItem {
     index: usize,

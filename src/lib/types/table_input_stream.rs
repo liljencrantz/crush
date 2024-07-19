@@ -39,19 +39,18 @@ lazy_static! {
 
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
-        let path = vec!["global", "types", "table_input_stream"];
-        Call::declare_method(&mut res, &path);
-        GetItem::declare_method(&mut res, &path);
-        Pipe::declare_method(&mut res, &path);
+        Call::declare_method(&mut res);
+        GetItem::declare_method(&mut res);
+        Pipe::declare_method(&mut res);
         res
     };
 }
 
 #[signature(
-__call__,
-can_block = false,
-output = Known(ValueType::Type),
-short = "return the table_input_stream type with the specified column signature.",
+    types.table_input_stream.__call__,
+    can_block = false,
+    output = Known(ValueType::Type),
+    short = "return the table_input_stream type with the specified column signature.",
 )]
 struct Call {
     #[description("the columns of the stream.")]
@@ -80,11 +79,11 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-__getitem__,
-can_block = false,
-output = Known(ValueType::Struct),
-short = "Returns the specified row of the table stream as a struct.",
-example = "(ps)[4]"
+    types.table_input_stream.__getitem__,
+    can_block = false,
+    output = Known(ValueType::Struct),
+    short = "Returns the specified row of the table stream as a struct.",
+    example = "(ps)[4]"
 )]
 struct GetItem {
     index: i128,
@@ -97,11 +96,11 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-pipe,
-can_block = false,
-output = Known(ValueType::Struct),
-short = "Returns a struct containing a read end and a write end of a pipe of the specified type",
-example = "$pipe := ((table_input_stream value=$integer):pipe)\n    $_1 := (seq 100_000 | $pipe:write | bg)\n    $sum_job_id := ($pipe:read | sum | bg)\n    $pipe:close\n    $sum_job_id | fg"
+    types.table_input_stream.pipe,
+    can_block = false,
+    output = Known(ValueType::Struct),
+    short = "Returns a struct containing a read end and a write end of a pipe of the specified type",
+    example = "$pipe := ((table_input_stream value=$integer):pipe)\n    $_1 := (seq 100_000 | $pipe:write | bg)\n    $sum_job_id := ($pipe:read | sum | bg)\n    $pipe:close\n    $sum_job_id | fg"
 )]
 struct Pipe {}
 

@@ -4,7 +4,6 @@ use signature::signature;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Passthrough;
-use crate::lang::command::TypeMap;
 use crate::lang::errors::{CrushResult, error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::data::list::List;
@@ -16,7 +15,6 @@ use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use crate::argument_error_legacy;
 use crate::data::table::ColumnType;
-use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::this::This;
 
 lazy_static! {
@@ -32,11 +30,10 @@ lazy_static! {
 }
 
 #[signature(
-filter,
-can_block = true,
-output = Passthrough,
-short = "Filter stream based on this glob.",
-path = ("types", "glob"),
+    types.glob.filter,
+    can_block = true,
+    output = Passthrough,
+    short = "Filter stream based on this glob.",
 )]
 struct Filter {
     #[unnamed()]
@@ -55,7 +52,7 @@ fn find_string_columns(input: &[ColumnType], mut cfg: Vec<String>) -> Vec<usize>
                     _ => false,
                 }
             })
-            .map(|(idx, _c)| {idx})
+            .map(|(idx, _c)| { idx })
             .collect()
     } else {
         let yas: HashSet<String> = cfg.drain(..).collect();
@@ -65,7 +62,7 @@ fn find_string_columns(input: &[ColumnType], mut cfg: Vec<String>) -> Vec<usize>
             .filter(|(_idx, column)| {
                 yas.contains(&column.name)
             })
-            .map(|(idx, _c)| {idx})
+            .map(|(idx, _c)| { idx })
             .collect()
     }
 }
@@ -111,11 +108,10 @@ pub fn filter(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    new,
+    types.glob.new,
     can_block = false,
     output = Known(ValueType::Glob),
     short = "Create a glob from a string",
-    path = ("types", "glob"),
 )]
 struct New {
     #[description("the string representation of the glob.")]
@@ -128,11 +124,10 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    r#match,
+    types.glob.r#match,
     can_block = false,
     output = Known(ValueType::Bool),
     short = "True if the needle matches the pattern",
-    path = ("types", "glob"),
 )]
 struct Match {
     #[description("the sting to match this glob against.")]
@@ -146,11 +141,10 @@ fn r#match(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    not_match,
+    types.glob.not_match,
     can_block = false,
     output = Known(ValueType::Bool),
     short = "True if the needle does not match the pattern",
-    path = ("types", "glob"),
 )]
 struct NotMatch {
     #[description("the sting to match this glob against.")]
@@ -164,11 +158,10 @@ fn not_match(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-files,
-can_block = true,
-output = Known(ValueType::List(Box::from(ValueType::File))),
-short = "Perform file matching of this glob.",
-path = ("types", "glob"),
+    types.glob.files,
+    can_block = true,
+    output = Known(ValueType::List(Box::from(ValueType::File))),
+    short = "Perform file matching of this glob.",
 )]
 struct Files {
     #[description("the directory to match in. Use current working directory if unspecified.")]

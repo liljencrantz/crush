@@ -143,7 +143,7 @@ fn readline(context: CommandContext) -> CrushResult<()> {
     let line = to_crush_error(rl.readline(&cfg.prompt))?;
 
     if let Some(history) = &cfg.history {
-        rl.add_history_entry(line.as_str());
+        let _ = rl.add_history_entry(line.as_str());
         if let Err(err) = rl.save_history(&history_file(&history)?) {
             context.global_state.printer().line(&format!("Error: Failed to save history: {}", err))
         }

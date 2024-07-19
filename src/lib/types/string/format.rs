@@ -1,7 +1,11 @@
+use crate::lib::types::OrderedStringMap;
+use signature::signature;
 use crate::lang::errors::{argument_error_legacy, CrushResult, mandate};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{argument::Argument, value::Value};
+use crate::lang::command::OutputType::Known;
 use crate::lang::state::this::This;
+use crate::lang::value::ValueType;
 use crate::lib::types::string::format::FormatState::*;
 
 enum FormatState {
@@ -85,6 +89,19 @@ fn do_format(format: &str, param: Vec<Argument>) -> CrushResult<String> {
         }
     }
     Ok(res)
+}
+
+#[signature(
+    types.string.format, can_block = false, output = Known(ValueType::String),
+    short = "Format arguments into a string",
+    example = "\"Hello {name}\":format name=$name")]
+pub struct Format {
+    #[description("The named parameters to format into the pattern string")]
+    #[named()]
+    named: OrderedStringMap<Value>,
+    #[description("The unnamed parameters to format into the pattern string")]
+    #[unnamed()]
+    unnamed: Vec<Value>,
 }
 
 pub fn format(mut context: CommandContext) -> CrushResult<()> {

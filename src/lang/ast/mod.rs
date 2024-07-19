@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter, Pointer, Write};
+use std::fmt::{Display, Formatter, Write};
 use crate::lang::argument::{ArgumentDefinition, SwitchStyle};
 use crate::lang::command::{Command, Parameter};
 use crate::lang::command_invocation::CommandInvocation;
@@ -10,7 +10,6 @@ use crate::util::glob::Glob;
 use regex::Regex;
 use std::ops::Deref;
 use std::path::PathBuf;
-use num_format::Locale::se;
 use location::Location;
 use parameter_node::ParameterNode;
 use tracked_string::TrackedString;
@@ -135,24 +134,6 @@ pub fn operator_method(op: &str, op_location: Location, l: Box<Node>, r: Box<Nod
     )
 }
 
-fn unary_operator_function(op: &[&str], op_location: Location, n: Box<Node>) -> Box<Node> {
-    let location = op_location.union(n.location());
-    let cmd = attr(op, op_location);
-    Box::from(
-        Node::Substitution(
-            JobNode {
-                commands: vec![CommandNode {
-                    expressions: vec![
-                        cmd, *n,
-                    ],
-                    location: location,
-                }],
-                location: location,
-            }
-        )
-    )
-}
-
 pub fn unary_operator_method(op: &str, op_location: Location, n: Box<Node>) -> Box<Node> {
     let location = op_location.union(n.location());
     let cmd = Node::GetAttr(n, TrackedString::new(op, op_location));
@@ -194,16 +175,6 @@ pub fn operator(iop: impl Into<TrackedString>, l: Box<Node>, r: Box<Node>) -> Bo
         "=~" => operator_method("match", op.location, r, l),
         "!~" => operator_method("not_match", op.location, r, l),
 
-        _ => panic!("Unknown operator {}", &op.string),
-    }
-}
-
-pub fn unary_operator(iop: impl Into<TrackedString>, n: Box<Node>) -> Box<Node> {
-    let op = iop.into();
-    match op.string.as_str() {
-        "-" => unary_operator_method("__neg__", op.location, n),
-        "@" => Box::from(Node::Unary(op, n)),
-        "@@" => Box::from(Node::Unary(op, n)),
         _ => panic!("Unknown operator {}", &op.string),
     }
 }
@@ -517,7 +488,7 @@ impl Node {
 
     pub fn identifier(is: impl Into<TrackedString>) -> Box<Node> {
         let s = is.into();
-        if (s.string.starts_with("$")) {
+        if s.string.starts_with("$") {
             Box::from(Node::Identifier(s.slice_to_end(1)))
         } else {
             Box::from(Node::Identifier(s))

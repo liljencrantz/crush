@@ -40,11 +40,10 @@ lazy_static! {
 }
 
 #[signature(
-    __call__,
+    types.dict.__call__,
     can_block = false,
     output = Known(ValueType::Type),
     short = "Returns a dict type with the specified key and value types.",
-    path = ("types", "dict"),
 )]
 struct Call {
     #[description("the type of the keys in the dict.")]
@@ -77,13 +76,12 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
     }
 }
 #[signature(
-    new,
+    types.dict.new,
     can_block = false,
     output = Known(ValueType::Dict(Box::from(ValueType::Empty), Box::from(ValueType::Empty))),
     short = "Create an empty new dict.",
     long = "This method takes no arguments, but must not be called on a raw dict type. You must call it on a parametrized dict type, like $(dict $string $string)",
     example = "my_dict := $($(dict $string $integer):new)",
-    path = ("types", "dict"),
 )]
 struct New {}
 
@@ -104,11 +102,10 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    of,
+    types.dict.of,
     can_block = false,
     output = Unknown,
     short = "Create a new dict with the specified elements.",
-    path = ("types", "dict"),
 )]
 struct Of {}
 
@@ -142,11 +139,10 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    __setitem__,
+    types.dict.__setitem__,
     can_block = false,
     output = Known(ValueType::Empty),
     short = "Create a new mapping or replace an existing one.",
-    path = ("types", "dict"),
 )]
 struct SetItem {
     #[description("the key of the value to set.")]
@@ -156,19 +152,16 @@ struct SetItem {
 }
 
 fn __setitem__(mut context: CommandContext) -> CrushResult<()> {
-    context.arguments.check_len(2)?;
     let dict = context.this.dict()?;
-    let value = context.arguments.value(1)?;
-    let key = context.arguments.value(0)?;
-    dict.insert(key, value)
+    let cfg: SetItem = SetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
+    dict.insert(cfg.key, cfg.value)
 }
 
 #[signature(
-    __getitem__,
+    types.dict.__getitem__,
     can_block = false,
     output = Known(ValueType::Empty),
     short = "Return the value mapped to the specified key of the dict.",
-    path = ("types", "dict"),
 )]
 struct GetItem {
     #[description("the key of the value to get.")]
@@ -178,17 +171,15 @@ struct GetItem {
 fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     let dict = context.this.dict()?;
-    let key = context.arguments.value(0)?;
-    let o = context.output;
-    o.send(dict.get(&key).unwrap_or(Value::Empty))
+    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.output.send(dict.get(&cfg.key).unwrap_or(Value::Empty))
 }
 
 #[signature(
-    contains,
+    types.dict.contains,
     can_block = false,
     output = Known(ValueType::Bool),
     short = "Returns whether the given key is in the dict",
-    path = ("types", "dict"),
 )]
 struct Contains {
     #[description("the value to check.")]
@@ -202,11 +193,10 @@ fn contains(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    remove,
+    types.dict.remove,
     can_block = false,
     output = Unknown,
     short = "Remove a mapping from the dict and return the value, or nothing if there was no value in the dict",
-    path = ("types", "dict"),
 )]
 struct Remove {
     #[description("the value to remove.")]
@@ -223,11 +213,10 @@ fn remove(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    len,
+    types.dict.len,
     can_block = false,
     output = Known(ValueType::Integer),
     short = "The number of mappings in the dict.",
-    path = ("types", "dict"),
 )]
 struct Len {}
 
@@ -239,11 +228,10 @@ fn len(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    clear,
+    types.dict.clear,
     can_block = false,
     output = Unknown,
     short = "Remove all mappings from this dict.",
-    path = ("types", "dict"),
 )]
 struct Clear {}
 
@@ -255,11 +243,10 @@ fn clear(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    clone,
+    types.dict.clone,
     can_block = false,
     output = Unknown,
     short = "Create a new dict with the same set of mappings as this one.",
-    path = ("types", "dict"),
 )]
 struct CloneCmd {}
 
@@ -270,11 +257,10 @@ fn clone(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    empty,
+    types.dict.empty,
     can_block = false,
     output = Known(ValueType::Bool),
     short = "True if there are no mappings in the dict.",
-    path = ("types", "dict"),
 )]
 struct Empty {}
 
@@ -286,11 +272,10 @@ fn empty(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    key_type,
+    types.dict.key_type,
     can_block = false,
     output = Known(ValueType::Type),
     short = "the type of the keys in this dict.",
-    path = ("types", "dict"),
 )]
 struct KeyType {}
 
@@ -302,11 +287,10 @@ fn key_type(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    value_type,
+    types.dict.value_type,
     can_block = false,
     output = Known(ValueType::Type),
     short = "the type of the values in this dict.",
-    path = ("types", "dict"),
 )]
 struct ValueTypeMethod {}
 
@@ -318,11 +302,10 @@ fn value_type(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    collect,
+    types.dict.collect,
     can_block = true,
     output = Known(ValueType::Dict(Box::from(ValueType::Empty), Box::from(ValueType::Empty))),
     short = "Create a new dict by reading the specified columns from the input.",
-    path = ("types", "dict"),
 )]
 struct Collect {
     #[description("the name of the column to use as key")]
@@ -351,11 +334,10 @@ fn collect(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    join,
+    types.dict.join,
     can_block = false,
     output = Unknown,
     short = "Create a new dict with the same set of mappings as this one.",
-    path = ("types", "dict"),
 )]
 struct Join {
     #[description("the dict instances to join.")]

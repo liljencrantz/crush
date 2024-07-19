@@ -24,11 +24,10 @@ lazy_static! {
 }
 
 #[signature(
-__call__,
-can_block = false,
-output = Known(ValueType::Type),
-short = "Return the table_input_stream type with the specified column signature.",
-path= ("types", "table"),
+    types.table.__call__,
+    can_block = false,
+    output = Known(ValueType::Type),
+    short = "Return the table_input_stream type with the specified column signature.",
 )]
 struct Call {
     #[description("return the table type with the specified column signature.")]
@@ -55,11 +54,10 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-len,
-can_block = false,
-output = Known(ValueType::Integer),
-short = "The number of rows in the table.",
-path= ("types", "table"),
+    types.table.len,
+    can_block = false,
+    output = Known(ValueType::Integer),
+    short = "The number of rows in the table.",
 )]
 struct Len {}
 
@@ -71,12 +69,11 @@ fn len(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-__getitem__,
-can_block = false,
-output = Known(ValueType::Struct),
-short = "Returns the specified row of the table as a struct.",
-example = "(bin:from Cargo.toml|materialize)[4]",
-path= ("types", "table"),
+    types.table.__getitem__,
+    can_block = false,
+    output = Known(ValueType::Struct),
+    short = "Returns the specified row of the table as a struct.",
+    example = "$(bin:from Cargo.toml|materialize)[4]",
 )]
 struct GetItem {
     index: usize,

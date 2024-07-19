@@ -2,7 +2,6 @@ use std::collections::HashSet;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Passthrough;
-use crate::lang::command::TypeMap;
 use crate::lang::errors::{argument_error_legacy, CrushResult, error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ValueType;
@@ -12,12 +11,7 @@ use ordered_map::OrderedMap;
 use regex::Regex;
 use signature::signature;
 use crate::data::table::ColumnType;
-use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::this::This;
-
-fn full(name: &'static str) -> Vec<&'static str> {
-    vec!["global", "types", "re", name]
-}
 
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
@@ -35,11 +29,10 @@ lazy_static! {
 }
 
 #[signature(
-    new,
+    types.re.new,
     can_block = false,
     output = Known(ValueType::Regex),
     short = "Compile a string into a new regular expression instance.",
-    path = ("types", "re"),
 )]
 struct New {
     #[description("the new regular expression as a string.")]
@@ -56,11 +49,10 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    r#match,
+    types.re.r#match,
     can_block = false,
     output = Known(ValueType::Bool),
     short = "True if the io matches the pattern.",
-    path = ("types", "re"),
 )]
 struct Match {
     #[description("the string to match against.")]
@@ -74,11 +66,10 @@ fn r#match(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    not_match,
+    types.re.not_match,
     can_block = false,
     output = Known(ValueType::Bool),
     short = "True if the io matches the pattern.",
-    path = ("types", "re"),
 )]
 struct NotMatch {
     #[description("the string to match against.")]
@@ -87,16 +78,15 @@ struct NotMatch {
 
 fn not_match(mut context: CommandContext) -> CrushResult<()> {
     let re = context.this.re()?.1;
-    let cfg: Match = Match::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: NotMatch = NotMatch::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(Value::Bool(!re.is_match(&cfg.needle)))
 }
 
 #[signature(
-    replace,
+    types.re.replace,
     can_block = false,
     short = "Replace the first match of the regex in text with the replacement",
     long = "re\"[0-9]\":replace \"123-456\" \"X\"",
-    path = ("types", "re"),
 )]
 struct ReplaceSignature {
     #[description("the text to perform replacement on.")]
@@ -114,11 +104,10 @@ fn replace(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    replace_all,
+    types.re.replace_all,
     can_block = false,
     short = "Replace all matches of the regex in text with the replacement",
     long = "re\"[0-9]\":replace \"123-456\" \"X\"",
-    path = ("types", "re"),
 )]
 struct ReplaceAllSignature {
     #[description("the text to perform replacement on.")]
@@ -138,11 +127,10 @@ fn replace_all(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-filter,
-can_block = true,
-output = Passthrough,
-short = "Filter stream based on this regex.",
-path = ("types", "re"),
+    types.re.filter,
+    can_block = true,
+    output = Passthrough,
+    short = "Filter stream based on this regex.",
 )]
 struct Filter {
     #[unnamed()]

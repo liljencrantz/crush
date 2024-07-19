@@ -45,7 +45,7 @@ impl<'input> Lexer<'input> {
                 },
 
                 Some((i, ')')) => {
-                    if (self.mode.len() == 1) {
+                    if self.mode.len() == 1 {
                         return Some(Err(LexicalError::MismatchedSubEnd));
                     }
                     self.mode.pop();
@@ -315,7 +315,7 @@ impl<'input> Lexer<'input> {
                 },
 
                 Some((i, ')')) => {
-                    if (self.mode.len() == 1) {
+                    if self.mode.len() == 1 {
                         return Some(Err(LexicalError::MismatchedSubEnd));
                     }
                     self.mode.pop();
@@ -514,7 +514,7 @@ fn identifier_char(ch: char) -> bool {
 }
 
 fn number_char(ch: char) -> bool {
-    (ch >= '0' && ch <= '9')
+    ch >= '0' && ch <= '9'
 }
 
 fn number_or_underscore_char(ch: char) -> bool {

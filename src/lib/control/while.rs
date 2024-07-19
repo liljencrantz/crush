@@ -5,7 +5,6 @@ use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use crate::lang::data::table::ColumnType;
-use lazy_static::lazy_static;
 use crate::data::table::Row;
 use signature::signature;
 use crate::lang::command::OutputType::Known;

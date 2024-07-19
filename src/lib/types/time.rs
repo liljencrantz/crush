@@ -20,7 +20,7 @@ fn full(name: &'static str) -> Vec<&'static str> {
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
-        let path = vec!["global", "types", "string"];
+
         res.declare(
             full("__add__"),
             add,
@@ -41,9 +41,9 @@ lazy_static! {
             Unknown,
             [],
         );
-        Now::declare_method(&mut res, &path);
-        Parse::declare_method(&mut res, &path);
-        Format::declare_method(&mut res, &path);
+        Now::declare_method(&mut res);
+        Parse::declare_method(&mut res);
+        Format::declare_method(&mut res);
         res
     };
 }
@@ -61,10 +61,10 @@ binary_op!(
 );
 
 #[signature(
-now,
-can_block = false,
-output = Known(ValueType::Time),
-short = "The current point in time.",
+    types.time.now,
+    can_block = false,
+    output = Known(ValueType::Time),
+    short = "The current point in time.",
 )]
 struct Now {}
 
@@ -73,63 +73,60 @@ fn now(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-parse,
-can_block=false,
-output=Known(ValueType::Time),
-short="Parse a time string using a strptime-style pattern string",
-long="After parsing the date, it will be converted to the local time zone.",
-long="Date specifiers:",
-long=" * %Y, year with century.",
-long=" * %y, year without century, zero padded.",
-long=" * %C, century, zero padded.",
-long=" * %m, month, zero padded.",
-long=" * %b, abbreviated month name.",
-long=" * %h, abbreviated month name.",
-long=" * %B, full month name.",
-long=" * %d, day of month, zero padded.",
-long=" * %e, day of month, space padded.",
-long=" * %a, weekday as abbreviated name.",
-long=" * %A, weekday as full name.",
-long=" * %w, weekday as a number, where 0 is Sunday and 6 is Saturday.",
-long=" * %u, weekday as a number, where 1 is Monday and 7 is Sunday.",
-long=" * %U, week number of the year (Sunday as first day of week), zero padded.",
-long=" * %W, week number of the year (Monday as first day of week), zero padded.",
-long=" * %G, same to %Y but uses the year number in ISO 8601 week date.",
-long=" * %g, same to %y but uses the year number in ISO 8601 week date.",
-long=" * %V, same to %U but uses the year number in ISO 8601 week date.",
-long=" * %j, day of the year, zero-padded.",
-long=" * %D, month-day-year format. Same to %m/%d/%y.",
-long=" * %x, month-day-year format. Same to %m/%d/%y.",
-long=" * %F, year-month-day format (ISO 8601). Same to %Y-%m-%d.",
-long=" * %v, day-month-year format. Same to %e-%b-%Y.",
-
-long="Time specifiers:",
-long=" * %H, hour (24-hour clock) as a zero-padded number.",
-long=" * %k, hour (24-hour clock) as a space-padded number.",
-long=" * %I, hour (12-hour clock) as a zero-padded number.",
-long=" * %l, hour (12-hour clock) as a space-padded number.",
-long=" * %P, locale’s equivalent of either am or pm.",
-long=" * %p, locale’s equivalent of either AM or PM.",
-long=" * %M, minute as a zero-padded number.",
-long=" * %S, second as a zero-padded number.",
-long=" * %f, fractional nanoseconds since last whole seconds, zero-padded.",
-long=" * %R, hour-minute format. Same to %H:%M.",
-long=" * %T, hour-minute-second format. Same to %H:%M:%S.",
-long=" * %X, hour-minute-second format. Same to %H:%M:%S.",
-long=" * %r, hour-minute-second format in 12-hour clocks. Same to %I:%M:%S %p.",
-
-long="Time zone specifiers:",
-long=" * %z, UTC offset in the form +HHMM or -HHMM.",
-long=" * %Z, time zone name.",
-long=" * %:z, a colon, followed by UTC offset in the form +HHMM or -HHMM.",
-
-long="Special characters:",
-long=" * %c, ctime date & time format. Same to %a %b %e %T %Y sans \\n.",
-long=" * %+, ISO 8601 / RFC 3339 date & time format.",
-long=" * %s, UNIX timestamp, the number of seconds since 1970-01-01 00:00 UTC.",
-long=" * %t, a literal tab character.",
-long=" * %n, a literal newline character.",
-long=" * %%, a literal % character."
+    types.time.parse,
+    can_block = false,
+    output = Known(ValueType::Time),
+    short = "Parse a time string using a strptime-style pattern string",
+    long = "After parsing the date, it will be converted to the local time zone.",
+    long = "Date specifiers:",
+    long = " * %Y, year with century.",
+    long = " * %y, year without century, zero padded.",
+    long = " * %C, century, zero padded.",
+    long = " * %m, month, zero padded.",
+    long = " * %b, abbreviated month name.",
+    long = " * %h, abbreviated month name.",
+    long = " * %B, full month name.",
+    long = " * %d, day of month, zero padded.",
+    long = " * %e, day of month, space padded.",
+    long = " * %a, weekday as abbreviated name.",
+    long = " * %A, weekday as full name.",
+    long = " * %w, weekday as a number, where 0 is Sunday and 6 is Saturday.",
+    long = " * %u, weekday as a number, where 1 is Monday and 7 is Sunday.",
+    long = " * %U, week number of the year (Sunday as first day of week), zero padded.",
+    long = " * %W, week number of the year (Monday as first day of week), zero padded.",
+    long = " * %G, same to %Y but uses the year number in ISO 8601 week date.",
+    long = " * %g, same to %y but uses the year number in ISO 8601 week date.",
+    long = " * %V, same to %U but uses the year number in ISO 8601 week date.",
+    long = " * %j, day of the year, zero-padded.",
+    long = " * %D, month-day-year format. Same to %m/%d/%y.",
+    long = " * %x, month-day-year format. Same to %m/%d/%y.",
+    long = " * %F, year-month-day format (ISO 8601). Same to %Y-%m-%d.",
+    long = " * %v, day-month-year format. Same to %e-%b-%Y.",
+    long = "Time specifiers:",
+    long = " * %H, hour (24-hour clock) as a zero-padded number.",
+    long = " * %k, hour (24-hour clock) as a space-padded number.",
+    long = " * %I, hour (12-hour clock) as a zero-padded number.",
+    long = " * %l, hour (12-hour clock) as a space-padded number.",
+    long = " * %P, locale’s equivalent of either am or pm.",
+    long = " * %p, locale’s equivalent of either AM or PM.",
+    long = " * %M, minute as a zero-padded number.",
+    long = " * %S, second as a zero-padded number.",
+    long = " * %f, fractional nanoseconds since last whole seconds, zero-padded.",
+    long = " * %R, hour-minute format. Same to %H:%M.",
+    long = " * %T, hour-minute-second format. Same to %H:%M:%S.",
+    long = " * %X, hour-minute-second format. Same to %H:%M:%S.",
+    long = " * %r, hour-minute-second format in 12-hour clocks. Same to %I:%M:%S %p.",
+    long = "Time zone specifiers:",
+    long = " * %z, UTC offset in the form +HHMM or -HHMM.",
+    long = " * %Z, time zone name.",
+    long = " * %:z, a colon, followed by UTC offset in the form +HHMM or -HHMM.",
+    long = "Special characters:",
+    long = " * %c, ctime date & time format. Same to %a %b %e %T %Y sans \\n.",
+    long = " * %+, ISO 8601 / RFC 3339 date & time format.",
+    long = " * %s, UNIX timestamp, the number of seconds since 1970-01-01 00:00 UTC.",
+    long = " * %t, a literal tab character.",
+    long = " * %n, a literal newline character.",
+    long = " * %%, a literal % character."
 )]
 struct Parse {
     #[description("the format of the time.")]
@@ -146,35 +143,35 @@ fn parse(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-format,
-can_block=false,
-output=Known(ValueType::String),
-short="Format this time using a strftime-style pattern string",
-long="The following format codes are recognised in the format string:",
-long=" * %a, weekday as abbreviated name.",
-long=" * %A, weekday as full name.",
-long=" * %w, weekday as a number, where 0 is Sunday and 6 is Saturday.",
-long=" * %d, day of month, zero padded.",
-long=" * %b, abbreviated month name.",
-long=" * %B, month name.",
-long=" * %m, month, zero padded.",
-long=" * %y, year without century, zero padded.",
-long=" * %Y, year with century.",
-long=" * %H, hour (24-hour clock) as a zero-padded number.",
-long=" * %I, hour (12-hour clock) as a zero-padded number.",
-long=" * %p, locale’s equivalent of either AM or PM.",
-long=" * %M, minute as a zero-padded number.",
-long=" * %S, second as a zero-padded number.",
-long=" * %f, microsecond as a decimal number, zero-padded.",
-long=" * %z, UTC offset in the form +HHMM or -HHMM.",
-long=" * %Z, time zone name.",
-long=" * %j, day of the year, zero-padded.",
-long=" * %U, week number of the year (Sunday as first day of week).",
-long=" * %W, week number of the year (Monday as first day of week).",
-long=" * %c, default data and time representation of current locale.",
-long=" * %x, default date representation of current locale.",
-long=" * %X, default time representation of current locale.",
-long=" * %%, a literal % character."
+    types.time.format,
+    can_block = false,
+    output = Known(ValueType::String),
+    short = "Format this time using a strftime-style pattern string",
+    long = "The following format codes are recognised in the format string:",
+    long = " * %a, weekday as abbreviated name.",
+    long = " * %A, weekday as full name.",
+    long = " * %w, weekday as a number, where 0 is Sunday and 6 is Saturday.",
+    long = " * %d, day of month, zero padded.",
+    long = " * %b, abbreviated month name.",
+    long = " * %B, month name.",
+    long = " * %m, month, zero padded.",
+    long = " * %y, year without century, zero padded.",
+    long = " * %Y, year with century.",
+    long = " * %H, hour (24-hour clock) as a zero-padded number.",
+    long = " * %I, hour (12-hour clock) as a zero-padded number.",
+    long = " * %p, locale’s equivalent of either AM or PM.",
+    long = " * %M, minute as a zero-padded number.",
+    long = " * %S, second as a zero-padded number.",
+    long = " * %f, microsecond as a decimal number, zero-padded.",
+    long = " * %z, UTC offset in the form +HHMM or -HHMM.",
+    long = " * %Z, time zone name.",
+    long = " * %j, day of the year, zero-padded.",
+    long = " * %U, week number of the year (Sunday as first day of week).",
+    long = " * %W, week number of the year (Monday as first day of week).",
+    long = " * %c, default data and time representation of current locale.",
+    long = " * %x, default date representation of current locale.",
+    long = " * %X, default time representation of current locale.",
+    long = " * %%, a literal % character."
 )]
 struct Format {
     #[description("the format of the time.")]

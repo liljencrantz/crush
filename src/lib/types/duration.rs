@@ -19,7 +19,7 @@ fn full(name: &'static str) -> Vec<&'static str> {
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
-        let path = vec!["global", "types", "duration"];
+
         res.declare(full("__add__"),
             add, false,
             "duration + (delta:duration | time:time)",
@@ -52,7 +52,7 @@ lazy_static! {
             Known(ValueType::Duration),
             [],
             );
-        Of::declare_method(&mut res, &path);
+        Of::declare_method(&mut res);
         res.declare(
             full("__neg__"), neg, false,
             "neg duration",
@@ -94,7 +94,7 @@ fn to_duration(a: i64, t: &str) -> CrushResult<chrono::Duration> {
     }
 }
 
-#[signature(of, can_block = false, short = "Create a new duration")]
+#[signature(types.duration.of, can_block = false, short = "Create a new duration")]
 struct Of {
     #[description("the number of nanoseconds in the duration.")]
     #[default(0)]

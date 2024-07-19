@@ -14,18 +14,19 @@ use crate::lang::state::this::This;
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
-        let path = vec!["global", "types", "table_output_stream"];
-        Call::declare_method(&mut res, &path);
-        Write::declare_method(&mut res, &path);
+
+        Call::declare_method(&mut res);
+        Write::declare_method(&mut res);
+
         res
     };
 }
 
 #[signature(
-__call__,
-can_block = false,
-output = Known(ValueType::Type),
-short = "return the table_output_stream type with the specified column signature.",
+    types.table_output_stream.__call__,
+    can_block = false,
+    output = Known(ValueType::Type),
+    short = "return the table_output_stream type with the specified column signature.",
 )]
 struct Call {
     #[description("the columns of the stream.")]
@@ -54,9 +55,9 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-write,
-output = Known(ValueType::Empty),
-short = "write input to this output stream",
+    types.table_output_stream.write,
+    output = Known(ValueType::Empty),
+    short = "write input to this output stream",
 )]
 struct Write {}
 

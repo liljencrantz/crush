@@ -289,8 +289,8 @@ fn first(context: CommandContext) -> CrushResult<()> {
 }
 
 # [signature(
-last,
-short = "Return the value of the specified column from the last row of the stream.",
+    last,
+    short = "Return the value of the specified column from the last row of the stream.",
 )]
 pub struct Last {
     field: Option<String>,
@@ -299,7 +299,7 @@ pub struct Last {
 fn last(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream()? {
         Some(mut input) => {
-            let cfg: First = First::parse(context.arguments, &context.global_state.printer())?;
+            let cfg: Last = Last::parse(context.arguments, &context.global_state.printer())?;
             let column = parse(input.types(), cfg.field)?;
 
             let mut rr = None;

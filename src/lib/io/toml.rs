@@ -14,7 +14,6 @@ use crate::lang::{data::list::List, data::r#struct::Struct, data::table::Table};
 use signature::signature;
 use std::collections::HashSet;
 use std::convert::{From, TryFrom};
-use crate::lib::types::convert;
 
 fn from_toml(toml_value: &toml::Value) -> CrushResult<Value> {
     match toml_value {

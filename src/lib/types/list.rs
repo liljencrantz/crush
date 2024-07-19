@@ -1,8 +1,7 @@
 use std::clone::Clone;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::command::TypeMap;
-use crate::lang::errors::{argument_error, argument_error_legacy, CrushResult, data_error, mandate};
+use crate::lang::errors::{argument_error_legacy, CrushResult, data_error, mandate};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
 use crate::lang::{command::Command, data::list::List, value::ValueType};
@@ -43,10 +42,9 @@ lazy_static! {
 }
 
 #[signature(
-    repeat,
+    types.list.repeat,
     can_block = false,
     short = "Create a list containing the same value multiple times",
-    path = ("types", "list"),
 )]
 struct Repeat {
     #[description("the value to put into the list.")]
@@ -67,11 +65,10 @@ fn repeat(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-__call__,
-can_block = false,
-output = Known(ValueType::Type),
-short = "Returns a list type with the specified value type.",
-path = ("types", "list"),
+    types.list.__call__,
+    can_block = false,
+    output = Known(ValueType::Type),
+    short = "Returns a list type with the specified value type.",
 )]
 struct Call {
     #[description("the type of the values in the list.")]
@@ -106,11 +103,10 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
     }
 }
 #[signature(
-    of,
+    types.list.of,
     can_block = false,
     output = Known(ValueType::List(Box::from(ValueType::Empty))),
     short = "Create a new list containing the supplied elements.",
-    path = ("types", "list"),
 )]
 struct Of {
     #[description("the elements of the new list.")]
@@ -118,7 +114,7 @@ struct Of {
     values: Vec<Value>,
 }
 
-fn of(mut context: CommandContext) -> CrushResult<()> {
+fn of(context: CommandContext) -> CrushResult<()> {
     let cfg: Of = Of::parse(context.arguments, &context.global_state.printer())?;
     match cfg.values.len() {
         0 => argument_error_legacy("Expected at least one argument"),
@@ -127,12 +123,11 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    collect,
+    types.list.collect,
     can_block = false,
     output = Known(ValueType::List(Box::from(ValueType::Empty))),
     short = "Create a new list by reading a column from the input.",
     long= "If no elements are supplied as arguments, input must be a stream with exactly one column.",
-    path = ("types", "list"),
 )]
 struct Collect {
     column: Option<String>,
@@ -149,7 +144,7 @@ fn collect_internal(mut input: Stream, idx: usize, value_type: ValueType, output
 
 fn collect(context: CommandContext) -> CrushResult<()> {
     let cfg: Collect = Collect::parse(context.arguments, &context.global_state.printer())?;
-    let mut input = mandate(context.input.recv()?.stream()?, "Expected a stream")?;
+    let input = mandate(context.input.recv()?.stream()?, "Expected a stream")?;
     let input_type = input.types().to_vec();
     match (input_type.len(), cfg.column) {
         (_, Some(name)) =>
@@ -167,12 +162,11 @@ fn collect(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    new,
+    types.list.new,
     can_block = false,
     output = Known(ValueType::List(Box::from(ValueType::Empty))),
     short = "Create a new list with the specified element type.",
     example = "l := ((list string):new)",
-    path = ("types", "list"),
 )]
 struct New {}
 
@@ -185,11 +179,10 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-len,
-can_block = false,
-output = Known(ValueType::Integer),
-short = "The number of values in the list.",
-path = ("types", "list"),
+    types.list.len,
+    can_block = false,
+    output = Known(ValueType::Integer),
+    short = "The number of values in the list.",
 )]
 struct Len {}
 
@@ -201,11 +194,10 @@ fn len(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-empty,
-can_block = false,
-output = Known(ValueType::Bool),
-short = "True if there are no values in the list.",
-path = ("types", "list"),
+    types.list.empty,
+    can_block = false,
+    output = Known(ValueType::Bool),
+    short = "True if there are no values in the list.",
 )]
 struct Empty {}
 
@@ -217,11 +209,10 @@ fn empty(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    push,
+    types.list.push,
     can_block = false,
     output = Known(ValueType::List(Box::from(ValueType::Empty))),
     short = "Push elements to the end of the list.",
-    path = ("types", "list"),
 )]
 struct Push {
     #[unnamed()]
@@ -245,11 +236,10 @@ fn push(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    pop,
+    types.list.pop,
     can_block = false,
     output = Known(ValueType::Empty),
     short = "Remove the last element from the list.",
-    path = ("types", "list"),
 )]
 struct Pop {
 }
@@ -262,11 +252,10 @@ fn pop(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    peek,
+    types.list.peek,
     can_block = false,
     output = Known(ValueType::Empty),
     short = "Return the last element from the list without removing it.",
-    path = ("types", "list"),
 )]
 struct Peek {
 }
@@ -279,11 +268,10 @@ fn peek(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-clear,
-can_block = false,
-output = Unknown,
-short = "Remove all values from this list.",
-path = ("types", "list"),
+    types.list.clear,
+    can_block = false,
+    output = Unknown,
+    short = "Remove all values from this list.",
 )]
 struct Clear {
 }
@@ -296,11 +284,10 @@ fn clear(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    __setitem__,
+    types.list.__setitem__,
     can_block = false,
     output = Known(ValueType::Empty),
     short = "Assign a new value to the element at the specified index.",
-    path = ("types", "list"),
 )]
 struct SetItem {
     #[description("the index of the item to set.")]
@@ -310,20 +297,17 @@ struct SetItem {
 }
 
 fn __setitem__(mut context: CommandContext) -> CrushResult<()> {
-    context.arguments.check_len(2)?;
     let list = context.this.list()?;
-    let key = context.arguments.integer(0)?;
-    let value = context.arguments.value(1)?;
-    list.set(key as usize, value)?;
+    let cfg: SetItem = SetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
+    list.set(cfg.idx, cfg.value)?;
     context.output.empty()
 }
 
 #[signature(
-    remove,
+    types.list.remove,
     can_block = false,
     output = Known(ValueType::Empty),
     short = "Remove the element at the specified index and return it.",
-    path = ("types", "list"),
 )]
 struct Remove {
     idx: usize,
@@ -336,11 +320,10 @@ fn remove(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    insert,
+    types.list.insert,
     can_block = false,
     output = Unknown,
     short = "Insert a new element at the specified index. Following values will be shifted forward.",
-    path = ("types", "list"),
 )]
 struct Insert {
     idx: usize,
@@ -354,11 +337,10 @@ fn insert(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    truncate,
+    types.list.truncate,
     can_block = false,
     output = Unknown,
     short = "Remove all elements past the specified index.",
-    path = ("types", "list"),
 )]
 struct Truncate {
     idx: Option<usize>,
@@ -372,11 +354,10 @@ fn truncate(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    clone,
+    types.list.clone,
     can_block = false,
     output = Known(ValueType::List(Box::from(ValueType::Empty))),
     short = "Create a duplicate of the list.",
-    path = ("types", "list"),
 )]
 struct CloneCmd {}
 
@@ -389,11 +370,10 @@ fn clone(mut context: CommandContext) -> CrushResult<()> {
 
 
 #[signature(
-    __getitem__,
+    types.list.__getitem__,
     can_block = false,
     output = Known(ValueType::Empty),
     short = "Return the value at the specified index of the list.",
-    path = ("types", "list"),
 )]
 struct GetItem {
     #[description("the index of the item to get.")]
@@ -401,18 +381,16 @@ struct GetItem {
 }
 
 fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
-    context.arguments.check_len(1)?;
     let list = context.this.list()?;
-    let idx = context.arguments.integer(0)?;
-    context.output.send(list.get(idx as usize)?)
+    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.output.send(list.get(cfg.idx)?)
 }
 
 #[signature(
-slice,
-can_block = false,
-output=Unknown,
-short = "Extract a slice from this list.",
-path = ("types", "list"),
+    types.list.slice,
+    can_block = false,
+    output=Unknown,
+    short = "Extract a slice from this list.",
 )]
 struct Slice {
     #[description("Starting index (inclusive). If unspecified, from start of list.")]
