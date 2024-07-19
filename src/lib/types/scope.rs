@@ -16,16 +16,17 @@ use crate::lang::value::ValueType;
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
-        let path = vec!["global", "types", "scope"];
-        Resolve::declare_method(&mut res, &path);
-        GetItem::declare_method(&mut res, &path);
-        Parent::declare_method(&mut res, &path);
-        CurrentScope::declare_method(&mut res, &path);
-        All::declare_method(&mut res, &path);
-        Local::declare_method(&mut res, &path);
-        ReadOnly::declare_method(&mut res, &path);
-        Name::declare_method(&mut res, &path);
-        Use::declare_method(&mut res, &path);
+
+        Resolve::declare_method(&mut res);
+        GetItem::declare_method(&mut res);
+        Parent::declare_method(&mut res);
+        CurrentScope::declare_method(&mut res);
+        All::declare_method(&mut res);
+        Local::declare_method(&mut res);
+        ReadOnly::declare_method(&mut res);
+        Name::declare_method(&mut res);
+        Use::declare_method(&mut res);
+
         res
     };
 }
@@ -35,6 +36,7 @@ __getitem__,
 can_block = false,
 output = Unknown,
 short = "Return the specified member in the current scope",
+path = ("types", "scope"),
 )]
 struct GetItem {
     name: String,
@@ -55,6 +57,7 @@ can_block = false,
 output = Unknown,
 short = "Resolve the specified member in the current scope",
 long = "This method looks at the current scope as well as all it parents to resolve the specified member",
+path = ("types", "scope"),
 )]
 struct Resolve {
     name: String,
@@ -74,6 +77,7 @@ __current_scope__,
 can_block = false,
 output = Known(ValueType::Scope),
 short = "The current scope.",
+path = ("types", "scope"),
 )]
 struct CurrentScope {}
 
@@ -86,6 +90,7 @@ __parent__,
 can_block = false,
 output = Known(ValueType::Scope),
 short = "The parent of this scope. The root (global) scope returns itself.",
+path = ("types", "scope")
 )]
 struct Parent {}
 
@@ -99,6 +104,7 @@ __all__,
 can_block = false,
 output = Known(ValueType::List(Box::new(ValueType::String))),
 short = "The names of all variable visible from the current scope.",
+path = ("types", "scope")
 )]
 struct All {}
 
@@ -114,6 +120,7 @@ __local__,
 can_block = false,
 output = Known(ValueType::List(Box::new(ValueType::String))),
 short = "The names of all variables defined in the local scope.",
+path = ("types", "scope")
 )]
 struct Local {}
 
@@ -129,6 +136,7 @@ __read_only__,
 can_block = false,
 output = Known(ValueType::Bool),
 short = "True if this scope is write protected.",
+path = ("types", "scope")
 )]
 struct ReadOnly {}
 
@@ -143,6 +151,7 @@ __name__,
 can_block = false,
 output = Unknown,
 short = "The name of this scope, or empty if unnamed.",
+path = ("types", "scope")
 )]
 struct Name {}
 
@@ -157,6 +166,7 @@ __use__,
 can_block = false,
 output = Known(ValueType::List(Box::new(ValueType::Scope))),
 short = "All use imports in this scope.",
+path = ("types", "scope")
 )]
 struct Use {}
 

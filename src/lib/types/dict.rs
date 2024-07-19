@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::{Known, Unknown};
-use crate::lang::command::TypeMap;
 use crate::lang::errors::{argument_error, argument_error_legacy, CrushResult, mandate};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
@@ -22,7 +21,7 @@ lazy_static! {
         Len::declare_method(&mut res);
         Empty::declare_method(&mut res);
         Call::declare_method(&mut res);
-        Clone::declare_method(&mut res);
+        CloneCmd::declare_method(&mut res);
         Clear::declare_method(&mut res);
         KeyType::declare_method(&mut res);
         ValueTypeMethod::declare_method(&mut res);
@@ -156,7 +155,6 @@ struct SetItem {
     value: Value,
 }
 
-
 fn __setitem__(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(2)?;
     let dict = context.this.dict()?;
@@ -263,7 +261,7 @@ fn clear(mut context: CommandContext) -> CrushResult<()> {
     short = "Create a new dict with the same set of mappings as this one.",
     path = ("types", "dict"),
 )]
-struct Clone {}
+struct CloneCmd {}
 
 fn clone(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;

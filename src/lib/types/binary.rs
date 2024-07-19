@@ -12,9 +12,10 @@ use crate::lang::state::this::This;
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
-        let path = vec!["global", "types", "binary"];
-        Len::declare_method(&mut res, &path);
-        GetItem::declare_method(&mut res, &path);
+
+        Len::declare_method(&mut res);
+        GetItem::declare_method(&mut res);
+
         res
     };
 }
@@ -24,6 +25,7 @@ len,
 can_block = false,
 output = Known(ValueType::Integer),
 short = "The number of bytes in the binary.",
+path = ("types", "binary"),
 )]
 struct Len {}
 
@@ -37,7 +39,8 @@ __getitem__,
 can_block = false,
 output = Known(ValueType::Integer),
 short = "Returns the byte at the specified offset.",
-example = "(bin:from Cargo.toml)[4]"
+example = "$(bin:from Cargo.toml)[4]",
+path = ("types", "binary"),
 )]
 struct GetItem {
     index: usize,

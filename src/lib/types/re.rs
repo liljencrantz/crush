@@ -22,85 +22,83 @@ fn full(name: &'static str) -> Vec<&'static str> {
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
-        let path = vec!["global", "types", "re"];
-        res.declare(
-            full("match"),
-            r#match,
-            false,
-            "re =~ io:string",
-            "True if the io matches the pattern",
-            None,
-            Known(ValueType::Bool),
-            [],
-        );
-        res.declare(
-            full("not_match"),
-            not_match,
-            false,
-            "re !~ io:string",
-            "True if the io does not match the pattern",
-            None,
-            Known(ValueType::Bool),
-            [],
-        );
-        ReplaceSignature::declare_method(&mut res, &path);
-        ReplaceAllSignature::declare_method(&mut res, &path);
-        Filter::declare_method(&mut res, &path);
-        res.declare(
-            full("new"),
-            new,
-            false,
-            "re:new pattern:string",
-            "Create a new regular expression instance",
-            None,
-            Known(ValueType::Regex),
-            [],
-        );
+
+        ReplaceSignature::declare_method(&mut res);
+        ReplaceAllSignature::declare_method(&mut res);
+        Filter::declare_method(&mut res);
+        New::declare_method(&mut res);
+        Match::declare_method(&mut res);
+        NotMatch::declare_method(&mut res);
+
         res
     };
 }
 
+#[signature(
+    new,
+    can_block = false,
+    output = Known(ValueType::Regex),
+    short = "Compile a string into a new regular expression instance.",
+    path = ("types", "re"),
+)]
+struct New {
+    #[description("the new regular expression as a string.")]
+    pattern: String,
+}
+
 fn new(mut context: CommandContext) -> CrushResult<()> {
-    let def = context.arguments.string(0)?;
-    let res = match Regex::new(def.as_ref()) {
-        Ok(r) => Value::Regex(def, r),
+    let cfg: New = New::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let res = match Regex::new(&cfg.pattern) {
+        Ok(r) => Value::Regex(cfg.pattern, r),
         Err(e) => return argument_error_legacy(e.to_string().as_str()),
     };
     context.output.send(res)
 }
 
+#[signature(
+    r#match,
+    can_block = false,
+    output = Known(ValueType::Bool),
+    short = "True if the io matches the pattern.",
+    path = ("types", "re"),
+)]
+struct Match {
+    #[description("the string to match against.")]
+    needle: String,
+}
+
 fn r#match(mut context: CommandContext) -> CrushResult<()> {
     let re = context.this.re()?.1;
-    let needle = context.arguments.string(0)?;
-    context.output.send(Value::Bool(re.is_match(&needle)))
+    let cfg: Match = Match::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.output.send(Value::Bool(re.is_match(&cfg.needle)))
+}
+
+#[signature(
+    not_match,
+    can_block = false,
+    output = Known(ValueType::Bool),
+    short = "True if the io matches the pattern.",
+    path = ("types", "re"),
+)]
+struct NotMatch {
+    #[description("the string to match against.")]
+    needle: String,
 }
 
 fn not_match(mut context: CommandContext) -> CrushResult<()> {
     let re = context.this.re()?.1;
-    let needle = context.arguments.string(0)?;
-    context.output.send(Value::Bool(!re.is_match(&needle)))
+    let cfg: Match = Match::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.output.send(Value::Bool(!re.is_match(&cfg.needle)))
 }
 
 #[signature(
     replace,
     can_block = false,
     short = "Replace the first match of the regex in text with the replacement",
-    long = "re\"[0-9]\":replace \"123-456\" \"X\""
+    long = "re\"[0-9]\":replace \"123-456\" \"X\"",
+    path = ("types", "re"),
 )]
 struct ReplaceSignature {
-    #[description("the text to perform replacement on.")]
-    text: String,
-    #[description("the replacement")]
-    replacement: String,
-}
-
-#[signature(
-    replace_all,
-    can_block = false,
-    short = "Replace all matches of the regex in text with the replacement",
-    long = "re\"[0-9]\":replace \"123-456\" \"X\""
-)]
-struct ReplaceAllSignature {
     #[description("the text to perform replacement on.")]
     text: String,
     #[description("the replacement")]
@@ -113,6 +111,20 @@ fn replace(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::from(
         re.replace(&args.text, args.replacement.as_str()).as_ref(),
     ))
+}
+
+#[signature(
+    replace_all,
+    can_block = false,
+    short = "Replace all matches of the regex in text with the replacement",
+    long = "re\"[0-9]\":replace \"123-456\" \"X\"",
+    path = ("types", "re"),
+)]
+struct ReplaceAllSignature {
+    #[description("the text to perform replacement on.")]
+    text: String,
+    #[description("the replacement")]
+    replacement: String,
 }
 
 fn replace_all(mut context: CommandContext) -> CrushResult<()> {
@@ -130,6 +142,7 @@ filter,
 can_block = true,
 output = Passthrough,
 short = "Filter stream based on this regex.",
+path = ("types", "re"),
 )]
 struct Filter {
     #[unnamed()]

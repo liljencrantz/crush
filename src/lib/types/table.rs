@@ -14,10 +14,11 @@ use crate::lang::state::this::This;
 lazy_static! {
     pub static ref METHODS: OrderedMap<String, Command> = {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
-        let path = vec!["global", "types", "table"];
-        Call::declare_method(&mut res, &path);
-        Len::declare_method(&mut res, &path);
-        GetItem::declare_method(&mut res, &path);
+
+        Call::declare_method(&mut res);
+        Len::declare_method(&mut res);
+        GetItem::declare_method(&mut res);
+
         res
     };
 }
@@ -27,6 +28,7 @@ __call__,
 can_block = false,
 output = Known(ValueType::Type),
 short = "Return the table_input_stream type with the specified column signature.",
+path= ("types", "table"),
 )]
 struct Call {
     #[description("return the table type with the specified column signature.")]
@@ -57,6 +59,7 @@ len,
 can_block = false,
 output = Known(ValueType::Integer),
 short = "The number of rows in the table.",
+path= ("types", "table"),
 )]
 struct Len {}
 
@@ -72,7 +75,8 @@ __getitem__,
 can_block = false,
 output = Known(ValueType::Struct),
 short = "Returns the specified row of the table as a struct.",
-example = "(bin:from Cargo.toml|materialize)[4]"
+example = "(bin:from Cargo.toml|materialize)[4]",
+path= ("types", "table"),
 )]
 struct GetItem {
     index: usize,

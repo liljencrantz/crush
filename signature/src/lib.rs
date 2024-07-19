@@ -241,6 +241,8 @@ fn generate_signature(path: &[String], signature: Vec<String>) -> String {
         ("__div__", 2) => format!("{} / {} # Only available in math mode", path.join(":"), signature[1]),
         ("__getitem__", 2) => format!("{}[{}]", path.join(":"), signature[1]),
         ("__setitem__", 3) => format!("{}[{}] = {}", path.join(":"), signature[1], signature[2]),
+        ("match", 2) => format!("{} =~ {}", path.join(":"), signature[1]),
+        ("not_match", 2) => format!("{} !~ {}", path.join(":"), signature[1]),
         _ => format!("{}:{}", path.join(":"), signature.join(" "))
     }
 }
