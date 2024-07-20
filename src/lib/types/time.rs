@@ -1,3 +1,4 @@
+use std::sync::OnceLock;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
@@ -7,7 +8,6 @@ use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ValueType;
 use crate::lang::value::Value;
 use chrono::{DateTime, Local};
-use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use signature::signature;
 use crate::lang::state::argument_vector::ArgumentVector;
@@ -17,8 +17,9 @@ fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "time", name]
 }
 
-lazy_static! {
-    pub static ref METHODS: OrderedMap<String, Command> = {
+pub fn methods() -> &'static OrderedMap<String, Command> {
+    static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
+    CELL.get_or_init(|| {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
 
         res.declare(
@@ -45,7 +46,7 @@ lazy_static! {
         Parse::declare_method(&mut res);
         Format::declare_method(&mut res);
         res
-    };
+    })
 }
 
 binary_op!(add, time, Duration, Time, |a, b| a + b);

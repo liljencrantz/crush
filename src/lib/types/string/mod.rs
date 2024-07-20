@@ -1,10 +1,10 @@
+use std::sync::OnceLock;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
 use crate::lang::{data::list::List, value::ValueType};
-use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use signature::signature;
 use crate::lang::state::argument_vector::ArgumentVector;
@@ -12,36 +12,36 @@ use crate::lang::state::this::This;
 
 mod format;
 
-lazy_static! {
-    pub static ref METHODS: OrderedMap<String, Command> =
-        {
-            let mut res: OrderedMap<String, Command> = OrderedMap::new();
+pub fn methods() -> &'static OrderedMap<String, Command> {
+    static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
+    CELL.get_or_init(|| {
+        let mut res: OrderedMap<String, Command> = OrderedMap::new();
 
-            Lower::declare_method(&mut res);
-            Upper::declare_method(&mut res);
-            Repeat::declare_method(&mut res);
-            Split::declare_method(&mut res);
-            Trim::declare_method(&mut res);
-            format::Format::declare_method(&mut res);
-            Join::declare_method(&mut res);
-            LPad::declare_method(&mut res);
-            RPad::declare_method(&mut res);
-            StartsWith::declare_method(&mut res);
-            EndsWith::declare_method(&mut res);
-            IsAlphanumeric::declare_method(&mut res);
-            IsAlphabetic::declare_method(&mut res);
-            IsAscii::declare_method(&mut res);
-            IsLowercase::declare_method(&mut res);
-            IsUppercase::declare_method(&mut res);
-            IsWhitespace::declare_method(&mut res);
-            IsControl::declare_method(&mut res);
-            Len::declare_method(&mut res);
-            IsDigit::declare_method(&mut res);
-            Substr::declare_method(&mut res);
-            GetItem::declare_method(&mut res);
+        Lower::declare_method(&mut res);
+        Upper::declare_method(&mut res);
+        Repeat::declare_method(&mut res);
+        Split::declare_method(&mut res);
+        Trim::declare_method(&mut res);
+        format::Format::declare_method(&mut res);
+        Join::declare_method(&mut res);
+        LPad::declare_method(&mut res);
+        RPad::declare_method(&mut res);
+        StartsWith::declare_method(&mut res);
+        EndsWith::declare_method(&mut res);
+        IsAlphanumeric::declare_method(&mut res);
+        IsAlphabetic::declare_method(&mut res);
+        IsAscii::declare_method(&mut res);
+        IsLowercase::declare_method(&mut res);
+        IsUppercase::declare_method(&mut res);
+        IsWhitespace::declare_method(&mut res);
+        IsControl::declare_method(&mut res);
+        Len::declare_method(&mut res);
+        IsDigit::declare_method(&mut res);
+        Substr::declare_method(&mut res);
+        GetItem::declare_method(&mut res);
 
-            res
-        };
+        res
+    })
 }
 
 #[signature(

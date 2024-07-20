@@ -4,11 +4,11 @@ use crate::lang::help::Help;
 use crate::lang::{data::table::ColumnType, value::Value};
 use crate::lib::types;
 use crate::util::glob::Glob;
-use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use regex::Regex;
 use std::cmp::max;
 use std::fmt::{Display, Formatter};
+use std::sync::OnceLock;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum ValueType {
@@ -36,8 +36,9 @@ pub enum ValueType {
     Type,
 }
 
-lazy_static! {
-    pub static ref EMPTY_METHODS: OrderedMap<String, Command> = OrderedMap::new();
+pub fn empty_methods() -> &'static OrderedMap<String, Command> {
+    static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
+    CELL.get_or_init(|| OrderedMap::new())
 }
 
 impl ValueType {
@@ -47,22 +48,22 @@ impl ValueType {
 
     pub fn fields(&self) -> &OrderedMap<String, Command> {
         match self {
-            ValueType::List(_) => &types::list::METHODS,
-            ValueType::Dict(_, _) => &types::dict::METHODS,
-            ValueType::String => &types::string::METHODS,
-            ValueType::File => &types::file::METHODS,
-            ValueType::Regex => &types::re::METHODS,
-            ValueType::Glob => &types::glob::METHODS,
-            ValueType::Integer => &types::integer::METHODS,
-            ValueType::Float => &types::float::METHODS,
-            ValueType::Duration => &types::duration::METHODS,
-            ValueType::Time => &types::time::METHODS,
-            ValueType::Table(_) => &types::table::METHODS,
-            ValueType::TableInputStream(_) => &types::table_input_stream::METHODS,
-            ValueType::TableOutputStream(_) => &types::table_output_stream::METHODS,
-            ValueType::Binary => &types::binary::METHODS,
-            ValueType::Scope => &types::scope::METHODS,
-            _ => &EMPTY_METHODS,
+            ValueType::List(_) => &types::list::methods(),
+            ValueType::Dict(_, _) => &types::dict::methods(),
+            ValueType::String => &types::string::methods(),
+            ValueType::File => &types::file::methods(),
+            ValueType::Regex => &types::re::methods(),
+            ValueType::Glob => &types::glob::methods(),
+            ValueType::Integer => &types::integer::methods(),
+            ValueType::Float => &types::float::methods(),
+            ValueType::Duration => &types::duration::methods(),
+            ValueType::Time => &types::time::methods(),
+            ValueType::Table(_) => &types::table::methods(),
+            ValueType::TableInputStream(_) => &types::table_input_stream::methods(),
+            ValueType::TableOutputStream(_) => &types::table_output_stream::methods(),
+            ValueType::Binary => &types::binary::methods(),
+            ValueType::Scope => &types::scope::methods(),
+            _ => empty_methods(),
         }
     }
 

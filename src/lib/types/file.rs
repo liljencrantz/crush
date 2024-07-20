@@ -5,7 +5,6 @@ use crate::lang::state::contexts::CommandContext;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
-use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use std::fs::{File, metadata};
 use std::os::unix::fs::MetadataExt;
@@ -13,12 +12,14 @@ use signature::signature;
 use std::collections::HashSet;
 use crate::lib::types::file::PermissionAdjustment::{Add, Remove, Set};
 use std::os::unix::fs::PermissionsExt;
+use std::sync::OnceLock;
 use crate::data::binary::BinaryReader;
 use crate::lang::state::this::This;
 use crate::util::user_map::{get_gid, get_uid};
 
-lazy_static! {
-    pub static ref METHODS: OrderedMap<String, Command> = {
+pub fn methods() -> &'static OrderedMap<String, Command> {
+    static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
+    CELL.get_or_init(|| {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
         Stat::declare_method(&mut res);
         Chown::declare_method(&mut res);
@@ -29,8 +30,9 @@ lazy_static! {
         Read::declare_method(&mut res);
         Parent::declare_method(&mut res);
         Name::declare_method(&mut res);
+
         res
-    };
+    })
 }
 
 #[signature(

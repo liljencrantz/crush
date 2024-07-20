@@ -1,3 +1,4 @@
+use std::sync::OnceLock;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{argument_error_legacy, CrushResult, mandate};
@@ -13,6 +14,18 @@ use crate::lang::pipe::streams;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::command::CrushCommand;
 use crate::lang::state::this::This;
+
+pub fn methods() -> &'static OrderedMap<String, Command> {
+    static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
+    CELL.get_or_init(|| {
+        let mut res: OrderedMap<String, Command> = OrderedMap::new();
+        Call::declare_method(&mut res);
+        GetItem::declare_method(&mut res);
+        Pipe::declare_method(&mut res);
+
+        res
+    })
+}
 
 lazy_static! {
     static ref CLOSE: Value =
@@ -37,13 +50,6 @@ lazy_static! {
             [],
         ));
 
-    pub static ref METHODS: OrderedMap<String, Command> = {
-        let mut res: OrderedMap<String, Command> = OrderedMap::new();
-        Call::declare_method(&mut res);
-        GetItem::declare_method(&mut res);
-        Pipe::declare_method(&mut res);
-        res
-    };
 }
 
 #[signature(

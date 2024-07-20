@@ -30,10 +30,10 @@ pub mod table_output_stream;
 pub mod time;
 
 #[signature(
-materialize,
-can_block = true,
-short = "Recursively convert all streams in io to materialized form",
-example= "ls | materialize"
+    types.materialize,
+    can_block = true,
+    short = "Recursively convert all streams in io to materialized form",
+    example = "ls | materialize"
 )]
 struct Materialize {}
 
@@ -43,7 +43,7 @@ fn materialize(context: CommandContext) -> CrushResult<()> {
 
 fn new(mut context: CommandContext) -> CrushResult<()> {
     let parent = context.this.clone().r#struct()?;
-    let res = Struct::empty( Some(parent));
+    let res = Struct::empty(Some(parent));
     let o = context.output;
 
     // Call constructor if one exists
@@ -56,12 +56,12 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-data,
-can_block = false,
-output = Known(ValueType::Struct),
-short = "Construct a struct with the specified members",
-long= "Example:",
-long= "data foo=5 bar=\"baz\" false",
+    types.data,
+    can_block = false,
+    output = Known(ValueType::Struct),
+    short = "Construct a struct with the specified members",
+    long = "Example:",
+    long = "data foo=5 bar=\"baz\" false",
 )]
 struct Data {
     #[description("unnamed values.")]
@@ -83,16 +83,16 @@ fn data(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-class,
-can_block = false,
-output = Known(ValueType::Struct),
-short = "Create an empty new class",
-long= "Example:",
-long= "Point := class",
-long= "Point:__init__ = {\n        |x:float y:float|\n        this:x = x\n        this:y = y\n    }",
-long= "Point:len = {\n        ||\n        math:sqrt this:x*this:x + this:y*this:y\n    }",
-long= "Point:__add__ = {\n        |other|\n        Point:new x=this:x+other:x y=this:y+other:y\n    }",
-long= "p := (Point:new x=1.0 y=2.0)\n    p:len"
+    types.class,
+    can_block = false,
+    output = Known(ValueType::Struct),
+    short = "Create an empty new class",
+    long = "Example:",
+    long = "Point := class",
+    long = "Point:__init__ = {\n        |x:float y:float|\n        this:x = x\n        this:y = y\n    }",
+    long = "Point:len = {\n        ||\n        math:sqrt this:x*this:x + this:y*this:y\n    }",
+    long = "Point:__add__ = {\n        |other|\n        Point:new x=this:x+other:x y=this:y+other:y\n    }",
+    long = "p := (Point:new x=1.0 y=2.0)\n    p:len"
 )]
 struct Class {
     #[description("the type to convert the value to.")]
@@ -103,7 +103,7 @@ fn class(context: CommandContext) -> CrushResult<()> {
     let cfg: Class = Class::parse(context.arguments, &context.global_state.printer())?;
     let scope = context.scope;
     let parent = cfg.parent.unwrap_or_else(|| scope.root_object());
-    let res = Struct::empty( Some(parent));
+    let res = Struct::empty(Some(parent));
     context.output.send(Value::Struct(res))
 }
 
@@ -112,9 +112,9 @@ pub fn column_types(columns: &OrderedStringMap<ValueType>) -> Vec<ColumnType> {
 }
 
 #[signature(
-convert,
-can_block = false,
-short = "Convert the vale to the specified type"
+    types.convert,
+    can_block = false,
+    short = "Convert the vale to the specified type"
 )]
 struct Convert {
     #[description("the value to convert.")]
@@ -129,17 +129,17 @@ pub fn convert(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-__typeof__,
-can_block = false,
-output = Known(ValueType::Type),
-short = "Return the type of the specified value.",
+    types.r#typeof,
+    can_block = false,
+    output = Known(ValueType::Type),
+    short = "Return the type of the specified value.",
 )]
 struct TypeOf {
     #[description("the value to convert.")]
     value: Value,
 }
 
-pub fn __typeof__(context: CommandContext) -> CrushResult<()> {
+pub fn r#typeof(context: CommandContext) -> CrushResult<()> {
     let cfg: TypeOf = TypeOf::parse(context.arguments, &context.global_state.printer())?;
     context.output.send(Value::Type(cfg.value.value_type()))
 }

@@ -1,11 +1,11 @@
 use std::clone::Clone;
+use std::sync::OnceLock;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::errors::{argument_error_legacy, CrushResult, data_error, mandate};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
 use crate::lang::{command::Command, data::list::List, value::ValueType};
-use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use signature::signature;
 use crate::data::table::ColumnVec;
@@ -14,8 +14,9 @@ use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::this::This;
 use crate::util::replace::Replace;
 
-lazy_static! {
-    pub static ref METHODS: OrderedMap<String, Command> = {
+pub fn methods() -> &'static OrderedMap<String, Command> {
+    static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
+    CELL.get_or_init(|| {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
 
         Len::declare_method(&mut res);
@@ -38,7 +39,7 @@ lazy_static! {
         Slice::declare_method(&mut res);
 
         res
-    };
+    })
 }
 
 #[signature(
@@ -105,7 +106,7 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     types.list.of,
     can_block = false,
-    output = Known(ValueType::List(Box::from(ValueType::Empty))),
+    output = Known(ValueType::List(Box::from(ValueType::Any))),
     short = "Create a new list containing the supplied elements.",
 )]
 struct Of {
@@ -125,7 +126,7 @@ fn of(context: CommandContext) -> CrushResult<()> {
 #[signature(
     types.list.collect,
     can_block = false,
-    output = Known(ValueType::List(Box::from(ValueType::Empty))),
+    output = Known(ValueType::List(Box::from(ValueType::Any))),
     short = "Create a new list by reading a column from the input.",
     long= "If no elements are supplied as arguments, input must be a stream with exactly one column.",
 )]
@@ -164,7 +165,7 @@ fn collect(context: CommandContext) -> CrushResult<()> {
 #[signature(
     types.list.new,
     can_block = false,
-    output = Known(ValueType::List(Box::from(ValueType::Empty))),
+    output = Known(ValueType::List(Box::from(ValueType::Any))),
     short = "Create a new list with the specified element type.",
     example = "l := ((list string):new)",
 )]
@@ -211,7 +212,7 @@ fn empty(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     types.list.push,
     can_block = false,
-    output = Known(ValueType::List(Box::from(ValueType::Empty))),
+    output = Known(ValueType::List(Box::from(ValueType::Any))),
     short = "Push elements to the end of the list.",
 )]
 struct Push {
@@ -306,7 +307,7 @@ fn __setitem__(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     types.list.remove,
     can_block = false,
-    output = Known(ValueType::Empty),
+    output = Known(ValueType::Any),
     short = "Remove the element at the specified index and return it.",
 )]
 struct Remove {
@@ -356,7 +357,7 @@ fn truncate(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     types.list.clone,
     can_block = false,
-    output = Known(ValueType::List(Box::from(ValueType::Empty))),
+    output = Known(ValueType::List(Box::from(ValueType::Any))),
     short = "Create a duplicate of the list.",
 )]
 struct CloneCmd {}
@@ -372,7 +373,7 @@ fn clone(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     types.list.__getitem__,
     can_block = false,
-    output = Known(ValueType::Empty),
+    output = Known(ValueType::Any),
     short = "Return the value at the specified index of the list.",
 )]
 struct GetItem {

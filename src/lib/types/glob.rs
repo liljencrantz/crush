@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
+use std::sync::OnceLock;
 use signature::signature;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
@@ -11,22 +12,23 @@ use crate::lang::value::ValueType;
 use crate::lang::value::Value;
 use crate::util::file::cwd;
 use crate::util::glob::Glob;
-use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use crate::argument_error_legacy;
 use crate::data::table::ColumnType;
 use crate::lang::state::this::This;
 
-lazy_static! {
-    pub static ref METHODS: OrderedMap<String, Command> = {
+pub fn methods() -> &'static OrderedMap<String, Command> {
+    static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
+    CELL.get_or_init(|| {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
         New::declare_method(&mut res);
         Match::declare_method(&mut res);
         NotMatch::declare_method(&mut res);
         Files::declare_method(&mut res);
         Filter::declare_method(&mut res);
+
         res
-    };
+    })
 }
 
 #[signature(

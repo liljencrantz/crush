@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use std::sync::OnceLock;
 use ordered_map::OrderedMap;
 use signature::signature;
 
@@ -13,8 +13,9 @@ use crate::lang::state::this::This;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 
-lazy_static! {
-    pub static ref METHODS: OrderedMap<String, Command> = {
+pub fn methods() -> &'static OrderedMap<String, Command> {
+    static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
+    CELL.get_or_init(|| {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
 
         Resolve::declare_method(&mut res);
@@ -26,9 +27,8 @@ lazy_static! {
         ReadOnly::declare_method(&mut res);
         Name::declare_method(&mut res);
         Use::declare_method(&mut res);
-
         res
-    };
+    })
 }
 
 #[signature(

@@ -1,3 +1,4 @@
+use std::sync::OnceLock;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::command::TypeMap;
@@ -6,7 +7,6 @@ use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ValueType;
 use crate::lang::value::Value;
 use chrono::Duration;
-use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use signature::signature;
 use crate::lang::state::argument_vector::ArgumentVector;
@@ -16,42 +16,43 @@ fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "duration", name]
 }
 
-lazy_static! {
-    pub static ref METHODS: OrderedMap<String, Command> = {
+pub fn methods() -> &'static OrderedMap<String, Command> {
+    static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
+    CELL.get_or_init(|| {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
 
         res.declare(full("__add__"),
-            add, false,
-            "duration + (delta:duration | time:time)",
-            "Add the specified delta or time to this duration",
-            None,
-            Unknown,
-            [],
-            );
+                    add, false,
+                    "duration + (delta:duration | time:time)",
+                    "Add the specified delta or time to this duration",
+                    None,
+                    Unknown,
+                    [],
+        );
         res.declare(full("__sub__"),
-            sub, false,
-            "duration - delta:duration",
-            "Remove the specified delta from this duration",
-            None,
-            Known(ValueType::Duration),
-            [],
-            );
+                    sub, false,
+                    "duration - delta:duration",
+                    "Remove the specified delta from this duration",
+                    None,
+                    Known(ValueType::Duration),
+                    [],
+        );
         res.declare(full("__mul__"),
-            mul, false,
-            "duration * factor:integer",
-            "Multiply this duration by the specified factor",
-            None,
-            Known(ValueType::Duration),
-            [],
-            );
+                    mul, false,
+                    "duration * factor:integer",
+                    "Multiply this duration by the specified factor",
+                    None,
+                    Known(ValueType::Duration),
+                    [],
+        );
         res.declare(full("__div__"),
-            div, false,
-            "duration / divisor:integer",
-            "Divide this duration by the specified divisor",
-            None,
-            Known(ValueType::Duration),
-            [],
-            );
+                    div, false,
+                    "duration / divisor:integer",
+                    "Divide this duration by the specified divisor",
+                    None,
+                    Known(ValueType::Duration),
+                    [],
+        );
         Of::declare_method(&mut res);
         res.declare(
             full("__neg__"), neg, false,
@@ -60,9 +61,10 @@ lazy_static! {
             None,
             Known(ValueType::Duration),
             [],
-            );
+        );
+
         res
-    };
+    })
 }
 
 binary_op!(

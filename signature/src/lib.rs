@@ -125,11 +125,11 @@ fn parse_full_name(location: Span, name_tree: &[TokenTree]) -> SignatureResult<(
                 res.push(l),
             TokenTree::Punct(p) => {
                 if p.as_char() != '.' {
-                    return fail!(el.span(), "Unbexpected punctuation");
+                    return fail!(el.span(), "Unexpected punctuation");
                 }
             }
             TokenTree::Group(_) | TokenTree::Literal(_) => {
-                return fail!(el.span(), "Expected identifier");
+                return fail!(el.span(), "Expected command name to be an identifier");
             }
         }
     }
@@ -265,7 +265,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
         metadata_location,
     );
 
-    let root: syn::Item = syn::parse2(input).expect("Invalid syntax tree");
+    let root: Item = syn::parse2(input).expect("Invalid syntax tree");
 
     let mut long_description = metadata.long_description;
     let mut signature = vec![metadata.name.to_string()];
@@ -388,13 +388,8 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 long_description.push(example);
             }
 
-            let has_path = metadata.path.len() > 0;
             let signature_literal = Literal::string(&signature.join(" "));
-            let full_signature_literal = if has_path {
-                Literal::string(&generate_signature(&metadata.path, signature))
-            } else {
-                signature_literal.clone()
-            };
+            let full_signature_literal = Literal::string(&generate_signature(&metadata.path, signature));
 
 
             let long_description = if !long_description.is_empty() {
@@ -406,13 +401,12 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 quote! {None}
             };
 
-            let handler =
-                if has_path {
-                    let mut vec_stream = TokenStream::new();
-                    vec_stream.extend(metadata.path.iter().flat_map(|e| vec![TokenTree::Literal(Literal::string(e)),
-                                                                             TokenTree::Punct(Punct::new(',', Spacing::Alone))]));
-                    let path = TokenTree::Group(Group::new(Delimiter::None, vec_stream));
-                    quote! {
+            let mut vec_stream = TokenStream::new();
+            vec_stream.extend(metadata.path.iter().flat_map(|e| vec![TokenTree::Literal(Literal::string(e)),
+                                                                     TokenTree::Punct(Punct::new(',', Spacing::Alone))]));
+            let path = TokenTree::Group(Group::new(Delimiter::None, vec_stream));
+
+            let handler = quote! {
 
             #[allow(unused_parens)] // TODO: don't emit unnecessary parenthesis in the first place
             impl #struct_name {
@@ -468,68 +462,8 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                     #unnamed_mutations
 
                     Ok( #struct_name { #assignments })
-                }
-            }}
-                } else {
-                    quote! {
-
-            #[allow(unused_parens)] // TODO: don't emit unnecessary parenthesis in the first place
-            impl #struct_name {
-                pub fn declare(env: &mut crate::lang::state::scope::ScopeLoader) -> crate::lang::errors::CrushResult <()> {
-                    env.declare_command(
-                        #command_name,
-                        #command_invocation,
-                        #can_block,
-                        #signature_literal,
-                        #description,
-                        #long_description,
-                        #output,
-                        vec![
-                            #argument_desciptions
-                        ],
-                    )
-                }
-
-                pub fn declare_method(env: &mut ordered_map::OrderedMap<std::string::String, crate::lang::command::Command>, path: &Vec<&str>) {
-                    let mut full = path.clone();
-                    full.push(#command_name);
-                    env.insert(#command_name.to_string(),
-                        <dyn crate::lang::command::CrushCommand>::command(
-                            #command_invocation,
-                            #can_block,
-                            full,
-                            #full_signature_literal,
-                            #description,
-                            #long_description,
-                            #output,
-                            [#argument_desciptions],
-                        )
-                    );
-                }
-
-                #[allow(unreachable_patterns)]
-                pub fn parse(_arguments: Vec<crate::lang::argument::Argument>, _printer: &crate::lang::printer::Printer) -> crate::lang::errors::CrushResult < # struct_name > {
-                    use std::convert::TryFrom;
-                    use std::ops::Deref;
-                    # values
-                    let mut _unnamed = std::collections::VecDeque::new();
-
-                    for _arg in _arguments {
-                        let _location = _arg.location;
-                        match (_arg.argument_type.as_deref(), _arg.value) {
-                            #named_matchers
-                            #named_fallback
-                            (None, _value) => _unnamed.push_back((_value, _arg.location)),
-                            (Some(_name), _value) => return crate::lang::errors::argument_error(format!("Unknown argument name \"{}\"", _name), _location),
-                        }
+            }
                     }
-
-                    #unnamed_mutations
-
-                    Ok( #struct_name { #assignments })
-                }
-            }
-            }
                 };
 
             let mut output = s.to_token_stream();

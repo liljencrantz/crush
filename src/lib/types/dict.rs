@@ -1,11 +1,11 @@
 use std::collections::HashSet;
+use std::sync::OnceLock;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::errors::{argument_error, argument_error_legacy, CrushResult, mandate};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
 use crate::lang::{data::dict::Dict, value::ValueType};
-use lazy_static::lazy_static;
 use ordered_map::{Entry, OrderedMap};
 use signature::signature;
 use crate::data::table::ColumnVec;
@@ -14,8 +14,9 @@ use itertools::Itertools;
 use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::this::This;
 
-lazy_static! {
-    pub static ref METHODS: OrderedMap<String, Command> = {
+pub fn methods() -> &'static OrderedMap<String, Command> {
+    static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
+    CELL.get_or_init(|| {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
 
         Len::declare_method(&mut res);
@@ -36,7 +37,7 @@ lazy_static! {
         GetItem::declare_method(&mut res);
 
         res
-    };
+    })
 }
 
 #[signature(
@@ -78,7 +79,7 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     types.dict.new,
     can_block = false,
-    output = Known(ValueType::Dict(Box::from(ValueType::Empty), Box::from(ValueType::Empty))),
+    output = Known(ValueType::Dict(Box::from(ValueType::Any), Box::from(ValueType::Any))),
     short = "Create an empty new dict.",
     long = "This method takes no arguments, but must not be called on a raw dict type. You must call it on a parametrized dict type, like $(dict $string $string)",
     example = "my_dict := $($(dict $string $integer):new)",
@@ -154,13 +155,14 @@ struct SetItem {
 fn __setitem__(mut context: CommandContext) -> CrushResult<()> {
     let dict = context.this.dict()?;
     let cfg: SetItem = SetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
-    dict.insert(cfg.key, cfg.value)
+    dict.insert(cfg.key, cfg.value);
+    context.output.empty()
 }
 
 #[signature(
     types.dict.__getitem__,
     can_block = false,
-    output = Known(ValueType::Empty),
+    output = Known(ValueType::Any),
     short = "Return the value mapped to the specified key of the dict.",
 )]
 struct GetItem {
@@ -304,7 +306,7 @@ fn value_type(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     types.dict.collect,
     can_block = true,
-    output = Known(ValueType::Dict(Box::from(ValueType::Empty), Box::from(ValueType::Empty))),
+    output = Known(ValueType::Dict(Box::from(ValueType::Any), Box::from(ValueType::Any))),
     short = "Create a new dict by reading the specified columns from the input.",
 )]
 struct Collect {
