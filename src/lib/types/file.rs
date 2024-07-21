@@ -6,14 +6,19 @@ use crate::lang::data::r#struct::Struct;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use ordered_map::OrderedMap;
-use std::fs::{File, metadata};
-use std::os::unix::fs::MetadataExt;
+use std::fs::{File, metadata, remove_dir, remove_file};
 use signature::signature;
 use std::collections::HashSet;
-use crate::lib::types::file::PermissionAdjustment::{Add, Remove, Set};
+use std::ops::Deref;
 use std::os::unix::fs::PermissionsExt;
-use std::sync::OnceLock;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, OnceLock};
+use chrono::{DateTime, Local};
+use libc::{S_IFBLK, S_IFCHR, S_IFDIR, S_IFIFO, S_IFLNK, S_IFREG, S_IFSOCK};
+use nix::sys::stat::lstat;
 use crate::data::binary::BinaryReader;
+use crate::lang::data::table::{ColumnType, Row};
+use crate::lang::pipe::OutputStream;
 use crate::lang::state::this::This;
 use crate::util::user_map::{get_gid, get_uid};
 
@@ -30,7 +35,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
         Read::declare_method(&mut res);
         Parent::declare_method(&mut res);
         Name::declare_method(&mut res);
-
+        Remove::declare_method(&mut res);
         res
     })
 }
@@ -41,28 +46,58 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     output = Known(ValueType::Struct),
     short = "Return a struct with information about a file.",
     long = "The return value contains the following fields:",
-    long = "* is_directory:bool is the file is a directory",
-    long = "* is_file:bool is the file a regular file",
+    long = "* is_socket:bool is the file is a socket",
     long = "* is_symlink:bool is the file a symbolic link",
+    long = "* is_block_device:bool is the file a block device",
+    long = "* is_directory:bool is the file is a directory",
+    long = "* is_character_device:bool is the file a character_device",
+    long = "* is_fifo:bool is the file a fifo",
     long = "* inode:integer the inode number of the file",
     long = "* nlink:integer the number of hardlinks to the file",
-    long = "* mode:integer the permission bits for the file",
-    long = "* len: integer the size of the file",
+    long = "* uid: The user id of the file owner",
+    long = "* gid: The group id of the file owner",
+    long = "* size: File size in bytes",
+    long = "* block_size: The size of a single block on the device storing this file",
+    long = "* blocks: The number of blocks used to store this file",
+    long = "* access_time: The last time this file was accessed",
+    long = "* modification_time: The last time this file was modified",
+    long = "* creation_time: The time this file was created",
 )]
-struct Stat {}
+struct Stat {
+    #[description("If true, stat will not follow symlinks and instead return information about the link itself"
+    )]
+    #[default(false)]
+    symlink: bool,
+}
 
 pub fn stat(mut context: CommandContext) -> CrushResult<()> {
     let file = context.this.file()?;
-    let metadata = to_crush_error(metadata(file))?;
+    let cfg = Stat::parse(context.remove_arguments(), context.global_state.printer())?;
+    let metadata = to_crush_error(
+        if cfg.symlink {
+            lstat(&file)
+        } else {
+            nix::sys::stat::stat(&file)
+        })?;
     context.output.send(Value::Struct(Struct::new(
         vec![
-            ("is_directory", Value::Bool(metadata.is_dir())),
-            ("is_file", Value::Bool(metadata.is_file())),
-            ("is_symlink", Value::Bool(metadata.file_type().is_symlink())),
-            ("inode", Value::Integer(metadata.ino() as i128)),
-            ("nlink", Value::Integer(metadata.nlink() as i128)),
-            ("mode", Value::Integer(metadata.mode() as i128)),
-            ("len", Value::Integer(metadata.len() as i128)),
+            ("is_socket", Value::Bool((metadata.st_mode & S_IFSOCK) != 0)),
+            ("is_symlink", Value::Bool((metadata.st_mode & S_IFLNK) != 0)),
+            ("is_file", Value::Bool((metadata.st_mode & S_IFREG) != 0)),
+            ("is_block_device", Value::Bool((metadata.st_mode & S_IFBLK) != 0)),
+            ("is_directory", Value::Bool((metadata.st_mode & S_IFDIR) != 0)),
+            ("is_character_device", Value::Bool((metadata.st_mode & S_IFCHR) != 0)),
+            ("is_fifo", Value::Bool((metadata.st_mode & S_IFIFO) != 0)),
+            ("inode", Value::Integer(metadata.st_ino as i128)),
+            ("nlink", Value::Integer(metadata.st_nlink as i128)),
+            ("uid", Value::Integer(metadata.st_uid as i128)),
+            ("gid", Value::Integer(metadata.st_gid as i128)),
+            ("size", Value::Integer(metadata.st_size as i128)),
+            ("block_size", Value::Integer(metadata.st_blksize as i128)),
+            ("blocks", Value::Integer(metadata.st_blocks as i128)),
+            ("access_time", Value::Time(DateTime::from_timestamp(metadata.st_atime, 0).unwrap().with_timezone(&Local))),
+            ("modification_time", Value::Time(DateTime::from_timestamp(metadata.st_mtime, 0).unwrap().with_timezone(&Local))),
+            ("creation_time", Value::Time(DateTime::from_timestamp(metadata.st_ctime, 0).unwrap().with_timezone(&Local))),
         ],
         None,
     )))
@@ -82,7 +117,7 @@ struct Chown {
 }
 
 pub fn chown(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Chown = Chown::parse(context.arguments, &context.global_state.printer())?;
+    let cfg = Chown::parse(context.arguments, &context.global_state.printer())?;
     let file = context.this.file()?;
 
     let uid = if let Some(name) = cfg.user {
@@ -158,11 +193,11 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
                         class_done = true;
                     }
                     '-' => {
-                        adjustments = Remove;
+                        adjustments = PermissionAdjustment::Remove;
                         class_done = true;
                     }
                     '=' => {
-                        adjustments = Set;
+                        adjustments = PermissionAdjustment::Set;
                         class_done = true;
                     }
                     c => {
@@ -193,15 +228,15 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
 
     for cl in classes {
         match adjustments {
-            Add => {
+            PermissionAdjustment::Add => {
                 // Add new bits
                 current |= modes << cl;
             }
-            Remove => {
+            PermissionAdjustment::Remove => {
                 // Remove bits
                 current = current & !(modes << cl);
             }
-            Set => {
+            PermissionAdjustment::Set => {
                 // Clear current bits
                 current = current & !(7 << cl);
                 // Add new bits
@@ -214,7 +249,7 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
 }
 
 pub fn chmod(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Chmod = Chmod::parse(context.arguments, &context.global_state.printer())?;
+    let cfg = Chmod::parse(context.arguments, &context.global_state.printer())?;
     let file = context.this.file()?;
     let metadata = to_crush_error(metadata(&file))?;
 
@@ -256,7 +291,7 @@ struct GetItem {
 
 pub fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     let base_directory = context.this.file()?;
-    let cfg: GetItem = GetItem::parse(context.arguments, &context.global_state.printer())?;
+    let cfg = GetItem::parse(context.arguments, &context.global_state.printer())?;
     context.output.send(Value::from(base_directory.join(&cfg.name)))
 }
 
@@ -331,4 +366,138 @@ fn parent(mut context: CommandContext) -> CrushResult<()> {
             mandate(
                 context.this.file()?.parent(),
                 "Invalid file path")?))
+}
+
+fn remove_output_type() -> &'static Vec<ColumnType> {
+    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
+    CELL.get_or_init(|| {
+        vec![
+            ColumnType::new("file", ValueType::File),
+            ColumnType::new("deleted", ValueType::Bool),
+            ColumnType::new("status", ValueType::String),
+        ]
+    })
+}
+
+#[signature(
+    types.file.remove,
+    can_block = true,
+    output = Known(ValueType::TableInputStream(remove_output_type().clone())),
+    short = "Delete this file",
+    long = "Returns a stream of deletion failures."
+)]
+struct Remove {
+    #[description("If this file is a directory, recursively delete files and subdirectories")]
+    #[default(false)]
+    recursive: bool,
+    #[description("If true, emit status updates for deleted files, not just errors")]
+    #[default(false)]
+    verbose: bool,
+}
+
+fn remove_outcome_to_row<ErrType: ToString>(path: Arc<Path>, result: Result<(), ErrType>) -> Row {
+    match result {
+        Ok(_) => Row::new(vec![Value::File(path), Value::Bool(true), Value::String(Arc::from("Deleted"))]),
+        Err(e) => Row::new(vec![Value::File(path), Value::Bool(false), Value::String(Arc::from(e.to_string()))]),
+    }
+}
+
+fn handle_remove_result<ErrType: ToString>(path: Arc<Path>, result: Result<(), ErrType>, out: &OutputStream, verbose: bool) -> CrushResult<()> {
+    match result {
+        Ok(_) => {
+            if verbose {
+                out.send(remove_outcome_to_row::<String>(path, Ok(())))
+            } else {
+                Ok(())
+            }
+        }
+        Err(e) => {
+            out.send(remove_outcome_to_row(path, Err(e)))
+        }
+    }
+}
+
+fn remove_file_of_unknown_type(path: Arc<Path>, out: &OutputStream, verbose: bool) -> CrushResult<()> {
+    match lstat(path.deref()) {
+        Ok(stat) => {
+            if stat.st_mode & S_IFDIR != 0 {
+                let pp = path.deref();
+                let res = remove_dir(pp);
+                drop(pp);
+                handle_remove_result(path, res, out, verbose)
+            } else {
+                let pp = path.deref();
+                let res = remove_file(pp);
+                drop(pp);
+                handle_remove_result(path, res, out, verbose)
+            }
+        }
+        Err(e) => handle_remove_result(path, Err(e), out, verbose),
+    }
+}
+
+fn remove_known_directory(path: Arc<Path>, out: &OutputStream, verbose: bool) -> CrushResult<()> {
+    let pp = path.deref();
+    let res = remove_dir(pp);
+    drop(pp);
+    handle_remove_result(path, res, out, verbose)
+}
+
+fn remove_known_file(path: Arc<Path>, out: &OutputStream, verbose: bool) -> CrushResult<()> {
+    let pp = path.deref();
+    let res = remove_file(pp);
+    drop(pp);
+    handle_remove_result(path, res, out, verbose)
+}
+
+fn remove(mut context: CommandContext) -> CrushResult<()> {
+    let output = context.output.initialize(remove_output_type())?;
+    let cfg = Remove::parse(context.remove_arguments(), context.global_state.printer())?;
+    match context.this {
+        Some(Value::File(file)) => {
+            if cfg.recursive {
+                let mut directories = vec![(file, false)];
+
+                while let Some((next, subdirectories_already_deleted)) = directories.pop() {
+                    if subdirectories_already_deleted {
+                        remove_known_directory(next, &output, cfg.verbose)?;
+                    } else {
+                        directories.push((next.clone(), true));
+                        match next.clone().read_dir() {
+                            Ok(rd) => {
+                                for e in rd {
+                                    match e {
+                                        Ok(e) =>
+                                            match e.metadata() {
+                                                Ok(meta) => {
+                                                    if meta.is_dir() {
+                                                        directories.push((Arc::from(e.path()), false));
+                                                    } else {
+                                                        remove_known_file(Arc::from(e.path()), &output, cfg.verbose)?;
+                                                    }
+                                                }
+                                                Err(e) =>
+                                                    output.send(remove_outcome_to_row(next.clone(), Err(e)))?,
+                                            },
+
+                                        Err(e)=>
+                                            output.send(remove_outcome_to_row(next.clone(), Err(e)))?,
+                                    }
+                                }
+                            }
+                            Err(e) =>
+                                output.send(remove_outcome_to_row(next.clone(), Err(e)))?,
+                        }
+                    }
+                }
+                Ok(())
+            } else {
+                remove_file_of_unknown_type(file, &output, cfg.verbose)
+            }
+        }
+        None => argument_error_legacy("Expected this to be a file, but this is not set"),
+        Some(v) => argument_error_legacy(
+            &format!("Expected this to be a file, but it is a {}", v.value_type().to_string()),
+        ),
+    }
 }
