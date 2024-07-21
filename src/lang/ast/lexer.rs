@@ -264,14 +264,6 @@ impl<'input> Lexer<'input> {
                     return Some(Token::QuotedFile(s, Location::new(i, end_idx + 1)).into());
                 }
 
-                /*
-                                Regex(& 'input str, Location),
-                                MathModeStart(& 'input str, Location),
-
-                                FactorOperator(& 'input str, Location),
-                                TermOperator(& 'input str, Location),
-                */
-
                 Some((i, ch)) if (ch == ' ') | (ch == '\n') | (ch == '\r') => continue,
                 Some((i, ch)) => return Some(Err(LexicalError::UnexpectedCharacter(ch))),
                 None => return None, // End of file
@@ -478,14 +470,6 @@ impl<'input> Lexer<'input> {
                     return Some(Token::QuotedFile(s, Location::new(i, end_idx + 1)).into());
                 }
 
-                /*
-                                Regex(& 'input str, Location),
-                                MathModeStart(& 'input str, Location),
-
-                                FactorOperator(& 'input str, Location),
-                                TermOperator(& 'input str, Location),
-                */
-
                 Some((i, ch)) if (ch == ' ') | (ch == '\n') | (ch == '\r') => continue,
                 Some((i, ch)) => return Some(Err(LexicalError::UnexpectedCharacter(ch))),
                 None => return None, // End of file
@@ -494,11 +478,8 @@ impl<'input> Lexer<'input> {
     }
 }
 
-
-
-
 fn string_or_glob_first_char(ch: char) -> bool {
-    (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '*' || ch == '?' || ch == '.' || ch == '_' || ch == '-'
+    (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '*' || ch == '?' || ch == '_' || ch == '-'
 }
 
 fn string_or_glob_char(ch: char) -> bool {

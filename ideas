@@ -1,19 +1,8 @@
-Math mode:
+A way to add methods to existing types:
 
-Stop comingling math and regular "shell" syntax. Use m() to enter math mode, e.g
+$file_extra := struct mkdir={|| cmd mkdir -p $this}
 
-$foo = m($foo + $bar)
-
-in math mode, +, -, *, /, and ^ perform math operations. Outside math mode, the do not.
-
-Outside of math mode, * is the wildcard operator.
-
-Similarly, we drop regular expression literals and switch to regular expression mode, e.g.
-
-re(.*)
-
-Regular expression mode is similar to "regular" eregexes, but are whitespace insensitive (use backslash + space
-for a space, \n for a newline, etc. regexp mode still has comments.
+implicit
 
 Graphs:
 

@@ -1,12 +1,12 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, CrushResult, mandate, to_crush_error};
+use crate::lang::errors::{argument_error_legacy, CrushResult, data_error, mandate, to_crush_error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use ordered_map::OrderedMap;
-use std::fs::{File, metadata, remove_dir, remove_file};
+use std::fs::{create_dir, File, metadata, remove_dir, remove_file};
 use signature::signature;
 use std::collections::HashSet;
 use std::ops::Deref;
@@ -36,6 +36,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
         Parent::declare_method(&mut res);
         Name::declare_method(&mut res);
         Remove::declare_method(&mut res);
+        MkDir::declare_method(&mut res);
         res
     })
 }
@@ -500,4 +501,34 @@ fn remove(mut context: CommandContext) -> CrushResult<()> {
             &format!("Expected this to be a file, but it is a {}", v.value_type().to_string()),
         ),
     }
+}
+
+#[signature(
+    types.file.mkdir,
+    can_block = false,
+    output = Known(ValueType::Empty),
+    short = "Create directory",
+)]
+struct MkDir {
+}
+
+fn mkdir_recursive(path: &Path, leaf: bool) -> CrushResult<()> {
+    if path.exists() && path.is_dir() {
+        if leaf {
+            data_error("Directory already exists")
+        }
+        else {
+        Ok(())
+        }
+    } else {
+        if let Some(parent) = path.parent() {
+            mkdir_recursive(parent, false)?;
+        }
+        to_crush_error(create_dir(path))
+    }
+}
+
+fn mkdir(mut context: CommandContext) -> CrushResult<()> {
+    let directory = context.this.file()?;
+    mkdir_recursive(&directory, true)
 }
