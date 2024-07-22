@@ -20,10 +20,10 @@ use crate::lang::data::table::Row;
 extern crate uptime_lib;
 
 #[signature(
-name,
-can_block = false,
-output = Known(ValueType::String),
-short = "name of this host")]
+    host.name,
+    can_block = false,
+    output = Known(ValueType::String),
+    short = "name of this host")]
 struct Name {}
 
 fn name(context: CommandContext) -> CrushResult<()> {
@@ -49,10 +49,10 @@ lazy_static! {
 }
 
 #[signature(
-uptime,
-can_block = false,
-output = Known(ValueType::Duration),
-short = "uptime of this host")]
+    host.uptime,
+    can_block = false,
+    output = Known(ValueType::Duration),
+    short = "uptime of this host")]
 struct Uptime {}
 
 fn uptime(context: CommandContext) -> CrushResult<()> {
@@ -64,10 +64,10 @@ fn uptime(context: CommandContext) -> CrushResult<()> {
 
 
 #[signature(
-battery,
-can_block = true,
-output = Known(ValueType::TableInputStream(BATTERY_OUTPUT_TYPE.clone())),
-short = "List all batteries in the system and their status")]
+    host.battery,
+    can_block = true,
+    output = Known(ValueType::TableInputStream(BATTERY_OUTPUT_TYPE.clone())),
+    short = "List all batteries in the system and their status")]
 struct Battery {}
 
 fn state_name(state: battery::State) -> String {
@@ -95,9 +95,9 @@ fn battery(context: CommandContext) -> CrushResult<()> {
             Value::from(battery.model().unwrap_or("").to_string()),
             Value::from(battery.technology().to_string()),
             Value::Integer(battery.cycle_count().unwrap_or(0) as i128),
-            Value::Float(battery.temperature().map(|t|{t.value as f64}).unwrap_or(0.0)),
-            Value::Float( battery.voltage().value as f64),
-            Value::Float( battery.state_of_health().value as f64),
+            Value::Float(battery.temperature().map(|t| { t.value as f64 }).unwrap_or(0.0)),
+            Value::Float(battery.voltage().value as f64),
+            Value::Float(battery.state_of_health().value as f64),
             Value::from(state_name(battery.state())),
             Value::Float(battery.state_of_charge().value as f64),
             Value::Duration(time_to_duration(battery.time_to_full())),
@@ -108,10 +108,10 @@ fn battery(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-memory,
-can_block = false,
-output = Known(ValueType::Struct),
-short = "memory usage of this host.")]
+    host.memory,
+    can_block = false,
+    output = Known(ValueType::Struct),
+    short = "memory usage of this host.")]
 struct Memory {}
 
 fn memory(context: CommandContext) -> CrushResult<()> {
@@ -140,10 +140,10 @@ mod os {
     use super::*;
 
     #[signature(
-    name,
-    can_block = false,
-    output = Known(ValueType::String),
-    short = "name of the operating system")]
+        host.os.name,
+        can_block = false,
+        output = Known(ValueType::String),
+        short = "name of the operating system")]
     pub struct Name {}
 
     fn name(context: CommandContext) -> CrushResult<()> {
@@ -153,10 +153,10 @@ mod os {
     }
 
     #[signature(
-    version,
-    can_block = false,
-    output = Known(ValueType::String),
-    short = "version of the operating system kernel"
+        host.os.version,
+        can_block = false,
+        output = Known(ValueType::String),
+        short = "version of the operating system kernel"
     )]
     pub struct Version {}
 
@@ -171,10 +171,10 @@ mod cpu {
     use super::*;
 
     #[signature(
-    count,
-    can_block = false,
-    output = Known(ValueType::Integer),
-    short = "number of CPU cores")]
+        host.cpu.count,
+        can_block = false,
+        output = Known(ValueType::Integer),
+        short = "number of CPU cores")]
     pub struct Count {}
 
     fn count(context: CommandContext) -> CrushResult<()> {
@@ -184,10 +184,10 @@ mod cpu {
     }
 
     #[signature(
-    load,
-    can_block = false,
-    output = Known(ValueType::Struct),
-    short = "current CPU load")]
+        host.cpu.load,
+        can_block = false,
+        output = Known(ValueType::Struct),
+        short = "current CPU load")]
     pub struct Load {}
 
     fn load(context: CommandContext) -> CrushResult<()> {
@@ -203,10 +203,10 @@ mod cpu {
     }
 
     #[signature(
-    speed,
-    can_block = false,
-    output = Known(ValueType::Integer),
-    short = "current CPU frequency")]
+        host.cpu.speed,
+        can_block = false,
+        output = Known(ValueType::Integer),
+        short = "current CPU frequency")]
     pub struct Speed {}
 
     fn speed(context: CommandContext) -> CrushResult<()> {
@@ -253,11 +253,11 @@ mod macos {
 }
 
     #[signature(
-    procs,
-    can_block = true,
-    short = "Return a table stream containing information on all running processes on this host",
-    output = Known(ValueType::TableInputStream(LIST_OUTPUT_TYPE.clone())),
-    long = "host:procs accepts no arguments.")]
+        host.procs,
+        can_block = true,
+        short = "Return a table stream containing information on all running processes on this host",
+        output = Known(ValueType::TableInputStream(LIST_OUTPUT_TYPE.clone())),
+        long = "host:procs accepts no arguments.")]
     pub struct Procs {}
 
     use libproc::libproc::proc_pid::{listpidinfo, listpids, pidinfo, ListThreads, ProcType};
@@ -304,11 +304,11 @@ mod macos {
     }
 
     #[signature(
-    threads,
-    can_block = true,
-    short = "Return a table stream containing information on all running threads on this host",
-    output = Known(ValueType::TableInputStream(THREADS_OUTPUT_TYPE.clone())),
-    long = "host:threads accepts no arguments.")]
+        host.threads,
+        can_block = true,
+        short = "Return a table stream containing information on all running threads on this host",
+        output = Known(ValueType::TableInputStream(THREADS_OUTPUT_TYPE.clone())),
+        long = "host:threads accepts no arguments.")]
     pub struct Threads {}
 
     fn threads(context: CommandContext) -> CrushResult<()> {
@@ -361,12 +361,11 @@ mod macos {
                     }
                 }
 
-//                let curr_res = pidrusage::<RUsageInfoV2>(pid).ok();
+                //                let curr_res = pidrusage::<RUsageInfoV2>(pid).ok();
             }
         }
         Ok(())
     }
-
 }
 
 #[cfg(target_os = "linux")]
@@ -420,11 +419,11 @@ mod linux {
 
 
     #[signature(
-    procs,
-    can_block = true,
-    short = "Return a table stream containing information on all running processes on this host",
-    output = Known(ValueType::TableInputStream(LIST_OUTPUT_TYPE.clone())),
-    long = "host:procs accepts no arguments.")]
+        host.procs,
+        can_block = true,
+        short = "Return a table stream containing information on all running processes on this host",
+        output = Known(ValueType::TableInputStream(LIST_OUTPUT_TYPE.clone())),
+        long = "host:procs accepts no arguments.")]
     pub struct Procs {}
 
     fn procs(mut context: CommandContext) -> CrushResult<()> {
@@ -465,11 +464,11 @@ mod linux {
 }
 
 #[signature(
-signal,
-can_block = false,
-short = "Send a signal to a set of processes",
-output = Known(ValueType::Empty),
-long = "The set of existing signals is platform dependent, but common signals
+    host.signal,
+    can_block = false,
+    short = "Send a signal to a set of processes",
+    output = Known(ValueType::Empty),
+    long = "The set of existing signals is platform dependent, but common signals
     include SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGTRAP, SIGABRT, SIGBUS, SIGFPE,
     SIGKILL, SIGUSR1, SIGSEGV, SIGUSR2, SIGPIPE, SIGALRM, SIGTERM, SIGCHLD,
     SIGCONT and SIGWINCH.")]

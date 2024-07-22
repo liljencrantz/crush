@@ -17,99 +17,99 @@ macro_rules! math_fun {
 }
 
 #[signature(
-sin,
-output = Known(ValueType::Float),
-short = "The sine of number.")]
+    math.sin,
+    output = Known(ValueType::Float),
+    short = "The sine of number.")]
 pub struct Sin {
     number: Number,
 }
 math_fun!(sin, Sin, |x: f64| x.sin());
 
 #[signature(
-cos,
-output = Known(ValueType::Float),
-short = "The cosine of number.")]
+    math.cos,
+    output = Known(ValueType::Float),
+    short = "The cosine of number.")]
 pub struct Cos {
     number: Number,
 }
 math_fun!(cos, Cos, |x: f64| x.cos());
 
 #[signature(
-tan,
-output = Known(ValueType::Float),
-short = "The tangent of number.")]
+    math.tan,
+    output = Known(ValueType::Float),
+    short = "The tangent of number.")]
 pub struct Tan {
     number: Number,
 }
 math_fun!(tan, Tan, |x: f64| x.tan());
 
 #[signature(
-sqrt,
-output = Known(ValueType::Float),
-short = "The square root of number.")]
+    math.sqrt,
+    output = Known(ValueType::Float),
+    short = "The square root of number.")]
 pub struct Sqrt {
     number: Number,
 }
 math_fun!(sqrt, Sqrt, |x: f64| x.sqrt());
 
 #[signature(
-asin,
-output = Known(ValueType::Float),
-short = "The arc sine of number.")]
+    math.asin,
+    output = Known(ValueType::Float),
+    short = "The arc sine of number.")]
 pub struct ASin {
     number: Number,
 }
 math_fun!(asin, ASin, |x: f64| x.asin());
 
 #[signature(
-acos,
-output = Known(ValueType::Float),
-short = "The arc cosine of number.")]
+    math.acos,
+    output = Known(ValueType::Float),
+    short = "The arc cosine of number.")]
 pub struct ACos {
     number: Number,
 }
 math_fun!(acos, ACos, |x: f64| x.acos());
 
 #[signature(
-atan,
-output = Known(ValueType::Float),
-short = "The arc tangent of number.")]
+    math.atan,
+    output = Known(ValueType::Float),
+    short = "The arc tangent of number.")]
 pub struct ATan {
     number: Number,
 }
 math_fun!(atan, ATan, |x: f64| x.atan());
 
 #[signature(
-ceil,
-output = Known(ValueType::Float),
-short = "The smallest integer larger than number.")]
+    math.ceil,
+    output = Known(ValueType::Float),
+    short = "The smallest integer larger than number.")]
 pub struct Ceil {
     number: Number,
 }
 math_fun!(ceil, Ceil, |x: f64| x.ceil());
 
 #[signature(
-floor,
-output = Known(ValueType::Float),
-short = "The largest integer smaller than number.")]
+    math.floor,
+    output = Known(ValueType::Float),
+    short = "The largest integer smaller than number.")]
 pub struct Floor {
     number: Number,
 }
 math_fun!(floor, Floor, |x: f64| x.floor());
 
 #[signature(
-ln,
-output = Known(ValueType::Float),
-short = "The natural logarithm of number.")]
+    math.ln,
+    output = Known(ValueType::Float),
+    short = "The natural logarithm of number.")]
 pub struct Ln {
     number: Number,
 }
 math_fun!(ln, Ln, |x: f64| x.ln());
 
 #[signature(
-log,
-output = Known(ValueType::Float),
-short = "The logarithm of number in base.")]
+    math.log,
+    output = Known(ValueType::Float),
+    short = "The logarithm of number in base.")]
 pub struct Log {
     number: Number,
     base: Number,
@@ -121,9 +121,9 @@ fn log(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-pow,
-output = Known(ValueType::Float),
-short = "Raise the number to n.")]
+    math.pow,
+    output = Known(ValueType::Float),
+    short = "Raise the number to n.")]
 pub struct Pow {
     base: Number,
     n: Number,

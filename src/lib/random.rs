@@ -10,10 +10,10 @@ use crate::data::table::{ColumnType, Row};
 use crate::lang::signature::number::Number;
 
 #[signature(
-float,
-can_block = false,
-short = "generate a random floating point number between 0 (inclusive) and 1 (exclusive)",
-output = Known(ValueType::Float),
+    random.float,
+    can_block = false,
+    short = "generate a random floating point number between 0 (inclusive) and 1 (exclusive)",
+    output = Known(ValueType::Float),
 )]
 struct Float {
     #[default(Number::Float(1.0))]
@@ -39,10 +39,10 @@ lazy_static! {
 }
 
 #[signature(
-float_stream,
-can_block = true,
-short = "generate a stream of random floating point numbers between 0 (inclusive) and 1 (exclusive)",
-output = Known(ValueType::TableInputStream(FLOAT_STREAM_OUTPUT_TYPE.clone())),
+    random.float_stream,
+    can_block = true,
+    short = "generate a stream of random floating point numbers between 0 (inclusive) and 1 (exclusive)",
+    output = Known(ValueType::TableInputStream(FLOAT_STREAM_OUTPUT_TYPE.clone())),
 )]
 struct FloatStream {
     #[default(Number::Float(1.0))]
@@ -61,10 +61,10 @@ fn float_stream(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-integer,
-can_block = false,
-short = "generate a random integer between 0 and 1 (or some other specified number)",
-output = Known(ValueType::Integer),
+    random.integer,
+    can_block = false,
+    short = "generate a random integer between 0 and 1 (or some other specified number)",
+    output = Known(ValueType::Integer),
 )]
 struct Integer {
     #[default(2)]
@@ -80,10 +80,10 @@ fn integer(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-integer_stream,
-can_block = true,
-short = "generate a stream of random integer numbers between 0 (inclusive) and 2 (exclusive)",
-output = Known(ValueType::TableInputStream(INTEGER_STREAM_OUTPUT_TYPE.clone())),
+    random.integer_stream,
+    can_block = true,
+    short = "generate a stream of random integer numbers between 0 (inclusive) and 2 (exclusive)",
+    output = Known(ValueType::TableInputStream(INTEGER_STREAM_OUTPUT_TYPE.clone())),
 )]
 struct IntegerStream {
     #[default(2)]

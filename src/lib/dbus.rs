@@ -723,7 +723,12 @@ fn service_call(mut context: CommandContext) -> CrushResult<()> {
     }
 }
 
-#[signature(session, can_block = false, output = Known(ValueType::Struct), short = "A struct containing all dbus session-level services")]
+#[signature(
+    dbus.session,
+    can_block = false,
+    output = Known(ValueType::Struct),
+    short = "A struct containing all dbus session-level services"
+)]
 struct Session {}
 
 fn session(context: CommandContext) -> CrushResult<()> {
@@ -731,7 +736,12 @@ fn session(context: CommandContext) -> CrushResult<()> {
     populate_bus(context, dbus)
 }
 
-#[signature(system, can_block = false, output = Known(ValueType::Struct), short = "A struct containing all dbus system-level services")]
+#[signature(
+    dbus.system,
+    can_block = false,
+    output = Known(ValueType::Struct),
+    short = "A struct containing all dbus system-level services"
+)]
 struct System {}
 
 fn system(context: CommandContext) -> CrushResult<()> {

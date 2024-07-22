@@ -142,7 +142,6 @@ fn ssh_host_complete(
     to_crush_error(known_hosts.read_file(&host_file, KnownHostFileKind::OpenSSH))?;
     for host in to_crush_error(known_hosts.iter())? {
         match &cmd.last_argument {
-
             LastArgument::Unknown => {
                 let completion = escape(host.name().unwrap_or(""));
                 res.push(Completion::new(
@@ -164,7 +163,6 @@ fn ssh_host_complete(
             }
 
             _ => {}
-
         }
     }
     Ok(())
@@ -172,10 +170,10 @@ fn ssh_host_complete(
 
 
 #[signature(
-exec,
-can_block = true,
-short = "Execute a command on a remote host",
-long = "    Execute the specified command on the soecified host"
+    remote.exec,
+    can_block = true,
+    short = "Execute a command on a remote host",
+    long = "    Execute the specified command on the soecified host"
 )]
 struct Exec {
     #[description("the command to execute.")]
@@ -185,14 +183,16 @@ struct Exec {
     host: String,
     #[description("username on remote machines.")]
     username: Option<String>,
-    #[description("password on remote machines. If no password is provided, agent authentication will be used.")]
+    #[description("password on remote machines. If no password is provided, agent authentication will be used."
+    )]
     password: Option<String>,
     #[description("(~/.ssh/known_hosts) known hosts file.")]
     host_file: Files,
     #[description("skip checking the know hosts file.")]
     #[default(false)]
     ignore_host_file: bool,
-    #[description("allow missing hosts in the known hosts file. Missing hosts will be automatically added to the file.")]
+    #[description("allow missing hosts in the known hosts file. Missing hosts will be automatically added to the file."
+    )]
     #[default(false)]
     allow_not_found: bool,
 }
@@ -219,11 +219,11 @@ fn exec(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-pexec,
-can_block = true,
-short = "Execute a command on a set of hosts",
-long = "    Execute the specified command all specified hosts",
-output = Known(ValueType::TableInputStream(PEXEC_OUTPUT_TYPE.clone())),
+    remote.pexec,
+    can_block = true,
+    short = "Execute a command on a set of hosts",
+    long = "    Execute the specified command all specified hosts",
+    output = Known(ValueType::TableInputStream(PEXEC_OUTPUT_TYPE.clone())),
 )]
 struct Pexec {
     #[description("the command to execute.")]
@@ -238,14 +238,16 @@ struct Pexec {
     parallel: i128,
     #[description("username on remote machines.")]
     username: Option<String>,
-    #[description("password on remote machines. If no password is provided, agent authentication will be used.")]
+    #[description("password on remote machines. If no password is provided, agent authentication will be used."
+    )]
     password: Option<String>,
     #[description("(~/.ssh/known_hosts) known hosts file.")]
     host_file: Files,
     #[description("skip checking the know hosts file.")]
     #[default(false)]
     ignore_host_file: bool,
-    #[description("allow missing hosts in the known hosts file. Missing hosts will be automatically added to the file.")]
+    #[description("allow missing hosts in the known hosts file. Missing hosts will be automatically added to the file."
+    )]
     #[default(false)]
     allow_not_found: bool,
 }
@@ -321,10 +323,10 @@ fn pexec(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-identity,
-can_block = true,
-output = Known(ValueType::TableInputStream(IDENTITY_OUTPUT_TYPE.clone())),
-short = "List all known ssh-agent identities"
+    remote.identity,
+    can_block = true,
+    output = Known(ValueType::TableInputStream(IDENTITY_OUTPUT_TYPE.clone())),
+    short = "List all known ssh-agent identities"
 )]
 struct Identity {}
 
@@ -350,11 +352,11 @@ mod host {
     use std::convert::TryInto;
 
     #[signature(
-    list,
-    can_block = true,
-    output = super::Known(ValueType::TableInputStream(super::HOST_LIST_OUTPUT_TYPE.clone())),
-    short = "List all known hosts",
-    long = "If a given host key has no hostname, the hostname will be the empty string"
+        remote.host.list,
+        can_block = true,
+        output = super::Known(ValueType::TableInputStream(super::HOST_LIST_OUTPUT_TYPE.clone())),
+        short = "List all known hosts",
+        long = "If a given host key has no hostname, the hostname will be the empty string"
     )]
     pub struct List {
         #[description("(~/.ssh/known_hosts) known hosts file.")]
@@ -387,11 +389,11 @@ mod host {
     }
 
     #[signature(
-    remove,
-    can_block = true,
-    short = "Remove hosts from known_hosts file",
-    output = Known(ValueType::Integer),
-    long = "Remove all hosts that match both the host and the key filters.\n    Returns the number of host entries deleted."
+        remote.host.remove,
+        can_block = true,
+        short = "Remove hosts from known_hosts file",
+        output = Known(ValueType::Integer),
+        long = "Remove all hosts that match both the host and the key filters.\n    Returns the number of host entries deleted."
     )]
     pub struct Remove {
         #[description("(~/.ssh/known_hosts) known hosts file.")]

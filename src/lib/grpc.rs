@@ -29,10 +29,10 @@ lazy_static! {
 }
 
 #[signature(
-connect,
-can_block = true,
-short = "Create a connection to a gRPC service)",
-long = "This command currently does not currently do what it says. It's a proof of concept that\n    uses grpcurl under the hood. It does not have presistent connections and is quite slow and unreliable."
+    grpc.connect,
+    can_block = true,
+    short = "Create a connection to a gRPC service)",
+    long = "This command currently does not currently do what it says. It's a proof of concept that\n    uses grpcurl under the hood. It does not have presistent connections and is quite slow and unreliable."
 )]
 struct Connect {
     #[description("Host to connect to.")]

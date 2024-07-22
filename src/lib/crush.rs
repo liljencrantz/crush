@@ -34,7 +34,11 @@ fn threads_output_type() -> &'static Vec<ColumnType> {
     ])
 }
 
-#[signature(threads, output = Known(ValueType::TableInputStream(threads_output_type().clone())), short = "All the subthreads crush is currently running")]
+#[signature(
+    crush.threads,
+    output = Known(ValueType::TableInputStream(threads_output_type().clone())),
+    short = "All the subthreads crush is currently running"
+)]
 struct Threads {}
 
 fn threads(context: CommandContext) -> CrushResult<()> {
@@ -50,7 +54,7 @@ fn threads(context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
-#[signature(exit, output = Known(ValueType::Empty), short = "Exit the shell")]
+#[signature(crush.exit, output = Known(ValueType::Empty), short = "Exit the shell")]
 struct Exit {
     #[default(0)]
     status: i32,
@@ -63,7 +67,7 @@ fn exit(context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Empty)
 }
 
-#[signature(prompt, can_block = false, short = "Set or get the prompt")]
+#[signature(crush.prompt, can_block = false, short = "Set or get the prompt")]
 struct Prompt {
     prompt: Option<Command>,
 }
@@ -83,11 +87,11 @@ fn job_output_type() -> &'static Vec<ColumnType> {
 }
 
 #[signature(
-jobs,
-can_block = false,
-short = "List running jobs",
-output = Known(ValueType::TableInputStream(job_output_type().clone())),
-long = "All currently running jobs")]
+    crush.jobs,
+    can_block = false,
+    short = "List running jobs",
+    output = Known(ValueType::TableInputStream(job_output_type().clone())),
+    long = "All currently running jobs")]
 struct Jobs {}
 
 fn jobs(context: CommandContext) -> CrushResult<()> {
@@ -110,11 +114,11 @@ fn history_output_type() -> &'static Vec<ColumnType> {
 }
 
 #[signature(
-history,
-can_block = true,
-short = "List previous commands",
-output = Known(ValueType::TableInputStream(history_output_type().clone())),
-long = "All previous invocation")]
+    crush.history,
+    can_block = true,
+    short = "List previous commands",
+    output = Known(ValueType::TableInputStream(history_output_type().clone())),
+    long = "All previous invocation")]
 struct HistoryCommand {}
 
 fn history(context: CommandContext) -> CrushResult<()> {
@@ -154,9 +158,9 @@ mod locale {
     }
 
     #[signature(
-    list,
-    output = Known(ValueType::TableInputStream(list_output_type().clone())),
-    short = "List all available locales."
+        crush.locale.list,
+        output = Known(ValueType::TableInputStream(list_output_type().clone())),
+        short = "List all available locales."
     )]
     pub struct List {}
 
@@ -202,7 +206,7 @@ mod locale {
         Ok(())
     }
 
-    #[signature(set, output = Known(ValueType::Empty), short = "Set the current locale.")]
+    #[signature(crush.locale.set, output = Known(ValueType::Empty), short = "Set the current locale.")]
     pub struct Set {
         #[custom_completion(locale_complete)]
         #[description("the new locale.")]
@@ -216,7 +220,7 @@ mod locale {
         context.output.send(Value::Empty)
     }
 
-    #[signature(get, output = Known(ValueType::String), short = "Get the current locale.")]
+    #[signature(crush.locale.get, output = Known(ValueType::String), short = "Get the current locale.")]
     pub struct Get {}
 
     fn get(context: CommandContext) -> CrushResult<()> {
@@ -237,9 +241,9 @@ mod byte_unit {
     }
 
     #[signature(
-    list,
-    output = Known(ValueType::TableInputStream(list_output_type().clone())),
-    short = "List all available locales."
+        crush.byte_unit.list,
+        output = Known(ValueType::TableInputStream(list_output_type().clone())),
+        short = "List all available locales."
     )]
     pub struct List {}
 
@@ -252,7 +256,7 @@ mod byte_unit {
         Ok(())
     }
 
-    #[signature(set, output = Known(ValueType::Empty), short = "Set the current byte unit.")]
+    #[signature(crush.byte_unit.set, output = Known(ValueType::Empty), short = "Set the current byte unit.")]
     pub struct Set {
         #[description("the new byte unit.")]
         byte_unit: String,
@@ -265,7 +269,7 @@ mod byte_unit {
         context.output.send(Value::Empty)
     }
 
-    #[signature(get, output = Known(ValueType::String), short = "Get the current byte unit.")]
+    #[signature(crush.byte_unit.get, output = Known(ValueType::String), short = "Get the current byte unit.")]
     pub struct Get {}
 
     fn get(context: CommandContext) -> CrushResult<()> {

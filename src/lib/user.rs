@@ -19,9 +19,9 @@ use crate::{argument_error_legacy, to_crush_error};
 use crate::util::logins;
 
 #[signature(
-me,
-can_block = false,
-short = "current user",
+    user.me,
+    can_block = false,
+    short = "current user",
 )]
 struct Me {}
 
@@ -40,10 +40,10 @@ lazy_static! {
 }
 
 #[signature(
-current,
-can_block = true,
-output = Known(ValueType::TableInputStream(CURRENT_OUTPUT_TYPE.clone())),
-short = "Currently logged in users",
+    user.current,
+    can_block = true,
+    output = Known(ValueType::TableInputStream(CURRENT_OUTPUT_TYPE.clone())),
+    short = "Currently logged in users",
 )]
 struct Current {}
 
@@ -56,7 +56,7 @@ fn current(context: CommandContext) -> CrushResult<()> {
             Value::from(l.tty),
             Value::Time(l.time),
             Value::from(l.pid),
-            Value::from(l.host.unwrap_or_else(||{"".to_string()})),
+            Value::from(l.host.unwrap_or_else(|| { "".to_string() })),
         ]))?;
     }
     Ok(())
@@ -95,9 +95,9 @@ lazy_static! {
 }
 
 #[signature(
-r#do,
-can_block = true,
-short = "Execute a lambda as another user.",
+    user.r#do,
+    can_block = true,
+    short = "Execute a lambda as another user.",
 )]
 pub struct Do {
     #[description("the command to run as another user.")]
@@ -169,19 +169,17 @@ fn r#do(mut context: CommandContext) -> CrushResult<()> {
 
         child.wait()?;
         Ok(())
-    }   else {
+    } else {
         argument_error_legacy("Invalid user")
     }
 }
 
 
-
-
 #[signature(
-list,
-can_block = true,
-output = Known(ValueType::TableInputStream(LIST_OUTPUT_TYPE.clone())),
-short = "List all users on the system",
+    user.list,
+    can_block = true,
+    output = Known(ValueType::TableInputStream(LIST_OUTPUT_TYPE.clone())),
+    short = "List all users on the system",
 )]
 struct List {}
 
@@ -202,9 +200,9 @@ fn list(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-__getitem__,
-can_block = false,
-short = "find a user by name",
+    user.__getitem__,
+    can_block = false,
+    short = "find a user by name",
 )]
 struct GetItem {
     #[description("the name of the user to find.")]

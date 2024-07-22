@@ -21,10 +21,10 @@ lazy_static! {
 }
 
 #[signature(
-journal,
-can_block = true,
-output = Known(ValueType::TableInputStream(JOURNAL_OUTPUT_TYPE.clone())),
-short = "Show the systemd journal"
+    systemd.journal,
+    can_block = true,
+    output = Known(ValueType::TableInputStream(JOURNAL_OUTPUT_TYPE.clone())),
+    short = "Show the systemd journal"
 )]
 struct JournalSignature {
     #[description("wait indefinitely for more data once the end of the journal is reached.")]
@@ -89,7 +89,7 @@ fn journal(mut context: CommandContext) -> CrushResult<()> {
     loop {
         match to_crush_error(if cfg.follow { journal.await_next_record(None) } else { journal.next_record() })? {
             None => if !cfg.follow {
-                break
+                break;
             },
             Some(row) => {
                 let data = Value::Struct(Struct::new(

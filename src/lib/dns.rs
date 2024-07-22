@@ -38,9 +38,9 @@ fn srv_stream_output_type() -> &'static Vec<ColumnType> {
 }
 
 #[signature(
-query,
-can_block = true,
-short = "Look up DNS record)",
+    dns.query,
+    can_block = true,
+    short = "Look up DNS record)",
 )]
 struct Query {
     #[description("DNS record to look up.")]
@@ -116,7 +116,7 @@ fn query(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Query::parse(context.remove_arguments(), &context.global_state.printer())?;
     let rc = resolv_conf()?;
     let ns = rc.nameservers[0].to_string();
-    let address = format!("{}:{}", cfg.nameserver.as_deref().unwrap_or_else(|| { &ns}), cfg.port).parse().unwrap();
+    let address = format!("{}:{}", cfg.nameserver.as_deref().unwrap_or_else(|| { &ns }), cfg.port).parse().unwrap();
     if cfg.tcp {
         let conn = TcpClientConnection::new(address).unwrap();
         query_internal(cfg, context, SyncClient::new(conn))
@@ -127,9 +127,9 @@ fn query(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-nameserver,
-can_block = true,
-short = "List of default nameservers",
+    dns.nameserver,
+    can_block = true,
+    short = "List of default nameservers",
 )]
 struct Nameserver {}
 
@@ -138,14 +138,14 @@ fn nameserver(context: CommandContext) -> CrushResult<()> {
     context.output.send(
         List::new(
             ValueType::String,
-            rc.nameservers.iter().map(|n| {Value::from(n.to_string())}).collect::<Vec<_>>()
+            rc.nameservers.iter().map(|n| { Value::from(n.to_string()) }).collect::<Vec<_>>(),
         ).into())
 }
 
 #[signature(
-search,
-can_block = true,
-short = "List of DNS search paths",
+    dns.search,
+    can_block = true,
+    short = "List of DNS search paths",
 )]
 struct Search {}
 
@@ -155,17 +155,17 @@ fn search(context: CommandContext) -> CrushResult<()> {
         List::new(
             ValueType::String,
             rc.get_search()
-                .map(|s|{s.iter().map(|n| {Value::from(n.to_string())}).collect()})
-                .unwrap_or(vec![])
+                .map(|s| { s.iter().map(|n| { Value::from(n.to_string()) }).collect() })
+                .unwrap_or(vec![]),
         ).into()
     )
 }
 
 #[signature(
-domain,
-can_block = true,
-short = "DNS domain, if any",
-output = Known(ValueType::Any),
+    dns.domain,
+    can_block = true,
+    short = "DNS domain, if any",
+    output = Known(ValueType::Any),
 )]
 struct Domain {}
 
@@ -173,7 +173,7 @@ fn domain(context: CommandContext) -> CrushResult<()> {
     let rc = resolv_conf()?;
     context.output.send(
         rc.get_domain()
-            .map(|d| {Value::from(d)})
+            .map(|d| { Value::from(d) })
             .unwrap_or(Value::Empty))
 }
 
