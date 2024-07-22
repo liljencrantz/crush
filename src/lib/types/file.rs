@@ -1,6 +1,6 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, CrushResult, data_error, mandate, to_crush_error};
+use crate::lang::errors::{argument_error_legacy, CrushResult, data_error, error, mandate, to_crush_error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::value::Value;
@@ -11,11 +11,13 @@ use signature::signature;
 use std::collections::HashSet;
 use std::ops::Deref;
 use std::os::unix::fs::PermissionsExt;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::{Arc, OnceLock};
 use chrono::{DateTime, Local};
-use libc::{S_IFBLK, S_IFCHR, S_IFDIR, S_IFIFO, S_IFLNK, S_IFREG, S_IFSOCK};
-use nix::sys::stat::lstat;
+use nix::errno::Errno;
+use nix::libc::{S_IFBLK, S_IFCHR, S_IFDIR, S_IFIFO, S_IFLNK, S_IFREG, S_IFSOCK};
+use nix::sys::stat::{lstat, utimensat, UtimensatFlags};
+use nix::sys::time::TimeSpec;
 use crate::data::binary::BinaryReader;
 use crate::lang::data::table::{ColumnType, Row};
 use crate::lang::pipe::OutputStream;
@@ -37,6 +39,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
         Name::declare_method(&mut res);
         Remove::declare_method(&mut res);
         MkDir::declare_method(&mut res);
+        Touch::declare_method(&mut res);
         res
     })
 }
@@ -170,7 +173,6 @@ enum PermissionAdjustment {
 const READ: u32 = 4;
 const WRITE: u32 = 2;
 const EXECUTE: u32 = 1;
-
 
 fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
     let mut class_done = false;
@@ -481,7 +483,7 @@ fn remove(mut context: CommandContext) -> CrushResult<()> {
                                                     output.send(remove_outcome_to_row(next.clone(), Err(e)))?,
                                             },
 
-                                        Err(e)=>
+                                        Err(e) =>
                                             output.send(remove_outcome_to_row(next.clone(), Err(e)))?,
                                     }
                                 }
@@ -509,16 +511,14 @@ fn remove(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Empty),
     short = "Create directory",
 )]
-struct MkDir {
-}
+struct MkDir {}
 
 fn mkdir_recursive(path: &Path, leaf: bool) -> CrushResult<()> {
     if path.exists() && path.is_dir() {
         if leaf {
             data_error("Directory already exists")
-        }
-        else {
-        Ok(())
+        } else {
+            Ok(())
         }
     } else {
         if let Some(parent) = path.parent() {
@@ -531,4 +531,33 @@ fn mkdir_recursive(path: &Path, leaf: bool) -> CrushResult<()> {
 fn mkdir(mut context: CommandContext) -> CrushResult<()> {
     let directory = context.this.file()?;
     mkdir_recursive(&directory, true)
+}
+
+#[signature(
+    types.file.touch,
+    can_block = false,
+    output = Known(ValueType::Empty),
+    short = "Set the modification and access times of file.",
+    long = "If the file doesn't exist, it is created.",
+)]
+struct Touch {
+    #[description("Do not create the file if it doesn't exist")]
+    #[default(false)]
+    no_create: bool,
+}
+
+fn touch(mut context: CommandContext) -> CrushResult<()> {
+    let file = context.this.file()?;
+    let cfg = Touch::parse(context.remove_arguments(), context.global_state.printer())?;
+
+    match utimensat(None, &file, &TimeSpec::UTIME_NOW, &TimeSpec::UTIME_NOW, UtimensatFlags::FollowSymlink) {
+        Ok(_) => Ok(()),
+        Err(Errno::ENOENT) => {
+            if !cfg.no_create {
+                to_crush_error(File::create_new(file))?;
+            }
+            Ok(())
+        }
+        Err(err) => error(err.to_string()),
+    }
 }
