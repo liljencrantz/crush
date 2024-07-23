@@ -71,18 +71,18 @@ fn cmd_internal(
             }
 
             Some(name) => {
-                let switch =
+                let (switch, join_string) =
                     match a.switch_style {
                         SwitchStyle::None =>
                             if name.len() == 1 {
-                                format!("-{}", name)
+                                (format!("-{}", name), "")
                             } else {
-                                format!("--{}", name)
+                                (format!("--{}", name), "=")
                             },
                         SwitchStyle::Single =>
-                            format!("-{}", name),
+                            (format!("-{}", name), ""),
                         SwitchStyle::Double =>
-                            format!("--{}", name),
+                            (format!("--{}", name), "="),
                     };
                 match a.value {
                     Value::Bool(true) => {
@@ -92,12 +92,12 @@ fn cmd_internal(
                         let mut files = Vec::new();
                         glob.glob_files(&cwd()?, &mut files)?;
                         for file in files {
-                            cmd.arg(format!("{}={}", switch, mandate(file.to_str(), "Invalid file name")?));
+                            cmd.arg(format!("{}{}{}", switch, join_string, mandate(file.to_str(), "Invalid file name")?));
                         }
                     }
                     _ => {
                         for s in format_value(&a.value)? {
-                            cmd.arg(format!("{}={}", switch, s));
+                            cmd.arg(format!("{}{}{}", switch, join_string, s));
                         }
                     }
                 }
