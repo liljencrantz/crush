@@ -21,6 +21,7 @@ pub enum SimpleSignature {
     Value,
     Dict,
     PathBuf,
+    Scope,
 }
 
 impl TryFrom<&Ident> for SimpleSignature {
@@ -46,6 +47,7 @@ impl TryFrom<&Ident> for SimpleSignature {
             "Value" => Ok(SimpleSignature::Value),
             "Dict" => Ok(SimpleSignature::Dict),
             "PathBuf" => Ok(SimpleSignature::PathBuf),
+            "Scope" => Ok(SimpleSignature::Scope),
             _ => Err("Unknown type".to_string()),
         }
     }
@@ -80,6 +82,7 @@ impl SimpleSignature {
             SimpleSignature::Value => "Value",
             SimpleSignature::Dict => "Dict",
             SimpleSignature::PathBuf => "PathBuf",
+            SimpleSignature::Scope => "Scope",
         }
     }
 
@@ -103,6 +106,7 @@ impl SimpleSignature {
             SimpleSignature::Stream => quote! {_value},
             SimpleSignature::Value => quote! {_value},
             SimpleSignature::PathBuf => quote! {crate::lang::value::Value::File(_value)},
+            SimpleSignature::Scope => quote! {crate::lang::value::Value::Scope(_value)},
         }
     }
 
@@ -126,6 +130,7 @@ impl SimpleSignature {
             SimpleSignature::Stream => quote! {crate::lang::value::ValueType::Any},
             SimpleSignature::Value => quote! {crate::lang::value::ValueType::Any},
             SimpleSignature::PathBuf => quote! {crate::lang::value::ValueType::File},
+            SimpleSignature::Scope => quote! {crate::lang::value::ValueType::Scope},
         }
     }
 
@@ -144,6 +149,7 @@ impl SimpleSignature {
             SimpleSignature::Struct => "struct",
             SimpleSignature::Dict => "dict",
             SimpleSignature::PathBuf => "file",
+            SimpleSignature::Scope => "scope",
         }
     }
 
@@ -228,6 +234,7 @@ impl SimpleSignature {
             SimpleSignature::F64 => "dump_float",
             SimpleSignature::Value => "dump_value",
             SimpleSignature::Dict => "dump_dict",
+            SimpleSignature::Scope => "dump_scope",
             _ => panic!("Unknown type"),
         }
     }

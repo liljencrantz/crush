@@ -8,6 +8,7 @@ use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use std::fmt::{Display, Formatter};
 use crate::data::dict::Dict;
+use crate::lang::state::scope::Scope;
 use crate::lang::value::vec_reader::VecReader;
 use crate::util::replace::Replace;
 
@@ -211,6 +212,17 @@ impl List {
         for el in cells.iter() {
             match el {
                 Value::Dict(s) => destination.push(s.clone()),
+                _ => return error("Wrong element type"),
+            }
+        }
+        Ok(())
+    }
+
+    pub fn dump_scope(&self, destination: &mut Vec<Scope>) -> CrushResult<()> {
+        let cells = self.cells.lock().unwrap();
+        for el in cells.iter() {
+            match el {
+                Value::Scope(s) => destination.push(s.clone()),
                 _ => return error("Wrong element type"),
             }
         }

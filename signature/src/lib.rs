@@ -410,8 +410,8 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
             #[allow(unused_parens)] // TODO: don't emit unnecessary parenthesis in the first place
             impl #struct_name {
-                pub fn declare(env: &mut crate::lang::state::scope::ScopeLoader) -> crate::lang::errors::CrushResult <()> {
-                    env.declare_command(
+                pub fn declare(_env: &mut crate::lang::state::scope::ScopeLoader) -> crate::lang::errors::CrushResult <()> {
+                    _env.declare_command(
                         #command_name,
                         #command_invocation,
                         #can_block,
@@ -425,10 +425,10 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                     )
                 }
 
-                pub fn declare_method(env: &mut ordered_map::OrderedMap<std::string::String, crate::lang::command::Command>) {
+                pub fn declare_method(_env: &mut ordered_map::OrderedMap<std::string::String, crate::lang::command::Command>) {
                     let mut full = vec!["global", #path];
                     full.push(#command_name);
-                    env.insert(#command_name.to_string(),
+                    _env.insert(#command_name.to_string(),
                         <dyn crate::lang::command::CrushCommand>::command(
                             #command_invocation,
                             #can_block,
