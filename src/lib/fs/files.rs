@@ -147,7 +147,7 @@ fn run_for_single_directory_or_file(
     Ok(())
 }
 
-#[signature(files, short = "Recursively list files", output = Unknown)]
+#[signature(fs.files, short = "Recursively list files", output = Unknown)]
 pub struct FilesSignature {
     #[unnamed()]
     #[description("directories and files to list")]

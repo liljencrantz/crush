@@ -8,10 +8,10 @@ use signature::signature;
 use crate::lang::command::OutputType::Passthrough;
 
 #[signature(
-uniq,
-output = Passthrough,
-short = "Only output the first row if multiple rows has the same value for the specified column",
-example = "host:procs | sort user | uniq user")]
+    stream.uniq,
+    output = Passthrough,
+    short = "Only output the first row if multiple rows has the same value for the specified column",
+    example = "host:procs | sort user | uniq user")]
 pub struct Uniq {
     field: Option<String>,
 }

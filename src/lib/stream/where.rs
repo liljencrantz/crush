@@ -9,12 +9,12 @@ use crate::lang::ast::location::Location;
 use crate::lang::pipe::pipe;
 
 #[signature(
-r#where,
-can_block = true,
-output = Passthrough,
-short = "Filter out rows from io based on condition",
-long = "The columns of the row are exported to the environment using the column names.",
-example = "host:procs | where {status != \"Sleeping\"}")]
+    stream.r#where,
+    can_block = true,
+    output = Passthrough,
+    short = "Filter out rows from io based on condition",
+    long = "The columns of the row are exported to the environment using the column names.",
+    example = "host:procs | where {status != \"Sleeping\"}")]
 pub struct Where {
     #[description("the condition to filter on.")]
     condition: Command,

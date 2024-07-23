@@ -11,7 +11,7 @@ use std::io::{BufRead, BufReader};
 use crate::lang::state::contexts::CommandContext;
 
 #[signature(
-    from,
+    io.split.from,
     can_block = true,
     short = "Read specified files (or input) as a table, split on the specified separator characters.",
 )]

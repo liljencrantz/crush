@@ -62,7 +62,7 @@ fn do_join(
 fn get_output_type(left_type: &[ColumnType], right_type: &[ColumnType], right_key_idx: usize) -> Result<Vec<ColumnType>, CrushError> {
     let seen =
         left_type.iter()
-            .map(|c| {c.name.clone()})
+            .map(|c| { c.name.clone() })
             .collect::<HashSet<_>>();
     let mut res = left_type.to_vec();
 
@@ -84,10 +84,10 @@ fn get_output_type(left_type: &[ColumnType], right_type: &[ColumnType], right_ke
 }
 
 #[signature(
-join,
-output = Unknown,
-short = "Join two streams together on the specified keys.",
-example = "join user=(files) name=(user:list)")]
+    stream.join,
+    output = Unknown,
+    short = "Join two streams together on the specified keys.",
+    example = "join user=(files) name=(user:list)")]
 pub struct Join {
     #[named()]
     #[description("Field to join")]

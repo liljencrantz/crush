@@ -18,7 +18,7 @@ fn while_output_type() -> &'static Vec<ColumnType> {
 }
 
 #[signature(
-    r#while,
+    control.r#while,
     condition = true,
     output = Known(ValueType::TableInputStream(while_output_type().clone())),
     short = "Repeatedly execute the body for as long the condition is met.",

@@ -6,7 +6,7 @@ use crate::lang::value::ValueType;
 use crate::lang::command::OutputType::Known;
 
 #[signature(
-    count,
+    stream.count,
     short = "Count the number of rows in the input.",
     output = Known(ValueType::Integer),
     example = "proc:list | count # Number of processes on the system")]

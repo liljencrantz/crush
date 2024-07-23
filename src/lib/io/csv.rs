@@ -15,7 +15,7 @@ use crate::lang::value::ValueType;
 use signature::signature;
 
 #[signature(
-    from,
+    io.csv.from,
     example = "csv:from separator=\",\" head=1 name=string age=integer nick=string",
     short = "Parse specified files as CSV files"
 )]

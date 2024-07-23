@@ -25,7 +25,7 @@ fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
             } else {
                 Ok(Value::Float(
                     mandate(f.as_f64(),
-                    "Not a valid number")?
+                            "Not a valid number")?
                 ))
             }
         }
@@ -76,7 +76,7 @@ fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
             Ok(d.into())
         }
 
-        serde_yaml::Value::Tagged(t) => {from_yaml(&t.value)}
+        serde_yaml::Value::Tagged(t) => { from_yaml(&t.value) }
     }
 }
 
@@ -134,11 +134,11 @@ fn to_yaml(value: Value) -> CrushResult<serde_yaml::Value> {
 }
 
 #[signature(
-from,
-can_block = true,
-output = Unknown,
-short = "Parse yaml format",
-example = "(http \"https://jsonplaceholder.typicode.com/todos/3\"):body | yaml:from")]
+    io.yaml.from,
+    can_block = true,
+    output = Unknown,
+    short = "Parse yaml format",
+    example = "(http \"https://jsonplaceholder.typicode.com/todos/3\"):body | yaml:from")]
 struct FromSignature {
     #[unnamed()]
     files: Files,
@@ -153,11 +153,11 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-to,
-can_block = true,
-output = Unknown,
-short = "Serialize to yaml format",
-example = "ls | yaml:to")]
+    io.yaml.to,
+    can_block = true,
+    output = Unknown,
+    short = "Serialize to yaml format",
+    example = "ls | yaml:to")]
 struct To {
     #[unnamed()]
     file: Files,

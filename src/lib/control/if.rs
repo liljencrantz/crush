@@ -5,10 +5,10 @@ use signature::signature;
 use crate::lang::value::Value;
 
 #[signature(
-r#if,
-condition = true,
-short = "Conditionally execute a command once.",
-example = "if a > 10 {echo \"big\"} {echo \"small\"}"
+    control.r#if,
+    condition = true,
+    short = "Conditionally execute a command once.",
+    example = "if a > 10 {echo \"big\"} {echo \"small\"}"
 )]
 pub struct If {
     #[description("the condition to filter on.")]

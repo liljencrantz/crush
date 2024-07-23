@@ -18,17 +18,18 @@ use std::collections::HashMap;
 use crate::lang::state::global_state::GlobalState;
 
 #[signature(
-group,
-can_block = true,
-short = "Group stream by the specified column(s)",
-example = "find . | group user type file_count={count} size={sum size}"
+    stream.group,
+    can_block = true,
+    short = "Group stream by the specified column(s)",
+    example = "find . | group user type file_count={count} size={sum size}"
 )]
 pub struct Group {
     #[unnamed()]
     #[description("the column(s) to group by and copy into the output stream.")]
     group_by: Vec<String>,
     #[named()]
-    #[description("create these additional columns by aggregating the grouped rows using the supplied aggregation command.")]
+    #[description("create these additional columns by aggregating the grouped rows using the supplied aggregation command."
+    )]
     command: OrderedStringMap<Command>,
 }
 
@@ -71,10 +72,10 @@ fn aggregate(
                     let local_scope = scope.clone();
                     let local_state = global_state.clone();
                     context.spawn("group:aggr", move ||
-                        local_command.eval(
-                            CommandContext::new(&local_scope, &local_state)
-                                .with_input(input_receiver)
-                                .with_output(output_sender)))?;
+                    local_command.eval(
+                        CommandContext::new(&local_scope, &local_state)
+                            .with_input(input_receiver)
+                            .with_output(output_sender)))?;
                     receivers.push(output_receiver);
                 }
 

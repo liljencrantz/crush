@@ -6,9 +6,9 @@ use crate::lang::value::Value;
 use crate::lib::control::timeit::time_run;
 
 #[signature(
-timer,
-short = "Execute a command once and return the execution time.",
-example = "timer {files|sort size}"
+    control.timer,
+    short = "Execute a command once and return the execution time.",
+    example = "timer {files|sort size}"
 )]
 pub struct Timer {
     #[description("the command to time.")]

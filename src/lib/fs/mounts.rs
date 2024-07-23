@@ -22,10 +22,10 @@ lazy_static! {
 }
 
 #[signature(
-mounts,
-can_block = true,
-output = Known(ValueType::TableInputStream(OUTPUT_TYPE.clone())),
-short = "List mount points",
+    fs.mounts,
+    can_block = true,
+    output = Known(ValueType::TableInputStream(OUTPUT_TYPE.clone())),
+    short = "List mount points",
 )]
 pub struct Mounts {}
 
@@ -41,7 +41,7 @@ fn mounts(mut context: CommandContext) -> CrushResult<()> {
             vec![
                 Value::from(size),
                 Value::from(avail),
-                Value::from(if size == 0 {0.0} else {(avail as f64) / (size as f64)}),
+                Value::from(if size == 0 { 0.0 } else { (avail as f64) / (size as f64) }),
                 Value::from(m.format.unwrap_or("".to_string())),
                 Value::from(m.readonly.map(|r| { Value::from(r) }).unwrap_or(Value::Empty)),
                 Value::from(m.name.unwrap_or("".to_string())),

@@ -16,10 +16,10 @@ mod mounts;
 pub mod fd;
 
 #[signature(
-cd,
-can_block=false,
-output = Known(ValueType::Empty),
-short = "Change to the specified working directory.",
+    fs.cd,
+    can_block = false,
+    output = Known(ValueType::Empty),
+    short = "Change to the specified working directory.",
 )]
 struct Cd {
     #[unnamed()]
@@ -40,10 +40,10 @@ fn cd(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-pwd,
-can_block=false,
-output = Known(ValueType::File),
-short = "Return the current working directory.",
+    fs.pwd,
+    can_block = false,
+    output = Known(ValueType::File),
+    short = "Return the current working directory.",
 )]
 struct Pwd {}
 

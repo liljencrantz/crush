@@ -14,7 +14,7 @@ fn loop_output_type() -> Vec<ColumnType> {
 }
 
 #[signature(
-    r#loop,
+    control.r#loop,
     condition = true,
     output = Known(ValueType::TableInputStream(loop_output_type())),
     short = "Repeatedly execute the body until the break command is called.",

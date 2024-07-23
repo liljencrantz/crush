@@ -4,10 +4,11 @@ use crate::lang::pipe::Stream;
 use signature::signature;
 
 #[signature(
-zip,
-can_block = true,
-short = "Combine two streams of data into one containing one row of each input stream in each row of output.",
-long = "If the two streams have different numbers of rows, the longer stream will be truncated to the length\nof the shorter one."
+    stream.zip,
+    can_block = true,
+    short = "Combine two streams of data into one containing one row of each input stream in each row of output.",
+    long = "If the two streams have different numbers of rows, the longer stream will be truncated",
+    long = "to the length of the shorter one."
 )]
 pub struct Zip {
     #[description("the first stream.")]

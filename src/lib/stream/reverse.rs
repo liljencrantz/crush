@@ -5,12 +5,11 @@ use signature::signature;
 use crate::lang::command::OutputType::Passthrough;
 
 #[signature(
-reverse,
-can_block = true,
-short = "Reverses the order of the rows in the input",
-output = Passthrough)]
-pub struct Reverse {
-}
+    stream.reverse,
+    can_block = true,
+    short = "Reverses the order of the rows in the input",
+    output = Passthrough)]
+pub struct Reverse {}
 
 fn reverse(context: CommandContext) -> CrushResult<()> {
     Reverse::parse(context.arguments.clone(), &context.global_state.printer())?;

@@ -4,7 +4,10 @@ use crate::lang::data::table::ColumnType;
 use crate::lang::{data::table::Row, value::Value, value::ValueType};
 use signature::signature;
 
-#[signature(enumerate, short = "Prepend a column containing the row number to each row of the input.")]
+#[signature(
+    stream.enumerate,
+    short = "Prepend a column containing the row number to each row of the input."
+)]
 pub struct Enumerate {
     #[description("the index to use for the first row.")]
     #[default(0)]

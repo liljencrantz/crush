@@ -16,17 +16,18 @@ use crate::lang::command_invocation::resolve_external_command;
 use crate::util::file::cwd;
 
 #[signature(
-cmd,
-short = "Execute an external command",
-long = "Globs are expanded. Argument and switch order is preserved.",
-output = Known(ValueType::BinaryInputStream),
-can_block = true,
+    control.cmd,
+    short = "Execute an external command",
+    long = "Globs are expanded. Argument and switch order is preserved.",
+    output = Known(ValueType::BinaryInputStream),
+    can_block = true,
 )]
 pub struct Cmd {
     #[description("The file path to the command to execute")]
     command: PathBuf,
     #[named()]
-    #[description("Switches to pass in to the command. The name will be prepended with a double dash '--', unless it is a single character name, in which case a single dash '-' will be prepended")]
+    #[description("Switches to pass in to the command. The name will be prepended with a double dash '--', unless it is a single character name, in which case a single dash '-' will be prepended"
+    )]
     switches: OrderedStringMap<Value>,
     #[unnamed()]
     #[description("Arguments to pass in to the command")]

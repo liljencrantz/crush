@@ -4,10 +4,10 @@ use signature::signature;
 use crate::lang::command::OutputType::Passthrough;
 
 #[signature(
-head,
-can_block = true,
-output = Passthrough,
-short = "Return the first row(s) of the input.",
+    stream.head,
+    can_block = true,
+    output = Passthrough,
+    short = "Return the first row(s) of the input.",
 )]
 pub struct Head {
     #[description("the number of rows to return.")]

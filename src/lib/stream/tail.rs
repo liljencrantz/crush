@@ -6,10 +6,10 @@ use crate::lang::data::table::Row;
 use signature::signature;
 use crate::lang::command::OutputType::Passthrough;
 #[signature(
-tail,
-can_block = true,
-output = Passthrough,
-short = "Return the last row(s) of the input.",
+    stream.tail,
+    can_block = true,
+    output = Passthrough,
+    short = "Return the last row(s) of the input.",
 )]
 pub struct Tail {
     #[description("the number of rows to return.")]

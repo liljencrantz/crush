@@ -23,13 +23,13 @@ fn halp(o: &dyn Help, printer: &Printer) {
 }
 
 #[signature(
-help,
-can_block=false,
-output = Known(ValueType::Empty),
-short = "Show help about the specified thing.",
-example = "help $ls",
-example = "help $integer",
-example = "help $help",
+    control.help,
+    can_block = false,
+    output = Known(ValueType::Empty),
+    short = "Show help about the specified thing.",
+    example = "help $ls",
+    example = "help $integer",
+    example = "help $help",
 )]
 pub struct HelpSignature {
     #[description("the topic you want help on.")]

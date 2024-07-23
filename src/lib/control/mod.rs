@@ -25,10 +25,10 @@ mod schedule;
 mod r#while;
 
 #[signature(
-r#break,
-can_block = false,
-short = "Stop execution of a loop.",
-output = Known(ValueType::Empty))]
+    control.r#break,
+    can_block = false,
+    short = "Stop execution of a loop.",
+    output = Known(ValueType::Empty))]
 struct Break {}
 
 fn r#break(context: CommandContext) -> CrushResult<()> {
@@ -37,10 +37,10 @@ fn r#break(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-r#continue,
-can_block = false,
-short = "Skip execution of the current iteration of a loop.",
-output = Known(ValueType::Empty))]
+    control.r#continue,
+    can_block = false,
+    short = "Skip execution of the current iteration of a loop.",
+    output = Known(ValueType::Empty))]
 struct Continue {}
 
 fn r#continue(context: CommandContext) -> CrushResult<()> {
@@ -55,10 +55,10 @@ impl BinaryReader for PipeReader {
 }
 
 #[signature(
-sleep,
-can_block = true,
-short = "Pause execution of commands for the specified amount of time",
-long = "    Execute the specified command all specified hosts"
+    control.sleep,
+    can_block = true,
+    short = "Pause execution of commands for the specified amount of time",
+    long = "Execute the specified command all specified hosts"
 )]
 struct Sleep {
     #[description("the time to sleep for.")]
@@ -73,9 +73,9 @@ fn sleep(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-bg,
-short = "Run a pipeline in background",
-example = "pipe := ((table_input_stream value=integer):pipe)\n    _1 := (seq 100_000 | pipe:output:write | bg)\n    sum_job_id := (pipe:input | sum | bg)\n    pipe:close\n    sum_job_id | fg"
+    control.bg,
+    short = "Run a pipeline in background",
+    example = "$pipe := $($(table_input_stream value=integer):pipe)\n    $_1 := $(seq 100_000 | pipe:output:write | bg)\n    $sum_job_id := $($pipe:input | sum | bg)\n    $pipe:close\n    $sum_job_id | fg"
 )]
 struct Bg {}
 
@@ -89,9 +89,9 @@ fn bg(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-fg,
-short = "Return the output of a background pipeline",
-example = "pipe := ((table_input_stream value=integer):pipe)\n    _1 := (seq 100_000 | pipe:output:write | bg)\n    sum_job_id := (pipe:input | sum | bg)\n    pipe:close\n    sum_job_id | fg"
+    control.fg,
+    short = "Return the output of a background pipeline",
+    example = "$pipe := $($(table_input_stream value=integer):pipe)\n    $_1 := $(seq 100_000 | pipe:output:write | bg)\n    $sum_job_id := $($pipe:input | sum | bg)\n    $pipe:close\n    $sum_job_id | fg"
 )]
 struct Fg {}
 
@@ -131,8 +131,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 Some(
                     r#"    Example:
 
-    for (seq 10) {
-        echo ("Lap #{}":format value)
+    for $(seq 10) {
+        echo $("Lap #{}":format $value)
     }"#,
                 ),
                 vec![],

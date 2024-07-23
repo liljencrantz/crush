@@ -78,12 +78,12 @@ fn from_toml(toml_value: &toml::Value) -> CrushResult<Value> {
 }
 
 #[signature(
-from,
-can_block = true,
-output = Unknown,
-short = "Parse toml format",
-long = "Input can either be a binary stream or a file. All Toml types except\n    datetime are supported. Datetime is not supported because the rust toml\n    currently doesn't support accessing the internal state of a datetime.",
-example = "toml:from Cargo.toml")]
+    io.toml.from,
+    can_block = true,
+    output = Unknown,
+    short = "Parse toml format",
+    long = "Input can either be a binary stream or a file. All Toml types except\n    datetime are supported. Datetime is not supported because the rust toml\n    currently doesn't support accessing the internal state of a datetime.",
+    example = "toml:from Cargo.toml")]
 struct FromSignature {
     #[unnamed()]
     files: Files,
@@ -155,12 +155,12 @@ fn to_toml(value: Value) -> CrushResult<toml::Value> {
 }
 
 #[signature(
-to,
-can_block = true,
-output = Unknown,
-short = "Serialize to toml format",
-long = "If no file is specified, output is returned as a BinaryStream.\n    The following Crush types are supported: File, string, integer, float, bool, list, table,\n    table_input_stream, struct, time, duration, binary and binary_stream.",
-example = "ls | toml:to")]
+    io.toml.to,
+    can_block = true,
+    output = Unknown,
+    short = "Serialize to toml format",
+    long = "If no file is specified, output is returned as a BinaryStream.\n    The following Crush types are supported: File, string, integer, float, bool, list, table,\n    table_input_stream, struct, time, duration, binary and binary_stream.",
+    example = "ls | toml:to")]
 struct To {
     #[unnamed()]
     file: Files,

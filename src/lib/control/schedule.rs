@@ -10,16 +10,20 @@ use crate::lang::pipe::pipe;
 use crate::lang::value::ValueType;
 
 #[signature(
-schedule,
-short = "Schedule recurring events",
-long = "If a command is specified, timer will run the command at the specified cadence.\n    Otherwise, if timer is used inside a pipeline, it will read one row of input at the specified cadence and write it out again.\n    Otherwise, timer will simply write an empty row at the specified cadence."
+    control.schedule,
+    short = "Schedule recurring events",
+    long = "If a command is specified, timer will run the command at the specified cadence.",
+    long = "Otherwise, if timer is used inside a pipeline, it will read one row of input at",
+    long = "the specified cadence and write it out again.",
+    long = "Otherwise, timer will simply write an empty row at the specified cadence.",
 )]
 pub struct Schedule {
     #[description("the interval between heartbeats")]
     interval: Duration,
     #[description("the delay for the first heartbeat")]
     initial_delay: Option<Duration>,
-    #[description("if heart beat delivery starts blocking, catch up by sending more heartbeats afterwards.")]
+    #[description("if heart beat delivery starts blocking, catch up by sending more heartbeats afterwards."
+    )]
     #[default(false)]
     schedule_at_fixed_rate: bool,
     #[description("a command to run")]
@@ -59,7 +63,7 @@ fn schedule(mut context: CommandContext) -> CrushResult<()> {
     }
 }
 
-fn run(cfg: Schedule, mut f: impl FnMut() -> CrushResult<()>) -> CrushResult<()>{
+fn run(cfg: Schedule, mut f: impl FnMut() -> CrushResult<()>) -> CrushResult<()> {
     if cfg.schedule_at_fixed_rate {
         let mut last_time = Local::now();
         loop {

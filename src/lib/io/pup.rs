@@ -8,13 +8,13 @@ use signature::signature;
 use std::io::BufReader;
 
 #[signature(
-to,
-can_block = true,
-output = Unknown,
-short = "Serialize to pup format",
-long = "Pup is the native crush serialization format. All Crush types, including",
-long = "lambdas can be serialized to this format.",
-example = "ls | pup:to")]
+    io.pup.to,
+    can_block = true,
+    output = Unknown,
+    short = "Serialize to pup format",
+    long = "Pup is the native crush serialization format. All Crush types, including",
+    long = "lambdas can be serialized to this format.",
+    example = "ls | pup:to")]
 struct To {
     #[unnamed()]
     file: Files,
@@ -28,11 +28,11 @@ fn to(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-from,
-can_block = true,
-output = Unknown,
-short = "Parse pup format",
-example = "pup:from serialized.pup")]
+    io.pup.from,
+    can_block = true,
+    output = Unknown,
+    short = "Parse pup format",
+    example = "pup:from serialized.pup")]
 struct From {
     #[unnamed()]
     files: Files,

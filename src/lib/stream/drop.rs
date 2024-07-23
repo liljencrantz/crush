@@ -6,12 +6,12 @@ use crate::lang::command::OutputType::Unknown;
 use std::collections::HashSet;
 
 #[signature(
-drop,
-can_block = true,
-short = "Drop all fields mentioned from input, copy remainder of input",
-long = "This command is does the opposite of the select command.\n    It copies all column except the ones specified from input to output.",
-example= "host:procs | drop vms rss # Drop memory usage columns from output of ps",
-output = Unknown,
+    stream.drop,
+    can_block = true,
+    short = "Drop all fields mentioned from input, copy remainder of input",
+    long = "This command is does the opposite of the select command.\n    It copies all column except the ones specified from input to output.",
+    example = "host:procs | drop vms rss # Drop memory usage columns from output of ps",
+    output = Unknown,
 )]
 pub struct Drop {
     #[unnamed()]
@@ -34,7 +34,7 @@ fn drop(context: CommandContext) -> CrushResult<()> {
                 let mut it = inc.iter();
                 output.send(
                     Row::new(
-                    row.drain(..).filter(|_| !*(it.next().unwrap())).collect()
+                        row.drain(..).filter(|_| !*(it.next().unwrap())).collect()
                     )
                 )?;
             }

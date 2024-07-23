@@ -11,7 +11,7 @@ use crate::lang::data::table::ColumnType;
 use lazy_static::lazy_static;
 use crate::lang::command::OutputType::Known;
 use crate::util::directory_lister::{DirectoryLister, directory_lister};
-use  std::os::unix::fs::MetadataExt;
+use std::os::unix::fs::MetadataExt;
 use crate::lang::data::table::ColumnFormat;
 
 lazy_static! {
@@ -23,10 +23,10 @@ lazy_static! {
 }
 
 #[signature(
-usage,
-can_block = true,
-output = Known(ValueType::TableInputStream(OUTPUT_TYPE.clone())),
-short = "Calculate the recursive directory space usage.",
+    fs.usage,
+    can_block = true,
+    output = Known(ValueType::TableInputStream(OUTPUT_TYPE.clone())),
+    short = "Calculate the recursive directory space usage.",
 )]
 pub struct Usage {
     #[unnamed()]

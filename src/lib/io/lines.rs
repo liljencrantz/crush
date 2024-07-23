@@ -11,7 +11,7 @@ use std::convert::From;
 use crate::lang::state::contexts::CommandContext;
 
 #[signature(
-    from,
+    io.lines.from,
     can_block = true,
     short = "Read specified files (or input) as a table with one line of text per row"
 )]
@@ -53,7 +53,7 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    to,
+    io.lines.to,
     can_block = true,
     short = "Write specified iterator of strings to a file (or convert to BinaryStream) separated by newlines"
 )]

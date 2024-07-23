@@ -12,11 +12,11 @@ use crate::util::replace::Replace;
 fn parse(input_type: &[ColumnType], field: Option<String>) -> CrushResult<usize> {
     field.map(|f| input_type.find(&f))
         .unwrap_or_else(||
-            if input_type.len() == 1 {
-                Ok(0)
-            } else {
-                error("Specify which column to operate on")
-            }
+        if input_type.len() == 1 {
+            Ok(0)
+        } else {
+            error("Specify which column to operate on")
+        }
         )
 }
 
@@ -40,9 +40,9 @@ sum_function!(sum_float, f64, 0.0, Float);
 sum_function!(sum_duration, Duration, Duration::seconds(0), Duration);
 
 #[signature(
-sum,
-short = "Calculate the sum for the specific column across all rows.",
-example = "proc:list | sum cpu")]
+    stream.sum,
+    short = "Calculate the sum for the specific column across all rows.",
+    example = "proc:list | sum cpu")]
 pub struct Sum {
     field: Option<String>,
 }
@@ -92,9 +92,9 @@ avg_function!(avg_float, f64, 0.0, Float, f64);
 avg_function!(avg_duration, Duration, Duration::seconds(0), Duration, i32);
 
 #[signature(
-avg,
-short = "Calculate the average for the specific column across all rows.",
-example = "proc:list | avg cpu")]
+    stream.avg,
+    short = "Calculate the average for the specific column across all rows.",
+    example = "proc:list | avg cpu")]
 pub struct Avg {
     field: Option<String>,
 }
@@ -162,10 +162,10 @@ aggr_function!(max_string, String, "string", |a, b| std::cmp::max(a, b));
 aggr_function!(max_file, File, "file", |a, b| std::cmp::max(a, b));
 
 #[signature(
-min,
-short = "Calculate the minimum for the specific column across all rows.",
-long = "If the input only has one column, the column name is optional.\n\n    The column can be numeric, temporal, a string or a file.",
-example = "host:procs | min cpu")]
+    stream.min,
+    short = "Calculate the minimum for the specific column across all rows.",
+    long = "If the input only has one column, the column name is optional.\n\n    The column can be numeric, temporal, a string or a file.",
+    example = "host:procs | min cpu")]
 pub struct Min {
     field: Option<String>,
 }
@@ -192,10 +192,10 @@ fn min(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-max,
-short = "Calculate the maximum for the specific column across all rows.",
-long = "If the input only has one column, the column name is optional.\n\n    The column can be numeric, temporal, a string or a file.",
-example = "host:procs | max cpu")]
+    stream.max,
+    short = "Calculate the maximum for the specific column across all rows.",
+    long = "If the input only has one column, the column name is optional.\n\n    The column can be numeric, temporal, a string or a file.",
+    example = "host:procs | max cpu")]
 pub struct Max {
     field: Option<String>,
 }
@@ -240,9 +240,9 @@ mul_function!(mul_int, i128, 1, Integer);
 mul_function!(mul_float, f64, 1.0, Float);
 
 #[signature(
-mul,
-short = "Calculate the product for the specific column across all rows.",
-example = "seq 5 10 | mul")]
+    stream.mul,
+    short = "Calculate the product for the specific column across all rows.",
+    example = "seq 5 10 | mul")]
 pub struct Mul {
     field: Option<String>,
 }
@@ -264,9 +264,9 @@ fn mul(context: CommandContext) -> CrushResult<()> {
     }
 }
 
-# [signature(
-first,
-short = "Return the value of the specified column from the first row of the stream.",
+#[signature(
+    stream.first,
+    short = "Return the value of the specified column from the first row of the stream.",
 )]
 pub struct First {
     field: Option<String>,
@@ -288,8 +288,8 @@ fn first(context: CommandContext) -> CrushResult<()> {
     }
 }
 
-# [signature(
-    last,
+#[signature(
+    stream.last,
     short = "Return the value of the specified column from the last row of the stream.",
 )]
 pub struct Last {
@@ -307,8 +307,8 @@ fn last(context: CommandContext) -> CrushResult<()> {
                 rr = Some(row)
             }
             rr
-                .map(|r| {context.output.send(r.into_cells().replace(column, Value::Empty))})
-                .unwrap_or_else(|| {argument_error_legacy("Empty stream")})
+                .map(|r| { context.output.send(r.into_cells().replace(column, Value::Empty)) })
+                .unwrap_or_else(|| { argument_error_legacy("Empty stream") })
         }
         _ => error("Expected a stream"),
     }

@@ -7,14 +7,15 @@ use crate::lang::pipe::pipe;
 use crate::lang::value::Value;
 
 #[signature(
-timeit,
-short = "Execute a command many times and estimate the execution time.",
-example = "timeit {files|sort size}"
+    control.timeit,
+    short = "Execute a command many times and estimate the execution time.",
+    example = "timeit {files|sort size}"
 )]
 pub struct TimeIt {
     #[description("the command to time.")]
     it: Command,
-    #[description("the number of runs in each repeat. If unspecified, timeit will repeat enough times for each batch to take roughly 0.4 seconds.")]
+    #[description("the number of runs in each repeat. If unspecified, timeit will repeat enough times for each batch to take roughly 0.4 seconds."
+    )]
     number: Option<usize>,
     #[description("repeat count. The average speed in the fastest repeat will be returned.")]
     #[default(5usize)]
@@ -44,7 +45,7 @@ fn repeatn(it: &Command, context: &CommandContext, n: usize) -> CrushResult<Dura
     for _ in 0..n {
         times.push(time_run(it, context)?);
     }
-    let sum: Duration = times.iter().fold(Duration::seconds(0), |a, b| {a+*b});
+    let sum: Duration = times.iter().fold(Duration::seconds(0), |a, b| { a + *b });
     Ok(sum / (times.len() as i32))
 }
 

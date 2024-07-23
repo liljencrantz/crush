@@ -24,7 +24,7 @@ fn parse_method(m: &str) -> CrushResult<Method> {
 }
 
 #[signature(
-http,
+io.http,
 short = "Make a http request",
 long = "Return a struct with the following fields:",
 long = "* status:integer, the http status of the reply",

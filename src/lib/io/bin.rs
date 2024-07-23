@@ -6,7 +6,7 @@ use signature::signature;
 use crate::lang::state::contexts::CommandContext;
 
 #[signature(
-    from,
+    io.bin.from,
     can_block = true,
     short = "Read specified files (or input) as a binary stream"
 )]
@@ -23,7 +23,7 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    to,
+    io.bin.to,
     can_block = true,
     short = "Write specified iterator of strings to a file (or convert to BinaryStream) separated by newlines"
 )]

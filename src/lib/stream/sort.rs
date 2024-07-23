@@ -8,10 +8,11 @@ use signature::signature;
 use std::cmp::Ordering;
 
 #[signature(
-sort,
-short = "Sort input based on column",
-example = "host:procs | sort cpu",
-output = Passthrough)]
+    stream.sort,
+    can_block = true,
+    short = "Sort input based on column",
+    example = "host:procs | sort cpu",
+    output = Passthrough)]
 pub struct Sort {
     #[unnamed()]
     #[description("the columns to sort on. Optional if input only has one column.")]

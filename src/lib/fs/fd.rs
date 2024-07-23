@@ -16,11 +16,11 @@ lazy_static! {
 }
 
 #[signature(
-file,
-can_block = true,
-short = "Return a table stream containing information on all open files",
-output = Known(ValueType::TableInputStream(FILE_OUTPUT_TYPE.clone())),
-long = "fd:file accepts no arguments.")]
+    fs.fd.file,
+    can_block = true,
+    short = "Return a table stream containing information on all open files",
+    output = Known(ValueType::TableInputStream(FILE_OUTPUT_TYPE.clone())),
+    long = "fd:file accepts no arguments.")]
 pub struct File {}
 
 fn file(mut context: CommandContext) -> CrushResult<()> {
@@ -96,11 +96,11 @@ pub mod procfs {
 }
 
     #[signature(
-    network,
-    can_block = true,
-    short = "Return a table stream containing information on all open network sockets",
-    output = Known(ValueType::TableInputStream(NET_OUTPUT_TYPE.clone())),
-    long = "fd:network accepts no arguments.")]
+        network,
+        can_block = true,
+        short = "Return a table stream containing information on all open network sockets",
+        output = Known(ValueType::TableInputStream(NET_OUTPUT_TYPE.clone())),
+        long = "fd:network accepts no arguments.")]
     pub struct Network {}
 
     fn parse_addr(addr: &str) -> CrushResult<(String, u16)> {
@@ -271,11 +271,11 @@ pub mod procfs {
     }
 
     #[signature(
-    unix,
-    can_block = true,
-    short = "Return a table stream containing information on all open unix sockets",
-    output = Known(ValueType::TableInputStream(UNIX_OUTPUT_TYPE.clone())),
-    long = "fd:unix accepts no arguments.")]
+        unix,
+        can_block = true,
+        short = "Return a table stream containing information on all open unix sockets",
+        output = Known(ValueType::TableInputStream(UNIX_OUTPUT_TYPE.clone())),
+        long = "fd:unix accepts no arguments.")]
     pub struct Unix {}
 
     fn unix(context: CommandContext) -> CrushResult<()> {
