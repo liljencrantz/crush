@@ -31,7 +31,7 @@ impl<'input> Lexer<'input> {
                 Some((i, ':')) => {
                     let cc2 = self.chars.peek();
                     match cc2 {
-                        Some((i2, '=')) => {
+                        Some((_, '=')) => {
                             self.chars.next();
                             return Some(Token::Declare(Location::new(i, i + 2)).into());
                         }
@@ -61,18 +61,18 @@ impl<'input> Lexer<'input> {
                 Some((i, '>')) => return Some(Token::ComparisonOperator(">", Location::from(i)).into()),
                 Some((i, '!')) => {
                     match self.chars.peek() {
-                        Some((i2, '=')) => {
+                        Some((_, '=')) => {
                             self.chars.next();
                             return Some(Token::ComparisonOperator("!=", Location::new(i, i + 2)).into());
                         }
-                        Some((i2, ch)) => return Some(Err(LexicalError::UnexpectedCharacterWithSuggestion(*ch, '='))),
+                        Some((_, ch)) => return Some(Err(LexicalError::UnexpectedCharacterWithSuggestion(*ch, '='))),
                         _ => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion('='))),
                     }
                 }
                 Some((i, '@')) => {
                     let cc2 = self.chars.peek();
                     match cc2 {
-                        Some((i2, '@')) => {
+                        Some((_, '@')) => {
                             self.chars.next();
                             return Some(Token::Named(Location::new(i, i + 2)).into());
                         }
@@ -83,7 +83,7 @@ impl<'input> Lexer<'input> {
                 Some((i, '=')) => {
                     let cc2 = self.chars.peek();
                     match cc2 {
-                        Some((i2, '=')) => {
+                        Some((_, '=')) => {
                             self.chars.next();
                             return Some(Token::LogicalOperator("==", Location::new(i, i + 2)).into());
                         }
@@ -108,14 +108,14 @@ impl<'input> Lexer<'input> {
                     loop {
                         let cc2 = self.chars.peek();
                         match cc2 {
-                            Some((i2, '.')) => {
+                            Some((_, '.')) => {
                                 if had_period {
                                     break;
                                 }
                                 had_period = true;
                                 end_idx = self.chars.next().unwrap().0;
                             }
-                            Some((i2, ch2)) if number_or_underscore_char(*ch2) => {
+                            Some((_, ch2)) if number_or_underscore_char(*ch2) => {
                                 end_idx = self.chars.next().unwrap().0;
                             }
                             _ => {
@@ -144,7 +144,7 @@ impl<'input> Lexer<'input> {
                     loop {
                         let cc2 = self.chars.peek();
                         match cc2 {
-                            Some((i2, ch2)) if identifier_char(*ch2) => {
+                            Some((_, ch2)) if identifier_char(*ch2) => {
                                 end_idx = self.chars.next().unwrap().0;
                             }
                             _ => {
@@ -164,7 +164,7 @@ impl<'input> Lexer<'input> {
                     loop {
                         let cc2 = self.chars.peek();
                         match cc2 {
-                            Some((i2, ch2)) if identifier_char(*ch2) => {
+                            Some((_, ch2)) if identifier_char(*ch2) => {
                                 end_idx = self.chars.next().unwrap().0;
                             }
                             _ => {
@@ -180,7 +180,7 @@ impl<'input> Lexer<'input> {
                     loop {
                         let cc2 = self.chars.peek();
                         match cc2 {
-                            Some((i2, ch2)) if string_or_glob_char(*ch2) => {
+                            Some((_, ch2)) if string_or_glob_char(*ch2) => {
                                 end_idx = self.chars.next().unwrap().0;
                             }
                             _ => {
@@ -203,7 +203,7 @@ impl<'input> Lexer<'input> {
                     loop {
                         let cc2 = self.chars.peek();
                         match cc2 {
-                            Some((i2, ch2)) if file_or_glob_char(*ch2) => {
+                            Some((_, ch2)) if file_or_glob_char(*ch2) => {
                                 end_idx = self.chars.next().unwrap().0;
                             }
                             _ => {
@@ -217,7 +217,7 @@ impl<'input> Lexer<'input> {
                 }
 
                 Some((i, '"')) => {
-                    let mut end_idx = i;
+                    let end_idx;
                     loop {
                         let cc2 = self.chars.next();
                         match cc2 {
@@ -241,7 +241,7 @@ impl<'input> Lexer<'input> {
                 }
 
                 Some((i, '\'')) => {
-                    let mut end_idx = i;
+                    let end_idx;
                     loop {
                         let cc2 = self.chars.next();
                         match cc2 {
@@ -264,8 +264,8 @@ impl<'input> Lexer<'input> {
                     return Some(Token::QuotedFile(s, Location::new(i, end_idx + 1)).into());
                 }
 
-                Some((i, ch)) if (ch == ' ') | (ch == '\n') | (ch == '\r') => continue,
-                Some((i, ch)) => return Some(Err(LexicalError::UnexpectedCharacter(ch))),
+                Some((_, ch)) if (ch == ' ') | (ch == '\n') | (ch == '\r') => continue,
+                Some((_, ch)) => return Some(Err(LexicalError::UnexpectedCharacter(ch))),
                 None => return None, // End of file
             }
         }
@@ -281,7 +281,7 @@ impl<'input> Lexer<'input> {
                 Some((i, ':')) => {
                     let cc2 = self.chars.peek();
                     match cc2 {
-                        Some((i2, '=')) => {
+                        Some((_, '=')) => {
                             self.chars.next();
                             return Some(Token::Declare(Location::new(i, i + 2)).into());
                         }
@@ -296,7 +296,7 @@ impl<'input> Lexer<'input> {
 
                 Some((i, '$')) => {
                     match self.chars.peek() {
-                        Some((i2, '(')) => {
+                        Some((_, '(')) => {
                             self.chars.next();
                             self.mode.push(LexerMode::Expression);
                             return Some(Token::SubStart(Location::new(i, i + 2)).into());
@@ -324,7 +324,7 @@ impl<'input> Lexer<'input> {
                 Some((i, '>')) => return Some(Token::ComparisonOperator(">", Location::from(i)).into()),
                 Some((i, '!')) => {
                     match self.chars.peek() {
-                        Some((i2, '=')) => {
+                        Some((_, '=')) => {
                             self.chars.next();
                             return Some(Token::ComparisonOperator("!=", Location::new(i, i + 2)).into());
                         }
@@ -334,7 +334,7 @@ impl<'input> Lexer<'input> {
                 Some((i, '@')) => {
                     let cc2 = self.chars.peek();
                     match cc2 {
-                        Some((i2, '@')) => {
+                        Some((_, '@')) => {
                             self.chars.next();
                             return Some(Token::Named(Location::new(i, i + 2)).into());
                         }
@@ -349,7 +349,7 @@ impl<'input> Lexer<'input> {
                 Some((i, '=')) => {
                     let cc2 = self.chars.peek();
                     match cc2 {
-                        Some((i2, '=')) => {
+                        Some((_, '=')) => {
                             self.chars.next();
                             return Some(Token::LogicalOperator("==", Location::new(i, i + 2)).into());
                         }
@@ -374,14 +374,14 @@ impl<'input> Lexer<'input> {
                     loop {
                         let cc2 = self.chars.peek();
                         match cc2 {
-                            Some((i2, '.')) => {
+                            Some((_, '.')) => {
                                 if had_period {
                                     break;
                                 }
                                 had_period = true;
                                 end_idx = self.chars.next().unwrap().0;
                             }
-                            Some((i2, ch2)) if number_or_underscore_char(*ch2) => {
+                            Some((_, ch2)) if number_or_underscore_char(*ch2) => {
                                 end_idx = self.chars.next().unwrap().0;
                             }
                             _ => {
@@ -404,7 +404,7 @@ impl<'input> Lexer<'input> {
                     loop {
                         let cc2 = self.chars.peek();
                         match cc2 {
-                            Some((i2, ch2)) if identifier_char(*ch2) => {
+                            Some((_, ch2)) if identifier_char(*ch2) => {
                                 end_idx = self.chars.next().unwrap().0;
                             }
                             _ => {
@@ -423,7 +423,7 @@ impl<'input> Lexer<'input> {
                 }
 
                 Some((i, '"')) => {
-                    let mut end_idx = i;
+                    let end_idx;
                     loop {
                         let cc2 = self.chars.next();
                         match cc2 {
@@ -447,7 +447,7 @@ impl<'input> Lexer<'input> {
                 }
 
                 Some((i, '\'')) => {
-                    let mut end_idx = i;
+                    let end_idx;
                     loop {
                         let cc2 = self.chars.next();
                         match cc2 {
@@ -470,8 +470,8 @@ impl<'input> Lexer<'input> {
                     return Some(Token::QuotedFile(s, Location::new(i, end_idx + 1)).into());
                 }
 
-                Some((i, ch)) if (ch == ' ') | (ch == '\n') | (ch == '\r') => continue,
-                Some((i, ch)) => return Some(Err(LexicalError::UnexpectedCharacter(ch))),
+                Some((_, ch)) if (ch == ' ') | (ch == '\n') | (ch == '\r') => continue,
+                Some((_, ch)) => return Some(Err(LexicalError::UnexpectedCharacter(ch))),
                 None => return None, // End of file
             }
         }

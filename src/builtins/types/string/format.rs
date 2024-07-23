@@ -1,4 +1,4 @@
-use crate::lib::types::OrderedStringMap;
+use crate::builtins::types::OrderedStringMap;
 use signature::signature;
 use crate::lang::errors::{argument_error_legacy, CrushResult, mandate};
 use crate::lang::state::contexts::CommandContext;
@@ -6,7 +6,7 @@ use crate::lang::{argument::Argument, value::Value};
 use crate::lang::command::OutputType::Known;
 use crate::lang::state::this::This;
 use crate::lang::value::ValueType;
-use crate::lib::types::string::format::FormatState::*;
+use crate::builtins::types::string::format::FormatState::*;
 
 enum FormatState {
     Normal,

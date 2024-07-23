@@ -1,7 +1,7 @@
 use std::sync::OnceLock;
 use signature::signature;
 use crate::lang::command::OutputType::{Known, Unknown};
-use crate::lang::errors::{argument_error_legacy, mandate, CrushResult};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::data::table::{ColumnType, Row};

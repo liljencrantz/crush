@@ -3,7 +3,7 @@ use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use signature::signature;
 use crate::lang::value::Value;
-use crate::lib::control::timeit::time_run;
+use crate::builtins::control::timeit::time_run;
 
 #[signature(
     control.timer,

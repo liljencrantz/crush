@@ -155,7 +155,7 @@ struct SetItem {
 fn __setitem__(mut context: CommandContext) -> CrushResult<()> {
     let dict = context.this.dict()?;
     let cfg: SetItem = SetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
-    dict.insert(cfg.key, cfg.value);
+    dict.insert(cfg.key, cfg.value)?;
     context.output.empty()
 }
 

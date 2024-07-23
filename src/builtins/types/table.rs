@@ -5,7 +5,7 @@ use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ValueType;
 use crate::lang::value::Value;
-use crate::lib::types::column_types;
+use crate::builtins::types::column_types;
 use ordered_map::OrderedMap;
 use signature::signature;
 use crate::lang::ordered_string_map::OrderedStringMap;

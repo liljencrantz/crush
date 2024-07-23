@@ -2,13 +2,13 @@
 extern crate lalrpop_util;
 
 mod lang;
-mod lib;
+mod builtins;
 mod util;
 
 use crate::lang::errors::{argument_error_legacy, CrushResult, to_crush_error};
 use crate::lang::pretty::create_pretty_printer;
 use crate::lang::{execute, printer};
-use lib::declare;
+use builtins::declare;
 use std::io::Read;
 use std::path::PathBuf;
 use lang::{data, state};

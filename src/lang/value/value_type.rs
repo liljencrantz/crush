@@ -2,7 +2,7 @@ use crate::lang::command::Command;
 use crate::lang::errors::{error, to_crush_error, CrushResult, argument_error_legacy};
 use crate::lang::help::Help;
 use crate::lang::{data::table::ColumnType, value::Value};
-use crate::lib::types;
+use crate::builtins::types;
 use crate::util::glob::Glob;
 use ordered_map::OrderedMap;
 use regex::Regex;

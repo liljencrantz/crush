@@ -388,9 +388,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 long_description.push(example);
             }
 
-            let signature_literal = Literal::string(&signature.join(" "));
-            let full_signature_literal = Literal::string(&generate_signature(&metadata.path, signature));
-
+            let signature_literal = Literal::string(&generate_signature(&metadata.path, signature));
 
             let long_description = if !long_description.is_empty() {
                 let mut s = "    ".to_string();
@@ -415,7 +413,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                         #command_name,
                         #command_invocation,
                         #can_block,
-                        #full_signature_literal,
+                        #signature_literal,
                         #description,
                         #long_description,
                         #output,
@@ -433,7 +431,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                             #command_invocation,
                             #can_block,
                             full,
-                            #full_signature_literal,
+                            #signature_literal,
                             #description,
                             #long_description,
                             #output,

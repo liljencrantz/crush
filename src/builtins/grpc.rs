@@ -18,7 +18,7 @@ use crate::lang::data::table::{Row, Table};
 use crate::lang::errors::{error, mandate};
 use crate::lang::signature::patterns::Patterns;
 use crate::lang::state::this::This;
-use crate::lib::io::json::{json_to_value, value_to_json};
+use crate::builtins::io::json::{json_to_value, value_to_json};
 use crate::lang::value::ValueType;
 use crate::lang::data::table::ColumnType;
 

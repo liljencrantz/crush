@@ -424,14 +424,10 @@ fn remove_file_of_unknown_type(path: Arc<Path>, out: &OutputStream, verbose: boo
     match lstat(path.deref()) {
         Ok(stat) => {
             if stat.st_mode & S_IFDIR != 0 {
-                let pp = path.deref();
-                let res = remove_dir(pp);
-                drop(pp);
+                let res = remove_dir(path.deref());
                 handle_remove_result(path, res, out, verbose)
             } else {
-                let pp = path.deref();
-                let res = remove_file(pp);
-                drop(pp);
+                let res = remove_file(path.deref());
                 handle_remove_result(path, res, out, verbose)
             }
         }
@@ -440,16 +436,12 @@ fn remove_file_of_unknown_type(path: Arc<Path>, out: &OutputStream, verbose: boo
 }
 
 fn remove_known_directory(path: Arc<Path>, out: &OutputStream, verbose: bool) -> CrushResult<()> {
-    let pp = path.deref();
-    let res = remove_dir(pp);
-    drop(pp);
+    let res = remove_dir(path.deref());
     handle_remove_result(path, res, out, verbose)
 }
 
 fn remove_known_file(path: Arc<Path>, out: &OutputStream, verbose: bool) -> CrushResult<()> {
-    let pp = path.deref();
-    let res = remove_file(pp);
-    drop(pp);
+    let res = remove_file(path.deref());
     handle_remove_result(path, res, out, verbose)
 }
 
