@@ -140,6 +140,9 @@ struct SimpleCommand {
     arguments: Vec<ArgumentDescription>,
 }
 
+/**
+    A command that can block iff any of its arguments can block, e.g. `and` or `or`.
+*/
 struct ConditionCommand {
     call: fn(context: CommandContext) -> CrushResult<()>,
     full_name: Vec<String>,

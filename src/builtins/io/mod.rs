@@ -29,7 +29,7 @@ mod yaml;
     can_block = false,
     short = "Return value",
     output = Known(ValueType::Any),
-    example = "val val",
+    example = "val $val",
     long = "This command is useful if you want to pass a command as input in\n    a pipeline instead of executing it. It is different from the echo command\n    in that val sends the value through the pipeline, whereas echo prints it to screen."
 )]
 struct Val {

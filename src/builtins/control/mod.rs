@@ -122,22 +122,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             r#if::If::declare(env)?;
             r#while::While::declare(env)?;
             r#loop::Loop::declare(env)?;
-
-            env.declare_condition_command(
-                "for",
-                r#for::r#for,
-                "for [name=](table_input_stream|table|dict|list) body:command",
-                "Execute body once for every element in iterable.",
-                Some(
-                    r#"    Example:
-
-    for $(seq 10) {
-        echo $("Lap #{}":format $value)
-    }"#,
-                ),
-                vec![],
-            )?;
-
+            r#for::For::declare(env)?;
             cmd::Cmd::declare(env)?;
             Break::declare(env)?;
             timeit::TimeIt::declare(env)?;

@@ -11,7 +11,8 @@ use crate::lang::command::OutputType::Passthrough;
     stream.uniq,
     output = Passthrough,
     short = "Only output the first row if multiple rows has the same value for the specified column",
-    example = "host:procs | sort user | uniq user")]
+    long = "If no column is given, the entire rows are compared.",
+    example = "host:procs | uniq user")]
 pub struct Uniq {
     field: Option<String>,
 }

@@ -90,7 +90,7 @@ fn get_output_type(left_type: &[ColumnType], right_type: &[ColumnType], right_ke
     example = "join user=(files) name=(user:list)")]
 pub struct Join {
     #[named()]
-    #[description("Field to join")]
+    #[description("Fields to join")]
     join: OrderedStringMap<Stream>,
 }
 

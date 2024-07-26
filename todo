@@ -1,4 +1,8 @@
 Todo:
+The automatic argument parser seems to allow stray arguemnts, e.g. `val 1 2 3`
+Math commands for command mode
+Rewrite all tests for new syntax
+New regex literal syntax
 Add saner default prompt
 Add default syntax highlighting config
 Add some way to extract the definition from a closure
@@ -19,8 +23,6 @@ Avoid infinite loops when printing structs that reference each other
 __getattr__ support?
 fix dynamic loading deadlocks
 tab completions for external commands
-more file info: size, permissions, user, group, modified, created, type. Move to methods or add more to stat?
-Rename len to size in file:stat?
-Proper syntax for background jobs
+More shell-like syntax for background jobs
 Make IFS configurable for cmd command
-Fix ^C and ^Z
+Add signal handlers to fix ^C and ^Z during regular execution

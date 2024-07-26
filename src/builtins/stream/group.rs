@@ -136,7 +136,7 @@ fn create_worker_thread(
 }
 
 pub fn group(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Group = Group::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg = Group::parse(context.remove_arguments(), &context.global_state.printer())?;
     let mut input = mandate(
         context.input.recv()?.stream()?,
         "Expected input to be a stream",

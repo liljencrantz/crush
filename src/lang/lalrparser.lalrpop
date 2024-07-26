@@ -34,20 +34,11 @@ Job: JobNode = {
 };
 
 Expr: Box<Node> = {
-    <j:JobExpr> => j.to_node()
-};
-
-JobExpr: Box<JobNode> = {
-    <c:AssignmentExpr> => {
-        let l = c.location();
-        Box::from(JobNode{
-            commands: vec![c.to_command()],
-            location: l,
-        })
-    },
-    <mut j:JobExpr> Pipe <c:AssignmentExpr> => {
-        j.commands.push(c.to_command());
-        j
+    AssignmentExpr,
+    <mut j:Expr> Pipe <c:AssignmentExpr> => {
+        let mut jj = j.expression_to_job();
+        jj.commands.push(c.expression_to_command());
+        Box::from(Node::Substitution(jj))
     },
 }
 
@@ -70,21 +61,17 @@ ComparisonExpr: Box<Node> = {
 }
 
 CommandExpr: Box<Node> = {
-               <c:TermExpr> => c,
-               <lt:TermExpr> <t:Plus> <rt:TermExpr> => {
-                   operator_method("__add__", t, lt, rt)
-               },
-               <lt:TermExpr> <t:Minus> <rt:TermExpr> => {
-                   operator_method("__sub__", t, lt, rt)
-               },
-           };
+    TermExpr,
+    <lt: CommandExpr> <t:Plus> <rt:TermExpr> => operator_method("__add__", t, lt, rt),
+    <lt: CommandExpr> <t:Minus> <rt:TermExpr> => operator_method("__sub__", t, lt, rt),
+    };
 
 TermExpr: Box<Node> = {
     FactorExpr,
-    <l: @L> <lt:FactorExpr> <op:Star> <rt:FactorExpr> <r: @R> => {
+    <l: @L> <lt:TermExpr> <op:Star> <rt:FactorExpr> <r: @R> => {
         operator_method("__mul__", op, lt, rt)
     },
-    <l: @L> <lt:FactorExpr> <op:Slash> <rt:FactorExpr> <r: @R> => {
+    <l: @L> <lt:TermExpr> <op:Slash> <rt:FactorExpr> <r: @R> => {
         operator_method("__div__", op, lt, rt)
     },
 }
@@ -108,31 +95,35 @@ ItemExpr: Box<Node> = {
     <f:Float> => Node::float(f),
     <i: ItemExpr> GetItemStart <e: Assignment> GetItemEnd => Box::from(Node::GetItem(i, e)),
     <i: ItemExpr> MemberOperator <l: Identifier> => Box::from(Node::GetAttr(i, l.into())),
-    <i: ItemExpr> ExprModeStart <mut v: OptExpressionList> SubEnd => {
+    <i: ItemExpr> ExprModeStart <mut ov: OptExpressionList> SubEnd => {
         let l = i.location();
-        v.insert(0, *i);
-        let c = CommandNode {
-            expressions: v,
-            location: l,
+        let mut v = match ov {
+            Some(vv) => vv,
+            None => vec![],
         };
+                v.insert(0, *i);
+                let c = CommandNode {
+                    expressions: v,
+                    location: l,
+                };
 
-        Box::from(Node::Substitution(
-            JobNode{
-                commands: vec![c],
-                location: l,
-            }
-        ))
+                Box::from(Node::Substitution(
+                    JobNode{
+                        commands: vec![c],
+                        location: l,
+                    }
+                ))
         },
 }
 
-OptExpressionList: Vec<Node> = {
-    => vec![],
-    ExpressionList,
+OptExpressionList: Option<Vec<Node>> = {
+    => None,
+    <e: ExpressionList> => Some(e),
 }
 
 ExpressionList: Vec<Node> = {
-    <e: Expr> => vec![*e],
-    <mut l: ExpressionList> Separator <e: Expr> => {
+    <e: AssignmentExpr> => vec![*e],
+    <mut l: ExpressionList> Separator <e: AssignmentExpr> => {
         l.push(*e);
         l
     },
@@ -226,15 +217,7 @@ Item: Box<Node> = {
     <i: Item> MemberOperator <start: @L> <l: StringOrGlob> <end: @R> => Box::from(Node::GetAttr(i, TrackedString::from(l))),
     JobStart Separator? <s: Signature> <l: JobListWithoutSeparator> JobEnd => Box::from(Node::Closure(s, l)),
     SubStart <j:Job> SubEnd => Box::from(Node::Substitution(j)),
-    <l: @L>ExprModeStart <e:Expr> SubEnd <r: @R> => Box::from(
-        Node::Substitution(
-            JobNode{
-                commands: vec![
-                    CommandNode{
-                        expressions: vec![*e],
-                        location: Location::new(l, r)
-                    }],
-                location: Location::new(l, r)})),
+    <l: @L>ExprModeStart <e:Expr> SubEnd <r: @R> => Box::from(Node::Substitution(e.expression_to_job())),
 }
 
 AssignmentOperator: TrackedString = {

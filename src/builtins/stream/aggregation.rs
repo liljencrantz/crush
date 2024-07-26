@@ -221,7 +221,7 @@ fn max(context: CommandContext) -> CrushResult<()> {
     }
 }
 
-macro_rules! mul_function {
+macro_rules! prod_function {
     ($name:ident, $var_type:ident, $var_initializer:expr, $value_type:ident) => {
         fn $name(mut s: Stream, column: usize) -> CrushResult<Value> {
             let mut res: $var_type = $var_initializer;
@@ -236,25 +236,25 @@ macro_rules! mul_function {
     };
 }
 
-mul_function!(mul_int, i128, 1, Integer);
-mul_function!(mul_float, f64, 1.0, Float);
+prod_function!(prod_int, i128, 1, Integer);
+prod_function!(prod_float, f64, 1.0, Float);
 
 #[signature(
-    stream.mul,
+    stream.prod,
     short = "Calculate the product for the specific column across all rows.",
-    example = "seq 5 10 | mul")]
-pub struct Mul {
+    example = "seq 5 10 | prod")]
+pub struct Prod {
     field: Option<String>,
 }
 
-fn mul(context: CommandContext) -> CrushResult<()> {
+fn prod(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream()? {
         Some(input) => {
-            let cfg = Mul::parse(context.arguments, &context.global_state.printer())?;
+            let cfg = Prod::parse(context.arguments, &context.global_state.printer())?;
             let column = parse(input.types(), cfg.field)?;
             match &input.types()[column].cell_type {
-                ValueType::Integer => context.output.send(mul_int(input, column)?),
-                ValueType::Float => context.output.send(mul_float(input, column)?),
+                ValueType::Integer => context.output.send(prod_int(input, column)?),
+                ValueType::Float => context.output.send(prod_float(input, column)?),
                 t => argument_error_legacy(
                     &format!("Can't calculate product of elements of type {}", t),
                 ),

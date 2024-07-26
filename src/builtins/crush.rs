@@ -313,7 +313,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             )?;
             crush.create_namespace(
                 "byte_unit",
-                "Formating style for table columns containing byte size",
+                "Formating style for table columns containing byte size.",
                 Box::new(move |env| {
                     byte_unit::List::declare(env)?;
                     byte_unit::Get::declare(env)?;

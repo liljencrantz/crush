@@ -131,7 +131,7 @@ pub struct CommandContext {
 
 impl CommandContext {
     /**
-    Return a new Command context with the same scope and state, but empty I/O and arguments.
+    Return an empty new Command context with the specified scope and state.
      */
     pub fn new(scope: &Scope, state: &GlobalState) -> CommandContext {
         CommandContext {
@@ -147,6 +147,8 @@ impl CommandContext {
 
     /**
     Clear the argument vector and return the original.
+
+    This is useful when you want to parse the argument vector without consuming the whole context.
      */
     pub fn remove_arguments(&mut self) -> Vec<Argument> {
         let mut tmp = Vec::new(); // This does not cause a memory allocation

@@ -453,7 +453,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                             #named_matchers
                             #named_fallback
                             (None, _value) => _unnamed.push_back((_value, _arg.location)),
-                            (Some(_name), _value) => return crate::lang::errors::argument_error(format!("Unknown argument name \"{}\"", _name), _location),
+                            (Some(_name), _value) => return crate::lang::errors::argument_error(format!("{}: Unexpected argument nameed \"{}\" with value of type {}", #command_name, _name, _value.value_type()), _location),
                         }
                     }
 
@@ -466,9 +466,9 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
             let mut output = s.to_token_stream();
             output.extend(handler.into_token_stream());
-            if struct_name.to_string() == "AllowedValuesStringSignature" {
-                println!("{}", output.to_string());
-            }
+//            if struct_name.to_string() == "Sort" {
+//                println!("{}", output.to_string());
+//            }
             Ok(output)
         }
         _ => fail!(root.span(), "Expected a struct"),

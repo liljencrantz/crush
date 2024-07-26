@@ -71,7 +71,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "Logical operators (and and or)",
         Box::new(|env| {
             env.declare_condition_command(
-                "__and__",
+                "cond:__and__",
                 and,
                 "__and__ condition:(bool|command)... -> boolean",
                 "True if all arguments are true",
@@ -85,7 +85,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             )?;
 
             env.declare_condition_command(
-                "__or__",
+                "cond:__or__",
                 or,
                 "__or__ condition:(bool|command)... -> boolean",
                 "True if any argument is true",

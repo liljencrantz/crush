@@ -40,7 +40,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             aggregation::Avg::declare(env)?;
             aggregation::Min::declare(env)?;
             aggregation::Max::declare(env)?;
-            aggregation::Mul::declare(env)?;
+            aggregation::Prod::declare(env)?;
             aggregation::First::declare(env)?;
             aggregation::Last::declare(env)?;
             env.declare_command(

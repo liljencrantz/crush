@@ -45,15 +45,38 @@ pub enum Node {
 }
 
 impl Node {
-    pub fn to_command(self) -> CommandNode {
+    pub fn val(l: Location) -> Node {
+        Node::GetAttr(
+            Box::from(Node::GetAttr(
+                Box::from(Node::Identifier(TrackedString::new("global", l))),
+                TrackedString::new("io", l))),
+            TrackedString::new("val", l))
+    }
+
+    pub fn expression_to_command(self) -> CommandNode {
         let l = self.location();
         match self {
             Node::Substitution(n) if n.commands.len() == 1 => {
                 n.commands[0].clone()
             }
-            _ => CommandNode {
-                expressions: vec![self],
-                location: l,
+            _ => {
+                CommandNode {
+                    expressions: vec![Node::val(self.location()), self],
+                    location: l,
+                }
+            }
+        }
+    }
+
+    pub fn expression_to_job(self) -> JobNode {
+        if let Node::Substitution(s) = self {
+            s
+        } else {
+            let location = self.location();
+            let expressions = vec![Node::val(location), self];
+            JobNode {
+                commands: vec![CommandNode { expressions, location }],
+                location,
             }
         }
     }
@@ -188,7 +211,7 @@ pub struct CommandNode {
 
 impl CommandNode {
     pub fn compile(&self, env: &Scope) -> CrushResult<CommandInvocation> {
-        if let Some(c) = self.expressions[0].compile_as_command(env)? {
+        if let Some(c) = self.expressions[0].compile_as_special_command(env)? {
             if self.expressions.len() == 1 {
                 Ok(c)
             } else {
@@ -291,7 +314,7 @@ impl Node {
 
             Node::GetItem(a, o) => ValueDefinition::JobDefinition(
                 Job::new(vec![self
-                    .compile_as_command(env)?
+                    .compile_as_special_command(env)?
                     .unwrap()],
                          a.location().union(o.location()),
                 )),
@@ -417,7 +440,7 @@ impl Node {
         }
     }
 
-    pub fn compile_as_command(&self, env: &Scope) -> CrushResult<Option<CommandInvocation>> {
+    pub fn compile_as_special_command(&self, env: &Scope) -> CrushResult<Option<CommandInvocation>> {
         match self {
             Node::Assignment(target, _style, op, value) => {
                 Node::compile_standalone_assignment(target, op, value, env)
