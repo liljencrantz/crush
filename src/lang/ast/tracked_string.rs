@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 use crate::lang::ast::location::Location;
-use crate::lang::ast::Token;
+use crate::lang::ast::token::Token;
 
 #[derive(Clone, Debug)]
 pub struct TrackedString {

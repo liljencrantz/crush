@@ -1,4 +1,7 @@
 use crate::lang::ast::*;
+use crate::lang::ast::node::*;
+use crate::lang::ast::token::*;
+use crate::lang::ast::lexer::*;
 use crate::lang::ast::parameter_node::ParameterNode;
 use crate::lang::ast::location::Location;
 use crate::lang::ast::tracked_string::TrackedString;
@@ -7,16 +10,21 @@ use crate::lang::argument::SwitchStyle;
 grammar<'input>(input: &'input str);
 
 pub JobList: JobListNode = {
-    Separator? <l:JobListWithoutSeparator> => l,
+    Separators? <l:JobListWithoutSeparator> => l,
+};
+
+Separators: () = {
+    Separator,
+    Separators Separator,
 };
 
 JobListWithoutSeparator: JobListNode = {
     <l: @L> => JobListNode {jobs: vec![], location: Location::new(l, l)},
-    <j: NonEmptyJobList> Separator? => j,
+    <j: NonEmptyJobList> Separators? => j,
 };
 
 NonEmptyJobList: JobListNode = {
-    <l: @L> <mut lst:NonEmptyJobList> Separator <j:Job> <r: @R> =>  {
+    <l: @L> <mut lst:NonEmptyJobList> Separators <j:Job> <r: @R> =>  {
         lst.jobs.push(j);
         lst.location = Location::new(l, r);
         lst
@@ -26,7 +34,7 @@ NonEmptyJobList: JobListNode = {
 
 Job: JobNode = {
     <l: @L> <c:Command> <r: @R> => JobNode{commands: vec![c], location: Location::new(l, r)},
-    <l: @L> <mut j:Job> Pipe Separator? <c:Command> <r: @R> => {
+    <l: @L> <mut j:Job> Pipe Separators? <c:Command> <r: @R> => {
         j.commands.push(c);
         j.location = Location::new(l, r);
         j
@@ -56,29 +64,24 @@ LogicalExpr: Box<Node> = {
 }
 
 ComparisonExpr: Box<Node> = {
-    CommandExpr,
-    <c: ComparisonExpr> <op: ComparisonOperator> <t: CommandExpr> =>operator(op, c, t),
-}
-
-CommandExpr: Box<Node> = {
     TermExpr,
-    <lt: CommandExpr> <t:Plus> <rt:TermExpr> => operator_method("__add__", t, lt, rt),
-    <lt: CommandExpr> <t:Minus> <rt:TermExpr> => operator_method("__sub__", t, lt, rt),
-    };
+    <c: ComparisonExpr> <op: ComparisonOperator> <t: TermExpr> =>operator(op, c, t),
+}
 
 TermExpr: Box<Node> = {
     FactorExpr,
-    <l: @L> <lt:TermExpr> <op:Star> <rt:FactorExpr> <r: @R> => {
-        operator_method("__mul__", op, lt, rt)
-    },
-    <l: @L> <lt:TermExpr> <op:Slash> <rt:FactorExpr> <r: @R> => {
-        operator_method("__div__", op, lt, rt)
-    },
-}
+    <lt: TermExpr> <t:Plus> <rt:FactorExpr> => operator_method("__add__", t, lt, rt),
+    <lt: TermExpr> <t:Minus> <rt:FactorExpr> => operator_method("__sub__", t, lt, rt),
+    };
 
 FactorExpr: Box<Node> = {
     UnaryExpr,
-    SubStart <e:Expr> SubEnd => e,
+    <l: @L> <lt:FactorExpr> <op:Star> <rt:UnaryExpr> <r: @R> => {
+        operator_method("__mul__", op, lt, rt)
+    },
+    <l: @L> <lt:FactorExpr> <op:Slash> <rt:UnaryExpr> <r: @R> => {
+        operator_method("__div__", op, lt, rt)
+    },
 }
 
 UnaryExpr: Box<Node> = {
@@ -87,6 +90,8 @@ UnaryExpr: Box<Node> = {
 }
 
 ItemExpr: Box<Node> = {
+    ExprModeStart <e:Expr> SubEnd => e,
+    SubStart <j:Job> SubEnd => Box::from(Node::Substitution(j)),
     <l: Identifier> => Node::identifier(l),
     <l: Regex> => Node::regex(l),
     <l:QuotedFile> => Node::file(l, true),
@@ -123,7 +128,7 @@ OptExpressionList: Option<Vec<Node>> = {
 
 ExpressionList: Vec<Node> = {
     <e: AssignmentExpr> => vec![*e],
-    <mut l: ExpressionList> Separator <e: AssignmentExpr> => {
+    <mut l: ExpressionList> Separators <e: AssignmentExpr> => {
         l.push(*e);
         l
     },
@@ -162,13 +167,13 @@ Unary: Box<Node> = {
 
 Signature: Option<Vec<ParameterNode>> = {
     => None,
-    Pipe Pipe Separator? => Some(vec![]),
-    Pipe <s: ParameterList> Pipe Separator? => Some(s),
+    Pipe Pipe Separators? => Some(vec![]),
+    Pipe <s: ParameterList> Pipe Separators? => Some(s),
 }
 
 ParameterList: Vec<ParameterNode> = {
     Parameter => vec![<>],
-    <mut l: ParameterList> Separator? <p: Parameter> => {l.push(p); l},
+    <mut l: ParameterList> Separators? <p: Parameter> => {l.push(p); l},
 }
 
 Parameter: ParameterNode = {
@@ -215,7 +220,7 @@ Item: Box<Node> = {
 },
     <i: Item> GetItemStart <e: Assignment> GetItemEnd => Box::from(Node::GetItem(i, e)),
     <i: Item> MemberOperator <start: @L> <l: StringOrGlob> <end: @R> => Box::from(Node::GetAttr(i, TrackedString::from(l))),
-    JobStart Separator? <s: Signature> <l: JobListWithoutSeparator> JobEnd => Box::from(Node::Closure(s, l)),
+    JobStart Separators? <s: Signature> <l: JobListWithoutSeparator> JobEnd => Box::from(Node::Closure(s, l)),
     SubStart <j:Job> SubEnd => Box::from(Node::Substitution(j)),
     <l: @L>ExprModeStart <e:Expr> SubEnd <r: @R> => Box::from(Node::Substitution(e.expression_to_job())),
 }

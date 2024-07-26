@@ -1,3 +1,3 @@
-seq 10 | select num={($value*5):mod 7} | group num | sort num
-seq 1000 | select num={($value*5):mod 7} | group num c={count} | sort num
-seq 1000 | select num={($value*5):mod 7} | group num c={count} s={sum} | sort num
+seq 10 | select num={(value*5):mod 7} | group num | sort num
+seq 1000 | select num={(value*5):mod 7} | group num c={count} | sort num
+seq 1000 | select num={(value*5):mod 7} | group num c={count} s={sum} | sort num

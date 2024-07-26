@@ -7,10 +7,10 @@ pup:from ./.test_file
 # Create a closure that close on outside variables
 $a := 4
 $b := 7.5
-$fff := {|$c:$integer=1 $d| echo $a*$b*$c; for (seq 3) $d }
+$fff := {|$c:$integer=1 $d| echo (a * b * c); for i=$(seq 3) $d }
 # Serialize the closure
 val $fff | pup:to ./.test_file
 # Unset the variables used by the closure
 var:unset "a" "b" "fff"
 # Deserialize the closure and check that the variables still exists.
-(pup:from ./.test_file) c=3 {echo 1}
+$(pup:from ./.test_file) c=3 {echo 1}

@@ -1,5 +1,5 @@
 use std::cmp::min;
-use crate::lang::ast::{Node, CommandNode, JobListNode, JobNode};
+use crate::lang::ast::{node::Node, CommandNode, JobListNode, JobNode};
 use crate::lang::errors::{error, CrushResult, mandate, argument_error_legacy, to_crush_error};
 use crate::lang::value::{ValueType, Value};
 use crate::lang::command::{Command, ArgumentDescription};

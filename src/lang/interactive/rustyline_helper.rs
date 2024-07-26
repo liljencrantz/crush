@@ -8,7 +8,7 @@ use rustyline::error::ReadlineError;
 use rustyline::completion::{Pair, Completer};
 use crate::lang::errors::CrushResult;
 use std::cmp::min;
-use crate::lang::ast::Token;
+use crate::lang::ast::token::Token;
 use crate::lang::value::Value;
 use crate::util::directory_lister::directory_lister;
 use crate::lang::state::scope::Scope;

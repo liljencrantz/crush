@@ -32,17 +32,17 @@
 
 "Duration comparisons"
 
-(duration:of seconds=1) > (duration:of seconds=2)
-(duration:of seconds=1) < (duration:of seconds=2)
-(duration:of seconds=1) >= (duration:of seconds=2)
-(duration:of seconds=1) <= (duration:of seconds=2)
-(duration:of seconds=1) != (duration:of seconds=2)
-(duration:of seconds=1) == (duration:of seconds=2)
+$(duration:of seconds=1) > $(duration:of seconds=2)
+$(duration:of seconds=1) < $(duration:of seconds=2)
+$(duration:of seconds=1) >= $(duration:of seconds=2)
+$(duration:of seconds=1) <= $(duration:of seconds=2)
+$(duration:of seconds=1) != $(duration:of seconds=2)
+$(duration:of seconds=1) == $(duration:of seconds=2)
 
 "Time comparisons"
 
-$t1 := (time:now)
-$t2 := (time:now + (duration:of seconds=1))
+$t1 := (time.now())
+$t2 := (time.now() + duration.of(seconds=1))
 $t1 > $t2
 $t1 < $t2
 $t1 >= $t2

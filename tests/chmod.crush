@@ -1,4 +1,4 @@
-touch ./foo
+./foo:touch
 ./foo:chmod "a=" "o+xr" "u+w" "g-r"
 files ./foo | select permissions
 rm ./foo

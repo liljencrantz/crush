@@ -1,7 +1,7 @@
 use crate::lang::errors::{to_crush_error, CrushResult, CrushError};
 use crate::lang::job::Job;
 use crate::lang::state::scope::Scope;
-use crate::lang::ast::{Token, JobListNode, lexer::Lexer};
+use crate::lang::ast::{token::Token, JobListNode, lexer::Lexer};
 use std::sync::{Arc, Mutex};
 
 lalrpop_mod!(pub lalrparser, "/lang/lalrparser.rs");
