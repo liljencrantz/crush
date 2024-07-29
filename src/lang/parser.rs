@@ -106,11 +106,12 @@ impl Parser {
                 Token::GetItemStart( _) => { stack.push("]"); }
                 Token::SubEnd( _) | Token::JobEnd( _) | Token::GetItemEnd( _) => { stack.pop(); }
                 Token::QuotedString(_, _) => {}
-                Token::StringOrGlob(_, _) => {}
+                Token::String(_, _) => {}
+                Token::File(_, _) => {}
+                Token::Glob(_, _) => {}
                 Token::Identifier(_, _) => {}
                 Token::Flag(_, _) => {}
                 Token::QuotedFile(_, _) => {}
-                Token::FileOrGlob(_, _) => {}
                 Token::Regex(_, _) => {}
                 Token::Integer(_, _) => {}
                 Token::Float(_, _) => {}
@@ -141,7 +142,7 @@ mod tests {
         let tok = p().tokenize("{aaa}\n").unwrap();
         assert_eq!(tok, vec![
             Token::JobStart(Location::from(0)),
-            Token::StringOrGlob("aaa", Location::new(1,4)),
+            Token::String("aaa", Location::new(1,4)),
             Token::JobEnd(Location::from(4)),
             Token::Separator("\n", Location::from(5)),
         ]);

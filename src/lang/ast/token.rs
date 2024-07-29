@@ -14,11 +14,12 @@ pub enum Token<'input> {
     Star(Location),
     Slash(Location),
     QuotedString(&'input str, Location),
-    StringOrGlob(&'input str, Location),
     Identifier(&'input str, Location),
     Flag(&'input str, Location),
     QuotedFile(&'input str, Location),
-    FileOrGlob(&'input str, Location),
+    Glob(&'input str, Location),
+    File(&'input str, Location),
+    String(&'input str, Location),
     Regex(&'input str, Location),
     Integer(&'input str, Location),
     Float(&'input str, Location),
@@ -45,11 +46,12 @@ impl Token<'_> {
             Token::UnaryOperator(_, l) |
             Token::ComparisonOperator(_, l) |
             Token::QuotedString(_, l) |
-            Token::StringOrGlob(_, l) |
+            Token::String(_, l) |
+            Token::File(_, l) |
+            Token::Glob(_, l) |
             Token::Identifier(_, l) |
             Token::Flag(_, l) |
             Token::QuotedFile(_, l) |
-            Token::FileOrGlob(_, l) |
             Token::Regex(_, l) |
             Token::Integer(_, l) |
             Token::Float(_, l) |
@@ -81,11 +83,12 @@ impl Token<'_> {
             Token::UnaryOperator(s, _) |
             Token::ComparisonOperator(s, _) |
             Token::QuotedString(s, _) |
-            Token::StringOrGlob(s, _) |
+            Token::String(s, _) |
+            Token::File(s, _) |
+            Token::Glob(s, _) |
             Token::Identifier(s, _) |
             Token::Flag(s, _) |
             Token::QuotedFile(s, _) |
-            Token::FileOrGlob(s, _) |
             Token::Regex(s, _) |
             Token::Integer(s, _) |
             Token::Separator(s, _) |
@@ -128,11 +131,12 @@ impl<'a> Into<Spanned<'a>> for Token<'a> {
             Token::LogicalOperator(_, l) |
             Token::UnaryOperator(_, l) |
             Token::QuotedString(_, l) |
-            Token::StringOrGlob(_, l) |
+            Token::String(_, l) |
+            Token::File(_, l) |
+            Token::Glob(_, l) |
             Token::Identifier(_, l) |
             Token::Flag(_, l) |
             Token::QuotedFile(_, l) |
-            Token::FileOrGlob(_, l) |
             Token::Regex(_, l) |
             Token::Integer(_, l) |
             Token::ComparisonOperator(_, l) |

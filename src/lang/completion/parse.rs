@@ -218,7 +218,9 @@ fn fetch_value(node: &Node, scope: &Scope, is_command: bool) -> CrushResult<Opti
     match node {
         Node::Identifier(l) => scope.get(&l.string),
 
-        Node::Symbol(l) =>
+        Node::String(s, true) => Ok(Some(Value::from(s))),
+
+        Node::String(l, false) =>
             if is_command {
                 scope.get(&l.string)
             } else {
@@ -230,8 +232,6 @@ fn fetch_value(node: &Node, scope: &Scope, is_command: bool) -> CrushResult<Opti
                 Some(parent) => parent.field(&l.string),
                 None => Ok(None),
             },
-
-        Node::String(s) => Ok(Some(Value::from(s))),
 
         Node::Integer(s) => Ok(Some(Value::Integer(to_crush_error(
             s.string.replace("_", "").parse::<i128>()
@@ -264,7 +264,7 @@ fn parse_previous_argument(arg: &Node) -> PreviousArgument {
     match arg {
         Node::Assignment(key, _, op, value) => {
             match (key.as_ref(), op.as_str()) {
-                (Node::Symbol(name), "=") => {
+                (Node::String(name, false), "=") => {
                     let inner = parse_previous_argument(value.as_ref());
                     return PreviousArgument {
                         name: Some(name.string.clone()),
@@ -307,7 +307,10 @@ pub fn parse(
                         Ok(ParseResult::PartialLabel(
                             label.prefix(cursor).string)),
 
-                    Node::Symbol(label) =>
+                    Node::String(string, true) =>
+                        Ok(ParseResult::PartialQuotedString(string.prefix(cursor).string)),
+
+                    Node::String(label, false) =>
                         Ok(ParseResult::PartialField(
                             label.prefix(cursor).string)),
 
@@ -320,9 +323,6 @@ pub fn parse(
                         Ok(ParseResult::PartialFile(
                             if *quoted { unescape(&path.string)? } else { path.string.clone() },
                             *quoted)),
-
-                    Node::String(string) =>
-                        Ok(ParseResult::PartialQuotedString(string.prefix(cursor).string)),
 
                     Node::GetItem(_, _) => { panic!("AAA"); }
 
@@ -363,7 +363,7 @@ pub fn parse(
 
             if argument_complete {
                 match arg.deref() {
-                    Node::Symbol(l) => {
+                    Node::String(l, false) => {
                         let substring = &l.string[0..min(l.string.len(), cursor - l.location.start)];
                         Ok(ParseResult::PartialArgument(
                             PartialCommandResult {
@@ -390,7 +390,7 @@ pub fn parse(
                                 }
                             )),
 
-                        Node::Symbol(l) =>
+                        Node::String(l, false) =>
                             Ok(ParseResult::PartialArgument(
                                 PartialCommandResult {
                                     command: c,
@@ -423,7 +423,7 @@ pub fn parse(
                                 }
                             )),
 
-                        Node::String(s) =>
+                        Node::String(s, true) =>
                             Ok(ParseResult::PartialArgument(
                                 PartialCommandResult {
                                     command: c,

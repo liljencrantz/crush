@@ -1,8 +1,9 @@
 use crate::lang::errors::{CrushResult, data_error};
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::fmt::{Display, Formatter};
-use crate::util::directory_lister::{directory_lister, DirectoryLister};
+use crate::util::directory_lister::{Directory, directory_lister, DirectoryLister};
+use crate::util::glob::CompileState::{Regular, WasAny, WasDot, WasSeparator};
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, PartialOrd, Ord)]
 pub struct Glob {
@@ -16,6 +17,7 @@ enum Tile {
     Single,
     Any,
     Recursive,
+    Separator,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -30,37 +32,88 @@ impl Display for Glob {
     }
 }
 
+enum CompileState {
+    WasAny,
+    WasSeparator,
+    WasDot,
+    Regular,
+}
+
 fn compile(s: &str) -> Vec<Tile> {
     let mut res = Vec::new();
-    let mut was_any = false;
+    let mut state = WasSeparator;
     for c in s.chars() {
-        if was_any {
-            match c {
-                '*' => res.push(Tile::Recursive),
-                '?' => {
-                    res.push(Tile::Any);
-                    res.push(Tile::Single);
-                }
-                c => {
-                    res.push(Tile::Any);
-                    res.push(Tile::Char(c));
+        match state {
+            Regular =>
+                match c {
+                    '*' => state = WasAny,
+                    '/' => {
+                        state = WasSeparator;
+                        res.push(Tile::Separator)
+                    }
+                    '?' => res.push(Tile::Single),
+                    c => res.push(Tile::Char(c)),
+                },
+            WasAny => {
+                state = Regular;
+                match c {
+                    '*' => res.push(Tile::Recursive),
+                    '?' => {
+                        res.push(Tile::Any);
+                        res.push(Tile::Single);
+                    }
+                    '/' => {
+                        state = WasSeparator;
+                        res.push(Tile::Any);
+                        res.push(Tile::Separator);
+                    }
+                    c => {
+                        res.push(Tile::Any);
+                        res.push(Tile::Char(c));
+                    }
                 }
             }
-            was_any = false;
-        } else {
-            match c {
-                '*' => was_any = true,
-                '?' => {
-                    res.push(Tile::Single);
+            WasSeparator => {
+                state = Regular;
+                match c {
+                    '.' => state = WasDot,
+                    '*' => state = WasAny,
+                    '/' => {
+                        state = WasSeparator;
+                        res.push(Tile::Separator)
+                    }
+                    '?' => res.push(Tile::Single),
+                    c => res.push(Tile::Char(c)),
                 }
-                c => {
-                    res.push(Tile::Char(c));
+            }
+            WasDot => {
+                state = Regular;
+                match c {
+                    '*' => {
+                        res.push(Tile::Char('.'));
+                        state = WasAny
+                    }
+                    '/' => {
+                        state = WasSeparator;
+                    }
+                    '?' => {
+                        res.push(Tile::Char('.'));
+                        res.push(Tile::Single)
+                    }
+                    c => {
+                        res.push(Tile::Char('.'));
+                        res.push(Tile::Char(c))
+                    }
                 }
             }
         }
     }
-    if was_any {
-        res.push(Tile::Any);
+
+    match state {
+        WasAny => res.push(Tile::Any),
+        WasSeparator => {}
+        Regular => {}
+        WasDot => {}
     }
     res
 }
@@ -82,43 +135,118 @@ impl Glob {
     }
 }
 
+struct GlobState<'s> {
+    pattern: &'s [Tile],
+    directory: PathBuf,
+}
+
+enum GlobMatchResult<'s> {
+    FullMatch,
+    PartialMatch { remaining_pattern: &'s [Tile] },
+}
+
+fn glob_file_match<'a>(pattern: &'a [Tile], path: &[char], entry: &Directory, out: &mut HashSet<PathBuf>, queue: &mut VecDeque<GlobState<'a>>) -> CrushResult<()> {
+    match (pattern.first(), path.first()) {
+        (None, None) => {
+            out.insert(entry.full_path.clone());
+        }
+        (Some(Tile::Char(_)), None) | (Some(Tile::Single), None) => {}
+        (Some(Tile::Any), None) => {
+            if pattern.len() == 1 {
+                out.insert(entry.full_path.clone());
+            }
+            if entry.is_directory {
+                if pattern[1..] == [Tile::Separator] {
+                    out.insert(entry.full_path.clone());
+                }
+
+                if let Some(Tile::Separator) = pattern.get(1) {
+                    queue.push_back(GlobState {
+                        pattern: &pattern[2..],
+                        directory: entry.full_path.clone(),
+                    });
+                }
+            }
+        }
+        (Some(Tile::Recursive), None) => {
+            if pattern.len() == 1 {
+                out.insert(entry.full_path.clone());
+            }
+            if entry.is_directory {
+                if pattern[1..] == [Tile::Separator] {
+                    out.insert(entry.full_path.clone());
+                }
+
+                if let Some(Tile::Separator) = pattern.get(1) {
+                    queue.push_back(GlobState {
+                        pattern: &pattern[2..],
+                        directory: entry.full_path.clone(),
+                    });
+                }
+
+                queue.push_back(GlobState {
+                    pattern,
+                    directory: entry.full_path.clone(),
+                });
+            }
+        }
+        (Some(Tile::Separator), None) => {
+            if pattern.len() == 1 {
+                if entry.is_directory {
+                    out.insert(entry.full_path.clone());
+                }
+            } else {
+                if entry.is_directory {
+                    queue.push_back(GlobState {
+                        pattern: &pattern[1..],
+                        directory: entry.full_path.clone(),
+                    });
+                }
+            }
+        }
+
+        (None, Some(ch)) => {}
+        (Some(Tile::Char(ch1)), Some(ch2)) if ch1 == ch2 => {
+            return glob_file_match(&pattern[1..], &path[1..], entry, out, queue)
+        }
+        (Some(Tile::Char(_)), Some(_)) => {}
+        (Some(Tile::Single), Some(_)) => {
+            return glob_file_match(&pattern[1..], &path[1..], entry, out, queue)
+        }
+        (Some(Tile::Any), Some(_)) | (Some(Tile::Recursive), Some(_)) => {
+            glob_file_match(&pattern[1..], path, entry, out, queue)?;
+            glob_file_match(pattern, &path[1..], entry, out, queue)?;
+        }
+        (Some(Tile::Separator), Some(_)) => {}
+    }
+    Ok(())
+}
+
 fn glob_files(pattern: &[Tile], cwd: &Path, out: &mut Vec<PathBuf>, lister: &impl DirectoryLister) -> CrushResult<()> {
     if pattern.is_empty() {
         return Ok(());
     }
 
     let mut queue = VecDeque::new();
+    let mut dedup = HashSet::new();
 
     queue.push_back(if matches!(pattern[0], Tile::Char('/')) {
-        ("/".to_string(), PathBuf::from("/"))
+        GlobState { pattern: &pattern[1..], directory: PathBuf::from("/") }
     } else {
-        ("".to_string(), cwd.to_path_buf())
+        GlobState { pattern, directory: cwd.to_path_buf() }
     });
 
-    while !queue.is_empty() {
-        let (s, next_dir) = queue.pop_front().unwrap();
-        for entry in lister.list(&next_dir)? {
-            match entry.name.to_str() {
-                Some(name) => {
-                    let mut ss = format!("{}{}", s, name);
-                    let res = glob_match(pattern, &ss);
-                    if res.matches {
-                        out.push(PathBuf::from(&ss))
-                    }
-                    if res.prefix && entry.is_directory {
-                        if !res.matches {
-                            let with_trailing_slash = format!("{}/", ss);
-                            if glob_match(pattern, &with_trailing_slash).matches {
-                                out.push(PathBuf::from(&with_trailing_slash))
-                            }
-                        }
-                        ss.push('/');
-                        queue.push_back((ss, entry.full_path));
-                    }
-                }
-                None => return data_error("Invalid file name"),
+    while let Some(state) = queue.pop_front() {
+        for entry in lister.list(&state.directory)? {
+            if let Some(path) = entry.name.to_str() {
+                let path_vec: Vec<char> = path.chars().collect();
+                glob_file_match(state.pattern, &path_vec, &entry, &mut dedup, &mut queue);
             }
         }
+    }
+
+    for e in dedup.drain() {
+        out.push(e);
     }
     Ok(())
 }
@@ -183,18 +311,6 @@ fn glob_match(pattern: &[Tile], value: &str) -> GlobResult {
             },
         },
 
-        Some(Tile::Char('/')) => match value.chars().next() {
-            Some('/') => glob_match(&pattern[1..], &value[1..]),
-            Some(_) => GlobResult {
-                matches: false,
-                prefix: false,
-            },
-            None => GlobResult {
-                matches: false,
-                prefix: true,
-            },
-        },
-
         Some(Tile::Char(g)) => match value.chars().next() {
             Some(v) => {
                 if *g == v {
@@ -212,95 +328,108 @@ fn glob_match(pattern: &[Tile], value: &str) -> GlobResult {
                 prefix: false,
             },
         },
+
+        Some(Tile::Separator) => match value.chars().next() {
+            Some('/') => glob_match(&pattern[1..], &value[1..]),
+            Some(_) => GlobResult {
+                matches: false,
+                prefix: false,
+            },
+            None => GlobResult {
+                matches: false,
+                prefix: true,
+            },
+        },
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use itertools::Itertools;
     use super::*;
-    use crate::util::directory_lister::FakeDirectoryLister;
+    use crate::util::directory_lister::tests::FakeDirectoryLister;
 
     #[test]
     fn test_glob_match() {
         assert_eq!(
-            glob_match(&compile("%%"), "a"),
+            glob_match(&compile("**"), "a"),
             GlobResult {
                 matches: true,
                 prefix: true,
             }
         );
         assert_eq!(
-            glob_match(&compile("%%"), "a/b/c/d"),
+            glob_match(&compile("**"), "a/b/c/d"),
             GlobResult {
                 matches: true,
                 prefix: true,
             }
         );
         assert_eq!(
-            glob_match(&compile("%%"), "a/b/c/d/"),
+            glob_match(&compile("**"), "a/b/c/d/"),
             GlobResult {
                 matches: true,
                 prefix: true,
             }
         );
         assert_eq!(
-            glob_match(&compile("%%/"), "a/"),
+            glob_match(&compile("**/"), "a/"),
             GlobResult {
                 matches: true,
                 prefix: true,
             }
         );
         assert_eq!(
-            glob_match(&compile("%%/"), "a/b/c/d/"),
+            glob_match(&compile("**/"), "a/b/c/d/"),
             GlobResult {
                 matches: true,
                 prefix: true,
             }
         );
         assert_eq!(
-            glob_match(&compile("%%/"), "a"),
+            glob_match(&compile("**/"), "a"),
             GlobResult {
                 matches: false,
                 prefix: true,
             }
         );
         assert_eq!(
-            glob_match(&compile("%%/"), "a/b/c/d"),
+            glob_match(&compile("**/"), "a/b/c/d"),
             GlobResult {
                 matches: false,
                 prefix: true,
             }
         );
         assert_eq!(
-            glob_match(&compile("%%a"), "aaa"),
+            glob_match(&compile("**a"), "aaa"),
             GlobResult {
                 matches: true,
                 prefix: true,
             }
         );
         assert_eq!(
-            glob_match(&compile("%%a/"), "aaa/"),
+            glob_match(&compile("**a/"), "aaa/"),
             GlobResult {
                 matches: true,
                 prefix: true,
             }
         );
         assert_eq!(
-            glob_match(&compile("%%a"), "aaa/"),
+            glob_match(&compile("**a"), "aaa/"),
             GlobResult {
                 matches: false,
                 prefix: true,
             }
         );
         assert_eq!(
-            glob_match(&compile("aaa/%"), "aaa"),
+            glob_match(&compile("aaa/*"), "aaa"),
             GlobResult {
                 matches: false,
                 prefix: true,
             }
         );
         assert_eq!(
-            glob_match(&compile("a/%/c"), "a/bbbb"),
+            glob_match(&compile("a/*/c"), "a/bbbb"),
             GlobResult {
                 matches: false,
                 prefix: true,
@@ -342,49 +471,49 @@ mod tests {
             }
         );
         assert_eq!(
-            glob_match(&compile("%%a"), "bbb"),
+            glob_match(&compile("**a"), "bbb"),
             GlobResult {
                 matches: false,
                 prefix: true,
             }
         );
         assert_eq!(
-            glob_match(&compile("%"), "a/b"),
+            glob_match(&compile("*"), "a/b"),
             GlobResult {
                 matches: false,
                 prefix: false,
             }
         );
         assert_eq!(
-            glob_match(&compile("%%c"), "a/b"),
+            glob_match(&compile("**c"), "a/b"),
             GlobResult {
                 matches: false,
                 prefix: true,
             }
         );
         assert_eq!(
-            glob_match(&compile("a/%/c"), "a/b/c"),
+            glob_match(&compile("a/*/c"), "a/b/c"),
             GlobResult {
                 matches: true,
                 prefix: false,
             }
         );
         assert_eq!(
-            glob_match(&compile("a/b%/c"), "a/b/c"),
+            glob_match(&compile("a/b*/c"), "a/b/c"),
             GlobResult {
                 matches: true,
                 prefix: false,
             }
         );
         assert_eq!(
-            glob_match(&compile("a/%b/c"), "a/d/c"),
+            glob_match(&compile("a/*b/c"), "a/d/c"),
             GlobResult {
                 matches: false,
                 prefix: false,
             }
         );
         assert_eq!(
-            glob_match(&compile("a/%/c/"), "a/b/c/"),
+            glob_match(&compile("a/*/c/"), "a/b/c/"),
             GlobResult {
                 matches: true,
                 prefix: false,
@@ -394,60 +523,89 @@ mod tests {
 
     fn lister() -> FakeDirectoryLister {
         let mut res = FakeDirectoryLister::new("/home/rabbit");
-        res.add("example_data/tree", &vec!["a"])
-            .add("example_data/tree/sub", &vec!["b", "c"]);
+        res.add("tree", &vec!["a"])
+            .add("tree/sub", &vec!["b", "c"]);
         res
     }
 
-    #[test]
-    fn test_glob_files() {
+    fn check_file_glob_count(glob: &str, count: usize) {
         let mut out = Vec::new();
-        let _ = glob_files(
-            &compile("%%"),
-            &PathBuf::from("example_data/tree"),
+        let ggg = glob_files(
+            &compile(glob),
+            &PathBuf::from(""),
             &mut out,
             &lister(),
         );
-        assert_eq!(out.len(), 4);
-        out.clear();
-        let _ = glob_files(
-            &compile("%%/"),
-            &PathBuf::from("example_data/tree"),
+        assert_eq!(out.len(), count);
+    }
+
+    fn check_file_glob(glob: &str, matches: &[&str]) {
+        let mut out = Vec::new();
+        let ggg = glob_files(
+            &compile(glob),
+            &PathBuf::from(""),
             &mut out,
             &lister(),
         );
-        assert_eq!(out.len(), 1);
-        out.clear();
-        let _ = glob_files(
-            &compile("./tree/s%"),
-            &PathBuf::from("example_data"),
-            &mut out,
-            &lister(),
-        );
-        assert_eq!(out.len(), 1);
-        out.clear();
-        let _ = glob_files(
-            &compile("%%/%"),
-            &PathBuf::from("example_data/tree"),
-            &mut out,
-            &lister(),
-        );
-        assert_eq!(out.len(), 3);
-        out.clear();
-        let _ = glob_files(
-            &compile("?%%/?"),
-            &PathBuf::from("example_data/tree"),
-            &mut out,
-            &lister(),
-        );
-        assert_eq!(out.len(), 2);
-        out.clear();
-        let _ = glob_files(
-            &compile("%%b"),
-            &PathBuf::from("example_data/tree"),
-            &mut out,
-            &lister(),
-        );
-        assert_eq!(out.len(), 2);
+        let set: HashSet<String> = out.drain(..).map(|e|{e.to_str().unwrap().to_string()}).collect();
+        assert_eq!(set.len(), matches.len());
+        for el in matches {
+            assert!(
+                set.contains(*el),
+                "The element '{}' wasn't present in glob result. The following items were found: {}",
+                el,
+                set.iter().map({|e| format!("'{}'", e)}).join(", "));
+        }
+    }
+
+    #[test]
+    fn test_glob_files_literal() {
+        check_file_glob("tree", &["tree"]);
+    }
+    #[test]
+    fn test_glob_files_single() {
+        check_file_glob("tre?", &["tree"]);
+    }
+    #[test]
+    fn test_glob_files_any() {
+        check_file_glob("*", &["tree"]);
+    }
+    #[test]
+    fn test_glob_files_recursive() {
+        check_file_glob_count("**", 5);
+    }
+    #[test]
+    fn test_glob_files_recursive_directories() {
+        check_file_glob("**/", &["tree", "tree/sub"]);
+    }
+
+    #[test]
+    fn test_glob_files_with_separator() {
+        check_file_glob("tree/s*", &["tree/sub"]);
+    }
+
+    #[test]
+    fn test_glob_files_leading_dot() {
+        check_file_glob("./tree/s*", &["tree/sub"]);
+    }
+
+    #[test]
+    fn test_glob_files_recursive_any() {
+        check_file_glob_count("**/*", 4);
+    }
+
+    #[test]
+    fn test_glob_files_recursive_any_directory() {
+        check_file_glob("**/*/", &["tree/sub"]);
+    }
+
+    #[test]
+    fn test_glob_files_single_recursive_any() {
+        check_file_glob_count("?**/*", 4);
+    }
+
+    #[test]
+    fn test_glob_files_trailing_letter() {
+        check_file_glob("**b", &["tree/sub/b", "tree/sub"]);
     }
 }

@@ -95,7 +95,7 @@ ItemExpr: Box<Node> = {
     <l: Identifier> => Node::identifier(l),
     <l: Regex> => Node::regex(l),
     <l:QuotedFile> => Node::file(l, true),
-    <s:QuotedString> => Node::string(s),
+    <s:QuotedString> => Node::quoted_string(s),
     <i:Integer> => Node::integer(i),
     <f:Float> => Node::float(f),
     <i: ItemExpr> GetItemStart <e: Assignment> GetItemEnd => Box::from(Node::GetItem(i, e)),
@@ -194,12 +194,13 @@ Default: Option<Node> = {
 }
 
 Item: Box<Node> = {
-    <l: StringOrGlob> => Node::parse_symbol_or_glob(l),
+    <l: String> => Node::unquoted_string(l),
+    <l: File> => Node::file(l, false),
+    <l: Glob> => Node::glob(l),
     <l: Identifier> => Node::identifier(l),
     <l: Regex> => Node::regex(l),
-    <l: FileOrGlob> => Node::parse_file_or_glob(l),
     <l:QuotedFile> => Node::file(l, true),
-    <l:QuotedString> => Node::string(l),
+    <l:QuotedString> => Node::quoted_string(l),
     <l:Integer> => Node::integer(l),
     <l:Float> => Node::float(l),
 
@@ -207,19 +208,19 @@ Item: Box<Node> = {
     let ts = TrackedString::from(l);
         Box::from(
             if ts.string.starts_with("--") {
-                Node::Assignment(Box::from(Node::Symbol(ts.slice_to_end(2))),
+                Node::Assignment(Node::unquoted_string(ts.slice_to_end(2)),
                 SwitchStyle::Double,
                 "=".to_string(),
                 Box::from(Node::Identifier(TrackedString::new("true", ts.location()))))
             } else {
-            Node::Assignment(Box::from(Node::Symbol(ts.slice_to_end(1))),
+            Node::Assignment(Node::unquoted_string(ts.slice_to_end(1)),
             SwitchStyle::Single,
             "=".to_string(),
             Box::from(Node::Identifier(TrackedString::new("true", ts.location()))))
 })
 },
     <i: Item> GetItemStart <e: Assignment> GetItemEnd => Box::from(Node::GetItem(i, e)),
-    <i: Item> MemberOperator <start: @L> <l: StringOrGlob> <end: @R> => Box::from(Node::GetAttr(i, TrackedString::from(l))),
+    <i: Item> MemberOperator <start: @L> <l: String> <end: @R> => Box::from(Node::GetAttr(i, TrackedString::from(l))),
     JobStart Separators? <s: Signature> <l: JobListWithoutSeparator> JobEnd => Box::from(Node::Closure(s, l)),
     SubStart <j:Job> SubEnd => Box::from(Node::Substitution(j)),
     <l: @L>ExprModeStart <e:Expr> SubEnd <r: @R> => Box::from(Node::Substitution(e.expression_to_job())),
@@ -246,11 +247,12 @@ extern {
         Plus=> Token::Plus(<Location>),
         Minus=> Token::Minus(<Location>),
         QuotedString=> Token::QuotedString(<&'input str>, <Location>),
-        StringOrGlob=> Token::StringOrGlob(<&'input str>, <Location>),
+        String=> Token::String(<&'input str>, <Location>),
+        File=> Token::File(<&'input str>, <Location>),
+        Glob=> Token::Glob(<&'input str>, <Location>),
         Identifier=> Token::Identifier(<&'input str>, <Location>),
         Flag=> Token::Flag(<&'input str>, <Location>),
         QuotedFile=> Token::QuotedFile(<&'input str>, <Location>),
-        FileOrGlob=> Token::FileOrGlob(<&'input str>, <Location>),
         Regex=> Token::Regex(<&'input str>, <Location>),
         Separator=> Token::Separator(<&'input str>, <Location>),
         Integer=> Token::Integer(<&'input str>, <Location>),

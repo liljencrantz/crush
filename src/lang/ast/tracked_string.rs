@@ -88,11 +88,12 @@ impl From<Token<'_>> for TrackedString {
             Token::UnaryOperator(_, l) |
             Token::ComparisonOperator(_, l) |
             Token::QuotedString(_, l) |
-            Token::StringOrGlob(_, l) |
+            Token::String(_, l) |
+            Token::File(_, l) |
+            Token::Glob(_, l) |
             Token::Identifier(_, l) |
             Token::Flag(_, l) |
             Token::QuotedFile(_, l) |
-            Token::FileOrGlob(_, l) |
             Token::Regex(_, l) |
             Token::Integer(_, l) |
             Token::Float(_, l) |

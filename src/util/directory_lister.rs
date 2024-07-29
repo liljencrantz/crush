@@ -73,117 +73,117 @@ impl Iterator for RealIter {
     }
 }
 
-#[cfg(test)]
-pub struct FakeDirectoryLister {
-    cwd: PathBuf,
-    map: OrderedMap<PathBuf, Vec<FakeListerEntry>>,
-}
 
 #[cfg(test)]
-impl FakeDirectoryLister {
-    pub fn new(cwd: impl Into<PathBuf>) -> FakeDirectoryLister {
-        FakeDirectoryLister {
-            map: OrderedMap::new(),
-            cwd: cwd.into(),
-        }
+pub mod tests {
+    use std::collections::VecDeque;
+    use ordered_map::{Entry, OrderedMap};
+    use crate::lang::errors::mandate;
+    use super::*;
+
+    pub struct FakeDirectoryLister {
+        cwd: PathBuf,
+        map: OrderedMap<PathBuf, Vec<FakeListerEntry>>,
     }
 
-    pub fn add(&mut self, path: impl Into<PathBuf>, content: &[&str]) -> &mut FakeDirectoryLister {
-        let g = path.into();
-        let path = if g.is_relative() {
-            self.cwd.join(g)
-        } else {
-            g
-        };
-
-        let mut content = content.iter()
-            .map(|n| FakeListerEntry {
-                name: PathBuf::from(n),
-                is_directory: false,
-            })
-            .collect::<Vec<_>>();
-
-        match self.map.entry(path.clone()) {
-            Entry::Occupied(mut e) => {
-                content.append(&mut e.value().clone());
-                e.insert(content);
+    impl FakeDirectoryLister {
+        pub fn new(cwd: impl Into<PathBuf>) -> FakeDirectoryLister {
+            FakeDirectoryLister {
+                map: OrderedMap::new(),
+                cwd: cwd.into(),
             }
-            Entry::Vacant(e) => { e.insert(content.to_vec()) }
         }
 
-        let mut parent = PathBuf::from(path);
-        while let Some(p) = parent.parent() {
-            let mut v = vec![
-                FakeListerEntry {
-                    name: PathBuf::from(parent.components().last().unwrap().as_os_str()),
-                    is_directory: true,
-                }];
+        pub fn add(&mut self, path: impl Into<PathBuf>, content: &[&str]) -> &mut FakeDirectoryLister {
+            let g = path.into();
+            let path = if g.is_relative() {
+                self.cwd.join(g)
+            } else {
+                g
+            };
 
-            match self.map.entry(p.to_path_buf()) {
+            let mut content = content.iter()
+                .map(|n| FakeListerEntry {
+                    name: PathBuf::from(n),
+                    is_directory: false,
+                })
+                .collect::<Vec<_>>();
+
+            match self.map.entry(path.clone()) {
                 Entry::Occupied(mut e) => {
-                    if !e.value().contains(&v[0]) {
-                        let mut tmp = e.value().clone();
-                        tmp.append(&mut v);
-                        e.insert(tmp);
+                    content.append(&mut e.value().clone());
+                    e.insert(content);
+                }
+                Entry::Vacant(e) => { e.insert(content.to_vec()) }
+            }
+
+            let mut parent = PathBuf::from(path);
+            while let Some(p) = parent.parent() {
+                let mut v = vec![
+                    FakeListerEntry {
+                        name: PathBuf::from(parent.components().last().unwrap().as_os_str()),
+                        is_directory: true,
+                    }];
+
+                match self.map.entry(p.to_path_buf()) {
+                    Entry::Occupied(mut e) => {
+                        if !e.value().contains(&v[0]) {
+                            let mut tmp = e.value().clone();
+                            tmp.append(&mut v);
+                            e.insert(tmp);
+                        }
+                    }
+                    Entry::Vacant(e) => {
+                        e.insert(v);
                     }
                 }
-                Entry::Vacant(e) => {
-                    e.insert(v);
-                }
-            }
 
-            parent = p.to_path_buf();
+                parent = p.to_path_buf();
+            }
+            self
         }
-        self
     }
-}
 
-#[cfg(test)]
-impl DirectoryLister for FakeDirectoryLister {
-    type DirectoryIter = FakeIter;
+    impl DirectoryLister for FakeDirectoryLister {
+        type DirectoryIter = FakeIter;
 
-    fn list(&self, path: impl Into<PathBuf>) -> CrushResult<Self::DirectoryIter> {
-        let g = path.into();
-        let path = if g.is_relative() {
-            self.cwd.join(&g)
-        } else {
-            g.clone()
-        };
+        fn list(&self, path: impl Into<PathBuf>) -> CrushResult<Self::DirectoryIter> {
+            let g = path.into();
+            let path = if g.is_relative() {
+                self.cwd.join(&g)
+            } else {
+                g.clone()
+            };
 
-        Ok(
-            FakeIter {
-                vec: VecDeque::from(
-                    mandate(
-                        self.map.get(&path)
-                            .map(|v|
-                            v.iter().map(|f| Directory {
-                                name: f.name.clone(),
-                                full_path: g.join(&f.name),
-                                is_directory: f.is_directory
-                            }).collect::<Vec<_>>()),
-                        "Unknown directory")?.clone()),
-            }
-        )
+            Ok(
+                FakeIter {
+                    vec: VecDeque::from(
+                        mandate(
+                            self.map.get(&path)
+                                .map(|v|
+                                v.iter().map(|f| Directory {
+                                    name: f.name.clone(),
+                                    full_path: g.join(&f.name),
+                                    is_directory: f.is_directory
+                                }).collect::<Vec<_>>()),
+                            format!("Unknown directory {:?}", path))?.clone()),
+                }
+            )
+        }
     }
-}
 
-#[cfg(test)]
-pub struct FakeIter {
-    vec: VecDeque<Directory>,
-}
-
-#[cfg(test)]
-impl Iterator for FakeIter {
-    type Item = Directory;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.vec.pop_front()
+    pub struct FakeIter {
+        vec: VecDeque<Directory>,
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+    impl Iterator for FakeIter {
+        type Item = Directory;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            self.vec.pop_front()
+        }
+    }
+
 
     fn as_strs(it: FakeIter) -> Vec<String> {
         let mut res = it.map(|d| d.name.to_str().unwrap().to_string()).collect::<Vec<_>>();

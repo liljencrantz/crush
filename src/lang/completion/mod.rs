@@ -355,7 +355,7 @@ pub fn complete(
 mod tests {
     use super::*;
     use crate::lang::value::Value;
-    use crate::util::directory_lister::FakeDirectoryLister;
+    use crate::util::directory_lister::tests::FakeDirectoryLister;
     use signature::signature;
     use crate::lang::state::contexts::CommandContext;
 

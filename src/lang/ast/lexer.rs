@@ -203,12 +203,12 @@ impl<'input> Lexer<'input> {
                     return Some(Token::Flag(&self.full_str[i..end_idx + 1], Location::new(i, end_idx + 1)).into());
                 }
 
-                Some((i, ch)) if string_or_glob_first_char(ch) => {
+                Some((i, ch)) if string_or_file_or_glob_first_char(ch) => {
                     let mut end_idx = i;
                     loop {
                         let cc2 = self.chars.peek();
                         match cc2 {
-                            Some((_, ch2)) if string_or_glob_char(*ch2) => {
+                            Some((_, ch2)) if string_or_file_or_glob_char(*ch2) => {
                                 end_idx = self.chars.next().unwrap().0;
                             }
                             _ => {
@@ -222,26 +222,17 @@ impl<'input> Lexer<'input> {
                     return match s {
                         "and" => Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into()),
                         "or" => Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into()),
-                        _ => Some(Token::StringOrGlob(s, Location::new(i, end_idx + 1)).into()),
-                    };
-                }
-
-                Some((i, ch)) if file_or_glob_first_char(ch) => {
-                    let mut end_idx = i;
-                    loop {
-                        let cc2 = self.chars.peek();
-                        match cc2 {
-                            Some((_, ch2)) if file_or_glob_char(*ch2) => {
-                                end_idx = self.chars.next().unwrap().0;
+                        _ => {
+                            if s.contains('*') || s.contains('?') {
+                                Some(Token::Glob(s, Location::new(i, end_idx + 1)).into())
                             }
-                            _ => {
-                                break
+                            else if s.contains('/') || s.contains('.') || s.starts_with('~') {
+                                Some(Token::File(s, Location::new(i, end_idx + 1)).into())
+                            } else {
+                                Some(Token::String(s, Location::new(i, end_idx + 1)).into())
                             }
                         }
-                    }
-
-                    let s = &self.full_str[i..end_idx + 1];
-                    return Some(Token::FileOrGlob(s, Location::new(i, end_idx + 1)).into());
+                    };
                 }
 
                 Some((i, '"')) => {
@@ -529,12 +520,12 @@ impl<'input> Lexer<'input> {
     }
 }
 
-fn string_or_glob_first_char(ch: char) -> bool {
-    (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '*' || ch == '?' || ch == '_' || ch == '-'
+fn string_or_file_or_glob_first_char(ch: char) -> bool {
+    (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '*' || ch == '?' || ch == '_' || ch == '-' || ch == '.' || ch == '~' || ch == '/'
 }
 
-fn string_or_glob_char(ch: char) -> bool {
-    (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '*' || ch == '?' || ch == '.' || ch == '_' || ch == '-'
+fn string_or_file_or_glob_char(ch: char) -> bool {
+    string_or_file_or_glob_first_char(ch) || (ch >= '0' && ch <= '9')
 }
 
 fn identifier_first_char(ch: char) -> bool {
@@ -551,14 +542,6 @@ fn number_char(ch: char) -> bool {
 
 fn number_or_underscore_char(ch: char) -> bool {
     (ch >= '0' && ch <= '9') || ch == '_'
-}
-
-fn file_or_glob_first_char(ch: char) -> bool {
-    ch == '.' || ch == '~' || ch == '/'
-}
-
-fn file_or_glob_char(ch: char) -> bool {
-    string_or_glob_char(ch) || ch == '/'
 }
 
 fn whitespace_char(ch: char) -> bool {
