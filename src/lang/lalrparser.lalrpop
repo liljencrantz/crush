@@ -194,16 +194,15 @@ Default: Option<Node> = {
 }
 
 Item: Box<Node> = {
-    <l: String> => Node::unquoted_string(l),
-    <l: File> => Node::file(l, false),
-    <l: Glob> => Node::glob(l),
-    <l: Identifier> => Node::identifier(l),
-    <l: Regex> => Node::regex(l),
+    <l:String> => Node::unquoted_string(l),
+    <l:File> => Node::file(l, false),
+    <l:Glob> => Node::glob(l),
+    <l:Identifier> => Node::identifier(l),
+    <l:Regex> => Node::regex(l),
     <l:QuotedFile> => Node::file(l, true),
     <l:QuotedString> => Node::quoted_string(l),
     <l:Integer> => Node::integer(l),
     <l:Float> => Node::float(l),
-
     <l:Flag> => {
     let ts = TrackedString::from(l);
         Box::from(
@@ -217,8 +216,8 @@ Item: Box<Node> = {
             SwitchStyle::Single,
             "=".to_string(),
             Box::from(Node::Identifier(TrackedString::new("true", ts.location()))))
-})
-},
+        })
+    },
     <i: Item> GetItemStart <e: Assignment> GetItemEnd => Box::from(Node::GetItem(i, e)),
     <i: Item> MemberOperator <start: @L> <l: String> <end: @R> => Box::from(Node::GetAttr(i, TrackedString::from(l))),
     JobStart Separators? <s: Signature> <l: JobListWithoutSeparator> JobEnd => Box::from(Node::Closure(s, l)),
