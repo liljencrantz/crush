@@ -5,7 +5,7 @@ use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
 use chrono::{DateTime, Local};
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{error, to_crush_error, CrushResult};
+use crate::lang::errors::{error, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::signature::files::Files;
 use crate::lang::pipe::OutputStream;
@@ -75,12 +75,12 @@ fn insert_entity(
             Column::Size => Value::Integer(i128::from(meta.len())),
             Column::Blocks => Value::Integer(i128::from(meta.blocks())),
             Column::Modified => {
-                let modified_system = to_crush_error(meta.modified())?;
+                let modified_system = meta.modified()?;
                 let modified_datetime: DateTime<Local> = DateTime::from(modified_system);
                 Value::Time(modified_datetime)
             }
             Column::Accessed => {
-                let accessed_system = to_crush_error(meta.accessed())?;
+                let accessed_system = meta.accessed()?;
                 let accessed_datetime: DateTime<Local> = DateTime::from(accessed_system);
                 Value::Time(accessed_datetime)
             }
@@ -117,10 +117,10 @@ fn run_for_single_directory_or_file(
 ) -> CrushResult<()> {
     if path.is_dir() {
         let dirs = fs::read_dir(path);
-        for maybe_entry in to_crush_error(dirs)? {
-            let entry = to_crush_error(maybe_entry)?;
+        for maybe_entry in dirs? {
+            let entry = maybe_entry?;
             insert_entity(
-                &to_crush_error(entry.metadata())?,
+                &entry.metadata()?,
                 entry.path(),
                 users,
                 groups,
@@ -137,7 +137,7 @@ fn run_for_single_directory_or_file(
     } else {
         match path.file_name() {
             Some(_) => {
-                insert_entity(&to_crush_error(path.metadata())?, path, users, groups, cols, output)?;
+                insert_entity(&path.metadata()?, path, users, groups, cols, output)?;
             }
             None => {
                 return error("Invalid file name");

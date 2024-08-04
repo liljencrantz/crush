@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error_legacy, CrushResult, to_crush_error};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::signature::files::Files;
 use crate::lang::state::scope::ScopeLoader;
 use crate::lang::value::Value;
@@ -38,7 +38,7 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::BinaryInputStream(mut input) => {
             let mut out = cfg.file.writer(context.output)?;
-            to_crush_error(std::io::copy(input.as_mut(), out.as_mut()))?;
+            std::io::copy(input.as_mut(), out.as_mut())?;
             Ok(())
         }
         _ => argument_error_legacy("Expected a binary stream"),

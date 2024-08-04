@@ -3,7 +3,7 @@ use crate::lang::{data::table::Row, value::Value, value::ValueType};
 use std::io::{BufReader, Write};
 
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{error, mandate, to_crush_error, CrushResult};
+use crate::lang::errors::{error, mandate, CrushResult};
 use crate::lang::signature::files::Files;
 use crate::lang::state::scope::ScopeLoader;
 use crate::lang::data::table::ColumnType;
@@ -89,7 +89,7 @@ fn to_yaml(value: Value) -> CrushResult<serde_yaml::Value> {
 
         Value::String(s) => Ok(serde_yaml::Value::from(s.to_string())),
 
-        Value::Integer(i) => Ok(serde_yaml::Value::from(to_crush_error(i64::try_from(i))?)),
+        Value::Integer(i) => Ok(serde_yaml::Value::from(i64::try_from(i)?)),
 
         Value::List(l) => Ok(serde_yaml::Value::Sequence(
             l.iter()
@@ -147,7 +147,7 @@ struct FromSignature {
 pub fn from(context: CommandContext) -> CrushResult<()> {
     let cfg: FromSignature = FromSignature::parse(context.arguments, &context.global_state.printer())?;
     let reader = BufReader::new(cfg.files.reader(context.input)?);
-    let serde_value = to_crush_error(serde_yaml::from_reader(reader))?;
+    let serde_value = serde_yaml::from_reader(reader)?;
     let crush_value = from_yaml(&serde_value)?;
     context.output.send(crush_value)
 }
@@ -168,7 +168,7 @@ fn to(context: CommandContext) -> CrushResult<()> {
     let mut writer = cfg.file.writer(context.output)?;
     let value = context.input.recv()?;
     let yaml_value = to_yaml(value)?;
-    to_crush_error(writer.write(to_crush_error(serde_yaml::to_string(&yaml_value))?.as_bytes()))?;
+    writer.write(serde_yaml::to_string(&yaml_value)?.as_bytes())?;
     Ok(())
 }
 

@@ -4,7 +4,7 @@ use crate::lang::{data::table::Row, value::Value, value::ValueType};
 use std::io::{BufReader, Write};
 
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{error, mandate, to_crush_error, CrushResult};
+use crate::lang::errors::{error, mandate, CrushResult};
 use crate::lang::signature::files::Files;
 use crate::lang::state::scope::ScopeLoader;
 use crate::lang::data::table::ColumnType;
@@ -90,7 +90,7 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
 
         Value::String(s) => Ok(serde_json::Value::from(s.to_string())),
 
-        Value::Integer(i) => Ok(serde_json::Value::from(to_crush_error(i64::try_from(i))?)),
+        Value::Integer(i) => Ok(serde_json::Value::from(i64::try_from(i)?)),
 
         Value::List(l) => Ok(serde_json::Value::Array(
             l.iter()
@@ -134,7 +134,7 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
 }
 
 pub fn json_to_value(s: &str) -> CrushResult<Value> {
-    let serde_value = to_crush_error(serde_json::from_str(s))?;
+    let serde_value = serde_json::from_str(s)?;
     from_json(&serde_value)
 }
 
@@ -157,7 +157,7 @@ struct FromSignature {
 pub fn from(context: CommandContext) -> CrushResult<()> {
     let cfg: FromSignature = FromSignature::parse(context.arguments, &context.global_state.printer())?;
     let reader = BufReader::new(cfg.files.reader(context.input)?);
-    let serde_value = to_crush_error(serde_json::from_reader(reader))?;
+    let serde_value = serde_json::from_reader(reader)?;
     let crush_value = from_json(&serde_value)?;
     context.output.send(crush_value)
 }
@@ -181,12 +181,12 @@ fn to(context: CommandContext) -> CrushResult<()> {
     let mut writer = cfg.file.writer(context.output)?;
     let value = context.input.recv()?;
     let json_value = to_json(value)?;
-    to_crush_error(writer.write(
+    writer.write(
         if cfg.compact {
             json_value.to_string()
         } else {
-            to_crush_error(serde_json::to_string_pretty(&json_value))?
-        }.as_bytes()))?;
+            serde_json::to_string_pretty(&json_value)?
+        }.as_bytes())?;
     Ok(())
 }
 

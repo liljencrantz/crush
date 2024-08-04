@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{to_crush_error, CrushResult};
+use crate::lang::errors::{CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::{lang::value::Value, lang::value::ValueType};
@@ -29,7 +29,7 @@ struct Name {}
 fn name(context: CommandContext) -> CrushResult<()> {
     context
         .output
-        .send(Value::from(to_crush_error(sys_info::hostname())?))
+        .send(Value::from(sys_info::hostname()?))
 }
 
 lazy_static! {
@@ -88,8 +88,8 @@ fn time_to_duration(tm: Option<battery::units::Time>) -> Duration {
 fn battery(context: CommandContext) -> CrushResult<()> {
     let manager = battery::Manager::new()?;
     let output = context.output.initialize(&BATTERY_OUTPUT_TYPE)?;
-    for battery in to_crush_error(manager.batteries())? {
-        let battery = to_crush_error(battery)?;
+    for battery in manager.batteries()? {
+        let battery = battery?;
         output.send(Row::new(vec![
             Value::from(battery.vendor().unwrap_or("").to_string()),
             Value::from(battery.model().unwrap_or("").to_string()),
@@ -115,7 +115,7 @@ fn battery(context: CommandContext) -> CrushResult<()> {
 struct Memory {}
 
 fn memory(context: CommandContext) -> CrushResult<()> {
-    let mem = to_crush_error(sys_info::mem_info())?;
+    let mem = sys_info::mem_info()?;
     context.output.send(Value::Struct(Struct::new(
         vec![
             ("total", Value::Integer(mem.total as i128)),
@@ -149,7 +149,7 @@ mod os {
     fn name(context: CommandContext) -> CrushResult<()> {
         context
             .output
-            .send(Value::from(to_crush_error(sys_info::os_type())?))
+            .send(Value::from(sys_info::os_type()?))
     }
 
     #[signature(
@@ -163,7 +163,7 @@ mod os {
     fn version(context: CommandContext) -> CrushResult<()> {
         context
             .output
-            .send(Value::from(to_crush_error(sys_info::os_release())?))
+            .send(Value::from(sys_info::os_release()?))
     }
 }
 
@@ -180,7 +180,7 @@ mod cpu {
     fn count(context: CommandContext) -> CrushResult<()> {
         context
             .output
-            .send(Value::Integer(to_crush_error(sys_info::cpu_num())? as i128))
+            .send(Value::Integer(sys_info::cpu_num()? as i128))
     }
 
     #[signature(
@@ -191,7 +191,7 @@ mod cpu {
     pub struct Load {}
 
     fn load(context: CommandContext) -> CrushResult<()> {
-        let load = to_crush_error(sys_info::loadavg())?;
+        let load = sys_info::loadavg()?;
         context.output.send(Value::Struct(Struct::new(
             vec![
                 ("one", Value::Float(load.one)),
@@ -211,7 +211,7 @@ mod cpu {
 
     fn speed(context: CommandContext) -> CrushResult<()> {
         context.output.send(Value::Integer(
-            to_crush_error(sys_info::cpu_speed())? as i128
+            sys_info::cpu_speed()? as i128
         ))
     }
 }
@@ -484,10 +484,10 @@ struct Signal {
 fn signal(mut context: CommandContext) -> CrushResult<()> {
     let sig: Signal = Signal::parse(context.remove_arguments(), &context.global_state.printer())?;
     for pid in sig.pid {
-        to_crush_error(signal::kill(
+        signal::kill(
             Pid::from_raw(pid as i32),
-            to_crush_error(signal::Signal::from_str(&sig.signal))?,
-        ))?;
+            signal::Signal::from_str(&sig.signal)?,
+        )?;
     }
     context.output.empty()
 }

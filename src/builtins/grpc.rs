@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use crate::lang::command::CrushCommand;
-use crate::{argument_error_legacy, CrushResult, to_crush_error};
+use crate::{argument_error_legacy, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
 use signature::signature;
@@ -99,25 +99,25 @@ impl Grpc {
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());
 
-        let mut child = to_crush_error(cmd.spawn())?;
+        let mut child = cmd.spawn()?;
 
         let mut stdout = mandate(child.stdout.take(), "Expected output stream")?;
         let mut buff = Vec::new();
-        to_crush_error(stdout.read_to_end(&mut buff))?;
-        let output = to_crush_error(String::from_utf8(buff))?;
+        stdout.read_to_end(&mut buff)?;
+        let output = String::from_utf8(buff)?;
         let (send_err, recv_err) = bounded(1);
         let mut stderr = mandate(child.stderr.take(), "Expected error stream")?;
         context.spawn("grpcurl:stderr", move || {
             let mut buff = Vec::new();
-            to_crush_error(stderr.read_to_end(&mut buff))?;
-            let errors = to_crush_error(String::from_utf8(buff))?;
+            stderr.read_to_end(&mut buff)?;
+            let errors = String::from_utf8(buff)?;
             let _ = send_err.send(errors);
             Ok(())
         })?;
 
         match child.wait()?.success() {
             true => Ok(output),
-            false => argument_error_legacy(to_crush_error(recv_err.recv())?),
+            false => argument_error_legacy(recv_err.recv()?),
         }
     }
 }

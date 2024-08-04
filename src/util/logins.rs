@@ -8,39 +8,12 @@ use std::os::raw::c_short;
 use chrono::{DateTime, Local, TimeZone};
 use libc::{endutxent, getutxent, timeval};
 use UtmpxType::{BootTime, DeadProcess, Empty, InitProcess, LoginProcess, NewTime, OldTime, UserProcess};
-
-#[derive(Debug)]
-pub struct Error {
-    msg: String,
-}
+use crate::lang::errors::{CrushError, login_error};
+use crate::lang::errors::CrushErrorType::LoginsError;
 
 static MUTEX: Mutex<()> = Mutex::new(());
 
-impl Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.msg)
-    }
-}
-
-impl std::error::Error for Error {}
-
-impl From<std::io::Error> for Error {
-    fn from(e: std::io::Error) -> Self {
-        Error {
-            msg: e.to_string(),
-        }
-    }
-}
-
-impl From<Utf8Error> for Error {
-    fn from(e: Utf8Error) -> Self {
-        Error {
-            msg: e.to_string(),
-        }
-    }
-}
-
-pub type LoginResult<T> = Result<T, Error>;
+pub type LoginResult<T> = Result<T, CrushError>;
 
 pub struct Login {
     pub tty: String,
@@ -96,7 +69,7 @@ fn parse_timeval(tv: &timeval) -> DateTime<Local> {
 }
 
 impl TryFrom<c_short> for UtmpxType {
-    type Error = Error;
+    type Error = CrushError;
 
     fn try_from(value: c_short) -> Result<Self, Self::Error> {
         match value {
@@ -108,7 +81,7 @@ impl TryFrom<c_short> for UtmpxType {
             libc::INIT_PROCESS => Ok(InitProcess),
             libc::LOGIN_PROCESS => Ok(LoginProcess),
             libc::DEAD_PROCESS => Ok(DeadProcess),
-            _ => Err(Error { msg: "Invalid utmpx record type".to_string() })
+            _ => login_error("Invalid utmpx record type"),
         }
     }
 }

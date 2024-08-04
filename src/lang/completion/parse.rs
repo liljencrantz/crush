@@ -1,6 +1,6 @@
 use std::cmp::min;
 use crate::lang::ast::{node::Node, CommandNode, JobListNode, JobNode};
-use crate::lang::errors::{error, CrushResult, mandate, argument_error_legacy, to_crush_error};
+use crate::lang::errors::{error, CrushResult, mandate, argument_error_legacy};
 use crate::lang::value::{ValueType, Value};
 use crate::lang::command::{Command, ArgumentDescription};
 use crate::lang::state::scope::Scope;
@@ -233,13 +233,11 @@ fn fetch_value(node: &Node, scope: &Scope, is_command: bool) -> CrushResult<Opti
                 None => Ok(None),
             },
 
-        Node::Integer(s) => Ok(Some(Value::Integer(to_crush_error(
-            s.string.replace("_", "").parse::<i128>()
-        )?))),
+        Node::Integer(s) => Ok(Some(Value::Integer(
+            s.string.replace("_", "").parse::<i128>()?))),
 
-        Node::Float(s) => Ok(Some(Value::Float(to_crush_error(
-            s.string.replace("_", "").parse::<f64>()
-        )?))),
+        Node::Float(s) => Ok(Some(Value::Float(
+            s.string.replace("_", "").parse::<f64>()?))),
 
         Node::Glob(f) =>
             Ok(Some(Value::Glob(Glob::new(&f.string)))),
@@ -247,7 +245,7 @@ fn fetch_value(node: &Node, scope: &Scope, is_command: bool) -> CrushResult<Opti
         Node::Regex(r) =>
             Ok(Some(Value::Regex(
                 r.string.clone(),
-                to_crush_error(Regex::new(&r.string))?))),
+                Regex::new(&r.string)?))),
 
         _ => Ok(None),
     }

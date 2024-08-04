@@ -2,13 +2,13 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use regex::Regex;
 use crate::lang::argument::{ArgumentDefinition, SwitchStyle};
-use crate::lang::ast::{CommandNode, expand_user, JobListNode, JobNode, propose_name};
+use crate::lang::ast::{CommandNode, JobListNode, JobNode, propose_name};
 use crate::lang::ast::location::Location;
 use crate::lang::ast::parameter_node::ParameterNode;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::command::{Command, Parameter};
 use crate::lang::command_invocation::CommandInvocation;
-use crate::lang::errors::{CrushResult, error, to_crush_error};
+use crate::lang::errors::{CrushResult, error};
 use crate::lang::job::Job;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueDefinition};
@@ -174,7 +174,7 @@ impl Node {
             Node::Regex(l) => ValueDefinition::Value(
                 Value::Regex(
                     l.string.clone(),
-                    to_crush_error(Regex::new(&l.string.clone()))?, ),
+                    Regex::new(&l.string.clone())?, ),
                 l.location,
             ),
             Node::String(t, true) => ValueDefinition::Value(Value::from(unescape(&t.string)?), t.location),
@@ -186,15 +186,11 @@ impl Node {
                 },
             Node::Integer(s) =>
                 ValueDefinition::Value(
-                    Value::Integer(to_crush_error(
-                        s.string.replace("_", "").parse::<i128>()
-                    )?),
+                    Value::Integer(s.string.replace("_", "").parse::<i128>()?),
                     s.location),
             Node::Float(s) =>
                 ValueDefinition::Value(
-                    Value::Float(to_crush_error(
-                        s.string.replace("_", "").parse::<f64>()
-                    )?),
+                    Value::Float(s.string.replace("_", "").parse::<f64>()?),
                     s.location),
             Node::GetAttr(node, identifier) =>
                 ValueDefinition::GetAttr(Box::new(node.compile(env, is_command)?.unnamed_value()?), identifier.clone()),

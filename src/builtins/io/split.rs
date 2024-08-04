@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, to_crush_error};
+use crate::lang::errors::{CrushResult};
 use crate::lang::signature::files::Files;
 use crate::lang::state::scope::ScopeLoader;
 use crate::lang::pipe::OutputStream;
@@ -54,10 +54,10 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
 
     let mut buf = Vec::<u8>::new();
     let mut token = String::new();
-    while to_crush_error(reader.read_until(b'\n', &mut buf))? != 0 {
+    while reader.read_until(b'\n', &mut buf)? != 0 {
         // this moves the ownership of the read data to s
         // there is no allocation
-        let s = to_crush_error(String::from_utf8(buf))?;
+        let s = String::from_utf8(buf)?;
         for c in s.chars() {
             if cfg.separator.contains(c) {
                 send(&output, &cfg.trim, cfg.allow_empty, token.as_str())?;

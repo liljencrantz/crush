@@ -9,7 +9,7 @@ you'll need something cleverer.
 */
 
 use std::path::PathBuf;
-use crate::lang::errors::{CrushResult, to_crush_error};
+use crate::lang::errors::{CrushResult};
 use std::fs::{ReadDir, read_dir};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -43,7 +43,7 @@ impl DirectoryLister for RealDirectoryLister {
     fn list(&self, path: impl Into<PathBuf>) -> CrushResult<RealIter> {
         Ok(
             RealIter {
-                read_dir: to_crush_error(read_dir(&path.into()))?,
+                read_dir: read_dir(&path.into())?,
             }
         )
     }

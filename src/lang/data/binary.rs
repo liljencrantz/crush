@@ -1,4 +1,4 @@
-use crate::lang::errors::{to_crush_error, CrushResult};
+use crate::lang::errors::CrushResult;
 use crossbeam::channel::{bounded, Receiver, Sender};
 use std::cmp::min;
 use std::collections::VecDeque;
@@ -111,14 +111,14 @@ impl BinaryReader for FileReader {
 impl dyn BinaryReader {
     pub fn paths(mut files: Vec<PathBuf>) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
         if files.len() == 1 {
-            Ok(Box::from(FileReader::new(to_crush_error(File::open(
+            Ok(Box::from(FileReader::new(File::open(
                 files.remove(0),
-            ))?)))
+            )?)))
         } else {
             let mut readers: Vec<Box<dyn BinaryReader + Send + Sync>> = Vec::new();
 
             for p in files.drain(..) {
-                let f = to_crush_error(File::open(p).map(|f| Box::from(FileReader::new(f))))?;
+                let f = File::open(p).map(|f| Box::from(FileReader::new(f)))?;
                 readers.push(f)
             }
             Ok(Box::from(MultiReader {

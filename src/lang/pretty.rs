@@ -3,7 +3,6 @@ A receiver of values that prints any values sent to it in a human readable forma
  */
 
 use crate::lang::data::binary::BinaryReader;
-use crate::lang::errors::to_crush_error;
 use crate::lang::printer::Printer;
 use crate::lang::pipe::{CrushStream, InputStream, ValueSender, printer_pipe};
 use crate::lang::data::table::ColumnType;
@@ -30,7 +29,7 @@ pub fn create_pretty_printer(
     let global_state = global_state.clone();
     let (o, i) = printer_pipe();
     let printer_clone = global_state.printer().clone();
-    printer_clone.handle_error(to_crush_error(
+    printer_clone.handle_error(
         thread::Builder::new()
             .name("output-formater".to_string())
             .spawn(move || {
@@ -39,8 +38,7 @@ pub fn create_pretty_printer(
                     pp.format_data = global_state.format_data();
                     pp.print_value(val, &ColumnFormat::None);
                 }
-            }),
-    ));
+            }).map_err(|e|{e.into()}));
     o
 }
 

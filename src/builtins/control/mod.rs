@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, data_error, mandate, to_crush_error};
+use crate::lang::errors::{CrushResult, data_error, mandate};
 use crate::lang::state::scope::Scope;
 use crate::lang::{
     data::binary::BinaryReader, data::list::List, value::Value,
@@ -67,7 +67,7 @@ struct Sleep {
 
 fn sleep(context: CommandContext) -> CrushResult<()> {
     let cfg = Sleep::parse(context.arguments, &context.global_state.printer())?;
-    std::thread::sleep(to_crush_error(cfg.duration.to_std())?);
+    std::thread::sleep(cfg.duration.to_std()?);
     context.output.send(Value::Empty)?;
     Ok(())
 }
@@ -111,13 +111,13 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "Commands for flow control, (loops, etc)",
         Box::new(move |env| {
             let path = List::new(ValueType::File, []);
-            to_crush_error(env::var("PATH").map(|v| {
+            env::var("PATH").map(|v| {
                 let mut dirs: Vec<Value> = v
                     .split(':')
                     .map(|s| Value::from(PathBuf::from(s)))
                     .collect();
                 let _ = path.append(&mut dirs);
-            }))?;
+            })?;
             env.declare("cmd_path", path.into())?;
             r#if::If::declare(env)?;
             r#while::While::declare(env)?;

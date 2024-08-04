@@ -1,4 +1,4 @@
-use crate::lang::errors::{to_crush_error, CrushResult, CrushError};
+use crate::lang::errors::{CrushResult, CrushError};
 use crate::lang::job::Job;
 use crate::lang::state::scope::Scope;
 use crate::lang::ast::{token::Token, JobListNode, lexer::Lexer};
@@ -58,8 +58,9 @@ impl Parser {
 
     pub fn ast(&self, s: &str) -> CrushResult<JobListNode> {
         let lex = Lexer::new(s);
-        to_crush_error(self.parser.lock().unwrap().parse(s, lex))
+        Ok(self.parser.lock().unwrap().parse(s, lex)?)
     }
+
     pub fn tokenize<'a>(&self, s: &'a str) -> CrushResult<Vec<Token<'a>>> {
         let l = Lexer::new(s);
         l.into_iter().map(|item| item.map(|it| it.1).map_err(|e| CrushError::from(e)) ).collect()

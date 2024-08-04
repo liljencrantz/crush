@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use signature::signature;
 use crate::state::contexts::CommandContext;
-use crate::lang::errors::{CrushResult, to_crush_error};
+use crate::lang::errors::{CrushResult};
 use crate::lang::command::OutputType::Known;
 use mountpoints::mountinfos;
 use crate::data::table::Row;
@@ -33,7 +33,7 @@ fn mounts(mut context: CommandContext) -> CrushResult<()> {
     let _cfg: Mounts = Mounts::parse(context.remove_arguments(), &context.global_state.printer())?;
     let output = context.output.initialize(&OUTPUT_TYPE)?;
 
-    for m in to_crush_error(mountinfos())? {
+    for m in mountinfos()? {
         let size = m.size.unwrap_or(0);
         let avail = m.avail.unwrap_or(0);
 

@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error_legacy, to_crush_error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::state::contexts::{CommandContext, JobContext};
 use crate::lang::state::scope::Scope;
 use crate::lang::serialization::{deserialize, serialize};
@@ -15,7 +15,7 @@ pub fn file(
     output: &ValueSender,
     global_state: &GlobalState,
 ) -> CrushResult<()> {
-    let cmd = to_crush_error(fs::read_to_string(filename))?;
+    let cmd = fs::read_to_string(filename)?;
     string(global_env, &cmd.as_str(), output, global_state)
 }
 
@@ -36,7 +36,7 @@ pub fn pup(
                     let val = recv.recv()?;
                     let mut buf = Vec::new();
                     serialize(&val.materialize()?, &mut buf)?;
-                    to_crush_error(std::io::stdout().write(&buf))?;
+                    std::io::stdout().write(&buf)?;
                     Ok(())
                 },
             )?;

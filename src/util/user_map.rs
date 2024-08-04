@@ -5,12 +5,14 @@ use std::os::raw::c_char;
 use lazy_static::lazy_static;
 
 use nix::unistd::{Uid, Gid, getuid};
-use crate::lang::errors::{CrushResult, to_crush_error, error};
+use crate::lang::errors::{CrushResult, data_error, error};
 use std::ffi::CStr;
+use std::ops::Deref;
 use libc::gid_t;
 use std::path::PathBuf;
 use libc::{passwd, uid_t};
 use crate::argument_error_legacy;
+use crate::lang::printer::PrinterMessage::CrushError;
 
 static USER_MUTEX: Mutex<i32> = Mutex::new(0i32);
 static GROUP_MUTEX: Mutex<i32> = Mutex::new(0i32);
@@ -29,8 +31,11 @@ lazy_static! {
     };
 }
 
-pub fn get_current_username() -> CrushResult<String> {
-    CURRENT_USERNAME.as_ref().map(|s| s.clone()).map_err(|e| e.clone())
+pub fn get_current_username() -> CrushResult<&'static str> {
+    match CURRENT_USERNAME.deref() {
+        Ok(s) => Ok(s.as_str()),
+        Err(e) => data_error(e.message()),
+    }
 }
 
 pub fn create_user_map() -> CrushResult<HashMap<Uid, String>> {
@@ -69,7 +74,7 @@ pub fn get_all_users() -> CrushResult<Vec<UserData>> {
             if passwd.is_null() {
                 break;
             }
-            match  UserData::new(&*passwd){
+            match UserData::new(&*passwd) {
                 Ok(d) => res.push(d),
                 Err(e) => return Err(e),
             }
@@ -129,7 +134,7 @@ pub fn create_group_map() -> CrushResult<HashMap<Gid, String>> {
 }
 
 unsafe fn parse(s: *const c_char) -> CrushResult<String> {
-    Ok(to_crush_error(CStr::from_ptr(s).to_str())?.to_string())
+    Ok(CStr::from_ptr(s).to_str()?.to_string())
 }
 
 pub fn get_uid(target_username: &str) -> CrushResult<Option<Uid>> {

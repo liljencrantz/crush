@@ -1,5 +1,5 @@
 use crate::lang::command::Command;
-use crate::lang::errors::{to_crush_error, CrushResult};
+use crate::lang::errors::CrushResult;
 use crate::lang::parser::Parser;
 use crate::lang::printer::Printer;
 use crate::lang::threads::ThreadStore;
@@ -156,7 +156,7 @@ impl Drop for JobHandleInternal {
 impl GlobalState {
 
     pub fn new(printer: Printer) -> CrushResult<GlobalState> {
-        let locale = to_crush_error(SystemLocale::default().or_else(|_| {SystemLocale::from_name("C")}))?;
+        let locale = SystemLocale::default().or_else(|_| {SystemLocale::from_name("C")})?;
         Ok(GlobalState {
             data: Arc::from(Mutex::new(StateData {
                 format_data: FormatData {

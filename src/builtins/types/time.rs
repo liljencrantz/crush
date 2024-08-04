@@ -3,7 +3,7 @@ use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command::TypeMap;
-use crate::lang::errors::{argument_error_legacy, CrushResult, to_crush_error};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ValueType;
 use crate::lang::value::Value;
@@ -138,7 +138,7 @@ struct Parse {
 
 fn parse(context: CommandContext) -> CrushResult<()> {
     let cfg: Parse = Parse::parse(context.arguments, &context.global_state.printer())?;
-    let tm = to_crush_error(DateTime::parse_from_str(&cfg.time, &cfg.format))?;
+    let tm = DateTime::parse_from_str(&cfg.time, &cfg.format)?;
     let dt = tm.with_timezone(&Local);
     context.output.send(Value::Time(dt))
 }

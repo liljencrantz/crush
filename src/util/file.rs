@@ -1,4 +1,4 @@
-use crate::lang::errors::CrushResult;
+use crate::lang::errors::{CrushResult, data_error};
 use std::path::PathBuf;
 
 pub fn cwd() -> CrushResult<PathBuf> {
@@ -6,5 +6,8 @@ pub fn cwd() -> CrushResult<PathBuf> {
 }
 
 pub fn home() -> CrushResult<PathBuf> {
-    dirs::home_dir().ok_or_else(|| "Could not find users home directory".into())
+    match dirs::home_dir() {
+        None => data_error("Could not find users home directory"),
+        Some(p) => Ok(p),
+    }
 }

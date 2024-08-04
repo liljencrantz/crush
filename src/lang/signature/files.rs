@@ -1,5 +1,5 @@
 use crate::lang::data::binary::{binary_channel, BinaryReader};
-use crate::lang::errors::{argument_error_legacy, to_crush_error, CrushResult, CrushError, data_error};
+use crate::lang::errors::{argument_error_legacy, CrushResult, CrushError, data_error};
 use crate::lang::printer::Printer;
 use crate::lang::pipe::{ValueReceiver, ValueSender};
 use crate::lang::value::{Value, ValueType};
@@ -71,9 +71,7 @@ impl Files {
             Ok(w)
         } else if self.files.len() == 1 {
             output.send(Value::Empty)?;
-            Ok(Box::from(to_crush_error(File::create(
-                self.files[0].clone(),
-            ))?))
+            Ok(Box::from(File::create(self.files[0].clone(), )?))
         } else {
             argument_error_legacy("Expected at most one destination file")
         }

@@ -25,7 +25,7 @@ use crate::lang::data::{
 use crate::util::time::duration_format;
 use crate::{
     lang::data::table::Table,
-    lang::errors::{error, to_crush_error},
+    lang::errors::error,
     util::file::cwd,
     util::glob::Glob,
 };
@@ -392,7 +392,7 @@ impl Value {
             }
             Value::BinaryInputStream(mut s) => {
                 let mut vec = Vec::new();
-                to_crush_error(std::io::copy(s.as_mut(), &mut vec))?;
+                std::io::copy(s.as_mut(), &mut vec)?;
                 Value::from(vec)
             }
             Value::Table(r) => Value::Table(r.materialize()?),
@@ -427,12 +427,11 @@ impl Value {
         match new_type {
             ValueType::File => Ok(Value::from(PathBuf::from(str_val.as_str()))),
             ValueType::Glob => Ok(Value::Glob(Glob::new(str_val.as_str()))),
-            ValueType::Integer => to_crush_error(str_val.parse::<i128>()).map(Value::Integer),
-            ValueType::Regex => {
-                to_crush_error(Regex::new(str_val.as_str()).map(|v| Value::Regex(str_val, v)))
-            }
+            ValueType::Integer => Ok(str_val.parse::<i128>().map(Value::Integer)?),
+            ValueType::Regex =>
+                Ok(Regex::new(str_val.as_str()).map(|v| Value::Regex(str_val, v))?),
             ValueType::Binary => Ok(Value::Binary(str_val.bytes().collect())),
-            ValueType::Float => Ok(Value::Float(to_crush_error(f64::from_str(&str_val))?)),
+            ValueType::Float => Ok(Value::Float(f64::from_str(&str_val)?)),
             ValueType::Bool => Ok(Value::Bool(match str_val.as_str() {
                 "true" => true,
                 "false" => false,
@@ -442,9 +441,7 @@ impl Value {
             })),
             ValueType::String => Ok(Value::from(str_val)),
             ValueType::Time => error("invalid convert"),
-            ValueType::Duration => Ok(Value::Duration(Duration::seconds(to_crush_error(
-                i64::from_str(&str_val),
-            )?))),
+            ValueType::Duration => Ok(Value::Duration(Duration::seconds(i64::from_str(&str_val)?))),
             ValueType::Command => error("invalid convert"),
             ValueType::TableInputStream(_) => error("invalid convert"),
             ValueType::TableOutputStream(_) => error("invalid convert"),

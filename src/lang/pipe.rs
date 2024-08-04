@@ -4,7 +4,7 @@ This file implements the crush equivalent of a pipe from a regular shell.
 Unlike normal pipes, these pipes can send *any* crush value. The most important
 use case is to send a single value of the type TableInputStream.
  */
-use crate::lang::errors::{error, send_error, to_crush_error, CrushError, CrushResult};
+use crate::lang::errors::{error, CrushError, CrushResult};
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
 use crate::lang::value::Value;
@@ -23,10 +23,7 @@ pub struct ValueSender {
 
 impl ValueSender {
     pub fn send(&self, cell: Value) -> CrushResult<()> {
-        match self.sender.send(cell) {
-            Ok(_) => Ok(()),
-            Err(_) => send_error(),
-        }
+        Ok(self.sender.send(cell)?)
     }
 
     pub fn empty(&self) -> CrushResult<()> {
@@ -52,7 +49,7 @@ pub struct ValueReceiver {
 
 impl ValueReceiver {
     pub fn recv(&self) -> CrushResult<Value> {
-        to_crush_error(self.receiver.recv())
+        Ok(self.receiver.recv()?)
     }
 
     pub fn is_pipeline(&self) -> bool {
@@ -92,10 +89,7 @@ pub struct OutputStream {
 
 impl OutputStream {
     pub fn send(&self, row: Row) -> CrushResult<()> {
-        match self.sender.send(row) {
-            Ok(_) => Ok(()),
-            Err(_) => send_error(),
-        }
+        Ok(self.sender.send(row)?)
     }
 
     pub fn types(&self) -> &[ColumnType] {
@@ -126,7 +120,7 @@ impl InputStream {
     }
 
     pub fn recv(&self) -> CrushResult<Row> {
-        self.validate(to_crush_error(self.receiver.recv()))
+        self.validate(self.receiver.recv().map_err({|e| e.into()}))
     }
 
     pub fn recv_timeout(&self, timeout: Duration) -> Result<Row, RecvTimeoutError> {

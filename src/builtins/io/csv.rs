@@ -5,7 +5,7 @@ use crate::{
 };
 use std::{io::prelude::*, io::BufReader};
 
-use crate::lang::errors::{error, to_crush_error, CrushResult};
+use crate::lang::errors::{error, CrushResult};
 use crate::lang::data::table::ColumnType;
 
 use crate::lang::signature::files::Files;
@@ -58,7 +58,7 @@ fn from(context: CommandContext) -> CrushResult<()> {
     let mut skipped = 0usize;
     loop {
         line.clear();
-        to_crush_error(reader.read_line(&mut line))?;
+        reader.read_line(&mut line)?;
         if line.is_empty() {
             break;
         }

@@ -6,7 +6,7 @@ use crate::{
 use std::io::{BufReader, Read, Write};
 
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{error, mandate, to_crush_error, CrushResult};
+use crate::lang::errors::{error, mandate, CrushResult};
 use crate::lang::signature::files::Files;
 use crate::lang::state::scope::ScopeLoader;
 use crate::lang::data::table::ColumnType;
@@ -94,11 +94,11 @@ fn from(context: CommandContext) -> CrushResult<()> {
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
     let mut v = Vec::new();
 
-    to_crush_error(reader.read_to_end(&mut v))?;
+    reader.read_to_end(&mut v)?;
     let v =
         match std::str::from_utf8(&v) {
-            Ok(s) => to_crush_error(toml::from_str(s)),
-            Err(e) => Err(CrushError::from(e))
+            Ok(s) => Ok::<toml::Value, CrushError>(toml::from_str(s)?),
+            Err(e) => Err(e.into())
         }?;
     let crush_value = from_toml(&v)?;
     context.output.send(crush_value)?;
@@ -111,7 +111,7 @@ fn to_toml(value: Value) -> CrushResult<toml::Value> {
 
         Value::String(s) => Ok(toml::Value::from(s.as_ref())),
 
-        Value::Integer(i) => Ok(toml::Value::from(to_crush_error(i64::try_from(i))?)),
+        Value::Integer(i) => Ok(toml::Value::from(i64::try_from(i)?)),
 
         Value::List(l) => Ok(toml::Value::Array(
             l.iter().map(to_toml)
@@ -171,7 +171,7 @@ fn to(context: CommandContext) -> CrushResult<()> {
     let mut writer = cfg.file.writer(context.output)?;
     let serde_value = context.input.recv()?;
     let toml_value = to_toml(serde_value)?;
-    to_crush_error(writer.write(toml_value.to_string().as_bytes()))?;
+    writer.write(toml_value.to_string().as_bytes())?;
     Ok(())
 }
 

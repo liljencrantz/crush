@@ -1,5 +1,5 @@
 use crate::lang::command::Command;
-use crate::lang::errors::{error, to_crush_error, CrushResult, argument_error_legacy};
+use crate::lang::errors::{error, CrushResult, argument_error_legacy};
 use crate::lang::help::Help;
 use crate::lang::{data::table::ColumnType, value::Value};
 use crate::builtins::types;
@@ -130,10 +130,10 @@ impl ValueType {
                 Err(e) => error(e.to_string().as_str()),
             },
             ValueType::Glob => Ok(Value::Glob(Glob::new(s))),
-            ValueType::Regex => Ok(Value::Regex(s.to_string(), to_crush_error(Regex::new(s))?)),
+            ValueType::Regex => Ok(Value::Regex(s.to_string(), Regex::new(s)?)),
             ValueType::File => Ok(Value::from(s)),
-            ValueType::Float => Ok(Value::Float(to_crush_error(s.parse::<f64>())?)),
-            ValueType::Bool => Ok(Value::Bool(to_crush_error(s.parse::<bool>())?)),
+            ValueType::Float => Ok(Value::Float(s.parse::<f64>()?)),
+            ValueType::Bool => Ok(Value::Bool(s.parse::<bool>()?)),
             _ => error("Failed to parse cell"),
         }
     }

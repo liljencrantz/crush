@@ -1,5 +1,6 @@
 use std::fmt::{Debug, Display, Formatter};
 use num_format::Grouping;
+use crate::lang::errors::{byte_unit_error, CrushError};
 use crate::util::byte_unit::ByteUnit::{Binary, Decimal, Raw};
 use crate::util::integer_formater::format_integer;
 
@@ -10,28 +11,15 @@ pub enum ByteUnit {
     Raw,
 }
 
-#[derive(Debug)]
-pub struct Error {
-    msg: String,
-}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.msg)
-    }
-}
-
-impl std::error::Error for Error {}
-
 impl TryFrom<&str> for ByteUnit {
-    type Error = Error;
+    type Error = CrushError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         match s {
             "binary" => Ok(Binary),
             "decimal" => Ok(Decimal),
             "raw" => Ok(Raw),
-            _ => Err(Error{msg:format!("Unknown byte unit {}", s)})
+            _ => byte_unit_error(s),
         }
     }
 }

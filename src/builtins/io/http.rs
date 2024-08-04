@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error_legacy, to_crush_error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{
     data::binary::binary_channel, data::r#struct::Struct, data::table::ColumnType, data::table::Row, data::table::Table,
@@ -69,7 +69,7 @@ fn http(context: CommandContext) -> CrushResult<()> {
         request = request.body(body)
     }
 
-    let mut b = to_crush_error(request.send())?;
+    let mut b = request.send()?;
 
     let status: StatusCode = b.status();
     let header_map: &HeaderMap = b.headers();
@@ -96,6 +96,6 @@ fn http(context: CommandContext) -> CrushResult<()> {
         ],
         None,
     )))?;
-    to_crush_error(b.copy_to(output.as_mut()))?;
+    b.copy_to(output.as_mut())?;
     Ok(())
 }

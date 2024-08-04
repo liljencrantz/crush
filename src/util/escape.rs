@@ -1,5 +1,5 @@
 use crate::util::hex::from_hex;
-use crate::lang::errors::{to_crush_error, data_error};
+use crate::lang::errors::{data_error};
 use std::convert::TryFrom;
 use crate::CrushResult;
 
@@ -74,7 +74,7 @@ pub fn unescape(s: &str) -> CrushResult<String> {
                     state = Hex(v)
                 } else {
                     let bytes = from_hex(&v)?;
-                    let chunk = to_crush_error(String::from_utf8(bytes))?;
+                    let chunk = String::from_utf8(bytes)?;
                     res += &chunk;
                     state = Normal
                 }
@@ -86,8 +86,7 @@ pub fn unescape(s: &str) -> CrushResult<String> {
                     state = Unicode2(v)
                 } else {
                     let bytes = from_hex(&v)?;
-                    let cc = to_crush_error(char::try_from(
-                        (bytes[0] as u32) << 8 | (bytes[1] as u32)))?;
+                    let cc = char::try_from((bytes[0] as u32) << 8 | (bytes[1] as u32))?;
                     res.push(cc);
                     state = Normal
                 }
@@ -99,10 +98,9 @@ pub fn unescape(s: &str) -> CrushResult<String> {
                     state = Unicode4(v)
                 } else {
                     let bytes = from_hex(&v)?;
-                    let cc = to_crush_error(char::try_from(
+                    let cc = char::try_from(
                         (bytes[0] as u32) << 24 | (bytes[1] as u32) << 16 |
-                            (bytes[2] as u32) << 8 | (bytes[3] as u32) << 0
-                    ))?;
+                            (bytes[2] as u32) << 8 | (bytes[3] as u32) << 0)?;
                     res.push(cc);
                     state = Normal
                 }

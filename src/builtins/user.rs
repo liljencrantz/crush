@@ -15,7 +15,7 @@ use crate::util::user_map::{get_all_users, get_current_username, get_user};
 use crate::lang::command::{Command, CrushCommand};
 use crate::lang::serialization::{deserialize, serialize};
 use crate::lang::state::this::This;
-use crate::{argument_error_legacy, to_crush_error};
+use crate::{argument_error_legacy};
 use crate::util::logins;
 
 #[signature(
@@ -128,7 +128,7 @@ fn r#do(mut context: CommandContext) -> CrushResult<()> {
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());
 
-        let mut child = to_crush_error(cmd.spawn())?;
+        let mut child = cmd.spawn()?;
         let mut stdin = mandate(child.stdin.take(), "Expected stdin stream")?;
         let mut serialized = Vec::new();
         serialize(&Value::Command(cfg.command), &mut serialized)?;
@@ -143,7 +143,7 @@ fn r#do(mut context: CommandContext) -> CrushResult<()> {
         let my_context = context.clone();
         context.spawn("sudo:stdout", move || {
             let mut buff = Vec::new();
-            to_crush_error(stdout.read_to_end(&mut buff))?;
+            stdout.read_to_end(&mut buff)?;
             if buff.len() == 0 {
                 error("No value returned")
             } else {
@@ -156,8 +156,8 @@ fn r#do(mut context: CommandContext) -> CrushResult<()> {
         let mut stderr = mandate(child.stderr.take(), "Expected error stream")?;
         context.spawn("sudo:stderr", move || {
             let mut buff = Vec::new();
-            to_crush_error(stderr.read_to_end(&mut buff))?;
-            let errors = to_crush_error(String::from_utf8(buff))?;
+            stderr.read_to_end(&mut buff)?;
+            let errors = String::from_utf8(buff)?;
             for e in errors.split('\n') {
                 let err = e.trim();
                 if !err.is_empty() {

@@ -1,6 +1,6 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, CrushResult, data_error, error, mandate, to_crush_error};
+use crate::lang::errors::{argument_error_legacy, CrushResult, data_error, error, mandate};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::value::Value;
@@ -77,12 +77,12 @@ struct Stat {
 pub fn stat(mut context: CommandContext) -> CrushResult<()> {
     let file = context.this.file()?;
     let cfg = Stat::parse(context.remove_arguments(), context.global_state.printer())?;
-    let metadata = to_crush_error(
+    let metadata =
         if cfg.symlink {
             lstat(&file)
         } else {
             nix::sys::stat::stat(&file)
-        })?;
+        }?;
     context.output.send(Value::Struct(Struct::new(
         vec![
             ("is_socket", Value::Bool((metadata.st_mode & S_IFSOCK) != 0)),
@@ -136,7 +136,7 @@ pub fn chown(mut context: CommandContext) -> CrushResult<()> {
         None
     };
 
-    to_crush_error(nix::unistd::chown(&file, uid, gid))?;
+    nix::unistd::chown(&file, uid, gid)?;
 
     context
         .output
@@ -254,7 +254,7 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
 pub fn chmod(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Chmod::parse(context.arguments, &context.global_state.printer())?;
     let file = context.this.file()?;
-    let metadata = to_crush_error(metadata(&file))?;
+    let metadata = metadata(&file)?;
 
     let mut current: u32 = metadata.permissions().mode();
 
@@ -262,7 +262,7 @@ pub fn chmod(mut context: CommandContext) -> CrushResult<()> {
         current = apply(&perm, current)?;
     }
 
-    to_crush_error(std::fs::set_permissions(&file, std::fs::Permissions::from_mode(current)))?;
+    std::fs::set_permissions(&file, std::fs::Permissions::from_mode(current))?;
     context
         .output
         .send(Value::Empty)
@@ -310,9 +310,9 @@ struct Write {}
 fn write(mut context: CommandContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::BinaryInputStream(mut input) => {
-            let mut out = to_crush_error(File::create(
-                context.this.file()?))?;
-            to_crush_error(std::io::copy(input.as_mut(), &mut out))?;
+            let mut out = File::create(
+                context.this.file()?)?;
+            std::io::copy(input.as_mut(), &mut out)?;
             Ok(())
         }
         _ => argument_error_legacy("Expected a binary stream"),
@@ -516,7 +516,7 @@ fn mkdir_recursive(path: &Path, leaf: bool) -> CrushResult<()> {
         if let Some(parent) = path.parent() {
             mkdir_recursive(parent, false)?;
         }
-        to_crush_error(create_dir(path))
+        Ok(create_dir(path)?)
     }
 }
 
@@ -546,7 +546,7 @@ fn touch(mut context: CommandContext) -> CrushResult<()> {
         Ok(_) => Ok(()),
         Err(Errno::ENOENT) => {
             if !cfg.no_create {
-                to_crush_error(File::create_new(file))?;
+                File::create_new(file)?;
             }
             Ok(())
         }

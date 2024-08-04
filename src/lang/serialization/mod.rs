@@ -1,5 +1,5 @@
 use crate::lang::data::dict::Dict;
-use crate::lang::errors::{to_crush_error, CrushResult};
+use crate::lang::errors::{CrushResult};
 use crate::lang::data::list::List;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::state::scope::Scope;
@@ -61,7 +61,7 @@ pub fn serialize_writer(value: &Value, destination: &mut dyn Write) -> CrushResu
     serialize(value, &mut buf)?;
     let mut pos = 0;
     while pos < buf.len() {
-        let bytes_written = to_crush_error(destination.write(&buf[pos..]))?;
+        let bytes_written = destination.write(&buf[pos..])?;
         pos += bytes_written;
     }
     Ok(())
@@ -69,7 +69,7 @@ pub fn serialize_writer(value: &Value, destination: &mut dyn Write) -> CrushResu
 
 pub fn deserialize_reader(source: &mut dyn Read, env: &Scope) -> CrushResult<Value> {
     let mut buf = Vec::new();
-    to_crush_error(source.read_to_end(&mut buf))?;
+    source.read_to_end(&mut buf)?;
     deserialize(&buf, env)
 }
 

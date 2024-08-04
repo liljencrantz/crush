@@ -9,7 +9,7 @@ use crate::util::file::home;
 use std::path::PathBuf;
 use crate::lang::state::scope::Scope;
 use crate::lang::pipe::{ValueSender, empty_channel, pipe, black_hole};
-use crate::lang::errors::{CrushResult, to_crush_error, data_error, error};
+use crate::lang::errors::{CrushResult, data_error, error};
 use crate::lang::execute;
 
 use crate::lang::state::global_state::GlobalState;
@@ -22,7 +22,7 @@ use crate::lang::state::contexts::JobContext;
 const DEFAULT_PROMPT: &'static str = "crush# ";
 
 pub fn config_dir() -> CrushResult<PathBuf> {
-    to_crush_error(std::env::var("XDG_CONFIG_HOME"))
+    std::env::var("XDG_CONFIG_HOME")
         .map(|s| PathBuf::from(s).join("crush"))
         .or_else(|_| match home() {
             Ok(home) => Ok(home.join(".config/crush")),
@@ -149,7 +149,7 @@ pub fn run(
                 break;
             }
             Some(Err(err)) => {
-                global_state.printer().handle_error::<()>(to_crush_error(Err(err)));
+                global_state.printer().handle_error::<()>(Err(err.into()));
                 break;
             }
             None => {
@@ -187,7 +187,7 @@ pub fn run(
 
 fn ensure_parent_exists(file: &PathBuf) -> CrushResult<()> {
     if let Some(dir) = file.parent() {
-        to_crush_error(fs::create_dir_all(dir))
+        Ok(fs::create_dir_all(dir)?)
     } else {
         error("Missing parent directory")
     }

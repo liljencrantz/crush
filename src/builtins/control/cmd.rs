@@ -3,7 +3,7 @@ use std::process::Stdio;
 use std::io::{Read, Write};
 use std::borrow::BorrowMut;
 use std::path::PathBuf;
-use crate::{argument_error_legacy, CrushResult, to_crush_error};
+use crate::{argument_error_legacy, CrushResult};
 use crate::lang::argument::{Argument, SwitchStyle};
 use crate::lang::errors::mandate;
 use crate::lang::ordered_string_map::OrderedStringMap;
@@ -111,7 +111,7 @@ fn cmd_internal(
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit());
 
-        to_crush_error(to_crush_error(cmd.spawn())?.wait())?;
+        cmd.spawn()?.wait()?;
         Ok(())
     } else {
         let input = context.input.recv()?;
@@ -123,7 +123,7 @@ fn cmd_internal(
         cmd.stdout(stdout_writer);
         cmd.stderr(stderr_writer);
 
-        let mut child = to_crush_error(cmd.spawn())?;
+        let mut child = cmd.spawn()?;
         let mut stdin = mandate(child.stdin.take(), "Expected stdin stream")?;
 
         match input {
@@ -138,7 +138,7 @@ fn cmd_internal(
             }
             BinaryInputStream(mut r) => {
                 context.spawn("cmd:stdin", move || {
-                    to_crush_error(std::io::copy(r.as_mut(), stdin.borrow_mut()))?;
+                    std::io::copy(r.as_mut(), stdin.borrow_mut())?;
                     Ok(())
                 })?;
             }
@@ -150,8 +150,8 @@ fn cmd_internal(
         context.spawn("cmd:stderr", move || {
             let _ = &my_context;
             let mut buff = Vec::new();
-            to_crush_error(stderr_reader.read_to_end(&mut buff))?;
-            let errors = to_crush_error(String::from_utf8(buff))?;
+            stderr_reader.read_to_end(&mut buff)?;
+            let errors = String::from_utf8(buff)?;
             for e in errors.split('\n') {
                 let err = e.trim();
                 if !err.is_empty() {

@@ -1,4 +1,4 @@
-use crate::lang::errors::{error, to_crush_error, CrushResult};
+use crate::lang::errors::{error, CrushResult};
 use crate::lang::serialization::model::{element, Element};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
 use crate::lang::value::Value;
@@ -12,7 +12,7 @@ impl Serializable<i128> for i128 {
     ) -> CrushResult<i128> {
         match elements[id].element.as_ref().unwrap() {
             element::Element::SmallInteger(i) => Ok(*i as i128),
-            element::Element::LargeInteger(s) => Ok(to_crush_error(s.parse())?),
+            element::Element::LargeInteger(s) => Ok(s.parse()?),
             _ => error("Expected integer"),
         }
     }

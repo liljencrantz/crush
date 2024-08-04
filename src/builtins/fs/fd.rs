@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{error, to_crush_error, CrushResult};
+use crate::lang::errors::{error, CrushResult};
 use crate::lang::state::contexts::{CommandContext};
 use crate::lang::data::table::ColumnType;
 use crate::{data::table::Row, lang::value::Value, lang::value::ValueType};
@@ -30,7 +30,7 @@ fn file(mut context: CommandContext) -> CrushResult<()> {
     match psutil::process::processes() {
         Ok(procs) => {
             for proc in procs {
-                for row in to_crush_error(file_internal(proc))? {
+                for row in file_internal(proc)? {
                     output.send(row)?;
                 }
             }

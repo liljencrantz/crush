@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, CrushResult, data_error, mandate, to_crush_error};
+use crate::lang::errors::{argument_error_legacy, CrushResult, data_error, mandate};
 use crate::lang::data::list::List;
 use crate::lang::pretty::PrettyPrinter;
 use crate::lang::state::scope::Scope;
@@ -145,7 +145,7 @@ fn readline(context: CommandContext) -> CrushResult<()> {
         let _ = rl.load_history(&history_file(&history)?);
     }
 
-    let line = to_crush_error(rl.readline(&cfg.prompt))?;
+    let line = rl.readline(&cfg.prompt)?;
 
     if let Some(history) = &cfg.history {
         let _ = rl.add_history_entry(line.as_str());

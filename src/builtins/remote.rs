@@ -1,6 +1,6 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{error, mandate, to_crush_error, CrushResult};
+use crate::lang::errors::{error, mandate, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::signature::files::Files;
 use crate::lang::signature::patterns::Patterns;
@@ -47,7 +47,7 @@ fn parse(
         host = tmp.next().unwrap().to_string();
     } else {
         username = default_username.clone()
-            .unwrap_or(get_current_username()?);
+            .unwrap_or(get_current_username()?.to_string());
     }
 
     let port: u16;
@@ -56,7 +56,7 @@ fn parse(
     } else {
         let mut parts = host.split(':');
         let tmp = parts.next().unwrap().to_string();
-        port = to_crush_error(parts.next().unwrap().parse::<u16>())?;
+        port = parts.next().unwrap().parse::<u16>()?;
         drop(parts);
         host = tmp;
     }
@@ -75,15 +75,15 @@ fn run_remote(
 ) -> CrushResult<Value> {
     let (host, username, port) = parse(host, &default_username)?;
 
-    let tcp = to_crush_error(TcpStream::connect(&format!("{}:{}", host, port)))?;
-    let mut sess = to_crush_error(Session::new())?;
+    let tcp = TcpStream::connect(&format!("{}:{}", host, port))?;
+    let mut sess = Session::new()?;
 
     sess.set_tcp_stream(tcp);
-    to_crush_error(sess.handshake())?;
+    sess.handshake()?;
 
     if !ignore_host_file {
-        let mut known_hosts = to_crush_error(sess.known_hosts())?;
-        to_crush_error(known_hosts.read_file(host_file, KnownHostFileKind::OpenSSH))?;
+        let mut known_hosts = sess.known_hosts()?;
+        known_hosts.read_file(host_file, KnownHostFileKind::OpenSSH)?;
         let (key, key_type) = mandate(
             sess.host_key(),
             &format!("Could not fetch host key for {}", host),
@@ -104,8 +104,8 @@ fn run_remote(
                         HostKeyType::Ecdsa521 => KnownHostKeyFormat::Ecdsa521,
                         HostKeyType::Ed255219 => KnownHostKeyFormat::Ed255219,
                     };
-                    to_crush_error(known_hosts.add(&host, key, "Added by Crush", key_format))?;
-                    to_crush_error(known_hosts.write_file(host_file, KnownHostFileKind::OpenSSH))?;
+                    known_hosts.add(&host, key, "Added by Crush", key_format)?;
+                    known_hosts.write_file(host_file, KnownHostFileKind::OpenSSH)?;
                 }
             }
             CheckResult::Failure => return error("Host validation check failure"),
@@ -113,19 +113,19 @@ fn run_remote(
     }
 
     if let Some(pass) = password {
-        to_crush_error(sess.userauth_password(&username, pass))?
+        sess.userauth_password(&username, pass)?
     } else {
-        to_crush_error(sess.userauth_agent(&username))?;
+        sess.userauth_agent(&username)?;
     }
 
-    let mut channel = to_crush_error(sess.channel_session())?;
-    to_crush_error(channel.exec("crush --pup"))?;
-    to_crush_error(channel.write(cmd))?;
-    to_crush_error(channel.send_eof())?;
+    let mut channel = sess.channel_session()?;
+    channel.exec("crush --pup")?;
+    channel.write(cmd)?;
+    channel.send_eof()?;
     let mut out_buf = Vec::new();
-    to_crush_error(channel.read_to_end(&mut out_buf))?;
+    channel.read_to_end(&mut out_buf)?;
     let res = deserialize(&out_buf, env)?;
-    to_crush_error(channel.wait_close())?;
+    channel.wait_close()?;
     Ok(res)
 }
 
@@ -135,12 +135,12 @@ fn ssh_host_complete(
     _scope: &Scope,
     res: &mut Vec<Completion>,
 ) -> CrushResult<()> {
-    let session = to_crush_error(Session::new())?;
-    let mut known_hosts = to_crush_error(session.known_hosts())?;
+    let session = Session::new()?;
+    let mut known_hosts = session.known_hosts()?;
     let host_file = home()?.join(".ssh/known_hosts");
 
-    to_crush_error(known_hosts.read_file(&host_file, KnownHostFileKind::OpenSSH))?;
-    for host in to_crush_error(known_hosts.iter())? {
+    known_hosts.read_file(&host_file, KnownHostFileKind::OpenSSH)?;
+    for host in known_hosts.iter()? {
         match &cmd.last_argument {
             LastArgument::Unknown => {
                 let completion = escape(host.name().unwrap_or(""));
@@ -275,7 +275,7 @@ fn pexec(mut context: CommandContext) -> CrushResult<()> {
     serialize(&Value::Command(cfg.command), &mut in_buf)?;
 
     for host in &cfg.host {
-        to_crush_error(host_send.send(host.clone()))?;
+        host_send.send(host.clone())?;
     }
 
     drop(host_send);
@@ -306,7 +306,7 @@ fn pexec(mut context: CommandContext) -> CrushResult<()> {
                         my_ignore_host_file,
                         my_allow_not_found,
                     )?;
-                    to_crush_error(my_send.send((host, res)))?;
+                    my_send.send((host, res))?;
                 }
                 Ok(())
             })?;
@@ -332,13 +332,13 @@ struct Identity {}
 
 fn identity(context: CommandContext) -> CrushResult<()> {
     let output = context.output.initialize(&IDENTITY_OUTPUT_TYPE)?;
-    let sess = to_crush_error(Session::new())?;
-    let mut agent = to_crush_error(sess.agent())?;
+    let sess = Session::new()?;
+    let mut agent = sess.agent()?;
 
-    to_crush_error(agent.connect())?;
-    to_crush_error(agent.list_identities())?;
+    agent.connect()?;
+    agent.list_identities()?;
 
-    for identity in to_crush_error(agent.identities())? {
+    for identity in agent.identities()? {
         output.send(Row::new(vec![
             Value::from(identity.comment().to_string()),
             Value::from(identity.blob()),
@@ -368,9 +368,9 @@ mod host {
         let output = context
             .output
             .initialize(&super::HOST_LIST_OUTPUT_TYPE)?;
-        let session = to_crush_error(Session::new())?;
+        let session = Session::new()?;
 
-        let mut known_hosts = to_crush_error(session.known_hosts())?;
+        let mut known_hosts = session.known_hosts()?;
 
         // Initialize the known hosts with a global known hosts file
         let host_file = if cfg.host_file.had_entries() {
@@ -378,8 +378,8 @@ mod host {
         } else {
             home()?.join(".ssh/known_hosts")
         };
-        to_crush_error(known_hosts.read_file(&host_file, KnownHostFileKind::OpenSSH))?;
-        for host in to_crush_error(known_hosts.iter())? {
+        known_hosts.read_file(&host_file, KnownHostFileKind::OpenSSH)?;
+        for host in known_hosts.iter()? {
             output.send(Row::new(vec![
                 Value::from(host.name().unwrap_or("")),
                 Value::from(host.key()),
@@ -412,11 +412,11 @@ mod host {
             home()?.join(".ssh/known_hosts")
         };
 
-        let session = to_crush_error(Session::new())?;
-        let mut known_hosts = to_crush_error(session.known_hosts())?;
+        let session = Session::new()?;
+        let mut known_hosts = session.known_hosts()?;
 
-        to_crush_error(known_hosts.read_file(&host_file, KnownHostFileKind::OpenSSH))?;
-        let all_hosts = to_crush_error(known_hosts.hosts())?;
+        known_hosts.read_file(&host_file, KnownHostFileKind::OpenSSH)?;
+        let all_hosts = known_hosts.hosts()?;
         let victims = all_hosts
             .iter()
             .filter(|host| cfg.host.test(host.name().unwrap_or("")))
@@ -424,9 +424,9 @@ mod host {
             .collect::<Vec<_>>();
         let victim_count = victims.len();
         for v in victims {
-            to_crush_error(known_hosts.remove(v))?;
+            known_hosts.remove(v)?;
         }
-        to_crush_error(known_hosts.write_file(&host_file, KnownHostFileKind::OpenSSH))?;
+        known_hosts.write_file(&host_file, KnownHostFileKind::OpenSSH)?;
         context.output.send(Value::Integer(victim_count as i128))
     }
 }

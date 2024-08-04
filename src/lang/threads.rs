@@ -1,6 +1,6 @@
 use std::thread::{JoinHandle, ThreadId};
 use crate::lang::printer::Printer;
-use crate::lang::errors::{to_crush_error, CrushResult};
+use crate::lang::errors::CrushResult;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use crossbeam::channel::Sender;
@@ -70,13 +70,13 @@ impl ThreadStore {
             F: Send + 'static,
     {
         let slef = self.clone();
-        let handle = to_crush_error(thread::Builder::new()
+        let handle = thread::Builder::new()
             .name(name.to_string())
             .spawn(move || {
                 let res = f();
                 slef.exit();
                 res
-            }))?;
+            })?;
         let id = handle.thread().id();
         let mut data = self.data.lock().unwrap();
             data.threads.push(ThreadData {

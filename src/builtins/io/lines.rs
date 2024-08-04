@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error_legacy, CrushResult, data_error, to_crush_error};
+use crate::lang::errors::{argument_error_legacy, CrushResult, data_error};
 use crate::lang::signature::files::Files;
 use crate::lang::state::scope::ScopeLoader;
 use crate::lang::{
@@ -31,7 +31,7 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
     let mut line = String::new();
 
     loop {
-        to_crush_error(reader.read_line(&mut line))?;
+        reader.read_line(&mut line)?;
         if line.is_empty() {
             break;
         }
@@ -78,7 +78,7 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
                     Value::String(s) => {
                         let mut s = s.to_string();
                         s.push('\n');
-                        to_crush_error(out.write(s.as_bytes()))?;
+                        out.write(s.as_bytes())?;
                     }
                     _ => {
                         return data_error("Expected a string");

@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::Read;
-use crate::{argument_error_legacy, CrushResult, to_crush_error};
+use crate::{argument_error_legacy, CrushResult};
 use crate::lang::state::scope::Scope;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::{Value, ValueType};
@@ -57,15 +57,15 @@ struct Query {
 
 fn resolv_conf() -> CrushResult<resolv_conf::Config> {
     let mut buf = Vec::with_capacity(8192);
-    let mut f = to_crush_error(File::open("/etc/resolv.conf"))?;
-    to_crush_error(f.read_to_end(&mut buf))?;
-    to_crush_error(resolv_conf::Config::parse(&buf))
+    let mut f = File::open("/etc/resolv.conf")?;
+    f.read_to_end(&mut buf)?;
+    Ok(resolv_conf::Config::parse(&buf)?)
 }
 
 fn query_internal(cfg: Query, context: CommandContext, client: SyncClient<impl ClientConnection>) -> CrushResult<()> {
     match cfg.record_type.as_ref() {
         "A" => {
-            let response = to_crush_error(client.query(&to_crush_error(Name::from_str(&cfg.name))?, DNSClass::IN, RecordType::A))?;
+            let response = client.query(&Name::from_str(&cfg.name)?, DNSClass::IN, RecordType::A)?;
             let output = context.output.initialize(&a_stream_output_type())?;
 
             for answer in response.answers() {
@@ -78,7 +78,7 @@ fn query_internal(cfg: Query, context: CommandContext, client: SyncClient<impl C
             }
         }
         "AAAA" => {
-            let response = to_crush_error(client.query(&to_crush_error(Name::from_str(&cfg.name))?, DNSClass::IN, RecordType::AAAA))?;
+            let response = client.query(&Name::from_str(&cfg.name)?, DNSClass::IN, RecordType::AAAA)?;
             let output = context.output.initialize(&a_stream_output_type())?;
 
             for answer in response.answers() {
@@ -91,7 +91,7 @@ fn query_internal(cfg: Query, context: CommandContext, client: SyncClient<impl C
             }
         }
         "SRV" => {
-            let response = to_crush_error(client.query(&to_crush_error(Name::from_str(&cfg.name))?, DNSClass::IN, RecordType::SRV))?;
+            let response = client.query(&Name::from_str(&cfg.name)?, DNSClass::IN, RecordType::SRV)?;
             let output = context.output.initialize(&srv_stream_output_type())?;
 
             for answer in response.answers() {

@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, to_crush_error};
+use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
@@ -35,7 +35,7 @@ fn cd(mut context: CommandContext) -> CrushResult<()> {
         false => home(),
     }?;
 
-    to_crush_error(std::env::set_current_dir(dir))?;
+    std::env::set_current_dir(dir)?;
     context.output.send(Value::Empty)
 }
 

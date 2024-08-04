@@ -167,11 +167,11 @@ impl SimpleSignature {
                 }
                 SimpleSignature::String => quote! { _value.to_string()},
                 SimpleSignature::PathBuf => quote! { _value.to_path_buf()},
-                SimpleSignature::Usize => quote! { crate::lang::errors::to_crush_error(usize::try_from(_value))?},
-                SimpleSignature::U64 => quote! { crate::lang::errors::to_crush_error(u64::try_from(_value))?},
-                SimpleSignature::I64 => quote! { crate::lang::errors::to_crush_error(i64::try_from(_value))?},
-                SimpleSignature::U32 => quote! { crate::lang::errors::to_crush_error(u32::try_from(_value))?},
-                SimpleSignature::I32 => quote! { crate::lang::errors::to_crush_error(i32::try_from(_value))?},
+                SimpleSignature::Usize => quote! { usize::try_from(_value)?},
+                SimpleSignature::U64 => quote! { u64::try_from(_value)?},
+                SimpleSignature::I64 => quote! { i64::try_from(_value)?},
+                SimpleSignature::U32 => quote! { u32::try_from(_value)?},
+                SimpleSignature::I32 => quote! { i32::try_from(_value)?},
                 SimpleSignature::Stream => {
                     quote! {
                     crate::lang::errors::mandate_argument(

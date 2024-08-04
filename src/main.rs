@@ -5,7 +5,7 @@ mod lang;
 mod builtins;
 mod util;
 
-use crate::lang::errors::{argument_error_legacy, CrushResult, to_crush_error};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::pretty::create_pretty_printer;
 use crate::lang::{execute, printer};
 use builtins::declare;
@@ -101,7 +101,7 @@ fn run() -> CrushResult<i32> {
 
         Mode::Pup => {
             let mut buff = Vec::new();
-            to_crush_error(std::io::stdin().read_to_end(&mut buff))?;
+            std::io::stdin().read_to_end(&mut buff)?;
             execute::pup(
                 local_scope,
                 &buff,

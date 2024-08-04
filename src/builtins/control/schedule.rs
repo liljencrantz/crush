@@ -1,5 +1,5 @@
 use std::mem::swap;
-use crate::lang::errors::{CrushResult, mandate, to_crush_error};
+use crate::lang::errors::{CrushResult, mandate};
 use crate::lang::state::contexts::CommandContext;
 use signature::signature;
 use chrono::{Duration, Local};
@@ -34,7 +34,7 @@ fn schedule(mut context: CommandContext) -> CrushResult<()> {
     let mut cfg: Schedule = Schedule::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     if let Some(initial_delay) = &cfg.initial_delay {
-        std::thread::sleep(to_crush_error(initial_delay.to_std())?);
+        std::thread::sleep(initial_delay.to_std()?);
     }
 
     let mut cmd = None;
@@ -71,13 +71,13 @@ fn run(cfg: Schedule, mut f: impl FnMut() -> CrushResult<()>) -> CrushResult<()>
             last_time = last_time + cfg.interval.clone();
             let next_duration = last_time - Local::now();
             if next_duration > Duration::seconds(0) {
-                std::thread::sleep(to_crush_error(next_duration.to_std())?);
+                std::thread::sleep(next_duration.to_std()?);
             }
         }
     } else {
         loop {
             f()?;
-            std::thread::sleep(to_crush_error(cfg.interval.to_std())?);
+            std::thread::sleep(cfg.interval.to_std()?);
         }
     }
 }

@@ -1,4 +1,4 @@
-use crate::lang::errors::{to_crush_error, CrushError, CrushResult, CrushErrorType};
+use crate::lang::errors::{CrushError, CrushErrorType, CrushResult};
 use crossbeam::channel::bounded;
 use crossbeam::channel::Sender;
 use crossbeam::channel::Receiver;
@@ -9,7 +9,7 @@ use termion::terminal_size;
 use std::cmp::max;
 use crate::lang::ast::location::Location;
 
-enum PrinterMessage {
+pub enum PrinterMessage {
     Ping,
     CrushError(CrushError),
     Error(String),
@@ -90,9 +90,8 @@ pub fn noop() -> (Printer, JoinHandle<()>) {
 
 impl Printer {
     pub fn line(&self, line: &str) {
-        self.handle_error(to_crush_error(
-            self.sender.send(PrinterMessage::Line(line.to_string())),
-        ));
+        self.handle_error(
+            self.sender.send(Line(line.to_string())).map_err({|e| e.into()}));
     }
     /*
         pub fn lines(&self, lines: Vec<String>) {
@@ -101,7 +100,7 @@ impl Printer {
     */
     pub fn handle_error<T>(&self, result: CrushResult<T>) {
         if let Err(e) = result {
-            if !e.is(CrushErrorType::SendError) {
+            if let CrushErrorType::SendError(s) = e.error_type() {
                 self.crush_error(e)
             }
         }

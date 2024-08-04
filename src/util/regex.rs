@@ -1,4 +1,3 @@
-use crate::lang::errors::to_crush_error;
 use crate::lang::printer::Printer;
 use regex::Regex;
 use std::fs::read_dir;
@@ -24,11 +23,11 @@ impl RegexFileMatcher for Regex {
                                 },
                             }
                         }
-                        e => printer.handle_error(to_crush_error(e)),
+                        e => printer.handle_error(e.map_err({|ee| ee.into()})),
                     }
                 }
             }
-            e => printer.handle_error(to_crush_error(e)),
+            e => printer.handle_error(e.map_err({|ee| ee.into()})),
         }
     }
 }

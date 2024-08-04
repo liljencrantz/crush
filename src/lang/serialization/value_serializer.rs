@@ -1,6 +1,6 @@
 use crate::lang::command::CrushCommand;
 use crate::lang::data::dict::Dict;
-use crate::lang::errors::{error, to_crush_error, CrushResult, mandate};
+use crate::lang::errors::{error, CrushResult, mandate};
 use crate::lang::data::list::List;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::state::scope::Scope;
@@ -56,7 +56,7 @@ impl Serializable<Value> for Value {
             element::Element::Binary(v) => Ok(Value::from(v)),
             element::Element::Glob(v) => Ok(Value::Glob(Glob::new(v))),
             element::Element::Regex(v) => {
-                Ok(Value::Regex(v.clone(), to_crush_error(Regex::new(v))?))
+                Ok(Value::Regex(v.clone(), Regex::new(v)?))
             }
             element::Element::Bool(v) => Ok(Value::Bool(*v)),
             element::Element::Empty(_) => Ok(Value::Empty),
