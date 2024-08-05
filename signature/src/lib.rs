@@ -294,6 +294,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 let mut allowed_values = None;
                 let mut description = None;
                 let mut completion_command = quote! {None};
+
                 if !field.attrs.is_empty() {
                     for attr in &field.attrs {
                         if call_is_default(attr) {
@@ -383,6 +384,15 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 };
             }
 
+            if !had_unnamed_target {
+                unnamed_mutations.extend(quote! {
+                    if !_unnamed.is_empty() {
+                        let (_value, _location) = &_unnamed[0];
+                        return crate::lang::errors::argument_error(format!("{}: Stray unnamed argument", #command_name), *_location);
+                    }
+                });
+            }
+
             if let Some(example) = metadata.example {
                 long_description.push("Example".to_string());
                 long_description.push(example);
@@ -466,9 +476,9 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
             let mut output = s.to_token_stream();
             output.extend(handler.into_token_stream());
-//            if struct_name.to_string() == "Sort" {
-//                println!("{}", output.to_string());
-//            }
+            //            if struct_name.to_string() == "Sort" {
+            //                println!("{}", output.to_string());
+            //            }
             Ok(output)
         }
         _ => fail!(root.span(), "Expected a struct"),

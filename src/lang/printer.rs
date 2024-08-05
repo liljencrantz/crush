@@ -100,8 +100,9 @@ impl Printer {
     */
     pub fn handle_error<T>(&self, result: CrushResult<T>) {
         if let Err(e) = result {
-            if let CrushErrorType::SendError(s) = e.error_type() {
-                self.crush_error(e)
+            match e.error_type() {
+                CrushErrorType::SendError(_) => {}
+                _ => self.crush_error(e),
             }
         }
     }

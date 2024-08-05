@@ -1,14 +1,15 @@
 Todo:
-The automatic argument parser seems to allow stray arguemnts, e.g. `val 1 2 3`
-Math commands for command mode
+`return` command.
+Math commands for command mode, e.g. `add 1 2 3`
+Lops for math mode, e.g. `(for i=foo {...})`, `(loop {...})` and `(while condition {...})`
+Control flow for math mode, i.e. `return`, break` and `continue` as keywords.
 Rewrite all tests for new syntax
 New regex literal syntax
 Add saner default prompt
 Add default syntax highlighting config
-Add some way to extract the definition from a closure
+Add some way to extract the definition from a closure, e.g. `$my_function:definition`
 Add command field to printer
-Allow commands to specify the type of input they expect
-There should be a scope help message
+Allow commands to specify the type of input they expect for better/earlier validation
 Write a command that extracts all help into html
 Tab completion of globs
 Add system tests for binary stream handling
