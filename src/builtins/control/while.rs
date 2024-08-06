@@ -9,6 +9,7 @@ use crate::data::table::Row;
 use signature::signature;
 use crate::lang::command::OutputType::Known;
 use crate::lang::pipe::pipe;
+use crate::lang::state::scope::ScopeType::Loop;
 
 fn while_output_type() -> &'static Vec<ColumnType> {
     static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
@@ -40,7 +41,7 @@ fn r#while(mut context: CommandContext) -> CrushResult<()> {
     loop {
         let (sender, receiver) = pipe();
 
-        let cond_env = context.scope.create_child(&context.scope, true);
+        let cond_env = context.scope.create_child(&context.scope, Loop);
         cfg.condition.eval(context.empty().with_scope(cond_env.clone()).with_output(sender))?;
         if cond_env.is_stopped() {
             break;
@@ -49,7 +50,7 @@ fn r#while(mut context: CommandContext) -> CrushResult<()> {
         match receiver.recv()? {
             Value::Bool(true) => match &cfg.body {
                 Some(body) => {
-                    let body_env = context.scope.create_child(&context.scope, true);
+                    let body_env = context.scope.create_child(&context.scope, Loop);
                     body.eval(context.empty().with_scope(body_env.clone()).with_output(body_sender.clone()))?;
                     output.send(Row::new(vec![body_receiver.recv()?]))?;
                     if body_env.is_stopped() {

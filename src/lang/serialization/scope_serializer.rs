@@ -6,6 +6,12 @@ use crate::lang::serialization::{DeserializationState, Serializable, Serializati
 use crate::lang::value::Value;
 use crate::util::identity_arc::Identity;
 use std::collections::hash_map::Entry;
+use element::Element::Member;
+use model::scope::Calling::CallingValue;
+use model::scope::Description::{DescriptionValue, HasDescription};
+use model::scope::Name::{HasName, NameValue};
+use model::scope::Parent::ParentValue;
+use crate::lang::serialization::model::scope::ReturnValue::ReturnValueValue;
 
 impl Serializable<Scope> for Scope {
     fn deserialize(
@@ -18,31 +24,35 @@ impl Serializable<Scope> for Scope {
             Entry::Vacant(_) => match elements[id].element.as_ref().unwrap() {
                 element::Element::UserScope(s) => {
                     let name = match s.name {
-                        None | Some(model::scope::Name::HasName(_)) => None,
-                        Some(model::scope::Name::NameValue(n)) => {
+                        None | Some(HasName(_)) => None,
+                        Some(NameValue(n)) => {
                             Some(String::deserialize(n as usize, elements, state)?)
                         }
                     };
                     let description = match s.description {
-                        None | Some(model::scope::Description::HasDescription(_)) => None,
-                        Some(model::scope::Description::DescriptionValue(n)) => {
+                        None | Some(HasDescription(_)) => None,
+                        Some(DescriptionValue(n)) => {
                             Some(String::deserialize(n as usize, elements, state)?)
                         }
                     };
-                    let res = Scope::create(name, description, s.is_loop, s.is_stopped, s.is_readonly);
+                    let res = Scope::create(name, description, s.scope_type.try_into()?, s.is_stopped, s.is_readonly);
                     state.scopes.insert(id, res.clone());
-                    if let Some(model::scope::Parent::ParentValue(pid)) = s.parent {
+                    if let Some(ParentValue(pid)) = s.parent {
                         res.set_parent(Some(Scope::deserialize(pid as usize, elements, state)?));
                     }
-                    if let Some(model::scope::Calling::CallingValue(cid)) = s.calling {
+                    if let Some(CallingValue(cid)) = s.calling {
                         res.set_calling(Some(Scope::deserialize(cid as usize, elements, state)?));
                     }
                     for uid in &s.uses {
                         res.r#use(&Scope::deserialize(*uid as usize, elements, state)?);
                     }
+                    if let Some(ReturnValueValue(rid)) = s.return_value {
+                        res.set_return_value(Value::deserialize(rid as usize, elements, state)?);
+                    }
+
                     for mid in s.members.iter() {
                         match &elements[*mid as usize].element {
-                            Some(model::element::Element::Member(m)) => {
+                            Some(Member(m)) => {
                                 res.redeclare(
                                     &String::deserialize(m.name as usize, elements, state)?,
                                     Value::deserialize(m.value as usize, elements, state)?,
@@ -87,57 +97,50 @@ impl Serializable<Scope> for Scope {
                 match self.full_path() {
                     Ok(p) => {
                         let strings_idx = p.serialize(elements, state)?;
-                        elements[idx] = model::Element {
-                            element: Some(model::element::Element::InternalScope(strings_idx as u64)),
+                        elements[idx] = Element {
+                            element: Some(element::Element::InternalScope(strings_idx as u64)),
                         };
                     }
                     Err(_) => {
                         let mut sscope: model::Scope = model::Scope::default();
                         let scope_data = self.export()?;
 
-                        match scope_data.name {
-                            None => {
-                                sscope.name = Some(model::scope::Name::HasName(false));
-                            }
-                            Some(n) => {
-                                let nid = n.to_string().serialize(elements, state)?;
-                                sscope.name = Some(model::scope::Name::NameValue(nid as u64));
-                            }
-                        }
-                        match scope_data.parent_scope {
-                            None => {
-                                sscope.parent = Some(model::scope::Parent::HasParent(false));
-                            }
-                            Some(p) => {
-                                let pid = p.serialize(elements, state)?;
-                                sscope.parent = Some(model::scope::Parent::ParentValue(pid as u64));
-                            }
-                        }
-                        match scope_data.calling_scope {
-                            None => {
-                                sscope.calling = Some(model::scope::Calling::HasCalling(false));
-                            }
-                            Some(c) => {
-                                let cid = c.serialize(elements, state)?;
-                                sscope.calling =
-                                    Some(model::scope::Calling::CallingValue(cid as u64));
-                            }
-                        }
+                        sscope.name = match scope_data.name {
+                            None => Some(HasName(false)),
+                            Some(n) =>
+                                Some(NameValue(n.to_string().serialize(elements, state)? as u64)),
+                        };
+                        sscope.parent = match scope_data.parent_scope {
+                            None => Some(model::scope::Parent::HasParent(false)),
+                            Some(p) =>
+                                Some(ParentValue(p.serialize(elements, state)? as u64)),
+                        };
+                        sscope.calling = match scope_data.calling_scope {
+                            None =>
+                                Some(model::scope::Calling::HasCalling(false)),
+                            Some(c) =>
+                                Some(CallingValue(c.serialize(elements, state)? as u64)),
+                        };
                         sscope.is_readonly = scope_data.is_readonly;
-                        sscope.is_loop = scope_data.is_loop;
+                        sscope.scope_type = scope_data.scope_type.into();
                         sscope.is_stopped = scope_data.is_stopped;
 
                         for u in scope_data.uses.iter() {
                             sscope.uses.push(u.serialize(elements, state)? as u64);
                         }
 
+                        sscope.return_value = match scope_data.return_value {
+                            None => None,
+                            Some(v) => Some(ReturnValueValue(v.serialize(elements, state)? as u64)),
+                        };
+
                         for (k, v) in scope_data.mapping.iter() {
                             let name_idx = k.to_string().serialize(elements, state)?;
                             let value_idx = v.serialize(elements, state)?;
 
                             let entry_idx = elements.len();
-                            elements.push(model::Element {
-                                element: Some(model::element::Element::Member(model::Member {
+                            elements.push(Element {
+                                element: Some(Member(model::Member {
                                     name: name_idx as u64,
                                     value: value_idx as u64,
                                 })),
@@ -146,8 +149,8 @@ impl Serializable<Scope> for Scope {
                             sscope.members.push(entry_idx as u64);
                         }
 
-                        elements[idx] = model::Element {
-                            element: Some(model::element::Element::UserScope(sscope)),
+                        elements[idx] = Element {
+                            element: Some(element::Element::UserScope(sscope)),
                         };
                     }
                 }

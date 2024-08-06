@@ -8,6 +8,7 @@ use signature::signature;
 use std::env;
 
 use crate::lang::command::OutputType::Known;
+use crate::lang::command::OutputType::Unknown;
 use chrono::Duration;
 use std::path::PathBuf;
 use crate::lang::data::table::{ColumnType, Row};
@@ -33,6 +34,21 @@ struct Break {}
 
 fn r#break(context: CommandContext) -> CrushResult<()> {
     context.scope.do_break()?;
+    context.output.empty()
+}
+
+#[signature(
+    control.r#return,
+    can_block = false,
+    short = "Stop execution of a closure and return a value.",
+    output = Unknown)]
+struct Return {
+    value: Option<Value>,
+}
+
+fn r#return(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = Return::parse(context.remove_arguments(), context.global_state.printer())?;
+    context.scope.do_return(cfg.value)?;
     context.output.empty()
 }
 
@@ -125,6 +141,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             r#for::For::declare(env)?;
             cmd::Cmd::declare(env)?;
             Break::declare(env)?;
+            Return::declare(env)?;
             timeit::TimeIt::declare(env)?;
             timer::Timer::declare(env)?;
             schedule::Schedule::declare(env)?;

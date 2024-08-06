@@ -1,7 +1,7 @@
 Todo:
 `return` command.
 Math commands for command mode, e.g. `add 1 2 3`
-Lops for math mode, e.g. `(for i=foo {...})`, `(loop {...})` and `(while condition {...})`
+Loops for math mode, e.g. `(for i=foo {...})`, `(loop {...})` and `(while condition {...})`
 Control flow for math mode, i.e. `return`, break` and `continue` as keywords.
 Rewrite all tests for new syntax
 New regex literal syntax

@@ -6,6 +6,7 @@ use crate::lang::data::table::ColumnType;
 use crate::lang::pipe::pipe;
 use crate::lang::command::OutputType::Known;
 use signature::signature;
+use crate::lang::state::scope::ScopeType;
 
 fn loop_output_type() -> Vec<ColumnType> {
     vec![
@@ -29,7 +30,7 @@ fn r#loop(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Loop = Loop::parse(context.remove_arguments(), &context.global_state.printer())?;
     let (sender, receiver) = pipe();
     loop {
-        let env = context.scope.create_child(&context.scope, true);
+        let env = context.scope.create_child(&context.scope, ScopeType::Loop);
         cfg.body.eval(context.empty().with_scope(env.clone()).with_output(sender.clone()))?;
         if env.is_stopped() {
             context.output.send(receiver.recv()?)?;

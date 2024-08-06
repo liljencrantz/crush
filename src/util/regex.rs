@@ -23,11 +23,11 @@ impl RegexFileMatcher for Regex {
                                 },
                             }
                         }
-                        e => printer.handle_error(e.map_err({|ee| ee.into()})),
+                        e => printer.handle_error(e.map_err(|ee| ee.into())),
                     }
                 }
             }
-            e => printer.handle_error(e.map_err({|ee| ee.into()})),
+            e => printer.handle_error(e.map_err(|ee| ee.into())),
         }
     }
 }

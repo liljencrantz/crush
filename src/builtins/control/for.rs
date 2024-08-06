@@ -9,6 +9,7 @@ use crate::lang::data::r#struct::Struct;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::pipe::{pipe, Stream};
 use crate::lang::state::argument_vector::ArgumentVector;
+use crate::lang::state::scope::ScopeType::Loop;
 
 #[signature(
     control.r#for,
@@ -38,7 +39,7 @@ fn r#for(mut context: CommandContext) -> CrushResult<()> {
     let (name, mut input) = cfg.iterator.drain().next().unwrap();
 
     while let Ok(line) = input.read() {
-        let env = context.scope.create_child(&context.scope, true);
+        let env = context.scope.create_child(&context.scope, Loop);
 
         let vvv = if input.types().len() == 1 {
             Vec::from(line).remove(0)

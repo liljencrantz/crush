@@ -15,6 +15,7 @@ use lang::{data, state};
 use crate::lang::interactive;
 use lang::state::global_state::GlobalState;
 use crate::lang::printer::Printer;
+use crate::lang::state::scope::ScopeType::Other;
 
 #[derive(PartialEq, Eq)]
 enum Mode {
@@ -79,7 +80,7 @@ fn run() -> CrushResult<i32> {
     let config = parse_args()?;
 
     let root_scope = state::scope::Scope::create_root();
-    let local_scope = root_scope.create_child(&root_scope, false);
+    let local_scope = root_scope.create_child(&root_scope, Other);
 
     let (printer, print_handle) = if config.mode == Mode::Pup {
         printer::noop()

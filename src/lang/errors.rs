@@ -45,6 +45,7 @@ pub enum CrushErrorType {
     ChronoParseError(chrono::ParseError),
     LoginsError(String),
     CharTryFromError(std::char::CharTryFromError),
+    SerializationError(String),
 }
 
 #[derive(Debug)]
@@ -112,6 +113,7 @@ impl CrushError {
             ChronoParseError(e) => e.to_string(),
             LoginsError(e) => e.to_string(),
             CharTryFromError(e) => e.to_string(),
+            SerializationError(e) => e.to_string(),
         }
     }
 
@@ -504,6 +506,14 @@ pub fn eof_error<T>() -> CrushResult<T> {
 pub fn argument_error_legacy<T>(message: impl Into<String>) -> CrushResult<T> {
     Err(CrushError {
         error_type: InvalidArgument(message.into()),
+        location: None,
+        definition: None,
+    })
+}
+
+pub fn serialization_error<T>(message: impl Into<String>) -> CrushResult<T> {
+    Err(CrushError {
+        error_type: SerializationError(message.into()),
         location: None,
         definition: None,
     })

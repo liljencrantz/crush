@@ -7,7 +7,7 @@ use crate::lang::state::contexts::{CommandContext, CompileContext, JobContext};
 use crate::lang::help::Help;
 use crate::lang::job::Job;
 use crate::lang::data::list::List;
-use crate::lang::state::scope::Scope;
+use crate::lang::state::scope::{Scope, ScopeType};
 use crate::lang::serialization::model;
 use crate::lang::serialization::model::closure::Name;
 use crate::lang::serialization::model::{element, Element};
@@ -34,7 +34,7 @@ impl CrushCommand for Closure {
     fn eval(&self, context: CommandContext) -> CrushResult<()> {
         let job_definitions = self.job_definitions.clone();
         let parent_env = self.env.clone();
-        let env = parent_env.create_child(&context.scope, false);
+        let env = parent_env.create_child(&context.scope, ScopeType::Closure);
 
         let mut cc = CompileContext::from(&context).with_scope(&env);
         if let Some(this) = context.this {
@@ -71,7 +71,7 @@ impl CrushCommand for Closure {
             job.map(|id| local_threads.join_one(id, &local_printer));
 
             if env.is_stopped() {
-                return context.output.empty();
+                return env.send_return_value(&context.output);
             }
         }
         Ok(())

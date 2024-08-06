@@ -150,6 +150,12 @@ enum SwitchStyle {
   DOUBLE = 2;
 }
 
+enum ScopeType {
+  LOOP = 0;
+  CLOSURE = 1;
+  OTHER = 2;
+}
+
 message ArgumentDefinition {
   oneof argument_type {
     uint64 some = 1;
@@ -187,9 +193,13 @@ message Scope {
   }
   repeated uint64 uses = 6;
   repeated uint64 members = 7;
-  bool is_loop = 8;
+  ScopeType scope_type = 8;
   bool is_stopped = 9;
   bool is_readonly = 10;
+  oneof return_value {
+    bool has_return_value = 15;
+    uint64 return_value_value = 16;
+  }
   oneof name {
     bool has_name = 11;
     uint64 name_value = 12;

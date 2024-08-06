@@ -1,5 +1,5 @@
 use crate::lang::command::{Command, CrushCommand, OutputType, ArgumentDescription};
-use crate::lang::errors::{error, mandate, CrushResult, argument_error_legacy, CrushError};
+use crate::lang::errors::{error, mandate, CrushResult, argument_error_legacy, CrushError, serialization_error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::help::Help;
 use crate::data::r#struct::Struct;
@@ -12,7 +12,8 @@ use std::fmt::{Display, Formatter};
 use chrono::Duration;
 use lazy_static::lazy_static;
 use crate::data::table::{ColumnType, Row};
-use crate::lang::pipe::CrushStream;
+use crate::lang::pipe::{CrushStream, ValueSender};
+use crate::lang::state::scope::ScopeType::{Closure, Loop, Other};
 use crate::util::replace::Replace;
 
 /**
@@ -70,7 +71,6 @@ impl ScopeLoader {
             data: Arc::from(Mutex::new(ScopeData::lazy(
                 None,
                 Some(self.scope.clone()),
-                false,
                 Some(name.to_string()),
                 Some(description.into()),
                 loader,
@@ -149,10 +149,40 @@ impl ScopeLoader {
             data: Arc::from(Mutex::new(ScopeData::new(
                 Some(self.parent.clone()),
                 Some(self.parent.clone()),
-                false,
+                Other,
                 None,
                 None,
             ))),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Copy)]
+pub enum ScopeType {
+    Loop,
+    Closure,
+    Other,
+}
+
+impl TryFrom<i32> for ScopeType {
+    type Error = CrushError;
+
+    fn try_from(value: i32) -> CrushResult<ScopeType> {
+        match value {
+            0 => Ok(Loop),
+            1 => Ok(Closure),
+            2 => Ok(Other),
+            v => serialization_error(format!("Invalid scope type {}", v)),
+        }
+    }
+}
+
+impl From<ScopeType> for i32 {
+    fn from(value: ScopeType) -> Self {
+        match value {
+            Loop => 0,
+            Closure => 1,
+            Other => 2,
         }
     }
 }
@@ -179,7 +209,7 @@ pub struct ScopeData {
     pub mapping: OrderedMap<String, Value>,
 
     /** True if this scope is a loop. Required to implement the break/continue commands.*/
-    pub is_loop: bool,
+    pub scope_type: ScopeType,
 
     /** True if this scope should stop execution, i.e. if the continue or break commands have been
                    called.  */
@@ -188,6 +218,8 @@ pub struct ScopeData {
     /** True if this scope can not be further modified. Note that mutable variables in it, e.g.
                    lists can still be modified. */
     pub is_readonly: bool,
+
+    pub return_value: Option<Value>,
 
     pub name: Option<String>,
     description: Option<String>,
@@ -199,18 +231,19 @@ impl ScopeData {
     fn new(
         parent_scope: Option<Scope>,
         calling_scope: Option<Scope>,
-        is_loop: bool,
+        scope_type: ScopeType,
         name: Option<String>,
         description: Option<String>,
     ) -> ScopeData {
         ScopeData {
             parent_scope,
             calling_scope,
-            is_loop,
+            scope_type,
             uses: Vec::new(),
             mapping: OrderedMap::new(),
             is_stopped: false,
             is_readonly: false,
+            return_value: None,
             name,
             description,
             is_loaded: true,
@@ -221,7 +254,6 @@ impl ScopeData {
     fn lazy(
         parent_scope: Option<Scope>,
         calling_scope: Option<Scope>,
-        is_loop: bool,
         name: Option<String>,
         description: Option<String>,
         loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>,
@@ -229,11 +261,12 @@ impl ScopeData {
         ScopeData {
             parent_scope,
             calling_scope,
-            is_loop,
+            scope_type: Other,
             uses: Vec::new(),
             mapping: OrderedMap::new(),
             is_stopped: false,
             is_readonly: false,
+            return_value: None,
             name,
             description,
             is_loaded: false,
@@ -247,11 +280,12 @@ impl Clone for ScopeData {
         ScopeData {
             parent_scope: self.parent_scope.clone(),
             calling_scope: self.calling_scope.clone(),
-            is_loop: self.is_loop,
+            scope_type: self.scope_type,
             uses: self.uses.clone(),
             mapping: self.mapping.clone(),
             is_stopped: self.is_stopped,
             is_readonly: self.is_readonly,
+            return_value: self.return_value.clone(),
             name: self.name.clone(),
             description: self.description.clone(),
             is_loaded: true,
@@ -270,7 +304,7 @@ impl Scope {
             data: Arc::from(Mutex::new(ScopeData::new(
                 None,
                 None,
-                false,
+                Other,
                 Some("global".to_string()),
                 Some("The root of all namespaces. All namespaces directly or indirectly\ninherit from this one.".to_string()),
             ))),
@@ -280,7 +314,7 @@ impl Scope {
     pub fn create(
         name: Option<String>,
         description: Option<String>,
-        is_loop: bool,
+        scope_type: ScopeType,
         is_stopped: bool,
         is_readonly: bool,
     ) -> Scope {
@@ -290,9 +324,10 @@ impl Scope {
                 calling_scope: None,
                 uses: vec![],
                 mapping: OrderedMap::new(),
-                is_loop,
+                scope_type,
                 is_stopped,
                 is_readonly,
+                return_value: None,
                 name,
                 description,
                 is_loaded: true,
@@ -301,12 +336,12 @@ impl Scope {
         }
     }
 
-    pub fn create_child(&self, caller: &Scope, is_loop: bool) -> Scope {
+    pub fn create_child(&self, caller: &Scope, scope_type: ScopeType) -> Scope {
         Scope {
             data: Arc::from(Mutex::new(ScopeData::new(
                 Some(self.clone()),
                 Some(caller.clone()),
-                is_loop,
+                scope_type,
                 None,
                 None,
             ))),
@@ -323,7 +358,6 @@ impl Scope {
             data: Arc::from(Mutex::new(ScopeData::lazy(
                 None,
                 Some(self.clone()),
-                false,
                 Some(name.to_string()),
                 Some(description.into()),
                 loader,
@@ -337,7 +371,7 @@ impl Scope {
         let data = self.lock()?;
         if data.is_readonly {
             Ok(false)
-        } else if data.is_loop {
+        } else if data.scope_type == ScopeType::Loop {
             Ok(true)
         } else {
             let caller = data.calling_scope.clone();
@@ -365,13 +399,34 @@ impl Scope {
         let mut data = self.lock()?;
         if data.is_readonly {
             Ok(false)
-        } else if data.is_loop {
+        } else if data.scope_type == Loop {
             data.is_stopped = true;
             Ok(true)
         } else {
             let caller = data.calling_scope.clone();
             drop(data);
             let ok = caller.map(|p| p.do_break()).unwrap_or(Ok(false))?;
+            if !ok {
+                Ok(false)
+            } else {
+                self.lock().unwrap().is_stopped = true;
+                Ok(true)
+            }
+        }
+    }
+
+    pub fn do_return(&self, value: Option<Value>) -> CrushResult<bool> {
+        let mut data = self.lock()?;
+        if data.is_readonly {
+            Ok(false)
+        } else if data.scope_type == Closure {
+            data.is_stopped = true;
+            data.return_value = value;
+            Ok(true)
+        } else {
+            let caller = data.calling_scope.clone();
+            drop(data);
+            let ok = caller.map(|p| p.do_return(value)).unwrap_or(Ok(false))?;
             if !ok {
                 Ok(false)
             } else {
@@ -396,6 +451,13 @@ impl Scope {
 
     pub fn is_stopped(&self) -> bool {
         self.lock().unwrap().is_stopped
+    }
+
+    pub fn send_return_value(&self, output: &ValueSender) -> CrushResult<()>{
+        match self.lock().unwrap().return_value.take() {
+            None => output.empty(),
+            Some(v) => output.send(v),
+        }
     }
 
     fn lock(&self) -> CrushResult<MutexGuard<ScopeData>> {
@@ -743,6 +805,10 @@ impl Scope {
 
     pub fn set_calling(&self, calling: Option<Scope>) {
         self.lock().unwrap().calling_scope = calling;
+    }
+
+    pub fn set_return_value(&self, value: Value) {
+        self.lock().unwrap().return_value = Some(value);
     }
 }
 
