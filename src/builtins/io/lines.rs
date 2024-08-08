@@ -8,24 +8,39 @@ use crate::lang::{
 use signature::signature;
 use std::io::{BufRead, BufReader};
 use std::convert::From;
+use std::sync::OnceLock;
+use crate::lang::command::OutputType::Known;
 use crate::lang::state::contexts::CommandContext;
+
+pub fn output_type() -> &'static Vec<ColumnType> {
+    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
+    CELL.get_or_init(|| vec![ColumnType::new("line", ValueType::String)])
+}
 
 #[signature(
     io.lines.from,
     can_block = true,
+    output = Known(ValueType::TableInputStream(output_type().clone())),
     short = "Read specified files (or input) as a table with one line of text per row"
 )]
-
 struct FromSignature {
     #[unnamed()]
     #[description("the files to read from (read from input if no file is specified).")]
     files: Files,
+
+    #[default(false)]
+    #[description("do not emit empty lines.")]
+    skip_empty_lines: bool,
+
+    #[default(false)]
+    #[description("strip whitespace from beginning and end of lines.")]
+    strip_whitespace: bool,
 }
 
 pub fn from(context: CommandContext) -> CrushResult<()> {
     let output = context
         .output
-        .initialize(&[ColumnType::new("line", ValueType::String)])?;
+        .initialize(output_type())?;
     let cfg: FromSignature = FromSignature::parse(context.arguments, &context.global_state.printer())?;
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
     let mut line = String::new();
@@ -40,13 +55,20 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
         } else {
             &line[..]
         };
-        while s.starts_with('\r') {
-            s = &s[1..];
+        if cfg.strip_whitespace {
+            s = s.trim()
+        } else {
+            while s.starts_with('\r') {
+                s = &s[1..];
+            }
+            while s.ends_with('\r') {
+                s = &s[0..line.len() - 1];
+            }
         }
-        while s.ends_with('\r') {
-            s = &s[0..line.len() - 1];
+
+        if line.len() > 0 || !cfg.skip_empty_lines {
+            output.send(Row::new(vec![Value::from(s)]))?;
         }
-        output.send(Row::new(vec![Value::from(s)]))?;
         line.clear();
     }
     Ok(())

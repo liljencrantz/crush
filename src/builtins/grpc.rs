@@ -11,22 +11,16 @@ use crate::lang::state::scope::Scope;
 use std::process;
 use std::process::Stdio;
 use std::io::Read;
+use std::sync::OnceLock;
 use crossbeam::channel::bounded;
-use lazy_static::lazy_static;
 use crate::lang::data::list::List;
-use crate::lang::data::table::{Row, Table};
+use crate::lang::data::table::{ColumnFormat, Row, Table};
 use crate::lang::errors::{error, mandate};
 use crate::lang::signature::patterns::Patterns;
 use crate::lang::state::this::This;
 use crate::builtins::io::json::{json_to_value, value_to_json};
 use crate::lang::value::ValueType;
 use crate::lang::data::table::ColumnType;
-
-lazy_static! {
-    static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
-        ColumnType::new("value", ValueType::Any),
-    ];
-}
 
 #[signature(
     grpc.connect,

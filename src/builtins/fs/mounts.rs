@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use std::sync::OnceLock;
 use signature::signature;
 use crate::state::contexts::CommandContext;
 use crate::lang::errors::{CrushResult};
@@ -9,8 +9,9 @@ use crate::lang::value::{Value, ValueType};
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::ColumnFormat;
 
-lazy_static! {
-    static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
+pub fn output_type() -> &'static Vec<ColumnType> {
+    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
+    CELL.get_or_init(|| vec![
         ColumnType::new_with_format("size", ColumnFormat::ByteUnit, ValueType::Integer),
         ColumnType::new_with_format("availble", ColumnFormat::ByteUnit, ValueType::Integer),
         ColumnType::new_with_format("usage", ColumnFormat::Percentage, ValueType::Float),
@@ -18,20 +19,20 @@ lazy_static! {
         ColumnType::new("readonly", ValueType::Any),
         ColumnType::new("name", ValueType::String),
         ColumnType::new("path", ValueType::File),
-    ];
+        ])
 }
 
 #[signature(
     fs.mounts,
     can_block = true,
-    output = Known(ValueType::TableInputStream(OUTPUT_TYPE.clone())),
+    output = Known(ValueType::TableInputStream(output_type().clone())),
     short = "List mount points",
 )]
 pub struct Mounts {}
 
 fn mounts(mut context: CommandContext) -> CrushResult<()> {
     let _cfg: Mounts = Mounts::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let output = context.output.initialize(&OUTPUT_TYPE)?;
+    let output = context.output.initialize(output_type())?;
 
     for m in mountinfos()? {
         let size = m.size.unwrap_or(0);

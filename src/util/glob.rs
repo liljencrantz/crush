@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, data_error};
+use crate::lang::errors::{CrushResult};
 use std::collections::{HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::fmt::{Display, Formatter};
@@ -140,11 +140,6 @@ struct GlobState<'s> {
     directory: PathBuf,
 }
 
-enum GlobMatchResult<'s> {
-    FullMatch,
-    PartialMatch { remaining_pattern: &'s [Tile] },
-}
-
 fn glob_file_match<'a>(pattern: &'a [Tile], path: &[char], entry: &Directory, out: &mut HashSet<PathBuf>, queue: &mut VecDeque<GlobState<'a>>) -> CrushResult<()> {
     match (pattern.first(), path.first()) {
         (None, None) => {
@@ -205,7 +200,7 @@ fn glob_file_match<'a>(pattern: &'a [Tile], path: &[char], entry: &Directory, ou
             }
         }
 
-        (None, Some(ch)) => {}
+        (None, Some(_)) => {}
         (Some(Tile::Char(ch1)), Some(ch2)) if ch1 == ch2 => {
             return glob_file_match(&pattern[1..], &path[1..], entry, out, queue)
         }

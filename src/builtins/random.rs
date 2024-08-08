@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use std::sync::OnceLock;
 use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
@@ -29,20 +29,21 @@ fn float(mut context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
-lazy_static! {
-    static ref FLOAT_STREAM_OUTPUT_TYPE: Vec<ColumnType> = vec![
-        ColumnType::new("value", ValueType::Float),
-    ];
-    static ref INTEGER_STREAM_OUTPUT_TYPE: Vec<ColumnType> = vec![
-        ColumnType::new("value", ValueType::Integer),
-    ];
+pub fn float_stream_output_type() -> &'static Vec<ColumnType> {
+    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
+    CELL.get_or_init(|| vec![ColumnType::new("value", ValueType::Float)])
+}
+
+pub fn integer_stream_output_type() -> &'static Vec<ColumnType> {
+    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
+    CELL.get_or_init(|| vec![ColumnType::new("value", ValueType::Integer)])
 }
 
 #[signature(
     random.float_stream,
     can_block = true,
     short = "generate a stream of random floating point numbers between 0 (inclusive) and 1 (exclusive)",
-    output = Known(ValueType::TableInputStream(FLOAT_STREAM_OUTPUT_TYPE.clone())),
+    output = Known(ValueType::TableInputStream(float_stream_output_type().clone())),
 )]
 struct FloatStream {
     #[default(Number::Float(1.0))]
@@ -53,7 +54,7 @@ struct FloatStream {
 fn float_stream(mut context: CommandContext) -> CrushResult<()> {
     let cfg = FloatStream::parse(context.remove_arguments(), &context.global_state.printer())?;
     let to = cfg.to.as_float();
-    let output = context.output.initialize(&FLOAT_STREAM_OUTPUT_TYPE)?;
+    let output = context.output.initialize(float_stream_output_type())?;
     loop {
         output
             .send(Row::new(vec![Value::Float(rand::random::<f64>() * to)]))?;
@@ -83,7 +84,7 @@ fn integer(mut context: CommandContext) -> CrushResult<()> {
     random.integer_stream,
     can_block = true,
     short = "generate a stream of random integer numbers between 0 (inclusive) and 2 (exclusive)",
-    output = Known(ValueType::TableInputStream(INTEGER_STREAM_OUTPUT_TYPE.clone())),
+    output = Known(ValueType::TableInputStream(integer_stream_output_type().clone())),
 )]
 struct IntegerStream {
     #[default(2)]
@@ -93,7 +94,7 @@ struct IntegerStream {
 
 fn integer_stream(mut context: CommandContext) -> CrushResult<()> {
     let cfg = IntegerStream::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let output = context.output.initialize(&INTEGER_STREAM_OUTPUT_TYPE)?;
+    let output = context.output.initialize(integer_stream_output_type())?;
     loop {
         output
             .send(Row::new(vec![Value::Integer((rand::random::<f64>() * (cfg.to as f64)) as i128)]))?;

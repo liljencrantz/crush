@@ -1,3 +1,4 @@
+use std::sync::OnceLock;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{error, CrushResult};
 use crate::lang::state::contexts::{CommandContext};
@@ -7,25 +8,26 @@ use lazy_static::lazy_static;
 use psutil::process::{Process, ProcessResult};
 use signature::signature;
 
-lazy_static! {
-    static ref FILE_OUTPUT_TYPE: Vec<ColumnType> = vec![
+pub fn file_output_type() -> &'static Vec<ColumnType> {
+    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
+    CELL.get_or_init(|| vec![
         ColumnType::new("fd", ValueType::Integer),
         ColumnType::new("path", ValueType::File),
         ColumnType::new("pid", ValueType::Integer),
-    ];
+    ])
 }
 
 #[signature(
     fs.fd.file,
     can_block = true,
     short = "Return a table stream containing information on all open files",
-    output = Known(ValueType::TableInputStream(FILE_OUTPUT_TYPE.clone())),
+    output = Known(ValueType::TableInputStream(file_output_type().clone())),
     long = "fd:file accepts no arguments.")]
 pub struct File {}
 
 fn file(mut context: CommandContext) -> CrushResult<()> {
     File::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let output = context.output.initialize(&FILE_OUTPUT_TYPE)?;
+    let output = context.output.initialize(file_output_type())?;
 
     match psutil::process::processes() {
         Ok(procs) => {

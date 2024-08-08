@@ -2,6 +2,7 @@ use crate::lang::command::Command;
 use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use signature::signature;
+use crate::lang::state::scope::ScopeType;
 use crate::lang::value::Value;
 
 #[signature(
@@ -23,11 +24,15 @@ fn r#if(mut context: CommandContext) -> CrushResult<()> {
     let cfg: If = If::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     if cfg.condition {
-        cfg.true_clause.eval(context.with_args(vec![], None))
+        let env = context.scope.create_child(&context.scope, ScopeType::Conditional);
+        cfg.true_clause.eval(context.empty().with_scope(env).with_output(context.output))
     } else {
         match cfg.false_clause {
             None => context.output.send(Value::Empty),
-            Some(v) => v.eval(context.with_args(vec![], None)),
+            Some(v) => {
+                let env = context.scope.create_child(&context.scope, ScopeType::Conditional);
+                v.eval(context.empty().with_scope(env).with_output(context.output))
+            },
         }
     }
 }

@@ -2,13 +2,12 @@ use signature::signature;
 use crate::lang::argument::Argument;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{argument_error_legacy, CrushResult, mandate};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::pipe::{pipe, Stream};
-use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::scope::ScopeType::Loop;
 
 #[signature(

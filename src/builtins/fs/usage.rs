@@ -8,24 +8,25 @@ use crate::lang::data::table::Row;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use crate::lang::data::table::ColumnType;
-use lazy_static::lazy_static;
 use crate::lang::command::OutputType::Known;
 use crate::util::directory_lister::{DirectoryLister, directory_lister};
 use std::os::unix::fs::MetadataExt;
+use std::sync::OnceLock;
 use crate::lang::data::table::ColumnFormat;
 
-lazy_static! {
-    static ref OUTPUT_TYPE: Vec<ColumnType> = vec![
+pub fn output_type() -> &'static Vec<ColumnType> {
+    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
+    CELL.get_or_init(|| vec![
         ColumnType::new_with_format("size", ColumnFormat::ByteUnit, ValueType::Integer),
         ColumnType::new("blocks", ValueType::Integer),
         ColumnType::new("file", ValueType::File),
-    ];
+    ])
 }
 
 #[signature(
     fs.usage,
     can_block = true,
-    output = Known(ValueType::TableInputStream(OUTPUT_TYPE.clone())),
+    output = Known(ValueType::TableInputStream(output_type().clone())),
     short = "Calculate the recursive directory space usage.",
 )]
 pub struct Usage {
@@ -73,7 +74,7 @@ fn size(
 
 fn usage(context: CommandContext) -> CrushResult<()> {
     let cfg: Usage = Usage::parse(context.arguments, &context.global_state.printer())?;
-    let output = context.output.initialize(&OUTPUT_TYPE)?;
+    let output = context.output.initialize(&output_type())?;
     let dirs = if cfg.directory.had_entries() {
         Vec::from(cfg.directory)
     } else {

@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Display, Formatter};
 use num_format::Grouping;
 use crate::lang::errors::{byte_unit_error, CrushError};
 use crate::util::byte_unit::ByteUnit::{Binary, Decimal, Raw};

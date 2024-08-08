@@ -1,6 +1,6 @@
 use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::state::contexts::CommandContext;
-use crate::lang::state::scope::Scope;
+use crate::lang::state::scope::{Scope, ScopeType};
 use crate::lang::pipe::pipe;
 use crate::lang::value::Value;
 
@@ -16,8 +16,12 @@ pub fn and(mut context: CommandContext) -> CrushResult<()> {
             }
             Value::Command(c) => {
                 let (sender, receiver) = pipe();
-                let cc = context.empty().with_output(sender);
+                let env = context.scope.create_child(&context.scope, ScopeType::Conditional);
+                let cc = context.empty().with_output(sender).with_scope(env);
                 c.eval(cc)?;
+                if context.scope.is_stopped() {
+                    return Ok(());
+                }
                 match receiver.recv()? {
                     Value::Bool(b) => {
                         if !b {
@@ -25,7 +29,7 @@ pub fn and(mut context: CommandContext) -> CrushResult<()> {
                             break;
                         }
                     }
-                    _ => return argument_error_legacy("Expected boolean values"),
+                    v => return argument_error_legacy(format!("Expected boolean values, got a value of type {}", v.value_type().to_string())),
                 }
             }
             _ => return argument_error_legacy("Expected boolean values"),
@@ -47,8 +51,12 @@ pub fn or(mut context: CommandContext) -> CrushResult<()> {
 
             Value::Command(c) => {
                 let (sender, receiver) = pipe();
-                let cc = context.empty().with_output(sender);
+                let env = context.scope.create_child(&context.scope, ScopeType::Conditional);
+                let cc = context.empty().with_output(sender).with_scope(env);
                 c.eval(cc)?;
+                if context.scope.is_stopped() {
+                    return Ok(());
+                }
                 match receiver.recv()? {
                     Value::Bool(b) => {
                         if b {
@@ -71,30 +79,30 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "Logical operators (and and or)",
         Box::new(|env| {
             env.declare_condition_command(
-                "cond:__and__",
+                "__and__",
                 and,
-                "__and__ condition:(bool|command)... -> boolean",
+                "cond:__and__ condition:(bool|command)... -> boolean",
                 "True if all arguments are true",
                 Some(r#"    Every argument to and must be either a boolean or a command that returns a boolean.
     The and command will check all arguments in order, and if any of them are false, and
     will return false. If all conditions are true, and returns true.
 
-    Do note that and is a short circuiting command, meaning that if one of the conditions
-    is found to be false, and will not evaluate any remaining closures."#),
+    Do note that `and` is a short circuiting command, meaning that if one of the conditions
+    is found to be false, `and` will not evaluate any remaining closures."#),
                 vec![],
             )?;
 
             env.declare_condition_command(
-                "cond:__or__",
+                "__or__",
                 or,
-                "__or__ condition:(bool|command)... -> boolean",
+                "cond:__or__ condition:(bool|command)... -> boolean",
                 "True if any argument is true",
                 Some(r#"    Every argument to or must be either a boolean or a command that returns a boolean.
     The or command will check all arguments in order, and if any of them are true, or
     will return true. If all conditions are false, or returns false.
 
-    Do note that or is a short circuiting command, meaning that if one of the conditions
-    is found to be true, or will not evaluate any remaining closures."#),
+    Do note that `or` is a short circuiting command, meaning that if one of the conditions
+    is found to be true, `or` will not evaluate any remaining closures."#),
                 vec![],
             )?;
 

@@ -1,5 +1,3 @@
-use std::error::Error;
-use std::fmt::Display;
 use crate::lang::ast::location::Location;
 use CrushErrorType::*;
 use std::cmp::{min, max};
@@ -46,6 +44,7 @@ pub enum CrushErrorType {
     LoginsError(String),
     CharTryFromError(std::char::CharTryFromError),
     SerializationError(String),
+    InvalidJump(String),
 }
 
 #[derive(Debug)]
@@ -114,6 +113,7 @@ impl CrushError {
             LoginsError(e) => e.to_string(),
             CharTryFromError(e) => e.to_string(),
             SerializationError(e) => e.to_string(),
+            InvalidJump(e) => e.to_string(),
         }
     }
 
@@ -530,6 +530,14 @@ pub fn argument_error<T>(message: impl Into<String>, location: Location) -> Crus
 pub fn data_error<T>(message: impl Into<String>) -> CrushResult<T> {
     Err(CrushError {
         error_type: InvalidData(message.into()),
+        location: None,
+        definition: None,
+    })
+}
+
+pub fn invalid_jump<T>(message: impl Into<String>) -> CrushResult<T> {
+    Err(CrushError {
+        error_type: InvalidJump(message.into()),
         location: None,
         definition: None,
     })

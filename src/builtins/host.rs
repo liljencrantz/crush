@@ -7,10 +7,10 @@ use nix::sys::signal;
 use nix::unistd::Pid;
 use signature::signature;
 use std::str::FromStr;
+use std::sync::OnceLock;
 use crate::lang::errors::error;
 use crate::lang::data::r#struct::Struct;
 use sys_info;
-use lazy_static::lazy_static;
 use battery::State;
 use chrono::Duration;
 use crate::lang::data::table::ColumnFormat;
@@ -32,8 +32,9 @@ fn name(context: CommandContext) -> CrushResult<()> {
         .send(Value::from(sys_info::hostname()?))
 }
 
-lazy_static! {
-    static ref BATTERY_OUTPUT_TYPE: Vec<ColumnType> = vec![
+pub fn battery_output_type() -> &'static Vec<ColumnType> {
+    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
+    CELL.get_or_init(|| vec![
         ColumnType::new("vendor", ValueType::String),
         ColumnType::new("model", ValueType::String),
         ColumnType::new("technology", ValueType::String),
@@ -45,7 +46,7 @@ lazy_static! {
         ColumnType::new_with_format("charge", ColumnFormat::Percentage, ValueType::Float),
         ColumnType::new("time_to_full", ValueType::Duration),
         ColumnType::new("time_to_empty", ValueType::Duration),
-    ];
+    ])
 }
 
 #[signature(
@@ -66,7 +67,7 @@ fn uptime(context: CommandContext) -> CrushResult<()> {
 #[signature(
     host.battery,
     can_block = true,
-    output = Known(ValueType::TableInputStream(BATTERY_OUTPUT_TYPE.clone())),
+    output = Known(ValueType::TableInputStream(battery_output_type().clone())),
     short = "List all batteries in the system and their status")]
 struct Battery {}
 
@@ -87,7 +88,7 @@ fn time_to_duration(tm: Option<battery::units::Time>) -> Duration {
 
 fn battery(context: CommandContext) -> CrushResult<()> {
     let manager = battery::Manager::new()?;
-    let output = context.output.initialize(&BATTERY_OUTPUT_TYPE)?;
+    let output = context.output.initialize(battery_output_type())?;
     for battery in manager.batteries()? {
         let battery = battery?;
         output.send(Row::new(vec![
@@ -218,7 +219,7 @@ mod cpu {
 
 #[cfg(target_os = "macos")]
 mod macos {
-    use lazy_static::lazy_static;
+    use std::sync::OnceLock;
     use crate::lang::command::OutputType::Known;
     use crate::lang::errors::{CrushResult};
     use crate::lang::state::contexts::CommandContext;
@@ -229,34 +230,36 @@ mod macos {
     use signature::signature;
     use crate::lang::data::table::{ColumnFormat};
 
-    lazy_static! {
-    static ref LIST_OUTPUT_TYPE: Vec<ColumnType> = vec![
-        ColumnType::new("pid", ValueType::Integer),
-        ColumnType::new("ppid", ValueType::Integer),
-        ColumnType::new("user", ValueType::String),
-        ColumnType::new_with_format("rss", ColumnFormat::ByteUnit, ValueType::Integer),
-        ColumnType::new_with_format("vms", ColumnFormat::ByteUnit, ValueType::Integer),
-        ColumnType::new("cpu", ValueType::Duration),
-        ColumnType::new("name", ValueType::String),
-    ];
-}
+    pub fn list_output_type() -> &'static Vec<ColumnType> {
+        static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
+        CELL.get_or_init(|| vec![
+            ColumnType::new("pid", ValueType::Integer),
+            ColumnType::new("ppid", ValueType::Integer),
+            ColumnType::new("user", ValueType::String),
+            ColumnType::new_with_format("rss", ColumnFormat::ByteUnit, ValueType::Integer),
+            ColumnType::new_with_format("vms", ColumnFormat::ByteUnit, ValueType::Integer),
+            ColumnType::new("cpu", ValueType::Duration),
+            ColumnType::new("name", ValueType::String),
+        ])
+    }
 
-    lazy_static! {
-    static ref THREADS_OUTPUT_TYPE: Vec<ColumnType> = vec![
-        ColumnType::new("tid", ValueType::Integer),
-        ColumnType::new("pid", ValueType::Integer),
-        ColumnType::new("priority", ValueType::Integer),
-        ColumnType::new("user", ValueType::Duration),
-        ColumnType::new("system", ValueType::Duration),
-        ColumnType::new("name", ValueType::String),
-    ];
-}
+    pub fn threads_output_type() -> &'static Vec<ColumnType> {
+        static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
+        CELL.get_or_init(|| vec![
+            ColumnType::new("tid", ValueType::Integer),
+            ColumnType::new("pid", ValueType::Integer),
+            ColumnType::new("priority", ValueType::Integer),
+            ColumnType::new("user", ValueType::Duration),
+            ColumnType::new("system", ValueType::Duration),
+            ColumnType::new("name", ValueType::String),
+        ])
+    }
 
     #[signature(
         host.procs,
         can_block = true,
         short = "Return a table stream containing information on all running processes on this host",
-        output = Known(ValueType::TableInputStream(LIST_OUTPUT_TYPE.clone())),
+        output = Known(ValueType::TableInputStream(list_output_type().clone())),
         long = "host:procs accepts no arguments.")]
     pub struct Procs {}
 
@@ -266,7 +269,7 @@ mod macos {
     use mach2::mach_time::mach_timebase_info;
 
     fn procs(context: CommandContext) -> CrushResult<()> {
-        let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
+        let output = context.output.initialize(list_output_type())?;
         let users = create_user_map()?;
         let mut info: mach_timebase_info = mach_timebase_info { numer: 0, denom: 0 };
         unsafe {
@@ -307,14 +310,14 @@ mod macos {
         host.threads,
         can_block = true,
         short = "Return a table stream containing information on all running threads on this host",
-        output = Known(ValueType::TableInputStream(THREADS_OUTPUT_TYPE.clone())),
+        output = Known(ValueType::TableInputStream(threads_output_type().clone())),
         long = "host:threads accepts no arguments.")]
     pub struct Threads {}
 
     fn threads(context: CommandContext) -> CrushResult<()> {
         let mut base_procs = Vec::new();
 
-        let output = context.output.initialize(&THREADS_OUTPUT_TYPE)?;
+        let output = context.output.initialize(threads_output_type())?;
         let mut info: mach_timebase_info = mach_timebase_info { numer: 0, denom: 0 };
         unsafe {
             mach_timebase_info(std::ptr::addr_of_mut!(info));

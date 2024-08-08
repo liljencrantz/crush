@@ -1,8 +1,12 @@
+Changed variable declaration syntax:
+let foo=bar
+
+More consistent with the regular crush syntax, but slightly more verbose.
+
 A way to add methods to existing types:
 
 $file_extra := struct mkdir={|| cmd mkdir -p $this}
-
-implicit
+implicit $file $file_extra
 
 Graphs:
 

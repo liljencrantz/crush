@@ -34,9 +34,15 @@ impl CrushCommand for Closure {
     fn eval(&self, context: CommandContext) -> CrushResult<()> {
         let job_definitions = self.job_definitions.clone();
         let parent_env = self.env.clone();
-        let env = parent_env.create_child(&context.scope, ScopeType::Closure);
 
-        let mut cc = CompileContext::from(&context).with_scope(&env);
+        let scope_type = match self.signature {
+            None => ScopeType::Block,
+            Some(_) => ScopeType::Closure,
+        };
+
+        let env = parent_env.create_child(&context.scope, scope_type);
+
+        let mut cc = CompileContext::from(&context.clone().with_output(black_hole())).with_scope(&env);
         if let Some(this) = context.this {
             env.redeclare("this", this)?;
         }
@@ -48,21 +54,15 @@ impl CrushCommand for Closure {
 
         for (idx, job_definition) in job_definitions.iter().enumerate() {
             let first = idx == 0;
-            let last = idx == job_definitions.len() - 1;
             let input = if first {
                 context.input.clone()
             } else {
                 empty_channel()
             };
-            let output = if last {
-                context.output.clone()
-            } else {
-                black_hole()
-            };
 
             let job = job_definition.eval(JobContext::new(
                 input,
-                output,
+                black_hole(),
                 env.clone(),
                 context.global_state.clone(),
             ))?;
@@ -74,7 +74,7 @@ impl CrushCommand for Closure {
                 return env.send_return_value(&context.output);
             }
         }
-        Ok(())
+        context.output.empty()
     }
 
     fn might_block(&self, _arg: &[ArgumentDefinition], _context: &mut CompileContext) -> bool {
@@ -99,7 +99,7 @@ impl CrushCommand for Closure {
 
     fn bind_helper(&self, wrapped: &Command, this: Value) -> Command {
         Arc::from(BoundCommand {
-            command:wrapped.clone(),
+            command: wrapped.clone(),
             this,
         })
     }
@@ -426,7 +426,7 @@ impl<'a> ClosureDeserializer<'a> {
                     ArgumentType::ArgumentDict
                 }
             },
-            switch_style: SwitchStyle::try_from(s.switch_style )?,
+            switch_style: SwitchStyle::try_from(s.switch_style)?,
             location: Location::new(s.start as usize, s.end as usize),
         })
     }
@@ -589,8 +589,8 @@ impl Closure {
                             return argument_error(
                                 format!(
                                     "Missing variable {}. Options are {}!!!",
-                                        name.string,
-                                    named.keys().map(|a|{a.to_string()}).collect::<Vec<String>>().join(", ")),
+                                    name.string,
+                                    named.keys().map(|a| { a.to_string() }).collect::<Vec<String>>().join(", ")),
                                 name.location);
                         }
                     } else {

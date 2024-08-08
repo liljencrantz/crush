@@ -6,7 +6,6 @@ use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ValueType;
 use crate::lang::value::Value;
 use crate::builtins::types::column_types;
-use lazy_static::lazy_static;
 use ordered_map::OrderedMap;
 use signature::signature;
 use crate::lang::ordered_string_map::OrderedStringMap;
@@ -27,29 +26,30 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     })
 }
 
-lazy_static! {
-    static ref CLOSE: Value =
-        Value::Command(<dyn CrushCommand>::command(
-            close, false,
-            &["global", "types", "pipe", "close"],
-            "pipe:close",
-            "Close the specified pipe",
-            None,
-            Known(ValueType::Empty),
-            [],
-        ));
+pub fn close_value() -> &'static Value {
+    static CELL: OnceLock<Value> = OnceLock::new();
+    CELL.get_or_init(|| Value::Command(<dyn CrushCommand>::command(
+        close, false,
+        &["global", "types", "pipe", "close"],
+        "pipe:close",
+        "Close the specified pipe",
+        None,
+        Known(ValueType::Empty),
+        [],
+    )))
+}
 
-        static ref WRITE: Value =
-        Value::Command(<dyn CrushCommand>::command(
-            write, true,
-            &["global", "types", "pipe", "write"],
-            "pipe:write",
-            "Write sink for this pipe",
-            None,
-            Known(ValueType::Empty),
-            [],
-        ));
-
+pub fn write_value() -> &'static Value {
+    static CELL: OnceLock<Value> = OnceLock::new();
+    CELL.get_or_init(|| Value::Command(<dyn CrushCommand>::command(
+        write, true,
+        &["global", "types", "pipe", "write"],
+        "pipe:write",
+        "Write sink for this pipe",
+        None,
+        Known(ValueType::Empty),
+        [],
+    )))
 }
 
 #[signature(
@@ -106,7 +106,7 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Struct),
     short = "Returns a struct containing a read end and a write end of a pipe of the specified type",
-    example = "$pipe := ((table_input_stream value=$integer):pipe)\n    $_1 := (seq 100_000 | $pipe:write | bg)\n    $sum_job_id := ($pipe:read | sum | bg)\n    $pipe:close\n    $sum_job_id | fg"
+    example = "$pipe := $($(table_input_stream value=$integer):pipe)\n    $_1 := $(seq 100_000 | $pipe:write | bg)\n    $sum_job_id := $($pipe:read | sum | bg)\n    $pipe:close\n    $sum_job_id | fg"
 )]
 struct Pipe {}
 
@@ -118,8 +118,8 @@ fn pipe(mut context: CommandContext) -> CrushResult<()> {
                 vec![
                     ("read", Value::TableInputStream(input)),
                     ("output", Value::TableOutputStream(output)),
-                    ("write", WRITE.clone()),
-                    ("close", CLOSE.clone()),
+                    ("write", write_value().clone()),
+                    ("close", close_value().clone()),
                 ],
                 None,
             )))

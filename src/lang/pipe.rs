@@ -14,7 +14,6 @@ use lazy_static::lazy_static;
 
 pub type RecvTimeoutError = crossbeam::channel::RecvTimeoutError;
 
-
 #[derive(Clone)]
 pub struct ValueSender {
     sender: Sender<Value>,
@@ -120,7 +119,7 @@ impl InputStream {
     }
 
     pub fn recv(&self) -> CrushResult<Row> {
-        self.validate(self.receiver.recv().map_err({|e| e.into()}))
+        self.validate(self.receiver.recv().map_err(|e| e.into()))
     }
 
     pub fn recv_timeout(&self, timeout: Duration) -> Result<Row, RecvTimeoutError> {

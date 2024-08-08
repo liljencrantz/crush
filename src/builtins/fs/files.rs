@@ -188,7 +188,6 @@ pub struct FilesSignature {
     #[description("show file name")]
     #[default(true)]
     file: bool,
-
 }
 
 fn column_data(config: &FilesSignature) -> (Vec<ColumnType>, Vec<Column>) {

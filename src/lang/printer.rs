@@ -91,7 +91,7 @@ pub fn noop() -> (Printer, JoinHandle<()>) {
 impl Printer {
     pub fn line(&self, line: &str) {
         self.handle_error(
-            self.sender.send(Line(line.to_string())).map_err({|e| e.into()}));
+            self.sender.send(Line(line.to_string())).map_err(|e| e.into()));
     }
     /*
         pub fn lines(&self, lines: Vec<String>) {

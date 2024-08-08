@@ -1,6 +1,7 @@
 use std::io::{Read, Write};
 use std::process;
 use std::process::Stdio;
+use std::sync::OnceLock;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::errors::{CrushResult, error, mandate};
@@ -10,7 +11,6 @@ use crate::lang::data::r#struct::Struct;
 use crate::lang::value::{Value, ValueType};
 use signature::signature;
 use crate::lang::{data::table::ColumnType, data::table::Row};
-use lazy_static::lazy_static;
 use crate::util::user_map::{get_all_users, get_current_username, get_user};
 use crate::lang::command::{Command, CrushCommand};
 use crate::lang::serialization::{deserialize, serialize};
@@ -29,26 +29,27 @@ fn me(context: CommandContext) -> CrushResult<()> {
     context.output.send(get_user_value(&get_current_username()?)?)
 }
 
-lazy_static! {
-    static ref CURRENT_OUTPUT_TYPE: Vec<ColumnType> = vec![
+pub fn current_output_type() -> &'static Vec<ColumnType> {
+    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
+    CELL.get_or_init(|| vec![
         ColumnType::new("name", ValueType::String),
         ColumnType::new("tty", ValueType::String),
         ColumnType::new("host", ValueType::String),
         ColumnType::new("time", ValueType::Time),
         ColumnType::new("pid", ValueType::Integer),
-    ];
+    ])
 }
 
 #[signature(
     user.current,
     can_block = true,
-    output = Known(ValueType::TableInputStream(CURRENT_OUTPUT_TYPE.clone())),
+    output = Known(ValueType::TableInputStream(current_output_type().clone())),
     short = "Currently logged in users",
 )]
 struct Current {}
 
 fn current(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(&CURRENT_OUTPUT_TYPE)?;
+    let output = context.output.initialize(current_output_type())?;
 
     for l in logins::list()? {
         output.send(Row::new(vec![
@@ -62,36 +63,38 @@ fn current(context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
-lazy_static! {
-    static ref LIST_OUTPUT_TYPE: Vec<ColumnType> = vec![
+pub fn list_output_type() -> &'static Vec<ColumnType> {
+    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
+    CELL.get_or_init(|| vec![
         ColumnType::new("name", ValueType::String),
         ColumnType::new("home", ValueType::File),
         ColumnType::new("shell", ValueType::File),
         ColumnType::new("information", ValueType::String),
         ColumnType::new("uid", ValueType::Integer),
         ColumnType::new("gid", ValueType::Integer),
-    ];
+    ])
 }
 
-lazy_static! {
-    pub static ref USER: Struct = {
+pub fn user_struct() -> &'static Struct {
+    static CELL: OnceLock<Struct> = OnceLock::new();
+    CELL.get_or_init(|| {
         let do_cmd = <dyn CrushCommand>::command(
-                r#do,
-                true,
-                &["global", "user"],
-                "do command",
-                "Run specified closure or command as another user",
-                None,
-                Unknown,
-                [],
-            );
-            Struct::new(
-                vec![
-                    ("do", Value::Command(do_cmd)),
-                ],
-                None,
-            )
-    };
+            r#do,
+            true,
+            &["global", "user"],
+            "do command",
+            "Run specified closure or command as another user",
+            None,
+            Unknown,
+            [],
+        );
+        Struct::new(
+            vec![
+                ("do", Value::Command(do_cmd)),
+            ],
+            None,
+        )
+    })
 }
 
 #[signature(
@@ -178,13 +181,13 @@ fn r#do(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     user.list,
     can_block = true,
-    output = Known(ValueType::TableInputStream(LIST_OUTPUT_TYPE.clone())),
+    output = Known(ValueType::TableInputStream(list_output_type().clone())),
     short = "List all users on the system",
 )]
 struct List {}
 
 fn list(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
+    let output = context.output.initialize(list_output_type())?;
     for u in get_all_users()? {
         output.send(Row::new(
             vec![
@@ -227,7 +230,7 @@ fn get_user_value(input_name: &str) -> CrushResult<Value> {
                     ("uid", Value::Integer(user.uid as i128)),
                     ("gid", Value::Integer(user.gid as i128)),
                 ],
-                Some(USER.clone()),
+                Some(user_struct().clone()),
             ))),
         Err(e) => Err(e),
     }

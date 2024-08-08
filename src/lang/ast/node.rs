@@ -2,7 +2,7 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use regex::Regex;
 use crate::lang::argument::{ArgumentDefinition, SwitchStyle};
-use crate::lang::ast::{CommandNode, JobListNode, JobNode, propose_name};
+use crate::lang::ast::{CommandNode, expand_user, JobListNode, JobNode, propose_name};
 use crate::lang::ast::location::Location;
 use crate::lang::ast::parameter_node::ParameterNode;
 use crate::lang::ast::tracked_string::TrackedString;
@@ -196,8 +196,8 @@ impl Node {
                 ValueDefinition::GetAttr(Box::new(node.compile(env, is_command)?.unnamed_value()?), identifier.clone()),
 
             Node::Substitution(s) => ValueDefinition::JobDefinition(s.compile(env)?),
-            Node::Closure(s, c) => {
-                let param = s.as_ref().map(|v| {
+            Node::Closure(signature, jobs) => {
+                let param = signature.as_ref().map(|v| {
                     v.iter()
                         .map(|p| p.generate(env))
                         .collect::<CrushResult<Vec<Parameter>>>()
@@ -207,12 +207,12 @@ impl Node {
                     Some(Ok(p)) => Some(p),
                     Some(Err(e)) => return Err(e),
                 };
-                ValueDefinition::ClosureDefinition(None, p, c.compile(env)?, c.location)
+                ValueDefinition::ClosureDefinition(None, p, jobs.compile(env)?, jobs.location)
             }
             Node::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g.string)), g.location),
             Node::File(s, quoted) => ValueDefinition::Value(
                 Value::from(
-                    if *quoted { PathBuf::from(&unescape(&s.string)?) } else { PathBuf::from(&s.string) }
+                    if *quoted { PathBuf::from(&unescape(&s.string)?) } else { PathBuf::from(&expand_user(&s.string)?) }
                 ),
                 s.location,
             ),

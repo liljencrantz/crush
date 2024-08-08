@@ -197,7 +197,7 @@ impl ColumnType {
         Ok(res)
     }
 
-    pub fn new(name: impl Into<String>, cell_type: ValueType) -> ColumnType {
+    pub fn new(name: &str, cell_type: ValueType) -> ColumnType {
         ColumnType {
             name: name.into(),
             format: ColumnFormat::None,

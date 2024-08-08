@@ -1,11 +1,9 @@
-use std::fmt::{Display, Write};
 use crate::lang::argument::{ArgumentDefinition};
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::{CrushResult, error, mandate};
 use crate::lang::job::Job;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{ValueDefinition};
-use std::ops::Deref;
 use location::Location;
 use tracked_string::TrackedString;
 use crate::util::user_map::get_user;
@@ -185,9 +183,9 @@ fn home_as_string(user: &str) -> CrushResult<String> {
     mandate(get_user(user)?.home.to_str(), "Bad home directory").map(|s| { s.to_string() })
 }
 
-fn expand_user(s: String) -> CrushResult<String> {
+fn expand_user(s: &str) -> CrushResult<String> {
     if !s.starts_with('~') {
-        Ok(s)
+        Ok(s.to_string())
     } else {
         let parts: Vec<&str> = s[1..].splitn(2, '/').collect();
         let home = if parts[0].len() > 0 { home_as_string(parts[0]) } else { home_as_string(&get_current_username()?) };
@@ -198,5 +196,3 @@ fn expand_user(s: String) -> CrushResult<String> {
         }
     }
 }
-
-

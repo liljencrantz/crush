@@ -12,7 +12,6 @@ use libc::gid_t;
 use std::path::PathBuf;
 use libc::{passwd, uid_t};
 use crate::argument_error_legacy;
-use crate::lang::printer::PrinterMessage::CrushError;
 
 static USER_MUTEX: Mutex<i32> = Mutex::new(0i32);
 static GROUP_MUTEX: Mutex<i32> = Mutex::new(0i32);

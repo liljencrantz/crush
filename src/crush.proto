@@ -153,7 +153,9 @@ enum SwitchStyle {
 enum ScopeType {
   LOOP = 0;
   CLOSURE = 1;
-  OTHER = 2;
+  CONDITIONAL = 2;
+  NAMESPACE = 3;
+  BLOCK = 4;
 }
 
 message ArgumentDefinition {

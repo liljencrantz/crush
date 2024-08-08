@@ -1,5 +1,5 @@
 use crate::lang::command::{Command, CrushCommand, OutputType, ArgumentDescription};
-use crate::lang::errors::{error, mandate, CrushResult, argument_error_legacy, CrushError, serialization_error};
+use crate::lang::errors::{error, mandate, CrushResult, argument_error_legacy, CrushError, serialization_error, invalid_jump};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::help::Help;
 use crate::data::r#struct::Struct;
@@ -11,9 +11,10 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::fmt::{Display, Formatter};
 use chrono::Duration;
 use lazy_static::lazy_static;
+use ScopeType::Namespace;
 use crate::data::table::{ColumnType, Row};
 use crate::lang::pipe::{CrushStream, ValueSender};
-use crate::lang::state::scope::ScopeType::{Closure, Loop, Other};
+use crate::lang::state::scope::ScopeType::{Block, Closure, Conditional, Loop};
 use crate::util::replace::Replace;
 
 /**
@@ -68,7 +69,7 @@ impl ScopeLoader {
         loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>,
     ) -> CrushResult<Scope> {
         let res = Scope {
-            data: Arc::from(Mutex::new(ScopeData::lazy(
+            data: Arc::from(Mutex::new(ScopeData::lazy_namespace(
                 None,
                 Some(self.scope.clone()),
                 Some(name.to_string()),
@@ -149,7 +150,7 @@ impl ScopeLoader {
             data: Arc::from(Mutex::new(ScopeData::new(
                 Some(self.parent.clone()),
                 Some(self.parent.clone()),
-                Other,
+                Namespace,
                 None,
                 None,
             ))),
@@ -161,7 +162,21 @@ impl ScopeLoader {
 pub enum ScopeType {
     Loop,
     Closure,
-    Other,
+    Conditional,
+    Namespace,
+    Block,
+}
+
+impl ScopeType {
+    pub fn description(&self) -> &str {
+        match self {
+            Loop => "loop",
+            Closure => "closure",
+            Conditional => "conditional",
+            Namespace => "namespace",
+            Block => "Block",
+        }
+    }
 }
 
 impl TryFrom<i32> for ScopeType {
@@ -171,7 +186,9 @@ impl TryFrom<i32> for ScopeType {
         match value {
             0 => Ok(Loop),
             1 => Ok(Closure),
-            2 => Ok(Other),
+            2 => Ok(Conditional),
+            3 => Ok(Namespace),
+            4 => Ok(Block),
             v => serialization_error(format!("Invalid scope type {}", v)),
         }
     }
@@ -182,27 +199,29 @@ impl From<ScopeType> for i32 {
         match value {
             Loop => 0,
             Closure => 1,
-            Other => 2,
+            Conditional => 2,
+            Namespace => 3,
+            Block => 4,
         }
     }
 }
 
 pub struct ScopeData {
     /** This is the parent scope used to perform variable name resolution. If a variable lookup
-                   fails in the current scope, it proceeds to this scope. This is usually the scope in which this
-                   scope was *created*.
+                            fails in the current scope, it proceeds to this scope. This is usually the scope in which this
+                            scope was *created*.
 
-                   Not that when scopes are used as namespaces, they do not use this scope.
+                            Not that when scopes are used as namespaces, they do not use this scope.
      */
     pub parent_scope: Option<Scope>,
 
     /** This is the scope in which the current scope was called. Since a closure can be called
-                   from inside any scope, it need not be the same as the parent scope. This scope is the one used
-                   for break/continue loop control, and it is also the scope that builds up the namespace hierarchy. */
+                            from inside any scope, it need not be the same as the parent scope. This scope is the one used
+                            for break/continue loop control, and it is also the scope that builds up the namespace hierarchy. */
     pub calling_scope: Option<Scope>,
 
     /** This is a list of scopes that are imported into the current scope. Anything directly inside
-                   one of these scopes is also considered part of this scope. */
+                            one of these scopes is also considered part of this scope. */
     pub uses: Vec<Scope>,
 
     /** The actual data of this scope. */
@@ -212,11 +231,11 @@ pub struct ScopeData {
     pub scope_type: ScopeType,
 
     /** True if this scope should stop execution, i.e. if the continue or break commands have been
-                   called.  */
+                            called.  */
     pub is_stopped: bool,
 
     /** True if this scope can not be further modified. Note that mutable variables in it, e.g.
-                   lists can still be modified. */
+                            lists or dicts can still be modified. */
     pub is_readonly: bool,
 
     pub return_value: Option<Value>,
@@ -251,7 +270,7 @@ impl ScopeData {
         }
     }
 
-    fn lazy(
+    fn lazy_namespace(
         parent_scope: Option<Scope>,
         calling_scope: Option<Scope>,
         name: Option<String>,
@@ -261,7 +280,7 @@ impl ScopeData {
         ScopeData {
             parent_scope,
             calling_scope,
-            scope_type: Other,
+            scope_type: Namespace,
             uses: Vec::new(),
             mapping: OrderedMap::new(),
             is_stopped: false,
@@ -271,6 +290,13 @@ impl ScopeData {
             description,
             is_loaded: false,
             loader: Some(loader),
+        }
+    }
+
+    fn description(&self) -> String {
+        match &self.name {
+            None => self.scope_type.description().to_string(),
+            Some(s) => format!("{}: {}", self.scope_type.description().to_string(), s),
         }
     }
 }
@@ -304,7 +330,7 @@ impl Scope {
             data: Arc::from(Mutex::new(ScopeData::new(
                 None,
                 None,
-                Other,
+                Namespace,
                 Some("global".to_string()),
                 Some("The root of all namespaces. All namespaces directly or indirectly\ninherit from this one.".to_string()),
             ))),
@@ -355,7 +381,7 @@ impl Scope {
         loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>,
     ) -> CrushResult<Scope> {
         let res = Scope {
-            data: Arc::from(Mutex::new(ScopeData::lazy(
+            data: Arc::from(Mutex::new(ScopeData::lazy_namespace(
                 None,
                 Some(self.clone()),
                 Some(name.to_string()),
@@ -367,25 +393,6 @@ impl Scope {
         Ok(res)
     }
 
-    pub fn do_continue(&self) -> CrushResult<bool> {
-        let data = self.lock()?;
-        if data.is_readonly {
-            Ok(false)
-        } else if data.scope_type == ScopeType::Loop {
-            Ok(true)
-        } else {
-            let caller = data.calling_scope.clone();
-            drop(data);
-            let ok = caller.map(|p| p.do_continue()).unwrap_or(Ok(false))?;
-            if !ok {
-                Ok(false)
-            } else {
-                self.lock().unwrap().is_stopped = true;
-                Ok(true)
-            }
-        }
-    }
-
     pub fn get_calling_scope(&self) -> CrushResult<Scope> {
         let data = self.lock()?;
         if let Some(scope) = &data.calling_scope {
@@ -395,45 +402,80 @@ impl Scope {
         }
     }
 
-    pub fn do_break(&self) -> CrushResult<bool> {
-        let mut data = self.lock()?;
+    pub fn do_continue(&self) -> CrushResult<()> {
+        let data = self.lock()?;
         if data.is_readonly {
-            Ok(false)
+            invalid_jump("`continue` command outside of loop")
         } else if data.scope_type == Loop {
-            data.is_stopped = true;
-            Ok(true)
+            Ok(())
         } else {
             let caller = data.calling_scope.clone();
             drop(data);
-            let ok = caller.map(|p| p.do_break()).unwrap_or(Ok(false))?;
-            if !ok {
-                Ok(false)
-            } else {
-                self.lock().unwrap().is_stopped = true;
-                Ok(true)
+            match caller {
+                None => invalid_jump("`continue command outside of loop"),
+                Some(p) => {
+                    p.do_continue()?;
+                    self.lock().unwrap().is_stopped = true;
+                    Ok(())
+                }
             }
         }
     }
 
-    pub fn do_return(&self, value: Option<Value>) -> CrushResult<bool> {
+    pub fn do_break(&self) -> CrushResult<()> {
         let mut data = self.lock()?;
         if data.is_readonly {
-            Ok(false)
-        } else if data.scope_type == Closure {
+            invalid_jump("`break` command outside of loop")
+        } else if data.scope_type == Loop {
             data.is_stopped = true;
-            data.return_value = value;
-            Ok(true)
+            Ok(())
         } else {
             let caller = data.calling_scope.clone();
             drop(data);
-            let ok = caller.map(|p| p.do_return(value)).unwrap_or(Ok(false))?;
-            if !ok {
-                Ok(false)
-            } else {
-                self.lock().unwrap().is_stopped = true;
-                Ok(true)
+            match caller {
+                None => invalid_jump("`break` command outside of loop"),
+                Some(p) => {
+                    p.do_break()?;
+                    self.lock().unwrap().is_stopped = true;
+                    Ok(())
+                }
             }
         }
+    }
+
+    pub fn do_return(&self, value: Option<Value>) -> CrushResult<()> {
+        let mut data = self.lock()?;
+        if data.is_readonly {
+            invalid_jump("`return` command outside of function")
+        } else if data.scope_type == Closure {
+            data.is_stopped = true;
+            data.return_value = value;
+            Ok(())
+        } else {
+            let caller = data.calling_scope.clone();
+            drop(data);
+            match caller {
+                None => invalid_jump("`return` command outside of function"),
+                Some(p) => {
+                    p.do_return(value)?;
+                    self.lock().unwrap().is_stopped = true;
+                    Ok(())
+                }
+            }
+        }
+    }
+
+    pub fn stack_trace(&self) -> CrushResult<Vec<String>> {
+        let data = self.lock()?;
+        let parent = &data.parent_scope.clone();
+        let desc = data.description().to_string();
+        drop(data);
+        let mut res = match parent {
+            None => vec![],
+            Some(p) => p.stack_trace()?,
+        };
+        res.push(desc);
+        Ok(res)
     }
 
     pub fn do_exit(&self) -> CrushResult<()> {
@@ -453,7 +495,7 @@ impl Scope {
         self.lock().unwrap().is_stopped
     }
 
-    pub fn send_return_value(&self, output: &ValueSender) -> CrushResult<()>{
+    pub fn send_return_value(&self, output: &ValueSender) -> CrushResult<()> {
         match self.lock().unwrap().return_value.take() {
             None => output.empty(),
             Some(v) => output.send(v),
