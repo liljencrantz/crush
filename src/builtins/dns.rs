@@ -16,26 +16,18 @@ use trust_dns_client::tcp::TcpClientConnection;
 use crate::data::list::List;
 use crate::lang::errors::data_error;
 
-use std::sync::OnceLock;
+static A_STREAM_OUTPUT_TYPE: [ColumnType; 2] = [
+    ColumnType::new("target", ValueType::String),
+    ColumnType::new("ttl", ValueType::Duration),
+];
 
-fn a_stream_output_type() -> &'static Vec<ColumnType> {
-    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
-    CELL.get_or_init(|| vec![
-        ColumnType::new("target", ValueType::String),
-        ColumnType::new("ttl", ValueType::Duration),
-    ])
-}
-
-fn srv_stream_output_type() -> &'static Vec<ColumnType> {
-    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
-    CELL.get_or_init(|| vec![
-        ColumnType::new("target", ValueType::String),
-        ColumnType::new("priority", ValueType::Integer),
-        ColumnType::new("weight", ValueType::Integer),
-        ColumnType::new("port", ValueType::Integer),
-        ColumnType::new("ttl", ValueType::Duration),
-    ])
-}
+static SRV_STREAM_OUTPUT_TYPE: [ColumnType; 5] = [
+    ColumnType::new("target", ValueType::String),
+    ColumnType::new("priority", ValueType::Integer),
+    ColumnType::new("weight", ValueType::Integer),
+    ColumnType::new("port", ValueType::Integer),
+    ColumnType::new("ttl", ValueType::Duration),
+];
 
 #[signature(
     dns.query,
@@ -66,7 +58,7 @@ fn query_internal(cfg: Query, context: CommandContext, client: SyncClient<impl C
     match cfg.record_type.as_ref() {
         "A" => {
             let response = client.query(&Name::from_str(&cfg.name)?, DNSClass::IN, RecordType::A)?;
-            let output = context.output.initialize(&a_stream_output_type())?;
+            let output = context.output.initialize(&A_STREAM_OUTPUT_TYPE)?;
 
             for answer in response.answers() {
                 match answer.data() {
@@ -79,7 +71,7 @@ fn query_internal(cfg: Query, context: CommandContext, client: SyncClient<impl C
         }
         "AAAA" => {
             let response = client.query(&Name::from_str(&cfg.name)?, DNSClass::IN, RecordType::AAAA)?;
-            let output = context.output.initialize(&a_stream_output_type())?;
+            let output = context.output.initialize(&A_STREAM_OUTPUT_TYPE)?;
 
             for answer in response.answers() {
                 match answer.data() {
@@ -92,7 +84,7 @@ fn query_internal(cfg: Query, context: CommandContext, client: SyncClient<impl C
         }
         "SRV" => {
             let response = client.query(&Name::from_str(&cfg.name)?, DNSClass::IN, RecordType::SRV)?;
-            let output = context.output.initialize(&srv_stream_output_type())?;
+            let output = context.output.initialize(&SRV_STREAM_OUTPUT_TYPE)?;
 
             for answer in response.answers() {
                 match answer.data() {

@@ -8,6 +8,7 @@ use crate::lang::{data::r#struct::Struct, value::Value};
 use chrono::Duration;
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
+use crate::lang::any_str::AnyStr;
 use crate::lang::serialization::{DeserializationState, model, Serializable, SerializationState};
 use crate::lang::serialization::model::{element, Element};
 
@@ -177,12 +178,17 @@ pub enum ColumnFormat {
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ColumnType {
-    pub name: String,
+    name: AnyStr,
     pub format: ColumnFormat,
     pub cell_type: ValueType,
 }
 
 impl ColumnType {
+
+    pub fn name(&self) -> &str {
+        self.name.to_str()
+    }
+
     pub fn materialize(input: &[ColumnType]) -> CrushResult<Vec<ColumnType>> {
         let mut res = Vec::new();
 
@@ -197,7 +203,15 @@ impl ColumnType {
         Ok(res)
     }
 
-    pub fn new(name: &str, cell_type: ValueType) -> ColumnType {
+    pub const fn new(name: &'static str, cell_type: ValueType) -> ColumnType {
+        ColumnType {
+            name: AnyStr::Slice(name),
+            format: ColumnFormat::None,
+            cell_type,
+        }
+    }
+
+    pub fn new_from_string(name: String, cell_type: ValueType) -> ColumnType {
         ColumnType {
             name: name.into(),
             format: ColumnFormat::None,
@@ -205,7 +219,15 @@ impl ColumnType {
         }
     }
 
-    pub fn new_with_format(name: impl Into<String>, format: ColumnFormat, cell_type: ValueType) -> ColumnType {
+    pub const fn new_with_format(name: &'static str, format: ColumnFormat, cell_type: ValueType) -> ColumnType {
+        ColumnType {
+            name: AnyStr::Slice(name),
+            format,
+            cell_type,
+        }
+    }
+
+    pub fn new_with_format_from_string(name: String, format: ColumnFormat, cell_type: ValueType) -> ColumnType {
         ColumnType {
             name: name.into(),
             format,
@@ -216,7 +238,7 @@ impl ColumnType {
 
 impl Display for ColumnType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        self.name.fmt(f)?;
+        self.name.to_str().fmt(f)?;
         f.write_str("=($")?;
         self.cell_type.fmt(f)?;
         f.write_str(")")
@@ -230,7 +252,7 @@ pub trait ColumnVec {
 impl ColumnVec for &[ColumnType] {
     fn find(&self, needle: &str) -> CrushResult<usize> {
         for (idx, field) in self.iter().enumerate() {
-            if field.name == needle {
+            if field.name.to_str() == needle {
                 return Ok(idx);
             }
         }

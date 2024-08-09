@@ -33,7 +33,7 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
     let mut output_type = if config.copy {
         input_type.clone()
     } else {
-        Vec::new()
+        vec![]
     };
 
     let mut first_result = Vec::new();
@@ -52,7 +52,7 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
                             .iter()
                             .zip(&input_type)
                             .map(|(cell, cell_type)| {
-                                Argument::named(cell_type.name.as_ref(), cell.clone(), config.location)
+                                Argument::named(cell_type.name(), cell.clone(), config.location)
                             })
                             .collect();
                         closure.eval(context.empty().with_args(arguments, None).with_output(sender))?;
@@ -63,13 +63,14 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
 
                 match location {
                     Action::Append(name) => {
-                        output_type.push(ColumnType::new(name, value.value_type()));
+                        output_type.push(ColumnType::new_from_string(name.clone(), value.value_type()));
                         first_result.push(value);
                     }
                     Action::Replace(idx) => {
+                        let name = output_type[*idx].name().to_string();
                         output_type.replace(
                             *idx,
-                            ColumnType::new(&output_type[*idx].name, value.value_type()),
+                            ColumnType::new_from_string(name, value.value_type()),
                         );
                         first_result[*idx] = value;
                     }
@@ -95,7 +96,7 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
                         .cells()
                         .iter()
                         .zip(&input_type)
-                        .map(|(cell, cell_type)| Argument::named(&cell_type.name, cell.clone(), config.location))
+                        .map(|(cell, cell_type)| Argument::named(&cell_type.name(), cell.clone(), config.location))
                         .collect();
                     let (sender, receiver) = pipe();
                     closure.eval(context.empty().with_args(arguments, None).with_output(sender))?;

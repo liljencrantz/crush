@@ -36,6 +36,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     output = Unknown,
     short = "Add this number and the specified term and return the result",
 )]
+#[allow(unused)]
 struct Add {
     #[description("the number to add")]
     term: Number
@@ -58,6 +59,7 @@ binary_op!(
     output = Unknown,
     short = "Subtract the specified term from this number and return the result",
 )]
+#[allow(unused)]
 struct Sub {
     #[description("the number to subtract")]
     term: Number
@@ -79,6 +81,7 @@ binary_op!(
     output = Unknown,
     short = "multiply this number and the specified factor and return the result",
 )]
+#[allow(unused)]
 struct Mul {
     #[description("the number to multiply")]
     term: Number
@@ -101,6 +104,7 @@ binary_op!(
     output = Unknown,
     short = "Divide this number by the specified factor",
 )]
+#[allow(unused)]
 struct Div {
     #[description("the number to divide by")]
     term: Number
@@ -122,6 +126,7 @@ binary_op!(
     output = Known(ValueType::Integer),
     short = "Remainder after integer division",
 )]
+#[allow(unused)]
 struct Rem {
     #[description("the number to divide by")]
     term: i128
@@ -135,6 +140,7 @@ binary_op!(rem, integer, Integer, Integer, |a, b| a % b);
     output = Known(ValueType::Integer),
     short = "Least positive residue after integer division",
 )]
+#[allow(unused)]
 struct Mod {
     #[description("the number to divide by")]
     term: i128
@@ -148,6 +154,7 @@ binary_op!(r#mod, integer, Integer, Integer, |a, b| (a % b + b) % b);
     output = Known(ValueType::Integer),
     short = "Negate this integer",
 )]
+#[allow(unused)]
 struct Neg {
 }
 
@@ -164,6 +171,7 @@ fn __neg__(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Integer),
     short = "Largest integer value",
 )]
+#[allow(unused)]
 struct Max {
 }
 
@@ -180,6 +188,7 @@ fn max(context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Integer),
     short = "Smallest integer value",
 )]
+#[allow(unused)]
 struct Min {
 }
 

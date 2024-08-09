@@ -1,6 +1,5 @@
-use crate::lang::command::{Command, CrushCommand, OutputType, ArgumentDescription};
+use crate::lang::command::{Command};
 use crate::lang::errors::{error, mandate, CrushResult, argument_error_legacy, CrushError, serialization_error, invalid_jump};
-use crate::lang::state::contexts::CommandContext;
 use crate::lang::help::Help;
 use crate::data::r#struct::Struct;
 use crate::lang::{value::Value, value::ValueType};
@@ -10,7 +9,6 @@ use std::cmp::max;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::fmt::{Display, Formatter};
 use chrono::Duration;
-use lazy_static::lazy_static;
 use ScopeType::Namespace;
 use crate::data::table::{ColumnType, Row};
 use crate::lang::pipe::{CrushStream, ValueSender};
@@ -43,7 +41,6 @@ Without it, every single module in Crush would be loaded on startup.
  */
 pub struct ScopeLoader {
     mapping: OrderedMap<String, Value>,
-    path: Vec<String>,
     parent: Scope,
     scope: Scope,
 }
@@ -79,64 +76,6 @@ impl ScopeLoader {
         };
         self.declare(name, Value::Scope(res.clone()))?;
         Ok(res)
-    }
-
-    pub fn declare_command(
-        &mut self,
-        name: &str,
-        call: fn(CommandContext) -> CrushResult<()>,
-        can_block: bool,
-        signature: &'static str,
-        short_help: &'static str,
-        long_help: Option<&'static str>,
-        output: OutputType,
-        arguments: impl Into<Vec<ArgumentDescription>>,
-    ) -> CrushResult<()> {
-        let mut full_name = self.path.clone();
-        full_name.push(name.to_string());
-        let command = <dyn CrushCommand>::command(
-            call,
-            can_block,
-            &full_name,
-            signature,
-            short_help,
-            long_help,
-            output,
-            arguments,
-        );
-        if self.mapping.contains_key(name) {
-            return error(format!("Tried to declare command {}, but it already exists", name).as_str());
-        }
-        self.mapping
-            .insert(name.to_string(), Value::Command(command));
-        Ok(())
-    }
-
-    pub fn declare_condition_command(
-        &mut self,
-        name: &str,
-        call: fn(context: CommandContext) -> CrushResult<()>,
-        signature: &'static str,
-        short_help: &'static str,
-        long_help: Option<&'static str>,
-        arguments: Vec<ArgumentDescription>,
-    ) -> CrushResult<()> {
-        let mut full_name = self.path.clone();
-        full_name.push(name.to_string());
-        let command = <dyn CrushCommand>::condition(
-            call,
-            full_name,
-            signature,
-            short_help,
-            long_help,
-            arguments,
-        );
-        if self.mapping.contains_key(name) {
-            return error(format!("Tried to declare command {}, but it already exists", name).as_str());
-        }
-        self.mapping
-            .insert(name.to_string(), Value::Command(command));
-        Ok(())
     }
 
     fn copy_into(&mut self, target: &mut OrderedMap<String, Value>) {
@@ -208,20 +147,20 @@ impl From<ScopeType> for i32 {
 
 pub struct ScopeData {
     /** This is the parent scope used to perform variable name resolution. If a variable lookup
-                            fails in the current scope, it proceeds to this scope. This is usually the scope in which this
-                            scope was *created*.
+                                  fails in the current scope, it proceeds to this scope. This is usually the scope in which this
+                                  scope was *created*.
 
-                            Not that when scopes are used as namespaces, they do not use this scope.
+                                  Not that when scopes are used as namespaces, they do not use this scope.
      */
     pub parent_scope: Option<Scope>,
 
     /** This is the scope in which the current scope was called. Since a closure can be called
-                            from inside any scope, it need not be the same as the parent scope. This scope is the one used
-                            for break/continue loop control, and it is also the scope that builds up the namespace hierarchy. */
+                                  from inside any scope, it need not be the same as the parent scope. This scope is the one used
+                                  for break/continue loop control, and it is also the scope that builds up the namespace hierarchy. */
     pub calling_scope: Option<Scope>,
 
     /** This is a list of scopes that are imported into the current scope. Anything directly inside
-                            one of these scopes is also considered part of this scope. */
+                                  one of these scopes is also considered part of this scope. */
     pub uses: Vec<Scope>,
 
     /** The actual data of this scope. */
@@ -231,11 +170,11 @@ pub struct ScopeData {
     pub scope_type: ScopeType,
 
     /** True if this scope should stop execution, i.e. if the continue or break commands have been
-                            called.  */
+                                  called.  */
     pub is_stopped: bool,
 
     /** True if this scope can not be further modified. Note that mutable variables in it, e.g.
-                            lists or dicts can still be modified. */
+                                  lists or dicts can still be modified. */
     pub is_readonly: bool,
 
     pub return_value: Option<Value>,
@@ -509,7 +448,6 @@ impl Scope {
         }
 
         drop(data);
-        let path = self.full_path()?;
 
         data = self.data.lock().unwrap();
         if data.is_loaded {
@@ -519,7 +457,6 @@ impl Scope {
         let loader = mandate(data.loader.take(), "Missing module loader")?;
         let mut tmp = ScopeLoader {
             mapping: OrderedMap::new(),
-            path,
             parent: data.calling_scope.as_ref().unwrap().clone(),
             scope: self.clone(),
         };
@@ -926,13 +863,6 @@ fn long_help_methods(fields: &mut Vec<(String, Value)>, lines: &mut Vec<String>)
     }
 }
 
-lazy_static! {
-    pub static ref SCOPE_STREAM_TYPE: Vec<ColumnType> = vec![
-        ColumnType::new("name", ValueType::String),
-        ColumnType::new("value", ValueType::Any),
-    ];
-}
-
 pub struct ScopeReader {
     idx: usize,
     rows: Vec<(String, Value)>,
@@ -979,6 +909,10 @@ impl CrushStream for ScopeReader {
     }
 
     fn types(&self) -> &[ColumnType] {
+        static SCOPE_STREAM_TYPE: [ColumnType; 2] = [
+            ColumnType::new("name", ValueType::String),
+            ColumnType::new("value", ValueType::Any),
+        ];
         &SCOPE_STREAM_TYPE
     }
 }

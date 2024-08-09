@@ -8,19 +8,15 @@ use crate::lang::{
 use signature::signature;
 use std::io::{BufRead, BufReader};
 use std::convert::From;
-use std::sync::OnceLock;
 use crate::lang::command::OutputType::Known;
 use crate::lang::state::contexts::CommandContext;
 
-pub fn output_type() -> &'static Vec<ColumnType> {
-    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
-    CELL.get_or_init(|| vec![ColumnType::new("line", ValueType::String)])
-}
+static OUTPUT_TYPE: [ColumnType; 1] = [ColumnType::new("line", ValueType::String)];
 
 #[signature(
     io.lines.from,
     can_block = true,
-    output = Known(ValueType::TableInputStream(output_type().clone())),
+    output = Known(ValueType::table_input_stream(&OUTPUT_TYPE)),
     short = "Read specified files (or input) as a table with one line of text per row"
 )]
 struct FromSignature {
@@ -40,7 +36,7 @@ struct FromSignature {
 pub fn from(context: CommandContext) -> CrushResult<()> {
     let output = context
         .output
-        .initialize(output_type())?;
+        .initialize(&OUTPUT_TYPE)?;
     let cfg: FromSignature = FromSignature::parse(context.arguments, &context.global_state.printer())?;
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
     let mut line = String::new();

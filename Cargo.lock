@@ -336,7 +336,6 @@ dependencies = [
  "itertools 0.13.0",
  "lalrpop",
  "lalrpop-util",
- "lazy_static",
  "libc",
  "libproc",
  "mach2",

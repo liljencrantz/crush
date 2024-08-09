@@ -22,6 +22,7 @@ use crate::util::file::cwd;
     output = Known(ValueType::BinaryInputStream),
     can_block = true,
 )]
+#[allow(unused)]
 pub struct Cmd {
     #[description("The file path to the command to execute")]
     command: PathBuf,

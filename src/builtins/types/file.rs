@@ -371,21 +371,16 @@ fn parent(mut context: CommandContext) -> CrushResult<()> {
                 "Invalid file path")?))
 }
 
-fn remove_output_type() -> &'static Vec<ColumnType> {
-    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
-    CELL.get_or_init(|| {
-        vec![
-            ColumnType::new("file", ValueType::File),
-            ColumnType::new("deleted", ValueType::Bool),
-            ColumnType::new("status", ValueType::String),
-        ]
-    })
-}
+static REMOVE_OUTPUT_TYPE: [ColumnType; 3] = [
+    ColumnType::new("file", ValueType::File),
+    ColumnType::new("deleted", ValueType::Bool),
+    ColumnType::new("status", ValueType::String),
+];
 
 #[signature(
     types.file.remove,
     can_block = true,
-    output = Known(ValueType::TableInputStream(remove_output_type().clone())),
+    output = Known(ValueType::table_input_stream(&REMOVE_OUTPUT_TYPE)),
     short = "Delete this file",
     long = "Returns a stream of deletion failures."
 )]
@@ -446,7 +441,7 @@ fn remove_known_file(path: Arc<Path>, out: &OutputStream, verbose: bool) -> Crus
 }
 
 fn remove(mut context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(remove_output_type())?;
+    let output = context.output.initialize(&REMOVE_OUTPUT_TYPE)?;
     let cfg = Remove::parse(context.remove_arguments(), context.global_state.printer())?;
     match context.this {
         Some(Value::File(file)) => {

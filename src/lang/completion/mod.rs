@@ -188,7 +188,7 @@ fn complete_file(
 }
 
 fn complete_argument_name(
-    arguments: &Vec<ArgumentDescription>,
+    arguments: &[ArgumentDescription],
     prefix: &str,
     cursor: usize,
     out: &mut Vec<Completion>,

@@ -25,7 +25,7 @@ fn enumerate(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream()? {
         Some(mut input) => {
             let mut output_type = vec![
-                ColumnType::new(&cfg.name, ValueType::Integer)];
+                ColumnType::new_from_string(cfg.name, ValueType::Integer)];
             output_type.extend(input.types().to_vec());
             let output = context.output.initialize(&output_type)?;
 

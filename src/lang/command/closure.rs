@@ -108,7 +108,7 @@ impl CrushCommand for Closure {
         None
     }
 
-    fn arguments(&self) -> &Vec<ArgumentDescription> {
+    fn arguments(&self) -> &[ArgumentDescription] {
         &self.arguments
     }
 }

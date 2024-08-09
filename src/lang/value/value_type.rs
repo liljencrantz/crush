@@ -1,4 +1,4 @@
-use crate::lang::command::Command;
+use crate::lang::command::{Command, OutputType};
 use crate::lang::errors::{error, CrushResult, argument_error_legacy};
 use crate::lang::help::Help;
 use crate::lang::{data::table::ColumnType, value::Value};
@@ -9,6 +9,7 @@ use regex::Regex;
 use std::cmp::max;
 use std::fmt::{Display, Formatter};
 use std::sync::OnceLock;
+use crate::lang::command::OutputType::Known;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum ValueType {
@@ -42,6 +43,14 @@ pub fn empty_methods() -> &'static OrderedMap<String, Command> {
 }
 
 impl ValueType {
+    pub fn table_input_stream(columns: &[ColumnType]) -> ValueType {
+        ValueType::TableInputStream(columns.to_vec())
+    }
+
+    pub fn output_type(&self) -> OutputType {
+        Known(self.clone())
+    }
+
     pub fn either(_options: Vec<ValueType>) -> ValueType {
         ValueType::Any
     }

@@ -1,33 +1,28 @@
-use std::sync::OnceLock;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{error, CrushResult};
 use crate::lang::state::contexts::{CommandContext};
 use crate::lang::data::table::ColumnType;
 use crate::{data::table::Row, lang::value::Value, lang::value::ValueType};
-use lazy_static::lazy_static;
 use psutil::process::{Process, ProcessResult};
 use signature::signature;
 
-pub fn file_output_type() -> &'static Vec<ColumnType> {
-    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
-    CELL.get_or_init(|| vec![
-        ColumnType::new("fd", ValueType::Integer),
-        ColumnType::new("path", ValueType::File),
-        ColumnType::new("pid", ValueType::Integer),
-    ])
-}
+static FILE_OUTPUT_TYPE: [ColumnType; 3] = [
+    ColumnType::new("fd", ValueType::Integer),
+    ColumnType::new("path", ValueType::File),
+    ColumnType::new("pid", ValueType::Integer),
+];
 
 #[signature(
     fs.fd.file,
     can_block = true,
     short = "Return a table stream containing information on all open files",
-    output = Known(ValueType::TableInputStream(file_output_type().clone())),
+    output = Known(ValueType::table_input_stream(&FILE_OUTPUT_TYPE)),
     long = "fd:file accepts no arguments.")]
 pub struct File {}
 
 fn file(mut context: CommandContext) -> CrushResult<()> {
     File::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let output = context.output.initialize(file_output_type())?;
+    let output = context.output.initialize(&FILE_OUTPUT_TYPE)?;
 
     match psutil::process::processes() {
         Ok(procs) => {
@@ -78,8 +73,7 @@ pub mod procfs {
     use std::path::PathBuf;
     use super::*;
 
-    lazy_static! {
-    static ref NET_OUTPUT_TYPE: Vec<ColumnType> = vec![
+    static NET_OUTPUT_TYPE: [ColumnType; 9] =[
         ColumnType::new("type", ValueType::String),
         ColumnType::new("local_ip", ValueType::String),
         ColumnType::new("local_port", ValueType::Integer),
@@ -90,18 +84,18 @@ pub mod procfs {
         ColumnType::new("creator", ValueType::String),
         ColumnType::new("pid", ValueType::Any),
     ];
-    static ref UNIX_OUTPUT_TYPE: Vec<ColumnType> = vec![
+
+    static UNIX_OUTPUT_TYPE: [ColumnType; 3] = [
         ColumnType::new("inode", ValueType::Integer),
         ColumnType::new("path", ValueType::Any),
         ColumnType::new("pid", ValueType::Any),
     ];
-}
 
     #[signature(
         network,
         can_block = true,
         short = "Return a table stream containing information on all open network sockets",
-        output = Known(ValueType::TableInputStream(NET_OUTPUT_TYPE.clone())),
+        output = Known(ValueType::table_input_stream(&NET_OUTPUT_TYPE)),
         long = "fd:network accepts no arguments.")]
     pub struct Network {}
 
@@ -132,7 +126,7 @@ pub mod procfs {
                     &parts[0][24..28],
                     &parts[0][28..32],
                 );
-                let ip = to_crush_error(obtuse.parse::<Ipv6Addr>())?;
+                let ip = obtuse.parse::<Ipv6Addr>()?;
                 ip.to_string()
             }
             _ => return error(format!("Invalid ip address {}", parts[0])),
@@ -164,8 +158,7 @@ pub mod procfs {
                         Some(s) => {
                             if s.starts_with("socket:[") && s.ends_with("]") {
                                 let inode = s.strip_prefix("socket:[").unwrap().strip_suffix("]").unwrap()
-                                    .parse::<u32>()
-                                    .unwrap();
+                                    .parse::<u32>()?;
                                 match pids.entry(inode) {
                                     Entry::Occupied(mut e) => {
                                         e.get_mut().push(proc.pid());
@@ -196,7 +189,7 @@ pub mod procfs {
         match psutil::process::processes() {
             Ok(procs) => {
                 for proc in procs {
-                    to_crush_error(extract_sockets(proc, &mut pids))?;
+                    extract_sockets(proc, &mut pids)?;
                 }
             }
             Err(_) => return error("Failed to list processes"),
@@ -217,11 +210,11 @@ pub mod procfs {
         file_type: &str,
         printer: &Printer,
         output: &OutputStream) -> CrushResult<()> {
-        let mut f = to_crush_error(std::fs::File::open(&format!("/proc/net/{}", file_type)))?;
+        let mut f = std::fs::File::open(&format!("/proc/net/{}", file_type))?;
         // Skip header
-        to_crush_error(f.read_line())?;
+        f.read_line()?;
 
-        while let Some(line) = to_crush_error(f.read_line())? {
+        while let Some(line) = f.read_line()? {
             let trimmed = line.trim_start_matches(' ').trim_end_matches(' ');
             let parts = trimmed.split(' ').filter(|s| !s.is_empty()).collect::<Vec<_>>();
             if parts.len() == 0 {
@@ -232,11 +225,11 @@ pub mod procfs {
                 continue;
             }
 
-            let uid = to_crush_error(parts[7].parse::<u32>())?;
+            let uid = parts[7].parse::<u32>()?;
 
             let (local_ip, local_port) = parse_addr(parts[1])?;
             let (remote_ip, remote_port) = parse_addr(parts[2])?;
-            let inode = to_crush_error(parts[9].parse::<u32>())?;
+            let inode = parts[9].parse::<u32>()?;
 
             match pids.entry(inode) {
                 Entry::Occupied(e) => {
@@ -249,7 +242,7 @@ pub mod procfs {
                             Value::from(&remote_ip),
                             Value::Integer(remote_port as i128),
                             Value::Integer(inode as i128),
-                            users.get(&nix::unistd::Uid::from_raw(uid)).map(|s| Value::from(s)).unwrap_or_else(|| Value::from("?")),
+                            users.get(&Uid::from_raw(uid)).map(|s| Value::from(s)).unwrap_or_else(|| Value::from("?")),
                             Value::Integer(*pid as i128),
                         ]))?;
                     }
@@ -276,7 +269,7 @@ pub mod procfs {
         unix,
         can_block = true,
         short = "Return a table stream containing information on all open unix sockets",
-        output = Known(ValueType::TableInputStream(UNIX_OUTPUT_TYPE.clone())),
+        output = Known(ValueType::table_input_stream(&UNIX_OUTPUT_TYPE)),
         long = "fd:unix accepts no arguments.")]
     pub struct Unix {}
 
@@ -289,17 +282,17 @@ pub mod procfs {
         match psutil::process::processes() {
             Ok(procs) => {
                 for proc in procs {
-                    to_crush_error(extract_sockets(proc, &mut pids))?;
+                    extract_sockets(proc, &mut pids)?;
                 }
             }
             Err(_) => return error("Failed to list processes"),
         }
 
-        let mut f = to_crush_error(std::fs::File::open("/proc/net/unix"))?;
+        let mut f = std::fs::File::open("/proc/net/unix")?;
         // Skip header
-        to_crush_error(f.read_line())?;
+        f.read_line()?;
 
-        while let Some(line) = to_crush_error(f.read_line())? {
+        while let Some(line) = f.read_line()? {
             let trimmed = line.trim_start_matches(' ').trim_end_matches(' ');
             let parts = trimmed.split(' ').filter(|s| !s.is_empty()).collect::<Vec<_>>();
             if parts.len() == 0 {
@@ -310,7 +303,7 @@ pub mod procfs {
                 continue;
             }
 
-            let inode = to_crush_error(parts[6].parse::<u32>())?;
+            let inode = parts[6].parse::<u32>()?;
 
             let path = if parts.len() >= 8 {
                 Value::from(PathBuf::from(parts[7]))

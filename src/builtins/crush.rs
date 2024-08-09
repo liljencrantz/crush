@@ -8,7 +8,6 @@ use crate::lang::command::OutputType::Known;
 use nix::unistd::Pid;
 use crate::lang::data::dict::Dict;
 use std::env;
-use std::sync::OnceLock;
 use rustyline::history::{History, SearchDirection};
 use crate::data::list::List;
 use crate::lang::command::Command;
@@ -25,24 +24,21 @@ fn make_arguments() -> Value {
     List::new(ValueType::String, env::args().map(|a| { Value::from(a) }).collect::<Vec<_>>()).into()
 }
 
-fn threads_output_type() -> &'static Vec<ColumnType> {
-    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
-    CELL.get_or_init(|| vec![
-        ColumnType::new("jid", ValueType::Any),
-        ColumnType::new("created", ValueType::Time),
-        ColumnType::new("name", ValueType::String),
-    ])
-}
+static THREADS_OUTPUT_TYPE: [ColumnType; 3] = [
+    ColumnType::new("jid", ValueType::Any),
+    ColumnType::new("created", ValueType::Time),
+    ColumnType::new("name", ValueType::String),
+];
 
 #[signature(
     crush.threads,
-    output = Known(ValueType::TableInputStream(threads_output_type().clone())),
+    output = Known(ValueType::table_input_stream(&THREADS_OUTPUT_TYPE)),
     short = "All the subthreads crush is currently running"
 )]
 struct Threads {}
 
 fn threads(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(threads_output_type())?;
+    let output = context.output.initialize(&THREADS_OUTPUT_TYPE)?;
 
     for t in context.global_state.threads().current()? {
         output.send(Row::new(vec![
@@ -78,24 +74,21 @@ fn prompt(context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Empty)
 }
 
-fn job_output_type() -> &'static Vec<ColumnType> {
-    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
-    CELL.get_or_init(|| vec![
-        ColumnType::new("id", ValueType::Integer),
-        ColumnType::new("description", ValueType::String),
-    ])
-}
+static JOB_OUTPUT_TYPE: [ColumnType; 2] = [
+    ColumnType::new("id", ValueType::Integer),
+    ColumnType::new("description", ValueType::String),
+];
 
 #[signature(
     crush.jobs,
     can_block = false,
     short = "List running jobs",
-    output = Known(ValueType::TableInputStream(job_output_type().clone())),
+    output = Known(ValueType::table_input_stream(& JOB_OUTPUT_TYPE)),
     long = "All currently running jobs")]
 struct Jobs {}
 
 fn jobs(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(job_output_type())?;
+    let output = context.output.initialize(&JOB_OUTPUT_TYPE)?;
     for job in context.global_state.jobs() {
         output.send(Row::new(vec![
             Value::from(job.id),
@@ -105,24 +98,21 @@ fn jobs(context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
-fn history_output_type() -> &'static Vec<ColumnType> {
-    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
-    CELL.get_or_init(|| vec![
-        ColumnType::new("idx", ValueType::Integer),
-        ColumnType::new("command", ValueType::String),
-    ])
-}
+static HISTORY_OUTPUT_TYPE: [ColumnType; 2] = [
+    ColumnType::new("idx", ValueType::Integer),
+    ColumnType::new("command", ValueType::String),
+];
 
 #[signature(
     crush.history,
     can_block = true,
     short = "List previous commands",
-    output = Known(ValueType::TableInputStream(history_output_type().clone())),
+    output = Known(ValueType::table_input_stream(&HISTORY_OUTPUT_TYPE)),
     long = "All previous invocation")]
 struct HistoryCommand {}
 
 fn history(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(history_output_type())?;
+    let output = context.output.initialize(&HISTORY_OUTPUT_TYPE)?;
     let mut res = Vec::new();
     context.global_state.editor().as_mut().map(|editor| {
         let history = editor.history();
@@ -149,22 +139,17 @@ mod locale {
     use crate::lang::completion::Completion;
     use crate::util::escape::{escape, escape_without_quotes};
 
-    fn list_output_type() -> &'static Vec<ColumnType> {
-        static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
-        CELL.get_or_init(|| vec![
-            ColumnType::new("name", ValueType::String),
-        ])
-    }
+    static LIST_OUTPUT_TYPE: [ColumnType; 1] = [ColumnType::new("name", ValueType::String)];
 
     #[signature(
         crush.locale.list,
-        output = Known(ValueType::TableInputStream(list_output_type().clone())),
+        output = Known(ValueType::table_input_stream(&LIST_OUTPUT_TYPE)),
         short = "List all available locales."
     )]
     pub struct List {}
 
     fn list(context: CommandContext) -> CrushResult<()> {
-        let output = context.output.initialize(list_output_type())?;
+        let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
         let available = SystemLocale::available_names()?;
 
         for name in available {
@@ -205,7 +190,9 @@ mod locale {
         Ok(())
     }
 
-    #[signature(crush.locale.set, output = Known(ValueType::Empty), short = "Set the current locale.")]
+    #[signature(
+        crush.locale.set, output = Known(ValueType::Empty), short = "Set the current locale."
+    )]
     pub struct Set {
         #[custom_completion(locale_complete)]
         #[description("the new locale.")]
@@ -219,7 +206,9 @@ mod locale {
         context.output.send(Value::Empty)
     }
 
-    #[signature(crush.locale.get, output = Known(ValueType::String), short = "Get the current locale.")]
+    #[signature(
+        crush.locale.get, output = Known(ValueType::String), short = "Get the current locale."
+    )]
     pub struct Get {}
 
     fn get(context: CommandContext) -> CrushResult<()> {
@@ -231,22 +220,17 @@ mod byte_unit {
     use super::*;
     use crate::util::byte_unit::ByteUnit;
 
-    fn list_output_type() -> &'static Vec<ColumnType> {
-        static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
-        CELL.get_or_init(|| vec![
-            ColumnType::new("name", ValueType::String),
-        ])
-    }
+    static LIST_OUTPUT_TYPE: [ColumnType; 1] = [ColumnType::new("name", ValueType::String)];
 
     #[signature(
         crush.byte_unit.list,
-        output = Known(ValueType::TableInputStream(list_output_type().clone())),
+        output = Known(ValueType::table_input_stream(&LIST_OUTPUT_TYPE)),
         short = "List all available locales."
     )]
     pub struct List {}
 
     fn list(context: CommandContext) -> CrushResult<()> {
-        let output = context.output.initialize(list_output_type())?;
+        let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
 
         for name in ByteUnit::units() {
             output.send(Row::new(vec![Value::from(name.to_string())]))?;
@@ -254,7 +238,9 @@ mod byte_unit {
         Ok(())
     }
 
-    #[signature(crush.byte_unit.set, output = Known(ValueType::Empty), short = "Set the current byte unit.")]
+    #[signature(
+        crush.byte_unit.set, output = Known(ValueType::Empty), short = "Set the current byte unit."
+    )]
     pub struct Set {
         #[description("the new byte unit.")]
         byte_unit: String,
@@ -267,7 +253,9 @@ mod byte_unit {
         context.output.send(Value::Empty)
     }
 
-    #[signature(crush.byte_unit.get, output = Known(ValueType::String), short = "Get the current byte unit.")]
+    #[signature(
+        crush.byte_unit.get, output = Known(ValueType::String), short = "Get the current byte unit."
+    )]
     pub struct Get {}
 
     fn get(context: CommandContext) -> CrushResult<()> {

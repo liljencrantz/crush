@@ -412,42 +412,32 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
             let mut vec_stream = TokenStream::new();
             vec_stream.extend(metadata.path.iter().flat_map(|e| vec![TokenTree::Literal(Literal::string(e)),
                                                                      TokenTree::Punct(Punct::new(',', Spacing::Alone))]));
-            let path = TokenTree::Group(Group::new(Delimiter::None, vec_stream));
+            vec_stream.extend(vec![TokenTree::Literal(command_name.clone()), TokenTree::Punct(Punct::new(',', Spacing::Alone))]);
+            let command_path = TokenTree::Group(Group::new(Delimiter::None, vec_stream));
 
             let handler = quote! {
 
             #[allow(unused_parens)] // TODO: don't emit unnecessary parenthesis in the first place
             impl #struct_name {
                 pub fn declare(_env: &mut crate::lang::state::scope::ScopeLoader) -> crate::lang::errors::CrushResult <()> {
-                    _env.declare_command(
-                        #command_name,
-                        #command_invocation,
-                        #can_block,
-                        #signature_literal,
-                        #description,
-                        #long_description,
-                        #output,
-                        vec![
-                            #argument_desciptions
-                        ],
-                    )
+                    _env.declare(#command_name, crate::lang::value::Value::Command(#struct_name::create_command()))
                 }
 
                 pub fn declare_method(_env: &mut ordered_map::OrderedMap<std::string::String, crate::lang::command::Command>) {
-                    let mut full = vec!["global", #path];
-                    full.push(#command_name);
-                    _env.insert(#command_name.to_string(),
-                        <dyn crate::lang::command::CrushCommand>::command(
+                    _env.insert(#command_name.to_string(), #struct_name::create_command());
+                }
+
+                pub fn create_command() -> crate::lang::command::Command {
+                    <dyn crate::lang::command::CrushCommand>::command(
                             #command_invocation,
                             #can_block,
-                            full,
+                            vec!["global", #command_path],
                             #signature_literal,
                             #description,
                             #long_description,
                             #output,
                             [#argument_desciptions],
-                        )
-                    );
+                    )
                 }
 
                 #[allow(unreachable_patterns)]
@@ -463,7 +453,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                             #named_matchers
                             #named_fallback
                             (None, _value) => _unnamed.push_back((_value, _arg.location)),
-                            (Some(_name), _value) => return crate::lang::errors::argument_error(format!("{}: Unexpected argument nameed \"{}\" with value of type {}", #command_name, _name, _value.value_type()), _location),
+                            (Some(_name), _value) => return crate::lang::errors::argument_error(format!("{}: Unexpected argument named \"{}\" with value of type {}", #command_name, _name, _value.value_type()), _location),
                         }
                     }
 

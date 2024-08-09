@@ -1,9 +1,10 @@
 Todo:
 Math commands for command mode, e.g. `add 1 2 3`
-Loop sugar for math mode, e.g. `(for i=foo {...})`, `(loop {...})` and `(while condition {...})`
-Control flow sugar for math mode, i.e. `return`, break` and `continue` as keywords.
+Blocks and function definitions in expression mode
+Loop sugar for expression mode, e.g. `(for i=foo {...})`, `(loop {...})` and `(while condition {...})`
+Control flow sugar for expression mode, i.e. `return`, break` and `continue` as keywords.
 Rewrite all tests for new syntax
-New regex literal syntax
+New regex literal syntax `^(.*)`
 Add saner default prompt
 Add default syntax highlighting config
 Add some way to extract the definition from a closure, e.g. `$my_function:definition`

@@ -6,12 +6,11 @@ use crate::lang::signature::files::Files;
 use crate::lang::signature::patterns::Patterns;
 use crate::lang::state::scope::Scope;
 use crate::lang::serialization::{deserialize, serialize};
-use crate::lang::data::table::{ColumnFormat, ColumnType, Row};
+use crate::lang::data::table::{ColumnType, Row};
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use crate::util::file::home;
 use crossbeam::channel::unbounded;
-use lazy_static::lazy_static;
 use signature::signature;
 use ssh2::KnownHostFileKind;
 use ssh2::{CheckResult, HostKeyType, KnownHostKeyFormat, Session};
@@ -23,23 +22,17 @@ use crate::util::user_map::get_current_username;
 use crate::lang::completion::Completion;
 use crate::lang::completion::parse::{PartialCommandResult, LastArgument};
 use std::convert::TryFrom;
-use std::sync::OnceLock;
 use crate::util::escape::{escape, escape_without_quotes};
 
-pub fn identity_output_type() -> &'static Vec<ColumnType> {
-    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
-    CELL.get_or_init(|| vec![
-        ColumnType::new("identity", ValueType::String),
-        ColumnType::new("public_key", ValueType::Binary),
-    ])
-}
-pub fn host_output_type() -> &'static Vec<ColumnType> {
-    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
-    CELL.get_or_init(|| vec![
-        ColumnType::new("host", ValueType::String),
-        ColumnType::new("public_key", ValueType::String),
-    ])
-}
+static IDENTITY_OUTPUT_TYPE: [ColumnType; 2] = [
+    ColumnType::new("identity", ValueType::String),
+    ColumnType::new("public_key", ValueType::Binary),
+];
+
+static HOST_OUTPUT_TYPE: [ColumnType; 2] = [
+    ColumnType::new("host", ValueType::String),
+    ColumnType::new("public_key", ValueType::String),
+];
 
 fn parse(
     mut host: String,
@@ -228,7 +221,7 @@ fn exec(context: CommandContext) -> CrushResult<()> {
     can_block = true,
     short = "Execute a command on a set of hosts",
     long = "    Execute the specified command all specified hosts",
-    output = Known(ValueType::TableInputStream(pexec_output_type().clone())),
+    output = Known(ValueType::table_input_stream(&PEXEC_OUTPUT_TYPE)),
 )]
 struct Pexec {
     #[description("the command to execute.")]
@@ -257,13 +250,10 @@ struct Pexec {
     allow_not_found: bool,
 }
 
-pub fn pexec_output_type() -> &'static Vec<ColumnType> {
-    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
-    CELL.get_or_init(|| vec![
-        ColumnType::new("host", ValueType::String),
-        ColumnType::new("result", ValueType::Any),
-    ])
-}
+static PEXEC_OUTPUT_TYPE: [ColumnType; 2] = [
+    ColumnType::new("host", ValueType::String),
+    ColumnType::new("result", ValueType::Any),
+];
 
 fn pexec(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Pexec = Pexec::parse(context.remove_arguments(), &context.global_state.printer())?;
@@ -319,7 +309,7 @@ fn pexec(mut context: CommandContext) -> CrushResult<()> {
     }
 
     drop(result_send);
-    let output = context.output.initialize(pexec_output_type())?;
+    let output = context.output.initialize(&PEXEC_OUTPUT_TYPE)?;
 
     while let Ok((host, val)) = result_recv.recv() {
         output.send(Row::new(vec![Value::from(host), val]))?;
@@ -331,13 +321,13 @@ fn pexec(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     remote.identity,
     can_block = true,
-    output = Known(ValueType::TableInputStream(identity_output_type().clone())),
+    output = Known(ValueType::table_input_stream(&IDENTITY_OUTPUT_TYPE)),
     short = "List all known ssh-agent identities"
 )]
 struct Identity {}
 
 fn identity(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(identity_output_type())?;
+    let output = context.output.initialize(&IDENTITY_OUTPUT_TYPE)?;
     let sess = Session::new()?;
     let mut agent = sess.agent()?;
 
@@ -360,7 +350,7 @@ mod host {
     #[signature(
         remote.host.list,
         can_block = true,
-        output = super::Known(ValueType::TableInputStream(host_output_type().clone())),
+        output = Known(ValueType::table_input_stream(&HOST_OUTPUT_TYPE)),
         short = "List all known hosts",
         long = "If a given host key has no hostname, the hostname will be the empty string"
     )]
@@ -373,7 +363,7 @@ mod host {
         let cfg: List = List::parse(context.arguments, &context.global_state.printer())?;
         let output = context
             .output
-            .initialize(host_output_type())?;
+            .initialize(&HOST_OUTPUT_TYPE)?;
         let session = Session::new()?;
 
         let mut known_hosts = session.known_hosts()?;

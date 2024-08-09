@@ -29,27 +29,24 @@ fn me(context: CommandContext) -> CrushResult<()> {
     context.output.send(get_user_value(&get_current_username()?)?)
 }
 
-pub fn current_output_type() -> &'static Vec<ColumnType> {
-    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
-    CELL.get_or_init(|| vec![
-        ColumnType::new("name", ValueType::String),
-        ColumnType::new("tty", ValueType::String),
-        ColumnType::new("host", ValueType::String),
-        ColumnType::new("time", ValueType::Time),
-        ColumnType::new("pid", ValueType::Integer),
-    ])
-}
+static CURRENT_OUTPUT_TYPE: [ColumnType; 5] = [
+    ColumnType::new("name", ValueType::String),
+    ColumnType::new("tty", ValueType::String),
+    ColumnType::new("host", ValueType::String),
+    ColumnType::new("time", ValueType::Time),
+    ColumnType::new("pid", ValueType::Integer),
+];
 
 #[signature(
     user.current,
     can_block = true,
-    output = Known(ValueType::TableInputStream(current_output_type().clone())),
+    output = Known(ValueType::TableInputStream(CURRENT_OUTPUT_TYPE.to_vec())),
     short = "Currently logged in users",
 )]
 struct Current {}
 
 fn current(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(current_output_type())?;
+    let output = context.output.initialize(&CURRENT_OUTPUT_TYPE)?;
 
     for l in logins::list()? {
         output.send(Row::new(vec![
@@ -63,17 +60,14 @@ fn current(context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
-pub fn list_output_type() -> &'static Vec<ColumnType> {
-    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
-    CELL.get_or_init(|| vec![
-        ColumnType::new("name", ValueType::String),
-        ColumnType::new("home", ValueType::File),
-        ColumnType::new("shell", ValueType::File),
-        ColumnType::new("information", ValueType::String),
-        ColumnType::new("uid", ValueType::Integer),
-        ColumnType::new("gid", ValueType::Integer),
-    ])
-}
+static LIST_OUTPUT_TYPE: [ColumnType; 6] = [
+    ColumnType::new("name", ValueType::String),
+    ColumnType::new("home", ValueType::File),
+    ColumnType::new("shell", ValueType::File),
+    ColumnType::new("information", ValueType::String),
+    ColumnType::new("uid", ValueType::Integer),
+    ColumnType::new("gid", ValueType::Integer),
+];
 
 pub fn user_struct() -> &'static Struct {
     static CELL: OnceLock<Struct> = OnceLock::new();
@@ -177,17 +171,16 @@ fn r#do(mut context: CommandContext) -> CrushResult<()> {
     }
 }
 
-
 #[signature(
     user.list,
     can_block = true,
-    output = Known(ValueType::TableInputStream(list_output_type().clone())),
+    output = Known(ValueType::table_input_stream(&LIST_OUTPUT_TYPE)),
     short = "List all users on the system",
 )]
 struct List {}
 
 fn list(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(list_output_type())?;
+    let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
     for u in get_all_users()? {
         output.send(Row::new(
             vec![

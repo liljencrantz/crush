@@ -178,7 +178,7 @@ impl PrettyPrinter {
 
     fn calculate_header_width(&self, w: &mut [usize], types: &[ColumnType]) {
         for (idx, val) in types.iter().enumerate() {
-            w[idx] = max(w[idx], val.name.width());
+            w[idx] = max(w[idx], val.name().width());
         }
     }
 
@@ -202,9 +202,9 @@ impl PrettyPrinter {
         let last_idx = types.len() - 1;
         for (idx, val) in types.iter().enumerate() {
             let is_last = idx == last_idx;
-            header += val.name.as_ref();
+            header += val.name().as_ref();
             if !is_last {
-                header += &" ".repeat(w[idx] - val.name.width() + 1);
+                header += &" ".repeat(w[idx] - val.name().width() + 1);
             }
         }
         self.printer.line(header.as_str())
@@ -399,7 +399,7 @@ impl PrettyPrinter {
     }
 
     fn print_single_column_table(&self, data: Vec<Row>, types: &[ColumnType]) {
-        self.printer.line(&types[0].name);
+        self.printer.line(&types[0].name());
         let max_width = self.printer.width();
         let mut columns = 1;
         let mut widths = vec![];

@@ -38,6 +38,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     output = Known(ValueType::Float),
     short = "Add this number and the specified term and return the result",
 )]
+#[allow(unused)]
 struct Add {
     #[description("the number to add")]
     term: Number
@@ -60,6 +61,7 @@ binary_op!(
     output = Known(ValueType::Float),
     short = "Subtract the specified term from this number and return the result",
 )]
+#[allow(unused)]
 struct Sub {
     #[description("the number to subtract")]
     term: Number
@@ -82,6 +84,7 @@ binary_op!(
     output = Known(ValueType::Float),
     short = "multiply this number and the specified factor and return the result",
 )]
+#[allow(unused)]
 struct Mul {
     #[description("the number to multiply")]
     term: Number
@@ -104,6 +107,7 @@ binary_op!(
     output = Known(ValueType::Float),
     short = "Divide this number by the specified factor",
 )]
+#[allow(unused)]
 struct Div {
     #[description("the number to divide by")]
     term: Number

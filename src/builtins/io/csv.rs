@@ -44,7 +44,7 @@ fn from(context: CommandContext) -> CrushResult<()> {
     let columns = cfg
         .columns
         .iter()
-        .map(|(k, v)| ColumnType::new(k, v.clone()))
+        .map(|(k, v)| ColumnType::new_from_string(k.clone(), v.clone()))
         .collect::<Vec<_>>();
     let output = context.output.initialize(&columns)?;
 

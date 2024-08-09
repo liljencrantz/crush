@@ -1,4 +1,5 @@
-    /**
+use std::sync::OnceLock;
+/**
 This file implements the crush equivalent of a pipe from a regular shell.
 
 Unlike normal pipes, these pipes can send *any* crush value. The most important
@@ -10,7 +11,6 @@ use crate::lang::data::table::Row;
 use crate::lang::value::Value;
 use chrono::Duration;
 use crossbeam::channel::{bounded, unbounded, Receiver, Sender};
-use lazy_static::lazy_static;
 
 pub type RecvTimeoutError = crossbeam::channel::RecvTimeoutError;
 
@@ -56,18 +56,16 @@ impl ValueReceiver {
     }
 }
 
-lazy_static! {
-    static ref BLACK_HOLE: ValueSender = {
-        let (mut o, _) = pipe();
-        o.is_pipeline = false;
-        o
-    };
-}
 /**
 A Sender that will drop any data sent to it at once.
  */
 pub fn black_hole() -> ValueSender {
-    (*BLACK_HOLE).clone()
+    static CELL: OnceLock<ValueSender> = OnceLock::new();
+    CELL.get_or_init(||{
+        let (mut o, _) = pipe();
+        o.is_pipeline = false;
+        o
+    }).clone()
 }
 
 /**
@@ -141,7 +139,7 @@ impl InputStream {
                         return error(
                             format!(
                                 "Wrong cell type in io column {:?}, expected {:?}, got {:?}",
-                                ct.name,
+                                ct.name(),
                                 c.value_type(),
                                 ct.cell_type
                             )

@@ -1,4 +1,3 @@
-use std::sync::OnceLock;
 use signature::signature;
 use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::errors::{argument_error_legacy, CrushResult};
@@ -112,25 +111,22 @@ pub fn r#use(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Empty)
 }
 
-fn env_output_type() -> &'static Vec<ColumnType> {
-    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
-    CELL.get_or_init(|| vec![
-        ColumnType::new("name", ValueType::String),
-        ColumnType::new("type", ValueType::String),
-    ])
-}
+static ENV_OUTPUT_TYPE: [ColumnType; 2] = [
+    ColumnType::new("name", ValueType::String),
+    ColumnType::new("type", ValueType::String),
+];
 
 #[signature(
     var.env,
     can_block = false,
-    output = Known(ValueType::TableInputStream(env_output_type().clone())),
+    output = Known(ValueType::table_input_stream(&ENV_OUTPUT_TYPE)),
     short = "Returns a table containing the current namespace",
     long = "The columns of the table are the name, and the type of the value.",
 )]
 struct Env {}
 
 pub fn env(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(env_output_type())?;
+    let output = context.output.initialize(&ENV_OUTPUT_TYPE)?;
     let values = context.scope.dump()?;
     let mut keys = values.keys().collect::<Vec<&String>>();
     keys.sort();

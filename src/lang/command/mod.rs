@@ -84,7 +84,7 @@ pub trait CrushCommand: Help {
     ) -> CrushResult<usize>;
     fn bind_helper(&self, wrapped: &Command, this: Value) -> Command;
     fn output_type<'a>(&'a self, input: &'a OutputType) -> Option<&'a ValueType>;
-    fn arguments(&self) -> &Vec<ArgumentDescription>;
+    fn arguments(&self) -> &[ArgumentDescription];
 }
 
 pub trait TypeMap {
@@ -274,7 +274,7 @@ impl CrushCommand for SimpleCommand {
         self.output.calculate(input)
     }
 
-    fn arguments(&self) -> &Vec<ArgumentDescription> {
+    fn arguments(&self) -> &[ArgumentDescription] {
         &self.arguments
     }
 }
@@ -358,7 +358,7 @@ impl CrushCommand for ConditionCommand {
         None
     }
 
-    fn arguments(&self) -> &Vec<ArgumentDescription> {
+    fn arguments(&self) -> &[ArgumentDescription] {
         &self.arguments
     }
 }
@@ -468,7 +468,7 @@ impl CrushCommand for BoundCommand {
         self.command.output_type(input)
     }
 
-    fn arguments(&self) -> &Vec<ArgumentDescription> {
+    fn arguments(&self) -> &[ArgumentDescription] {
         self.command.arguments()
     }
 }

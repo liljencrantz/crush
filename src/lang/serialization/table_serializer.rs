@@ -38,8 +38,8 @@ impl Serializable<ColumnType> for ColumnType {
         state: &mut DeserializationState,
     ) -> CrushResult<ColumnType> {
         if let element::Element::ColumnType(t) = elements[id].element.as_ref().unwrap() {
-            Ok(ColumnType::new_with_format(
-                &String::deserialize(t.name as usize, elements, state)?,
+            Ok(ColumnType::new_with_format_from_string(
+                String::deserialize(t.name as usize, elements, state)?,
                 ColumnFormat::try_from(t.format)?,
                 ValueType::deserialize(t.r#type as usize, elements, state)?,
             ))
@@ -56,7 +56,7 @@ impl Serializable<ColumnType> for ColumnType {
         let idx = elements.len();
         elements.push(model::Element::default());
         let mut stype = model::ColumnType::default();
-        stype.name = self.name.serialize(elements, state)? as u64;
+        stype.name = self.name().to_string().serialize(elements, state)? as u64;
         stype.r#type = self.cell_type.serialize(elements, state)? as u64;
         stype.format = self.format.into();
         elements[idx].element = Some(element::Element::ColumnType(stype));

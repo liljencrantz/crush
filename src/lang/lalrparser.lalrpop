@@ -43,7 +43,7 @@ Job: JobNode = {
 
 Expr: Box<Node> = {
     AssignmentExpr,
-    <mut j:Expr> Pipe <c:AssignmentExpr> => {
+    <j:Expr> Pipe <c:AssignmentExpr> => {
         let mut jj = j.expression_to_job();
         jj.commands.push(c.expression_to_command());
         Box::from(Node::Substitution(jj))
@@ -100,7 +100,7 @@ ItemExpr: Box<Node> = {
     <f:Float> => Node::float(f),
     <i: ItemExpr> GetItemStart <e: Assignment> GetItemEnd => Box::from(Node::GetItem(i, e)),
     <i: ItemExpr> MemberOperator <l: Identifier> => Box::from(Node::GetAttr(i, l.into())),
-    <i: ItemExpr> ExprModeStart <mut ov: OptExpressionList> SubEnd => {
+    <i: ItemExpr> ExprModeStart <ov: OptExpressionList> SubEnd => {
         let l = i.location();
         let mut v = match ov {
             Some(vv) => vv,

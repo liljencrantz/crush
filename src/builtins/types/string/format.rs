@@ -95,6 +95,7 @@ fn do_format(format: &str, param: Vec<Argument>) -> CrushResult<String> {
     types.string.format, can_block = false, output = Known(ValueType::String),
     short = "Format arguments into a string",
     example = "\"Hello {name}\":format name=$name")]
+#[allow(unused)]
 pub struct Format {
     #[description("The named parameters to format into the pattern string")]
     #[named()]

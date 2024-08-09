@@ -1,13 +1,10 @@
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 use std::os::raw::c_char;
-
-use lazy_static::lazy_static;
 
 use nix::unistd::{Uid, Gid, getuid};
 use crate::lang::errors::{CrushResult, data_error, error};
 use std::ffi::CStr;
-use std::ops::Deref;
 use libc::gid_t;
 use std::path::PathBuf;
 use libc::{passwd, uid_t};
@@ -16,8 +13,9 @@ use crate::argument_error_legacy;
 static USER_MUTEX: Mutex<i32> = Mutex::new(0i32);
 static GROUP_MUTEX: Mutex<i32> = Mutex::new(0i32);
 
-lazy_static! {
-    static ref CURRENT_USERNAME: CrushResult<String> = {
+pub fn get_current_username() -> CrushResult<&'static str> {
+    static CELL: OnceLock<CrushResult<String>> = OnceLock::new();
+    let cu = CELL.get_or_init(|| {
         match create_user_map() {
             Ok(mut map) => {
                 match map.remove(&getuid()) {
@@ -27,11 +25,8 @@ lazy_static! {
             },
             Err(e) => Err(e),
         }
-    };
-}
-
-pub fn get_current_username() -> CrushResult<&'static str> {
-    match CURRENT_USERNAME.deref() {
+    });
+    match cu {
         Ok(s) => Ok(s.as_str()),
         Err(e) => data_error(e.message()),
     }
@@ -41,15 +36,15 @@ pub fn create_user_map() -> CrushResult<HashMap<Uid, String>> {
     let _user_lock = USER_MUTEX.lock().unwrap();
     let mut res = HashMap::new();
     unsafe {
-        nix::libc::setpwent();
+        libc::setpwent();
         loop {
-            let passwd = nix::libc::getpwent();
+            let passwd = libc::getpwent();
             if passwd.is_null() {
                 break;
             }
             res.insert(Uid::from_raw((*passwd).pw_uid), parse((*passwd).pw_name)?);
         }
-        nix::libc::endpwent();
+        libc::endpwent();
     }
     Ok(res)
 }

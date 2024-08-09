@@ -13,9 +13,3 @@ fn $name(mut context: CommandContext) -> CrushResult<()> {
 }
     }
 }
-
-macro_rules! example {
-    ($example:literal) => {
-        Some(concat!("    Example:\n\n    ", $example))
-    };
-}

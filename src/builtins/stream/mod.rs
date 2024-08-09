@@ -1,6 +1,8 @@
+use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::errors::CrushResult;
 use crate::lang::state::scope::Scope;
+use crate::lang::value::Value;
 
 mod count;
 mod drop;
@@ -43,13 +45,18 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             aggregation::Prod::declare(env)?;
             aggregation::First::declare(env)?;
             aggregation::Last::declare(env)?;
-            env.declare_command(
-                "select", select::select, true,
-                "select copy_fields:field... [%] new_field=definition:command",
-                "Pass on some old fields and calculate new ones for each line of input",
-                example!(r#"files | select user path={"{}/{}":format (pwd) file}"#), Unknown,
-                vec![],
-            )?;
+            env.declare(
+                "select",
+                Value::Command(<dyn CrushCommand>::command(
+                    select::select,
+                    true,
+                    ["stream", "select"],
+                    "stream:select copy_fields:field... [*] new_field=definition:command",
+                    "Pass on some old fields and calculate new ones for each line of input",
+                    None,
+                    Unknown,
+                    [],
+                )))?;
             seq::Seq::declare(env)?;
             zip::Zip::declare(env)?;
             Ok(())

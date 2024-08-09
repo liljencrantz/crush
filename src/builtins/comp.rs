@@ -5,24 +5,21 @@ use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use std::cmp::Ordering;
-use crate::lang::state::argument_vector::ArgumentVector;
+use signature::signature;
 
 macro_rules! cmp {
-    ($name:ident, $op:expr) => {
+    ($struct_name:ident, $name:ident, $op:expr) => {
         pub fn $name(mut context: CommandContext) -> CrushResult<()> {
-            context.arguments.check_len(2)?;
-            let l = context.arguments.value(0)?;
-            let r = context.arguments.value(1)?;
-            match l.partial_cmp(&r) {
+            let cfg = $struct_name::parse(context.remove_arguments(), &context.global_state.printer())?;
+            match cfg.left.partial_cmp(&cfg.right) {
                 Some(ordering) => context.output.send(Value::Bool($op(ordering))),
                 None => {
                     return argument_error_legacy(
                         format!(
                             "Values of type {} and {} can't be compared with each other",
-                            l.value_type().to_string(),
-                            r.value_type().to_string(),
+                            cfg.left.value_type().to_string(),
+                            cfg.right.value_type().to_string(),
                         )
-                        .as_str(),
                     )
                 }
             }
@@ -30,30 +27,115 @@ macro_rules! cmp {
     };
 }
 
-cmp!(gt, |o| o == Ordering::Greater);
-cmp!(lt, |o| o == Ordering::Less);
-cmp!(gte, |o| o != Ordering::Less);
-cmp!(lte, |o| o != Ordering::Greater);
+#[signature(
+    comp.gt,
+    can_block = false,
+    short = "True if left side is greater than right side",
+    output = Known(ValueType::Bool),
+)]
+struct Gt {
+    #[description("the left side of the comparison.")]
+    left: Value,
+    #[description("the right side of the comparison.")]
+    right: Value,
+}
+
+#[signature(
+    comp.lt,
+    can_block = false,
+    short = "True if left side is less than right side",
+    output = Known(ValueType::Bool),
+)]
+struct Lt {
+    #[description("the left side of the comparison.")]
+    left: Value,
+    #[description("the right side of the comparison.")]
+    right: Value,
+}
+
+#[signature(
+    comp.gte,
+    can_block = false,
+    short = "True if left side is greater than or equal right side",
+    output = Known(ValueType::Bool),
+)]
+struct Gte {
+    #[description("the left side of the comparison.")]
+    left: Value,
+    #[description("the right side of the comparison.")]
+    right: Value,
+}
+
+#[signature(
+    comp.lte,
+    can_block = false,
+    short = "True if left side is less than or equal than right side",
+    output = Known(ValueType::Bool),
+)]
+struct Lte {
+    #[description("the left side of the comparison.")]
+    left: Value,
+    #[description("the right side of the comparison.")]
+    right: Value,
+}
+
+cmp!(Gt, gt, |o| o == Ordering::Greater);
+cmp!(Lt, lt, |o| o == Ordering::Less);
+cmp!(Gte, gte, |o| o != Ordering::Less);
+cmp!(Lte, lte, |o| o != Ordering::Greater);
+
+#[signature(
+    comp.eq,
+    can_block = false,
+    short = "True if left side is equal to right side",
+    output = Known(ValueType::Bool),
+)]
+struct Eq {
+    #[description("the left side of the comparison.")]
+    left: Value,
+    #[description("the right side of the comparison.")]
+    right: Value,
+}
 
 pub fn eq(mut context: CommandContext) -> CrushResult<()> {
-    context.arguments.check_len(2)?;
-    let l = context.arguments.value(0)?;
-    let r = context.arguments.value(1)?;
-    context.output.send(Value::Bool(l.eq(&r)))
+    let cfg = Eq::parse(context.remove_arguments(), context.global_state.printer())?;
+    context.output.send(Value::Bool(cfg.left.eq(&cfg.right)))
+}
+
+#[signature(
+    comp.neq,
+    can_block = false,
+    short = "True if left side is not equal to right side",
+    output = Known(ValueType::Bool),
+)]
+struct Neq {
+    #[description("the left side of the comparison.")]
+    left: Value,
+    #[description("the right side of the comparison.")]
+    right: Value,
 }
 
 pub fn neq(mut context: CommandContext) -> CrushResult<()> {
-    context.arguments.check_len(2)?;
-    let l = context.arguments.value(0)?;
-    let r = context.arguments.value(1)?;
-    context.output.send(Value::Bool(!l.eq(&r)))
+    let cfg = Neq::parse(context.remove_arguments(), context.global_state.printer())?;
+    context.output.send(Value::Bool(!cfg.left.eq(&cfg.right)))
+}
+
+#[signature(
+    comp.not,
+    can_block = false,
+    short = "Negates the argument",
+    output = Known(ValueType::Bool),
+)]
+struct Not {
+    #[description("the value to negate.")]
+    argument: bool,
 }
 
 pub fn not(mut context: CommandContext) -> CrushResult<()> {
-    context.arguments.check_len(1)?;
+    let cfg = Not::parse(context.remove_arguments(), context.global_state.printer())?;
     context
         .output
-        .send(Value::Bool(!context.arguments.bool(0)?))
+        .send(Value::Bool(!cfg.argument))
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
@@ -61,76 +143,13 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "comp",
         "Comparison operators",
         Box::new(|env| {
-            env.declare_command(
-                "gt",
-                gt,
-                false,
-                "any > any",
-                "True if left side is greater than right side",
-                None,
-                Known(ValueType::Bool),
-                vec![],
-            )?;
-            env.declare_command(
-                "gte",
-                gte,
-                false,
-                "any >= any",
-                "True if left side is greater than or equal to right side",
-                None,
-                Known(ValueType::Bool),
-                vec![],
-            )?;
-            env.declare_command(
-                "lt",
-                lt,
-                false,
-                "any < any",
-                "True if left side is less than right side",
-                None,
-                Known(ValueType::Bool),
-                vec![],
-            )?;
-            env.declare_command(
-                "lte",
-                lte,
-                false,
-                "any <= any",
-                "True if left side is less than or equal to right side",
-                None,
-                Known(ValueType::Bool),
-                vec![],
-            )?;
-            env.declare_command(
-                "eq",
-                eq,
-                false,
-                "any == any",
-                "True if left side is equal to right side",
-                None,
-                Known(ValueType::Bool),
-                vec![],
-            )?;
-            env.declare_command(
-                "neq",
-                neq,
-                false,
-                "any != any",
-                "True if left side is not equal to right side",
-                None,
-                Known(ValueType::Bool),
-                vec![],
-            )?;
-            env.declare_command(
-                "__not__",
-                not,
-                false,
-                "not boolean",
-                "Negates a boolean value",
-                None,
-                Known(ValueType::Bool),
-                vec![],
-            )?;
+            env.declare("gt", Value::Command(Gt::create_command()))?;
+            env.declare("gte", Value::Command(Gte::create_command()))?;
+            env.declare("lt", Value::Command(Lt::create_command()))?;
+            env.declare("lte", Value::Command(Lte::create_command()))?;
+            env.declare("eq", Value::Command(Eq::create_command()))?;
+            env.declare("neq", Value::Command(Neq::create_command()))?;
+            env.declare("not", Value::Command(Not::create_command()))?;
             Ok(())
         }),
     )?;

@@ -1,8 +1,7 @@
 use crate::lang::argument::column_names;
 use crate::lang::command::CrushCommand;
-use crate::lang::command::OutputType::{Known, Unknown};
+use crate::lang::command::OutputType::{Known};
 use crate::lang::errors::{CrushResult, mandate};
-use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::pipe::black_hole;
@@ -63,6 +62,7 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
     long = "Example:",
     long = "data foo=5 bar=\"baz\" false",
 )]
+#[allow(unused)]
 struct Data {
     #[description("unnamed values.")]
     #[unnamed]
@@ -108,7 +108,7 @@ fn class(context: CommandContext) -> CrushResult<()> {
 }
 
 pub fn column_types(columns: &OrderedStringMap<ValueType>) -> Vec<ColumnType> {
-    columns.iter().map(|(key, value)| ColumnType::new(key, value.clone())).collect()
+    columns.iter().map(|(key, value)| ColumnType::new_from_string(key.clone(), value.clone())).collect()
 }
 
 #[signature(
@@ -144,20 +144,63 @@ pub fn r#typeof(context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Type(cfg.value.value_type()))
 }
 
-fn class_set(mut context: CommandContext) -> CrushResult<()> {
+#[signature(
+    types.root.__setitem__,
+    can_block = false,
+    output = Known(ValueType::Empty),
+    short = "Modify the specified field to hold the specified value.",
+)]
+struct SetItem {
+    #[description("the name of the field to get the value of.")]
+    name: String,
+    #[description("the new value for the field.")]
+    value: Value,
+}
+
+fn __setitem__(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = SetItem::parse(context.remove_arguments(), context.global_state.printer())?;
     let this = context.this.r#struct()?;
-    let value = context.arguments.value(1)?;
-    let name = context.arguments.string(0)?;
-    this.set(&name, value);
+    this.set(&cfg.name, cfg.value);
     context.output.send(Value::Empty)
 }
 
-fn class_get(mut context: CommandContext) -> CrushResult<()> {
+#[signature(
+    types.root.__setattr__,
+    can_block = false,
+    output = Known(ValueType::Empty),
+    short = "Modify the specified field to hold the specified value.",
+)]
+struct SetAttr {
+    #[description("the name of the field to get the value of.")]
+    name: String,
+    #[description("the new value for the field.")]
+    value: Value,
+}
+
+fn __setattr__(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = SetAttr::parse(context.remove_arguments(), context.global_state.printer())?;
     let this = context.this.r#struct()?;
-    let name = context.arguments.string(0)?;
+    this.set(&cfg.name, cfg.value);
+    context.output.send(Value::Empty)
+}
+
+#[signature(
+    types.root.__getitem__,
+    can_block = false,
+    output = Known(ValueType::Any),
+    short = "Return the value of the specified field.",
+)]
+struct GetItem {
+    #[description("the name of the field to get the value of.")]
+    name: String,
+}
+
+fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = GetItem::parse(context.remove_arguments(), context.global_state.printer())?;
+    let this = context.this.r#struct()?;
     context.output.send(mandate(
-        this.get(&name),
-        format!("Unknown field {}", name).as_str(),
+        this.get(&cfg.name),
+        format!("Unknown field {}", cfg.name).as_str(),
     )?)
 }
 
@@ -168,33 +211,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         Box::new(move |env| {
             let root =
                 Struct::new(vec![
-                    ("__setattr__", Value::Command(<dyn CrushCommand>::command(
-                        class_set, false,
-                        &["global", "types", "root", "__setattr__"],
-                        "root:__setitem__ name:string value:any",
-                        "Modify the specified field to hold the specified value",
-                        None,
-                        Known(ValueType::Empty),
-                        [],
-                    ))),
-                    ("__getitem__", Value::Command(<dyn CrushCommand>::command(
-                        class_get, false,
-                        &["global", "types", "root", "__getitem__"],
-                        "root:__getitem__ name:string",
-                        "Return the value of the specified field",
-                        None,
-                        Unknown,
-                        [],
-                    ))),
-                    ("__setitem__", Value::Command(<dyn CrushCommand>::command(
-                        class_set, false,
-                        &["global", "types", "root", "__setitem__"],
-                        "root:__setitem__ name:string value:any",
-                        "Modify the specified field to hold the specified value",
-                        None,
-                        Unknown,
-                        [],
-                    ))),
+                    ("__setattr__", Value::Command(SetAttr::create_command())),
+                    ("__getitem__", Value::Command(GetItem::create_command())),
+                    ("__setitem__", Value::Command(SetItem::create_command())),
                     ("new", Value::Command(<dyn CrushCommand>::command(
                         new, true,
                         &["global", "types", "root", "new"],

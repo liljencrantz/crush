@@ -1,4 +1,3 @@
-use lazy_static::__Deref;
 use crate::lang::argument::{column_names, Argument};
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::*;

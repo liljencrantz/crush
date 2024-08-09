@@ -31,7 +31,7 @@ fn run(
     let arguments = Vec::from(row.clone())
         .drain(..)
         .zip(input_type.iter())
-        .map(|(c, t)| Argument::named(t.name.as_ref(), c, location))
+        .map(|(c, t)| Argument::named(t.name(), c, location))
         .collect();
 
     condition.eval(

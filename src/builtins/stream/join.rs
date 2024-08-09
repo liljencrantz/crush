@@ -62,19 +62,19 @@ fn do_join(
 fn get_output_type(left_type: &[ColumnType], right_type: &[ColumnType], right_key_idx: usize) -> Result<Vec<ColumnType>, CrushError> {
     let seen =
         left_type.iter()
-            .map(|c| { c.name.clone() })
+            .map(|c| { c.name() })
             .collect::<HashSet<_>>();
     let mut res = left_type.to_vec();
 
     for (idx, c) in right_type.iter().enumerate() {
-        let mut name = c.name.clone();
+        let mut name = c.name().to_string();
         let mut version = 1;
-        while seen.contains(&name) {
+        while seen.contains(name.as_str()) {
             version += 1;
-            name = format!("{}_{}", c.name, version);
+            name = format!("{}_{}", c.name(), version);
         }
 
-        let column = ColumnType::new(name.as_str(), c.cell_type.clone());
+        let column = ColumnType::new_from_string(name.to_string(), c.cell_type.clone());
 
         if idx != right_key_idx {
             res.push(column);
@@ -88,6 +88,7 @@ fn get_output_type(left_type: &[ColumnType], right_type: &[ColumnType], right_ke
     output = Unknown,
     short = "Join two streams together on the specified keys.",
     example = "join user=(files) name=(user:list)")]
+#[allow(unused)]
 pub struct Join {
     #[named()]
     #[description("Fields to join")]

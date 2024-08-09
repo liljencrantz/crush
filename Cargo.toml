@@ -36,12 +36,11 @@ path = "ordered_map"
 lalrpop-util = { version = "0.20.2", features = [ "lexer"] }
 chrono = "0.4.38"
 regex = "1.10.5"
-lazy_static = "1.4.0"
 rustyline = { version = "14.0.0", features = ["with-file-history"] }
 rustyline-derive = "0.10.0"
 dirs = "5.0.1"
 serde_json = { version = "1.0.118", features = ["preserve_order"] }
-serde_yaml = { version = "0.9.34+deprecated" }
+serde_yaml = { version = "0.9.34" }
 toml = "0.8.14"
 reqwest = { version = "0.12.5", features = ["blocking"] }
 crossbeam = "0.8.4"

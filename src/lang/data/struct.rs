@@ -11,17 +11,13 @@ use ordered_map::OrderedMap;
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, Mutex};
 use std::fmt::{Formatter, Display};
-use std::ops::Deref;
 
-fn struct_stream_type() -> &'static Vec<ColumnType> {
-    static CELL: OnceLock<Vec<ColumnType>> = OnceLock::new();
-    CELL.get_or_init(|| vec![
-        ColumnType::new("name", ValueType::String),
-        ColumnType::new("value", ValueType::Any),
-    ])
-}
+static STRUCT_STREAM_TYPE: [ColumnType; 2] = [
+    ColumnType::new("name", ValueType::String),
+    ColumnType::new("value", ValueType::Any),
+];
 
 #[derive(Clone)]
 struct StructData {
@@ -87,7 +83,7 @@ impl PartialOrd for Struct {
 
 impl Struct {
     pub fn empty(parent: Option<Struct>) -> Struct {
-        let v:Vec<(String, Value)> = Vec::new();
+        let v: Vec<(String, Value)> = Vec::new();
         Struct::new(v, parent)
     }
 
@@ -112,7 +108,7 @@ impl Struct {
         let mut cells = Vec::new();
 
         values.drain(..).zip(types).for_each(|(value, column)| {
-            lookup.insert(column.name, cells.len());
+            lookup.insert(column.name().to_string(), cells.len());
             cells.push(value);
         });
         Struct {
@@ -132,8 +128,8 @@ impl Struct {
             reverse_lookup.insert(value.clone(), key);
         }
         for (idx, value) in data.cells.iter().enumerate() {
-            res.push(ColumnType::new(
-                reverse_lookup.get(&idx).unwrap().deref(),
+            res.push(ColumnType::new_from_string(
+                reverse_lookup.get(&idx).unwrap().to_string(),
                 value.value_type(),
             ));
         }
@@ -303,6 +299,6 @@ impl CrushStream for StructReader {
     }
 
     fn types(&self) -> &[ColumnType] {
-        struct_stream_type()
+        &STRUCT_STREAM_TYPE
     }
 }

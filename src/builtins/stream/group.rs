@@ -158,7 +158,7 @@ pub fn group(mut context: CommandContext) -> CrushResult<()> {
         .collect::<Vec<_>>();
 
     for name in cfg.command.keys() {
-        output_type.push(ColumnType::new(name, ValueType::Any));
+        output_type.push(ColumnType::new_from_string(name.clone(), ValueType::Any));
     }
 
     let output = context.output.initialize(&output_type)?;
