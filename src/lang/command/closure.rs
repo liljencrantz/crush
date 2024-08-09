@@ -19,6 +19,7 @@ use std::fmt::Display;
 use std::sync::Arc;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::ast::location::Location;
+use crate::lang::state::scope::ScopeType::{Block};
 
 pub struct Closure {
     name: Option<TrackedString>,
@@ -54,15 +55,21 @@ impl CrushCommand for Closure {
 
         for (idx, job_definition) in job_definitions.iter().enumerate() {
             let first = idx == 0;
+            let last = idx == job_definitions.len() - 1;
             let input = if first {
                 context.input.clone()
             } else {
                 empty_channel()
             };
+            let output = if last && scope_type == Block {
+                context.output.clone()
+            } else {
+                black_hole()
+            };
 
             let job = job_definition.eval(JobContext::new(
                 input,
-                black_hole(),
+                output,
                 env.clone(),
                 context.global_state.clone(),
             ))?;
@@ -74,7 +81,10 @@ impl CrushCommand for Closure {
                 return env.send_return_value(&context.output);
             }
         }
-        context.output.empty()
+        if scope_type == ScopeType::Closure {
+            context.output.empty()?;
+        }
+        Ok(())
     }
 
     fn might_block(&self, _arg: &[ArgumentDefinition], _context: &mut CompileContext) -> bool {

@@ -32,7 +32,7 @@ static SRV_STREAM_OUTPUT_TYPE: [ColumnType; 5] = [
 #[signature(
     dns.query,
     can_block = true,
-    short = "Look up DNS record)",
+    short = "Look up a DNS record",
 )]
 struct Query {
     #[description("DNS record to look up.")]

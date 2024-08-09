@@ -155,7 +155,7 @@ impl Highlighter for RustylineHelper {
         Owned("\x1b[1m".to_owned() + hint + "\x1b[m")
     }
 
-    fn highlight_char(&self, _line: &str, _pos: usize, forced: bool) -> bool {
+    fn highlight_char(&self, _line: &str, _pos: usize, _forced: bool) -> bool {
         true
     }
 }
@@ -165,8 +165,7 @@ impl Validator for RustylineHelper {
         &self,
         ctx: &mut validate::ValidationContext,
     ) -> rustyline::Result<validate::ValidationResult> {
-        Ok(ValidationResult::Valid(None))
-/*
+
         let input = ctx.input().to_string();
         if input.trim() == "!!" {
             return Ok(ValidationResult::Valid(None));
@@ -183,7 +182,7 @@ impl Validator for RustylineHelper {
             }
         } else {
             Ok(ValidationResult::Invalid(None))
-        }*/
+        }
     }
 
     fn validate_while_typing(&self) -> bool {

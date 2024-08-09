@@ -40,6 +40,7 @@ use ordered_map::OrderedMap;
 pub use value_definition::ValueDefinition;
 pub use value_type::ValueType;
 use std::fmt::{Display, Formatter};
+use std::io::Read;
 use std::sync::Arc;
 use vec_reader::VecReader;
 use crate::data::table::ColumnFormat;
@@ -422,7 +423,14 @@ impl Value {
             _ => {}
         }
 
-        let str_val = self.to_string();
+        let str_val = match self {
+            Value::BinaryInputStream(mut reader) => {
+                let mut res = String::new();
+                reader.read_to_string(&mut res)?;
+                res
+            }
+            v => v.to_string(),
+        };
 
         match new_type {
             ValueType::File => Ok(Value::from(PathBuf::from(str_val.as_str()))),
@@ -435,9 +443,7 @@ impl Value {
             ValueType::Bool => Ok(Value::Bool(match str_val.as_str() {
                 "true" => true,
                 "false" => false,
-                _ => {
-                    return error(format!("Can't convert value '{}' to boolean", str_val).as_str());
-                }
+                _ => return error(format!("Can't convert value '{}' to boolean", str_val).as_str()),
             })),
             ValueType::String => Ok(Value::from(str_val)),
             ValueType::Time => error("invalid convert"),
@@ -461,7 +467,7 @@ impl Value {
     Format this value in a way appropriate for use in the pretty printer.
 
     * Escape non-printable strings
-    * Respect integer grouping, but use _ intead of whatever number group
+    * Respect integer grouping, but use _ instead of whatever number group
       separator the locale prescribes, so that the number can be copied
       and pasted into the terminal again.
      */

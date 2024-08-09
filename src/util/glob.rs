@@ -235,7 +235,7 @@ fn glob_files(pattern: &[Tile], cwd: &Path, out: &mut Vec<PathBuf>, lister: &imp
         for entry in lister.list(&state.directory)? {
             if let Some(path) = entry.name.to_str() {
                 let path_vec: Vec<char> = path.chars().collect();
-                glob_file_match(state.pattern, &path_vec, &entry, &mut dedup, &mut queue);
+                glob_file_match(state.pattern, &path_vec, &entry, &mut dedup, &mut queue)?;
             }
         }
     }

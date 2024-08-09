@@ -27,9 +27,13 @@ fn parse_method(m: &str) -> CrushResult<Method> {
 io.http,
 short = "Make a http request",
 long = "Return a struct with the following fields:",
-long = "* status:integer, the http status of the reply",
+long = "* status_code:integer, the http status code of the reply",
+long = "* status_name:string, the name associated with the http status code",
 long = "* header:list, the http headers of the reply",
 long = "* body:binary_stream, the content of the reply",
+long = "",
+long = "The http status codes and corresponding names are defined in",
+long = "https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml",
 example = "http \"https://example.com/\" header=(\"Authorization: Bearer {}\":format token)",
 can_block = true
 )]
@@ -47,7 +51,7 @@ pub struct Http {
 }
 
 fn http(context: CommandContext) -> CrushResult<()> {
-    let cfg: Http = Http::parse(context.arguments, &context.global_state.printer())?;
+    let cfg = Http::parse(context.arguments, &context.global_state.printer())?;
 
     let (mut output, input) = binary_channel();
     let client = reqwest::blocking::Client::new();
@@ -56,12 +60,8 @@ fn http(context: CommandContext) -> CrushResult<()> {
     for t in cfg.header.iter() {
         let h = t.splitn(2, ':').collect::<Vec<&str>>();
         match h.len() {
-            2 => {
-                request = request.header(h[0], h[1].to_string());
-            }
-            _ => {
-                return argument_error_legacy("Bad header format");
-            }
+            2 => request = request.header(h[0], h[1].to_string()),
+            _ => return argument_error_legacy("Bad header format"),
         }
     }
 
@@ -90,7 +90,8 @@ fn http(context: CommandContext) -> CrushResult<()> {
     ));
     context.output.send(Value::Struct(Struct::new(
         vec![
-            ("status", Value::Integer(status.as_u16() as i128)),
+            ("status_code", Value::Integer(status.as_u16() as i128)),
+            ("status_name", Value::from(status.to_string())),
             ("headers", Value::Table(headers)),
             ("body", Value::BinaryInputStream(input)),
         ],

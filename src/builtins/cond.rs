@@ -111,7 +111,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     Do note that `or` is a short circuiting command, meaning that if one of the conditions
     is found to be true, `or` will not evaluate any remaining closures."#),
                         vec![],
-                    )));
+                    )))?;
             Ok(())
         }))?;
     Ok(())
