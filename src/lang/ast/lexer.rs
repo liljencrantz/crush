@@ -30,8 +30,8 @@ impl<'input> Lexer<'input> {
         loop {
             let cc = self.chars.next();
             match cc {
-                Some((i, '{')) => return Some(Token::JobStart(Location::from(i)).into()),
-                Some((i, '}')) => return Some(Token::JobEnd(Location::from(i)).into()),
+                Some((i, '{')) => return Some(Token::BlockStart(Location::from(i)).into()),
+                Some((i, '}')) => return Some(Token::BlockEnd(Location::from(i)).into()),
                 Some((i, ':')) => {
                     let cc2 = self.chars.peek();
                     match cc2 {
@@ -294,8 +294,8 @@ impl<'input> Lexer<'input> {
         loop {
             let cc = self.chars.next();
             match cc {
-                Some((i, '{')) => return Some(Token::JobStart(Location::from(i)).into()),
-                Some((i, '}')) => return Some(Token::JobEnd(Location::from(i)).into()),
+                Some((i, '{')) => return Some(Token::BlockStart(Location::from(i)).into()),
+                Some((i, '}')) => return Some(Token::BlockEnd(Location::from(i)).into()),
                 Some((i, '.')) => return Some(Token::MemberOperator(Location::from(i)).into()),
                 Some((i, ':')) => {
                     let cc2 = self.chars.peek();

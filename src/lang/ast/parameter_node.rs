@@ -15,7 +15,12 @@ pub enum ParameterNode {
 impl ParameterNode {
 
     pub fn parameter(is: impl Into<TrackedString>, parameter_type: Option<Box<Node>>, default: Option<Node>) -> ParameterNode {
-        ParameterNode::Parameter(is.into().slice_to_end(1), parameter_type, default)
+        let s = is.into();
+        if s.string.starts_with("$") {
+            ParameterNode::Parameter(s.slice_to_end(1), parameter_type, default)
+        } else {
+            ParameterNode::Parameter(s, parameter_type, default)
+        }
     }
 
     pub fn unnamed(is: impl Into<TrackedString>) -> ParameterNode {

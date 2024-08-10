@@ -103,8 +103,8 @@ impl From<Token<'_>> for TrackedString {
             Token::Separator(_, l) |
             Token::SubStart( l) |
             Token::SubEnd( l) |
-            Token::JobStart( l) |
-            Token::JobEnd( l) |
+            Token::BlockStart( l) |
+            Token::BlockEnd( l) |
             Token::GetItemStart( l) |
             Token::GetItemEnd( l) |
             Token::Pipe( l) |

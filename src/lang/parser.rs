@@ -103,9 +103,9 @@ impl Parser {
                 Token::Pipe( _) | Token::MemberOperator(_) => { needs_trailing_arg = true }
                 Token::SubStart( _) => { stack.push(")"); }
                 Token::ExprModeStart(_) => {stack.push(")");}
-                Token::JobStart( _) => { stack.push("}"); }
+                Token::BlockStart( _) => { stack.push("}"); }
                 Token::GetItemStart( _) => { stack.push("]"); }
-                Token::SubEnd( _) | Token::JobEnd( _) | Token::GetItemEnd( _) => { stack.pop(); }
+                Token::SubEnd( _) | Token::BlockEnd( _) | Token::GetItemEnd( _) => { stack.pop(); }
                 Token::QuotedString(_, _) => {}
                 Token::String(_, _) => {}
                 Token::File(_, _) => {}
@@ -142,9 +142,9 @@ mod tests {
     fn check_simple_tokens() {
         let tok = p().tokenize("{aaa}\n").unwrap();
         assert_eq!(tok, vec![
-            Token::JobStart(Location::from(0)),
+            Token::BlockStart(Location::from(0)),
             Token::String("aaa", Location::new(1,4)),
-            Token::JobEnd(Location::from(4)),
+            Token::BlockEnd(Location::from(4)),
             Token::Separator("\n", Location::from(5)),
         ]);
     }

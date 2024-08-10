@@ -61,7 +61,7 @@ impl RustylineHelper {
                 Unnamed(_) | Named( _) | Pipe( _) | LogicalOperator(_, _) | UnaryOperator(_, _) |
                 ComparisonOperator(_, _) | Equals( _) | Declare( _) | GetItemEnd( _) | GetItemStart( _) | SubEnd( _) |
                 Bang(_) | Plus(_) | Minus(_) | Star(_) | Slash(_) | MemberOperator(_) | ExprModeStart(_) |
-                SubStart( _) | JobEnd( _) | JobStart( _) =>
+                SubStart( _) | BlockEnd( _) | BlockStart( _) =>
                     highlight.get(&Value::from("operator")),
                 Identifier(_, _) => None,
                 Separator(_, _) => None,
@@ -165,6 +165,7 @@ impl Validator for RustylineHelper {
         &self,
         ctx: &mut validate::ValidationContext,
     ) -> rustyline::Result<validate::ValidationResult> {
+        return Ok(ValidationResult::Valid(None));
 
         let input = ctx.input().to_string();
         if input.trim() == "!!" {

@@ -23,6 +23,7 @@ JobListWithoutSeparator: JobListNode = {
     <j: NonEmptyJobList> Separators? => j,
 };
 
+
 NonEmptyJobList: JobListNode = {
     <l: @L> <mut lst:NonEmptyJobList> Separators <j:Job> <r: @R> =>  {
         lst.jobs.push(j);
@@ -41,55 +42,73 @@ Job: JobNode = {
     }
 };
 
+ExprJobListWithoutSeparator: JobListNode = {
+    <l: @L> => JobListNode {jobs: vec![], location: Location::new(l, l)},
+    <j: ExprNonEmptyJobList> Separators? => j,
+};
+
+ExprNonEmptyJobList: JobListNode = {
+    <l: @L> <mut lst:ExprNonEmptyJobList> Separators <j:Expr> <r: @R> =>  {
+        lst.jobs.push(j.expression_to_job());
+        lst.location = Location::new(l, r);
+        lst
+    },
+    <l: @L> <j: Expr> <r: @R> => JobListNode {jobs: vec![j.expression_to_job()], location: Location::new(l, r)},
+};
+
+ExprJobList: JobListNode = {
+    Separators? <l:ExprJobListWithoutSeparator> => l,
+};
+
 Expr: Box<Node> = {
-    AssignmentExpr,
-    <j:Expr> Pipe <c:AssignmentExpr> => {
+    ExprAssignment,
+    <j:Expr> Pipe <c:ExprAssignment> => {
         let mut jj = j.expression_to_job();
         jj.commands.push(c.expression_to_command());
         Box::from(Node::Substitution(jj))
     },
 }
 
-AssignmentExpr: Box<Node> = {
-    LogicalExpr,
-    <i: ItemExpr> <op: Equals> <e: AssignmentExpr> =>
+ExprAssignment: Box<Node> = {
+    ExprLogical,
+    <i: ExprItem> <op: Equals> <e: ExprAssignment> =>
         Box::from(Node::Assignment(i, SwitchStyle::None, "=".to_string(), e)),
-    <i: ItemExpr> <op: Declare> <e: AssignmentExpr> =>
+    <i: ExprItem> <op: Declare> <e: ExprAssignment> =>
         Box::from(Node::Assignment(i, SwitchStyle::None, ":=".to_string(), e)),
 }
 
-LogicalExpr: Box<Node> = {
-    ComparisonExpr,
-    <l: LogicalExpr> <op: LogicalOperator> <c: ComparisonExpr> => operator(op, l, c),
+ExprLogical: Box<Node> = {
+    ExprComparison,
+    <l: ExprLogical> <op: LogicalOperator> <c: ExprComparison> => operator(op, l, c),
 }
 
-ComparisonExpr: Box<Node> = {
-    TermExpr,
-    <c: ComparisonExpr> <op: ComparisonOperator> <t: TermExpr> =>operator(op, c, t),
+ExprComparison: Box<Node> = {
+    ExprTerm,
+    <c: ExprComparison> <op: ComparisonOperator> <t: ExprTerm> =>operator(op, c, t),
 }
 
-TermExpr: Box<Node> = {
-    FactorExpr,
-    <lt: TermExpr> <t:Plus> <rt:FactorExpr> => operator_method("__add__", t, lt, rt),
-    <lt: TermExpr> <t:Minus> <rt:FactorExpr> => operator_method("__sub__", t, lt, rt),
+ExprTerm: Box<Node> = {
+    ExprFactor,
+    <lt: ExprTerm> <t:Plus> <rt:ExprFactor> => operator_method("__add__", t, lt, rt),
+    <lt: ExprTerm> <t:Minus> <rt:ExprFactor> => operator_method("__sub__", t, lt, rt),
     };
 
-FactorExpr: Box<Node> = {
-    UnaryExpr,
-    <l: @L> <lt:FactorExpr> <op:Star> <rt:UnaryExpr> <r: @R> => {
+ExprFactor: Box<Node> = {
+    ExprUnary,
+    <l: @L> <lt:ExprFactor> <op:Star> <rt:ExprUnary> <r: @R> => {
         operator_method("__mul__", op, lt, rt)
     },
-    <l: @L> <lt:FactorExpr> <op:Slash> <rt:UnaryExpr> <r: @R> => {
+    <l: @L> <lt:ExprFactor> <op:Slash> <rt:ExprUnary> <r: @R> => {
         operator_method("__div__", op, lt, rt)
     },
 }
 
-UnaryExpr: Box<Node> = {
-    ItemExpr,
-    <op:Minus> <u: UnaryExpr> => unary_operator_method("__neg__", op, u),
+ExprUnary: Box<Node> = {
+    ExprItem,
+    <op:Minus> <u: ExprUnary> => unary_operator_method("__neg__", op, u),
 }
 
-ItemExpr: Box<Node> = {
+ExprItem: Box<Node> = {
     ExprModeStart <e:Expr> SubEnd => e,
     SubStart <j:Job> SubEnd => Box::from(Node::Substitution(j)),
     <l: Identifier> => Node::identifier(l),
@@ -98,9 +117,9 @@ ItemExpr: Box<Node> = {
     <s:QuotedString> => Node::quoted_string(s),
     <i:Integer> => Node::integer(i),
     <f:Float> => Node::float(f),
-    <i: ItemExpr> GetItemStart <e: Assignment> GetItemEnd => Box::from(Node::GetItem(i, e)),
-    <i: ItemExpr> MemberOperator <l: Identifier> => Box::from(Node::GetAttr(i, l.into())),
-    <i: ItemExpr> ExprModeStart <ov: OptExpressionList> SubEnd => {
+    <i: ExprItem> GetItemStart <e: Assignment> GetItemEnd => Box::from(Node::GetItem(i, e)),
+    <i: ExprItem> MemberOperator <l: Identifier> => Box::from(Node::GetAttr(i, l.into())),
+    <i: ExprItem> ExprModeStart <ov: ExprOptList> SubEnd => {
         let l = i.location();
         let mut v = match ov {
             Some(vv) => vv,
@@ -119,20 +138,49 @@ ItemExpr: Box<Node> = {
                     }
                 ))
         },
+    BlockStart Separators? <s: ExprSignature> <l: ExprJobListWithoutSeparator> BlockEnd => Box::from(Node::Closure(s, l)),
 }
 
-OptExpressionList: Option<Vec<Node>> = {
+ExprOptList: Option<Vec<Node>> = {
     => None,
-    <e: ExpressionList> => Some(e),
+    <e: ExprList> => Some(e),
 }
 
-ExpressionList: Vec<Node> = {
-    <e: AssignmentExpr> => vec![*e],
-    <mut l: ExpressionList> Separators <e: AssignmentExpr> => {
+ExprList: Vec<Node> = {
+    <e: ExprAssignment> => vec![*e],
+    <mut l: ExprList> Separators <e: ExprAssignment> => {
         l.push(*e);
         l
     },
 }
+
+ExprSignature: Option<Vec<ParameterNode>> = {
+    => None,
+    Pipe Pipe Separators? => Some(vec![]),
+    Pipe <s: ExprParameterList> Pipe Separators? => Some(s),
+}
+
+ExprParameterList: Vec<ParameterNode> = {
+    ExprParameter => vec![<>],
+    <mut l: ExprParameterList> Separators? <p: ExprParameter> => {l.push(p); l},
+}
+
+ExprParameter: ParameterNode = {
+    <start: @L> <l: Identifier> <end: @R> <d: ExprDefault> => ParameterNode::parameter(l, None, d),
+
+    <start: @L> <l: Identifier> <end: @R> MemberOperator <t: ExprItem> <d: Default> =>
+        ParameterNode::parameter(l, Some(t), d),
+
+    Unnamed <start: @L> <l: Identifier> <end: @R> => ParameterNode::unnamed(l),
+
+    Named <start: @L> <l: Identifier> <end: @R> => ParameterNode::named(l),
+}
+
+ExprDefault: Option<Node> = {
+    => None,
+    Equals <l: ExprLogical> => Some(*l),
+}
+
 
 Command: CommandNode = {
     <start: @L> <a: Assignment> <end: @R> => CommandNode{expressions: vec![*a], location: Location::new(start, end)},
@@ -177,8 +225,7 @@ ParameterList: Vec<ParameterNode> = {
 }
 
 Parameter: ParameterNode = {
-    <start: @L> <l: Identifier> <end: @R> <d: Default> =>
-    ParameterNode::parameter(l, None, d),
+    <start: @L> <l: Identifier> <end: @R> <d: Default> => ParameterNode::parameter(l, None, d),
 
     <start: @L> <l: Identifier> <end: @R> MemberOperator <t: Item> <d: Default> =>
         ParameterNode::parameter(l, Some(t), d),
@@ -220,7 +267,7 @@ Item: Box<Node> = {
     },
     <i: Item> GetItemStart <e: Assignment> GetItemEnd => Box::from(Node::GetItem(i, e)),
     <i: Item> MemberOperator <start: @L> <l: String> <end: @R> => Box::from(Node::GetAttr(i, TrackedString::from(l))),
-    JobStart Separators? <s: Signature> <l: JobListWithoutSeparator> JobEnd => Box::from(Node::Closure(s, l)),
+    BlockStart Separators? <s: Signature> <l: JobListWithoutSeparator> BlockEnd => Box::from(Node::Closure(s, l)),
     SubStart <j:Job> SubEnd => Box::from(Node::Substitution(j)),
     <l: @L>ExprModeStart <e:Expr> SubEnd <r: @R> => Box::from(Node::Substitution(e.expression_to_job())),
 }
@@ -258,8 +305,8 @@ extern {
         Float=> Token::Float(<&'input str>, <Location>),
         SubStart=> Token::SubStart(<Location>),
         SubEnd=> Token::SubEnd(<Location>),
-        JobStart=> Token::JobStart(<Location>),
-        JobEnd=> Token::JobEnd(<Location>),
+        BlockStart=> Token::BlockStart(<Location>),
+        BlockEnd=> Token::BlockEnd(<Location>),
         GetItemStart=> Token::GetItemStart(<Location>),
         GetItemEnd=> Token::GetItemEnd(<Location>),
         Pipe=> Token::Pipe(<Location>),

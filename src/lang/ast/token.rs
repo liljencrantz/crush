@@ -29,8 +29,8 @@ pub enum Token<'input> {
     Separator(&'input str, Location),
     SubStart(Location),
     SubEnd(Location),
-    JobStart(Location),
-    JobEnd(Location),
+    BlockStart(Location),
+    BlockEnd(Location),
     GetItemStart(Location),
     GetItemEnd(Location),
     Pipe(Location),
@@ -61,8 +61,8 @@ impl Token<'_> {
             Token::Separator(_, l) |
             Token::SubStart(l) |
             Token::SubEnd(l) |
-            Token::JobStart(l) |
-            Token::JobEnd(l) |
+            Token::BlockStart(l) |
+            Token::BlockEnd(l) |
             Token::GetItemStart(l) |
             Token::GetItemEnd(l) |
             Token::Pipe(l) |
@@ -98,8 +98,8 @@ impl Token<'_> {
             Token::Declare(_) => ":=",
             Token::SubStart(_) => "(",
             Token::SubEnd(_) => "_",
-            Token::JobStart(_) => "{",
-            Token::JobEnd(_) => "}",
+            Token::BlockStart(_) => "{",
+            Token::BlockEnd(_) => "}",
             Token::GetItemStart(_) => "[",
             Token::GetItemEnd(_) => "]",
             Token::Pipe(_) => "|",
@@ -147,8 +147,8 @@ impl<'a> Into<Spanned<'a>> for Token<'a> {
             Token::Separator(_, l) |
             Token::SubStart(l) |
             Token::SubEnd(l) |
-            Token::JobStart(l) |
-            Token::JobEnd(l) |
+            Token::BlockStart(l) |
+            Token::BlockEnd(l) |
             Token::GetItemStart(l) |
             Token::GetItemEnd(l) |
             Token::Pipe(l) |

@@ -17,6 +17,8 @@ use crate::lang::value::{Value, ValueDefinition, ValueType};
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::sync::Arc;
+use itertools::Itertools;
+use ordered_map::OrderedMap;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::ast::location::Location;
 use crate::lang::state::scope::ScopeType::{Block};
@@ -563,7 +565,7 @@ impl Closure {
         mut arguments: Vec<Argument>,
         context: &mut CompileContext,
     ) -> CrushResult<()> {
-        let mut named = HashMap::new();
+        let mut named = OrderedMap::new();
         let mut unnamed = Vec::new();
         for arg in arguments.drain(..) {
             match arg.argument_type {
@@ -580,42 +582,43 @@ impl Closure {
             match param {
                 Parameter::Parameter(name, value_type, default) => {
                     if let Value::Type(value_type) = value_type.eval_and_bind(context)? {
+
+                        let value : Value;
+
                         if named.contains_key(&name.string) {
-                            let value = named.remove(&name.string).unwrap();
-                            if !value_type.is(&value) {
-                                return argument_error(
-                                    format!(
-                                        "Wrong parameter type {}, expected {}",
-                                        value.value_type(), value_type),
-                                    name.location);
-                            }
-                            context.env.redeclare(&name.string, value)?;
+                            value = named.remove(&name.string).unwrap();
                         } else if !unnamed.is_empty() {
-                            context.env.redeclare(&name.string, unnamed.remove(0))?;
+                            value = unnamed.remove(0);
                         } else if let Some(default) = default {
-                            let env = context.env.clone();
-                            env.redeclare(&name.string, default.eval_and_bind(context)?)?;
+                            value = default.eval_and_bind(context)?;
                         } else {
                             return argument_error(
+                                format!("Missing argument {}.", name),
+                                name.location);
+                        };
+
+                        if !value_type.is(&value) {
+                            return argument_error(
                                 format!(
-                                    "Missing variable {}. Options are {}!!!",
-                                    name.string,
-                                    named.keys().map(|a| { a.to_string() }).collect::<Vec<String>>().join(", ")),
+                                    "Wrong type {} for argument {}, expected {}",
+                                    value.value_type(), name, value_type),
                                 name.location);
                         }
+                        context.env.redeclare(&name.string, value)?;
+
                     } else {
                         return argument_error_legacy("Not a type");
                     }
                 }
                 Parameter::Named(name) => {
                     if named_name.is_some() {
-                        return argument_error_legacy("Multiple named argument maps specified");
+                        return argument_error_legacy("Multiple named argument destinations specified");
                     }
                     named_name = Some(name);
                 }
                 Parameter::Unnamed(name) => {
                     if unnamed_name.is_some() {
-                        return argument_error_legacy("Multiple named argument maps specified");
+                        return argument_error_legacy("Multiple unnamed argument destinations specified");
                     }
                     unnamed_name = Some(name);
                 }
@@ -628,7 +631,7 @@ impl Closure {
                 List::new(ValueType::Any, unnamed).into(),
             )?;
         } else if !unnamed.is_empty() {
-            return argument_error_legacy("No target for unnamed arguments");
+            return argument_error_legacy(format!("Stray unnamed argument of type {}", unnamed[0].value_type()));
         }
 
         if let Some(named_name) = named_name {
@@ -638,7 +641,7 @@ impl Closure {
             }
             context.env.redeclare(named_name.string.as_ref(), d.into())?;
         } else if !named.is_empty() {
-            return argument_error_legacy("No target for extra named arguments");
+            return argument_error_legacy(format!("Unrecognized named arguments {}", named.keys().join(", ")));
         }
         Ok(())
     }
