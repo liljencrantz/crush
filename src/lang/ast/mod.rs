@@ -129,7 +129,7 @@ pub fn operator(iop: impl Into<TrackedString>, l: Box<Node>, r: Box<Node>) -> Bo
         "*" => operator_method("__mul__", op.location, l, r),
         "//" => operator_method("__div__", op.location, l, r),
 
-        // Note that these operators reverse the arguemnts because the method wxists on the second argument!
+        // Note that these operators reverse the arguments because the method exists on the second argument!
         "=~" => operator_method("match", op.location, r, l),
         "!~" => operator_method("not_match", op.location, r, l),
 

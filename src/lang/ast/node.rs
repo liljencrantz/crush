@@ -491,8 +491,6 @@ impl Node {
     }
 
     pub fn regex(is: impl Into<TrackedString>) -> Box<Node> {
-        let ts = is.into();
-        let s = ts.string;
-        Box::from(Node::Regex(TrackedString::new(&s[3..s.len() - 1], ts.location)))
+        Box::from(Node::Regex(is.into()))
     }
 }

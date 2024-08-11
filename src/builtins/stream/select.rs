@@ -131,7 +131,7 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
             let mut location = context.arguments[0].location;
 
             if let Value::Glob(g) = &context.arguments[0].value {
-                if context.arguments[0].argument_type.is_none() && &g.to_string() == "%" {
+                if context.arguments[0].argument_type.is_none() && &g.to_string() == "*" {
                     copy = true;
                     context.arguments.remove(0);
                 } else {

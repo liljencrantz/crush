@@ -82,9 +82,9 @@ impl Display for Value {
             Value::Time(val) => f.write_str(&val.format("%Y-%m-%d %H:%M:%S %z").to_string()),
             Value::Glob(val) => std::fmt::Display::fmt(val, f),
             Value::Regex(val, _) => {
-                f.write_str("re\"")?;
+                f.write_str("^(")?;
                 f.write_str(val)?;
-                f.write_str("\"")
+                f.write_str(")")
             }
             Value::File(val) => std::fmt::Display::fmt(val.to_str().unwrap_or("<invalid filename>"), f),
             Value::List(l) => std::fmt::Display::fmt(l, f),
