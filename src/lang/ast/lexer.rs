@@ -460,6 +460,14 @@ impl<'input> Lexer<'input> {
                     return match s {
                         "and" => Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into()),
                         "or" => Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into()),
+                        "for" => Some(Token::For(Location::new(i, end_idx + 1)).into()),
+                        "while" => Some(Token::While(Location::new(i, end_idx + 1)).into()),
+                        "loop" => Some(Token::Loop(Location::new(i, end_idx + 1)).into()),
+                        "if" => Some(Token::If(Location::new(i, end_idx + 1)).into()),
+                        "else" => Some(Token::Else(Location::new(i, end_idx + 1)).into()),
+                        "return" => Some(Token::Return(Location::new(i, end_idx + 1)).into()),
+                        "break" => Some(Token::Break(Location::new(i, end_idx + 1)).into()),
+                        "continue" => Some(Token::Continue(Location::new(i, end_idx + 1)).into()),
                         _ => Some(Token::Identifier(s, Location::new(i, end_idx + 1)).into()),
                     };
                 }

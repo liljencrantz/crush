@@ -62,20 +62,25 @@ impl Node {
     }
 
     pub fn expression_to_job(self) -> JobNode {
-        if let Node::Substitution(s) = self {
-            s
-        } else {
-            let location = self.location();
-            let expressions = vec![Node::val(location), self];
-            JobNode {
-                commands: vec![CommandNode { expressions, location }],
-                location,
+        let location = self.location();
+        match self {
+            Node::Substitution(s) => s,
+            Node::Assignment(..) => {
+                JobNode {
+                    commands: vec![CommandNode { expressions: vec![self], location }],
+                    location,
+                }
+            }
+            _ => {
+                let expressions = vec![Node::val(location), self];
+                JobNode {
+                    commands: vec![CommandNode { expressions, location }],
+                    location,
+                }
             }
         }
     }
-}
 
-impl Node {
     pub fn prefix(&self, pos: usize) -> CrushResult<Node> {
         match self {
             Node::Identifier(s) => Ok(Node::Identifier(s.prefix(pos))),
@@ -344,6 +349,129 @@ impl Node {
 
     pub fn quoted_string(is: impl Into<TrackedString>) -> Box<Node> {
         Box::from(Node::String(is.into(), true))
+    }
+
+    pub fn return_expr(location: Location) -> Box<Node> {
+        Self::control_expr("return", location)
+    }
+
+    pub fn break_expr(location: Location) -> Box<Node> {
+        Self::control_expr("break", location)
+    }
+
+    pub fn continue_expr(location: Location) -> Box<Node> {
+        Self::control_expr("continue", location)
+    }
+
+    pub fn if_expr(if_location: Location, condition: Box<Node>, true_body: JobListNode, false_body: Option<JobListNode>) -> Box<Node> {
+        let location = if_location.union(true_body.location);
+        let mut expressions = vec![
+            Self::get_attr(&["global", "control", "if"], if_location),
+            Node::Substitution(
+                JobNode {
+                    commands: vec![
+                        CommandNode {
+                            expressions: vec![*condition],
+                            location,
+                        }],
+                    location,
+                }
+            ),
+            Node::Closure(None, true_body),
+        ];
+
+        for x in false_body {
+            expressions.push(Node::Closure(None, x));
+        }
+
+        Box::from(Node::Substitution(JobNode {
+            commands: vec![CommandNode {
+                expressions,
+                location,
+            }],
+            location,
+        }))
+    }
+
+    pub fn while_expr(while_location: Location, condition: Box<Node>, body: JobListNode) -> Box<Node> {
+        let location = while_location.union(body.location);
+        Box::from(Node::Substitution(JobNode {
+            commands: vec![CommandNode {
+                expressions: vec![
+                    Self::get_attr(&["global", "control", "while"], while_location),
+                    Node::Closure(
+                        None,
+                        JobListNode {
+                            jobs: vec![
+                                JobNode {
+                                    commands: vec![
+                                        CommandNode {
+                                            expressions: vec![*condition],
+                                            location,
+                                        }],
+                                    location,
+                                }
+                            ],
+                            location,
+                        },
+                    ),
+                    Node::Closure(None, body),
+                ],
+                location,
+            }],
+            location,
+        }))
+    }
+
+    pub fn loop_expr(loop_location: Location, body: JobListNode) -> Box<Node> {
+        let location = loop_location.union(body.location);
+        Box::from(Node::Substitution(JobNode {
+            commands: vec![CommandNode {
+                expressions: vec![
+                    Self::get_attr(&["global", "control", "loop"], loop_location),
+                    Node::Closure(None, body),
+                ],
+                location,
+            }],
+            location,
+        }))
+    }
+
+    pub fn for_expr(for_location: Location, id: TrackedString, iter: Box<Node>, body: JobListNode) -> Box<Node> {
+        let location = for_location.union(body.location);
+        Box::from(Node::Substitution(JobNode {
+            commands: vec![CommandNode {
+                expressions: vec![
+                    Self::get_attr(&["global", "control", "for"], for_location),
+                    Node::Assignment(Box::from(Node::Identifier(id)), SwitchStyle::None, "=".to_string(), iter),
+                    Node::Closure(None, body),
+                ],
+                location,
+            }],
+            location,
+        }))
+    }
+
+    fn get_attr(path: &[&str], location: Location) -> Node {
+        if path.len() == 1 {
+            Node::Identifier(TrackedString::from((path[0], location)))
+        } else {
+            Node::GetAttr(
+                Box::from(Self::get_attr(&path[0..(path.len() - 1)], location)),
+                TrackedString::from((path[path.len() - 1], location)))
+        }
+    }
+
+    fn control_expr(keyword: &str, location: Location) -> Box<Node> {
+        Box::from(Node::Substitution(JobNode {
+            commands: vec![CommandNode {
+                expressions: vec![
+                    Self::get_attr(&["global", "control", keyword], location)
+                ],
+                location,
+            }],
+            location,
+        }))
     }
 
     pub fn unquoted_string(is: impl Into<TrackedString>) -> Box<Node> {

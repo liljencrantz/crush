@@ -115,6 +115,14 @@ impl From<Token<'_>> for TrackedString {
             Token::Star(l) |
             Token::Slash(l) |
             Token::Bang(l) |
+            Token::For(l) |
+            Token::While(l) |
+            Token::Loop(l) |
+            Token::If(l) |
+            Token::Else(l) |
+            Token::Return(l) |
+            Token::Break(l) |
+            Token::Continue(l) |
             Token::ExprModeStart(l) => { TrackedString::new(value.as_string(), l) }
         }
     }

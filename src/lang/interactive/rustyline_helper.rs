@@ -65,6 +65,14 @@ impl RustylineHelper {
                     highlight.get(&Value::from("operator")),
                 Identifier(_, _) => None,
                 Separator(_, _) => None,
+                For(_) |
+                While(_) |
+                Loop(_) |
+                If(_) |
+                Else(_) |
+                Return(_) |
+                Break(_) |
+                Continue(_) => highlight.get(&Value::from("keyword")),
             };
             match res {
                 Some(Value::String(s)) => Some(s.to_string()),

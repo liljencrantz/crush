@@ -117,6 +117,14 @@ impl Parser {
                 Token::Integer(_, _) => {}
                 Token::Float(_, _) => {}
                 Token::Separator(_, _) => {}
+                Token::For(_) => {}
+                Token::While(_) => {}
+                Token::Loop(_) => {}
+                Token::If(_) => {}
+                Token::Else(_) => {}
+                Token::Return(_) => {}
+                Token::Break(_) => {}
+                Token::Continue(_) => {}
             }
         }
         stack.reverse();

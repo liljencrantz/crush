@@ -37,6 +37,14 @@ pub enum Token<'input> {
     Unnamed(Location),
     Named(Location),
     ExprModeStart(Location),
+    For(Location),
+    While(Location),
+    Loop(Location),
+    If(Location),
+    Else(Location),
+    Return(Location),
+    Break(Location),
+    Continue(Location),
 }
 
 impl Token<'_> {
@@ -73,6 +81,14 @@ impl Token<'_> {
             Token::Minus(l) |
             Token::Star(l) |
             Token::Slash(l) |
+            Token::For(l) |
+            Token::While(l) |
+            Token::Loop(l) |
+            Token::If(l) |
+            Token::Else(l) |
+            Token::Return(l) |
+            Token::Break(l) |
+            Token::Continue(l) |
             Token::ExprModeStart(l) => *l,
         }
     }
@@ -111,6 +127,14 @@ impl Token<'_> {
             Token::Minus(_) => "-",
             Token::Star(_) => "*",
             Token::Slash(_) => "/",
+            Token::For(_) => "for",
+            Token::While(_) => "while",
+            Token::Loop(_) => "loop",
+            Token::If(_) => "if",
+            Token::Else(_) => "else",
+            Token::Return(_) => "return",
+            Token::Break(_) => "break",
+            Token::Continue(_) => "continue",
         }
     }
 }
@@ -159,7 +183,15 @@ impl<'a> Into<Spanned<'a>> for Token<'a> {
             Token::Minus(l) |
             Token::Star(l) |
             Token::Slash(l) |
-            Token::ExprModeStart(l) => { l }
+            Token::For(l) |
+            Token::While(l) |
+            Token::Loop(l) |
+            Token::If(l) |
+            Token::Else(l) |
+            Token::Return(l) |
+            Token::Break(l) |
+            Token::Continue(l) |
+            Token::ExprModeStart(l) => l,
         };
         Ok((loc.start, self, loc.end))
     }

@@ -108,6 +108,11 @@ ExprUnary: Box<Node> = {
     <op:Minus> <u: ExprUnary> => unary_operator_method("__neg__", op, u),
 }
 
+ExprOptFalseBody: Option<JobListNode> = {
+    => None,
+    Else Separators? BlockStart <false_body: ExprJobList> BlockEnd => Some(false_body),
+}
+
 ExprItem: Box<Node> = {
     ExprModeStart <e:Expr> SubEnd => e,
     SubStart <j:Job> SubEnd => Box::from(Node::Substitution(j)),
@@ -117,6 +122,13 @@ ExprItem: Box<Node> = {
     <s:QuotedString> => Node::quoted_string(s),
     <i:Integer> => Node::integer(i),
     <f:Float> => Node::float(f),
+    <e:Return> => Node::return_expr(e),
+    <e:Break> => Node::break_expr(e),
+    <e:Continue> => Node::continue_expr(e),
+    <key:If> <condition:Expr> Separators? BlockStart <true_body: ExprJobList> BlockEnd <false_body: ExprOptFalseBody> => Node::if_expr(key, condition, true_body, false_body),
+    <key:While> <condition:Expr> Separators? BlockStart <body: ExprJobList> BlockEnd => Node::while_expr(key, condition, body),
+    <key:Loop> Separators? BlockStart <body: ExprJobList> BlockEnd => Node::loop_expr(key, body),
+    <key:For> <id:Identifier> Equals <iter:Expr> Separators? BlockStart <body: ExprJobList> BlockEnd => Node::for_expr(key, id.into(), iter, body),
     <i: ExprItem> GetItemStart <e: Assignment> GetItemEnd => Box::from(Node::GetItem(i, e)),
     <i: ExprItem> MemberOperator <l: Identifier> => Box::from(Node::GetAttr(i, l.into())),
     <i: ExprItem> ExprModeStart <ov: ExprOptList> SubEnd => {
@@ -313,5 +325,13 @@ extern {
         Unnamed=> Token::Unnamed(<Location>),
         Named=> Token::Named(<Location>),
         ExprModeStart=> Token::ExprModeStart(<Location>),
+        For => Token::For(<Location>),
+        While => Token::While(<Location>),
+        Loop => Token::Loop(<Location>),
+        If => Token::If(<Location>),
+        Else => Token::Else(<Location>),
+        Return => Token::Return(<Location>),
+        Break => Token::Break(<Location>),
+        Continue => Token::Continue(<Location>),
     }
 }
