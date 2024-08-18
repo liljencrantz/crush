@@ -39,20 +39,27 @@ impl Patterns {
         }
         false
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.patterns.is_empty()
+    }
 }
 
 impl Display for Patterns {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        f.write_str("[")?;
-        f.write_str(
-            &self
-                .patterns
-                .iter()
-                .map(|v| v.to_string())
-                .collect::<Vec<_>>()
-                .join(", "),
-        )?;
-        f.write_str("]")?;
-        Ok(())
+        if self.patterns.len() == 1 {
+            self.patterns[0].fmt(f)
+        } else {
+            f.write_str("[")?;
+            f.write_str(
+                &self
+                    .patterns
+                    .iter()
+                    .map(|v| v.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", "),
+            )?;
+            f.write_str("]")
+        }
     }
 }

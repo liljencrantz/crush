@@ -12,6 +12,7 @@ use std::process;
 use std::process::Stdio;
 use std::io::Read;
 use crossbeam::channel::bounded;
+use itertools::Itertools;
 use crate::lang::data::list::List;
 use crate::lang::data::table::{Row, Table};
 use crate::lang::errors::{error, mandate};
@@ -25,7 +26,8 @@ use crate::lang::data::table::ColumnType;
     grpc.connect,
     can_block = true,
     short = "Create a connection to a gRPC service)",
-    long = "This command currently does not currently do what it says. It's a proof of concept that\n    uses grpcurl under the hood. It does not have presistent connections and is quite slow and unreliable."
+    long = "This command currently does not currently do what it says. It's a proof of concept that",
+    long = "uses grpcurl under the hood. It does not have presistent connections and is quite slow and unreliable."
 )]
 struct Connect {
     #[description("Host to connect to.")]
@@ -33,10 +35,13 @@ struct Connect {
     #[description("Service to connect to on this host")]
     service: Patterns,
     #[default(false)]
+    #[description("Use plaintext to connect")]
     plaintext: bool,
     #[default(Duration::seconds(10))]
+    #[description("Timeout for making calls")]
     timeout: Duration,
     #[default(5990)]
+    #[description("Port to connect to")]
     port: i128,
 }
 
@@ -48,27 +53,22 @@ struct Grpc {
 }
 
 impl Grpc {
-    fn new(v: Value) -> CrushResult<Grpc> {
-        match v {
-            Value::Struct(s) => {
-                if let Some(Value::String(host)) = s.get("host") {
-                    if let Some(Value::Bool(plaintext)) = s.get("plaintext") {
-                        if let Some(Value::Duration(timeout)) = s.get("timeout") {
-                            if let Some(Value::Integer(port)) = s.get("port") {
-                                return Ok(Grpc {
-                                    host: host.to_string(),
-                                    plaintext,
-                                    timeout,
-                                    port,
-                                });
-                            }
-                        }
+    fn new(s: Struct) -> CrushResult<Grpc> {
+        if let Some(Value::String(host)) = s.get("host") {
+            if let Some(Value::Bool(plaintext)) = s.get("plaintext") {
+                if let Some(Value::Duration(timeout)) = s.get("timeout") {
+                    if let Some(Value::Integer(port)) = s.get("port") {
+                        return Ok(Grpc {
+                            host: host.to_string(),
+                            plaintext,
+                            timeout,
+                            port,
+                        });
                     }
                 }
-                argument_error_legacy("Invalid struct specification")
             }
-            _ => argument_error_legacy("Expected a struct"),
         }
+        argument_error_legacy("Invalid struct specification")
     }
 
     fn call<S: Into<String>>(&self, context: &CommandContext, data: Option<String>, mut args: Vec<S>) -> CrushResult<String> {
@@ -117,7 +117,9 @@ impl Grpc {
 
 fn connect(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Connect = Connect::parse(context.remove_arguments(), &context.global_state.printer())?;
-
+    if cfg.service.is_empty() {
+        return argument_error_legacy("You must specify at least one service to connect to. You can use globs, such as '*'");
+    }
     let tmp = Struct::new(
         vec![
             ("host", Value::from(cfg.host.clone())),
@@ -127,12 +129,18 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
         ],
         None);
 
-    let g = Grpc::new(Value::Struct(tmp))?;
+    let g = Grpc::new(tmp)?;
     let s = Struct::from_vec(vec![], vec![]);
     let list = g.call(&context, None, vec!["list"])?;
-
     let mut available_services = list.lines().collect::<Vec<&str>>();
     let services = available_services.drain(..).filter(|s| { cfg.service.test(s) }).collect::<Vec<&str>>();
+
+    if services.is_empty() {
+        return argument_error_legacy(format!(
+            "No match for service pattern {}. Found services {}",
+            cfg.service.to_string(),
+            list.lines().join(", ")));
+    }
 
     for service in services {
         let out = g.call(&context, None, vec!["list", service])?;
@@ -197,7 +205,7 @@ fn grpc_method_call(mut context: CommandContext) -> CrushResult<()> {
     };
     let this = context.this.r#struct()?;
     if let Some(Value::String(method)) = this.get("method") {
-        let grpc = Grpc::new(Value::Struct(this))?;
+        let grpc = Grpc::new(this)?;
         let out =
             grpc.call(&context, data, vec![method.to_string()])?;
 
