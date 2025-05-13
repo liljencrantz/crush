@@ -93,15 +93,7 @@ fn run_remote(
                 if !allow_not_found {
                     return error(&format!("Host {} missing from known host file", host));
                 } else {
-                    let key_format = match key_type {
-                        HostKeyType::Unknown => KnownHostKeyFormat::Unknown,
-                        HostKeyType::Rsa => KnownHostKeyFormat::SshRsa,
-                        HostKeyType::Dss => KnownHostKeyFormat::SshDss,
-                        HostKeyType::Ecdsa256 => KnownHostKeyFormat::Ecdsa256,
-                        HostKeyType::Ecdsa384 => KnownHostKeyFormat::Ecdsa384,
-                        HostKeyType::Ecdsa521 => KnownHostKeyFormat::Ecdsa521,
-                        HostKeyType::Ed255219 => KnownHostKeyFormat::Ed255219,
-                    };
+                    let key_format: KnownHostKeyFormat = key_type.into();
                     known_hosts.add(&host, key, "Added by Crush", key_format)?;
                     known_hosts.write_file(host_file, KnownHostFileKind::OpenSSH)?;
                 }

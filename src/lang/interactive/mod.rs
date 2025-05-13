@@ -84,7 +84,7 @@ pub fn run(
     global_state.printer().line("Welcome to Crush");
     global_state.printer().line(r#"Type "help" for... help."#);
 
-    let config = Config::builder()
+    let editor_config = Config::builder()
         .history_ignore_space(true)
         .completion_type(CompletionType::List)
         .edit_mode(EditMode::Emacs)
@@ -95,9 +95,9 @@ pub fn run(
         global_env.clone(),
     );
 
-    let mut rl = Editor::with_config(config)?;
-    rl.set_helper(Some(h));
-    global_state.set_editor(Some(rl));
+    let mut editor = Editor::with_config(editor_config)?;
+    editor.set_helper(Some(h));
+    global_state.set_editor(Some(editor));
 
     if let Ok(file) = crush_history_file() {
         let _ = global_state.editor().as_mut().map(|rl| { rl.load_history(&file) });

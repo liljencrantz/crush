@@ -29,6 +29,7 @@ pub enum SignatureType {
     OrderedStringMap(SimpleSignature),
     Files,
     Number,
+    Text,
 }
 
 pub struct Signature {
@@ -66,6 +67,7 @@ impl Signature {
             SignatureType::OrderedStringMap(sub) => ordered_string_map_type_data(sub, &self.name, self.default, self.is_unnamed_target, self.allowed_values, self.span),
             SignatureType::Files => files_type_data(&self.name, self.default, self.is_unnamed_target, self.allowed_values, self.span),
             SignatureType::Number => number_type_data(&self.name, self.default, self.is_unnamed_target, self.allowed_values, self.span),
+            SignatureType::Text => text_type_data(&self.name, self.default, self.is_unnamed_target, self.allowed_values, self.span),
         }
     }
 }
@@ -128,6 +130,12 @@ impl TryFrom<&Type> for SignatureType {
                                         fail!(ty.span(), "Unexopected generic argument")
                                     } else {
                                         Ok(SignatureType::Number)
+                                    }
+                                "Text" =>
+                                    if arguments.len() != 0 {
+                                        fail!(ty.span(), "Unexopected generic argument")
+                                    } else {
+                                        Ok(SignatureType::Text)
                                     }
                                 _ => fail!(ty.span(), "Unknown argument type")
                             }
@@ -328,6 +336,80 @@ fn number_type_data(
                         Some((value, _location)) =>
                             return crate::lang::errors::argument_error(format ! (
                                 "Expected argument \"{}\" to be a number, was of type {}",
+                                #name_literal,
+                                value.value_type().to_string()),
+                                _location),
+                        _ => {}
+                    }
+                }
+            })
+        },
+        assign: default
+            .map(|default| {
+                quote! {
+                    # name: # name.unwrap_or( # default),
+                }
+            }).unwrap_or(
+            quote! {
+                    #name: crate::lang::errors::mandate(
+                        #name,
+                        format!("Missing value for parameter {}", #name_literal).as_str())?,
+                    }),
+    })
+}
+
+fn text_type_data(
+    name: &Ident,
+    default: Option<TokenTree>,
+    _is_unnamed_target: bool,
+    _allowed_values: Option<Vec<Literal>>,
+    _span: Span,
+) -> SignatureResult<TypeData> {
+    let name_literal = proc_macro2::Literal::string(&name.to_string());
+    Ok(TypeData {
+        allowed_values: quote! { None },
+        crush_internal_type: quote! {crate::lang::value::ValueType::either(vec![
+                        crate::lang::value::ValueType::String,
+                        crate::lang::value::ValueType::File,
+                    ])},
+        signature: format!(
+            "{}=(string|file)",
+            name.to_string()
+        ),
+        initialize: quote! { let mut #name = None; },
+        mappings: quote! {
+                        (Some(#name_literal), crate::lang::value::Value::String(_value)) => #name = Some(Text::String(_value)),
+                        (Some(#name_literal), crate::lang::value::Value::File(_value)) => #name = Some(Text::File(_value)),
+                    },
+        unnamed_mutate:
+        if default.is_none() {
+            Some(quote! {
+                if # name.is_none() {
+                    match _unnamed.pop_front() {
+                        Some(( crate::lang::value::Value::String(_value), _location)) => # name = Some(Text::String(_value)),
+                        Some(( crate::lang::value::Value::File(_value), _location)) => # name = Some(Text::File(_value)),
+                        Some((value, _location)) =>
+                            return crate::lang::errors::argument_error(format ! (
+                                "Expected argument \"{}\" to be textual, was of type {}",
+                                #name_literal,
+                                value.value_type().to_string()),
+                                _location),
+                        _ =>
+                            return crate::lang::errors::argument_error_legacy(format ! (
+                                "No value provided for argument \"{}\"",
+                                # name_literal).as_str()),
+                    }
+                }
+            })
+        } else {
+            Some(quote! {
+                if # name.is_none() {
+                    match _unnamed.pop_front() {
+                        Some(( crate::lang::value::Value::String(_value), _location)) => # name = Some(Text::String(_value)),
+                        Some(( crate::lang::value::Value::File(_value), _location)) => # name = Some(Text::File(_value)),
+                        Some((value, _location)) =>
+                            return crate::lang::errors::argument_error(format ! (
+                                "Expected argument \"{}\" to be textual, was of type {}",
                                 #name_literal,
                                 value.value_type().to_string()),
                                 _location),

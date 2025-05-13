@@ -15,6 +15,7 @@ use crate::util::glob::Glob;
 use ordered_map::OrderedMap;
 use crate::argument_error_legacy;
 use crate::data::table::ColumnType;
+use crate::lang::signature::text::Text;
 use crate::lang::state::this::This;
 
 pub fn methods() -> &'static OrderedMap<String, Command> {
@@ -133,30 +134,30 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
 )]
 struct Match {
     #[description("the sting to match this glob against.")]
-    needle: String,
+    needle: Text,
 }
 
 fn r#match(mut context: CommandContext) -> CrushResult<()> {
     let g = context.this.glob()?;
     let cfg: Match = Match::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.output.send(Value::Bool(g.matches(&cfg.needle)))
+    context.output.send(Value::Bool(g.matches(&cfg.needle.as_string())))
 }
 
 #[signature(
     types.glob.not_match,
     can_block = false,
     output = Known(ValueType::Bool),
-    short = "True if the needle does not match the pattern",
+    short = "False if the needle matches the pattern",
 )]
 struct NotMatch {
     #[description("the sting to match this glob against.")]
-    needle: String,
+    needle: Text,
 }
 
 fn not_match(mut context: CommandContext) -> CrushResult<()> {
     let g = context.this.glob()?;
     let cfg: NotMatch = NotMatch::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.output.send(Value::Bool(!g.matches(&cfg.needle)))
+    context.output.send(Value::Bool(!g.matches(&cfg.needle.as_string())))
 }
 
 #[signature(

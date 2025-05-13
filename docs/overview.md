@@ -116,53 +116,53 @@ including classes and closures, can be losslessly serialized into this format.
 But because Pup is Crush-specific, it's useless for data sharing to
 other languages.
 
-### Operators for comparison, logical operations and arithmetical operations
+### Math mode
 
 Crush allows you to perform mathematical calculations on integer and floating
-point numbers directly in the shell, mostly using the same mathematical operators
-used in almost any other programming language.
+point numbers directly in the shell using the same mathematical operators
+used in almost any other programming language. To do so, you must enter a
+sepraate mode called "math mode". You do so using parenthesis:
 
-    crush# 5+6
+    crush# (5+6)
     11
-    crush# 1+2*3
+    crush# (1+2*3)
     7
-
-The only exception is that the `/` operator is used for constructing files and
-paths (more on that later), so division is done using the `//` operator.
-
-    crush# 4.2//3
-    1.4000000000000001
 
 Comparisons between values are done using `>`, `<`, `<=`, `>=`, `==` and `!=`,
 just like in most languages. All comparisons between values of different types result in an error.
 
-    crush# 4 > 5
+    crush# (4 > 5)
     false
-    crush# 40.0 > 5
+    crush# (40.0 > 5)
     Error: Values of type float and integer can't be compared with each other
     Error: receiving on an empty and disconnected channel
+
+### Conditional operators
 
 The `and` and `or` operators are used to combine logical expressions:
     
     crush# $false or $true
     true
-    crush# if (./tree:exists) and ((./tree:stat):is_file) {echo "yay"}
+    crush# if $(./tree:exists) and {$((./tree:stat):is_file)} {echo "yay"}
+
+### Globs and regular expressions
     
 Crush also has operators related to patterns and matching. `=~` and `!~` are
 used to check if a pattern matches an input:
 
-    # The % character is the wildcard operator in globs
-    crush# %.txt =~ foo.txt
+    # The * character is the wildcard operator in globs
+    crush# foo.txt =~ *.txt
     true
-    # This is how you construct and match a regular expression
-    crush# re"ab+c" =~ "abbbbbc"
+
+    # This is how you construct and match against a regular expression
+    crush# abbbbbc =~ ^(ab+c")
     true
 
 Regexps also support replacement using the `replace` and `replace_all` methods.
 
-    crush# re"a":replace "tralala" "aaa"
+    crush# ^(a):replace tralala aaa
     traaalala
-    crush# re"a":replace_all "tralala" "aaa"
+    crush# ^(a):replace_all tralala aaa
     traaalaaalaaa
 
 ### Type system
@@ -228,9 +228,9 @@ is equivalent to `foo=$true`.
 Sometimes you want to use the output of one command as an *argument* to another
 command, just like a subshell in e.g. bash. This is different from what a pipe does,
 which is using the output as the *input*. To do this, use the so called subshell syntax by putting
-the command within parenthesis (`()`), like so:
+the command within dollar-parenthesis (`$()`), like so:
 
-    crush# echo (pwd)
+    crush# echo $(pwd)
 
 ### Closures
 
@@ -391,47 +391,42 @@ variety of formats or output of commands like `ps`, `find`.
 
 ### Globs
 
-The `*` operator is used for multiplication, so Crush uses `%` as the wildcard
-operator instead. `?` is still used for single character wildcards.
+As other shells, Crush uses `*` as the wildcard operator and `?` for single character wildcards.
+The operator `**` is used for performing globbing recursively into subdirectories.
 
-    crush# ls %.txt
-    user size  modified                  type file
-    fox  21303 2020-03-30 13:40:37 +0200 file /home/liljencrantz/src/crush/README.md
-    crush# ls ????????
-    user size modified                  type file
-    fox    75 2020-03-07 17:09:15 +0100 file /home/liljencrantz/src/crush/build.rs
-
-The operator `%%` is used for performing globbing recursively into subdirectories.
-Another way of looking ath the same syntax is to say that `%` and `?` match any
-character except `/`, whereas `%%` matches any character including `/`.
-
-    # Count the number of lines of rust code in the crush source code
-    crush# lines src/%%.rs|count
+    crush# files *.md
+    permissions links user group size      modified                  type file
+    rw-r--r--       1 fox  fox   1.643 kiB 2022-09-21 16:07:19 +0200 file README.md
+    crush# files ????????
+    permissions links  user group size  modified                  type file
+    rw-r --r--       1 fox  fox   150 B 2024-07-22 15:18:45 +0200 file build.rs
+    # Count the number of lines of rust code in this tree
+    crush# lines:from **.rs | count
 
 Wildcards are not automatically expanded, they are passed in to commands as glob
 objects, and the command chooses what to match the glob against. If you want to
 perform glob expansion in a command that doesn't do so itself, use the `:files`
 method of the glob object to do so:
 
-    crush# echo (%%.rs):files
+    crush# echo $(**.rs:files)
 
 ### Regular expressions
 
-Regular expressions are constructed like `re"REGEXP GOES HERE"`. They support
+Regular expressions are constructed like `^(REGEXP GOES HERE)`. They support
 matching and replacement:
 
-    crush# re"ab+c" =~ "abbbbbc"
+    crush# abbbbbc =~ ^(ab+c)
     true
-    crush# re"a+":replace "baalaa" "a"
+    crush# ^(a+):replace baalaa a
     balaa
-    crush# re"a+":replace_all "baalaa" "a"
+    crush# ^(a+):replace_all baalaa a
     bala
 
 ### Lists and dicts
 
 Crush has built-in lists:
 
-    crush# l := (list:of 1 2 3)
+    crush# l := $(list:of 1 2 3)
     crush# l
     [1, 2, 3]
     crush# l:peek

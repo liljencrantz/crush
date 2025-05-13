@@ -11,6 +11,7 @@ use ordered_map::OrderedMap;
 use regex::Regex;
 use signature::signature;
 use crate::data::table::ColumnType;
+use crate::lang::signature::text::Text;
 use crate::lang::state::this::This;
 
 pub fn methods() -> &'static OrderedMap<String, Command> {
@@ -56,13 +57,13 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
 )]
 struct Match {
     #[description("the string to match against.")]
-    needle: String,
+    needle: Text,
 }
 
 fn r#match(mut context: CommandContext) -> CrushResult<()> {
     let re = context.this.re()?.1;
     let cfg: Match = Match::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.output.send(Value::Bool(re.is_match(&cfg.needle)))
+    context.output.send(Value::Bool(re.is_match(&cfg.needle.as_string())))
 }
 
 #[signature(
@@ -73,13 +74,13 @@ fn r#match(mut context: CommandContext) -> CrushResult<()> {
 )]
 struct NotMatch {
     #[description("the string to match against.")]
-    needle: String,
+    needle: Text,
 }
 
 fn not_match(mut context: CommandContext) -> CrushResult<()> {
     let re = context.this.re()?.1;
     let cfg: NotMatch = NotMatch::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.output.send(Value::Bool(!re.is_match(&cfg.needle)))
+    context.output.send(Value::Bool(!re.is_match(&cfg.needle.as_string())))
 }
 
 #[signature(
