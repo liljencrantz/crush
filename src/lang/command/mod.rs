@@ -14,6 +14,7 @@ use closure::Closure;
 use ordered_map::OrderedMap;
 use std::fmt::{Formatter, Display};
 use std::sync::Arc;
+use crate::lang::any_str::AnyStr;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::completion::Completion;
 use crate::lang::completion::parse::PartialCommandResult;
@@ -133,9 +134,9 @@ struct SimpleCommand {
     call: fn(context: CommandContext) -> CrushResult<()>,
     can_block: bool,
     full_name: Vec<String>,
-    signature: &'static str,
-    short_help: &'static str,
-    long_help: Option<&'static str>,
+    signature: AnyStr,
+    short_help: AnyStr,
+    long_help: Option<AnyStr>,
     output: OutputType,
     arguments: Vec<ArgumentDescription>,
 }
@@ -167,9 +168,9 @@ impl dyn CrushCommand {
         call: fn(context: CommandContext) -> CrushResult<()>,
         can_block: bool,
         full_name: impl IntoIterator<Item = impl AsRef<str>>,
-        signature: &'static str,
-        short_help: &'static str,
-        long_help: Option<&'static str>,
+        signature: impl Into<AnyStr>,
+        short_help: impl Into<AnyStr>,
+        long_help: Option<impl Into<AnyStr>>,
         output: OutputType,
         arguments: impl Into<Vec<ArgumentDescription>>,
     ) -> Command {
@@ -177,9 +178,9 @@ impl dyn CrushCommand {
             call,
             can_block,
             full_name: full_name.into_iter().map(|a| {a.as_ref().to_string()}).collect(),
-            signature,
-            short_help,
-            long_help,
+            signature: signature.into(),
+            short_help: short_help.into(),
+            long_help: long_help.map(|h| h.into()),
             output,
             arguments: arguments.into(),
         })
@@ -290,7 +291,7 @@ impl Help for SimpleCommand {
 
     fn long_help(&self) -> Option<String> {
         let output = self.output.format();
-        let long_cat = self.long_help.map(|s| s.to_string());
+        let long_cat = self.long_help.as_ref().map(|s| s.to_string());
         match (output, long_cat) {
             (Some(o), Some(l)) => Some(format!("{}\n\n{}", o, l)),
             (Some(o), None) => Some(o),

@@ -1,3 +1,4 @@
+use crate::lang::any_str::AnyStr;
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::errors::CrushResult;
@@ -53,7 +54,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     ["stream", "select"],
                     "stream:select copy_fields:field... [*] new_field=definition:command",
                     "Pass on some old fields and calculate new ones for each line of input",
-                    None,
+                    None::<AnyStr>,
                     Unknown,
                     [],
                 )))?;

@@ -10,6 +10,7 @@ use crate::lang::value::ValueType;
 use crate::lang::{data::r#struct::Struct, value::Value};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use signature::signature;
+use crate::lang::any_str::AnyStr;
 use crate::lang::state::this::This;
 
 pub mod binary;
@@ -219,7 +220,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                         &["global", "types", "root", "new"],
                         "root:new @unnamed @@named",
                         "Create a new instance of the specified type",
-                        None,
+                        None::<AnyStr>,
                         Known(ValueType::Struct),
                         [],
                     ))),

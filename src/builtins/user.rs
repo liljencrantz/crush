@@ -16,6 +16,7 @@ use crate::lang::command::{Command, CrushCommand};
 use crate::lang::serialization::{deserialize, serialize};
 use crate::lang::state::this::This;
 use crate::{argument_error_legacy};
+use crate::lang::any_str::AnyStr;
 use crate::util::logins;
 
 #[signature(
@@ -78,7 +79,7 @@ pub fn user_struct() -> &'static Struct {
             &["global", "user"],
             "do command",
             "Run specified closure or command as another user",
-            None,
+            None::<AnyStr>,
             Unknown,
             [],
         );

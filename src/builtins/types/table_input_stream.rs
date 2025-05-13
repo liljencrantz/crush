@@ -8,6 +8,7 @@ use crate::lang::value::Value;
 use crate::builtins::types::column_types;
 use ordered_map::OrderedMap;
 use signature::signature;
+use crate::lang::any_str::AnyStr;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::pipe::streams;
 use crate::lang::data::r#struct::Struct;
@@ -33,7 +34,7 @@ pub fn close_value() -> &'static Value {
         &["global", "types", "pipe", "close"],
         "pipe:close",
         "Close the specified pipe",
-        None,
+        None::<AnyStr>,
         Known(ValueType::Empty),
         [],
     )))
@@ -46,7 +47,7 @@ pub fn write_value() -> &'static Value {
         &["global", "types", "pipe", "write"],
         "pipe:write",
         "Write sink for this pipe",
-        None,
+        None::<AnyStr>,
         Known(ValueType::Empty),
         [],
     )))

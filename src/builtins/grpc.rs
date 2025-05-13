@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use crate::lang::command::CrushCommand;
 use crate::{argument_error_legacy, CrushResult};
 use crate::lang::state::contexts::CommandContext;
@@ -11,14 +11,17 @@ use crate::lang::state::scope::Scope;
 use std::process;
 use std::process::Stdio;
 use std::io::Read;
+use std::sync::OnceLock;
 use crossbeam::channel::bounded;
 use itertools::Itertools;
+use regex::Regex;
 use crate::lang::data::list::List;
 use crate::lang::data::table::{Row, Table};
 use crate::lang::errors::{error, mandate};
 use crate::lang::signature::patterns::Patterns;
 use crate::lang::state::this::This;
 use crate::builtins::io::json::{json_to_value, value_to_json};
+use crate::lang::any_str::AnyStr;
 use crate::lang::value::ValueType;
 use crate::lang::data::table::ColumnType;
 
@@ -26,8 +29,7 @@ use crate::lang::data::table::ColumnType;
     grpc.connect,
     can_block = true,
     short = "Create a connection to a gRPC service)",
-    long = "This command currently does not currently do what it says. It's a proof of concept that",
-    long = "uses grpcurl under the hood. It does not have presistent connections and is quite slow and unreliable."
+    long = "This command currently uses grpcurl under the hood. It does not have a persistent gRPC connections and can therefore be slow."
 )]
 struct Connect {
     #[description("Host to connect to.")]
@@ -115,6 +117,111 @@ impl Grpc {
     }
 }
 
+#[derive(Clone, Debug)]
+struct ProtoMessage {
+    name: String,
+    fields: Vec<ProtoField>,
+}
+
+#[derive(Clone, Debug)]
+struct ProtoField {
+    name: String,
+    proto_type: ProtoType,
+}
+
+#[derive(Clone, Debug)]
+enum ProtoType {
+    Int64,
+    UInt64,
+    Int32,
+    UInt32,
+    Double,
+    Float,
+    Bool,
+    String,
+    Bytes,
+    Message(ProtoMessage),
+}
+
+impl ProtoType {
+    fn crush_type(&self) -> ValueType {
+        match self {
+            ProtoType::Int64 => ValueType::Integer,
+            ProtoType::UInt64 => ValueType::Integer,
+            ProtoType::Int32 => ValueType::Integer,
+            ProtoType::UInt32 => ValueType::Integer,
+            ProtoType::Double => ValueType::Float,
+            ProtoType::Float => ValueType::Float,
+            ProtoType::Bool => ValueType::Bool,
+            ProtoType::String => ValueType::String,
+            ProtoType::Bytes => ValueType::Binary,
+            ProtoType::Message(_) => ValueType::Struct,
+        }
+    }
+
+    fn arguments(&self) -> String {
+        if let ProtoType::Message(fields) = self {
+            fields.fields.iter().map(|f|  format!("{}={}", f.name, f.proto_type.crush_type().to_string())).join(" ")
+        }
+        else {
+            self.crush_type().to_string()
+        }
+    }
+}
+
+fn insert_known_types(known_types: &mut HashMap<String, ProtoType>) {
+    known_types.insert("int32".to_string(), ProtoType::Int32);
+    known_types.insert("int64".to_string(), ProtoType::Int64);
+    known_types.insert("uint32".to_string(), ProtoType::UInt32);
+    known_types.insert("uint64".to_string(), ProtoType::UInt64);
+    known_types.insert("bool".to_string(), ProtoType::Bool);
+    known_types.insert("string".to_string(), ProtoType::String);
+    known_types.insert("bytes".to_string(), ProtoType::Bytes);
+    known_types.insert("double".to_string(), ProtoType::Double);
+    known_types.insert("float".to_string(), ProtoType::Float);
+}
+
+fn parse_message_type<'a>(context: &CommandContext, name: &str, grpc: &Grpc, known_types: &'a mut HashMap<String, ProtoType>)
+                          -> CrushResult<ProtoType>
+{
+    if known_types.contains_key(name) {
+        return Ok(known_types.get(name).unwrap().clone());
+    }
+    let signature = grpc.call(context, None, vec!["describe", name])?;
+
+    static regex: OnceLock<Regex> = OnceLock::new();
+    let re = regex.get_or_init(|| {
+        Regex::new(r"[[:blank:]]*([a-zA-Z_.][a-zA-Z0-9_.]*)[[:blank:]]+([a-zA-Z_][a-zA-Z0-9_]*)[[:blank:]]*=[[:blank:]]*([0-9]+);[[:blank:]]*").unwrap()
+    });
+
+    let mut fields = Vec::new();
+
+    for line in signature.lines() {
+        match re.captures(line) {
+            None => {}
+            Some(c) => match (c.get(1), c.get(2)) {
+                (Some(type_name), Some(field_name)) => {
+                    let field_type = parse_message_type(context, type_name.as_str(), grpc, known_types)?;
+                    fields.push(ProtoField {
+                        name: field_name.as_str().to_string(),
+                        proto_type: field_type,
+                    });
+                }
+                _ => {}
+            }
+        };
+    }
+
+    let res = ProtoType::Message(ProtoMessage {
+        name: name.to_string(),
+        fields,
+    });
+
+    known_types.insert(name.to_string(), res.clone());
+
+    Ok(res)
+}
+
 fn connect(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Connect = Connect::parse(context.remove_arguments(), &context.global_state.printer())?;
     if cfg.service.is_empty() {
@@ -142,11 +249,20 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
             list.lines().join(", ")));
     }
 
+    let mut known_types = HashMap::new();
+    insert_known_types(&mut known_types);
+
     for service in services {
         let out = g.call(&context, None, vec!["list", service])?;
         for line in out.lines() {
             let stripped = line.strip_prefix(&format!("{}.", service));
             if let Some(method) = stripped {
+                let signature = g.call(&context, None, vec!["describe".to_string(), format!("{}.{}", service, method)])?;
+                let input_type_name = parse_input_type_from_signature(method, signature.as_str())?;
+                println!("{:?}", input_type_name);
+                let input_type = parse_message_type(&context, &input_type_name, &g, &mut known_types )?;
+                println!("{:?}", input_type);
+
                 s.set(
                     method, Value::Struct(
                         Struct::new(
@@ -163,9 +279,9 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
                                         grpc_method_call,
                                         true,
                                         &["global", "grpc", "connect", method, "__call__"],
-                                        "",
-                                        "Call gRPC method",
-                                        None,
+                                        format!("{} {}", method, input_type.arguments()),
+                                        format!("Call the {} method of the {} service", method, service),
+                                        None::<AnyStr>,
                                         Unknown,
                                         [],
                                     )),
@@ -178,6 +294,25 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
         }
     }
     context.output.send(Value::Struct(s))
+}
+
+fn parse_input_type_from_signature<'a>(method_name: &str, signature: &'a str) -> CrushResult<&'a str> {
+    static regex: OnceLock<Regex> = OnceLock::new();
+    let re = regex.get_or_init(|| {
+        Regex::new(r"\((.*)\).*\(.*\)").unwrap()
+    });
+    for line in signature.lines() {
+        if line.starts_with("rpc") {
+            return match re.captures(line) {
+                None => argument_error_legacy("Failed to parse signature"),
+                Some(c) => match c.get(1) {
+                    None => argument_error_legacy("Failed to parse signature"),
+                    Some(m) => Ok(m.as_str().trim()),
+                }
+            };
+        }
+    }
+    argument_error_legacy(format!("Failed to parse signature of method {}", method_name))
 }
 
 fn grpc_method_call(mut context: CommandContext) -> CrushResult<()> {

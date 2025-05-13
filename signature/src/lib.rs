@@ -406,7 +406,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 let text = Literal::string(&s);
                 quote! {Some(#text) }
             } else {
-                quote! {None}
+                quote! {None::<crate::lang::any_str::AnyStr>}
             };
 
             let mut vec_stream = TokenStream::new();

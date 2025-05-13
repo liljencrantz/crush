@@ -65,7 +65,7 @@ pub struct PrettyPrinter {
 }
 
 fn is_printable(v: u8) -> bool {
-    v >= 0x20 && v <= 0x7e
+    (v >= 0x20 && v <= 0x7e) || (v == 0x9) || (v == 0xa)
 }
 
 fn printable(v: u8) -> String {
