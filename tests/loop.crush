@@ -3,7 +3,6 @@ loop {
     break
     echo "NO"
 }
-
 $a := $false
 loop {
     if $a $break

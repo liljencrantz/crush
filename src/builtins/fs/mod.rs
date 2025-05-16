@@ -4,7 +4,7 @@ use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
-use crate::util::file::{cwd, home};
+use crate::util::file::{home};
 use signature::signature;
 use crate::lang::signature::files::Files;
 use std::path::PathBuf;
@@ -40,15 +40,15 @@ fn cd(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    fs.pwd,
+    fs.cwd,
     can_block = false,
     output = Known(ValueType::File),
     short = "Return the current working directory.",
 )]
-struct Pwd {}
+struct Cwd {}
 
-fn pwd(context: CommandContext) -> CrushResult<()> {
-    context.output.send(Value::from(cwd()?))
+fn cwd(context: CommandContext) -> CrushResult<()> {
+    context.output.send(Value::from(crate::util::file::cwd()?))
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
@@ -59,7 +59,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             files::FilesSignature::declare(fs)?;
             Cd::declare(fs)?;
             mounts::Mounts::declare(fs)?;
-            Pwd::declare(fs)?;
+            Cwd::declare(fs)?;
             usage::Usage::declare(fs)?;
             fs.create_namespace(
                 "fd",

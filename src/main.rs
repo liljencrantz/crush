@@ -60,9 +60,9 @@ fn print_help(printer: &Printer) {
     printer.line("");
     printer.line("  -h, --help        Print this message and exit");
     printer.line("  -i --interactive  Run in interactive mode (this is the default)");
-    printer.line("  -p --pup          Read pup-serialized closure from standard input,");
-    printer.line("                      execute, and serialize output to pup-format");
-    printer.line("                      and send to standard output");
+    printer.line("  -p --pup          Read a pup-serialized closure from standard input,");
+    printer.line("                    execute it, serialize the output to pup-format,");
+    printer.line("                    and write it to standard output");
     printer.line("");
     printer.line("Crush can be run in three modes.");
     printer.line("");

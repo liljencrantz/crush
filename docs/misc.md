@@ -2,7 +2,7 @@
 
 ## Similarity to PowerShell
 
-Crush shares the majority of its design goals with PowerShell. I consider
+Crush many of its surface level properties with PowerShell. I consider
 PowerShell one of the coolest and most interesting innovations to ever come out
 of Microsoft. That said, I've found using PowerShell in practice to often feel
 clunky and annoying, especially for interactive use. I also feel that tying a
@@ -21,7 +21,7 @@ closures, loops and flow control while remaining useful for interactive use.
 
 ### Future work
 
-There are plenty of langage ideas waiting to be tried out. Pattern matching and
+There are plenty of language ideas waiting to be tried out. Pattern matching and
 error handling are among the most obvious. Also, the error handling in Crush
 itself is currently very rudimentary.
 

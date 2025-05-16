@@ -24,7 +24,6 @@ pub struct For {
 }
 
 fn r#for(mut context: CommandContext) -> CrushResult<()> {
-    let (sender, receiver) = pipe();
     if context.arguments.len() != 2 {
         return argument_error_legacy("Expected two parameters: A stream and a command");
     }
@@ -43,7 +42,7 @@ fn r#for(mut context: CommandContext) -> CrushResult<()> {
         let vvv = if input.types().len() == 1 {
             Vec::from(line).remove(0)
         } else {
-                Value::Struct(Struct::from_vec(Vec::from(line), input.types().to_vec()))
+            Value::Struct(Struct::from_vec(Vec::from(line), input.types().to_vec()))
         };
 
         let arguments =
@@ -53,12 +52,11 @@ fn r#for(mut context: CommandContext) -> CrushResult<()> {
                 location,
             )];
 
-        cfg.body.eval(context.empty().with_scope(env.clone()).with_args(arguments, None).with_output(sender.clone()))?;
+        cfg.body.eval(context.empty().with_scope(env.clone()).with_args(arguments, None))?;
         if env.is_stopped() {
-            context.output.send(receiver.recv()?)?;
             break;
         }
-        receiver.recv()?;
     }
+    context.output.empty();
     Ok(())
 }

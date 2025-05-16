@@ -10,12 +10,10 @@ use crate::lang::command::OutputType::Known;
 use crate::lang::pipe::pipe;
 use crate::lang::state::scope::ScopeType::Loop;
 
-static WHILE_OUTPUT_TYPE: [ColumnType; 1] = [ColumnType::new("value", ValueType::Any)];
-
 #[signature(
     control.r#while,
     condition = true,
-    output = Known(ValueType::table_input_stream(&WHILE_OUTPUT_TYPE)),
+    output = Known(ValueType::Empty),
     short = "Repeatedly execute the body for as long the condition is met.",
     long = "The loop body is optional. If not specified, the condition is executed until it returns false.\n    This effectively means that the condition becomes the body, and the loop break check comes at\n    the end of the loop.",
     example = "while {./some_file:exists} {echo \"hello\"}"
@@ -28,8 +26,6 @@ pub struct While {
 }
 
 fn r#while(mut context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(&WHILE_OUTPUT_TYPE)?;
-    let (body_sender, body_receiver) = pipe();
     let cfg: While = While::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     loop {
@@ -45,8 +41,7 @@ fn r#while(mut context: CommandContext) -> CrushResult<()> {
             Value::Bool(true) => match &cfg.body {
                 Some(body) => {
                     let body_env = context.scope.create_child(&context.scope, Loop);
-                    body.eval(context.empty().with_scope(body_env.clone()).with_output(body_sender.clone()))?;
-                    output.send(Row::new(vec![body_receiver.recv()?]))?;
+                    body.eval(context.empty().with_scope(body_env.clone()))?;
                     if body_env.is_stopped() {
                         break;
                     }
@@ -57,5 +52,6 @@ fn r#while(mut context: CommandContext) -> CrushResult<()> {
             _ => return data_error("While loop condition must output value of boolean type"),
         }
     }
+    context.output.empty();
     Ok(())
 }

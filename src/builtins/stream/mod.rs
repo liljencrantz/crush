@@ -15,6 +15,7 @@ mod join;
 mod reverse;
 mod select;
 mod seq;
+mod skip;
 mod sort;
 mod aggregation;
 mod tail;
@@ -34,6 +35,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             head::Head::declare(env)?;
             tail::Tail::declare(env)?;
             r#where::Where::declare(env)?;
+            skip::Skip::declare(env)?;
             sort::Sort::declare(env)?;
             reverse::Reverse::declare(env)?;
             group::Group::declare(env)?;
@@ -52,7 +54,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     select::select,
                     true,
                     ["stream", "select"],
-                    "stream:select copy_fields:field... [*] new_field=definition:command",
+                    "stream:select [copy_fields:string...] [*] [new_field=command]",
                     "Pass on some old fields and calculate new ones for each line of input",
                     None::<AnyStr>,
                     Unknown,

@@ -2,18 +2,14 @@ for i=(list.of(1, 2)) {
     echo $i
 }
 
-$d := ((dict(string, integer).new))
-$d["fooo"] = 3
+$d := (dict(string, integer).new())
+$d[fooo] = 3
 
 for i=$d {
     echo $i:key $i:value
 }
 
 $table := $(seq 3 | materialize)
-
-for $table {
-    echo $value
-}
 
 for i=$table {
     echo $i

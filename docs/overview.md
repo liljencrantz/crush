@@ -257,20 +257,20 @@ The following closure requires the caller to supply the argument `a`, and allows
 the caller to specify the argument `b`, which must by of type integer. If the
 caller does not specify it, it falls back to a default value of 7.
 
-    crush# print_things := {|a b: $integer = 7|}
+    crush# print_things := {|$a $b: $integer = 7|}
 
 Additionally, the `@` operator can be used to create a list of all unnamed
 arguments, and the `@@` operator can be used to create a list of all named
 arguments not mentioned elsewhere in the parameter list.
 
-    crush# print_everything := {|@unnamed @@named| echo "Named" $named "Unnamed" $unnamed}
+    crush# print_everything := {|@ $unnamed @@ $named| echo "Named" $named "Unnamed" $unnamed}
 
 The `@` and `@@` operators are also used during command invocation to perform
-the mirrored operation. The following code creates an `lss` function that calls
-the `ls` command and passes on any arguments to it, and pipes the output through
+the mirrored operation. The following code creates an `ls` function that calls
+the `files` command and passes on any arguments to it, and pipes the output through
 the `select` command to only show one column from the output.
 
-    lss := {|@args @@kwargs| ls @args @@kwargs | select file}
+    $ls := {|@ $args @@ $kwargs| files @ $args @@ $kwargs| select file}
 
 ### Types
 
@@ -318,19 +318,6 @@ former displays a help messages, the latter lists the content of a value.
 
         host:procs | sort cpu
 
-### The content of your current working directory lives in your namespace
-
-All the files in the current working directory are part of the local namespace.
-This means that e.g. `.` is a file object that points to the current working
-directory. The `/` operator is used in Crush to join two file directory element
-together.
-
-This means that for the most part, using files in Crush is extremely simple and
-convenient.
-
-    crush# cd .. # This does what you'd think
-    crush# cd /  # As does this
-
 ### Namespaces, members and methods
 
 Members are accessed using the `:` operator. Most other languages tend to use
@@ -355,7 +342,7 @@ what you'd expect.
 
 If you assign the output of the find command to a variable like so:
 
-    crush# $all_the_files := (find /)
+    crush# $all_the_files := $(files --recurse /)
 
 What will really be stored in the `all_the_files` variable is simply a stream. A
 small number of lines of output will be eagerly evaluated, before the thread
@@ -377,8 +364,7 @@ re-executed until the stream is empty.
 ### More SQL-like data stream operations
 
 Crush features many commands to operate om arbitrary streams of data using a
-SQL-like syntax. These commands use field-specifiers like `foo` to specify
-columns in the data stream that they operate on:
+SQL-like syntax:
 
     host:procs | where {$user == root} | group status proc_per_status={count} | sort proc_per_status
     status   proc_per_status
@@ -387,7 +373,7 @@ columns in the data stream that they operate on:
 
 Unlike in SQL, these commands all operate on input streams, meaning they can be
 combined in any order, and the input source can be file/http resources in a
-variety of formats or output of commands like `ps`, `find`.
+variety of formats or output of commands like `host:procs`, or `files`.
 
 ### Globs
 
@@ -402,13 +388,14 @@ The operator `**` is used for performing globbing recursively into subdirectorie
     rw-r --r--       1 fox  fox   150 B 2024-07-22 15:18:45 +0200 file build.rs
     # Count the number of lines of rust code in this tree
     crush# lines:from **.rs | count
+    114552
 
 Wildcards are not automatically expanded, they are passed in to commands as glob
 objects, and the command chooses what to match the glob against. If you want to
 perform glob expansion in a command that doesn't do so itself, use the `:files`
 method of the glob object to do so:
 
-    crush# echo $(**.rs:files)
+    crush# **.rs:files
 
 ### Regular expressions
 
@@ -426,47 +413,38 @@ matching and replacement:
 
 Crush has built-in lists:
 
-    crush# l := $(list:of 1 2 3)
-    crush# l
+    crush# $l := $(list:of 1 2 3)
+    crush# $l
     [1, 2, 3]
-    crush# l:peek
+    crush# $l:peek
     3
-    crush# l:pop
+    crush# $l:pop
     3
-    crush# l:len
+    crush# $l:len
     2
-    crush# l[1]
+    crush# $l[1]
     2
-    crush# l[1] = 7
-    crush# l
+    crush# $l[1] = 7
+    crush# $l
     [1, 7]
-    crush# help l
+    crush# help $l
     type list integer
 
-        A mutable list of items, usually of the same type
+    A mutable list of items, usually of the same type
 
-        * __call__  Return a list type for the specified element type
-        * __getitem__    Return a file or subdirectory in the specified base directory
-        * __setitem__    Assign a new value to the element at the specified index
-        * clear          Remove all elments from the list
-        * clone          Create a duplicate of the list
-        * empty          True if there are no elements in the list
-        * len            The number of elements in the list
-        * new            Create a new list with the specified element type
-        * of             Create a new list containing the supplied elements
-        * peek           Return the last element from the list
-        * pop            Remove the last element from the list
-        * push           Push an element to the end of the list
-        * remove         Remove the element at the specified index
-        * truncate       Remove all elements past the specified index
+    * __call__     Returns a list type with the specified value type.
+    * __getitem__  Return the value at the specified index of the list.
+    * __setitem__  Assign a new value to the element at the specified index.
+    * clear        Remove all values from this list.
+    [...]
 
 and dictionaries:
 
-    crush# d := (dict string integer):new
-    crush# d["foo"] = 42
-    crush# d["foo"]
+    crush# $d := (dict string integer):new
+    crush# $d["foo"] = 42
+    crush# $d["foo"]
     42
-    crush# help d
+    crush# help $d
     type dict string integer
 
         A mutable mapping from one set of values to another
@@ -475,20 +453,16 @@ and dictionaries:
         * __getitem__    Return the value the specified key is mapped to
         * __setitem__    Create a new mapping or replace an existing one
         * clear          Remove all mappings from this dict
-        * clone          Create a new dict with the same st of mappings as this one
-        * empty          True if there are no mappings in the dict
-        * len            The number of mappings in the dict
-        * new            Construct a new dict
-        * remove         Remove a mapping from the dict
+        [...]
 
 ### Time
 
 Crush has two data types for dealing with time: `time` and `duration`.
 
-    crush# start := time:now
-    crush# something_that_takes_a_lot_of_time
-    crush# end := time:now
-    crush# echo ("We spent {} on the thing":format end - start)
+    crush# $start := $(time:now)
+    crush# $something_that_takes_a_lot_of_time
+    crush# $end := $(time:now)
+    crush# echo ("We spent {} on the thing":format (end - start))
     4:06
 
 The mathematical operators that make sense are defined for `time` and
@@ -510,62 +484,37 @@ of different steps in the pipeline, which improves performance.
 But sometimes, streaming data sets are inconvenient, especially if one wants to
 use the same dataset twice.
 
-    crush# $files := ls
-    crush# $files
-    user         size   modified                  type      file
-    fox  1_307 2020-03-26 01:08:45 +0100 file      ideas
-    fox  4_096 2019-11-22 21:56:30 +0100 directory target
-    fox  4_096 2020-03-27 09:18:25 +0100 directory tests
-    fox 95_328 2020-03-24 17:20:00 +0100 file      Cargo.lock
-    fox  4_096 2020-02-15 00:12:18 +0100 directory example_data
-    fox     31 2019-10-03 13:43:12 +0200 file      .gitignore
-    fox 13_355 2020-03-29 03:05:16 +0200 file      README.md
-    fox  4_096 2020-03-27 11:35:25 +0100 directory src
-    fox    479 2020-03-24 17:20:00 +0100 file      Cargo.toml
-    fox  4_096 2020-03-29 01:29:52 +0100 directory .git
-    fox  8_382 2020-03-29 00:54:13 +0100 file      todo
-    fox     75 2020-03-07 17:09:15 +0100 file      build.rs
-    fox    711 2019-10-03 14:19:46 +0200 file      crush.iml
-    crush# $files
+    crush# $f := $(files)
+    crush# $f
+    permissions links user group size      modified                  type      file
+    rw-r--r--       1 fox  staff 1.792 kiB 2024-08-09 13:46:03 +0200 file      Cargo.toml
+    rw-r--r--       1 fox  staff 1.037 kiB 2022-08-24 17:41:16 +0200 file      LICENSE
+    rwxr-xr-x       4 fox  staff     128 B 2022-09-21 22:15:38 +0200 directory signature
+    rwxr-xr-x       7 fox  staff     224 B 2025-05-15 13:37:58 +0200 directory target
+    crush# $f
+    crush#
 
-Notice how there is no output the second time the content of the `files` variable is
+Notice how there is no output the second time the content of the `$f` variable is
 displayed, because the table_input_stream has already been consumed.
 
 Enter the materialize command, which takes any value and recursively converts
 all transient (table_input_stream and binary_stream) components into an equivalent
 in-memory form (table, and binary, respectively).
 
-    crush# $materialized_files := (ls|materialize)
+    crush# $materialized_files := (files|materialize)
     crush# $materialized_files
-    user size   modified                  type      file
-    fox    1307 2020-03-26 01:08:45 +0100 file      ideas
-    fox    4096 2019-11-22 21:56:30 +0100 directory target
-    fox    4096 2020-03-27 09:18:25 +0100 directory tests
-    fox  95_328 2020-03-24 17:20:00 +0100 file      Cargo.lock
-    fox   4_096 2020-02-15 00:12:18 +0100 directory example_data
-    fox      31 2019-10-03 13:43:12 +0200 file      .gitignore
-    fox  14_420 2020-03-29 03:06:02 +0200 file      README.md
-    fox   4_096 2020-03-27 11:35:25 +0100 directory src
-    fox     479 2020-03-24 17:20:00 +0100 file      Cargo.toml
-    fox   4_096 2020-03-29 01:29:52 +0100 directory .git
-    fox   8_382 2020-03-29 00:54:13 +0100 file      todo
-    fox      75 2020-03-07 17:09:15 +0100 file      build.rs
-    fox     711 2019-10-03 14:19:46 +0200 file      crush.iml
+    permissions links user group size      modified                  type      file
+    rw-r--r--       1 fox  staff 1.792 kiB 2024-08-09 13:46:03 +0200 file      Cargo.toml
+    rw-r--r--       1 fox  staff 1.037 kiB 2022-08-24 17:41:16 +0200 file      LICENSE
+    rwxr-xr-x       4 fox  staff     128 B 2022-09-21 22:15:38 +0200 directory signature
+    rwxr-xr-x       7 fox  staff     224 B 2025-05-15 13:37:58 +0200 directory target
     crush# $materialized_files
-    user size   modified                  type      file
-    fox    1307 2020-03-26 01:08:45 +0100 file      ideas
-    fox    4096 2019-11-22 21:56:30 +0100 directory target
-    fox    4096 2020-03-27 09:18:25 +0100 directory tests
-    fox  95_328 2020-03-24 17:20:00 +0100 file      Cargo.lock
-    fox   4_096 2020-02-15 00:12:18 +0100 directory example_data
-    fox      31 2019-10-03 13:43:12 +0200 file      .gitignore
-    fox  14_420 2020-03-29 03:06:02 +0200 file      README.md
-    fox   4_096 2020-03-27 11:35:25 +0100 directory src
-    fox     479 2020-03-24 17:20:00 +0100 file      Cargo.toml
-    fox   4_096 2020-03-29 01:29:52 +0100 directory .git
-    fox   8_382 2020-03-29 00:54:13 +0100 file      todo
-    fox      75 2020-03-07 17:09:15 +0100 file      build.rs
-    fox     711 2019-10-03 14:19:46 +0200 file      crush.iml
+    permissions links user group size      modified                  type      file
+    rw-r--r--       1 fox  staff 1.792 kiB 2024-08-09 13:46:03 +0200 file      Cargo.toml
+    rw-r--r--       1 fox  staff 1.037 kiB 2022-08-24 17:41:16 +0200 file      LICENSE
+    rwxr-xr-x       4 fox  staff     128 B 2022-09-21 22:15:38 +0200 directory signature
+    rwxr-xr-x       7 fox  staff     224 B 2025-05-15 13:37:58 +0200 directory target
+    crush#
 
 When the `table_input_stream` is materialized into a `table`, it can be accessed
 multiple times.
@@ -585,7 +534,7 @@ that can be controlled using `break` and `continue`.
     
         Example:
     
-        if (./some_file:stat):is_file {echo "It's a file!"} {echo "It's not a file!"}
+        if $(./some_file:stat:is_file) {echo "It's a file!"} {echo "It's not a file!"}
 
 
     for [name=]iterable:(table_input_stream|table|dict|list) body:command
@@ -594,7 +543,7 @@ that can be controlled using `break` and `continue`.
     
         Example:
     
-        for (seq) {
+        for $(seq) {
             echo ("Lap {}":format value)
         }
 
@@ -620,11 +569,11 @@ Crush features several shortcuts to make working with external commands easier.
   character argument names are turned into options with a single hyphen, and
   multi-character argument names are turned into GNU style long options with
   two hyphens, e.g. `git commit m="hello"` is converted into 
-  `git commit -m "hello"` and `git:commit message="hello"` is converted into
+  `git commit -m "hello"` and `git commit message="hello"` is converted into
   `git commit --message "hello"`.
 * Thirdly, named arguments with a value of boolean true are simply turned into
-  options without a value, so for example `git:commit --a --append` (or 
-  `git:commit a=true append=true` for that matter) is converted into
+  options without a value, so for example `git commit --a --append` (or 
+  `git commit a=true append=true` for that matter) is converted into
   `git commit -a --append`.
 
 Further work is required when it comes to job control, terminal emulation and various

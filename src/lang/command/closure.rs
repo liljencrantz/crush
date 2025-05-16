@@ -50,7 +50,6 @@ impl CrushCommand for Closure {
             env.redeclare("this", this)?;
         }
         Closure::push_arguments_to_env(&self.signature, context.arguments, &mut cc)?;
-
         if env.is_stopped() {
             return Ok(());
         }
@@ -66,7 +65,8 @@ impl CrushCommand for Closure {
             let output = if last && scope_type == Block {
                 context.output.clone()
             } else {
-                black_hole()
+                context.output.clone()
+//                black_hole()
             };
 
             let job = job_definition.eval(JobContext::new(
@@ -577,7 +577,6 @@ impl Closure {
         }
         let mut unnamed_name = None;
         let mut named_name = None;
-
         for param in signature {
             match param {
                 Parameter::Parameter(name, value_type, default) => {
@@ -614,13 +613,13 @@ impl Closure {
                     if named_name.is_some() {
                         return argument_error_legacy("Multiple named argument destinations specified");
                     }
-                    named_name = Some(name);
+                    named_name = Some(name.slice_to_end(1));
                 }
                 Parameter::Unnamed(name) => {
                     if unnamed_name.is_some() {
                         return argument_error_legacy("Multiple unnamed argument destinations specified");
                     }
-                    unnamed_name = Some(name);
+                    unnamed_name = Some(name.slice_to_end(1));
                 }
             }
         }

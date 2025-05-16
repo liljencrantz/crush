@@ -10,7 +10,6 @@ use crate::lang::data::dict::Dict;
 use std::env;
 use rustyline::history::{History, SearchDirection};
 use crate::data::list::List;
-use crate::lang::command::Command;
 
 fn make_env() -> CrushResult<Value> {
     let e = Dict::new(ValueType::String, ValueType::String)?;
@@ -63,15 +62,32 @@ fn exit(context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Empty)
 }
 
-#[signature(crush.prompt, can_block = false, short = "Set or get the prompt")]
-struct Prompt {
-    prompt: Option<Command>,
-}
+mod prompt {
+    use signature::signature;
+    use crate::lang::command::Command;
+    use crate::lang::errors::CrushResult;
+    use crate::lang::state::contexts::CommandContext;
+    use crate::lang::value::Value;
 
-fn prompt(context: CommandContext) -> CrushResult<()> {
-    let cfg: Prompt = Prompt::parse(context.arguments, &context.global_state.printer())?;
-    context.global_state.set_prompt(cfg.prompt);
-    context.output.send(Value::Empty)
+    #[signature(crush.prompt.set, can_block = false, short = "Set a new prompt")]
+    pub struct Set {
+        prompt: Command,
+    }
+
+    fn set(context: CommandContext) -> CrushResult<()> {
+        let cfg: Set = Set::parse(context.arguments, &context.global_state.printer())?;
+        context.global_state.set_prompt(Some(cfg.prompt));
+        context.output.send(Value::Empty)
+    }
+
+    #[signature(crush.prompt.get, can_block = false, short = "Get the current prompt")]
+    pub struct Get {
+    }
+
+    fn get(context: CommandContext) -> CrushResult<()> {
+        let cfg: Get = Get::parse(context.arguments, &context.global_state.printer())?;
+        context.output.send(context.global_state.prompt().map(|cmd| {Value::Command(cmd)}).unwrap_or(Value::Empty))
+    }
 }
 
 static JOB_OUTPUT_TYPE: [ColumnType; 2] = [
@@ -83,7 +99,7 @@ static JOB_OUTPUT_TYPE: [ColumnType; 2] = [
     crush.jobs,
     can_block = false,
     short = "List running jobs",
-    output = Known(ValueType::table_input_stream(& JOB_OUTPUT_TYPE)),
+    output = Known(ValueType::table_input_stream(&JOB_OUTPUT_TYPE)),
     long = "All currently running jobs")]
 struct Jobs {}
 
@@ -277,11 +293,25 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             highlight.insert(Value::from("file_literal"), Value::from(""))?;
             highlight.insert(Value::from("label"), Value::from(""))?;
             highlight.insert(Value::from("numeric_literal"), Value::from(""))?;
+            highlight.insert(Value::from("glob_literal"), Value::from(""))?;
+            highlight.insert(Value::from("regex_literal"), Value::from(""))?;
+            highlight.insert(Value::from("command"), Value::from(""))?;
+            highlight.insert(Value::from("keyword"), Value::from(""))?;
             crush.declare("highlight", highlight.into())?;
 
             crush.declare("env", make_env()?)?;
             crush.declare("arguments", make_arguments())?;
-            Prompt::declare(crush)?;
+
+            crush.create_namespace(
+                "prompt",
+                "Prompt data for Crush",
+                Box::new(move |env| {
+                    prompt::Set::declare(env)?;
+                    prompt::Get::declare(env)?;
+                    Ok(())
+                }),
+            )?;
+
             Threads::declare(crush)?;
             Exit::declare(crush)?;
             Jobs::declare(crush)?;
@@ -299,7 +329,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             )?;
             crush.create_namespace(
                 "byte_unit",
-                "Formating style for table columns containing byte size.",
+                "Formating style for table columns containing byte sizes.",
                 Box::new(move |env| {
                     byte_unit::List::declare(env)?;
                     byte_unit::Get::declare(env)?;

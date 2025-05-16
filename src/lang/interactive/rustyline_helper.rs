@@ -40,7 +40,7 @@ impl RustylineHelper {
         _ctx: &Context<'_>,
     ) -> CrushResult<(usize, Vec<Pair>)> {
         let mut res = crate::lang::completion::complete(
-            line, pos, &self.scope, &self.state.parser(),&directory_lister())?;
+            line, pos, &self.scope, &self.state.parser(), &directory_lister())?;
         let crunched = res.drain(..)
             .map(|c| Pair {
                 display: c.display().to_string(),
@@ -49,31 +49,41 @@ impl RustylineHelper {
         Ok((pos, crunched))
     }
 
-    fn get_color(&self, token_type: Token) -> Option<String> {
+    fn get_color(&self, token_type: Token, new_command: bool) -> Option<String> {
         if let Ok(Value::Dict(highlight)) = self.scope.get_absolute_path(
             vec!["global".to_string(), "crush".to_string(), "highlight".to_string()]) {
             use Token::*;
-            let res = match token_type {
-                Flag(_, _) | String(_, _) | QuotedString(_, _) => highlight.get(&Value::from("string_literal")),
-                Regex(_, _) => highlight.get(&Value::from("string_literal")),
-                File(_, _) | Glob(_, _) | QuotedFile(_, _) => highlight.get(&Value::from("file_literal")),
-                Float(_, _) | Integer(_, _) => highlight.get(&Value::from("numeric_literal")),
-                Unnamed(_) | Named( _) | Pipe( _) | LogicalOperator(_, _) | UnaryOperator(_, _) |
-                ComparisonOperator(_, _) | Equals( _) | Declare( _) | GetItemEnd( _) | GetItemStart( _) | SubEnd( _) |
-                Bang(_) | Plus(_) | Minus(_) | Star(_) | Slash(_) | MemberOperator(_) | ExprModeStart(_) |
-                SubStart( _) | BlockEnd( _) | BlockStart( _) =>
-                    highlight.get(&Value::from("operator")),
-                Identifier(_, _) => None,
-                Separator(_, _) => None,
-                For(_) |
-                While(_) |
-                Loop(_) |
-                If(_) |
-                Else(_) |
-                Return(_) |
-                Break(_) |
-                Continue(_) => highlight.get(&Value::from("keyword")),
-            };
+
+            let res =
+                match token_type {
+                    String(_, _) | QuotedString(_, _) =>
+                        if new_command {
+                            highlight.get(&Value::from("command"))
+                        } else {
+                            highlight.get(&Value::from("string_literal"))
+                        },
+                    Flag(_, _) => highlight.get(&Value::from("string_literal")),
+                    Regex(_, _) => highlight.get(&Value::from("regex_literal")),
+                    Glob(_, _) => highlight.get(&Value::from("glob_literal")),
+                    File(_, _) | QuotedFile(_, _) => highlight.get(&Value::from("file_literal")),
+                    Float(_, _) | Integer(_, _) => highlight.get(&Value::from("numeric_literal")),
+                    Unnamed(_) | Named(_) | Pipe(_) | LogicalOperator(_, _) | UnaryOperator(_, _) |
+                    ComparisonOperator(_, _) | Equals(_) | Declare(_) | GetItemEnd(_) | GetItemStart(_) | SubEnd(_) |
+                    Bang(_) | Plus(_) | Minus(_) | Star(_) | Slash(_) | MemberOperator(_) | ExprModeStart(_) |
+                    SubStart(_) | BlockEnd(_) | BlockStart(_) =>
+                        highlight.get(&Value::from("operator")),
+                    Identifier(_, _) => None,
+                    Separator(_, _) => None,
+                    For(_) |
+                    While(_) |
+                    Loop(_) |
+                    If(_) |
+                    Else(_) |
+                    Return(_) |
+                    Break(_) |
+                    Continue(_) => highlight.get(&Value::from("keyword")),
+                };
+
             match res {
                 Some(Value::String(s)) => Some(s.to_string()),
                 _ => None,
@@ -86,6 +96,8 @@ impl RustylineHelper {
     fn highlight_internal(&self, line: &str, _cursor: usize) -> CrushResult<String> {
         let mut res = String::new();
         let mut pos = 0;
+        let mut new_command = true;
+        let mut prev = None;
         for tok in self.state.parser().tokenize(
             &self.state.parser().close_token(line))? {
             if pos >= line.len() {
@@ -96,7 +108,17 @@ impl RustylineHelper {
             }
             res.push_str(&line[pos..min(tok.location().start, line.len())]);
             let mut do_reset = false;
-            match self.get_color(tok) {
+
+            new_command = match (new_command, tok, prev) {
+                (_, Token::BlockStart(_) | Token::Separator(_, _) | Token::Pipe(_), _) => true,
+                (true, Token::String(_, _) | Token::Identifier(_, _), Some(Token::String(_, _) | Token::Identifier(_, _))) => false,
+                (true, Token::String(_, _) | Token::Identifier(_, _), _) => true,
+                (true, Token::String(_, _) | Token::Identifier(_, _), None) => true,
+                (true, Token::MemberOperator(_), Some(Token::String(_, _) | Token::Identifier(_, _))) => true,
+                _ => false,
+            };
+
+            match self.get_color(tok, new_command) {
                 Some(color) => {
                     if !color.is_empty() {
                         do_reset = true;
@@ -112,6 +134,7 @@ impl RustylineHelper {
                 res.push_str("\x1b[0m");
             }
             pos = tok.location().end;
+            prev = Some(tok);
         }
         Ok(res)
     }

@@ -13,11 +13,11 @@ can be configured.
 
 ### Configuring the Crush prompt
 
-To configure the Crush prompt, call the `crush:prompt` command, and pass in a closure that
+To configure the Crush prompt, call the `crush:prompt:set` command, and pass in a closure that
 returns a string, for example:
 
 ```shell script
-crush:prompt {"{user}@{host} {wd}# ":format wd=(pwd) user=(user:me:name) host=(host:name) }
+crush:prompt:set {"{user}@{host} {wd}# ":format wd=(pwd) user=(user:me:name) host=(host:name) }
 ```
 
 If you want your Crush prompt to be colorful, the `term` namespace contains useful
@@ -25,10 +25,10 @@ constants containing ANSI color codes for altering the look of your prompt.
 A slightly more colorful version of the above prompt would be:
 
 ```shell script
-crush:prompt {
-    "{green}{user}{normal}@{host} {green}{wd}{normal}# ":format wd=(pwd) \
-        user=(user:me:name) host=(host:name) \
-        green=term:green normal=term:normal
+crush:prompt:set {
+    "{green}{user}{normal}@{host} {green}{wd}{normal}# ":format wd=$(pwd) \
+        user=$(user:me:name) host=$(host:name) \
+        green=$(term:green) normal=$(term:normal)
 }
 ```
 
@@ -46,15 +46,18 @@ resemble a Christmas tree:
 | `string_literal` | String literals, like `"Burrow"`                         |
 | `file_literal` | File literals, like `'Cargo.toml'`                       |
 | `label` | Variables and members, like `$global`                    |
-| `field` | Field definitions, such as `name`                        |
+|`glob_literal`| Glob literals like `*.txt`                               |
+|`regex_literal`| Regex literal like `^(a*)`                               |
+|`command`| Commands`                                                |
+|`keyword`| Reserved words like `continue` and `break`                |
 
 The `term` namespace contains useful constants containing ANSI color codes.
 A configuration example:
 
 ```shell script
-crush:highlight["file_literal"] = term:cyan
-crush:highlight["string_literal"] = term:yellow
-crush:highlight["numeric_literal"] = term:magenta
+crush:highlight[file_literal] = $(term:cyan)
+crush:highlight[string_literal] = $(term:yellow)
+crush:highlight[numeric_literal] = $(term:magenta)
 ```
 
 ### Locale

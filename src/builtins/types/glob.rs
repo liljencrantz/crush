@@ -133,7 +133,7 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
     short = "True if the needle matches the pattern",
 )]
 struct Match {
-    #[description("the sting to match this glob against.")]
+    #[description("the text to match this glob against.")]
     needle: Text,
 }
 
