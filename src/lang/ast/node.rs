@@ -41,9 +41,32 @@ impl Node {
     pub fn val(l: Location) -> Node {
         Node::GetAttr(
             Box::from(Node::GetAttr(
-                Box::from(Node::Identifier(TrackedString::new("global", l))),
+                Node::global(l),
                 TrackedString::new("io", l))),
             TrackedString::new("val", l))
+    }
+
+    pub fn list_literal(node: JobListNode) -> Box<Node> {
+        let mut cmd = vec![Self::get_attr(&["global", "types", "list", "of"], node.location)];
+        for it in node.jobs {
+            cmd.push(Node::Substitution(it))
+        }
+
+        Box::from(Node::Substitution(JobNode {
+            commands: vec![CommandNode {
+                expressions: cmd,
+                location: node.location,
+            }],
+            location: node.location,
+        }))
+    }
+
+    fn id(s: &str, l: Location) -> Box<Node> {
+        Box::from(Node::Identifier(TrackedString::new(s, l)))
+    }
+
+    fn global(l: Location) -> Box<Node> {
+        Node::id("global", l)
     }
 
     pub fn expression_to_command(self) -> CommandNode {

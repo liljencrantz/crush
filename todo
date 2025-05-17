@@ -25,5 +25,4 @@ Make IFS configurable for cmd command
 Add signal handlers to fix ^C and ^Z during regular execution
 Show errors from loading config
 Document @ and @@
-List literals in math mode
 Dict literals in math mode

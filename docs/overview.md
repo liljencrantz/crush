@@ -232,35 +232,50 @@ the command within dollar-parenthesis (`$()`), like so:
 
     crush# echo $(pwd)
 
-### Closures
+### Blocks
 
-In Crush, braces (`{}`) are used to create a closure. Assigning a closure to a
-variable is how you create your own functions.
+In Crush, braces (`{}`) are used to create blocks of code. 
 
-    crush# $print_greeting := {echo "Hello"}
-    crush# print_greeting
-    Hello
-
-Any named arguments passed when calling a closure and added to the local scope
+Any named arguments passed when calling a block are added to the local scope
 of the invocation:
 
     crush# $print_a := {echo $a}
     crush# print_a a="Greetings"
     Greetings
 
-#### Passing arguments to a closure
+#### Closures
 
-For added type safety, you may optionally declare what parameters a closure expects at the
-start of a closure.
+For added type safety, you may optionally declare what parameters a block of code accepts.
+Such blocks are called closures:
 
-The following closure requires the caller to supply the argument `a`, and allows
-the caller to specify the argument `b`, which must by of type integer. If the
-caller does not specify it, it falls back to a default value of 7.
+    crush# {|$a $b $c| echo $a $b $c}
 
+Closures also allow you to break execution early using the return builtin command:
+
+    {
+        ||
+        if $(check_early_exit) { 
+            # This call will return the entire closure, not just the innermost block
+            return
+        }
+
+        ...
+    }
+
+Assign a closure or a block to a variable in order to create your own custom commands
+
+    crush# $print_greeting := {echo "Hello!"}
+    crush# print_greeting
+    Hello!
+
+You can specify the type of a closure argument and/or the default value using the
+following syntax:
+
+    # 'b' must be an integer number, and if unspecified, will have the value 7 
     crush# print_things := {|$a $b: $integer = 7|}
 
 Additionally, the `@` operator can be used to create a list of all unnamed
-arguments, and the `@@` operator can be used to create a list of all named
+arguments, and the `@@` operator can be used to create a dict of all named
 arguments not mentioned elsewhere in the parameter list.
 
     crush# print_everything := {|@ $unnamed @@ $named| echo "Named" $named "Unnamed" $unnamed}
@@ -321,7 +336,7 @@ former displays a help messages, the latter lists the content of a value.
 ### Namespaces, members and methods
 
 Members are accessed using the `:` operator. Most other languages tend to use
-`.`, but that is a very common character in file names, so Crush needed to find
+`.`, but that is a very common character in file names, so Crush needed to use
 something else.
 
 Most types have several useful methods. Files have `exists` and `stat`, which do

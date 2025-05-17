@@ -131,6 +131,7 @@ ExprItem: Box<Node> = {
     <key:For> <id:Identifier> Equals <iter:Expr> Separators? BlockStart <body: ExprJobList> BlockEnd => Node::for_expr(key, id.into(), iter, body),
     <i: ExprItem> GetItemStart <e: Assignment> GetItemEnd => Box::from(Node::GetItem(i, e)),
     <i: ExprItem> MemberOperator <l: Identifier> => Box::from(Node::GetAttr(i, l.into())),
+    GetItemStart <l: ExprJobList> GetItemEnd => Node::list_literal(l),
     <i: ExprItem> ExprModeStart <ov: ExprOptList> SubEnd => {
         let l = i.location();
         let mut v = match ov {
