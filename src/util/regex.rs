@@ -2,20 +2,25 @@ use crate::lang::printer::Printer;
 use regex::Regex;
 use std::fs::read_dir;
 use std::path::{Path, PathBuf};
+use crate::lang::errors;
+use crate::lang::errors::{CrushError, CrushErrorType, CrushResult};
 
 pub trait RegexFileMatcher {
-    fn match_files(&self, cwd: &Path, out: &mut Vec<PathBuf>, printer: &Printer);
+    fn match_files(&self, cwd: &Path, out: &mut Vec<PathBuf>) -> CrushResult<()>;
 }
 
 impl RegexFileMatcher for Regex {
-    fn match_files(&self, p: &Path, out: &mut Vec<PathBuf>, printer: &Printer) {
+    fn match_files(&self, p: &Path, out: &mut Vec<PathBuf>) -> CrushResult<()> {
         match read_dir(p) {
             Ok(dir) => {
                 for e in dir {
                     match e {
                         Ok(entry) => {
                             match entry.file_name().to_str() {
-                                None => printer.error("Invalid filename encountered. Sadly, I cannot tell you what it is. Because it's invalid."),
+                                None => {
+                                    return errors::error(
+                                        "Invalid filename encountered. Sadly, I cannot tell you what it is. Because it's invalid.");
+                                }
                                 Some(name) => {
                                     if self.is_match(name) {
                                         out.push(p.join(entry.file_name()));
@@ -23,11 +28,16 @@ impl RegexFileMatcher for Regex {
                                 },
                             }
                         }
-                        e => printer.handle_error(e.map_err(|ee| ee.into())),
+                        Err(e) => {
+                            return Err(CrushError::from(e));
+                        }
                     }
                 }
             }
-            e => printer.handle_error(e.map_err(|ee| ee.into())),
+            Err(e) => {
+                return Err(CrushError::from(e));
+            }
         }
+        Ok(())
     }
 }

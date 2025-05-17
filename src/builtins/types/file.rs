@@ -45,69 +45,6 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
 }
 
 #[signature(
-    types.file.stat,
-    can_block = false,
-    output = Known(ValueType::Struct),
-    short = "Return a struct with information about a file.",
-    long = "The return value contains the following fields:",
-    long = "* is_socket:bool is the file is a socket",
-    long = "* is_symlink:bool is the file a symbolic link",
-    long = "* is_block_device:bool is the file a block device",
-    long = "* is_directory:bool is the file is a directory",
-    long = "* is_character_device:bool is the file a character_device",
-    long = "* is_fifo:bool is the file a fifo",
-    long = "* inode:integer the inode number of the file",
-    long = "* nlink:integer the number of hardlinks to the file",
-    long = "* uid: The user id of the file owner",
-    long = "* gid: The group id of the file owner",
-    long = "* size: File size in bytes",
-    long = "* block_size: The size of a single block on the device storing this file",
-    long = "* blocks: The number of blocks used to store this file",
-    long = "* access_time: The last time this file was accessed",
-    long = "* modification_time: The last time this file was modified",
-    long = "* creation_time: The time this file was created",
-)]
-struct Stat {
-    #[description("If true, stat will not follow symlinks and instead return information about the link itself"
-    )]
-    #[default(false)]
-    symlink: bool,
-}
-
-pub fn stat(mut context: CommandContext) -> CrushResult<()> {
-    let file = context.this.file()?;
-    let cfg = Stat::parse(context.remove_arguments(), context.global_state.printer())?;
-    let metadata =
-        if cfg.symlink {
-            lstat(&file)
-        } else {
-            nix::sys::stat::stat(&file)
-        }?;
-    context.output.send(Value::Struct(Struct::new(
-        vec![
-            ("is_socket", Value::Bool((metadata.st_mode & S_IFSOCK) != 0)),
-            ("is_symlink", Value::Bool((metadata.st_mode & S_IFLNK) != 0)),
-            ("is_file", Value::Bool((metadata.st_mode & S_IFREG) != 0)),
-            ("is_block_device", Value::Bool((metadata.st_mode & S_IFBLK) != 0)),
-            ("is_directory", Value::Bool((metadata.st_mode & S_IFDIR) != 0)),
-            ("is_character_device", Value::Bool((metadata.st_mode & S_IFCHR) != 0)),
-            ("is_fifo", Value::Bool((metadata.st_mode & S_IFIFO) != 0)),
-            ("inode", Value::Integer(metadata.st_ino as i128)),
-            ("nlink", Value::Integer(metadata.st_nlink as i128)),
-            ("uid", Value::Integer(metadata.st_uid as i128)),
-            ("gid", Value::Integer(metadata.st_gid as i128)),
-            ("size", Value::Integer(metadata.st_size as i128)),
-            ("block_size", Value::Integer(metadata.st_blksize as i128)),
-            ("blocks", Value::Integer(metadata.st_blocks as i128)),
-            ("access_time", Value::Time(DateTime::from_timestamp(metadata.st_atime, 0).unwrap().with_timezone(&Local))),
-            ("modification_time", Value::Time(DateTime::from_timestamp(metadata.st_mtime, 0).unwrap().with_timezone(&Local))),
-            ("creation_time", Value::Time(DateTime::from_timestamp(metadata.st_ctime, 0).unwrap().with_timezone(&Local))),
-        ],
-        None,
-    )))
-}
-
-#[signature(
     types.file.chown,
     can_block = false,
     output = Known(ValueType::Empty),

@@ -77,11 +77,11 @@ impl Files {
         }
     }
 
-    pub fn expand(&mut self, value: Value, printer: &Printer) -> CrushResult<()> {
+    pub fn expand(&mut self, value: Value) -> CrushResult<()> {
         match value {
             Value::File(p) => self.files.push(p.to_path_buf()),
             Value::Glob(pattern) => pattern.glob_files(&PathBuf::from("."), &mut self.files)?,
-            Value::Regex(_, re) => re.match_files(&cwd()?, &mut self.files, printer),
+            Value::Regex(_, re) => re.match_files(&cwd()?, &mut self.files)?,
             Value::String(f) => self.files.push(PathBuf::from(f.deref())),
             value => match value.stream()? {
                 None => return argument_error_legacy("Expected a file name"),

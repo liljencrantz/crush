@@ -447,11 +447,11 @@ fn files_type_data(
             name.to_string()
         ),
         initialize: quote! { let mut #name = crate::lang::signature::files::Files::new(); },
-        mappings: quote! { (Some(#name_literal), value) => #name.expand(value, _printer)?, },
+        mappings: quote! { (Some(#name_literal), value) => #name.expand(value)?, },
         unnamed_mutate: if is_unnamed_target {
             Some(quote! {
                             while !_unnamed.is_empty() {
-                                #name.expand(_unnamed.pop_front().unwrap().0, _printer)?;
+                                #name.expand(_unnamed.pop_front().unwrap().0)?;
                             }
                         })
         } else {

@@ -353,7 +353,7 @@ impl Value {
             Value::String(s) => v.push(PathBuf::from(s.to_string())),
             Value::File(p) => v.push(p.to_path_buf()),
             Value::Glob(pattern) => pattern.glob_files(&PathBuf::from("."), v)?,
-            Value::Regex(_, re) => re.match_files(&cwd()?, v, printer),
+            Value::Regex(_, re) => re.match_files(&cwd()?, v)?,
             val => match val.stream()? {
                 None => return error("Expected a file name"),
                 Some(mut s) => {
