@@ -89,7 +89,7 @@ struct Metadata {
     can_block: bool,
     short_description: Option<String>,
     long_description: Vec<String>,
-    example: Option<String>,
+    example: Vec<String>,
     output: Option<TokenStream>,
     #[allow(unused)]
     condition: bool,
@@ -150,7 +150,7 @@ fn parse_full_name(location: Span, name_tree: &[TokenTree]) -> SignatureResult<(
 
 fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
     let mut can_block = true;
-    let mut example = None;
+    let mut example = Vec::new();
     let mut short_description = None;
     let mut long_description = Vec::new();
     let mut output: Option<TokenStream> = None;
@@ -191,7 +191,7 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
                         match (name.to_string().as_str(), p.as_char()) {
                             ("short", '=') => short_description = Some(unescaped),
                             ("long", '=') => long_description.push(unescaped),
-                            ("example", '=') => example = Some(unescaped),
+                            ("example", '=') => example.push(unescaped),
                             _ => return fail!(l.span(), "Unknown argument"),
                         }
                     }
@@ -249,7 +249,7 @@ fn generate_signature(path: &[String], signature: Vec<String>) -> String {
 
 fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<TokenStream> {
     let metadata_location = metadata.span();
-    let metadata = parse_metadata(metadata)?;
+    let mut metadata = parse_metadata(metadata)?;
 
     let description = Literal::string(
         metadata
@@ -344,8 +344,12 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 };
                 if let Some(description) = description {
                     if !had_field_description {
+                        if !long_description.is_empty() {
+                            long_description.push("".to_string());
+                        }
                         long_description
                             .push("This command accepts the following arguments:".to_string());
+                        long_description.push("".to_string());
                         had_field_description = true;
                     }
                     long_description.push(format!(
@@ -393,16 +397,20 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 });
             }
 
-            if let Some(example) = metadata.example {
+            if !metadata.example.is_empty() {
+                if !long_description.is_empty() {
+                    long_description.push("".to_string());
+                }
                 long_description.push("Example".to_string());
-                long_description.push(example);
+                long_description.push("".to_string());
+                long_description.append(&mut metadata.example);
             }
 
             let signature_literal = Literal::string(&generate_signature(&metadata.path, signature));
 
             let long_description = if !long_description.is_empty() {
                 let mut s = "    ".to_string();
-                s.push_str(&long_description.join("\n\n    "));
+                s.push_str(&long_description.join("\n    "));
                 let text = Literal::string(&s);
                 quote! {Some(#text) }
             } else {

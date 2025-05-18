@@ -26,3 +26,5 @@ Add signal handlers to fix ^C and ^Z during regular execution
 Show errors from loading config
 Document @ and @@
 Dict literals in math mode
+Ability to enter/exit math mode
+Create median command

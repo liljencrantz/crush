@@ -43,6 +43,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             join::Join::declare(env)?;
             aggregation::Sum::declare(env)?;
             aggregation::Avg::declare(env)?;
+            aggregation::Median::declare(env)?;
             aggregation::Min::declare(env)?;
             aggregation::Max::declare(env)?;
             aggregation::Prod::declare(env)?;

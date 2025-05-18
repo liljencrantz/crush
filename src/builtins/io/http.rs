@@ -34,7 +34,7 @@ long = "* body:binary_stream, the content of the reply",
 long = "",
 long = "The http status codes and corresponding names are defined in",
 long = "https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml",
-example = "http \"https://example.com/\" header=(\"Authorization: Bearer {}\":format token)",
+example = "http \"https://example.com/\" header=$(\"Authorization: Bearer {}\":format $token)",
 can_block = true
 )]
 pub struct Http {

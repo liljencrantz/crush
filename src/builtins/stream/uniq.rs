@@ -10,10 +10,11 @@ use crate::lang::command::OutputType::Passthrough;
 #[signature(
     stream.uniq,
     output = Passthrough,
-    short = "Only output the first row if multiple rows has the same value for the specified column",
+    short = "Only output the first row whenever multiple consecutive rows has the same value for the specified column",
     long = "If no column is given, the entire rows are compared.",
     example = "host:procs | uniq user")]
 pub struct Uniq {
+    #[description("The field to compare.")]
     field: Option<String>,
 }
 
@@ -44,6 +45,6 @@ pub fn uniq(context: CommandContext) -> CrushResult<()> {
             }
             Ok(())
         }
-        _ => error("Expected io to be a stream"),
+        _ => error("Expected input to be a stream"),
     }
 }

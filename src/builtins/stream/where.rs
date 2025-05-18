@@ -12,9 +12,10 @@ use crate::lang::pipe::pipe;
     stream.r#where,
     can_block = true,
     output = Passthrough,
-    short = "Filter out rows from io based on condition",
+    short = "Filter out rows from input based on condition",
     long = "The columns of the row are exported to the environment using the column names.",
-    example = "host:procs | where {status != \"Sleeping\"}")]
+    example = "# List all subdirectories to the current working directory",
+    example = "files | where {$type == directory}")]
 pub struct Where {
     #[description("the condition to filter on.")]
     condition: Command,

@@ -30,7 +30,9 @@ mod yaml;
     short = "Return value",
     output = Known(ValueType::Any),
     example = "val $val",
-    long = "This command is useful if you want to pass a command as input in\n    a pipeline instead of executing it. It is different from the echo command\n    in that val sends the value through the pipeline, whereas echo prints it to screen."
+    long = "This command is useful if you want to pass a command as input in",
+    long= "a pipeline instead of executing it. It is different from the echo command",
+    long = "in that val sends the value through the pipeline, whereas echo prints it to screen."
 )]
 struct Val {
     #[description("the value to pass as output.")]
@@ -66,7 +68,11 @@ pub fn dir(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    io.echo, can_block = false, short = "Prints all arguments directly to the screen", output = Known(ValueType::Empty), example = "echo \"Hello, world!\""
+    io.echo,
+    can_block = false,
+    short = "Prints all arguments directly to the screen",
+    output = Known(ValueType::Empty),
+    example = "echo \"Hello, world!\""
 )]
 struct Echo {
     #[description("the values to print.")]
@@ -96,8 +102,9 @@ fn echo(context: CommandContext) -> CrushResult<()> {
 #[signature(
     io.member,
     can_block = false,
-    short = "Extracts one member from the input struct.",
-    example = "http \"example.com\" | member body | json:from"
+    short = "Extract one member from the input struct.",
+    example = "$uri := \"https://raw.githubusercontent.com/liljencrantz/crush/refs/heads/master/example_data/dinosaurs.json\"",
+    example = "http $uri | member body | json:from"
 )]
 struct Member {
     #[description("the member to extract.")]
@@ -106,9 +113,6 @@ struct Member {
 
 fn member(context: CommandContext) -> CrushResult<()> {
     let cfg: Member = Member::parse(context.arguments, &context.global_state.printer())?;
-    if cfg.field.len() != 1 {
-        return argument_error_legacy("Invalid field - should have exactly one element");
-    }
     match context.input.recv()? {
         Value::Struct(s) => context.output.send(mandate(
             s.get(&cfg.field),

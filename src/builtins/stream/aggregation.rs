@@ -42,6 +42,8 @@ sum_function!(sum_duration, Duration, Duration::seconds(0), Duration);
 #[signature(
     stream.sum,
     short = "Calculate the sum for the specific column across all rows.",
+    long = "If the input only has one column, the column name is optional.",
+    long = "The column type must be numeric or a duration.",
     example = "proc:list | sum cpu")]
 pub struct Sum {
     field: Option<String>,
@@ -94,7 +96,9 @@ avg_function!(avg_duration, Duration, Duration::seconds(0), Duration, i32);
 #[signature(
     stream.avg,
     short = "Calculate the average for the specific column across all rows.",
-    example = "proc:list | avg cpu")]
+    long = "If the input only has one column, the column name is optional.",
+    long = "The column type must be numeric or a duration.",
+    example = "host:procs | avg cpu")]
 pub struct Avg {
     field: Option<String>,
 }
@@ -119,6 +123,71 @@ fn avg(context: CommandContext) -> CrushResult<()> {
         _ => error("Expected a stream"),
     }
 }
+
+macro_rules! median_function {
+    ($name:ident, $var_type:ident, $var_initializer:expr, $value_type:ident, $count_type:ident, $halver:expr) => {
+        fn $name(mut s: Stream, column: usize) -> CrushResult<Value> {
+            let mut res: Vec<$var_type> = Vec::new();
+            loop {
+                match s.read() {
+                    Ok(row) => {
+                        match row.cells()[column] {
+                            Value::$value_type(i) => res.push(i),
+                            _ => return error("Invalid cell value"),
+                        }
+                    }
+                    Err(_) => break,
+                }
+            }
+            res.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            if (res.is_empty()) {
+                argument_error_legacy("Can't calculate median of empty set")
+            } else if (res.len() % 2 == 1) {
+                Ok(Value::$value_type(res[(res.len()-1)/2]))
+            } else {
+                let low = res[(res.len()/2) - 1];
+                let high = res[(res.len()/2)];
+                Ok(Value::$value_type((low+high)/$halver))
+            }
+        }
+    };
+}
+
+median_function!(median_int, i128, 0, Integer, i128, 2);
+median_function!(median_float, f64, 0.0, Float, f64, 2.0);
+median_function!(median_duration, Duration, Duration::seconds(0), Duration, i32, 2);
+
+#[signature(
+    stream.median,
+    short = "Calculate the median for the specific column across all rows.",
+    long = "If the input only has one column, the column name is optional.",
+    long = "The column type must be numeric or a duration.",
+    example = "host:procs | median cpu")]
+pub struct Median {
+    field: Option<String>,
+}
+
+fn median(context: CommandContext) -> CrushResult<()> {
+    match context.input.recv()?.stream()? {
+        Some(input) => {
+            let cfg: Median = Median::parse(context.arguments, &context.global_state.printer())?;
+            let column = parse(input.types(), cfg.field)?;
+            match &input.types()[column].cell_type {
+                ValueType::Integer => context.output.send(crate::builtins::stream::aggregation::median_int(input, column)?),
+                ValueType::Float => context.output.send(crate::builtins::stream::aggregation::median_float(input, column)?),
+                ValueType::Duration => context.output.send(crate::builtins::stream::aggregation::median_duration(input, column)?),
+                t => argument_error_legacy(
+                    &format!(
+                        "Can't calculate average of elements of type {}",
+                        t
+                    ),
+                ),
+            }
+        }
+        _ => error("Expected a stream"),
+    }
+}
+
 
 macro_rules! aggr_function {
     ($name:ident, $value_type:ident, $desc:literal, $op:expr) => {
@@ -164,7 +233,8 @@ aggr_function!(max_file, File, "file", |a, b| std::cmp::max(a, b));
 #[signature(
     stream.min,
     short = "Calculate the minimum for the specific column across all rows.",
-    long = "If the input only has one column, the column name is optional.\n\n    The column can be numeric, temporal, a string or a file.",
+    long = "If the input only has one column, the column name is optional.",
+    long = "The column can be numeric, temporal, a string or a file.",
     example = "host:procs | min cpu")]
 pub struct Min {
     field: Option<String>,
@@ -194,7 +264,8 @@ fn min(context: CommandContext) -> CrushResult<()> {
 #[signature(
     stream.max,
     short = "Calculate the maximum for the specific column across all rows.",
-    long = "If the input only has one column, the column name is optional.\n\n    The column can be numeric, temporal, a string or a file.",
+    long = "If the input only has one column, the column name is optional.",
+    long = "The column can be numeric, temporal, a string or a file.",
     example = "host:procs | max cpu")]
 pub struct Max {
     field: Option<String>,
@@ -241,7 +312,9 @@ prod_function!(prod_float, f64, 1.0, Float);
 
 #[signature(
     stream.prod,
-    short = "Calculate the product for the specific column across all rows.",
+    short = "Calculate the product of the specified column across all rows.",
+    long = "Specifying the column is optional if the stream only has one column.",
+    long = "The column type must be numeric.",
     example = "seq 5 10 | prod")]
 pub struct Prod {
     field: Option<String>,
@@ -267,6 +340,9 @@ fn prod(context: CommandContext) -> CrushResult<()> {
 #[signature(
     stream.first,
     short = "Return the value of the specified column from the first row of the stream.",
+    long = "Specifying the column is optional if the stream only has one column.",
+    example = "# Find the name of the process with the lowest cumulative CPU usage",
+    example = "host:procs | sort cpu | first name",
 )]
 pub struct First {
     field: Option<String>,
@@ -291,6 +367,9 @@ fn first(context: CommandContext) -> CrushResult<()> {
 #[signature(
     stream.last,
     short = "Return the value of the specified column from the last row of the stream.",
+    long = "Specifying the column is optional if the stream only has one column.",
+    example = "# Find the name of the process with the highest cumulative CPU usage",
+    example = "host:procs | sort cpu | last name",
 )]
 pub struct Last {
     field: Option<String>,

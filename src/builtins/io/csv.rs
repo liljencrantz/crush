@@ -16,14 +16,14 @@ use signature::signature;
 
 #[signature(
     io.csv.from,
-    example = "csv:from separator=\",\" head=1 name=string age=integer nick=string",
+    example = "csv:from separator=\",\" head=1 name=$string age=$integer nick=$string",
     short = "Parse specified files as CSV files"
 )]
 #[derive(Debug)]
 struct From {
     #[unnamed()]
     #[description(
-        "source. If unspecified, will read from io, which must be a binary or binary_stream."
+        "source. If unspecified, will read from input, which must be a binary or binary_stream."
     )]
     files: Files,
     #[named()]
@@ -33,7 +33,7 @@ struct From {
     #[default(',')]
     separator: char,
     #[default(0usize)]
-    #[description("skip this many lines of inpit from the beginning.")]
+    #[description("skip this many lines of input from the beginning.")]
     head: usize,
     #[description("trim this character from start and end of every value.")]
     trim: Option<char>,
@@ -66,7 +66,13 @@ fn from(context: CommandContext) -> CrushResult<()> {
             skipped += 1;
             continue;
         }
-        let line_without_newline = if line.ends_with('\n') {&line[0..line.len() - 1]} else {&line};
+        let line_without_newline =
+            if line.ends_with('\n') {
+                &line[0..line.len() - 1]
+            } else {
+                &line
+            };
+
         let mut split: Vec<&str> = line_without_newline
             .split(separator)
             .map(|s| trim.map(|c| s.trim_matches(c)).unwrap_or(s))

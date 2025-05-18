@@ -28,7 +28,6 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
     CELL.get_or_init(|| {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
-        Stat::declare_method(&mut res);
         Chown::declare_method(&mut res);
         Chmod::declare_method(&mut res);
         Exists::declare_method(&mut res);

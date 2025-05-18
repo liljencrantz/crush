@@ -148,7 +148,7 @@ pub fn value_to_json(v: Value) -> CrushResult<String> {
     can_block = true,
     output = Unknown,
     short = "Parse json format",
-    example = "(http \"https://jsonplaceholder.typicode.com/todos/3\"):body | json:from")]
+    example = "http \"https://jsonplaceholder.typicode.com/todos/3\"| member body | json:from")]
 struct FromSignature {
     #[unnamed()]
     files: Files,
@@ -167,7 +167,7 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
     can_block = true,
     output = Unknown,
     short = "Serialize to json format",
-    example = "ls | json:to")]
+    example = "files | json:to")]
 struct To {
     #[unnamed()]
     file: Files,

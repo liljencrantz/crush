@@ -9,7 +9,7 @@ use crate::lang::command::OutputType::Passthrough;
     stream.skip,
     can_block = true,
     output = Passthrough,
-    short = "Skip the specified number of rows in the stream and return the rest.",
+    short = "Skip the specified number of rows in the stream and return the remainder.",
 )]
 pub struct Skip {
     #[description("the number of rows to skip.")]

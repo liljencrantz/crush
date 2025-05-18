@@ -11,7 +11,8 @@ use std::cmp::Ordering;
     stream.sort,
     can_block = true,
     short = "Sort input based on column",
-    example = "host:procs | sort cpu",
+    example = "# Show the contents of the current directory, sorted first on type and then on filename",
+    example = "files | sort type file",
     output = Passthrough)]
 pub struct Sort {
     #[unnamed()]
