@@ -2,12 +2,12 @@
 name = "crush"
 version = "0.1.0"
 authors = ["Axel Liljencrantz <liljencrantz@gmail.com>"]
-edition = "2021"
+edition = "2024"
 license-file = "LICENSE"
 description = "A command line shell that is also a powerful and modern programming language"
 readme = "README.md"
 repository = "https://github.com/liljencrantz/crush"
-rust-version = "1.71.0"
+rust-version = "1.85.0"
 
 [build-dependencies.prost-build]
 version = "0.12.6"
