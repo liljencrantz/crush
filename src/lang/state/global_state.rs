@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use rustyline::Editor;
 use rustyline::history::DefaultHistory;
 use crate::interactive::rustyline_helper::RustylineHelper;
+use crate::lang::ast::lexer::LexerMode;
 use crate::lang::value::Value;
 use crate::util::byte_unit::ByteUnit;
 use crate::util::temperature::Temperature;
@@ -16,7 +17,6 @@ use crate::util::temperature::Temperature;
 A type representing the shared crush state, such as the printer, the running jobs, the running
 threads, etc.
  */
-
 #[derive(Clone)]
 pub struct FormatData {
     locale: SystemLocale,
@@ -27,7 +27,7 @@ pub struct FormatData {
     byte_unit: ByteUnit,
 }
 
-fn country(locale: & str) -> Option<&str> {
+fn country(locale: &str) -> Option<&str> {
     let dot_split = locale.splitn(2, '.').collect::<Vec<_>>();
     let under_split = dot_split[0].splitn(2, '_').collect::<Vec<_>>();
     if under_split.len() == 2 {
@@ -38,7 +38,6 @@ fn country(locale: & str) -> Option<&str> {
 }
 
 impl FormatData {
-
     pub fn grouping(&self) -> Grouping {
         self.locale.grouping()
     }
@@ -52,7 +51,7 @@ impl FormatData {
     }
 
     pub fn temperature(&self) -> Temperature {
-        self.temperature.unwrap_or_else(||{
+        self.temperature.unwrap_or_else(|| {
             match country(self.locale.name()) {
                 // Countries that use Fahrenheit
                 Some("US") | Some("BS") | Some("PW") |
@@ -91,6 +90,7 @@ struct StateData {
     prompt: Option<Command>,
     jobs: Vec<Option<LiveJob>>,
     exit_status: Option<i32>,
+    mode: LexerMode,
 }
 
 #[derive(Clone, Copy)]
@@ -126,9 +126,9 @@ pub struct LiveJob {
 }
 
 /**
-  A resource tracker. Once it reaches zero, the job is done, and it is removed from the global job
-  table.
-*/
+A resource tracker. Once it reaches zero, the job is done, and it is removed from the global job
+table.
+ */
 #[derive(Clone)]
 pub struct JobHandle {
     internal: Arc<Mutex<JobHandleInternal>>,
@@ -154,9 +154,8 @@ impl Drop for JobHandleInternal {
 }
 
 impl GlobalState {
-
     pub fn new(printer: Printer) -> CrushResult<GlobalState> {
-        let locale = SystemLocale::default().or_else(|_| {SystemLocale::from_name("C")})?;
+        let locale = SystemLocale::default().or_else(|_| { SystemLocale::from_name("C") })?;
         Ok(GlobalState {
             data: Arc::from(Mutex::new(StateData {
                 format_data: FormatData {
@@ -170,6 +169,7 @@ impl GlobalState {
                 exit_status: None,
                 prompt: None,
                 jobs: Vec::new(),
+                mode: LexerMode::Command,
             })),
             threads: ThreadStore::new(),
             printer,
@@ -214,7 +214,17 @@ impl GlobalState {
     pub fn exit_status(&self) -> Option<i32> {
         let data = self.data.lock().unwrap();
         data.exit_status
-        }
+    }
+
+    pub fn set_mode(&self, mode: LexerMode) {
+        let mut data = self.data.lock().unwrap();
+        data.mode = mode;
+    }
+
+    pub fn mode(&self) -> LexerMode {
+        let data = self.data.lock().unwrap();
+        data.mode
+    }
 
     pub fn set_locale(&self, new_locale: SystemLocale) {
         let mut data = self.data.lock().unwrap();

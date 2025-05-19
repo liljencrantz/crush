@@ -19,6 +19,7 @@ use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::value::{ValueDefinition, Value};
 use crate::lang::ast::location::Location;
 use crate::lang::state::contexts::JobContext;
+use crate::lang::state::global_state;
 
 const DEFAULT_PROMPT: &'static str = "crush# ";
 
@@ -100,8 +101,6 @@ pub fn run(
     editor.set_helper(Some(h));
     global_state.set_editor(Some(editor));
 
-    let mut mode = LexerMode::Command;
-
     if let Ok(file) = crush_history_file() {
         let _ = global_state.editor().as_mut().map(|rl| { rl.load_history(&file) });
     }
@@ -121,7 +120,7 @@ pub fn run(
                     global_state.threads().reap(global_state.printer())
                 } else {
 
-                    match (cmd.trim(), mode) {
+                    match (cmd.trim(), global_state.mode()) {
                         ("!!", _) => {
                             cmd = global_state
                                 .editor().as_mut()
@@ -129,11 +128,11 @@ pub fn run(
                                 .unwrap_or(None).unwrap_or(cmd);
                         }
                         ("(", LexerMode::Command) => {
-                            mode = LexerMode::Expression;
+                            global_state.set_mode(LexerMode::Expression);
                             continue;
                         }
                         (")", LexerMode::Expression) => {
-                            mode = LexerMode::Command;
+                            global_state.set_mode(LexerMode::Command);
                             continue;
                         }
                         _ => {}
@@ -146,7 +145,7 @@ pub fn run(
                             execute::string(
                                 &global_env,
                                 &cmd,
-                                mode,
+                                global_state.mode(),
                                 pretty_printer,
                                 global_state,
                             ));

@@ -13,6 +13,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::sync::{Arc, OnceLock};
 use nix::errno::Errno;
+use nix::fcntl::AT_FDCWD;
 use nix::libc::S_IFDIR;
 use nix::sys::stat::{lstat, utimensat, UtimensatFlags};
 use nix::sys::time::TimeSpec;
@@ -476,7 +477,7 @@ fn touch(mut context: CommandContext) -> CrushResult<()> {
     let file = context.this.file()?;
     let cfg = Touch::parse(context.remove_arguments(), context.global_state.printer())?;
 
-    match utimensat(None, &file, &TimeSpec::UTIME_NOW, &TimeSpec::UTIME_NOW, UtimensatFlags::FollowSymlink) {
+    match utimensat(AT_FDCWD, &file, &TimeSpec::UTIME_NOW, &TimeSpec::UTIME_NOW, UtimensatFlags::FollowSymlink) {
         Ok(_) => Ok(()),
         Err(Errno::ENOENT) => {
             if !cfg.no_create {

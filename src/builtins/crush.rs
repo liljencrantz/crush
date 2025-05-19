@@ -68,8 +68,15 @@ mod prompt {
     use crate::lang::errors::CrushResult;
     use crate::lang::state::contexts::CommandContext;
     use crate::lang::value::Value;
+    use crate::lang::command::OutputType::Known;
+    use crate::lang::value::ValueType;
 
-    #[signature(crush.prompt.set, can_block = false, short = "Set a new prompt")]
+    #[signature(
+        crush.prompt.set,
+        can_block = false,
+        short = "Set a new prompt",
+        output = Known(ValueType::Empty)
+    )]
     pub struct Set {
         prompt: Command,
     }
@@ -80,7 +87,11 @@ mod prompt {
         context.output.send(Value::Empty)
     }
 
-    #[signature(crush.prompt.get, can_block = false, short = "Get the current prompt")]
+    #[signature(
+        crush.prompt.get,
+        can_block = false,
+        short = "Get the current prompt")
+    ]
     pub struct Get {
     }
 
@@ -88,6 +99,32 @@ mod prompt {
         Get::parse(context.arguments, &context.global_state.printer())?;
         context.output.send(context.global_state.prompt().map(|cmd| {Value::Command(cmd)}).unwrap_or(Value::Empty))
     }
+
+    pub mod mode {
+        use signature::signature;
+        use crate::lang::ast::lexer::LexerMode;
+        use crate::lang::errors::CrushResult;
+        use crate::lang::state::contexts::CommandContext;
+        use crate::lang::value::Value;
+        use crate::lang::command::OutputType::Known;
+        use crate::lang::value::ValueType;
+
+        #[signature(
+            crush.prompt.get,
+            can_block = false,
+            output = Known(ValueType::String),
+            short = "Returns the current language mode")
+        ]
+        pub struct Get {}
+
+        fn get(context: CommandContext) -> CrushResult<()> {
+            context.output.send(Value::from(match context.global_state.mode() {
+                LexerMode::Command => "command",
+                LexerMode::Expression => "expression",
+            }))
+        }
+    }
+
 }
 
 static JOB_OUTPUT_TYPE: [ColumnType; 2] = [
@@ -308,6 +345,14 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 Box::new(move |env| {
                     prompt::Set::declare(env)?;
                     prompt::Get::declare(env)?;
+
+                    env.create_namespace(
+                        "mode",
+                        "Crush language mode",
+                        Box::new(move |env| {
+                            prompt::mode::Get::declare(env)?;
+                            Ok(())
+                        }))?;
                     Ok(())
                 }),
             )?;
@@ -316,6 +361,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Exit::declare(crush)?;
             Jobs::declare(crush)?;
             HistoryCommand::declare(crush)?;
+
 
             crush.create_namespace(
                 "locale",

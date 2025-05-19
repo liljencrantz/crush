@@ -3,7 +3,7 @@ use rustyline::{validate, Context};
 use std::borrow::Cow::{Owned, Borrowed};
 use std::borrow::Cow;
 use rustyline::hint::{Hinter, HistoryHinter};
-use rustyline::highlight::{Highlighter, MatchingBracketHighlighter};
+use rustyline::highlight::{CmdKind, Highlighter, MatchingBracketHighlighter};
 use rustyline::error::ReadlineError;
 use rustyline::completion::{Pair, Completer};
 use crate::lang::errors::CrushResult;
@@ -190,7 +190,7 @@ impl Highlighter for RustylineHelper {
         Owned("\x1b[1m".to_owned() + hint + "\x1b[m")
     }
 
-    fn highlight_char(&self, _line: &str, _pos: usize, _forced: bool) -> bool {
+    fn highlight_char(&self, _line: &str, _pos: usize, _forced: CmdKind) -> bool {
         true
     }
 }
