@@ -116,12 +116,12 @@ including classes and closures, can be losslessly serialized into this format.
 But because Pup is Crush-specific, it's useless for data sharing to
 other languages.
 
-### Math mode
+### Expression mode
 
 Crush allows you to perform mathematical calculations on integer and floating
 point numbers directly in the shell using the same mathematical operators
 used in almost any other programming language. To do so, you must enter a
-sepraate mode called "math mode". You do so using parenthesis:
+seprate mode called "expression mode". You do so using parenthesis:
 
     crush# (5+6)
     11
@@ -136,6 +136,12 @@ just like in most languages. All comparisons between values of different types r
     crush# (40.0 > 5)
     Error: Values of type float and integer can't be compared with each other
     Error: receiving on an empty and disconnected channel
+
+Expression mode is a fully functional secondary mode of crush. You invoke a command
+using parenthesis, pipes still work, etc.
+
+    # An entire pipeline written in command mode 
+    (files() | sort("file", reverse=true) | where({size < 1000}))
 
 ### Conditional operators
 

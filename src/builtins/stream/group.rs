@@ -4,12 +4,12 @@ use crate::lang::state::contexts::CommandContext;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::printer::Printer;
 use crate::lang::state::scope::Scope;
-use crate::lang::pipe::{pipe, InputStream};
+use crate::lang::pipe::{pipe, TableInputStream};
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::ColumnVec;
 use crate::{
     lang::errors::argument_error_legacy,
-    lang::pipe::{unlimited_streams, OutputStream},
+    lang::pipe::{unlimited_streams, TableOutputStream},
     lang::{data::table::Row, value::Value, value::ValueType},
 };
 use crossbeam::channel::{unbounded, Receiver};
@@ -38,8 +38,8 @@ fn aggregate(
     context: &CommandContext,
     global_state: GlobalState,
     scope: Scope,
-    destination: OutputStream,
-    task_input: Receiver<(Vec<Value>, InputStream)>,
+    destination: TableOutputStream,
+    task_input: Receiver<(Vec<Value>, TableInputStream)>,
 ) -> CrushResult<()> {
     while let Ok((key, rows)) = task_input.recv() {
         match commands.len() {
@@ -101,8 +101,8 @@ fn create_worker_thread(
     cfg: &Group,
     printer: &Printer,
     scope: &Scope,
-    destination: &OutputStream,
-    task_input: &Receiver<(Vec<Value>, InputStream)>,
+    destination: &TableOutputStream,
+    task_input: &Receiver<(Vec<Value>, TableInputStream)>,
     context: &CommandContext,
     global_state: &GlobalState,
 ) -> CrushResult<()> {
@@ -162,9 +162,9 @@ pub fn group(mut context: CommandContext) -> CrushResult<()> {
     }
 
     let output = context.output.initialize(&output_type)?;
-    let mut groups: HashMap<Vec<Value>, OutputStream> = HashMap::new();
+    let mut groups: HashMap<Vec<Value>, TableOutputStream> = HashMap::new();
 
-    let (task_output, task_input) = unbounded::<(Vec<Value>, InputStream)>();
+    let (task_output, task_input) = unbounded::<(Vec<Value>, TableInputStream)>();
 
     for _ in 0..16 {
         create_worker_thread(

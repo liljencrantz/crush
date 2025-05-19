@@ -1,7 +1,7 @@
 use crate::lang::errors::{CrushResult};
 use crate::lang::signature::files::Files;
 use crate::lang::state::scope::ScopeLoader;
-use crate::lang::pipe::OutputStream;
+use crate::lang::pipe::TableOutputStream;
 use crate::lang::{
     data::table::ColumnType, data::table::Row, value::Value,
     value::ValueType,
@@ -29,7 +29,7 @@ struct From {
 }
 
 fn send(
-    output: &OutputStream,
+    output: &TableOutputStream,
     trim: &Option<String>,
     allow_empty: bool,
     mut ptr: &str,

@@ -3,7 +3,7 @@ use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::errors::CrushResult;
 use std::path::{Path, PathBuf};
-use crate::lang::pipe::OutputStream;
+use crate::lang::pipe::TableOutputStream;
 use crate::lang::data::table::Row;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
@@ -42,7 +42,7 @@ fn size(
     silent: bool,
     all: bool,
     is_directory: bool,
-    output: &OutputStream,
+    output: &TableOutputStream,
     lister: &impl DirectoryLister,
 ) -> CrushResult<(u64, u64)> {
     let mut sz = path.metadata().map(|m| m.size()).unwrap_or(0);

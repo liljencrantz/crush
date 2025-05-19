@@ -7,6 +7,7 @@ use crate::lang::value::Value;
 use std::io::Write;
 use std::path::Path;
 use std::{fs};
+use crate::lang::ast::lexer::LexerMode;
 use crate::lang::state::global_state::GlobalState;
 
 pub fn file(
@@ -16,7 +17,7 @@ pub fn file(
     global_state: &GlobalState,
 ) -> CrushResult<()> {
     let cmd = fs::read_to_string(filename)?;
-    string(global_env, &cmd.as_str(), output, global_state)
+    string(global_env, &cmd.as_str(), LexerMode::Command, output, global_state)
 }
 
 pub fn pup(
@@ -54,10 +55,11 @@ pub fn pup(
 pub fn string(
     global_env: &Scope,
     command: &str,
+    initial_mode: LexerMode,
     output: &ValueSender,
     global_state: &GlobalState,
 ) -> CrushResult<()> {
-    let jobs = global_state.parser().parse(command, &global_env)?;
+    let jobs = global_state.parser().parse(command, &global_env, initial_mode)?;
     for job_definition in jobs {
         let handle = job_definition.eval(JobContext::new(
             empty_channel(),

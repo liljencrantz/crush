@@ -189,8 +189,8 @@ fn parse_message_type<'a>(context: &CommandContext, name: &str, grpc: &Grpc, kno
     }
     let signature = grpc.call(context, None, vec!["describe", name])?;
 
-    static regex: OnceLock<Regex> = OnceLock::new();
-    let re = regex.get_or_init(|| {
+    static REGEX: OnceLock<Regex> = OnceLock::new();
+    let re = REGEX.get_or_init(|| {
         Regex::new(r"[[:blank:]]*([a-zA-Z_.][a-zA-Z0-9_.]*)[[:blank:]]+([a-zA-Z_][a-zA-Z0-9_]*)[[:blank:]]*=[[:blank:]]*([0-9]+);[[:blank:]]*").unwrap()
     });
 
@@ -297,8 +297,8 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
 }
 
 fn parse_input_type_from_signature<'a>(method_name: &str, signature: &'a str) -> CrushResult<&'a str> {
-    static regex: OnceLock<Regex> = OnceLock::new();
-    let re = regex.get_or_init(|| {
+    static REGEX: OnceLock<Regex> = OnceLock::new();
+    let re = REGEX.get_or_init(|| {
         Regex::new(r"\((.*)\).*\(.*\)").unwrap()
     });
     for line in signature.lines() {

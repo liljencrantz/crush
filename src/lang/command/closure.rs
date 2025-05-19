@@ -14,7 +14,6 @@ use crate::lang::serialization::model::{element, Element};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
 use crate::lang::pipe::{black_hole, empty_channel};
 use crate::lang::value::{Value, ValueDefinition, ValueType};
-use std::collections::HashMap;
 use std::fmt::Display;
 use std::sync::Arc;
 use itertools::Itertools;

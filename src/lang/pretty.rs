@@ -4,7 +4,7 @@ A receiver of values that prints any values sent to it in a human readable forma
 
 use crate::lang::data::binary::BinaryReader;
 use crate::lang::printer::Printer;
-use crate::lang::pipe::{CrushStream, InputStream, ValueSender, printer_pipe};
+use crate::lang::pipe::{CrushStream, TableInputStream, ValueSender, printer_pipe};
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
 use crate::lang::data::table::Table;
@@ -216,7 +216,7 @@ impl PrettyPrinter {
         mut r: Vec<Value>,
         indent: usize,
         rows: &mut Vec<Table>,
-        outputs: &mut Vec<InputStream>,
+        outputs: &mut Vec<TableInputStream>,
         binaries: &mut Vec<Box<dyn BinaryReader>>,
         columns: &[ColumnType],
         col_count: usize,

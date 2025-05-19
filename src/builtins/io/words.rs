@@ -1,7 +1,7 @@
 use crate::lang::errors::{CrushResult};
 use crate::lang::signature::files::Files;
 use crate::lang::state::scope::ScopeLoader;
-use crate::lang::pipe::OutputStream;
+use crate::lang::pipe::TableOutputStream;
 use crate::lang::{
     data::table::ColumnType, data::table::Row, value::Value,
     value::ValueType,
@@ -21,7 +21,7 @@ struct From {
     files: Files,
 }
 
-fn send(output: &OutputStream, mut ptr: &str) -> CrushResult<()> {
+fn send(output: &TableOutputStream, mut ptr: &str) -> CrushResult<()> {
     ptr = ptr.trim_matches(|c: char| c.is_ascii_punctuation());
     if !ptr.is_empty() {
         output.send(Row::new(vec![Value::from(ptr)]))

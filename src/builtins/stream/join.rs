@@ -4,7 +4,7 @@ use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::printer::Printer;
 use crate::lang::pipe::Stream;
-use crate::lang::pipe::OutputStream;
+use crate::lang::pipe::TableOutputStream;
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::ColumnVec;
 use crate::lang::data::table::Row;
@@ -31,7 +31,7 @@ fn do_join(
     left_idx: usize,
     mut r: Stream,
     right_idx: usize,
-    output: &OutputStream,
+    output: &TableOutputStream,
     printer: &Printer,
 ) -> CrushResult<()> {
     let mut l_data: OrderedMap<Value, Vec<Row>> = OrderedMap::new();

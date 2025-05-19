@@ -1,8 +1,6 @@
-use std::collections::VecDeque;
 use crate::lang::errors::argument_error_legacy;
 use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
-use crate::lang::data::table::Row;
 use signature::signature;
 use crate::lang::command::OutputType::Passthrough;
 #[signature(

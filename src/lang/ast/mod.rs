@@ -110,6 +110,24 @@ pub fn unary_operator_method(op: &str, op_location: Location, n: Box<Node>) -> B
     )
 }
 
+pub fn negate(n: Box<Node>) -> Box<Node> {
+    let location = n.location();
+    let cmd = attr(&["global", "comp", "not"], location);
+    Box::from(
+        Node::Substitution(
+            JobNode {
+                commands: vec![CommandNode {
+                    expressions: vec![
+                        cmd, *n,
+                    ],
+                    location,
+                }],
+                location,
+            }
+        )
+    )
+}
+
 pub fn operator(iop: impl Into<TrackedString>, l: Box<Node>, r: Box<Node>) -> Box<Node> {
     let op = iop.into();
     match op.string.as_str() {

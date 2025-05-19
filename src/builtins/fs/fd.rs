@@ -67,7 +67,7 @@ pub mod procfs {
     use crate::util::hex::from_hex;
     use dns_lookup::lookup_addr;
     use std::collections::hash_map::Entry;
-    use crate::lang::pipe::OutputStream;
+    use crate::lang::pipe::TableOutputStream;
     use std::net::Ipv6Addr;
     use crate::lang::printer::Printer;
     use std::path::PathBuf;
@@ -209,7 +209,7 @@ pub mod procfs {
         hosts: &mut HashMap<String, String>,
         file_type: &str,
         printer: &Printer,
-        output: &OutputStream) -> CrushResult<()> {
+        output: &TableOutputStream) -> CrushResult<()> {
         let mut f = std::fs::File::open(&format!("/proc/net/{}", file_type))?;
         // Skip header
         f.read_line()?;

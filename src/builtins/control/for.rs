@@ -7,7 +7,7 @@ use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::ordered_string_map::OrderedStringMap;
-use crate::lang::pipe::{pipe, Stream};
+use crate::lang::pipe::{Stream};
 use crate::lang::state::scope::ScopeType::Loop;
 
 #[signature(
@@ -57,6 +57,5 @@ fn r#for(mut context: CommandContext) -> CrushResult<()> {
             break;
         }
     }
-    context.output.empty();
-    Ok(())
+    context.output.empty()
 }

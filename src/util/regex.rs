@@ -1,9 +1,8 @@
-use crate::lang::printer::Printer;
 use regex::Regex;
 use std::fs::read_dir;
 use std::path::{Path, PathBuf};
 use crate::lang::errors;
-use crate::lang::errors::{CrushError, CrushErrorType, CrushResult};
+use crate::lang::errors::{CrushError, CrushResult};
 
 pub trait RegexFileMatcher {
     fn match_files(&self, cwd: &Path, out: &mut Vec<PathBuf>) -> CrushResult<()>;

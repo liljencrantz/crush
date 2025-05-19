@@ -76,7 +76,7 @@ These are presented below in order of precedence.
 
 | operator                    | Example                               | Description                                           |
 |-----------------------------|---------------------------------------|-------------------------------------------------------|
-| `:=` `=`                    | `foo := 7`                            | Declare a new variable, reassign an existing variable |
+| `:=` `=`                    | `$foo := 7`                           | Declare a new variable, reassign an existing variable |
 | `and` `or`                  | `foo:is_file and foo:stat:len > 4096` | Logical operators                                     |
 | `>` `>=` `<` `<=` `==` `!=` | `foo > 5`                             | Compare two values to each other                      |
 | `+` `-`                     | `1+1`                                 | Addition and subtraction                              |
@@ -87,22 +87,22 @@ These are presented below in order of precedence.
 ## Command substitutions
 
 It is often useful to use the output of a crush command as an argument to a different
-command. To do this, simply put the command within parenthesis:
+command. To do this, simply put the command within a subshell `$()`:
 
 ```shell script
-"Hello, {name}":format name=(user:me:name)
+"Hello, {name}":format name=$(user:me:name)
 ```
 
 if the command that you run in a substitution returns a stream, the outer command will
 be run in parallel with the substitution and may in fact finish running first.
 
 This example will create a command that locates all the files in your computer, and assigns
-the output stream to a variable. The `find` command in this example will block because there
+the output stream to a variable. The `files` command in this example will block because there
 is nothing reading its output.
 
 ```shell script
-all_the_files := (find /)
-all_the_files | head 1
+$all_the_files := $(files --recurse /)
+$all_the_files | head 1
 ```
 
 ## Namespaces

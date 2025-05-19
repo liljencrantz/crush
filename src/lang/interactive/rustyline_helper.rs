@@ -13,6 +13,8 @@ use crate::lang::value::Value;
 use crate::util::directory_lister::directory_lister;
 use crate::lang::state::scope::Scope;
 use rustyline_derive::Helper;
+use crate::lang::ast::lexer::LexerMode;
+use crate::lang::ast::lexer::LexerMode::Command;
 use crate::lang::state::global_state::GlobalState;
 
 #[derive(Helper)]
@@ -21,6 +23,7 @@ pub struct RustylineHelper {
     scope: Scope,
     highlighter: MatchingBracketHighlighter,
     hinter: HistoryHinter,
+    mode: LexerMode,
 }
 
 impl RustylineHelper {
@@ -30,6 +33,7 @@ impl RustylineHelper {
             scope,
             highlighter: MatchingBracketHighlighter::new(),
             hinter: HistoryHinter {},
+            mode: Command,
         }
     }
 
@@ -99,7 +103,8 @@ impl RustylineHelper {
         let mut new_command = true;
         let mut prev = None;
         for tok in self.state.parser().tokenize(
-            &self.state.parser().close_token(line))? {
+            &self.state.parser().close_token(line),
+            self.mode)? {
             if pos >= line.len() {
                 break;
             }
@@ -113,7 +118,6 @@ impl RustylineHelper {
                 (_, Token::BlockStart(_) | Token::Separator(_, _) | Token::Pipe(_), _) => true,
                 (true, Token::String(_, _) | Token::Identifier(_, _), Some(Token::String(_, _) | Token::Identifier(_, _))) => false,
                 (true, Token::String(_, _) | Token::Identifier(_, _), _) => true,
-                (true, Token::String(_, _) | Token::Identifier(_, _), None) => true,
                 (true, Token::MemberOperator(_), Some(Token::String(_, _) | Token::Identifier(_, _))) => true,
                 _ => false,
             };
@@ -203,7 +207,7 @@ impl Validator for RustylineHelper {
             return Ok(ValidationResult::Valid(None));
         }
         if let Ok(closed) = self.state.parser().close_command(&input) {
-            match self.state.parser().ast(&closed) {
+            match self.state.parser().ast(&closed, self.mode) {
                 Ok(_) => Ok(
                     if closed == input {
                         ValidationResult::Valid(None)

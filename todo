@@ -1,8 +1,5 @@
 Todo:
-Math commands for command mode, e.g. `add 1 2 3`
 Rewrite all tests for new syntax
-Add saner default prompt
-Add default syntax highlighting config
 Add some way to extract the definition from a closure, e.g. `$my_function:definition`
 Add command field to printer
 Allow commands to specify the type of input they expect for better/earlier validation
@@ -17,7 +14,6 @@ pbuf:from command that takes a protobuf definition and uses it to deserialize pr
 avro:from command that deserializes avro data
 Support __str__ method for string rendering
 Avoid infinite loops when printing structs that reference each other
-__getattr__ support?
 fix dynamic loading deadlocks
 tab completions for external commands
 More shell-like syntax for background jobs
@@ -25,6 +21,4 @@ Make IFS configurable for cmd command
 Add signal handlers to fix ^C and ^Z during regular execution
 Show errors from loading config
 Document @ and @@
-Dict literals in math mode
-Ability to enter/exit math mode
-Create median command
+Dict literals in expression mode ({key: value})

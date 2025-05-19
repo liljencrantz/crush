@@ -13,7 +13,7 @@ use crate::util::file::home;
 use crossbeam::channel::unbounded;
 use signature::signature;
 use ssh2::KnownHostFileKind;
-use ssh2::{CheckResult, HostKeyType, KnownHostKeyFormat, Session};
+use ssh2::{CheckResult, KnownHostKeyFormat, Session};
 use std::cmp::min;
 use std::io::{Read, Write};
 use std::net::TcpStream;

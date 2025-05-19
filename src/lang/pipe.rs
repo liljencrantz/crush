@@ -29,7 +29,7 @@ impl ValueSender {
         self.send(Value::Empty)
     }
 
-    pub fn initialize(&self, signature: &[ColumnType]) -> CrushResult<OutputStream> {
+    pub fn initialize(&self, signature: &[ColumnType]) -> CrushResult<TableOutputStream> {
         let (output, input) = streams(signature.to_vec());
         self.send(Value::TableInputStream(input))?;
         Ok(output)
@@ -79,12 +79,12 @@ pub fn empty_channel() -> ValueReceiver {
 }
 
 #[derive(Clone)]
-pub struct OutputStream {
+pub struct TableOutputStream {
     sender: Sender<Row>,
     types: Vec<ColumnType>,
 }
 
-impl OutputStream {
+impl TableOutputStream {
     pub fn send(&self, row: Row) -> CrushResult<()> {
         Ok(self.sender.send(row)?)
     }
@@ -95,12 +95,12 @@ impl OutputStream {
 }
 
 #[derive(Debug, Clone)]
-pub struct InputStream {
+pub struct TableInputStream {
     receiver: Receiver<Row>,
     types: Vec<ColumnType>,
 }
 
-impl InputStream {
+impl TableInputStream {
     pub fn get(&self, idx: i128) -> CrushResult<Row> {
         let mut i = 0i128;
         loop {
@@ -176,28 +176,28 @@ pub fn printer_pipe() -> (ValueSender, ValueReceiver) {
     )
 }
 
-pub fn streams(signature: Vec<ColumnType>) -> (OutputStream, InputStream) {
+pub fn streams(signature: Vec<ColumnType>) -> (TableOutputStream, TableInputStream) {
     let (output, input) = bounded(128);
     (
-        OutputStream {
+        TableOutputStream {
             sender: output,
             types: signature.clone(),
         },
-        InputStream {
+        TableInputStream {
             receiver: input,
             types: signature,
         },
     )
 }
 
-pub fn unlimited_streams(signature: Vec<ColumnType>) -> (OutputStream, InputStream) {
+pub fn unlimited_streams(signature: Vec<ColumnType>) -> (TableOutputStream, TableInputStream) {
     let (output, input) = unbounded();
     (
-        OutputStream {
+        TableOutputStream {
             sender: output,
             types: signature.clone(),
         },
-        InputStream {
+        TableInputStream {
             receiver: input,
             types: signature,
         },
@@ -210,7 +210,7 @@ pub trait CrushStream {
     fn types(&self) -> &[ColumnType];
 }
 
-impl CrushStream for InputStream {
+impl CrushStream for TableInputStream {
     fn read(&mut self) -> Result<Row, CrushError> {
         self.recv()
     }

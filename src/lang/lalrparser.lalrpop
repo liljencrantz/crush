@@ -13,6 +13,10 @@ pub JobList: JobListNode = {
     Separators? <l:JobListWithoutSeparator> => l,
 };
 
+pub ExprJobList: JobListNode = {
+    Separators? <l:ExprJobListWithoutSeparator> => l,
+};
+
 Separators: () = {
     Separator,
     Separators Separator,
@@ -54,10 +58,6 @@ ExprNonEmptyJobList: JobListNode = {
         lst
     },
     <l: @L> <j: Expr> <r: @R> => JobListNode {jobs: vec![j.expression_to_job()], location: Location::new(l, r)},
-};
-
-ExprJobList: JobListNode = {
-    Separators? <l:ExprJobListWithoutSeparator> => l,
 };
 
 Expr: Box<Node> = {
@@ -106,6 +106,7 @@ ExprFactor: Box<Node> = {
 ExprUnary: Box<Node> = {
     ExprItem,
     <op:Minus> <u: ExprUnary> => unary_operator_method("__neg__", op, u),
+    Bang <u: ExprUnary> => negate(u),
 }
 
 ExprOptFalseBody: Option<JobListNode> = {
@@ -299,6 +300,7 @@ extern {
         UnaryOperator=> Token::UnaryOperator(<&'input str>, <Location>),
         MemberOperator => Token::MemberOperator(<Location>),
         Equals=> Token::Equals(<Location>),
+        Bang=> Token::Bang(<Location>),
         Declare=> Token::Declare(<Location>),
         ComparisonOperator=> Token::ComparisonOperator(<&'input str>, <Location>),
         Slash=> Token::Slash(<Location>),

@@ -7,7 +7,7 @@ use crate::data::dict::Dict;
 use crate::data::list::List;
 use crate::data::r#struct::Struct;
 use crate::data::table::Table;
-use crate::lang::pipe::{InputStream, OutputStream};
+use crate::lang::pipe::{TableInputStream, TableOutputStream};
 use crate::lang::value::{Value, ValueType};
 use crate::state::scope::Scope;
 use crate::util::glob::Glob;
@@ -50,8 +50,8 @@ pub trait This {
     fn duration(&mut self) -> CrushResult<Duration>;
     fn time(&mut self) -> CrushResult<DateTime<Local>>;
     fn table(&mut self) -> CrushResult<Table>;
-    fn table_input_stream(&mut self) -> CrushResult<InputStream>;
-    fn table_output_stream(&mut self) -> CrushResult<OutputStream>;
+    fn table_input_stream(&mut self) -> CrushResult<TableInputStream>;
+    fn table_output_stream(&mut self) -> CrushResult<TableOutputStream>;
     fn binary(&mut self) -> CrushResult<Vec<u8>>;
     fn scope(&mut self) -> CrushResult<Scope>;
 }
@@ -111,13 +111,13 @@ impl This for Option<Value> {
     this_method!(scope, Scope, Scope, "scope");
     this_method!(
         table_input_stream,
-        InputStream,
+        TableInputStream,
         TableInputStream,
         "table_input_stream"
     );
     this_method!(
         table_output_stream,
-        OutputStream,
+        TableOutputStream,
         TableOutputStream,
         "table_output_stream"
     );

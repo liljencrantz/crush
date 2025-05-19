@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 /**
@@ -15,6 +15,13 @@ impl Text {
         match self {
             Text::File(p) => p.to_str().unwrap_or("").to_string(),
             Text::String(s) => s.to_string(),
+        }
+    }
+
+    pub fn as_path(&self) -> PathBuf {
+        match self {
+            Text::File(p) => p.to_path_buf(),
+            Text::String(s) => PathBuf::from(s.to_string()),
         }
     }
 }

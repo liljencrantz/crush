@@ -4,7 +4,8 @@ use std::str::CharIndices;
 use crate::lang::ast::token::Token;
 use crate::lang::ast::location::Location;
 
-enum LexerMode {
+#[derive(Clone, Copy)]
+pub enum LexerMode {
     Command,
     Expression,
 }
@@ -18,9 +19,9 @@ pub struct Lexer<'input> {
 pub type Spanned<'input> = Result<(usize, Token<'input>, usize), LexicalError>;
 
 impl<'input> Lexer<'input> {
-    pub fn new(input: &'input str) -> Self {
+    pub fn new(input: &'input str, initial_mode: LexerMode) -> Self {
         Lexer {
-            mode: vec![LexerMode::Command],
+            mode: vec![initial_mode],
             full_str: input,
             chars: input.char_indices().peekable(),
         }

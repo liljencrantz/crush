@@ -85,7 +85,7 @@ mod prompt {
     }
 
     fn get(context: CommandContext) -> CrushResult<()> {
-        let cfg: Get = Get::parse(context.arguments, &context.global_state.printer())?;
+        Get::parse(context.arguments, &context.global_state.printer())?;
         context.output.send(context.global_state.prompt().map(|cmd| {Value::Command(cmd)}).unwrap_or(Value::Empty))
     }
 }

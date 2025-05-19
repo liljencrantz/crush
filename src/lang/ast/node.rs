@@ -403,7 +403,7 @@ impl Node {
             Node::Closure(None, true_body),
         ];
 
-        for x in false_body {
+        if let Some(x) = false_body {
             expressions.push(Node::Closure(None, x));
         }
 

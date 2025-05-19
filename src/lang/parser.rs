@@ -3,6 +3,7 @@ use crate::lang::job::Job;
 use crate::lang::state::scope::Scope;
 use crate::lang::ast::{token::Token, JobListNode, lexer::Lexer};
 use std::sync::{Arc, Mutex};
+use crate::lang::ast::lexer::LexerMode;
 
 lalrpop_mod!(pub lalrparser, "/lang/lalrparser.rs");
 
@@ -43,26 +44,31 @@ fn close_switch(input: &str) -> String {
 #[derive(Clone)]
 pub struct Parser {
     parser: Arc<Mutex<lalrparser::JobListParser>>,
+    expr_parser: Arc<Mutex<lalrparser::ExprJobListParser>>,
 }
 
 impl Parser {
     pub fn new() -> Parser {
         Parser {
             parser: Arc::from(Mutex::new(lalrparser::JobListParser::new())),
+            expr_parser: Arc::from(Mutex::new(lalrparser::ExprJobListParser::new())),
         }
     }
 
-    pub fn parse(&self, s: &str, env: &Scope) -> CrushResult<Vec<Job>> {
-        self.ast(s)?.compile(env)
+    pub fn parse(&self, s: &str, env: &Scope, initial_mode: LexerMode) -> CrushResult<Vec<Job>> {
+        self.ast(s, initial_mode)?.compile(env)
     }
 
-    pub fn ast(&self, s: &str) -> CrushResult<JobListNode> {
-        let lex = Lexer::new(s);
-        Ok(self.parser.lock().unwrap().parse(s, lex)?)
+    pub fn ast(&self, s: &str, initial_mode: LexerMode) -> CrushResult<JobListNode> {
+        let lex = Lexer::new(s, initial_mode);
+        match initial_mode {
+            LexerMode::Command => Ok(self.parser.lock().unwrap().parse(s, lex)?),
+            LexerMode::Expression => Ok(self.expr_parser.lock().unwrap().parse(s, lex)?),
+        }
     }
 
-    pub fn tokenize<'a>(&self, s: &'a str) -> CrushResult<Vec<Token<'a>>> {
-        let l = Lexer::new(s);
+    pub fn tokenize<'a>(&self, s: &'a str, initial_mode: LexerMode) -> CrushResult<Vec<Token<'a>>> {
+        let l = Lexer::new(s, initial_mode);
         l.into_iter().map(|item| item.map(|it| it.1).map_err(|e| CrushError::from(e)) ).collect()
     }
 
@@ -84,7 +90,7 @@ impl Parser {
     */
     pub fn close_command(&self, input: &str) -> CrushResult<String> {
         let input = self.close_token(input);
-        let tokens = self.tokenize(&input)?;
+        let tokens = self.tokenize(&input, LexerMode::Command)?;
         let mut stack = Vec::new();
 
         let mut needs_trailing_arg = false;

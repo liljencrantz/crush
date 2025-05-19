@@ -2,7 +2,6 @@ use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{argument_error_legacy, CrushResult, data_error, error, mandate};
 use crate::lang::state::contexts::CommandContext;
-use crate::lang::data::r#struct::Struct;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use ordered_map::OrderedMap;
@@ -13,14 +12,14 @@ use std::ops::Deref;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::sync::{Arc, OnceLock};
-use chrono::{DateTime, Local};
 use nix::errno::Errno;
-use nix::libc::{S_IFBLK, S_IFCHR, S_IFDIR, S_IFIFO, S_IFLNK, S_IFREG, S_IFSOCK};
+use nix::libc::S_IFDIR;
 use nix::sys::stat::{lstat, utimensat, UtimensatFlags};
 use nix::sys::time::TimeSpec;
 use crate::data::binary::BinaryReader;
 use crate::lang::data::table::{ColumnType, Row};
-use crate::lang::pipe::OutputStream;
+use crate::lang::pipe::TableOutputStream;
+use crate::lang::signature::text::Text;
 use crate::lang::state::this::This;
 use crate::util::user_map::{get_gid, get_uid};
 
@@ -221,17 +220,20 @@ pub fn exists(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     types.file.__getitem__,
     can_block = false,
-    output = Known(ValueType::Bool),
+    output = Known(ValueType::File),
     short = "Return a file or subdirectory in the specified base directory.",
+    example = "$filename := foo.txt",
+    example = "$base_directory := .",
+    example = "$file := $base_directory[$filename]",
 )]
 struct GetItem {
-    name: String,
+    name: Text,
 }
 
 pub fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     let base_directory = context.this.file()?;
     let cfg = GetItem::parse(context.arguments, &context.global_state.printer())?;
-    context.output.send(Value::from(base_directory.join(&cfg.name)))
+    context.output.send(Value::from(base_directory.join(&cfg.name.as_path())))
 }
 
 
@@ -239,11 +241,12 @@ pub fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     types.file.write,
     can_block = true,
     output = Known(ValueType::Empty),
-    short = "A write sink for binary_stream values",
+    short = "Write a binary_stream to this file. If no stream is given, input pipe must be one.",
 )]
 struct Write {}
 
 fn write(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = Write::parse(context.arguments, &context.global_state.printer())?;
     match context.input.recv()? {
         Value::BinaryInputStream(mut input) => {
             let mut out = File::create(
@@ -316,7 +319,7 @@ static REMOVE_OUTPUT_TYPE: [ColumnType; 3] = [
 #[signature(
     types.file.remove,
     can_block = true,
-    output = Known(ValueType::table_input_stream(&REMOVE_OUTPUT_TYPE)),
+    output = Known(ValueType::table_input_stream(& REMOVE_OUTPUT_TYPE)),
     short = "Delete this file",
     long = "Returns a stream of deletion failures."
 )]
@@ -336,7 +339,7 @@ fn remove_outcome_to_row<ErrType: ToString>(path: Arc<Path>, result: Result<(), 
     }
 }
 
-fn handle_remove_result<ErrType: ToString>(path: Arc<Path>, result: Result<(), ErrType>, out: &OutputStream, verbose: bool) -> CrushResult<()> {
+fn handle_remove_result<ErrType: ToString>(path: Arc<Path>, result: Result<(), ErrType>, out: &TableOutputStream, verbose: bool) -> CrushResult<()> {
     match result {
         Ok(_) => {
             if verbose {
@@ -351,7 +354,7 @@ fn handle_remove_result<ErrType: ToString>(path: Arc<Path>, result: Result<(), E
     }
 }
 
-fn remove_file_of_unknown_type(path: Arc<Path>, out: &OutputStream, verbose: bool) -> CrushResult<()> {
+fn remove_file_of_unknown_type(path: Arc<Path>, out: &TableOutputStream, verbose: bool) -> CrushResult<()> {
     match lstat(path.deref()) {
         Ok(stat) => {
             if stat.st_mode & S_IFDIR != 0 {
@@ -366,12 +369,12 @@ fn remove_file_of_unknown_type(path: Arc<Path>, out: &OutputStream, verbose: boo
     }
 }
 
-fn remove_known_directory(path: Arc<Path>, out: &OutputStream, verbose: bool) -> CrushResult<()> {
+fn remove_known_directory(path: Arc<Path>, out: &TableOutputStream, verbose: bool) -> CrushResult<()> {
     let res = remove_dir(path.deref());
     handle_remove_result(path, res, out, verbose)
 }
 
-fn remove_known_file(path: Arc<Path>, out: &OutputStream, verbose: bool) -> CrushResult<()> {
+fn remove_known_file(path: Arc<Path>, out: &TableOutputStream, verbose: bool) -> CrushResult<()> {
     let res = remove_file(path.deref());
     handle_remove_result(path, res, out, verbose)
 }

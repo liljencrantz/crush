@@ -7,6 +7,7 @@ use rustyline::error::ReadlineError;
 use rustyline::{Editor, Config, CompletionType, EditMode};
 use crate::util::file::home;
 use std::path::PathBuf;
+use crate::lang::ast::lexer::LexerMode;
 use crate::lang::state::scope::Scope;
 use crate::lang::pipe::{ValueSender, empty_channel, pipe, black_hole};
 use crate::lang::errors::{CrushResult, data_error, error};
@@ -99,6 +100,8 @@ pub fn run(
     editor.set_helper(Some(h));
     global_state.set_editor(Some(editor));
 
+    let mut mode = LexerMode::Command;
+
     if let Ok(file) = crush_history_file() {
         let _ = global_state.editor().as_mut().map(|rl| { rl.load_history(&file) });
     }
@@ -118,11 +121,22 @@ pub fn run(
                     global_state.threads().reap(global_state.printer())
                 } else {
 
-                    if cmd.trim() == "!!" {
-                        cmd = global_state
-                            .editor().as_mut()
-                            .map(|rl| { rl.history().into_iter().last().map(|s| {s.to_string()})})
+                    match (cmd.trim(), mode) {
+                        ("!!", _) => {
+                            cmd = global_state
+                                .editor().as_mut()
+                                .map(|rl| { rl.history().into_iter().last().map(|s| {s.to_string()})})
                                 .unwrap_or(None).unwrap_or(cmd);
+                        }
+                        ("(", LexerMode::Command) => {
+                            mode = LexerMode::Expression;
+                            continue;
+                        }
+                        (")", LexerMode::Expression) => {
+                            mode = LexerMode::Command;
+                            continue;
+                        }
+                        _ => {}
                     }
                     global_state.editor().as_mut().map(|rl| { rl.add_history_entry(&cmd) });
                     global_state.threads().reap(global_state.printer());
@@ -132,6 +146,7 @@ pub fn run(
                             execute::string(
                                 &global_env,
                                 &cmd,
+                                mode,
                                 pretty_printer,
                                 global_state,
                             ));

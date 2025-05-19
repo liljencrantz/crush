@@ -2,12 +2,9 @@ use crate::lang::command::Command;
 use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ValueType;
-use crate::lang::data::table::{ColumnType, Row};
-use crate::lang::pipe::pipe;
 use crate::lang::command::OutputType::Known;
 use signature::signature;
 use crate::lang::state::scope::ScopeType;
-use crate::lang::value::Value::Empty;
 
 #[signature(
     control.r#loop,

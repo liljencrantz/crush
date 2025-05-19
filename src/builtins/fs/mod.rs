@@ -13,7 +13,7 @@ use std::sync::Arc;
 use chrono::{DateTime, Local};
 use libc::{S_IFBLK, S_IFCHR, S_IFDIR, S_IFIFO, S_IFLNK, S_IFREG, S_IFSOCK};
 use nix::sys::stat::lstat;
-use crate::lang::data::table::{ColumnFormat, ColumnType, Row};
+use crate::lang::data::table::{ColumnType, Row};
 
 mod usage;
 mod files;

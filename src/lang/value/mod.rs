@@ -17,7 +17,7 @@ use crate::lang::errors::{argument_error_legacy, CrushResult, mandate};
 use crate::lang::data::r#struct::Struct;
 use crate::lang::data::r#struct::StructReader;
 use crate::lang::state::scope::Scope;
-use crate::lang::pipe::{InputStream, OutputStream, Stream, streams};
+use crate::lang::pipe::{TableInputStream, TableOutputStream, Stream, streams};
 use crate::lang::data::{
     binary::BinaryReader, dict::Dict, dict::DictReader, list::List,
     table::ColumnType, table::TableReader,
@@ -50,6 +50,8 @@ use crate::state::scope::ScopeReader;
 use crate::util::escape::escape;
 use crate::util::integer_formater::format_integer;
 
+pub type BinaryInputStream = Box<dyn BinaryReader + Send + Sync>;
+
 pub enum Value {
     Empty,
     String(Arc<str>),
@@ -59,8 +61,8 @@ pub enum Value {
     Glob(Glob),
     Regex(String, Regex),
     Command(Command),
-    TableInputStream(InputStream),
-    TableOutputStream(OutputStream),
+    TableInputStream(TableInputStream),
+    TableOutputStream(TableOutputStream),
     File(Arc<Path>),
     Table(Table),
     Struct(Struct),
@@ -69,7 +71,7 @@ pub enum Value {
     Scope(Scope),
     Bool(bool),
     Float(f64),
-    BinaryInputStream(Box<dyn BinaryReader + Send + Sync>),
+    BinaryInputStream(BinaryInputStream),
     Binary(Arc<[u8]>),
     Type(ValueType),
 }
@@ -284,23 +286,11 @@ impl Value {
         }
     }
 
-    pub fn path(&self, name: &str) -> Option<Value> {
-        match self {
-            Value::File(s) => Some(Value::from(s.join(name))),
-            _ => None,
-        }
-    }
-
     pub fn alignment(&self) -> Alignment {
         match self {
             Value::Time(_) | Value::Duration(_) | Value::Integer(_) | Value::Float(_) => Alignment::Right,
             _ => Alignment::Left,
         }
-    }
-
-    pub fn empty_table_input_stream() -> Value {
-        let (_s, r) = streams(vec![]);
-        Value::TableInputStream(r)
     }
 
     pub fn stream(&self) -> CrushResult<Option<Stream>> {
@@ -346,31 +336,6 @@ impl Value {
             Value::Binary(_) => ValueType::Binary,
             Value::Type(_) => ValueType::Type,
         }
-    }
-
-    pub fn file_expand(&self, v: &mut Vec<PathBuf>, printer: &Printer) -> CrushResult<()> {
-        match self {
-            Value::String(s) => v.push(PathBuf::from(s.to_string())),
-            Value::File(p) => v.push(p.to_path_buf()),
-            Value::Glob(pattern) => pattern.glob_files(&PathBuf::from("."), v)?,
-            Value::Regex(_, re) => re.match_files(&cwd()?, v)?,
-            val => match val.stream()? {
-                None => return error("Expected a file name"),
-                Some(mut s) => {
-                    let t = s.types();
-                    if t.len() == 1 && t[0].cell_type == ValueType::File {
-                        while let Ok(row) = s.read() {
-                            if let Value::File(f) = Vec::from(row).remove(0) {
-                                v.push(f.to_path_buf());
-                            }
-                        }
-                    } else {
-                        return argument_error_legacy("Table stream must contain one column of type file");
-                    }
-                }
-            },
-        }
-        Ok(())
     }
 
     pub fn matches(&self, value: &str) -> CrushResult<bool> {

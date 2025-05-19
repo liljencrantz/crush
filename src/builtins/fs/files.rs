@@ -8,7 +8,7 @@ use crate::lang::command::OutputType::Unknown;
 use crate::lang::errors::{error, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::signature::files::Files;
-use crate::lang::pipe::OutputStream;
+use crate::lang::pipe::TableOutputStream;
 use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value::ValueType};
 use crate::util::user_map::{create_user_map, create_group_map};
 use signature::signature;
@@ -59,7 +59,7 @@ fn insert_entity(
     users: &HashMap<Uid, String>,
     groups: &HashMap<Gid, String>,
     cols: &[Column],
-    output: &mut OutputStream,
+    output: &mut TableOutputStream,
 ) -> CrushResult<()> {
     let mut row = Vec::new();
     for col in cols.iter() {
@@ -113,7 +113,7 @@ fn run_for_single_directory_or_file(
     recursive: bool,
     cols: &[Column],
     q: &mut VecDeque<PathBuf>,
-    output: &mut OutputStream,
+    output: &mut TableOutputStream,
 ) -> CrushResult<()> {
     if path.is_dir() {
         let dirs = fs::read_dir(path);

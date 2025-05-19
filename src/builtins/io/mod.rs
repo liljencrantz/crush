@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, CrushResult, data_error, mandate};
+use crate::lang::errors::{CrushResult, data_error, mandate};
 use crate::lang::data::list::List;
 use crate::lang::pretty::PrettyPrinter;
 use crate::lang::state::scope::Scope;

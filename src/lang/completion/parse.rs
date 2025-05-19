@@ -11,6 +11,7 @@ use crate::lang::parser::Parser;
 use crate::util::escape::unescape;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
+use crate::lang::ast::lexer::LexerMode;
 
 pub enum CompletionCommand {
     Unknown,
@@ -287,7 +288,7 @@ pub fn parse(
     scope: &Scope,
     parser: &Parser,
 ) -> CrushResult<ParseResult> {
-    let ast = parser.ast(&parser.close_command(&line[0..cursor])?)?;
+    let ast = parser.ast(&parser.close_command(&line[0..cursor])?, LexerMode::Command)?;
 
     if ast.jobs.len() == 0 {
         return Ok(ParseResult::Nothing);

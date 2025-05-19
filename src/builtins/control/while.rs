@@ -3,8 +3,6 @@ use crate::lang::errors::{data_error, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
-use crate::lang::data::table::ColumnType;
-use crate::data::table::Row;
 use signature::signature;
 use crate::lang::command::OutputType::Known;
 use crate::lang::pipe::pipe;
@@ -52,6 +50,5 @@ fn r#while(mut context: CommandContext) -> CrushResult<()> {
             _ => return data_error("While loop condition must output value of boolean type"),
         }
     }
-    context.output.empty();
-    Ok(())
+    context.output.empty()
 }
