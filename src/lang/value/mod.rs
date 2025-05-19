@@ -17,7 +17,7 @@ use crate::lang::errors::{argument_error_legacy, CrushResult, mandate};
 use crate::lang::data::r#struct::Struct;
 use crate::lang::data::r#struct::StructReader;
 use crate::lang::state::scope::Scope;
-use crate::lang::pipe::{TableInputStream, TableOutputStream, Stream, streams};
+use crate::lang::pipe::{TableInputStream, TableOutputStream, Stream};
 use crate::lang::data::{
     binary::BinaryReader, dict::Dict, dict::DictReader, list::List,
     table::ColumnType, table::TableReader,
@@ -34,8 +34,6 @@ use chrono::Duration;
 use crate::lang::command::{Command, CommandBinder};
 use crate::lang::help::Help;
 use crate::lang::pretty::format_buffer;
-use crate::lang::printer::Printer;
-use crate::util::regex::RegexFileMatcher;
 use ordered_map::OrderedMap;
 pub use value_definition::ValueDefinition;
 pub use value_type::ValueType;

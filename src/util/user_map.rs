@@ -79,7 +79,7 @@ pub fn get_all_users() -> CrushResult<Vec<UserData>> {
 }
 
 impl UserData {
-    unsafe fn new(data: &passwd) -> CrushResult<UserData> {
+    unsafe fn new(data: &passwd) -> CrushResult<UserData> { unsafe {
         Ok(UserData {
             name: parse(data.pw_name)?,
             home: PathBuf::from(parse(data.pw_dir)?),
@@ -88,7 +88,7 @@ impl UserData {
             uid: data.pw_uid,
             gid: data.pw_gid,
         })
-    }
+    }}
 }
 
 pub fn get_user(input_name: &str) -> CrushResult<UserData> {
@@ -127,9 +127,9 @@ pub fn create_group_map() -> CrushResult<HashMap<Gid, String>> {
     Ok(res)
 }
 
-unsafe fn parse(s: *const c_char) -> CrushResult<String> {
+unsafe fn parse(s: *const c_char) -> CrushResult<String> { unsafe {
     Ok(CStr::from_ptr(s).to_str()?.to_string())
-}
+}}
 
 pub fn get_uid(target_username: &str) -> CrushResult<Option<Uid>> {
     let _user_lock = USER_MUTEX.lock().unwrap();
