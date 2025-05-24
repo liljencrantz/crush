@@ -56,6 +56,7 @@ sys-info = "0.9.1"
 battery = "0.7.8"
 nix = { version = "0.30.1", features = ["process", "user", "signal", "fs"] }
 dns-lookup = "2.0.4"
+sysinfo = "0.35.1"
 psutil = "3.3.0"
 num-format = { version = "0.4.4", features = ["with-system-locale"] }
 unicode-width = "0.2.0"

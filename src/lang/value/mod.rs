@@ -176,6 +176,12 @@ impl From<usize> for Value {
     }
 }
 
+impl From<u32> for Value {
+    fn from(v: u32) -> Value {
+        Value::Integer(v as i128)
+    }
+}
+
 impl From<u64> for Value {
     fn from(v: u64) -> Value {
         Value::Integer(v as i128)

@@ -215,6 +215,7 @@ mod cpu {
 
 #[cfg(target_os = "macos")]
 mod macos {
+    use std::ops::Deref;
     use crate::lang::command::OutputType::Known;
     use crate::lang::errors::{CrushResult};
     use crate::lang::state::contexts::CommandContext;
@@ -222,6 +223,7 @@ mod macos {
     use crate::util::user_map::create_user_map;
     use crate::{data::table::Row, lang::value::Value, lang::value::ValueType};
     use chrono::Duration;
+    use libc::uid_t;
     use signature::signature;
     use crate::lang::data::table::{ColumnFormat};
 
@@ -256,41 +258,36 @@ mod macos {
     use libproc::libproc::task_info::TaskAllInfo;
     use libproc::libproc::thread_info::ThreadInfo;
     use mach2::mach_time::mach_timebase_info;
+    use nix::unistd;
+    use sysinfo::Uid;
 
     fn procs(context: CommandContext) -> CrushResult<()> {
+        use sysinfo::{
+            Components, Disks, Networks, System,
+        };
+        let mut sys = System::new_all();
+
+        // First we update all information of our `System` struct.
+        sys.refresh_all();
         let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
         let users = create_user_map()?;
-        let mut info: mach_timebase_info = mach_timebase_info { numer: 0, denom: 0 };
-        unsafe {
-            mach_timebase_info(std::ptr::addr_of_mut!(info));
-        }
 
-        if let Ok(base_procs) = listpids(ProcType::ProcAllPIDS) {
-            for pid in base_procs {
-                if let Ok(curr_task) = pidinfo::<TaskAllInfo>(pid as i32, 0) {
-                    let ppid = curr_task.pbsd.pbi_ppid as i128;
-                    let name =
-                        String::from_utf8(
-                            curr_task.pbsd.pbi_name
-                                .iter()
-                                .map(|c| unsafe { std::mem::transmute::<i8, u8>(*c) })
-                                .filter(|c| { *c > 0u8 })
-                                .collect()
-                        ).unwrap_or_else(|_| { "<Invalid>".to_string() });
-                    output.send(Row::new(vec![
-                        Value::Integer(pid as i128),
-                        Value::Integer(ppid),
-                        users.get(&nix::unistd::Uid::from_raw(curr_task.pbsd.pbi_uid)).map(|s| Value::from(s)).unwrap_or_else(|| Value::from("?")),
-                        Value::Integer(i128::from(curr_task.ptinfo.pti_resident_size)),
-                        Value::Integer(i128::from(curr_task.ptinfo.pti_virtual_size)),
-                        Value::Duration(Duration::nanoseconds(
-                            i64::try_from(curr_task.ptinfo.pti_total_user + curr_task.ptinfo.pti_total_system)? *
-                                i64::from(info.numer) /
-                                i64::from(info.denom))),
-                        Value::from(name),
-                    ]))?;
-                }
-            }
+        for (pid, proc) in sys.processes() {
+
+            output.send(Row::new(vec![
+                Value::from(pid.as_u32()),
+                Value::from(proc.parent().map(|i| i.as_u32()).unwrap_or(1u32)),
+                proc.user_id().and_then(|i| {
+                    let ii = i.deref();
+                    let iii = *ii as uid_t;
+                    let iiii = unistd::Uid::from_raw(iii);
+                    return users.get(&iiii);
+                }).map(|s| Value::from(s)).unwrap_or_else(|| Value::from("?")),
+                Value::Integer( proc.memory().into()),
+                Value::Integer(proc.virtual_memory().into()),
+                Value::Duration(Duration::microseconds((1_000_000.0 * proc.cpu_usage()) as i64)),
+                Value::from(proc.name().to_str().unwrap_or("<Invalid>")),
+            ]))?;
         }
         Ok(())
     }
