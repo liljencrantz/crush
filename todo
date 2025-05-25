@@ -22,3 +22,5 @@ Add signal handlers to fix ^C and ^Z during regular execution
 Show errors from loading config
 Document @ and @@
 Dict literals in expression mode ({key: value})
+Make closures only return last item
+Make comments not be invisible

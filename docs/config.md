@@ -32,6 +32,15 @@ crush:prompt:set {
 }
 ```
 
+### Configuring the Crush title message
+
+To configure the Crush prompt, call the `crush:title:set` command, and pass in a closure that
+returns a string, for example:
+
+```shell script
+crush:title:set {"{user}@{host} {wd}":format wd=(pwd) user=(user:me:name) host=(host:name) }
+```
+
 ### Configuring syntax highlighting
 
 The dict `crush:highlight` allows you to customize the syntax highlighting of
