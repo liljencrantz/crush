@@ -88,6 +88,7 @@ pub struct GlobalState {
 struct StateData {
     format_data: FormatData,
     prompt: Option<Command>,
+    title: Option<Command>,
     jobs: Vec<Option<LiveJob>>,
     exit_status: Option<i32>,
     mode: LexerMode,
@@ -168,6 +169,7 @@ impl GlobalState {
                 },
                 exit_status: None,
                 prompt: None,
+                title: None,
                 jobs: Vec::new(),
                 mode: LexerMode::Command,
             })),
@@ -239,6 +241,16 @@ impl GlobalState {
     pub fn prompt(&self) -> Option<Command> {
         let data = self.data.lock().unwrap();
         data.prompt.as_ref().map(|a| a.clone())
+    }
+
+    pub fn title(&self) -> Option<Command> {
+        let data = self.data.lock().unwrap();
+        data.title.as_ref().map(|a| a.clone())
+    }
+
+    pub fn set_title(&self, prompt: Option<Command>) {
+        let mut data = self.data.lock().unwrap();
+        data.title = prompt;
     }
 
     pub fn jobs(&self) -> Vec<LiveJob> {

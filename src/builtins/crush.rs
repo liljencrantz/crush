@@ -74,23 +74,23 @@ mod prompt {
     #[signature(
         crush.prompt.set,
         can_block = false,
-        short = "Set a new prompt",
+        short = "Set a new prompt command",
         output = Known(ValueType::Empty)
     )]
     pub struct Set {
-        prompt: Command,
+        prompt: Option<Command>,
     }
 
     fn set(context: CommandContext) -> CrushResult<()> {
         let cfg: Set = Set::parse(context.arguments, &context.global_state.printer())?;
-        context.global_state.set_prompt(Some(cfg.prompt));
+        context.global_state.set_prompt(cfg.prompt);
         context.output.send(Value::Empty)
     }
 
     #[signature(
         crush.prompt.get,
         can_block = false,
-        short = "Get the current prompt")
+        short = "Get the current prompt command")
     ]
     pub struct Get {
     }
@@ -123,6 +123,46 @@ mod prompt {
                 LexerMode::Expression => "expression",
             }))
         }
+    }
+
+}
+
+mod title {
+    use signature::signature;
+    use crate::lang::command::Command;
+    use crate::lang::errors::CrushResult;
+    use crate::lang::state::contexts::CommandContext;
+    use crate::lang::value::Value;
+    use crate::lang::command::OutputType::Known;
+    use crate::lang::value::ValueType;
+
+    #[signature(
+        crush.title.set,
+        can_block = false,
+        short = "Set a new title command",
+        output = Known(ValueType::Empty)
+    )]
+    pub struct Set {
+        prompt: Option<Command>,
+    }
+
+    fn set(context: CommandContext) -> CrushResult<()> {
+        let cfg: Set = Set::parse(context.arguments, &context.global_state.printer())?;
+        context.global_state.set_title(cfg.prompt);
+        context.output.send(Value::Empty)
+    }
+
+    #[signature(
+        crush.title.get,
+        can_block = false,
+        short = "Get the current title command")
+    ]
+    pub struct Get {
+    }
+
+    fn get(context: CommandContext) -> CrushResult<()> {
+        Get::parse(context.arguments, &context.global_state.printer())?;
+        context.output.send(context.global_state.title().map(|cmd| {Value::Command(cmd)}).unwrap_or(Value::Empty))
     }
 
 }
@@ -353,6 +393,16 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                             prompt::mode::Get::declare(env)?;
                             Ok(())
                         }))?;
+                    Ok(())
+                }),
+            )?;
+
+            crush.create_namespace(
+                "title",
+                "Title data for Crush",
+                Box::new(move |env| {
+                    title::Set::declare(env)?;
+                    title::Get::declare(env)?;
                     Ok(())
                 }),
             )?;

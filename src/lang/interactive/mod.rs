@@ -36,7 +36,7 @@ fn crush_history_file() -> CrushResult<PathBuf> {
     Ok(config_dir()?.join("history"))
 }
 
-pub fn execute_prompt(
+fn execute_command(
     prompt: Option<Command>,
     env: &Scope,
     global_state: &GlobalState,
@@ -105,7 +105,12 @@ pub fn run(
         let _ = global_state.editor().as_mut().map(|rl| { rl.load_history(&file) });
     }
     loop {
-        let prompt = match execute_prompt(global_state.prompt(), &global_env, global_state) {
+
+        if let Ok(Some(title)) = execute_command(global_state.title(), &global_env, global_state) {
+            println!("\x1b]0;{}\x07", title);
+        }
+
+        let prompt = match execute_command(global_state.prompt(), &global_env, global_state) {
             Ok(s) => s,
             Err(e) => {
                 global_state.printer().crush_error(e);
