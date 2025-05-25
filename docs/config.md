@@ -48,17 +48,18 @@ Crush code in the interactive Crush prompt. Assign ANSI color codes
 to the various token types of Crush to make your terminal more closely
 resemble a Christmas tree:
 
-| Name | Description                                              |
-| --- |----------------------------------------------------------|
-| `operator` | All the different Crush operators, such as `neg` and `+` |
+| Name              | Description                                              |
+|-------------------|----------------------------------------------------------|
+| `command`         | Commands                                                 |
+| `comment`         | Comments                                                 |
+| `file_literal`    | File literals, like `'Cargo.toml'`                       |
+| `glob_literal`    | Glob literals like `*.txt`                               |
+| `keyword`         | Reserved words like `continue` and `break`               |
+| `label`           | Variables and members, like `$global`                    |
 | `numeric_literal` | Integer and floating point literals, such as `6`         |
-| `string_literal` | String literals, like `"Burrow"`                         |
-| `file_literal` | File literals, like `'Cargo.toml'`                       |
-| `label` | Variables and members, like `$global`                    |
-|`glob_literal`| Glob literals like `*.txt`                               |
-|`regex_literal`| Regex literal like `^(a*)`                               |
-|`command`| Commands`                                                |
-|`keyword`| Reserved words like `continue` and `break`                |
+| `operator`        | All the different Crush operators, such as `neg` and `+` |
+| `regex_literal`   | Regex literal like `^(a*)`                               |
+| `string_literal`  | String literals, like `"Burrow"`                         |
 
 The `term` namespace contains useful constants containing ANSI color codes.
 A configuration example:

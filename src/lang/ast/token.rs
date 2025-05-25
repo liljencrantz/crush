@@ -14,6 +14,7 @@ pub enum Token<'input> {
     Star(Location),
     Slash(Location),
     QuotedString(&'input str, Location),
+    Comment(&'input str, Location),
     Identifier(&'input str, Location),
     Flag(&'input str, Location),
     QuotedFile(&'input str, Location),
@@ -55,6 +56,7 @@ impl Token<'_> {
             Token::ComparisonOperator(_, l) |
             Token::QuotedString(_, l) |
             Token::String(_, l) |
+            Token::Comment(_, l) |
             Token::File(_, l) |
             Token::Glob(_, l) |
             Token::Identifier(_, l) |
@@ -100,6 +102,7 @@ impl Token<'_> {
             Token::ComparisonOperator(s, _) |
             Token::QuotedString(s, _) |
             Token::String(s, _) |
+            Token::Comment(s, _) |
             Token::File(s, _) |
             Token::Glob(s, _) |
             Token::Identifier(s, _) |
@@ -156,6 +159,7 @@ impl<'a> Into<Spanned<'a>> for Token<'a> {
             Token::UnaryOperator(_, l) |
             Token::QuotedString(_, l) |
             Token::String(_, l) |
+            Token::Comment(_, l) |
             Token::File(_, l) |
             Token::Glob(_, l) |
             Token::Identifier(_, l) |

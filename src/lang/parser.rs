@@ -3,7 +3,8 @@ use crate::lang::job::Job;
 use crate::lang::state::scope::Scope;
 use crate::lang::ast::{token::Token, JobListNode, lexer::Lexer};
 use std::sync::{Arc, Mutex};
-use crate::lang::ast::lexer::LexerMode;
+use crate::lang::ast::lexer::{LexerMode, TokenizerMode};
+use crate::lang::ast::lexer::TokenizerMode::SkipComments;
 
 lalrpop_mod!(pub lalrparser, "/lang/lalrparser.rs");
 
@@ -60,15 +61,15 @@ impl Parser {
     }
 
     pub fn ast(&self, s: &str, initial_mode: LexerMode) -> CrushResult<JobListNode> {
-        let lex = Lexer::new(s, initial_mode);
+        let lex = Lexer::new(s, initial_mode, SkipComments);
         match initial_mode {
             LexerMode::Command => Ok(self.parser.lock().unwrap().parse(s, lex)?),
             LexerMode::Expression => Ok(self.expr_parser.lock().unwrap().parse(s, lex)?),
         }
     }
 
-    pub fn tokenize<'a>(&self, s: &'a str, initial_mode: LexerMode) -> CrushResult<Vec<Token<'a>>> {
-        let l = Lexer::new(s, initial_mode);
+    pub fn tokenize<'a>(&self, s: &'a str, initial_mode: LexerMode, tokenizer_mode: TokenizerMode) -> CrushResult<Vec<Token<'a>>> {
+        let l = Lexer::new(s, initial_mode, tokenizer_mode);
         l.into_iter().map(|item| item.map(|it| it.1).map_err(|e| CrushError::from(e)) ).collect()
     }
 
@@ -90,7 +91,7 @@ impl Parser {
     */
     pub fn close_command(&self, input: &str) -> CrushResult<String> {
         let input = self.close_token(input);
-        let tokens = self.tokenize(&input, LexerMode::Command)?;
+        let tokens = self.tokenize(&input, LexerMode::Command, SkipComments)?;
         let mut stack = Vec::new();
 
         let mut needs_trailing_arg = false;
@@ -131,6 +132,7 @@ impl Parser {
                 Token::Return(_) => {}
                 Token::Break(_) => {}
                 Token::Continue(_) => {}
+                Token::Comment(_, _) => {}
             }
         }
         stack.reverse();
@@ -154,7 +156,7 @@ mod tests {
 
     #[test]
     fn check_simple_tokens() {
-        let tok = p().tokenize("{aaa}\n").unwrap();
+        let tok = p().tokenize("{aaa}\n", LexerMode::Command, SkipComments).unwrap();
         assert_eq!(tok, vec![
             Token::BlockStart(Location::from(0)),
             Token::String("aaa", Location::new(1,4)),
@@ -165,7 +167,7 @@ mod tests {
 
     #[test]
     fn check_expression_tokens() {
-        let tok = p().tokenize("e(foo(5, 3.3))\n").unwrap();
+        let tok = p().tokenize("e(foo(5, 3.3))\n", LexerMode::Command, SkipComments).unwrap();
         assert_eq!(tok, vec![
             Token::ExprModeStart(Location::new(0, 2)),
             Token::Identifier("foo", Location::new(2,5)),
@@ -181,7 +183,7 @@ mod tests {
 
     #[test]
     fn check_token_offsets() {
-        let tok = p().tokenize("123:123.4 foo=\"bar\"").unwrap();
+        let tok = p().tokenize("123:123.4 foo=\"bar\"", LexerMode::Command, SkipComments).unwrap();
         assert_eq!(tok.len(), 6);
         assert_eq!(tok[0].location(), Location::new(0, 3));
         assert_eq!(tok[1].location(), Location::new(3usize, 4usize));
@@ -193,7 +195,7 @@ mod tests {
 
     #[test]
     fn check_token_newline() {
-        let tok = p().tokenize("123# comment\nggg").unwrap();
+        let tok = p().tokenize("123# comment\nggg", LexerMode::Command, SkipComments).unwrap();
         assert_eq!(tok.len(), 3);
         assert_eq!(tok[0].location(), Location::new(0usize, 3usize));
         assert_eq!(tok[1].location(), Location::new(12usize, 13usize));

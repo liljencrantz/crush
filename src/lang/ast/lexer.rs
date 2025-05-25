@@ -10,6 +10,12 @@ pub enum LexerMode {
     Expression,
 }
 
+#[derive(Clone, Copy)]
+pub enum TokenizerMode {
+    SkipComments,
+    IncludeComments,
+}
+
 pub struct Lexer<'input> {
     mode: Vec<LexerMode>,
     full_str: &'input str,
@@ -19,7 +25,7 @@ pub struct Lexer<'input> {
 pub type Spanned<'input> = Result<(usize, Token<'input>, usize), LexicalError>;
 
 impl<'input> Lexer<'input> {
-    pub fn new(input: &'input str, initial_mode: LexerMode) -> Self {
+    pub fn new(input: &'input str, initial_mode: LexerMode, tokenizer_mode: TokenizerMode) -> Self {
         Lexer {
             mode: vec![initial_mode],
             full_str: input,
@@ -129,13 +135,26 @@ impl<'input> Lexer<'input> {
                     }
                 }
 
-                Some((_, '#')) => {
+                Some((i, '#')) => {
+                    let mut end_idx = i;
                     loop {
                         let cc2 = self.chars.next();
                         match cc2 {
-                            Some((_, '\n')) | None => break,
-                            Some((_, _)) => {}
+                            None => {
+                                break;
+                            }
+                            Some((_, '\n')) => {
+                                end_idx += 1;
+                                break;
+                            }
+                            Some((_, _)) => {
+                                end_idx += 1;
+                            }
                         }
+                    }
+                    if matches!(TokenizerMode::IncludeComments, tokenizer_mode) {
+                        let s = &self.full_str[i..end_idx];
+                        return Some(Token::Comment(&self.full_str[i..end_idx + 1], Location::new(i, end_idx + 1)).into());
                     }
                 }
 
@@ -205,8 +224,7 @@ impl<'input> Lexer<'input> {
                                         Some(_) => was_backslash = false,
                                         None => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion(')'))),
                                     }
-                                }
-                                else {
+                                } else {
                                     match self.chars.next() {
                                         Some((_, '/')) => was_backslash = true,
                                         Some((i2, ')')) => {
@@ -222,8 +240,8 @@ impl<'input> Lexer<'input> {
                                     }
                                 }
                             }
-                            let s = &self.full_str[i+2..end];
-                            return Some(Token::Regex(s, Location::new(i, end+1)).into());
+                            let s = &self.full_str[i + 2..end];
+                            return Some(Token::Regex(s, Location::new(i, end + 1)).into());
                         }
                         Some((_, ch2)) => return Some(Err(LexicalError::UnexpectedCharacterWithSuggestion(*ch2, '('))),
                         _ => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion('('))),
@@ -384,8 +402,7 @@ impl<'input> Lexer<'input> {
                                         Some(_) => was_backslash = false,
                                         None => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion(')'))),
                                     }
-                                }
-                                else {
+                                } else {
                                     match self.chars.next() {
                                         Some((_, '/')) => was_backslash = true,
                                         Some((i2, ')')) => {
@@ -401,8 +418,8 @@ impl<'input> Lexer<'input> {
                                     }
                                 }
                             }
-                            let s = &self.full_str[i+2..end];
-                            return Some(Token::Regex(s, Location::new(i, end+1)).into());
+                            let s = &self.full_str[i + 2..end];
+                            return Some(Token::Regex(s, Location::new(i, end + 1)).into());
                         }
                         Some((_, ch2)) => return Some(Err(LexicalError::UnexpectedCharacterWithSuggestion(*ch2, '('))),
                         _ => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion('('))),

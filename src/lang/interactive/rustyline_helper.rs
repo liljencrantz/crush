@@ -13,7 +13,7 @@ use crate::lang::value::Value;
 use crate::util::directory_lister::directory_lister;
 use crate::lang::state::scope::Scope;
 use rustyline_derive::Helper;
-use crate::lang::ast::lexer::LexerMode;
+use crate::lang::ast::lexer::{LexerMode, TokenizerMode};
 use crate::lang::ast::lexer::LexerMode::Command;
 use crate::lang::state::global_state::GlobalState;
 
@@ -69,6 +69,7 @@ impl RustylineHelper {
                     Flag(_, _) => highlight.get(&Value::from("string_literal")),
                     Regex(_, _) => highlight.get(&Value::from("regex_literal")),
                     Glob(_, _) => highlight.get(&Value::from("glob_literal")),
+                    Comment(_, _) => highlight.get(&Value::from("comment")),
                     File(_, _) | QuotedFile(_, _) => highlight.get(&Value::from("file_literal")),
                     Float(_, _) | Integer(_, _) => highlight.get(&Value::from("numeric_literal")),
                     Unnamed(_) | Named(_) | Pipe(_) | LogicalOperator(_, _) | UnaryOperator(_, _) |
@@ -104,7 +105,8 @@ impl RustylineHelper {
         let mut prev = None;
         for tok in self.state.parser().tokenize(
             &self.state.parser().close_token(line),
-            self.mode)? {
+            self.mode,
+            TokenizerMode::IncludeComments)? {
             if pos >= line.len() {
                 break;
             }

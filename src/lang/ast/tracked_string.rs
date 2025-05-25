@@ -89,6 +89,7 @@ impl From<Token<'_>> for TrackedString {
             Token::ComparisonOperator(_, l) |
             Token::QuotedString(_, l) |
             Token::String(_, l) |
+            Token::Comment(_, l) |
             Token::File(_, l) |
             Token::Glob(_, l) |
             Token::Identifier(_, l) |
