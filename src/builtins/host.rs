@@ -5,7 +5,6 @@ use crate::lang::state::scope::Scope;
 use nix::sys::signal;
 use nix::unistd::Pid;
 use std::str::FromStr;
-use crate::lang::errors::error;
 use crate::lang::data::r#struct::Struct;
 use std::ops::Deref;
 use crate::lang::data::table::ColumnType;
@@ -15,8 +14,6 @@ use chrono::Duration;
 use nix::libc::uid_t;
 use signature::signature;
 use crate::lang::data::table::ColumnFormat;
-
-extern crate uptime_lib;
 
 #[signature(
     host.name,
@@ -122,7 +119,6 @@ fn memory(context: CommandContext) -> CrushResult<()> {
 }
 
 mod os {
-    use dns_lookup::LookupErrorKind::System;
     use super::*;
 
     #[signature(
