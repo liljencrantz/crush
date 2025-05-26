@@ -37,7 +37,6 @@ pub enum CrushErrorType {
     DnsClientError(trust_dns_client::error::ClientError),
     MountpointsError(mountpoints::Error),
     PsutilProcessError(psutil::process::ProcessError),
-    SysInfoError(sys_info::Error),
     BatteryError(battery::Error),
     NixError(nix::errno::Errno),
     ReqwestError(reqwest::Error),
@@ -106,7 +105,6 @@ impl CrushError {
             DnsClientError(e) => e.to_string(),
             MountpointsError(e) => e.to_string(),
             PsutilProcessError(e) => e.to_string(),
-            SysInfoError(e) => e.to_string(),
             BatteryError(e) => e.to_string(),
             NixError(e) => e.to_string(),
             ReqwestError(e) => e.to_string(),
@@ -383,16 +381,6 @@ impl From<psutil::process::ProcessError> for CrushError {
     fn from(e: psutil::process::ProcessError) -> Self {
         CrushError {
             error_type: PsutilProcessError(e),
-            location: None,
-            definition: None,
-        }
-    }
-}
-
-impl From<sys_info::Error> for CrushError {
-    fn from(e: sys_info::Error) -> Self {
-        CrushError {
-            error_type: SysInfoError(e),
             location: None,
             definition: None,
         }

@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult};
+use crate::lang::errors::{CrushResult, mandate};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::{lang::value::Value, lang::value::ValueType};
@@ -9,7 +9,6 @@ use signature::signature;
 use std::str::FromStr;
 use crate::lang::errors::error;
 use crate::lang::data::r#struct::Struct;
-use sys_info;
 use battery::State;
 use chrono::Duration;
 use crate::lang::data::table::ColumnFormat;
@@ -28,7 +27,7 @@ struct Name {}
 fn name(context: CommandContext) -> CrushResult<()> {
     context
         .output
-        .send(Value::from(sys_info::hostname()?))
+        .send(Value::from(mandate(nix::unistd::gethostname()?.to_str(), "Invalid hostname")?))
 }
 
 static BATTERY_OUTPUT_TYPE: [ColumnType; 11] = [
@@ -112,22 +111,14 @@ fn battery(context: CommandContext) -> CrushResult<()> {
 struct Memory {}
 
 fn memory(context: CommandContext) -> CrushResult<()> {
-    let mem = sys_info::mem_info()?;
+    let mut sys = sysinfo::System::new_all();
     context.output.send(Value::Struct(Struct::new(
         vec![
-            ("total", Value::Integer(mem.total as i128)),
-            ("free", Value::Integer(mem.free as i128)),
-            ("avail", Value::Integer(mem.avail as i128)),
-            ("buffers", Value::Integer(mem.buffers as i128)),
-            ("cached", Value::Integer(mem.cached as i128)),
-            (
-                "swap_total",
-                Value::Integer(mem.swap_total as i128),
-            ),
-            (
-                "swap_free",
-                Value::Integer(mem.swap_free as i128),
-            ),
+            ("total", Value::from(sys.total_memory())),
+            ("free", Value::from(sys.free_memory())),
+            ("avail", Value::from(sys.available_memory())),
+            ("swap_total", Value::from(sys.total_swap()),),
+            ("swap_free", Value::from(sys.free_swap()),),
         ],
         None,
     )))
@@ -146,7 +137,7 @@ mod os {
     fn name(context: CommandContext) -> CrushResult<()> {
         context
             .output
-            .send(Value::from(sys_info::os_type()?))
+            .send(Value::from(std::env::consts::OS))
     }
 
     #[signature(
@@ -160,7 +151,7 @@ mod os {
     fn version(context: CommandContext) -> CrushResult<()> {
         context
             .output
-            .send(Value::from(sys_info::os_release()?))
+            .send(Value::from(mandate(sysinfo::System::os_version(), "Unknown OS version")?))
     }
 }
 
@@ -175,9 +166,10 @@ mod cpu {
     pub struct Count {}
 
     fn count(context: CommandContext) -> CrushResult<()> {
+        let mut sys = sysinfo::System::new_all();
         context
             .output
-            .send(Value::Integer(sys_info::cpu_num()? as i128))
+            .send(Value::from(sys.cpus().len()))
     }
 
     #[signature(
@@ -188,7 +180,7 @@ mod cpu {
     pub struct Load {}
 
     fn load(context: CommandContext) -> CrushResult<()> {
-        let load = sys_info::loadavg()?;
+        let load = sysinfo::System::load_average();
         context.output.send(Value::Struct(Struct::new(
             vec![
                 ("one", Value::Float(load.one)),
@@ -199,18 +191,6 @@ mod cpu {
         )))
     }
 
-    #[signature(
-        host.cpu.speed,
-        can_block = false,
-        output = Known(ValueType::Integer),
-        short = "current CPU frequency")]
-    pub struct Speed {}
-
-    fn speed(context: CommandContext) -> CrushResult<()> {
-        context.output.send(Value::Integer(
-            sys_info::cpu_speed()? as i128
-        ))
-    }
 }
 
 #[cfg(target_os = "macos")]
@@ -259,11 +239,11 @@ mod macos {
     use libproc::libproc::thread_info::ThreadInfo;
     use mach2::mach_time::mach_timebase_info;
     use nix::unistd;
-    use sysinfo::Uid;
+    use sysinfo::{ProcessRefreshKind, RefreshKind, Uid};
 
     fn procs(context: CommandContext) -> CrushResult<()> {
         use sysinfo::{
-            Components, Disks, Networks, System,
+            System,
         };
         let mut sys = System::new_all();
 
@@ -508,7 +488,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "Metadata about the CPUs of this host",
                 Box::new(move |env| {
                     cpu::Count::declare(env)?;
-                    cpu::Speed::declare(env)?;
                     cpu::Load::declare(env)?;
                     Ok(())
                 }),
