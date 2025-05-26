@@ -223,7 +223,7 @@ mod macos {
     use crate::util::user_map::create_user_map;
     use crate::{data::table::Row, lang::value::Value, lang::value::ValueType};
     use chrono::Duration;
-    use libc::uid_t;
+    use nix::libc::uid_t;
     use signature::signature;
     use crate::lang::data::table::{ColumnFormat};
 

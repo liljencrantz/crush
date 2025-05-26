@@ -5,9 +5,9 @@ use std::os::raw::c_char;
 use nix::unistd::{Uid, Gid, getuid};
 use crate::lang::errors::{CrushResult, data_error, error};
 use std::ffi::CStr;
-use libc::gid_t;
+use nix::libc::gid_t;
 use std::path::PathBuf;
-use libc::{passwd, uid_t};
+use nix::libc::{passwd, uid_t};
 use crate::argument_error_legacy;
 
 static USER_MUTEX: Mutex<i32> = Mutex::new(0i32);
@@ -36,15 +36,15 @@ pub fn create_user_map() -> CrushResult<HashMap<Uid, String>> {
     let _user_lock = USER_MUTEX.lock().unwrap();
     let mut res = HashMap::new();
     unsafe {
-        libc::setpwent();
+        nix::libc::setpwent();
         loop {
-            let passwd = libc::getpwent();
+            let passwd = nix::libc::getpwent();
             if passwd.is_null() {
                 break;
             }
             res.insert(Uid::from_raw((*passwd).pw_uid), parse((*passwd).pw_name)?);
         }
-        libc::endpwent();
+        nix::libc::endpwent();
     }
     Ok(res)
 }
@@ -62,7 +62,7 @@ pub fn get_all_users() -> CrushResult<Vec<UserData>> {
     let _user_lock = USER_MUTEX.lock().unwrap();
     let mut res = Vec::new();
     unsafe {
-        libc::setpwent();
+        nix::libc::setpwent();
         loop {
             let passwd = nix::libc::getpwent();
             if passwd.is_null() {
@@ -73,7 +73,7 @@ pub fn get_all_users() -> CrushResult<Vec<UserData>> {
                 Err(e) => return Err(e),
             }
         }
-        libc::endpwent();
+        nix::libc::endpwent();
     }
     Ok(res)
 }
@@ -94,16 +94,16 @@ impl UserData {
 pub fn get_user(input_name: &str) -> CrushResult<UserData> {
     let _user_lock = USER_MUTEX.lock().unwrap();
     unsafe {
-        libc::setpwent();
+        nix::libc::setpwent();
         loop {
-            let passwd = libc::getpwent();
+            let passwd = nix::libc::getpwent();
             if passwd.is_null() {
                 return argument_error_legacy(format!("Unknown user {}", input_name));
             }
             let name = parse((*passwd).pw_name)?;
             if name == input_name {
                 let res = UserData::new(&*passwd);
-                libc::endpwent();
+                nix::libc::endpwent();
                 return res;
             }
         }

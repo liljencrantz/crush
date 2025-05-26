@@ -363,7 +363,6 @@ dependencies = [
  "itertools 0.14.0",
  "lalrpop",
  "lalrpop-util 0.22.1",
- "libc",
  "libproc",
  "mach2",
  "maplit",

@@ -4,7 +4,7 @@ Read login records from utmp/utmpx database.
 use std::sync::Mutex;
 use std::os::raw::c_short;
 use chrono::{DateTime, Local, TimeZone};
-use libc::{endutxent, getutxent, timeval};
+use nix::libc::{endutxent, getutxent, timeval};
 use UtmpxType::{BootTime, DeadProcess, Empty, InitProcess, LoginProcess, NewTime, OldTime, UserProcess};
 use crate::lang::errors::{CrushError, login_error};
 
@@ -70,14 +70,14 @@ impl TryFrom<c_short> for UtmpxType {
 
     fn try_from(value: c_short) -> Result<Self, Self::Error> {
         match value {
-            libc::EMPTY => Ok(Empty),
-            libc::BOOT_TIME => Ok(BootTime),
-            libc::OLD_TIME => Ok(OldTime),
-            libc::NEW_TIME => Ok(NewTime),
-            libc::USER_PROCESS => Ok(UserProcess),
-            libc::INIT_PROCESS => Ok(InitProcess),
-            libc::LOGIN_PROCESS => Ok(LoginProcess),
-            libc::DEAD_PROCESS => Ok(DeadProcess),
+            nix::libc::EMPTY => Ok(Empty),
+            nix::libc::BOOT_TIME => Ok(BootTime),
+            nix::libc::OLD_TIME => Ok(OldTime),
+            nix::libc::NEW_TIME => Ok(NewTime),
+            nix::libc::USER_PROCESS => Ok(UserProcess),
+            nix::libc::INIT_PROCESS => Ok(InitProcess),
+            nix::libc::LOGIN_PROCESS => Ok(LoginProcess),
+            nix::libc::DEAD_PROCESS => Ok(DeadProcess),
             _ => login_error("Invalid utmpx record type"),
         }
     }
