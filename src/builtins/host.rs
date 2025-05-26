@@ -7,7 +7,6 @@ use nix::unistd::Pid;
 use std::str::FromStr;
 use crate::lang::errors::error;
 use crate::lang::data::r#struct::Struct;
-use battery::State;
 use std::ops::Deref;
 use crate::lang::data::table::ColumnType;
 use crate::util::user_map::create_user_map;
@@ -15,7 +14,7 @@ use crate::{data::table::Row, lang::value::Value, lang::value::ValueType};
 use chrono::Duration;
 use nix::libc::uid_t;
 use signature::signature;
-use crate::lang::data::table::{ColumnFormat};
+use crate::lang::data::table::ColumnFormat;
 
 extern crate uptime_lib;
 
@@ -54,12 +53,8 @@ static BATTERY_OUTPUT_TYPE: [ColumnType; 11] = [
 struct Uptime {}
 
 fn uptime(context: CommandContext) -> CrushResult<()> {
-    match uptime_lib::get() {
-        Ok(d) => context.output.send(Value::Duration(Duration::nanoseconds(i64::try_from(d.as_nanos()).unwrap()))),
-        Err(e) => error(e.to_string()),
-    }
+    context.output.send(Value::Duration(Duration::seconds(sysinfo::System::uptime() as i64)))
 }
-
 
 #[signature(
     host.battery,
@@ -70,11 +65,11 @@ struct Battery {}
 
 fn state_name(state: battery::State) -> String {
     match state {
-        State::Unknown => "Unknown",
-        State::Charging => "Charging",
-        State::Discharging => "Discharging",
-        State::Empty => "Empty",
-        State::Full => "Full",
+        battery::State::Unknown => "Unknown",
+        battery::State::Charging => "Charging",
+        battery::State::Discharging => "Discharging",
+        battery::State::Empty => "Empty",
+        battery::State::Full => "Full",
         _ => "Unknown",
     }.to_string()
 }
@@ -127,6 +122,7 @@ fn memory(context: CommandContext) -> CrushResult<()> {
 }
 
 mod os {
+    use dns_lookup::LookupErrorKind::System;
     use super::*;
 
     #[signature(
@@ -172,6 +168,19 @@ mod cpu {
         context
             .output
             .send(Value::from(sys.cpus().len()))
+    }
+
+    #[signature(
+        host.cpu.arch,
+        can_block = false,
+        output = Known(ValueType::String),
+        short = "the name of the CPU architecture")]
+    pub struct Arch {}
+
+    fn arch(context: CommandContext) -> CrushResult<()> {
+        context
+            .output
+            .send(Value::from(sysinfo::System::cpu_arch()))
     }
 
     #[signature(
@@ -375,6 +384,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 "cpu",
                 "Metadata about the CPUs of this host",
                 Box::new(move |env| {
+                    cpu::Arch::declare(env)?;
                     cpu::Count::declare(env)?;
                     cpu::Load::declare(env)?;
                     Ok(())
