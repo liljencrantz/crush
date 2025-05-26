@@ -44,9 +44,7 @@ serde_yaml = { version = "0.9.34" }
 toml = "0.8.22"
 reqwest = { version = "0.12.15", features = ["blocking"] }
 crossbeam = "0.8.4"
-time = "0.3.41"
 prost = "0.13.5"
-bytes = "1.10.1"
 termion = "4.0.5"
 float-ord = "0.3.2"
 maplit = "1.0.2"
