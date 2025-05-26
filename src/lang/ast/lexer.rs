@@ -18,6 +18,7 @@ pub enum TokenizerMode {
 
 pub struct Lexer<'input> {
     mode: Vec<LexerMode>,
+    tokenizer_mode: TokenizerMode,
     full_str: &'input str,
     chars: Peekable<CharIndices<'input>>,
 }
@@ -28,6 +29,7 @@ impl<'input> Lexer<'input> {
     pub fn new(input: &'input str, initial_mode: LexerMode, tokenizer_mode: TokenizerMode) -> Self {
         Lexer {
             mode: vec![initial_mode],
+            tokenizer_mode,
             full_str: input,
             chars: input.char_indices().peekable(),
         }
@@ -152,8 +154,7 @@ impl<'input> Lexer<'input> {
                             }
                         }
                     }
-                    if matches!(TokenizerMode::IncludeComments, tokenizer_mode) {
-                        let s = &self.full_str[i..end_idx];
+                    if matches!(self.tokenizer_mode, TokenizerMode::IncludeComments) {
                         return Some(Token::Comment(&self.full_str[i..end_idx + 1], Location::new(i, end_idx + 1)).into());
                     }
                 }

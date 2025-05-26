@@ -2,18 +2,20 @@ use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{CrushResult, mandate};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
-use crate::{lang::value::Value, lang::value::ValueType};
 use nix::sys::signal;
 use nix::unistd::Pid;
-use signature::signature;
 use std::str::FromStr;
 use crate::lang::errors::error;
 use crate::lang::data::r#struct::Struct;
 use battery::State;
-use chrono::Duration;
-use crate::lang::data::table::ColumnFormat;
+use std::ops::Deref;
 use crate::lang::data::table::ColumnType;
-use crate::lang::data::table::Row;
+use crate::util::user_map::create_user_map;
+use crate::{data::table::Row, lang::value::Value, lang::value::ValueType};
+use chrono::Duration;
+use nix::libc::uid_t;
+use signature::signature;
+use crate::lang::data::table::{ColumnFormat};
 
 extern crate uptime_lib;
 
@@ -111,7 +113,7 @@ fn battery(context: CommandContext) -> CrushResult<()> {
 struct Memory {}
 
 fn memory(context: CommandContext) -> CrushResult<()> {
-    let mut sys = sysinfo::System::new_all();
+    let sys = sysinfo::System::new_all();
     context.output.send(Value::Struct(Struct::new(
         vec![
             ("total", Value::from(sys.total_memory())),
@@ -166,7 +168,7 @@ mod cpu {
     pub struct Count {}
 
     fn count(context: CommandContext) -> CrushResult<()> {
-        let mut sys = sysinfo::System::new_all();
+        let sys = sysinfo::System::new_all();
         context
             .output
             .send(Value::from(sys.cpus().len()))
@@ -190,243 +192,133 @@ mod cpu {
             None,
         )))
     }
-
 }
 
-#[cfg(target_os = "macos")]
-mod macos {
-    use std::ops::Deref;
-    use crate::lang::command::OutputType::Known;
-    use crate::lang::errors::{CrushResult};
-    use crate::lang::state::contexts::CommandContext;
-    use crate::lang::data::table::ColumnType;
-    use crate::util::user_map::create_user_map;
-    use crate::{data::table::Row, lang::value::Value, lang::value::ValueType};
-    use chrono::Duration;
-    use nix::libc::uid_t;
-    use signature::signature;
-    use crate::lang::data::table::{ColumnFormat};
+static LIST_OUTPUT_TYPE: [ColumnType; 7] = [
+    ColumnType::new("pid", ValueType::Integer),
+    ColumnType::new("ppid", ValueType::Integer),
+    ColumnType::new("user", ValueType::String),
+    ColumnType::new_with_format("rss", ColumnFormat::ByteUnit, ValueType::Integer),
+    ColumnType::new_with_format("vms", ColumnFormat::ByteUnit, ValueType::Integer),
+    ColumnType::new("cpu", ValueType::Duration),
+    ColumnType::new("name", ValueType::String),
+];
 
-    static LIST_OUTPUT_TYPE: [ColumnType; 7] = [
-        ColumnType::new("pid", ValueType::Integer),
-        ColumnType::new("ppid", ValueType::Integer),
-        ColumnType::new("user", ValueType::String),
-        ColumnType::new_with_format("rss", ColumnFormat::ByteUnit, ValueType::Integer),
-        ColumnType::new_with_format("vms", ColumnFormat::ByteUnit, ValueType::Integer),
-        ColumnType::new("cpu", ValueType::Duration),
-        ColumnType::new("name", ValueType::String),
-    ];
+static THREADS_OUTPUT_TYPE: [ColumnType; 6] = [
+    ColumnType::new("tid", ValueType::Integer),
+    ColumnType::new("pid", ValueType::Integer),
+    ColumnType::new("priority", ValueType::Integer),
+    ColumnType::new("user", ValueType::Duration),
+    ColumnType::new("system", ValueType::Duration),
+    ColumnType::new("name", ValueType::String),
+];
 
-    static THREADS_OUTPUT_TYPE: [ColumnType; 6] = [
-        ColumnType::new("tid", ValueType::Integer),
-        ColumnType::new("pid", ValueType::Integer),
-        ColumnType::new("priority", ValueType::Integer),
-        ColumnType::new("user", ValueType::Duration),
-        ColumnType::new("system", ValueType::Duration),
-        ColumnType::new("name", ValueType::String),
-    ];
+#[signature(
+    host.procs,
+    can_block = true,
+    short = "Return a table stream containing information on all running processes on this host",
+    output = Known(ValueType::table_input_stream(& LIST_OUTPUT_TYPE)),
+    long = "host:procs accepts no arguments.")]
+pub struct Procs {}
 
-    #[signature(
-        host.procs,
-        can_block = true,
-        short = "Return a table stream containing information on all running processes on this host",
-        output = Known(ValueType::table_input_stream(&LIST_OUTPUT_TYPE)),
-        long = "host:procs accepts no arguments.")]
-    pub struct Procs {}
+use libproc::libproc::proc_pid::{listpidinfo, listpids, pidinfo, ListThreads, ProcType};
+use libproc::libproc::task_info::TaskAllInfo;
+use libproc::libproc::thread_info::ThreadInfo;
+use mach2::mach_time::mach_timebase_info;
+use nix::unistd;
 
-    use libproc::libproc::proc_pid::{listpidinfo, listpids, pidinfo, ListThreads, ProcType};
-    use libproc::libproc::task_info::TaskAllInfo;
-    use libproc::libproc::thread_info::ThreadInfo;
-    use mach2::mach_time::mach_timebase_info;
-    use nix::unistd;
-    use sysinfo::{ProcessRefreshKind, RefreshKind, Uid};
+fn procs(context: CommandContext) -> CrushResult<()> {
+    use sysinfo::{
+        System,
+    };
+    let mut sys = System::new_all();
 
-    fn procs(context: CommandContext) -> CrushResult<()> {
-        use sysinfo::{
-            System,
-        };
-        let mut sys = System::new_all();
+    // First we update all information of our `System` struct.
+    sys.refresh_all();
+    let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
+    let users = create_user_map()?;
 
-        // First we update all information of our `System` struct.
-        sys.refresh_all();
-        let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
-        let users = create_user_map()?;
+    for (pid, proc) in sys.processes() {
+        output.send(Row::new(vec![
+            Value::from(pid.as_u32()),
+            Value::from(proc.parent().map(|i| i.as_u32()).unwrap_or(1u32)),
+            proc.user_id().and_then(|i| {
+                let ii = i.deref();
+                let iii = *ii as uid_t;
+                let iiii = unistd::Uid::from_raw(iii);
+                return users.get(&iiii);
+            }).map(|s| Value::from(s)).unwrap_or_else(|| Value::from("?")),
+            Value::Integer(proc.memory().into()),
+            Value::Integer(proc.virtual_memory().into()),
+            Value::Duration(Duration::microseconds((1_000_000.0 * proc.cpu_usage()) as i64)),
+            Value::from(proc.name().to_str().unwrap_or("<Invalid>")),
+        ]))?;
+    }
+    Ok(())
+}
 
-        for (pid, proc) in sys.processes() {
+#[signature(
+    host.threads,
+    can_block = true,
+    short = "Return a table stream containing information on all running threads on this host",
+    output = Known(ValueType::table_input_stream(& THREADS_OUTPUT_TYPE)),
+    long = "host:threads accepts no arguments.")]
+pub struct Threads {}
 
-            output.send(Row::new(vec![
-                Value::from(pid.as_u32()),
-                Value::from(proc.parent().map(|i| i.as_u32()).unwrap_or(1u32)),
-                proc.user_id().and_then(|i| {
-                    let ii = i.deref();
-                    let iii = *ii as uid_t;
-                    let iiii = unistd::Uid::from_raw(iii);
-                    return users.get(&iiii);
-                }).map(|s| Value::from(s)).unwrap_or_else(|| Value::from("?")),
-                Value::Integer( proc.memory().into()),
-                Value::Integer(proc.virtual_memory().into()),
-                Value::Duration(Duration::microseconds((1_000_000.0 * proc.cpu_usage()) as i64)),
-                Value::from(proc.name().to_str().unwrap_or("<Invalid>")),
-            ]))?;
-        }
-        Ok(())
+fn threads(context: CommandContext) -> CrushResult<()> {
+    let mut base_procs = Vec::new();
+
+    let output = context.output.initialize(&THREADS_OUTPUT_TYPE)?;
+    let mut info: mach_timebase_info = mach_timebase_info { numer: 0, denom: 0 };
+    unsafe {
+        mach_timebase_info(std::ptr::addr_of_mut!(info));
     }
 
-    #[signature(
-        host.threads,
-        can_block = true,
-        short = "Return a table stream containing information on all running threads on this host",
-        output = Known(ValueType::table_input_stream(&THREADS_OUTPUT_TYPE)),
-        long = "host:threads accepts no arguments.")]
-    pub struct Threads {}
-
-    fn threads(context: CommandContext) -> CrushResult<()> {
-        let mut base_procs = Vec::new();
-
-        let output = context.output.initialize(&THREADS_OUTPUT_TYPE)?;
-        let mut info: mach_timebase_info = mach_timebase_info { numer: 0, denom: 0 };
-        unsafe {
-            mach_timebase_info(std::ptr::addr_of_mut!(info));
+    if let Ok(procs) = listpids(ProcType::ProcAllPIDS) {
+        for p in procs {
+            base_procs.push(p);
         }
+    }
 
-        if let Ok(procs) = listpids(ProcType::ProcAllPIDS) {
-            for p in procs {
-                base_procs.push(p);
-            }
-        }
+    for pid in base_procs {
+        if let Ok(curr_task) = pidinfo::<TaskAllInfo>(pid as i32, 0) {
+            let threadids = listpidinfo::<ListThreads>(pid as i32, curr_task.ptinfo.pti_threadnum as usize);
+            let mut curr_threads = Vec::new();
+            if let Ok(threadids) = threadids {
+                for t in threadids {
+                    if let Ok(thread) = pidinfo::<ThreadInfo>(pid as i32, t) {
+                        let name =
+                            String::from_utf8(
+                                thread.pth_name
+                                    .iter()
+                                    .map(|c| unsafe { std::mem::transmute::<i8, u8>(*c) })
+                                    .filter(|c| { *c > 0u8 })
+                                    .collect()
+                            ).unwrap_or_else(|_| { "<Invalid>".to_string() });
+                        output.send(Row::new(vec![
+                            Value::Integer(t as i128),
+                            Value::Integer(pid as i128),
+                            Value::Integer(thread.pth_priority as i128),
+                            Value::Duration(Duration::nanoseconds(
+                                i64::try_from(thread.pth_user_time)? *
+                                    i64::from(info.numer) /
+                                    i64::from(info.denom))),
+                            Value::Duration(Duration::nanoseconds(
+                                i64::try_from(thread.pth_system_time)? *
+                                    i64::from(info.numer) /
+                                    i64::from(info.denom))),
+                            Value::from(name),
+                        ]))?;
 
-        for pid in base_procs {
-            if let Ok(curr_task) = pidinfo::<TaskAllInfo>(pid as i32, 0) {
-                let threadids = listpidinfo::<ListThreads>(pid as i32, curr_task.ptinfo.pti_threadnum as usize);
-                let mut curr_threads = Vec::new();
-                if let Ok(threadids) = threadids {
-                    for t in threadids {
-                        if let Ok(thread) = pidinfo::<ThreadInfo>(pid as i32, t) {
-                            let name =
-                                String::from_utf8(
-                                    thread.pth_name
-                                        .iter()
-                                        .map(|c| unsafe { std::mem::transmute::<i8, u8>(*c) })
-                                        .filter(|c| { *c > 0u8 })
-                                        .collect()
-                                ).unwrap_or_else(|_| { "<Invalid>".to_string() });
-                            output.send(Row::new(vec![
-                                Value::Integer(t as i128),
-                                Value::Integer(pid as i128),
-                                Value::Integer(thread.pth_priority as i128),
-                                Value::Duration(Duration::nanoseconds(
-                                    i64::try_from(thread.pth_user_time)? *
-                                        i64::from(info.numer) /
-                                        i64::from(info.denom))),
-                                Value::Duration(Duration::nanoseconds(
-                                    i64::try_from(thread.pth_system_time)? *
-                                        i64::from(info.numer) /
-                                        i64::from(info.denom))),
-                                Value::from(name),
-                            ]))?;
-
-                            curr_threads.push(thread);
-                        }
+                        curr_threads.push(thread);
                     }
                 }
-
-                //                let curr_res = pidrusage::<RUsageInfoV2>(pid).ok();
             }
-        }
-        Ok(())
-    }
-}
 
-#[cfg(target_os = "linux")]
-mod linux {
-    use crate::lang::command::OutputType::Known;
-    use crate::lang::errors::{error, CrushResult};
-    use crate::lang::state::contexts::CommandContext;
-    use crate::lang::data::table::ColumnType;
-    use crate::util::user_map::create_user_map;
-    use crate::{lang::value::Value, lang::value::ValueType};
-    use chrono::Duration;
-    use nix::unistd::Uid;
-    use psutil::process::os::unix::ProcessExt;
-    use psutil::process::{Process, ProcessResult, Status};
-    use signature::signature;
-    use std::collections::HashMap;
-    use crate::lang::data::table::{Row, ColumnFormat};
-
-    static LIST_OUTPUT_TYPE: [ColumnType; 8] = [
-        ColumnType::new("pid", ValueType::Integer),
-        ColumnType::new("ppid", ValueType::Integer),
-        ColumnType::new("status", ValueType::String),
-        ColumnType::new("user", ValueType::String),
-        ColumnType::new("cpu", ValueType::Duration),
-        ColumnType::new_with_format("rss", ColumnFormat::ByteUnit, ValueType::Integer),
-        ColumnType::new_with_format("vms", ColumnFormat::ByteUnit, ValueType::Integer),
-        ColumnType::new("name", ValueType::String),
-    ];
-
-    fn state_name(s: Status) -> &'static str {
-        match s {
-            Status::Running => "Running",
-            Status::Sleeping => "Sleeping",
-            Status::Waiting => "Waiting",
-            Status::Stopped => "Stopped",
-            Status::Dead => "Dead",
-            Status::Zombie => "Zombie",
-            Status::Idle => "Idle",
-            Status::DiskSleep => "DiskSleep",
-            Status::TracingStop => "TracingStop",
-            Status::WakeKill => "WakeKill",
-            Status::Waking => "Waking",
-            Status::Parked => "Parked",
-            Status::Locked => "Locked",
-            Status::Suspended => "Suspended",
+            //                let curr_res = pidrusage::<RUsageInfoV2>(pid).ok();
         }
     }
-
-
-    #[signature(
-        host.procs,
-        can_block = true,
-        short = "Return a table stream containing information on all running processes on this host",
-        output = Known(ValueType::table_input_stream(&LIST_OUTPUT_TYPE)),
-        long = "host:procs accepts no arguments.")]
-    pub struct Procs {}
-
-    fn procs(mut context: CommandContext) -> CrushResult<()> {
-        Procs::parse(context.remove_arguments(), &context.global_state.printer())?;
-        let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
-        let users = create_user_map()?;
-
-        match psutil::process::processes() {
-            Ok(procs) => {
-                for proc in procs {
-                    output.send(handle_process(proc, &users)?)?;
-                }
-            }
-            Err(_) => return error("Failed to list processes"),
-        }
-        Ok(())
-    }
-
-    fn handle_process(proc: ProcessResult<Process>, users: &HashMap<Uid, String>) -> ProcessResult<Row> {
-        let proc = proc?;
-
-        Ok(Row::new(vec![
-            Value::Integer(proc.pid() as i128),
-            Value::Integer(proc.ppid()?.unwrap_or(0) as i128),
-            Value::from(state_name(proc.status()?)),
-            users.get(&nix::unistd::Uid::from_raw(proc.uids()?.effective)).map(|s| Value::from(s)).unwrap_or_else(|| Value::from("?")),
-            Value::Duration(Duration::microseconds(
-                proc.cpu_times()?.busy().as_micros() as i64
-            )),
-            Value::Integer(proc.memory_info()?.rss() as i128),
-            Value::Integer(proc.memory_info()?.vms() as i128),
-            Value::from(
-                &proc.cmdline_vec()?
-                    .unwrap_or(vec![format!("[{}]", proc.name()?)])[0],
-            ),
-        ]))
-    }
+    Ok(())
 }
 
 #[signature(
@@ -467,12 +359,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Memory::declare(host)?;
             Name::declare(host)?;
             Uptime::declare(host)?;
-            #[cfg(target_os = "linux")]
-            linux::Procs::declare(host)?;
-            #[cfg(target_os = "macos")]
-            macos::Procs::declare(host)?;
-            #[cfg(target_os = "macos")]
-            macos::Threads::declare(host)?;
+            Procs::declare(host)?;
+            Threads::declare(host)?;
             Signal::declare(host)?;
             host.create_namespace(
                 "os",

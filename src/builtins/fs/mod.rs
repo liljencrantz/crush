@@ -18,7 +18,6 @@ use crate::lang::data::table::{ColumnType, Row};
 mod usage;
 mod files;
 mod mounts;
-pub mod fd;
 
 #[signature(
     fs.cd,
@@ -159,18 +158,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Cwd::declare(fs)?;
             Stat::declare(fs)?;
             usage::Usage::declare(fs)?;
-            fs.create_namespace(
-                "fd",
-                "Information on currently open files and sockets",
-                Box::new(move |fd| {
-                    fd::File::declare(fd)?;
-                    #[cfg(target_os = "linux")]
-                    fd::procfs::Network::declare(fd)?;
-                    #[cfg(target_os = "linux")]
-                    fd::procfs::Unix::declare(fd)?;
-                    Ok(())
-                }),
-            )?;
             Ok(())
         }),
     )?;

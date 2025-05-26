@@ -248,7 +248,7 @@ pub fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
 struct Write {}
 
 fn write(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Write::parse(context.arguments, &context.global_state.printer())?;
+    let _cfg = Write::parse(context.arguments, &context.global_state.printer())?;
     match context.input.recv()? {
         Value::BinaryInputStream(mut input) => {
             let mut out = File::create(

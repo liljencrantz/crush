@@ -11,7 +11,7 @@ use crate::lang::{execute, printer};
 use builtins::declare;
 use std::io::Read;
 use std::path::PathBuf;
-use num_format::{Error, SystemLocale};
+use num_format::SystemLocale;
 use lang::{data, state};
 use crate::lang::interactive;
 use lang::state::global_state::GlobalState;
@@ -141,7 +141,7 @@ fn set_initial_locale(global_state: &GlobalState) {
     if let Ok(lang) = std::env::var("LANG") {
         match SystemLocale::from_name(&lang) {
             Ok(new_locale) => global_state.set_locale(new_locale),
-            Err(err) => global_state.printer().error(&format!("Invalid locale {}", lang)),
+            Err(_) => global_state.printer().error(&format!("Invalid locale {}", lang)),
         }
     }
 }

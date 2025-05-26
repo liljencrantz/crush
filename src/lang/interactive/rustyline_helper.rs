@@ -200,11 +200,11 @@ impl Highlighter for RustylineHelper {
 impl Validator for RustylineHelper {
     fn validate(
         &self,
-        ctx: &mut validate::ValidationContext,
+        _ctx: &mut validate::ValidationContext,
     ) -> rustyline::Result<validate::ValidationResult> {
         return Ok(ValidationResult::Valid(None));
 
-        let input = ctx.input().to_string();
+        let input = _ctx.input().to_string();
         if input.trim() == "!!" {
             return Ok(ValidationResult::Valid(None));
         }

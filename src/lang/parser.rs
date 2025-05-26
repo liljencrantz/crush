@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use crate::lang::ast::lexer::{LexerMode, TokenizerMode};
 use crate::lang::ast::lexer::TokenizerMode::SkipComments;
 
-/**
+/*
     The AST parser is written in `lalrpop`, and is located in the file `lalrparser.lalrpop`.
     There is a build rule that converts that into this file.
 */
