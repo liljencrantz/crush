@@ -38,7 +38,9 @@ To configure the Crush prompt, call the `crush:title:set` command, and pass in a
 returns a string, for example:
 
 ```shell script
-crush:title:set {"{user}@{host} {wd}":format wd=(pwd) user=(user:me:name) host=(host:name) }
+crush:title:set {
+      "{user}@{host} {wd}":format wd=(pwd) user=(user:me:name) host=(host:name) 
+}
 ```
 
 ### Configuring syntax highlighting

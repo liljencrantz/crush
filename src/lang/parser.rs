@@ -1,3 +1,8 @@
+/**
+    The API for compiling Crush code into a `Vec<Job>`. Internally, this will tokenize the text,
+    turn the token list into an AST, and finally compiling the AST into a list of jobs.
+*/
+
 use crate::lang::errors::{CrushResult, CrushError};
 use crate::lang::job::Job;
 use crate::lang::state::scope::Scope;
@@ -6,6 +11,10 @@ use std::sync::{Arc, Mutex};
 use crate::lang::ast::lexer::{LexerMode, TokenizerMode};
 use crate::lang::ast::lexer::TokenizerMode::SkipComments;
 
+/**
+    The AST parser is written in `lalrpop`, and is located in the file `lalrparser.lalrpop`.
+    There is a build rule that converts that into this file.
+*/
 lalrpop_mod!(pub lalrparser, "/lang/lalrparser.rs");
 
 fn close_quote(input: &str) -> String {
@@ -49,6 +58,7 @@ pub struct Parser {
 }
 
 impl Parser {
+    /// Create a new parser
     pub fn new() -> Parser {
         Parser {
             parser: Arc::from(Mutex::new(lalrparser::JobListParser::new())),
@@ -56,10 +66,13 @@ impl Parser {
         }
     }
 
+    /// Parse the given string into a `Vec<Job>`, that we can directly evaluate.
     pub fn parse(&self, s: &str, env: &Scope, initial_mode: LexerMode) -> CrushResult<Vec<Job>> {
         self.ast(s, initial_mode)?.compile(env)
     }
 
+    /// Return the abstract syntax tree (AST) for the supplied command. This is used by the
+    /// completion engine.
     pub fn ast(&self, s: &str, initial_mode: LexerMode) -> CrushResult<JobListNode> {
         let lex = Lexer::new(s, initial_mode, SkipComments);
         match initial_mode {
@@ -68,6 +81,8 @@ impl Parser {
         }
     }
 
+    /// Return the list of tokens making up this string. This is used by the syntax highlighting
+    /// engine.
     pub fn tokenize<'a>(&self, s: &'a str, initial_mode: LexerMode, tokenizer_mode: TokenizerMode) -> CrushResult<Vec<Token<'a>>> {
         let l = Lexer::new(s, initial_mode, tokenizer_mode);
         l.into_iter().map(|item| item.map(|it| it.1).map_err(|e| CrushError::from(e)) ).collect()

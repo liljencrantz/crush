@@ -1,3 +1,5 @@
+/// All the different types a value can have.
+
 use crate::lang::command::{Command, OutputType};
 use crate::lang::errors::{error, CrushResult, argument_error_legacy};
 use crate::lang::help::Help;

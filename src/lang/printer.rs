@@ -1,3 +1,8 @@
+/**
+    Crush uses a single thread to perform all output printing. This prevents torn lines and other
+    visual problems. Output is sent to the print thread via a Printer.
+*/
+
 use crate::lang::errors::{CrushError, CrushErrorType, CrushResult};
 use crossbeam::channel::bounded;
 use crossbeam::channel::Sender;
@@ -14,9 +19,13 @@ pub enum PrinterMessage {
     CrushError(CrushError),
     Error(String),
     Line(String),
-    //    Lines(Vec<String>),
 }
 
+/**
+    The thing you use to send messages to the print thread.
+
+    It is relatively small, and can be cloned when convenient.
+*/
 #[derive(Clone)]
 pub struct Printer {
     source: Option<(String, Location)>,
@@ -32,6 +41,12 @@ const TERMINAL_MIN_HEIGHT: usize = 5;
 const TERMINAL_FALLBACK_WIDTH: usize = 80;
 const TERMINAL_FALLBACK_HEIGHT: usize = 30;
 
+/**
+    Create a print thread and a printer that sends messages to it.
+    Create idditional printer instances by cloning it. To exit the print thread,
+    simply drop all Printer instances connected to it, and the thread will exit.
+    To wait until the print thread has exited, call join on the JoinHandle.
+*/
 pub fn init() -> (Printer, JoinHandle<()>) {
     let (sender, receiver) = bounded(128);
     let (pong_sender, pong_receiver) = bounded(1);
@@ -64,6 +79,13 @@ pub fn init() -> (Printer, JoinHandle<()>) {
     )
 }
 
+/**
+    Create a Printer instance that doesn't actually print. A print thread actually still exists,
+    but it does not print anything.
+
+    It would be more performant to rewrite this to not even spawn a thread and just drop whatever
+    you pass in, but Crush currently is not optimized for speed.
+ */
 pub fn noop() -> (Printer, JoinHandle<()>) {
     let (sender, receiver) = bounded(128);
     let (pong_sender, pong_receiver) = bounded(1);
@@ -89,14 +111,16 @@ pub fn noop() -> (Printer, JoinHandle<()>) {
 }
 
 impl Printer {
+    /**
+        Send one line of preformated output to the printer.
+    */
     pub fn line(&self, line: &str) {
         self.handle_error(
             self.sender.send(Line(line.to_string())).map_err(|e| e.into()));
     }
-    /*
-        pub fn lines(&self, lines: Vec<String>) {
-            self.handle_error(to_crush_error(self.sender.send(PrinterMessage::Lines(lines))));
-        }
+
+    /**
+        If the passed in result is an error, print information about it.
     */
     pub fn handle_error<T>(&self, result: CrushResult<T>) {
         if let Err(e) = result {
@@ -107,12 +131,23 @@ impl Printer {
         }
     }
 
+    /**
+    Send a ping to the printer and await a reply. Because messages from a given thread are performed
+    in order, this ensures that all output passed on to the printer from this thread have been
+    printed. Sending a ping before displaying a prompt lower the risk of stray output while showing
+    the prompt. Note that messages from other threads aren't necessarily processed in order, so
+    this isn't a foolproof method to fully avoid stray output.
+    */
     pub fn ping(&self) {
         if let Ok(_) = self.sender.send(PrinterMessage::Ping) {
             let _ = self.pong_receiver.recv();
         }
     }
 
+    /**
+    Tell this printer what location is being used for input. This is used when printing error
+    messages.
+    */
     pub fn with_source(&self, def: &str, location: Location) -> Printer {
         Printer {
             sender: self.sender.clone(),
@@ -121,14 +156,23 @@ impl Printer {
         }
     }
 
+    /**
+        Print information about the passed in error.
+     */
     pub fn crush_error(&self, err: CrushError) {
         let _ = self.sender.send(PrinterMessage::CrushError(err.with_source(&self.source)));
     }
 
+    /**
+        Print the passed in, pre-formated error.
+     */
     pub fn error(&self, err: &str) {
         let _ = self.sender.send(PrinterMessage::Error(err.to_string()));
     }
 
+    /**
+     The width (in characters) of the console we're printing to.
+    */
     pub fn width(&self) -> usize {
         match terminal_size() {
             Ok(s) => max(TERMINAL_MIN_WIDTH, s.0 as usize),
@@ -136,6 +180,9 @@ impl Printer {
         }
     }
 
+    /**
+    The height (in characters) of the console we're printing to.
+     */
     pub fn height(&self) -> usize {
         match terminal_size() {
             Ok(s) => max(TERMINAL_MIN_HEIGHT, s.1 as usize),

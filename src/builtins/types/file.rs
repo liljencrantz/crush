@@ -228,6 +228,7 @@ pub fn exists(mut context: CommandContext) -> CrushResult<()> {
     example = "$file := $base_directory[$filename]",
 )]
 struct GetItem {
+    #[description("the name of the file or subdirectory")]
     name: Text,
 }
 

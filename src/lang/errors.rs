@@ -1,3 +1,9 @@
+/// Crush error handling type.
+///
+/// Because Crush has a very large number of builtins, many of which use a third party library
+/// that implements its own Error handling, the `CrushErrorType` is insanely large.
+/// It doesn't do anything that is weird or unusual, it's just big.
+
 use crate::lang::ast::location::Location;
 use CrushErrorType::*;
 use std::cmp::{min, max};

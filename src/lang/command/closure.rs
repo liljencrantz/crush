@@ -255,9 +255,9 @@ impl<'a> ClosureSerializer<'a> {
         a: &ArgumentType,
     ) -> CrushResult<model::argument_definition::ArgumentType> {
         Ok(match a {
-            ArgumentType::Some(s) =>
+            ArgumentType::Named(s) =>
                 model::argument_definition::ArgumentType::Some(s.serialize(self.elements, self.state)? as u64),
-            ArgumentType::None => model::argument_definition::ArgumentType::None(false),
+            ArgumentType::Unnamed => model::argument_definition::ArgumentType::None(false),
             ArgumentType::ArgumentList => {
                 model::argument_definition::ArgumentType::ArgumentList(false)
             }
@@ -428,8 +428,8 @@ impl<'a> ClosureDeserializer<'a> {
         Ok(ArgumentDefinition {
             value: self.value_definition(mandate(s.value.as_ref(), "Missing argument value")?)?,
             argument_type: match mandate(s.argument_type.as_ref(), "Missing argument type")? {
-                model::argument_definition::ArgumentType::Some(s) => ArgumentType::Some(TrackedString::deserialize(*s as usize, self.elements, self.state)?),
-                model::argument_definition::ArgumentType::None(_) => ArgumentType::None,
+                model::argument_definition::ArgumentType::Some(s) => ArgumentType::Named(TrackedString::deserialize(*s as usize, self.elements, self.state)?),
+                model::argument_definition::ArgumentType::None(_) => ArgumentType::Unnamed,
                 model::argument_definition::ArgumentType::ArgumentList(_) => {
                     ArgumentType::ArgumentList
                 }

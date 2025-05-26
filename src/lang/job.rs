@@ -1,3 +1,4 @@
+/// An executable pipeline of one or more commands.
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::{CompileContext, JobContext};

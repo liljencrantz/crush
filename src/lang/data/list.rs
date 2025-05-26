@@ -1,3 +1,5 @@
+/// The crush type used for storing lists of data
+
 use crate::lang::errors::{argument_error_legacy, error, mandate, CrushResult};
 use crate::lang::pipe::Stream;
 use crate::lang::{value::Value, value::ValueType};
@@ -9,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use std::fmt::{Display, Formatter};
 use crate::data::dict::Dict;
 use crate::lang::state::scope::Scope;
-use crate::lang::value::vec_reader::VecReader;
+use crate::lang::vec_reader::VecReader;
 use crate::util::replace::Replace;
 
 #[derive(Clone)]

@@ -40,9 +40,12 @@ struct Query {
     #[description("DNS record type. Currently, A, AAAA and SRV are supported.")]
     #[default("A")]
     record_type: String,
+    #[description("Use TCP connection instead of UDP")]
     #[default(false)]
     tcp: bool,
+    #[description("Overwrite the nameserver to talk to")]
     nameserver: Option<String>,
+    #[description("DNS port")]
     #[default(53)]
     port: i128,
 }

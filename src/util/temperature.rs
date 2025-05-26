@@ -13,7 +13,7 @@ impl Temperature {
         match self {
             Temperature::Celsius => kelvin - 273.15,
             Temperature::Kelvin => kelvin,
-            Temperature::Fahrenheit => kelvin - 273.15 / (9.0 / 5.0) + 32.0,
+            Temperature::Fahrenheit => ((kelvin - 273.15) * (9.0 / 5.0)) + 32.0,
         }
     }
 

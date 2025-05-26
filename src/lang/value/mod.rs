@@ -1,9 +1,8 @@
 /**
-The type representing all values in crush.
+The type representing any value in crush.
  */
 mod value_definition;
 mod value_type;
-pub mod vec_reader;
 
 use std::cmp::Ordering;
 use std::hash::Hasher;
@@ -17,7 +16,7 @@ use crate::lang::errors::{argument_error_legacy, CrushResult, mandate};
 use crate::lang::data::r#struct::Struct;
 use crate::lang::data::r#struct::StructReader;
 use crate::lang::state::scope::Scope;
-use crate::lang::pipe::{TableInputStream, TableOutputStream, Stream};
+use crate::lang::pipe::{Stream, TableInputStream, TableOutputStream};
 use crate::lang::data::{
     binary::BinaryReader, dict::Dict, dict::DictReader, list::List,
     table::ColumnType, table::TableReader,
@@ -40,7 +39,7 @@ pub use value_type::ValueType;
 use std::fmt::{Display, Formatter};
 use std::io::Read;
 use std::sync::Arc;
-use vec_reader::VecReader;
+use crate::lang::vec_reader::VecReader;
 use crate::data::table::ColumnFormat;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::state::global_state::FormatData;
@@ -654,7 +653,6 @@ impl Help for Value {
 
 #[cfg(test)]
 mod tests {
-    use num_format::Grouping;
     use super::*;
 
     #[test]

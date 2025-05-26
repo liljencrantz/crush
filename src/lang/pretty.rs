@@ -1,5 +1,5 @@
 /**
-A receiver of values that prints any values sent to it in a human readable format.
+    A receiver of values that prints any values sent to it in a human readable format.
  */
 
 use crate::lang::data::binary::BinaryReader;
@@ -22,6 +22,12 @@ use crate::lang::state::global_state::GlobalState;
 use crate::data::table::ColumnFormat;
 use crate::state::global_state::FormatData;
 
+/**
+    The main entrypoint for this module. Given a `Printer` and a `GlobalState` instance,
+    return a `ValueSender`. All values passed to the `ValueSender` will be formatted according
+    to the rules in `GlobalState::fromat_data()` and passed on to the `Printer`. Stream data will
+    be turned into pretty human readable tables.
+*/
 pub fn create_pretty_printer(
     printer: Printer,
     global_state: &GlobalState,

@@ -23,3 +23,4 @@ pub mod data;
 pub mod interactive;
 pub mod ordered_string_map;
 pub mod any_str;
+pub mod vec_reader;

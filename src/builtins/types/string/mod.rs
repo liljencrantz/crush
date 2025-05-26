@@ -7,6 +7,7 @@ use crate::lang::value::Value;
 use crate::lang::{data::list::List, value::ValueType};
 use ordered_map::OrderedMap;
 use signature::signature;
+use crate::lang::signature::text::Text;
 use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::this::This;
 
@@ -39,6 +40,8 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
         IsDigit::declare_method(&mut res);
         Substr::declare_method(&mut res);
         GetItem::declare_method(&mut res);
+        Match::declare_method(&mut res);
+        NotMatch::declare_method(&mut res);
 
         res
     })
@@ -369,7 +372,7 @@ fn substr(mut context: CommandContext) -> CrushResult<()> {
     short = "Extract a one character substring from this string.",
 )]
 struct GetItem {
-    #[description("index.")]
+    #[description("index")]
     idx: usize,
 }
 
@@ -382,4 +385,38 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     context
         .output
         .send(Value::from(&s[cfg.idx..(cfg.idx + 1)]))
+}
+
+#[signature(
+    types.string.r#match,
+    can_block = false,
+    output = Known(ValueType::Bool),
+    short = "True if the needle matches the pattern",
+)]
+struct Match {
+    #[description("the text to match this string against.")]
+    needle: Text,
+}
+
+fn r#match(mut context: CommandContext) -> CrushResult<()> {
+    let s = context.this.string()?;
+    let cfg: Match = Match::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.output.send(Value::Bool(s.eq(&cfg.needle.as_string())))
+}
+
+#[signature(
+    types.string.not_match,
+    can_block = false,
+    output = Known(ValueType::Bool),
+    short = "False if the needle matches the pattern",
+)]
+struct NotMatch {
+    #[description("the text to match this glob against.")]
+    needle: Text,
+}
+
+fn not_match(mut context: CommandContext) -> CrushResult<()> {
+    let s = context.this.string()?;
+    let cfg: NotMatch = NotMatch::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.output.send(Value::Bool(!s.eq(&cfg.needle.as_string())))
 }

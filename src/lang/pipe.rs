@@ -1,10 +1,13 @@
-use std::sync::OnceLock;
 /**
 This file implements the crush equivalent of a pipe from a regular shell.
 
-Unlike normal pipes, these pipes can send *any* crush value. The most important
-use case is to send a single value of the type TableInputStream.
+Unlike normal pipes, these pipes can send *any* crush value, but they are limited to sending data
+between threads inside of a single process. The most important use case is to send a single value
+of the type TableInputStream.
  */
+
+use std::sync::OnceLock;
+
 use crate::lang::errors::{error, CrushError, CrushResult};
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;

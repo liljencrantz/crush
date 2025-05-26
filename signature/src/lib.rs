@@ -247,6 +247,43 @@ fn generate_signature(path: &[String], signature: Vec<String>) -> String {
     }
 }
 
+
+
+fn format_default_group_help(default_value: &Group) -> String {
+    let s = default_value.stream().to_string();
+    if s.ends_with("usize") {
+        return s[0..s.len() - 5].to_string();
+    }
+    if s.starts_with("Number::Float(") && s.ends_with(")") {
+        return s[14..s.len() - 1].to_string();
+    }
+    if s.starts_with("\"") && s.ends_with("\"") && is_alnum(&s[1..s.len() - 1]){
+        return s[1..s.len() - 1].to_string();
+    }
+    if s == "i128::max_value()" {
+        return i128::max_value().to_string();
+    }
+    s
+}
+
+fn is_alnum(s: &str) -> bool {
+    for ch in s.chars() {
+        if !ch.is_alphanumeric() {
+            return false
+        }
+    }
+    true
+}
+
+fn format_default_for_help(default_value: &TokenTree) -> String {
+    format!(" ({})", match default_value {
+        TokenTree::Group(g) => format_default_group_help(g),
+        TokenTree::Ident(_) |
+        TokenTree::Punct(_) |
+        TokenTree::Literal(_) => default_value.to_string(),
+    })
+}
+
 fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<TokenStream> {
     let metadata_location = metadata.span();
     let mut metadata = parse_metadata(metadata)?;
@@ -338,7 +375,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 }
 
                 let default_help = if let Some(d) = &default_value {
-                    format!(" {}", d.to_string())
+                    format_default_for_help(d)
                 } else {
                     "".to_string()
                 };

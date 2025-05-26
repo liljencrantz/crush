@@ -52,6 +52,7 @@ fn threads(context: CommandContext) -> CrushResult<()> {
 #[signature(crush.exit, output = Known(ValueType::Empty), short = "Exit the shell")]
 struct Exit {
     #[default(0)]
+    #[description("The exit status to set for the process")]
     status: i32,
 }
 
@@ -78,6 +79,7 @@ mod prompt {
         output = Known(ValueType::Empty)
     )]
     pub struct Set {
+        #[description("The new command to invoke in order to produce a prompt")]
         prompt: Option<Command>,
     }
 
@@ -143,12 +145,13 @@ mod title {
         output = Known(ValueType::Empty)
     )]
     pub struct Set {
-        prompt: Option<Command>,
+        #[description("The new command to invoke in order to produce a title")]
+        title: Option<Command>,
     }
 
     fn set(context: CommandContext) -> CrushResult<()> {
         let cfg: Set = Set::parse(context.arguments, &context.global_state.printer())?;
-        context.global_state.set_title(cfg.prompt);
+        context.global_state.set_title(cfg.title);
         context.output.send(Value::Empty)
     }
 

@@ -13,8 +13,8 @@ use crate::lang::serialization::model;
 
 #[derive(Debug, Clone)]
 pub enum ArgumentType {
-    Some(TrackedString),
-    None,
+    Named(TrackedString),
+    Unnamed,
     ArgumentList,
     ArgumentDict,
 }
@@ -51,11 +51,11 @@ impl Into<i32> for SwitchStyle {
 
 impl ArgumentType {
     pub fn is_some(&self) -> bool {
-        matches!(self, ArgumentType::Some(_))
+        matches!(self, ArgumentType::Named(_))
     }
 
     pub fn is_this(&self) -> bool {
-        if let ArgumentType::Some(v) = self {
+        if let ArgumentType::Named(v) = self {
             v.string == "this"
         } else {
             false
@@ -82,7 +82,7 @@ pub type ArgumentDefinition = BaseArgument<ArgumentType, ValueDefinition>;
 impl ArgumentDefinition {
     pub fn named(name: &TrackedString, value: ValueDefinition) -> ArgumentDefinition {
         ArgumentDefinition {
-            argument_type: ArgumentType::Some(name.clone()),
+            argument_type: ArgumentType::Named(name.clone()),
             switch_style: SwitchStyle::None,
             location: name.location.union(value.location()),
             value,
@@ -91,7 +91,7 @@ impl ArgumentDefinition {
 
     pub fn named_with_style(name: &TrackedString, switch_style: SwitchStyle, value: ValueDefinition) -> ArgumentDefinition {
         ArgumentDefinition {
-            argument_type: ArgumentType::Some(name.clone()),
+            argument_type: ArgumentType::Named(name.clone()),
             switch_style,
             location: name.location.union(value.location()),
             value,
@@ -100,7 +100,7 @@ impl ArgumentDefinition {
 
     pub fn unnamed(value: ValueDefinition) -> ArgumentDefinition {
         ArgumentDefinition {
-            argument_type: ArgumentType::None,
+            argument_type: ArgumentType::Unnamed,
             switch_style: SwitchStyle::None,
             location: value.location(),
             value,
@@ -187,7 +187,7 @@ impl ArgumentEvaluator for Vec<ArgumentDefinition> {
                 this = Some(a.value.eval_and_bind(context)?);
             } else {
                 match &a.argument_type {
-                    ArgumentType::Some(name) =>
+                    ArgumentType::Named(name) =>
                         res.push(Argument::named_with_style(
                             &name.string,
                             a.switch_style,
@@ -195,7 +195,7 @@ impl ArgumentEvaluator for Vec<ArgumentDefinition> {
                             a.location,
                         )),
 
-                    ArgumentType::None =>
+                    ArgumentType::Unnamed =>
                         res.push(Argument::unnamed(
                             a.value.eval_and_bind(context)?,
                             a.location,

@@ -1,3 +1,5 @@
+/// Functions that execute the contents of a string or file as Crush code.
+
 use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::state::contexts::{CommandContext, JobContext};
 use crate::lang::state::scope::Scope;

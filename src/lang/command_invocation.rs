@@ -1,3 +1,13 @@
+/// A single command from a larger Job.
+///
+/// This code is a bit messy, because it is not until we get to this point in the execution of
+/// a command that we will figure out if we're running a crush builtin or an external command.
+///
+/// If the command we are executing is in fact a struct, we call the `__eval__` method on the
+/// struct.
+///
+/// This code path also tries to avoid forking of threads for commands that are known to never
+/// block, which again complicates the code a bit.
 use crate::lang::errors::{CrushResult, error};
 use crate::lang::state::contexts::{CompileContext, JobContext};
 use crate::lang::state::scope::Scope;
@@ -54,7 +64,7 @@ impl CommandInvocation {
 
     /**
     Evaluates all the arguments into values, and puts them into a CommandContext,
-    ready to be exacuted by the main command.
+    ready to be executed by the main command.
      */
     fn execution_context(
         local_arguments: Vec<ArgumentDefinition>,

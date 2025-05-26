@@ -1,3 +1,4 @@
+/// A class that allows you to use a `Vec<Value>` as input into a `CrushStream`.
 use chrono::Duration;
 use crate::CrushResult;
 use crate::data::table::{ColumnType, Row};

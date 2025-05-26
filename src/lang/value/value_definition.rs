@@ -1,3 +1,4 @@
+/// The definition of a value, as found in a Job.
 use crate::lang::command::Parameter;
 use crate::lang::errors::mandate;
 use crate::lang::state::contexts::CompileContext;
