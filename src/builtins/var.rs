@@ -132,12 +132,24 @@ pub fn env(context: CommandContext) -> CrushResult<()> {
     keys.sort();
 
     for k in keys {
-        context.global_state.printer().handle_error(output.send(Row::new(vec![
+        output.send(Row::new(vec![
             Value::from(k.clone()),
             Value::from(values[k].to_string()),
-        ])));
+        ]))?;
     }
-    context.output.send(Value::Empty)
+    Ok(())
+}
+
+#[signature(
+    var.scope,
+    can_block = false,
+    output = Known(ValueType::Scope),
+    short = "Returns the current scope",
+)]
+struct ScopeSignature {}
+
+pub fn scope(context: CommandContext) -> CrushResult<()> {
+    context.output.send(Value::Scope(context.scope))
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
@@ -151,6 +163,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Unset::declare(ns)?;
             Use::declare(ns)?;
             Env::declare(ns)?;
+            ScopeSignature::declare(ns)?;
             Ok(())
         }))?;
     Ok(())

@@ -189,8 +189,8 @@ fn list(context: CommandContext) -> CrushResult<()> {
                 Value::from(u.home),
                 Value::from(u.shell),
                 Value::from(u.information),
-                Value::Integer(u.uid as i128),
-                Value::Integer(u.gid as i128),
+                Value::from(u.uid),
+                Value::from(u.gid),
             ]))?;
     }
     Ok(())
