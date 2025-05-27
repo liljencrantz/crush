@@ -49,6 +49,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             aggregation::Prod::declare(env)?;
             aggregation::First::declare(env)?;
             aggregation::Last::declare(env)?;
+            aggregation::Concat::declare(env)?;
             env.declare(
                 "select",
                 Value::Command(<dyn CrushCommand>::command(

@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use crate::lang::errors::{argument_error_legacy, error, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::pipe::Stream;
@@ -388,6 +389,52 @@ fn last(context: CommandContext) -> CrushResult<()> {
             rr
                 .map(|r| { context.output.send(r.into_cells().replace(column, Value::Empty)) })
                 .unwrap_or_else(|| { argument_error_legacy("Empty stream") })
+        }
+        _ => error("Expected a stream"),
+    }
+}
+
+#[signature(
+    stream.concat,
+    short = "Concatenate all values of the specified column across all rows",
+    long = "If the input only has one column, the column name is optional.",
+    long = "The column can be numeric, or textual.",
+    example = "host:procs | min cpu")]
+pub struct Concat {
+    #[documentaion("The name of the column to concatenate")]
+    field: Option<String>,
+    #[documentaion("The separator to insert between each element")]
+    #[default(", ")]
+    separator: String,
+}
+
+fn concat(context: CommandContext) -> CrushResult<()> {
+    match context.input.recv()?.stream()? {
+        Some(mut input) => {
+            let cfg: Concat = Concat::parse(context.arguments, &context.global_state.printer())?;
+            let column = parse(input.types(), cfg.field)?;
+            let mut res = String::new();
+
+            if let Ok(row) = input.read() {
+                match row.into_cells().replace(column, Value::Empty) {
+                    Value::String(i) => res.push_str(i.deref()),
+                    Value::File(i) => res.push_str(i.to_str().unwrap_or("<Invalid>")),
+                    Value::Integer(i) => res.push_str(&i.to_string()),
+                    Value::Float(i) => res.push_str(&i.to_string()),
+                    _ => return error("Invalid cell value, expected number or text"),
+                };
+                while let Ok(row) = input.read() {
+                    res.push_str(&cfg.separator);
+                    match row.into_cells().replace(column, Value::Empty) {
+                        Value::String(i) => res.push_str(i.deref()),
+                        Value::File(i) => res.push_str(i.to_str().unwrap_or("<Invalid>")),
+                        Value::Integer(i) => res.push_str(&i.to_string()),
+                        Value::Float(i) => res.push_str(&i.to_string()),
+                        _ => return error("Invalid cell value, expected number or text"),
+                    }
+                }
+            }
+            context.output.send(Value::from(res))
         }
         _ => error("Expected a stream"),
     }
