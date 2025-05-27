@@ -14,16 +14,16 @@ pub struct Count {}
 
 pub fn count(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()? {
-        Value::Table(r) => context.output.send(Value::Integer(r.len() as i128)),
-        Value::List(r) => context.output.send(Value::Integer(r.len() as i128)),
-        Value::Dict(r) => context.output.send(Value::Integer(r.len() as i128)),
+        Value::Table(r) => context.output.send(Value::from(r.len())),
+        Value::List(r) => context.output.send(Value::from(r.len())),
+        Value::Dict(r) => context.output.send(Value::from(r.len())),
         v => match v.stream()? {
             Some(mut input) => {
                 let mut res: i128 = 0;
                 while let Ok(_) = input.read() {
                     res += 1;
                 }
-                context.output.send(Value::Integer(res))
+                context.output.send(Value::from(res))
             }
             None => argument_error_legacy("Expected a stream"),
         },

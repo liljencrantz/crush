@@ -84,14 +84,14 @@ fn battery(context: CommandContext) -> CrushResult<()> {
             Value::from(battery.vendor().unwrap_or("").to_string()),
             Value::from(battery.model().unwrap_or("").to_string()),
             Value::from(battery.technology().to_string()),
-            Value::Integer(battery.cycle_count().unwrap_or(0) as i128),
-            Value::Float(battery.temperature().map(|t| { t.value as f64 }).unwrap_or(0.0)),
-            Value::Float(battery.voltage().value as f64),
-            Value::Float(battery.state_of_health().value as f64),
+            Value::from(battery.cycle_count().unwrap_or(0)),
+            Value::from(battery.temperature().map(|t| { t.value as f64 }).unwrap_or(0.0)),
+            Value::from(battery.voltage().value as f64),
+            Value::from(battery.state_of_health().value as f64),
             Value::from(state_name(battery.state())),
-            Value::Float(battery.state_of_charge().value as f64),
-            Value::Duration(time_to_duration(battery.time_to_full())),
-            Value::Duration(time_to_duration(battery.time_to_empty())),
+            Value::from(battery.state_of_charge().value as f64),
+            Value::from(time_to_duration(battery.time_to_full())),
+            Value::from(time_to_duration(battery.time_to_empty())),
         ]))?;
     }
     Ok(())
@@ -253,9 +253,9 @@ fn procs(context: CommandContext) -> CrushResult<()> {
                 let iiii = unistd::Uid::from_raw(iii);
                 return users.get(&iiii);
             }).map(|s| Value::from(s)).unwrap_or_else(|| Value::from("?")),
-            Value::Integer(proc.memory().into()),
-            Value::Integer(proc.virtual_memory().into()),
-            Value::Duration(Duration::microseconds((1_000_000.0 * proc.cpu_usage()) as i64)),
+            Value::from(proc.memory()),
+            Value::from(proc.virtual_memory()),
+            Value::from(Duration::microseconds((1_000_000.0 * proc.cpu_usage()) as i64)),
             Value::from(proc.name().to_str().unwrap_or("<Invalid>")),
         ]))?;
     }
@@ -301,14 +301,14 @@ fn threads(context: CommandContext) -> CrushResult<()> {
                                     .collect()
                             ).unwrap_or_else(|_| { "<Invalid>".to_string() });
                         output.send(Row::new(vec![
-                            Value::Integer(t as i128),
-                            Value::Integer(pid as i128),
-                            Value::Integer(thread.pth_priority as i128),
-                            Value::Duration(Duration::nanoseconds(
+                            Value::from(t),
+                            Value::from(pid),
+                            Value::from(thread.pth_priority),
+                            Value::from(Duration::nanoseconds(
                                 i64::try_from(thread.pth_user_time)? *
                                     i64::from(info.numer) /
                                     i64::from(info.denom))),
-                            Value::Duration(Duration::nanoseconds(
+                            Value::from(Duration::nanoseconds(
                                 i64::try_from(thread.pth_system_time)? *
                                     i64::from(info.numer) /
                                     i64::from(info.denom))),
@@ -319,8 +319,6 @@ fn threads(context: CommandContext) -> CrushResult<()> {
                     }
                 }
             }
-
-            //                let curr_res = pidrusage::<RUsageInfoV2>(pid).ok();
         }
     }
     Ok(())

@@ -22,7 +22,7 @@ static OUTPUT_TYPE: [ColumnType; 3] = [
 #[signature(
     fs.usage,
     can_block = true,
-    output = Known(ValueType::table_input_stream(&OUTPUT_TYPE)),
+    output = Known(ValueType::table_input_stream(& OUTPUT_TYPE)),
     short = "Calculate the recursive directory space usage.",
 )]
 pub struct Usage {
@@ -53,8 +53,8 @@ fn size(
             if (!silent && child.is_directory) || all {
                 output.send(Row::new(
                     vec![
-                        Value::Integer(child_sz as i128),
-                        Value::Integer(child_bl as i128),
+                        Value::from(child_sz),
+                        Value::from(child_bl),
                         Value::from(child.full_path),
                     ]
                 ))?;

@@ -68,12 +68,12 @@ fn insert_entity(
                 let permissions = format_permissions(meta.permissions().mode());
                 Value::from(permissions)
             }
-            Column::Inode => Value::Integer(i128::from(meta.ino())),
-            Column::Links => Value::Integer(i128::from(meta.nlink())),
+            Column::Inode => Value::from(meta.ino()),
+            Column::Links => Value::from(meta.nlink()),
             Column::User => users.get(&Uid::from_raw(meta.uid())).map(|n| Value::from(n)).unwrap_or_else(|| Value::from("?")),
             Column::Group => groups.get(&Gid::from_raw(meta.gid())).map(|n| Value::from(n)).unwrap_or_else(|| Value::from("?")),
-            Column::Size => Value::Integer(i128::from(meta.len())),
-            Column::Blocks => Value::Integer(i128::from(meta.blocks())),
+            Column::Size => Value::from(meta.len()),
+            Column::Blocks => Value::from(meta.blocks()),
             Column::Modified => {
                 let modified_system = meta.modified()?;
                 let modified_datetime: DateTime<Local> = DateTime::from(modified_system);

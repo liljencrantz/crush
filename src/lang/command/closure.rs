@@ -652,16 +652,22 @@ impl Closure {
         if let Some(signature) = signature {
             Self::push_arguments_to_env_with_signature(signature, arguments, context)
         } else {
+            let mut unnamed = vec![];
             for arg in arguments.drain(..) {
                 match arg.argument_type {
                     Some(name) => {
                         context.env.redeclare(name.as_ref(), arg.value)?;
                     }
                     None => {
-                        return argument_error_legacy("No target for unnamed arguments");
+                        unnamed.push(arg.value);
                     }
                 }
             }
+
+            if !unnamed.is_empty() {
+                context.env.redeclare_reserved("__unnamed__", Value::List(List::new_without_type(unnamed)));
+            }
+
             Ok(())
         }
     }

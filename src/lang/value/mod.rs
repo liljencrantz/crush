@@ -9,7 +9,7 @@ use std::hash::Hasher;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, TimeDelta};
 use regex::Regex;
 
 use crate::lang::errors::{argument_error_legacy, CrushResult, mandate};
@@ -124,6 +124,12 @@ impl From<Vec<u8>> for Value {
 impl From<&Vec<u8>> for Value {
     fn from(s: &Vec<u8>) -> Value {
         Value::Binary(Arc::from(s.as_ref()))
+    }
+}
+
+impl From<TimeDelta> for Value {
+    fn from(d: TimeDelta) -> Value {
+        Value::Duration(d)
     }
 }
 

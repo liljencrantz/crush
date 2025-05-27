@@ -147,20 +147,20 @@ impl From<ScopeType> for i32 {
 
 pub struct ScopeData {
     /** This is the parent scope used to perform variable name resolution. If a variable lookup
-                                  fails in the current scope, it proceeds to this scope. This is usually the scope in which this
-                                  scope was *created*.
+                                     fails in the current scope, it proceeds to this scope. This is usually the scope in which this
+                                     scope was *created*.
 
-                                  Not that when scopes are used as namespaces, they do not use this scope.
+                                     Not that when scopes are used as namespaces, they do not use this scope.
      */
     pub parent_scope: Option<Scope>,
 
     /** This is the scope in which the current scope was called. Since a closure can be called
-                                  from inside any scope, it need not be the same as the parent scope. This scope is the one used
-                                  for break/continue loop control, and it is also the scope that builds up the namespace hierarchy. */
+                                     from inside any scope, it need not be the same as the parent scope. This scope is the one used
+                                     for break/continue loop control, and it is also the scope that builds up the namespace hierarchy. */
     pub calling_scope: Option<Scope>,
 
     /** This is a list of scopes that are imported into the current scope. Anything directly inside
-                                  one of these scopes is also considered part of this scope. */
+                                     one of these scopes is also considered part of this scope. */
     pub uses: Vec<Scope>,
 
     /** The actual data of this scope. */
@@ -170,11 +170,11 @@ pub struct ScopeData {
     pub scope_type: ScopeType,
 
     /** True if this scope should stop execution, i.e. if the continue or break commands have been
-                                  called.  */
+                                     called.  */
     pub is_stopped: bool,
 
     /** True if this scope can not be further modified. Note that mutable variables in it, e.g.
-                                  lists or dicts can still be modified. */
+                                     lists or dicts can still be modified. */
     pub is_readonly: bool,
 
     pub return_value: Option<Value>,
@@ -467,6 +467,7 @@ impl Scope {
         Ok(data)
     }
 
+    /// Empty this scope
     pub fn clear(&self) -> CrushResult<()> {
         let mut data = self.lock()?;
         data.mapping.clear();
@@ -603,10 +604,17 @@ impl Scope {
         Ok(())
     }
 
+    /// Redeclare a variable.
     pub fn redeclare(&self, name: &str, value: Value) -> CrushResult<()> {
         if name.starts_with("__") {
             return argument_error_legacy(format!("Illegal operation: Can't redeclare variables beginning with double underscores. ({})", name));
         }
+        self.redeclare_reserved(name, value)
+    }
+
+    /// Redeclare a variable while ignoring naming restictions, i.e. even names beginning with "__" are
+    /// allowed.
+    pub fn redeclare_reserved(&self, name: &str, value: Value) -> CrushResult<()> {
         let mut data = self.lock()?;
         if data.is_readonly {
             return error("Scope is read only");
@@ -615,6 +623,7 @@ impl Scope {
         Ok(())
     }
 
+    /// Set a new value for an existing variable
     pub fn set(&self, name: &str, value: Value) -> CrushResult<()> {
         if name.starts_with("__") {
             return argument_error_legacy(format!("Illegal operation: Can't set variables beginning with double underscores. ({})", name));
@@ -641,24 +650,25 @@ impl Scope {
         }
     }
 
-    pub fn remove_str(&self, name: &str) -> CrushResult<Option<Value>> {
-        let n = &name
+    /// Remove a variable.
+    pub fn remove_str(&self, path: &str) -> CrushResult<Option<Value>> {
+        let n = &path
             .split(':')
             .map(|s| s.to_string())
             .collect::<Vec<String>>()[..];
         self.remove(n)
     }
 
-    pub fn remove(&self, name: &[String]) -> CrushResult<Option<Value>> {
-        if name.is_empty() {
+    pub fn remove(&self, path: &[String]) -> CrushResult<Option<Value>> {
+        if path.is_empty() {
             return Ok(None);
         }
-        if name.len() == 1 {
-            self.remove_here(name[0].as_ref())
+        if path.len() == 1 {
+            self.remove_here(path[0].as_ref())
         } else {
-            match self.get(name[0].as_ref())? {
+            match self.get(path[0].as_ref())? {
                 None => Ok(None),
-                Some(Value::Scope(env)) => env.remove(&name[1..name.len()]),
+                Some(Value::Scope(env)) => env.remove(&path[1..path.len()]),
                 _ => Ok(None),
             }
         }

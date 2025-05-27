@@ -221,7 +221,7 @@ fn history(context: CommandContext) -> CrushResult<()> {
     let len = res.len();
     for (idx, c) in res.into_iter().enumerate() {
         output.send(Row::new(vec![
-            Value::Integer((len - idx) as i128),
+            Value::from(len - idx),
             Value::from(c),
         ]))?;
     }
