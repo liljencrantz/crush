@@ -49,6 +49,10 @@ pub enum CrushErrorType {
     CharTryFromError(std::char::CharTryFromError),
     SerializationError(String),
     InvalidJump(String),
+    #[cfg(target_os = "linux")]
+    DbusError(dbus::Error),
+    #[cfg(target_os = "linux")]
+    Roxmltree(roxmltree::Error),
 }
 
 #[derive(Debug)]
@@ -116,6 +120,10 @@ impl CrushError {
             CharTryFromError(e) => e.to_string(),
             SerializationError(e) => e.to_string(),
             InvalidJump(e) => e.to_string(),
+            #[cfg(target_os = "linux")]
+            DbusError(e) => e.message().unwrap_or("").to_string(),
+            #[cfg(target_os = "linux")]
+            Roxmltree(e) => e.to_string(),
         }
     }
 
@@ -173,6 +181,10 @@ impl CrushError {
             _ => None
         }
     }
+
+    pub fn is_eof(&self) -> bool {
+        matches!(self.error_type(), CrushErrorType::EOFError)
+    }
 }
 
 impl From<std::io::Error> for CrushError {
@@ -209,6 +221,26 @@ impl From<std::num::ParseFloatError> for CrushError {
     fn from(e: std::num::ParseFloatError) -> Self {
         CrushError {
             error_type: ParseFloatError(e),
+            location: None,
+            definition: None,
+        }
+    }
+}
+
+impl From<dbus::Error> for CrushError {
+    fn from(e: dbus::Error) -> Self {
+        CrushError {
+            error_type: DbusError(e),
+            location: None,
+            definition: None,
+        }
+    }
+}
+
+impl From<roxmltree::Error> for CrushError {
+    fn from(e: roxmltree::Error) -> Self {
+        CrushError {
+            error_type: Roxmltree(e),
             location: None,
             definition: None,
         }

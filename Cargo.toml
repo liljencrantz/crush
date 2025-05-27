@@ -10,10 +10,10 @@ repository = "https://github.com/liljencrantz/crush"
 rust-version = "1.85.0"
 
 [build-dependencies.prost-build]
-version = "0.12.6"
+version = "0.13.5"
 
 [build-dependencies.lalrpop]
-version = "0.20.2"
+version = "0.22.2"
 features = ["lexer"]
 
 [workspace]
@@ -36,7 +36,7 @@ path = "ordered_map"
 lalrpop-util = { version = "0.22.1", features = [ "lexer"] }
 chrono = "0.4.41"
 regex = "1.11.1"
-rustyline = { version = "15.0.0", features = ["with-file-history"] }
+rustyline = { version = "16.0.0", features = ["with-file-history"] }
 rustyline-derive = "0.11.0"
 dirs = "6.0.0"
 serde_json = { version = "1.0.140", features = ["preserve_order"] }
@@ -61,12 +61,12 @@ trust-dns-client = "0.23.2"
 resolv-conf = "0.7.4"
 itertools = "0.14.0"
 mountpoints = "0.2.1"
+libproc = "0.14.10"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-dbus = "0.8.4"
-roxmltree = "0.13.0"
-systemd = "0.4.0"
+dbus = "0.9.7"
+roxmltree = "0.20.0"
+systemd = "0.10.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-libproc = "0.10.0"
 mach2 = "0.4.1"

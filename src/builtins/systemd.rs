@@ -20,8 +20,10 @@ static JOURNAL_OUTPUT_TYPE: [ColumnType; 2] = [
 #[signature(
     systemd.journal,
     can_block = true,
-    output = Known(ValueType::TableInputStream(JOURNAL_OUTPUT_TYPE.clone())),
-    short = "Show the systemd journal"
+    output = Known(ValueType::table_input_stream(&JOURNAL_OUTPUT_TYPE)),
+    short = "Show the systemd journal",
+    example = "# Show last 10 entries for pid 123",
+    example = "systemd:journal _PID=\"123\" | tail"
 )]
 struct JournalSignature {
     #[description("wait indefinitely for more data once the end of the journal is reached.")]

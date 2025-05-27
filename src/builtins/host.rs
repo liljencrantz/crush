@@ -14,6 +14,8 @@ use chrono::Duration;
 use nix::libc::uid_t;
 use signature::signature;
 use crate::lang::data::table::ColumnFormat;
+#[cfg(target_os = "macos")]
+use mach2::mach_time::mach_timebase_info;
 
 #[signature(
     host.name,
@@ -229,7 +231,6 @@ pub struct Procs {}
 use libproc::libproc::proc_pid::{listpidinfo, listpids, pidinfo, ListThreads, ProcType};
 use libproc::libproc::task_info::TaskAllInfo;
 use libproc::libproc::thread_info::ThreadInfo;
-use mach2::mach_time::mach_timebase_info;
 use nix::unistd;
 
 fn procs(context: CommandContext) -> CrushResult<()> {
@@ -261,7 +262,7 @@ fn procs(context: CommandContext) -> CrushResult<()> {
     }
     Ok(())
 }
-
+#[cfg(target_os = "macos")]
 #[signature(
     host.threads,
     can_block = true,
@@ -270,6 +271,7 @@ fn procs(context: CommandContext) -> CrushResult<()> {
     long = "host:threads accepts no arguments.")]
 pub struct Threads {}
 
+    #[cfg(target_os = "macos")]
 fn threads(context: CommandContext) -> CrushResult<()> {
     let mut base_procs = Vec::new();
 
@@ -365,6 +367,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Name::declare(host)?;
             Uptime::declare(host)?;
             Procs::declare(host)?;
+            #[cfg(target_os = "macos")]
             Threads::declare(host)?;
             Signal::declare(host)?;
             host.create_namespace(
