@@ -231,34 +231,31 @@ use libproc::libproc::task_info::TaskAllInfo;
 use libproc::libproc::thread_info::ThreadInfo;
 use mach2::mach_time::mach_timebase_info;
 use nix::unistd;
-use sysinfo::ThreadKind;
+use sysinfo::{ThreadKind, System};
 
 fn procs(context: CommandContext) -> CrushResult<()> {
-    use sysinfo::{
-        System,
-    };
     let mut sys = System::new_all();
-
-    // First we update all information of our `System` struct.
     sys.refresh_all();
     let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
     let users = create_user_map()?;
 
     for (pid, proc) in sys.processes() {
-        output.send(Row::new(vec![
-            Value::from(pid.as_u32()),
-            Value::from(proc.parent().map(|i| i.as_u32()).unwrap_or(1u32)),
-            proc.user_id().and_then(|i| {
-                let ii = i.deref();
-                let iii = *ii as uid_t;
-                let iiii = unistd::Uid::from_raw(iii);
-                return users.get(&iiii);
-            }).map(|s| Value::from(s)).unwrap_or_else(|| Value::from("?")),
-            Value::from(proc.memory()),
-            Value::from(proc.virtual_memory()),
-            Value::from(Duration::microseconds((1_000_000.0 * proc.cpu_usage()) as i64)),
-            Value::from(proc.name().to_str().unwrap_or("<Invalid>")),
-        ]))?;
+        if let None = proc.thread_kind() {
+            output.send(Row::new(vec![
+                Value::from(pid.as_u32()),
+                Value::from(proc.parent().map(|i| i.as_u32()).unwrap_or(1u32)),
+                proc.user_id().and_then(|i| {
+                    let ii = i.deref();
+                    let iii = *ii as uid_t;
+                    let iiii = unistd::Uid::from_raw(iii);
+                    return users.get(&iiii);
+                }).map(|s| Value::from(s)).unwrap_or_else(|| Value::from("?")),
+                Value::from(proc.memory()),
+                Value::from(proc.virtual_memory()),
+                Value::from(Duration::milliseconds(proc.accumulated_cpu_time() as i64)),
+                Value::from(proc.name().to_str().unwrap_or("<Invalid>")),
+            ]))?;
+        }
     }
     Ok(())
 }
