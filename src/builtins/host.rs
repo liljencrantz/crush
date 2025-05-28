@@ -229,6 +229,7 @@ static THREADS_OUTPUT_TYPE: [ColumnType; 6] = [
 pub struct Procs {}
 
 use nix::unistd;
+use sysinfo::ThreadKind;
 
 fn procs(context: CommandContext) -> CrushResult<()> {
     use sysinfo::{
@@ -273,6 +274,25 @@ fn threads(context: CommandContext) -> CrushResult<()> {
     let mut base_procs = Vec::new();
 
     let output = context.output.initialize(&THREADS_OUTPUT_TYPE)?;
+/*
+    use sysinfo::{
+        System,
+    };
+    let mut sys = System::new_all();
+
+    // First we update all information of our `System` struct.
+    sys.refresh_all();
+
+    for (pid, proc) in sys.processes() {
+
+        match proc.thread_kind().unwrap() {
+            ThreadKind::Kernel => {}
+            ThreadKind::Userland => {}
+        }
+        proc.parent()
+
+    }
+*/
     let mut info: mach_timebase_info = mach_timebase_info { numer: 0, denom: 0 };
     unsafe {
         mach_timebase_info(std::ptr::addr_of_mut!(info));
