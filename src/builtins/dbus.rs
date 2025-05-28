@@ -2,7 +2,7 @@ use crate::lang::argument::{column_names, Argument};
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::*;
 use crate::lang::data::dict::Dict;
-use crate::lang::errors::{argument_error_legacy, data_error, eof_error, error, mandate, to_crush_error, CrushResult};
+use crate::lang::errors::{argument_error_legacy, data_error, eof_error, error, mandate, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::data::list::List;
 use crate::lang::data::r#struct::Struct;
@@ -15,6 +15,7 @@ use signature::signature;
 use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::iter::Peekable;
+use std::ops::Deref;
 use std::str::Chars;
 use std::time::Duration;
 use crate::lang::ast::location::Location;
@@ -53,10 +54,9 @@ impl DBusThing {
             a.serialize(value, &mut msg)?;
         }
 
-        let reply = to_crush_error(
+        let reply = 
             self.connection
-                .send_with_reply_and_block(msg, Duration::from_secs(5)),
-        )?;
+                .send_with_reply_and_block(msg, Duration::from_secs(5))?;
         let mut values = method.deserialize(&reply)?;
         let mut output_arguments = method
             .arguments
@@ -87,7 +87,7 @@ impl DBusThing {
     pub fn list_services(&self) -> CrushResult<Vec<String>> {
         let proxy = self.proxy("org.freedesktop.DBus", "/");
         let (mut names, ): (Vec<String>, ) =
-            to_crush_error(proxy.method_call("org.freedesktop.DBus", "ListNames", ()))?;
+            proxy.method_call("org.freedesktop.DBus", "ListNames", ())?;
         Ok(names.drain(..).filter(|n| !n.starts_with(':')).collect())
     }
 
@@ -98,11 +98,11 @@ impl DBusThing {
         while !queue.is_empty() {
             let path = queue.pop().unwrap();
             let sub_proxy = self.proxy(service, &path);
-            let (intro_xml, ): (String, ) = to_crush_error(sub_proxy.method_call(
+            let (intro_xml, ): (String, ) = sub_proxy.method_call(
                 "org.freedesktop.DBus.Introspectable", //&name,
                 "Introspect",
                 (),
-            ))?;
+            )?;
             let node = parse_interface(&path, &intro_xml)?;
             for o in &node.objects {
                 let mut child = path.clone();
@@ -130,7 +130,7 @@ impl DBusThing {
 fn parse_interface(path: &str, xml: &str) -> CrushResult<DBusParsedInterface> {
     let mut objects = Vec::new();
     let mut interfaces = Vec::new();
-    let doc = to_crush_error(roxmltree::Document::parse(xml))?;
+    let doc = roxmltree::Document::parse(xml)?;
     for node in doc.root().children() {
         if !node.is_element() {
             continue;
@@ -341,7 +341,7 @@ impl DBusArgument {
             }
             DBusType::Byte => {
                 if let Value::Integer(value) = value {
-                    a.append(to_crush_error(u8::try_from(value))?);
+                    a.append(u8::try_from(value)?);
                 } else {
                     return argument_error_legacy(format!(
                         "Expected a number, got a {}",
@@ -351,7 +351,7 @@ impl DBusArgument {
             }
             DBusType::Int16 => {
                 if let Value::Integer(value) = value {
-                    a.append(to_crush_error(i16::try_from(value))?);
+                    a.append(i16::try_from(value)?);
                 } else {
                     return argument_error_legacy(format!(
                         "Expected a number, got a {}",
@@ -361,7 +361,7 @@ impl DBusArgument {
             }
             DBusType::UInt16 => {
                 if let Value::Integer(value) = value {
-                    a.append(to_crush_error(u16::try_from(value))?);
+                    a.append(u16::try_from(value)?);
                 } else {
                     return argument_error_legacy(format!(
                         "Expected a number, got a {}",
@@ -371,7 +371,7 @@ impl DBusArgument {
             }
             DBusType::Int32 => {
                 if let Value::Integer(value) = value {
-                    a.append(to_crush_error(i32::try_from(value))?);
+                    a.append(i32::try_from(value)?);
                 } else {
                     return argument_error_legacy(format!(
                         "Expected a number, got a {}",
@@ -381,7 +381,7 @@ impl DBusArgument {
             }
             DBusType::UInt32 => {
                 if let Value::Integer(value) = value {
-                    a.append(to_crush_error(u32::try_from(value))?);
+                    a.append(u32::try_from(value)?);
                 } else {
                     return argument_error_legacy(format!(
                         "Expected a number, got a {}",
@@ -391,7 +391,7 @@ impl DBusArgument {
             }
             DBusType::Int64 => {
                 if let Value::Integer(value) = value {
-                    a.append(to_crush_error(i64::try_from(value))?);
+                    a.append(i64::try_from(value)?);
                 } else {
                     return argument_error_legacy(format!(
                         "Expected a number, got a {}",
@@ -401,7 +401,7 @@ impl DBusArgument {
             }
             DBusType::UInt64 => {
                 if let Value::Integer(value) = value {
-                    a.append(to_crush_error(u64::try_from(value))?);
+                    a.append(u64::try_from(value)?);
                 } else {
                     return argument_error_legacy(format!(
                         "Expected a number value, got a {}",
@@ -682,7 +682,7 @@ fn service_call(mut context: CommandContext) -> CrushResult<()> {
             service_obj.get("service"),
             "Missing service field in struct",
         )? {
-            let dbus = DBusThing::new(to_crush_error(Connection::new_session())?);
+            let dbus = DBusThing::new(Connection::new_session()?);
             let mut objects = dbus.list_objects(&service)?;
             match (cfg.object, cfg.method) {
                 (None, None) => context.output.send(List::new(
@@ -731,7 +731,7 @@ fn service_call(mut context: CommandContext) -> CrushResult<()> {
 struct Session {}
 
 fn session(context: CommandContext) -> CrushResult<()> {
-    let dbus = DBusThing::new(to_crush_error(Connection::new_session())?);
+    let dbus = DBusThing::new(Connection::new_session()?);
     populate_bus(context, dbus)
 }
 
@@ -744,7 +744,7 @@ fn session(context: CommandContext) -> CrushResult<()> {
 struct System {}
 
 fn system(context: CommandContext) -> CrushResult<()> {
-    let dbus = DBusThing::new(to_crush_error(Connection::new_system())?);
+    let dbus = DBusThing::new(Connection::new_system()?);
     populate_bus(context, dbus)
 }
 
@@ -765,7 +765,7 @@ fn populate_bus(context: CommandContext, dbus: DBusThing) -> CrushResult<()> {
                             vec!["global", "dbus", "service", "__call__"],
                             "service",
                             "Access object in the specified service",
-                            None,
+                            Some("Performs a DBus RPC  with the supplied arguments and returns the result"),
                             Known(ValueType::Empty),
                             [],
                         )),

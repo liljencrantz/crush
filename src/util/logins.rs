@@ -4,7 +4,7 @@ Read login records from utmp/utmpx database.
 use std::sync::Mutex;
 use std::os::raw::c_short;
 use chrono::{DateTime, Local, TimeZone};
-use nix::libc::{endutxent, getutxent, timeval};
+use nix::libc::{endutxent, getutxent};
 use UtmpxType::{BootTime, DeadProcess, Empty, InitProcess, LoginProcess, NewTime, OldTime, UserProcess};
 use crate::lang::errors::{CrushError, login_error};
 
@@ -61,10 +61,6 @@ enum UtmpxType {
     DeadProcess,
 }
 
-fn parse_timeval(tv: &timeval) -> DateTime<Local> {
-    Local.timestamp_nanos(tv.tv_usec as i64 * 1000 + (tv.tv_sec as i64) * 1000000000)
-}
-
 impl TryFrom<c_short> for UtmpxType {
     type Error = CrushError;
 
@@ -94,14 +90,17 @@ pub fn list() -> LoginResult<Vec<Login>> {
         let record = unsafe { &*record_ptr };
         let host = record.ut_host.parse()?;
         match UtmpxType::try_from(record.ut_type) {
-            Ok(UserProcess) | Ok(InitProcess) | Ok(LoginProcess) =>
+            Ok(UserProcess) | Ok(InitProcess) | Ok(LoginProcess) => {
+                let tv = record.ut_tv;
+                let time = Local.timestamp_nanos(tv.tv_usec as i64 * 1000 + (tv.tv_sec as i64) * 1000000000);
                 res.push(Login {
                     tty: format!("/dev/{}", record.ut_line.parse()?),
                     user: record.ut_user.parse()?,
-                    time: parse_timeval(&record.ut_tv),
+                    time,
                     host: if host.is_empty() { None } else { Some(host) },
                     pid: record.ut_pid as i128,
-                }),
+                })
+            },
             _ => {}
         }
     }
