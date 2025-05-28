@@ -227,6 +227,7 @@ impl From<std::num::ParseFloatError> for CrushError {
     }
 }
 
+#[cfg(target_os = "linux")]
 impl From<dbus::Error> for CrushError {
     fn from(e: dbus::Error) -> Self {
         CrushError {
@@ -237,6 +238,7 @@ impl From<dbus::Error> for CrushError {
     }
 }
 
+#[cfg(target_os = "linux")]
 impl From<roxmltree::Error> for CrushError {
     fn from(e: roxmltree::Error) -> Self {
         CrushError {

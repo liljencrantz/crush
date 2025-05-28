@@ -16,6 +16,12 @@ use signature::signature;
 use crate::lang::data::table::ColumnFormat;
 #[cfg(target_os = "macos")]
 use mach2::mach_time::mach_timebase_info;
+#[cfg(target_os = "macos")]
+use libproc::proc_pid::{listpidinfo, listpids, ListThreads, pidinfo, ProcType};
+#[cfg(target_os = "macos")]
+use libproc::task_info::TaskAllInfo;
+#[cfg(target_os = "macos")]
+use libproc::thread_info::ThreadInfo;
 
 #[signature(
     host.name,
@@ -257,6 +263,7 @@ fn procs(context: CommandContext) -> CrushResult<()> {
     }
     Ok(())
 }
+
 #[cfg(target_os = "macos")]
 #[signature(
     host.threads,
@@ -266,30 +273,12 @@ fn procs(context: CommandContext) -> CrushResult<()> {
     long = "host:threads accepts no arguments.")]
 pub struct Threads {}
 
-    #[cfg(target_os = "macos")]
+#[cfg(target_os = "macos")]
 fn threads(context: CommandContext) -> CrushResult<()> {
     let mut base_procs = Vec::new();
 
     let output = context.output.initialize(&THREADS_OUTPUT_TYPE)?;
-/*
-    use sysinfo::{
-        System,
-    };
-    let mut sys = System::new_all();
 
-    // First we update all information of our `System` struct.
-    sys.refresh_all();
-
-    for (pid, proc) in sys.processes() {
-
-        match proc.thread_kind().unwrap() {
-            ThreadKind::Kernel => {}
-            ThreadKind::Userland => {}
-        }
-        proc.parent()
-
-    }
-*/
     let mut info: mach_timebase_info = mach_timebase_info { numer: 0, denom: 0 };
     unsafe {
         mach_timebase_info(std::ptr::addr_of_mut!(info));
@@ -340,6 +329,43 @@ fn threads(context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
+#[signature(
+    host.threads,
+    can_block = true,
+    short = "Return a table stream containing information on all running threads on this host",
+    output = Known(ValueType::table_input_stream(& LIST_OUTPUT_TYPE)),
+    long = "host:threads accepts no arguments.")]
+pub struct Threads {}
+
+#[cfg(target_os = "linux")]
+fn threads(context: CommandContext) -> CrushResult<()> {
+    let mut sys = System::new_all();
+    sys.refresh_all();
+    let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
+    let users = create_user_map()?;
+
+    for (pid, proc) in sys.processes() {
+        if let Some(kind) = proc.thread_kind() {
+            output.send(Row::new(vec![
+                Value::from(pid.as_u32()),
+                Value::from(proc.parent().map(|i| i.as_u32()).unwrap_or(1u32)),
+                proc.user_id().and_then(|i| {
+                    let ii = i.deref();
+                    let iii = *ii as uid_t;
+                    let iiii = unistd::Uid::from_raw(iii);
+                    return users.get(&iiii);
+                }).map(|s| Value::from(s)).unwrap_or_else(|| Value::from("?")),
+                Value::from(proc.memory()),
+                Value::from(proc.virtual_memory()),
+                Value::from(Duration::milliseconds(proc.accumulated_cpu_time() as i64)),
+                Value::from(proc.name().to_str().unwrap_or("<Invalid>")),
+            ]))?;
+        }
+    }
+    Ok(())
+}
+
 #[signature(
     host.signal,
     can_block = false,
@@ -380,6 +406,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Uptime::declare(host)?;
             Procs::declare(host)?;
             #[cfg(target_os = "macos")]
+            Threads::declare(host)?;
+            #[cfg(target_os = "linux")]
             Threads::declare(host)?;
             Signal::declare(host)?;
             host.create_namespace(
