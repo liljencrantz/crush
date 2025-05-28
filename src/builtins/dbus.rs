@@ -2,7 +2,7 @@ use crate::lang::argument::{column_names, Argument};
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::*;
 use crate::lang::data::dict::Dict;
-use crate::lang::errors::{argument_error_legacy, data_error, eof_error, error, mandate, CrushError, CrushErrorType, CrushResult};
+use crate::lang::errors::{argument_error_legacy, data_error, eof_error, error, mandate, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::data::list::List;
 use crate::lang::data::r#struct::Struct;

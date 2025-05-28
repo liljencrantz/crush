@@ -4,7 +4,7 @@ Read login records from utmp/utmpx database.
 use std::sync::Mutex;
 use std::os::raw::c_short;
 use chrono::{DateTime, Local, TimeZone};
-use nix::libc::{endutxent, getutxent, timeval};
+use nix::libc::{endutxent, getutxent};
 use UtmpxType::{BootTime, DeadProcess, Empty, InitProcess, LoginProcess, NewTime, OldTime, UserProcess};
 use crate::lang::errors::{CrushError, login_error};
 

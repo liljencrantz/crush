@@ -228,9 +228,6 @@ static THREADS_OUTPUT_TYPE: [ColumnType; 6] = [
     long = "host:procs accepts no arguments.")]
 pub struct Procs {}
 
-use libproc::libproc::proc_pid::{listpidinfo, listpids, pidinfo, ListThreads, ProcType};
-use libproc::libproc::task_info::TaskAllInfo;
-use libproc::libproc::thread_info::ThreadInfo;
 use nix::unistd;
 
 fn procs(context: CommandContext) -> CrushResult<()> {

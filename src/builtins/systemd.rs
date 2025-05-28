@@ -86,7 +86,7 @@ fn journal(mut context: CommandContext) -> CrushResult<()> {
     let output = context.output.initialize(&JOURNAL_OUTPUT_TYPE)?;
 
     loop {
-        match if cfg.follow { journal.await_next_record(None) } else { journal.next_record() }? {
+        match if cfg.follow { journal.await_next_entry(None) } else { journal.next_entry() }? {
             None => if !cfg.follow {
                 break;
             },
