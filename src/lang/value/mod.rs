@@ -38,6 +38,7 @@ pub use value_definition::ValueDefinition;
 pub use value_type::ValueType;
 use std::fmt::{Display, Formatter};
 use std::io::Read;
+use std::ops::Add;
 use std::sync::Arc;
 use crate::lang::vec_reader::VecReader;
 use crate::data::table::ColumnFormat;
@@ -184,6 +185,18 @@ impl From<usize> for Value {
 impl From<u32> for Value {
     fn from(v: u32) -> Value {
         Value::Integer(v as i128)
+    }
+}
+
+impl From<sysinfo::Uid> for Value {
+    fn from(v: sysinfo::Uid) -> Value {
+        Value::from(v.add(0))
+    }
+}
+
+impl From<sysinfo::Gid> for Value {
+    fn from(v: sysinfo::Gid) -> Value {
+        Value::from(v.add(0))
     }
 }
 

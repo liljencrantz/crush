@@ -13,6 +13,7 @@ mod crush;
 mod dbus;
 mod dns;
 mod fs;
+mod groups;
 mod grpc;
 mod host;
 mod io;
@@ -24,7 +25,7 @@ mod stream;
 mod systemd;
 mod term;
 pub mod types;
-mod user;
+mod users;
 mod var;
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
@@ -38,6 +39,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     dns::declare(root)?;
     fs::declare(root)?;
     grpc::declare(root)?;
+    groups::declare(root)?;
     host::declare(root)?;
     io::declare(root)?;
     math::declare(root)?;
@@ -48,7 +50,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     systemd::declare(root)?;
     term::declare(root)?;
     types::declare(root)?;
-    user::declare(root)?;
+    users::declare(root)?;
     var::declare(root)?;
 
     root.read_only();

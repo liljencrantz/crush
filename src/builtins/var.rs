@@ -95,7 +95,8 @@ pub fn unset(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Empty),
     short = "Puts the specified scope into the list of scopes to search in by default during scope lookups",
-    example = "var:use $math; sqrt 2",
+    example = "var:use $math",
+    example = "sqrt 2",
 )]
 struct Use {
     #[description("the scopes to use.")]
@@ -111,22 +112,22 @@ pub fn r#use(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Empty)
 }
 
-static ENV_OUTPUT_TYPE: [ColumnType; 2] = [
+static LIST_OUTPUT_TYPE: [ColumnType; 2] = [
     ColumnType::new("name", ValueType::String),
     ColumnType::new("type", ValueType::String),
 ];
 
 #[signature(
-    var.env,
+    var.list,
     can_block = false,
-    output = Known(ValueType::table_input_stream(&ENV_OUTPUT_TYPE)),
+    output = Known(ValueType::table_input_stream(&LIST_OUTPUT_TYPE)),
     short = "Returns a table containing the current namespace",
     long = "The columns of the table are the name, and the type of the value.",
 )]
-struct Env {}
+struct List {}
 
-pub fn env(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(&ENV_OUTPUT_TYPE)?;
+pub fn list(context: CommandContext) -> CrushResult<()> {
+    let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
     let values = context.scope.dump()?;
     let mut keys = values.keys().collect::<Vec<&String>>();
     keys.sort();
@@ -141,14 +142,14 @@ pub fn env(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    var.scope,
+    var.local,
     can_block = false,
     output = Known(ValueType::Scope),
     short = "Returns the current scope",
 )]
-struct ScopeSignature {}
+struct Local {}
 
-pub fn scope(context: CommandContext) -> CrushResult<()> {
+pub fn local(context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Scope(context.scope))
 }
 
@@ -162,8 +163,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Get::declare(ns)?;
             Unset::declare(ns)?;
             Use::declare(ns)?;
-            Env::declare(ns)?;
-            ScopeSignature::declare(ns)?;
+            List::declare(ns)?;
+            Local::declare(ns)?;
             Ok(())
         }))?;
     Ok(())

@@ -8,7 +8,7 @@ use nix::libc::{endutxent, getutxent};
 use UtmpxType::{BootTime, DeadProcess, Empty, InitProcess, LoginProcess, NewTime, OldTime, UserProcess};
 use crate::lang::errors::{CrushError, login_error};
 
-static MUTEX: Mutex<()> = Mutex::new(());
+static LOGIN_MUTEX: Mutex<()> = Mutex::new(());
 
 pub type LoginResult<T> = Result<T, CrushError>;
 
@@ -81,7 +81,7 @@ impl TryFrom<c_short> for UtmpxType {
 
 pub fn list() -> LoginResult<Vec<Login>> {
     let mut res = Vec::new();
-    let _lock = MUTEX.lock().unwrap();
+    let _lock = LOGIN_MUTEX.lock().unwrap();
     loop {
         let record_ptr = unsafe { getutxent() };
         if record_ptr.is_null() {

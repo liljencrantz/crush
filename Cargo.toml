@@ -61,7 +61,6 @@ trust-dns-client = "0.23.2"
 resolv-conf = "0.7.4"
 itertools = "0.14.0"
 mountpoints = "0.2.1"
-libproc = "0.14.10"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 dbus = "0.9.7"
@@ -70,3 +69,4 @@ systemd = "0.10.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 mach2 = "0.4.1"
+libproc = "0.14.10"

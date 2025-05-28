@@ -13,6 +13,7 @@ use chrono::Duration;
 use std::path::PathBuf;
 use crate::lang::data::table::{ColumnType, Row};
 use os_pipe::PipeReader;
+use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 
 mod cmd;
@@ -121,6 +122,25 @@ fn fg(context: CommandContext) -> CrushResult<()> {
     }
 }
 
+#[signature(
+    control.source,
+    short = "Evaluate files into current crush session",
+    example = "source *.crush"
+)]
+struct Source {
+    #[unnamed()]
+    #[description("the files to source")]
+    files: Files,
+}
+
+fn source(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Source = Source::parse(context.remove_arguments(), &context.global_state.printer())?;
+    for file in Vec::<PathBuf>::from(cfg.files) {
+        crate::execute::file(&context.scope, &file, &context.output, &context.global_state)?;
+    }
+    Ok(())
+}
+
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
         "control",
@@ -150,6 +170,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Bg::declare(env)?;
             Fg::declare(env)?;
             help::HelpSignature::declare(env)?;
+            Source::declare(env)?;
             Ok(())
         }),
     )?;

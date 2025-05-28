@@ -8,7 +8,7 @@ use ordered_map::OrderedMap;
 use std::fs::{create_dir, File, metadata, remove_dir, remove_file};
 use signature::signature;
 use std::collections::HashSet;
-use std::ops::Deref;
+use std::ops::{Add, Deref};
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::sync::{Arc, OnceLock};
@@ -72,7 +72,7 @@ pub fn chown(mut context: CommandContext) -> CrushResult<()> {
         None
     };
 
-    nix::unistd::chown(&file, uid, gid)?;
+    nix::unistd::chown(&file, uid.map(|i| i.add(0).into()), gid.map(|i| i.add(0).into()))?;
 
     context
         .output

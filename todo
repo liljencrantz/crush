@@ -6,8 +6,6 @@ Allow commands to specify the type of input they expect for better/earlier valid
 Write a command that extracts all help into html
 Tab completion of globs
 Add system tests for binary stream handling
-In closures without a signature, put unnamed variables in the variable '__unnamed__'
-Add control:source command
 Data enums + pattern matching syntax
 Add package command to create a new namespace
 pbuf:from command that takes a protobuf definition and uses it to deserialize protobuf data
@@ -23,3 +21,5 @@ Show errors from loading config
 Dict literals in expression mode ({key: value})
 Make closures only return last item
 {|$foo: $glob or $string or $regex|} to specify that an argument is one of several types
+Better syntax highlighting for expression mode
+Better syntax highlighting of possible errors

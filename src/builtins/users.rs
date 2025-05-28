@@ -20,9 +20,11 @@ use crate::lang::any_str::AnyStr;
 use crate::util::logins;
 
 #[signature(
-    user.me,
+    users.me,
     can_block = false,
     short = "current user",
+    example = "# Show my own uid",
+    example = "users:me:uid",
 )]
 struct Me {}
 
@@ -39,10 +41,12 @@ static CURRENT_OUTPUT_TYPE: [ColumnType; 5] = [
 ];
 
 #[signature(
-    user.current,
+    users.current,
     can_block = true,
     output = Known(ValueType::TableInputStream(CURRENT_OUTPUT_TYPE.to_vec())),
-    short = "Currently logged in users",
+    short = "List all currently logged in users with their tty, login time, etc.",
+    example = "# Find the username of the latest user to login in to this system",
+    example = "$(users:current | sort time --reverse)[0] | member name",
 )]
 struct Current {}
 
@@ -53,9 +57,9 @@ fn current(context: CommandContext) -> CrushResult<()> {
         output.send(Row::new(vec![
             Value::from(l.user),
             Value::from(l.tty),
+            Value::from(l.host.unwrap_or_else(|| { "".to_string() })),
             Value::Time(l.time),
             Value::from(l.pid),
-            Value::from(l.host.unwrap_or_else(|| { "".to_string() })),
         ]))?;
     }
     Ok(())
@@ -93,7 +97,7 @@ pub fn user_struct() -> &'static Struct {
 }
 
 #[signature(
-    user.r#do,
+    users.r#do,
     can_block = true,
     short = "Execute a lambda as another user.",
 )]
@@ -173,7 +177,7 @@ fn r#do(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    user.list,
+    users.list,
     can_block = true,
     output = Known(ValueType::table_input_stream(&LIST_OUTPUT_TYPE)),
     short = "List all users on the system",
@@ -197,9 +201,11 @@ fn list(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    user.__getitem__,
+    users.__getitem__,
     can_block = false,
     short = "find a user by name",
+    example = "# Remove the file foo.txt as root",
+    example = "users[root]:do {rm foo.txt}",
 )]
 struct GetItem {
     #[description("the name of the user to find.")]
@@ -221,8 +227,8 @@ fn get_user_value(input_name: &str) -> CrushResult<Value> {
                     ("home", Value::from(user.home)),
                     ("shell", Value::from(user.shell)),
                     ("information", Value::from(user.information)),
-                    ("uid", Value::Integer(user.uid as i128)),
-                    ("gid", Value::Integer(user.gid as i128)),
+                    ("uid", Value::from(user.uid)),
+                    ("gid", Value::from(user.gid)),
                 ],
                 Some(user_struct().clone()),
             ))),
@@ -232,13 +238,13 @@ fn get_user_value(input_name: &str) -> CrushResult<Value> {
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
-        "user",
+        "users",
         "User commands",
-        Box::new(move |user| {
-            Me::declare(user)?;
-            Current::declare(user)?;
-            List::declare(user)?;
-            GetItem::declare(user)?;
+        Box::new(move |users| {
+            Me::declare(users)?;
+            Current::declare(users)?;
+            List::declare(users)?;
+            GetItem::declare(users)?;
             Ok(())
         }),
     )?;

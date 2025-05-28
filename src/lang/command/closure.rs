@@ -665,7 +665,7 @@ impl Closure {
             }
 
             if !unnamed.is_empty() {
-                context.env.redeclare_reserved("__unnamed__", Value::List(List::new_without_type(unnamed)));
+                context.env.redeclare_reserved("__unnamed__", Value::List(List::new_without_type(unnamed)))?;
             }
 
             Ok(())

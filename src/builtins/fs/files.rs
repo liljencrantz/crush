@@ -13,7 +13,6 @@ use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value
 use crate::util::user_map::{create_user_map, create_group_map};
 use signature::signature;
 use std::os::unix::fs::PermissionsExt;
-use nix::unistd::{Uid, Gid};
 use crate::data::table::ColumnFormat;
 
 enum Column {
@@ -56,8 +55,8 @@ fn format_permissions(mode: u32) -> String {
 fn insert_entity(
     meta: &Metadata,
     file: PathBuf,
-    users: &HashMap<Uid, String>,
-    groups: &HashMap<Gid, String>,
+    users: &HashMap<sysinfo::Uid, String>,
+    groups: &HashMap<sysinfo::Gid, String>,
     cols: &[Column],
     output: &mut TableOutputStream,
 ) -> CrushResult<()> {
@@ -70,8 +69,8 @@ fn insert_entity(
             }
             Column::Inode => Value::from(meta.ino()),
             Column::Links => Value::from(meta.nlink()),
-            Column::User => users.get(&Uid::from_raw(meta.uid())).map(|n| Value::from(n)).unwrap_or_else(|| Value::from("?")),
-            Column::Group => groups.get(&Gid::from_raw(meta.gid())).map(|n| Value::from(n)).unwrap_or_else(|| Value::from("?")),
+            Column::User => users.get(&sysinfo::Uid::try_from(meta.uid() as usize)?).map(|n| Value::from(n)).unwrap_or_else(|| Value::from("?")),
+            Column::Group => groups.get(&sysinfo::Gid::try_from(meta.gid() as usize)?).map(|n| Value::from(n)).unwrap_or_else(|| Value::from("?")),
             Column::Size => Value::from(meta.len()),
             Column::Blocks => Value::from(meta.blocks()),
             Column::Modified => {
@@ -108,8 +107,8 @@ fn insert_entity(
 
 fn run_for_single_directory_or_file(
     path: PathBuf,
-    users: &HashMap<Uid, String>,
-    groups: &HashMap<Gid, String>,
+    users: &HashMap<sysinfo::Uid, String>,
+    groups: &HashMap<sysinfo::Gid, String>,
     recursive: bool,
     cols: &[Column],
     q: &mut VecDeque<PathBuf>,
