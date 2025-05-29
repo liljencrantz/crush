@@ -58,7 +58,13 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     ["stream", "select"],
                     "stream:select [copy_fields:string...] [*] [new_field=command]",
                     "Pass on some old fields and calculate new ones for each line of input",
-                    None::<AnyStr>,
+                    Some(r#"    Examples:
+
+    # Show only the filename and discard all other columns
+    files | select file
+
+    # Add an extra column to the output of files that shows the time passed since last modification
+    files | select * age={(time.now() - modified)}"#),
                     Unknown,
                     [],
                 )))?;
