@@ -44,6 +44,7 @@ fn r#break(context: CommandContext) -> CrushResult<()> {
     short = "Stop execution of a closure and return a value.",
     output = Unknown)]
 struct Return {
+    #[description("the value to return")]
     value: Option<Value>,
 }
 
@@ -75,7 +76,6 @@ impl BinaryReader for PipeReader {
     control.sleep,
     can_block = true,
     short = "Pause execution of commands for the specified amount of time",
-    long = "Execute the specified command all specified hosts"
 )]
 struct Sleep {
     #[description("the time to sleep for.")]

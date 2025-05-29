@@ -12,7 +12,6 @@ use std::convert::TryFrom;
 use std::sync::Arc;
 use chrono::{DateTime, Local};
 use nix::libc::{S_IFBLK, S_IFCHR, S_IFDIR, S_IFIFO, S_IFLNK, S_IFREG, S_IFSOCK};
-use nix::sys::stat::lstat;
 use crate::lang::data::table::{ColumnType, Row};
 
 mod usage;
@@ -47,10 +46,10 @@ static STAT_OUTPUT_TYPE: [ColumnType; 18] = [
     ColumnType::new("is_socket", ValueType::Bool),
     ColumnType::new("is_symlink", ValueType::Bool),
     ColumnType::new("is_file", ValueType::Bool),
-    ColumnType::new("is_block_device", ValueType::Bool),
-    ColumnType::new("is_directory", ValueType::Bool),
-    ColumnType::new("is_character_device", ValueType::Bool),
-    ColumnType::new("is_fifo", ValueType::Float),
+    ColumnType::new("is_block", ValueType::Bool),
+    ColumnType::new("is_dir", ValueType::Bool),
+    ColumnType::new("is_char", ValueType::Bool),
+    ColumnType::new("is_fifo", ValueType::Bool),
     ColumnType::new("inode", ValueType::Integer),
     ColumnType::new("nlink", ValueType::Integer),
     ColumnType::new("uid", ValueType::Integer),
@@ -72,9 +71,9 @@ static STAT_OUTPUT_TYPE: [ColumnType; 18] = [
     long = "The return value contains the following columns:",
     long = "* is_socket:bool is the file is a socket",
     long = "* is_symlink:bool is the file a symbolic link",
-    long = "* is_block_device:bool is the file a block device",
-    long = "* is_directory:bool is the file is a directory",
-    long = "* is_character_device:bool is the file a character_device",
+    long = "* is_block:bool is the file a block device",
+    long = "* is_dir:bool is the file is a directory",
+    long = "* is_char:bool is the file a character_device",
     long = "* is_fifo:bool is the file a fifo",
     long = "* inode:integer the inode number of the file",
     long = "* nlink:integer the number of hardlinks to the file",
@@ -106,19 +105,19 @@ fn stat(mut context: CommandContext) -> CrushResult<()> {
 
         let metadata =
             if cfg.symlink {
-                lstat(&file)
+                nix::sys::stat::lstat(&file)
             } else {
                 nix::sys::stat::stat(&file)
             }?;
 
         output.send(Row::new(vec![
-            Value::Bool((metadata.st_mode & S_IFSOCK) != 0),
-            Value::Bool((metadata.st_mode & S_IFLNK) != 0),
-            Value::Bool((metadata.st_mode & S_IFREG) != 0),
-            Value::Bool((metadata.st_mode & S_IFBLK) != 0),
-            Value::Bool((metadata.st_mode & S_IFDIR) != 0),
-            Value::Bool((metadata.st_mode & S_IFCHR) != 0),
-            Value::Bool((metadata.st_mode & S_IFIFO) != 0),
+            Value::Bool((metadata.st_mode & S_IFSOCK) == S_IFSOCK),
+            Value::Bool((metadata.st_mode & S_IFLNK) == S_IFLNK),
+            Value::Bool((metadata.st_mode & S_IFREG) == S_IFREG),
+            Value::Bool((metadata.st_mode & S_IFBLK) == S_IFBLK),
+            Value::Bool((metadata.st_mode & S_IFDIR) == S_IFDIR),
+            Value::Bool((metadata.st_mode & S_IFCHR) == S_IFCHR),
+            Value::Bool((metadata.st_mode & S_IFIFO) == S_IFIFO),
             Value::Integer(metadata.st_ino as i128),
             Value::Integer(metadata.st_nlink as i128),
             Value::Integer(metadata.st_uid as i128),
