@@ -11,6 +11,7 @@ use crate::{
     util::replace::Replace,
 };
 use crate::lang::ast::location::Location;
+use crate::lang::value::ValueType;
 
 enum Action {
     Replace(usize),
@@ -36,52 +37,27 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
         vec![]
     };
 
-    let mut first_result = Vec::new();
-
-    match input.read() {
-        Ok(row) => {
-            if config.copy {
-                first_result.append(&mut row.cells().clone());
+    for (location, source) in &config.columns {
+        let next_type =
+        match source {
+            Source::Closure(_) => ValueType::Any,
+            Source::Argument(idx) => input_type[*idx].cell_type.clone(),
+        };
+        match location {
+            Action::Append(name) => {
+                output_type.push(ColumnType::new_from_string(name.clone(), next_type));
             }
-            for (location, source) in &config.columns {
-                let value = match source {
-                    Source::Closure(closure) => {
-                        let (sender, receiver) = pipe();
-                        let arguments: Vec<Argument> = row
-                            .cells()
-                            .iter()
-                            .zip(&input_type)
-                            .map(|(cell, cell_type)| {
-                                Argument::named(cell_type.name(), cell.clone(), config.location)
-                            })
-                            .collect();
-                        closure.eval(context.empty().with_args(arguments, None).with_output(sender))?;
-                        receiver.recv()?
-                    }
-                    Source::Argument(idx) => row.cells()[*idx].clone(),
-                };
-
-                match location {
-                    Action::Append(name) => {
-                        output_type.push(ColumnType::new_from_string(name.clone(), value.value_type()));
-                        first_result.push(value);
-                    }
-                    Action::Replace(idx) => {
-                        let name = output_type[*idx].name().to_string();
-                        output_type.replace(
-                            *idx,
-                            ColumnType::new_from_string(name, value.value_type()),
-                        );
-                        first_result[*idx] = value;
-                    }
-                }
+            Action::Replace(idx) => {
+                let name = output_type[*idx].name().to_string();
+                output_type.replace(
+                    *idx,
+                    ColumnType::new_from_string(name, next_type),
+                );
             }
         }
-        Err(_) => return Ok(()),
     }
 
     let output = context.output.initialize(&output_type)?;
-    output.send(Row::new(first_result))?;
 
     while let Ok(row) = input.read() {
         let mut next_result = Vec::new();
