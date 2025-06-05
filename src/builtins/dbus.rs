@@ -43,7 +43,7 @@ impl DBusThing {
         mut input: Vec<Value>,
     ) -> CrushResult<Value> {
         let mut msg =
-            Message::new_method_call(service, &object.path, &interface.name, &method.name).unwrap();
+            Message::new_method_call(service, &object.path, &interface.name, &method.name)?;
 
         let input_arguments = method
             .arguments
@@ -96,7 +96,7 @@ impl DBusThing {
         queue.push("/".to_string());
         let mut res = Vec::new();
         while !queue.is_empty() {
-            let path = queue.pop().unwrap();
+            let path = queue.pop()?;
             let sub_proxy = self.proxy(service, &path);
             let (intro_xml, ): (String, ) = sub_proxy.method_call(
                 "org.freedesktop.DBus.Introspectable", //&name,
@@ -146,7 +146,7 @@ fn parse_interface(path: &str, xml: &str) -> CrushResult<DBusParsedInterface> {
             match child.tag_name().name() {
                 "interface" => {
                     let name =
-                        mandate(child.attribute("name"), "Invalid object definition")?.to_string();
+                        child.attribute("name").ok_or("Invalid object definition")?.to_string();
 
                     let mut methods = Vec::new();
 
@@ -157,7 +157,7 @@ fn parse_interface(path: &str, xml: &str) -> CrushResult<DBusParsedInterface> {
                         if method.tag_name().name() != "method" {
                             continue;
                         }
-                        let name = mandate(method.attribute("name"), "Invalid object definition")?
+                        let name = method.attribute("name").ok_or("Invalid object definition")?
                             .to_string();
                         let mut arguments = Vec::new();
 
@@ -169,15 +169,11 @@ fn parse_interface(path: &str, xml: &str) -> CrushResult<DBusParsedInterface> {
                                 continue;
                             }
                             let name = argument.attribute("name").map(|s| s.to_string());
-                            let argument_type = mandate(
-                                argument.attribute("type"),
-                                "Missing argument type attribute",
-                            )?
+                            let argument_type = argument.attribute("type")
+                                .ok_or("Missing argument type attribute")?
                                 .to_string();
-                            let direction = match mandate(
-                                argument.attribute("direction"),
-                                "Missing argument direction attribute",
-                            )?
+                            let direction = match 
+                                argument.attribute("direction").ok_or("Missing argument direction attribute")?
                                 .to_lowercase()
                                 .as_str()
                             {
@@ -197,8 +193,7 @@ fn parse_interface(path: &str, xml: &str) -> CrushResult<DBusParsedInterface> {
                     interfaces.push(DBusInterface { name, methods });
                 }
                 "node" => {
-                    let object_name =
-                        mandate(child.attribute("name"), "Invalid object definition")?;
+                    let object_name = child.attribute("name").ok_or("Invalid object definition")?;
                     objects.push(object_name.to_string());
                 }
                 _ => {}
@@ -279,30 +274,24 @@ impl DBusType {
             Some('h') => Ok(Some(DBusType::UnixFd)),
             Some('v') => Ok(Some(DBusType::Variant)),
 
-            Some('a') => Ok(Some(DBusType::Array(Box::from(mandate(
-                DBusType::parse_internal(i)?,
-                "Expected an array subtype",
-            )?)))),
+            Some('a') => Ok(Some(DBusType::Array(Box::from(
+                DBusType::parse_internal(i)?.ok_or("Expected an array subtype")?)))),
             Some('(') => {
                 let mut sub = Vec::new();
-                while mandate(i.peek(), "Unexpected end of type")? != &')' {
-                    sub.push(mandate(
-                        DBusType::parse_internal(i)?,
-                        "Expected an array subtype",
-                    )?);
+                while i.peek().ok_or("Unexpected end of type")? != &')' {
+                    sub.push(
+                        DBusType::parse_internal(i)?
+                            .ok_or("Expected an array subtype")?);
                 }
                 Ok(Some(DBusType::Struct(sub)))
             }
 
             Some('{') => {
-                let key_type = mandate(
-                    DBusType::parse_internal(i)?,
-                    "Expected an array subtype",
-                )?;
-                let value_type = mandate(
-                    DBusType::parse_internal(i)?,
-                    "Expected an array subtype",
-                )?;
+                let key_type = 
+                    DBusType::parse_internal(i)?
+                        .ok_or("Expected an array subtype")?;
+                let value_type = 
+                    DBusType::parse_internal(i)?.ok_or("Expected an array subtype")?;
                 Ok(Some(DBusType::DictEntry {
                     key_type: Box::from(key_type),
                     value_type: Box::from(value_type),
@@ -444,7 +433,7 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
         ArgType::UInt64 => Value::Integer(mandate(iter.get::<u64>(), "Unexpected type")? as i128),
         ArgType::Double => Value::Float(mandate(iter.get::<f64>(), "Unexpected type")?),
         ArgType::Array => {
-            let mut sub = iter.recurse(ArgType::Array).unwrap();
+            let mut sub = iter.recurse(ArgType::Array)?;
 
             if sub.arg_type() == ArgType::DictEntry {
                 let mut res = Vec::new();
@@ -520,7 +509,7 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
             }
         }
         ArgType::Variant => {
-            let mut sub = iter.recurse(ArgType::Variant).unwrap();
+            let mut sub = iter.recurse(ArgType::Variant)?;
             match deserialize(&mut sub) {
                 Ok(value) => {
                     sub.next();
@@ -537,7 +526,7 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
         ArgType::DictEntry => panic!("Invalid location for DictEntry"),
         ArgType::UnixFd => panic!("unimplemented"),
         ArgType::Struct => {
-            let mut sub = iter.recurse(ArgType::Struct).unwrap();
+            let mut sub = iter.recurse(ArgType::Struct)?;
             let mut res = Vec::new();
             loop {
                 match deserialize(&mut sub) {
@@ -611,7 +600,7 @@ fn filter_object(mut input: Vec<DBusObject>, filter: Value) -> CrushResult<DBusO
         Value::File(p) => {
             res = input
                 .drain(..)
-                .filter(|o| &o.path == p.to_str().unwrap())
+                .filter(|o| &o.path == p.to_str()?)
                 .collect()
         }
         Value::Glob(p) => res = input.drain(..).filter(|o| p.matches(&o.path)).collect(),

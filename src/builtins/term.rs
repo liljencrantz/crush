@@ -5,7 +5,7 @@ use crate::lang::value::Value;
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "term",
-        "Terminal constants",
+        "Constants useful for manipulating the terminal, such as changing text color and text weight.",
         Box::new(move |fd| {
             fd.declare("normal", Value::from("\x1b[0m"))?;
             fd.declare("bold", Value::from("\x1b[1m"))?;

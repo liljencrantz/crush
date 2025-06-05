@@ -184,9 +184,10 @@ fn insert_known_types(known_types: &mut HashMap<String, ProtoType>) {
 fn parse_message_type<'a>(context: &CommandContext, name: &str, grpc: &Grpc, known_types: &'a mut HashMap<String, ProtoType>)
                           -> CrushResult<ProtoType>
 {
-    if known_types.contains_key(name) {
-        return Ok(known_types.get(name).unwrap().clone());
+    if let Some(t) = known_types.get(name) {
+        return Ok(t.clone());
     }
+
     let signature = grpc.call(context, None, vec!["describe", name])?;
 
     static REGEX: OnceLock<Regex> = OnceLock::new();

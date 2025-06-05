@@ -4,7 +4,7 @@ use crate::lang::{data::table::Row, value::Value, value::ValueType};
 use std::io::{BufReader, Write};
 
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{error, mandate, CrushResult};
+use crate::lang::errors::{error, CrushResult};
 use crate::lang::signature::files::Files;
 use crate::lang::state::scope::ScopeLoader;
 use crate::lang::data::table::ColumnType;
@@ -23,9 +23,8 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
             } else if f.is_i64() {
                 Ok(Value::Integer(f.as_i64().expect("") as i128))
             } else {
-                Ok(Value::Float(mandate(
-                    f.as_f64(),
-                    "Not a valid number")?))
+                Ok(Value::Float(
+                    f.as_f64().ok_or("Not a valid number")?))
             }
         }
         serde_json::Value::String(s) => Ok(Value::from(s.as_str())),
@@ -83,10 +82,7 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
 fn to_json(value: Value) -> CrushResult<serde_json::Value> {
     let v = value.materialize()?;
     match v {
-        Value::File(s) => Ok(serde_json::Value::from(mandate(
-            s.to_str(),
-            "Invalid filename",
-        )?)),
+        Value::File(s) => Ok(serde_json::Value::from(s.to_str().ok_or("Invalid filename")?)),
 
         Value::String(s) => Ok(serde_json::Value::from(s.to_string())),
 

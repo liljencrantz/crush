@@ -16,7 +16,7 @@ pub struct Skip {
 }
 
 fn skip(context: CommandContext) -> CrushResult<()> {
-    let cfg: Skip = Skip::parse(context.arguments, &context.global_state.printer())?;
+    let cfg = Skip::parse(context.arguments, &context.global_state.printer())?;
     match context.input.recv()?.stream()? {
         Some(mut input) => {
             let output = context.output.initialize(input.types())?;

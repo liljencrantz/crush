@@ -1,11 +1,9 @@
-use crate::lang::command::Command;
-use crate::lang::errors::error;
+use crate::lang::command::{Command, OutputType};
+use crate::lang::errors::{argument_error, error, CrushResult, argument_error_legacy};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::pipe::{pipe, Stream};
 use crate::lang::data::table::ColumnVec;
 use crate::{
-    lang::errors::argument_error_legacy,
-    lang::errors::CrushResult,
     data::table::ColumnType,
     lang::{argument::Argument, data::table::Row, value::Value},
     util::replace::Replace,
@@ -40,7 +38,7 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
     for (location, source) in &config.columns {
         let next_type =
         match source {
-            Source::Closure(_) => ValueType::Any,
+            Source::Closure(c) => c.output_type(&OutputType::Known(ValueType::TableInputStream(input_type.clone()))).unwrap_or(&ValueType::Any).clone(),
             Source::Argument(idx) => input_type[*idx].cell_type.clone(),
         };
         match location {
@@ -111,7 +109,7 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
                     copy = true;
                     context.arguments.remove(0);
                 } else {
-                    return argument_error_legacy("Invalid argument");
+                    return argument_error("Invalid argument", context.arguments[0].location);
                 }
             }
 
@@ -121,9 +119,9 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
                 match (a.argument_type.as_deref(), a.value.clone()) {
                     (Some(name), Value::Command(closure)) => {
                         match (copy, input_type.find(name)) {
-                            (true, Ok(idx)) => {
-                                columns.push((Action::Replace(idx), Source::Closure(closure)))
-                            }
+                            (true, Ok(idx)) =>
+                                columns.push((Action::Replace(idx), Source::Closure(closure))),
+
                             _ => columns.push((
                                 Action::Append(name.to_string()),
                                 Source::Closure(closure),
@@ -134,14 +132,12 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
                         match (copy, input_type.find(name.as_ref())) {
                             (false, Ok(idx)) => columns
                                 .push((Action::Append(name.to_string()), Source::Argument(idx))),
-                            _ => {
-                                return argument_error_legacy(
-                                    format!("Unknown column {}", name).as_str(),
-                                );
-                            }
+                            _ =>
+                                return argument_error(
+                                    format!("Unknown column {}", name).as_str(), a.location),
                         }
                     }
-                    _ => return argument_error_legacy("Invalid argument"),
+                    _ => return argument_error("Invalid argument", a.location),
                 }
             }
 

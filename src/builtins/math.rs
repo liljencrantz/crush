@@ -19,7 +19,9 @@ macro_rules! math_fun {
 #[signature(
     math.sin,
     output = Known(ValueType::Float),
-    short = "The sine of number.")]
+    short = "The sine of number.",
+    example = "math:sin 1",
+)]
 pub struct Sin {
     number: Number,
 }
@@ -28,7 +30,9 @@ math_fun!(sin, Sin, |x: f64| x.sin());
 #[signature(
     math.cos,
     output = Known(ValueType::Float),
-    short = "The cosine of number.")]
+    short = "The cosine of number.",
+    example = "math:cos 1",
+)]
 pub struct Cos {
     number: Number,
 }

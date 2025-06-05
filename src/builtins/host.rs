@@ -27,6 +27,17 @@ fn name(context: CommandContext) -> CrushResult<()> {
         .send(Value::from(mandate(nix::unistd::gethostname()?.to_str(), "Invalid hostname")?))
 }
 
+#[signature(
+    host.uptime,
+    can_block = false,
+    output = Known(ValueType::Duration),
+    short = "uptime of this host")]
+struct Uptime {}
+
+fn uptime(context: CommandContext) -> CrushResult<()> {
+    context.output.send(Value::Duration(Duration::seconds(sysinfo::System::uptime() as i64)))
+}
+
 static BATTERY_OUTPUT_TYPE: [ColumnType; 11] = [
     ColumnType::new("vendor", ValueType::String),
     ColumnType::new("model", ValueType::String),
@@ -42,20 +53,9 @@ static BATTERY_OUTPUT_TYPE: [ColumnType; 11] = [
 ];
 
 #[signature(
-    host.uptime,
-    can_block = false,
-    output = Known(ValueType::Duration),
-    short = "uptime of this host")]
-struct Uptime {}
-
-fn uptime(context: CommandContext) -> CrushResult<()> {
-    context.output.send(Value::Duration(Duration::seconds(sysinfo::System::uptime() as i64)))
-}
-
-#[signature(
     host.battery,
     can_block = true,
-    output = Known(ValueType::table_input_stream(& BATTERY_OUTPUT_TYPE)),
+    output = Known(ValueType::table_input_stream(&BATTERY_OUTPUT_TYPE)),
     short = "List all batteries in the system and their status")]
 struct Battery {}
 
@@ -100,7 +100,14 @@ fn battery(context: CommandContext) -> CrushResult<()> {
     host.memory,
     can_block = false,
     output = Known(ValueType::Struct),
-    short = "memory usage of this host.")]
+    short = "memory usage of this host.",
+    long = "The output struct contains the following fields:",
+    long = "* total, total amount of memory available to the host",
+    long = "* free, unused memory",
+    long = "* avail, available memory",
+    long = "* swap_total, total amount of swap available to the host",
+    long = "* swap_free, unused swap",
+)]
 struct Memory {}
 
 fn memory(context: CommandContext) -> CrushResult<()> {
@@ -378,7 +385,13 @@ mod linux {
     long = "The set of existing signals is platform dependent, but common signals
     include SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGTRAP, SIGABRT, SIGBUS, SIGFPE,
     SIGKILL, SIGUSR1, SIGSEGV, SIGUSR2, SIGPIPE, SIGALRM, SIGTERM, SIGCHLD,
-    SIGCONT and SIGWINCH.")]
+    SIGCONT and SIGWINCH.",
+    example = "# Create a `killall` command that kills any process whose name matches the specified pattern",
+    example = "# The pattern can be a an exact string, a wildcard, or a regex",
+    example = "$killall := { |$victim| host:signal @$(host:procs|where {$name =~ $victim}|select pid | list:collect) signal=SIGKILL}",
+    example = "# Kill all crush commands",
+    example = "killall ^(crush)",
+)]
 struct Signal {
     #[unnamed("id of a process to signal")]
     #[description("the id of the process to send to.")]
@@ -389,7 +402,7 @@ struct Signal {
 }
 
 fn signal(mut context: CommandContext) -> CrushResult<()> {
-    let sig: Signal = Signal::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let sig = Signal::parse(context.remove_arguments(), &context.global_state.printer())?;
     for pid in sig.pid {
         signal::kill(
             Pid::from_raw(pid as i32),

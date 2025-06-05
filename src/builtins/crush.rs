@@ -1,15 +1,16 @@
+use nix::unistd::Pid;
+use signature::signature;
+use std::env;
+use rustyline::history::{History, SearchDirection};
 use crate::lang::errors::{CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
 use crate::lang::data::table::{ColumnType, Row};
-use signature::signature;
 use crate::lang::command::OutputType::Known;
-use nix::unistd::Pid;
-use crate::lang::data::dict::Dict;
-use std::env;
-use rustyline::history::{History, SearchDirection};
+use crate::lang::command::Command;
 use crate::data::list::List;
+use crate::lang::data::dict::Dict;
 
 fn make_env() -> CrushResult<Value> {
     let e = Dict::new(ValueType::String, ValueType::String)?;
@@ -49,7 +50,12 @@ fn threads(context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
-#[signature(crush.exit, output = Known(ValueType::Empty), short = "Exit the shell")]
+#[signature(
+    crush.exit,
+    output = Known(ValueType::Empty),
+    short = "Exit the shell",
+    long = "Crush will not actually exit until all jobs have finished.",
+)]
 struct Exit {
     #[default(0)]
     #[description("The exit status to set for the process")]
@@ -64,13 +70,7 @@ fn exit(context: CommandContext) -> CrushResult<()> {
 }
 
 mod prompt {
-    use signature::signature;
-    use crate::lang::command::Command;
-    use crate::lang::errors::CrushResult;
-    use crate::lang::state::contexts::CommandContext;
-    use crate::lang::value::Value;
-    use crate::lang::command::OutputType::Known;
-    use crate::lang::value::ValueType;
+    use super::*;
 
     #[signature(
         crush.prompt.set,
@@ -130,13 +130,7 @@ mod prompt {
 }
 
 mod title {
-    use signature::signature;
-    use crate::lang::command::Command;
-    use crate::lang::errors::CrushResult;
-    use crate::lang::state::contexts::CommandContext;
-    use crate::lang::value::Value;
-    use crate::lang::command::OutputType::Known;
-    use crate::lang::value::ValueType;
+    use super::*;
 
     #[signature(
         crush.title.set,

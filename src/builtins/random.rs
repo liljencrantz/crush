@@ -16,7 +16,7 @@ use crate::lang::signature::number::Number;
 )]
 struct Float {
     #[default(Number::Float(1.0))]
-    #[description("upper bound.")]
+    #[description("upper bound (exclusive).")]
     to: Number,
 }
 
@@ -37,10 +37,12 @@ static INTEGER_STREAM_OUTPUT_TYPE: [ColumnType; 1] = [ColumnType::new("value", V
     can_block = true,
     short = "generate a stream of random floating point numbers between 0 (inclusive) and 1 (exclusive)",
     output = Known(ValueType::table_input_stream(&FLOAT_STREAM_OUTPUT_TYPE)),
+    example = "# Generate 20 floating point numbers between 0 and 100",
+    example = "random.float_stream 100 | head 20",
 )]
 struct FloatStream {
     #[default(Number::Float(1.0))]
-    #[description("upper bound.")]
+    #[description("upper bound (exclusive).")]
     to: Number,
 }
 
@@ -67,7 +69,7 @@ struct Integer {
 }
 
 fn integer(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Integer = Integer::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg = Integer::parse(context.remove_arguments(), &context.global_state.printer())?;
     let n = rand::random::<f64>() * (cfg.to as f64);
     context.output.send(Value::Integer(n as i128))?;
     Ok(())
@@ -78,10 +80,12 @@ fn integer(mut context: CommandContext) -> CrushResult<()> {
     can_block = true,
     short = "generate a stream of random integer numbers between 0 (inclusive) and 2 (exclusive)",
     output = Known(ValueType::table_input_stream(&INTEGER_STREAM_OUTPUT_TYPE)),
+    example = "# Generate 20 integers between 0 and 100",
+    example = "random.integer_stream 100 | head 20",
 )]
 struct IntegerStream {
     #[default(2)]
-    #[description("upper bound.")]
+    #[description("upper bound (exclusive).")]
     to: i128,
 }
 

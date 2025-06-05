@@ -265,12 +265,11 @@ fn files(context: CommandContext) -> CrushResult<()> {
     let mut q = VecDeque::new();
     q.extend(dir.drain(..));
     loop {
-        if q.is_empty() {
-            break;
+        match q.pop_front() {
+            None => break,
+            Some(dir) => 
+                run_for_single_directory_or_file(dir, &users, &groups, config.recurse, &cols, &mut q, &mut output)?,
         }
-        let dir = q.pop_front().unwrap();
-        let _ =
-            run_for_single_directory_or_file(dir, &users, &groups, config.recurse, &cols, &mut q, &mut output);
     }
     Ok(())
 }

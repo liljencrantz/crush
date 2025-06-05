@@ -1,11 +1,11 @@
-use crate::lang::errors::{error, CrushResult};
-use crate::lang::state::contexts::CommandContext;
+use crate::lang::command::OutputType::Passthrough;
 use crate::lang::data::table::ColumnVec;
 use crate::lang::data::table::Row;
+use crate::lang::errors::{CrushResult, error};
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
-use std::collections::HashSet;
 use signature::signature;
-use crate::lang::command::OutputType::Passthrough;
+use std::collections::HashSet;
 
 #[signature(
     stream.uniq,
@@ -21,7 +21,7 @@ pub struct Uniq {
 pub fn uniq(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream()? {
         Some(mut input) => {
-            let cfg: Uniq = Uniq::parse(context.arguments, &context.global_state.printer())?;
+            let cfg = Uniq::parse(context.arguments, &context.global_state.printer())?;
             let output = context.output.initialize(input.types())?;
             match cfg.field.map(|f| input.types().find(&f)).transpose()? {
                 None => {

@@ -7,6 +7,7 @@
 use crate::lang::ast::location::Location;
 use CrushErrorType::*;
 use std::cmp::{min, max};
+use reqwest::header::ToStrError;
 use crate::lang::ast::token;
 
 #[derive(Debug)]
@@ -53,6 +54,8 @@ pub enum CrushErrorType {
     DbusError(dbus::Error),
     #[cfg(target_os = "linux")]
     Roxmltree(roxmltree::Error),
+    AddrParseError(std::net::AddrParseError),
+    ToStrError(ToStrError),
 }
 
 #[derive(Debug)]
@@ -120,6 +123,8 @@ impl CrushError {
             CharTryFromError(e) => e.to_string(),
             SerializationError(e) => e.to_string(),
             InvalidJump(e) => e.to_string(),
+            AddrParseError(e) => e.to_string(),
+            ToStrError(e) => e.to_string(),
             #[cfg(target_os = "linux")]
             DbusError(e) => e.message().unwrap_or("").to_string(),
             #[cfg(target_os = "linux")]
@@ -221,6 +226,26 @@ impl From<std::num::ParseFloatError> for CrushError {
     fn from(e: std::num::ParseFloatError) -> Self {
         CrushError {
             error_type: ParseFloatError(e),
+            location: None,
+            definition: None,
+        }
+    }
+}
+
+impl From<std::net::AddrParseError> for CrushError {
+    fn from(e: std::net::AddrParseError) -> Self {
+        CrushError {
+            error_type: AddrParseError(e),
+            location: None,
+            definition: None,
+        }
+    }
+}
+
+impl From<ToStrError> for CrushError {
+    fn from(e: ToStrError) -> Self {
+        CrushError {
+            error_type: ToStrError(e),
             location: None,
             definition: None,
         }
@@ -503,6 +528,16 @@ impl From<std::char::CharTryFromError> for CrushError {
     fn from(e: std::char::CharTryFromError) -> Self {
         CrushError {
             error_type: CharTryFromError(e),
+            location: None,
+            definition: None,
+        }
+    }
+}
+
+impl From<&str> for CrushError {
+    fn from(e: &str) -> Self {
+        CrushError {
+            error_type: InvalidData(e.to_string()),
             location: None,
             definition: None,
         }

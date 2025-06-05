@@ -18,7 +18,7 @@ pub struct Tail {
 }
 
 fn tail(context: CommandContext) -> CrushResult<()> {
-    let cfg: Tail = Tail::parse(context.arguments, &context.global_state.printer())?;
+    let cfg = Tail::parse(context.arguments, &context.global_state.printer())?;
     match context.input.recv()?.stream()? {
         Some(mut input) => {
             let output = context.output.initialize(input.types())?;

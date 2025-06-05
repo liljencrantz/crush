@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error_legacy, CrushResult};
+use crate::lang::errors::{argument_error_legacy, mandate, CrushError, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{
     data::binary::binary_channel, data::r#struct::Struct, data::table::ColumnType, data::table::Row, data::table::Table,
@@ -81,12 +81,12 @@ fn http(context: CommandContext) -> CrushResult<()> {
         header_map
             .iter()
             .map(|(n, v)| {
-                Row::new(vec![
+                Ok(Row::new(vec![
                     Value::from(n.as_str()),
-                    Value::from(v.to_str().unwrap()),
-                ])
+                    Value::from(v.to_str()?),
+                ]))
             })
-            .collect(),
+            .collect::<CrushResult<Vec<_>>>()?,
     ));
     context.output.send(Value::Struct(Struct::new(
         vec![

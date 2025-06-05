@@ -275,7 +275,7 @@ fn is_alnum(s: &str) -> bool {
     true
 }
 
-fn format_default_for_help(default_value: &TokenTree) -> String {
+fn format_default_for_help(default_value: &TokenTree, allowed: &TokenStream) -> String {
     format!(" ({})", match default_value {
         TokenTree::Group(g) => format_default_group_help(g),
         TokenTree::Ident(_) |
@@ -375,7 +375,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 }
 
                 let default_help = if let Some(d) = &default_value {
-                    format_default_for_help(d)
+                    format_default_for_help(d, &type_data.allowed_values)
                 } else {
                     "".to_string()
                 };

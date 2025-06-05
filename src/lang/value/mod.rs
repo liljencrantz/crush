@@ -122,6 +122,12 @@ impl From<Vec<u8>> for Value {
     }
 }
 
+impl From<&[Box<[u8]>]> for Value {
+    fn from(s: &[Box<[u8]>] ) -> Value {
+        Value::Binary(Arc::from(s.concat()))
+    }
+}
+
 impl From<&Vec<u8>> for Value {
     fn from(s: &Vec<u8>) -> Value {
         Value::Binary(Arc::from(s.as_ref()))

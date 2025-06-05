@@ -117,8 +117,8 @@ fn cmd_internal(
     } else {
         let input = context.input.recv()?;
 
-        let (stdout_reader, stdout_writer) = os_pipe::pipe().unwrap();
-        let (mut stderr_reader, stderr_writer) = os_pipe::pipe().unwrap();
+        let (stdout_reader, stdout_writer) = os_pipe::pipe()?;
+        let (mut stderr_reader, stderr_writer) = os_pipe::pipe()?;
 
         cmd.stdin(Stdio::piped());
         cmd.stdout(stdout_writer);
