@@ -7,10 +7,11 @@ use crate::{
     lang::errors::CrushResult, lang::pipe::empty_channel, lang::pipe::pipe,
     lang::value::Value,
 };
-use std::fmt::{Display, Formatter};
+use std::fmt::{Display, Formatter, Pointer, Write};
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::ast::location::Location;
 
+/// The definition of a value, as found in a Job.
 #[derive(Clone)]
 pub enum ValueDefinition {
     Value(Value, Location),
@@ -107,10 +108,26 @@ impl Display for ValueDefinition {
         match &self {
             ValueDefinition::Value(v, _location) => v.fmt(f),
             ValueDefinition::Identifier(v) => v.fmt(f),
-            ValueDefinition::ClosureDefinition(_, _, _, _location) => f.write_str("<closure>"),
+            ValueDefinition::ClosureDefinition(_name, maybe_params, jobs, _location) => {
+                f.write_str("{ ")?;
+                if let Some(params) = maybe_params {
+                    f.write_str("| ")?;
+                    for p in params {
+                        p.fmt(f)?;
+                        f.write_str(" ")?
+                    }
+                    f.write_str("| ")?;
+                }
+                
+                for j in jobs {
+                    j.fmt(f)?;
+                    f.write_str(";\n")?;
+                }
+                f.write_str(" }")
+            },
             ValueDefinition::JobDefinition(j) => j.fmt(f),
             ValueDefinition::GetAttr(v, l) => {
-                v.fmt(f)?;
+                std::fmt::Display::fmt(&v, f)?;
                 f.write_str(":")?;
                 l.fmt(f)
             }

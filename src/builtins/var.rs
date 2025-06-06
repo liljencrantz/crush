@@ -11,7 +11,12 @@ use crate::lang::value::{Value, ValueType};
     var.r#let,
     can_block = false,
     output = Unknown,
-    short = "Declare new variables"
+    short = "Declare new variables.",
+    long = "No variable can exist in the local scope, or an error will result.",
+    long = "Normally used via the := operator, but can be used standalone as well.",
+    example = "# These two lines are completely equivalent",
+    example = "$x := 2",
+    example = "var:let x = 2",
 )]
 struct Let {
     #[description("the variables to declare.")]
@@ -31,7 +36,12 @@ pub fn r#let(mut context: CommandContext) -> CrushResult<()> {
     var.set,
     can_block = false,
     output = Unknown,
-    short = "Reassign existing variables"
+    short = "Reassign existing variables",
+    long = "A variable must already exist in some scope, or an error will result.",
+    long = "Normally used via the = operator, but can be used standalone as well.",
+    example = "# These two lines are completely equivalent",
+    example = "$x = 2",
+    example = "var:set x = 2",
 )]
 struct Set {
     #[description("the variables to declare.")]
@@ -51,7 +61,11 @@ pub fn set(mut context: CommandContext) -> CrushResult<()> {
     var.get,
     can_block = false,
     output = Unknown,
-    short = "Returns the current value of a variable"
+    short = "Returns the current value of a variable",
+    long = "A variable must already exist in some scope, or an error will result.",
+    example = "# These two lines are completely equivalent",
+    example = "$x",
+    example = "var:get x",
 )]
 struct Get {
     #[description("the name of the variable to return the value of.")]
@@ -69,8 +83,10 @@ pub fn get(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     var.unset,
     can_block = false,
-    output = Unknown,
-    short = "Removes variables from the namespace"
+    output = Known(ValueType::Empty),
+    short = "Removes variables from the namespace",
+    example = "# Remove the variable x",
+    example = "var:unset x",
 )]
 struct Unset {
     #[description("the name of the variables to unset.")]
@@ -94,7 +110,8 @@ pub fn unset(mut context: CommandContext) -> CrushResult<()> {
     var.r#use,
     can_block = false,
     output = Known(ValueType::Empty),
-    short = "Puts the specified scope into the list of scopes to search in by default during scope lookups",
+    short = "Make specified scopes searched by default during scope resolution.",
+    example = "# Import the math scope",
     example = "var:use $math",
     example = "sqrt 2",
 )]
@@ -112,6 +129,32 @@ pub fn r#use(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Empty)
 }
 
+#[signature(
+    var.unuse,
+    can_block = false,
+    output = Known(ValueType::Bool),
+    short = "Make specified scopes not searched by default during scope resolution.",
+    long = "The unuse builtin will recursively go through all parent scopes and remove",
+    long = "all uses of the provided scopes through the entire chain.",
+    example = "# Stop using the stream scope",
+    example = "var:unuse $stream",
+    example = "# This command will now fail, because stream::select is not in scope",
+    example = "select",
+)]
+struct Unuse {
+    #[description("the scopes to unuse.")]
+    #[unnamed()]
+    name: Vec<Scope>,
+}
+
+pub fn unuse(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = Use::parse(context.remove_arguments(), context.global_state.printer())?;
+    for e in cfg.name {
+        context.scope.unuse(&e);
+    }
+    context.output.send(Value::Empty)
+}
+
 static LIST_OUTPUT_TYPE: [ColumnType; 2] = [
     ColumnType::new("name", ValueType::String),
     ColumnType::new("type", ValueType::String),
@@ -121,8 +164,7 @@ static LIST_OUTPUT_TYPE: [ColumnType; 2] = [
     var.list,
     can_block = false,
     output = Known(ValueType::table_input_stream(&LIST_OUTPUT_TYPE)),
-    short = "Returns a table containing the current namespace",
-    long = "The columns of the table are the name, and the type of the value.",
+    short = "Returns a table containing all variable names currently in scope and their types.",
 )]
 struct List {}
 
@@ -145,7 +187,7 @@ pub fn list(context: CommandContext) -> CrushResult<()> {
     var.local,
     can_block = false,
     output = Known(ValueType::Scope),
-    short = "Returns the current scope",
+    short = "Returns the current scope.",
 )]
 struct Local {}
 
@@ -163,6 +205,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Get::declare(ns)?;
             Unset::declare(ns)?;
             Use::declare(ns)?;
+            Unuse::declare(ns)?;
             List::declare(ns)?;
             Local::declare(ns)?;
             Ok(())

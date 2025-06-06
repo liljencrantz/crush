@@ -397,11 +397,12 @@ impl Display for Parameter {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Parameter::Parameter(name, value_type, default) => {
+                f.write_str("$")?;
                 name.fmt(f)?;
-                f.write_str(":")?;
+                f.write_str(": $")?;
                 value_type.fmt(f)?;
                 if let Some(default) = default {
-                    f.write_str("=")?;
+                    f.write_str(" = ")?;
                     default.fmt(f)?;
                 }
                 Ok(())

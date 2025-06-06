@@ -6,7 +6,7 @@ use crate::lang::state::contexts::CompileContext;
 use crate::lang::value::Value;
 use crate::lang::value::ValueDefinition;
 use std::collections::HashSet;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Display, Formatter, Write};
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::ast::location::Location;
 use crate::lang::serialization::model;
@@ -240,6 +240,19 @@ impl ArgumentEvaluator for Vec<ArgumentDefinition> {
 
 impl Display for ArgumentDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match &self.argument_type {
+            ArgumentType::Named(name) => {
+                f.write_str(&name.to_string())?;
+                f.write_str("=")?;
+            },
+            ArgumentType::Unnamed => {}
+            ArgumentType::ArgumentList => {
+                f.write_str("@ ")?;
+            }
+            ArgumentType::ArgumentDict => {
+                f.write_str("@@ ")?;
+            }
+        }
         self.value.fmt(f)
     }
 }

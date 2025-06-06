@@ -16,7 +16,7 @@ macro_rules! cmp {
                 None => {
                     return argument_error_legacy(
                         format!(
-                            "Values of type {} and {} can't be compared with each other",
+                            "The two provided values of types {} and {} could not be compared",
                             cfg.left.value_type().to_string(),
                             cfg.right.value_type().to_string(),
                         )

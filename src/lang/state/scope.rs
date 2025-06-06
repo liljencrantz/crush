@@ -733,6 +733,16 @@ impl Scope {
         self.lock().unwrap().uses.push(other.clone());
     }
 
+    pub fn unuse(&self, other: &Scope) {
+        let mut inner = self.lock().unwrap();
+        inner.uses.iter()
+            .position(|s| s.id() == other.id())
+            .map(|i| {
+                inner.uses.remove(i)});
+        drop(inner);
+        self.parent().map(|parent| parent.unuse(other));
+    }
+
     pub fn dump(&self) -> CrushResult<OrderedMap<String, ValueType>> {
         let mut res = OrderedMap::new();
         self.dump_internal(&mut res, true)?;

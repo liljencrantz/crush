@@ -7,6 +7,7 @@ use std::thread::ThreadId;
 use std::fmt::{Display, Formatter};
 use crate::lang::ast::location::Location;
 
+/// An executable pipeline of one or more commands.
 #[derive(Clone)]
 pub struct Job {
     commands: Vec<CommandInvocation>,
@@ -34,6 +35,7 @@ impl Job {
         &self.commands
     }
 
+    /// Evaluate this job in the specified context
     pub fn eval(&self, context: JobContext) -> CrushResult<Option<ThreadId>> {
         let context = context.running(self.to_string());
         let mut input = context.input.clone();
@@ -73,7 +75,7 @@ impl Display for Job {
             if first {
                 first = false;
             } else {
-                f.write_str("|")?;
+                f.write_str(" | ")?;
             }
             c.fmt(f)?;
         }

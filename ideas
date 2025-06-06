@@ -7,6 +7,7 @@ A way to add methods to existing types:
 
 $file_extra := struct mkdir={|| cmd mkdir -p $this}
 implicit $file $file_extra
+./foo:mkdir
 
 Graphs:
 
@@ -39,24 +40,6 @@ do the rest:
 crush> (ps | where {pid == 1}):parent
 ...
 
-
-grpc command:
-
-# Create new grpc instance:
-crush> srv := (grpc "localhost:443")
-# List all services on a server
-crush> dir srv
-[my.service other.service]
-# List all methods of a service
-crush> dir srv:my.service
-[method1 method2]
-# Call method without parameters
-srv:my.service:method1
-["some" "output"]
-# Call method with parameters
-srv:my.service:method2 id=1234 tags=(list:of "foo" "bar")
-["other" "output"]
-
 Validation:
 All commands declare valid input and output types.
 Input types can be partial, e.g. any iterator or any iterator with some restrictions.
@@ -68,8 +51,7 @@ Commands:
 A simple command for replacing a regex in every line of a file. Implement it in crush, using built in commands.
 Extra columns for ps: tty, current CPU usage.
 A grep-command.
-read equivalent
-Allow simpler column renaming via select, e.g. 'ps|select time=cpu'
+Simple column renaming in select, e.g. 'ps|select time=cpu'
 xml:from/to using html5ever under the hood
 html:from/to using html5ever under the hood
 Add hex and base64 en/decoding methods to the binary/string types
@@ -86,8 +68,6 @@ Syntax highlighting (with more accurate parenthesis matching)
 Every command should have a command id withing that job, e.g. 5:2
 Every thread should have a thread id within that command, e.g. 5:2:3
 Make command closing work on file literals
-Add unicode escape sequence support
-Add hex escape sequence support
 Make suggestions use completion engine instead of history
 Handle ^Z to put jobs into background. How?
 Handle ^C to cancel jobs. How?
@@ -104,4 +84,4 @@ Tab completion missing feature list:
 * Add command specific completions for methods
 * GetItem and SetItem completions
 
-toml:from ./Cargo.toml | semver:bump ^package:version --minor | toml:to ./cargo.toml
+toml:from ./Cargo.toml | semver:bump package:version --minor | toml:to ./cargo.toml

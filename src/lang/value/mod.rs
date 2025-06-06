@@ -498,7 +498,7 @@ fn has_non_printable(s: &str) -> bool {
     for c in s.chars() {
         if c < '\x20' {
             return true;
-        }
+        } 
     }
     false
 }
@@ -620,17 +620,14 @@ pub enum Alignment {
     Right,
 }
 
-impl std::cmp::PartialOrd for Value {
+impl PartialOrd for Value {
     fn partial_cmp(&self, other: &Value) -> Option<Ordering> {
-        let t1 = self.value_type();
-        let t2 = other.value_type();
-        if t1 != t2 {
-            return None;
-        }
-
         match (self, other) {
             (Value::String(val1), Value::String(val2)) => Some(val1.cmp(val2)),
             (Value::Integer(val1), Value::Integer(val2)) => Some(val1.cmp(val2)),
+            (Value::Float(val1), Value::Integer(val2)) => val1.partial_cmp(&(*val2 as f64)),
+            (Value::Integer(val1), Value::Float(val2)) => (*val1 as f64).partial_cmp(val2),
+            (Value::Float(val1), Value::Float(val2)) => val1.partial_cmp(val2),
             (Value::Time(val1), Value::Time(val2)) => Some(val1.cmp(val2)),
             (Value::Duration(val1), Value::Duration(val2)) => Some(val1.cmp(val2)),
             (Value::Glob(val1), Value::Glob(val2)) => Some(val1.cmp(val2)),
@@ -641,7 +638,6 @@ impl std::cmp::PartialOrd for Value {
             (Value::List(val1), Value::List(val2)) => val1.partial_cmp(val2),
             (Value::Dict(val1), Value::Dict(val2)) => val1.partial_cmp(val2),
             (Value::Bool(val1), Value::Bool(val2)) => Some(val1.cmp(val2)),
-            (Value::Float(val1), Value::Float(val2)) => val1.partial_cmp(val2),
             (Value::Binary(val1), Value::Binary(val2)) => Some(val1.cmp(val2)),
             _ => None,
         }
