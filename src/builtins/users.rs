@@ -4,7 +4,7 @@ use std::process::Stdio;
 use std::sync::OnceLock;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{CrushResult, error, mandate};
+use crate::lang::errors::{CrushResult, error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::data::r#struct::Struct;
@@ -131,7 +131,7 @@ fn r#do(mut context: CommandContext) -> CrushResult<()> {
         cmd.stderr(Stdio::piped());
 
         let mut child = cmd.spawn()?;
-        let mut stdin = mandate(child.stdin.take(), "Expected stdin stream")?;
+        let mut stdin = child.stdin.take().ok_or( "Expected stdin stream")?;
         let mut serialized = Vec::new();
         serialize(&Value::Command(cfg.command), &mut serialized)?;
 
@@ -140,7 +140,7 @@ fn r#do(mut context: CommandContext) -> CrushResult<()> {
             Ok(())
         })?;
 
-        let mut stdout = mandate(child.stdout.take(), "Expected output stream")?;
+        let mut stdout = child.stdout.take().ok_or( "Expected output stream")?;
         let env = context.scope.clone();
         let my_context = context.clone();
         context.spawn("sudo:stdout", move || {
@@ -155,7 +155,7 @@ fn r#do(mut context: CommandContext) -> CrushResult<()> {
             }
         })?;
 
-        let mut stderr = mandate(child.stderr.take(), "Expected error stream")?;
+        let mut stderr = child.stderr.take().ok_or( "Expected error stream")?;
         context.spawn("sudo:stderr", move || {
             let mut buff = Vec::new();
             stderr.read_to_end(&mut buff)?;

@@ -1,5 +1,5 @@
 use std::mem::swap;
-use crate::lang::errors::{CrushResult, mandate};
+use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use signature::signature;
 use chrono::{Duration, Local};
@@ -42,7 +42,7 @@ fn schedule(mut context: CommandContext) -> CrushResult<()> {
     match cmd {
         None => {
             if context.input.is_pipeline() {
-                let mut input = mandate(context.input.recv()?.stream()?, "Expected a stream")?;
+                let mut input =context.input.recv()?.stream()?.ok_or("Expected a stream")?;
                 let output = context.output.initialize(input.types())?;
                 run(cfg, || { output.send(input.read()?) })
             } else {

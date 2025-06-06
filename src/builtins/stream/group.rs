@@ -1,5 +1,5 @@
 use crate::lang::command::Command;
-use crate::lang::errors::{mandate, CrushResult};
+use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::printer::Printer;
@@ -137,9 +137,7 @@ fn create_worker_thread(
 
 pub fn group(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Group::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut input = mandate(
-        context.input.recv()?.stream()?,
-        "Expected input to be a stream",
+    let mut input = context.input.recv()?.stream()?.ok_or("Expected input to be a stream",
     )?;
     let input_type = input.types().to_vec();
     let indices: Vec<usize> = cfg

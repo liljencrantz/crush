@@ -12,7 +12,7 @@ use std::str::FromStr;
 use chrono::{DateTime, Local, TimeDelta};
 use regex::Regex;
 
-use crate::lang::errors::{argument_error_legacy, CrushResult, mandate};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::data::r#struct::Struct;
 use crate::lang::data::r#struct::StructReader;
 use crate::lang::state::scope::Scope;
@@ -309,8 +309,8 @@ impl Value {
         match path.len() {
             0 => error("Invalid path"),
             1 => Ok(self.clone()),
-            2 => mandate(self.field(&path[1])?, "Invalid path"),
-            _ => mandate(self.field(&path[1])?, "Invalid path")?.get_recursive(&path[1..]),
+            2 => Ok(self.field(&path[1])?.ok_or("Invalid path")?),
+            _ => self.field(&path[1])?.ok_or("Invalid path")?.get_recursive(&path[1..]),
         }
     }
 

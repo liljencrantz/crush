@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, mandate};
+use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use nix::sys::signal;
@@ -24,7 +24,7 @@ struct Name {}
 fn name(context: CommandContext) -> CrushResult<()> {
     context
         .output
-        .send(Value::from(mandate(nix::unistd::gethostname()?.to_str(), "Invalid hostname")?))
+        .send(Value::from(nix::unistd::gethostname()?.to_str().ok_or( "Invalid hostname")?))
 }
 
 #[signature(
@@ -151,7 +151,7 @@ mod os {
     fn version(context: CommandContext) -> CrushResult<()> {
         context
             .output
-            .send(Value::from(mandate(sysinfo::System::os_version(), "Unknown OS version")?))
+            .send(Value::from(sysinfo::System::os_version().ok_or( "Unknown OS version")?))
     }
 }
 

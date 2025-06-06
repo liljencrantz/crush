@@ -1,7 +1,7 @@
 use std::sync::OnceLock;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, CrushResult, mandate};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ValueType;
 use crate::lang::value::Value;
@@ -64,11 +64,10 @@ struct Write {}
 
 fn write(mut context: CommandContext) -> CrushResult<()> {
     let real_output = context.this.table_output_stream()?;
-    let mut stream = mandate(context.input.recv()?.stream()?, "Expected a stream")?;
+    let mut stream = context.input.recv()?.stream()?.ok_or("Expected a stream")?;
 
     while let Ok(row) = stream.read() {
         real_output.send(row)?;
     }
-    context.output.send(Value::Empty)?;
-    Ok(())
+    context.output.send(Value::Empty)
 }

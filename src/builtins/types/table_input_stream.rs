@@ -1,7 +1,7 @@
 use std::sync::OnceLock;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, CrushResult, mandate};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ValueType;
 use crate::lang::value::Value;
@@ -58,6 +58,8 @@ pub fn write_value() -> &'static Value {
     can_block = false,
     output = Known(ValueType::Type),
     short = "return the table_input_stream type with the specified column signature.",
+    long = "You usually do this in order to create a pipe specialized to a specific column signature.",
+    example = "$pipe := $($(table_input_stream value=$integer):pipe)",
 )]
 struct Call {
     #[description("the columns of the stream.")]
@@ -90,7 +92,7 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Struct),
     short = "Returns the specified row of the table stream as a struct.",
-    example = "(ps)[4]"
+    example = "$(files)[4]"
 )]
 struct GetItem {
     index: i128,
@@ -106,8 +108,36 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     types.table_input_stream.pipe,
     can_block = false,
     output = Known(ValueType::Struct),
-    short = "Returns a struct containing a read end and a write end of a pipe of the specified type",
-    example = "$pipe := $($(table_input_stream value=$integer):pipe)\n    $_1 := $(seq 100_000 | $pipe:write | bg)\n    $sum_job_id := $($pipe:read | sum | bg)\n    $pipe:close\n    $sum_job_id | fg"
+    short = "Returns a pipe consisting of a read end and a write end.",
+    long = "Each row of data in the pipe must have the columns specified by this table_input_stream specialization.",
+    long = "A pipe is usually created by specializing table_input_stream e.g. like",
+    long = "",
+    long = "  $pipe := $($(table_input_stream value=$integer):pipe)",
+    long = "",
+    long = "A pipe object can have arbitrarily many write jobs producing data into the pipe.",
+    long = "Each writer simply pipes rows into the pipe:write method.",
+    long = "",
+    long = "A pipe object can have arbitrarily many read jobs consuming data from the pipe.",
+    long = "Each reader simply consumes rows from the pipe:read method.",
+    long = "",
+    long = "Each row written to the pipe will be consumed by exactly one reader job.",
+    long = "",
+    long = "In order for the consumer jobs to finish, all the writer jobs must end *and* the",
+    long = "pipe:close method must be called. Once this has happened and all the rows have been",
+    long = "processed, the consumer job(s) will finish.",
+    long = "",
+    long = "Note that the pipe:close method does not interrupt currently existing write jobs, but",
+    long = "it does prevent new write jobs from being started.",
+    example = "# Create a pipe",
+    example = "$pipe := $($(table_input_stream value=$integer):pipe)",
+    example = "# Create a job that writes 100_000 integers to the pipe and put this job in the background",
+    example = "$_1 := $(seq 100_000 | pipe:write | bg)",
+    example = "# Create a second job that reads from the pipe and sums all the integers and put this job in the background",
+    example = "$sum_job_handle := $(pipe:read | sum | bg)",
+    example = "# Close the pipe so that the second job can finish",
+    example = "pipe:close",
+    example = "# Put the sum job in the foreground",
+    example = "sum_job_handle | fg",
 )]
 struct Pipe {}
 
@@ -129,6 +159,8 @@ fn pipe(mut context: CommandContext) -> CrushResult<()> {
     }
 }
 
+/// Close a pipe.
+/// This is done be clearing the `read` and `output` fields.
 fn close(mut context: CommandContext) -> CrushResult<()> {
     let pipe = context.this.r#struct()?;
     pipe.set("read", Value::Empty);
@@ -138,9 +170,9 @@ fn close(mut context: CommandContext) -> CrushResult<()> {
 
 fn write(mut context: CommandContext) -> CrushResult<()> {
     let pipe = context.this.r#struct()?;
-    match mandate(pipe.get("output"), "Missing field")? {
-        Value::TableOutputStream(output_stream) => {
-            let mut stream = mandate(context.input.recv()?.stream()?, "Expected a stream")?;
+    match pipe.get("output") {
+        Some(Value::TableOutputStream(output_stream)) => {
+            let mut stream = context.input.recv()?.stream()?.ok_or("Expected a stream")?;
 
             while let Ok(row) = stream.read() {
                 output_stream.send(row)?;

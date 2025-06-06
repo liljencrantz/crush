@@ -148,7 +148,7 @@ struct Unuse {
 }
 
 pub fn unuse(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Use::parse(context.remove_arguments(), context.global_state.printer())?;
+    let cfg = Unuse::parse(context.remove_arguments(), context.global_state.printer())?;
     for e in cfg.name {
         context.scope.unuse(&e);
     }

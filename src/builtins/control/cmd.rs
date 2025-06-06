@@ -5,7 +5,6 @@ use std::borrow::BorrowMut;
 use std::path::PathBuf;
 use crate::{argument_error_legacy, CrushResult};
 use crate::lang::argument::{Argument, SwitchStyle};
-use crate::lang::errors::mandate;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::value::Value;
 use crate::lang::value::Value::{Binary, BinaryInputStream};
@@ -93,7 +92,7 @@ fn cmd_internal(
                         let mut files = Vec::new();
                         glob.glob_files(&cwd()?, &mut files)?;
                         for file in files {
-                            cmd.arg(format!("{}{}{}", switch, join_string, mandate(file.to_str(), "Invalid file name")?));
+                            cmd.arg(format!("{}{}{}", switch, join_string, file.to_str().ok_or("Invalid file name")?));
                         }
                     }
                     _ => {
@@ -125,7 +124,7 @@ fn cmd_internal(
         cmd.stderr(stderr_writer);
 
         let mut child = cmd.spawn()?;
-        let mut stdin = mandate(child.stdin.take(), "Expected stdin stream")?;
+        let mut stdin = child.stdin.take().ok_or("Expected stdin stream")?;
 
         match input {
             Value::Empty => {
@@ -178,7 +177,7 @@ fn cmd(mut context: CommandContext) -> CrushResult<()> {
             let file = if f.exists() {
                 Some(f.to_path_buf())
             } else {
-                resolve_external_command(mandate(f.to_str(), "Invalid command name")?, &context.scope)?
+                resolve_external_command(f.to_str().ok_or( "Invalid command name")?, &context.scope)?
             };
 
             if let Some(file) = file {

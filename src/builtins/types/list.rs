@@ -2,7 +2,7 @@ use std::clone::Clone;
 use std::sync::OnceLock;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{argument_error_legacy, CrushResult, data_error, mandate};
+use crate::lang::errors::{argument_error_legacy, CrushResult, data_error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
 use crate::lang::{command::Command, data::list::List, value::ValueType};
@@ -145,7 +145,7 @@ fn collect_internal(mut input: Stream, idx: usize, value_type: ValueType, output
 
 fn collect(context: CommandContext) -> CrushResult<()> {
     let cfg: Collect = Collect::parse(context.arguments, &context.global_state.printer())?;
-    let input = mandate(context.input.recv()?.stream()?, "Expected a stream")?;
+    let input = context.input.recv()?.stream()?.ok_or("Expected a stream")?;
     let input_type = input.types().to_vec();
     match (input_type.len(), cfg.column) {
         (_, Some(name)) =>

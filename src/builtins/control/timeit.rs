@@ -1,6 +1,6 @@
 use chrono::{Duration, Local};
 use crate::lang::command::Command;
-use crate::lang::errors::{CrushResult, mandate};
+use crate::lang::errors::{CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use signature::signature;
 use crate::lang::pipe::pipe;
@@ -68,7 +68,7 @@ fn timeit(mut context: CommandContext) -> CrushResult<()> {
     for _ in 0..cfg.repeat {
         repeat_times.push(repeatn(&cfg.it, &context, number)?);
     }
-    let tm = mandate(repeat_times.iter().min(), "Failed to run command")?;
+    let tm = repeat_times.iter().min().ok_or("Failed to run command")?;
 
     output.send(Value::Duration(tm.clone()))
 }

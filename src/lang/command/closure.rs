@@ -2,7 +2,7 @@ use crate::lang::argument::{Argument, ArgumentDefinition, ArgumentType, SwitchSt
 use crate::lang::command::{ArgumentDescription, BoundCommand, Command, CrushCommand, OutputType, Parameter};
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::data::dict::Dict;
-use crate::lang::errors::{argument_error, argument_error_legacy, CrushResult, error, mandate};
+use crate::lang::errors::{argument_error, argument_error_legacy, CrushResult, error};
 use crate::lang::state::contexts::{CommandContext, CompileContext, JobContext};
 use crate::lang::help::Help;
 use crate::lang::job::Job;
@@ -382,7 +382,7 @@ impl<'a> ClosureDeserializer<'a> {
             None => error("Missing parameter"),
             Some(model::parameter::Parameter::Normal(param)) => Ok(Parameter::Parameter(
                 TrackedString::deserialize(param.name as usize, self.elements, self.state)?,
-                self.value_definition(mandate(param.r#type.as_ref(), "Invalid parameter")?)?,
+                self.value_definition(param.r#type.as_ref().ok_or( "Invalid parameter")?)?,
                 match &param.default {
                     None | Some(model::normal_parameter::Default::HasDefault(_)) => None,
                     Some(model::normal_parameter::Default::DefaultValue(def)) => {
@@ -426,8 +426,8 @@ impl<'a> ClosureDeserializer<'a> {
 
     fn argument(&mut self, s: &model::ArgumentDefinition) -> CrushResult<ArgumentDefinition> {
         Ok(ArgumentDefinition {
-            value: self.value_definition(mandate(s.value.as_ref(), "Missing argument value")?)?,
-            argument_type: match mandate(s.argument_type.as_ref(), "Missing argument type")? {
+            value: self.value_definition(s.value.as_ref().ok_or( "Missing argument value")?)?,
+            argument_type: match s.argument_type.as_ref().ok_or( "Missing argument type")? {
                 model::argument_definition::ArgumentType::Some(s) => ArgumentType::Named(TrackedString::deserialize(*s as usize, self.elements, self.state)?),
                 model::argument_definition::ArgumentType::None(_) => ArgumentType::Unnamed,
                 model::argument_definition::ArgumentType::ArgumentList(_) => {
@@ -444,7 +444,7 @@ impl<'a> ClosureDeserializer<'a> {
 
     fn value_definition(&mut self, s: &model::ValueDefinition) -> CrushResult<ValueDefinition> {
         Ok(
-            match mandate(s.value_definition.as_ref(), "Invalid value definition")? {
+            match s.value_definition.as_ref().ok_or( "Invalid value definition")? {
                 model::value_definition::ValueDefinition::Value(val) => ValueDefinition::Value(
                     Value::deserialize(val.value as usize, self.elements, self.state)?,
                     Location { start: val.start as usize, end: val.end as usize },
@@ -483,10 +483,8 @@ impl<'a> ClosureDeserializer<'a> {
                     ValueDefinition::Identifier(TrackedString::deserialize(*s as usize, self.elements, self.state)?)
                 }
                 model::value_definition::ValueDefinition::GetAttr(a) => ValueDefinition::GetAttr(
-                    Box::from(self.value_definition(mandate(
-                        a.parent.as_ref(),
-                        "Invalid value definition",
-                    )?)?),
+                    Box::from(self.value_definition(
+                        a.parent.as_ref().ok_or("Invalid value definition")?)?),
                     TrackedString::deserialize(a.element as usize, self.elements, self.state)?,
                 ),
             },

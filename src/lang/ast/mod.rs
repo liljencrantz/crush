@@ -1,6 +1,6 @@
 use crate::lang::argument::{ArgumentDefinition};
 use crate::lang::command_invocation::CommandInvocation;
-use crate::lang::errors::{CrushResult, error, mandate};
+use crate::lang::errors::{CrushResult, error};
 use crate::lang::job::Job;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{ValueDefinition};
@@ -198,7 +198,7 @@ fn attr(parts: &[&str], location: Location) -> Node {
 }
 
 fn home_as_string(user: &str) -> CrushResult<String> {
-    mandate(get_user(user)?.home.to_str(), "Bad home directory").map(|s| { s.to_string() })
+    Ok(get_user(user)?.home.to_str().ok_or("Bad home directory")?.to_string())
 }
 
 fn expand_user(s: &str) -> CrushResult<String> {

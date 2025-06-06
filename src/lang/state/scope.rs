@@ -1,5 +1,5 @@
 use crate::lang::command::{Command};
-use crate::lang::errors::{error, mandate, CrushResult, argument_error_legacy, CrushError, serialization_error, invalid_jump};
+use crate::lang::errors::{error, CrushResult, argument_error_legacy, CrushError, serialization_error, invalid_jump};
 use crate::lang::help::Help;
 use crate::data::r#struct::Struct;
 use crate::lang::{value::Value, value::ValueType};
@@ -454,7 +454,7 @@ impl Scope {
             return Ok(data);
         }
         data.is_loaded = true;
-        let loader = mandate(data.loader.take(), "Missing module loader")?;
+        let loader = data.loader.take().ok_or("Missing module loader")?;
         let mut tmp = ScopeLoader {
             mapping: OrderedMap::new(),
             parent: data.calling_scope.as_ref().unwrap().clone(),
@@ -730,7 +730,11 @@ impl Scope {
     }
 
     pub fn r#use(&self, other: &Scope) {
-        self.lock().unwrap().uses.push(other.clone());
+        let mut inner = self.lock().unwrap();
+        if inner.uses.iter()
+            .position(|s| s.id() == other.id()).is_none() {
+            inner.uses.push(other.clone());
+        }
     }
 
     pub fn unuse(&self, other: &Scope) {

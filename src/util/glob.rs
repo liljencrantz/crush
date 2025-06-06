@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, mandate};
+use crate::lang::errors::CrushResult;
 use std::collections::{HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::fmt::{Display, Formatter};
@@ -203,7 +203,7 @@ struct GlobState<'s> {
 
 fn insert_home(glob: &[Tile], home: &Path) -> CrushResult<Vec<Tile>> {
     let mut res = Vec::new();
-    for c in mandate(home.to_str(), "Invalid home directory")?[1..].chars() {
+    for c in home.to_str().ok_or("Invalid home directory")?[1..].chars() {
         match c {
             '/' => res.push(Tile::Separator),
             cc => res.push(Tile::Char(cc)),

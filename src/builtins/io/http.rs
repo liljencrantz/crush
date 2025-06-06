@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error_legacy, mandate, CrushError, CrushResult};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{
     data::binary::binary_channel, data::r#struct::Struct, data::table::ColumnType, data::table::Row, data::table::Table,

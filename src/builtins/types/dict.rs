@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::sync::OnceLock;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::{Known, Unknown};
-use crate::lang::errors::{argument_error, argument_error_legacy, CrushResult, mandate};
+use crate::lang::errors::{argument_error, argument_error_legacy, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
 use crate::lang::{data::dict::Dict, value::ValueType};
@@ -318,7 +318,7 @@ struct Collect {
 
 fn collect(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Collect = Collect::parse(context.remove_arguments(), context.global_state.printer())?;
-    let mut input = mandate(context.input.recv()?.stream()?, "Expected a stream")?;
+    let mut input = context.input.recv()?.stream()?.ok_or("Expected a stream")?;
     let input_type = input.types().to_vec();
     let mut res = OrderedMap::new();
     match (input_type.as_slice().find(&cfg.key_column), input_type.as_slice().find(&cfg.value_column)) {

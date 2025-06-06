@@ -3,7 +3,7 @@ use crate::lang::{data::table::Row, value::Value, value::ValueType};
 use std::io::{BufReader, Write};
 
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{error, mandate, CrushResult};
+use crate::lang::errors::{error, CrushResult};
 use crate::lang::signature::files::Files;
 use crate::lang::state::scope::ScopeLoader;
 use crate::lang::data::table::ColumnType;
@@ -24,8 +24,7 @@ fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
                 Ok(Value::Integer(f.as_i64().expect("") as i128))
             } else {
                 Ok(Value::Float(
-                    mandate(f.as_f64(),
-                            "Not a valid number")?
+                    f.as_f64().ok_or("Not a valid number")?
                 ))
             }
         }
@@ -82,10 +81,8 @@ fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
 
 fn to_yaml(value: Value) -> CrushResult<serde_yaml::Value> {
     match value.materialize()? {
-        Value::File(s) => Ok(serde_yaml::Value::from(mandate(
-            s.to_str(),
-            "Invalid filename",
-        )?)),
+        Value::File(s) => Ok(serde_yaml::Value::from(
+            s.to_str().ok_or("Invalid filename")?)),
 
         Value::String(s) => Ok(serde_yaml::Value::from(s.to_string())),
 

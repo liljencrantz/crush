@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{mandate, CrushResult};
+use crate::lang::errors::{CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
@@ -125,9 +125,9 @@ fn stat(mut context: CommandContext) -> CrushResult<()> {
             Value::Integer(metadata.st_size as i128),
             Value::Integer(metadata.st_blksize as i128),
             Value::Integer(metadata.st_blocks as i128),
-            Value::Time(mandate(DateTime::from_timestamp(metadata.st_atime, 0), "Failed to parse timestamp")?.with_timezone(&Local)),
-            Value::Time(mandate(DateTime::from_timestamp(metadata.st_mtime, 0), "Failed to parse timestamp")?.with_timezone(&Local)),
-            Value::Time(mandate(DateTime::from_timestamp(metadata.st_ctime, 0), "Failed to parse timestamp")?.with_timezone(&Local)),
+            Value::Time(DateTime::from_timestamp(metadata.st_atime, 0).ok_or("Failed to parse timestamp")?.with_timezone(&Local)),
+            Value::Time(DateTime::from_timestamp(metadata.st_mtime, 0).ok_or( "Failed to parse timestamp")?.with_timezone(&Local)),
+            Value::Time(DateTime::from_timestamp(metadata.st_ctime, 0).ok_or( "Failed to parse timestamp")?.with_timezone(&Local)),
             Value::File(Arc::from(file.as_path())),
         ]))?;
     }

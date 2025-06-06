@@ -1,17 +1,17 @@
-use std::cmp::min;
-use crate::lang::ast::{node::Node, CommandNode, JobListNode, JobNode};
-use crate::lang::errors::{error, CrushResult, mandate, argument_error_legacy};
-use crate::lang::value::{ValueType, Value};
-use crate::lang::command::{Command, ArgumentDescription};
-use crate::lang::state::scope::Scope;
-use std::ops::Deref;
-use regex::Regex;
-use crate::util::glob::Glob;
+use crate::lang::ast::lexer::LexerMode;
+use crate::lang::ast::{CommandNode, JobListNode, JobNode, node::Node};
+use crate::lang::command::{ArgumentDescription, Command};
+use crate::lang::errors::{CrushResult, argument_error_legacy, error};
 use crate::lang::parser::Parser;
+use crate::lang::state::scope::Scope;
+use crate::lang::value::{Value, ValueType};
 use crate::util::escape::unescape;
+use crate::util::glob::Glob;
+use regex::Regex;
+use std::cmp::min;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
-use crate::lang::ast::lexer::LexerMode;
+use std::ops::Deref;
 
 pub enum CompletionCommand {
     Unknown,
@@ -150,18 +150,17 @@ impl Display for ParseResult {
                 f.write_str("string ")?;
                 f.write_str(s)
             }
-            ParseResult::PartialArgument(_a) => {
-                f.write_str("command")
-            }
+            ParseResult::PartialArgument(_a) => f.write_str("command"),
         }
     }
 }
 
-fn find_command_in_expression<'input>(exp: &Node, cursor: usize) -> CrushResult<Option<CommandNode>> {
+fn find_command_in_expression<'input>(
+    exp: &Node,
+    cursor: usize,
+) -> CrushResult<Option<CommandNode>> {
     match exp {
-        Node::Assignment(_, _, _, b) => {
-            find_command_in_expression(b, cursor)
-        }
+        Node::Assignment(_, _, _, b) => find_command_in_expression(b, cursor),
 
         Node::Substitution(j) => {
             if j.location.contains(cursor) {
@@ -179,9 +178,7 @@ fn find_command_in_expression<'input>(exp: &Node, cursor: usize) -> CrushResult<
             }
         }
 
-        _ => {
-            Ok(None)
-        }
+        _ => Ok(None),
     }
 }
 
@@ -200,7 +197,7 @@ fn find_command_in_job(job: JobNode, cursor: usize) -> CrushResult<CommandNode> 
             return find_command_in_command(cmd.clone(), cursor);
         }
     }
-    mandate(job.commands.last(), "Nothing to complete").map(|c| c.clone())
+    Ok(job.commands.last().ok_or("Nothing to complete")?.clone())
 }
 
 fn find_command_in_job_list(ast: JobListNode, cursor: usize) -> CrushResult<CommandNode> {
@@ -209,10 +206,10 @@ fn find_command_in_job_list(ast: JobListNode, cursor: usize) -> CrushResult<Comm
             return find_command_in_job(job.clone(), cursor);
         }
     }
-    mandate(
-        ast.jobs.last()
-            .and_then(|j| j.commands.last()
-                .map(|c| c.clone())), "Nothing to complete")
+    Ok(ast.jobs
+        .last()
+        .and_then(|j| j.commands.last().map(|c| c.clone()))
+        .ok_or("Nothing to complete")?)
 }
 
 fn fetch_value(node: &Node, scope: &Scope, is_command: bool) -> CrushResult<Option<Value>> {
@@ -221,32 +218,30 @@ fn fetch_value(node: &Node, scope: &Scope, is_command: bool) -> CrushResult<Opti
 
         Node::String(s, true) => Ok(Some(Value::from(s))),
 
-        Node::String(l, false) =>
+        Node::String(l, false) => {
             if is_command {
                 scope.get(&l.string)
             } else {
                 Ok(None)
-            },
+            }
+        }
 
-        Node::GetAttr(n, l) =>
-            match fetch_value(n, scope, is_command)? {
-                Some(parent) => parent.field(&l.string),
-                None => Ok(None),
-            },
+        Node::GetAttr(n, l) => match fetch_value(n, scope, is_command)? {
+            Some(parent) => parent.field(&l.string),
+            None => Ok(None),
+        },
 
         Node::Integer(s) => Ok(Some(Value::Integer(
-            s.string.replace("_", "").parse::<i128>()?))),
+            s.string.replace("_", "").parse::<i128>()?,
+        ))),
 
         Node::Float(s) => Ok(Some(Value::Float(
-            s.string.replace("_", "").parse::<f64>()?))),
+            s.string.replace("_", "").parse::<f64>()?,
+        ))),
 
-        Node::Glob(f) =>
-            Ok(Some(Value::Glob(Glob::new(&f.string)))),
+        Node::Glob(f) => Ok(Some(Value::Glob(Glob::new(&f.string)))),
 
-        Node::Regex(r) =>
-            Ok(Some(Value::Regex(
-                r.string.clone(),
-                Regex::new(&r.string)?))),
+        Node::Regex(r) => Ok(Some(Value::Regex(r.string.clone(), Regex::new(&r.string)?))),
 
         _ => Ok(None),
     }
@@ -261,18 +256,16 @@ fn parse_command_node(node: &Node, scope: &Scope) -> CrushResult<CompletionComma
 
 fn parse_previous_argument(arg: &Node) -> PreviousArgument {
     match arg {
-        Node::Assignment(key, _, op, value) => {
-            match (key.as_ref(), op.as_str()) {
-                (Node::String(name, false), "=") => {
-                    let inner = parse_previous_argument(value.as_ref());
-                    return PreviousArgument {
-                        name: Some(name.string.clone()),
-                        value: inner.value,
-                    };
-                }
-                _ => {}
+        Node::Assignment(key, _, op, value) => match (key.as_ref(), op.as_str()) {
+            (Node::String(name, false), "=") => {
+                let inner = parse_previous_argument(value.as_ref());
+                return PreviousArgument {
+                    name: Some(name.string.clone()),
+                    value: inner.value,
+                };
             }
-        }
+            _ => {}
+        },
 
         _ => {}
     }
@@ -302,40 +295,48 @@ pub fn parse(
             let cmd = &cmd.expressions[0];
             if cmd.location().contains(cursor) {
                 match cmd {
-                    Node::Identifier(label) =>
-                        Ok(ParseResult::PartialLabel(
-                            label.prefix(cursor).string)),
+                    Node::Identifier(label) => {
+                        Ok(ParseResult::PartialLabel(label.prefix(cursor).string))
+                    }
 
-                    Node::String(string, true) =>
-                        Ok(ParseResult::PartialQuotedString(string.prefix(cursor).string)),
+                    Node::String(string, true) => Ok(ParseResult::PartialQuotedString(
+                        string.prefix(cursor).string,
+                    )),
 
-                    Node::String(label, false) =>
-                        Ok(ParseResult::PartialField(
-                            label.prefix(cursor).string)),
+                    Node::String(label, false) => {
+                        Ok(ParseResult::PartialField(label.prefix(cursor).string))
+                    }
 
-                    Node::GetAttr(parent, field) =>
-                        Ok(ParseResult::PartialMember(
-                            mandate(fetch_value(parent, scope, true)?, "Unknown value")?,
-                            field.prefix(cursor).string)),
+                    Node::GetAttr(parent, field) => Ok(ParseResult::PartialMember(
+                        fetch_value(parent, scope, true)?.ok_or("Unknown value")?,
+                        field.prefix(cursor).string,
+                    )),
 
-                    Node::File(path, quoted) =>
-                        Ok(ParseResult::PartialFile(
-                            if *quoted { unescape(&path.string)? } else { path.string.clone() },
-                            *quoted)),
+                    Node::File(path, quoted) => Ok(ParseResult::PartialFile(
+                        if *quoted {
+                            unescape(&path.string)?
+                        } else {
+                            path.string.clone()
+                        },
+                        *quoted,
+                    )),
 
-                    Node::GetItem(_, _) => { panic!("AAA"); }
+                    Node::GetItem(_, _) => {
+                        panic!("AAA");
+                    }
 
-                    _ => error(format!("Can't extract command to complete. Unknown node type {}", cmd.type_name())),
+                    _ => error(format!(
+                        "Can't extract command to complete. Unknown node type {}",
+                        cmd.type_name()
+                    )),
                 }
             } else {
-                Ok(ParseResult::PartialArgument(
-                    PartialCommandResult {
-                        command: parse_command_node(cmd, scope)?,
-                        previous_arguments: vec![],
-                        last_argument: LastArgument::Unknown,
-                        last_argument_name: None,
-                    }
-                ))
+                Ok(ParseResult::PartialArgument(PartialCommandResult {
+                    command: parse_command_node(cmd, scope)?,
+                    previous_arguments: vec![],
+                    last_argument: LastArgument::Unknown,
+                    last_argument_name: None,
+                }))
             }
         }
         _ => {
@@ -357,92 +358,97 @@ pub fn parse(
                         }
                     }
                 } else {
-                    (Box::from(cmd.expressions.last().unwrap().clone()), None, false)
+                    (
+                        Box::from(cmd.expressions.last().unwrap().clone()),
+                        None,
+                        false,
+                    )
                 };
 
             if argument_complete {
                 match arg.deref() {
                     Node::String(l, false) => {
-                        let substring = &l.string[0..min(l.string.len(), cursor - l.location.start)];
-                        Ok(ParseResult::PartialArgument(
-                            PartialCommandResult {
-                                command: c,
-                                previous_arguments,
-                                last_argument: LastArgument::Switch(substring.to_string()),
-                                last_argument_name,
-                            }
-                        ))
+                        let substring =
+                            &l.string[0..min(l.string.len(), cursor - l.location.start)];
+                        Ok(ParseResult::PartialArgument(PartialCommandResult {
+                            command: c,
+                            previous_arguments,
+                            last_argument: LastArgument::Switch(substring.to_string()),
+                            last_argument_name,
+                        }))
                     }
 
-                    _ => argument_error_legacy(format!("Invalid argument name {}", arg.type_name()))
+                    _ => {
+                        argument_error_legacy(format!("Invalid argument name {}", arg.type_name()))
+                    }
                 }
             } else {
                 if arg.location().contains(cursor) {
                     match arg.as_ref() {
-                        Node::Identifier(l) =>
-                            Ok(ParseResult::PartialArgument(
-                                PartialCommandResult {
-                                    command: c,
-                                    previous_arguments,
-                                    last_argument: LastArgument::Label(l.string.clone()),
-                                    last_argument_name,
-                                }
-                            )),
+                        Node::Identifier(l) => {
+                            Ok(ParseResult::PartialArgument(PartialCommandResult {
+                                command: c,
+                                previous_arguments,
+                                last_argument: LastArgument::Label(l.string.clone()),
+                                last_argument_name,
+                            }))
+                        }
 
-                        Node::String(l, false) =>
-                            Ok(ParseResult::PartialArgument(
-                                PartialCommandResult {
-                                    command: c,
-                                    previous_arguments,
-                                    last_argument: LastArgument::Field(l.string.clone()),
-                                    last_argument_name,
-                                }
-                            )),
+                        Node::String(l, false) => {
+                            Ok(ParseResult::PartialArgument(PartialCommandResult {
+                                command: c,
+                                previous_arguments,
+                                last_argument: LastArgument::Field(l.string.clone()),
+                                last_argument_name,
+                            }))
+                        }
 
-                        Node::GetAttr(parent, field) =>
-                            Ok(ParseResult::PartialArgument(
-                                PartialCommandResult {
-                                    command: c,
-                                    previous_arguments,
-                                    last_argument: LastArgument::Member(
-                                        mandate(fetch_value(parent, scope, false)?, "unknown value")?,
-                                        field.prefix(cursor).string),
-                                    last_argument_name,
-                                })),
+                        Node::GetAttr(parent, field) => {
+                            Ok(ParseResult::PartialArgument(PartialCommandResult {
+                                command: c,
+                                previous_arguments,
+                                last_argument: LastArgument::Member(
+                                    fetch_value(parent, scope, false)?.ok_or("unknown value")?,
+                                    field.prefix(cursor).string,
+                                ),
+                                last_argument_name,
+                            }))
+                        }
 
-                        Node::File(path, quoted) =>
-                            Ok(ParseResult::PartialArgument(
-                                PartialCommandResult {
-                                    command: c,
-                                    previous_arguments,
-                                    last_argument: LastArgument::File(
-                                        if *quoted { unescape(&path.string)? } else { path.string.clone() },
-                                        *quoted),
-                                    last_argument_name,
-                                }
-                            )),
+                        Node::File(path, quoted) => {
+                            Ok(ParseResult::PartialArgument(PartialCommandResult {
+                                command: c,
+                                previous_arguments,
+                                last_argument: LastArgument::File(
+                                    if *quoted {
+                                        unescape(&path.string)?
+                                    } else {
+                                        path.string.clone()
+                                    },
+                                    *quoted,
+                                ),
+                                last_argument_name,
+                            }))
+                        }
 
-                        Node::String(s, true) =>
-                            Ok(ParseResult::PartialArgument(
-                                PartialCommandResult {
-                                    command: c,
-                                    previous_arguments,
-                                    last_argument: LastArgument::QuotedString(unescape(&s.string)?),
-                                    last_argument_name,
-                                }
-                            )),
+                        Node::String(s, true) => {
+                            Ok(ParseResult::PartialArgument(PartialCommandResult {
+                                command: c,
+                                previous_arguments,
+                                last_argument: LastArgument::QuotedString(unescape(&s.string)?),
+                                last_argument_name,
+                            }))
+                        }
 
                         _ => error("Can't extract argument to complete"),
                     }
                 } else {
-                    Ok(ParseResult::PartialArgument(
-                        PartialCommandResult {
-                            command: c,
-                            previous_arguments,
-                            last_argument: LastArgument::Unknown,
-                            last_argument_name,
-                        }
-                    ))
+                    Ok(ParseResult::PartialArgument(PartialCommandResult {
+                        command: c,
+                        previous_arguments,
+                        last_argument: LastArgument::Unknown,
+                        last_argument_name,
+                    }))
                 }
             }
         }
@@ -457,7 +463,7 @@ mod tests {
 
     fn ast(s: &str) -> CrushResult<JobListNode> {
         panic!()
-//        to_crush_error(lalrparser::JobListParser::new().parse(s))
+        //        to_crush_error(lalrparser::JobListParser::new().parse(s))
     }
 
     #[test]

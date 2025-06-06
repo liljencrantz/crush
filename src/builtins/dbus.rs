@@ -2,7 +2,7 @@ use crate::lang::argument::{column_names, Argument};
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::*;
 use crate::lang::data::dict::Dict;
-use crate::lang::errors::{argument_error_legacy, data_error, eof_error, error, mandate, CrushResult};
+use crate::lang::errors::{argument_error_legacy, data_error, eof_error, error, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::data::list::List;
 use crate::lang::data::r#struct::Struct;
@@ -422,16 +422,16 @@ impl DBusArgument {
 
 fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
     Ok(match iter.arg_type() {
-        ArgType::String => Value::from(mandate(iter.get::<String>(), "Unexpected type")?),
-        ArgType::Boolean => Value::Bool(mandate(iter.get(), "Unexpected type")?),
-        ArgType::Byte => Value::Integer(mandate(iter.get::<u8>(), "Unexpected type")? as i128),
-        ArgType::Int16 => Value::Integer(mandate(iter.get::<i16>(), "Unexpected type")? as i128),
-        ArgType::UInt16 => Value::Integer(mandate(iter.get::<u16>(), "Unexpected type")? as i128),
-        ArgType::Int32 => Value::Integer(mandate(iter.get::<i32>(), "Unexpected type")? as i128),
-        ArgType::UInt32 => Value::Integer(mandate(iter.get::<u32>(), "Unexpected type")? as i128),
-        ArgType::Int64 => Value::Integer(mandate(iter.get::<i64>(), "Unexpected type")? as i128),
-        ArgType::UInt64 => Value::Integer(mandate(iter.get::<u64>(), "Unexpected type")? as i128),
-        ArgType::Double => Value::Float(mandate(iter.get::<f64>(), "Unexpected type")?),
+        ArgType::String => Value::from(iter.get::<String>().ok_or("Unexpected type")?),
+        ArgType::Boolean => Value::from(iter.get::<bool>().ok_or("Unexpected type")?),
+        ArgType::Byte => Value::Integer(iter.get::<u8>().ok_or("Unexpected type")? as i128),
+        ArgType::Int16 => Value::Integer(iter.get::<i16>().ok_or("Unexpected type")? as i128),
+        ArgType::UInt16 => Value::Integer(iter.get::<u16>().ok_or("Unexpected type")? as i128),
+        ArgType::Int32 => Value::Integer(iter.get::<i32>().ok_or("Unexpected type")? as i128),
+        ArgType::UInt32 => Value::Integer(iter.get::<u32>().ok_or("Unexpected type")? as i128),
+        ArgType::Int64 => Value::Integer(iter.get::<i64>().ok_or("Unexpected type")? as i128),
+        ArgType::UInt64 => Value::Integer(iter.get::<u64>().ok_or("Unexpected type")? as i128),
+        ArgType::Double => Value::Float(iter.get::<f64>().ok_or("Unexpected type")?),
         ArgType::Array => {
             let mut sub = iter.recurse(ArgType::Array)?;
 
@@ -665,12 +665,10 @@ fn filter_method(
 
 fn service_call(mut context: CommandContext) -> CrushResult<()> {
     let cfg: ServiceCall = ServiceCall::parse(context.remove_arguments(), &context.global_state.printer())?;
-    if let Value::Struct(service_obj) = mandate(context.this, "Missing this parameter for method")?
+    if let Value::Struct(service_obj) = context.this.ok_or("Missing this parameter for method")?
     {
-        if let Value::String(service) = mandate(
-            service_obj.get("service"),
-            "Missing service field in struct",
-        )? {
+        if let Value::String(service) =
+            service_obj.get("service").ok_or("Missing service field in struct")? {
             let dbus = DBusThing::new(Connection::new_session()?);
             let mut objects = dbus.list_objects(&service)?;
             match (cfg.object, cfg.method) {

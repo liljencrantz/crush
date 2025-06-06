@@ -3,7 +3,7 @@ use std::sync::{Mutex, OnceLock};
 use std::os::raw::c_char;
 
 use nix::unistd::getuid;
-use crate::lang::errors::{CrushResult, data_error, error, mandate};
+use crate::lang::errors::{CrushResult, data_error, error};
 use std::ffi::CStr;
 use std::path::PathBuf;
 use nix::libc::passwd;
@@ -81,7 +81,7 @@ impl UserData {
 
 pub fn get_user(input_name: &str) -> CrushResult<UserData> {
     let all = get_all_users()?;
-    mandate(all.into_iter().find(|u| u.name == input_name), format!("Unknown user {}", input_name))
+    Ok(all.into_iter().find(|u| u.name == input_name).ok_or(format!("Unknown user {}", input_name))?)
 }
 
 pub fn create_group_map() -> CrushResult<HashMap<sysinfo::Gid, String>> {

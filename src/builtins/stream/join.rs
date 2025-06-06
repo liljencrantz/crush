@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error_legacy, mandate};
+use crate::lang::errors::{argument_error_legacy};
 use crate::lang::errors::CrushError;
 use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
@@ -99,8 +99,8 @@ pub fn join(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(2)?;
     let l = context.arguments.remove(0);
     let r = context.arguments.remove(0);
-    match (l.argument_type, mandate(l.value.stream()?, "Expected a stream")?,
-           r.argument_type, mandate(r.value.stream()?, "Expected a stream")?) {
+    match (l.argument_type, l.value.stream()?.ok_or( "Expected a stream")?,
+           r.argument_type, r.value.stream()?.ok_or( "Expected a stream")?) {
         (Some(left_name), left_stream, Some(right_name), right_stream) => {
             let left_idx = left_stream.types().find(&left_name)?;
             let right_idx = right_stream.types().find(&right_name)?;

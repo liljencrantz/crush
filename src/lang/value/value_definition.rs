@@ -1,13 +1,12 @@
 /// The definition of a value, as found in a Job.
 use crate::lang::command::Parameter;
-use crate::lang::errors::mandate;
 use crate::lang::state::contexts::CompileContext;
 use crate::lang::{command::CrushCommand, job::Job};
 use crate::{
     lang::errors::CrushResult, lang::pipe::empty_channel, lang::pipe::pipe,
     lang::value::Value,
 };
-use std::fmt::{Display, Formatter, Pointer, Write};
+use std::fmt::{Display, Formatter};
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::ast::location::Location;
 
@@ -68,11 +67,7 @@ impl ValueDefinition {
                 )),
             ),
             ValueDefinition::Identifier(s) => (
-                None,
-                mandate(
-                    context.env.get(&s.string)?,
-                    &format!("Unknown variable {}", self),
-                )?,
+                None, context.env.get(&s.string)?.ok_or(&format!("Unknown variable {}", self))?,
             ),
 
             ValueDefinition::GetAttr(parent_def, entry) => {
@@ -89,8 +84,7 @@ impl ValueDefinition {
                 } else {
                     parent
                 };
-                let val = mandate(
-                    parent.field(&entry.string)?,
+                let val = parent.field(&entry.string)?.ok_or(
                     &format!(
                         "Missing field {} in value of type {}",
                         entry,

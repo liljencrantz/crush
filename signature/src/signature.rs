@@ -276,9 +276,7 @@ fn simple_type_data(
                                                     }),
         },
         assign: quote! {
-                    #name: crate::lang::errors::mandate(
-                        #name,
-                        format!("Missing value for parameter {}", #name_literal).as_str())?,
+                    #name: #name.ok_or(format!("Missing value for parameter {}", #name_literal).as_str())?,
                     },
     })
 }
@@ -351,9 +349,8 @@ fn number_type_data(
                 }
             }).unwrap_or(
             quote! {
-                    #name: crate::lang::errors::mandate(
-                        #name,
-                        format!("Missing value for parameter {}", #name_literal).as_str())?,
+                    #name:
+                        #name.ok_or(format!("Missing value for parameter {}", #name_literal).as_str())?,
                     }),
     })
 }
@@ -425,9 +422,7 @@ fn text_type_data(
                 }
             }).unwrap_or(
             quote! {
-                    #name: crate::lang::errors::mandate(
-                        #name,
-                        format!("Missing value for parameter {}", #name_literal).as_str())?,
+                    #name: #name.ok_or(format!("Missing value for parameter {}", #name_literal).as_str())?,
                     }),
     })
 }

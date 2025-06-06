@@ -1,7 +1,7 @@
 use crate::data::list::List;
 use crate::data::table::{ColumnType, Row};
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{data_error, mandate};
+use crate::lang::errors::data_error;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
@@ -173,7 +173,7 @@ fn query_internal(
             client,
             RecordType::CNAME,
             &A_STREAM_OUTPUT_TYPE,
-            |answer| data_error("Received an unexpected record."),
+            |_| data_error("Received an unexpected record."),
         ),
         "NS" => perform_query(
             cfg,
@@ -298,10 +298,8 @@ fn query_internal(
 
 fn create_address(nameserver: &Option<String>, port: i128) -> CrushResult<SocketAddr> {
     let srv = match nameserver {
-        None => mandate(
-            parse_resolv_conf()?.nameservers.get(0),
-            "No nameservers configured",
-        )?
+        None => parse_resolv_conf()?.nameservers.get(0)
+            .ok_or("No nameservers configured")?
         .to_string(),
 
         Some(server) => server.to_string(),

@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, data_error, mandate};
+use crate::lang::errors::{CrushResult, data_error};
 use crate::lang::data::list::List;
 use crate::lang::pretty::PrettyPrinter;
 use crate::lang::state::scope::Scope;
@@ -114,8 +114,8 @@ struct Member {
 fn member(context: CommandContext) -> CrushResult<()> {
     let cfg: Member = Member::parse(context.arguments, &context.global_state.printer())?;
     match context.input.recv()? {
-        Value::Struct(s) => context.output.send(mandate(
-            s.get(&cfg.field),
+        Value::Struct(s) => context.output.send(
+            s.get(&cfg.field).ok_or(
             format!("Unknown field \"{}\"", cfg.field).as_str(),
         )?),
         _ => data_error("Expected a struct"),

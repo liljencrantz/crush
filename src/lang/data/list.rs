@@ -1,6 +1,6 @@
 /// The crush type used for storing lists of data
 
-use crate::lang::errors::{argument_error_legacy, error, mandate, CrushResult};
+use crate::lang::errors::{argument_error_legacy, error, CrushResult};
 use crate::lang::pipe::Stream;
 use crate::lang::{value::Value, value::ValueType};
 use crate::util::identity_arc::Identity;
@@ -94,7 +94,7 @@ impl List {
 
     pub fn get(&self, idx: usize) -> CrushResult<Value> {
         let cells = self.cells.lock().unwrap();
-        Ok(mandate(cells.get(idx), "Index out of bounds")?.clone())
+        Ok(cells.get(idx).ok_or("Index out of bounds")?.clone())
     }
 
     pub fn set(&self, idx: usize, value: Value) -> CrushResult<()> {

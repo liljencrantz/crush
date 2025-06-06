@@ -17,7 +17,7 @@ use itertools::Itertools;
 use regex::Regex;
 use crate::lang::data::list::List;
 use crate::lang::data::table::{Row, Table};
-use crate::lang::errors::{error, mandate};
+use crate::lang::errors::error;
 use crate::lang::signature::patterns::Patterns;
 use crate::lang::state::this::This;
 use crate::builtins::io::json::{json_to_value, value_to_json};
@@ -96,12 +96,12 @@ impl Grpc {
 
         let mut child = cmd.spawn()?;
 
-        let mut stdout = mandate(child.stdout.take(), "Expected output stream")?;
+        let mut stdout = child.stdout.take().ok_or( "Expected output stream")?;
         let mut buff = Vec::new();
         stdout.read_to_end(&mut buff)?;
         let output = String::from_utf8(buff)?;
         let (send_err, recv_err) = bounded(1);
-        let mut stderr = mandate(child.stderr.take(), "Expected error stream")?;
+        let mut stderr = child.stderr.take().ok_or( "Expected error stream")?;
         context.spawn("grpcurl:stderr", move || {
             let mut buff = Vec::new();
             stderr.read_to_end(&mut buff)?;

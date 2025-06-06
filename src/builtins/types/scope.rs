@@ -5,7 +5,7 @@ use signature::signature;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{CrushResult, mandate};
+use crate::lang::errors::{CrushResult};
 use crate::data::list::List;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::this::This;
@@ -43,7 +43,7 @@ struct GetItem {
 fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     let val = context.this.scope()?;
     let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.output.send(mandate(val.get_local(&cfg.name)?, "Unknown member")?)
+    context.output.send(val.get_local(&cfg.name)?.ok_or("Unknown member")?)
 }
 
 #[signature(
@@ -60,7 +60,7 @@ struct Resolve {
 fn __resolve__(mut context: CommandContext) -> CrushResult<()> {
     let val = context.this.scope()?;
     let cfg: Resolve = Resolve::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.output.send(mandate(val.get(&cfg.name)?, "Unknown member")?)
+    context.output.send(val.get(&cfg.name)?.ok_or("Unknown member")?)
 }
 
 #[signature(

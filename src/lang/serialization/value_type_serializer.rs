@@ -1,4 +1,4 @@
-use crate::lang::errors::{error, mandate, CrushResult};
+use crate::lang::errors::{error, CrushResult};
 use crate::lang::serialization::model;
 use crate::lang::serialization::model::{element, Element};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
@@ -14,7 +14,7 @@ impl Serializable<ValueType> for ValueType {
         state: &mut DeserializationState,
     ) -> CrushResult<ValueType> {
         if let element::Element::Type(outer_type) = elements[id].element.as_ref().unwrap() {
-            match mandate(outer_type.r#type.as_ref(), "Missing type")? {
+            match outer_type.r#type.as_ref().ok_or("Missing type")? {
                 SimpleType(simple_type) => Ok(match simple_type {
                     0 => ValueType::String,
                     1 => ValueType::Integer,

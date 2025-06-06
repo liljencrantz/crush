@@ -6,7 +6,7 @@ use crate::{
 use std::io::{BufReader, Read, Write};
 
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{error, mandate, CrushResult};
+use crate::lang::errors::{error, CrushResult};
 use crate::lang::signature::files::Files;
 use crate::lang::state::scope::ScopeLoader;
 use crate::lang::data::table::ColumnType;
@@ -107,7 +107,7 @@ fn from(context: CommandContext) -> CrushResult<()> {
 
 fn to_toml(value: Value) -> CrushResult<toml::Value> {
     match value.materialize()? {
-        Value::File(s) => Ok(toml::Value::from(mandate(s.to_str(), "Invalid filename")?)),
+        Value::File(s) => Ok(toml::Value::from(s.to_str().ok_or("Invalid filename")?)),
 
         Value::String(s) => Ok(toml::Value::from(s.as_ref())),
 

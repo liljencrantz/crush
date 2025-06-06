@@ -1,7 +1,7 @@
 use std::sync::OnceLock;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, mandate};
+use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ValueType;
 use crate::lang::value::Value;
@@ -49,6 +49,6 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     let cfg: GetItem = GetItem::parse(context.arguments, &context.global_state.printer())?;
     let val = context.this.binary()?;
     context.output.send(Value::Integer(
-        *mandate(val.get(cfg.index), "Index out of bounds")? as i128,
+        *val.get(cfg.index).ok_or("Index out of bounds")? as i128,
     ))
 }

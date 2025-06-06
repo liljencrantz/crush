@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, data_error, mandate};
+use crate::lang::errors::{CrushResult, data_error};
 use crate::lang::state::scope::Scope;
 use crate::lang::{
     data::binary::BinaryReader, data::list::List, value::Value,
@@ -92,13 +92,26 @@ fn sleep(context: CommandContext) -> CrushResult<()> {
 #[signature(
     control.bg,
     short = "Run a pipeline in background",
-    example = "$pipe := $($(table_input_stream value=integer):pipe)\n    $_1 := $(seq 100_000 | pipe:output:write | bg)\n    $sum_job_id := $($pipe:input | sum | bg)\n    $pipe:close\n    $sum_job_id | fg"
+    long = "The bg builtin will read the result from a pipeline and insert it into a table output stream.",
+    long = "Because this stream is immediately returned, execution will continue and the pipeline will run",
+    long = "in the background.",
+    long = "",
+    long = "To get the result of the pipeline, use the fg builtin.",
+    example = "# Create a pipe",
+    example = "$pipe := $($(table_input_stream value=$integer):pipe)",
+    example = "# Create a job that writes 100_000 integers to the pipe and put this job in the background",
+    example = "$_1 := $(seq 100_000 | pipe:write | bg)",
+    example = "# Create a second job that reads from the pipe and sums all the integers and put this job in the background",
+    example = "$sum_job_handle := $(pipe:read | sum | bg)",
+    example = "# Close the pipe so that the second job can finish",
+    example = "pipe:close",
+    example = "# Put the sum job in the foreground",
+    example = "sum_job_handle | fg",
 )]
 struct Bg {}
 
 fn bg(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(
-        &[ColumnType::new("value", ValueType::Any)])?;
+    let output = context.output.initialize(&[ColumnType::new("value", ValueType::Any)])?;
     if let Ok(value) = context.input.recv() {
         output.send(Row::new(vec![value]))?;
     }
@@ -108,12 +121,26 @@ fn bg(context: CommandContext) -> CrushResult<()> {
 #[signature(
     control.fg,
     short = "Return the output of a background pipeline",
-    example = "$pipe := $($(table_input_stream value=integer):pipe)\n    $_1 := $(seq 100_000 | pipe:output:write | bg)\n    $sum_job_id := $($pipe:input | sum | bg)\n    $pipe:close\n    $sum_job_id | fg"
+    long = "The bg builtin will read the result from a pipeline and insert it into a table output stream.",
+    long = "Because this stream is immediately returned, execution will continue and the pipeline will run",
+    long = "in the background.",
+    long = "",
+    long = "To get the result of the pipeline, use the fg builtin.",
+    example = "# Create a pipe",
+    example = "$pipe := $($(table_input_stream value=$integer):pipe)",
+    example = "# Create a job that writes 100_000 integers to the pipe and put this job in the background",
+    example = "$_1 := $(seq 100_000 | pipe:write | bg)",
+    example = "# Create a second job that reads from the pipe and sums all the integers and put this job in the background",
+    example = "$sum_job_handle := $(pipe:read | sum | bg)",
+    example = "# Close the pipe so that the second job can finish",
+    example = "pipe:close",
+    example = "# Put the sum job in the foreground",
+    example = "sum_job_handle | fg",
 )]
 struct Fg {}
 
 fn fg(context: CommandContext) -> CrushResult<()> {
-    let mut result_stream = mandate(context.input.recv()?.stream()?, "Invalid input")?;
+    let mut result_stream = context.input.recv()?.stream()?.ok_or( "Invalid input")?;
     let mut result: Vec<Value> = result_stream.read()?.into();
     if result.len() != 1 {
         data_error("Expected a single row, single column result")

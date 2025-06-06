@@ -1,6 +1,6 @@
 use crate::builtins::types::OrderedStringMap;
 use signature::signature;
-use crate::lang::errors::{argument_error_legacy, CrushResult, mandate};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{argument::Argument, value::Value};
 use crate::lang::command::OutputType::Known;
@@ -17,7 +17,7 @@ enum FormatState {
 }
 
 fn format_argument(res: &mut String, arg: Option<&Argument>) -> CrushResult<()> {
-    res.push_str(mandate(arg, "Missing argument")?.value.to_string().as_str());
+    res.push_str(arg.ok_or("Missing argument")?.value.to_string().as_str());
     Ok(())
 }
 

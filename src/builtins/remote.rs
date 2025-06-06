@@ -1,6 +1,6 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{error, mandate, CrushResult};
+use crate::lang::errors::{error, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::signature::files::Files;
 use crate::lang::signature::patterns::Patterns;
@@ -82,8 +82,8 @@ fn run_remote(
     if !ignore_host_file {
         let mut known_hosts = sess.known_hosts()?;
         known_hosts.read_file(host_file, KnownHostFileKind::OpenSSH)?;
-        let (key, key_type) = mandate(
-            sess.host_key(),
+        let (key, key_type) =
+            sess.host_key().ok_or(
             &format!("Could not fetch host key for {}", host),
         )?;
         match known_hosts.check_port(&host, port, key) {

@@ -544,6 +544,26 @@ impl From<&str> for CrushError {
     }
 }
 
+impl From<String> for CrushError {
+    fn from(e: String) -> Self {
+        CrushError {
+            error_type: InvalidData(e),
+            location: None,
+            definition: None,
+        }
+    }
+}
+
+impl From<&String> for CrushError {
+    fn from(e: &String) -> Self {
+        CrushError {
+            error_type: InvalidData(e.to_string()),
+            location: None,
+            definition: None,
+        }
+    }
+}
+
 pub type CrushResult<T> = Result<T, CrushError>;
 
 pub fn eof_error<T>() -> CrushResult<T> {
@@ -616,13 +636,6 @@ pub fn error<T>(message: impl Into<String>) -> CrushResult<T> {
         location: None,
         definition: None,
     })
-}
-
-pub fn mandate<T>(result: Option<T>, msg: impl Into<String>) -> CrushResult<T> {
-    match result {
-        Some(v) => Ok(v),
-        None => data_error(msg),
-    }
 }
 
 pub fn mandate_argument<T>(result: Option<T>, message: impl Into<String>, location: Location) -> CrushResult<T> {

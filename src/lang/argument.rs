@@ -6,7 +6,7 @@ use crate::lang::state::contexts::CompileContext;
 use crate::lang::value::Value;
 use crate::lang::value::ValueDefinition;
 use std::collections::HashSet;
-use std::fmt::{Display, Formatter, Write};
+use std::fmt::{Display, Formatter};
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::ast::location::Location;
 use crate::lang::serialization::model;

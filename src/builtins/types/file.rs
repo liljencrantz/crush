@@ -1,6 +1,6 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, CrushResult, data_error, error, mandate};
+use crate::lang::errors::{argument_error_legacy, CrushResult, data_error, error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
@@ -61,13 +61,13 @@ pub fn chown(mut context: CommandContext) -> CrushResult<()> {
     let file = context.this.file()?;
 
     let uid = if let Some(name) = cfg.user {
-        Some(mandate(get_uid(&name)?, format!("Unknown user {}", &name))?)
+        Some(get_uid(&name)?.ok_or( format!("Unknown user {}", &name))?)
     } else {
         None
     };
 
     let gid = if let Some(name) = cfg.group {
-        Some(mandate(get_gid(&name)?, format!("Unknown group {}", &name))?)
+        Some(get_gid(&name)?.ok_or(format!("Unknown group {}", &name))?)
     } else {
         None
     };
@@ -286,13 +286,8 @@ fn name(mut context: CommandContext) -> CrushResult<()> {
     context
         .output
         .send(Value::from(
-            mandate(
-                mandate(
-                    context.this.file()?
-                        .file_name(),
-                    "Invalid file path")?
-                    .to_str(),
-                "Invalid file name")?))
+                    context.this.file()?.file_name().ok_or("Invalid file path")?
+                    .to_str().ok_or("Invalid file name")?))
 }
 
 #[signature(
@@ -307,9 +302,7 @@ fn parent(mut context: CommandContext) -> CrushResult<()> {
     context
         .output
         .send(Value::from(
-            mandate(
-                context.this.file()?.parent(),
-                "Invalid file path")?))
+                context.this.file()?.parent().ok_or("Invalid file path")?))
 }
 
 static REMOVE_OUTPUT_TYPE: [ColumnType; 3] = [

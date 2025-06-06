@@ -2,7 +2,7 @@ use signature::signature;
 use crate::lang::argument::Argument;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{argument_error_legacy, mandate, CrushResult};
+use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
 use crate::lang::data::r#struct::Struct;
@@ -34,7 +34,7 @@ fn r#for(mut context: CommandContext) -> CrushResult<()> {
         return argument_error_legacy("Expected exactly one stream to iterate over");
     }
 
-    let (name, mut input) = mandate(cfg.iterator.drain().next(),"Failed to obtain a stream")?;
+    let (name, mut input) = cfg.iterator.drain().next().ok_or("Failed to obtain a stream")?;
 
     while let Ok(line) = input.read() {
         let env = context.scope.create_child(&context.scope, Loop);

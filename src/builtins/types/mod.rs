@@ -1,7 +1,7 @@
 use crate::lang::argument::column_names;
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::{Known};
-use crate::lang::errors::{CrushResult, mandate};
+use crate::lang::errors::{CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::pipe::black_hole;
@@ -199,8 +199,8 @@ struct GetItem {
 fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     let cfg = GetItem::parse(context.remove_arguments(), context.global_state.printer())?;
     let this = context.this.r#struct()?;
-    context.output.send(mandate(
-        this.get(&cfg.name),
+    context.output.send(
+        this.get(&cfg.name).ok_or(
         format!("Unknown field {}", cfg.name).as_str(),
     )?)
 }
