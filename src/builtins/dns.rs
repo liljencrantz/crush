@@ -330,7 +330,7 @@ fn query(mut context: CommandContext) -> CrushResult<()> {
 )]
 struct QueryReverse {
     #[description("IP address to look up. Can be either IPv4 or IPv6.")]
-    name: String,
+    address: String,
     #[description("Use TCP connection instead of UDP")]
     #[default(false)]
     tcp: bool,
@@ -370,10 +370,10 @@ fn query_reverse_internal(
     context: CommandContext,
     client: SyncClient<impl ClientConnection>,
 ) -> CrushResult<()> {
-    let name = if cfg.name.contains(".") {
-        Name::from(Ipv4Addr::from_str(&cfg.name)?)
+    let name = if cfg.address.contains(".") {
+        Name::from(Ipv4Addr::from_str(&cfg.address)?)
     } else {
-        Name::from(Ipv6Addr::from_str(&cfg.name)?)
+        Name::from(Ipv6Addr::from_str(&cfg.address)?)
     };
 
     let response = client.query(&name, DNSClass::IN, RecordType::PTR)?;
@@ -409,13 +409,13 @@ fn nameserver(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    dns.search,
+    dns.search_paths,
     can_block = true,
     short = "List of DNS search paths",
 )]
-struct Search {}
+struct SearchPaths {}
 
-fn search(context: CommandContext) -> CrushResult<()> {
+fn search_paths(context: CommandContext) -> CrushResult<()> {
     let rc = parse_resolv_conf()?;
     context.output.send(
         List::new(
@@ -453,7 +453,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Query::declare(dns)?;
             QueryReverse::declare(dns)?;
             Nameserver::declare(dns)?;
-            Search::declare(dns)?;
+            SearchPaths::declare(dns)?;
             Domain::declare(dns)?;
             Ok(())
         }),
