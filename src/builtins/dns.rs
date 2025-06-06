@@ -16,7 +16,6 @@ use trust_dns_client::client::{Client, ClientConnection, SyncClient};
 use trust_dns_client::rr::{DNSClass, Name, RData, Record, RecordType};
 use trust_dns_client::tcp::TcpClientConnection;
 use trust_dns_client::udp::UdpClientConnection;
-use crate::lang::pipe::TableOutputStream;
 
 static A_STREAM_OUTPUT_TYPE: [ColumnType; 2] = [
     ColumnType::new("target", ValueType::String),
@@ -67,23 +66,24 @@ struct Query {
     #[description("Use TCP connection instead of UDP.")]
     #[default(false)]
     tcp: bool,
-    #[description("Override the nameserver to talk to.")]
+    #[description("Override what nameserver to talk to.")]
     nameserver: Option<String>,
-    #[description("DNS port.")]
+    #[description("Port to talk to the nameserver on.")]
     #[default(53)]
     port: i128,
-    #[description("If a CNAME record is encountered, do not follow it, but show the CNAME record instead.")]
+    #[description(
+        "If a CNAME record is encountered, do not follow it, but show the CNAME record instead."
+    )]
     #[default(false)]
     no_follow_cname: bool,
+    #[description("Connection timeout.")]
+    #[default(Duration::seconds(5))]
+    timeout: Duration,
 }
 
 impl Query {
-
     fn with_name(self, name: String) -> Self {
-        Self {
-            name,
-            ..self
-        }
+        Self { name, ..self }
     }
 }
 
@@ -94,35 +94,33 @@ fn parse_resolv_conf() -> CrushResult<resolv_conf::Config> {
     Ok(resolv_conf::Config::parse(&buf)?)
 }
 
-fn perform_query(cfg: Query,
-                 context: CommandContext,
-                 client: SyncClient<impl ClientConnection>,
-                 record_type: RecordType,
-                 signature: &[ColumnType],
-                 process_record: fn(&TableOutputStream, &Record) -> CrushResult<()>
-        ) -> CrushResult<()> {
-    let response =
-        client.query(&Name::from_str(&cfg.name)?, DNSClass::IN, record_type)?;
+fn perform_query(
+    cfg: Query,
+    context: CommandContext,
+    client: SyncClient<impl ClientConnection>,
+    query_record_type: RecordType,
+    output_signature: &[ColumnType],
+    process_record_callback: fn(&Record) -> CrushResult<Row>,
+) -> CrushResult<()> {
+    let response = client.query(&Name::from_str(&cfg.name)?, DNSClass::IN, query_record_type)?;
 
-    if record_type != RecordType::CNAME {
-        if let Some(answer) = response.answers().first() {
-            if let Some(RData::CNAME(cname)) = answer.data() {
-                if cfg.no_follow_cname {
-                    let output = context.output.initialize(&A_STREAM_OUTPUT_TYPE)?;
-                    return output.send(Row::new(vec![
-                        Value::from(cname.to_string()),
-                        Value::from(Duration::seconds(answer.ttl() as i64)),
-                    ]));
-                }
-                return query_internal(cfg.with_name(cname.to_string()), context, client);
+    if let Some(answer) = response.answers().first() {
+        if let Some(RData::CNAME(cname)) = answer.data() {
+            if cfg.no_follow_cname || query_record_type == RecordType::CNAME {
+                let output = context.output.initialize(&A_STREAM_OUTPUT_TYPE)?;
+                return output.send(Row::new(vec![
+                    Value::from(cname.to_string()),
+                    Value::from(Duration::seconds(answer.ttl() as i64)),
+                ]));
             }
+            return query_internal(cfg.with_name(cname.to_string()), context, client);
         }
     }
 
-    let output = context.output.initialize(signature)?;
+    let output = context.output.initialize(output_signature)?;
 
     for answer in response.answers() {
-        process_record(&output, answer)?;
+        output.send(process_record_callback(answer)?)?;
     }
     Ok(())
 }
@@ -133,70 +131,113 @@ fn query_internal(
     client: SyncClient<impl ClientConnection>,
 ) -> CrushResult<()> {
     match cfg.record_type.as_ref() {
-        "A" => perform_query(cfg, context, client, RecordType::A, &A_STREAM_OUTPUT_TYPE, |output, answer| {
-            match answer.data() {
-                Some(RData::A(ip)) => output.send(Row::new(vec![
+        "A" => perform_query(
+            cfg,
+            context,
+            client,
+            RecordType::A,
+            &A_STREAM_OUTPUT_TYPE,
+            |answer| match answer.data() {
+                Some(RData::A(ip)) => Ok(Row::new(vec![
                     Value::from(ip.to_string()),
                     Value::from(Duration::seconds(answer.ttl() as i64)),
                 ])),
-                Some(r) => data_error(format!("Received an unexpected record. Wanted an A record, got a {}", r.record_type().to_string())),
+                Some(r) => data_error(format!(
+                    "Received an unexpected record. Wanted an A record, got a {}",
+                    r.record_type().to_string()
+                )),
                 None => data_error("No A record found"),
-            }
-        }),
-        "AAAA" => perform_query(cfg, context, client, RecordType::AAAA, &A_STREAM_OUTPUT_TYPE, |output, answer| {
-            match answer.data() {
-                Some(RData::AAAA(ip)) => output.send(Row::new(vec![
+            },
+        ),
+        "AAAA" => perform_query(
+            cfg,
+            context,
+            client,
+            RecordType::AAAA,
+            &A_STREAM_OUTPUT_TYPE,
+            |answer| match answer.data() {
+                Some(RData::AAAA(ip)) => Ok(Row::new(vec![
                     Value::from(ip.to_string()),
                     Value::from(Duration::seconds(answer.ttl() as i64)),
                 ])),
-                Some(r) => data_error(format!("Received an unexpected record. Wanted an AAAA record, got a {}", r.record_type().to_string())),
+                Some(r) => data_error(format!(
+                    "Received an unexpected record. Wanted an AAAA record, got a {}",
+                    r.record_type().to_string()
+                )),
                 None => data_error("No AAAA record found"),
-            }
-        }),
-        "CNAME" => perform_query(cfg, context, client, RecordType::AAAA, &A_STREAM_OUTPUT_TYPE, |output, answer| {
-            match answer.data() {
-                Some(RData::CNAME(ip)) => output.send(Row::new(vec![
+            },
+        ),
+        "CNAME" => perform_query(
+            cfg,
+            context,
+            client,
+            RecordType::CNAME,
+            &A_STREAM_OUTPUT_TYPE,
+            |answer| data_error("Received an unexpected record."),
+        ),
+        "NS" => perform_query(
+            cfg,
+            context,
+            client,
+            RecordType::NS,
+            &A_STREAM_OUTPUT_TYPE,
+            |answer| match answer.data() {
+                Some(RData::NS(ip)) => Ok(Row::new(vec![
                     Value::from(ip.to_string()),
                     Value::from(Duration::seconds(answer.ttl() as i64)),
                 ])),
-                Some(r) => data_error(format!("Received an unexpected record. Wanted an CNAME record, got a {}", r.record_type().to_string())),
-                None => data_error("No CNAME record found"),
-            }
-        }),
-        "NS" => perform_query(cfg, context, client, RecordType::NS, &A_STREAM_OUTPUT_TYPE, |output, answer| {
-            match answer.data() {
-                Some(RData::NS(ip)) => output.send(Row::new(vec![
-                    Value::from(ip.to_string()),
-                    Value::from(Duration::seconds(answer.ttl() as i64)),
-                ])),
-                Some(r) => data_error(format!("Received an unexpected record. Wanted an NS record, got a {}", r.record_type().to_string())),
+                Some(r) => data_error(format!(
+                    "Received an unexpected record. Wanted an NS record, got a {}",
+                    r.record_type().to_string()
+                )),
                 None => data_error("No NS record found"),
-            }
-        }),
-        "MX" => perform_query(cfg, context, client, RecordType::MX, &MX_STREAM_OUTPUT_TYPE, |output, answer| {
-            match answer.data() {
-                Some(RData::MX(mx)) => output.send(Row::new(vec![
+            },
+        ),
+        "MX" => perform_query(
+            cfg,
+            context,
+            client,
+            RecordType::MX,
+            &MX_STREAM_OUTPUT_TYPE,
+            |answer| match answer.data() {
+                Some(RData::MX(mx)) => Ok(Row::new(vec![
                     Value::from(mx.exchange().to_string()),
                     Value::Integer(mx.preference() as i128),
                     Value::Duration(Duration::seconds(answer.ttl() as i64)),
                 ])),
-                Some(r) => data_error(format!("Received an unexpected record. Wanted an MX record, got a {}", r.record_type().to_string())),
+                Some(r) => data_error(format!(
+                    "Received an unexpected record. Wanted an MX record, got a {}",
+                    r.record_type().to_string()
+                )),
                 None => data_error("No MX record found"),
-            }
-        }),
-        "PTR" => perform_query(cfg, context, client, RecordType::PTR, &A_STREAM_OUTPUT_TYPE, |output, answer| {
-            match answer.data() {
-                Some(RData::PTR(ip)) => output.send(Row::new(vec![
+            },
+        ),
+        "PTR" => perform_query(
+            cfg,
+            context,
+            client,
+            RecordType::PTR,
+            &A_STREAM_OUTPUT_TYPE,
+            |answer| match answer.data() {
+                Some(RData::PTR(ip)) => Ok(Row::new(vec![
                     Value::from(ip.to_string()),
                     Value::from(Duration::seconds(answer.ttl() as i64)),
                 ])),
-                Some(r) => data_error(format!("Received an unexpected record. Wanted an PTR record, got a {}", r.record_type().to_string())),
+                Some(r) => data_error(format!(
+                    "Received an unexpected record. Wanted an PTR record, got a {}",
+                    r.record_type().to_string()
+                )),
                 None => data_error("No PTR record found"),
-            }
-        }),
-        "SOA" => perform_query(cfg, context, client, RecordType::SOA, &SOA_STREAM_OUTPUT_TYPE, |output, answer| {
-            match answer.data() {
-                Some(RData::SOA(soa)) => output.send(Row::new(vec![
+            },
+        ),
+        "SOA" => perform_query(
+            cfg,
+            context,
+            client,
+            RecordType::SOA,
+            &SOA_STREAM_OUTPUT_TYPE,
+            |answer| match answer.data() {
+                Some(RData::SOA(soa)) => Ok(Row::new(vec![
                     Value::from(soa.mname().to_string()),
                     Value::from(soa.rname().to_string()),
                     Value::from(soa.serial()),
@@ -205,33 +246,52 @@ fn query_internal(
                     Value::from(Duration::seconds(soa.expire() as i64)),
                     Value::from(Duration::seconds(answer.ttl() as i64)),
                 ])),
-                Some(r) => data_error(format!("Received an unexpected record. Wanted an SOA record, got a {}", r.record_type().to_string())),
+                Some(r) => data_error(format!(
+                    "Received an unexpected record. Wanted an SOA record, got a {}",
+                    r.record_type().to_string()
+                )),
                 None => data_error("No SOA record found"),
-            }
-        }),
-        "SRV" => perform_query(cfg, context, client, RecordType::SRV, &SRV_STREAM_OUTPUT_TYPE, |output, answer| {
-            match answer.data() {
-                Some(RData::SRV(srv)) => output.send(Row::new(vec![
+            },
+        ),
+        "SRV" => perform_query(
+            cfg,
+            context,
+            client,
+            RecordType::SRV,
+            &SRV_STREAM_OUTPUT_TYPE,
+            |answer| match answer.data() {
+                Some(RData::SRV(srv)) => Ok(Row::new(vec![
                     Value::from(srv.target().to_string()),
                     Value::Integer(srv.priority() as i128),
                     Value::Integer(srv.weight() as i128),
                     Value::Integer(srv.port() as i128),
                     Value::Duration(Duration::seconds(answer.ttl() as i64)),
                 ])),
-                Some(r) => data_error(format!("Received an unexpected record. Wanted an SRV record, got a {}", r.record_type().to_string())),
+                Some(r) => data_error(format!(
+                    "Received an unexpected record. Wanted an SRV record, got a {}",
+                    r.record_type().to_string()
+                )),
                 None => data_error("No SRV record found"),
-            }
-        }),
-        "TXT" => perform_query(cfg, context, client, RecordType::TXT, &TXT_STREAM_OUTPUT_TYPE, |output, answer| {
-            match answer.data() {
-                Some(RData::TXT(txt)) => output.send(Row::new(vec![
+            },
+        ),
+        "TXT" => perform_query(
+            cfg,
+            context,
+            client,
+            RecordType::TXT,
+            &TXT_STREAM_OUTPUT_TYPE,
+            |answer| match answer.data() {
+                Some(RData::TXT(txt)) => Ok(Row::new(vec![
                     Value::from(txt.txt_data()),
                     Value::Duration(Duration::seconds(answer.ttl() as i64)),
                 ])),
-                Some(r) => data_error(format!("Received an unexpected record. Wanted an TXT record, got a {}", r.record_type().to_string())),
+                Some(r) => data_error(format!(
+                    "Received an unexpected record. Wanted an TXT record, got a {}",
+                    r.record_type().to_string()
+                )),
                 None => data_error("No TXT record found"),
-            }
-        }),
+            },
+        ),
         _ => argument_error_legacy(format!("Unknown DNS record type {}", &cfg.record_type)),
     }
 }
@@ -241,7 +301,8 @@ fn create_address(nameserver: &Option<String>, port: i128) -> CrushResult<Socket
         None => mandate(
             parse_resolv_conf()?.nameservers.get(0),
             "No nameservers configured",
-        )?.to_string(),
+        )?
+        .to_string(),
 
         Some(server) => server.to_string(),
     };
@@ -249,15 +310,15 @@ fn create_address(nameserver: &Option<String>, port: i128) -> CrushResult<Socket
     Ok(format!("{}:{}", srv, port).parse()?)
 }
 
-
 fn query(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Query::parse(context.remove_arguments(), &context.global_state.printer())?;
     let address = create_address(&cfg.nameserver, cfg.port)?;
+    let t = cfg.timeout.num_nanoseconds().map(|us| core::time::Duration::from_nanos(us as u64)).ok_or("Out of bounds timeout")?;
     if cfg.tcp {
-        let conn = TcpClientConnection::new(address)?;
+        let conn = TcpClientConnection::with_timeout(address, t)?;
         query_internal(cfg, context, SyncClient::new(conn))
     } else {
-        let conn = UdpClientConnection::new(address)?;
+        let conn = UdpClientConnection::with_timeout(address, t)?;
         query_internal(cfg, context, SyncClient::new(conn))
     }
 }
@@ -278,16 +339,29 @@ struct QueryReverse {
     #[description("DNS port")]
     #[default(53)]
     port: i128,
+    #[description("Connection timeout.")]
+    #[default(Duration::seconds(5))]
+    timeout: Duration,
 }
 
 fn query_reverse(mut context: CommandContext) -> CrushResult<()> {
     let cfg = QueryReverse::parse(context.remove_arguments(), &context.global_state.printer())?;
     let address = create_address(&cfg.nameserver, cfg.port)?;
 
+    let t = cfg.timeout.num_nanoseconds().map(|us| core::time::Duration::from_nanos(us as u64)).ok_or("Out of bounds timeout")?;
+
     if cfg.tcp {
-        query_reverse_internal(cfg, context, SyncClient::new(TcpClientConnection::new(address)?))
+        query_reverse_internal(
+            cfg,
+            context,
+            SyncClient::new(TcpClientConnection::with_timeout(address, t)?),
+        )
     } else {
-        query_reverse_internal(cfg, context, SyncClient::new(UdpClientConnection::new(address)?))
+        query_reverse_internal(
+            cfg,
+            context,
+            SyncClient::new(UdpClientConnection::with_timeout(address, t)?),
+        )
     }
 }
 
@@ -305,15 +379,11 @@ fn query_reverse_internal(
     let response = client.query(&name, DNSClass::IN, RecordType::PTR)?;
 
     match response.answers().first() {
-        None => {
-            Ok(())
-        }
-        Some(answer) => {
-            match answer.data() {
-                Some(RData::PTR(ip)) => context.output.send(Value::from(ip.to_string())),
-                _ => data_error("Missing PTR record"),
-            }
-        }
+        None => Ok(()),
+        Some(answer) => match answer.data() {
+            Some(RData::PTR(ip)) => context.output.send(Value::from(ip.to_string())),
+            _ => data_error("Missing PTR record"),
+        },
     }
 }
 
@@ -334,7 +404,7 @@ fn nameserver(context: CommandContext) -> CrushResult<()> {
                 .map(|n| Value::from(n.to_string()))
                 .collect::<Vec<_>>(),
         )
-            .into(),
+        .into(),
     )
 }
 
@@ -354,7 +424,7 @@ fn search(context: CommandContext) -> CrushResult<()> {
                 .map(|s| s.iter().map(|n| Value::from(n.to_string())).collect())
                 .unwrap_or(vec![]),
         )
-            .into(),
+        .into(),
     )
 }
 
