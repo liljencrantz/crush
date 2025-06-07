@@ -273,8 +273,7 @@ per_char_method!(is_alphanumeric, |ch| ch.is_alphanumeric());
 
 #[signature(
     types.string.is_alphabetic, can_block = false, output = Known(ValueType::Bool),
-    short = "True if every character of this string is alphabetic
-",
+    short = "True if every character of this string is alphabetic",
 )]
 struct IsAlphabetic {}
 per_char_method!(is_alphabetic, |ch| ch.is_alphabetic());

@@ -651,6 +651,7 @@ impl Help for Value {
         match self {
             Value::Scope(s) => s.signature(),
             Value::Command(s) => s.signature(),
+            Value::Type(s) => s.signature(),
             v => v.value_type().signature(),
         }
     }
@@ -668,6 +669,7 @@ impl Help for Value {
         match self {
             Value::Scope(s) => s.long_help(),
             Value::Command(s) => s.long_help(),
+            Value::Type(s) => s.long_help(),
             v => v.value_type().long_help(),
         }
     }

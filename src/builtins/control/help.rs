@@ -1,26 +1,10 @@
-use signature::signature;
+use crate::lang::command::OutputType::Known;
 use crate::lang::help::Help;
 use crate::lang::value::Value;
-use crate::{CrushResult, Printer};
-use crate::lang::errors::error;
-use crate::state::contexts::CommandContext;
-use crate::lang::command::OutputType::Known;
 use crate::lang::value::ValueType;
-
-fn halp(o: &dyn Help, printer: &Printer) {
-    printer.line(
-        match o.long_help() {
-            None => format!("{}\n\n    {}", o.signature(), o.short_help()),
-            Some(long_help) => format!(
-                "{}\n\n    {}\n\n{}",
-                o.signature(),
-                o.short_help(),
-                long_help
-            ),
-        }
-            .as_str(),
-    );
-}
+use crate::state::contexts::CommandContext;
+use crate::{CrushResult, Printer};
+use signature::signature;
 
 #[signature(
     control.help,
@@ -37,7 +21,8 @@ pub struct HelpSignature {
 }
 
 pub fn help(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: HelpSignature = HelpSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: HelpSignature =
+        HelpSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
     match cfg.topic {
         None => {
             context.global_state.printer().line(
@@ -50,7 +35,7 @@ for an introduction at https://github.com/liljencrantz/crush/.
 
 Call the help command with the name of any value, including a command or a
 type in order to get help about it. For example, you might want to run the
-commands "help help", "help string", "help if" or "help where".
+commands "help $help", "help $string", "help $if" or "help $where".
 
 To get a list of everything in your namespace, write "var:env". To list the
 members of a value, write "dir <value>".
@@ -58,16 +43,19 @@ members of a value, write "dir <value>".
             );
             context.output.send(Value::Empty)
         }
-        Some(v) => {
-            match v {
-                Value::String(f) => match &context.scope.get_calling_scope()?.get(&f)? {
-                    None => error(format!("Unknown identifier {}", &f))?,
-                    Some(v) => halp(v, &context.global_state.printer()),
-                },
-                Value::Command(cmd) => halp(cmd.help(), &context.global_state.printer()),
-                Value::Type(t) => halp(&t, &context.global_state.printer()),
-                v => halp(&v, &context.global_state.printer()),
-            }
+        Some(o) => {
+            context.global_state.printer().line(
+                match o.long_help() {
+                    None => format!("{}\n\n    {}", o.signature(), o.short_help()),
+                    Some(long_help) => format!(
+                        "{}\n\n    {}\n\n{}",
+                        o.signature(),
+                        o.short_help(),
+                        long_help
+                    ),
+                }
+                .as_str(),
+            );
             context.output.send(Value::Empty)
         }
     }
