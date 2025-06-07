@@ -8,8 +8,8 @@ Tab completion of globs
 Add system tests for binary stream handling
 Data enums + pattern matching syntax
 Add package command to create a new namespace
-pbuf:from command that takes a protobuf definition and uses it to deserialize protobuf data
-avro:from command that deserializes avro data
+pbuf:from/to command that takes a protobuf definition and uses it to deserialize protobuf data
+avro:from/to command that deserializes avro data
 Support __str__ method for string rendering
 Avoid infinite loops when printing structs that reference each other
 fix dynamic loading deadlocks

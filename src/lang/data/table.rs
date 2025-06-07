@@ -239,9 +239,8 @@ impl ColumnType {
 impl Display for ColumnType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         self.name.to_str().fmt(f)?;
-        f.write_str("=$($")?;
-        self.cell_type.fmt(f)?;
-        f.write_str(")")
+        f.write_str("=")?;
+        self.cell_type.subfmt(f)
     }
 }
 

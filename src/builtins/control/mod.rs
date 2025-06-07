@@ -92,6 +92,8 @@ fn sleep(context: CommandContext) -> CrushResult<()> {
 #[signature(
     control.bg,
     short = "Run a pipeline in background",
+    long = "Append the bg builtin to the end of a pipeline to run it in the background.",
+    long = "",
     long = "The bg builtin will read the result from a pipeline and insert it into a table output stream.",
     long = "Because this stream is immediately returned, execution will continue and the pipeline will run",
     long = "in the background.",

@@ -20,6 +20,7 @@ use chrono::Duration;
 use crate::util::hex::to_hex;
 use crate::lang::state::global_state::GlobalState;
 use crate::data::table::ColumnFormat;
+use crate::lang::data::dict::DictReader;
 use crate::state::global_state::FormatData;
 
 /**
@@ -141,6 +142,7 @@ impl PrettyPrinter {
                 } else {
                     self.print_stream(list.stream().as_mut(), 0)
                 }
+            Value::Dict(dict) => self.print_stream(&mut DictReader::new(dict), 0),
             _ => self.printer.line(cell.to_pretty_string(&self.format_data, format, false).as_str()),
         };
     }

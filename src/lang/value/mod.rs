@@ -659,6 +659,7 @@ impl Help for Value {
         match self {
             Value::Scope(s) => s.short_help(),
             Value::Command(s) => s.short_help(),
+            Value::Type(s) => s.short_help(),
             v => v.value_type().short_help(),
         }
     }

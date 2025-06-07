@@ -32,11 +32,11 @@ and checking how many files are in the current directory:
 
 This all looks familiar. But appearances are deceiving. The `files` command being
 called is a Crush builtin, and the output is not sent over a unix pipe but over
-a Crush channel. It is not understood by the command as a series of bytes, but as
+a Crush pipe. It is not understood by the command as a series of bytes, but as
 a table of rows, and Crush provides you with SQL-like commands to sort, filter,
 aggregate and group rows of data.
 
-    # Sort by size
+    # Sort the table by the `size` column
     crush# files | sort size
     user size modified                  type      file
     fox    31 2019-10-03 13:43:12 +0200 file      .gitignore
@@ -45,7 +45,7 @@ aggregate and group rows of data.
     fox   711 2019-10-03 14:19:46 +0200 file      crush.iml
     ...
 
-    # Filter only directories
+    # Filter to only show directories
     crush# files | where {$type == directory}
     user size  modified                  type      file
     fox  4_096 2019-11-22 21:56:30 +0100 directory target
@@ -161,7 +161,7 @@ used to check if a pattern matches an input:
     true
 
     # This is how you construct and match against a regular expression
-    crush# abbbbbc =~ ^(ab+c")
+    crush# abbbbbc =~ ^(ab+c)
     true
 
 Regexps also support replacement using the `replace` and `replace_all` methods.
@@ -252,7 +252,7 @@ of the invocation:
 #### Closures
 
 For added type safety, you may optionally declare what parameters a block of code accepts.
-Such blocks are called closures:
+Blocks with a parameter declaration are called closures:
 
     crush# {|$a $b $c| echo $a $b $c}
 
@@ -323,21 +323,21 @@ When playing around with Crush, the `help` and `dir`commands are useful. The
 former displays a help messages, the latter lists the content of a value.
 
     crush# help $sort
-    sort [field=string...] [reverse=bool]
-
+    stream:sort [field=string...] [reverse=bool]
+    
         Sort input based on column
-
+    
         Output: A stream with the same columns as the input
-
+    
         This command accepts the following arguments:
-
+        
         * field, the columns to sort on. Optional if input only has one column.
-
         * reverse (false), reverse the sort order.
-
+        
         Example
-
-        host:procs | sort cpu
+        
+        # Show the contents of the current directory, sorted first on type and then on filename
+        files | sort type file
 
 ### Namespaces, members and methods
 
@@ -345,7 +345,7 @@ Members are accessed using the `:` operator. Most other languages tend to use
 `.`, but that is a very common character in file names, so Crush needed to use
 something else.
 
-Most types have several useful methods. Files have `exists` and `stat`, which do
+Most types have several useful methods. Files have `exists` and `mkdir`, which do
 what you'd expect.
 
     crush# .:exists
@@ -365,9 +365,9 @@ If you assign the output of the find command to a variable like so:
 
     crush# $all_the_files := $(files --recurse /)
 
-What will really be stored in the `all_the_files` variable is simply a stream. A
+What will really be stored in the `all_the_files` variable is table input stream. A
 small number of lines of output will be eagerly evaluated, before the thread
-executing the find command will start blocking. If the stream is consumed, for
+executing the `files` command will start blocking. If the stream is consumed, for
 example by writing
 
     crush# $all_the_files
@@ -384,7 +384,7 @@ re-executed until the stream is empty.
 
 ### More SQL-like data stream operations
 
-Crush features many commands to operate om arbitrary streams of data using a
+Crush features many commands to operate on arbitrary streams of data using a
 SQL-like syntax:
 
     host:procs | where {$user == root} | group status proc_per_status={count} | sort proc_per_status

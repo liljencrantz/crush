@@ -52,11 +52,10 @@ ssh2 = "0.9.5"
 rand = "0.9.1"
 battery = "0.7.8"
 nix = { version = "0.30.1", features = ["process", "user", "signal", "fs", "hostname"] }
-dns-lookup = "2.0.4"
 sysinfo = "0.35.1"
 num-format = { version = "0.4.4", features = ["with-system-locale"] }
 unicode-width = "0.2.0"
-os_pipe = "1.2.1"
+os_pipe = "1.2.2"
 trust-dns-client = "0.23.2"
 resolv-conf = "0.7.4"
 itertools = "0.14.0"
