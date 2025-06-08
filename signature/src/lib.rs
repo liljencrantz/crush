@@ -390,7 +390,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                         had_field_description = true;
                     }
                     long_description.push(format!(
-                        "* `{}`{}, {}",
+                        "* `{}`{} {}",
                         name.to_string(),
                         default_help,
                         description

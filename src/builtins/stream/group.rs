@@ -28,8 +28,7 @@ pub struct Group {
     #[description("the column(s) to group by and copy into the output stream.")]
     group_by: Vec<String>,
     #[named()]
-    #[description("create these additional columns by aggregating the grouped rows using the supplied aggregation command."
-    )]
+    #[description("create these additional columns by aggregating the grouped rows using the supplied aggregation command.")]
     command: OrderedStringMap<Command>,
 }
 

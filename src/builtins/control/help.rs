@@ -7,6 +7,7 @@ use crate::{CrushResult, Printer};
 use markdown::mdast::Node;
 use markdown::{ParseOptions, to_mdast};
 use signature::signature;
+use std::cmp::{max, min};
 
 #[signature(
     control.help,
@@ -30,14 +31,15 @@ static CODE_END: &str = "\x1b[0m";
 
 fn render(s: &str, width: usize) -> CrushResult<String> {
     let tree = to_mdast(s, &ParseOptions::default())?;
-//    println!("{}", s);
-//    println!("{:?}", tree);
+    //    println!("{}", s);
+    //    println!("{:?}", tree);
     let mut state = State {
         pos: 0,
-        width,
+        width: max(20, min(width, 80)),
         indentation: 0,
         out: String::new(),
         is_list: false,
+        named_bullet_width: None,
     };
     recurse(tree, &mut state)?;
     Ok(state.out)
@@ -49,6 +51,7 @@ struct State {
     indentation: usize,
     out: String,
     is_list: bool,
+    named_bullet_width: Option<usize>,
 }
 
 impl State {
@@ -57,9 +60,22 @@ impl State {
         self.pos = self.indentation;
         self.out.push_str(&" ".repeat(self.indentation));
     }
-    
+
     fn fits(&mut self, s: &str) -> bool {
         self.pos + s.len() <= self.width
+    }
+}
+
+fn code_bulletpoint(node: &Node) -> Option<usize> {
+    match node {
+        Node::ListItem(li) => match (li.children.first(), li.children.len()) {
+            (Some(Node::Paragraph(p)), 1) => match p.children.first() {
+                Some(Node::InlineCode(c)) => Some(c.value.len()),
+                _ => None,
+            },
+            _ => None,
+        },
+        _ => None,
     }
 }
 
@@ -76,9 +92,23 @@ fn recurse(node: Node, state: &mut State) -> CrushResult<()> {
         Node::List(n) => {
             state.newline();
             state.is_list = true;
+            let mut w = Some(0usize);
+            for child in n.children.iter() {
+                if let Some(nw) = code_bulletpoint(child) {
+                    w = Some(max(nw, w.unwrap_or(0)));
+                } else {
+                    w = None;
+                    break;
+                }
+            }
+
+            if (w.is_some()) {
+                state.named_bullet_width = w;
+            }
             for child in n.children {
                 recurse(child, state)?;
             }
+            state.named_bullet_width = None;
             state.is_list = false;
         }
         Node::MdxjsEsm(_) => {}
@@ -106,7 +136,6 @@ fn recurse(node: Node, state: &mut State) -> CrushResult<()> {
         Node::LinkReference(_) => {}
         Node::Strong(_) => {}
         Node::Text(n) => {
-
             let mut first = true;
             for child in n.value.split(&[' ', '\n', '\r', '\t']) {
                 if first {
@@ -116,7 +145,7 @@ fn recurse(node: Node, state: &mut State) -> CrushResult<()> {
                     state.pos += 1;
                 }
                 if child.len() == 0 {
-                    continue
+                    continue;
                 }
                 if !state.fits(child) {
                     state.newline();
@@ -147,13 +176,35 @@ fn recurse(node: Node, state: &mut State) -> CrushResult<()> {
         Node::TableRow(_) => {}
         Node::TableCell(_) => {}
         Node::ListItem(n) => {
-            state.indentation += 3;
             state.out.push_str(" * ");
             state.pos += 3;
-            for child in n.children {
-                recurse(child, state)?;
+            if let Some(w) = state.named_bullet_width {
+                state.indentation = 4 + w;
+                for child in n.children {
+                    if let Node::Paragraph(p) = child {
+                        let mut first = true;
+                        for child in p.children {
+                            if first {
+                                if let Node::InlineCode(c) = child {
+                                    let l = c.value.len();
+                                    recurse(Node::InlineCode(c), state)?;
+                                    state.out.push_str(&" ".repeat(w - l));
+                                }
+                                first = false;
+                            } else {
+                                recurse(child, state)?;
+                            }
+                        }
+                    }
+                }
+                state.indentation = 0;
+            } else {
+                state.indentation = 3;
+                for child in n.children {
+                    recurse(child, state)?;
+                }
+                state.indentation = 0;
             }
-            state.indentation -= 3;
             state.newline();
         }
         Node::Definition(_) => {}
@@ -175,11 +226,9 @@ fn recurse(node: Node, state: &mut State) -> CrushResult<()> {
 pub fn help(mut context: CommandContext) -> CrushResult<()> {
     let cfg: HelpSignature =
         HelpSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
-    match cfg.topic {
+    let s = match cfg.topic {
         None => {
-            context.global_state.printer().line(
-                render(
-                r#"
+            r#"
 # Welcome to Crush!
 
 If this is your first time using Crush, congratulations on just entering your
@@ -192,27 +241,22 @@ commands `help $help`, `help $string`, `help $if` or `help $where`.
 
 To get a list of everything in your namespace, write `var:env`. To list the
 members of a value, write `dir <value>`.
-"#, 80)?.as_str(),
-            );
-            context.output.send(Value::Empty)
+"#
         }
-        Some(o) => {
-            context.global_state.printer().line(
-                match o.long_help() {
-                    None => render(&format!("    {}\n\n{}", o.signature(), o.short_help()), 80)?,
-                    Some(long_help) => render(
-                        &format!(
-                            "    {}\n\n{}\n\n{}",
-                            o.signature(),
-                            o.short_help(),
-                            long_help
-                        ),
-                        80,
-                    )?,
-                }
-                .as_str(),
-            );
-            context.output.send(Value::Empty)
-        }
-    }
+        Some(o) => match o.long_help() {
+            None => &format!("    {}\n\n{}", o.signature(), o.short_help()),
+            Some(long_help) => &format!(
+                "    {}\n\n{}\n\n{}",
+                o.signature(),
+                o.short_help(),
+                long_help
+            ),
+        },
+    };
+
+    context
+        .global_state
+        .printer()
+        .line(render(s, context.global_state.printer().width())?.as_str());
+    context.output.send(Value::Empty)
 }

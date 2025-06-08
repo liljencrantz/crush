@@ -271,7 +271,7 @@ impl Scope {
                 None,
                 Namespace,
                 Some("global".to_string()),
-                Some("The root of all namespaces. All namespaces directly or indirectly\ninherit from this one.".to_string()),
+                Some("The root of all scopes. All scopes directly or indirectly inherit from the root scope.".to_string()),
             ))),
         }
     }
@@ -858,7 +858,7 @@ impl Help for Scope {
     }
 
     fn long_help(&self) -> Option<String> {
-        let mut lines = Vec::new();
+        let mut lines = vec!["This scope contains the following elements:".to_string(), "".to_string()];
 
         let data = self.lock().unwrap();
         let mut keys: Vec<_> = data.mapping
