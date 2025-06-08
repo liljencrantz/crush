@@ -1,3 +1,4 @@
+use chrono::Duration;
 use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{
@@ -10,15 +11,15 @@ use signature::signature;
 
 fn parse_method(m: &str) -> CrushResult<Method> {
     Ok(match m {
-        "get" => Method::GET,
-        "post" => Method::POST,
-        "put" => Method::PUT,
-        "delete" => Method::DELETE,
-        "head" => Method::HEAD,
-        "options" => Method::OPTIONS,
-        "connect" => Method::CONNECT,
-        "patch" => Method::PATCH,
-        "trace" => Method::TRACE,
+        "GET" => Method::GET,
+        "POST" => Method::POST,
+        "PUT" => Method::PUT,
+        "DELETE" => Method::DELETE,
+        "HEAD" => Method::HEAD,
+        "OPTIONS" => Method::OPTIONS,
+        "CONNECT" => Method::CONNECT,
+        "PATCH" => Method::PATCH,
+        "TRACE" => Method::TRACE,
         _ => return argument_error_legacy(format!("Unknown method {}", m).as_str()),
     })
 }
@@ -27,10 +28,10 @@ fn parse_method(m: &str) -> CrushResult<Method> {
 io.http,
 short = "Make a http request",
 long = "Return a struct with the following fields:",
-long = "* status_code:integer, the http status code of the reply",
-long = "* status_name:string, the name associated with the http status code",
-long = "* header:list, the http headers of the reply",
-long = "* body:binary_stream, the content of the reply",
+long = "* `status_code` (integer) the http status code of the reply",
+long = "* `status_name` (string) the name associated with the http status code",
+long = "* `header` (list) the http headers of the reply",
+long = "* `body` (binary_stream) the content of the reply",
 long = "",
 long = "The http status codes and corresponding names are defined in",
 long = "https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml",
@@ -40,14 +41,17 @@ can_block = true
 pub struct Http {
     #[description("URI to request")]
     uri: String,
-    #[description("HTTP method.")]
-    #[values("get", "post", "put", "delete", "head", "options", "connect", "patch", "trace")]
-    #[default("get")]
+    #[description("the HTTP method to use in this request.")]
+    #[values("GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "CONNECT", "PATCH", "TRACE")]
+    #[default("GET")]
     method: String,
     #[description("form content, if any.")]
     form: Option<String>,
     #[description("HTTP headers, must be on the form \"key:value\".")]
     header: Vec<String>,
+    #[description("connection timeout.")]
+    #[default(Duration::seconds(5))]
+    timeout: Duration,
 }
 
 fn http(context: CommandContext) -> CrushResult<()> {
@@ -55,8 +59,11 @@ fn http(context: CommandContext) -> CrushResult<()> {
 
     let (mut output, input) = binary_channel();
     let client = reqwest::blocking::Client::new();
-    let mut request = client.request(parse_method(&cfg.method)?, cfg.uri.as_str());
-
+    let t = cfg.timeout.num_nanoseconds()
+        .map(|us| core::time::Duration::from_nanos(us as u64))
+        .ok_or("Out of bounds timeout")?;
+    let mut request = client.request(parse_method(&cfg.method)?, cfg.uri.as_str()).timeout(t);
+    
     for t in cfg.header.iter() {
         let h = t.splitn(2, ':').collect::<Vec<&str>>();
         match h.len() {

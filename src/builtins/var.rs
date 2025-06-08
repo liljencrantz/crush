@@ -11,15 +11,16 @@ use crate::lang::value::{Value, ValueType};
     var.r#let,
     can_block = false,
     output = Unknown,
-    short = "Declare new variables.",
+    short = "Declare new variables in the current scope.",
     long = "No variable can exist in the local scope, or an error will result.",
-    long = "Normally used via the := operator, but can be used standalone as well.",
-    example = "# These two lines are completely equivalent",
+    long = "",
+    long = "The let builtin is not normally called directly, but via the syntactic sugar of the := operator.",
+    example = "# These two lines are equivalent",
     example = "$x := 2",
-    example = "var:let x = 2",
+    example = "var:let x=2",
 )]
 struct Let {
-    #[description("the variables to declare.")]
+    #[description("the variables to declare. The value you supply will be the initial value of the variable.")]
     #[named()]
     variables: OrderedStringMap<Value>,
 }
@@ -37,14 +38,17 @@ pub fn r#let(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Unknown,
     short = "Reassign existing variables",
-    long = "A variable must already exist in some scope, or an error will result.",
-    long = "Normally used via the = operator, but can be used standalone as well.",
-    example = "# These two lines are completely equivalent",
+    long = "A variable by the specified name must already exist in some visible scope before calling 
+    the `set` builtin, or an error will result.",
+    long = "",
+    long = "The set builtin is not normally called directly, but via the syntactic sugar of the = 
+    operator.",
+    example = "# These two lines are equivalent",
     example = "$x = 2",
-    example = "var:set x = 2",
+    example = "var:set x=2",
 )]
 struct Set {
-    #[description("the variables to declare.")]
+    #[description("the variables to reassign. The value you supply will be the new value of the variable.")]
     #[named()]
     variables: OrderedStringMap<Value>,
 }
@@ -62,8 +66,12 @@ pub fn set(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Unknown,
     short = "Returns the current value of a variable",
-    long = "A variable must already exist in some scope, or an error will result.",
-    example = "# These two lines are completely equivalent",
+    long = "A variable by the specified name must already exist in some visible scope before calling
+     the `get` builtin, or an error will result.",
+    long = "",
+    long = "The get builtin is not normally called directly, simply prefix the `$` sigil with the 
+    name of the variable you want to get.",
+    example = "# These two lines are equivalent",
     example = "$x",
     example = "var:get x",
 )]
@@ -134,8 +142,8 @@ pub fn r#use(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Bool),
     short = "Make specified scopes not searched by default during scope resolution.",
-    long = "The unuse builtin will recursively go through all parent scopes and remove",
-    long = "all uses of the provided scopes through the entire chain.",
+    long = "The unuse builtin will recursively go through all parent scopes and remove all uses of 
+    the provided scopes through the entire chain.",
     example = "# Stop using the stream scope",
     example = "var:unuse $stream",
     example = "# This command will now fail, because stream::select is not in scope",
@@ -165,6 +173,8 @@ static LIST_OUTPUT_TYPE: [ColumnType; 2] = [
     can_block = false,
     output = Known(ValueType::table_input_stream(&LIST_OUTPUT_TYPE)),
     short = "Returns a table containing all variable names currently in scope and their types.",
+    long = "A variable is in scope if it exists in the current scope, any of its parents, or any of
+     the scopes used in any of those scopes.",
 )]
 struct List {}
 

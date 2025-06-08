@@ -18,7 +18,7 @@ pub struct TypeData {
     pub assign: TokenStream,
     pub crush_internal_type: TokenStream,
     pub signature: String,
-    pub allowed_values: TokenStream,
+    pub allowed_values: Option<Vec<TokenTree>>,
 }
 
 pub enum SignatureType {
@@ -38,7 +38,7 @@ pub struct Signature {
     name: Ident,
     default: Option<TokenTree>,
     is_unnamed_target: bool,
-    allowed_values: Option<Vec<Literal>>,
+    allowed_values: Option<Vec<TokenTree>>,
 }
 
 impl Signature {
@@ -46,7 +46,7 @@ impl Signature {
                name: &Ident,
                default: Option<TokenTree>,
                is_unnamed_target: bool,
-               allowed_values: Option<Vec<Literal>>) -> SignatureResult<Signature> {
+               allowed_values: Option<Vec<TokenTree>>) -> SignatureResult<Signature> {
         let signature_type = SignatureType::try_from(ty)?;
         Ok(Signature {
             span: ty.span(),
@@ -171,7 +171,7 @@ fn extract_argument(path: &PathArguments) -> SignatureResult<Vec<SimpleSignature
     }
 }
 
-fn allowed_values_name(allowed_values: &Option<Vec<Literal>>, name: &str, span: Span) -> Option<Ident> {
+fn allowed_values_name(allowed_values: &Option<Vec<TokenTree>>, name: &str, span: Span) -> Option<Ident> {
     allowed_values
         .as_ref()
         .map(|_| Ident::new(&format!("_{}_allowed_values", name.to_string()), span.clone()))
@@ -182,7 +182,7 @@ fn simple_type_data(
     name: &Ident,
     default: Option<TokenTree>,
     _is_unnamed_target: bool,
-    allowed_values: Option<Vec<Literal>>,
+    allowed_values: Option<Vec<TokenTree>>,
     span: Span,
 ) -> SignatureResult<TypeData> {
     let native_type = simple_type.ident(span);
@@ -203,13 +203,15 @@ fn simple_type_data(
                     .to_lowercase()
             )
         } else {
-            format!(
-                "[{}={}]",
-                name.to_string(),
-                simple_type.description()
-                    .to_string()
-                    .to_lowercase()
-            )
+            if simple_type.description() == "bool" && default.is_some() && default.as_ref().unwrap().to_string() == "(false)" {
+                format!("[--{}]", name)
+            } else {
+                format!(
+                    "[{}={}]",
+                    name.to_string(),
+                    simple_type.description()
+                )
+            }
         },
         initialize: match &allowed_values {
             None => quote! { let mut #name = None; },
@@ -224,18 +226,7 @@ fn simple_type_data(
                             }
             }
         },
-        allowed_values: match &allowed_values {
-            None => quote! { None },
-            Some(literals) => {
-                let mut literal_params = proc_macro2::TokenStream::new();
-                for l in literals {
-                    literal_params.extend(quote! { crate::lang::value::Value::from(#l),});
-                }
-                quote! {
-                                Some(vec![#literal_params])
-                            }
-            }
-        },
+        allowed_values,
         mappings: quote! {(Some(#name_literal), #value_type) => #name = Some(#mutator),},
         unnamed_mutate: match default {
             None => Some(quote! {
@@ -286,12 +277,12 @@ fn number_type_data(
     name: &Ident,
     default: Option<TokenTree>,
     _is_unnamed_target: bool,
-    _allowed_values: Option<Vec<Literal>>,
+    _allowed_values: Option<Vec<TokenTree>>,
     _span: Span,
 ) -> SignatureResult<TypeData> {
     let name_literal = proc_macro2::Literal::string(&name.to_string());
     Ok(TypeData {
-        allowed_values: quote! { None },
+        allowed_values: None,
         crush_internal_type: quote! {crate::lang::value::ValueType::either(vec![
                         crate::lang::value::ValueType::Integer,
                         crate::lang::value::ValueType::Float,
@@ -359,12 +350,12 @@ fn text_type_data(
     name: &Ident,
     default: Option<TokenTree>,
     _is_unnamed_target: bool,
-    _allowed_values: Option<Vec<Literal>>,
+    _allowed_values: Option<Vec<TokenTree>>,
     _span: Span,
 ) -> SignatureResult<TypeData> {
     let name_literal = proc_macro2::Literal::string(&name.to_string());
     Ok(TypeData {
-        allowed_values: quote! { None },
+        allowed_values: None,
         crush_internal_type: quote! {crate::lang::value::ValueType::either(vec![
                         crate::lang::value::ValueType::String,
                         crate::lang::value::ValueType::File,
@@ -431,12 +422,12 @@ fn files_type_data(
     name: &Ident,
     _default: Option<TokenTree>,
     is_unnamed_target: bool,
-    _allowed_values: Option<Vec<Literal>>,
+    _allowed_values: Option<Vec<TokenTree>>,
     _span: Span,
 ) -> SignatureResult<TypeData> {
     let name_literal = proc_macro2::Literal::string(&name.to_string());
     Ok(TypeData {
-        allowed_values: quote! { None },
+        allowed_values: None,
         signature: format!(
             "[{}=(file|glob|regex|list|table|table_input_stream)...]",
             name.to_string()
@@ -461,12 +452,12 @@ fn patterns_type_data(
     name: &Ident,
     _default: Option<TokenTree>,
     is_unnamed_target: bool,
-    _allowed_values: Option<Vec<Literal>>,
+    _allowed_values: Option<Vec<TokenTree>>,
     _span: Span,
 ) -> SignatureResult<TypeData> {
     let name_literal = proc_macro2::Literal::string(&name.to_string());
     Ok(TypeData {
-        allowed_values: quote! { None },
+        allowed_values: None,
         signature: format!("[{}=(string|glob|regex)...]", name.to_string()),
         initialize: quote! { let mut #name = crate::lang::signature::patterns::Patterns::new(); },
         mappings: quote! {
@@ -501,7 +492,7 @@ fn option_type_data(
     name: &Ident,
     _default: Option<TokenTree>,
     _is_unnamed_target: bool,
-    _allowed_values: Option<Vec<Literal>>,
+    _allowed_values: Option<Vec<TokenTree>>,
     span: Span,
 ) -> SignatureResult<TypeData> {
     let sub_type = simple_type.literal();
@@ -510,7 +501,7 @@ fn option_type_data(
     let name_literal = proc_macro2::Literal::string(&name.to_string());
 
     Ok(TypeData {
-        allowed_values: quote! { None },
+        allowed_values: None,
         signature: format!(
             "[{}={}]",
             name.to_string(),
@@ -546,7 +537,7 @@ fn ordered_string_map_type_data(
     name: &Ident,
     _default: Option<TokenTree>,
     _is_unnamed_target: bool,
-    allowed_values: Option<Vec<Literal>>,
+    allowed_values: Option<Vec<TokenTree>>,
     span: Span,
 ) -> SignatureResult<TypeData> {
     if allowed_values.is_some() {
@@ -557,7 +548,7 @@ fn ordered_string_map_type_data(
     let sub_type = simple_type.value_type();
 
     Ok(TypeData {
-        allowed_values: quote! { None },
+        allowed_values: None,
         signature: format!(
             "[<any>={}...]",
             simple_type.description()
@@ -577,7 +568,7 @@ fn vec_type_data(
     name: &Ident,
     _default: Option<TokenTree>,
     is_unnamed_target: bool,
-    allowed_values: Option<Vec<Literal>>,
+    allowed_values: Option<Vec<TokenTree>>,
     span: Span,
 ) -> SignatureResult<TypeData> {
     if allowed_values.is_some() {
@@ -591,7 +582,7 @@ fn vec_type_data(
     let type_name = simple_type.name();
 
     Ok(TypeData {
-        allowed_values: quote! { None },
+        allowed_values: None,
         crush_internal_type: quote! {crate::lang::value::ValueType::List(Box::from(#sub_type))},
         signature: format!(
             "[{}={}...]",

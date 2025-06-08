@@ -102,7 +102,7 @@ fn recurse(node: Node, state: &mut State) -> CrushResult<()> {
                 }
             }
 
-            if (w.is_some()) {
+            if w.is_some() {
                 state.named_bullet_width = w;
             }
             for child in n.children {

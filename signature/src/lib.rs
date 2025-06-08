@@ -65,6 +65,24 @@ fn call_literals(attr: &Attribute) -> SignatureResult<Vec<Literal>> {
     Ok(res)
 }
 
+fn call_trees(attr: &Attribute) -> SignatureResult<Vec<TokenTree>> {
+    let mut res = Vec::new();
+    for tree in attr.tokens.clone().into_iter() {
+        match tree {
+            TokenTree::Group(g) => {
+                for item in g.stream().into_iter() {
+                    match item {
+                        TokenTree::Punct(_) => {}
+                        item => res.push(item),
+                    }
+                }
+            }
+            _ => return fail!(attr.span(), "All values must be grou"),
+        }
+    }
+    Ok(res)
+}
+
 fn call_literal(attr: &Attribute) -> SignatureResult<Literal> {
     let mut res = call_literals(attr)?;
     if res.len() == 1 {
@@ -249,23 +267,6 @@ fn generate_signature(path: &[String], signature: Vec<String>) -> String {
 
 
 
-fn format_default_group_help(default_value: &Group) -> String {
-    let s = default_value.stream().to_string();
-    if s.ends_with("usize") {
-        return s[0..s.len() - 5].to_string();
-    }
-    if s.starts_with("Number::Float(") && s.ends_with(")") {
-        return s[14..s.len() - 1].to_string();
-    }
-    if s.starts_with("\"") && s.ends_with("\"") && is_alnum(&s[1..s.len() - 1]){
-        return s[1..s.len() - 1].to_string();
-    }
-    if s == "i128::max_value()" {
-        return i128::max_value().to_string();
-    }
-    s
-}
-
 fn is_alnum(s: &str) -> bool {
     for ch in s.chars() {
         if !ch.is_alphanumeric() {
@@ -275,13 +276,46 @@ fn is_alnum(s: &str) -> bool {
     true
 }
 
-fn format_default_for_help(default_value: &TokenTree, allowed: &TokenStream) -> String {
-    format!(" (`{}`)", match default_value {
-        TokenTree::Group(g) => format_default_group_help(g),
-        TokenTree::Ident(_) |
-        TokenTree::Punct(_) |
-        TokenTree::Literal(_) => default_value.to_string(),
-    })
+fn token_tree_to_markdown(tree: &TokenTree) -> String {
+    let s = match tree {
+            TokenTree::Group(g) => g.stream().to_string(),
+            TokenTree::Ident(_) |
+            TokenTree::Punct(_) |
+            TokenTree::Literal(_) => tree.to_string(),
+        };
+
+    let v = if s.ends_with("usize") {
+        s[0..s.len() - 5].to_string()
+    }
+    else if s.starts_with("Number::Float(") && s.ends_with(")") {
+        s[14..s.len() - 1].to_string()
+    }
+    else if s.starts_with("Duration::seconds(") && s.ends_with(")") {
+        format!("$duration:of seconds={}", &s[18..s.len() - 1])
+    }
+    else if s.starts_with("\"") && s.ends_with("\"") && is_alnum(&s[1..s.len() - 1]){
+        s[1..s.len() - 1].to_string()
+    }
+    else if s == "i128::max_value()" {
+        i128::max_value().to_string()
+    } else {
+        s
+    };
+
+    format!("`{}`", v)
+}
+
+fn token_trees_to_markdown(v: &[TokenTree]) -> String {
+    v.iter().map(|t| token_tree_to_markdown(t)).collect::<Vec<_>>().join(", ")
+}
+
+fn default_and_allowed_as_markdown(default_value: &Option<TokenTree>, allowed: &Option<Vec<TokenTree>>) -> String {
+    match (default_value, allowed) {
+        (Some(d), Some(a)) => format!(" (default: {}, allowed: {})", token_tree_to_markdown(d), token_trees_to_markdown(a)),
+        (Some(d), None) => format!(" (default: {})", token_tree_to_markdown(d)),
+        (None, Some(a)) => format!(" (allowed: {})", token_trees_to_markdown(a)),
+        (None, None) => "".to_string(),
+    }
 }
 
 fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<TokenStream> {
@@ -341,7 +375,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                         } else if call_is_named(attr, "named") {
                             is_named_target = true;
                         } else if call_is_named(attr, "values") {
-                            allowed_values = Some(call_literals(attr)?);
+                            allowed_values = Some(call_trees(attr)?);
                         } else if call_is_named(attr, "custom_completion") {
                             let name = call_value(attr)?;
                             completion_command = quote! {Some(#name)};
@@ -374,11 +408,8 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                     named_matchers.extend(mappings);
                 }
 
-                let default_help = if let Some(d) = &default_value {
-                    format_default_for_help(d, &type_data.allowed_values)
-                } else {
-                    "".to_string()
-                };
+                let default_help = default_and_allowed_as_markdown(&default_value, &type_data.allowed_values);
+
                 if let Some(description) = description {
                     if !had_field_description {
                         if !long_description.is_empty() {
@@ -409,7 +440,21 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 had_unnamed_target |= is_unnamed_target;
                 let crush_internal_type = type_data.crush_internal_type;
 
-                let allowed_values = type_data.allowed_values;
+                let allowed_values = match &type_data.allowed_values {
+                    None => quote! { None },
+                    Some(literals) => {
+                        let mut literal_params = proc_macro2::TokenStream::new();
+                        for l in literals {
+                            literal_params.extend(quote! { crate::lang::value::Value::from(#l),});
+                        }
+                        let res = quote! {
+                                Some(vec![#literal_params])
+                            };
+                        //panic!("{:?}", literals);
+                        res
+                    }
+                };
+
 
                 argument_desciptions = quote! {
                     #argument_desciptions
