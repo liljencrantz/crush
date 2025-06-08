@@ -873,17 +873,8 @@ impl Help for Scope {
 }
 
 fn long_help_methods(fields: &mut Vec<(String, Value)>, lines: &mut Vec<String>) {
-    let mut max_len = 0;
-    for (k, _) in fields.iter() {
-        max_len = max(max_len, k.len());
-    }
     for (k, v) in fields.drain(..) {
-        lines.push(format!(
-            "    * {}  {}{}",
-            k,
-            " ".repeat(max_len - k.len()),
-            v.short_help()
-        ));
+        lines.push(format!(" * `{}` {}", k, v.short_help()));
     }
 }
 

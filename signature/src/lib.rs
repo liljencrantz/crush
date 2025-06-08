@@ -276,7 +276,7 @@ fn is_alnum(s: &str) -> bool {
 }
 
 fn format_default_for_help(default_value: &TokenTree, allowed: &TokenStream) -> String {
-    format!(" ({})", match default_value {
+    format!(" (`{}`)", match default_value {
         TokenTree::Group(g) => format_default_group_help(g),
         TokenTree::Ident(_) |
         TokenTree::Punct(_) |
@@ -390,7 +390,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                         had_field_description = true;
                     }
                     long_description.push(format!(
-                        "* {}{}, {}",
+                        "* `{}`{}, {}",
                         name.to_string(),
                         default_help,
                         description
@@ -438,16 +438,16 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 if !long_description.is_empty() {
                     long_description.push("".to_string());
                 }
-                long_description.push("Example".to_string());
+                long_description.push("# Example".to_string());
                 long_description.push("".to_string());
-                long_description.append(&mut metadata.example);
+                long_description.append(&mut metadata.example.iter().map(|e| format!("    {}", e)).collect::<Vec<_>>());
             }
 
             let signature_literal = Literal::string(&generate_signature(&metadata.path, signature));
 
             let long_description = if !long_description.is_empty() {
-                let mut s = "    ".to_string();
-                s.push_str(&long_description.join("\n    "));
+                let mut s = "".to_string();
+                s.push_str(&long_description.join("\n"));
                 let text = Literal::string(&s);
                 quote! {Some(#text) }
             } else {

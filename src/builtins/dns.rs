@@ -63,20 +63,20 @@ struct Query {
     #[values("A", "AAAA", "CNAME", "MX", "NS", "PTR", "SOA", "SRV", "TXT")]
     #[default("A")]
     record_type: String,
-    #[description("Use TCP connection instead of UDP.")]
+    #[description("use TCP as the transport instead of UDP.")]
     #[default(false)]
     tcp: bool,
-    #[description("Override what nameserver to talk to.")]
+    #[description("the nameserver to talk to. If none is given, use the nameservers configured in `/etc/resolv.conf`.")]
     nameserver: Option<String>,
-    #[description("Port to talk to the nameserver on.")]
+    #[description("port to talk to the nameserver on.")]
     #[default(53)]
     port: i128,
     #[description(
-        "If a CNAME record is encountered, do not follow it, but show the CNAME record instead."
+        "if a CNAME record is encountered, do not follow it. Show the actual CNAME record instead."
     )]
     #[default(false)]
     no_follow_cname: bool,
-    #[description("Connection timeout.")]
+    #[description("connection timeout.")]
     #[default(Duration::seconds(5))]
     timeout: Duration,
 }

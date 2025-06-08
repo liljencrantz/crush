@@ -56,6 +56,7 @@ pub enum CrushErrorType {
     Roxmltree(roxmltree::Error),
     AddrParseError(std::net::AddrParseError),
     ToStrError(ToStrError),
+    Message(markdown::message::Message),
 }
 
 #[derive(Debug)]
@@ -125,6 +126,7 @@ impl CrushError {
             InvalidJump(e) => e.to_string(),
             AddrParseError(e) => e.to_string(),
             ToStrError(e) => e.to_string(),
+            Message(m) => m.to_string(),
             #[cfg(target_os = "linux")]
             DbusError(e) => e.message().unwrap_or("").to_string(),
             #[cfg(target_os = "linux")]
@@ -558,6 +560,16 @@ impl From<&String> for CrushError {
     fn from(e: &String) -> Self {
         CrushError {
             error_type: InvalidData(e.to_string()),
+            location: None,
+            definition: None,
+        }
+    }
+}
+
+impl From<markdown::message::Message> for CrushError {
+    fn from(m: markdown::message::Message) -> Self {
+        CrushError {
+            error_type: Message(m),
             location: None,
             definition: None,
         }

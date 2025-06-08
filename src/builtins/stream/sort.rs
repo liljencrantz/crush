@@ -10,7 +10,7 @@ use std::cmp::Ordering;
 #[signature(
     stream.sort,
     can_block = true,
-    short = "Sort input based on column",
+    short = "Sort input stream based on one or more of it's columns",
     example = "# Show the contents of the current directory, sorted first on type and then on filename",
     example = "files | sort type file",
     output = Passthrough)]

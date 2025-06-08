@@ -210,41 +210,41 @@ impl Help for ValueType {
         let mut lines = match self {
             ValueType::Duration => {
                 vec![
-                    "    A duration instance has nanosecond precision. It is represented internally".to_string(),
-                    "    as two 64 bit numbers, one for the number of seconds, and one for the".to_string(),
-                    "    nanosecond remainder".to_string(),
+                    "A duration instance has nanosecond precision. It is represented internally".to_string(),
+                    "as two 64 bit numbers, one for the number of seconds, and one for the".to_string(),
+                    "nanosecond remainder".to_string(),
                     "".to_string(),
-                    "    durations are signed, i.e. they can be used to denote a negative span of time.".to_string(),
+                    "durations are signed, i.e. they can be used to denote a negative span of time.".to_string(),
                     "".to_string(),
                 ]
             }
             ValueType::Time => {
                 vec![
-                    "    All time instances use the local time zone.".to_string(),
+                    "All time instances use the local time zone.".to_string(),
                     "".to_string(),
-                    "    A time instance has nanosecond precision. It is represented internally".to_string(),
-                    "    as two 64 bit numbers, one for the number of seconds since the Unix epoc,".to_string(),
-                    "    and one for the nanosecond remainder".to_string(),
+                    "A time instance has nanosecond precision. It is represented internally".to_string(),
+                    "as two 64 bit numbers, one for the number of seconds since the Unix epoc,".to_string(),
+                    "and one for the nanosecond remainder".to_string(),
                     "".to_string(),
                 ]
             }
             ValueType::Integer => {
                 vec![
-                    "    A Crush integer uses signed 128 bit precision. This means that the highest".to_string(),
-                    format!("    number that can be represented is {},", i128::MAX),
-                    format!("    and the lowest is {}.", i128::MIN),
+                    "A Crush integer uses signed 128 bit precision. This means that the highest".to_string(),
+                    format!("number that can be represented is {},", i128::MAX),
+                    format!("and the lowest is {}.", i128::MIN),
                     "".to_string(),
                 ]
             }
             ValueType::Float => {
                 vec![
-                    "    A Crush float is a IEEE 754 64-bit (double precision) floating point number.".to_string(),
+                    "A Crush float is a IEEE 754 64-bit (double precision) floating point number.".to_string(),
                     "".to_string(),
                 ]
             }
             ValueType::Empty => {
                 vec![
-                    "    The empty type is returned by commands that don't return any value.".to_string(),
+                    "The empty type is returned by commands that don't return any value.".to_string(),
                 ]
             }
             _ => { Vec::new() }
@@ -259,15 +259,10 @@ impl Help for ValueType {
 }
 
 fn long_help_methods(fields: &Vec<(&String, &Command)>, lines: &mut Vec<String>) {
-    let mut max_len = 0;
-    for (k, _) in fields {
-        max_len = max(max_len, k.len());
-    }
     for (k, v) in fields {
         lines.push(format!(
-            "    * {}  {}{}",
+            " * `{}` {}",
             k,
-            " ".repeat(max_len - k.len()),
             v.help().short_help()
         ));
     }

@@ -152,7 +152,7 @@ fn run_for_single_directory_or_file(
     long = "If given no arguments, list the contents to the current working directory.",
     long = "If given any unnamed arguments, those will be the files and directories to list.",
     long = "By default, files will not recurse to subdirectories, you can override this using",
-    long = "the --recurse switch.",
+    long = "the `--recurse` switch.",
     output = Unknown)]
 pub struct FilesSignature {
     #[unnamed()]
