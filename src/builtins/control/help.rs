@@ -21,6 +21,10 @@ use std::cmp::{max, min};
 pub struct HelpSignature {
     #[description("the topic you want help on.")]
     topic: Option<Value>,
+    #[default("terminal")]
+    #[description("output format. The default, `terminal`, will render the help directly into the terminal. The other formats return a string containing either an html fragment or markdown.")]
+    #[values("html", "markdown", "terminal")]
+    format: String,
 }
 
 static HEADER_START: &str = "\x1b[4m";
@@ -254,9 +258,16 @@ members of a value, write `dir <value>`.
         },
     };
 
-    context
-        .global_state
-        .printer()
-        .line(render(s, context.global_state.printer().width())?.as_str());
-    context.output.send(Value::Empty)
+    match cfg.format.as_str() {
+        "markdown" =>        context.output.send(Value::from(s)),
+        "html" => context.output.send(Value::from(markdown::to_html(s))),
+        "terminal" => {
+            context
+                .global_state
+                .printer()
+                .line(&render(s, context.global_state.printer().width())?);
+            context.output.send(Value::Empty)
+        }         
+        _ => unreachable!(),
+    }
 }
