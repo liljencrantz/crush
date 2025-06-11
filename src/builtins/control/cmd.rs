@@ -17,7 +17,7 @@ use crate::util::file::cwd;
 #[signature(
     control.cmd,
     short = "Execute an external command",
-    long = "Globs are expanded. Argument and switch order is preserved.",
+    long = "Globs are file-expanded. Argument and switch order is preserved.",
     output = Known(ValueType::BinaryInputStream),
     can_block = true,
 )]

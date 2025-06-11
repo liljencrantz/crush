@@ -1,19 +1,21 @@
-use crate::lang::command::{Command};
-use crate::lang::errors::{error, CrushResult, argument_error_legacy, CrushError, serialization_error, invalid_jump};
-use crate::lang::help::Help;
 use crate::data::r#struct::Struct;
-use crate::lang::{value::Value, value::ValueType};
-use crate::util::identity_arc::Identity;
-use ordered_map::OrderedMap;
-use std::cmp::max;
-use std::sync::{Arc, Mutex, MutexGuard};
-use std::fmt::{Display, Formatter};
-use chrono::Duration;
-use ScopeType::Namespace;
 use crate::data::table::{ColumnType, Row};
+use crate::lang::command::Command;
+use crate::lang::errors::{
+    CrushError, CrushResult, argument_error_legacy, error, invalid_jump, serialization_error,
+};
+use crate::lang::help::Help;
 use crate::lang::pipe::{CrushStream, ValueSender};
 use crate::lang::state::scope::ScopeType::{Block, Closure, Conditional, Loop};
+use crate::lang::{value::Value, value::ValueType};
+use crate::util::identity_arc::Identity;
 use crate::util::replace::Replace;
+use ScopeType::Namespace;
+use chrono::Duration;
+use ordered_map::OrderedMap;
+use std::cmp::max;
+use std::fmt::{Display, Formatter};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 /**
 This is where we store variables, including functions.
@@ -48,7 +50,9 @@ pub struct ScopeLoader {
 impl ScopeLoader {
     pub fn declare(&mut self, name: &str, value: Value) -> CrushResult<()> {
         if self.mapping.contains_key(name) {
-            return error(format!("Tried to declare variable {}, but it already exists", name).as_str());
+            return error(
+                format!("Tried to declare variable {}, but it already exists", name).as_str(),
+            );
         }
         self.mapping.insert(name.to_string(), value);
         Ok(())
@@ -146,21 +150,20 @@ impl From<ScopeType> for i32 {
 }
 
 pub struct ScopeData {
-    /** This is the parent scope used to perform variable name resolution. If a variable lookup
-                                     fails in the current scope, it proceeds to this scope. This is usually the scope in which this
-                                     scope was *created*.
-
-                                     Not that when scopes are used as namespaces, they do not use this scope.
-     */
+    /// This is the parent scope used to perform variable name resolution. If a variable lookup
+    /// fails in the current scope, it proceeds to this scope. This is usually the scope in which this
+    /// scope was *created*.
+    ///
+    /// Note that when scopes are used as namespaces, they do not use this scope.
     pub parent_scope: Option<Scope>,
 
     /** This is the scope in which the current scope was called. Since a closure can be called
-                                     from inside any scope, it need not be the same as the parent scope. This scope is the one used
-                                     for break/continue loop control, and it is also the scope that builds up the namespace hierarchy. */
+    from inside any other scope, it need not be the same as the parent scope. This scope is the one used
+    for break/continue loop control, and it is also the scope that builds up the namespace hierarchy. */
     pub calling_scope: Option<Scope>,
 
     /** This is a list of scopes that are imported into the current scope. Anything directly inside
-                                     one of these scopes is also considered part of this scope. */
+    one of these scopes is also considered part of this scope. */
     pub uses: Vec<Scope>,
 
     /** The actual data of this scope. */
@@ -170,11 +173,11 @@ pub struct ScopeData {
     pub scope_type: ScopeType,
 
     /** True if this scope should stop execution, i.e. if the continue or break commands have been
-                                     called.  */
+    called.  */
     pub is_stopped: bool,
 
     /** True if this scope can not be further modified. Note that mutable variables in it, e.g.
-                                     lists or dicts can still be modified. */
+    lists or dicts can still be modified. */
     pub is_readonly: bool,
 
     pub return_value: Option<Value>,
@@ -545,18 +548,16 @@ impl Scope {
                     } else {
                         match path.len() {
                             1 => Ok(Value::Scope(self.clone())),
-                            2 => {
-                                match lookup(&path[1], &data) {
-                                    Some(v) => Ok(v),
-                                    _ => error(
-                                        format!(
-                                            "Could not find command {} in scope {}",
-                                            path[1], path[0]
-                                        )
-                                            .as_str(),
+                            2 => match lookup(&path[1], &data) {
+                                Some(v) => Ok(v),
+                                _ => error(
+                                    format!(
+                                        "Could not find command {} in scope {}",
+                                        path[1], path[0]
                                     )
-                                }
-                            }
+                                    .as_str(),
+                                ),
+                            },
 
                             _ => {
                                 match lookup(&path[1], &data) {
@@ -569,16 +570,21 @@ impl Scope {
                                         v.get_recursive(&path[1..])
                                     }
                                     _ => {
-                                        error(
-                                            format!(
-                                                "Could not find subscope {} in scope {} {}. Candidates are {}",
-                                                path.iter().map(|k| k.to_string()).collect::<Vec<_>>().join(":"),
-                                                //path[1],
-                                                data.name.clone().unwrap(),
-                                                self.id(),
-                                                data.mapping.iter().map(|(k, _)| k.to_string()).collect::<Vec<_>>().join(", "),
-                                            )
-                                        )
+                                        error(format!(
+                                            "Could not find subscope {} in scope {} {}. Candidates are {}",
+                                            path.iter()
+                                                .map(|k| k.to_string())
+                                                .collect::<Vec<_>>()
+                                                .join(":"),
+                                            //path[1],
+                                            data.name.clone().unwrap(),
+                                            self.id(),
+                                            data.mapping
+                                                .iter()
+                                                .map(|(k, _)| k.to_string())
+                                                .collect::<Vec<_>>()
+                                                .join(", "),
+                                        ))
                                     }
                                 }
                             }
@@ -591,14 +597,19 @@ impl Scope {
 
     pub fn declare(&self, name: &str, value: Value) -> CrushResult<()> {
         if name.starts_with("__") {
-            return argument_error_legacy(format!("Illegal operation: Can't declare variables beginning with double underscores. ({})", name));
+            return argument_error_legacy(format!(
+                "Illegal operation: Can't declare variables beginning with double underscores. ({})",
+                name
+            ));
         }
         let mut data = self.lock()?;
         if data.is_readonly {
             return error("Scope is read only");
         }
         if data.mapping.contains_key(name) {
-            return error(format!("Tried to declare variable {}, but it already exists", name).as_str());
+            return error(
+                format!("Tried to declare variable {}, but it already exists", name).as_str(),
+            );
         }
         data.mapping.insert(name.to_string(), value);
         Ok(())
@@ -607,7 +618,10 @@ impl Scope {
     /// Redeclare a variable.
     pub fn redeclare(&self, name: &str, value: Value) -> CrushResult<()> {
         if name.starts_with("__") {
-            return argument_error_legacy(format!("Illegal operation: Can't redeclare variables beginning with double underscores. ({})", name));
+            return argument_error_legacy(format!(
+                "Illegal operation: Can't redeclare variables beginning with double underscores. ({})",
+                name
+            ));
         }
         self.redeclare_reserved(name, value)
     }
@@ -626,7 +640,10 @@ impl Scope {
     /// Set a new value for an existing variable
     pub fn set(&self, name: &str, value: Value) -> CrushResult<()> {
         if name.starts_with("__") {
-            return argument_error_legacy(format!("Illegal operation: Can't set variables beginning with double underscores. ({})", name));
+            return argument_error_legacy(format!(
+                "Illegal operation: Can't set variables beginning with double underscores. ({})",
+                name
+            ));
         }
         let mut data = self.lock()?;
         if !data.mapping.contains_key(name) {
@@ -638,7 +655,10 @@ impl Scope {
                 None => error(format!("Unknown variable {}", name).as_str()),
             }
         } else if data.is_readonly {
-            error(format!("Tried to modify {}, a member of a read-only scope", name))
+            error(format!(
+                "Tried to modify {}, a member of a read-only scope",
+                name
+            ))
         } else if data.mapping[name].value_type() != value.value_type() {
             error(format!(
                 "Type mismatch when reassigning variable {}. Use `var:unset \"{}\"` to remove the old variable if you want to reassign it.",
@@ -676,7 +696,10 @@ impl Scope {
 
     fn remove_here(&self, key: &str) -> CrushResult<Option<Value>> {
         if key.starts_with("__") {
-            return argument_error_legacy(format!("Illegal operation: Can't remove variables beginning with double underscores. ({})", key));
+            return argument_error_legacy(format!(
+                "Illegal operation: Can't remove variables beginning with double underscores. ({})",
+                key
+            ));
         }
         let mut data = self.lock()?;
         if !data.mapping.contains_key(key) {
@@ -731,18 +754,23 @@ impl Scope {
 
     pub fn r#use(&self, other: &Scope) {
         let mut inner = self.lock().unwrap();
-        if inner.uses.iter()
-            .position(|s| s.id() == other.id()).is_none() {
+        if inner
+            .uses
+            .iter()
+            .position(|s| s.id() == other.id())
+            .is_none()
+        {
             inner.uses.push(other.clone());
         }
     }
 
     pub fn unuse(&self, other: &Scope) {
         let mut inner = self.lock().unwrap();
-        inner.uses.iter()
+        inner
+            .uses
+            .iter()
             .position(|s| s.id() == other.id())
-            .map(|i| {
-                inner.uses.remove(i)});
+            .map(|i| inner.uses.remove(i));
         drop(inner);
         self.parent().map(|parent| parent.unuse(other));
     }
@@ -759,7 +787,11 @@ impl Scope {
         Ok(res)
     }
 
-    fn dump_internal(&self, map: &mut OrderedMap<String, ValueType>, recurse: bool) -> CrushResult<()> {
+    fn dump_internal(
+        &self,
+        map: &mut OrderedMap<String, ValueType>,
+        recurse: bool,
+    ) -> CrushResult<()> {
         if recurse {
             let p = self.lock()?.parent_scope.clone();
             if let Some(p) = p {
@@ -858,10 +890,14 @@ impl Help for Scope {
     }
 
     fn long_help(&self) -> Option<String> {
-        let mut lines = vec!["This scope contains the following elements:".to_string(), "".to_string()];
+        let mut lines = vec![
+            "This scope contains the following elements:".to_string(),
+            "".to_string(),
+        ];
 
         let data = self.lock().unwrap();
-        let mut keys: Vec<_> = data.mapping
+        let mut keys: Vec<_> = data
+            .mapping
             .iter()
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect();
@@ -891,11 +927,9 @@ impl ScopeReader {
                 .dump_local()
                 .unwrap()
                 .drain()
-                .map(|(k, _t)| { (k.clone(), s.get_local(&k)) })
-                .filter(|(_k, v)| {
-                    if let Ok(Some(_v)) = v { true } else { false }
-                })
-                .map(|(k, v)| { (k, v.unwrap().unwrap()) })
+                .map(|(k, _t)| (k.clone(), s.get_local(&k)))
+                .filter(|(_k, v)| if let Ok(Some(_v)) = v { true } else { false })
+                .map(|(k, v)| (k, v.unwrap().unwrap()))
                 .collect(),
         }
     }

@@ -1,53 +1,47 @@
-Changed variable declaration syntax:
-let foo=bar
+# Extend argument declaration syntax
+
+* Add the option of adding a documentation string for each argument.
+* Add a syntax to allow documentation of the whole closure via short, long and example strings.
+* Allow an optional separator between arguments so that you can put each argument on a separate line
+
+```
+$timeit := {
+    |
+        short="Execute a command many times and estimate the execution time."
+        long="This function provides a simple way to time small bits of Crush code"
+        example="timeit {files|sort size}"
+        $it: $command "the command to time."
+        $number: $integer "the number of runs in each repeat. If unspecified, timeit will repeat enough times for each batch to take roughly 0.4 seconds."
+        $repeat: $integer = 5 "repeat count. The average speed in the fastest repeat will be returned."
+    |
+    ...
+}
+```
+
+# XML serialization
+
+Use struct:s with three members,
+
+* `name`, the node name.
+* `attr`, a `dict $string $string` containing the attributes of the node.
+* `children`, a `list $any` containing text fragments (as strings) mixed with child nodes. 
+
+# Changed variable declaration syntax
+
+`let foo=bar`
 
 More consistent with the regular crush syntax, but slightly more verbose.
 
-A way to add methods to existing types:
+# Validation
 
-$file_extra := struct mkdir={|| cmd mkdir -p $this}
-implicit $file $file_extra
-./foo:mkdir
-
-Graphs:
-
-Graphs consist of two data types: nodes and edges.
-
-Crush nodes are simply rows in a single normal table. (Not a TableInputStream, it has to be a table)
-
-Crush edges are a new type that connect rows in the same table to each other. Every
-edge contains two index references. Edges can be directed or undirected, and they can
-have a single arbitrary value associated with them.
-
-Edges can point to the same row or other rows in the same table, but allowing
-them to point to rows in other tables would lead to reference cycles and memory
-leaks. One-to-one relationships are simply edge fields. One-to-many, and many-to-many
-relationships are modeled using fields of lists.
-
-# Find leaf nodes
-crush> ps | where { (children:len) == 0 }
-
-A new operator, '::', is used to access a member in each element of a list.
-
-# Find processes who are running as a different user than their parent
-ps | where { parent::user != global:user:me:name }
-
-When using '::' on a list/set of edges, it fetches that member in each element in returns them in a new list.
-
-In order to display a graph as a tree, simply return an edge as the root object, and the pretty-printer will
-do the rest:
-
-crush> (ps | where {pid == 1}):parent
-...
-
-Validation:
 All commands declare valid input and output types.
 Input types can be partial, e.g. any iterator or any iterator with some restrictions.
 Checks are performed to validate consistency.
 Syntax for not having to duplicate output type.
 Track location of arguments through signature macro parsing
 
-Commands:
+# New and updated builtins
+
 A simple command for replacing a regex in every line of a file. Implement it in crush, using built in commands.
 Extra columns for ps: tty, current CPU usage.
 A grep-command.
@@ -65,14 +59,14 @@ watch command
 Either stop copying Command instances, or make them pointers to static data.
 Syntax highlighting (with more accurate parenthesis matching)
 
-Every command should have a command id withing that job, e.g. 5:2
+Every command should have a command id within that job, e.g. 5:2
 Every thread should have a thread id within that command, e.g. 5:2:3
 Make command closing work on file literals
 Make suggestions use completion engine instead of history
 Handle ^Z to put jobs into background. How?
 Handle ^C to cancel jobs. How?
 
-Tab completion missing feature list:
+# Tab completion missing feature list
 
 * Support for enabling and disabling completion error printing
 * fall back to "stupid" completion if parsing the AST fails
@@ -83,5 +77,3 @@ Tab completion missing feature list:
 * Add previous output type of previous command in pipeline if known to parsed state
 * Add command specific completions for methods
 * GetItem and SetItem completions
-
-toml:from ./Cargo.toml | semver:bump package:version --minor | toml:to ./cargo.toml

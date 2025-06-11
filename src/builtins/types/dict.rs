@@ -11,6 +11,7 @@ use signature::signature;
 use crate::data::table::ColumnVec;
 use crate::util::replace::Replace;
 use itertools::Itertools;
+use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::this::This;
 
@@ -44,7 +45,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     types.dict.__call__,
     can_block = false,
     output = Known(ValueType::Type),
-    short = "Returns a dict type with the specified key and value types.",
+    short = "Returns a dict type parametrized with the specified key and value types.",
 )]
 struct Call {
     #[description("the type of the keys in the dict.")]
@@ -76,13 +77,14 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
         _ => argument_error_legacy("Invalid this, expected type dict"),
     }
 }
+
 #[signature(
     types.dict.new,
     can_block = false,
     output = Known(ValueType::Dict(Box::from(ValueType::Any), Box::from(ValueType::Any))),
     short = "Create an empty new dict.",
     long = "This method takes no arguments, but must not be called on a raw dict type. You must call it on a parametrized dict type, like $(dict $string $string)",
-    example = "my_dict := $($(dict $string $integer):new)",
+    example = "$my_dict := $($(dict $string $integer):new)",
 )]
 struct New {}
 
@@ -107,36 +109,69 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Unknown,
     short = "Create a new dict with the specified elements.",
+    long = "If the keys are strings, you can provide the elements as named arguments. Otherwise, you must provide them as a list of alternating keys and values.",
+    long = "",
+    long = "You must not mix named and unnamed arguments.",
+    example = "# Create a dict with the keys 1, 2, and 3, and the corresponding values a, b, and c.",
+    example = "$my_dict := $(dict:of 1 a 2 b 3 c)",
+    example = "# Create a dict with the keys a, b, and c, and the corresponding values 1, 2, and 3.",
+    example = "$my_dict := $(dict:of a=1 b=2 c=3)",
 )]
-struct Of {}
+struct Of {
+    #[unnamed()]
+    elements: Vec<Value>,
+    #[named()]
+    values: OrderedStringMap<Value>,
+}
 
 fn of(mut context: CommandContext) -> CrushResult<()> {
-    if context.arguments.len() % 2 == 1 {
-        return argument_error_legacy("Expected an even number of arguments");
+    let cfg = Of::parse(context.remove_arguments(), &context.global_state.printer())?;
+    
+    match (cfg.elements.is_empty(), cfg.values.is_empty()) {
+        (false, false) => argument_error_legacy("Cannot specify both elements and values"),
+        (true, true) => argument_error_legacy("No values specified"),
+        (true, false) => {
+            let mut value_types = HashSet::new();
+            let mut entries = OrderedMap::new();
+
+            let mut arg = cfg.values.into_iter();
+
+            while let Some((key, value)) = arg.next() {
+                value_types.insert(value.value_type());
+                entries.insert(Value::from(key), value);
+            }
+
+            let value_type = if value_types.len() == 1 { value_types.drain().next().unwrap() } else { ValueType::Any };
+
+            context.output.send(Dict::new_with_data(ValueType::String, value_type, entries)?.into())
+        }
+        (false, true) => {
+            if cfg.elements.len() % 2 == 1 {
+                argument_error_legacy("Expected an even number of arguments")
+            } else {
+                let mut key_types = HashSet::new();
+                let mut value_types = HashSet::new();
+                let mut entries = OrderedMap::new();
+
+                let mut arg = cfg.elements.into_iter();
+
+                while let Some((key, value)) = arg.next_tuple() {
+                    key_types.insert(key.value_type());
+                    value_types.insert(value.value_type());
+                    entries.insert(key, value);
+                }
+
+                if key_types.len() != 1 {
+                    return argument_error_legacy("Multiple key types specified in dict");
+                }
+
+                let key_type = key_types.drain().next().unwrap();
+                let value_type = if value_types.len() == 1 { value_types.drain().next().unwrap() } else { ValueType::Any };
+
+                context.output.send(Dict::new_with_data(key_type, value_type, entries)?.into())
+            }
+        }
     }
-    if context.arguments.len() == 0 {
-        return argument_error_legacy("Expected at least one pair of arguments");
-    }
-
-    let mut key_types = HashSet::new();
-    let mut value_types = HashSet::new();
-    let mut entries = OrderedMap::new();
-
-    let mut arg = context.remove_arguments().into_iter();
-
-    while let Some((key, value)) = arg.next_tuple() {
-        key_types.insert(key.value.value_type());
-        value_types.insert(value.value.value_type());
-        entries.insert(key.value, value.value);
-    }
-
-    if key_types.len() != 1 {
-        return argument_error_legacy("Multiple key types specified in dict");
-    }
-    let key_type = key_types.drain().next().unwrap();
-    let value_type = if value_types.len() == 1 { value_types.drain().next().unwrap() } else { ValueType::Any };
-
-    context.output.send(Dict::new_with_data(key_type, value_type, entries)?.into())
 }
 
 #[signature(
@@ -144,6 +179,12 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Empty),
     short = "Create a new mapping or replace an existing one.",
+    example = "# Create a new dict",
+    example = "$d := $(dict:of a=1 b=2)",
+    example = "# Insert a new mapping",
+    example = "$d[c]=3",
+    example = "# Replace an existing mapping",
+    example = "$d[b]=22",
 )]
 struct SetItem {
     #[description("the key of the value to set.")]
@@ -164,6 +205,10 @@ fn __setitem__(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Any),
     short = "Return the value mapped to the specified key of the dict.",
+    example = "# Create a new dict",
+    example = "$d := $(dict:of a=1 b=2)",
+    example = "# Return the value mapped to the key 2, which is 2",
+    example = "$d[b]",
 )]
 struct GetItem {
     #[description("the key of the value to get.")]

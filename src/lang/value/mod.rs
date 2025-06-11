@@ -46,6 +46,7 @@ use crate::lang::ast::tracked_string::TrackedString;
 use crate::state::global_state::FormatData;
 use crate::state::scope::ScopeReader;
 use crate::util::escape::escape;
+use crate::util::identity_arc::Identity;
 use crate::util::integer_formater::format_integer;
 
 pub type BinaryInputStream = Box<dyn BinaryReader + Send + Sync>;
@@ -610,6 +611,8 @@ impl PartialEq for Value {
             (Value::Bool(val1), Value::Bool(val2)) => val1 == val2,
             (Value::Float(val1), Value::Float(val2)) => val1 == val2,
             (Value::Binary(val1), Value::Binary(val2)) => val1 == val2,
+            (Value::Scope(val1), Value::Scope(val2)) => val1.id() == val2.id(),
+            (Value::Type(val1), Value::Type(val2)) => val1 == val2,
             _ => false,
         }
     }

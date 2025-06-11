@@ -43,7 +43,7 @@ struct GetItem {
 fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     let val = context.this.scope()?;
     let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.output.send(val.get_local(&cfg.name)?.ok_or("Unknown member")?)
+    context.output.send(val.get_local(&cfg.name)?.ok_or(format!("Unknown member ${} in scope {}", &cfg.name, val.name().unwrap_or("<Anonymous>".to_string())))?)
 }
 
 #[signature(
@@ -60,7 +60,7 @@ struct Resolve {
 fn __resolve__(mut context: CommandContext) -> CrushResult<()> {
     let val = context.this.scope()?;
     let cfg: Resolve = Resolve::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.output.send(val.get(&cfg.name)?.ok_or("Unknown member")?)
+    context.output.send(val.get(&cfg.name)?.ok_or(format!("Unknown member {} in scope {}", &cfg.name, val.name().unwrap_or("<Anonymous>".to_string())))?)
 }
 
 #[signature(
@@ -76,16 +76,16 @@ fn __current_scope__(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    types.scope.__parent__,
+    types.scope.__super__,
     can_block = false,
     output = Known(ValueType::Scope),
     short = "The parent of this scope. The root (global) scope returns itself.",
 )]
 struct Parent {}
 
-fn __parent__(mut context: CommandContext) -> CrushResult<()> {
+fn __super__(mut context: CommandContext) -> CrushResult<()> {
     let scope = context.this.scope()?;
-    context.output.send(Value::Scope(scope.parent().unwrap_or(scope)))
+    context.output.send(Value::Scope(scope.get_calling_scope().unwrap_or(scope)))
 }
 
 #[signature(

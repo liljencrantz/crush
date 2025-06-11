@@ -399,11 +399,12 @@ fn last(context: CommandContext) -> CrushResult<()> {
     short = "Concatenate all values of the specified column across all rows",
     long = "If the input only has one column, the column name is optional.",
     long = "The column can be numeric, or textual.",
-    example = "host:procs | min cpu")]
+    example = "host:procs | concat name \":\"",
+)]
 pub struct Concat {
-    #[documentaion("The name of the column to concatenate")]
+    #[documentation("The name of the column to concatenate")]
     field: Option<String>,
-    #[documentaion("The separator to insert between each element")]
+    #[documentation("The separator to insert between each element")]
     #[default(", ")]
     separator: String,
 }

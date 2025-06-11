@@ -55,6 +55,7 @@ static TXT_STREAM_OUTPUT_TYPE: [ColumnType; 2] = [
     dns.query,
     can_block = true,
     short = "Look up a DNS record",
+    example = "dns:query \"www.google.com\" AAAA",
 )]
 struct Query {
     #[description("DNS record to look up.")]
@@ -325,6 +326,7 @@ fn query(mut context: CommandContext) -> CrushResult<()> {
     dns.query_reverse,
     can_block = true,
     short = "Perform a reverse DNS lookup on a given IP address",
+    example = "dns:query_reverse \"127.0.0.1\"",
 )]
 struct QueryReverse {
     #[description("IP address to look up. Can be either IPv4 or IPv6.")]

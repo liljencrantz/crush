@@ -121,9 +121,7 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
 
         Value::Binary(b) => Ok(serde_json::Value::from(b.to_vec())),
 
-        Value::BinaryInputStream(_) => panic!("Impossible"),
-
-        Value::TableInputStream(_) => panic!("Impossible"),
+        Value::BinaryInputStream(_) | Value::TableInputStream(_) => panic!("Impossible"),
 
         v => error(&format!("Unsupported data type {}", v.value_type())),
     }
@@ -144,6 +142,7 @@ pub fn value_to_json(v: Value) -> CrushResult<String> {
     can_block = true,
     output = Unknown,
     short = "Parse json format",
+    long = "When deserializing a list, `json:from` will try to infer the type of the list. If all of the elements of the list are of the same type, the list will be parametrized to the same type. If all elements are objects, and all objects have the same set of fields with the same types, the list will be turned into a table.",
     example = "http \"https://jsonplaceholder.typicode.com/todos/3\"| member body | json:from")]
 struct FromSignature {
     #[unnamed()]
@@ -163,6 +162,9 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
     can_block = true,
     output = Unknown,
     short = "Serialize to json format",
+    long = "When serializing a list, some types have to be squashed, because json does not have all the same types that Crush does:",
+    long = "* `time` values are turned into strings in the RFC 3339 format.",
+    long = "* `duration` values are turned into the integer number of seconds in the duration.",
     example = "files | json:to")]
 struct To {
     #[unnamed()]

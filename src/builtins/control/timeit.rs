@@ -64,11 +64,10 @@ fn timeit(mut context: CommandContext) -> CrushResult<()> {
             n
         }
     };
-
     for _ in 0..cfg.repeat {
         repeat_times.push(repeatn(&cfg.it, &context, number)?);
     }
-    let tm = repeat_times.iter().min().ok_or("Failed to run command")?;
+    let tm = repeat_times.into_iter().min().ok_or("Failed to run command")?;
 
-    output.send(Value::Duration(tm.clone()))
+    output.send(Value::Duration(tm))
 }

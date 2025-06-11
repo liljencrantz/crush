@@ -13,11 +13,12 @@ use crate::lang::state::contexts::CommandContext;
 #[signature(
     io.words.from,
     can_block = true,
-    short = "Read specified files (or input) as a table, split on word boundaries, and trim away punctuation."
+    short = "Read input and split on word boundaries.",
+    long = "Input can be files or the input pipe, which must be a binary input stream, split on word boundaries, trim away punctuation and discard empty \"words\".",
 )]
 struct From {
     #[unnamed()]
-    #[description("the files to read from (read from input if no file is specified).")]
+    #[description("the files to read from (read from input pipe if no file is specified).")]
     files: Files,
 }
 
@@ -34,7 +35,7 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
     let output = context
         .output
         .initialize(&[ColumnType::new("word", ValueType::String)])?;
-    let cfg: From = From::parse(context.arguments, &context.global_state.printer())?;
+    let cfg = From::parse(context.arguments, &context.global_state.printer())?;
 
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
 

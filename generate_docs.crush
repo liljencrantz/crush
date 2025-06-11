@@ -1,0 +1,74 @@
+#! /usr/bin/env crush
+
+$render := {
+    |$data|
+
+    "
+<html>
+  <head>
+    <title>{title}</title>
+  </head>
+  <body>
+    <ul>
+
+{menu}
+    </ul>
+  </body>
+</html>":format @@ $data
+}
+
+$scope_key := {
+    |$s|
+
+    if $($s == $global) {
+        $s:__name__
+    } {
+        "{}:{}":format $(scope_key $($s:__super__)) $($s:__name__)
+    }
+}
+
+$crawl_scope := {
+    |$s $seen $res|
+
+    $key := $(scope_key $s)
+    if $($seen:contains $key) {
+        return
+    }
+
+    $seen[$key] = $s
+
+    $res[scope]:push $s
+
+    for name=$(dir $s) {
+        if $($name:starts_with "__") {
+        }   {
+            $val := $($s[$name])
+
+            if $($(typeof $val) == $scope) {
+                crawl_scope $val $seen $res
+            }
+        }
+    }
+}
+
+$generate_menu := {
+    | $res |
+
+    $menu := $($(list $string):new)
+
+    for s=$($res[scope]) {
+        $menu:push $("      <li><a href='{path}'>{path}</a><?li>\n":format path=$(scope_key $s))
+    }
+
+    $res[menu] = $($menu | concat value "")
+}
+
+$res := $($(dict $string $any):new)
+$res[title] = "Crush"
+$res[scope] = $($(list $scope):new)
+crawl_scope $global $($(dict $string $any):new) $res
+generate_menu $res
+
+echo $res
+echo --raw $(render $res)
+

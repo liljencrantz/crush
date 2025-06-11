@@ -82,7 +82,9 @@ fn from_toml(toml_value: &toml::Value) -> CrushResult<Value> {
     can_block = true,
     output = Unknown,
     short = "Parse toml format",
-    long = "Input can either be a binary stream or a file. All Toml types except\n    datetime are supported. Datetime is not supported because the rust toml\n    currently doesn't support accessing the internal state of a datetime.",
+    long = "Input can either be a binary stream or a file. All Toml types except datetime are supported. Datetime is not supported because the rust toml library currently doesn't support accessing the internal state of a datetime.",
+    long = "",
+    long = "When deserializing a list, `toml:from` will try to infer the type of the list. If all of the elements of the list are of the same type, the list will be parametrized to the same type. If all elements are objects, and all objects have the same set of fields with the same types, the list will be turned into a table.",
     example = "toml:from Cargo.toml")]
 struct FromSignature {
     #[unnamed()]
@@ -159,7 +161,11 @@ fn to_toml(value: Value) -> CrushResult<toml::Value> {
     can_block = true,
     output = Unknown,
     short = "Serialize to toml format",
-    long = "If no file is specified, output is returned as a BinaryStream.\n    The following Crush types are supported: File, string, integer, float, bool, list, table,\n    table_input_stream, struct, time, duration, binary and binary_stream.",
+    long = "If no file is specified, output is returned as a BinaryStream. The following Crush types are supported: File, string, integer, float, bool, list, table, table_input_stream, struct, time, duration, binary and binary_stream.",
+    long = "",
+    long = "When serializing a list, some types have to be squashed, because toml does not have all the same types that Crush does:",
+    long = "* `time` values are turned into strings in the RFC 3339 format.",
+    long = "* `duration` values are turned into the integer number of seconds in the duration.",
     example = "ls | toml:to")]
 struct To {
     #[unnamed()]

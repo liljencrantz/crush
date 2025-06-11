@@ -29,10 +29,8 @@ mod yaml;
     can_block = false,
     short = "Return value",
     output = Known(ValueType::Any),
+    long = "This command is useful if you want to pass a command as input in a pipeline instead of executing it. It is different from the echo command in that val sends the value through the pipeline, whereas echo prints it to screen.",
     example = "val $val",
-    long = "This command is useful if you want to pass a command as input in",
-    long= "a pipeline instead of executing it. It is different from the echo command",
-    long = "in that val sends the value through the pipeline, whereas echo prints it to screen."
 )]
 struct Val {
     #[description("the value to pass as output.")]

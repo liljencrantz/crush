@@ -6,14 +6,14 @@ use rustyline::hint::{Hinter, HistoryHinter};
 use rustyline::highlight::{CmdKind, Highlighter, MatchingBracketHighlighter};
 use rustyline::error::ReadlineError;
 use rustyline::completion::{Pair, Completer};
-use crate::lang::errors::CrushResult;
+use crate::lang::errors::{CrushError, CrushResult};
 use std::cmp::min;
 use crate::lang::ast::token::Token;
 use crate::lang::value::Value;
 use crate::util::directory_lister::directory_lister;
 use crate::lang::state::scope::Scope;
 use rustyline_derive::Helper;
-use crate::lang::ast::lexer::{LexerMode, TokenizerMode};
+use crate::lang::ast::lexer::{Lexer, LexerMode, TokenizerMode};
 use crate::lang::ast::lexer::LexerMode::Command;
 use crate::lang::state::global_state::GlobalState;
 

@@ -15,8 +15,13 @@ use crate::lang::state::scope::ScopeType::Loop;
     can_block = true,
     short = "Execute a command once for each element in a stream.",
     output = Unknown,
-    example = "for i=$(host:procs) {echo $(\"Iterating over process {}\":format $i:name)}",
-    example = "for i=$(seq 10) {echo $(\"Lap #{}\":format $i)}")]
+    example = "for i=$(host:procs) {
+  echo $(\"Iterating over process {}\":format $i:name)
+}
+for i=$(seq 10) {
+  echo $(\"Lap #{}\":format $i)
+}",
+)]
 pub struct For {
     #[named()]
     iterator: OrderedStringMap<Stream>,
