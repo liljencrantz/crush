@@ -73,8 +73,6 @@ message Closure {
     Signature signature_value = 5;
   }
   uint64 env = 6;
-  string short_help = 7;
-  string long_help = 8;
 }
 
 message ClosureDefinition {
@@ -98,8 +96,22 @@ message Signature {
 message Parameter {
   oneof parameter {
     NormalParameter normal = 1;
-    uint64 named = 2;
-    uint64 unnamed = 3;
+    VarArg named = 2;
+    VarArg unnamed = 3;
+    Meta meta = 4;
+  }
+}
+
+message Meta {
+  uint64 key = 1;
+  uint64 value = 2;
+}
+
+message VarArg {
+  uint64 name = 1;
+  oneof doc {
+    bool has_doc = 2;
+    uint64 doc_value = 3;
   }
 }
 
@@ -109,6 +121,10 @@ message NormalParameter {
   oneof default {
     bool has_default = 3;
     ValueDefinition default_value = 4;
+  }
+  oneof doc {
+    bool has_doc = 5;
+    uint64 doc_value = 6;
   }
 }
 

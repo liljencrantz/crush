@@ -13,6 +13,7 @@ use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 use std::fmt::{Formatter, Display};
+use crate::lang::help::Help;
 
 static STRUCT_STREAM_TYPE: [ColumnType; 2] = [
     ColumnType::new("name", ValueType::String),
@@ -259,6 +260,41 @@ impl Display for Struct {
             f.write_str(")")?;
         }
         Ok(())
+    }
+}
+
+impl Help for Struct {
+    fn signature(&self) -> String {
+        self.get("__signature__").map(|v| v.to_string()).unwrap_or("type struct".to_string())
+    }
+
+    fn short_help(&self) -> String {
+        self.get("__short_help__").map(|v| v.to_string()).unwrap_or("A mapping from name to value".to_string())
+    }
+
+    fn long_help(&self) -> Option<String> {
+        let mut res = String::new();
+
+        if let Some(l) = self.get("__long_help__").map(|v| v.to_string()) {
+            res.push_str(l.as_str());
+            res.push('\n');       
+        }
+        
+        let mut v = self.map().drain().collect::<Vec<_>>();
+        if !v.is_empty() {
+            if !res.is_empty() {
+                res.push('\n');       
+            }
+            res.push_str("This struct has the following fields:\n");       
+            
+            v.sort_by(|a, b| a.0.cmp(&b.0));
+
+            for el in v {
+                res.push_str(format!("* `{}` {}\n", el.0, el.1.short_help()).as_str());
+            }
+        }
+        
+        Some(res)
     }
 }
 

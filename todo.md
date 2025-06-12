@@ -26,3 +26,7 @@
 * Better syntax highlighting of possible errors
 * Operator ordering is unintuitve sometimes e.g. `$s == $s:global`. At least throw an error instead of doing the wrong thing?
 * return values from closures seem broken
+* Doesn't the bool type need some methods?
+* The name isn't propagated to methods when they are created
+* Documentation metadata for function declarations in expression mode
+* Move yaml builtin to use saphyr

@@ -655,6 +655,7 @@ impl Help for Value {
             Value::Scope(s) => s.signature(),
             Value::Command(s) => s.signature(),
             Value::Type(s) => s.signature(),
+            Value::Struct(s) => s.signature(),
             v => v.value_type().signature(),
         }
     }
@@ -664,6 +665,7 @@ impl Help for Value {
             Value::Scope(s) => s.short_help(),
             Value::Command(s) => s.short_help(),
             Value::Type(s) => s.short_help(),
+            Value::Struct(s) => s.short_help(),
             v => v.value_type().short_help(),
         }
     }
@@ -673,6 +675,7 @@ impl Help for Value {
             Value::Scope(s) => s.long_help(),
             Value::Command(s) => s.long_help(),
             Value::Type(s) => s.long_help(),
+            Value::Struct(s) => s.long_help(),
             v => v.value_type().long_help(),
         }
     }

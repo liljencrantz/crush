@@ -33,7 +33,10 @@ pub mod time;
     types.materialize,
     can_block = true,
     short = "Recursively convert all streams in io to materialized form",
-    example = "ls | materialize"
+    example = "# Put a table of files in the current directory into the variable $f",
+    example = "$f := $(files | materialize)",
+    example = "# Because we materialized the table stream into a table, counting the elements is not destructive",
+    example = "$f | count",
 )]
 struct Materialize {}
 
@@ -48,9 +51,10 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
 
     // Call constructor if one exists
     if let Some(Value::Command(c)) = res.get("__init__") {
+        let p = context.global_state.printer().clone();
         context.output = black_hole();
         context.this = Some(Value::Struct(res.clone()));
-        c.eval(context)?;
+        p.handle_error(c.eval(context));
     }
     o.send(Value::Struct(res))
 }
@@ -60,8 +64,9 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Struct),
     short = "Construct a struct with the specified members",
-    long = "Example:",
-    long = "data foo=5 bar=\"baz\" false",
+    long = "Unnamed arguments will be given the names _1, _2, _3, and so on.",
+    long = "Unlike a struct created via the `class` builtin, a struct created via the `data` builtin does not have a parent or any methods. This means that a \"data struct\" is immutable, though its members may potentially be modified, depending on their type.",
+    example = "data foo=5 bar=\"baz\" false",
 )]
 #[allow(unused)]
 struct Data {
@@ -88,12 +93,36 @@ fn data(context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Struct),
     short = "Create an empty new class",
-    long = "Example:",
-    long = "Point := class",
-    long = "Point:__init__ = {\n        |x:float y:float|\n        this:x = x\n        this:y = y\n    }",
-    long = "Point:len = {\n        ||\n        math:sqrt this:x*this:x + this:y*this:y\n    }",
-    long = "Point:__add__ = {\n        |other|\n        Point:new x=this:x+other:x y=this:y+other:y\n    }",
-    long = "p := (Point:new x=1.0 y=2.0)\n    p:len"
+    example = "# Create a class that represents a point in 2D space",
+    example = "$Point := $(class)",
+    example = "$Point:__short_help__ = \"A point in 2D space\"",
+    example = "$Point:__long_help__ = \"Uses floating point numbers to represent the x and y coordinates\"",
+    example = "$Point:__signature__ = \"class Point\"",
+    example = "# Constructor takes two arguments, x and y",
+    example = "Point:__init__ = {",
+    example = "  |$x:$float $y:$float|",
+    example = "  $this:x = $x",
+    example = "  $this:y = $y",
+    example = "}",
+    example = "",
+    example = "Point:len = {",
+    example = "  |",
+    example = "  short_help = \"Returns the distance from the origin\"",
+    example = "  |",
+    example = "  (math.sqrt(this.x*this.x + this.y*this.y))",
+    example = "}",
+    example = "# Overload the `+` operator to add two points. (Only available in expression mode)",
+    example = "Point:__add__ = {",
+    example = "  |",
+    example = "  short_help = \"Add two points together\"",
+    example = "  $other : $struct \"the other point.\"",
+    example = "  |",
+    example = "  (Point.new(x=(this.x+other.x), y=(this.y+other.y)))",
+    example = "}",
+    example = "$p := $(Point:new x=1.0 y=2.0)",
+    example = "p:len",
+    example = "$p2 := (Point.new(x=-1.0, y=2.0))",
+    example = "$p3 := (p + p2)",
 )]
 struct Class {
     #[description("the type to convert the value to.")]
@@ -115,7 +144,13 @@ pub fn column_types(columns: &OrderedStringMap<ValueType>) -> Vec<ColumnType> {
 #[signature(
     types.convert,
     can_block = false,
-    short = "Convert the vale to the specified type"
+    short = "Convert the vale to the specified type",
+    long = "Converting a value to the type it already holds always works and returns the original value. Most other conversions take the input value, convert it to a string and then attempt to parse that string as the desired type.",
+    long = "",
+    long = "The following short cut conversions exist that do not go via a string representation:",
+    long = "* `$float` to `$integer` the value is truncated to its integer part.",
+    long = "* `$integer` to `$bool` 0 is false, all other values are true.",
+    example = "convert 1.8 $integer",
 )]
 struct Convert {
     #[description("the value to convert.")]
@@ -134,6 +169,8 @@ pub fn convert(context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Type),
     short = "Return the type of the specified value.",
+    example = "typeof 1.8",
+    example = "# returns \"float\"",
 )]
 struct TypeOf {
     #[description("the value to convert.")]
@@ -220,7 +257,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                         &["global", "types", "root", "new"],
                         "root:new @unnamed @@named",
                         "Create a new instance of the specified type",
-                        None::<AnyStr>,
+                        Some("The `new` method ignores any arguments and returns a new instance of the type. If there parent struct has a `__init__` method, it will be called with all the named and unnnamed arguments passed in."),
                         Known(ValueType::Struct),
                         [],
                     ))),

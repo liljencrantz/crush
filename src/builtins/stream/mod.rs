@@ -57,7 +57,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     ["stream", "select"],
                     "stream:select [copy_fields:string...] [*] [new_field=command]",
                     "Pass on some old fields and calculate new ones for each line of input",
-                    Some(r#"# Examples:
+                    Some(r#"# Examples
 
     # Show only the filename and discard all other columns
     files | select file

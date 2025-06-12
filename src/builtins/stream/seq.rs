@@ -7,7 +7,9 @@ use signature::signature;
 #[signature(
     stream.seq,
     can_block=true,
-    short = "Return a stream of sequential numbers"
+    short = "Return a stream of sequential numbers",
+    example = "# Prepend an index column to the output of the files command",
+    example = "zip $(seq) $(files)",
 )]
 #[derive(Debug)]
 pub struct Seq {

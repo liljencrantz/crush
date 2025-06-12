@@ -483,7 +483,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 if !long_description.is_empty() {
                     long_description.push("".to_string());
                 }
-                long_description.push("# Example".to_string());
+                long_description.push("# Examples".to_string());
                 long_description.push("".to_string());
                 long_description.append(&mut metadata.example.iter().map(|e| format!("    {}", e)).collect::<Vec<_>>());
             }

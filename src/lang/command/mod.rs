@@ -388,15 +388,16 @@ impl Eq for ConditionCommand {}
 
 #[derive(Clone)]
 pub enum Parameter {
-    Parameter(TrackedString, ValueDefinition, Option<ValueDefinition>),
-    Named(TrackedString),
-    Unnamed(TrackedString),
+    Parameter(TrackedString, ValueDefinition, Option<ValueDefinition>, Option<TrackedString>),
+    Named(TrackedString, Option<TrackedString>),
+    Unnamed(TrackedString, Option<TrackedString>),
+    Meta(TrackedString, TrackedString)
 }
 
 impl Display for Parameter {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Parameter::Parameter(name, value_type, default) => {
+            Parameter::Parameter(name, value_type, default, doc) => {
                 f.write_str("$")?;
                 name.fmt(f)?;
                 f.write_str(": $")?;
@@ -407,13 +408,18 @@ impl Display for Parameter {
                 }
                 Ok(())
             }
-            Parameter::Named(n) => {
+            Parameter::Named(n, doc) => {
                 f.write_str("@@")?;
-                n.fmt(f)
+                n.fmt(f)?;
+                Ok(())
             }
-            Parameter::Unnamed(n) => {
+            Parameter::Unnamed(n, doc) => {
                 f.write_str("@")?;
-                n.fmt(f)
+                n.fmt(f)?;
+                Ok(())
+            }
+            Parameter::Meta(key, value) => {
+                Ok(())
             }
         }
     }

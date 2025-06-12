@@ -180,14 +180,16 @@ ExprParameterList: Vec<ParameterNode> = {
 }
 
 ExprParameter: ParameterNode = {
-    <start: @L> <l: Identifier> <end: @R> <d: ExprDefault> => ParameterNode::parameter(l, None, d),
+//    <name: Identifier> Equals <value: QuotedString> => ParameterNode::meta(name, value),
 
-    <start: @L> <l: Identifier> <end: @R> MemberOperator <t: ExprItem> <d: Default> =>
-        ParameterNode::parameter(l, Some(t), d),
+    <start: @L> <l: Identifier> <end: @R> <d: ExprDefault>  <doc: QuotedString?> => ParameterNode::parameter(l, None, d, doc),
 
-    Unnamed <start: @L> <l: Identifier> <end: @R> => ParameterNode::unnamed(l),
+    <start: @L> <l: Identifier> <end: @R> MemberOperator <t: ExprItem> <d: Default>  <doc: QuotedString?> =>
+        ParameterNode::parameter(l, Some(t), d, doc),
 
-    Named <start: @L> <l: Identifier> <end: @R> => ParameterNode::named(l),
+    Unnamed <start: @L> <l: Identifier> <end: @R> <doc: QuotedString?> => ParameterNode::unnamed(l, doc),
+
+    Named <start: @L> <l: Identifier> <end: @R>  <doc: QuotedString?> => ParameterNode::named(l, doc),
 }
 
 ExprDefault: Option<Node> = {
@@ -229,24 +231,26 @@ Unary: Box<Node> = {
 
 Signature: Option<Vec<ParameterNode>> = {
     => None,
-    Pipe Pipe Separators? => Some(vec![]),
-    Pipe <s: ParameterList> Pipe Separators? => Some(s),
+    Pipe Separators? Pipe Separators? => Some(vec![]),
+    Pipe Separators? <s: ParameterList> Pipe Separators? => Some(s),
 }
 
 ParameterList: Vec<ParameterNode> = {
-    Parameter => vec![<>],
-    <mut l: ParameterList> Separators? <p: Parameter> => {l.push(p); l},
+    <p: Parameter> Separators? => vec![p],
+    <mut l: ParameterList> <p: Parameter> Separators?=> {l.push(p); l},
 }
 
 Parameter: ParameterNode = {
-    <start: @L> <l: Identifier> <end: @R> <d: Default> => ParameterNode::parameter(l, None, d),
+    <name: String> Equals <value: QuotedString> => ParameterNode::meta(name, value),
 
-    <start: @L> <l: Identifier> <end: @R> MemberOperator <t: Item> <d: Default> =>
-        ParameterNode::parameter(l, Some(t), d),
+    <start: @L> <l: Identifier> <end: @R> <d: Default> <doc: QuotedString?> => ParameterNode::parameter(l, None, d, doc),
 
-    Unnamed <start: @L> <l: Identifier> <end: @R> => ParameterNode::unnamed(l),
+    <start: @L> <l: Identifier> <end: @R> MemberOperator <t: Item> <d: Default> <doc: QuotedString?> =>
+        ParameterNode::parameter(l, Some(t), d, doc),
 
-    Named <start: @L> <l: Identifier> <end: @R> => ParameterNode::named(l),
+    Unnamed <start: @L> <l: Identifier> <doc: QuotedString?> <end: @R> => ParameterNode::unnamed(l, doc),
+
+    Named <start: @L> <l: Identifier> <doc: QuotedString?> <end: @R> => ParameterNode::named(l, doc),
 }
 
 Default: Option<Node> = {
