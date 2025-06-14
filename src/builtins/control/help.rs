@@ -173,7 +173,6 @@ fn recurse(node: Node, state: &mut State) -> CrushResult<()> {
             //            state.out.push_str(CODE_START);
             //          state.out.push_str(&n.value);
             //        state.out.push_str(CODE_END);
-            state.newline();
         }
         Node::Math(_) => {}
         Node::MdxFlowExpression(_) => {}

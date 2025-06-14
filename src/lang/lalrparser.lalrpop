@@ -121,6 +121,7 @@ ExprItem: Box<Node> = {
     <l: Regex> => Node::regex(l),
     <l:QuotedFile> => Node::file(l, true),
     <s:QuotedString> => Node::quoted_string(s),
+    <s:String> => Node::unquoted_string(s),
     <i:Integer> => Node::integer(i),
     <f:Float> => Node::float(f),
     <e:Return> => Node::return_expr(e),
@@ -131,9 +132,9 @@ ExprItem: Box<Node> = {
     <key:Loop> Separators? BlockStart <body: ExprJobList> BlockEnd => Node::loop_expr(key, body),
     <key:For> <id:Identifier> Equals <iter:Expr> Separators? BlockStart <body: ExprJobList> BlockEnd => Node::for_expr(key, id.into(), iter, body),
     <i: ExprItem> GetItemStart <e: Assignment> GetItemEnd => Box::from(Node::GetItem(i, e)),
-    <i: ExprItem> MemberOperator <l: Identifier> => Box::from(Node::GetAttr(i, l.into())),
+    <i: ExprItem> MemberOperator <l: String> => Box::from(Node::GetAttr(i, l.into())),
     GetItemStart <l: ExprJobList> GetItemEnd => Node::list_literal(l),
-    <i: ExprItem> ExprModeStart <ov: ExprOptList> SubEnd => {
+    <i: ExprItem> ExprModeStart <ov: ExprOptParamList> SubEnd => {
         let l = i.location();
         let mut v = match ov {
             Some(vv) => vv,
@@ -155,18 +156,25 @@ ExprItem: Box<Node> = {
     BlockStart Separators? <s: ExprSignature> <l: ExprJobListWithoutSeparator> BlockEnd => Box::from(Node::Closure(s, l)),
 }
 
-ExprOptList: Option<Vec<Node>> = {
+ExprOptParamList: Option<Vec<Node>> = {
     => None,
-    <e: ExprList> => Some(e),
+    <e: ExprParamList> Separators? => Some(e),
 }
 
-ExprList: Vec<Node> = {
-    <e: ExprAssignment> => vec![*e],
-    <mut l: ExprList> Separators <e: ExprAssignment> => {
+ExprParamList: Vec<Node> = {
+    <e: ExprParam> => vec![*e],
+    <mut l: ExprParamList> Separators <e: ExprParam> => {
         l.push(*e);
         l
     },
 }
+
+ExprParam: Box<Node> = {
+    ExprLogical,
+    <i: String> <op: Equals> <e: ExprLogical> =>
+        Box::from(Node::Assignment(Node::unquoted_string(i), SwitchStyle::None, "=".to_string(), e)),
+}
+
 
 ExprSignature: Option<Vec<ParameterNode>> = {
     => None,
@@ -175,12 +183,12 @@ ExprSignature: Option<Vec<ParameterNode>> = {
 }
 
 ExprParameterList: Vec<ParameterNode> = {
-    ExprParameter => vec![<>],
-    <mut l: ExprParameterList> Separators? <p: ExprParameter> => {l.push(p); l},
+    <p: ExprParameter> Separators?=> vec![p],
+    <mut l: ExprParameterList> <p: ExprParameter> Separators? => {l.push(p); l},
 }
 
 ExprParameter: ParameterNode = {
-//    <name: Identifier> Equals <value: QuotedString> => ParameterNode::meta(name, value),
+    <name: String> Equals <value: QuotedString> => ParameterNode::meta(name, value),
 
     <start: @L> <l: Identifier> <end: @R> <d: ExprDefault>  <doc: QuotedString?> => ParameterNode::parameter(l, None, d, doc),
 

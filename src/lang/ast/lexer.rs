@@ -385,8 +385,26 @@ impl<'input> Lexer<'input> {
                             self.mode.push(LexerMode::Command);
                             return Some(Token::SubStart(Location::new(i, i + 2)).into());
                         }
+                        Some((_, ch2)) if identifier_first_char(*ch2) => {
+                            let mut end_idx = i;
+                            loop {
+                                let cc2 = self.chars.peek();
+                                match cc2 {
+                                    Some((_, ch3)) if identifier_char(*ch3) => {
+                                        end_idx = self.chars.next().unwrap().0;
+                                    }
+                                    _ => {
+                                        break
+                                    }
+                                }
+                            }
+
+                            let s = &self.full_str[i..end_idx + 1];
+                            return Some(Token::Identifier(s, Location::new(i, end_idx + 1)).into())
+                        }
                         Some((_, ch2)) => return Some(Err(LexicalError::UnexpectedCharacterWithSuggestion(*ch2, '('))),
-                        _ => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion('('))),
+                        _ => return Some(Err(LexicalError::UnexpectedEOF)),
+
                     }
                 }
 
@@ -440,7 +458,7 @@ impl<'input> Lexer<'input> {
                 Some((i, '|')) => return Some(Token::Pipe(Location::from(i)).into()),
                 Some((i, ';')) => return Some(Token::Separator(";", Location::from(i)).into()),
                 Some((i, ',')) => return Some(Token::Separator(",", Location::from(i)).into()),
-                Some((i, '\n')) => return Some(Token::Separator("\n", Location::from(i)).into()),
+                Some((i, '\n')) => continue,//return Some(Token::Separator("\n", Location::from(i)).into()),
                 Some((_, '\\')) =>
                     match self.chars.peek() {
                         Some((_, '\n')) => {
@@ -570,7 +588,7 @@ impl<'input> Lexer<'input> {
                         "return" => Some(Token::Return(Location::new(i, end_idx + 1)).into()),
                         "break" => Some(Token::Break(Location::new(i, end_idx + 1)).into()),
                         "continue" => Some(Token::Continue(Location::new(i, end_idx + 1)).into()),
-                        _ => Some(Token::Identifier(s, Location::new(i, end_idx + 1)).into()),
+                        _ => Some(Token::String(s, Location::new(i, end_idx + 1)).into()),
                     };
                 }
 

@@ -650,6 +650,25 @@ impl Help for Closure {
                     long_help.append(&mut param_help);
                 }
 
+                let mut example = Vec::new();
+
+                for i in sig {
+                    match i {
+                        Parameter::Meta(key, value) => {
+                            if key.string == "example" {
+                                example.push(format!("    {}", unescape(&value.string).unwrap_or("<Invalid encoding>".to_string())));
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                
+                if example.len() > 0 {
+                    long_help.push(format!("# Examples"));
+                    long_help.push("".to_string());
+                    long_help.append(&mut example);
+                }
+                
                 Some(long_help.join("\n"))
             }
             _ => None,

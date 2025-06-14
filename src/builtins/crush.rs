@@ -356,7 +356,7 @@ mod byte_unit {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "crush",
-        "Metadata about this Crush shell instance",
+        "Information about this Crush session",
         Box::new(move |crush| {
             crush.declare("pid", Value::Integer(Pid::this().as_raw() as i128))?;
             crush.declare("ppid", Value::Integer(Pid::parent().as_raw() as i128))?;

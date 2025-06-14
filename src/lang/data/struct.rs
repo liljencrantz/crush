@@ -13,6 +13,7 @@ use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 use std::fmt::{Formatter, Display};
+use std::ops::Deref;
 use crate::lang::help::Help;
 
 static STRUCT_STREAM_TYPE: [ColumnType; 2] = [
@@ -263,6 +264,31 @@ impl Display for Struct {
     }
 }
 
+fn format_help(s: impl Into<String>, is_example: bool) -> String {
+    if is_example {
+        format!("    {}", s.into())
+    } else {
+        s.into()
+    }
+}
+
+fn extract_help(value: Value, res: &mut Vec<String> , is_example: bool) {
+    match value {
+        Value::String(s) =>
+            res.push(format_help(s.deref(), is_example)),
+        Value::List(l) => {
+            for v in l.iter() {
+                match v {
+                    Value::String(s) =>
+                        res.push(format_help(s.deref(), is_example)),
+                    _ => res.push("<Invalid help item>".to_string()),
+                }
+            }
+        }
+        _ => res.push("<Invalid help item>".to_string()),
+    }
+}
+
 impl Help for Struct {
     fn signature(&self) -> String {
         self.get("__signature__").map(|v| v.to_string()).unwrap_or("type struct".to_string())
@@ -273,28 +299,33 @@ impl Help for Struct {
     }
 
     fn long_help(&self) -> Option<String> {
-        let mut res = String::new();
+        let mut res = Vec::new();
 
-        if let Some(l) = self.get("__long_help__").map(|v| v.to_string()) {
-            res.push_str(l.as_str());
-            res.push('\n');       
+        if let Some(l) = self.get("__long_help__") {
+            extract_help(l, &mut res, false)
         }
-        
+
         let mut v = self.map().drain().collect::<Vec<_>>();
         if !v.is_empty() {
             if !res.is_empty() {
-                res.push('\n');       
+                res.push("".to_string());       
             }
-            res.push_str("This struct has the following fields:\n");       
+            
+            res.push("This struct has the following fields:".to_string());       
             
             v.sort_by(|a, b| a.0.cmp(&b.0));
 
             for el in v {
-                res.push_str(format!("* `{}` {}\n", el.0, el.1.short_help()).as_str());
+                res.push(format!("* `{}` {}", el.0, el.1.short_help()));
             }
         }
-        
-        Some(res)
+
+        if let Some(l) = self.get("__example__") {
+            res.push("# Examples".to_string());
+            extract_help(l, &mut res, true)
+        }
+
+        Some(res.join("\n"))
     }
 }
 

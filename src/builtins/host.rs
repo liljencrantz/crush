@@ -415,7 +415,7 @@ fn signal(mut context: CommandContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "host",
-        "Information about this host",
+        "Information about the host this crush session is running on",
         Box::new(move |host| {
             Battery::declare(host)?;
             Memory::declare(host)?;

@@ -10,7 +10,6 @@ use crate::lang::value::ValueType;
 use crate::lang::{data::r#struct::Struct, value::Value};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use signature::signature;
-use crate::lang::any_str::AnyStr;
 use crate::lang::state::this::This;
 
 pub mod binary;
@@ -96,8 +95,9 @@ fn data(context: CommandContext) -> CrushResult<()> {
     example = "# Create a class that represents a point in 2D space",
     example = "$Point := $(class)",
     example = "$Point:__short_help__ = \"A point in 2D space\"",
-    example = "$Point:__long_help__ = \"Uses floating point numbers to represent the x and y coordinates\"",
     example = "$Point:__signature__ = \"class Point\"",
+    example = "$Point:__long_help__ = \"Uses floating point numbers to represent the x and y coordinates\"",
+    example = "$Point:__example__ = \"$p := ($Point.new(1.0, 2.0))\"",
     example = "# Constructor takes two arguments, x and y",
     example = "Point:__init__ = {",
     example = "  |$x:$float $y:$float|",
@@ -109,7 +109,7 @@ fn data(context: CommandContext) -> CrushResult<()> {
     example = "  |",
     example = "  short_help = \"Returns the distance from the origin\"",
     example = "  |",
-    example = "  (math.sqrt(this.x*this.x + this.y*this.y))",
+    example = "  ($math.sqrt($this.x*$this.x + $this.y*$this.y))",
     example = "}",
     example = "# Overload the `+` operator to add two points. (Only available in expression mode)",
     example = "Point:__add__ = {",
@@ -117,12 +117,12 @@ fn data(context: CommandContext) -> CrushResult<()> {
     example = "  short_help = \"Add two points together\"",
     example = "  $other : $struct \"the other point.\"",
     example = "  |",
-    example = "  (Point.new(x=(this.x+other.x), y=(this.y+other.y)))",
+    example = "  ($Point.new(x=($this.x+$other.x), y=($this.y+$other.y)))",
     example = "}",
-    example = "$p := $(Point:new x=1.0 y=2.0)",
-    example = "p:len",
-    example = "$p2 := (Point.new(x=-1.0, y=2.0))",
-    example = "$p3 := (p + p2)",
+    example = "$p := $($Point:new x=1.0 y=2.0)",
+    example = "$p:len",
+    example = "$p2 := ($Point.new(x=-1.0, y=2.0))",
+    example = "$p3 := ($p + $p2)",
 )]
 struct Class {
     #[description("the type to convert the value to.")]

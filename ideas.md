@@ -26,11 +26,16 @@ Use struct:s with three members,
 * `attr`, a `dict $string $string` containing the attributes of the node.
 * `children`, a `list $any` containing text fragments (as strings) mixed with child nodes. 
 
-# Changed variable declaration syntax
+# Changed variable declaration and assignement syntax
 
-`let foo=bar`
+```
+# Declare new variable
+let foo=bar
+# Assign new value to existing variable
+set foo=bar
+```
 
-More consistent with the regular crush syntax, but slightly more verbose.
+More consistent with the regular crush syntax, but more verbose.
 
 # Validation
 
