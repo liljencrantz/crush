@@ -605,26 +605,8 @@ impl Help for Closure {
         match &self.signature {
             Some(sig) => {
                 let mut long_help = Vec::new();
-
-                long_help.push(
-                    sig.iter()
-                        .flat_map(|p| match p {
-                            Parameter::Meta(key, value) => {
-                                if key.string == "long_help" {
-                                    Some(
-                                        unescape(&value.string)
-                                            .unwrap_or("<Invalid help string>".to_string()),
-                                    )
-                                } else {
-                                    None
-                                }
-                            }
-                            _ => None,
-                        })
-                        .collect(),
-                );
-
                 let mut param_help = Vec::new();
+                let mut example = Vec::new();
 
                 for i in sig {
                     match i {
@@ -639,6 +621,18 @@ impl Help for Closure {
                                     .unwrap_or("".to_string())
                             ));
                         }
+                        Parameter::Meta(key, value) => {
+                            match key.string.as_ref() {
+                                "long_help" => {
+                                    long_help.push(unescape(&value.string)
+                                        .unwrap_or("<Invalid help string>".to_string()));
+                                }
+                                "example" => {
+                                    example.push(format!("    {}", unescape(&value.string).unwrap_or("<Invalid encoding>".to_string())));
+                                }
+                                _ => {}
+                            }
+                        }
                         _ => {}
                     }
                 }
@@ -648,19 +642,6 @@ impl Help for Closure {
                     long_help.push("This command accepts the following arguments:".to_string());
                     long_help.push("".to_string());
                     long_help.append(&mut param_help);
-                }
-
-                let mut example = Vec::new();
-
-                for i in sig {
-                    match i {
-                        Parameter::Meta(key, value) => {
-                            if key.string == "example" {
-                                example.push(format!("    {}", unescape(&value.string).unwrap_or("<Invalid encoding>".to_string())));
-                            }
-                        }
-                        _ => {}
-                    }
                 }
                 
                 if example.len() > 0 {
