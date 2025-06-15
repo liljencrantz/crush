@@ -1,28 +1,28 @@
+use crate::data::binary::BinaryReader;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, CrushResult, data_error, error};
+use crate::lang::data::table::{ColumnType, Row};
+use crate::lang::errors::{CrushResult, argument_error_legacy, data_error, error};
+use crate::lang::pipe::TableOutputStream;
+use crate::lang::signature::text::Text;
 use crate::lang::state::contexts::CommandContext;
+use crate::lang::state::this::This;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
+use crate::util::user_map::{get_gid, get_uid};
+use nix::errno::Errno;
+use nix::fcntl::AT_FDCWD;
+use nix::libc::S_IFDIR;
+use nix::sys::stat::{UtimensatFlags, lstat, utimensat};
+use nix::sys::time::TimeSpec;
 use ordered_map::OrderedMap;
-use std::fs::{create_dir, File, metadata, remove_dir, remove_file};
 use signature::signature;
 use std::collections::HashSet;
+use std::fs::{File, create_dir, metadata, remove_dir, remove_file};
 use std::ops::{Add, Deref};
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::sync::{Arc, OnceLock};
-use nix::errno::Errno;
-use nix::fcntl::AT_FDCWD;
-use nix::libc::S_IFDIR;
-use nix::sys::stat::{lstat, utimensat, UtimensatFlags};
-use nix::sys::time::TimeSpec;
-use crate::data::binary::BinaryReader;
-use crate::lang::data::table::{ColumnType, Row};
-use crate::lang::pipe::TableOutputStream;
-use crate::lang::signature::text::Text;
-use crate::lang::state::this::This;
-use crate::util::user_map::{get_gid, get_uid};
 
 pub fn methods() -> &'static OrderedMap<String, Command> {
     static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
@@ -61,7 +61,7 @@ pub fn chown(mut context: CommandContext) -> CrushResult<()> {
     let file = context.this.file()?;
 
     let uid = if let Some(name) = cfg.user {
-        Some(get_uid(&name)?.ok_or( format!("Unknown user {}", &name))?)
+        Some(get_uid(&name)?.ok_or(format!("Unknown user {}", &name))?)
     } else {
         None
     };
@@ -72,11 +72,13 @@ pub fn chown(mut context: CommandContext) -> CrushResult<()> {
         None
     };
 
-    nix::unistd::chown(&file, uid.map(|i| i.add(0).into()), gid.map(|i| i.add(0).into()))?;
+    nix::unistd::chown(
+        &file,
+        uid.map(|i| i.add(0).into()),
+        gid.map(|i| i.add(0).into()),
+    )?;
 
-    context
-        .output
-        .send(Value::Empty)
+    context.output.send(Value::Empty)
 }
 
 #[signature(
@@ -118,42 +120,50 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
 
     for c in perm.chars() {
         match class_done {
-            false => {
-                match c {
-                    'u' => { classes.insert(OWNER); }
-                    'g' => { classes.insert(GROUP); }
-                    'o' => { classes.insert(OTHER); }
-                    'a' => {
-                        classes.insert(OWNER);
-                        classes.insert(GROUP);
-                        classes.insert(OTHER);
-                    }
-                    '+' => {
-                        class_done = true;
-                    }
-                    '-' => {
-                        adjustments = PermissionAdjustment::Remove;
-                        class_done = true;
-                    }
-                    '=' => {
-                        adjustments = PermissionAdjustment::Set;
-                        class_done = true;
-                    }
-                    c => {
-                        return argument_error_legacy(format!("Illegal character in class-part of permission: {}", c));
-                    }
+            false => match c {
+                'u' => {
+                    classes.insert(OWNER);
                 }
-            }
-            true => {
-                match c {
-                    'r' => modes |= READ,
-                    'w' => modes |= WRITE,
-                    'x' => modes |= EXECUTE,
-                    c => {
-                        return argument_error_legacy(format!("Illegal character in mode-part of permission: {}", c));
-                    }
+                'g' => {
+                    classes.insert(GROUP);
                 }
-            }
+                'o' => {
+                    classes.insert(OTHER);
+                }
+                'a' => {
+                    classes.insert(OWNER);
+                    classes.insert(GROUP);
+                    classes.insert(OTHER);
+                }
+                '+' => {
+                    class_done = true;
+                }
+                '-' => {
+                    adjustments = PermissionAdjustment::Remove;
+                    class_done = true;
+                }
+                '=' => {
+                    adjustments = PermissionAdjustment::Set;
+                    class_done = true;
+                }
+                c => {
+                    return argument_error_legacy(format!(
+                        "Illegal character in class-part of permission: {}",
+                        c
+                    ));
+                }
+            },
+            true => match c {
+                'r' => modes |= READ,
+                'w' => modes |= WRITE,
+                'x' => modes |= EXECUTE,
+                c => {
+                    return argument_error_legacy(format!(
+                        "Illegal character in mode-part of permission: {}",
+                        c
+                    ));
+                }
+            },
         }
     }
 
@@ -199,9 +209,7 @@ pub fn chmod(mut context: CommandContext) -> CrushResult<()> {
     }
 
     std::fs::set_permissions(&file, std::fs::Permissions::from_mode(current))?;
-    context
-        .output
-        .send(Value::Empty)
+    context.output.send(Value::Empty)
 }
 
 #[signature(
@@ -235,9 +243,10 @@ struct GetItem {
 pub fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     let base_directory = context.this.file()?;
     let cfg = GetItem::parse(context.arguments, &context.global_state.printer())?;
-    context.output.send(Value::from(base_directory.join(&cfg.name.as_path())))
+    context
+        .output
+        .send(Value::from(base_directory.join(&cfg.name.as_path())))
 }
-
 
 #[signature(
     types.file.write,
@@ -251,8 +260,7 @@ fn write(mut context: CommandContext) -> CrushResult<()> {
     let _cfg = Write::parse(context.arguments, &context.global_state.printer())?;
     match context.input.recv()? {
         Value::BinaryInputStream(mut input) => {
-            let mut out = File::create(
-                context.this.file()?)?;
+            let mut out = File::create(context.this.file()?)?;
             std::io::copy(input.as_mut(), &mut out)?;
             Ok(())
         }
@@ -271,7 +279,9 @@ struct Read {}
 fn read(mut context: CommandContext) -> CrushResult<()> {
     context
         .output
-        .send(Value::BinaryInputStream(<dyn BinaryReader>::paths(vec![context.this.file()?])?))
+        .send(Value::BinaryInputStream(<dyn BinaryReader>::paths(vec![
+            context.this.file()?,
+        ])?))
 }
 
 #[signature(
@@ -283,11 +293,15 @@ fn read(mut context: CommandContext) -> CrushResult<()> {
 struct Name {}
 
 fn name(mut context: CommandContext) -> CrushResult<()> {
-    context
-        .output
-        .send(Value::from(
-                    context.this.file()?.file_name().ok_or("Invalid file path")?
-                    .to_str().ok_or("Invalid file name")?))
+    context.output.send(Value::from(
+        context
+            .this
+            .file()?
+            .file_name()
+            .ok_or("Invalid file path")?
+            .to_str()
+            .ok_or("Invalid file name")?,
+    ))
 }
 
 #[signature(
@@ -299,10 +313,9 @@ fn name(mut context: CommandContext) -> CrushResult<()> {
 struct Parent {}
 
 fn parent(mut context: CommandContext) -> CrushResult<()> {
-    context
-        .output
-        .send(Value::from(
-                context.this.file()?.parent().ok_or("Invalid file path")?))
+    context.output.send(Value::from(
+        context.this.file()?.parent().ok_or("Invalid file path")?,
+    ))
 }
 
 static REMOVE_OUTPUT_TYPE: [ColumnType; 3] = [
@@ -329,12 +342,25 @@ struct Remove {
 
 fn remove_outcome_to_row<ErrType: ToString>(path: Arc<Path>, result: Result<(), ErrType>) -> Row {
     match result {
-        Ok(_) => Row::new(vec![Value::File(path), Value::Bool(true), Value::String(Arc::from("Deleted"))]),
-        Err(e) => Row::new(vec![Value::File(path), Value::Bool(false), Value::String(Arc::from(e.to_string()))]),
+        Ok(_) => Row::new(vec![
+            Value::File(path),
+            Value::Bool(true),
+            Value::String(Arc::from("Deleted")),
+        ]),
+        Err(e) => Row::new(vec![
+            Value::File(path),
+            Value::Bool(false),
+            Value::String(Arc::from(e.to_string())),
+        ]),
     }
 }
 
-fn handle_remove_result<ErrType: ToString>(path: Arc<Path>, result: Result<(), ErrType>, out: &TableOutputStream, verbose: bool) -> CrushResult<()> {
+fn handle_remove_result<ErrType: ToString>(
+    path: Arc<Path>,
+    result: Result<(), ErrType>,
+    out: &TableOutputStream,
+    verbose: bool,
+) -> CrushResult<()> {
     match result {
         Ok(_) => {
             if verbose {
@@ -343,13 +369,15 @@ fn handle_remove_result<ErrType: ToString>(path: Arc<Path>, result: Result<(), E
                 Ok(())
             }
         }
-        Err(e) => {
-            out.send(remove_outcome_to_row(path, Err(e)))
-        }
+        Err(e) => out.send(remove_outcome_to_row(path, Err(e))),
     }
 }
 
-fn remove_file_of_unknown_type(path: Arc<Path>, out: &TableOutputStream, verbose: bool) -> CrushResult<()> {
+fn remove_file_of_unknown_type(
+    path: Arc<Path>,
+    out: &TableOutputStream,
+    verbose: bool,
+) -> CrushResult<()> {
     match lstat(path.deref()) {
         Ok(stat) => {
             if stat.st_mode & S_IFDIR != 0 {
@@ -364,7 +392,11 @@ fn remove_file_of_unknown_type(path: Arc<Path>, out: &TableOutputStream, verbose
     }
 }
 
-fn remove_known_directory(path: Arc<Path>, out: &TableOutputStream, verbose: bool) -> CrushResult<()> {
+fn remove_known_directory(
+    path: Arc<Path>,
+    out: &TableOutputStream,
+    verbose: bool,
+) -> CrushResult<()> {
     let res = remove_dir(path.deref());
     handle_remove_result(path, res, out, verbose)
 }
@@ -391,26 +423,30 @@ fn remove(mut context: CommandContext) -> CrushResult<()> {
                             Ok(rd) => {
                                 for e in rd {
                                     match e {
-                                        Ok(e) =>
-                                            match e.metadata() {
-                                                Ok(meta) => {
-                                                    if meta.is_dir() {
-                                                        directories.push((Arc::from(e.path()), false));
-                                                    } else {
-                                                        remove_known_file(Arc::from(e.path()), &output, cfg.verbose)?;
-                                                    }
+                                        Ok(e) => match e.metadata() {
+                                            Ok(meta) => {
+                                                if meta.is_dir() {
+                                                    directories.push((Arc::from(e.path()), false));
+                                                } else {
+                                                    remove_known_file(
+                                                        Arc::from(e.path()),
+                                                        &output,
+                                                        cfg.verbose,
+                                                    )?;
                                                 }
-                                                Err(e) =>
-                                                    output.send(remove_outcome_to_row(next.clone(), Err(e)))?,
-                                            },
+                                            }
+                                            Err(e) => output.send(remove_outcome_to_row(
+                                                next.clone(),
+                                                Err(e),
+                                            ))?,
+                                        },
 
-                                        Err(e) =>
-                                            output.send(remove_outcome_to_row(next.clone(), Err(e)))?,
+                                        Err(e) => output
+                                            .send(remove_outcome_to_row(next.clone(), Err(e)))?,
                                     }
                                 }
                             }
-                            Err(e) =>
-                                output.send(remove_outcome_to_row(next.clone(), Err(e)))?,
+                            Err(e) => output.send(remove_outcome_to_row(next.clone(), Err(e)))?,
                         }
                     }
                 }
@@ -420,9 +456,10 @@ fn remove(mut context: CommandContext) -> CrushResult<()> {
             }
         }
         None => argument_error_legacy("Expected this to be a file, but this is not set"),
-        Some(v) => argument_error_legacy(
-            &format!("Expected this to be a file, but it is a {}", v.value_type().to_string()),
-        ),
+        Some(v) => argument_error_legacy(&format!(
+            "Expected this to be a file, but it is a {}",
+            v.value_type().to_string()
+        )),
     }
 }
 
@@ -471,7 +508,13 @@ fn touch(mut context: CommandContext) -> CrushResult<()> {
     let file = context.this.file()?;
     let cfg = Touch::parse(context.remove_arguments(), context.global_state.printer())?;
 
-    match utimensat(AT_FDCWD, &file, &TimeSpec::UTIME_NOW, &TimeSpec::UTIME_NOW, UtimensatFlags::FollowSymlink) {
+    match utimensat(
+        AT_FDCWD,
+        &file,
+        &TimeSpec::UTIME_NOW,
+        &TimeSpec::UTIME_NOW,
+        UtimensatFlags::FollowSymlink,
+    ) {
         Ok(_) => Ok(()),
         Err(Errno::ENOENT) => {
             if !cfg.no_create {

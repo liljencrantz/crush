@@ -1,5 +1,3 @@
-
-
 #[derive(Copy, Clone)]
 pub enum Temperature {
     Celsius,
@@ -8,8 +6,7 @@ pub enum Temperature {
 }
 
 impl Temperature {
-
-    pub fn format(&self, kelvin: f64) -> f64{
+    pub fn format(&self, kelvin: f64) -> f64 {
         match self {
             Temperature::Celsius => kelvin - 273.15,
             Temperature::Kelvin => kelvin,
@@ -17,12 +14,11 @@ impl Temperature {
         }
     }
 
-    pub fn unit(&self) -> &str{
+    pub fn unit(&self) -> &str {
         match self {
             Temperature::Celsius => "°C",
             Temperature::Kelvin => "K", // Kelvin is an absolute unit, so no ° symbol
             Temperature::Fahrenheit => "°F",
         }
     }
-
 }

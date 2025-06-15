@@ -3,12 +3,11 @@
 /// Because Crush has a very large number of builtins, many of which use a third party library
 /// that implements its own Error handling, the `CrushErrorType` is insanely large.
 /// It doesn't do anything that is weird or unusual, it's just big.
-
 use crate::lang::ast::location::Location;
-use CrushErrorType::*;
-use std::cmp::{min, max};
-use reqwest::header::ToStrError;
 use crate::lang::ast::token;
+use CrushErrorType::*;
+use reqwest::header::ToStrError;
+use std::cmp::{max, min};
 
 #[derive(Debug)]
 pub enum CrushErrorType {
@@ -75,7 +74,11 @@ struct ErrorLine {
 
 impl ErrorLine {
     fn format_location(&self) -> String {
-        format!("{}{}", " ".repeat(self.location.start), "^".repeat(self.location.len()))
+        format!(
+            "{}{}",
+            " ".repeat(self.location.start),
+            "^".repeat(self.location.len())
+        )
     }
 }
 
@@ -86,9 +89,7 @@ impl CrushError {
 
     pub fn message(&self) -> String {
         match &self.error_type {
-            InvalidArgument(s)
-            | InvalidData(s)
-            | GenericError(s) => s.clone(),
+            InvalidArgument(s) | InvalidData(s) | GenericError(s) => s.clone(),
             SendError(e) => e.to_string(),
             EOFError => "EOF error".to_string(),
             IOError(e) => e.to_string(),
@@ -141,8 +142,7 @@ impl CrushError {
     pub fn with_source(self, source: &Option<(String, Location)>) -> CrushError {
         match source {
             None => self,
-            Some((def, loc)) =>
-                self.with_location(*loc).with_definition(def),
+            Some((def, loc)) => self.with_location(*loc).with_definition(def),
         }
     }
 
@@ -156,11 +156,7 @@ impl CrushError {
 
     pub fn with_location(self, l: Location) -> CrushError {
         let location = if let Some(old) = self.location() {
-            if old.len() < l.len() {
-                old
-            } else {
-                l
-            }
+            if old.len() < l.len() { old } else { l }
         } else {
             l
         };
@@ -177,15 +173,24 @@ impl CrushError {
                 let mut res = String::new();
                 let lines = extract_location(def, loc);
                 if lines.len() == 1 && lines[0].line_number == 1 {
-                    res.push_str(&format!("{}\n{}\n", lines[0].line, lines[0].format_location()));
+                    res.push_str(&format!(
+                        "{}\n{}\n",
+                        lines[0].line,
+                        lines[0].format_location()
+                    ));
                 } else {
                     for line in lines {
-                        res.push_str(&format!("Line {}\n{}\n{}\n", line.line_number, line.line, line.format_location()));
+                        res.push_str(&format!(
+                            "Line {}\n{}\n{}\n",
+                            line.line_number,
+                            line.line,
+                            line.format_location()
+                        ));
                     }
                 }
                 Some(res)
             }
-            _ => None
+            _ => None,
         }
     }
 
@@ -286,8 +291,12 @@ impl From<crate::lang::ast::lexer::LexicalError> for CrushError {
     }
 }
 
-impl From<lalrpop_util::ParseError<usize, token::Token<'_>, crate::lang::ast::lexer::LexicalError>> for CrushError {
-    fn from(e: lalrpop_util::ParseError<usize, token::Token, crate::lang::ast::lexer::LexicalError>) -> Self {
+impl From<lalrpop_util::ParseError<usize, token::Token<'_>, crate::lang::ast::lexer::LexicalError>>
+    for CrushError
+{
+    fn from(
+        e: lalrpop_util::ParseError<usize, token::Token, crate::lang::ast::lexer::LexicalError>,
+    ) -> Self {
         CrushError {
             error_type: ParseError(e.to_string()),
             location: None,
@@ -626,7 +635,7 @@ pub fn invalid_jump<T>(message: impl Into<String>) -> CrushResult<T> {
     })
 }
 
-pub fn login_error<T>(message: impl Into<String>) -> CrushResult<T>{
+pub fn login_error<T>(message: impl Into<String>) -> CrushResult<T> {
     Err(CrushError {
         error_type: LoginsError(message.into()),
         location: None,
@@ -634,7 +643,7 @@ pub fn login_error<T>(message: impl Into<String>) -> CrushResult<T>{
     })
 }
 
-pub fn byte_unit_error<T>(s: &str) -> CrushResult<T>{
+pub fn byte_unit_error<T>(s: &str) -> CrushResult<T> {
     Err(CrushError {
         error_type: ByteUnitError(format!("Unknown byte unit {}", s)),
         location: None,
@@ -650,7 +659,11 @@ pub fn error<T>(message: impl Into<String>) -> CrushResult<T> {
     })
 }
 
-pub fn mandate_argument<T>(result: Option<T>, message: impl Into<String>, location: Location) -> CrushResult<T> {
+pub fn mandate_argument<T>(
+    result: Option<T>,
+    message: impl Into<String>,
+    location: Location,
+) -> CrushResult<T> {
     match result {
         Some(v) => Ok(v),
         None => Err(CrushError {
@@ -669,15 +682,14 @@ fn extract_location(s: &str, loc: Location) -> Vec<ErrorLine> {
     for (off, ch) in s.char_indices().chain(vec![(s.len(), '\n')]) {
         if ch == '\n' {
             if off > loc.start && start < loc.end {
-                res.push(
-                    ErrorLine {
-                        line_number: line,
-                        line: s[start..(off)].to_string(),
-                        location: Location::new(
-                            max(start, loc.start) - start,
-                            min(off, loc.end) - start),
-                    }
-                );
+                res.push(ErrorLine {
+                    line_number: line,
+                    line: s[start..(off)].to_string(),
+                    location: Location::new(
+                        max(start, loc.start) - start,
+                        min(off, loc.end) - start,
+                    ),
+                });
             }
             start = off + 1;
             line += 1;
@@ -698,24 +710,18 @@ mod tests {
             line: "remote:exec --hsot=foo".to_string(),
             location: Location::new(12, 22),
         };
-        assert_eq!(
-            line.format_location(),
-            "            ^^^^^^^^^^".to_string()
-        );
+        assert_eq!(line.format_location(), "            ^^^^^^^^^^".to_string());
     }
-
 
     #[test]
     fn check_simple_location_extraction() {
         assert_eq!(
             extract_location("remote:exec --hsot=foo", Location::new(12, 22)),
-            vec![
-                ErrorLine {
-                    line_number: 1,
-                    line: "remote:exec --hsot=foo".to_string(),
-                    location: Location::new(12, 22),
-                },
-            ]
+            vec![ErrorLine {
+                line_number: 1,
+                line: "remote:exec --hsot=foo".to_string(),
+                location: Location::new(12, 22),
+            },]
         );
     }
 
@@ -723,13 +729,11 @@ mod tests {
     fn check_second_line_location_extraction() {
         assert_eq!(
             extract_location("find .\nremote:exec --hsot=foo", Location::new(19, 29)),
-            vec![
-                ErrorLine {
-                    line_number: 2,
-                    line: "remote:exec --hsot=foo".to_string(),
-                    location: Location::new(12, 22),
-                },
-            ]
+            vec![ErrorLine {
+                line_number: 2,
+                line: "remote:exec --hsot=foo".to_string(),
+                location: Location::new(12, 22),
+            },]
         );
     }
 
@@ -737,13 +741,11 @@ mod tests {
     fn check_first_line_location_extraction() {
         assert_eq!(
             extract_location("remote:exec --hsot=foo\nfind .", Location::new(12, 22)),
-            vec![
-                ErrorLine {
-                    line_number: 1,
-                    line: "remote:exec --hsot=foo".to_string(),
-                    location: Location::new(12, 22),
-                },
-            ]
+            vec![ErrorLine {
+                line_number: 1,
+                line: "remote:exec --hsot=foo".to_string(),
+                location: Location::new(12, 22),
+            },]
         );
     }
 
@@ -751,13 +753,11 @@ mod tests {
     fn check_whole_line_location_extraction() {
         assert_eq!(
             extract_location("echo 1\necho 2\necho 3", Location::new(7, 13)),
-            vec![
-                ErrorLine {
-                    line_number: 2,
-                    line: "echo 2".to_string(),
-                    location: Location::new(0, 6),
-                },
-            ]
+            vec![ErrorLine {
+                line_number: 2,
+                line: "echo 2".to_string(),
+                location: Location::new(0, 6),
+            },]
         );
     }
 

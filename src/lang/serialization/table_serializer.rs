@@ -1,9 +1,9 @@
 use crate::data::table::ColumnFormat;
+use crate::lang::data::table::{ColumnType, Row};
 use crate::lang::errors::{CrushError, CrushResult, error};
 use crate::lang::serialization::model;
-use crate::lang::serialization::model::{element, Element};
+use crate::lang::serialization::model::{Element, element};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
-use crate::lang::data::table::{ColumnType, Row};
 use crate::lang::value::{Value, ValueType};
 
 impl TryFrom<i32> for ColumnFormat {
@@ -20,7 +20,7 @@ impl TryFrom<i32> for ColumnFormat {
     }
 }
 
-impl Into<i32>for ColumnFormat {
+impl Into<i32> for ColumnFormat {
     fn into(self) -> i32 {
         match self {
             ColumnFormat::None => 0,

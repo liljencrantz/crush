@@ -1,19 +1,19 @@
+use crate::data::table::ColumnFormat;
+use crate::lang::command::OutputType::Unknown;
+use crate::lang::errors::{CrushResult, error};
+use crate::lang::pipe::TableOutputStream;
+use crate::lang::signature::files::Files;
+use crate::lang::state::contexts::CommandContext;
+use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value::ValueType};
+use crate::util::user_map::{create_group_map, create_user_map};
+use chrono::{DateTime, Local};
+use signature::signature;
 use std::collections::{HashMap, VecDeque};
 use std::fs;
 use std::fs::Metadata;
 use std::os::unix::fs::MetadataExt;
-use std::path::PathBuf;
-use chrono::{DateTime, Local};
-use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{error, CrushResult};
-use crate::lang::state::contexts::CommandContext;
-use crate::lang::signature::files::Files;
-use crate::lang::pipe::TableOutputStream;
-use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value::ValueType};
-use crate::util::user_map::{create_user_map, create_group_map};
-use signature::signature;
 use std::os::unix::fs::PermissionsExt;
-use crate::data::table::ColumnFormat;
+use std::path::PathBuf;
 
 enum Column {
     Permissions,
@@ -34,20 +34,22 @@ fn format_permissions(mode: u32) -> String {
     let sticky = ((mode >> 9) & 1) != 0;
     let setgid = ((mode >> 9) & 2) != 0;
     let setuid = ((mode >> 9) & 4) != 0;
-    for (sticky, set_owner, rwx) in vec![(false, setuid, (mode >> 6) & 7), (false, setgid, (mode >> 3) & 7), (sticky, false, mode & 7)] {
+    for (sticky, set_owner, rwx) in vec![
+        (false, setuid, (mode >> 6) & 7),
+        (false, setgid, (mode >> 3) & 7),
+        (sticky, false, mode & 7),
+    ] {
         res.push(if (rwx & 4) != 0 { 'r' } else { '-' });
         res.push(if (rwx & 2) != 0 { 'w' } else { '-' });
-        res.push(
-            match (sticky, set_owner, (rwx & 1) != 0) {
-                (false, false, false) => '-',
-                (false, false, true) => 'x',
-                (false, true, false) => 'S',
-                (false, true, true) => 's',
-                (true, false, false) => 'T',
-                (true, false, true) => 't',
-                _ => '?',
-            }
-        );
+        res.push(match (sticky, set_owner, (rwx & 1) != 0) {
+            (false, false, false) => '-',
+            (false, false, true) => 'x',
+            (false, true, false) => 'S',
+            (false, true, true) => 's',
+            (true, false, false) => 'T',
+            (true, false, true) => 't',
+            _ => '?',
+        });
     }
     res
 }
@@ -69,8 +71,14 @@ fn insert_entity(
             }
             Column::Inode => Value::from(meta.ino()),
             Column::Links => Value::from(meta.nlink()),
-            Column::User => users.get(&sysinfo::Uid::try_from(meta.uid() as usize)?).map(|n| Value::from(n)).unwrap_or_else(|| Value::from("?")),
-            Column::Group => groups.get(&sysinfo::Gid::try_from(meta.gid() as usize)?).map(|n| Value::from(n)).unwrap_or_else(|| Value::from("?")),
+            Column::User => users
+                .get(&sysinfo::Uid::try_from(meta.uid() as usize)?)
+                .map(|n| Value::from(n))
+                .unwrap_or_else(|| Value::from("?")),
+            Column::Group => groups
+                .get(&sysinfo::Gid::try_from(meta.gid() as usize)?)
+                .map(|n| Value::from(n))
+                .unwrap_or_else(|| Value::from("?")),
             Column::Size => Value::from(meta.len()),
             Column::Blocks => Value::from(meta.blocks()),
             Column::Modified => {
@@ -92,14 +100,13 @@ fn insert_entity(
                 } else {
                     "file"
                 })
-            },
-            Column::File =>
-                Value::from(if file.starts_with("./") {
-                    let b = file.to_str().map(|s| PathBuf::from(&s[2..]));
-                    b.unwrap_or(file.clone())
-                } else {
-                    file.clone()
-                }),
+            }
+            Column::File => Value::from(if file.starts_with("./") {
+                let b = file.to_str().map(|s| PathBuf::from(&s[2..]));
+                b.unwrap_or(file.clone())
+            } else {
+                file.clone()
+            }),
         });
     }
     output.send(Row::new(row))
@@ -221,7 +228,11 @@ fn column_data(config: &FilesSignature) -> (Vec<ColumnType>, Vec<Column>) {
         cols.push(Column::Group);
     }
     if config.size {
-        types.push(ColumnType::new_with_format("size", ColumnFormat::ByteUnit, ValueType::Integer));
+        types.push(ColumnType::new_with_format(
+            "size",
+            ColumnFormat::ByteUnit,
+            ValueType::Integer,
+        ));
         cols.push(Column::Size);
     }
     if config.blocks {
@@ -249,7 +260,8 @@ fn column_data(config: &FilesSignature) -> (Vec<ColumnType>, Vec<Column>) {
 }
 
 fn files(context: CommandContext) -> CrushResult<()> {
-    let config: FilesSignature = FilesSignature::parse(context.arguments, &context.global_state.printer())?;
+    let config: FilesSignature =
+        FilesSignature::parse(context.arguments, &context.global_state.printer())?;
 
     let (types, cols) = column_data(&config);
 
@@ -267,8 +279,15 @@ fn files(context: CommandContext) -> CrushResult<()> {
     loop {
         match q.pop_front() {
             None => break,
-            Some(dir) => 
-                run_for_single_directory_or_file(dir, &users, &groups, config.recurse, &cols, &mut q, &mut output)?,
+            Some(dir) => run_for_single_directory_or_file(
+                dir,
+                &users,
+                &groups,
+                config.recurse,
+                &cols,
+                &mut q,
+                &mut output,
+            )?,
         }
     }
     Ok(())

@@ -1,22 +1,22 @@
-use std::collections::HashSet;
-use std::path::PathBuf;
-use std::sync::OnceLock;
-use signature::signature;
+use crate::argument_error_legacy;
+use crate::data::table::ColumnType;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Passthrough;
-use crate::lang::errors::{CrushResult, error};
-use crate::lang::state::contexts::CommandContext;
 use crate::lang::data::list::List;
-use crate::lang::value::ValueType;
+use crate::lang::errors::{CrushResult, error};
+use crate::lang::signature::text::Text;
+use crate::lang::state::contexts::CommandContext;
+use crate::lang::state::this::This;
 use crate::lang::value::Value;
+use crate::lang::value::ValueType;
 use crate::util::file::cwd;
 use crate::util::glob::Glob;
 use ordered_map::OrderedMap;
-use crate::argument_error_legacy;
-use crate::data::table::ColumnType;
-use crate::lang::signature::text::Text;
-use crate::lang::state::this::This;
+use signature::signature;
+use std::collections::HashSet;
+use std::path::PathBuf;
+use std::sync::OnceLock;
 
 pub fn methods() -> &'static OrderedMap<String, Command> {
     static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
@@ -49,23 +49,19 @@ fn find_string_columns(input: &[ColumnType], mut cfg: Vec<String>) -> Vec<usize>
         input
             .iter()
             .enumerate()
-            .filter(|(_idx, column)| {
-                match column.cell_type {
-                    ValueType::File | ValueType::String => true,
-                    _ => false,
-                }
+            .filter(|(_idx, column)| match column.cell_type {
+                ValueType::File | ValueType::String => true,
+                _ => false,
             })
-            .map(|(idx, _c)| { idx })
+            .map(|(idx, _c)| idx)
             .collect()
     } else {
         let yas: HashSet<String> = cfg.drain(..).collect();
         input
             .iter()
             .enumerate()
-            .filter(|(_idx, column)| {
-                yas.contains(column.name())
-            })
-            .map(|(idx, _c)| { idx })
+            .filter(|(_idx, column)| yas.contains(column.name()))
+            .map(|(idx, _c)| idx)
             .collect()
     }
 }
@@ -140,7 +136,9 @@ struct Match {
 fn r#match(mut context: CommandContext) -> CrushResult<()> {
     let g = context.this.glob()?;
     let cfg: Match = Match::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.output.send(Value::Bool(g.matches(&cfg.needle.as_string())))
+    context
+        .output
+        .send(Value::Bool(g.matches(&cfg.needle.as_string())))
 }
 
 #[signature(
@@ -156,8 +154,11 @@ struct NotMatch {
 
 fn not_match(mut context: CommandContext) -> CrushResult<()> {
     let g = context.this.glob()?;
-    let cfg: NotMatch = NotMatch::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.output.send(Value::Bool(!g.matches(&cfg.needle.as_string())))
+    let cfg: NotMatch =
+        NotMatch::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context
+        .output
+        .send(Value::Bool(!g.matches(&cfg.needle.as_string())))
 }
 
 #[signature(
@@ -176,8 +177,11 @@ fn files(mut context: CommandContext) -> CrushResult<()> {
     let g = context.this.glob()?;
     let mut files = Vec::new();
     g.glob_files(&cfg.directory.unwrap_or(cwd()?), &mut files)?;
-    context.output.send(List::new(
-        ValueType::File,
-        files.drain(..).map(|f| Value::from(f)).collect::<Vec<_>>(),
-    ).into())
+    context.output.send(
+        List::new(
+            ValueType::File,
+            files.drain(..).map(|f| Value::from(f)).collect::<Vec<_>>(),
+        )
+        .into(),
+    )
 }

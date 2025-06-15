@@ -1,20 +1,24 @@
+use crate::lang::ast::location::Location;
+use crate::lang::ast::tracked_string::TrackedString;
 /// The definition of a value, as found in a Job.
 use crate::lang::command::Parameter;
 use crate::lang::state::contexts::CompileContext;
 use crate::lang::{command::CrushCommand, job::Job};
 use crate::{
-    lang::errors::CrushResult, lang::pipe::empty_channel, lang::pipe::pipe,
-    lang::value::Value,
+    lang::errors::CrushResult, lang::pipe::empty_channel, lang::pipe::pipe, lang::value::Value,
 };
 use std::fmt::{Display, Formatter};
-use crate::lang::ast::tracked_string::TrackedString;
-use crate::lang::ast::location::Location;
 
 /// The definition of a value, as found in a Job.
 #[derive(Clone)]
 pub enum ValueDefinition {
     Value(Value, Location),
-    ClosureDefinition(Option<TrackedString>, Option<Vec<Parameter>>, Vec<Job>, Location),
+    ClosureDefinition(
+        Option<TrackedString>,
+        Option<Vec<Parameter>>,
+        Vec<Job>,
+        Location,
+    ),
     JobDefinition(Job),
     Identifier(TrackedString),
     GetAttr(Box<ValueDefinition>, TrackedString),
@@ -44,10 +48,7 @@ impl ValueDefinition {
         Ok(t.map(|tt| v.clone().bind(tt)).unwrap_or(v))
     }
 
-    pub fn eval(
-        &self,
-        context: &mut CompileContext,
-    ) -> CrushResult<(Option<Value>, Value)> {
+    pub fn eval(&self, context: &mut CompileContext) -> CrushResult<(Option<Value>, Value)> {
         Ok(match self {
             ValueDefinition::Value(v, _) => (None, v.clone()),
             ValueDefinition::JobDefinition(def) => {
@@ -67,7 +68,11 @@ impl ValueDefinition {
                 )),
             ),
             ValueDefinition::Identifier(s) => (
-                None, context.env.get(&s.string)?.ok_or(&format!("Unknown variable {}", self))?,
+                None,
+                context
+                    .env
+                    .get(&s.string)?
+                    .ok_or(&format!("Unknown variable {}", self))?,
             ),
 
             ValueDefinition::GetAttr(parent_def, entry) => {
@@ -84,13 +89,11 @@ impl ValueDefinition {
                 } else {
                     parent
                 };
-                let val = parent.field(&entry.string)?.ok_or(
-                    &format!(
-                        "Missing field {} in value of type {}",
-                        entry,
-                        parent.value_type()
-                    ),
-                )?;
+                let val = parent.field(&entry.string)?.ok_or(&format!(
+                    "Missing field {} in value of type {}",
+                    entry,
+                    parent.value_type()
+                ))?;
                 (Some(parent), val)
             }
         })
@@ -112,13 +115,13 @@ impl Display for ValueDefinition {
                     }
                     f.write_str("| ")?;
                 }
-                
+
                 for j in jobs {
                     j.fmt(f)?;
                     f.write_str(";\n")?;
                 }
                 f.write_str(" }")
-            },
+            }
             ValueDefinition::JobDefinition(j) => j.fmt(f),
             ValueDefinition::GetAttr(v, l) => {
                 std::fmt::Display::fmt(&v, f)?;

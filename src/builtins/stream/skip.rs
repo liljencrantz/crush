@@ -1,8 +1,8 @@
-use crate::lang::errors::argument_error_legacy;
+use crate::lang::command::OutputType::Passthrough;
 use crate::lang::errors::CrushResult;
+use crate::lang::errors::argument_error_legacy;
 use crate::lang::state::contexts::CommandContext;
 use signature::signature;
-use crate::lang::command::OutputType::Passthrough;
 #[signature(
     stream.skip,
     can_block = true,
@@ -23,7 +23,7 @@ fn skip(context: CommandContext) -> CrushResult<()> {
             let mut res: i128 = 0;
             while res < cfg.rows {
                 if let Err(_) = input.read() {
-                    return Ok(())
+                    return Ok(());
                 }
                 res += 1;
             }

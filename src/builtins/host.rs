@@ -1,17 +1,17 @@
 use crate::lang::command::OutputType::Known;
+use crate::lang::data::r#struct::Struct;
+use crate::lang::data::table::ColumnFormat;
+use crate::lang::data::table::ColumnType;
 use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
-use nix::sys::signal;
-use nix::unistd::Pid;
-use std::str::FromStr;
-use crate::lang::data::r#struct::Struct;
-use crate::lang::data::table::ColumnType;
 use crate::util::user_map::create_user_map;
 use crate::{data::table::Row, lang::value::Value, lang::value::ValueType};
 use chrono::Duration;
+use nix::sys::signal;
+use nix::unistd::Pid;
 use signature::signature;
-use crate::lang::data::table::ColumnFormat;
+use std::str::FromStr;
 use sysinfo::System;
 
 #[signature(
@@ -22,9 +22,11 @@ use sysinfo::System;
 struct Name {}
 
 fn name(context: CommandContext) -> CrushResult<()> {
-    context
-        .output
-        .send(Value::from(nix::unistd::gethostname()?.to_str().ok_or( "Invalid hostname")?))
+    context.output.send(Value::from(
+        nix::unistd::gethostname()?
+            .to_str()
+            .ok_or("Invalid hostname")?,
+    ))
 }
 
 #[signature(
@@ -35,7 +37,9 @@ fn name(context: CommandContext) -> CrushResult<()> {
 struct Uptime {}
 
 fn uptime(context: CommandContext) -> CrushResult<()> {
-    context.output.send(Value::Duration(Duration::seconds(sysinfo::System::uptime() as i64)))
+    context.output.send(Value::Duration(Duration::seconds(
+        sysinfo::System::uptime() as i64,
+    )))
 }
 
 static BATTERY_OUTPUT_TYPE: [ColumnType; 11] = [
@@ -67,11 +71,13 @@ fn state_name(state: battery::State) -> String {
         battery::State::Empty => "Empty",
         battery::State::Full => "Full",
         _ => "Unknown",
-    }.to_string()
+    }
+    .to_string()
 }
 
 fn time_to_duration(tm: Option<battery::units::Time>) -> Duration {
-    tm.map(|t| Duration::seconds(t.value as i64)).unwrap_or(Duration::seconds(0))
+    tm.map(|t| Duration::seconds(t.value as i64))
+        .unwrap_or(Duration::seconds(0))
 }
 
 fn battery(context: CommandContext) -> CrushResult<()> {
@@ -84,7 +90,7 @@ fn battery(context: CommandContext) -> CrushResult<()> {
             Value::from(battery.model().unwrap_or("").to_string()),
             Value::from(battery.technology().to_string()),
             Value::from(battery.cycle_count().unwrap_or(0)),
-            Value::from(battery.temperature().map(|t| { t.value as f64 }).unwrap_or(0.0)),
+            Value::from(battery.temperature().map(|t| t.value as f64).unwrap_or(0.0)),
             Value::from(battery.voltage().value as f64),
             Value::from(battery.state_of_health().value as f64),
             Value::from(state_name(battery.state())),
@@ -117,8 +123,8 @@ fn memory(context: CommandContext) -> CrushResult<()> {
             ("total", Value::from(sys.total_memory())),
             ("free", Value::from(sys.free_memory())),
             ("avail", Value::from(sys.available_memory())),
-            ("swap_total", Value::from(sys.total_swap()),),
-            ("swap_free", Value::from(sys.free_swap()),),
+            ("swap_total", Value::from(sys.total_swap())),
+            ("swap_free", Value::from(sys.free_swap())),
         ],
         None,
     )))
@@ -135,9 +141,7 @@ mod os {
     pub struct Name {}
 
     fn name(context: CommandContext) -> CrushResult<()> {
-        context
-            .output
-            .send(Value::from(std::env::consts::OS))
+        context.output.send(Value::from(std::env::consts::OS))
     }
 
     #[signature(
@@ -149,9 +153,9 @@ mod os {
     pub struct Version {}
 
     fn version(context: CommandContext) -> CrushResult<()> {
-        context
-            .output
-            .send(Value::from(sysinfo::System::os_version().ok_or( "Unknown OS version")?))
+        context.output.send(Value::from(
+            sysinfo::System::os_version().ok_or("Unknown OS version")?,
+        ))
     }
 }
 
@@ -167,9 +171,7 @@ mod cpu {
 
     fn count(context: CommandContext) -> CrushResult<()> {
         let sys = sysinfo::System::new_all();
-        context
-            .output
-            .send(Value::from(sys.cpus().len()))
+        context.output.send(Value::from(sys.cpus().len()))
     }
 
     #[signature(
@@ -234,11 +236,19 @@ fn procs(context: CommandContext) -> CrushResult<()> {
             output.send(Row::new(vec![
                 Value::from(pid.as_u32()),
                 Value::from(proc.parent().map(|i| i.as_u32()).unwrap_or(1u32)),
-                proc.user_id().and_then(|i| users.get(i)).map(|s| Value::from(s)).unwrap_or_else(|| Value::from("?")),
+                proc.user_id()
+                    .and_then(|i| users.get(i))
+                    .map(|s| Value::from(s))
+                    .unwrap_or_else(|| Value::from("?")),
                 Value::from(proc.memory()),
                 Value::from(proc.virtual_memory()),
                 Value::from(Duration::milliseconds(proc.accumulated_cpu_time() as i64)),
-                Value::from(proc.exe().map(|s| s.to_str()).unwrap_or(proc.name().to_str()).unwrap_or("<Invalid>")),
+                Value::from(
+                    proc.exe()
+                        .map(|s| s.to_str())
+                        .unwrap_or(proc.name().to_str())
+                        .unwrap_or("<Invalid>"),
+                ),
             ]))?;
         }
     }
@@ -248,11 +258,11 @@ fn procs(context: CommandContext) -> CrushResult<()> {
 #[cfg(target_os = "macos")]
 mod macos {
     use super::*;
-    use mach2::mach_time::mach_timebase_info;
-    use libproc::proc_pid::{listpidinfo, ListThreads, pidinfo};
-    use libproc::processes::{pids_by_type, ProcFilter};
+    use libproc::proc_pid::{ListThreads, listpidinfo, pidinfo};
+    use libproc::processes::{ProcFilter, pids_by_type};
     use libproc::task_info::TaskAllInfo;
     use libproc::thread_info::ThreadInfo;
+    use mach2::mach_time::mach_timebase_info;
 
     static THREADS_OUTPUT_TYPE: [ColumnType; 6] = [
         ColumnType::new("tid", ValueType::Integer),
@@ -289,31 +299,33 @@ mod macos {
 
         for pid in base_procs {
             if let Ok(curr_task) = pidinfo::<TaskAllInfo>(pid as i32, 0) {
-                let threadids = listpidinfo::<ListThreads>(pid as i32, curr_task.ptinfo.pti_threadnum as usize);
+                let threadids =
+                    listpidinfo::<ListThreads>(pid as i32, curr_task.ptinfo.pti_threadnum as usize);
                 let mut curr_threads = Vec::new();
                 if let Ok(threadids) = threadids {
                     for t in threadids {
                         if let Ok(thread) = pidinfo::<ThreadInfo>(pid as i32, t) {
-                            let name =
-                                String::from_utf8(
-                                    thread.pth_name
-                                        .iter()
-                                        .map(|c| unsafe { std::mem::transmute::<i8, u8>(*c) })
-                                        .filter(|c| { *c > 0u8 })
-                                        .collect()
-                                ).unwrap_or_else(|_| { "<Invalid>".to_string() });
+                            let name = String::from_utf8(
+                                thread
+                                    .pth_name
+                                    .iter()
+                                    .map(|c| unsafe { std::mem::transmute::<i8, u8>(*c) })
+                                    .filter(|c| *c > 0u8)
+                                    .collect(),
+                            )
+                            .unwrap_or_else(|_| "<Invalid>".to_string());
                             output.send(Row::new(vec![
                                 Value::from(t),
                                 Value::from(pid),
                                 Value::from(thread.pth_priority),
                                 Value::from(Duration::nanoseconds(
-                                    i64::try_from(thread.pth_user_time)? *
-                                        i64::from(info.numer) /
-                                        i64::from(info.denom))),
+                                    i64::try_from(thread.pth_user_time)? * i64::from(info.numer)
+                                        / i64::from(info.denom),
+                                )),
                                 Value::from(Duration::nanoseconds(
-                                    i64::try_from(thread.pth_system_time)? *
-                                        i64::from(info.numer) /
-                                        i64::from(info.denom))),
+                                    i64::try_from(thread.pth_system_time)? * i64::from(info.numer)
+                                        / i64::from(info.denom),
+                                )),
                                 Value::from(name),
                             ]))?;
 
@@ -360,12 +372,15 @@ mod linux {
                 output.send(Row::new(vec![
                     Value::from(pid.as_u32()),
                     Value::from(proc.parent().map(|i| i.as_u32()).unwrap_or(1u32)),
-                    proc.user_id().and_then(|i| {
-                        let ii = i.deref();
-                        let iii = *ii as uid_t;
-                        let iiii = unistd::Uid::from_raw(iii);
-                        return users.get(&iiii);
-                    }).map(|s| Value::from(s)).unwrap_or_else(|| Value::from("?")),
+                    proc.user_id()
+                        .and_then(|i| {
+                            let ii = i.deref();
+                            let iii = *ii as uid_t;
+                            let iiii = unistd::Uid::from_raw(iii);
+                            return users.get(&iiii);
+                        })
+                        .map(|s| Value::from(s))
+                        .unwrap_or_else(|| Value::from("?")),
                     Value::from(proc.memory()),
                     Value::from(proc.virtual_memory()),
                     Value::from(Duration::milliseconds(proc.accumulated_cpu_time() as i64)),

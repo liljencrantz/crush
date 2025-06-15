@@ -1,29 +1,26 @@
 use crate::lang::errors::{CrushResult, data_error};
 use crate::lang::state::scope::Scope;
-use crate::lang::{
-    data::binary::BinaryReader, data::list::List, value::Value,
-    value::ValueType,
-};
+use crate::lang::{data::binary::BinaryReader, data::list::List, value::Value, value::ValueType};
 use signature::signature;
 use std::env;
 
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
-use chrono::Duration;
-use std::path::PathBuf;
 use crate::lang::data::table::{ColumnType, Row};
-use os_pipe::PipeReader;
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
+use chrono::Duration;
+use os_pipe::PipeReader;
+use std::path::PathBuf;
 
 mod cmd;
-mod help;
 mod r#for;
+mod help;
 mod r#if;
 mod r#loop;
+mod schedule;
 mod timeit;
 mod timer;
-mod schedule;
 mod r#while;
 
 #[signature(
@@ -113,7 +110,9 @@ fn sleep(context: CommandContext) -> CrushResult<()> {
 struct Bg {}
 
 fn bg(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(&[ColumnType::new("value", ValueType::Any)])?;
+    let output = context
+        .output
+        .initialize(&[ColumnType::new("value", ValueType::Any)])?;
     if let Ok(value) = context.input.recv() {
         output.send(Row::new(vec![value]))?;
     }
@@ -142,7 +141,7 @@ fn bg(context: CommandContext) -> CrushResult<()> {
 struct Fg {}
 
 fn fg(context: CommandContext) -> CrushResult<()> {
-    let mut result_stream = context.input.recv()?.stream()?.ok_or( "Invalid input")?;
+    let mut result_stream = context.input.recv()?.stream()?.ok_or("Invalid input")?;
     let mut result: Vec<Value> = result_stream.read()?.into();
     if result.len() != 1 {
         data_error("Expected a single row, single column result")
@@ -165,7 +164,12 @@ struct Source {
 fn source(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Source = Source::parse(context.remove_arguments(), &context.global_state.printer())?;
     for file in Vec::<PathBuf>::from(cfg.files) {
-        crate::execute::file(&context.scope, &file, &context.output, &context.global_state)?;
+        crate::execute::file(
+            &context.scope,
+            &file,
+            &context.output,
+            &context.global_state,
+        )?;
     }
     Ok(())
 }

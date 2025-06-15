@@ -1,7 +1,7 @@
 use crate::lang::data::dict::Dict;
-use crate::lang::errors::{CrushResult};
 use crate::lang::data::list::List;
 use crate::lang::data::r#struct::Struct;
+use crate::lang::errors::CrushResult;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
 use model::Element;
@@ -86,7 +86,7 @@ pub fn deserialize(buf: &Vec<u8>, env: &Scope) -> CrushResult<Value> {
 
     let res = SerializedValue::decode(&mut Cursor::new(buf)).unwrap();
 
-//    println!("AAA {:?}", res);
+    //    println!("AAA {:?}", res);
 
     Ok(Value::deserialize(
         res.root as usize,

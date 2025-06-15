@@ -1,11 +1,8 @@
-use std::ops::Deref;
-use std::path::PathBuf;
-use regex::Regex;
 use crate::lang::argument::{ArgumentDefinition, SwitchStyle};
-use crate::lang::ast::{CommandNode, expand_user, JobListNode, JobNode, propose_name};
 use crate::lang::ast::location::Location;
 use crate::lang::ast::parameter_node::ParameterNode;
 use crate::lang::ast::tracked_string::TrackedString;
+use crate::lang::ast::{CommandNode, JobListNode, JobNode, expand_user, propose_name};
 use crate::lang::command::{Command, Parameter};
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::{CrushResult, error};
@@ -14,6 +11,9 @@ use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueDefinition};
 use crate::util::escape::unescape;
 use crate::util::glob::Glob;
+use regex::Regex;
+use std::ops::Deref;
+use std::path::PathBuf;
 
 /**
 A type representing a node in the abstract syntax tree that is the output of parsing a Crush script.
@@ -40,14 +40,16 @@ pub enum Node {
 impl Node {
     pub fn val(l: Location) -> Node {
         Node::GetAttr(
-            Box::from(Node::GetAttr(
-                Node::global(l),
-                TrackedString::new("io", l))),
-            TrackedString::new("val", l))
+            Box::from(Node::GetAttr(Node::global(l), TrackedString::new("io", l))),
+            TrackedString::new("val", l),
+        )
     }
 
     pub fn list_literal(node: JobListNode) -> Box<Node> {
-        let mut cmd = vec![Self::get_attr(&["global", "types", "list", "of"], node.location)];
+        let mut cmd = vec![Self::get_attr(
+            &["global", "types", "list", "of"],
+            node.location,
+        )];
         for it in node.jobs {
             cmd.push(Node::Substitution(it))
         }
@@ -72,15 +74,11 @@ impl Node {
     pub fn expression_to_command(self) -> CommandNode {
         let l = self.location();
         match self {
-            Node::Substitution(n) if n.commands.len() == 1 => {
-                n.commands[0].clone()
-            }
-            _ => {
-                CommandNode {
-                    expressions: vec![Node::val(self.location()), self],
-                    location: l,
-                }
-            }
+            Node::Substitution(n) if n.commands.len() == 1 => n.commands[0].clone(),
+            _ => CommandNode {
+                expressions: vec![Node::val(self.location()), self],
+                location: l,
+            },
         }
     }
 
@@ -88,16 +86,20 @@ impl Node {
         let location = self.location();
         match self {
             Node::Substitution(s) => s,
-            Node::Assignment(..) => {
-                JobNode {
-                    commands: vec![CommandNode { expressions: vec![self], location }],
+            Node::Assignment(..) => JobNode {
+                commands: vec![CommandNode {
+                    expressions: vec![self],
                     location,
-                }
-            }
+                }],
+                location,
+            },
             _ => {
                 let expressions = vec![Node::val(location), self];
                 JobNode {
-                    commands: vec![CommandNode { expressions, location }],
+                    commands: vec![CommandNode {
+                        expressions,
+                        location,
+                    }],
                     location,
                 }
             }
@@ -115,16 +117,17 @@ impl Node {
         use Node::*;
 
         match self {
-            Glob(s) | Identifier(s) |
-            String(s, _) | Integer(s) | Float(s) |
-            Regex(s) | File(s, _) =>
-                s.location,
+            Glob(s)
+            | Identifier(s)
+            | String(s, _)
+            | Integer(s)
+            | Float(s)
+            | Regex(s)
+            | File(s, _) => s.location,
 
-            Assignment(a, _, _, b) =>
-                a.location().union(b.location()),
+            Assignment(a, _, _, b) => a.location().union(b.location()),
 
-            Unary(s, a) =>
-                s.location.union(a.location()),
+            Unary(s, a) => s.location.union(a.location()),
 
             GetItem(a, b) => a.location().union(b.location()),
             GetAttr(p, n) => p.location().union(n.location),
@@ -167,23 +170,26 @@ impl Node {
             Node::Assignment(target, style, op, value) => match op.deref() {
                 "=" => {
                     return match target.as_ref() {
-                        Node::String(t, false) | Node::Identifier(t) => Ok(ArgumentDefinition::named_with_style(
-                            t,
-                            *style,
-                            propose_name(&t, value.compile_argument(env)?.unnamed_value()?),
+                        Node::String(t, false) | Node::Identifier(t) => {
+                            Ok(ArgumentDefinition::named_with_style(
+                                t,
+                                *style,
+                                propose_name(&t, value.compile_argument(env)?.unnamed_value()?),
+                            ))
+                        }
+                        _ => error(format!(
+                            "Invalid left side in named argument. Expected a string or identifier, got a {}",
+                            target.type_name()
                         )),
-                        _ => error(format!("Invalid left side in named argument. Expected a string or identifier, got a {}", target.type_name())),
                     };
                 }
                 _ => return error("Invalid assignment operator"),
             },
 
-            Node::GetItem(a, o) => ValueDefinition::JobDefinition(
-                Job::new(vec![self
-                    .compile_as_special_command(env)?
-                    .unwrap()],
-                         a.location().union(o.location()),
-                )),
+            Node::GetItem(a, o) => ValueDefinition::JobDefinition(Job::new(
+                vec![self.compile_as_special_command(env)?.unwrap()],
+                a.location().union(o.location()),
+            )),
 
             Node::Unary(op, r) => match op.string.as_str() {
                 "@" => {
@@ -200,28 +206,31 @@ impl Node {
             },
             Node::Identifier(l) => ValueDefinition::Identifier(l.clone()),
             Node::Regex(l) => ValueDefinition::Value(
-                Value::Regex(
-                    l.string.clone(),
-                    Regex::new(&l.string.clone())?, ),
+                Value::Regex(l.string.clone(), Regex::new(&l.string.clone())?),
                 l.location,
             ),
-            Node::String(t, true) => ValueDefinition::Value(Value::from(unescape(&t.string)?), t.location),
-            Node::String(f, false) =>
+            Node::String(t, true) => {
+                ValueDefinition::Value(Value::from(unescape(&t.string)?), t.location)
+            }
+            Node::String(f, false) => {
                 if is_command {
                     ValueDefinition::Identifier(f.clone())
                 } else {
                     ValueDefinition::Value(Value::from(f), f.location)
-                },
-            Node::Integer(s) =>
-                ValueDefinition::Value(
-                    Value::Integer(s.string.replace("_", "").parse::<i128>()?),
-                    s.location),
-            Node::Float(s) =>
-                ValueDefinition::Value(
-                    Value::Float(s.string.replace("_", "").parse::<f64>()?),
-                    s.location),
-            Node::GetAttr(node, identifier) =>
-                ValueDefinition::GetAttr(Box::new(node.compile(env, is_command)?.unnamed_value()?), identifier.clone()),
+                }
+            }
+            Node::Integer(s) => ValueDefinition::Value(
+                Value::Integer(s.string.replace("_", "").parse::<i128>()?),
+                s.location,
+            ),
+            Node::Float(s) => ValueDefinition::Value(
+                Value::Float(s.string.replace("_", "").parse::<f64>()?),
+                s.location,
+            ),
+            Node::GetAttr(node, identifier) => ValueDefinition::GetAttr(
+                Box::new(node.compile(env, is_command)?.unnamed_value()?),
+                identifier.clone(),
+            ),
 
             Node::Substitution(s) => ValueDefinition::JobDefinition(s.compile(env)?),
             Node::Closure(signature, jobs) => {
@@ -239,9 +248,11 @@ impl Node {
             }
             Node::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g.string)), g.location),
             Node::File(s, quoted) => ValueDefinition::Value(
-                Value::from(
-                    if *quoted { PathBuf::from(&unescape(&s.string)?) } else { PathBuf::from(&expand_user(&s.string)?) }
-                ),
+                Value::from(if *quoted {
+                    PathBuf::from(&unescape(&s.string)?)
+                } else {
+                    PathBuf::from(&expand_user(&s.string)?)
+                }),
                 s.location,
             ),
         }))
@@ -277,8 +288,10 @@ impl Node {
                 Node::GetAttr(container, attr) => container.method_invocation(
                     &TrackedString::new("__setattr__", attr.location),
                     vec![
-                        ArgumentDefinition::unnamed(ValueDefinition::Value(Value::from(attr),
-                                                                           attr.location)),
+                        ArgumentDefinition::unnamed(ValueDefinition::Value(
+                            Value::from(attr),
+                            attr.location,
+                        )),
                         ArgumentDefinition::unnamed(value.compile_argument(env)?.unnamed_value()?),
                     ],
                     env,
@@ -302,15 +315,21 @@ impl Node {
         }
     }
 
-    pub fn compile_as_special_command(&self, env: &Scope) -> CrushResult<Option<CommandInvocation>> {
+    pub fn compile_as_special_command(
+        &self,
+        env: &Scope,
+    ) -> CrushResult<Option<CommandInvocation>> {
         match self {
             Node::Assignment(target, _style, op, value) => {
                 Node::compile_standalone_assignment(target, op, value, env)
             }
 
-            Node::GetItem(val, key) => {
-                val.method_invocation(&TrackedString::new("__getitem__", key.location()), vec![key.compile_argument(env)?], env, true)
-            }
+            Node::GetItem(val, key) => val.method_invocation(
+                &TrackedString::new("__getitem__", key.location()),
+                vec![key.compile_argument(env)?],
+                env,
+                true,
+            ),
 
             Node::Unary(op, _) => match op.string.as_ref() {
                 "@" | "@@" => Ok(None),
@@ -386,20 +405,22 @@ impl Node {
         Self::control_expr("continue", location)
     }
 
-    pub fn if_expr(if_location: Location, condition: Box<Node>, true_body: JobListNode, false_body: Option<JobListNode>) -> Box<Node> {
+    pub fn if_expr(
+        if_location: Location,
+        condition: Box<Node>,
+        true_body: JobListNode,
+        false_body: Option<JobListNode>,
+    ) -> Box<Node> {
         let location = if_location.union(true_body.location);
         let mut expressions = vec![
             Self::get_attr(&["global", "control", "if"], if_location),
-            Node::Substitution(
-                JobNode {
-                    commands: vec![
-                        CommandNode {
-                            expressions: vec![*condition],
-                            location,
-                        }],
+            Node::Substitution(JobNode {
+                commands: vec![CommandNode {
+                    expressions: vec![*condition],
                     location,
-                }
-            ),
+                }],
+                location,
+            }),
             Node::Closure(None, true_body),
         ];
 
@@ -416,7 +437,11 @@ impl Node {
         }))
     }
 
-    pub fn while_expr(while_location: Location, condition: Box<Node>, body: JobListNode) -> Box<Node> {
+    pub fn while_expr(
+        while_location: Location,
+        condition: Box<Node>,
+        body: JobListNode,
+    ) -> Box<Node> {
         let location = while_location.union(body.location);
         Box::from(Node::Substitution(JobNode {
             commands: vec![CommandNode {
@@ -425,16 +450,13 @@ impl Node {
                     Node::Closure(
                         None,
                         JobListNode {
-                            jobs: vec![
-                                JobNode {
-                                    commands: vec![
-                                        CommandNode {
-                                            expressions: vec![*condition],
-                                            location,
-                                        }],
+                            jobs: vec![JobNode {
+                                commands: vec![CommandNode {
+                                    expressions: vec![*condition],
                                     location,
-                                }
-                            ],
+                                }],
+                                location,
+                            }],
                             location,
                         },
                     ),
@@ -460,13 +482,23 @@ impl Node {
         }))
     }
 
-    pub fn for_expr(for_location: Location, id: TrackedString, iter: Box<Node>, body: JobListNode) -> Box<Node> {
+    pub fn for_expr(
+        for_location: Location,
+        id: TrackedString,
+        iter: Box<Node>,
+        body: JobListNode,
+    ) -> Box<Node> {
         let location = for_location.union(body.location);
         Box::from(Node::Substitution(JobNode {
             commands: vec![CommandNode {
                 expressions: vec![
                     Self::get_attr(&["global", "control", "for"], for_location),
-                    Node::Assignment(Box::from(Node::Identifier(id)), SwitchStyle::None, "=".to_string(), iter),
+                    Node::Assignment(
+                        Box::from(Node::Identifier(id)),
+                        SwitchStyle::None,
+                        "=".to_string(),
+                        iter,
+                    ),
                     Node::Closure(None, body),
                 ],
                 location,
@@ -481,16 +513,15 @@ impl Node {
         } else {
             Node::GetAttr(
                 Box::from(Self::get_attr(&path[0..(path.len() - 1)], location)),
-                TrackedString::from((path[path.len() - 1], location)))
+                TrackedString::from((path[path.len() - 1], location)),
+            )
         }
     }
 
     fn control_expr(keyword: &str, location: Location) -> Box<Node> {
         Box::from(Node::Substitution(JobNode {
             commands: vec![CommandNode {
-                expressions: vec![
-                    Self::get_attr(&["global", "control", keyword], location)
-                ],
+                expressions: vec![Self::get_attr(&["global", "control", keyword], location)],
                 location,
             }],
             location,

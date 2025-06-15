@@ -1,16 +1,16 @@
+use crate::lang::command::OutputType::Known;
+use crate::lang::data::r#struct::Struct;
+use crate::lang::data::table::Row;
 use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
-use crate::lang::data::r#struct::Struct;
 use crate::lang::value::Value;
-use signature::signature;
-use systemd::journal::{JournalFiles, Journal, JournalSeek};
-use crate::lang::data::table::Row;
 use crate::lang::{data::table::ColumnType, value::ValueType};
-use crate::lang::ordered_string_map::OrderedStringMap;
 use chrono::{DateTime, Local};
+use signature::signature;
 use std::convert::TryFrom;
-use crate::lang::command::OutputType::Known;
+use systemd::journal::{Journal, JournalFiles, JournalSeek};
 
 static JOURNAL_OUTPUT_TYPE: [ColumnType; 2] = [
     ColumnType::new("time", ValueType::Time),
@@ -60,17 +60,20 @@ fn parse_files(cfg: &JournalSignature) -> CrushResult<JournalFiles> {
 fn usec_since_epoch(tm: DateTime<Local>) -> CrushResult<u64> {
     let epoch = DateTime::from(std::time::UNIX_EPOCH);
     let duration = tm - epoch;
-    Ok(u64::try_from(duration.num_microseconds().ok_or("Time overflow")?)?)
+    Ok(u64::try_from(
+        duration.num_microseconds().ok_or("Time overflow")?,
+    )?)
 }
 
 fn journal(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: JournalSignature = JournalSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: JournalSignature =
+        JournalSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
     let mut journal = Journal::open(parse_files(&cfg)?, cfg.runtime_only, cfg.local_only)?;
 
     match cfg.seek {
         Some(Value::Time(tm)) => {
             journal.seek(JournalSeek::ClockRealtime {
-                usec: usec_since_epoch(tm)?
+                usec: usec_since_epoch(tm)?,
             })?;
         }
         Some(v) => {
@@ -86,14 +89,23 @@ fn journal(mut context: CommandContext) -> CrushResult<()> {
     let output = context.output.initialize(&JOURNAL_OUTPUT_TYPE)?;
 
     loop {
-        match if cfg.follow { journal.await_next_entry(None) } else { journal.next_entry() }? {
-            None => if !cfg.follow {
-                break;
-            },
+        match if cfg.follow {
+            journal.await_next_entry(None)
+        } else {
+            journal.next_entry()
+        }? {
+            None => {
+                if !cfg.follow {
+                    break;
+                }
+            }
             Some(row) => {
                 let data = Value::Struct(Struct::new(
-                    row.iter().map(|(k, v)| (k, Value::from(v.clone()))).collect(),
-                    None));
+                    row.iter()
+                        .map(|(k, v)| (k, Value::from(v.clone())))
+                        .collect(),
+                    None,
+                ));
                 output.send(Row::new(vec![
                     Value::Time(DateTime::from(journal.timestamp()?)),
                     data,

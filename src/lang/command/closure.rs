@@ -569,7 +569,7 @@ impl Help for Closure {
                 .map(|s| s
                     .iter()
                     .filter(|p| match p {
-                        Parameter::Meta(_, _ ) => false,
+                        Parameter::Meta(_, _) => false,
                         _ => true,
                     })
                     .map(|p| p.to_string())
@@ -621,18 +621,22 @@ impl Help for Closure {
                                     .unwrap_or("".to_string())
                             ));
                         }
-                        Parameter::Meta(key, value) => {
-                            match key.string.as_ref() {
-                                "long_help" => {
-                                    long_help.push(unescape(&value.string)
-                                        .unwrap_or("<Invalid help string>".to_string()));
-                                }
-                                "example" => {
-                                    example.push(format!("    {}", unescape(&value.string).unwrap_or("<Invalid encoding>".to_string())));
-                                }
-                                _ => {}
+                        Parameter::Meta(key, value) => match key.string.as_ref() {
+                            "long_help" => {
+                                long_help.push(
+                                    unescape(&value.string)
+                                        .unwrap_or("<Invalid help string>".to_string()),
+                                );
                             }
-                        }
+                            "example" => {
+                                example.push(format!(
+                                    "    {}",
+                                    unescape(&value.string)
+                                        .unwrap_or("<Invalid encoding>".to_string())
+                                ));
+                            }
+                            _ => {}
+                        },
                         _ => {}
                     }
                 }
@@ -643,13 +647,13 @@ impl Help for Closure {
                     long_help.push("".to_string());
                     long_help.append(&mut param_help);
                 }
-                
+
                 if example.len() > 0 {
                     long_help.push(format!("# Examples"));
                     long_help.push("".to_string());
                     long_help.append(&mut example);
                 }
-                
+
                 Some(long_help.join("\n"))
             }
             _ => None,

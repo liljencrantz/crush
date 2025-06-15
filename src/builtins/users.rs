@@ -1,23 +1,23 @@
+use crate::argument_error_legacy;
+use crate::lang::any_str::AnyStr;
+use crate::lang::command::OutputType::Known;
+use crate::lang::command::OutputType::Unknown;
+use crate::lang::command::{Command, CrushCommand};
+use crate::lang::data::r#struct::Struct;
+use crate::lang::errors::{CrushResult, error};
+use crate::lang::serialization::{deserialize, serialize};
+use crate::lang::state::contexts::CommandContext;
+use crate::lang::state::scope::Scope;
+use crate::lang::state::this::This;
+use crate::lang::value::{Value, ValueType};
+use crate::lang::{data::table::ColumnType, data::table::Row};
+use crate::util::logins;
+use crate::util::user_map::{get_all_users, get_current_username, get_user};
+use signature::signature;
 use std::io::{Read, Write};
 use std::process;
 use std::process::Stdio;
 use std::sync::OnceLock;
-use crate::lang::command::OutputType::Known;
-use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{CrushResult, error};
-use crate::lang::state::contexts::CommandContext;
-use crate::lang::state::scope::Scope;
-use crate::lang::data::r#struct::Struct;
-use crate::lang::value::{Value, ValueType};
-use signature::signature;
-use crate::lang::{data::table::ColumnType, data::table::Row};
-use crate::util::user_map::{get_all_users, get_current_username, get_user};
-use crate::lang::command::{Command, CrushCommand};
-use crate::lang::serialization::{deserialize, serialize};
-use crate::lang::state::this::This;
-use crate::{argument_error_legacy};
-use crate::lang::any_str::AnyStr;
-use crate::util::logins;
 
 #[signature(
     users.me,
@@ -29,7 +29,9 @@ use crate::util::logins;
 struct Me {}
 
 fn me(context: CommandContext) -> CrushResult<()> {
-    context.output.send(get_user_value(&get_current_username()?)?)
+    context
+        .output
+        .send(get_user_value(&get_current_username()?)?)
 }
 
 static CURRENT_OUTPUT_TYPE: [ColumnType; 5] = [
@@ -57,7 +59,7 @@ fn current(context: CommandContext) -> CrushResult<()> {
         output.send(Row::new(vec![
             Value::from(l.user),
             Value::from(l.tty),
-            Value::from(l.host.unwrap_or_else(|| { "".to_string() })),
+            Value::from(l.host.unwrap_or_else(|| "".to_string())),
             Value::Time(l.time),
             Value::from(l.pid),
         ]))?;
@@ -87,12 +89,7 @@ pub fn user_struct() -> &'static Struct {
             Unknown,
             [],
         );
-        Struct::new(
-            vec![
-                ("do", Value::Command(do_cmd)),
-            ],
-            None,
-        )
+        Struct::new(vec![("do", Value::Command(do_cmd))], None)
     })
 }
 
@@ -131,7 +128,7 @@ fn r#do(mut context: CommandContext) -> CrushResult<()> {
         cmd.stderr(Stdio::piped());
 
         let mut child = cmd.spawn()?;
-        let mut stdin = child.stdin.take().ok_or( "Expected stdin stream")?;
+        let mut stdin = child.stdin.take().ok_or("Expected stdin stream")?;
         let mut serialized = Vec::new();
         serialize(&Value::Command(cfg.command), &mut serialized)?;
 
@@ -140,7 +137,7 @@ fn r#do(mut context: CommandContext) -> CrushResult<()> {
             Ok(())
         })?;
 
-        let mut stdout = child.stdout.take().ok_or( "Expected output stream")?;
+        let mut stdout = child.stdout.take().ok_or("Expected output stream")?;
         let env = context.scope.clone();
         let my_context = context.clone();
         context.spawn("sudo:stdout", move || {
@@ -149,13 +146,11 @@ fn r#do(mut context: CommandContext) -> CrushResult<()> {
             if buff.len() == 0 {
                 error("No value returned")
             } else {
-                my_context
-                    .output
-                    .send(deserialize(&buff, &env)?)
+                my_context.output.send(deserialize(&buff, &env)?)
             }
         })?;
 
-        let mut stderr = child.stderr.take().ok_or( "Expected error stream")?;
+        let mut stderr = child.stderr.take().ok_or("Expected error stream")?;
         context.spawn("sudo:stderr", move || {
             let mut buff = Vec::new();
             stderr.read_to_end(&mut buff)?;
@@ -187,15 +182,14 @@ struct List {}
 fn list(context: CommandContext) -> CrushResult<()> {
     let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
     for u in get_all_users()? {
-        output.send(Row::new(
-            vec![
-                Value::from(u.name),
-                Value::from(u.home),
-                Value::from(u.shell),
-                Value::from(u.information),
-                Value::from(u.uid),
-                Value::from(u.gid),
-            ]))?;
+        output.send(Row::new(vec![
+            Value::from(u.name),
+            Value::from(u.home),
+            Value::from(u.shell),
+            Value::from(u.information),
+            Value::from(u.uid),
+            Value::from(u.gid),
+        ]))?;
     }
     Ok(())
 }
@@ -219,19 +213,18 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
 
 fn get_user_value(input_name: &str) -> CrushResult<Value> {
     match get_user(input_name) {
-        Ok(user) =>
-            Ok(Value::Struct(Struct::new(
-                vec![
-                    ("username", Value::from(input_name)),
-                    ("name", Value::from(user.name)),
-                    ("home", Value::from(user.home)),
-                    ("shell", Value::from(user.shell)),
-                    ("information", Value::from(user.information)),
-                    ("uid", Value::from(user.uid)),
-                    ("gid", Value::from(user.gid)),
-                ],
-                Some(user_struct().clone()),
-            ))),
+        Ok(user) => Ok(Value::Struct(Struct::new(
+            vec![
+                ("username", Value::from(input_name)),
+                ("name", Value::from(user.name)),
+                ("home", Value::from(user.home)),
+                ("shell", Value::from(user.shell)),
+                ("information", Value::from(user.information)),
+                ("uid", Value::from(user.uid)),
+                ("gid", Value::from(user.gid)),
+            ],
+            Some(user_struct().clone()),
+        ))),
         Err(e) => Err(e),
     }
 }

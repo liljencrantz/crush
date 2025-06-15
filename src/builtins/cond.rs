@@ -1,8 +1,8 @@
 use crate::lang::command::CrushCommand;
-use crate::lang::errors::{argument_error_legacy, CrushResult};
+use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::pipe::pipe;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::{Scope, ScopeType};
-use crate::lang::pipe::pipe;
 use crate::lang::value::Value;
 
 pub fn and(mut context: CommandContext) -> CrushResult<()> {
@@ -17,7 +17,9 @@ pub fn and(mut context: CommandContext) -> CrushResult<()> {
             }
             Value::Command(c) => {
                 let (sender, receiver) = pipe();
-                let env = context.scope.create_child(&context.scope, ScopeType::Conditional);
+                let env = context
+                    .scope
+                    .create_child(&context.scope, ScopeType::Conditional);
                 let cc = context.empty().with_output(sender).with_scope(env);
                 c.eval(cc)?;
                 if context.scope.is_stopped() {
@@ -30,7 +32,12 @@ pub fn and(mut context: CommandContext) -> CrushResult<()> {
                             break;
                         }
                     }
-                    v => return argument_error_legacy(format!("Expected boolean values, got a value of type {}", v.value_type().to_string())),
+                    v => {
+                        return argument_error_legacy(format!(
+                            "Expected boolean values, got a value of type {}",
+                            v.value_type().to_string()
+                        ));
+                    }
                 }
             }
             _ => return argument_error_legacy("Expected boolean values"),
@@ -52,7 +59,9 @@ pub fn or(mut context: CommandContext) -> CrushResult<()> {
 
             Value::Command(c) => {
                 let (sender, receiver) = pipe();
-                let env = context.scope.create_child(&context.scope, ScopeType::Conditional);
+                let env = context
+                    .scope
+                    .create_child(&context.scope, ScopeType::Conditional);
                 let cc = context.empty().with_output(sender).with_scope(env);
                 c.eval(cc)?;
                 if context.scope.is_stopped() {

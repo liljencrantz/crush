@@ -1,16 +1,16 @@
 use crate::lang::argument::column_names;
 use crate::lang::command::CrushCommand;
-use crate::lang::command::OutputType::{Known};
-use crate::lang::errors::{CrushResult};
+use crate::lang::command::OutputType::Known;
+use crate::lang::data::table::ColumnType;
+use crate::lang::errors::CrushResult;
+use crate::lang::ordered_string_map::OrderedStringMap;
+use crate::lang::pipe::black_hole;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
-use crate::lang::pipe::black_hole;
-use crate::lang::data::table::ColumnType;
+use crate::lang::state::this::This;
 use crate::lang::value::ValueType;
 use crate::lang::{data::r#struct::Struct, value::Value};
-use crate::lang::ordered_string_map::OrderedStringMap;
 use signature::signature;
-use crate::lang::state::this::This;
 
 pub mod binary;
 pub mod dict;
@@ -138,7 +138,10 @@ fn class(context: CommandContext) -> CrushResult<()> {
 }
 
 pub fn column_types(columns: &OrderedStringMap<ValueType>) -> Vec<ColumnType> {
-    columns.iter().map(|(key, value)| ColumnType::new_from_string(key.clone(), value.clone())).collect()
+    columns
+        .iter()
+        .map(|(key, value)| ColumnType::new_from_string(key.clone(), value.clone()))
+        .collect()
 }
 
 #[signature(
@@ -237,9 +240,9 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     let cfg = GetItem::parse(context.remove_arguments(), context.global_state.printer())?;
     let this = context.this.r#struct()?;
     context.output.send(
-        this.get(&cfg.name).ok_or(
-        format!("Unknown field {}", cfg.name).as_str(),
-    )?)
+        this.get(&cfg.name)
+            .ok_or(format!("Unknown field {}", cfg.name).as_str())?,
+    )
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {

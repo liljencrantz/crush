@@ -1,16 +1,16 @@
+use crate::lang::any_str::AnyStr;
 /**
 Code related to Table, TableInputStream and
  */
-use crate::lang::errors::{argument_error_legacy, CrushError, CrushResult, error};
+use crate::lang::errors::{CrushError, CrushResult, argument_error_legacy, error};
 use crate::lang::pipe::CrushStream;
+use crate::lang::serialization::model::{Element, element};
+use crate::lang::serialization::{DeserializationState, Serializable, SerializationState, model};
 use crate::lang::value::ValueType;
 use crate::lang::{data::r#struct::Struct, value::Value};
 use chrono::Duration;
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
-use crate::lang::any_str::AnyStr;
-use crate::lang::serialization::{DeserializationState, model, Serializable, SerializationState};
-use crate::lang::serialization::model::{element, Element};
 
 #[derive(PartialEq, PartialOrd, Clone)]
 pub struct Table {
@@ -39,7 +39,11 @@ impl Iterator for Iter {
 
 impl From<(Vec<ColumnType>, Vec<Row>)> for Table {
     fn from((types, rows): (Vec<ColumnType>, Vec<Row>)) -> Self {
-        Table { types, rows: Arc::from(rows), materialized: false }
+        Table {
+            types,
+            rows: Arc::from(rows),
+            materialized: false,
+        }
     }
 }
 
@@ -48,7 +52,9 @@ impl Table {
         if self.materialized {
             Ok(self.clone())
         } else {
-            let rows: Vec<Row> = self.rows.to_vec()
+            let rows: Vec<Row> = self
+                .rows
+                .to_vec()
                 .drain(..)
                 .map(|r| r.materialize())
                 .collect::<CrushResult<Vec<_>>>()?;
@@ -63,7 +69,7 @@ impl Table {
     pub fn iter(&self) -> Iter {
         Iter {
             table: self.clone(),
-            idx: 0
+            idx: 0,
         }
     }
 
@@ -91,10 +97,7 @@ pub struct TableReader {
 
 impl TableReader {
     pub fn new(rows: Table) -> TableReader {
-        TableReader {
-            idx: 0,
-            rows,
-        }
+        TableReader { idx: 0, rows }
     }
 }
 
@@ -104,10 +107,7 @@ impl CrushStream for TableReader {
             return error("EOF");
         }
         self.idx += 1;
-        Ok(self
-            .rows
-            .rows[self.idx - 1]
-            .clone())
+        Ok(self.rows.rows[self.idx - 1].clone())
     }
 
     fn read_timeout(
@@ -157,7 +157,11 @@ impl Row {
 
     pub fn materialize(mut self) -> CrushResult<Row> {
         Ok(Row {
-            cells: self.cells.drain(..).map(|c| c.materialize()).collect::<CrushResult<Vec<_>>>()?,
+            cells: self
+                .cells
+                .drain(..)
+                .map(|c| c.materialize())
+                .collect::<CrushResult<Vec<_>>>()?,
         })
     }
 }
@@ -184,7 +188,6 @@ pub struct ColumnType {
 }
 
 impl ColumnType {
-
     pub fn name(&self) -> &str {
         self.name.to_str()
     }
@@ -192,8 +195,7 @@ impl ColumnType {
     pub fn materialize(input: &[ColumnType]) -> CrushResult<Vec<ColumnType>> {
         let mut res = Vec::new();
 
-        for col in input
-            .iter() {
+        for col in input.iter() {
             res.push(ColumnType {
                 name: col.name.clone(),
                 format: col.format,
@@ -219,7 +221,11 @@ impl ColumnType {
         }
     }
 
-    pub const fn new_with_format(name: &'static str, format: ColumnFormat, cell_type: ValueType) -> ColumnType {
+    pub const fn new_with_format(
+        name: &'static str,
+        format: ColumnFormat,
+        cell_type: ValueType,
+    ) -> ColumnType {
         ColumnType {
             name: AnyStr::Slice(name),
             format,
@@ -227,7 +233,11 @@ impl ColumnType {
         }
     }
 
-    pub fn new_with_format_from_string(name: String, format: ColumnFormat, cell_type: ValueType) -> ColumnType {
+    pub fn new_with_format_from_string(
+        name: String,
+        format: ColumnFormat,
+        cell_type: ValueType,
+    ) -> ColumnType {
         ColumnType {
             name: name.into(),
             format,
@@ -264,7 +274,7 @@ impl ColumnVec for &[ColumnType] {
                     .collect::<Vec<String>>()
                     .join(", "),
             )
-                .as_str(),
+            .as_str(),
         )
     }
 }

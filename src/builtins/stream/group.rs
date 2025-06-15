@@ -1,21 +1,21 @@
 use crate::lang::command::Command;
-use crate::lang::errors::CrushResult;
-use crate::lang::state::contexts::CommandContext;
-use crate::lang::ordered_string_map::OrderedStringMap;
-use crate::lang::printer::Printer;
-use crate::lang::state::scope::Scope;
-use crate::lang::pipe::{pipe, TableInputStream};
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::ColumnVec;
+use crate::lang::errors::CrushResult;
+use crate::lang::ordered_string_map::OrderedStringMap;
+use crate::lang::pipe::{TableInputStream, pipe};
+use crate::lang::printer::Printer;
+use crate::lang::state::contexts::CommandContext;
+use crate::lang::state::global_state::GlobalState;
+use crate::lang::state::scope::Scope;
 use crate::{
     lang::errors::argument_error_legacy,
-    lang::pipe::{unlimited_streams, TableOutputStream},
+    lang::pipe::{TableOutputStream, unlimited_streams},
     lang::{data::table::Row, value::Value, value::ValueType},
 };
-use crossbeam::channel::{unbounded, Receiver};
+use crossbeam::channel::{Receiver, unbounded};
 use signature::signature;
 use std::collections::HashMap;
-use crate::lang::state::global_state::GlobalState;
 
 #[signature(
     stream.group,
@@ -28,7 +28,9 @@ pub struct Group {
     #[description("the column(s) to group by and copy into the output stream.")]
     group_by: Vec<String>,
     #[named()]
-    #[description("create these additional columns by aggregating the grouped rows using the supplied aggregation command.")]
+    #[description(
+        "create these additional columns by aggregating the grouped rows using the supplied aggregation command."
+    )]
     command: OrderedStringMap<Command>,
 }
 
@@ -53,7 +55,7 @@ fn aggregate(
                 commands[0].eval(
                     CommandContext::new(&scope, &global_state)
                         .with_input(input_receiver)
-                        .with_output(output_sender)
+                        .with_output(output_sender),
                 )?;
                 let mut result = key;
                 result.push(output_receiver.recv()?);
@@ -70,11 +72,13 @@ fn aggregate(
                     let local_command = command.clone();
                     let local_scope = scope.clone();
                     let local_state = global_state.clone();
-                    context.spawn("group:aggr", move ||
-                    local_command.eval(
-                        CommandContext::new(&local_scope, &local_state)
-                            .with_input(input_receiver)
-                            .with_output(output_sender)))?;
+                    context.spawn("group:aggr", move || {
+                        local_command.eval(
+                            CommandContext::new(&local_scope, &local_state)
+                                .with_input(input_receiver)
+                                .with_output(output_sender),
+                        )
+                    })?;
                     receivers.push(output_receiver);
                 }
 
@@ -116,28 +120,28 @@ fn create_worker_thread(
     let my_destination = destination.clone();
     let my_context = context.clone();
     let my_state = global_state.clone();
-    context.spawn(
-        "group:collect",
-        move || {
-            let local_printer = my_printer.clone();
-            local_printer.handle_error(aggregate(
-                my_commands,
-                &my_context,
-                my_state,
-                my_scope,
-                my_destination,
-                my_input,
-            ));
-            Ok(())
-        },
-    )?;
+    context.spawn("group:collect", move || {
+        let local_printer = my_printer.clone();
+        local_printer.handle_error(aggregate(
+            my_commands,
+            &my_context,
+            my_state,
+            my_scope,
+            my_destination,
+            my_input,
+        ));
+        Ok(())
+    })?;
     Ok(())
 }
 
 pub fn group(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Group::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut input = context.input.recv()?.stream()?.ok_or("Expected input to be a stream",
-    )?;
+    let mut input = context
+        .input
+        .recv()?
+        .stream()?
+        .ok_or("Expected input to be a stream")?;
     let input_type = input.types().to_vec();
     let indices: Vec<usize> = cfg
         .group_by
@@ -166,9 +170,13 @@ pub fn group(mut context: CommandContext) -> CrushResult<()> {
     for _ in 0..16 {
         create_worker_thread(
             &cfg,
-            &context.global_state.printer(), &context.scope, &output,
-            &task_input, &context,
-            &context.global_state)?;
+            &context.global_state.printer(),
+            &context.scope,
+            &output,
+            &task_input,
+            &context,
+            &context.global_state,
+        )?;
     }
 
     drop(task_input);

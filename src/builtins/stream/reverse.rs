@@ -1,8 +1,8 @@
-use crate::lang::errors::{error, CrushResult};
-use crate::lang::state::contexts::CommandContext;
-use crate::lang::data::table::Row;
-use signature::signature;
 use crate::lang::command::OutputType::Passthrough;
+use crate::lang::data::table::Row;
+use crate::lang::errors::{CrushResult, error};
+use crate::lang::state::contexts::CommandContext;
+use signature::signature;
 
 #[signature(
     stream.reverse,

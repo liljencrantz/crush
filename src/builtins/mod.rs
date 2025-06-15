@@ -35,7 +35,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     control::declare(root)?;
     crush::declare(root)?;
     #[cfg(target_os = "linux")]
-        dbus::declare(root)?;
+    dbus::declare(root)?;
     dns::declare(root)?;
     fs::declare(root)?;
     grpc::declare(root)?;

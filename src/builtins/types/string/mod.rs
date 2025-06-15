@@ -1,15 +1,15 @@
-use std::sync::OnceLock;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, CrushResult};
+use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::signature::text::Text;
+use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::contexts::CommandContext;
+use crate::lang::state::this::This;
 use crate::lang::value::Value;
 use crate::lang::{data::list::List, value::ValueType};
 use ordered_map::OrderedMap;
 use signature::signature;
-use crate::lang::signature::text::Text;
-use crate::lang::state::argument_vector::ArgumentVector;
-use crate::lang::state::this::This;
+use std::sync::OnceLock;
 
 mod format;
 
@@ -98,10 +98,15 @@ fn split(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Split = Split::parse(context.arguments, &context.global_state.printer())?;
     let this = context.this.string()?;
 
-    context.output.send(List::new(
-        ValueType::String,
-        this.split(&cfg.separator).map(|s| Value::from(s)).collect::<Vec<_>>(),
-    ).into())
+    context.output.send(
+        List::new(
+            ValueType::String,
+            this.split(&cfg.separator)
+                .map(|s| Value::from(s))
+                .collect::<Vec<_>>(),
+        )
+        .into(),
+    )
 }
 
 #[signature(
@@ -111,7 +116,9 @@ struct Trim {}
 
 fn trim(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    context.output.send(Value::from(context.this.string()?.trim()))
+    context
+        .output
+        .send(Value::from(context.this.string()?.trim()))
 }
 
 #[signature(
@@ -217,7 +224,9 @@ struct Repeat {
 fn repeat(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Repeat = Repeat::parse(context.arguments, &context.global_state.printer())?;
     let s = context.this.string()?;
-    context.output.send(Value::from(s.repeat(cfg.times).as_str()))
+    context
+        .output
+        .send(Value::from(s.repeat(cfg.times).as_str()))
 }
 
 #[signature(
@@ -253,7 +262,6 @@ fn starts_with(mut context: CommandContext) -> CrushResult<()> {
 }
 
 macro_rules! per_char_method {
-
     ($name:ident, $test:expr) => {
         fn $name(mut context: CommandContext) -> CrushResult<()> {
             context.arguments.check_len(0)?;
@@ -359,9 +367,7 @@ fn substr(mut context: CommandContext) -> CrushResult<()> {
     if to > s.len() {
         return argument_error_legacy("Substring beyond end of string");
     }
-    context
-        .output
-        .send(Value::from(&s[cfg.from..to]))
+    context.output.send(Value::from(&s[cfg.from..to]))
 }
 
 #[signature(
@@ -381,9 +387,7 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     if cfg.idx >= s.len() {
         return argument_error_legacy("Index beyond end of string");
     }
-    context
-        .output
-        .send(Value::from(&s[cfg.idx..(cfg.idx + 1)]))
+    context.output.send(Value::from(&s[cfg.idx..(cfg.idx + 1)]))
 }
 
 #[signature(
@@ -400,7 +404,9 @@ struct Match {
 fn r#match(mut context: CommandContext) -> CrushResult<()> {
     let s = context.this.string()?;
     let cfg: Match = Match::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.output.send(Value::Bool(s.eq(&cfg.needle.as_string())))
+    context
+        .output
+        .send(Value::Bool(s.eq(&cfg.needle.as_string())))
 }
 
 #[signature(
@@ -416,6 +422,9 @@ struct NotMatch {
 
 fn not_match(mut context: CommandContext) -> CrushResult<()> {
     let s = context.this.string()?;
-    let cfg: NotMatch = NotMatch::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.output.send(Value::Bool(!s.eq(&cfg.needle.as_string())))
+    let cfg: NotMatch =
+        NotMatch::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context
+        .output
+        .send(Value::Bool(!s.eq(&cfg.needle.as_string())))
 }

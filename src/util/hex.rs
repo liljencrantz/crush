@@ -23,6 +23,6 @@ pub fn from_hex(v: &str) -> CrushResult<Vec<u8>> {
 
     v.as_bytes()
         .chunks(2)
-        .map(|pair| { Ok(val(pair[0])? << 4 | val(pair[1])?)
-    }).collect()
+        .map(|pair| Ok(val(pair[0])? << 4 | val(pair[1])?))
+        .collect()
 }

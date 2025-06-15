@@ -1,15 +1,15 @@
-use std::sync::OnceLock;
+use crate::builtins::types::column_types;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, CrushResult};
+use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::state::contexts::CommandContext;
-use crate::lang::value::ValueType;
+use crate::lang::state::this::This;
 use crate::lang::value::Value;
-use crate::builtins::types::column_types;
+use crate::lang::value::ValueType;
 use ordered_map::OrderedMap;
 use signature::signature;
-use crate::lang::ordered_string_map::OrderedStringMap;
-use crate::lang::state::this::This;
+use std::sync::OnceLock;
 
 pub fn methods() -> &'static OrderedMap<String, Command> {
     static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
@@ -43,11 +43,15 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
             if c.is_empty() {
                 context
                     .output
-                    .send(Value::Type(ValueType::TableInputStream(column_types(&cfg.columns))))
+                    .send(Value::Type(ValueType::TableInputStream(column_types(
+                        &cfg.columns,
+                    ))))
             } else if cfg.columns.is_empty() {
                 context.output.send(Value::Type(ValueType::Table(c)))
             } else {
-                argument_error_legacy("Tried to set columns on a table type that already has columns")
+                argument_error_legacy(
+                    "Tried to set columns on a table type that already has columns",
+                )
             }
         }
         _ => argument_error_legacy("Invalid this, expected type table"),
@@ -64,9 +68,7 @@ struct Len {}
 
 fn len(mut context: CommandContext) -> CrushResult<()> {
     let table = context.this.table()?;
-    context
-        .output
-        .send(Value::Integer(table.len() as i128))
+    context.output.send(Value::Integer(table.len() as i128))
 }
 
 #[signature(
@@ -83,8 +85,7 @@ struct GetItem {
 fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     let cfg: GetItem = GetItem::parse(context.arguments, &context.global_state.printer())?;
     let o = context.this.table()?;
-    context.output.send(Value::Struct(
-        o.row(cfg.index)?
-            .into_struct(o.types()),
-    ))
+    context
+        .output
+        .send(Value::Struct(o.row(cfg.index)?.into_struct(o.types())))
 }

@@ -3,13 +3,13 @@ use crate::{
     lang::errors::CrushError,
     lang::{data::table::Row, value::Value},
 };
-use std::{io::prelude::*, io::BufReader};
+use std::{io::BufReader, io::prelude::*};
 
-use crate::lang::errors::{error, CrushResult};
 use crate::lang::data::table::ColumnType;
+use crate::lang::errors::{CrushResult, error};
 
-use crate::lang::signature::files::Files;
 use crate::lang::ordered_string_map::OrderedStringMap;
+use crate::lang::signature::files::Files;
 use crate::lang::state::scope::ScopeLoader;
 use crate::lang::value::ValueType;
 use signature::signature;
@@ -66,12 +66,11 @@ fn from(context: CommandContext) -> CrushResult<()> {
             skipped += 1;
             continue;
         }
-        let line_without_newline =
-            if line.ends_with('\n') {
-                &line[0..line.len() - 1]
-            } else {
-                &line
-            };
+        let line_without_newline = if line.ends_with('\n') {
+            &line[0..line.len() - 1]
+        } else {
+            &line
+        };
 
         let mut split: Vec<&str> = line_without_newline
             .split(separator)

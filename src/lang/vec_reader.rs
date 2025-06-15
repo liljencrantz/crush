@@ -1,11 +1,11 @@
-/// A class that allows you to use a `Vec<Value>` as input into a `CrushStream`.
-use chrono::Duration;
 use crate::CrushResult;
 use crate::data::table::{ColumnType, Row};
 use crate::lang::errors::eof_error;
 use crate::lang::pipe::CrushStream;
 use crate::lang::value::{Value, ValueType};
 use crate::util::replace::Replace;
+/// A class that allows you to use a `Vec<Value>` as input into a `CrushStream`.
+use chrono::Duration;
 
 pub struct VecReader {
     vec: Vec<Value>,
@@ -14,10 +14,7 @@ pub struct VecReader {
 }
 
 impl VecReader {
-    pub fn new(
-        vec: Vec<Value>,
-        column_type: ValueType,
-    ) -> VecReader {
+    pub fn new(vec: Vec<Value>, column_type: ValueType) -> VecReader {
         VecReader {
             vec,
             types: vec![ColumnType::new("value", column_type)],
@@ -30,7 +27,7 @@ impl CrushStream for VecReader {
     fn read(&mut self) -> CrushResult<Row> {
         self.idx += 1;
         if self.idx > self.vec.len() {
-            return eof_error()
+            return eof_error();
         }
         Ok(Row::new(vec![self.vec.replace(self.idx - 1, Value::Empty)]))
     }

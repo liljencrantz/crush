@@ -1,17 +1,16 @@
+use crate::builtins::types;
+use crate::lang::command::OutputType::Known;
 /// All the different types a value can have.
-
 use crate::lang::command::{Command, OutputType};
-use crate::lang::errors::{error, CrushResult, argument_error_legacy};
+use crate::lang::errors::{CrushResult, argument_error_legacy, error};
 use crate::lang::help::Help;
 use crate::lang::{data::table::ColumnType, value::Value};
-use crate::builtins::types;
 use crate::util::glob::Glob;
 use ordered_map::OrderedMap;
 use regex::Regex;
 use std::cmp::max;
 use std::fmt::{Display, Formatter, Write};
 use std::sync::OnceLock;
-use crate::lang::command::OutputType::Known;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum ValueType {
@@ -106,7 +105,9 @@ impl ValueType {
             | ValueType::Bool => self.clone(),
             ValueType::BinaryInputStream => ValueType::Binary,
             ValueType::TableInputStream(o) => ValueType::Table(ColumnType::materialize(o)?),
-            ValueType::TableOutputStream(_) => return argument_error_legacy("Can't materialize binary_output_stream"),
+            ValueType::TableOutputStream(_) => {
+                return argument_error_legacy("Can't materialize binary_output_stream");
+            }
             ValueType::Table(r) => ValueType::Table(ColumnType::materialize(r)?),
             ValueType::List(l) => ValueType::List(Box::from(l.materialize()?)),
             ValueType::Dict(k, v) => {
@@ -151,7 +152,11 @@ impl ValueType {
 
     pub fn is_parametrized(&self) -> bool {
         match self {
-            ValueType::List(_) | ValueType::Dict(_, _)| ValueType::TableOutputStream(_) | ValueType::TableInputStream(_) | ValueType::Table(_) => true,
+            ValueType::List(_)
+            | ValueType::Dict(_, _)
+            | ValueType::TableOutputStream(_)
+            | ValueType::TableInputStream(_)
+            | ValueType::Table(_) => true,
             _ => false,
         }
     }
@@ -168,7 +173,6 @@ impl ValueType {
         }
         Ok(())
     }
-
 }
 
 impl Help for ValueType {
@@ -178,8 +182,9 @@ impl Help for ValueType {
 
     fn short_help(&self) -> String {
         match self {
-            ValueType::String => 
-                "Textual data, stored as an immutable sequence of unicode code points.",
+            ValueType::String => {
+                "Textual data, stored as an immutable sequence of unicode code points."
+            }
             ValueType::Integer => "A numeric type representing an integer number.",
             ValueType::Time => "A point in time with nanosecond precision.",
             ValueType::Duration => "A difference between two points in time.",
@@ -195,15 +200,16 @@ impl Help for ValueType {
             ValueType::Dict(_, _) => "A mutable mapping from one set of values to another.",
             ValueType::Scope => "A scope in the Crush namespace.",
             ValueType::Bool => "True or false.",
-            ValueType::Float => 
-                "A numeric type representing any number with floating point precision.",
+            ValueType::Float => {
+                "A numeric type representing any number with floating point precision."
+            }
             ValueType::Empty => "Nothing.",
             ValueType::Any => "Any type.",
             ValueType::BinaryInputStream => "A stream of binary data.",
             ValueType::Binary => "Binary data.",
             ValueType::Type => "A type.",
         }
-            .to_string()
+        .to_string()
     }
 
     fn long_help(&self) -> Option<String> {
@@ -222,15 +228,18 @@ impl Help for ValueType {
                 vec![
                     "All time instances use the local time zone.".to_string(),
                     "".to_string(),
-                    "A time instance has nanosecond precision. It is represented internally".to_string(),
-                    "as two 64 bit numbers, one for the number of seconds since the Unix epoc,".to_string(),
+                    "A time instance has nanosecond precision. It is represented internally"
+                        .to_string(),
+                    "as two 64 bit numbers, one for the number of seconds since the Unix epoc,"
+                        .to_string(),
                     "and one for the nanosecond remainder".to_string(),
                     "".to_string(),
                 ]
             }
             ValueType::Integer => {
                 vec![
-                    "A Crush integer uses signed 128 bit precision. This means that the highest".to_string(),
+                    "A Crush integer uses signed 128 bit precision. This means that the highest"
+                        .to_string(),
                     format!("number that can be represented is {},", i128::MAX),
                     format!("and the lowest is {}.", i128::MIN),
                     "".to_string(),
@@ -238,16 +247,18 @@ impl Help for ValueType {
             }
             ValueType::Float => {
                 vec![
-                    "A Crush float is a IEEE 754 64-bit (double precision) floating point number.".to_string(),
+                    "A Crush float is a IEEE 754 64-bit (double precision) floating point number."
+                        .to_string(),
                     "".to_string(),
                 ]
             }
             ValueType::Empty => {
                 vec![
-                    "The empty type is returned by commands that don't return any value.".to_string(),
+                    "The empty type is returned by commands that don't return any value."
+                        .to_string(),
                 ]
             }
-            _ => { Vec::new() }
+            _ => Vec::new(),
         };
 
         let mut keys: Vec<_> = self.fields().into_iter().collect();
@@ -260,16 +271,11 @@ impl Help for ValueType {
 
 fn long_help_methods(fields: &Vec<(&String, &Command)>, lines: &mut Vec<String>) {
     for (k, v) in fields {
-        lines.push(format!(
-            " * `{}` {}",
-            k,
-            v.help().short_help()
-        ));
+        lines.push(format!(" * `{}` {}", k, v.help().short_help()));
     }
 }
 
 impl Display for ValueType {
-    
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             ValueType::String => f.write_str("string"),

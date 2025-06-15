@@ -206,7 +206,8 @@ fn find_command_in_job_list(ast: JobListNode, cursor: usize) -> CrushResult<Comm
             return find_command_in_job(job.clone(), cursor);
         }
     }
-    Ok(ast.jobs
+    Ok(ast
+        .jobs
         .last()
         .and_then(|j| j.commands.last().map(|c| c.clone()))
         .ok_or("Nothing to complete")?)

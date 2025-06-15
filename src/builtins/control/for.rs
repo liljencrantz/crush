@@ -1,14 +1,14 @@
-use signature::signature;
 use crate::lang::argument::Argument;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{argument_error_legacy, CrushResult};
-use crate::lang::state::contexts::CommandContext;
-use crate::lang::value::Value;
 use crate::lang::data::r#struct::Struct;
+use crate::lang::errors::{CrushResult, argument_error_legacy};
 use crate::lang::ordered_string_map::OrderedStringMap;
-use crate::lang::pipe::{Stream};
+use crate::lang::pipe::Stream;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeType::Loop;
+use crate::lang::value::Value;
+use signature::signature;
 
 #[signature(
     control.r#for,
@@ -39,7 +39,11 @@ fn r#for(mut context: CommandContext) -> CrushResult<()> {
         return argument_error_legacy("Expected exactly one stream to iterate over");
     }
 
-    let (name, mut input) = cfg.iterator.drain().next().ok_or("Failed to obtain a stream")?;
+    let (name, mut input) = cfg
+        .iterator
+        .drain()
+        .next()
+        .ok_or("Failed to obtain a stream")?;
 
     while let Ok(line) = input.read() {
         let env = context.scope.create_child(&context.scope, Loop);
@@ -50,14 +54,14 @@ fn r#for(mut context: CommandContext) -> CrushResult<()> {
             Value::Struct(Struct::from_vec(Vec::from(line), input.types().to_vec()))
         };
 
-        let arguments =
-            vec![Argument::new(
-                Some(name.clone()),
-                vvv,
-                location,
-            )];
+        let arguments = vec![Argument::new(Some(name.clone()), vvv, location)];
 
-        cfg.body.eval(context.empty().with_scope(env.clone()).with_args(arguments, None))?;
+        cfg.body.eval(
+            context
+                .empty()
+                .with_scope(env.clone())
+                .with_args(arguments, None),
+        )?;
         if env.is_stopped() {
             break;
         }

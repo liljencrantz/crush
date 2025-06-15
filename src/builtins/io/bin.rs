@@ -1,9 +1,9 @@
-use crate::lang::errors::{argument_error_legacy, CrushResult};
+use crate::lang::errors::{CrushResult, argument_error_legacy};
 use crate::lang::signature::files::Files;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeLoader;
 use crate::lang::value::Value;
 use signature::signature;
-use crate::lang::state::contexts::CommandContext;
 
 #[signature(
     io.bin.from,

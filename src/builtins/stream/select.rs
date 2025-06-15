@@ -1,15 +1,15 @@
+use crate::lang::ast::location::Location;
 use crate::lang::command::{Command, OutputType};
-use crate::lang::errors::{argument_error, error, CrushResult, argument_error_legacy};
-use crate::lang::state::contexts::CommandContext;
-use crate::lang::pipe::{pipe, Stream};
 use crate::lang::data::table::ColumnVec;
+use crate::lang::errors::{CrushResult, argument_error, argument_error_legacy, error};
+use crate::lang::pipe::{Stream, pipe};
+use crate::lang::state::contexts::CommandContext;
+use crate::lang::value::ValueType;
 use crate::{
     data::table::ColumnType,
     lang::{argument::Argument, data::table::Row, value::Value},
     util::replace::Replace,
 };
-use crate::lang::ast::location::Location;
-use crate::lang::value::ValueType;
 
 enum Action {
     Replace(usize),
@@ -36,9 +36,13 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
     };
 
     for (location, source) in &config.columns {
-        let next_type =
-        match source {
-            Source::Closure(c) => c.output_type(&OutputType::Known(ValueType::TableInputStream(input_type.clone()))).unwrap_or(&ValueType::Any).clone(),
+        let next_type = match source {
+            Source::Closure(c) => c
+                .output_type(&OutputType::Known(ValueType::TableInputStream(
+                    input_type.clone(),
+                )))
+                .unwrap_or(&ValueType::Any)
+                .clone(),
             Source::Argument(idx) => input_type[*idx].cell_type.clone(),
         };
         match location {
@@ -47,10 +51,7 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
             }
             Action::Replace(idx) => {
                 let name = output_type[*idx].name().to_string();
-                output_type.replace(
-                    *idx,
-                    ColumnType::new_from_string(name, next_type),
-                );
+                output_type.replace(*idx, ColumnType::new_from_string(name, next_type));
             }
         }
     }
@@ -70,10 +71,17 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
                         .cells()
                         .iter()
                         .zip(&input_type)
-                        .map(|(cell, cell_type)| Argument::named(&cell_type.name(), cell.clone(), config.location))
+                        .map(|(cell, cell_type)| {
+                            Argument::named(&cell_type.name(), cell.clone(), config.location)
+                        })
                         .collect();
                     let (sender, receiver) = pipe();
-                    closure.eval(context.empty().with_args(arguments, None).with_output(sender))?;
+                    closure.eval(
+                        context
+                            .empty()
+                            .with_args(arguments, None)
+                            .with_output(sender),
+                    )?;
                     receiver.recv()?
                 }
                 Source::Argument(idx) => row.cells()[*idx].clone(),
@@ -117,31 +125,38 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
             for a in &context.arguments {
                 location = location.union(a.location);
                 match (a.argument_type.as_deref(), a.value.clone()) {
-                    (Some(name), Value::Command(closure)) => {
-                        match (copy, input_type.find(name)) {
-                            (true, Ok(idx)) =>
-                                columns.push((Action::Replace(idx), Source::Closure(closure))),
+                    (Some(name), Value::Command(closure)) => match (copy, input_type.find(name)) {
+                        (true, Ok(idx)) => {
+                            columns.push((Action::Replace(idx), Source::Closure(closure)))
+                        }
 
-                            _ => columns.push((
-                                Action::Append(name.to_string()),
-                                Source::Closure(closure),
-                            )),
+                        _ => columns
+                            .push((Action::Append(name.to_string()), Source::Closure(closure))),
+                    },
+                    (None, Value::String(name)) => match (copy, input_type.find(name.as_ref())) {
+                        (false, Ok(idx)) => {
+                            columns.push((Action::Append(name.to_string()), Source::Argument(idx)))
                         }
-                    }
-                    (None, Value::String(name)) => {
-                        match (copy, input_type.find(name.as_ref())) {
-                            (false, Ok(idx)) => columns
-                                .push((Action::Append(name.to_string()), Source::Argument(idx))),
-                            _ =>
-                                return argument_error(
-                                    format!("Unknown column {}", name).as_str(), a.location),
+                        _ => {
+                            return argument_error(
+                                format!("Unknown column {}", name).as_str(),
+                                a.location,
+                            );
                         }
-                    }
+                    },
                     _ => return argument_error("Invalid argument", a.location),
                 }
             }
 
-            run(Config { columns, copy, location }, input, context)
+            run(
+                Config {
+                    columns,
+                    copy,
+                    location,
+                },
+                input,
+                context,
+            )
         }
         _ => error("Expected a stream"),
     }

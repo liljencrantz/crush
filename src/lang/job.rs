@@ -1,11 +1,11 @@
+use crate::lang::ast::location::Location;
 /// An executable pipeline of one or more commands.
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::CrushResult;
-use crate::lang::state::contexts::{CompileContext, JobContext};
 use crate::lang::pipe::pipe;
-use std::thread::ThreadId;
+use crate::lang::state::contexts::{CompileContext, JobContext};
 use std::fmt::{Display, Formatter};
-use crate::lang::ast::location::Location;
+use std::thread::ThreadId;
 
 /// An executable pipeline of one or more commands.
 #[derive(Clone)]
@@ -55,9 +55,10 @@ impl Job {
         }
 
         let last_call_def = &self.commands[last_job_idx];
-        last_call_def.eval(context.with_io(input, context.output.clone())).map_err(|e| e.with_location(self.location))
+        last_call_def
+            .eval(context.with_io(input, context.output.clone()))
+            .map_err(|e| e.with_location(self.location))
     }
-
 }
 
 impl Display for Job {

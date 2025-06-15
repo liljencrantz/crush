@@ -1,17 +1,17 @@
+use crate::interactive::rustyline_helper::RustylineHelper;
+use crate::lang::ast::lexer::LexerMode;
 use crate::lang::command::Command;
 use crate::lang::errors::CrushResult;
 use crate::lang::parser::Parser;
 use crate::lang::printer::Printer;
 use crate::lang::threads::ThreadStore;
-use num_format::{Grouping, SystemLocale};
-use std::sync::{Arc, Mutex, MutexGuard};
-use rustyline::Editor;
-use rustyline::history::DefaultHistory;
-use crate::interactive::rustyline_helper::RustylineHelper;
-use crate::lang::ast::lexer::LexerMode;
 use crate::lang::value::Value;
 use crate::util::byte_unit::ByteUnit;
 use crate::util::temperature::Temperature;
+use num_format::{Grouping, SystemLocale};
+use rustyline::Editor;
+use rustyline::history::DefaultHistory;
+use std::sync::{Arc, Mutex, MutexGuard};
 
 /**
 A type representing the shared crush state, such as the printer, the running jobs, the running
@@ -54,9 +54,8 @@ impl FormatData {
         self.temperature.unwrap_or_else(|| {
             match country(self.locale.name()) {
                 // Countries that use Fahrenheit
-                Some("US") | Some("BS") | Some("PW") |
-                Some("BZ") | Some("KY") | Some("FM") |
-                Some("MH") => Temperature::Fahrenheit,
+                Some("US") | Some("BS") | Some("PW") | Some("BZ") | Some("KY") | Some("FM")
+                | Some("MH") => Temperature::Fahrenheit,
                 // All other countries use Celsius
                 Some(_) => Temperature::Celsius,
                 // You didn't bother setting a locale, YOU GET KELVIN AS PUNISHMENT
@@ -156,7 +155,7 @@ impl Drop for JobHandleInternal {
 
 impl GlobalState {
     pub fn new(printer: Printer) -> CrushResult<GlobalState> {
-        let locale = SystemLocale::default().or_else(|_| { SystemLocale::from_name("C") })?;
+        let locale = SystemLocale::default().or_else(|_| SystemLocale::from_name("C"))?;
         Ok(GlobalState {
             data: Arc::from(Mutex::new(StateData {
                 format_data: FormatData {

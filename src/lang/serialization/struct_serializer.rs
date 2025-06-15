@@ -1,7 +1,7 @@
-use super::super::errors::{error, CrushResult};
+use super::super::errors::{CrushResult, error};
 use super::super::value::Value;
 use super::model;
-use super::model::{element, Element};
+use super::model::{Element, element};
 use super::{DeserializationState, Serializable, SerializationState};
 use crate::lang::data::r#struct::Struct;
 use crate::util::identity_arc::Identity;

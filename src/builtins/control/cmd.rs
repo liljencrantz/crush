@@ -1,18 +1,18 @@
-use signature::signature;
-use std::process::Stdio;
-use std::io::{Read, Write};
-use std::borrow::BorrowMut;
-use std::path::PathBuf;
-use crate::{argument_error_legacy, CrushResult};
 use crate::lang::argument::{Argument, SwitchStyle};
+use crate::lang::command::OutputType::Known;
+use crate::lang::command_invocation::resolve_external_command;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::value::Value;
 use crate::lang::value::Value::{Binary, BinaryInputStream};
-use crate::state::contexts::CommandContext;
 use crate::lang::value::ValueType;
-use crate::lang::command::OutputType::Known;
-use crate::lang::command_invocation::resolve_external_command;
+use crate::state::contexts::CommandContext;
 use crate::util::file::cwd;
+use crate::{CrushResult, argument_error_legacy};
+use signature::signature;
+use std::borrow::BorrowMut;
+use std::io::{Read, Write};
+use std::path::PathBuf;
+use std::process::Stdio;
 
 #[signature(
     control.cmd,
@@ -26,7 +26,8 @@ pub struct Cmd {
     #[description("The file path to the command to execute")]
     command: PathBuf,
     #[named()]
-    #[description("Switches to pass in to the command. The name will be prepended with a double dash '--', unless it is a single character name, in which case a single dash '-' will be prepended"
+    #[description(
+        "Switches to pass in to the command. The name will be prepended with a double dash '--', unless it is a single character name, in which case a single dash '-' will be prepended"
     )]
     switches: OrderedStringMap<Value>,
     #[unnamed()]
@@ -39,51 +40,48 @@ fn format_value(v: &Value) -> CrushResult<Vec<String>> {
         .materialize()?
         .to_string()
         .split("\n")
-        .filter(|s| { !s.is_empty() })
-        .map(|s| { s.to_string() })
-        .collect()
-    )
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .collect())
 }
 
 fn cmd_internal(
     context: CommandContext,
     file: PathBuf,
-    mut arguments: Vec<Argument>)
-    -> CrushResult<()> {
+    mut arguments: Vec<Argument>,
+) -> CrushResult<()> {
     let use_tty = !context.input.is_pipeline() && !context.output.is_pipeline();
     let mut cmd = std::process::Command::new(file.as_os_str());
 
     for a in arguments.drain(..) {
         match a.argument_type {
-            None => {
-                match a.value {
-                    Value::Glob(glob) => {
-                        let mut files = Vec::new();
-                        glob.glob_files(&cwd()?, &mut files)?;
-                        for file in files {
-                            cmd.arg(file);
-                        }
+            None => match a.value {
+                Value::Glob(glob) => {
+                    let mut files = Vec::new();
+                    glob.glob_files(&cwd()?, &mut files)?;
+                    for file in files {
+                        cmd.arg(file);
                     }
-                    _ => for s in format_value(&a.value)? {
+                }
+                _ => {
+                    for s in format_value(&a.value)? {
                         cmd.arg(s);
                     }
                 }
-            }
+            },
 
             Some(name) => {
-                let (switch, join_string) =
-                    match a.switch_style {
-                        SwitchStyle::None =>
-                            if name.len() == 1 {
-                                (format!("-{}", name), "")
-                            } else {
-                                (format!("--{}", name), "=")
-                            },
-                        SwitchStyle::Single =>
-                            (format!("-{}", name), ""),
-                        SwitchStyle::Double =>
-                            (format!("--{}", name), "="),
-                    };
+                let (switch, join_string) = match a.switch_style {
+                    SwitchStyle::None => {
+                        if name.len() == 1 {
+                            (format!("-{}", name), "")
+                        } else {
+                            (format!("--{}", name), "=")
+                        }
+                    }
+                    SwitchStyle::Single => (format!("-{}", name), ""),
+                    SwitchStyle::Double => (format!("--{}", name), "="),
+                };
                 match a.value {
                     Value::Bool(true) => {
                         cmd.arg(switch);
@@ -92,7 +90,12 @@ fn cmd_internal(
                         let mut files = Vec::new();
                         glob.glob_files(&cwd()?, &mut files)?;
                         for file in files {
-                            cmd.arg(format!("{}{}{}", switch, join_string, file.to_str().ok_or("Invalid file name")?));
+                            cmd.arg(format!(
+                                "{}{}{}",
+                                switch,
+                                join_string,
+                                file.to_str().ok_or("Invalid file name")?
+                            ));
                         }
                     }
                     _ => {
@@ -106,8 +109,7 @@ fn cmd_internal(
     }
 
     if use_tty {
-        cmd
-            .stdin(Stdio::inherit())
+        cmd.stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit());
 
@@ -145,7 +147,9 @@ fn cmd_internal(
             _ => return argument_error_legacy("Invalid input: Expected binary data"),
         }
 
-        context.output.send(BinaryInputStream(Box::from(stdout_reader)))?;
+        context
+            .output
+            .send(BinaryInputStream(Box::from(stdout_reader)))?;
         let my_context = context.clone();
         context.spawn("cmd:stderr", move || {
             let _ = &my_context;
@@ -177,13 +181,16 @@ fn cmd(mut context: CommandContext) -> CrushResult<()> {
             let file = if f.exists() {
                 Some(f.to_path_buf())
             } else {
-                resolve_external_command(f.to_str().ok_or( "Invalid command name")?, &context.scope)?
+                resolve_external_command(f.to_str().ok_or("Invalid command name")?, &context.scope)?
             };
 
             if let Some(file) = file {
                 cmd_internal(context, file, arguments)
             } else {
-                argument_error_legacy(format!("Unknown command {}", f.to_str().unwrap_or("<encoding error>")))
+                argument_error_legacy(format!(
+                    "Unknown command {}",
+                    f.to_str().unwrap_or("<encoding error>")
+                ))
             }
         }
         Value::String(s) => {

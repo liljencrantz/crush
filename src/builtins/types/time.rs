@@ -1,18 +1,18 @@
-use std::sync::OnceLock;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command::TypeMap;
-use crate::lang::errors::{argument_error_legacy, CrushResult};
+use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::signature::number::Number;
+use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::contexts::CommandContext;
-use crate::lang::value::ValueType;
+use crate::lang::state::this::This;
 use crate::lang::value::Value;
+use crate::lang::value::ValueType;
 use chrono::{DateTime, Duration, Local};
 use ordered_map::OrderedMap;
 use signature::signature;
-use crate::lang::signature::number::Number;
-use crate::lang::state::argument_vector::ArgumentVector;
-use crate::lang::state::this::This;
+use std::sync::OnceLock;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "time", name]
@@ -214,5 +214,7 @@ struct Format {
 fn format(mut context: CommandContext) -> CrushResult<()> {
     let time = context.this.time()?;
     let cfg: Format = Format::parse(context.arguments, &context.global_state.printer())?;
-    context.output.send(Value::from(time.format(&cfg.format).to_string()))
+    context
+        .output
+        .send(Value::from(time.format(&cfg.format).to_string()))
 }

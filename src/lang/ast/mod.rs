@@ -1,21 +1,21 @@
-use crate::lang::argument::{ArgumentDefinition};
+use crate::lang::argument::ArgumentDefinition;
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::{CrushResult, error};
 use crate::lang::job::Job;
 use crate::lang::state::scope::Scope;
-use crate::lang::value::{ValueDefinition};
-use location::Location;
-use tracked_string::TrackedString;
-use crate::util::user_map::get_user;
+use crate::lang::value::ValueDefinition;
 use crate::util::user_map::get_current_username;
+use crate::util::user_map::get_user;
+use location::Location;
 use node::Node;
+use tracked_string::TrackedString;
 
-pub mod location;
-pub mod tracked_string;
-pub mod parameter_node;
 pub mod lexer;
-pub mod token;
+pub mod location;
 pub mod node;
+pub mod parameter_node;
+pub mod token;
+pub mod tracked_string;
 
 #[derive(Clone, Debug)]
 pub struct JobListNode {
@@ -59,73 +59,49 @@ impl JobNode {
 fn operator_function(op: &[&str], op_location: Location, l: Box<Node>, r: Box<Node>) -> Box<Node> {
     let location = op_location.union(l.location()).union(r.location());
     let cmd = attr(op, op_location);
-    Box::from(
-        Node::Substitution(
-            JobNode {
-                commands: vec![CommandNode {
-                    expressions: vec![
-                        cmd, *l, *r,
-                    ],
-                    location: location,
-                }],
-                location: location,
-            }
-        )
-    )
+    Box::from(Node::Substitution(JobNode {
+        commands: vec![CommandNode {
+            expressions: vec![cmd, *l, *r],
+            location: location,
+        }],
+        location: location,
+    }))
 }
 
 pub fn operator_method(op: &str, op_location: Location, l: Box<Node>, r: Box<Node>) -> Box<Node> {
     let location = op_location.union(l.location()).union(r.location());
     let cmd = Node::GetAttr(l, TrackedString::new(op, op_location));
-    Box::from(
-        Node::Substitution(
-            JobNode {
-                commands: vec![CommandNode {
-                    expressions: vec![
-                        cmd, *r,
-                    ],
-                    location: location,
-                }],
-                location: location,
-            }
-        )
-    )
+    Box::from(Node::Substitution(JobNode {
+        commands: vec![CommandNode {
+            expressions: vec![cmd, *r],
+            location: location,
+        }],
+        location: location,
+    }))
 }
 
 pub fn unary_operator_method(op: &str, op_location: Location, n: Box<Node>) -> Box<Node> {
     let location = op_location.union(n.location());
     let cmd = Node::GetAttr(n, TrackedString::new(op, op_location));
-    Box::from(
-        Node::Substitution(
-            JobNode {
-                commands: vec![CommandNode {
-                    expressions: vec![
-                        cmd,
-                    ],
-                    location: location,
-                }],
-                location: location,
-            }
-        )
-    )
+    Box::from(Node::Substitution(JobNode {
+        commands: vec![CommandNode {
+            expressions: vec![cmd],
+            location: location,
+        }],
+        location: location,
+    }))
 }
 
 pub fn negate(n: Box<Node>) -> Box<Node> {
     let location = n.location();
     let cmd = attr(&["global", "comp", "not"], location);
-    Box::from(
-        Node::Substitution(
-            JobNode {
-                commands: vec![CommandNode {
-                    expressions: vec![
-                        cmd, *n,
-                    ],
-                    location,
-                }],
-                location,
-            }
-        )
-    )
+    Box::from(Node::Substitution(JobNode {
+        commands: vec![CommandNode {
+            expressions: vec![cmd, *n],
+            location,
+        }],
+        location,
+    }))
 }
 
 pub fn operator(iop: impl Into<TrackedString>, l: Box<Node>, r: Box<Node>) -> Box<Node> {
@@ -155,7 +131,6 @@ pub fn operator(iop: impl Into<TrackedString>, l: Box<Node>, r: Box<Node>) -> Bo
     }
 }
 
-
 #[derive(Clone, Debug)]
 pub struct CommandNode {
     pub expressions: Vec<Node>,
@@ -183,8 +158,9 @@ impl CommandNode {
 
 fn propose_name(name: &TrackedString, v: ValueDefinition) -> ValueDefinition {
     match v {
-        ValueDefinition::ClosureDefinition(_, p, j, l) =>
-            ValueDefinition::ClosureDefinition(Some(name.clone()), p, j, l),
+        ValueDefinition::ClosureDefinition(_, p, j, l) => {
+            ValueDefinition::ClosureDefinition(Some(name.clone()), p, j, l)
+        }
         _ => v,
     }
 }
@@ -198,7 +174,11 @@ fn attr(parts: &[&str], location: Location) -> Node {
 }
 
 fn home_as_string(user: &str) -> CrushResult<String> {
-    Ok(get_user(user)?.home.to_str().ok_or("Bad home directory")?.to_string())
+    Ok(get_user(user)?
+        .home
+        .to_str()
+        .ok_or("Bad home directory")?
+        .to_string())
 }
 
 fn expand_user(s: &str) -> CrushResult<String> {
@@ -206,11 +186,15 @@ fn expand_user(s: &str) -> CrushResult<String> {
         Ok(s.to_string())
     } else {
         let parts: Vec<&str> = s[1..].splitn(2, '/').collect();
-        let home = if parts[0].len() > 0 { home_as_string(parts[0]) } else { home_as_string(&get_current_username()?) };
+        let home = if parts[0].len() > 0 {
+            home_as_string(parts[0])
+        } else {
+            home_as_string(&get_current_username()?)
+        };
         if parts.len() == 1 {
             home
         } else {
-            home.map(|home| { format!("{}/{}", home, parts[1]) })
+            home.map(|home| format!("{}/{}", home, parts[1]))
         }
     }
 }

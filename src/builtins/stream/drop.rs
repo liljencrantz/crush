@@ -1,8 +1,8 @@
-use crate::lang::errors::{error, CrushResult};
-use crate::lang::state::contexts::CommandContext;
-use crate::lang::data::table::{Row, ColumnVec};
-use signature::signature;
 use crate::lang::command::OutputType::Unknown;
+use crate::lang::data::table::{ColumnVec, Row};
+use crate::lang::errors::{CrushResult, error};
+use crate::lang::state::contexts::CommandContext;
+use signature::signature;
 use std::collections::HashSet;
 
 #[signature(
@@ -24,20 +24,28 @@ fn drop(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream()? {
         Some(mut input) => {
             let t = input.types();
-            let drop = cfg.drop.iter()
+            let drop = cfg
+                .drop
+                .iter()
                 .map(|f| t.find(f))
                 .collect::<CrushResult<HashSet<usize>>>()?;
-            let inc: Vec<bool> = (0..t.len()).into_iter().map(|idx| drop.contains(&idx)).collect();
+            let inc: Vec<bool> = (0..t.len())
+                .into_iter()
+                .map(|idx| drop.contains(&idx))
+                .collect();
             let mut it = inc.iter();
-            let output = context.output.initialize(&t.to_vec().drain(..).filter(|_| !*(it.next().unwrap())).collect::<Vec<_>>())?;
+            let output = context.output.initialize(
+                &t.to_vec()
+                    .drain(..)
+                    .filter(|_| !*(it.next().unwrap()))
+                    .collect::<Vec<_>>(),
+            )?;
             while let Ok(row) = input.read() {
                 let mut row = Vec::from(row);
                 let mut it = inc.iter();
-                output.send(
-                    Row::new(
-                        row.drain(..).filter(|_| !*(it.next().unwrap())).collect()
-                    )
-                )?;
+                output.send(Row::new(
+                    row.drain(..).filter(|_| !*(it.next().unwrap())).collect(),
+                ))?;
             }
             Ok(())
         }

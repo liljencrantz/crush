@@ -1,10 +1,8 @@
 use crate::lang::argument::Argument;
-use crate::lang::state::scope::Scope;
 use crate::lang::errors::CrushResult;
+use crate::lang::pipe::{ValueReceiver, ValueSender, black_hole, empty_channel};
 use crate::lang::state::global_state::{GlobalState, JobHandle};
-use crate::lang::pipe::{
-    black_hole, empty_channel, ValueReceiver, ValueSender,
-};
+use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use std::mem::swap;
 use std::thread::ThreadId;
@@ -107,11 +105,13 @@ impl JobContext {
     }
 
     pub fn spawn<F>(&self, name: &str, f: F) -> CrushResult<ThreadId>
-        where
-            F: FnOnce() -> CrushResult<()>,
-            F: Send + 'static,
+    where
+        F: FnOnce() -> CrushResult<()>,
+        F: Send + 'static,
     {
-        self.global_state.threads().spawn(name, self.handle.clone().map(|h| { h.id() }), f)
+        self.global_state
+            .threads()
+            .spawn(name, self.handle.clone().map(|h| h.id()), f)
     }
 }
 
@@ -232,11 +232,12 @@ impl CommandContext {
     }
 
     pub fn spawn<F>(&self, name: &str, f: F) -> CrushResult<ThreadId>
-        where
-            F: FnOnce() -> CrushResult<()>,
-            F: Send + 'static,
+    where
+        F: FnOnce() -> CrushResult<()>,
+        F: Send + 'static,
     {
-        self.global_state.threads().spawn(name, self.handle.clone().map(|h| { h.id() }), f)
+        self.global_state
+            .threads()
+            .spawn(name, self.handle.clone().map(|h| h.id()), f)
     }
 }
-

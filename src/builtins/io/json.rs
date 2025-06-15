@@ -1,13 +1,13 @@
-use crate::lang::state::contexts::CommandContext;
 use crate::lang::errors::CrushError;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::{data::table::Row, value::Value, value::ValueType};
 use std::io::{BufReader, Write};
 
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{error, CrushResult};
+use crate::lang::data::table::ColumnType;
+use crate::lang::errors::{CrushResult, error};
 use crate::lang::signature::files::Files;
 use crate::lang::state::scope::ScopeLoader;
-use crate::lang::data::table::ColumnType;
 use crate::lang::{data::list::List, data::r#struct::Struct, data::table::Table};
 use signature::signature;
 use std::collections::HashSet;
@@ -23,8 +23,7 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
             } else if f.is_i64() {
                 Ok(Value::Integer(f.as_i64().expect("") as i128))
             } else {
-                Ok(Value::Float(
-                    f.as_f64().ok_or("Not a valid number")?))
+                Ok(Value::Float(f.as_f64().ok_or("Not a valid number")?))
             }
         }
         serde_json::Value::String(s) => Ok(Value::from(s.as_str())),
@@ -82,24 +81,24 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
 fn to_json(value: Value) -> CrushResult<serde_json::Value> {
     let v = value.materialize()?;
     match v {
-        Value::File(s) => Ok(serde_json::Value::from(s.to_str().ok_or("Invalid filename")?)),
+        Value::File(s) => Ok(serde_json::Value::from(
+            s.to_str().ok_or("Invalid filename")?,
+        )),
 
         Value::String(s) => Ok(serde_json::Value::from(s.to_string())),
 
         Value::Integer(i) => Ok(serde_json::Value::from(i64::try_from(i)?)),
 
         Value::List(l) => Ok(serde_json::Value::Array(
-            l.iter()
-                .map(to_json)
-                .collect::<CrushResult<Vec<_>>>()?,
+            l.iter().map(to_json).collect::<CrushResult<Vec<_>>>()?,
         )),
 
         Value::Table(t) => {
             let types = t.types().to_vec();
-            let structs: CrushResult<Vec<serde_json::Value>> =
-                t.iter()
-                    .map(|r| { to_json(Value::from(r.clone().into_struct(&types))) })
-                    .collect();
+            let structs: CrushResult<Vec<serde_json::Value>> = t
+                .iter()
+                .map(|r| to_json(Value::from(r.clone().into_struct(&types))))
+                .collect();
             Ok(serde_json::Value::Array(structs?))
         }
 
@@ -150,7 +149,8 @@ struct FromSignature {
 }
 
 pub fn from(context: CommandContext) -> CrushResult<()> {
-    let cfg: FromSignature = FromSignature::parse(context.arguments, &context.global_state.printer())?;
+    let cfg: FromSignature =
+        FromSignature::parse(context.arguments, &context.global_state.printer())?;
     let reader = BufReader::new(cfg.files.reader(context.input)?);
     let serde_value = serde_json::from_reader(reader)?;
     let crush_value = from_json(&serde_value)?;
@@ -184,7 +184,9 @@ fn to(context: CommandContext) -> CrushResult<()> {
             json_value.to_string()
         } else {
             serde_json::to_string_pretty(&json_value)?
-        }.as_bytes())?;
+        }
+        .as_bytes(),
+    )?;
     Ok(())
 }
 

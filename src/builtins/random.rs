@@ -1,12 +1,12 @@
+use crate::data::table::{ColumnType, Row};
+use crate::lang::command::OutputType::Known;
 use crate::lang::errors::CrushResult;
+use crate::lang::signature::number::Number;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
-use crate::lang::command::OutputType::Known;
 use signature::signature;
-use crate::data::table::{ColumnType, Row};
-use crate::lang::signature::number::Number;
 
 #[signature(
     random.float,
@@ -51,8 +51,7 @@ fn float_stream(mut context: CommandContext) -> CrushResult<()> {
     let to = cfg.to.as_float();
     let output = context.output.initialize(&FLOAT_STREAM_OUTPUT_TYPE)?;
     loop {
-        output
-            .send(Row::new(vec![Value::Float(rand::random::<f64>() * to)]))?;
+        output.send(Row::new(vec![Value::Float(rand::random::<f64>() * to)]))?;
     }
 }
 
@@ -93,8 +92,9 @@ fn integer_stream(mut context: CommandContext) -> CrushResult<()> {
     let cfg = IntegerStream::parse(context.remove_arguments(), &context.global_state.printer())?;
     let output = context.output.initialize(&INTEGER_STREAM_OUTPUT_TYPE)?;
     loop {
-        output
-            .send(Row::new(vec![Value::Integer((rand::random::<f64>() * (cfg.to as f64)) as i128)]))?;
+        output.send(Row::new(vec![Value::Integer(
+            (rand::random::<f64>() * (cfg.to as f64)) as i128,
+        )]))?;
     }
 }
 
@@ -112,4 +112,3 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     )?;
     Ok(())
 }
-

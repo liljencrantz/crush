@@ -1,14 +1,14 @@
-use crate::lang::data::binary::{binary_channel, BinaryReader};
-use crate::lang::errors::{argument_error_legacy, CrushResult, CrushError, data_error};
+use crate::lang::data::binary::{BinaryReader, binary_channel};
+use crate::lang::errors::{CrushError, CrushResult, argument_error_legacy, data_error};
 use crate::lang::pipe::{ValueReceiver, ValueSender};
 use crate::lang::value::{Value, ValueType};
 use crate::util::file::cwd;
 use crate::util::regex::RegexFileMatcher;
+use std::convert::TryFrom;
 use std::fs::File;
 use std::io::Write;
-use std::path::PathBuf;
-use std::convert::{TryFrom};
 use std::ops::Deref;
+use std::path::PathBuf;
 
 /**
 A type representing a set of files. It is used in the signature of builtin commands that
@@ -70,7 +70,7 @@ impl Files {
             Ok(w)
         } else if self.files.len() == 1 {
             output.send(Value::Empty)?;
-            Ok(Box::from(File::create(self.files[0].clone(), )?))
+            Ok(Box::from(File::create(self.files[0].clone())?))
         } else {
             argument_error_legacy("Expected at most one destination file")
         }
@@ -93,7 +93,9 @@ impl Files {
                             }
                         }
                     } else {
-                        return argument_error_legacy("Table stream must contain one column of type file");
+                        return argument_error_legacy(
+                            "Table stream must contain one column of type file",
+                        );
                     }
                 }
             },

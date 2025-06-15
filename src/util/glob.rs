@@ -1,10 +1,12 @@
 use crate::lang::errors::CrushResult;
-use std::collections::{HashSet, VecDeque};
-use std::path::{Path, PathBuf};
-use std::fmt::{Display, Formatter};
-use crate::util::directory_lister::{Directory, directory_lister, DirectoryLister};
+use crate::util::directory_lister::{Directory, DirectoryLister, directory_lister};
 use crate::util::file::home;
-use crate::util::glob::CompileState::{InitialState, Regular, WasAny, WasDot, WasDotDot, WasSeparator};
+use crate::util::glob::CompileState::{
+    InitialState, Regular, WasAny, WasDot, WasDotDot, WasSeparator,
+};
+use std::collections::{HashSet, VecDeque};
+use std::fmt::{Display, Formatter};
+use std::path::{Path, PathBuf};
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, PartialOrd, Ord)]
 pub struct Glob {
@@ -64,16 +66,15 @@ fn compile(s: &str) -> Vec<Tile> {
                 }
             }
 
-            Regular =>
-                match c {
-                    '*' => state = WasAny,
-                    '/' => {
-                        state = WasSeparator;
-                        res.push(Tile::Separator)
-                    }
-                    '?' => res.push(Tile::Single),
-                    c => res.push(Tile::Char(c)),
-                },
+            Regular => match c {
+                '*' => state = WasAny,
+                '/' => {
+                    state = WasSeparator;
+                    res.push(Tile::Separator)
+                }
+                '?' => res.push(Tile::Single),
+                c => res.push(Tile::Char(c)),
+            },
             WasAny => {
                 state = Regular;
                 match c {
@@ -121,40 +122,36 @@ fn compile(s: &str) -> Vec<Tile> {
                         res.push(Tile::Char('.'));
                         res.push(Tile::Single)
                     }
-                    '.' => {
-                        state = WasDotDot
-                    }
+                    '.' => state = WasDotDot,
                     c => {
                         res.push(Tile::Char('.'));
                         res.push(Tile::Char(c))
                     }
                 }
             }
-            WasDotDot => {
-                match c {
-                    '*' => {
-                        res.push(Tile::Char('.'));
-                        res.push(Tile::Char('.'));
-                        state = WasAny
-                    }
-                    '/' => {
-                        res.push(Tile::Parent);
-                        state = WasSeparator;
-                    }
-                    '?' => {
-                        res.push(Tile::Char('.'));
-                        res.push(Tile::Char('.'));
-                        res.push(Tile::Single);
-                        state = Regular
-                    }
-                    c => {
-                        res.push(Tile::Char('.'));
-                        res.push(Tile::Char('.'));
-                        res.push(Tile::Char(c));
-                        state = Regular
-                    }
+            WasDotDot => match c {
+                '*' => {
+                    res.push(Tile::Char('.'));
+                    res.push(Tile::Char('.'));
+                    state = WasAny
                 }
-            }
+                '/' => {
+                    res.push(Tile::Parent);
+                    state = WasSeparator;
+                }
+                '?' => {
+                    res.push(Tile::Char('.'));
+                    res.push(Tile::Char('.'));
+                    res.push(Tile::Single);
+                    state = Regular
+                }
+                c => {
+                    res.push(Tile::Char('.'));
+                    res.push(Tile::Char('.'));
+                    res.push(Tile::Char(c));
+                    state = Regular
+                }
+            },
         }
     }
 
@@ -164,7 +161,7 @@ fn compile(s: &str) -> Vec<Tile> {
         WasSeparator => {}
         Regular => {}
         WasDot => {}
-        WasDotDot => res.push(Tile::Parent)
+        WasDotDot => res.push(Tile::Parent),
     }
     res
 }
@@ -183,15 +180,21 @@ impl Glob {
 
     pub fn glob_files(&self, cwd: &Path, out: &mut Vec<PathBuf>) -> CrushResult<()> {
         match self.pattern.get(0).clone() {
-            Some(Tile::Separator) =>
-                glob_files(&self.pattern[1..], &PathBuf::from("/"), out, &directory_lister()),
+            Some(Tile::Separator) => glob_files(
+                &self.pattern[1..],
+                &PathBuf::from("/"),
+                out,
+                &directory_lister(),
+            ),
 
-            Some(Tile::Home) =>
-                glob_files(&insert_home(&self.pattern, &home()?)?, &PathBuf::from("/"), out, &directory_lister()),
+            Some(Tile::Home) => glob_files(
+                &insert_home(&self.pattern, &home()?)?,
+                &PathBuf::from("/"),
+                out,
+                &directory_lister(),
+            ),
 
-            _ =>
-                glob_files(&self.pattern, cwd, out, &directory_lister()),
-
+            _ => glob_files(&self.pattern, cwd, out, &directory_lister()),
         }
     }
 }
@@ -218,13 +221,14 @@ fn glob_file_match<'a>(
     path: &[char],
     entry: &Directory,
     out: &mut HashSet<PathBuf>,
-    queue: &mut VecDeque<GlobState<'a>>) -> CrushResult<()> {
+    queue: &mut VecDeque<GlobState<'a>>,
+) -> CrushResult<()> {
     match (pattern.first(), path.first()) {
         (None, None) => {
             out.insert(entry.full_path.clone());
         }
         (Some(Tile::Home), Some('~')) => {
-            return glob_file_match(&pattern[1..], &path[1..], entry, out, queue)
+            return glob_file_match(&pattern[1..], &path[1..], entry, out, queue);
         }
         (Some(Tile::Home), _) => {}
         (Some(Tile::Char(_)), None) | (Some(Tile::Single), None) => {}
@@ -283,16 +287,15 @@ fn glob_file_match<'a>(
         }
         (Some(Tile::Parent), _) => {
             // This should be impossible
-
         }
 
         (None, Some(_)) => {}
         (Some(Tile::Char(ch1)), Some(ch2)) if ch1 == ch2 => {
-            return glob_file_match(&pattern[1..], &path[1..], entry, out, queue)
+            return glob_file_match(&pattern[1..], &path[1..], entry, out, queue);
         }
         (Some(Tile::Char(_)), Some(_)) => {}
         (Some(Tile::Single), Some(_)) => {
-            return glob_file_match(&pattern[1..], &path[1..], entry, out, queue)
+            return glob_file_match(&pattern[1..], &path[1..], entry, out, queue);
         }
         (Some(Tile::Any), Some(_)) | (Some(Tile::Recursive), Some(_)) => {
             glob_file_match(&pattern[1..], path, entry, out, queue)?;
@@ -307,7 +310,8 @@ fn glob_files(
     pattern: &[Tile],
     cwd: &Path,
     out: &mut Vec<PathBuf>,
-    lister: &impl DirectoryLister) -> CrushResult<()> {
+    lister: &impl DirectoryLister,
+) -> CrushResult<()> {
     if pattern.is_empty() {
         return Ok(());
     }
@@ -316,9 +320,15 @@ fn glob_files(
     let mut dedup = HashSet::new();
 
     queue.push_back(if matches!(pattern[0], Tile::Char('/')) {
-        GlobState { pattern: &pattern[1..], directory: PathBuf::from("/") }
+        GlobState {
+            pattern: &pattern[1..],
+            directory: PathBuf::from("/"),
+        }
     } else {
-        GlobState { pattern, directory: cwd.to_path_buf() }
+        GlobState {
+            pattern,
+            directory: cwd.to_path_buf(),
+        }
     });
 
     while let Some(state) = queue.pop_front() {
@@ -441,27 +451,25 @@ fn glob_match(pattern: &[Tile], value: &str) -> GlobResult {
         Some(Tile::Parent) => {
             panic!("FIXME");
         }
-        Some(Tile::Home) => {
-            match value.chars().next() {
-                Some('~') => glob_match(&pattern[1..], &value[1..]),
-                Some(_) => GlobResult {
-                    matches: false,
-                    prefix: false,
-                },
-                None => GlobResult {
-                    matches: false,
-                    prefix: true,
-                },
-            }
-        }
+        Some(Tile::Home) => match value.chars().next() {
+            Some('~') => glob_match(&pattern[1..], &value[1..]),
+            Some(_) => GlobResult {
+                matches: false,
+                prefix: false,
+            },
+            None => GlobResult {
+                matches: false,
+                prefix: true,
+            },
+        },
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
     use super::*;
     use crate::util::directory_lister::tests::FakeDirectoryLister;
+    use itertools::Itertools;
 
     #[test]
     fn test_glob_match() {
@@ -637,38 +645,31 @@ mod tests {
 
     fn lister() -> FakeDirectoryLister {
         let mut res = FakeDirectoryLister::new("/home/rabbit");
-        res.add("tree", &vec!["a"])
-            .add("tree/sub", &vec!["b", "c"]);
+        res.add("tree", &vec!["a"]).add("tree/sub", &vec!["b", "c"]);
         res
     }
 
     fn check_file_glob_count(glob: &str, count: usize) {
         let mut out = Vec::new();
-        let ggg = glob_files(
-            &compile(glob),
-            &PathBuf::from(""),
-            &mut out,
-            &lister(),
-        );
+        let ggg = glob_files(&compile(glob), &PathBuf::from(""), &mut out, &lister());
         assert_eq!(out.len(), count);
     }
 
     fn check_file_glob(glob: &str, matches: &[&str]) {
         let mut out = Vec::new();
-        let ggg = glob_files(
-            &compile(glob),
-            &PathBuf::from(""),
-            &mut out,
-            &lister(),
-        );
-        let set: HashSet<String> = out.drain(..).map(|e| { e.to_str().unwrap().to_string() }).collect();
+        let ggg = glob_files(&compile(glob), &PathBuf::from(""), &mut out, &lister());
+        let set: HashSet<String> = out
+            .drain(..)
+            .map(|e| e.to_str().unwrap().to_string())
+            .collect();
         assert_eq!(set.len(), matches.len());
         for el in matches {
             assert!(
                 set.contains(*el),
                 "The element '{}' wasn't present in glob result. The following items were found: {}",
                 el,
-                set.iter().map({ |e| format!("'{}'", e) }).join(", "));
+                set.iter().map({ |e| format!("'{}'", e) }).join(", ")
+            );
         }
     }
 

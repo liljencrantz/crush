@@ -1,17 +1,17 @@
-use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, data_error};
-use crate::lang::data::list::List;
-use crate::lang::pretty::PrettyPrinter;
-use crate::lang::state::scope::Scope;
-use crate::lang::value::ValueType;
-use crate::lang::value::Value;
-use signature::signature;
-use rustyline::Editor;
-use std::path::PathBuf;
-use rustyline::history::DefaultHistory;
 use crate::data::table::ColumnFormat;
+use crate::lang::command::OutputType::Known;
+use crate::lang::data::list::List;
+use crate::lang::errors::{CrushResult, data_error};
 use crate::lang::interactive::config_dir;
+use crate::lang::pretty::PrettyPrinter;
 use crate::lang::state::contexts::CommandContext;
+use crate::lang::state::scope::Scope;
+use crate::lang::value::Value;
+use crate::lang::value::ValueType;
+use rustyline::Editor;
+use rustyline::history::DefaultHistory;
+use signature::signature;
+use std::path::PathBuf;
 
 mod bin;
 mod csv;
@@ -55,14 +55,17 @@ struct Dir {
 
 pub fn dir(context: CommandContext) -> CrushResult<()> {
     let cfg: Dir = Dir::parse(context.arguments, &context.global_state.printer())?;
-    context.output.send(List::new(
-        ValueType::String,
-        cfg.value
-            .fields()
-            .drain(..)
-            .map(|n| Value::from(n))
-            .collect::<Vec<_>>(),
-    ).into())
+    context.output.send(
+        List::new(
+            ValueType::String,
+            cfg.value
+                .fields()
+                .drain(..)
+                .map(|n| Value::from(n))
+                .collect::<Vec<_>>(),
+        )
+        .into(),
+    )
 }
 
 #[signature(
@@ -85,11 +88,11 @@ fn echo(context: CommandContext) -> CrushResult<()> {
     let cfg: Echo = Echo::parse(context.arguments, &context.global_state.printer())?;
     let pretty = PrettyPrinter::new(
         context.global_state.printer().clone(),
-        context.global_state.format_data());
+        context.global_state.format_data(),
+    );
     for value in cfg.values {
         match (cfg.raw, &value) {
-            (true, Value::String(s)) =>
-                context.global_state.printer().line(s),
+            (true, Value::String(s)) => context.global_state.printer().line(s),
 
             _ => pretty.print_value(value, &ColumnFormat::None),
         }
@@ -113,9 +116,9 @@ fn member(context: CommandContext) -> CrushResult<()> {
     let cfg: Member = Member::parse(context.arguments, &context.global_state.printer())?;
     match context.input.recv()? {
         Value::Struct(s) => context.output.send(
-            s.get(&cfg.field).ok_or(
-            format!("Unknown field \"{}\"", cfg.field).as_str(),
-        )?),
+            s.get(&cfg.field)
+                .ok_or(format!("Unknown field \"{}\"", cfg.field).as_str())?,
+        ),
         _ => data_error("Expected a struct"),
     }
 }
@@ -152,13 +155,15 @@ fn readline(context: CommandContext) -> CrushResult<()> {
     if let Some(history) = &cfg.history {
         let _ = rl.add_history_entry(line.as_str());
         if let Err(err) = rl.save_history(&history_file(&history)?) {
-            context.global_state.printer().line(&format!("Error: Failed to save history: {}", err))
+            context
+                .global_state
+                .printer()
+                .line(&format!("Error: Failed to save history: {}", err))
         }
     }
 
     context.output.send(Value::from(line))
 }
-
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(

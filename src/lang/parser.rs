@@ -1,15 +1,14 @@
+use crate::lang::ast::lexer::TokenizerMode::SkipComments;
+use crate::lang::ast::lexer::{LexerMode, TokenizerMode};
+use crate::lang::ast::{JobListNode, lexer::Lexer, token::Token};
 /**
     The API for compiling Crush code into a `Vec<Job>`. Internally, this will tokenize the text,
     turn the token list into an AST, and finally compiling the AST into a list of jobs.
 */
-
-use crate::lang::errors::{CrushResult, CrushError};
+use crate::lang::errors::{CrushError, CrushResult};
 use crate::lang::job::Job;
 use crate::lang::state::scope::Scope;
-use crate::lang::ast::{token::Token, JobListNode, lexer::Lexer};
 use std::sync::{Arc, Mutex};
-use crate::lang::ast::lexer::{LexerMode, TokenizerMode};
-use crate::lang::ast::lexer::TokenizerMode::SkipComments;
 
 /*
     The AST parser is written in `lalrpop`, and is located in the file `lalrparser.lalrpop`.
@@ -83,9 +82,16 @@ impl Parser {
 
     /// Return the list of tokens making up this string. This is used by the syntax highlighting
     /// engine.
-    pub fn tokenize<'a>(&self, s: &'a str, initial_mode: LexerMode, tokenizer_mode: TokenizerMode) -> CrushResult<Vec<Token<'a>>> {
+    pub fn tokenize<'a>(
+        &self,
+        s: &'a str,
+        initial_mode: LexerMode,
+        tokenizer_mode: TokenizerMode,
+    ) -> CrushResult<Vec<Token<'a>>> {
         let l = Lexer::new(s, initial_mode, tokenizer_mode);
-        l.into_iter().map(|item| item.map(|it| it.1).map_err(|e| CrushError::from(e)) ).collect()
+        l.into_iter()
+            .map(|item| item.map(|it| it.1).map_err(|e| CrushError::from(e)))
+            .collect()
     }
 
     /**
@@ -114,20 +120,35 @@ impl Parser {
         for tok in &tokens {
             needs_trailing_arg = false;
             match tok {
-                Token::Plus(_) |
-                Token::Minus(_) |
-                Token::Star(_) |
-                Token::Slash(_) |
-                Token::Bang(_) |
-                Token::Equals( _) | Token::Declare( _) |
-                Token::ComparisonOperator(_, _) | Token::UnaryOperator(_, _) |
-                Token::LogicalOperator(_, _) | Token::Named( _) | Token::Unnamed( _) |
-                Token::Pipe( _) | Token::MemberOperator(_) => { needs_trailing_arg = true }
-                Token::SubStart( _) => { stack.push(")"); }
-                Token::ExprModeStart(_) => {stack.push(")");}
-                Token::BlockStart( _) => { stack.push("}"); }
-                Token::GetItemStart( _) => { stack.push("]"); }
-                Token::SubEnd( _) | Token::BlockEnd( _) | Token::GetItemEnd( _) => { stack.pop(); }
+                Token::Plus(_)
+                | Token::Minus(_)
+                | Token::Star(_)
+                | Token::Slash(_)
+                | Token::Bang(_)
+                | Token::Equals(_)
+                | Token::Declare(_)
+                | Token::ComparisonOperator(_, _)
+                | Token::UnaryOperator(_, _)
+                | Token::LogicalOperator(_, _)
+                | Token::Named(_)
+                | Token::Unnamed(_)
+                | Token::Pipe(_)
+                | Token::MemberOperator(_) => needs_trailing_arg = true,
+                Token::SubStart(_) => {
+                    stack.push(")");
+                }
+                Token::ExprModeStart(_) => {
+                    stack.push(")");
+                }
+                Token::BlockStart(_) => {
+                    stack.push("}");
+                }
+                Token::GetItemStart(_) => {
+                    stack.push("]");
+                }
+                Token::SubEnd(_) | Token::BlockEnd(_) | Token::GetItemEnd(_) => {
+                    stack.pop();
+                }
                 Token::QuotedString(_, _) => {}
                 Token::String(_, _) => {}
                 Token::File(_, _) => {}
@@ -156,14 +177,15 @@ impl Parser {
             "{}{}{}",
             input,
             if needs_trailing_arg { " x" } else { "" },
-            stack.join("")))
+            stack.join("")
+        ))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::lang::ast::location::Location;
     use super::*;
+    use crate::lang::ast::location::Location;
 
     fn p() -> Parser {
         Parser::new()
@@ -171,34 +193,46 @@ mod tests {
 
     #[test]
     fn check_simple_tokens() {
-        let tok = p().tokenize("{aaa}\n", LexerMode::Command, SkipComments).unwrap();
-        assert_eq!(tok, vec![
-            Token::BlockStart(Location::from(0)),
-            Token::String("aaa", Location::new(1,4)),
-            Token::BlockEnd(Location::from(4)),
-            Token::Separator("\n", Location::from(5)),
-        ]);
+        let tok = p()
+            .tokenize("{aaa}\n", LexerMode::Command, SkipComments)
+            .unwrap();
+        assert_eq!(
+            tok,
+            vec![
+                Token::BlockStart(Location::from(0)),
+                Token::String("aaa", Location::new(1, 4)),
+                Token::BlockEnd(Location::from(4)),
+                Token::Separator("\n", Location::from(5)),
+            ]
+        );
     }
 
     #[test]
     fn check_expression_tokens() {
-        let tok = p().tokenize("e(foo(5, 3.3))\n", LexerMode::Command, SkipComments).unwrap();
-        assert_eq!(tok, vec![
-            Token::ExprModeStart(Location::new(0, 2)),
-            Token::Identifier("foo", Location::new(2,5)),
-            Token::ExprModeStart(Location::from(5)),
-            Token::Integer("5", Location::from(6)),
-            Token::Separator(",", Location::from(7)),
-            Token::Float("3.3", Location::new(9, 12)),
-            Token::SubEnd(Location::from(12)),
-            Token::SubEnd(Location::from(13)),
-            Token::Separator("\n", Location::from(14)),
-        ]);
+        let tok = p()
+            .tokenize("e(foo(5, 3.3))\n", LexerMode::Command, SkipComments)
+            .unwrap();
+        assert_eq!(
+            tok,
+            vec![
+                Token::ExprModeStart(Location::new(0, 2)),
+                Token::Identifier("foo", Location::new(2, 5)),
+                Token::ExprModeStart(Location::from(5)),
+                Token::Integer("5", Location::from(6)),
+                Token::Separator(",", Location::from(7)),
+                Token::Float("3.3", Location::new(9, 12)),
+                Token::SubEnd(Location::from(12)),
+                Token::SubEnd(Location::from(13)),
+                Token::Separator("\n", Location::from(14)),
+            ]
+        );
     }
 
     #[test]
     fn check_token_offsets() {
-        let tok = p().tokenize("123:123.4 foo=\"bar\"", LexerMode::Command, SkipComments).unwrap();
+        let tok = p()
+            .tokenize("123:123.4 foo=\"bar\"", LexerMode::Command, SkipComments)
+            .unwrap();
         assert_eq!(tok.len(), 6);
         assert_eq!(tok[0].location(), Location::new(0, 3));
         assert_eq!(tok[1].location(), Location::new(3usize, 4usize));
@@ -210,7 +244,9 @@ mod tests {
 
     #[test]
     fn check_token_newline() {
-        let tok = p().tokenize("123# comment\nggg", LexerMode::Command, SkipComments).unwrap();
+        let tok = p()
+            .tokenize("123# comment\nggg", LexerMode::Command, SkipComments)
+            .unwrap();
         assert_eq!(tok.len(), 3);
         assert_eq!(tok[0].location(), Location::new(0usize, 3usize));
         assert_eq!(tok[1].location(), Location::new(12usize, 13usize));
@@ -228,7 +264,10 @@ mod tests {
         assert_eq!(p.close_command("x [a").unwrap(), "x [a]");
         assert_eq!(p.close_command("x (a").unwrap(), "x (a)");
         assert_eq!(p.close_command("x {a").unwrap(), "x {a}");
-        assert_eq!(p.close_command("x (a) {b} {c (d) (e").unwrap(), "x (a) {b} {c (d) (e)}");
+        assert_eq!(
+            p.close_command("x (a) {b} {c (d) (e").unwrap(),
+            "x (a) {b} {c (d) (e)}"
+        );
         assert_eq!(p.close_command("a b=").unwrap(), "a b= x");
         assert_eq!(p.close_command("a +").unwrap(), "a + x");
         assert_eq!(p.close_command("a \"").unwrap(), "a \"\"");

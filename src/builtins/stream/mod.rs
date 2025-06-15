@@ -4,6 +4,7 @@ use crate::lang::errors::CrushResult;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 
+mod aggregation;
 mod count;
 mod drop;
 mod each;
@@ -16,7 +17,6 @@ mod select;
 mod seq;
 mod skip;
 mod sort;
-mod aggregation;
 mod tail;
 mod uniq;
 mod r#where;
@@ -57,20 +57,24 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     ["stream", "select"],
                     "stream:select [copy_fields:string...] [*] [new_field=command]",
                     "Pass on some old fields and calculate new ones for each line of input",
-                    Some(r#"# Examples
+                    Some(
+                        r#"# Examples
 
     # Show only the filename and discard all other columns
     files | select file
 
     # Add an extra column to the output of files that shows the time passed since last modification
-    files | select * age={(time.now() - modified)}"#),
+    files | select * age={(time.now() - modified)}"#,
+                    ),
                     Unknown,
                     [],
-                )))?;
+                )),
+            )?;
             seq::Seq::declare(env)?;
             zip::Zip::declare(env)?;
             Ok(())
-        }))?;
+        }),
+    )?;
     root.r#use(&e);
     Ok(())
 }

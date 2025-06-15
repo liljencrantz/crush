@@ -1,10 +1,10 @@
 use crate::lang::errors::{CrushResult, error};
-use crate::lang::serialization::model::{element, Element};
 use crate::lang::serialization::model;
+use crate::lang::serialization::model::{Element, element};
 
-use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
-use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::ast::location::Location;
+use crate::lang::ast::tracked_string::TrackedString;
+use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
 
 impl Serializable<TrackedString> for TrackedString {
     fn deserialize(
@@ -13,8 +13,10 @@ impl Serializable<TrackedString> for TrackedString {
         state: &mut DeserializationState,
     ) -> CrushResult<TrackedString> {
         match elements[id].element.as_ref().unwrap() {
-            element::Element::TrackedString(s) => Ok(TrackedString::new(&String::deserialize(s.string as usize, elements, state)?,
-                                                                        Location::new(s.start as usize, s.end as usize))),
+            element::Element::TrackedString(s) => Ok(TrackedString::new(
+                &String::deserialize(s.string as usize, elements, state)?,
+                Location::new(s.start as usize, s.end as usize),
+            )),
             _ => error("Expected string"),
         }
     }
@@ -27,13 +29,11 @@ impl Serializable<TrackedString> for TrackedString {
         let string_id = self.string.serialize(elements, state)?;
         let idx = elements.len();
         elements.push(Element {
-            element: Some(element::Element::TrackedString(
-                model::TrackedString {
-                    start: self.location.start as u64,
-                    end: self.location.end as u64,
-                    string: string_id as u64
-                }
-            )),
+            element: Some(element::Element::TrackedString(model::TrackedString {
+                start: self.location.start as u64,
+                end: self.location.end as u64,
+                string: string_id as u64,
+            })),
         });
         Ok(idx)
     }

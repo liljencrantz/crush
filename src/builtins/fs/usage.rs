@@ -1,17 +1,17 @@
-use signature::signature;
+use crate::lang::command::OutputType::Known;
+use crate::lang::data::table::ColumnFormat;
+use crate::lang::data::table::ColumnType;
+use crate::lang::data::table::Row;
+use crate::lang::errors::CrushResult;
+use crate::lang::pipe::TableOutputStream;
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
-use crate::lang::errors::CrushResult;
-use std::path::{Path, PathBuf};
-use crate::lang::pipe::TableOutputStream;
-use crate::lang::data::table::Row;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
-use crate::lang::data::table::ColumnType;
-use crate::lang::command::OutputType::Known;
 use crate::util::directory_lister::{DirectoryLister, directory_lister};
+use signature::signature;
 use std::os::unix::fs::MetadataExt;
-use crate::lang::data::table::ColumnFormat;
+use std::path::{Path, PathBuf};
 
 static OUTPUT_TYPE: [ColumnType; 3] = [
     ColumnType::new_with_format("size", ColumnFormat::ByteUnit, ValueType::Integer),
@@ -49,15 +49,20 @@ fn size(
     let mut bl = path.metadata().map(|m| m.blocks()).unwrap_or(0);
     Ok(if is_directory {
         for child in lister.list(path)? {
-            let (child_sz, child_bl) = size(&child.full_path, silent, all, child.is_directory, output, lister)?;
+            let (child_sz, child_bl) = size(
+                &child.full_path,
+                silent,
+                all,
+                child.is_directory,
+                output,
+                lister,
+            )?;
             if (!silent && child.is_directory) || all {
-                output.send(Row::new(
-                    vec![
-                        Value::from(child_sz),
-                        Value::from(child_bl),
-                        Value::from(child.full_path),
-                    ]
-                ))?;
+                output.send(Row::new(vec![
+                    Value::from(child_sz),
+                    Value::from(child_bl),
+                    Value::from(child.full_path),
+                ]))?;
             }
             sz += child_sz;
             bl += child_bl;
@@ -77,15 +82,20 @@ fn usage(context: CommandContext) -> CrushResult<()> {
         vec![PathBuf::from(".")]
     };
     for file in dirs {
-        let (sz, bl) = size(&file, cfg.silent, cfg.all, file.is_dir(), &output, &directory_lister())?;
+        let (sz, bl) = size(
+            &file,
+            cfg.silent,
+            cfg.all,
+            file.is_dir(),
+            &output,
+            &directory_lister(),
+        )?;
 
-        output.send(Row::new(
-            vec![
-                Value::Integer(sz as i128),
-                Value::Integer(bl as i128),
-                Value::from(file),
-            ]
-        ))?
+        output.send(Row::new(vec![
+            Value::Integer(sz as i128),
+            Value::Integer(bl as i128),
+            Value::from(file),
+        ]))?
     }
 
     Ok(())

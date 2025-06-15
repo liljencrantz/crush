@@ -1,22 +1,22 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult};
+use crate::lang::data::table::{ColumnType, Row};
+use crate::lang::errors::CrushResult;
+use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
-use crate::util::file::{home};
-use signature::signature;
-use crate::lang::signature::files::Files;
-use std::path::PathBuf;
-use std::convert::TryFrom;
-use std::sync::Arc;
+use crate::util::file::home;
 use chrono::{DateTime, Local};
 use nix::libc::{S_IFBLK, S_IFCHR, S_IFDIR, S_IFIFO, S_IFLNK, S_IFREG, S_IFSOCK};
-use crate::lang::data::table::{ColumnType, Row};
+use signature::signature;
+use std::convert::TryFrom;
+use std::path::PathBuf;
+use std::sync::Arc;
 
-mod usage;
 mod files;
 mod mounts;
+mod usage;
 
 #[signature(
     fs.cd,
@@ -100,15 +100,13 @@ fn stat(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Stat = Stat::parse(context.remove_arguments(), &context.global_state.printer())?;
     let output = context.output.initialize(&STAT_OUTPUT_TYPE)?;
 
-    let v : Vec<PathBuf> = cfg.destination.into();
+    let v: Vec<PathBuf> = cfg.destination.into();
     for file in v {
-
-        let metadata =
-            if cfg.symlink {
-                nix::sys::stat::lstat(&file)
-            } else {
-                nix::sys::stat::stat(&file)
-            }?;
+        let metadata = if cfg.symlink {
+            nix::sys::stat::lstat(&file)
+        } else {
+            nix::sys::stat::stat(&file)
+        }?;
 
         output.send(Row::new(vec![
             Value::Bool((metadata.st_mode & S_IFSOCK) == S_IFSOCK),
@@ -125,9 +123,21 @@ fn stat(mut context: CommandContext) -> CrushResult<()> {
             Value::Integer(metadata.st_size as i128),
             Value::Integer(metadata.st_blksize as i128),
             Value::Integer(metadata.st_blocks as i128),
-            Value::Time(DateTime::from_timestamp(metadata.st_atime, 0).ok_or("Failed to parse timestamp")?.with_timezone(&Local)),
-            Value::Time(DateTime::from_timestamp(metadata.st_mtime, 0).ok_or( "Failed to parse timestamp")?.with_timezone(&Local)),
-            Value::Time(DateTime::from_timestamp(metadata.st_ctime, 0).ok_or( "Failed to parse timestamp")?.with_timezone(&Local)),
+            Value::Time(
+                DateTime::from_timestamp(metadata.st_atime, 0)
+                    .ok_or("Failed to parse timestamp")?
+                    .with_timezone(&Local),
+            ),
+            Value::Time(
+                DateTime::from_timestamp(metadata.st_mtime, 0)
+                    .ok_or("Failed to parse timestamp")?
+                    .with_timezone(&Local),
+            ),
+            Value::Time(
+                DateTime::from_timestamp(metadata.st_ctime, 0)
+                    .ok_or("Failed to parse timestamp")?
+                    .with_timezone(&Local),
+            ),
             Value::File(Arc::from(file.as_path())),
         ]))?;
     }

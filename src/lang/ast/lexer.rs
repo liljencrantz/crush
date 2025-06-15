@@ -1,8 +1,8 @@
+use crate::lang::ast::location::Location;
+use crate::lang::ast::token::Token;
 use std::fmt::{Display, Formatter, Write};
 use std::iter::Peekable;
 use std::str::CharIndices;
-use crate::lang::ast::token::Token;
-use crate::lang::ast::location::Location;
 
 #[derive(Clone, Copy)]
 pub enum LexerMode {
@@ -70,46 +70,54 @@ impl<'input> Lexer<'input> {
                 Some((i, '|')) => return Some(Token::Pipe(Location::from(i)).into()),
                 Some((i, ';')) => return Some(Token::Separator(";", Location::from(i)).into()),
                 Some((i, '\n')) => return Some(Token::Separator("\n", Location::from(i)).into()),
-                Some((_, '\\')) =>
-                    match self.chars.peek() {
-                        Some((_, '\n')) => {
-                            self.chars.next();
-                            continue;
-                        }
-                        Some((_, ch)) => return Some(Err(LexicalError::UnexpectedCharacter(*ch))),
-                        None => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion('\n'))),
+                Some((_, '\\')) => match self.chars.peek() {
+                    Some((_, '\n')) => {
+                        self.chars.next();
+                        continue;
                     }
-                Some((i, '<')) =>
-                    match self.chars.peek() {
-                        Some((_, '=')) => {
-                            self.chars.next();
-                            return Some(Token::ComparisonOperator("<=", Location::new(i, i + 2)).into());
-                        }
-                        _ => return Some(Token::ComparisonOperator("<", Location::from(i)).into()),
+                    Some((_, ch)) => return Some(Err(LexicalError::UnexpectedCharacter(*ch))),
+                    None => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion('\n'))),
+                },
+                Some((i, '<')) => match self.chars.peek() {
+                    Some((_, '=')) => {
+                        self.chars.next();
+                        return Some(
+                            Token::ComparisonOperator("<=", Location::new(i, i + 2)).into(),
+                        );
                     }
+                    _ => return Some(Token::ComparisonOperator("<", Location::from(i)).into()),
+                },
 
-                Some((i, '>')) =>
-                    match self.chars.peek() {
-                        Some((_, '=')) => {
-                            self.chars.next();
-                            return Some(Token::ComparisonOperator(">=", Location::new(i, i + 2)).into());
-                        }
-                        _ => return Some(Token::ComparisonOperator(">", Location::from(i)).into()),
+                Some((i, '>')) => match self.chars.peek() {
+                    Some((_, '=')) => {
+                        self.chars.next();
+                        return Some(
+                            Token::ComparisonOperator(">=", Location::new(i, i + 2)).into(),
+                        );
                     }
+                    _ => return Some(Token::ComparisonOperator(">", Location::from(i)).into()),
+                },
 
-                Some((i, '!')) =>
-                    match self.chars.peek() {
-                        Some((_, '=')) => {
-                            self.chars.next();
-                            return Some(Token::ComparisonOperator("!=", Location::new(i, i + 2)).into());
-                        }
-                        Some((_, '~')) => {
-                            self.chars.next();
-                            return Some(Token::ComparisonOperator("!~", Location::new(i, i + 2)).into());
-                        }
-                        Some((_, ch)) => return Some(Err(LexicalError::UnexpectedCharacterWithSuggestion(*ch, '='))),
-                        _ => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion('='))),
+                Some((i, '!')) => match self.chars.peek() {
+                    Some((_, '=')) => {
+                        self.chars.next();
+                        return Some(
+                            Token::ComparisonOperator("!=", Location::new(i, i + 2)).into(),
+                        );
                     }
+                    Some((_, '~')) => {
+                        self.chars.next();
+                        return Some(
+                            Token::ComparisonOperator("!~", Location::new(i, i + 2)).into(),
+                        );
+                    }
+                    Some((_, ch)) => {
+                        return Some(Err(LexicalError::UnexpectedCharacterWithSuggestion(
+                            *ch, '=',
+                        )));
+                    }
+                    _ => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion('='))),
+                },
 
                 Some((i, '@')) => {
                     let cc2 = self.chars.peek();
@@ -127,11 +135,15 @@ impl<'input> Lexer<'input> {
                     match cc2 {
                         Some((_, '=')) => {
                             self.chars.next();
-                            return Some(Token::LogicalOperator("==", Location::new(i, i + 2)).into());
+                            return Some(
+                                Token::LogicalOperator("==", Location::new(i, i + 2)).into(),
+                            );
                         }
                         Some((_, '~')) => {
                             self.chars.next();
-                            return Some(Token::ComparisonOperator("=~", Location::new(i, i + 2)).into());
+                            return Some(
+                                Token::ComparisonOperator("=~", Location::new(i, i + 2)).into(),
+                            );
                         }
                         _ => return Some(Token::Equals(Location::from(i)).into()),
                     }
@@ -155,7 +167,13 @@ impl<'input> Lexer<'input> {
                         }
                     }
                     if matches!(self.tokenizer_mode, TokenizerMode::IncludeComments) {
-                        return Some(Token::Comment(&self.full_str[i..end_idx + 1], Location::new(i, end_idx + 1)).into());
+                        return Some(
+                            Token::Comment(
+                                &self.full_str[i..end_idx + 1],
+                                Location::new(i, end_idx + 1),
+                            )
+                            .into(),
+                        );
                     }
                 }
 
@@ -175,9 +193,7 @@ impl<'input> Lexer<'input> {
                             Some((_, ch2)) if number_or_underscore_char(*ch2) => {
                                 end_idx = self.chars.next().unwrap().0;
                             }
-                            _ => {
-                                break
-                            }
+                            _ => break,
                         }
                     }
 
@@ -204,50 +220,64 @@ impl<'input> Lexer<'input> {
                             Some((_, ch2)) if identifier_char(*ch2) => {
                                 end_idx = self.chars.next().unwrap().0;
                             }
-                            _ => {
-                                break
-                            }
+                            _ => break,
                         }
                     }
-                    return Some(Token::Identifier(&self.full_str[i..end_idx + 1], Location::new(i, end_idx + 1)).into());
+                    return Some(
+                        Token::Identifier(
+                            &self.full_str[i..end_idx + 1],
+                            Location::new(i, end_idx + 1),
+                        )
+                        .into(),
+                    );
                 }
 
-                Some((i, '^')) => {
-                    match self.chars.peek() {
-                        Some((_, '(')) => {
-                            self.chars.next();
-                            let mut was_backslash = false;
-                            let mut paren_count = 1;
-                            let end;
-                            loop {
-                                if was_backslash {
-                                    match self.chars.next() {
-                                        Some(_) => was_backslash = false,
-                                        None => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion(')'))),
+                Some((i, '^')) => match self.chars.peek() {
+                    Some((_, '(')) => {
+                        self.chars.next();
+                        let mut was_backslash = false;
+                        let mut paren_count = 1;
+                        let end;
+                        loop {
+                            if was_backslash {
+                                match self.chars.next() {
+                                    Some(_) => was_backslash = false,
+                                    None => {
+                                        return Some(Err(
+                                            LexicalError::UnexpectedEOFWithSuggestion(')'),
+                                        ));
                                     }
-                                } else {
-                                    match self.chars.next() {
-                                        Some((_, '/')) => was_backslash = true,
-                                        Some((i2, ')')) => {
-                                            paren_count -= 1;
-                                            if paren_count == 0 {
-                                                end = i2;
-                                                break;
-                                            }
+                                }
+                            } else {
+                                match self.chars.next() {
+                                    Some((_, '/')) => was_backslash = true,
+                                    Some((i2, ')')) => {
+                                        paren_count -= 1;
+                                        if paren_count == 0 {
+                                            end = i2;
+                                            break;
                                         }
-                                        Some((_, '(')) => paren_count += 1,
-                                        Some((_, _)) => {}
-                                        None => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion(')'))),
+                                    }
+                                    Some((_, '(')) => paren_count += 1,
+                                    Some((_, _)) => {}
+                                    None => {
+                                        return Some(Err(
+                                            LexicalError::UnexpectedEOFWithSuggestion(')'),
+                                        ));
                                     }
                                 }
                             }
-                            let s = &self.full_str[i + 2..end];
-                            return Some(Token::Regex(s, Location::new(i, end + 1)).into());
                         }
-                        Some((_, ch2)) => return Some(Err(LexicalError::UnexpectedCharacterWithSuggestion(*ch2, '('))),
-                        _ => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion('('))),
+                        let s = &self.full_str[i + 2..end];
+                        return Some(Token::Regex(s, Location::new(i, end + 1)).into());
                     }
-                }
+                    Some((_, ch2)) => {
+                        return Some(Err(LexicalError::UnexpectedCharacterWithSuggestion(
+                            *ch2, '(',
+                        )));
+                    }
+                    _ => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion('('))),
+                },
 
                 Some((i, '-')) => {
                     if let Some((_, '-')) = self.chars.peek() {
@@ -261,12 +291,16 @@ impl<'input> Lexer<'input> {
                             Some((_, ch2)) if identifier_char(*ch2) => {
                                 end_idx = self.chars.next().unwrap().0;
                             }
-                            _ => {
-                                break
-                            }
+                            _ => break,
                         }
                     }
-                    return Some(Token::Flag(&self.full_str[i..end_idx + 1], Location::new(i, end_idx + 1)).into());
+                    return Some(
+                        Token::Flag(
+                            &self.full_str[i..end_idx + 1],
+                            Location::new(i, end_idx + 1),
+                        )
+                        .into(),
+                    );
                 }
 
                 Some((i, ch)) if string_or_file_or_glob_first_char(ch) => {
@@ -277,17 +311,19 @@ impl<'input> Lexer<'input> {
                             Some((_, ch2)) if string_or_file_or_glob_char(*ch2) => {
                                 end_idx = self.chars.next().unwrap().0;
                             }
-                            _ => {
-                                break
-                            }
+                            _ => break,
                         }
                     }
 
                     let s = &self.full_str[i..end_idx + 1];
 
                     return match s {
-                        "and" => Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into()),
-                        "or" => Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into()),
+                        "and" => {
+                            Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into())
+                        }
+                        "or" => {
+                            Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into())
+                        }
                         _ => {
                             if s.contains('*') || s.contains('?') {
                                 Some(Token::Glob(s, Location::new(i, end_idx + 1)).into())
@@ -378,72 +414,81 @@ impl<'input> Lexer<'input> {
                     return Some(Token::ExprModeStart(Location::from(i)).into());
                 }
 
-                Some((i, '$')) => {
-                    match self.chars.peek() {
-                        Some((_, '(')) => {
-                            self.chars.next();
-                            self.mode.push(LexerMode::Command);
-                            return Some(Token::SubStart(Location::new(i, i + 2)).into());
+                Some((i, '$')) => match self.chars.peek() {
+                    Some((_, '(')) => {
+                        self.chars.next();
+                        self.mode.push(LexerMode::Command);
+                        return Some(Token::SubStart(Location::new(i, i + 2)).into());
+                    }
+                    Some((_, ch2)) if identifier_first_char(*ch2) => {
+                        let mut end_idx = i;
+                        loop {
+                            let cc2 = self.chars.peek();
+                            match cc2 {
+                                Some((_, ch3)) if identifier_char(*ch3) => {
+                                    end_idx = self.chars.next().unwrap().0;
+                                }
+                                _ => break,
+                            }
                         }
-                        Some((_, ch2)) if identifier_first_char(*ch2) => {
-                            let mut end_idx = i;
-                            loop {
-                                let cc2 = self.chars.peek();
-                                match cc2 {
-                                    Some((_, ch3)) if identifier_char(*ch3) => {
-                                        end_idx = self.chars.next().unwrap().0;
-                                    }
-                                    _ => {
-                                        break
+
+                        let s = &self.full_str[i..end_idx + 1];
+                        return Some(Token::Identifier(s, Location::new(i, end_idx + 1)).into());
+                    }
+                    Some((_, ch2)) => {
+                        return Some(Err(LexicalError::UnexpectedCharacterWithSuggestion(
+                            *ch2, '(',
+                        )));
+                    }
+                    _ => return Some(Err(LexicalError::UnexpectedEOF)),
+                },
+
+                Some((i, '^')) => match self.chars.peek() {
+                    Some((_, '(')) => {
+                        self.chars.next();
+                        let mut was_backslash = false;
+                        let mut paren_count = 1;
+                        let end;
+                        loop {
+                            if was_backslash {
+                                match self.chars.next() {
+                                    Some(_) => was_backslash = false,
+                                    None => {
+                                        return Some(Err(
+                                            LexicalError::UnexpectedEOFWithSuggestion(')'),
+                                        ));
                                     }
                                 }
-                            }
-
-                            let s = &self.full_str[i..end_idx + 1];
-                            return Some(Token::Identifier(s, Location::new(i, end_idx + 1)).into())
-                        }
-                        Some((_, ch2)) => return Some(Err(LexicalError::UnexpectedCharacterWithSuggestion(*ch2, '('))),
-                        _ => return Some(Err(LexicalError::UnexpectedEOF)),
-
-                    }
-                }
-
-                Some((i, '^')) => {
-                    match self.chars.peek() {
-                        Some((_, '(')) => {
-                            self.chars.next();
-                            let mut was_backslash = false;
-                            let mut paren_count = 1;
-                            let end;
-                            loop {
-                                if was_backslash {
-                                    match self.chars.next() {
-                                        Some(_) => was_backslash = false,
-                                        None => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion(')'))),
-                                    }
-                                } else {
-                                    match self.chars.next() {
-                                        Some((_, '/')) => was_backslash = true,
-                                        Some((i2, ')')) => {
-                                            paren_count -= 1;
-                                            if paren_count == 0 {
-                                                end = i2;
-                                                break;
-                                            }
+                            } else {
+                                match self.chars.next() {
+                                    Some((_, '/')) => was_backslash = true,
+                                    Some((i2, ')')) => {
+                                        paren_count -= 1;
+                                        if paren_count == 0 {
+                                            end = i2;
+                                            break;
                                         }
-                                        Some((_, '(')) => paren_count += 1,
-                                        Some((_, _)) => {}
-                                        None => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion(')'))),
+                                    }
+                                    Some((_, '(')) => paren_count += 1,
+                                    Some((_, _)) => {}
+                                    None => {
+                                        return Some(Err(
+                                            LexicalError::UnexpectedEOFWithSuggestion(')'),
+                                        ));
                                     }
                                 }
                             }
-                            let s = &self.full_str[i + 2..end];
-                            return Some(Token::Regex(s, Location::new(i, end + 1)).into());
                         }
-                        Some((_, ch2)) => return Some(Err(LexicalError::UnexpectedCharacterWithSuggestion(*ch2, '('))),
-                        _ => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion('('))),
+                        let s = &self.full_str[i + 2..end];
+                        return Some(Token::Regex(s, Location::new(i, end + 1)).into());
                     }
-                }
+                    Some((_, ch2)) => {
+                        return Some(Err(LexicalError::UnexpectedCharacterWithSuggestion(
+                            *ch2, '(',
+                        )));
+                    }
+                    _ => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion('('))),
+                },
 
                 Some((i, ')')) => {
                     if self.mode.len() == 1 {
@@ -458,43 +503,45 @@ impl<'input> Lexer<'input> {
                 Some((i, '|')) => return Some(Token::Pipe(Location::from(i)).into()),
                 Some((i, ';')) => return Some(Token::Separator(";", Location::from(i)).into()),
                 Some((i, ',')) => return Some(Token::Separator(",", Location::from(i)).into()),
-                Some((i, '\n')) => continue,//return Some(Token::Separator("\n", Location::from(i)).into()),
-                Some((_, '\\')) =>
-                    match self.chars.peek() {
-                        Some((_, '\n')) => {
-                            self.chars.next();
-                            continue;
-                        }
-                        Some((_, ch)) => return Some(Err(LexicalError::UnexpectedCharacter(*ch))),
-                        None => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion('\n'))),
+                Some((i, '\n')) => continue, //return Some(Token::Separator("\n", Location::from(i)).into()),
+                Some((_, '\\')) => match self.chars.peek() {
+                    Some((_, '\n')) => {
+                        self.chars.next();
+                        continue;
                     }
+                    Some((_, ch)) => return Some(Err(LexicalError::UnexpectedCharacter(*ch))),
+                    None => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion('\n'))),
+                },
 
-                Some((i, '<')) =>
-                    match self.chars.peek() {
-                        Some((_, '=')) => {
-                            self.chars.next();
-                            return Some(Token::ComparisonOperator("<=", Location::new(i, i + 2)).into());
-                        }
-                        _ => return Some(Token::ComparisonOperator("<", Location::from(i)).into()),
+                Some((i, '<')) => match self.chars.peek() {
+                    Some((_, '=')) => {
+                        self.chars.next();
+                        return Some(
+                            Token::ComparisonOperator("<=", Location::new(i, i + 2)).into(),
+                        );
                     }
+                    _ => return Some(Token::ComparisonOperator("<", Location::from(i)).into()),
+                },
 
-                Some((i, '>')) =>
-                    match self.chars.peek() {
-                        Some((_, '=')) => {
-                            self.chars.next();
-                            return Some(Token::ComparisonOperator(">=", Location::new(i, i + 2)).into());
-                        }
-                        _ => return Some(Token::ComparisonOperator(">", Location::from(i)).into()),
+                Some((i, '>')) => match self.chars.peek() {
+                    Some((_, '=')) => {
+                        self.chars.next();
+                        return Some(
+                            Token::ComparisonOperator(">=", Location::new(i, i + 2)).into(),
+                        );
                     }
+                    _ => return Some(Token::ComparisonOperator(">", Location::from(i)).into()),
+                },
 
-                Some((i, '!')) =>
-                    match self.chars.peek() {
-                        Some((_, '=')) => {
-                            self.chars.next();
-                            return Some(Token::ComparisonOperator("!=", Location::new(i, i + 2)).into());
-                        }
-                        _ => return Some(Token::Bang(Location::from(i)).into()),
+                Some((i, '!')) => match self.chars.peek() {
+                    Some((_, '=')) => {
+                        self.chars.next();
+                        return Some(
+                            Token::ComparisonOperator("!=", Location::new(i, i + 2)).into(),
+                        );
                     }
+                    _ => return Some(Token::Bang(Location::from(i)).into()),
+                },
                 Some((i, '@')) => {
                     let cc2 = self.chars.peek();
                     match cc2 {
@@ -515,21 +562,21 @@ impl<'input> Lexer<'input> {
                     match cc2 {
                         Some((_, '=')) => {
                             self.chars.next();
-                            return Some(Token::LogicalOperator("==", Location::new(i, i + 2)).into());
+                            return Some(
+                                Token::LogicalOperator("==", Location::new(i, i + 2)).into(),
+                            );
                         }
                         _ => return Some(Token::Equals(Location::from(i)).into()),
                     }
                 }
 
-                Some((_, '#')) => {
-                    loop {
-                        let cc2 = self.chars.next();
-                        match cc2 {
-                            Some((_, '\n')) | None => break,
-                            Some((_, _)) => {}
-                        }
+                Some((_, '#')) => loop {
+                    let cc2 = self.chars.next();
+                    match cc2 {
+                        Some((_, '\n')) | None => break,
+                        Some((_, _)) => {}
                     }
-                }
+                },
 
                 Some((i, ch)) if number_char(ch) => {
                     let mut end_idx = i;
@@ -547,9 +594,7 @@ impl<'input> Lexer<'input> {
                             Some((_, ch2)) if number_or_underscore_char(*ch2) => {
                                 end_idx = self.chars.next().unwrap().0;
                             }
-                            _ => {
-                                break
-                            }
+                            _ => break,
                         }
                     }
 
@@ -569,17 +614,19 @@ impl<'input> Lexer<'input> {
                             Some((_, ch2)) if identifier_char(*ch2) => {
                                 end_idx = self.chars.next().unwrap().0;
                             }
-                            _ => {
-                                break
-                            }
+                            _ => break,
                         }
                     }
 
                     let s = &self.full_str[i..end_idx + 1];
 
                     return match s {
-                        "and" => Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into()),
-                        "or" => Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into()),
+                        "and" => {
+                            Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into())
+                        }
+                        "or" => {
+                            Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into())
+                        }
                         "for" => Some(Token::For(Location::new(i, end_idx + 1)).into()),
                         "while" => Some(Token::While(Location::new(i, end_idx + 1)).into()),
                         "loop" => Some(Token::Loop(Location::new(i, end_idx + 1)).into()),
@@ -649,7 +696,15 @@ impl<'input> Lexer<'input> {
 }
 
 fn string_or_file_or_glob_first_char(ch: char) -> bool {
-    (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '*' || ch == '?' || ch == '_' || ch == '-' || ch == '.' || ch == '~' || ch == '/'
+    (ch >= 'a' && ch <= 'z')
+        || (ch >= 'A' && ch <= 'Z')
+        || ch == '*'
+        || ch == '?'
+        || ch == '_'
+        || ch == '-'
+        || ch == '.'
+        || ch == '~'
+        || ch == '/'
 }
 
 fn string_or_file_or_glob_char(ch: char) -> bool {
@@ -683,7 +738,7 @@ impl<'input> Iterator for Lexer<'input> {
         match self.mode.last() {
             Some(LexerMode::Expression) => self.next_expr(),
             Some(LexerMode::Command) => self.next_command(),
-            None => Some(Err(LexicalError::MismatchedSubEnd))
+            None => Some(Err(LexicalError::MismatchedSubEnd)),
         }
     }
 }
@@ -725,5 +780,3 @@ impl Display for LexicalError {
         }
     }
 }
-
-

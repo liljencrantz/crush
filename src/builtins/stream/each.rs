@@ -1,12 +1,12 @@
+use crate::lang::ast::location::Location;
 use crate::lang::command::Command;
-use crate::lang::errors::{error, CrushResult};
+use crate::lang::command::OutputType::Known;
+use crate::lang::errors::{CrushResult, error};
 use crate::lang::state::contexts::CommandContext;
+use crate::lang::value::ValueType::Empty;
 use crate::lang::{argument::Argument, data::table::ColumnType};
 use crate::lang::{data::table::Row, value::Value};
 use signature::signature;
-use crate::lang::value::ValueType::Empty;
-use crate::lang::command::OutputType::Known;
-use crate::lang::ast::location::Location;
 
 #[signature(
     stream.r#each,
@@ -34,11 +34,7 @@ fn run(
         .map(|(c, t)| Argument::named(t.name(), c, location))
         .collect();
 
-    condition.eval(
-        base_context
-            .clone()
-            .with_args(arguments, None)
-    )
+    condition.eval(base_context.clone().with_args(arguments, None))
 }
 
 pub fn each(context: CommandContext) -> CrushResult<()> {

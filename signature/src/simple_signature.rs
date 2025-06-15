@@ -1,6 +1,6 @@
-use std::convert::TryFrom;
 use proc_macro2::{Ident, Literal, Span, TokenStream};
 use quote::quote;
+use std::convert::TryFrom;
 
 pub enum SimpleSignature {
     String,
@@ -138,8 +138,12 @@ impl SimpleSignature {
         match self {
             SimpleSignature::String | SimpleSignature::Char => "string",
             SimpleSignature::Bool => "bool",
-            SimpleSignature::I128 | SimpleSignature::Usize | SimpleSignature::U64 |
-            SimpleSignature::I64 | SimpleSignature::U32 | SimpleSignature::I32 => "integer",
+            SimpleSignature::I128
+            | SimpleSignature::Usize
+            | SimpleSignature::U64
+            | SimpleSignature::I64
+            | SimpleSignature::U32
+            | SimpleSignature::I32 => "integer",
             SimpleSignature::ValueType => "type",
             SimpleSignature::F64 => "float",
             SimpleSignature::Command => "command",
@@ -158,12 +162,12 @@ impl SimpleSignature {
             None => match self {
                 SimpleSignature::Char => {
                     quote! {
-                    if _value.len() == 1 {
-                        _value.chars().next().unwrap()
-                    } else {
-                        return crate::lang::errors::argument_error("Argument must be exactly one character", _location)
+                        if _value.len() == 1 {
+                            _value.chars().next().unwrap()
+                        } else {
+                            return crate::lang::errors::argument_error("Argument must be exactly one character", _location)
+                        }
                     }
-                }
                 }
                 SimpleSignature::String => quote! { _value.to_string()},
                 SimpleSignature::PathBuf => quote! { _value.to_path_buf()},
@@ -184,43 +188,43 @@ impl SimpleSignature {
             },
             Some(allowed) => match self {
                 SimpleSignature::Char => quote! {
-                if _value.len() == 1 {
-                    let c = _value.chars().next().unwrap();
-                    if #allowed.contains(&c) {
-                        c
+                    if _value.len() == 1 {
+                        let c = _value.chars().next().unwrap();
+                        if #allowed.contains(&c) {
+                            c
+                        } else {
+                            return crate::lang::errors::argument_error(
+                                format!("Only the following values are allowed: {:?}", #allowed),
+                                _location,
+                            )
+                        }
+                    } else {
+                        return crate::lang::errors::argument_error(
+                            "Argument must be exactly one character",
+                            _location,
+                        )
+                    }
+                },
+                SimpleSignature::String => quote! {
+                    if #allowed.contains(&_value.deref()) {
+                        _value.to_string()
                     } else {
                         return crate::lang::errors::argument_error(
                             format!("Only the following values are allowed: {:?}", #allowed),
                             _location,
                         )
                     }
-                } else {
-                    return crate::lang::errors::argument_error(
-                        "Argument must be exactly one character",
-                        _location,
-                    )
-                }
-            },
-                SimpleSignature::String => quote! {
-                if #allowed.contains(&_value.deref()) {
-                    _value.to_string()
-                } else {
-                    return crate::lang::errors::argument_error(
-                        format!("Only the following values are allowed: {:?}", #allowed),
-                        _location,
-                    )
-                }
-            },
+                },
                 _ => quote! {
-                if #allowed.contains(&_value) {
-                    _value
-                } else {
-                    return crate::lang::errors::argument_error(
-                        format!("Only the following values are allowed: {:?}", #allowed),
-                        _location,
-                    )
-                }
-            },
+                    if #allowed.contains(&_value) {
+                        _value
+                    } else {
+                        return crate::lang::errors::argument_error(
+                            format!("Only the following values are allowed: {:?}", #allowed),
+                            _location,
+                        )
+                    }
+                },
             },
         }
     }

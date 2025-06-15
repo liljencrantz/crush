@@ -1,9 +1,9 @@
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::errors::CrushResult;
-use crate::lang::state::contexts::CommandContext;
-use crate::lang::signature::files::Files;
-use crate::lang::state::scope::ScopeLoader;
 use crate::lang::serialization::{deserialize_reader, serialize_writer};
+use crate::lang::signature::files::Files;
+use crate::lang::state::contexts::CommandContext;
+use crate::lang::state::scope::ScopeLoader;
 use signature::signature;
 use std::io::BufReader;
 

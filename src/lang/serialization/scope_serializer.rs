@@ -1,17 +1,17 @@
-use crate::lang::errors::{error, CrushResult};
-use crate::lang::state::scope::Scope;
+use crate::lang::errors::{CrushResult, error};
 use crate::lang::serialization::model;
-use crate::lang::serialization::model::{element, Element};
+use crate::lang::serialization::model::scope::ReturnValue::ReturnValueValue;
+use crate::lang::serialization::model::{Element, element};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
+use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use crate::util::identity_arc::Identity;
-use std::collections::hash_map::Entry;
 use element::Element::Member;
 use model::scope::Calling::CallingValue;
 use model::scope::Description::{DescriptionValue, HasDescription};
 use model::scope::Name::{HasName, NameValue};
 use model::scope::Parent::ParentValue;
-use crate::lang::serialization::model::scope::ReturnValue::ReturnValueValue;
+use std::collections::hash_map::Entry;
 
 impl Serializable<Scope> for Scope {
     fn deserialize(
@@ -35,7 +35,13 @@ impl Serializable<Scope> for Scope {
                             Some(String::deserialize(n as usize, elements, state)?)
                         }
                     };
-                    let res = Scope::create(name, description, s.scope_type.try_into()?, s.is_stopped, s.is_readonly);
+                    let res = Scope::create(
+                        name,
+                        description,
+                        s.scope_type.try_into()?,
+                        s.is_stopped,
+                        s.is_readonly,
+                    );
                     state.scopes.insert(id, res.clone());
                     if let Some(ParentValue(pid)) = s.parent {
                         res.set_parent(Some(Scope::deserialize(pid as usize, elements, state)?));
@@ -67,10 +73,7 @@ impl Serializable<Scope> for Scope {
                 }
                 element::Element::InternalScope(s) => {
                     let strings = Vec::deserialize(*s as usize, elements, state)?;
-                    match state
-                        .env
-                        .get_absolute_path(strings)
-                    {
+                    match state.env.get_absolute_path(strings) {
                         Ok(Value::Scope(s)) => Ok(s),
                         Ok(_) => error("Value is not a scope"),
                         Err(_) => error("Invalid path for scope lookup"),
@@ -107,19 +110,17 @@ impl Serializable<Scope> for Scope {
 
                         sscope.name = match scope_data.name {
                             None => Some(HasName(false)),
-                            Some(n) =>
-                                Some(NameValue(n.to_string().serialize(elements, state)? as u64)),
+                            Some(n) => {
+                                Some(NameValue(n.to_string().serialize(elements, state)? as u64))
+                            }
                         };
                         sscope.parent = match scope_data.parent_scope {
                             None => Some(model::scope::Parent::HasParent(false)),
-                            Some(p) =>
-                                Some(ParentValue(p.serialize(elements, state)? as u64)),
+                            Some(p) => Some(ParentValue(p.serialize(elements, state)? as u64)),
                         };
                         sscope.calling = match scope_data.calling_scope {
-                            None =>
-                                Some(model::scope::Calling::HasCalling(false)),
-                            Some(c) =>
-                                Some(CallingValue(c.serialize(elements, state)? as u64)),
+                            None => Some(model::scope::Calling::HasCalling(false)),
+                            Some(c) => Some(CallingValue(c.serialize(elements, state)? as u64)),
                         };
                         sscope.is_readonly = scope_data.is_readonly;
                         sscope.scope_type = scope_data.scope_type.into();

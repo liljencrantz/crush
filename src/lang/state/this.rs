@@ -1,8 +1,3 @@
-use std::path::PathBuf;
-use regex::Regex;
-use chrono::{DateTime, Duration, Local};
-use std::mem::swap;
-use crate::{argument_error_legacy, CrushResult};
 use crate::data::dict::Dict;
 use crate::data::list::List;
 use crate::data::r#struct::Struct;
@@ -11,6 +6,11 @@ use crate::lang::pipe::{TableInputStream, TableOutputStream};
 use crate::lang::value::{Value, ValueType};
 use crate::state::scope::Scope;
 use crate::util::glob::Glob;
+use crate::{CrushResult, argument_error_legacy};
+use chrono::{DateTime, Duration, Local};
+use regex::Regex;
+use std::mem::swap;
+use std::path::PathBuf;
 
 macro_rules! this_method {
     ($name:ident, $return_type:ty, $value_type:ident, $description:literal) => {
@@ -65,12 +65,15 @@ impl This for Option<Value> {
         swap(self, &mut this);
         match this {
             Some(Value::String(l)) => Ok(l.to_string()),
-            None => argument_error_legacy(concat!("Expected this to be a string, but this is not set")),
+            None => {
+                argument_error_legacy(concat!("Expected this to be a string, but this is not set"))
+            }
             Some(v) => argument_error_legacy(
                 format!(
                     concat!("Expected this to be a string, but it is a {}"),
                     v.value_type().to_string()
-                ).as_str(),
+                )
+                .as_str(),
             ),
         }
     }
@@ -80,12 +83,15 @@ impl This for Option<Value> {
         swap(self, &mut this);
         match this {
             Some(Value::File(l)) => Ok(l.to_path_buf()),
-            None => argument_error_legacy(concat!("Expected this to be a file, but this is not set")),
+            None => {
+                argument_error_legacy(concat!("Expected this to be a file, but this is not set"))
+            }
             Some(v) => argument_error_legacy(
                 format!(
                     concat!("Expected this to be a file, but it is a {}"),
                     v.value_type().to_string()
-                ).as_str(),
+                )
+                .as_str(),
             ),
         }
     }
@@ -127,12 +133,15 @@ impl This for Option<Value> {
         swap(self, &mut this);
         match this {
             Some(Value::Binary(l)) => Ok(l.to_vec()),
-            None => argument_error_legacy(concat!("Expected this to be a string, but this is not set")),
+            None => {
+                argument_error_legacy(concat!("Expected this to be a string, but this is not set"))
+            }
             Some(v) => argument_error_legacy(
                 format!(
                     concat!("Expected this to be a string, but it is a {}"),
                     v.value_type().to_string()
-                ).as_str(),
+                )
+                .as_str(),
             ),
         }
     }

@@ -1,24 +1,23 @@
-use std::ops::Deref;
-use crate::lang::errors::{argument_error_legacy, error, CrushResult};
-use crate::lang::state::contexts::CommandContext;
-use crate::lang::pipe::Stream;
+use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::ColumnVec;
-use crate::lang::{data::table::ColumnType};
+use crate::lang::errors::{CrushResult, argument_error_legacy, error};
+use crate::lang::pipe::Stream;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::{value::Value, value::ValueType};
+use crate::util::replace::Replace;
 use chrono::Duration;
 use float_ord::FloatOrd;
 use signature::signature;
-use crate::util::replace::Replace;
+use std::ops::Deref;
 
 fn parse(input_type: &[ColumnType], field: Option<String>) -> CrushResult<usize> {
-    field.map(|f| input_type.find(&f))
-        .unwrap_or_else(||
+    field.map(|f| input_type.find(&f)).unwrap_or_else(|| {
         if input_type.len() == 1 {
             Ok(0)
         } else {
             error("Specify which column to operate on")
         }
-        )
+    })
 }
 
 macro_rules! sum_function {
@@ -59,9 +58,9 @@ fn sum(context: CommandContext) -> CrushResult<()> {
                 ValueType::Integer => context.output.send(sum_int(input, column)?),
                 ValueType::Float => context.output.send(sum_float(input, column)?),
                 ValueType::Duration => context.output.send(sum_duration(input, column)?),
-                t => argument_error_legacy(
-                    &format!("Can't calculate sum of elements of type {}", t),
-                ),
+                t => {
+                    argument_error_legacy(&format!("Can't calculate sum of elements of type {}", t))
+                }
             }
         }
         _ => error("Expected a stream"),
@@ -113,12 +112,10 @@ fn avg(context: CommandContext) -> CrushResult<()> {
                 ValueType::Integer => context.output.send(avg_int(input, column)?),
                 ValueType::Float => context.output.send(avg_float(input, column)?),
                 ValueType::Duration => context.output.send(avg_duration(input, column)?),
-                t => argument_error_legacy(
-                    &format!(
-                        "Can't calculate average of elements of type {}",
-                        t
-                    ),
-                ),
+                t => argument_error_legacy(&format!(
+                    "Can't calculate average of elements of type {}",
+                    t
+                )),
             }
         }
         _ => error("Expected a stream"),
@@ -131,12 +128,10 @@ macro_rules! median_function {
             let mut res: Vec<$var_type> = Vec::new();
             loop {
                 match s.read() {
-                    Ok(row) => {
-                        match row.cells()[column] {
-                            Value::$value_type(i) => res.push(i),
-                            _ => return error("Invalid cell value"),
-                        }
-                    }
+                    Ok(row) => match row.cells()[column] {
+                        Value::$value_type(i) => res.push(i),
+                        _ => return error("Invalid cell value"),
+                    },
                     Err(_) => break,
                 }
             }
@@ -144,11 +139,11 @@ macro_rules! median_function {
             if (res.is_empty()) {
                 argument_error_legacy("Can't calculate median of empty set")
             } else if (res.len() % 2 == 1) {
-                Ok(Value::$value_type(res[(res.len()-1)/2]))
+                Ok(Value::$value_type(res[(res.len() - 1) / 2]))
             } else {
-                let low = res[(res.len()/2) - 1];
-                let high = res[(res.len()/2)];
-                Ok(Value::$value_type((low+high)/$halver))
+                let low = res[(res.len() / 2) - 1];
+                let high = res[(res.len() / 2)];
+                Ok(Value::$value_type((low + high) / $halver))
             }
         }
     };
@@ -156,7 +151,14 @@ macro_rules! median_function {
 
 median_function!(median_int, i128, 0, Integer, i128, 2);
 median_function!(median_float, f64, 0.0, Float, f64, 2.0);
-median_function!(median_duration, Duration, Duration::seconds(0), Duration, i32, 2);
+median_function!(
+    median_duration,
+    Duration,
+    Duration::seconds(0),
+    Duration,
+    i32,
+    2
+);
 
 #[signature(
     stream.median,
@@ -174,21 +176,36 @@ fn median(context: CommandContext) -> CrushResult<()> {
             let cfg: Median = Median::parse(context.arguments, &context.global_state.printer())?;
             let column = parse(input.types(), cfg.field)?;
             match &input.types()[column].cell_type {
-                ValueType::Integer => context.output.send(crate::builtins::stream::aggregation::median_int(input, column)?),
-                ValueType::Float => context.output.send(crate::builtins::stream::aggregation::median_float(input, column)?),
-                ValueType::Duration => context.output.send(crate::builtins::stream::aggregation::median_duration(input, column)?),
-                t => argument_error_legacy(
-                    &format!(
-                        "Can't calculate average of elements of type {}",
-                        t
-                    ),
-                ),
+                ValueType::Integer => {
+                    context
+                        .output
+                        .send(crate::builtins::stream::aggregation::median_int(
+                            input, column,
+                        )?)
+                }
+                ValueType::Float => {
+                    context
+                        .output
+                        .send(crate::builtins::stream::aggregation::median_float(
+                            input, column,
+                        )?)
+                }
+                ValueType::Duration => {
+                    context
+                        .output
+                        .send(crate::builtins::stream::aggregation::median_duration(
+                            input, column,
+                        )?)
+                }
+                t => argument_error_legacy(&format!(
+                    "Can't calculate average of elements of type {}",
+                    t
+                )),
             }
         }
         _ => error("Expected a stream"),
     }
 }
-
 
 macro_rules! aggr_function {
     ($name:ident, $value_type:ident, $desc:literal, $op:expr) => {
@@ -214,11 +231,12 @@ aggr_function!(min_float, Float, "float", |a, b| std::cmp::min(
     FloatOrd(b)
 )
 .0);
-aggr_function!(min_duration, Duration, "duration", |a, b| std::cmp::min(a, b));
+aggr_function!(min_duration, Duration, "duration", |a, b| std::cmp::min(
+    a, b
+));
 aggr_function!(min_time, Time, "time", |a, b| std::cmp::min(a, b));
 aggr_function!(min_string, String, "string", |a, b| std::cmp::min(a, b));
 aggr_function!(min_file, File, "file", |a, b| std::cmp::min(a, b));
-
 
 aggr_function!(max_int, Integer, "integer", |a, b| std::cmp::max(a, b));
 aggr_function!(max_float, Float, "float", |a, b| std::cmp::max(
@@ -226,7 +244,9 @@ aggr_function!(max_float, Float, "float", |a, b| std::cmp::max(
     FloatOrd(b)
 )
 .0);
-aggr_function!(max_duration, Duration, "duration", |a, b| std::cmp::max(a, b));
+aggr_function!(max_duration, Duration, "duration", |a, b| std::cmp::max(
+    a, b
+));
 aggr_function!(max_time, Time, "time", |a, b| std::cmp::max(a, b));
 aggr_function!(max_string, String, "string", |a, b| std::cmp::max(a, b));
 aggr_function!(max_file, File, "file", |a, b| std::cmp::max(a, b));
@@ -253,9 +273,7 @@ fn min(context: CommandContext) -> CrushResult<()> {
                 ValueType::Time => context.output.send(min_time(input, column)?),
                 ValueType::String => context.output.send(min_string(input, column)?),
                 ValueType::File => context.output.send(min_file(input, column)?),
-                t => argument_error_legacy(
-                    &format!("Can't pick min of elements of type {}", t),
-                ),
+                t => argument_error_legacy(&format!("Can't pick min of elements of type {}", t)),
             }
         }
         _ => error("Expected a stream"),
@@ -284,9 +302,7 @@ fn max(context: CommandContext) -> CrushResult<()> {
                 ValueType::Time => context.output.send(max_time(input, column)?),
                 ValueType::String => context.output.send(max_string(input, column)?),
                 ValueType::File => context.output.send(max_file(input, column)?),
-                t => argument_error_legacy(
-                    &format!("Can't pick max of elements of type {}", t),
-                ),
+                t => argument_error_legacy(&format!("Can't pick max of elements of type {}", t)),
             }
         }
         _ => error("Expected a stream"),
@@ -329,9 +345,10 @@ fn prod(context: CommandContext) -> CrushResult<()> {
             match &input.types()[column].cell_type {
                 ValueType::Integer => context.output.send(prod_int(input, column)?),
                 ValueType::Float => context.output.send(prod_float(input, column)?),
-                t => argument_error_legacy(
-                    &format!("Can't calculate product of elements of type {}", t),
-                ),
+                t => argument_error_legacy(&format!(
+                    "Can't calculate product of elements of type {}",
+                    t
+                )),
             }
         }
         _ => error("Expected a stream"),
@@ -356,7 +373,9 @@ fn first(context: CommandContext) -> CrushResult<()> {
             let column = parse(input.types(), cfg.field)?;
 
             if let Ok(row) = input.read() {
-                context.output.send(row.into_cells().replace(column, Value::Empty).clone())
+                context
+                    .output
+                    .send(row.into_cells().replace(column, Value::Empty).clone())
             } else {
                 error("Empty stream")
             }
@@ -386,9 +405,12 @@ fn last(context: CommandContext) -> CrushResult<()> {
             while let Ok(row) = input.read() {
                 rr = Some(row)
             }
-            rr
-                .map(|r| { context.output.send(r.into_cells().replace(column, Value::Empty)) })
-                .unwrap_or_else(|| { argument_error_legacy("Empty stream") })
+            rr.map(|r| {
+                context
+                    .output
+                    .send(r.into_cells().replace(column, Value::Empty))
+            })
+            .unwrap_or_else(|| argument_error_legacy("Empty stream"))
         }
         _ => error("Expected a stream"),
     }

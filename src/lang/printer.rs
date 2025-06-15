@@ -1,18 +1,17 @@
+use crate::lang::ast::location::Location;
 /**
     Crush uses a single thread to perform all output printing. This prevents torn lines and other
     visual problems. Output is sent to the print thread via a Printer.
 */
-
 use crate::lang::errors::{CrushError, CrushErrorType, CrushResult};
-use crossbeam::channel::bounded;
-use crossbeam::channel::Sender;
-use crossbeam::channel::Receiver;
-use std::thread;
 use crate::lang::printer::PrinterMessage::*;
+use crossbeam::channel::Receiver;
+use crossbeam::channel::Sender;
+use crossbeam::channel::bounded;
+use std::cmp::max;
+use std::thread;
 use std::thread::JoinHandle;
 use termion::terminal_size;
-use std::cmp::max;
-use crate::lang::ast::location::Location;
 
 pub enum PrinterMessage {
     Ping,
@@ -62,7 +61,9 @@ pub fn init() -> (Printer, JoinHandle<()>) {
             .spawn(move || {
                 while let Ok(message) = receiver.recv() {
                     match message {
-                        Ping => { let _ = pong_sender.send(()); }
+                        Ping => {
+                            let _ = pong_sender.send(());
+                        }
                         Error(err) => eprintln!("Error: {}", err),
                         CrushError(err) => {
                             eprintln!("Error: {}", err.message());
@@ -80,12 +81,12 @@ pub fn init() -> (Printer, JoinHandle<()>) {
 }
 
 /**
-    Create a Printer instance that doesn't actually print. A print thread actually still exists,
-    but it does not print anything.
+   Create a Printer instance that doesn't actually print. A print thread actually still exists,
+   but it does not print anything.
 
-    It would be more performant to rewrite this to not even spawn a thread and just drop whatever
-    you pass in, but Crush currently is not optimized for speed.
- */
+   It would be more performant to rewrite this to not even spawn a thread and just drop whatever
+   you pass in, but Crush currently is not optimized for speed.
+*/
 pub fn noop() -> (Printer, JoinHandle<()>) {
     let (sender, receiver) = bounded(128);
     let (pong_sender, pong_receiver) = bounded(1);
@@ -101,7 +102,9 @@ pub fn noop() -> (Printer, JoinHandle<()>) {
             .spawn(move || {
                 while let Ok(message) = receiver.recv() {
                     match message {
-                        Ping => { let _ = pong_sender.send(()); }
+                        Ping => {
+                            let _ = pong_sender.send(());
+                        }
                         _ => {}
                     }
                 }
@@ -116,7 +119,10 @@ impl Printer {
     */
     pub fn line(&self, line: &str) {
         self.handle_error(
-            self.sender.send(Line(line.to_string())).map_err(|e| e.into()));
+            self.sender
+                .send(Line(line.to_string()))
+                .map_err(|e| e.into()),
+        );
     }
 
     /**
@@ -157,15 +163,17 @@ impl Printer {
     }
 
     /**
-        Print information about the passed in error.
-     */
+       Print information about the passed in error.
+    */
     pub fn crush_error(&self, err: CrushError) {
-        let _ = self.sender.send(PrinterMessage::CrushError(err.with_source(&self.source)));
+        let _ = self
+            .sender
+            .send(PrinterMessage::CrushError(err.with_source(&self.source)));
     }
 
     /**
-        Print the passed in, pre-formated error.
-     */
+       Print the passed in, pre-formated error.
+    */
     pub fn error(&self, err: &str) {
         let _ = self.sender.send(PrinterMessage::Error(err.to_string()));
     }

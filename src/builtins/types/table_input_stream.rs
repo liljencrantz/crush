@@ -1,19 +1,19 @@
-use std::sync::OnceLock;
-use crate::lang::command::Command;
-use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, CrushResult};
-use crate::lang::state::contexts::CommandContext;
-use crate::lang::value::ValueType;
-use crate::lang::value::Value;
 use crate::builtins::types::column_types;
-use ordered_map::OrderedMap;
-use signature::signature;
 use crate::lang::any_str::AnyStr;
+use crate::lang::command::Command;
+use crate::lang::command::CrushCommand;
+use crate::lang::command::OutputType::Known;
+use crate::lang::data::r#struct::Struct;
+use crate::lang::errors::{CrushResult, argument_error_legacy};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::pipe::streams;
-use crate::lang::data::r#struct::Struct;
-use crate::lang::command::CrushCommand;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::this::This;
+use crate::lang::value::Value;
+use crate::lang::value::ValueType;
+use ordered_map::OrderedMap;
+use signature::signature;
+use std::sync::OnceLock;
 
 pub fn methods() -> &'static OrderedMap<String, Command> {
     static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
@@ -29,28 +29,34 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
 
 pub fn close_value() -> &'static Value {
     static CELL: OnceLock<Value> = OnceLock::new();
-    CELL.get_or_init(|| Value::Command(<dyn CrushCommand>::command(
-        close, false,
-        &["global", "types", "pipe", "close"],
-        "pipe:close",
-        "Close the specified pipe",
-        None::<AnyStr>,
-        Known(ValueType::Empty),
-        [],
-    )))
+    CELL.get_or_init(|| {
+        Value::Command(<dyn CrushCommand>::command(
+            close,
+            false,
+            &["global", "types", "pipe", "close"],
+            "pipe:close",
+            "Close the specified pipe",
+            None::<AnyStr>,
+            Known(ValueType::Empty),
+            [],
+        ))
+    })
 }
 
 pub fn write_value() -> &'static Value {
     static CELL: OnceLock<Value> = OnceLock::new();
-    CELL.get_or_init(|| Value::Command(<dyn CrushCommand>::command(
-        write, true,
-        &["global", "types", "pipe", "write"],
-        "pipe:write",
-        "Write sink for this pipe",
-        None::<AnyStr>,
-        Known(ValueType::Empty),
-        [],
-    )))
+    CELL.get_or_init(|| {
+        Value::Command(<dyn CrushCommand>::command(
+            write,
+            true,
+            &["global", "types", "pipe", "write"],
+            "pipe:write",
+            "Write sink for this pipe",
+            None::<AnyStr>,
+            Known(ValueType::Empty),
+            [],
+        ))
+    })
 }
 
 #[signature(
@@ -74,9 +80,13 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
             if c.is_empty() {
                 context
                     .output
-                    .send(Value::Type(ValueType::TableInputStream(column_types(&cfg.columns))))
+                    .send(Value::Type(ValueType::TableInputStream(column_types(
+                        &cfg.columns,
+                    ))))
             } else if cfg.columns.is_empty() {
-                context.output.send(Value::Type(ValueType::TableInputStream(c)))
+                context
+                    .output
+                    .send(Value::Type(ValueType::TableInputStream(c)))
             } else {
                 argument_error_legacy(
                     "Tried to set columns on a table_input_stream type that already has columns",
@@ -101,7 +111,9 @@ struct GetItem {
 fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     let cfg: GetItem = GetItem::parse(context.arguments, &context.global_state.printer())?;
     let o = context.this.table_input_stream()?;
-    context.output.send(Value::Struct(o.get(cfg.index)?.into_struct(o.types())))
+    context
+        .output
+        .send(Value::Struct(o.get(cfg.index)?.into_struct(o.types())))
 }
 
 #[signature(
@@ -186,6 +198,6 @@ fn write(mut context: CommandContext) -> CrushResult<()> {
             context.output.send(Value::Empty)?;
             Ok(())
         }
-        _ => argument_error_legacy("Expected an output stream")
+        _ => argument_error_legacy("Expected an output stream"),
     }
 }

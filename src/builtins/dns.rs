@@ -67,7 +67,9 @@ struct Query {
     #[description("use TCP as the transport instead of UDP.")]
     #[default(false)]
     tcp: bool,
-    #[description("the nameserver to talk to. If none is given, use the nameservers configured in `/etc/resolv.conf`.")]
+    #[description(
+        "the nameserver to talk to. If none is given, use the nameservers configured in `/etc/resolv.conf`."
+    )]
     nameserver: Option<String>,
     #[description("port to talk to the nameserver on.")]
     #[default(53)]
@@ -299,9 +301,11 @@ fn query_internal(
 
 fn create_address(nameserver: &Option<String>, port: i128) -> CrushResult<SocketAddr> {
     let srv = match nameserver {
-        None => parse_resolv_conf()?.nameservers.get(0)
+        None => parse_resolv_conf()?
+            .nameservers
+            .get(0)
             .ok_or("No nameservers configured")?
-        .to_string(),
+            .to_string(),
 
         Some(server) => server.to_string(),
     };
@@ -312,7 +316,11 @@ fn create_address(nameserver: &Option<String>, port: i128) -> CrushResult<Socket
 fn query(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Query::parse(context.remove_arguments(), &context.global_state.printer())?;
     let address = create_address(&cfg.nameserver, cfg.port)?;
-    let t = cfg.timeout.num_nanoseconds().map(|us| core::time::Duration::from_nanos(us as u64)).ok_or("Out of bounds timeout")?;
+    let t = cfg
+        .timeout
+        .num_nanoseconds()
+        .map(|us| core::time::Duration::from_nanos(us as u64))
+        .ok_or("Out of bounds timeout")?;
     if cfg.tcp {
         let conn = TcpClientConnection::with_timeout(address, t)?;
         query_internal(cfg, context, SyncClient::new(conn))
@@ -348,7 +356,11 @@ fn query_reverse(mut context: CommandContext) -> CrushResult<()> {
     let cfg = QueryReverse::parse(context.remove_arguments(), &context.global_state.printer())?;
     let address = create_address(&cfg.nameserver, cfg.port)?;
 
-    let t = cfg.timeout.num_nanoseconds().map(|us| core::time::Duration::from_nanos(us as u64)).ok_or("Out of bounds timeout")?;
+    let t = cfg
+        .timeout
+        .num_nanoseconds()
+        .map(|us| core::time::Duration::from_nanos(us as u64))
+        .ok_or("Out of bounds timeout")?;
 
     if cfg.tcp {
         query_reverse_internal(

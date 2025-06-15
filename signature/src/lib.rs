@@ -1,19 +1,18 @@
+use crate::signature::Signature;
 /**
 This macro is used on command signature structs. It outputs methods that let you
 parse and declare a command based on its signature.
  */
-
 use proc_macro2;
 use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing, Span};
 use proc_macro2::{Literal, TokenStream, TokenTree};
 use quote::{quote, quote_spanned, ToTokens};
-use syn::{Attribute, Item};
 use simple_signature::SimpleSignature;
-use crate::signature::Signature;
 use syn::spanned::Spanned;
+use syn::{Attribute, Item};
 
-mod simple_signature;
 mod signature;
+mod simple_signature;
 
 macro_rules! fail {
     ($span:expr, $msg:literal) => {
@@ -135,12 +134,14 @@ fn unescape(s: &str) -> String {
     res
 }
 
-fn parse_full_name(location: Span, name_tree: &[TokenTree]) -> SignatureResult<(String, Ident, Vec<String>)> {
+fn parse_full_name(
+    location: Span,
+    name_tree: &[TokenTree],
+) -> SignatureResult<(String, Ident, Vec<String>)> {
     let mut res = vec![];
     for el in name_tree.into_iter() {
         match el {
-            TokenTree::Ident(l) =>
-                res.push(l),
+            TokenTree::Ident(l) => res.push(l),
             TokenTree::Punct(p) => {
                 if p.as_char() != '.' {
                     return fail!(el.span(), "Unexpected punctuation");
@@ -163,7 +164,11 @@ fn parse_full_name(location: Span, name_tree: &[TokenTree]) -> SignatureResult<(
         ch.next();
         ch.next();
     }
-    return Ok((ch.as_str().to_string(), i.clone(), res.iter().map(|id| id.to_string()).collect()));
+    return Ok((
+        ch.as_str().to_string(),
+        i.clone(),
+        res.iter().map(|id| id.to_string()).collect(),
+    ));
 }
 
 fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
@@ -253,24 +258,38 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
 
 fn generate_signature(path: &[String], signature: Vec<String>) -> String {
     match (signature[0].as_str(), signature.len()) {
-        ("__add__", 2) => format!("{} + {} # Only available in math mode", path.join(":"), signature[1]),
-        ("__sub__", 2) => format!("{} - {} # Only available in math mode", path.join(":"), signature[1]),
-        ("__mul__", 2) => format!("{} * {} # Only available in math mode", path.join(":"), signature[1]),
-        ("__div__", 2) => format!("{} / {} # Only available in math mode", path.join(":"), signature[1]),
+        ("__add__", 2) => format!(
+            "{} + {} # Only available in math mode",
+            path.join(":"),
+            signature[1]
+        ),
+        ("__sub__", 2) => format!(
+            "{} - {} # Only available in math mode",
+            path.join(":"),
+            signature[1]
+        ),
+        ("__mul__", 2) => format!(
+            "{} * {} # Only available in math mode",
+            path.join(":"),
+            signature[1]
+        ),
+        ("__div__", 2) => format!(
+            "{} / {} # Only available in math mode",
+            path.join(":"),
+            signature[1]
+        ),
         ("__getitem__", 2) => format!("{}[{}]", path.join(":"), signature[1]),
         ("__setitem__", 3) => format!("{}[{}] = {}", path.join(":"), signature[1], signature[2]),
         ("match", 2) => format!("{} =~ {}", path.join(":"), signature[1]),
         ("not_match", 2) => format!("{} !~ {}", path.join(":"), signature[1]),
-        _ => format!("{}:{}", path.join(":"), signature.join(" "))
+        _ => format!("{}:{}", path.join(":"), signature.join(" ")),
     }
 }
-
-
 
 fn is_alnum(s: &str) -> bool {
     for ch in s.chars() {
         if !ch.is_alphanumeric() {
-            return false
+            return false;
         }
     }
     true
@@ -278,25 +297,19 @@ fn is_alnum(s: &str) -> bool {
 
 fn token_tree_to_markdown(tree: &TokenTree) -> String {
     let s = match tree {
-            TokenTree::Group(g) => g.stream().to_string(),
-            TokenTree::Ident(_) |
-            TokenTree::Punct(_) |
-            TokenTree::Literal(_) => tree.to_string(),
-        };
+        TokenTree::Group(g) => g.stream().to_string(),
+        TokenTree::Ident(_) | TokenTree::Punct(_) | TokenTree::Literal(_) => tree.to_string(),
+    };
 
     let v = if s.ends_with("usize") {
         s[0..s.len() - 5].to_string()
-    }
-    else if s.starts_with("Number::Float(") && s.ends_with(")") {
+    } else if s.starts_with("Number::Float(") && s.ends_with(")") {
         s[14..s.len() - 1].to_string()
-    }
-    else if s.starts_with("Duration::seconds(") && s.ends_with(")") {
+    } else if s.starts_with("Duration::seconds(") && s.ends_with(")") {
         format!("$duration:of seconds={}", &s[18..s.len() - 1])
-    }
-    else if s.starts_with("\"") && s.ends_with("\"") && is_alnum(&s[1..s.len() - 1]){
+    } else if s.starts_with("\"") && s.ends_with("\"") && is_alnum(&s[1..s.len() - 1]) {
         s[1..s.len() - 1].to_string()
-    }
-    else if s == "i128::max_value()" {
+    } else if s == "i128::max_value()" {
         i128::max_value().to_string()
     } else {
         s
@@ -306,12 +319,22 @@ fn token_tree_to_markdown(tree: &TokenTree) -> String {
 }
 
 fn token_trees_to_markdown(v: &[TokenTree]) -> String {
-    v.iter().map(|t| token_tree_to_markdown(t)).collect::<Vec<_>>().join(", ")
+    v.iter()
+        .map(|t| token_tree_to_markdown(t))
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
-fn default_and_allowed_as_markdown(default_value: &Option<TokenTree>, allowed: &Option<Vec<TokenTree>>) -> String {
+fn default_and_allowed_as_markdown(
+    default_value: &Option<TokenTree>,
+    allowed: &Option<Vec<TokenTree>>,
+) -> String {
     match (default_value, allowed) {
-        (Some(d), Some(a)) => format!(" (default: {}, allowed: {})", token_tree_to_markdown(d), token_trees_to_markdown(a)),
+        (Some(d), Some(a)) => format!(
+            " (default: {}, allowed: {})",
+            token_tree_to_markdown(d),
+            token_trees_to_markdown(a)
+        ),
         (Some(d), None) => format!(" (default: {})", token_tree_to_markdown(d)),
         (None, Some(a)) => format!(" (allowed: {})", token_trees_to_markdown(a)),
         (None, None) => "".to_string(),
@@ -388,13 +411,14 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 let name = &field.ident.clone().unwrap();
                 let name_string = Literal::string(&name.to_string());
 
-                let type_data =
-                    Signature::new(
-                        &field.ty,
-                        name,
-                        default_value.clone(),
-                        is_unnamed_target,
-                        allowed_values)?.type_data()?;
+                let type_data = Signature::new(
+                    &field.ty,
+                    name,
+                    default_value.clone(),
+                    is_unnamed_target,
+                    allowed_values,
+                )?
+                .type_data()?;
 
                 signature.push(type_data.signature);
 
@@ -408,7 +432,8 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                     named_matchers.extend(mappings);
                 }
 
-                let default_help = default_and_allowed_as_markdown(&default_value, &type_data.allowed_values);
+                let default_help =
+                    default_and_allowed_as_markdown(&default_value, &type_data.allowed_values);
 
                 if let Some(description) = description {
                     if !had_field_description {
@@ -448,13 +473,12 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                             literal_params.extend(quote! { crate::lang::value::Value::from(#l),});
                         }
                         let res = quote! {
-                                Some(vec![#literal_params])
-                            };
+                            Some(vec![#literal_params])
+                        };
                         //panic!("{:?}", literals);
                         res
                     }
                 };
-
 
                 argument_desciptions = quote! {
                     #argument_desciptions
@@ -485,7 +509,13 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 }
                 long_description.push("# Examples".to_string());
                 long_description.push("".to_string());
-                long_description.append(&mut metadata.example.iter().map(|e| format!("    {}", e)).collect::<Vec<_>>());
+                long_description.append(
+                    &mut metadata
+                        .example
+                        .iter()
+                        .map(|e| format!("    {}", e))
+                        .collect::<Vec<_>>(),
+                );
             }
 
             let signature_literal = Literal::string(&generate_signature(&metadata.path, signature));
@@ -500,9 +530,16 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
             };
 
             let mut vec_stream = TokenStream::new();
-            vec_stream.extend(metadata.path.iter().flat_map(|e| vec![TokenTree::Literal(Literal::string(e)),
-                                                                     TokenTree::Punct(Punct::new(',', Spacing::Alone))]));
-            vec_stream.extend(vec![TokenTree::Literal(command_name.clone()), TokenTree::Punct(Punct::new(',', Spacing::Alone))]);
+            vec_stream.extend(metadata.path.iter().flat_map(|e| {
+                vec![
+                    TokenTree::Literal(Literal::string(e)),
+                    TokenTree::Punct(Punct::new(',', Spacing::Alone)),
+                ]
+            }));
+            vec_stream.extend(vec![
+                TokenTree::Literal(command_name.clone()),
+                TokenTree::Punct(Punct::new(',', Spacing::Alone)),
+            ]);
             let command_path = TokenTree::Group(Group::new(Delimiter::None, vec_stream));
 
             let handler = quote! {

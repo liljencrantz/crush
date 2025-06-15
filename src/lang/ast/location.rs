@@ -31,9 +31,9 @@ impl Location {
 
 impl From<usize> for Location {
     fn from(value: usize) -> Self {
-        Location{
+        Location {
             start: value,
-            end: value+1
+            end: value + 1,
         }
     }
 }

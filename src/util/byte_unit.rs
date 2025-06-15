@@ -1,8 +1,8 @@
-use std::fmt::{Display, Formatter};
-use num_format::Grouping;
-use crate::lang::errors::{byte_unit_error, CrushError};
+use crate::lang::errors::{CrushError, byte_unit_error};
 use crate::util::byte_unit::ByteUnit::{Binary, Decimal, Raw};
 use crate::util::integer_formater::format_integer;
+use num_format::Grouping;
+use std::fmt::{Display, Formatter};
 
 #[derive(Copy, Clone)]
 pub enum ByteUnit {
@@ -50,7 +50,12 @@ impl ByteUnit {
 
 fn format_size(numerator: i128, denominator: i128, multiplier: i128, prefixes: &[&str]) -> String {
     if numerator / denominator > multiplier && prefixes.len() > 1 {
-        format_size(numerator, denominator * multiplier, multiplier, &prefixes[1..])
+        format_size(
+            numerator,
+            denominator * multiplier,
+            multiplier,
+            &prefixes[1..],
+        )
     } else {
         if denominator == 1 {
             format!("{} {}", numerator, prefixes[0])

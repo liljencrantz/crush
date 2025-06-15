@@ -1,12 +1,12 @@
 use crate::builtins::types::OrderedStringMap;
-use signature::signature;
-use crate::lang::errors::{argument_error_legacy, CrushResult};
-use crate::lang::state::contexts::CommandContext;
-use crate::lang::{argument::Argument, value::Value};
+use crate::builtins::types::string::format::FormatState::*;
 use crate::lang::command::OutputType::Known;
+use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::this::This;
 use crate::lang::value::ValueType;
-use crate::builtins::types::string::format::FormatState::*;
+use crate::lang::{argument::Argument, value::Value};
+use signature::signature;
 
 enum FormatState {
     Normal,

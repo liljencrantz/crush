@@ -1,6 +1,6 @@
+use crate::lang::data::table::ColumnType;
 use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
-use crate::lang::data::table::ColumnType;
 use crate::lang::{data::table::Row, value::Value, value::ValueType};
 use signature::signature;
 
@@ -19,7 +19,9 @@ pub struct Seq {
     #[description("the step size.")]
     #[default(1)]
     step: i128,
-    #[description("the end of the sequence (exclusive). If not specified, the sequence will continue forever.")]
+    #[description(
+        "the end of the sequence (exclusive). If not specified, the sequence will continue forever."
+    )]
     to: Option<i128>,
 }
 
@@ -28,7 +30,7 @@ pub fn seq(context: CommandContext) -> CrushResult<()> {
     let output = context
         .output
         .initialize(&[ColumnType::new("value", ValueType::Integer)])?;
-    
+
     let mut idx = cfg.from;
     loop {
         if let Some(to) = cfg.to {

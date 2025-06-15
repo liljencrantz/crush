@@ -1,13 +1,13 @@
 use crate::lang::command::CrushCommand;
 use crate::lang::data::dict::Dict;
-use crate::lang::errors::{error, CrushResult};
 use crate::lang::data::list::List;
 use crate::lang::data::r#struct::Struct;
-use crate::lang::state::scope::Scope;
-use crate::lang::serialization::model;
-use crate::lang::serialization::model::{element, Element};
-use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
 use crate::lang::data::table::Table;
+use crate::lang::errors::{CrushResult, error};
+use crate::lang::serialization::model;
+use crate::lang::serialization::model::{Element, element};
+use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
+use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
 use crate::util::glob::Glob;
 use chrono::offset::TimeZone;
@@ -35,7 +35,10 @@ fn serialize_simple(
             Value::Float(f) => element::Element::Float(*f),
             Value::Bool(b) => element::Element::Bool(*b),
             Value::Empty => element::Element::Empty(false),
-            Value::Time(d) => element::Element::Time(d.timestamp_nanos_opt().ok_or("Failed to get current time")?),
+            Value::Time(d) => element::Element::Time(
+                d.timestamp_nanos_opt()
+                    .ok_or("Failed to get current time")?,
+            ),
             _ => return error("Expected simple value"),
         }),
     };
@@ -55,9 +58,7 @@ impl Serializable<Value> for Value {
             element::Element::Float(v) => Ok(Value::Float(*v)),
             element::Element::Binary(v) => Ok(Value::from(v)),
             element::Element::Glob(v) => Ok(Value::Glob(Glob::new(v))),
-            element::Element::Regex(v) => {
-                Ok(Value::Regex(v.clone(), Regex::new(v)?))
-            }
+            element::Element::Regex(v) => Ok(Value::Regex(v.clone(), Regex::new(v)?)),
             element::Element::Bool(v) => Ok(Value::Bool(*v)),
             element::Element::Empty(_) => Ok(Value::Empty),
 
@@ -141,8 +142,9 @@ impl Serializable<Value> for Value {
             Value::Struct(s) => s.serialize(elements, state),
             Value::Dict(d) => d.serialize(elements, state),
             Value::Scope(s) => s.serialize(elements, state),
-            Value::TableOutputStream(_) | Value::TableInputStream(_) |
-            Value::BinaryInputStream(_) => error("Can't serialize streams"),
+            Value::TableOutputStream(_)
+            | Value::TableInputStream(_)
+            | Value::BinaryInputStream(_) => error("Can't serialize streams"),
         }
     }
 }

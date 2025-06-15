@@ -1,16 +1,16 @@
-use std::sync::OnceLock;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, CrushResult};
-use crate::lang::state::contexts::CommandContext;
-use crate::lang::value::ValueType;
-use crate::lang::value::Value;
-use ordered_map::OrderedMap;
-use signature::signature;
+use crate::lang::command::OutputType::Unknown;
+use crate::lang::errors::{CrushResult, argument_error_legacy};
 use crate::lang::signature::number::Number;
 use crate::lang::state::argument_vector::ArgumentVector;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::this::This;
-use crate::lang::command::OutputType::Unknown;
+use crate::lang::value::Value;
+use crate::lang::value::ValueType;
+use ordered_map::OrderedMap;
+use signature::signature;
+use std::sync::OnceLock;
 
 pub fn methods() -> &'static OrderedMap<String, Command> {
     static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
@@ -39,7 +39,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
 #[allow(unused)]
 struct Add {
     #[description("the number to add")]
-    term: Number
+    term: Number,
 }
 
 binary_op!(
@@ -62,7 +62,7 @@ binary_op!(
 #[allow(unused)]
 struct Sub {
     #[description("the number to subtract")]
-    term: Number
+    term: Number,
 }
 binary_op!(
     __sub__,
@@ -84,7 +84,7 @@ binary_op!(
 #[allow(unused)]
 struct Mul {
     #[description("the number to multiply")]
-    term: Number
+    term: Number,
 }
 
 binary_op!(
@@ -107,7 +107,7 @@ binary_op!(
 #[allow(unused)]
 struct Div {
     #[description("the number to divide by")]
-    term: Number
+    term: Number,
 }
 binary_op!(
     __div__,
@@ -129,7 +129,7 @@ binary_op!(
 #[allow(unused)]
 struct Rem {
     #[description("the number to divide by")]
-    term: i128
+    term: i128,
 }
 
 binary_op!(rem, integer, Integer, Integer, |a, b| a % b);
@@ -143,7 +143,7 @@ binary_op!(rem, integer, Integer, Integer, |a, b| a % b);
 #[allow(unused)]
 struct Mod {
     #[description("the number to divide by")]
-    term: i128
+    term: i128,
 }
 
 binary_op!(r#mod, integer, Integer, Integer, |a, b| (a % b + b) % b);
@@ -155,8 +155,7 @@ binary_op!(r#mod, integer, Integer, Integer, |a, b| (a % b + b) % b);
     short = "Negate this integer",
 )]
 #[allow(unused)]
-struct Neg {
-}
+struct Neg {}
 
 fn __neg__(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
@@ -172,14 +171,11 @@ fn __neg__(mut context: CommandContext) -> CrushResult<()> {
     short = "Largest integer value",
 )]
 #[allow(unused)]
-struct Max {
-}
+struct Max {}
 
 fn max(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    context
-        .output
-        .send(Value::Integer(i128::MAX))
+    context.output.send(Value::Integer(i128::MAX))
 }
 
 #[signature(
@@ -189,12 +185,9 @@ fn max(context: CommandContext) -> CrushResult<()> {
     short = "Smallest integer value",
 )]
 #[allow(unused)]
-struct Min {
-}
+struct Min {}
 
 fn min(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    context
-        .output
-        .send(Value::Integer(i128::MIN))
+    context.output.send(Value::Integer(i128::MIN))
 }

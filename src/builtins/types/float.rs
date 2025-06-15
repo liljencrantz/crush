@@ -1,15 +1,15 @@
-use std::sync::OnceLock;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, CrushResult};
-use crate::lang::state::contexts::CommandContext;
-use crate::lang::value::ValueType;
-use crate::lang::value::Value;
-use ordered_map::OrderedMap;
-use signature::signature;
+use crate::lang::errors::{CrushResult, argument_error_legacy};
 use crate::lang::signature::number::Number;
 use crate::lang::state::argument_vector::ArgumentVector;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::this::This;
+use crate::lang::value::Value;
+use crate::lang::value::ValueType;
+use ordered_map::OrderedMap;
+use signature::signature;
+use std::sync::OnceLock;
 
 pub fn methods() -> &'static OrderedMap<String, Command> {
     static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
@@ -41,7 +41,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
 #[allow(unused)]
 struct Add {
     #[description("the number to add")]
-    term: Number
+    term: Number,
 }
 
 binary_op!(
@@ -64,7 +64,7 @@ binary_op!(
 #[allow(unused)]
 struct Sub {
     #[description("the number to subtract")]
-    term: Number
+    term: Number,
 }
 
 binary_op!(
@@ -87,7 +87,7 @@ binary_op!(
 #[allow(unused)]
 struct Mul {
     #[description("the number to multiply")]
-    term: Number
+    term: Number,
 }
 
 binary_op!(
@@ -110,7 +110,7 @@ binary_op!(
 #[allow(unused)]
 struct Div {
     #[description("the number to divide by")]
-    term: Number
+    term: Number,
 }
 binary_op!(
     __div__,
@@ -129,8 +129,7 @@ binary_op!(
     output = Known(ValueType::Float),
     short = "Negate this float",
 )]
-struct Neg {
-}
+struct Neg {}
 
 fn __neg__(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
@@ -143,8 +142,7 @@ fn __neg__(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Bool),
     short = "True if this float is NaN",
 )]
-struct IsNan {
-}
+struct IsNan {}
 
 fn is_nan(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
@@ -174,14 +172,11 @@ fn is_infinite(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Float),
     short = "Largest finite float value",
 )]
-struct Max {
-}
+struct Max {}
 
 fn max(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    context
-        .output
-        .send(Value::Float(f64::MAX))
+    context.output.send(Value::Float(f64::MAX))
 }
 
 #[signature(
@@ -190,14 +185,11 @@ fn max(context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Float),
     short = "Smallest finite float value",
 )]
-struct Min {
-}
+struct Min {}
 
 fn min(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    context
-        .output
-        .send(Value::Float(f64::MIN))
+    context.output.send(Value::Float(f64::MIN))
 }
 
 #[signature(
@@ -206,14 +198,11 @@ fn min(context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Float),
     short = "Not a number",
 )]
-struct Nan {
-}
+struct Nan {}
 
 fn nan(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    context
-        .output
-        .send(Value::Float(f64::NAN))
+    context.output.send(Value::Float(f64::NAN))
 }
 
 #[signature(
@@ -222,12 +211,9 @@ fn nan(context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Float),
     short = "Infinity",
 )]
-struct Infinity {
-}
+struct Infinity {}
 
 fn infinity(context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    context
-        .output
-        .send(Value::Float(f64::INFINITY))
+    context.output.send(Value::Float(f64::INFINITY))
 }

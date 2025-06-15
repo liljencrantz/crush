@@ -1,27 +1,26 @@
+use crate::data::table::ColumnFormat;
 /**
-    A receiver of values that prints any values sent to it in a human readable format.
- */
-
+   A receiver of values that prints any values sent to it in a human readable format.
+*/
 use crate::lang::data::binary::BinaryReader;
-use crate::lang::printer::Printer;
-use crate::lang::pipe::{CrushStream, TableInputStream, ValueSender, printer_pipe};
+use crate::lang::data::dict::DictReader;
+use crate::lang::data::r#struct::Struct;
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
 use crate::lang::data::table::Table;
 use crate::lang::data::table::TableReader;
+use crate::lang::pipe::{CrushStream, TableInputStream, ValueSender, printer_pipe};
+use crate::lang::printer::Printer;
+use crate::lang::state::global_state::GlobalState;
 use crate::lang::value::Alignment;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
-use crate::lang::data::r#struct::Struct;
+use crate::state::global_state::FormatData;
+use crate::util::hex::to_hex;
+use chrono::Duration;
 use std::cmp::max;
 use std::io::{BufReader, Read};
 use std::thread;
-use chrono::Duration;
-use crate::util::hex::to_hex;
-use crate::lang::state::global_state::GlobalState;
-use crate::data::table::ColumnFormat;
-use crate::lang::data::dict::DictReader;
-use crate::state::global_state::FormatData;
 
 /**
     The main entrypoint for this module. Given a `Printer` and a `GlobalState` instance,
@@ -29,10 +28,7 @@ use crate::state::global_state::FormatData;
     to the rules in `GlobalState::fromat_data()` and passed on to the `Printer`. Stream data will
     be turned into pretty human readable tables.
 */
-pub fn create_pretty_printer(
-    printer: Printer,
-    global_state: &GlobalState,
-) -> ValueSender {
+pub fn create_pretty_printer(printer: Printer, global_state: &GlobalState) -> ValueSender {
     let global_state = global_state.clone();
     let (o, i) = printer_pipe();
     let printer_clone = global_state.printer().clone();
@@ -40,12 +36,17 @@ pub fn create_pretty_printer(
         thread::Builder::new()
             .name("output-formater".to_string())
             .spawn(move || {
-                let mut pp = PrettyPrinter { printer, format_data: global_state.format_data() };
+                let mut pp = PrettyPrinter {
+                    printer,
+                    format_data: global_state.format_data(),
+                };
                 while let Ok(val) = i.recv() {
                     pp.format_data = global_state.format_data();
                     pp.print_value(val, &ColumnFormat::None);
                 }
-            }).map_err(|e|{e.into()}));
+            })
+            .map_err(|e| e.into()),
+    );
     o
 }
 
@@ -65,7 +66,6 @@ impl Width for &str {
     }
 }
 
-
 pub struct PrettyPrinter {
     printer: Printer,
     format_data: FormatData,
@@ -84,7 +84,11 @@ fn printable(v: u8) -> String {
 }
 
 fn format_binary_chunk(c: &[u8]) -> String {
-    let hex = c.iter().map(|u| to_hex(*u)).collect::<Vec<String>>().join("");
+    let hex = c
+        .iter()
+        .map(|u| to_hex(*u))
+        .collect::<Vec<String>>()
+        .join("");
     let printable = c
         .iter()
         .map(|u| printable(*u))
@@ -126,7 +130,10 @@ fn is_text(buff: &[u8]) -> bool {
 
 impl PrettyPrinter {
     pub fn new(printer: Printer, format_data: FormatData) -> PrettyPrinter {
-        PrettyPrinter { printer, format_data }
+        PrettyPrinter {
+            printer,
+            format_data,
+        }
     }
 
     pub fn print_value(&self, cell: Value, format: &ColumnFormat) {
@@ -136,14 +143,18 @@ impl PrettyPrinter {
             Value::BinaryInputStream(mut b) => self.print_binary(b.as_mut(), 0),
             Value::Empty => {}
             Value::Struct(data) => self.print_struct(data, 0),
-            Value::List(list) =>
+            Value::List(list) => {
                 if list.len() < 8 {
                     self.printer.line(list.to_string().as_str())
                 } else {
                     self.print_stream(list.stream().as_mut(), 0)
                 }
+            }
             Value::Dict(dict) => self.print_stream(&mut DictReader::new(dict), 0),
-            _ => self.printer.line(cell.to_pretty_string(&self.format_data, format, false).as_str()),
+            _ => self.printer.line(
+                cell.to_pretty_string(&self.format_data, format, false)
+                    .as_str(),
+            ),
         };
     }
 
@@ -169,7 +180,7 @@ impl PrettyPrinter {
                         data.drain(..);
                     }
                 }
-                Err(e) =>
+                Err(e) => {
                     if e.is_disconnected() {
                         break;
                     } else {
@@ -177,6 +188,7 @@ impl PrettyPrinter {
                         data = Vec::new();
                         data.drain(..);
                     }
+                }
             }
         }
         if !data.is_empty() {
@@ -190,13 +202,21 @@ impl PrettyPrinter {
         }
     }
 
-    fn calculate_body_width(&self, w: &mut [usize], data: &[Row], col_count: usize, columns: &[ColumnType]) {
+    fn calculate_body_width(
+        &self,
+        w: &mut [usize],
+        data: &[Row],
+        col_count: usize,
+        columns: &[ColumnType],
+    ) {
         for r in data {
             for (idx, c) in r.cells().iter().enumerate() {
                 if idx == col_count {
                     break;
                 }
-                let l = c.to_pretty_string(&self.format_data, &columns[idx].format, true).width();
+                let l = c
+                    .to_pretty_string(&self.format_data, &columns[idx].format, true)
+                    .width();
                 w[idx] = max(w[idx], l);
             }
         }
@@ -273,7 +293,14 @@ impl PrettyPrinter {
         self.printer.line(&row);
     }
 
-    fn print_body(&self, w: &[usize], columns: &[ColumnType], data: Vec<Row>, indent: usize, last_separate: bool) {
+    fn print_body(
+        &self,
+        w: &[usize],
+        columns: &[ColumnType],
+        data: Vec<Row>,
+        indent: usize,
+        last_separate: bool,
+    ) {
         let col_count = w.len();
         for r in data.into_iter() {
             let mut rows = Vec::new();
@@ -284,13 +311,31 @@ impl PrettyPrinter {
 
             if last_separate {
                 let last = r_vec.remove(r_vec.len() - 1);
-                self.print_row(w, r_vec, indent, &mut rows, &mut outputs, &mut binaries, columns, col_count);
+                self.print_row(
+                    w,
+                    r_vec,
+                    indent,
+                    &mut rows,
+                    &mut outputs,
+                    &mut binaries,
+                    columns,
+                    col_count,
+                );
                 match last {
                     Value::Struct(s) => self.print_struct(s, indent + 1),
                     _ => panic!("Invalid data"),
                 }
             } else {
-                self.print_row(w, r_vec, indent, &mut rows, &mut outputs, &mut binaries, columns, col_count);
+                self.print_row(
+                    w,
+                    r_vec,
+                    indent,
+                    &mut rows,
+                    &mut outputs,
+                    &mut binaries,
+                    columns,
+                    col_count,
+                );
             }
 
             for r in rows {
@@ -342,7 +387,10 @@ impl PrettyPrinter {
         if types.len() == 1 && indent == 0 && !has_table {
             self.print_single_column_table(data, types)
         } else {
-            let last_separate = types.len() > 0 && indent == 0 && !has_table && types[types.len() - 1].cell_type == ValueType::Struct;
+            let last_separate = types.len() > 0
+                && indent == 0
+                && !has_table
+                && types[types.len() - 1].cell_type == ValueType::Struct;
 
             let types = if last_separate {
                 &types[0..types.len() - 1]

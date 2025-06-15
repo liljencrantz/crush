@@ -3,15 +3,15 @@ use crate::lang::{data::table::Row, value::Value, value::ValueType};
 use std::io::{BufReader, Write};
 
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{error, CrushResult};
+use crate::lang::data::dict::Dict;
+use crate::lang::data::table::ColumnType;
+use crate::lang::errors::{CrushResult, error};
 use crate::lang::signature::files::Files;
 use crate::lang::state::scope::ScopeLoader;
-use crate::lang::data::table::ColumnType;
 use crate::lang::{data::list::List, data::table::Table};
 use signature::signature;
 use std::collections::HashSet;
 use std::convert::TryFrom;
-use crate::lang::data::dict::Dict;
 
 fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
     match yaml_value {
@@ -23,9 +23,7 @@ fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
             } else if f.is_i64() {
                 Ok(Value::Integer(f.as_i64().expect("") as i128))
             } else {
-                Ok(Value::Float(
-                    f.as_f64().ok_or("Not a valid number")?
-                ))
+                Ok(Value::Float(f.as_f64().ok_or("Not a valid number")?))
             }
         }
         serde_yaml::Value::String(s) => Ok(Value::from(s.as_str())),
@@ -75,23 +73,22 @@ fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
             Ok(d.into())
         }
 
-        serde_yaml::Value::Tagged(t) => { from_yaml(&t.value) }
+        serde_yaml::Value::Tagged(t) => from_yaml(&t.value),
     }
 }
 
 fn to_yaml(value: Value) -> CrushResult<serde_yaml::Value> {
     match value.materialize()? {
         Value::File(s) => Ok(serde_yaml::Value::from(
-            s.to_str().ok_or("Invalid filename")?)),
+            s.to_str().ok_or("Invalid filename")?,
+        )),
 
         Value::String(s) => Ok(serde_yaml::Value::from(s.to_string())),
 
         Value::Integer(i) => Ok(serde_yaml::Value::from(i64::try_from(i)?)),
 
         Value::List(l) => Ok(serde_yaml::Value::Sequence(
-            l.iter()
-                .map(to_yaml)
-                .collect::<CrushResult<Vec<_>>>()?,
+            l.iter().map(to_yaml).collect::<CrushResult<Vec<_>>>()?,
         )),
 
         Value::Table(t) => {
@@ -143,7 +140,8 @@ struct FromSignature {
 }
 
 pub fn from(context: CommandContext) -> CrushResult<()> {
-    let cfg: FromSignature = FromSignature::parse(context.arguments, &context.global_state.printer())?;
+    let cfg: FromSignature =
+        FromSignature::parse(context.arguments, &context.global_state.printer())?;
     let reader = BufReader::new(cfg.files.reader(context.input)?);
     let serde_value = serde_yaml::from_reader(reader)?;
     let crush_value = from_yaml(&serde_value)?;

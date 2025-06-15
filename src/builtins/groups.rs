@@ -1,13 +1,13 @@
-use std::ops::Add;
+use crate::argument_error_legacy;
 use crate::lang::command::OutputType::Known;
+use crate::lang::data::r#struct::Struct;
 use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
-use crate::lang::data::r#struct::Struct;
 use crate::lang::value::{Value, ValueType};
-use signature::signature;
 use crate::lang::{data::table::ColumnType, data::table::Row};
-use crate::{argument_error_legacy};
+use signature::signature;
+use std::ops::Add;
 
 static LIST_OUTPUT_TYPE: [ColumnType; 2] = [
     ColumnType::new("name", ValueType::String),
@@ -27,11 +27,10 @@ fn list(context: CommandContext) -> CrushResult<()> {
     let groups = sysinfo::Groups::new_with_refreshed_list();
 
     for g in groups.list() {
-        output.send(Row::new(
-            vec![
-                Value::from(g.name()),
-                Value::from(g.id().add(0)),
-            ]))?;
+        output.send(Row::new(vec![
+            Value::from(g.name()),
+            Value::from(g.id().add(0)),
+        ]))?;
     }
     Ok(())
 }

@@ -1,7 +1,7 @@
-use crate::util::hex::from_hex;
-use crate::lang::errors::{data_error};
-use std::convert::TryFrom;
 use crate::CrushResult;
+use crate::lang::errors::data_error;
+use crate::util::hex::from_hex;
+use std::convert::TryFrom;
 
 pub fn escape_without_quotes(s: &str) -> String {
     let mut res = String::with_capacity(s.len());
@@ -13,12 +13,13 @@ pub fn escape_without_quotes(s: &str) -> String {
             '\r' => res += "\\r",
             '\t' => res += "\\t",
             '\x1b' => res += "\\e",
-            _ =>
+            _ => {
                 if c < '\x20' {
                     res.push_str(&format!("\\x{:02x}", u32::from(c)));
                 } else {
                     res.push(c);
-                },
+                }
+            }
         }
     }
     res
@@ -61,12 +62,13 @@ pub fn unescape(s: &str) -> CrushResult<String> {
                 }
             }
 
-            Normal =>
+            Normal => {
                 if c == '\\' {
                     state = Backslash;
                 } else {
                     res += &c.to_string();
                 }
+            }
 
             Hex(mut v) => {
                 v.push(c);
@@ -99,8 +101,11 @@ pub fn unescape(s: &str) -> CrushResult<String> {
                 } else {
                     let bytes = from_hex(&v)?;
                     let cc = char::try_from(
-                        (bytes[0] as u32) << 24 | (bytes[1] as u32) << 16 |
-                            (bytes[2] as u32) << 8 | (bytes[3] as u32) << 0)?;
+                        (bytes[0] as u32) << 24
+                            | (bytes[1] as u32) << 16
+                            | (bytes[2] as u32) << 8
+                            | (bytes[3] as u32) << 0,
+                    )?;
                     res.push(cc);
                     state = Normal
                 }

@@ -1,8 +1,8 @@
-use crate::lang::errors::{error, CrushResult};
-use crate::lang::serialization::model;
-use crate::lang::serialization::model::{element, Element};
-use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
 use crate::lang::data::table::ColumnType;
+use crate::lang::errors::{CrushResult, error};
+use crate::lang::serialization::model;
+use crate::lang::serialization::model::{Element, element};
+use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
 use crate::lang::value::ValueType;
 use model::r#type::SimpleTypeKind;
 use model::r#type::Type::SimpleType;
@@ -120,8 +120,9 @@ impl Serializable<ValueType> for ValueType {
                 });
                 return Ok(idx);
             }
-            ValueType::TableOutputStream(col) | ValueType::Table(col) |
-            ValueType::TableInputStream(col) => {
+            ValueType::TableOutputStream(col)
+            | ValueType::Table(col)
+            | ValueType::TableInputStream(col) => {
                 let d = model::TableType {
                     column_types: col
                         .iter()
@@ -130,9 +131,13 @@ impl Serializable<ValueType> for ValueType {
                 };
                 let idx = elements.len();
                 let el = match self {
-                    ValueType::TableOutputStream(_) => Some(model::r#type::Type::TableOutputStreamType(d)),
+                    ValueType::TableOutputStream(_) => {
+                        Some(model::r#type::Type::TableOutputStreamType(d))
+                    }
                     ValueType::Table(_) => Some(model::r#type::Type::TableType(d)),
-                    ValueType::TableInputStream(_) => Some(model::r#type::Type::TableInputStreamType(d)),
+                    ValueType::TableInputStream(_) => {
+                        Some(model::r#type::Type::TableInputStreamType(d))
+                    }
                     _ => panic!("Unpossible!"),
                 };
                 elements.push(model::Element {

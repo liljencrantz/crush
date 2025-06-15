@@ -1,17 +1,20 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::CrushResult;
+use crate::lang::signature::number::Number;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use signature::signature;
-use crate::lang::signature::number::Number;
 
 macro_rules! math_fun {
     ($name:ident, $Signature: ident, $op:expr) => {
         fn $name(context: CommandContext) -> CrushResult<()> {
-            let cfg: $Signature = $Signature::parse(context.arguments, &context.global_state.printer())?;
-            context.output.send(Value::Float($op(cfg.number.as_float())))
+            let cfg: $Signature =
+                $Signature::parse(context.arguments, &context.global_state.printer())?;
+            context
+                .output
+                .send(Value::Float($op(cfg.number.as_float())))
         }
     };
 }
@@ -121,7 +124,9 @@ pub struct Log {
 
 fn log(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Log = Log::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.output.send(Value::Float(cfg.number.as_float().log(cfg.base.as_float())))
+    context
+        .output
+        .send(Value::Float(cfg.number.as_float().log(cfg.base.as_float())))
 }
 
 #[signature(
@@ -135,7 +140,9 @@ pub struct Pow {
 
 fn pow(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Pow = Pow::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.output.send(Value::Float(cfg.base.as_float().powf(cfg.n.as_float())))
+    context
+        .output
+        .send(Value::Float(cfg.base.as_float().powf(cfg.n.as_float())))
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {

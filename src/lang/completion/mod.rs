@@ -1,17 +1,19 @@
-use std::ops::Deref;
+use crate::lang::command::ArgumentDescription;
+use crate::lang::completion::parse::{
+    CompletionCommand, LastArgument, ParseResult, PartialCommandResult, parse,
+};
+use crate::lang::errors::CrushResult;
+use crate::lang::parser::Parser;
 /**
   Main entry point for tab completion code
 */
 use crate::lang::state::scope::Scope;
-use crate::lang::errors::CrushResult;
-use crate::lang::value::{ValueType, Value};
+use crate::lang::value::{Value, ValueType};
 use crate::util::directory_lister::DirectoryLister;
-use std::path::PathBuf;
-use crate::lang::completion::parse::{ParseResult, CompletionCommand, LastArgument, parse, PartialCommandResult};
-use nix::NixPath;
-use crate::lang::command::ArgumentDescription;
 use crate::util::escape::escape_without_quotes;
-use crate::lang::parser::Parser;
+use nix::NixPath;
+use std::ops::Deref;
+use std::path::PathBuf;
 
 pub mod parse;
 
@@ -34,10 +36,7 @@ impl Completion {
         }
     }
 
-    pub fn complete(
-        &self,
-        line: &str,
-    ) -> String {
+    pub fn complete(&self, line: &str) -> String {
         let mut res = line.to_string();
         res.insert_str(self.position, &self.completion);
         res
@@ -64,11 +63,14 @@ fn has_type(value: &Value, pattern: &ValueType, max_depth: i8) -> bool {
         return false;
     }
     for name in &value.fields() {
-        if value.field(name)
-            .map(|opt| opt.map(|val|
-                is_or_has_type(&val, pattern, max_depth - 1))
-                .unwrap_or(false))
-            .unwrap_or(false) {
+        if value
+            .field(name)
+            .map(|opt| {
+                opt.map(|val| is_or_has_type(&val, pattern, max_depth - 1))
+                    .unwrap_or(false)
+            })
+            .unwrap_or(false)
+        {
             return true;
         }
     }
@@ -77,30 +79,32 @@ fn has_type(value: &Value, pattern: &ValueType, max_depth: i8) -> bool {
 
 fn completion_suffix(maybe_scope: CrushResult<Option<Value>>, t: &ValueType) -> &str {
     match t {
-        ValueType::Any =>
-            match maybe_scope {
-                Ok(Some(Value::Scope(_))) => ":",
-                Ok(Some(Value::Empty)) |
-                Ok(Some(Value::Bool(_))) |
-                Ok(Some(Value::String(_))) |
-                Ok(Some(Value::Command(_))) => " ",
-                _ => "",
-            }
+        ValueType::Any => match maybe_scope {
+            Ok(Some(Value::Scope(_))) => ":",
+            Ok(Some(Value::Empty))
+            | Ok(Some(Value::Bool(_)))
+            | Ok(Some(Value::String(_)))
+            | Ok(Some(Value::Command(_))) => " ",
+            _ => "",
+        },
 
-        target_type =>
-            match maybe_scope {
-                Ok(Some(completion_target)) =>
-                    if completion_target.value_type().is_compatible_with(target_type) {
-                        if has_type(&completion_target, target_type, 8) {
-                            ""
-                        } else {
-                            " "
-                        }
+        target_type => match maybe_scope {
+            Ok(Some(completion_target)) => {
+                if completion_target
+                    .value_type()
+                    .is_compatible_with(target_type)
+                {
+                    if has_type(&completion_target, target_type, 8) {
+                        ""
                     } else {
-                        ":"
-                    },
-                _ => "",
+                        " "
+                    }
+                } else {
+                    ":"
+                }
             }
+            _ => "",
+        },
     }
 }
 
@@ -118,23 +122,28 @@ fn complete_label(
     cursor: usize,
     out: &mut Vec<Completion>,
 ) -> CrushResult<()> {
-    out.append(&mut value.fields()
-        .iter()
-        .filter(|k| prefix_match(prefix, k))
-        .filter(|k| value.field(*k)
-            .map(|opt| opt.map(
-                |val| is_or_has_type(&val, t, 4))
-                .unwrap_or(false))
-            .unwrap_or(false))
-        .map(|k| Completion {
-            completion: format!(
-                "{}{}",
-                &k[prefix.len()..],
-                completion_suffix(value.field(k), t)),
-            display: k.clone(),
-            position: cursor,
-        })
-        .collect());
+    out.append(
+        &mut value
+            .fields()
+            .iter()
+            .filter(|k| prefix_match(prefix, k))
+            .filter(|k| {
+                value
+                    .field(*k)
+                    .map(|opt| opt.map(|val| is_or_has_type(&val, t, 4)).unwrap_or(false))
+                    .unwrap_or(false)
+            })
+            .map(|k| Completion {
+                completion: format!(
+                    "{}{}",
+                    &k[prefix.len()..],
+                    completion_suffix(value.field(k), t)
+                ),
+                display: k.clone(),
+                position: cursor,
+            })
+            .collect(),
+    );
     Ok(())
 }
 
@@ -151,38 +160,42 @@ fn complete_file(
     }
     let prefix = prefix.into();
     let (prefix_str, parent) = if prefix.is_empty() {
-        (
-            "",
-            PathBuf::from(".")
-        )
+        ("", PathBuf::from("."))
     } else if prefix.to_str().unwrap_or("").ends_with('/') {
         ("", prefix)
     } else {
         (
-            prefix.components().last().and_then(|p| p.as_os_str().to_str()).unwrap_or(""),
-            prefix.parent()
+            prefix
+                .components()
+                .last()
+                .and_then(|p| p.as_os_str().to_str())
+                .unwrap_or(""),
+            prefix
+                .parent()
                 .map(|p| p.to_path_buf())
                 .map(|p| if p.is_empty() { PathBuf::from(".") } else { p })
                 .unwrap_or(PathBuf::from("/")),
         )
     };
     if let Ok(dirs) = lister.list(parent) {
-        out.append(&mut dirs
-            .filter(|k| k.name.to_str().unwrap().starts_with(prefix_str))
-            .map(|k| Completion {
-                completion: format!(
-                    "{}{}",
-                    &k.name.to_str().unwrap()[prefix_str.len()..],
-                    match (quoted, k.is_directory) {
-                        (_, true) => "/",
-                        (true, false) => "' ",
-                        (false, false) => " ",
-                    },
-                ),
-                display: k.name.to_str().unwrap().to_string(),
-                position: cursor,
-            })
-            .collect());
+        out.append(
+            &mut dirs
+                .filter(|k| k.name.to_str().unwrap().starts_with(prefix_str))
+                .map(|k| Completion {
+                    completion: format!(
+                        "{}{}",
+                        &k.name.to_str().unwrap()[prefix_str.len()..],
+                        match (quoted, k.is_directory) {
+                            (_, true) => "/",
+                            (true, false) => "' ",
+                            (false, false) => " ",
+                        },
+                    ),
+                    display: k.name.to_str().unwrap().to_string(),
+                    position: cursor,
+                })
+                .collect(),
+        );
     }
     Ok(())
 }
@@ -194,18 +207,21 @@ fn complete_argument_name(
     out: &mut Vec<Completion>,
     is_switch: bool,
 ) -> CrushResult<()> {
-    out.append(&mut arguments
-        .iter()
-        .filter(|a| prefix_match(prefix, a.name.as_str()))
-        .map(|a| Completion {
-            completion: format!(
-                "{}{}",
-                &a.name[prefix.len()..],
-                if is_switch { " " } else { "=" }),
-            display: a.name.clone(),
-            position: cursor,
-        })
-        .collect());
+    out.append(
+        &mut arguments
+            .iter()
+            .filter(|a| prefix_match(prefix, a.name.as_str()))
+            .map(|a| Completion {
+                completion: format!(
+                    "{}{}",
+                    &a.name[prefix.len()..],
+                    if is_switch { " " } else { "=" }
+                ),
+                display: a.name.clone(),
+                position: cursor,
+            })
+            .collect(),
+    );
     Ok(())
 }
 
@@ -240,11 +256,7 @@ fn complete_argument_description(
     res: &mut Vec<Completion>,
 ) -> CrushResult<()> {
     if let Some(allowed) = &argument_description.allowed {
-        complete_argument_values(
-            allowed,
-            parse_result,
-            cursor,
-            res)?;
+        complete_argument_values(allowed, parse_result, cursor, res)?;
     }
     if let Some(cmd) = &argument_description.complete {
         cmd(&parse_result, cursor, scope, res)?;
@@ -260,13 +272,7 @@ fn complete_partial_argument(
     res: &mut Vec<Completion>,
 ) -> CrushResult<()> {
     if let Some(desc) = parse_result.last_argument_description() {
-        complete_argument_description(
-            desc,
-            &parse_result,
-            cursor,
-            scope,
-            res,
-        )?;
+        complete_argument_description(desc, &parse_result, cursor, scope, res)?;
     }
 
     let argument_type = parse_result.last_argument_type();
@@ -288,7 +294,13 @@ fn complete_partial_argument(
         }
 
         LastArgument::Label(label) => {
-            complete_label(Value::Scope(scope.clone()), &label, &argument_type, cursor, res)?;
+            complete_label(
+                Value::Scope(scope.clone()),
+                &label,
+                &argument_type,
+                cursor,
+                res,
+            )?;
         }
 
         LastArgument::Field(label) => {
@@ -323,27 +335,47 @@ pub fn complete(
     let mut res = Vec::new();
     match parse_result {
         ParseResult::Nothing => {
-            complete_label(Value::Scope(scope.clone()), "", &ValueType::Any, cursor, &mut res)?;
+            complete_label(
+                Value::Scope(scope.clone()),
+                "",
+                &ValueType::Any,
+                cursor,
+                &mut res,
+            )?;
             complete_file(lister, "", false, &ValueType::Any, cursor, &mut res)?;
         }
 
         ParseResult::PartialLabel(label) => {
-            complete_label(Value::Scope(scope.clone()), &label, &ValueType::Any, cursor, &mut res)?;
+            complete_label(
+                Value::Scope(scope.clone()),
+                &label,
+                &ValueType::Any,
+                cursor,
+                &mut res,
+            )?;
         }
 
         ParseResult::PartialField(label) => {
-            complete_label(Value::Scope(scope.clone()), &label, &ValueType::Any, cursor, &mut res)?;
+            complete_label(
+                Value::Scope(scope.clone()),
+                &label,
+                &ValueType::Any,
+                cursor,
+                &mut res,
+            )?;
         }
 
         ParseResult::PartialMember(parent, label) => {
             complete_label(parent, &label, &ValueType::Any, cursor, &mut res)?;
         }
 
-        ParseResult::PartialFile(cmd, quoted) =>
-            complete_file(lister, &cmd, quoted, &ValueType::Any, cursor, &mut res)?,
+        ParseResult::PartialFile(cmd, quoted) => {
+            complete_file(lister, &cmd, quoted, &ValueType::Any, cursor, &mut res)?
+        }
 
-        ParseResult::PartialArgument(parse_result) =>
-            complete_partial_argument(parse_result, cursor, scope, lister, &mut res)?,
+        ParseResult::PartialArgument(parse_result) => {
+            complete_partial_argument(parse_result, cursor, scope, lister, &mut res)?
+        }
 
         ParseResult::PartialQuotedString(_) => {}
     }
@@ -354,10 +386,10 @@ pub fn complete(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::lang::state::contexts::CommandContext;
     use crate::lang::value::Value;
     use crate::util::directory_lister::tests::FakeDirectoryLister;
     use signature::signature;
-    use crate::lang::state::contexts::CommandContext;
 
     fn parser() -> Parser {
         Parser::new()
@@ -411,15 +443,27 @@ mod tests {
 
     fn scope_with_function() -> Scope {
         let root = Scope::create_root();
-        let chld = root.create_namespace("namespace", "bla", Box::new(|env| {
-            MyCmdSignature::declare(env)?;
-            Ok(())
-        })).unwrap();
-        let _chld2 = root.create_namespace("other_namespace", "bla", Box::new(|env| {
-            AllowedCmdSignature::declare(env)?;
-            MultiArgumentCmdSignature::declare(env)?;
-            Ok(())
-        })).unwrap();
+        let chld = root
+            .create_namespace(
+                "namespace",
+                "bla",
+                Box::new(|env| {
+                    MyCmdSignature::declare(env)?;
+                    Ok(())
+                }),
+            )
+            .unwrap();
+        let _chld2 = root
+            .create_namespace(
+                "other_namespace",
+                "bla",
+                Box::new(|env| {
+                    AllowedCmdSignature::declare(env)?;
+                    MultiArgumentCmdSignature::declare(env)?;
+                    Ok(())
+                }),
+            )
+            .unwrap();
         root.r#use(&chld);
         root
     }
@@ -455,7 +499,10 @@ mod tests {
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "my_cmd super_fancy_argument=");
+        assert_eq!(
+            &completions[0].complete(line),
+            "my_cmd super_fancy_argument="
+        );
     }
 
     #[test]
@@ -466,7 +513,10 @@ mod tests {
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "namespace:my_cmd super_fancy_argument=");
+        assert_eq!(
+            &completions[0].complete(line),
+            "namespace:my_cmd super_fancy_argument="
+        );
     }
 
     #[test]
@@ -488,7 +538,10 @@ mod tests {
         s.declare("super_confusing_variable", Value::Empty).unwrap();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "my_cmd --super_fancy_argument ");
+        assert_eq!(
+            &completions[0].complete(line),
+            "my_cmd --super_fancy_argument "
+        );
     }
 
     #[test]
@@ -536,7 +589,6 @@ mod tests {
         assert_eq!(&completions[0].complete(line), "a | abcd ");
     }
 
-
     #[test]
     fn check_empty_switch_completion() {
         let line = "my_cmd --";
@@ -545,7 +597,10 @@ mod tests {
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "my_cmd --super_fancy_argument ");
+        assert_eq!(
+            &completions[0].complete(line),
+            "my_cmd --super_fancy_argument "
+        );
     }
 
     #[test]
@@ -645,10 +700,15 @@ mod tests {
         let cursor = 7;
 
         let s = Scope::create_root();
-        s.create_namespace("abcd", "bla", Box::new(|env| {
-            env.declare("bcde", Value::Empty).unwrap();
-            Ok(())
-        })).unwrap();
+        s.create_namespace(
+            "abcd",
+            "bla",
+            Box::new(|env| {
+                env.declare("bcde", Value::Empty).unwrap();
+                Ok(())
+            }),
+        )
+        .unwrap();
 
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
@@ -661,10 +721,15 @@ mod tests {
         let cursor = line.len();
 
         let s = Scope::create_root();
-        s.create_namespace("abcd", "bla", Box::new(|env| {
-            env.declare("bcde", Value::Empty).unwrap();
-            Ok(())
-        })).unwrap();
+        s.create_namespace(
+            "abcd",
+            "bla",
+            Box::new(|env| {
+                env.declare("bcde", Value::Empty).unwrap();
+                Ok(())
+            }),
+        )
+        .unwrap();
 
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
@@ -741,7 +806,10 @@ mod tests {
         s.declare("type", Value::Type(ValueType::Empty)).unwrap();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "my_cmd super_fancy_argument=$type ");
+        assert_eq!(
+            &completions[0].complete(line),
+            "my_cmd super_fancy_argument=$type "
+        );
     }
 
     #[test]
@@ -752,7 +820,10 @@ mod tests {
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "other_namespace:allowed_cmd argument=\"foo\" ");
+        assert_eq!(
+            &completions[0].complete(line),
+            "other_namespace:allowed_cmd argument=\"foo\" "
+        );
     }
 
     #[test]
@@ -763,7 +834,10 @@ mod tests {
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "other_namespace:allowed_cmd \"foo\" ");
+        assert_eq!(
+            &completions[0].complete(line),
+            "other_namespace:allowed_cmd \"foo\" "
+        );
     }
 
     #[test]
@@ -774,7 +848,10 @@ mod tests {
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "other_namespace:multi_argument_cmd \"foo\" \"bar\" ");
+        assert_eq!(
+            &completions[0].complete(line),
+            "other_namespace:multi_argument_cmd \"foo\" \"bar\" "
+        );
     }
 
     #[test]
@@ -785,7 +862,10 @@ mod tests {
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "other_namespace:multi_argument_cmd \"foo\" \"bar\" \"baz\" ");
+        assert_eq!(
+            &completions[0].complete(line),
+            "other_namespace:multi_argument_cmd \"foo\" \"bar\" \"baz\" "
+        );
     }
 
     #[test]
@@ -796,7 +876,10 @@ mod tests {
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "other_namespace:multi_argument_cmd \"foo\" argument3=\"baz\" \"bar\" ");
+        assert_eq!(
+            &completions[0].complete(line),
+            "other_namespace:multi_argument_cmd \"foo\" argument3=\"baz\" \"bar\" "
+        );
     }
 
     #[test]
@@ -807,7 +890,10 @@ mod tests {
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "other_namespace:multi_argument_cmd argument2=\"bar\" \"foo\" \"baz\" ");
+        assert_eq!(
+            &completions[0].complete(line),
+            "other_namespace:multi_argument_cmd argument2=\"bar\" \"foo\" \"baz\" "
+        );
     }
 
     #[test]

@@ -1,12 +1,12 @@
 use crate::lang::command::Command;
-use crate::lang::errors::{data_error, CrushResult};
+use crate::lang::command::OutputType::Known;
+use crate::lang::errors::{CrushResult, data_error};
+use crate::lang::pipe::pipe;
 use crate::lang::state::contexts::CommandContext;
+use crate::lang::state::scope::ScopeType::Loop;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use signature::signature;
-use crate::lang::command::OutputType::Known;
-use crate::lang::pipe::pipe;
-use crate::lang::state::scope::ScopeType::Loop;
 
 #[signature(
     control.r#while,
@@ -30,7 +30,12 @@ fn r#while(mut context: CommandContext) -> CrushResult<()> {
         let (sender, receiver) = pipe();
 
         let cond_env = context.scope.create_child(&context.scope, Loop);
-        cfg.condition.eval(context.empty().with_scope(cond_env.clone()).with_output(sender))?;
+        cfg.condition.eval(
+            context
+                .empty()
+                .with_scope(cond_env.clone())
+                .with_output(sender),
+        )?;
         if cond_env.is_stopped() {
             break;
         }

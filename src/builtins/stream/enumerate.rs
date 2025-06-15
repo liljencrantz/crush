@@ -1,6 +1,6 @@
-use crate::lang::errors::{error, CrushResult};
-use crate::lang::state::contexts::CommandContext;
 use crate::lang::data::table::ColumnType;
+use crate::lang::errors::{CrushResult, error};
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::{data::table::Row, value::Value, value::ValueType};
 use signature::signature;
 
@@ -24,8 +24,7 @@ fn enumerate(context: CommandContext) -> CrushResult<()> {
     let cfg = Enumerate::parse(context.arguments, &context.global_state.printer())?;
     match context.input.recv()?.stream()? {
         Some(mut input) => {
-            let mut output_type = vec![
-                ColumnType::new_from_string(cfg.name, ValueType::Integer)];
+            let mut output_type = vec![ColumnType::new_from_string(cfg.name, ValueType::Integer)];
             output_type.extend(input.types().to_vec());
             let output = context.output.initialize(&output_type)?;
 

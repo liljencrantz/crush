@@ -1,14 +1,11 @@
-use crate::lang::errors::{CrushResult};
-use crate::lang::signature::files::Files;
-use crate::lang::state::scope::ScopeLoader;
+use crate::lang::errors::CrushResult;
 use crate::lang::pipe::TableOutputStream;
-use crate::lang::{
-    data::table::ColumnType, data::table::Row, value::Value,
-    value::ValueType,
-};
+use crate::lang::signature::files::Files;
+use crate::lang::state::contexts::CommandContext;
+use crate::lang::state::scope::ScopeLoader;
+use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value::ValueType};
 use signature::signature;
 use std::io::{BufRead, BufReader};
-use crate::lang::state::contexts::CommandContext;
 
 #[signature(
     io.split.from,

@@ -1,18 +1,18 @@
-use std::clone::Clone;
-use std::sync::OnceLock;
+use crate::data::table::ColumnVec;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{argument_error_legacy, CrushResult, data_error};
-use crate::lang::state::contexts::CommandContext;
-use crate::lang::value::Value;
-use crate::lang::{command::Command, data::list::List, value::ValueType};
-use ordered_map::OrderedMap;
-use signature::signature;
-use crate::data::table::ColumnVec;
+use crate::lang::errors::{CrushResult, argument_error_legacy, data_error};
 use crate::lang::pipe::{Stream, ValueSender};
 use crate::lang::state::argument_vector::ArgumentVector;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::this::This;
+use crate::lang::value::Value;
+use crate::lang::{command::Command, data::list::List, value::ValueType};
 use crate::util::replace::Replace;
+use ordered_map::OrderedMap;
+use signature::signature;
+use std::clone::Clone;
+use std::sync::OnceLock;
 
 pub fn methods() -> &'static OrderedMap<String, Command> {
     static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
@@ -81,8 +81,9 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
         ValueType::List(c) => match *c {
             ValueType::Empty => {
                 let cfg: Call = Call::parse(context.arguments, &context.global_state.printer())?;
-                context.output.send(Value::Type(ValueType::List(Box::new(
-                    cfg.value_type))))
+                context
+                    .output
+                    .send(Value::Type(ValueType::List(Box::new(cfg.value_type))))
             }
             c => {
                 if context.arguments.is_empty() {
@@ -119,7 +120,9 @@ fn of(context: CommandContext) -> CrushResult<()> {
     let cfg: Of = Of::parse(context.arguments, &context.global_state.printer())?;
     match cfg.values.len() {
         0 => argument_error_legacy("Expected at least one argument"),
-        _ => context.output.send(List::new_without_type(cfg.values).into()),
+        _ => context
+            .output
+            .send(List::new_without_type(cfg.values).into()),
     }
 }
 
@@ -134,7 +137,12 @@ struct Collect {
     column: Option<String>,
 }
 
-fn collect_internal(mut input: Stream, idx: usize, value_type: ValueType, output: ValueSender) -> CrushResult<()> {
+fn collect_internal(
+    mut input: Stream,
+    idx: usize,
+    value_type: ValueType,
+    output: ValueSender,
+) -> CrushResult<()> {
     let mut lst = Vec::new();
     while let Ok(row) = input.read() {
         lst.push(Vec::from(row).replace(idx, Value::Empty));
@@ -148,17 +156,21 @@ fn collect(context: CommandContext) -> CrushResult<()> {
     let input = context.input.recv()?.stream()?.ok_or("Expected a stream")?;
     let input_type = input.types().to_vec();
     match (input_type.len(), cfg.column) {
-        (_, Some(name)) =>
-            match input_type.as_slice().find(&name) {
-                Ok(idx) =>
-                    collect_internal(input, idx, input_type[idx].cell_type.clone(), context.output),
-                _ => data_error(format!("Column {} not found", name))
-            }
+        (_, Some(name)) => match input_type.as_slice().find(&name) {
+            Ok(idx) => collect_internal(
+                input,
+                idx,
+                input_type[idx].cell_type.clone(),
+                context.output,
+            ),
+            _ => data_error(format!("Column {} not found", name)),
+        },
 
-        (1, None) =>
-            collect_internal(input, 0, input_type[0].cell_type.clone(), context.output),
+        (1, None) => collect_internal(input, 0, input_type[0].cell_type.clone(), context.output),
 
-        _ =>  data_error("Expected either input with exactly one column or an argument specifying which column to pick"),
+        _ => data_error(
+            "Expected either input with exactly one column or an argument specifying which column to pick",
+        ),
     }
 }
 
@@ -227,7 +239,11 @@ fn push(mut context: CommandContext) -> CrushResult<()> {
 
     for el in &cfg.values {
         if el.value_type() != l.element_type() && l.element_type() != ValueType::Any {
-            return argument_error_legacy(format!("Invalid element type, got {} but expected {}", el.value_type().to_string(), l.element_type().to_string()));
+            return argument_error_legacy(format!(
+                "Invalid element type, got {} but expected {}",
+                el.value_type().to_string(),
+                l.element_type().to_string()
+            ));
         }
     }
     if !cfg.values.is_empty() {
@@ -242,8 +258,7 @@ fn push(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Empty),
     short = "Remove the last element from the list.",
 )]
-struct Pop {
-}
+struct Pop {}
 
 fn pop(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
@@ -258,8 +273,7 @@ fn pop(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Empty),
     short = "Return the last element from the list without removing it.",
 )]
-struct Peek {
-}
+struct Peek {}
 
 fn peek(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
@@ -274,8 +288,7 @@ fn peek(mut context: CommandContext) -> CrushResult<()> {
     output = Unknown,
     short = "Remove all values from this list.",
 )]
-struct Clear {
-}
+struct Clear {}
 
 fn clear(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
@@ -349,7 +362,8 @@ struct Truncate {
 
 fn truncate(mut context: CommandContext) -> CrushResult<()> {
     let list = context.this.list()?;
-    let cfg: Truncate = Truncate::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: Truncate =
+        Truncate::parse(context.remove_arguments(), &context.global_state.printer())?;
     list.truncate(cfg.idx.unwrap_or_default());
     Ok(())
 }
@@ -364,11 +378,8 @@ struct CloneCmd {}
 
 fn clone(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    context
-        .output
-        .send(context.this.list()?.copy().into())
+    context.output.send(context.this.list()?.copy().into())
 }
-
 
 #[signature(
     types.list.__getitem__,
@@ -412,7 +423,5 @@ fn slice(mut context: CommandContext) -> CrushResult<()> {
     if to > s.len() {
         return argument_error_legacy("Substring beyond end of string");
     }
-    context
-        .output
-        .send(s.slice(cfg.from,to)?.into())
+    context.output.send(s.slice(cfg.from, to)?.into())
 }

@@ -1,14 +1,14 @@
-use std::thread::{JoinHandle, ThreadId};
-use crate::lang::printer::Printer;
 use crate::lang::errors::CrushResult;
+use crate::lang::printer::Printer;
+use crate::lang::state::global_state::JobId;
+use chrono::{DateTime, Local};
+use crossbeam::channel::Receiver;
+use crossbeam::channel::Sender;
+use crossbeam::channel::unbounded;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use crossbeam::channel::Sender;
-use crossbeam::channel::Receiver;
-use crossbeam::channel::unbounded;
+use std::thread::{JoinHandle, ThreadId};
 use std::time::Duration;
-use chrono::{DateTime, Local};
-use crate::lang::state::global_state::JobId;
 
 /**
 A thread management utility. Spawn, track and join on threads.
@@ -33,7 +33,7 @@ pub struct ThreadDescription {
 
 fn join_handle(handle: JoinHandle<CrushResult<()>>, printer: &Printer) {
     match handle.join() {
-        Ok(res) => { printer.handle_error(res) }
+        Ok(res) => printer.handle_error(res),
         Err(_) => printer.error("Unknown error while waiting for command to exit"),
     }
 }
@@ -65,9 +65,9 @@ impl ThreadStore {
     Spawn a new thread
     */
     pub fn spawn<F>(&self, name: &str, job_id: Option<JobId>, f: F) -> CrushResult<ThreadId>
-        where
-            F: FnOnce() -> CrushResult<()>,
-            F: Send + 'static,
+    where
+        F: FnOnce() -> CrushResult<()>,
+        F: Send + 'static,
     {
         let slef = self.clone();
         let handle = thread::Builder::new()
@@ -79,11 +79,11 @@ impl ThreadStore {
             })?;
         let id = handle.thread().id();
         let mut data = self.data.lock().unwrap();
-            data.threads.push(ThreadData {
-                handle,
-                creation_time: Local::now(),
-                job_id,
-            });
+        data.threads.push(ThreadData {
+            handle,
+            creation_time: Local::now(),
+            job_id,
+        });
         Ok(id)
     }
 
@@ -139,7 +139,9 @@ impl ThreadStore {
 
     pub fn current(&self) -> CrushResult<Vec<ThreadDescription>> {
         let data = self.data.lock().unwrap();
-        Ok(data.threads.iter()
+        Ok(data
+            .threads
+            .iter()
             .map(|t| ThreadDescription {
                 name: t.handle.thread().name().unwrap_or("<unnamed>").to_string(),
                 creation_time: t.creation_time.clone(),

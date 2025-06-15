@@ -1,9 +1,9 @@
+use crate::builtins::control::timeit::time_run;
 use crate::lang::command::Command;
 use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
-use signature::signature;
 use crate::lang::value::Value;
-use crate::builtins::control::timeit::time_run;
+use signature::signature;
 
 #[signature(
     control.timer,
@@ -17,5 +17,7 @@ pub struct Timer {
 
 fn timer(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Timer = Timer::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.output.send(Value::Duration(time_run(&cfg.it, &context)?))
+    context
+        .output
+        .send(Value::Duration(time_run(&cfg.it, &context)?))
 }

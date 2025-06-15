@@ -1,18 +1,18 @@
-use std::collections::HashSet;
-use std::sync::OnceLock;
+use crate::data::table::ColumnType;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Passthrough;
-use crate::lang::errors::{argument_error_legacy, CrushResult, error};
+use crate::lang::errors::{CrushResult, argument_error_legacy, error};
+use crate::lang::signature::text::Text;
 use crate::lang::state::contexts::CommandContext;
-use crate::lang::value::ValueType;
+use crate::lang::state::this::This;
 use crate::lang::value::Value;
+use crate::lang::value::ValueType;
 use ordered_map::OrderedMap;
 use regex::Regex;
 use signature::signature;
-use crate::data::table::ColumnType;
-use crate::lang::signature::text::Text;
-use crate::lang::state::this::This;
+use std::collections::HashSet;
+use std::sync::OnceLock;
 
 pub fn methods() -> &'static OrderedMap<String, Command> {
     static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
@@ -63,7 +63,9 @@ struct Match {
 fn r#match(mut context: CommandContext) -> CrushResult<()> {
     let re = context.this.re()?.1;
     let cfg: Match = Match::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.output.send(Value::Bool(re.is_match(&cfg.needle.as_string())))
+    context
+        .output
+        .send(Value::Bool(re.is_match(&cfg.needle.as_string())))
 }
 
 #[signature(
@@ -79,8 +81,11 @@ struct NotMatch {
 
 fn not_match(mut context: CommandContext) -> CrushResult<()> {
     let re = context.this.re()?.1;
-    let cfg: NotMatch = NotMatch::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.output.send(Value::Bool(!re.is_match(&cfg.needle.as_string())))
+    let cfg: NotMatch =
+        NotMatch::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context
+        .output
+        .send(Value::Bool(!re.is_match(&cfg.needle.as_string())))
 }
 
 #[signature(
@@ -98,7 +103,8 @@ struct ReplaceSignature {
 
 fn replace(mut context: CommandContext) -> CrushResult<()> {
     let re = context.this.re()?.1;
-    let args: ReplaceSignature = ReplaceSignature::parse(context.arguments, &context.global_state.printer())?;
+    let args: ReplaceSignature =
+        ReplaceSignature::parse(context.arguments, &context.global_state.printer())?;
     context.output.send(Value::from(
         re.replace(&args.text, args.replacement.as_str()).as_ref(),
     ))
@@ -144,23 +150,19 @@ fn find_string_columns(input: &[ColumnType], mut cfg: Vec<String>) -> Vec<usize>
         input
             .iter()
             .enumerate()
-            .filter(|(_, column)| {
-                match column.cell_type {
-                    ValueType::File | ValueType::String => true,
-                    _ => false,
-                }
+            .filter(|(_, column)| match column.cell_type {
+                ValueType::File | ValueType::String => true,
+                _ => false,
             })
-            .map(|(idx, _)| {idx})
+            .map(|(idx, _)| idx)
             .collect()
     } else {
         let yas: HashSet<String> = cfg.drain(..).collect();
         input
             .iter()
             .enumerate()
-            .filter(|(_, column)| {
-                yas.contains(column.name())
-            })
-            .map(|(idx, _c)| {idx})
+            .filter(|(_, column)| yas.contains(column.name()))
+            .map(|(idx, _c)| idx)
             .collect()
     }
 }

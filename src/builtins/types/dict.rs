@@ -1,19 +1,19 @@
-use std::collections::HashSet;
-use std::sync::OnceLock;
+use crate::data::table::ColumnVec;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::{Known, Unknown};
-use crate::lang::errors::{argument_error, argument_error_legacy, CrushResult};
-use crate::lang::state::contexts::CommandContext;
-use crate::lang::value::Value;
-use crate::lang::{data::dict::Dict, value::ValueType};
-use ordered_map::{Entry, OrderedMap};
-use signature::signature;
-use crate::data::table::ColumnVec;
-use crate::util::replace::Replace;
-use itertools::Itertools;
+use crate::lang::errors::{CrushResult, argument_error, argument_error_legacy};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::state::argument_vector::ArgumentVector;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::this::This;
+use crate::lang::value::Value;
+use crate::lang::{data::dict::Dict, value::ValueType};
+use crate::util::replace::Replace;
+use itertools::Itertools;
+use ordered_map::{Entry, OrderedMap};
+use signature::signature;
+use std::collections::HashSet;
+use std::sync::OnceLock;
 
 pub fn methods() -> &'static OrderedMap<String, Command> {
     static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
@@ -70,7 +70,9 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
                         .output
                         .send(Value::Type(ValueType::Dict(Box::from(t1), Box::from(t2))))
                 } else {
-                    argument_error_legacy("Tried to set subtype on a dict that already has a subtype")
+                    argument_error_legacy(
+                        "Tried to set subtype on a dict that already has a subtype",
+                    )
                 }
             }
         },
@@ -126,7 +128,7 @@ struct Of {
 
 fn of(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Of::parse(context.remove_arguments(), &context.global_state.printer())?;
-    
+
     match (cfg.elements.is_empty(), cfg.values.is_empty()) {
         (false, false) => argument_error_legacy("Cannot specify both elements and values"),
         (true, true) => argument_error_legacy("No values specified"),
@@ -141,9 +143,15 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
                 entries.insert(Value::from(key), value);
             }
 
-            let value_type = if value_types.len() == 1 { value_types.drain().next().unwrap() } else { ValueType::Any };
+            let value_type = if value_types.len() == 1 {
+                value_types.drain().next().unwrap()
+            } else {
+                ValueType::Any
+            };
 
-            context.output.send(Dict::new_with_data(ValueType::String, value_type, entries)?.into())
+            context
+                .output
+                .send(Dict::new_with_data(ValueType::String, value_type, entries)?.into())
         }
         (false, true) => {
             if cfg.elements.len() % 2 == 1 {
@@ -166,9 +174,15 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
                 }
 
                 let key_type = key_types.drain().next().unwrap();
-                let value_type = if value_types.len() == 1 { value_types.drain().next().unwrap() } else { ValueType::Any };
+                let value_type = if value_types.len() == 1 {
+                    value_types.drain().next().unwrap()
+                } else {
+                    ValueType::Any
+                };
 
-                context.output.send(Dict::new_with_data(key_type, value_type, entries)?.into())
+                context
+                    .output
+                    .send(Dict::new_with_data(key_type, value_type, entries)?.into())
             }
         }
     }
@@ -219,7 +233,9 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     let dict = context.this.dict()?;
     let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.output.send(dict.get(&cfg.key).unwrap_or(Value::Empty))
+    context
+        .output
+        .send(dict.get(&cfg.key).unwrap_or(Value::Empty))
 }
 
 #[signature(
@@ -235,7 +251,8 @@ struct Contains {
 
 fn contains(mut context: CommandContext) -> CrushResult<()> {
     let dict = context.this.dict()?;
-    let cfg: Contains = Contains::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: Contains =
+        Contains::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(Value::Bool(dict.contains(&cfg.key)))
 }
 
@@ -366,17 +383,28 @@ fn collect(mut context: CommandContext) -> CrushResult<()> {
     let mut input = context.input.recv()?.stream()?.ok_or("Expected a stream")?;
     let input_type = input.types().to_vec();
     let mut res = OrderedMap::new();
-    match (input_type.as_slice().find(&cfg.key_column), input_type.as_slice().find(&cfg.value_column)) {
+    match (
+        input_type.as_slice().find(&cfg.key_column),
+        input_type.as_slice().find(&cfg.value_column),
+    ) {
         (Ok(key_idx), Ok(value_idx)) => {
             while let Ok(row) = input.read() {
                 let mut row = Vec::from(row);
-                res.insert(row.replace(key_idx, Value::Empty), row.replace(value_idx, Value::Empty));
+                res.insert(
+                    row.replace(key_idx, Value::Empty),
+                    row.replace(value_idx, Value::Empty),
+                );
             }
-            context
-                .output
-                .send(Dict::new_with_data(input_type[key_idx].cell_type.clone(), input_type[value_idx].cell_type.clone(), res)?.into())
+            context.output.send(
+                Dict::new_with_data(
+                    input_type[key_idx].cell_type.clone(),
+                    input_type[value_idx].cell_type.clone(),
+                    res,
+                )?
+                .into(),
+            )
         }
-        _ => argument_error("Columns not found", context.arguments[0].location)
+        _ => argument_error("Columns not found", context.arguments[0].location),
     }
 }
 
@@ -410,7 +438,7 @@ fn join(mut context: CommandContext) -> CrushResult<()> {
         for e in d.elements() {
             match out.entry(e.0) {
                 Entry::Occupied(_) => {}
-                Entry::Vacant(v) => { v.insert(e.1) }
+                Entry::Vacant(v) => v.insert(e.1),
             }
         }
     }
@@ -419,8 +447,14 @@ fn join(mut context: CommandContext) -> CrushResult<()> {
         argument_error_legacy("Multiple key types specified in dict")
     } else {
         let key_type = key_types.drain().next().unwrap();
-        let value_type = if value_types.len() == 1 { value_types.drain().next().unwrap() } else { ValueType::Any };
+        let value_type = if value_types.len() == 1 {
+            value_types.drain().next().unwrap()
+        } else {
+            ValueType::Any
+        };
 
-        context.output.send(Dict::new_with_data(key_type, value_type, out)?.into())
+        context
+            .output
+            .send(Dict::new_with_data(key_type, value_type, out)?.into())
     }
 }

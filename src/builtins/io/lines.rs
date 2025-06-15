@@ -1,15 +1,12 @@
-use crate::lang::errors::{argument_error_legacy, CrushResult, data_error};
-use crate::lang::signature::files::Files;
-use crate::lang::state::scope::ScopeLoader;
-use crate::lang::{
-    data::table::ColumnType, data::table::Row, value::Value,
-    value::ValueType,
-};
-use signature::signature;
-use std::io::{BufRead, BufReader};
-use std::convert::From;
 use crate::lang::command::OutputType::Known;
+use crate::lang::errors::{CrushResult, argument_error_legacy, data_error};
+use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
+use crate::lang::state::scope::ScopeLoader;
+use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value::ValueType};
+use signature::signature;
+use std::convert::From;
+use std::io::{BufRead, BufReader};
 
 static OUTPUT_TYPE: [ColumnType; 1] = [ColumnType::new("line", ValueType::String)];
 
@@ -34,10 +31,9 @@ struct FromSignature {
 }
 
 pub fn from(context: CommandContext) -> CrushResult<()> {
-    let output = context
-        .output
-        .initialize(&OUTPUT_TYPE)?;
-    let cfg: FromSignature = FromSignature::parse(context.arguments, &context.global_state.printer())?;
+    let output = context.output.initialize(&OUTPUT_TYPE)?;
+    let cfg: FromSignature =
+        FromSignature::parse(context.arguments, &context.global_state.printer())?;
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
     let mut line = String::new();
 

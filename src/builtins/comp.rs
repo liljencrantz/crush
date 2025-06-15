@@ -1,26 +1,25 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, CrushResult};
+use crate::lang::errors::{CrushResult, argument_error_legacy};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
-use std::cmp::Ordering;
 use signature::signature;
+use std::cmp::Ordering;
 
 macro_rules! cmp {
     ($struct_name:ident, $name:ident, $op:expr) => {
         pub fn $name(mut context: CommandContext) -> CrushResult<()> {
-            let cfg = $struct_name::parse(context.remove_arguments(), &context.global_state.printer())?;
+            let cfg =
+                $struct_name::parse(context.remove_arguments(), &context.global_state.printer())?;
             match cfg.left.partial_cmp(&cfg.right) {
                 Some(ordering) => context.output.send(Value::Bool($op(ordering))),
                 None => {
-                    return argument_error_legacy(
-                        format!(
-                            "The two provided values of types {} and {} could not be compared",
-                            cfg.left.value_type().to_string(),
-                            cfg.right.value_type().to_string(),
-                        )
-                    )
+                    return argument_error_legacy(format!(
+                        "The two provided values of types {} and {} could not be compared",
+                        cfg.left.value_type().to_string(),
+                        cfg.right.value_type().to_string(),
+                    ))
                 }
             }
         }
@@ -133,9 +132,7 @@ struct Not {
 
 pub fn not(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Not::parse(context.remove_arguments(), context.global_state.printer())?;
-    context
-        .output
-        .send(Value::Bool(!cfg.argument))
+    context.output.send(Value::Bool(!cfg.argument))
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {

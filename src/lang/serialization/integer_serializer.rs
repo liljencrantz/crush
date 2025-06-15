@@ -1,5 +1,5 @@
-use crate::lang::errors::{error, CrushResult};
-use crate::lang::serialization::model::{element, Element};
+use crate::lang::errors::{CrushResult, error};
+use crate::lang::serialization::model::{Element, element};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
 use crate::lang::value::Value;
 use std::convert::TryFrom;

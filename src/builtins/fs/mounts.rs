@@ -1,12 +1,12 @@
-use signature::signature;
-use crate::state::contexts::CommandContext;
-use crate::lang::errors::{CrushResult};
-use crate::lang::command::OutputType::Known;
-use mountpoints::mountinfos;
 use crate::data::table::Row;
-use crate::lang::value::{Value, ValueType};
-use crate::lang::data::table::ColumnType;
+use crate::lang::command::OutputType::Known;
 use crate::lang::data::table::ColumnFormat;
+use crate::lang::data::table::ColumnType;
+use crate::lang::errors::CrushResult;
+use crate::lang::value::{Value, ValueType};
+use crate::state::contexts::CommandContext;
+use mountpoints::mountinfos;
+use signature::signature;
 
 static OUTPUT_TYPE: [ColumnType; 7] = [
     ColumnType::new_with_format("size", ColumnFormat::ByteUnit, ValueType::Integer),
@@ -34,17 +34,19 @@ fn mounts(mut context: CommandContext) -> CrushResult<()> {
         let size = m.size.unwrap_or(0);
         let avail = m.avail.unwrap_or(0);
 
-        output.send(Row::new(
-            vec![
-                Value::from(size),
-                Value::from(avail),
-                Value::from(if size == 0 { 0.0 } else { (avail as f64) / (size as f64) }),
-                Value::from(m.format.unwrap_or("".to_string())),
-                Value::from(m.readonly.map(|r| { Value::from(r) }).unwrap_or(Value::Empty)),
-                Value::from(m.name.unwrap_or("".to_string())),
-                Value::from(m.path),
-            ]
-        ))?;
+        output.send(Row::new(vec![
+            Value::from(size),
+            Value::from(avail),
+            Value::from(if size == 0 {
+                0.0
+            } else {
+                (avail as f64) / (size as f64)
+            }),
+            Value::from(m.format.unwrap_or("".to_string())),
+            Value::from(m.readonly.map(|r| Value::from(r)).unwrap_or(Value::Empty)),
+            Value::from(m.name.unwrap_or("".to_string())),
+            Value::from(m.path),
+        ]))?;
     }
 
     Ok(())

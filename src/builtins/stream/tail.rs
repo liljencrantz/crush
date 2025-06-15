@@ -1,10 +1,10 @@
-use std::collections::VecDeque;
-use crate::lang::errors::argument_error_legacy;
-use crate::lang::errors::CrushResult;
-use crate::lang::state::contexts::CommandContext;
-use crate::lang::data::table::Row;
-use signature::signature;
 use crate::lang::command::OutputType::Passthrough;
+use crate::lang::data::table::Row;
+use crate::lang::errors::CrushResult;
+use crate::lang::errors::argument_error_legacy;
+use crate::lang::state::contexts::CommandContext;
+use signature::signature;
+use std::collections::VecDeque;
 #[signature(
     stream.tail,
     can_block = true,

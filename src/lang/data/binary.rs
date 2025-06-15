@@ -1,5 +1,5 @@
 use crate::lang::errors::CrushResult;
-use crossbeam::channel::{bounded, Receiver, Sender};
+use crossbeam::channel::{Receiver, Sender, bounded};
 use std::cmp::min;
 use std::collections::VecDeque;
 use std::fmt::{Debug, Formatter};
@@ -111,9 +111,7 @@ impl BinaryReader for FileReader {
 impl dyn BinaryReader {
     pub fn paths(mut files: Vec<PathBuf>) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
         if files.len() == 1 {
-            Ok(Box::from(FileReader::new(File::open(
-                files.remove(0),
-            )?)))
+            Ok(Box::from(FileReader::new(File::open(files.remove(0))?)))
         } else {
             let mut readers: Vec<Box<dyn BinaryReader + Send + Sync>> = Vec::new();
 

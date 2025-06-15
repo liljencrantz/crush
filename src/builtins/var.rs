@@ -1,11 +1,11 @@
-use signature::signature;
 use crate::lang::command::OutputType::{Known, Unknown};
-use crate::lang::errors::{argument_error_legacy, CrushResult};
+use crate::lang::data::table::{ColumnType, Row};
+use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
-use crate::lang::data::table::{ColumnType, Row};
-use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::value::{Value, ValueType};
+use signature::signature;
 
 #[signature(
     var.r#let,
@@ -20,7 +20,9 @@ use crate::lang::value::{Value, ValueType};
     example = "var:let x=2",
 )]
 struct Let {
-    #[description("the variables to declare. The value you supply will be the initial value of the variable.")]
+    #[description(
+        "the variables to declare. The value you supply will be the initial value of the variable."
+    )]
     #[named()]
     variables: OrderedStringMap<Value>,
 }
@@ -48,7 +50,9 @@ pub fn r#let(mut context: CommandContext) -> CrushResult<()> {
     example = "var:set x=2",
 )]
 struct Set {
-    #[description("the variables to reassign. The value you supply will be the new value of the variable.")]
+    #[description(
+        "the variables to reassign. The value you supply will be the new value of the variable."
+    )]
     #[named()]
     variables: OrderedStringMap<Value>,
 }
@@ -219,6 +223,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             List::declare(ns)?;
             Local::declare(ns)?;
             Ok(())
-        }))?;
+        }),
+    )?;
     Ok(())
 }

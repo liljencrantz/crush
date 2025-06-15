@@ -1,3 +1,5 @@
+use crate::lang::errors::CrushResult;
+use std::fs::{ReadDir, read_dir};
 /**
 A simple wrapper around std::fs::read_dir to allow for unit testing via fakes.
 
@@ -7,10 +9,7 @@ There is also a fake lister for tests, accessible via FakeDirectoryLister::new()
 It only allows you to list files and check if they are a directory, so if you need full metadata,
 you'll need something cleverer.
 */
-
 use std::path::PathBuf;
-use crate::lang::errors::{CrushResult};
-use std::fs::{ReadDir, read_dir};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Directory {
@@ -26,7 +25,7 @@ pub struct FakeListerEntry {
 }
 
 pub trait DirectoryLister {
-    type DirectoryIter: Iterator<Item=Directory>;
+    type DirectoryIter: Iterator<Item = Directory>;
 
     fn list(&self, path: impl Into<PathBuf>) -> CrushResult<Self::DirectoryIter>;
 }
@@ -41,11 +40,9 @@ impl DirectoryLister for RealDirectoryLister {
     type DirectoryIter = RealIter;
 
     fn list(&self, path: impl Into<PathBuf>) -> CrushResult<RealIter> {
-        Ok(
-            RealIter {
-                read_dir: read_dir(&path.into())?,
-            }
-        )
+        Ok(RealIter {
+            read_dir: read_dir(&path.into())?,
+        })
     }
 }
 
@@ -59,9 +56,9 @@ impl Iterator for RealIter {
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             /*
-                Loop on failure (to skip directories we're not allowed to read) and
-                return None when read_dir returns None to terminate iteration
-             */
+               Loop on failure (to skip directories we're not allowed to read) and
+               return None when read_dir returns None to terminate iteration
+            */
             if let Ok(next) = self.read_dir.next()? {
                 return Some(Directory {
                     name: PathBuf::from(next.file_name()),
@@ -73,12 +70,11 @@ impl Iterator for RealIter {
     }
 }
 
-
 #[cfg(test)]
 pub mod tests {
-    use std::collections::VecDeque;
-    use ordered_map::{Entry, OrderedMap};
     use super::*;
+    use ordered_map::{Entry, OrderedMap};
+    use std::collections::VecDeque;
 
     pub struct FakeDirectoryLister {
         cwd: PathBuf,
@@ -93,15 +89,16 @@ pub mod tests {
             }
         }
 
-        pub fn add(&mut self, path: impl Into<PathBuf>, content: &[&str]) -> &mut FakeDirectoryLister {
+        pub fn add(
+            &mut self,
+            path: impl Into<PathBuf>,
+            content: &[&str],
+        ) -> &mut FakeDirectoryLister {
             let g = path.into();
-            let path = if g.is_relative() {
-                self.cwd.join(g)
-            } else {
-                g
-            };
+            let path = if g.is_relative() { self.cwd.join(g) } else { g };
 
-            let mut content = content.iter()
+            let mut content = content
+                .iter()
                 .map(|n| FakeListerEntry {
                     name: PathBuf::from(n),
                     is_directory: false,
@@ -113,16 +110,15 @@ pub mod tests {
                     content.append(&mut e.value().clone());
                     e.insert(content);
                 }
-                Entry::Vacant(e) => { e.insert(content.to_vec()) }
+                Entry::Vacant(e) => e.insert(content.to_vec()),
             }
 
             let mut parent = PathBuf::from(path);
             while let Some(p) = parent.parent() {
-                let mut v = vec![
-                    FakeListerEntry {
-                        name: PathBuf::from(parent.components().last().unwrap().as_os_str()),
-                        is_directory: true,
-                    }];
+                let mut v = vec![FakeListerEntry {
+                    name: PathBuf::from(parent.components().last().unwrap().as_os_str()),
+                    is_directory: true,
+                }];
 
                 match self.map.entry(p.to_path_buf()) {
                     Entry::Occupied(mut e) => {
@@ -154,19 +150,23 @@ pub mod tests {
                 g.clone()
             };
 
-            Ok(
-                FakeIter {
-                    vec: VecDeque::from(
-                            self.map.get(&path)
-                                .map(|v|
-                                v.iter().map(|f| Directory {
+            Ok(FakeIter {
+                vec: VecDeque::from(
+                    self.map
+                        .get(&path)
+                        .map(|v| {
+                            v.iter()
+                                .map(|f| Directory {
                                     name: f.name.clone(),
                                     full_path: g.join(&f.name),
-                                    is_directory: f.is_directory
-                                }).collect::<Vec<_>>()).ok_or(
-                            format!("Unknown directory {:?}", path))?.clone()),
-                }
-            )
+                                    is_directory: f.is_directory,
+                                })
+                                .collect::<Vec<_>>()
+                        })
+                        .ok_or(format!("Unknown directory {:?}", path))?
+                        .clone(),
+                ),
+            })
         }
     }
 
@@ -182,15 +182,18 @@ pub mod tests {
         }
     }
 
-
     fn as_strs(it: FakeIter) -> Vec<String> {
-        let mut res = it.map(|d| d.name.to_str().unwrap().to_string()).collect::<Vec<_>>();
+        let mut res = it
+            .map(|d| d.name.to_str().unwrap().to_string())
+            .collect::<Vec<_>>();
         res.sort();
         res
     }
 
     fn as_strs_real(it: RealIter) -> Vec<String> {
-        let mut res = it.map(|d| d.name.to_str().unwrap().to_string()).collect::<Vec<_>>();
+        let mut res = it
+            .map(|d| d.name.to_str().unwrap().to_string())
+            .collect::<Vec<_>>();
         res.sort();
         res
     }
@@ -204,7 +207,10 @@ pub mod tests {
         assert_eq!(as_strs(f.list("/home/").unwrap()), vec!["rabbit"]);
         assert_eq!(as_strs(f.list("/home/rabbit").unwrap()), vec!["a"]);
         assert_eq!(as_strs(f.list(".").unwrap()), vec!["a"]);
-        assert_eq!(as_strs(f.list("/home/rabbit/a").unwrap()), vec!["bar", "baz", "foo"]);
+        assert_eq!(
+            as_strs(f.list("/home/rabbit/a").unwrap()),
+            vec!["bar", "baz", "foo"]
+        );
         assert_eq!(as_strs(f.list("a").unwrap()), vec!["bar", "baz", "foo"]);
         assert_eq!(as_strs(f.list("./a").unwrap()), vec!["bar", "baz", "foo"]);
         assert_eq!(as_strs(f.list("a/baz").unwrap()), vec!["pix", "qux"]);
@@ -213,6 +219,9 @@ pub mod tests {
     #[test]
     fn check_real() {
         let f = directory_lister();
-        assert_eq!(as_strs_real(f.list("example_data/tree").unwrap()), vec!["a", "sub"]);
+        assert_eq!(
+            as_strs_real(f.list("example_data/tree").unwrap()),
+            vec!["a", "sub"]
+        );
     }
 }

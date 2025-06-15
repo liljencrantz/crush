@@ -1,7 +1,7 @@
-use std::fmt::{Display, Formatter};
 use crate::lang::ast::lexer::Spanned;
 use crate::lang::ast::location::Location;
 use crate::lang::ast::tracked_string::TrackedString;
+use std::fmt::{Display, Formatter};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Token<'input> {
@@ -51,67 +51,67 @@ pub enum Token<'input> {
 impl Token<'_> {
     pub fn location(&self) -> Location {
         match self {
-            Token::LogicalOperator(_, l) |
-            Token::UnaryOperator(_, l) |
-            Token::ComparisonOperator(_, l) |
-            Token::QuotedString(_, l) |
-            Token::String(_, l) |
-            Token::Comment(_, l) |
-            Token::File(_, l) |
-            Token::Glob(_, l) |
-            Token::Identifier(_, l) |
-            Token::Flag(_, l) |
-            Token::QuotedFile(_, l) |
-            Token::Regex(_, l) |
-            Token::Integer(_, l) |
-            Token::Float(_, l) |
-            Token::MemberOperator(l) |
-            Token::Equals(l) |
-            Token::Declare(l) |
-            Token::Separator(_, l) |
-            Token::SubStart(l) |
-            Token::SubEnd(l) |
-            Token::BlockStart(l) |
-            Token::BlockEnd(l) |
-            Token::GetItemStart(l) |
-            Token::GetItemEnd(l) |
-            Token::Pipe(l) |
-            Token::Unnamed(l) |
-            Token::Named(l) |
-            Token::Bang(l) |
-            Token::Plus(l) |
-            Token::Minus(l) |
-            Token::Star(l) |
-            Token::Slash(l) |
-            Token::For(l) |
-            Token::While(l) |
-            Token::Loop(l) |
-            Token::If(l) |
-            Token::Else(l) |
-            Token::Return(l) |
-            Token::Break(l) |
-            Token::Continue(l) |
-            Token::ExprModeStart(l) => *l,
+            Token::LogicalOperator(_, l)
+            | Token::UnaryOperator(_, l)
+            | Token::ComparisonOperator(_, l)
+            | Token::QuotedString(_, l)
+            | Token::String(_, l)
+            | Token::Comment(_, l)
+            | Token::File(_, l)
+            | Token::Glob(_, l)
+            | Token::Identifier(_, l)
+            | Token::Flag(_, l)
+            | Token::QuotedFile(_, l)
+            | Token::Regex(_, l)
+            | Token::Integer(_, l)
+            | Token::Float(_, l)
+            | Token::MemberOperator(l)
+            | Token::Equals(l)
+            | Token::Declare(l)
+            | Token::Separator(_, l)
+            | Token::SubStart(l)
+            | Token::SubEnd(l)
+            | Token::BlockStart(l)
+            | Token::BlockEnd(l)
+            | Token::GetItemStart(l)
+            | Token::GetItemEnd(l)
+            | Token::Pipe(l)
+            | Token::Unnamed(l)
+            | Token::Named(l)
+            | Token::Bang(l)
+            | Token::Plus(l)
+            | Token::Minus(l)
+            | Token::Star(l)
+            | Token::Slash(l)
+            | Token::For(l)
+            | Token::While(l)
+            | Token::Loop(l)
+            | Token::If(l)
+            | Token::Else(l)
+            | Token::Return(l)
+            | Token::Break(l)
+            | Token::Continue(l)
+            | Token::ExprModeStart(l) => *l,
         }
     }
 
     pub fn as_string(&self) -> &str {
         match self {
-            Token::LogicalOperator(s, _) |
-            Token::UnaryOperator(s, _) |
-            Token::ComparisonOperator(s, _) |
-            Token::QuotedString(s, _) |
-            Token::String(s, _) |
-            Token::Comment(s, _) |
-            Token::File(s, _) |
-            Token::Glob(s, _) |
-            Token::Identifier(s, _) |
-            Token::Flag(s, _) |
-            Token::QuotedFile(s, _) |
-            Token::Regex(s, _) |
-            Token::Integer(s, _) |
-            Token::Separator(s, _) |
-            Token::Float(s, _) => s,
+            Token::LogicalOperator(s, _)
+            | Token::UnaryOperator(s, _)
+            | Token::ComparisonOperator(s, _)
+            | Token::QuotedString(s, _)
+            | Token::String(s, _)
+            | Token::Comment(s, _)
+            | Token::File(s, _)
+            | Token::Glob(s, _)
+            | Token::Identifier(s, _)
+            | Token::Flag(s, _)
+            | Token::QuotedFile(s, _)
+            | Token::Regex(s, _)
+            | Token::Integer(s, _)
+            | Token::Separator(s, _)
+            | Token::Float(s, _) => s,
             Token::MemberOperator(_) => ":",
             Token::Equals(_) => "=",
             Token::Declare(_) => ":=",
@@ -155,47 +155,47 @@ impl From<Token<'_>> for String {
 impl<'a> Into<Spanned<'a>> for Token<'a> {
     fn into(self) -> Spanned<'a> {
         let loc = match &self {
-            Token::LogicalOperator(_, l) |
-            Token::UnaryOperator(_, l) |
-            Token::QuotedString(_, l) |
-            Token::String(_, l) |
-            Token::Comment(_, l) |
-            Token::File(_, l) |
-            Token::Glob(_, l) |
-            Token::Identifier(_, l) |
-            Token::Flag(_, l) |
-            Token::QuotedFile(_, l) |
-            Token::Regex(_, l) |
-            Token::Integer(_, l) |
-            Token::ComparisonOperator(_, l) |
-            Token::Float(_, l) |
-            Token::MemberOperator(l) |
-            Token::Equals(l) |
-            Token::Declare(l) |
-            Token::Separator(_, l) |
-            Token::SubStart(l) |
-            Token::SubEnd(l) |
-            Token::BlockStart(l) |
-            Token::BlockEnd(l) |
-            Token::GetItemStart(l) |
-            Token::GetItemEnd(l) |
-            Token::Pipe(l) |
-            Token::Unnamed(l) |
-            Token::Named(l) |
-            Token::Bang(l) |
-            Token::Plus(l) |
-            Token::Minus(l) |
-            Token::Star(l) |
-            Token::Slash(l) |
-            Token::For(l) |
-            Token::While(l) |
-            Token::Loop(l) |
-            Token::If(l) |
-            Token::Else(l) |
-            Token::Return(l) |
-            Token::Break(l) |
-            Token::Continue(l) |
-            Token::ExprModeStart(l) => l,
+            Token::LogicalOperator(_, l)
+            | Token::UnaryOperator(_, l)
+            | Token::QuotedString(_, l)
+            | Token::String(_, l)
+            | Token::Comment(_, l)
+            | Token::File(_, l)
+            | Token::Glob(_, l)
+            | Token::Identifier(_, l)
+            | Token::Flag(_, l)
+            | Token::QuotedFile(_, l)
+            | Token::Regex(_, l)
+            | Token::Integer(_, l)
+            | Token::ComparisonOperator(_, l)
+            | Token::Float(_, l)
+            | Token::MemberOperator(l)
+            | Token::Equals(l)
+            | Token::Declare(l)
+            | Token::Separator(_, l)
+            | Token::SubStart(l)
+            | Token::SubEnd(l)
+            | Token::BlockStart(l)
+            | Token::BlockEnd(l)
+            | Token::GetItemStart(l)
+            | Token::GetItemEnd(l)
+            | Token::Pipe(l)
+            | Token::Unnamed(l)
+            | Token::Named(l)
+            | Token::Bang(l)
+            | Token::Plus(l)
+            | Token::Minus(l)
+            | Token::Star(l)
+            | Token::Slash(l)
+            | Token::For(l)
+            | Token::While(l)
+            | Token::Loop(l)
+            | Token::If(l)
+            | Token::Else(l)
+            | Token::Return(l)
+            | Token::Break(l)
+            | Token::Continue(l)
+            | Token::ExprModeStart(l) => l,
         };
         Ok((loc.start, self, loc.end))
     }

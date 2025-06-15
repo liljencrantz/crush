@@ -1,10 +1,10 @@
-use chrono::Duration;
-use crate::lang::errors::{argument_error_legacy, CrushResult};
+use crate::lang::errors::{CrushResult, argument_error_legacy};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{
-    data::binary::binary_channel, data::r#struct::Struct, data::table::ColumnType, data::table::Row, data::table::Table,
-    value::Value, value::ValueType,
+    data::binary::binary_channel, data::r#struct::Struct, data::table::ColumnType,
+    data::table::Row, data::table::Table, value::Value, value::ValueType,
 };
+use chrono::Duration;
 use reqwest::header::HeaderMap;
 use reqwest::{Method, StatusCode};
 use signature::signature;
@@ -42,7 +42,9 @@ pub struct Http {
     #[description("URI to request")]
     uri: String,
     #[description("the HTTP method to use in this request.")]
-    #[values("GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "CONNECT", "PATCH", "TRACE")]
+    #[values(
+        "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "CONNECT", "PATCH", "TRACE"
+    )]
     #[default("GET")]
     method: String,
     #[description("form content, if any.")]
@@ -59,11 +61,15 @@ fn http(context: CommandContext) -> CrushResult<()> {
 
     let (mut output, input) = binary_channel();
     let client = reqwest::blocking::Client::new();
-    let t = cfg.timeout.num_nanoseconds()
+    let t = cfg
+        .timeout
+        .num_nanoseconds()
         .map(|us| core::time::Duration::from_nanos(us as u64))
         .ok_or("Out of bounds timeout")?;
-    let mut request = client.request(parse_method(&cfg.method)?, cfg.uri.as_str()).timeout(t);
-    
+    let mut request = client
+        .request(parse_method(&cfg.method)?, cfg.uri.as_str())
+        .timeout(t);
+
     for t in cfg.header.iter() {
         let h = t.splitn(2, ':').collect::<Vec<&str>>();
         match h.len() {

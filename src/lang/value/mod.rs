@@ -12,42 +12,37 @@ use std::str::FromStr;
 use chrono::{DateTime, Local, TimeDelta};
 use regex::Regex;
 
-use crate::lang::errors::{argument_error_legacy, CrushResult};
 use crate::lang::data::r#struct::Struct;
 use crate::lang::data::r#struct::StructReader;
-use crate::lang::state::scope::Scope;
-use crate::lang::pipe::{Stream, TableInputStream, TableOutputStream};
 use crate::lang::data::{
-    binary::BinaryReader, dict::Dict, dict::DictReader, list::List,
-    table::ColumnType, table::TableReader,
+    binary::BinaryReader, dict::Dict, dict::DictReader, list::List, table::ColumnType,
+    table::TableReader,
 };
+use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::pipe::{Stream, TableInputStream, TableOutputStream};
+use crate::lang::state::scope::Scope;
 use crate::util::time::duration_format;
-use crate::{
-    lang::data::table::Table,
-    lang::errors::error,
-    util::file::cwd,
-    util::glob::Glob,
-};
+use crate::{lang::data::table::Table, lang::errors::error, util::file::cwd, util::glob::Glob};
 use chrono::Duration;
 
+use crate::data::table::ColumnFormat;
+use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::command::{Command, CommandBinder};
 use crate::lang::help::Help;
 use crate::lang::pretty::format_buffer;
-use ordered_map::OrderedMap;
-pub use value_definition::ValueDefinition;
-pub use value_type::ValueType;
-use std::fmt::{Display, Formatter};
-use std::io::Read;
-use std::ops::Add;
-use std::sync::Arc;
 use crate::lang::vec_reader::VecReader;
-use crate::data::table::ColumnFormat;
-use crate::lang::ast::tracked_string::TrackedString;
 use crate::state::global_state::FormatData;
 use crate::state::scope::ScopeReader;
 use crate::util::escape::escape;
 use crate::util::identity_arc::Identity;
 use crate::util::integer_formater::format_integer;
+use ordered_map::OrderedMap;
+use std::fmt::{Display, Formatter};
+use std::io::Read;
+use std::ops::Add;
+use std::sync::Arc;
+pub use value_definition::ValueDefinition;
+pub use value_type::ValueType;
 
 pub type BinaryInputStream = Box<dyn BinaryReader + Send + Sync>;
 
@@ -87,7 +82,9 @@ impl Display for Value {
                 f.write_str(val)?;
                 f.write_str(")")
             }
-            Value::File(val) => std::fmt::Display::fmt(val.to_str().unwrap_or("<invalid filename>"), f),
+            Value::File(val) => {
+                std::fmt::Display::fmt(val.to_str().unwrap_or("<invalid filename>"), f)
+            }
             Value::List(l) => std::fmt::Display::fmt(l, f),
             Value::Duration(d) => f.write_str(&duration_format(d)),
             Value::Scope(env) => env.fmt(f),
@@ -97,8 +94,12 @@ impl Display for Value {
             Value::Binary(v) => f.write_str(&format_buffer(v, true)),
             Value::Type(t) => std::fmt::Display::fmt(t, f),
             Value::Struct(s) => s.fmt(f),
-            Value::Command(_) | Value::TableInputStream(_) | Value::TableOutputStream(_) |
-            Value::Table(_) | Value::BinaryInputStream(_) | Value::Empty => {
+            Value::Command(_)
+            | Value::TableInputStream(_)
+            | Value::TableOutputStream(_)
+            | Value::Table(_)
+            | Value::BinaryInputStream(_)
+            | Value::Empty => {
                 f.write_str("<")?;
                 std::fmt::Display::fmt(&self.value_type(), f)?;
                 f.write_str(">")
@@ -124,7 +125,7 @@ impl From<Vec<u8>> for Value {
 }
 
 impl From<&[Box<[u8]>]> for Value {
-    fn from(s: &[Box<[u8]>] ) -> Value {
+    fn from(s: &[Box<[u8]>]) -> Value {
         Value::Binary(Arc::from(s.concat()))
     }
 }
@@ -278,10 +279,7 @@ impl Value {
                     .get(name)
                     .map(|m| Value::Command(m.clone()))
             }),
-            Value::Type(t) => t
-                .fields()
-                .get(name)
-                .map(|m| Value::Command(m.clone())),
+            Value::Type(t) => t.fields().get(name).map(|m| Value::Command(m.clone())),
             _ => self
                 .value_type()
                 .fields()
@@ -295,7 +293,14 @@ impl Value {
         match self {
             Value::Struct(s) => res.append(&mut s.keys()),
             Value::Scope(scope) => {
-                res.append(&mut scope.dump_local().unwrap().iter().map(|(k, _)| k.to_string()).collect());
+                res.append(
+                    &mut scope
+                        .dump_local()
+                        .unwrap()
+                        .iter()
+                        .map(|(k, _)| k.to_string())
+                        .collect(),
+                );
                 add_keys(self.value_type().fields(), &mut res);
             }
             Value::Type(t) => add_keys(t.fields(), &mut res),
@@ -311,13 +316,18 @@ impl Value {
             0 => error("Invalid path"),
             1 => Ok(self.clone()),
             2 => Ok(self.field(&path[1])?.ok_or("Invalid path")?),
-            _ => self.field(&path[1])?.ok_or("Invalid path")?.get_recursive(&path[1..]),
+            _ => self
+                .field(&path[1])?
+                .ok_or("Invalid path")?
+                .get_recursive(&path[1..]),
         }
     }
 
     pub fn alignment(&self) -> Alignment {
         match self {
-            Value::Time(_) | Value::Duration(_) | Value::Integer(_) | Value::Float(_) => Alignment::Right,
+            Value::Time(_) | Value::Duration(_) | Value::Integer(_) | Value::Float(_) => {
+                Alignment::Right
+            }
             _ => Alignment::Left,
         }
     }
@@ -334,8 +344,9 @@ impl Value {
                 let mut paths = Vec::<PathBuf>::new();
                 l.glob_files(&cwd()?, &mut paths)?;
                 Some(Box::from(VecReader::new(
-                    paths.iter().map(|e| { Value::from(e.to_path_buf()) }).collect(),
-                    ValueType::File)))
+                    paths.iter().map(|e| Value::from(e.to_path_buf())).collect(),
+                    ValueType::File,
+                )))
             }
             _ => None,
         })
@@ -383,7 +394,10 @@ impl Value {
                 while let Ok(r) = output.recv() {
                     rows.push(r.materialize()?);
                 }
-                Value::Table(Table::from((ColumnType::materialize(output.types())?, rows)))
+                Value::Table(Table::from((
+                    ColumnType::materialize(output.types())?,
+                    rows,
+                )))
             }
             Value::BinaryInputStream(mut s) => {
                 let mut vec = Vec::new();
@@ -394,15 +408,23 @@ impl Value {
             Value::Dict(d) => d.materialize()?.into(),
             Value::Struct(r) => Value::Struct(r.materialize()?),
             Value::List(l) => l.materialize()?.into(),
-            Value::TableOutputStream(_) =>
-                return error(
-                    "Value of type table_output_stream can't be materialized"),
-            Value::Empty | Value::String(_) | Value::Integer(_) |
-            Value::Time(_) | Value::Duration(_) | Value::Glob(_) |
-            Value::Regex(_, _) | Value::Command(_) | Value::File(_) |
-            Value::Scope(_) | Value::Bool(_) | Value::Float(_) |
-            Value::Binary(_) | Value::Type(_) =>
-                self,
+            Value::TableOutputStream(_) => {
+                return error("Value of type table_output_stream can't be materialized");
+            }
+            Value::Empty
+            | Value::String(_)
+            | Value::Integer(_)
+            | Value::Time(_)
+            | Value::Duration(_)
+            | Value::Glob(_)
+            | Value::Regex(_, _)
+            | Value::Command(_)
+            | Value::File(_)
+            | Value::Scope(_)
+            | Value::Bool(_)
+            | Value::Float(_)
+            | Value::Binary(_)
+            | Value::Type(_) => self,
         })
     }
 
@@ -430,14 +452,15 @@ impl Value {
             ValueType::File => Ok(Value::from(PathBuf::from(str_val.as_str()))),
             ValueType::Glob => Ok(Value::Glob(Glob::new(str_val.as_str()))),
             ValueType::Integer => Ok(str_val.parse::<i128>().map(Value::Integer)?),
-            ValueType::Regex =>
-                Ok(Regex::new(str_val.as_str()).map(|v| Value::Regex(str_val, v))?),
+            ValueType::Regex => Ok(Regex::new(str_val.as_str()).map(|v| Value::Regex(str_val, v))?),
             ValueType::Binary => Ok(Value::Binary(str_val.bytes().collect())),
             ValueType::Float => Ok(Value::Float(f64::from_str(&str_val)?)),
             ValueType::Bool => Ok(Value::Bool(match str_val.as_str() {
                 "true" => true,
                 "false" => false,
-                _ => return error(format!("Can't convert value '{}' to boolean", str_val).as_str()),
+                _ => {
+                    return error(format!("Can't convert value '{}' to boolean", str_val).as_str());
+                }
             })),
             ValueType::String => Ok(Value::from(str_val)),
             ValueType::Time => error("invalid convert"),
@@ -465,29 +488,47 @@ impl Value {
       separator the locale prescribes, so that the number can be copied
       and pasted into the terminal again.
      */
-    pub fn to_pretty_string(&self, format_data: &FormatData, format: &ColumnFormat, table: bool) -> String {
+    pub fn to_pretty_string(
+        &self,
+        format_data: &FormatData,
+        format: &ColumnFormat,
+        table: bool,
+    ) -> String {
         match self {
-            Value::String(val) =>
+            Value::String(val) => {
                 if has_non_printable(val) {
                     escape(val)
                 } else {
                     val.to_string()
-                },
-
-            Value::Float(f) => match format {
-                ColumnFormat::ByteUnit |
-                ColumnFormat::None => if table { format!("{:.*}", format_data.float_precision(), f) } else { format!("{}", f) },
-                ColumnFormat::Percentage =>
-                    format!("{:.*}%", format_data.percentage_precision(), f * 100.0),
-                ColumnFormat::Temperature =>
-                    format!("{:.*} {}", format_data.temperature_precision(), format_data.temperature().format(*f), format_data.temperature().unit()),
+                }
             }
 
+            Value::Float(f) => match format {
+                ColumnFormat::ByteUnit | ColumnFormat::None => {
+                    if table {
+                        format!("{:.*}", format_data.float_precision(), f)
+                    } else {
+                        format!("{}", f)
+                    }
+                }
+                ColumnFormat::Percentage => {
+                    format!("{:.*}%", format_data.percentage_precision(), f * 100.0)
+                }
+                ColumnFormat::Temperature => format!(
+                    "{:.*} {}",
+                    format_data.temperature_precision(),
+                    format_data.temperature().format(*f),
+                    format_data.temperature().unit()
+                ),
+            },
+
             Value::Integer(i) => match format {
-                ColumnFormat::Percentage |
-                ColumnFormat::Temperature |
-                ColumnFormat::None => format_integer(*i, format_data.grouping()),
-                ColumnFormat::ByteUnit => format_data.byte_unit().format(*i, format_data.grouping()),
+                ColumnFormat::Percentage | ColumnFormat::Temperature | ColumnFormat::None => {
+                    format_integer(*i, format_data.grouping())
+                }
+                ColumnFormat::ByteUnit => {
+                    format_data.byte_unit().format(*i, format_data.grouping())
+                }
             },
 
             _ => self.to_string(),
@@ -499,7 +540,7 @@ fn has_non_printable(s: &str) -> bool {
     for c in s.chars() {
         if c < '\x20' {
             return true;
-        } 
+        }
     }
     false
 }
@@ -691,10 +732,7 @@ mod tests {
             Value::from("112432").convert(ValueType::Integer).is_err(),
             false
         );
-        assert_eq!(
-            Value::from("1d").convert(ValueType::Integer).is_err(),
-            true
-        );
+        assert_eq!(Value::from("1d").convert(ValueType::Integer).is_err(), true);
         assert_eq!(Value::from("1d").convert(ValueType::Glob).is_err(), false);
         assert_eq!(Value::from("1d").convert(ValueType::File).is_err(), false);
         assert_eq!(Value::from("1d").convert(ValueType::Time).is_err(), true);
@@ -742,5 +780,4 @@ mod tests {
             "10y0d0:00:01".to_string()
         );
     }
-
 }

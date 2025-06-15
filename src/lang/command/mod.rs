@@ -1,23 +1,23 @@
 mod closure;
 
-use crate::lang::argument::ArgumentDefinition;
-use crate::lang::errors::{error, CrushResult};
-use crate::lang::state::contexts::{CompileContext, CommandContext};
-use crate::lang::help::Help;
-use crate::lang::job::Job;
-use crate::lang::state::scope::Scope;
-use crate::lang::serialization::model;
-use crate::lang::serialization::model::{element, Element};
-use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
-use crate::lang::value::{Value, ValueDefinition, ValueType};
-use closure::Closure;
-use ordered_map::OrderedMap;
-use std::fmt::{Formatter, Display};
-use std::sync::Arc;
 use crate::lang::any_str::AnyStr;
+use crate::lang::argument::ArgumentDefinition;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::completion::Completion;
 use crate::lang::completion::parse::PartialCommandResult;
+use crate::lang::errors::{CrushResult, error};
+use crate::lang::help::Help;
+use crate::lang::job::Job;
+use crate::lang::serialization::model;
+use crate::lang::serialization::model::{Element, element};
+use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
+use crate::lang::state::contexts::{CommandContext, CompileContext};
+use crate::lang::state::scope::Scope;
+use crate::lang::value::{Value, ValueDefinition, ValueType};
+use closure::Closure;
+use ordered_map::OrderedMap;
+use std::fmt::{Display, Formatter};
+use std::sync::Arc;
 
 pub type Command = Arc<dyn CrushCommand + Send + Sync>;
 
@@ -64,11 +64,14 @@ pub struct ArgumentDescription {
     pub value_type: ValueType,
     pub allowed: Option<Vec<Value>>,
     pub description: Option<String>,
-    pub complete: Option<fn(
-        cmd: &PartialCommandResult,
-        cursor: usize,
-        scope: &Scope,
-        res: &mut Vec<Completion>) -> CrushResult<()>>,
+    pub complete: Option<
+        fn(
+            cmd: &PartialCommandResult,
+            cursor: usize,
+            scope: &Scope,
+            res: &mut Vec<Completion>,
+        ) -> CrushResult<()>,
+    >,
     pub named: bool,
     pub unnamed: bool,
 }
@@ -117,14 +120,7 @@ impl TypeMap for OrderedMap<String, Command> {
         self.insert(
             path[path.len() - 1].to_string(),
             <dyn CrushCommand>::command(
-                call,
-                can_block,
-                &path,
-                signature,
-                short_help,
-                long_help,
-                output,
-                arguments,
+                call, can_block, &path, signature, short_help, long_help, output, arguments,
             ),
         );
     }
@@ -161,7 +157,13 @@ impl dyn CrushCommand {
         env: &Scope,
         arguments: Vec<ArgumentDescription>,
     ) -> Command {
-        Arc::from(Closure::new(name, signature, job_definitions, env.clone(), arguments))
+        Arc::from(Closure::new(
+            name,
+            signature,
+            job_definitions,
+            env.clone(),
+            arguments,
+        ))
     }
 
     pub fn command(
@@ -177,7 +179,10 @@ impl dyn CrushCommand {
         Arc::from(SimpleCommand {
             call,
             can_block,
-            full_name: full_name.into_iter().map(|a| {a.as_ref().to_string()}).collect(),
+            full_name: full_name
+                .into_iter()
+                .map(|a| a.as_ref().to_string())
+                .collect(),
             signature: signature.into(),
             short_help: short_help.into(),
             long_help: long_help.map(|h| h.into()),
@@ -223,8 +228,11 @@ impl dyn CrushCommand {
             }
             element::Element::BoundCommand(bound_command) => {
                 let this = Value::deserialize(bound_command.this as usize, elements, state)?;
-                let command =
-                    <dyn CrushCommand>::deserialize(bound_command.command as usize, elements, state)?;
+                let command = <dyn CrushCommand>::deserialize(
+                    bound_command.command as usize,
+                    elements,
+                    state,
+                )?;
                 Ok(command.bind(this))
             }
             element::Element::Closure(_) => Closure::deserialize(id, elements, state),
@@ -244,7 +252,7 @@ impl CrushCommand for SimpleCommand {
     }
 
     fn name(&self) -> &str {
-        &self.full_name[self.full_name.len()-1]
+        &self.full_name[self.full_name.len() - 1]
     }
 
     fn help(&self) -> &dyn Help {
@@ -327,9 +335,7 @@ impl CrushCommand for ConditionCommand {
     }
 
     fn might_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool {
-        arguments
-            .iter()
-            .any(|arg| arg.value.can_block(context))
+        arguments.iter().any(|arg| arg.value.can_block(context))
     }
 
     fn help(&self) -> &dyn Help {
@@ -388,10 +394,15 @@ impl Eq for ConditionCommand {}
 
 #[derive(Clone)]
 pub enum Parameter {
-    Parameter(TrackedString, ValueDefinition, Option<ValueDefinition>, Option<TrackedString>),
+    Parameter(
+        TrackedString,
+        ValueDefinition,
+        Option<ValueDefinition>,
+        Option<TrackedString>,
+    ),
     Named(TrackedString, Option<TrackedString>),
     Unnamed(TrackedString, Option<TrackedString>),
-    Meta(TrackedString, TrackedString)
+    Meta(TrackedString, TrackedString),
 }
 
 impl Display for Parameter {
@@ -418,9 +429,7 @@ impl Display for Parameter {
                 n.fmt(f)?;
                 Ok(())
             }
-            Parameter::Meta(key, value) => {
-                Ok(())
-            }
+            Parameter::Meta(key, value) => Ok(()),
         }
     }
 }

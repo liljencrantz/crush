@@ -1,7 +1,8 @@
-use crate::lang::errors::{error, CrushError, CrushResult};
-use crate::lang::pipe::CrushStream;
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
+use crate::lang::errors::{CrushError, CrushResult, error};
+use crate::lang::help::Help;
+use crate::lang::pipe::CrushStream;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use crate::util::identity_arc::Identity;
@@ -10,11 +11,10 @@ use chrono::Duration;
 use ordered_map::OrderedMap;
 use std::cmp::Ordering;
 use std::collections::HashSet;
+use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
-use std::sync::{Arc, Mutex};
-use std::fmt::{Formatter, Display};
 use std::ops::Deref;
-use crate::lang::help::Help;
+use std::sync::{Arc, Mutex};
 
 static STRUCT_STREAM_TYPE: [ColumnType; 2] = [
     ColumnType::new("name", ValueType::String),
@@ -272,15 +272,13 @@ fn format_help(s: impl Into<String>, is_example: bool) -> String {
     }
 }
 
-fn extract_help(value: Value, res: &mut Vec<String> , is_example: bool) {
+fn extract_help(value: Value, res: &mut Vec<String>, is_example: bool) {
     match value {
-        Value::String(s) =>
-            res.push(format_help(s.deref(), is_example)),
+        Value::String(s) => res.push(format_help(s.deref(), is_example)),
         Value::List(l) => {
             for v in l.iter() {
                 match v {
-                    Value::String(s) =>
-                        res.push(format_help(s.deref(), is_example)),
+                    Value::String(s) => res.push(format_help(s.deref(), is_example)),
                     _ => res.push("<Invalid help item>".to_string()),
                 }
             }
@@ -291,11 +289,15 @@ fn extract_help(value: Value, res: &mut Vec<String> , is_example: bool) {
 
 impl Help for Struct {
     fn signature(&self) -> String {
-        self.get("__signature__").map(|v| v.to_string()).unwrap_or("type struct".to_string())
+        self.get("__signature__")
+            .map(|v| v.to_string())
+            .unwrap_or("type struct".to_string())
     }
 
     fn short_help(&self) -> String {
-        self.get("__short_help__").map(|v| v.to_string()).unwrap_or("A mapping from name to value".to_string())
+        self.get("__short_help__")
+            .map(|v| v.to_string())
+            .unwrap_or("A mapping from name to value".to_string())
     }
 
     fn long_help(&self) -> Option<String> {
@@ -308,11 +310,11 @@ impl Help for Struct {
         let mut v = self.map().drain().collect::<Vec<_>>();
         if !v.is_empty() {
             if !res.is_empty() {
-                res.push("".to_string());       
+                res.push("".to_string());
             }
-            
-            res.push("This struct has the following fields:".to_string());       
-            
+
+            res.push("This struct has the following fields:".to_string());
+
             v.sort_by(|a, b| a.0.cmp(&b.0));
 
             for el in v {

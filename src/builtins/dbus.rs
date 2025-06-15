@@ -1,16 +1,17 @@
-use crate::lang::argument::{column_names, Argument};
+use crate::lang::argument::{Argument, column_names};
+use crate::lang::ast::location::Location;
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::*;
 use crate::lang::data::dict::Dict;
-use crate::lang::errors::{argument_error_legacy, data_error, eof_error, error, CrushResult};
-use crate::lang::state::contexts::CommandContext;
 use crate::lang::data::list::List;
 use crate::lang::data::r#struct::Struct;
+use crate::lang::errors::{CrushResult, argument_error_legacy, data_error, eof_error, error};
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
+use dbus::Message;
 use dbus::arg::{ArgType, IterAppend};
 use dbus::blocking::{BlockingSender, Connection, Proxy};
-use dbus::Message;
 use signature::signature;
 use std::collections::HashSet;
 use std::convert::TryFrom;
@@ -18,7 +19,6 @@ use std::iter::Peekable;
 use std::ops::Deref;
 use std::str::Chars;
 use std::time::Duration;
-use crate::lang::ast::location::Location;
 
 struct DBusThing {
     connection: Connection,
@@ -54,9 +54,9 @@ impl DBusThing {
             a.serialize(value, &mut msg)?;
         }
 
-        let reply = 
-            self.connection
-                .send_with_reply_and_block(msg, Duration::from_secs(5))?;
+        let reply = self
+            .connection
+            .send_with_reply_and_block(msg, Duration::from_secs(5))?;
         let mut values = method.deserialize(&reply)?;
         let mut output_arguments = method
             .arguments
@@ -71,7 +71,7 @@ impl DBusThing {
             .drain(..)
             .zip(output_arguments.drain(..))
             // Fake location, only needed to call the column_names function
-            .map(|(value, arg)| Argument::new(arg.name.clone(), value, Location::new(0, 0),))
+            .map(|(value, arg)| Argument::new(arg.name.clone(), value, Location::new(0, 0)))
             .collect::<Vec<_>>();
 
         let mut names = column_names(&values_as_arguments);
@@ -86,7 +86,7 @@ impl DBusThing {
 
     pub fn list_services(&self) -> CrushResult<Vec<String>> {
         let proxy = self.proxy("org.freedesktop.DBus", "/");
-        let (mut names, ): (Vec<String>, ) =
+        let (mut names,): (Vec<String>,) =
             proxy.method_call("org.freedesktop.DBus", "ListNames", ())?;
         Ok(names.drain(..).filter(|n| !n.starts_with(':')).collect())
     }
@@ -98,7 +98,7 @@ impl DBusThing {
         while !queue.is_empty() {
             let path = queue.pop()?;
             let sub_proxy = self.proxy(service, &path);
-            let (intro_xml, ): (String, ) = sub_proxy.method_call(
+            let (intro_xml,): (String,) = sub_proxy.method_call(
                 "org.freedesktop.DBus.Introspectable", //&name,
                 "Introspect",
                 (),
@@ -145,8 +145,10 @@ fn parse_interface(path: &str, xml: &str) -> CrushResult<DBusParsedInterface> {
 
             match child.tag_name().name() {
                 "interface" => {
-                    let name =
-                        child.attribute("name").ok_or("Invalid object definition")?.to_string();
+                    let name = child
+                        .attribute("name")
+                        .ok_or("Invalid object definition")?
+                        .to_string();
 
                     let mut methods = Vec::new();
 
@@ -157,7 +159,9 @@ fn parse_interface(path: &str, xml: &str) -> CrushResult<DBusParsedInterface> {
                         if method.tag_name().name() != "method" {
                             continue;
                         }
-                        let name = method.attribute("name").ok_or("Invalid object definition")?
+                        let name = method
+                            .attribute("name")
+                            .ok_or("Invalid object definition")?
                             .to_string();
                         let mut arguments = Vec::new();
 
@@ -169,11 +173,13 @@ fn parse_interface(path: &str, xml: &str) -> CrushResult<DBusParsedInterface> {
                                 continue;
                             }
                             let name = argument.attribute("name").map(|s| s.to_string());
-                            let argument_type = argument.attribute("type")
+                            let argument_type = argument
+                                .attribute("type")
                                 .ok_or("Missing argument type attribute")?
                                 .to_string();
-                            let direction = match 
-                                argument.attribute("direction").ok_or("Missing argument direction attribute")?
+                            let direction = match argument
+                                .attribute("direction")
+                                .ok_or("Missing argument direction attribute")?
                                 .to_lowercase()
                                 .as_str()
                             {
@@ -275,23 +281,19 @@ impl DBusType {
             Some('v') => Ok(Some(DBusType::Variant)),
 
             Some('a') => Ok(Some(DBusType::Array(Box::from(
-                DBusType::parse_internal(i)?.ok_or("Expected an array subtype")?)))),
+                DBusType::parse_internal(i)?.ok_or("Expected an array subtype")?,
+            )))),
             Some('(') => {
                 let mut sub = Vec::new();
                 while i.peek().ok_or("Unexpected end of type")? != &')' {
-                    sub.push(
-                        DBusType::parse_internal(i)?
-                            .ok_or("Expected an array subtype")?);
+                    sub.push(DBusType::parse_internal(i)?.ok_or("Expected an array subtype")?);
                 }
                 Ok(Some(DBusType::Struct(sub)))
             }
 
             Some('{') => {
-                let key_type = 
-                    DBusType::parse_internal(i)?
-                        .ok_or("Expected an array subtype")?;
-                let value_type = 
-                    DBusType::parse_internal(i)?.ok_or("Expected an array subtype")?;
+                let key_type = DBusType::parse_internal(i)?.ok_or("Expected an array subtype")?;
+                let value_type = DBusType::parse_internal(i)?.ok_or("Expected an array subtype")?;
                 Ok(Some(DBusType::DictEntry {
                     key_type: Box::from(key_type),
                     value_type: Box::from(value_type),
@@ -410,7 +412,10 @@ impl DBusArgument {
             }
             DBusType::Array(_) => {}
             DBusType::Variant => {}
-            DBusType::DictEntry { key_type, value_type } => {}
+            DBusType::DictEntry {
+                key_type,
+                value_type,
+            } => {}
             DBusType::UnixFd => {}
             DBusType::Struct(_) => {}
             DBusType::ObjectPath => {}
@@ -447,7 +452,13 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
                             entry.next();
                             value
                         }
-                        Err(e) => if e.is_eof() { break; } else { return Err(e); },
+                        Err(e) => {
+                            if e.is_eof() {
+                                break;
+                            } else {
+                                return Err(e);
+                            }
+                        }
                     };
 
                     let value = match deserialize(&mut entry) {
@@ -456,11 +467,13 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
                             entry.next();
                             value
                         }
-                        Err(e) => return if e.is_eof() {
-                            error("Unexpected EOF in dbus message")
-                        } else {
-                            Err(e)
-                        },
+                        Err(e) => {
+                            return if e.is_eof() {
+                                error("Unexpected EOF in dbus message")
+                            } else {
+                                Err(e)
+                            };
+                        }
                     };
 
                     res.push((key, value));
@@ -496,7 +509,13 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
                             res.push(value);
                             sub.next();
                         }
-                        Err(e) => if e.is_eof() { break; } else { return Err(e); },
+                        Err(e) => {
+                            if e.is_eof() {
+                                break;
+                            } else {
+                                return Err(e);
+                            }
+                        }
                     }
                 }
 
@@ -515,11 +534,13 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
                     sub.next();
                     value
                 }
-                Err(e) => return if e.is_eof() {
-                    error("Unexpected EOF in DBUS message")
-                } else {
-                    Err(e)
-                },
+                Err(e) => {
+                    return if e.is_eof() {
+                        error("Unexpected EOF in DBUS message")
+                    } else {
+                        Err(e)
+                    };
+                }
             }
         }
         ArgType::Invalid => return eof_error(),
@@ -534,7 +555,13 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
                         res.push(value);
                         sub.next();
                     }
-                    Err(e) => if e.is_eof() { break; } else { return Err(e); },
+                    Err(e) => {
+                        if e.is_eof() {
+                            break;
+                        } else {
+                            return Err(e);
+                        }
+                    }
                 }
             }
             List::new(ValueType::Any, res).into()
@@ -560,7 +587,13 @@ impl DBusMethod {
                     res.push(value);
                     iter.next();
                 }
-                Err(e) => if e.is_eof() { break; } else { return Err(e); },
+                Err(e) => {
+                    if e.is_eof() {
+                        break;
+                    } else {
+                        return Err(e);
+                    }
+                }
             }
         }
         Ok(res)
@@ -597,12 +630,7 @@ struct ServiceCall {
 fn filter_object(mut input: Vec<DBusObject>, filter: Value) -> CrushResult<DBusObject> {
     let mut res: Vec<_>;
     match &filter {
-        Value::File(p) => {
-            res = input
-                .drain(..)
-                .filter(|o| &o.path == p.to_str()?)
-                .collect()
-        }
+        Value::File(p) => res = input.drain(..).filter(|o| &o.path == p.to_str()?).collect(),
         Value::Glob(p) => res = input.drain(..).filter(|o| p.matches(&o.path)).collect(),
         Value::Regex(_, re) => res = input.drain(..).filter(|o| re.is_match(&o.path)).collect(),
         _ => return error("Invalid filter type"),
@@ -664,33 +692,44 @@ fn filter_method(
 }
 
 fn service_call(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: ServiceCall = ServiceCall::parse(context.remove_arguments(), &context.global_state.printer())?;
-    if let Value::Struct(service_obj) = context.this.ok_or("Missing this parameter for method")?
-    {
-        if let Value::String(service) =
-            service_obj.get("service").ok_or("Missing service field in struct")? {
+    let cfg: ServiceCall =
+        ServiceCall::parse(context.remove_arguments(), &context.global_state.printer())?;
+    if let Value::Struct(service_obj) = context.this.ok_or("Missing this parameter for method")? {
+        if let Value::String(service) = service_obj
+            .get("service")
+            .ok_or("Missing service field in struct")?
+        {
             let dbus = DBusThing::new(Connection::new_session()?);
             let mut objects = dbus.list_objects(&service)?;
             match (cfg.object, cfg.method) {
-                (None, None) => context.output.send(List::new(
-                    ValueType::String,
-                    objects.drain(..).map(|d| Value::from(d.path)).collect::<Vec<_>>(),
-                ).into()),
+                (None, None) => context.output.send(
+                    List::new(
+                        ValueType::String,
+                        objects
+                            .drain(..)
+                            .map(|d| Value::from(d.path))
+                            .collect::<Vec<_>>(),
+                    )
+                    .into(),
+                ),
                 (Some(object), None) => {
                     let mut object = filter_object(objects, object)?;
-                    context.output.send(List::new(
-                        ValueType::String,
-                        object
-                            .interfaces
-                            .drain(..)
-                            .flat_map(|i| {
-                                i.methods
-                                    .iter()
-                                    .map(|m| Value::from(format!("{}.{}", &i.name, &m.name)))
-                                    .collect::<Vec<_>>()
-                            })
-                            .collect::<Vec<Value>>(),
-                    ).into())
+                    context.output.send(
+                        List::new(
+                            ValueType::String,
+                            object
+                                .interfaces
+                                .drain(..)
+                                .flat_map(|i| {
+                                    i.methods
+                                        .iter()
+                                        .map(|m| Value::from(format!("{}.{}", &i.name, &m.name)))
+                                        .collect::<Vec<_>>()
+                                })
+                                .collect::<Vec<Value>>(),
+                        )
+                        .into(),
+                    )
                 }
                 (Some(object), Some(method)) => {
                     let object = filter_object(objects, object)?;

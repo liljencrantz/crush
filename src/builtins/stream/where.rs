@@ -1,12 +1,12 @@
+use crate::lang::ast::location::Location;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Passthrough;
-use crate::lang::errors::{error, CrushResult};
+use crate::lang::errors::{CrushResult, error};
+use crate::lang::pipe::pipe;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{argument::Argument, data::table::ColumnType};
 use crate::lang::{data::table::Row, value::Value};
 use signature::signature;
-use crate::lang::ast::location::Location;
-use crate::lang::pipe::pipe;
 
 #[signature(
     stream.r#where,
@@ -59,7 +59,13 @@ pub fn r#where(mut context: CommandContext) -> CrushResult<()> {
 
             let output = context.output.initialize(input.types())?;
             while let Ok(row) = input.read() {
-                match evaluate(cfg.condition.clone(), location, &row, input.types(), &base_context) {
+                match evaluate(
+                    cfg.condition.clone(),
+                    location,
+                    &row,
+                    input.types(),
+                    &base_context,
+                ) {
                     Ok(val) => {
                         if val && output.send(row).is_err() {
                             break;

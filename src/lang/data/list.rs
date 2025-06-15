@@ -1,18 +1,17 @@
-/// The crush type used for storing lists of data
-
-use crate::lang::errors::{argument_error_legacy, error, CrushResult};
-use crate::lang::pipe::Stream;
-use crate::lang::{value::Value, value::ValueType};
-use crate::util::identity_arc::Identity;
-use std::cmp::Ordering;
-use std::collections::HashSet;
-use std::hash::Hasher;
-use std::sync::{Arc, Mutex};
-use std::fmt::{Display, Formatter};
 use crate::data::dict::Dict;
+/// The crush type used for storing lists of data
+use crate::lang::errors::{CrushResult, argument_error_legacy, error};
+use crate::lang::pipe::Stream;
 use crate::lang::state::scope::Scope;
 use crate::lang::vec_reader::VecReader;
+use crate::lang::{value::Value, value::ValueType};
+use crate::util::identity_arc::Identity;
 use crate::util::replace::Replace;
+use std::cmp::Ordering;
+use std::collections::HashSet;
+use std::fmt::{Display, Formatter};
+use std::hash::Hasher;
+use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
 pub struct List {
@@ -112,7 +111,10 @@ impl List {
     }
 
     pub fn iter(&self) -> Iter {
-        Iter { list: self.cells.lock().unwrap().to_vec(), idx: 0 }
+        Iter {
+            list: self.cells.lock().unwrap().to_vec(),
+            idx: 0,
+        }
     }
 
     pub fn append(&self, new_cells: &mut Vec<Value>) -> CrushResult<()> {
@@ -182,7 +184,10 @@ impl List {
 
     pub fn materialize(self) -> CrushResult<List> {
         let mut cells = self.cells.lock().unwrap();
-        let vec: Vec<Value> = cells.drain(..).map(|c| c.materialize()).collect::<CrushResult<Vec<_>>>()?;
+        let vec: Vec<Value> = cells
+            .drain(..)
+            .map(|c| c.materialize())
+            .collect::<CrushResult<Vec<_>>>()?;
         Ok(List {
             cell_type: self.cell_type.materialize()?,
             cells: Arc::new(Mutex::from(vec)),
@@ -206,7 +211,10 @@ impl List {
     }
 
     pub fn stream(&self) -> Stream {
-        Box::new(VecReader::new(self.iter().collect(), self.cell_type.clone()))
+        Box::new(VecReader::new(
+            self.iter().collect(),
+            self.cell_type.clone(),
+        ))
     }
 
     pub fn dump_dict(&self, destination: &mut Vec<Dict>) -> CrushResult<()> {

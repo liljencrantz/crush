@@ -1,16 +1,16 @@
-use nix::unistd::Pid;
-use signature::signature;
-use std::env;
-use rustyline::history::{History, SearchDirection};
-use crate::lang::errors::{CrushResult};
+use crate::data::list::List;
+use crate::lang::command::Command;
+use crate::lang::command::OutputType::Known;
+use crate::lang::data::dict::Dict;
+use crate::lang::data::table::{ColumnType, Row};
+use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
-use crate::lang::data::table::{ColumnType, Row};
-use crate::lang::command::OutputType::Known;
-use crate::lang::command::Command;
-use crate::data::list::List;
-use crate::lang::data::dict::Dict;
+use nix::unistd::Pid;
+use rustyline::history::{History, SearchDirection};
+use signature::signature;
+use std::env;
 
 fn make_env() -> CrushResult<Value> {
     let e = Dict::new(ValueType::String, ValueType::String)?;
@@ -21,7 +21,11 @@ fn make_env() -> CrushResult<Value> {
 }
 
 fn make_arguments() -> Value {
-    List::new(ValueType::String, env::args().map(|a| { Value::from(a) }).collect::<Vec<_>>()).into()
+    List::new(
+        ValueType::String,
+        env::args().map(|a| Value::from(a)).collect::<Vec<_>>(),
+    )
+    .into()
 }
 
 static THREADS_OUTPUT_TYPE: [ColumnType; 3] = [
@@ -42,7 +46,7 @@ fn threads(context: CommandContext) -> CrushResult<()> {
 
     for t in context.global_state.threads().current()? {
         output.send(Row::new(vec![
-            t.job_id.map(|i| { Value::from(i) }).unwrap_or(Value::Empty),
+            t.job_id.map(|i| Value::from(i)).unwrap_or(Value::Empty),
             Value::Time(t.creation_time),
             Value::from(t.name),
         ]))?;
@@ -94,22 +98,27 @@ mod prompt {
         can_block = false,
         short = "Get the current prompt command")
     ]
-    pub struct Get {
-    }
+    pub struct Get {}
 
     fn get(context: CommandContext) -> CrushResult<()> {
         Get::parse(context.arguments, &context.global_state.printer())?;
-        context.output.send(context.global_state.prompt().map(|cmd| {Value::Command(cmd)}).unwrap_or(Value::Empty))
+        context.output.send(
+            context
+                .global_state
+                .prompt()
+                .map(|cmd| Value::Command(cmd))
+                .unwrap_or(Value::Empty),
+        )
     }
 
     pub mod mode {
-        use signature::signature;
         use crate::lang::ast::lexer::LexerMode;
+        use crate::lang::command::OutputType::Known;
         use crate::lang::errors::CrushResult;
         use crate::lang::state::contexts::CommandContext;
         use crate::lang::value::Value;
-        use crate::lang::command::OutputType::Known;
         use crate::lang::value::ValueType;
+        use signature::signature;
 
         #[signature(
             crush.prompt.get,
@@ -120,13 +129,14 @@ mod prompt {
         pub struct Get {}
 
         fn get(context: CommandContext) -> CrushResult<()> {
-            context.output.send(Value::from(match context.global_state.mode() {
-                LexerMode::Command => "command",
-                LexerMode::Expression => "expression",
-            }))
+            context
+                .output
+                .send(Value::from(match context.global_state.mode() {
+                    LexerMode::Command => "command",
+                    LexerMode::Expression => "expression",
+                }))
         }
     }
-
 }
 
 mod title {
@@ -154,14 +164,18 @@ mod title {
         can_block = false,
         short = "Get the current title command")
     ]
-    pub struct Get {
-    }
+    pub struct Get {}
 
     fn get(context: CommandContext) -> CrushResult<()> {
         Get::parse(context.arguments, &context.global_state.printer())?;
-        context.output.send(context.global_state.title().map(|cmd| {Value::Command(cmd)}).unwrap_or(Value::Empty))
+        context.output.send(
+            context
+                .global_state
+                .title()
+                .map(|cmd| Value::Command(cmd))
+                .unwrap_or(Value::Empty),
+        )
     }
-
 }
 
 static JOB_OUTPUT_TYPE: [ColumnType; 2] = [
@@ -214,20 +228,17 @@ fn history(context: CommandContext) -> CrushResult<()> {
     });
     let len = res.len();
     for (idx, c) in res.into_iter().enumerate() {
-        output.send(Row::new(vec![
-            Value::from(len - idx),
-            Value::from(c),
-        ]))?;
+        output.send(Row::new(vec![Value::from(len - idx), Value::from(c)]))?;
     }
     Ok(())
 }
 
 mod locale {
     use super::*;
-    use num_format::SystemLocale;
-    use crate::lang::completion::parse::{PartialCommandResult, LastArgument};
     use crate::lang::completion::Completion;
+    use crate::lang::completion::parse::{LastArgument, PartialCommandResult};
     use crate::util::escape::{escape, escape_without_quotes};
+    use num_format::SystemLocale;
 
     static LIST_OUTPUT_TYPE: [ColumnType; 1] = [ColumnType::new("name", ValueType::String)];
 
@@ -256,18 +267,15 @@ mod locale {
     ) -> CrushResult<()> {
         for name in SystemLocale::available_names()? {
             match &cmd.last_argument {
-                LastArgument::Unknown => {
-                    res.push(Completion::new(
-                        escape(&name),
-                        name,
-                        0,
-                    ))
-                }
+                LastArgument::Unknown => res.push(Completion::new(escape(&name), name, 0)),
 
                 LastArgument::QuotedString(stripped_prefix) => {
                     if name.starts_with(stripped_prefix) && name.len() > 0 {
                         res.push(Completion::new(
-                            format!("{}\" ", escape_without_quotes(&name[stripped_prefix.len()..])),
+                            format!(
+                                "{}\" ",
+                                escape_without_quotes(&name[stripped_prefix.len()..])
+                            ),
                             name,
                             0,
                         ));
@@ -302,7 +310,9 @@ mod locale {
     pub struct Get {}
 
     fn get(context: CommandContext) -> CrushResult<()> {
-        context.output.send(Value::from(context.global_state.format_data().locale().name()))
+        context.output.send(Value::from(
+            context.global_state.format_data().locale().name(),
+        ))
     }
 }
 
@@ -349,7 +359,9 @@ mod byte_unit {
     pub struct Get {}
 
     fn get(context: CommandContext) -> CrushResult<()> {
-        context.output.send(Value::from(context.global_state.format_data().byte_unit().to_string()))
+        context.output.send(Value::from(
+            context.global_state.format_data().byte_unit().to_string(),
+        ))
     }
 }
 
@@ -389,7 +401,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                         Box::new(move |env| {
                             prompt::mode::Get::declare(env)?;
                             Ok(())
-                        }))?;
+                        }),
+                    )?;
                     Ok(())
                 }),
             )?;
@@ -408,7 +421,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Exit::declare(crush)?;
             Jobs::declare(crush)?;
             HistoryCommand::declare(crush)?;
-
 
             crush.create_namespace(
                 "locale",

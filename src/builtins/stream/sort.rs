@@ -1,9 +1,9 @@
 use crate::lang::command::OutputType::Passthrough;
-use crate::lang::errors::{error, CrushResult};
-use crate::lang::state::contexts::CommandContext;
 use crate::lang::data::table::ColumnVec;
 use crate::lang::data::table::Row;
 use crate::lang::errors::argument_error_legacy;
+use crate::lang::errors::{CrushResult, error};
+use crate::lang::state::contexts::CommandContext;
 use signature::signature;
 use std::cmp::Ordering;
 
@@ -35,7 +35,10 @@ fn sort(context: CommandContext) -> CrushResult<()> {
                     return argument_error_legacy("Missing comparison key");
                 }
             } else {
-                cfg.field.iter().map(|f| input.types().find(f)).collect::<CrushResult<Vec<_>>>()?
+                cfg.field
+                    .iter()
+                    .map(|f| input.types().find(f))
+                    .collect::<CrushResult<Vec<_>>>()?
             };
 
             for idx in &indices {

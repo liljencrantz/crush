@@ -1,16 +1,16 @@
-use std::sync::OnceLock;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::command::TypeMap;
-use crate::lang::errors::{argument_error_legacy, CrushResult};
+use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::contexts::CommandContext;
-use crate::lang::value::ValueType;
+use crate::lang::state::this::This;
 use crate::lang::value::Value;
+use crate::lang::value::ValueType;
 use chrono::Duration;
 use ordered_map::OrderedMap;
 use signature::signature;
-use crate::lang::state::argument_vector::ArgumentVector;
-use crate::lang::state::this::This;
+use std::sync::OnceLock;
 
 fn full(name: &'static str) -> Vec<&'static str> {
     vec!["global", "types", "duration", name]
@@ -21,41 +21,51 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     CELL.get_or_init(|| {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
 
-        res.declare(full("__add__"),
-                    add, false,
-                    "duration + (delta:duration | time:time)",
-                    "Add the specified delta or time to this duration",
-                    None,
-                    Unknown,
-                    [],
+        res.declare(
+            full("__add__"),
+            add,
+            false,
+            "duration + (delta:duration | time:time)",
+            "Add the specified delta or time to this duration",
+            None,
+            Unknown,
+            [],
         );
-        res.declare(full("__sub__"),
-                    sub, false,
-                    "duration - delta:duration",
-                    "Remove the specified delta from this duration",
-                    None,
-                    Known(ValueType::Duration),
-                    [],
+        res.declare(
+            full("__sub__"),
+            sub,
+            false,
+            "duration - delta:duration",
+            "Remove the specified delta from this duration",
+            None,
+            Known(ValueType::Duration),
+            [],
         );
-        res.declare(full("__mul__"),
-                    mul, false,
-                    "duration * factor:integer",
-                    "Multiply this duration by the specified factor",
-                    None,
-                    Known(ValueType::Duration),
-                    [],
+        res.declare(
+            full("__mul__"),
+            mul,
+            false,
+            "duration * factor:integer",
+            "Multiply this duration by the specified factor",
+            None,
+            Known(ValueType::Duration),
+            [],
         );
-        res.declare(full("__div__"),
-                    div, false,
-                    "duration / divisor:integer",
-                    "Divide this duration by the specified divisor",
-                    None,
-                    Known(ValueType::Duration),
-                    [],
+        res.declare(
+            full("__div__"),
+            div,
+            false,
+            "duration / divisor:integer",
+            "Divide this duration by the specified divisor",
+            None,
+            Known(ValueType::Duration),
+            [],
         );
         Of::declare_method(&mut res);
         res.declare(
-            full("__neg__"), neg, false,
+            full("__neg__"),
+            neg,
+            false,
             "neg duration",
             "Negate this duration",
             None,

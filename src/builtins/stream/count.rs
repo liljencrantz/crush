@@ -1,9 +1,9 @@
-use crate::lang::errors::{argument_error_legacy, CrushResult};
+use crate::lang::command::OutputType::Known;
+use crate::lang::errors::{CrushResult, argument_error_legacy};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
-use signature::signature;
 use crate::lang::value::ValueType;
-use crate::lang::command::OutputType::Known;
+use signature::signature;
 
 #[signature(
     stream.count,

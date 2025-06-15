@@ -1,4 +1,4 @@
-use crate::lang::errors::{argument_error_legacy, error, CrushResult};
+use crate::lang::errors::{CrushResult, argument_error_legacy, error};
 use crate::lang::pipe::CrushStream;
 use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value::ValueType};
 use crate::util::identity_arc::Identity;
@@ -36,7 +36,11 @@ impl Dict {
         }
     }
 
-    pub fn new_with_data(key_type: ValueType, value_type: ValueType, entries: OrderedMap<Value, Value>) -> CrushResult<Dict> {
+    pub fn new_with_data(
+        key_type: ValueType,
+        value_type: ValueType,
+        entries: OrderedMap<Value, Value>,
+    ) -> CrushResult<Dict> {
         if !key_type.is_hashable() {
             error("Tried to create dict with unhashable key type")
         } else {
@@ -85,10 +89,18 @@ impl Dict {
     pub fn insert(&self, key: Value, value: Value) -> CrushResult<()> {
         let mut entries = self.entries.lock().unwrap();
         if !self.key_type.is(&key) {
-            return argument_error_legacy(format!("Invalid key type, expected {}, got {}.", self.key_type.to_string(), key.value_type().to_string()));
+            return argument_error_legacy(format!(
+                "Invalid key type, expected {}, got {}.",
+                self.key_type.to_string(),
+                key.value_type().to_string()
+            ));
         }
         if !self.value_type.is(&value) {
-            return argument_error_legacy(format!("Invalid value type, expected {}, got {}.", self.value_type.to_string(), value.value_type().to_string()));
+            return argument_error_legacy(format!(
+                "Invalid value type, expected {}, got {}.",
+                self.value_type.to_string(),
+                value.value_type().to_string()
+            ));
         }
         entries.insert(key, value);
         Ok(())
@@ -117,7 +129,6 @@ impl Dict {
     }
 
     pub fn materialize(self) -> CrushResult<Dict> {
-
         let mut entries = self.entries.lock().unwrap();
         let mut map = OrderedMap::with_capacity(entries.len());
         for (k, v) in entries.drain() {

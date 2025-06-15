@@ -1,15 +1,15 @@
-use std::sync::OnceLock;
+use crate::builtins::types::column_types;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{argument_error_legacy, CrushResult};
+use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::state::contexts::CommandContext;
-use crate::lang::value::ValueType;
+use crate::lang::state::this::This;
 use crate::lang::value::Value;
-use crate::builtins::types::column_types;
+use crate::lang::value::ValueType;
 use ordered_map::OrderedMap;
 use signature::signature;
-use crate::lang::ordered_string_map::OrderedStringMap;
-use crate::lang::state::this::This;
+use std::sync::OnceLock;
 
 pub fn methods() -> &'static OrderedMap<String, Command> {
     static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
@@ -42,9 +42,13 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
             if c.is_empty() {
                 context
                     .output
-                    .send(Value::Type(ValueType::TableOutputStream(column_types(&cfg.columns))))
+                    .send(Value::Type(ValueType::TableOutputStream(column_types(
+                        &cfg.columns,
+                    ))))
             } else if cfg.columns.is_empty() {
-                context.output.send(Value::Type(ValueType::TableOutputStream(c)))
+                context
+                    .output
+                    .send(Value::Type(ValueType::TableOutputStream(c)))
             } else {
                 argument_error_legacy(
                     "Tried to set columns on a table_output_stream type that already has columns",

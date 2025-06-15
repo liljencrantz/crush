@@ -1,13 +1,13 @@
-use std::sync::OnceLock;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
-use crate::lang::value::ValueType;
+use crate::lang::state::this::This;
 use crate::lang::value::Value;
+use crate::lang::value::ValueType;
 use ordered_map::OrderedMap;
 use signature::signature;
-use crate::lang::state::this::This;
+use std::sync::OnceLock;
 
 pub fn methods() -> &'static OrderedMap<String, Command> {
     static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();

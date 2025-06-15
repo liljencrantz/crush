@@ -1,8 +1,8 @@
-use crate::{argument_error_legacy, CrushResult};
 use crate::lang::argument::Argument;
 use crate::lang::errors::error;
-use crate::lang::value::{Value};
+use crate::lang::value::Value;
 use crate::util::replace::Replace;
+use crate::{CrushResult, argument_error_legacy};
 
 pub trait ArgumentVector {
     fn check_len(&self, len: usize) -> CrushResult<()>;

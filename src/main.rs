@@ -1,22 +1,22 @@
 #[macro_use]
 extern crate lalrpop_util;
 
-mod lang;
 mod builtins;
+mod lang;
 mod util;
 
-use crate::lang::errors::{argument_error_legacy, CrushResult};
-use crate::lang::pretty::create_pretty_printer;
-use crate::lang::{execute, printer};
-use builtins::declare;
-use std::io::Read;
-use std::path::PathBuf;
-use num_format::SystemLocale;
-use lang::{data, state};
+use crate::lang::errors::{CrushResult, argument_error_legacy};
 use crate::lang::interactive;
-use lang::state::global_state::GlobalState;
+use crate::lang::pretty::create_pretty_printer;
 use crate::lang::printer::Printer;
 use crate::lang::state::scope::ScopeType::Namespace;
+use crate::lang::{execute, printer};
+use builtins::declare;
+use lang::state::global_state::GlobalState;
+use lang::{data, state};
+use num_format::SystemLocale;
+use std::io::Read;
+use std::path::PathBuf;
 
 #[derive(PartialEq, Eq)]
 enum Mode {
@@ -67,13 +67,22 @@ fn print_help(printer: &Printer) {
     printer.line("");
     printer.line("Crush can be run in three modes.");
     printer.line("");
-    printer.line("- With no arguments, Crush starts in interactive mode, and commands will be read from");
+    printer.line(
+        "- With no arguments, Crush starts in interactive mode, and commands will be read from",
+    );
     printer.line("  standard input.");
-    printer.line("- With a filename as the only argument, that file will be executed in non-interactive");
+    printer.line(
+        "- With a filename as the only argument, that file will be executed in non-interactive",
+    );
     printer.line("  mode.");
-    printer.line("- With the argument \"--pup\", a closure serialized to pup format will be read from");
-    printer.line("  standard input, and executed. The output of the closure will be written in pup-format");
-    printer.line("  to standard output. This third mode is used by e.g. sudo and remote:exec to run");
+    printer.line(
+        "- With the argument \"--pup\", a closure serialized to pup format will be read from",
+    );
+    printer.line(
+        "  standard input, and executed. The output of the closure will be written in pup-format",
+    );
+    printer
+        .line("  to standard output. This third mode is used by e.g. sudo and remote:exec to run");
     printer.line("  closures in a different process.");
 }
 
@@ -98,34 +107,17 @@ fn run() -> CrushResult<i32> {
     declare(&root_scope)?;
 
     match config.mode {
-        Mode::Interactive => interactive::run(
-            local_scope,
-            &pretty_printer,
-            &global_state,
-        )?,
+        Mode::Interactive => interactive::run(local_scope, &pretty_printer, &global_state)?,
 
         Mode::Pup => {
             let mut buff = Vec::new();
             std::io::stdin().read_to_end(&mut buff)?;
-            execute::pup(
-                local_scope,
-                &buff,
-                &global_state,
-            )?;
+            execute::pup(local_scope, &buff, &global_state)?;
         }
 
-        Mode::File(f) => {
-            execute::file(
-                &local_scope,
-                f.as_path(),
-                &pretty_printer,
-                &global_state,
-            )?
-        }
+        Mode::File(f) => execute::file(&local_scope, f.as_path(), &pretty_printer, &global_state)?,
 
-        Mode::Help => {
-            print_help(&global_state.printer())
-        }
+        Mode::Help => print_help(&global_state.printer()),
     }
     let status = global_state.exit_status().unwrap_or(0);
     global_state.threads().join(global_state.printer());
@@ -141,7 +133,9 @@ fn set_initial_locale(global_state: &GlobalState) {
     if let Ok(lang) = std::env::var("LANG") {
         match SystemLocale::from_name(&lang) {
             Ok(new_locale) => global_state.set_locale(new_locale),
-            Err(_) => global_state.printer().error(&format!("Invalid locale {}", lang)),
+            Err(_) => global_state
+                .printer()
+                .error(&format!("Invalid locale {}", lang)),
         }
     }
 }

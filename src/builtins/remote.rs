@@ -1,28 +1,28 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{error, CrushResult};
-use crate::lang::state::contexts::CommandContext;
+use crate::lang::completion::Completion;
+use crate::lang::completion::parse::{LastArgument, PartialCommandResult};
+use crate::lang::data::table::{ColumnType, Row};
+use crate::lang::errors::{CrushResult, error};
+use crate::lang::serialization::{deserialize, serialize};
 use crate::lang::signature::files::Files;
 use crate::lang::signature::patterns::Patterns;
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
-use crate::lang::serialization::{deserialize, serialize};
-use crate::lang::data::table::{ColumnType, Row};
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
+use crate::util::escape::{escape, escape_without_quotes};
 use crate::util::file::home;
+use crate::util::user_map::get_current_username;
 use crossbeam::channel::unbounded;
 use signature::signature;
 use ssh2::KnownHostFileKind;
 use ssh2::{CheckResult, KnownHostKeyFormat, Session};
 use std::cmp::min;
+use std::convert::TryFrom;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::PathBuf;
-use crate::util::user_map::get_current_username;
-use crate::lang::completion::Completion;
-use crate::lang::completion::parse::{PartialCommandResult, LastArgument};
-use std::convert::TryFrom;
-use crate::util::escape::{escape, escape_without_quotes};
 
 static IDENTITY_OUTPUT_TYPE: [ColumnType; 2] = [
     ColumnType::new("identity", ValueType::String),
@@ -44,7 +44,8 @@ fn parse(
         username = tmp.next().unwrap().to_string();
         host = tmp.next().unwrap().to_string();
     } else {
-        username = default_username.clone()
+        username = default_username
+            .clone()
             .unwrap_or(get_current_username()?.to_string());
     }
 
@@ -82,10 +83,9 @@ fn run_remote(
     if !ignore_host_file {
         let mut known_hosts = sess.known_hosts()?;
         known_hosts.read_file(host_file, KnownHostFileKind::OpenSSH)?;
-        let (key, key_type) =
-            sess.host_key().ok_or(
-            &format!("Could not fetch host key for {}", host),
-        )?;
+        let (key, key_type) = sess
+            .host_key()
+            .ok_or(&format!("Could not fetch host key for {}", host))?;
         match known_hosts.check_port(&host, port, key) {
             CheckResult::Match => {}
             CheckResult::Mismatch => return error("Host mismatch"),
@@ -134,18 +134,17 @@ fn ssh_host_complete(
         match &cmd.last_argument {
             LastArgument::Unknown => {
                 let completion = escape(host.name().unwrap_or(""));
-                res.push(Completion::new(
-                    completion,
-                    host.name().unwrap_or(""),
-                    0,
-                ))
+                res.push(Completion::new(completion, host.name().unwrap_or(""), 0))
             }
 
             LastArgument::QuotedString(stripped_prefix) => {
                 let completion = host.name().unwrap_or("");
                 if completion.starts_with(stripped_prefix) && completion.len() > 0 {
                     res.push(Completion::new(
-                        format!("{}\" ", escape_without_quotes(&completion[stripped_prefix.len()..])),
+                        format!(
+                            "{}\" ",
+                            escape_without_quotes(&completion[stripped_prefix.len()..])
+                        ),
                         host.name().unwrap_or(""),
                         0,
                     ));
@@ -157,7 +156,6 @@ fn ssh_host_complete(
     }
     Ok(())
 }
-
 
 #[signature(
     remote.exec,
@@ -173,7 +171,8 @@ struct Exec {
     host: String,
     #[description("username on remote machines.")]
     username: Option<String>,
-    #[description("password on remote machines. If no password is provided, agent authentication will be used."
+    #[description(
+        "password on remote machines. If no password is provided, agent authentication will be used."
     )]
     password: Option<String>,
     #[description("(~/.ssh/known_hosts) known hosts file.")]
@@ -181,7 +180,8 @@ struct Exec {
     #[description("skip checking the know hosts file.")]
     #[default(false)]
     ignore_host_file: bool,
-    #[description("allow missing hosts in the known hosts file. Missing hosts will be automatically added to the file."
+    #[description(
+        "allow missing hosts in the known hosts file. Missing hosts will be automatically added to the file."
     )]
     #[default(false)]
     allow_not_found: bool,
@@ -228,7 +228,8 @@ struct Pexec {
     parallel: i128,
     #[description("username on remote machines.")]
     username: Option<String>,
-    #[description("password on remote machines. If no password is provided, agent authentication will be used."
+    #[description(
+        "password on remote machines. If no password is provided, agent authentication will be used."
     )]
     password: Option<String>,
     #[description("(~/.ssh/known_hosts) known hosts file.")]
@@ -236,7 +237,8 @@ struct Pexec {
     #[description("skip checking the know hosts file.")]
     #[default(false)]
     ignore_host_file: bool,
-    #[description("allow missing hosts in the known hosts file. Missing hosts will be automatically added to the file."
+    #[description(
+        "allow missing hosts in the known hosts file. Missing hosts will be automatically added to the file."
     )]
     #[default(false)]
     allow_not_found: bool,
@@ -280,24 +282,22 @@ fn pexec(mut context: CommandContext) -> CrushResult<()> {
         let my_ignore_host_file = cfg.ignore_host_file;
         let my_allow_not_found = cfg.allow_not_found;
 
-        context.spawn(
-            "remote:pexec",
-            move || {
-                while let Ok(host) = my_recv.recv() {
-                    let res = run_remote(
-                        &my_buf,
-                        &my_env,
-                        host.clone(),
-                        &my_username,
-                        &my_password,
-                        &my_host_file,
-                        my_ignore_host_file,
-                        my_allow_not_found,
-                    )?;
-                    my_send.send((host, res))?;
-                }
-                Ok(())
-            })?;
+        context.spawn("remote:pexec", move || {
+            while let Ok(host) = my_recv.recv() {
+                let res = run_remote(
+                    &my_buf,
+                    &my_env,
+                    host.clone(),
+                    &my_username,
+                    &my_password,
+                    &my_host_file,
+                    my_ignore_host_file,
+                    my_allow_not_found,
+                )?;
+                my_send.send((host, res))?;
+            }
+            Ok(())
+        })?;
     }
 
     drop(result_send);
@@ -353,9 +353,7 @@ mod host {
 
     fn list(context: CommandContext) -> CrushResult<()> {
         let cfg: List = List::parse(context.arguments, &context.global_state.printer())?;
-        let output = context
-            .output
-            .initialize(&HOST_OUTPUT_TYPE)?;
+        let output = context.output.initialize(&HOST_OUTPUT_TYPE)?;
         let session = Session::new()?;
 
         let mut known_hosts = session.known_hosts()?;

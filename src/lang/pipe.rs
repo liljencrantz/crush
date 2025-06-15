@@ -5,15 +5,14 @@ Unlike normal pipes, these pipes can send *any* crush value, but they are limite
 between threads inside of a single process. The most important use case is to send a single value
 of the type TableInputStream.
  */
-
 use std::sync::OnceLock;
 
-use crate::lang::errors::{error, CrushError, CrushResult};
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
+use crate::lang::errors::{CrushError, CrushResult, error};
 use crate::lang::value::Value;
 use chrono::Duration;
-use crossbeam::channel::{bounded, unbounded, Receiver, Sender};
+use crossbeam::channel::{Receiver, Sender, bounded, unbounded};
 
 pub type RecvTimeoutError = crossbeam::channel::RecvTimeoutError;
 
@@ -64,11 +63,12 @@ A Sender that will drop any data sent to it at once.
  */
 pub fn black_hole() -> ValueSender {
     static CELL: OnceLock<ValueSender> = OnceLock::new();
-    CELL.get_or_init(||{
+    CELL.get_or_init(|| {
         let (mut o, _) = pipe();
         o.is_pipeline = false;
         o
-    }).clone()
+    })
+    .clone()
 }
 
 /**
@@ -146,7 +146,7 @@ impl TableInputStream {
                                 c.value_type(),
                                 ct.cell_type
                             )
-                                .as_str(),
+                            .as_str(),
                         );
                     }
                 }
@@ -163,8 +163,14 @@ A Sender/Receiver pair that is bounded to only one Value on the wire before bloc
 pub fn pipe() -> (ValueSender, ValueReceiver) {
     let (send, recv) = bounded(1);
     (
-        ValueSender { sender: send, is_pipeline: true },
-        ValueReceiver { receiver: recv, is_pipeline: true },
+        ValueSender {
+            sender: send,
+            is_pipeline: true,
+        },
+        ValueReceiver {
+            receiver: recv,
+            is_pipeline: true,
+        },
     )
 }
 
@@ -174,8 +180,14 @@ A Sender/Receiver pair that is bounded to only one Value on the wire before bloc
 pub fn printer_pipe() -> (ValueSender, ValueReceiver) {
     let (send, recv) = bounded(1);
     (
-        ValueSender { sender: send, is_pipeline: false },
-        ValueReceiver { receiver: recv, is_pipeline: false },
+        ValueSender {
+            sender: send,
+            is_pipeline: false,
+        },
+        ValueReceiver {
+            receiver: recv,
+            is_pipeline: false,
+        },
     )
 }
 
