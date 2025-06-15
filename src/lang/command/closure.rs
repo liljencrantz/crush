@@ -63,11 +63,11 @@ impl CrushCommand for Closure {
             } else {
                 empty_channel()
             };
-            let output = if last && scope_type == Block {
+            let output = if last {
                 context.output.clone()
             } else {
-                context.output.clone()
-                //                black_hole()
+                //context.output.clone()
+                black_hole()
             };
 
             let job = job_definition.eval(JobContext::new(

@@ -12,3 +12,4 @@ pub mod replace;
 pub mod time;
 pub mod user_map;
 pub mod temperature;
+pub mod highlight;
