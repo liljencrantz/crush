@@ -78,7 +78,6 @@ impl Iterator for RealIter {
 pub mod tests {
     use std::collections::VecDeque;
     use ordered_map::{Entry, OrderedMap};
-    use crate::lang::errors::mandate;
     use super::*;
 
     pub struct FakeDirectoryLister {
@@ -158,14 +157,13 @@ pub mod tests {
             Ok(
                 FakeIter {
                     vec: VecDeque::from(
-                        mandate(
                             self.map.get(&path)
                                 .map(|v|
                                 v.iter().map(|f| Directory {
                                     name: f.name.clone(),
                                     full_path: g.join(&f.name),
                                     is_directory: f.is_directory
-                                }).collect::<Vec<_>>()),
+                                }).collect::<Vec<_>>()).ok_or(
                             format!("Unknown directory {:?}", path))?.clone()),
                 }
             )

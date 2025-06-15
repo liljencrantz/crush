@@ -657,24 +657,6 @@ impl Help for Closure {
     }
 }
 
-/** Extracts the help message from a closure definition */
-fn extract_help(jobs: &mut Vec<Job>) -> String {
-    if jobs.is_empty() {
-        return "".to_string();
-    }
-
-    let j = &jobs[0];
-    match j.extract_help_message() {
-        Some(help) => {
-            if jobs.len() > 1 {
-                jobs.remove(0);
-            }
-            help
-        }
-        _ => "".to_string(),
-    }
-}
-
 impl Closure {
     pub fn new(
         name: Option<TrackedString>,
@@ -683,9 +665,6 @@ impl Closure {
         env: Scope,
         arguments: Vec<ArgumentDescription>,
     ) -> Closure {
-        let short_help = extract_help(&mut job_definitions);
-        let long_help = extract_help(&mut job_definitions);
-
         Closure {
             name,
             job_definitions,

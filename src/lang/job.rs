@@ -58,14 +58,6 @@ impl Job {
         last_call_def.eval(context.with_io(input, context.output.clone())).map_err(|e| e.with_location(self.location))
     }
 
-    /** Extracts the help message from a closure definition */
-    pub fn extract_help_message(&self) -> Option<String> {
-        if self.commands.len() != 1 {
-            return None;
-        }
-
-        self.commands[0].extract_help_message()
-    }
 }
 
 impl Display for Job {

@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, argument_error_legacy, mandate};
+use crate::lang::errors::{CrushResult, argument_error_legacy};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::data::r#struct::Struct;
@@ -60,7 +60,7 @@ fn parse_files(cfg: &JournalSignature) -> CrushResult<JournalFiles> {
 fn usec_since_epoch(tm: DateTime<Local>) -> CrushResult<u64> {
     let epoch = DateTime::from(std::time::UNIX_EPOCH);
     let duration = tm - epoch;
-    Ok(u64::try_from(mandate(duration.num_microseconds(), "Time overflow")?)?)
+    Ok(u64::try_from(duration.num_microseconds().ok_or("Time overflow")?)?)
 }
 
 fn journal(mut context: CommandContext) -> CrushResult<()> {
