@@ -135,6 +135,7 @@ message ValueDefinition {
     Job job = 3;
     uint64 label = 4;
     Attr get_attr = 5;
+    JobList jobList = 6;
   }
 }
 
@@ -153,6 +154,10 @@ message Job {
   repeated CommandInvocation commands = 1;
   uint64 start = 2;
   uint64 end = 3;
+}
+
+message JobList {
+  repeated Job jobs = 1;
 }
 
 message CommandInvocation {

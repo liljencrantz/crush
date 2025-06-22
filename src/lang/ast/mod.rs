@@ -9,6 +9,7 @@ use crate::util::user_map::get_user;
 use location::Location;
 use node::Node;
 use tracked_string::TrackedString;
+use crate::util::replace::Replace;
 
 pub mod lexer;
 pub mod location;
@@ -29,6 +30,15 @@ impl JobListNode {
     }
 }
 
+impl From<JobNode> for JobListNode {
+    fn from(job: JobNode) -> JobListNode {
+        JobListNode {
+            location: job.location,
+            jobs: vec![job],
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct JobNode {
     pub commands: Vec<CommandNode>,
@@ -46,13 +56,31 @@ impl JobNode {
         ))
     }
 
-    pub fn to_node(mut self) -> Box<Node> {
-        if self.commands.len() == 1 {
-            if self.commands[0].expressions.len() == 1 {
-                return Box::from(self.commands[0].expressions.remove(0));
+}
+
+impl From<Node> for JobNode {
+    fn from(node: Node) -> JobNode {
+        let location = node.location();
+        match node {
+            Node::Substitution(mut s) if s.jobs.len() == 1 => s.jobs.remove(0),
+            Node::Assignment(..) => JobNode {
+                commands: vec![CommandNode {
+                    expressions: vec![node],
+                    location,
+                }],
+                location,
+            },
+            _ => {
+                let expressions = vec![Node::val(location), node];
+                JobNode {
+                    commands: vec![CommandNode {
+                        expressions,
+                        location,
+                    }],
+                    location,
+                }
             }
         }
-        Box::from(Node::Substitution(self))
     }
 }
 
@@ -65,7 +93,7 @@ fn operator_function(op: &[&str], op_location: Location, l: Box<Node>, r: Box<No
             location: location,
         }],
         location: location,
-    }))
+    }.into()))
 }
 
 pub fn operator_method(op: &str, op_location: Location, l: Box<Node>, r: Box<Node>) -> Box<Node> {
@@ -77,7 +105,7 @@ pub fn operator_method(op: &str, op_location: Location, l: Box<Node>, r: Box<Nod
             location: location,
         }],
         location: location,
-    }))
+    }.into()))
 }
 
 pub fn unary_operator_method(op: &str, op_location: Location, n: Box<Node>) -> Box<Node> {
@@ -89,7 +117,7 @@ pub fn unary_operator_method(op: &str, op_location: Location, n: Box<Node>) -> B
             location: location,
         }],
         location: location,
-    }))
+    }.into()))
 }
 
 pub fn negate(n: Box<Node>) -> Box<Node> {
@@ -101,7 +129,7 @@ pub fn negate(n: Box<Node>) -> Box<Node> {
             location,
         }],
         location,
-    }))
+    }.into()))
 }
 
 pub fn operator(iop: impl Into<TrackedString>, l: Box<Node>, r: Box<Node>) -> Box<Node> {

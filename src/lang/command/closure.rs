@@ -66,7 +66,6 @@ impl CrushCommand for Closure {
             let output = if last {
                 context.output.clone()
             } else {
-                //context.output.clone()
                 black_hole()
             };
 
@@ -335,6 +334,13 @@ impl<'a> ClosureSerializer<'a> {
                         element: element.serialize(self.elements, self.state)? as u64,
                     }))
                 }
+                ValueDefinition::JobListDefinition(jobs) => {
+                    model::value_definition::ValueDefinition::JobList(
+                        model::JobList {
+                            jobs: jobs.iter().map(|j| self.job(j)).collect::<CrushResult<Vec<_>>>()?,
+                        }
+                    )
+                }
             }),
         })
     }
@@ -532,6 +538,19 @@ impl<'a> ClosureDeserializer<'a> {
                         Location::new(j.start as usize, j.end as usize),
                     ))
                 }
+                model::value_definition::ValueDefinition::JobList(jobs) => {
+                    let mut res = Vec::new();
+                    for j in &jobs.jobs {
+                        res.push(Job::new(
+                            j.commands
+                                .iter()
+                                .map(|c| self.command(c))
+                                .collect::<CrushResult<Vec<_>>>()?,
+                            Location::new(j.start as usize, j.end as usize)));
+                    }
+                    ValueDefinition::JobListDefinition(res)
+                }
+
                 model::value_definition::ValueDefinition::Label(s) => ValueDefinition::Identifier(
                     TrackedString::deserialize(*s as usize, self.elements, self.state)?,
                 ),
@@ -610,7 +629,7 @@ impl Help for Closure {
 
                 for i in sig {
                     match i {
-                        Parameter::Parameter(name, arg_type, default, doc) => {
+                        Parameter::Parameter(name, _arg_type, default, doc) => {
                             param_help.push(format!(
                                 " * `{}` {}{}",
                                 &name.string,
@@ -665,7 +684,7 @@ impl Closure {
     pub fn new(
         name: Option<TrackedString>,
         signature: Option<Vec<Parameter>>,
-        mut job_definitions: Vec<Job>,
+        job_definitions: Vec<Job>,
         env: Scope,
         arguments: Vec<ArgumentDescription>,
     ) -> Closure {

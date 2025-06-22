@@ -1,5 +1,6 @@
 use crate::lang::argument::{ArgumentDefinition, SwitchStyle};
 use crate::lang::ast::location::Location;
+use crate::lang::ast::node::TextLiteralStyle::{Quoted, Unquoted};
 use crate::lang::ast::parameter_node::ParameterNode;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::ast::{CommandNode, JobListNode, JobNode, expand_user, propose_name};
@@ -15,6 +16,12 @@ use regex::Regex;
 use std::ops::Deref;
 use std::path::PathBuf;
 
+#[derive(Clone, Debug, Copy)]
+pub enum TextLiteralStyle {
+    Quoted,
+    Unquoted,
+}
+
 /**
 A type representing a node in the abstract syntax tree that is the output of parsing a Crush script.
  */
@@ -25,15 +32,13 @@ pub enum Node {
     Glob(TrackedString),
     Identifier(TrackedString),
     Regex(TrackedString),
-    // true if filename is quoted
-    String(TrackedString, bool),
-    // true if filename is quoted
-    File(TrackedString, bool),
+    String(TrackedString, TextLiteralStyle),
+    File(TrackedString, TextLiteralStyle),
     Integer(TrackedString),
     Float(TrackedString),
     GetItem(Box<Node>, Box<Node>),
     GetAttr(Box<Node>, TrackedString),
-    Substitution(JobNode),
+    Substitution(JobListNode),
     Closure(Option<Vec<ParameterNode>>, JobListNode),
 }
 
@@ -51,16 +56,19 @@ impl Node {
             node.location,
         )];
         for it in node.jobs {
-            cmd.push(Node::Substitution(it))
+            cmd.push(Node::Substitution(it.into()))
         }
 
-        Box::from(Node::Substitution(JobNode {
-            commands: vec![CommandNode {
-                expressions: cmd,
+        Box::from(Node::Substitution(
+            JobNode {
+                commands: vec![CommandNode {
+                    expressions: cmd,
+                    location: node.location,
+                }],
                 location: node.location,
-            }],
-            location: node.location,
-        }))
+            }
+            .into(),
+        ))
     }
 
     fn id(s: &str, l: Location) -> Box<Node> {
@@ -69,41 +77,6 @@ impl Node {
 
     fn global(l: Location) -> Box<Node> {
         Node::id("global", l)
-    }
-
-    pub fn expression_to_command(self) -> CommandNode {
-        let l = self.location();
-        match self {
-            Node::Substitution(n) if n.commands.len() == 1 => n.commands[0].clone(),
-            _ => CommandNode {
-                expressions: vec![Node::val(self.location()), self],
-                location: l,
-            },
-        }
-    }
-
-    pub fn expression_to_job(self) -> JobNode {
-        let location = self.location();
-        match self {
-            Node::Substitution(s) => s,
-            Node::Assignment(..) => JobNode {
-                commands: vec![CommandNode {
-                    expressions: vec![self],
-                    location,
-                }],
-                location,
-            },
-            _ => {
-                let expressions = vec![Node::val(location), self];
-                JobNode {
-                    commands: vec![CommandNode {
-                        expressions,
-                        location,
-                    }],
-                    location,
-                }
-            }
-        }
     }
 
     pub fn prefix(&self, pos: usize) -> CrushResult<Node> {
@@ -170,7 +143,7 @@ impl Node {
             Node::Assignment(target, style, op, value) => match op.deref() {
                 "=" => {
                     return match target.as_ref() {
-                        Node::String(t, false) | Node::Identifier(t) => {
+                        Node::String(t, TextLiteralStyle::Unquoted) | Node::Identifier(t) => {
                             Ok(ArgumentDefinition::named_with_style(
                                 t,
                                 *style,
@@ -183,7 +156,7 @@ impl Node {
                         )),
                     };
                 }
-                _ => return error("Invalid assignment operator"),
+                s => return error(format!("Invalid assignment operator, can't use the {} operator inside a parameter list", s)),
             },
 
             Node::GetItem(a, o) => ValueDefinition::JobDefinition(Job::new(
@@ -209,10 +182,10 @@ impl Node {
                 Value::Regex(l.string.clone(), Regex::new(&l.string.clone())?),
                 l.location,
             ),
-            Node::String(t, true) => {
+            Node::String(t, TextLiteralStyle::Quoted) => {
                 ValueDefinition::Value(Value::from(unescape(&t.string)?), t.location)
             }
-            Node::String(f, false) => {
+            Node::String(f, TextLiteralStyle::Unquoted) => {
                 if is_command {
                     ValueDefinition::Identifier(f.clone())
                 } else {
@@ -232,7 +205,7 @@ impl Node {
                 identifier.clone(),
             ),
 
-            Node::Substitution(s) => ValueDefinition::JobDefinition(s.compile(env)?),
+            Node::Substitution(s) => ValueDefinition::JobListDefinition(s.compile(env)?),
             Node::Closure(signature, jobs) => {
                 let param = signature.as_ref().map(|v| {
                     v.iter()
@@ -247,11 +220,10 @@ impl Node {
                 ValueDefinition::ClosureDefinition(None, p, jobs.compile(env)?, jobs.location)
             }
             Node::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g.string)), g.location),
-            Node::File(s, quoted) => ValueDefinition::Value(
-                Value::from(if *quoted {
-                    PathBuf::from(&unescape(&s.string)?)
-                } else {
-                    PathBuf::from(&expand_user(&s.string)?)
+            Node::File(s, quote_style) => ValueDefinition::Value(
+                Value::from(match quote_style {
+                    Quoted => PathBuf::from(&unescape(&s.string)?),
+                    Unquoted => PathBuf::from(&expand_user(&s.string)?),
                 }),
                 s.location,
             ),
@@ -385,12 +357,12 @@ impl Node {
         }
     }
 
-    pub fn file(is: impl Into<TrackedString>, quoted: bool) -> Box<Node> {
+    pub fn file(is: impl Into<TrackedString>, quoted: TextLiteralStyle) -> Box<Node> {
         Box::from(Node::File(is.into(), quoted))
     }
 
     pub fn quoted_string(is: impl Into<TrackedString>) -> Box<Node> {
-        Box::from(Node::String(is.into(), true))
+        Box::from(Node::String(is.into(), Quoted))
     }
 
     pub fn return_expr(location: Location) -> Box<Node> {
@@ -420,7 +392,7 @@ impl Node {
                     location,
                 }],
                 location,
-            }),
+            }.into()),
             Node::Closure(None, true_body),
         ];
 
@@ -434,7 +406,7 @@ impl Node {
                 location,
             }],
             location,
-        }))
+        }.into()))
     }
 
     pub fn while_expr(
@@ -465,7 +437,7 @@ impl Node {
                 location,
             }],
             location,
-        }))
+        }.into()))
     }
 
     pub fn loop_expr(loop_location: Location, body: JobListNode) -> Box<Node> {
@@ -479,7 +451,7 @@ impl Node {
                 location,
             }],
             location,
-        }))
+        }.into()))
     }
 
     pub fn for_expr(
@@ -504,7 +476,7 @@ impl Node {
                 location,
             }],
             location,
-        }))
+        }.into()))
     }
 
     fn get_attr(path: &[&str], location: Location) -> Node {
@@ -525,11 +497,11 @@ impl Node {
                 location,
             }],
             location,
-        }))
+        }.into()))
     }
 
     pub fn unquoted_string(is: impl Into<TrackedString>) -> Box<Node> {
-        Box::from(Node::String(is.into(), false))
+        Box::from(Node::String(is.into(), Unquoted))
     }
 
     pub fn glob(is: impl Into<TrackedString>) -> Box<Node> {
@@ -546,5 +518,63 @@ impl Node {
 
     pub fn regex(is: impl Into<TrackedString>) -> Box<Node> {
         Box::from(Node::Regex(is.into()))
+    }
+}
+
+impl From<JobNode> for Box<Node> {
+    fn from(mut list: JobNode) -> Box<Node> {
+        if list.commands.len() == 1 {
+            if list.commands[0].expressions.len() == 1 {
+                return Box::from(list.commands[0].expressions.remove(0));
+            }
+        }
+        Box::from(Node::Substitution(list.into()))
+    }
+}
+
+impl From<Box<Node>> for JobNode {
+    fn from(node: Box<Node>) -> JobNode {
+        JobNode::from(CommandNode::from(*node))
+    }
+}
+
+impl From<CommandNode> for JobNode {
+    fn from(value: CommandNode) -> Self {
+        JobNode {
+            location: value.location,
+            commands: vec![value],
+        }
+    }
+}
+
+impl From<Node> for CommandNode {
+    fn from(value: Node) -> Self {
+        let l = value.location();
+        match value {
+            Node::Substitution(n) if n.jobs.len() == 1 && n.jobs[0].commands.len() == 1 => {
+                n.jobs[0].commands[0].clone()
+            }
+            Node::Assignment(..) => {
+                CommandNode {
+                    expressions: vec![value],
+                    location: l,
+                }
+            }
+            _ => CommandNode {
+                expressions: vec![Node::val(value.location()), value],
+                location: l,
+            },
+        }
+    }
+}
+
+impl From<Box<Node>> for JobListNode {
+    fn from(node: Box<Node>) -> JobListNode {
+        match *node {
+            Node::Substitution(job) => job,
+            _ => {
+                JobListNode::from(JobNode::from(node))
+            }
+        }
     }
 }

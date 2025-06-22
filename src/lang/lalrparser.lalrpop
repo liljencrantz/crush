@@ -6,6 +6,7 @@ use crate::lang::ast::parameter_node::ParameterNode;
 use crate::lang::ast::location::Location;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::argument::SwitchStyle;
+use crate::lang::ast::node::TextLiteralStyle::{Quoted, Unquoted};
 
 grammar<'input>(input: &'input str);
 
@@ -53,18 +54,19 @@ ExprJobListWithoutSeparator: JobListNode = {
 
 ExprNonEmptyJobList: JobListNode = {
     <l: @L> <mut lst:ExprNonEmptyJobList> Separators <j:Expr> <r: @R> =>  {
-        lst.jobs.push(j.expression_to_job());
+        lst.jobs.push(JobNode::from(j));
         lst.location = Location::new(l, r);
         lst
     },
-    <l: @L> <j: Expr> <r: @R> => JobListNode {jobs: vec![j.expression_to_job()], location: Location::new(l, r)},
+    <l: @L> <j: Expr> <r: @R> => JobListNode {jobs: vec![j.into()], location: Location::new(l, r)},
 };
 
 Expr: Box<Node> = {
     ExprAssignment,
     <j:Expr> Pipe <c:ExprAssignment> => {
-        let mut jj = j.expression_to_job();
-        jj.commands.push(c.expression_to_command());
+        let mut jj: JobListNode = j.into();
+        let idx = jj.jobs.len() - 1;
+        jj.jobs[idx].commands.push(CommandNode::from(*c));
         Box::from(Node::Substitution(jj))
     },
 }
@@ -116,10 +118,10 @@ ExprOptFalseBody: Option<JobListNode> = {
 
 ExprItem: Box<Node> = {
     ExprModeStart <e:Expr> SubEnd => e,
-    SubStart <j:Job> SubEnd => Box::from(Node::Substitution(j)),
+    SubStart <j:Job> SubEnd => Box::from(Node::Substitution(j.into())),
     <l: Identifier> => Node::identifier(l),
     <l: Regex> => Node::regex(l),
-    <l:QuotedFile> => Node::file(l, true),
+    <l:QuotedFile> => Node::file(l, Quoted),
     <s:QuotedString> => Node::quoted_string(s),
     <s:String> => Node::unquoted_string(s),
     <i:Integer> => Node::integer(i),
@@ -150,7 +152,7 @@ ExprItem: Box<Node> = {
                     JobNode{
                         commands: vec![c],
                         location: l,
-                    }
+                    }.into()
                 ))
         },
     BlockStart Separators? <s: ExprSignature> <l: ExprJobListWithoutSeparator> BlockEnd => Box::from(Node::Closure(s, l)),
@@ -268,16 +270,16 @@ Default: Option<Node> = {
 
 Item: Box<Node> = {
     <l:String> => Node::unquoted_string(l),
-    <l:File> => Node::file(l, false),
+    <l:File> => Node::file(l, Unquoted),
     <l:Glob> => Node::glob(l),
     <l:Identifier> => Node::identifier(l),
     <l:Regex> => Node::regex(l),
-    <l:QuotedFile> => Node::file(l, true),
+    <l:QuotedFile> => Node::file(l, Quoted),
     <l:QuotedString> => Node::quoted_string(l),
     <l:Integer> => Node::integer(l),
     <l:Float> => Node::float(l),
     <l:Flag> => {
-    let ts = TrackedString::from(l);
+        let ts = TrackedString::from(l);
         Box::from(
             if ts.string.starts_with("--") {
                 Node::Assignment(Node::unquoted_string(ts.slice_to_end(2)),
@@ -294,8 +296,8 @@ Item: Box<Node> = {
     <i: Item> GetItemStart <e: Assignment> GetItemEnd => Box::from(Node::GetItem(i, e)),
     <i: Item> MemberOperator <start: @L> <l: String> <end: @R> => Box::from(Node::GetAttr(i, TrackedString::from(l))),
     BlockStart Separators? <s: Signature> <l: JobListWithoutSeparator> BlockEnd => Box::from(Node::Closure(s, l)),
-    SubStart <j:Job> SubEnd => Box::from(Node::Substitution(j)),
-    <l: @L>ExprModeStart <e:Expr> SubEnd <r: @R> => Box::from(Node::Substitution(e.expression_to_job())),
+    SubStart <j:JobList> SubEnd => Box::from(Node::Substitution(j)),
+    <l: @L>ExprModeStart <e:ExprJobList> SubEnd <r: @R> => Box::from(Node::Substitution(e)),
 }
 
 AssignmentOperator: TrackedString = {

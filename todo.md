@@ -25,7 +25,7 @@
 * Better syntax highlighting for expression mode
 * Better syntax highlighting of possible errors
 * Operator ordering is unintuitve sometimes e.g. `$s == $s:global`. At least throw an error instead of doing the wrong thing?
-* return values from closures seem broken
-* The name isn't propagated to methods when they are created
+* returning values from closures seems to be broken
+* The method name isn't propagated to methods when they are created
 * Move yaml builtin to use saphyr
 * Figure out what to do about users/groups __getitem__

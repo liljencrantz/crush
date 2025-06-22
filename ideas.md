@@ -1,23 +1,3 @@
-# Extend argument declaration syntax
-
-* Add the option of adding a documentation string for each argument.
-* Add a syntax to allow documentation of the whole closure via short, long and example strings.
-* Allow an optional separator between arguments so that you can put each argument on a separate line
-
-```
-$timeit := {
-    |
-        short="Execute a command many times and estimate the execution time."
-        long="This function provides a simple way to time small bits of Crush code"
-        example="timeit {files|sort size}"
-        $it: $command "the command to time."
-        $number: $integer "the number of runs in each repeat. If unspecified, timeit will repeat enough times for each batch to take roughly 0.4 seconds."
-        $repeat: $integer = 5 "repeat count. The average speed in the fastest repeat will be returned."
-    |
-    ...
-}
-```
-
 # XML serialization
 
 Use struct:s with three members,
@@ -26,7 +6,7 @@ Use struct:s with three members,
 * `attr`, a `dict $string $string` containing the attributes of the node.
 * `children`, a `list $any` containing text fragments (as strings) mixed with child nodes. 
 
-# Changed variable declaration and assignement syntax
+# Changed variable declaration and assignment syntax
 
 ```
 # Declare new variable

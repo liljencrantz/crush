@@ -14,6 +14,8 @@ use crate::util::escape::escape_without_quotes;
 use nix::NixPath;
 use std::ops::Deref;
 use std::path::PathBuf;
+use crate::lang::ast::node::TextLiteralStyle;
+use crate::lang::ast::node::TextLiteralStyle::Unquoted;
 
 pub mod parse;
 
@@ -150,7 +152,7 @@ fn complete_label(
 fn complete_file(
     lister: &impl DirectoryLister,
     prefix: impl Into<PathBuf>,
-    quoted: bool,
+    quoted: TextLiteralStyle,
     value_type: &ValueType,
     cursor: usize,
     out: &mut Vec<Completion>,
@@ -187,8 +189,8 @@ fn complete_file(
                         &k.name.to_str().unwrap()[prefix_str.len()..],
                         match (quoted, k.is_directory) {
                             (_, true) => "/",
-                            (true, false) => "' ",
-                            (false, false) => " ",
+                            (TextLiteralStyle::Quoted, false) => "' ",
+                            (TextLiteralStyle::Unquoted, false) => " ",
                         },
                     ),
                     display: k.name.to_str().unwrap().to_string(),
@@ -285,7 +287,7 @@ fn complete_partial_argument(
 
         LastArgument::Unknown => {
             complete_label(Value::Scope(scope.clone()), "", &argument_type, cursor, res)?;
-            complete_file(lister, "", false, &argument_type, cursor, res)?;
+            complete_file(lister, "", Unquoted, &argument_type, cursor, res)?;
             if parse_result.last_argument_name.is_none() {
                 if let CompletionCommand::Known(cmd) = parse_result.command {
                     complete_argument_name(cmd.arguments(), "", cursor, res, false)?;
@@ -342,7 +344,7 @@ pub fn complete(
                 cursor,
                 &mut res,
             )?;
-            complete_file(lister, "", false, &ValueType::Any, cursor, &mut res)?;
+            complete_file(lister, "", Unquoted, &ValueType::Any, cursor, &mut res)?;
         }
 
         ParseResult::PartialLabel(label) => {

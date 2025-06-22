@@ -1,7 +1,7 @@
 use std::cmp::{max, min};
 
 /// A Location tracks the start and end of the definition of something in source code. It is used
-/// by jobs, closures, commands, etc. in order to be able to give good error reporting.
+/// by jobs, closures, commands, etc in order to be able to give good error reporting.
 #[derive(Clone, Debug, Copy, PartialEq, Eq)]
 pub struct Location {
     pub start: usize,

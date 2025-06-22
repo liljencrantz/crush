@@ -101,12 +101,16 @@ fn to_duration(a: i64, t: &str) -> CrushResult<chrono::Duration> {
         "minute" | "minutes" => Ok(Duration::seconds(a * 60)),
         "hour" | "hours" => Ok(Duration::seconds(a * 3600)),
         "day" | "days" => Ok(Duration::seconds(a * 3600 * 24)),
-        "year" | "years" => Ok(Duration::seconds(a * 3600 * 24 * 365)),
         _ => argument_error_legacy("Invalid duration"),
     }
 }
 
-#[signature(types.duration.of, can_block = false, short = "Create a new duration")]
+#[signature(
+    types.duration.of,
+    can_block = false,
+    short = "Create a new duration",
+    long = "Durations are stored as a time span in number of seconds. Because of leap seconds and daylight saving time, adding a `time` and a `duration` will sometimes lead to unintuitive results. For example, adding exactly one day to a `time` value will not always yield the exact same hour, minute and second one day later.",
+)]
 struct Of {
     #[description("the number of nanoseconds in the duration.")]
     #[default(0)]
@@ -126,7 +130,7 @@ struct Of {
     #[description("the number of hours in the duration.")]
     #[default(0)]
     hours: i64,
-    #[description("the number of days in the duration.")]
+    #[description("the number of days in the duration. This is internally represented as the number of seconds in a standard day. Be aware that because of leap seconds and daylight saving time, not all days are of the same length.")]
     #[default(0)]
     days: i64,
 }

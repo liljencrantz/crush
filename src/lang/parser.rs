@@ -69,7 +69,7 @@ impl Parser {
     pub fn parse(&self, s: &str, env: &Scope, initial_mode: LexerMode) -> CrushResult<Vec<Job>> {
         self.ast(s, initial_mode)?.compile(env)
     }
-
+    
     /// Return the abstract syntax tree (AST) for the supplied command. This is used by the
     /// completion engine.
     pub fn ast(&self, s: &str, initial_mode: LexerMode) -> CrushResult<JobListNode> {

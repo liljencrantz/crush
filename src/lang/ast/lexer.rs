@@ -503,7 +503,6 @@ impl<'input> Lexer<'input> {
                 Some((i, '|')) => return Some(Token::Pipe(Location::from(i)).into()),
                 Some((i, ';')) => return Some(Token::Separator(";", Location::from(i)).into()),
                 Some((i, ',')) => return Some(Token::Separator(",", Location::from(i)).into()),
-                Some((i, '\n')) => continue, //return Some(Token::Separator("\n", Location::from(i)).into()),
                 Some((_, '\\')) => match self.chars.peek() {
                     Some((_, '\n')) => {
                         self.chars.next();
@@ -687,7 +686,7 @@ impl<'input> Lexer<'input> {
                     return Some(Token::QuotedFile(s, Location::new(i, end_idx + 1)).into());
                 }
 
-                Some((_, ch)) if whitespace_char(ch) => continue,
+                Some((_, ch)) if expression_whitespace_char(ch) => continue,
                 Some((_, ch)) => return Some(Err(LexicalError::UnexpectedCharacter(ch))),
                 None => return None, // End of file
             }
@@ -729,6 +728,10 @@ fn number_or_underscore_char(ch: char) -> bool {
 
 fn whitespace_char(ch: char) -> bool {
     (ch == ' ') || (ch == '\r')
+}
+
+fn expression_whitespace_char(ch: char) -> bool {
+    (ch == ' ') || (ch == '\r') || (ch == '\n')
 }
 
 impl<'input> Iterator for Lexer<'input> {

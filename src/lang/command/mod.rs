@@ -408,7 +408,7 @@ pub enum Parameter {
 impl Display for Parameter {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Parameter::Parameter(name, value_type, default, doc) => {
+            Parameter::Parameter(name, value_type, default, _doc) => {
                 f.write_str("$")?;
                 name.fmt(f)?;
                 f.write_str(": $")?;
@@ -419,17 +419,17 @@ impl Display for Parameter {
                 }
                 Ok(())
             }
-            Parameter::Named(n, doc) => {
+            Parameter::Named(n, _doc) => {
                 f.write_str("@@")?;
                 n.fmt(f)?;
                 Ok(())
             }
-            Parameter::Unnamed(n, doc) => {
+            Parameter::Unnamed(n, _doc) => {
                 f.write_str("@")?;
                 n.fmt(f)?;
                 Ok(())
             }
-            Parameter::Meta(key, value) => Ok(()),
+            Parameter::Meta(_key, _value) => Ok(()),
         }
     }
 }

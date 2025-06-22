@@ -99,7 +99,7 @@ fn get_color<'a>(
         | SubStart(_)
         | BlockEnd(_)
         | BlockStart(_) => colors.get("operator"),
-        Identifier(_, _) => None,
+        Identifier(_, _) => colors.get("identifier"),
         Separator(_, _) => None,
         For(_) | While(_) | Loop(_) | If(_) | Else(_) | Return(_) | Break(_) | Continue(_) => {
             colors.get("keyword")

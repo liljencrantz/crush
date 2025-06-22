@@ -7,7 +7,8 @@ use crate::lang::{command::CrushCommand, job::Job};
 use crate::{
     lang::errors::CrushResult, lang::pipe::empty_channel, lang::pipe::pipe, lang::value::Value,
 };
-use std::fmt::{Display, Formatter};
+use std::fmt::{Display, Formatter, Pointer};
+use crate::lang::pipe::black_hole;
 
 /// The definition of a value, as found in a Job.
 #[derive(Clone)]
@@ -20,6 +21,7 @@ pub enum ValueDefinition {
         Location,
     ),
     JobDefinition(Job),
+    JobListDefinition(Vec<Job>),
     Identifier(TrackedString),
     GetAttr(Box<ValueDefinition>, TrackedString),
 }
@@ -32,6 +34,7 @@ impl ValueDefinition {
             ValueDefinition::JobDefinition(j) => j.location(),
             ValueDefinition::Identifier(l) => l.location,
             ValueDefinition::GetAttr(p, a) => p.location().union(a.location),
+            ValueDefinition::JobListDefinition(j) => j.last().map(|j| {j.location()}).unwrap_or(Location::new(0,0)),
         }
     }
 
@@ -57,6 +60,16 @@ impl ValueDefinition {
                 def.eval(context.job_context(first_input, last_output))?;
                 (None, last_input.recv()?)
             }
+            ValueDefinition::JobListDefinition(defs) => {
+                for def in defs[..defs.len()-1].iter() {
+                    def.eval(context.job_context(empty_channel(), black_hole()))?;
+                }
+                let (last_output, last_input) = pipe();
+                let last_def = &defs[defs.len()-1];
+                last_def.eval(context.job_context(empty_channel(), last_output))?;
+                (None, last_input.recv()?)
+            }
+
             ValueDefinition::ClosureDefinition(name, p, c, _) => (
                 None,
                 Value::Command(<dyn CrushCommand>::closure(
@@ -128,6 +141,7 @@ impl Display for ValueDefinition {
                 f.write_str(":")?;
                 l.fmt(f)
             }
+            ValueDefinition::JobListDefinition(jl) => jl.fmt(f),
         }
     }
 }
