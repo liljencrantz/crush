@@ -264,7 +264,7 @@ impl Node {
                             Value::from(attr),
                             attr.location,
                         )),
-                        ArgumentDefinition::unnamed(value.compile_argument(env)?.unnamed_value()?),
+                        ArgumentDefinition::unnamed(propose_name(attr, value.compile_argument(env)?.unnamed_value()?)),
                     ],
                     env,
                     true,

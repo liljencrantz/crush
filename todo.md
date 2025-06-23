@@ -20,12 +20,10 @@
 * Add signal handlers to fix ^C and ^Z during regular execution
 * Better errors when liading a file, line number in stead of character, etc.
 * Dict literals in expression mode ({key: value})
-* Make closures only return last item
 * {|$foo: $glob or $string or $regex|} to specify that an argument is one of several types
 * Better syntax highlighting for expression mode
 * Better syntax highlighting of possible errors
 * Operator ordering is unintuitve sometimes e.g. `$s == $s:global`. At least throw an error instead of doing the wrong thing?
 * returning values from closures seems to be broken
-* The method name isn't propagated to methods when they are created
 * Move yaml builtin to use saphyr
 * Figure out what to do about users/groups __getitem__
