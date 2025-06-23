@@ -8,8 +8,7 @@ use crate::lang::{data::table::ColumnType, value::Value};
 use crate::util::glob::Glob;
 use ordered_map::OrderedMap;
 use regex::Regex;
-use std::cmp::max;
-use std::fmt::{Display, Formatter, Write};
+use std::fmt::{Display, Formatter};
 use std::sync::OnceLock;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]

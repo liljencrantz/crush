@@ -13,7 +13,6 @@ use crate::util::replace::Replace;
 use ScopeType::Namespace;
 use chrono::Duration;
 use ordered_map::OrderedMap;
-use std::cmp::max;
 use std::fmt::{Display, Formatter};
 use std::sync::{Arc, Mutex, MutexGuard};
 
@@ -174,11 +173,11 @@ pub struct ScopeData {
     pub scope_type: ScopeType,
 
     /// True if this scope should stop executing, i.e. if the continue or break commands have been
-    /// called.  
+    /// called.
     pub is_stopped: bool,
 
     /// True if this scope can not be further modified. Note that mutable items in it, e.g.
-    /// lists or dicts can still be modified. 
+    /// lists or dicts can still be modified.
     pub is_readonly: bool,
 
     /// The return value of this scope, if any. Used by the return builtin to propagate a value
@@ -186,13 +185,13 @@ pub struct ScopeData {
 
     /// The name of this scope, if any
     pub name: Option<String>,
-    
+
     /// A human readable description of this scope, if any. Used for the short help message.
     description: Option<String>,
-    
+
     /// If this scope has been loaded. Used for lazy loading modules.
     is_loaded: bool,
-    
+
     /// Lazy loading initializer
     loader: Option<Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>>,
 }

@@ -1,5 +1,4 @@
 use crate::CrushResult;
-use crate::lang::ast::token::Token;
 use crate::lang::command::OutputType::Known;
 use crate::lang::help::Help;
 use crate::lang::value::Value;

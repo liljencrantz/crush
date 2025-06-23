@@ -16,7 +16,6 @@ use crate::lang::serialization::model::closure::Name;
 use crate::lang::serialization::model::{Element, element, normal_parameter};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
 use crate::lang::state::contexts::{CommandContext, CompileContext, JobContext};
-use crate::lang::state::scope::ScopeType::Block;
 use crate::lang::state::scope::{Scope, ScopeType};
 use crate::lang::value::{Value, ValueDefinition, ValueType};
 use crate::util::escape::unescape;

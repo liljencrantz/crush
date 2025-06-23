@@ -1,7 +1,6 @@
 use crate::lang::ast::lexer::LexerMode::Command;
-use crate::lang::ast::lexer::{Lexer, LexerMode, TokenizerMode};
-use crate::lang::ast::token::Token;
-use crate::lang::errors::{CrushError, CrushResult};
+use crate::lang::ast::lexer::LexerMode;
+use crate::lang::errors::CrushResult;
 use crate::lang::state::global_state::GlobalState;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
@@ -15,7 +14,6 @@ use rustyline::{Context, validate};
 use rustyline_derive::Helper;
 use std::borrow::Cow;
 use std::borrow::Cow::{Borrowed, Owned};
-use std::cmp::min;
 use std::collections::HashMap;
 
 #[derive(Helper)]

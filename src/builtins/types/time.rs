@@ -3,7 +3,6 @@ use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command::TypeMap;
 use crate::lang::errors::{CrushResult, argument_error_legacy};
-use crate::lang::signature::number::Number;
 use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::this::This;

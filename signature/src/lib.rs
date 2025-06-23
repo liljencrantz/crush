@@ -343,7 +343,7 @@ fn default_and_allowed_as_markdown(
 
 fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<TokenStream> {
     let metadata_location = metadata.span();
-    let mut metadata = parse_metadata(metadata)?;
+    let metadata = parse_metadata(metadata)?;
 
     let description = Literal::string(
         metadata
