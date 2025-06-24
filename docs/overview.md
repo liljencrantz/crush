@@ -365,9 +365,11 @@ If you assign the output of the find command to a variable like so:
 
     crush# $all_the_files := $(files --recurse /)
 
-What will really be stored in the `all_the_files` variable is table input stream. A
-small number of lines of output will be eagerly evaluated, before the thread
-executing the `files` command will start blocking. If the stream is consumed, for
+What will really be stored in the `all_the_files` variable is table input stream. 
+Control will immediately return to the prompt because the `files` command has
+returned it's value. But the files command will only produce a small number of 
+lines of output before the table stream it writes its output to is full, and the
+command begins to block. If the stream is consumed, for
 example by writing
 
     crush# $all_the_files
@@ -379,7 +381,7 @@ Another option would be to pipe the output via the head command
 
     crush# $all_the_files | head 1
 
-Which will consume one line of output from the stream. This command can be
+Which will consume exactly one line of output from the stream. This command can be
 re-executed until the stream is empty.
 
 ### More SQL-like data stream operations
@@ -449,7 +451,7 @@ Crush has built-in lists:
     crush# $l
     [1, 7]
     crush# help $l
-    type list integer
+    type list $integer
 
     A mutable list of items, usually of the same type
 
@@ -461,12 +463,12 @@ Crush has built-in lists:
 
 and dictionaries:
 
-    crush# $d := (dict string integer):new
+    crush# $d := (dict $string $integer):new
     crush# $d["foo"] = 42
     crush# $d["foo"]
     42
     crush# help $d
-    type dict string integer
+    type dict $string $integer
 
         A mutable mapping from one set of values to another
 

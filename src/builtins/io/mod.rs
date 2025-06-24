@@ -71,8 +71,9 @@ pub fn dir(context: CommandContext) -> CrushResult<()> {
 #[signature(
     io.echo,
     can_block = false,
-    short = "Prints all arguments directly to the screen",
     output = Known(ValueType::Empty),
+    short = "Prints all arguments directly to the screen",
+    long = "This command may at first appear pointless, since values entered to the prompt are printed to the screen by default. But inside of code blocks, results are either completely ignored or returned as the return value of the block. In these situations, the `echo` command is useful for passing values to the user.",
     example = "echo \"Hello, world!\""
 )]
 struct Echo {
@@ -129,7 +130,12 @@ fn history_file(name: &str) -> CrushResult<PathBuf> {
 
 #[signature(
     io.readline,
-    short = "Reads a string of input from the user.",
+    short = "Read a string of input from the user.",
+    long = "The readline command uses the same keyboard shortcuts as crush itself uses internally.",
+    example = "# Ask the user for their name",
+    example = "echo \"What is your name?\"",
+    example = "$name := $(readline prompt=\"name: \")",
+    example = "echo $(\"Hello, {}!\":format $name)",
     output = Known(ValueType::String),
 )]
 struct Readline {

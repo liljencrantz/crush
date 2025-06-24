@@ -18,7 +18,7 @@
 * More shell-like syntax for background jobs
 * Make IFS configurable for cmd command
 * Add signal handlers to fix ^C and ^Z during regular execution
-* Better errors when liading a file, line number in stead of character, etc.
+* Better errors when loading a file, line number in stead of character, etc.
 * Dict literals in expression mode ({key: value})
 * {|$foo: $glob or $string or $regex|} to specify that an argument is one of several types
 * Better syntax highlighting for expression mode

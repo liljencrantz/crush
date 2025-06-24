@@ -15,7 +15,7 @@ fn parse(input_type: &[ColumnType], field: Option<String>) -> CrushResult<usize>
         if input_type.len() == 1 {
             Ok(0)
         } else {
-            error("Specify which column to operate on")
+            error("Input stream has multiple columns, you must specify which column to operate on.")
         }
     })
 }
@@ -44,8 +44,9 @@ sum_function!(sum_duration, Duration, Duration::seconds(0), Duration);
     short = "Calculate the sum for the specific column across all rows.",
     long = "If the input only has one column, the column name is optional.",
     long = "The column type must be numeric or a duration.",
-    example = "proc:list | sum cpu")]
+    example = "host:procs | sum cpu")]
 pub struct Sum {
+    #[description("The name of the column to find the sum of")]
     field: Option<String>,
 }
 
@@ -100,6 +101,7 @@ avg_function!(avg_duration, Duration, Duration::seconds(0), Duration, i32);
     long = "The column type must be numeric or a duration.",
     example = "host:procs | avg cpu")]
 pub struct Avg {
+    #[description("The name of the column to find the average of")]
     field: Option<String>,
 }
 
@@ -167,6 +169,7 @@ median_function!(
     long = "The column type must be numeric or a duration.",
     example = "host:procs | median cpu")]
 pub struct Median {
+    #[description("The name of the column to find the median of")]
     field: Option<String>,
 }
 
@@ -258,6 +261,7 @@ aggr_function!(max_file, File, "file", |a, b| std::cmp::max(a, b));
     long = "The column can be numeric, temporal, a string or a file.",
     example = "host:procs | min cpu")]
 pub struct Min {
+    #[description("The name of the column to find the minimum of")]
     field: Option<String>,
 }
 
@@ -287,6 +291,7 @@ fn min(context: CommandContext) -> CrushResult<()> {
     long = "The column can be numeric, temporal, a string or a file.",
     example = "host:procs | max cpu")]
 pub struct Max {
+    #[description("The name of the column to find the maximum of")]
     field: Option<String>,
 }
 
@@ -334,6 +339,7 @@ prod_function!(prod_float, f64, 1.0, Float);
     long = "The column type must be numeric.",
     example = "seq 5 10 | prod")]
 pub struct Prod {
+    #[description("The name of the column to find the product of")]
     field: Option<String>,
 }
 
@@ -356,67 +362,6 @@ fn prod(context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    stream.first,
-    short = "Return the value of the specified column from the first row of the stream.",
-    long = "Specifying the column is optional if the stream only has one column.",
-    example = "# Find the name of the process with the lowest cumulative CPU usage",
-    example = "host:procs | sort cpu | first name",
-)]
-pub struct First {
-    field: Option<String>,
-}
-
-fn first(context: CommandContext) -> CrushResult<()> {
-    match context.input.recv()?.stream()? {
-        Some(mut input) => {
-            let cfg: First = First::parse(context.arguments, &context.global_state.printer())?;
-            let column = parse(input.types(), cfg.field)?;
-
-            if let Ok(row) = input.read() {
-                context
-                    .output
-                    .send(row.into_cells().replace(column, Value::Empty).clone())
-            } else {
-                error("Empty stream")
-            }
-        }
-        _ => error("Expected a stream"),
-    }
-}
-
-#[signature(
-    stream.last,
-    short = "Return the value of the specified column from the last row of the stream.",
-    long = "Specifying the column is optional if the stream only has one column.",
-    example = "# Find the name of the process with the highest cumulative CPU usage",
-    example = "host:procs | sort cpu | last name",
-)]
-pub struct Last {
-    field: Option<String>,
-}
-
-fn last(context: CommandContext) -> CrushResult<()> {
-    match context.input.recv()?.stream()? {
-        Some(mut input) => {
-            let cfg: Last = Last::parse(context.arguments, &context.global_state.printer())?;
-            let column = parse(input.types(), cfg.field)?;
-
-            let mut rr = None;
-            while let Ok(row) = input.read() {
-                rr = Some(row)
-            }
-            rr.map(|r| {
-                context
-                    .output
-                    .send(r.into_cells().replace(column, Value::Empty))
-            })
-            .unwrap_or_else(|| argument_error_legacy("Empty stream"))
-        }
-        _ => error("Expected a stream"),
-    }
-}
-
-#[signature(
     stream.concat,
     short = "Concatenate all values of the specified column across all rows",
     long = "If the input only has one column, the column name is optional.",
@@ -424,9 +369,9 @@ fn last(context: CommandContext) -> CrushResult<()> {
     example = "host:procs | concat name \":\"",
 )]
 pub struct Concat {
-    #[documentation("The name of the column to concatenate")]
+    #[description("The name of the column to concatenate")]
     field: Option<String>,
-    #[documentation("The separator to insert between each element")]
+    #[description("The separator to insert between each element")]
     #[default(", ")]
     separator: String,
 }

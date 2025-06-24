@@ -1,10 +1,22 @@
+# Pluggable tab completion framework
+
+Individual commands should be able to provide tags (possibly mime tags?)
+that point to specific completions, `hostname`, `uri`, `git/repo`, or `git/branch`.
+Completions for these tags can then be reused between different commands, and the 
+user can install additional completion sources.
+
+Potentially, the whole tab completion framework could also be shared between
+different shells.
+
+(Idea comes from Marcus Vesterlund)
+
 # XML serialization
 
 Use struct:s with three members,
 
 * `name`, the node name.
 * `attr`, a `dict $string $string` containing the attributes of the node.
-* `children`, a `list $any` containing text fragments (as strings) mixed with child nodes. 
+* `children`, a `list $any` containing text fragments (as strings) mixed with child nodes.
 
 # Changed variable declaration and assignment syntax
 

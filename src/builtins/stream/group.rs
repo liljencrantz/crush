@@ -21,7 +21,10 @@ use std::collections::HashMap;
     stream.group,
     can_block = true,
     short = "Group stream by the specified column(s)",
-    example = "find . | group user type file_count={count} size={sum size}"
+    example = "# Group files in current tree by the number of hardlinks pointing to them, show",
+    example = "# the number of files and the sum total file size for each link count. Sort results",
+    example = "# by size.",
+    example = "files --recurse | group links file_count={count} size={sum size} | sort size",
 )]
 pub struct Group {
     #[unnamed()]

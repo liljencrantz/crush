@@ -60,25 +60,31 @@ static TXT_STREAM_OUTPUT_TYPE: [ColumnType; 2] = [
 struct Query {
     #[description("DNS record to look up.")]
     name: String,
+
     #[description("DNS record type.")]
     #[values("A", "AAAA", "CNAME", "MX", "NS", "PTR", "SOA", "SRV", "TXT")]
     #[default("A")]
     record_type: String,
+
     #[description("use TCP as the transport instead of UDP.")]
     #[default(false)]
     tcp: bool,
+
     #[description(
         "the nameserver to talk to. If none is given, use the nameservers configured in `/etc/resolv.conf`."
     )]
     nameserver: Option<String>,
+
     #[description("port to talk to the nameserver on.")]
     #[default(53)]
     port: i128,
+    
     #[description(
         "if a CNAME record is encountered, do not follow it. Show the actual CNAME record instead."
     )]
     #[default(false)]
     no_follow_cname: bool,
+    
     #[description("connection timeout.")]
     #[default(Duration::seconds(5))]
     timeout: Duration,
@@ -339,14 +345,18 @@ fn query(mut context: CommandContext) -> CrushResult<()> {
 struct QueryReverse {
     #[description("IP address to look up. Can be either IPv4 or IPv6.")]
     address: String,
+    
     #[description("Use TCP connection instead of UDP")]
     #[default(false)]
     tcp: bool,
+    
     #[description("Override the nameserver to talk to")]
     nameserver: Option<String>,
+    
     #[description("DNS port")]
     #[default(53)]
     port: i128,
+    
     #[description("Connection timeout.")]
     #[default(Duration::seconds(5))]
     timeout: Duration,

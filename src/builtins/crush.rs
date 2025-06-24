@@ -112,13 +112,8 @@ mod prompt {
     }
 
     pub mod mode {
+        use super::*;
         use crate::lang::ast::lexer::LexerMode;
-        use crate::lang::command::OutputType::Known;
-        use crate::lang::errors::CrushResult;
-        use crate::lang::state::contexts::CommandContext;
-        use crate::lang::value::Value;
-        use crate::lang::value::ValueType;
-        use signature::signature;
 
         #[signature(
             crush.prompt.get,

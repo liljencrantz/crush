@@ -10,7 +10,6 @@ $render := {
   </head>
   <body>
     <ul>
-
 {menu}
     </ul>
   </body>
@@ -71,4 +70,3 @@ generate_menu $res
 
 echo $res
 echo --raw $(render $res)
-

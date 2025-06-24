@@ -16,6 +16,7 @@ use std::collections::HashSet;
 )]
 pub struct Drop {
     #[unnamed()]
+    #[description("the columns to remove from the stream.")]
     drop: Vec<String>,
 }
 

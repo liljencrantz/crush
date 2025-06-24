@@ -9,15 +9,24 @@ use markdown::{ParseOptions, to_mdast};
 use signature::signature;
 use std::cmp::{max, min};
 use std::collections::HashMap;
+use crate::util::highlight::syntax_highlight;
+
+static HEADER_START: &str = "\x1b[4m";
+static HEADER_END: &str = "\x1b[0m";
+
+static INLINE_CODE_START: &str = "\x1b[32m";
+static INLINE_CODE_END: &str = "\x1b[0m";
 
 #[signature(
     control.help,
     can_block = false,
     output = Known(ValueType::Empty),
-    short = "Show help about the specified thing.",
-    example = "help $ls",
-    example = "help $integer",
+    short = "Show help on the specified value.",
+    long = "The help command will show you help about a thing that you pass in. If you, for example pass in an integer (e.g. `help 3`), then you will see a help message about how crush represents integers and what methods an integer holds. You can also pass in any command to help (e.g. `help $files` for help on the `files` command). Note that you will need to prepend the `$` sigil to the command name, since you're not using it as the command name.",
+    example = "# Show this message",
     example = "help $help",
+    example = "# Show help on the root namespace",
+    example = "help $global",
 )]
 pub struct HelpSignature {
     #[description("the topic you want help on.")]
@@ -29,12 +38,6 @@ pub struct HelpSignature {
     #[values("html", "markdown", "terminal")]
     format: String,
 }
-
-static HEADER_START: &str = "\x1b[4m";
-static HEADER_END: &str = "\x1b[0m";
-
-static CODE_START: &str = "\x1b[32m";
-static CODE_END: &str = "\x1b[0m";
 
 fn render(s: &str, width: usize, colors: HashMap<String, String>) -> CrushResult<String> {
     let tree = to_mdast(s, &ParseOptions::default())?;
@@ -125,12 +128,12 @@ fn recurse(node: Node, state: &mut State) -> CrushResult<()> {
         Node::Yaml(_) => {}
         Node::Break(_) => {}
         Node::InlineCode(n) => {
-            state.out.push_str(CODE_START);
+            state.out.push_str(INLINE_CODE_START);
             if !state.fits(&n.value) {
                 state.newline();
             }
             state.out.push_str(&n.value);
-            state.out.push_str(CODE_END);
+            state.out.push_str(INLINE_CODE_END);
         }
         Node::InlineMath(_) => {}
         Node::Delete(_) => {}
@@ -230,7 +233,7 @@ fn recurse(node: Node, state: &mut State) -> CrushResult<()> {
 }
 
 fn syntax_highlight_code(code: &String, state: &mut State) -> CrushResult<()> {
-    let res = crate::util::highlight::syntax_highlight(code, &state.colors)?;
+    let res = syntax_highlight(code, &state.colors)?;
     state.out.push_str(&res);
     state.pos = 0;
     Ok(())

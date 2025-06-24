@@ -34,14 +34,18 @@ use std::sync::OnceLock;
 struct Connect {
     #[description("Host to connect to.")]
     host: String,
-    #[description("Service to connect to on this host")]
+    
+    #[description("Service to connect to on this host. This can be a string, a glob or a regular expression, in order to allow you to easily specify multiple services, e.g. use `*` to connect to all available services.")]
     service: Patterns,
+    
     #[default(false)]
     #[description("Use plaintext to connect")]
     plaintext: bool,
-    #[default(Duration::seconds(10))]
+    
+    #[default(Duration::seconds(5))]
     #[description("Timeout for making calls")]
     timeout: Duration,
+    
     #[default(5990)]
     #[description("Port to connect to")]
     port: i128,

@@ -26,7 +26,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
             add,
             false,
             "duration + (delta:duration | time:time)",
-            "Add the specified delta or time to this duration",
+            "Add the specified delta or time to this duration.",
             None,
             Unknown,
             [],
@@ -36,7 +36,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
             sub,
             false,
             "duration - delta:duration",
-            "Remove the specified delta from this duration",
+            "Remove the specified delta from this duration.",
             None,
             Known(ValueType::Duration),
             [],
@@ -46,7 +46,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
             mul,
             false,
             "duration * factor:integer",
-            "Multiply this duration by the specified factor",
+            "Multiply this duration by the specified factor.",
             None,
             Known(ValueType::Duration),
             [],
@@ -56,22 +56,19 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
             div,
             false,
             "duration / divisor:integer",
-            "Divide this duration by the specified divisor",
+            "Divide this duration by the specified divisor.",
             None,
             Known(ValueType::Duration),
             [],
         );
         Of::declare_method(&mut res);
-        res.declare(
-            full("__neg__"),
-            neg,
-            false,
-            "neg duration",
-            "Negate this duration",
-            None,
-            Known(ValueType::Duration),
-            [],
-        );
+        Milliseconds::declare_method(&mut res);
+        Seconds::declare_method(&mut res);
+        Minutes::declare_method(&mut res);
+        Hours::declare_method(&mut res);
+        Days::declare_method(&mut res);
+        NanosecondsPart::declare_method(&mut res);
+        Neg::declare_method(&mut res);
 
         res
     })
@@ -108,8 +105,10 @@ fn to_duration(a: i64, t: &str) -> CrushResult<chrono::Duration> {
 #[signature(
     types.duration.of,
     can_block = false,
-    short = "Create a new duration",
-    long = "Durations are stored as a time span in number of seconds. Because of leap seconds and daylight saving time, adding a `time` and a `duration` will sometimes lead to unintuitive results. For example, adding exactly one day to a `time` value will not always yield the exact same hour, minute and second one day later.",
+    output = Known(ValueType::Duration),
+    short = "Create a new duration.",
+    long = "Durations are stored as a time span in number of seconds. Because of leap seconds and daylight saving time, adding for example exactly one day to a `time` value will not always do what you might think, if a leap second or a daylight savings time changeover happened in the interim.",
+    example = "duration:of minutes=1",
 )]
 struct Of {
     #[description("the number of nanoseconds in the duration.")]
@@ -130,7 +129,7 @@ struct Of {
     #[description("the number of hours in the duration.")]
     #[default(0)]
     hours: i64,
-    #[description("the number of days in the duration. This is internally represented as the number of seconds in a standard day. Be aware that because of leap seconds and daylight saving time, not all days are of the same length.")]
+    #[description("the number of days in the duration. This is internally represented as the number of seconds in a standard day.")]
     #[default(0)]
     days: i64,
 }
@@ -148,7 +147,106 @@ fn of(context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Duration(res))
 }
 
-fn neg(mut context: CommandContext) -> CrushResult<()> {
+#[signature(
+    types.duration.seconds,
+    can_block = false,
+    output = Known(ValueType::Integer),
+    short = "Returns the number of seconds in this duration, rounded towards zero.",
+)]
+struct Seconds {
+}
+
+fn seconds(mut context: CommandContext) -> CrushResult<()> {
+    Seconds::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let this = context.this.duration()?;
+    context.output.send(Value::Integer(this.num_seconds() as i128))
+}
+
+#[signature(
+    types.duration.minutes,
+    can_block = false,
+    output = Known(ValueType::Integer),
+    short = "Returns the number of minutes in this duration, rounded towards zero.",
+)]
+struct Minutes {
+}
+
+fn minutes(mut context: CommandContext) -> CrushResult<()> {
+    Minutes::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let this = context.this.duration()?;
+    context.output.send(Value::Integer((this.num_seconds() / 60) as i128))
+}
+
+#[signature(
+    types.duration.hours,
+    can_block = false,
+    output = Known(ValueType::Integer),
+    short = "Returns the number of minutes in this duration, rounded towards zero.",
+)]
+struct Hours {
+}
+
+fn hours(mut context: CommandContext) -> CrushResult<()> {
+    Hours::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let this = context.this.duration()?;
+    context.output.send(Value::Integer((this.num_seconds() / (60 * 60)) as i128))
+}
+
+#[signature(
+    types.duration.days,
+    can_block = false,
+    output = Known(ValueType::Integer),
+    short = "Returns the number of minutes in this duration, rounded towards zero.",
+)]
+struct Days {
+}
+
+fn days(mut context: CommandContext) -> CrushResult<()> {
+    Days::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let this = context.this.duration()?;
+    context.output.send(Value::Integer((this.num_seconds() / (60 * 60 * 24)) as i128))
+}
+
+#[signature(
+    types.duration.milliseconds,
+    can_block = false,
+    output = Known(ValueType::Integer),
+    short = "Returns the number of milliseconds in this duration, rounded towards zero.",
+)]
+struct Milliseconds {
+}
+
+fn milliseconds(mut context: CommandContext) -> CrushResult<()> {
+    Days::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let this = context.this.duration()?;
+    context.output.send(Value::Integer(this.num_milliseconds() as i128))
+}
+
+#[signature(
+    types.duration.nanoseconds_part,
+    can_block = false,
+    output = Known(ValueType::Integer),
+    short = "Returns the nanosecond part of this duration.",
+)]
+struct NanosecondsPart {
+}
+
+fn nanoseconds_part(mut context: CommandContext) -> CrushResult<()> {
+    Days::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let this = context.this.duration()?;
+    context.output.send(Value::Integer(this.subsec_nanos() as i128))
+}
+
+#[signature(
+    types.duration.__neg__,
+    can_block = false,
+    output = Known(ValueType::Duration),
+    short = "Negate this duration.",
+)]
+struct Neg {
+}
+
+fn __neg__(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
