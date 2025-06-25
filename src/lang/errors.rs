@@ -297,9 +297,16 @@ impl From<lalrpop_util::ParseError<usize, token::Token<'_>, crate::lang::ast::le
     fn from(
         e: lalrpop_util::ParseError<usize, token::Token, crate::lang::ast::lexer::LexicalError>,
     ) -> Self {
+        let location = match e {
+            lalrpop_util::ParseError::InvalidToken { location } => {Some(Location::new(location, location))},
+            lalrpop_util::ParseError::UnrecognizedEof { location, .. } => {Some(Location::new(location, location))},
+            lalrpop_util::ParseError::UnrecognizedToken { token, .. } => {Some(Location::new(token.0, token.2))},
+            lalrpop_util::ParseError::ExtraToken { token } => {Some(Location::new(token.0, token.2))}
+            lalrpop_util::ParseError::User { .. } => {None}
+        };
         CrushError {
             error_type: ParseError(e.to_string()),
-            location: None,
+            location,
             definition: None,
         }
     }

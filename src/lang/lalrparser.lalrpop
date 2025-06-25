@@ -180,8 +180,8 @@ ExprParam: Box<Node> = {
 
 ExprSignature: Option<Vec<ParameterNode>> = {
     => None,
-    Pipe Pipe Separators? => Some(vec![]),
-    Pipe <s: ExprParameterList> Pipe Separators? => Some(s),
+    Pipe Separators? Pipe Separators? => Some(vec![]),
+    Pipe Separators? <s: ExprParameterList> Pipe Separators? => Some(s),
 }
 
 ExprParameterList: Vec<ParameterNode> = {

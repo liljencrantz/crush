@@ -60,14 +60,15 @@ pub fn string(
 ) -> CrushResult<()> {
     let jobs = global_state
         .parser()
-        .parse(command, &global_env, initial_mode)?;
+        .parse(command, &global_env, initial_mode)
+        .map_err(|e| e.with_definition(command))?;
     for job_definition in jobs {
         let handle = job_definition.eval(JobContext::new(
             empty_channel(),
             output.clone(),
             global_env.clone(),
             global_state.clone(),
-        ))?;
+        )).map_err(|e| e.with_definition(command))?;
 
         handle.map(|id| {
             global_state.threads().join_one(
