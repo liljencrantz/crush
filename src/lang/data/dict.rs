@@ -6,9 +6,12 @@ use crate::util::replace::Replace;
 use chrono::Duration;
 use ordered_map::OrderedMap;
 use std::cmp::Ordering;
+use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
+use crate::lang::data::r#struct::Struct;
+use crate::util::display_non_recursive::DisplayNonRecursive;
 
 #[derive(Clone)]
 pub struct Dict {
@@ -154,6 +157,9 @@ impl std::hash::Hash for Dict {
 
 impl PartialEq for Dict {
     fn eq(&self, other: &Dict) -> bool {
+        if self.id() == other.id() {
+            return true;
+        }
         let us = self.entries.lock().unwrap().clone();
         let them = other.entries.lock().unwrap().clone();
         if us.len() != them.len() {
@@ -174,8 +180,13 @@ impl PartialEq for Dict {
     }
 }
 
-impl Display for Dict {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+impl DisplayNonRecursive for Dict {
+    fn fmt_non_recursive(&self, f: &mut Formatter<'_>, seen: &mut HashSet<u64>) -> std::fmt::Result {
+        if seen.contains(&self.id()) {
+            return f.write_str("...");
+        }
+        seen.insert(self.id());
+
         f.write_str("dict{")?;
         let entries = self.entries.lock().unwrap();
         let mut first = true;
@@ -185,12 +196,19 @@ impl Display for Dict {
             } else {
                 f.write_str(" ")?;
             }
-            f.write_str(&k.to_string())?;
+            k.fmt_non_recursive(f, seen)?;
             f.write_str(": ")?;
-            f.write_str(&v.to_string())?;
+            v.fmt_non_recursive(f, seen)?;
         }
         f.write_str("}")?;
         Ok(())
+    }
+}
+
+impl Display for Dict {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        let mut seen = HashSet::new();
+        self.fmt_non_recursive(f, &mut seen)
     }
 }
 

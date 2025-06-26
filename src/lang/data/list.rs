@@ -12,6 +12,7 @@ use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
+use crate::util::display_non_recursive::DisplayNonRecursive;
 
 #[derive(Clone)]
 pub struct List {
@@ -246,8 +247,13 @@ impl List {
     dump_to!(dump_float, f64, Float, |v: &f64| *v);
 }
 
-impl Display for List {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl DisplayNonRecursive for List {
+    fn fmt_non_recursive(&self, f: &mut Formatter<'_>, seen: &mut HashSet<u64>) -> std::fmt::Result {
+        if seen.contains(&self.id()) {
+            return f.write_str("...");
+        }
+        seen.insert(self.id());
+
         f.write_str("[")?;
         let mut first = true;
         for cell in self.cells.lock().unwrap().iter() {
@@ -256,10 +262,17 @@ impl Display for List {
             } else {
                 f.write_str(", ")?;
             }
-            cell.fmt(f)?;
+            cell.fmt_non_recursive(f, seen)?;
         }
         f.write_str("]")?;
         Ok(())
+    }
+}
+
+impl Display for List {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut seen = HashSet::new();
+        self.fmt_non_recursive(f, &mut seen)
     }
 }
 
@@ -274,6 +287,9 @@ impl std::hash::Hash for List {
 
 impl PartialEq for List {
     fn eq(&self, other: &List) -> bool {
+        if self.id() == other.id() {
+            return true;
+        }
         let us = self.cells.lock().unwrap().clone();
         let them = other.cells.lock().unwrap().clone();
         if us.len() != them.len() {

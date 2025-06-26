@@ -13,3 +13,5 @@ pub mod replace;
 pub mod temperature;
 pub mod time;
 pub mod user_map;
+pub mod hash_non_recursive;
+pub mod display_non_recursive;

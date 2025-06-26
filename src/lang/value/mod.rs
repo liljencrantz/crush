@@ -5,7 +5,8 @@ mod value_definition;
 mod value_type;
 
 use std::cmp::Ordering;
-use std::hash::Hasher;
+use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
@@ -37,12 +38,14 @@ use crate::util::escape::escape;
 use crate::util::identity_arc::Identity;
 use crate::util::integer_formater::format_integer;
 use ordered_map::OrderedMap;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Display, Formatter, Write};
 use std::io::Read;
 use std::ops::Add;
 use std::sync::Arc;
 pub use value_definition::ValueDefinition;
 pub use value_type::ValueType;
+use crate::util::display_non_recursive::DisplayNonRecursive;
+use crate::util::hash_non_recursive::HashNonRecursive;
 
 pub type BinaryInputStream = Box<dyn BinaryReader + Send + Sync>;
 
@@ -70,8 +73,8 @@ pub enum Value {
     Type(ValueType),
 }
 
-impl Display for Value {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl DisplayNonRecursive for Value {
+    fn fmt_non_recursive(&self, f: &mut Formatter<'_>, seen: &mut HashSet<u64>) -> std::fmt::Result {
         match self {
             Value::String(val) => std::fmt::Display::fmt(val, f),
             Value::Integer(val) => std::fmt::Display::fmt(val, f),
@@ -85,15 +88,15 @@ impl Display for Value {
             Value::File(val) => {
                 std::fmt::Display::fmt(val.to_str().unwrap_or("<invalid filename>"), f)
             }
-            Value::List(l) => std::fmt::Display::fmt(l, f),
+            Value::List(l) => l.fmt_non_recursive(f, seen),
             Value::Duration(d) => f.write_str(&duration_format(d)),
             Value::Scope(env) => env.fmt(f),
             Value::Bool(v) => std::fmt::Display::fmt(if *v { "true" } else { "false" }, f),
-            Value::Dict(d) => d.fmt(f),
+            Value::Dict(d) => d.fmt_non_recursive(f, seen),
             Value::Float(val) => std::fmt::Display::fmt(val, f),
             Value::Binary(v) => f.write_str(&format_buffer(v, true)),
             Value::Type(t) => std::fmt::Display::fmt(t, f),
-            Value::Struct(s) => s.fmt(f),
+            Value::Struct(s) => s.fmt_non_recursive(f, seen),
             Value::Command(_)
             | Value::TableInputStream(_)
             | Value::TableOutputStream(_)
@@ -105,6 +108,13 @@ impl Display for Value {
                 f.write_str(">")
             }
         }
+    }
+}
+
+impl Display for Value {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut seen = HashSet::new();
+        self.fmt_non_recursive(f, &mut seen)
     }
 }
 
@@ -587,8 +597,15 @@ fn integer_decode(val: f64) -> (u64, i16, i8) {
     (mantissa, exponent, sign)
 }
 
-impl std::hash::Hash for Value {
+impl Hash for Value {
     fn hash<H: Hasher>(&self, state: &mut H) {
+        let mut seen = HashSet::new();
+        self.hash_non_recursive(state, &mut seen);
+    }
+}
+
+impl HashNonRecursive for Value {
+    fn hash_non_recursive<H: Hasher>(&self, state: &mut H, seen: &mut HashSet<u64>) {
         if !self.value_type().is_hashable() {
             panic!("Can't hash mutable cell types!");
         }
@@ -598,13 +615,13 @@ impl std::hash::Hash for Value {
             Value::Time(v) => v.hash(state),
             Value::Glob(v) => v.hash(state),
             Value::Regex(v, _) => v.hash(state),
-            Value::Command(_) => {}
             Value::File(v) => v.hash(state),
             Value::Duration(d) => d.hash(state),
             Value::Bool(v) => v.hash(state),
             Value::Binary(v) => v.hash(state),
-            Value::Struct(v) => v.hash(state),
-            Value::Scope(_)
+            Value::Struct(v) => v.hash_non_recursive(state, seen),
+            Value::Command(_)
+            | Value::Scope(_)
             | Value::Dict(_)
             | Value::Table(_)
             | Value::List(_)

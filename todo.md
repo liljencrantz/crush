@@ -12,7 +12,6 @@
 * pbuf:from/to command that takes a protobuf definition and uses it to deserialize protobuf data
 * avro:from/to command that deserializes avro data
 * Support __str__ method for string rendering
-* Avoid infinite loops when printing structs that reference each other
 * fix dynamic loading deadlocks
 * tab completions for external commands
 * More shell-like syntax for background jobs

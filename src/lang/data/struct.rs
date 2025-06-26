@@ -15,6 +15,8 @@ use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::sync::{Arc, Mutex};
+use crate::util::display_non_recursive::DisplayNonRecursive;
+use crate::util::hash_non_recursive::HashNonRecursive;
 
 static STRUCT_STREAM_TYPE: [ColumnType; 2] = [
     ColumnType::new("name", ValueType::String),
@@ -39,11 +41,14 @@ impl Identity for Struct {
     }
 }
 
-impl Hash for Struct {
-    fn hash<H: Hasher>(&self, state: &mut H) {
+impl HashNonRecursive for Struct {
+    fn hash_non_recursive<H: Hasher>(&self, state: &mut H, seen: &mut HashSet<u64>) {
+        if seen.contains(&self.id()) {
+            return;
+        }
         let data = self.data.lock().unwrap();
         data.cells.iter().for_each(|value| {
-            value.hash(state);
+            value.hash_non_recursive(state, seen);
         });
         let p = data.parent.clone();
         drop(data);
@@ -51,8 +56,18 @@ impl Hash for Struct {
     }
 }
 
+impl Hash for Struct {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        let mut seen = HashSet::new();
+        self.hash_non_recursive(state, &mut seen);
+    }
+}
+
 impl PartialEq for Struct {
     fn eq(&self, other: &Self) -> bool {
+        if self.id() == other.id() {
+            return true;
+        }
         let us = self.data.lock().unwrap().clone();
         let them = other.data.lock().unwrap().clone();
         if us.cells.len() != them.cells.len() {
@@ -241,15 +256,21 @@ impl Struct {
     }
 }
 
-impl Display for Struct {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl DisplayNonRecursive for Struct {
+    fn fmt_non_recursive(&self, f: &mut Formatter<'_>, seen: &mut HashSet<u64>) -> std::fmt::Result {
+        if seen.contains(&self.id()) {
+            return f.write_str("...");
+        }
+        seen.insert(self.id());
+        
         let elements = self.local_elements();
         let data = self.data.lock().unwrap();
 
         f.write_str("data")?;
         if let Some(parent) = data.parent.clone() {
+            drop(data);
             f.write_str(" parent=(")?;
-            parent.fmt(f)?;
+            parent.fmt_non_recursive(f, seen)?;
             f.write_str(")")?;
         }
 
@@ -257,10 +278,17 @@ impl Display for Struct {
             f.write_str(" ")?;
             name.fmt(f)?;
             f.write_str("=(")?;
-            value.fmt(f)?;
+            value.fmt_non_recursive(f, seen)?;
             f.write_str(")")?;
         }
         Ok(())
+    }
+}
+
+impl Display for Struct {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut seen = HashSet::new();
+        self.fmt_non_recursive(f, &mut seen)
     }
 }
 
