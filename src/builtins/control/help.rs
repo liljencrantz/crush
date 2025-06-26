@@ -271,7 +271,7 @@ Call the help command with the name of any value, including a command or a
 type in order to get help about it. For example, you might want to run the
 commands `help $help`, `help $string`, `help $if` or `help $where`.
 
-To get a list of everything in your namespace, write `var:env`. To list the
+To get a list of everything in your namespace, write `var:list`. To list the
 members of a value, write `dir <value>`.
 "#
         }

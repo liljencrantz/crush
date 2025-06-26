@@ -10,7 +10,6 @@ use crate::util::replace::Replace;
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
-use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
 use crate::util::display_non_recursive::DisplayNonRecursive;
 
@@ -273,15 +272,6 @@ impl Display for List {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut seen = HashSet::new();
         self.fmt_non_recursive(f, &mut seen)
-    }
-}
-
-impl std::hash::Hash for List {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        let cells = self.cells.lock().unwrap().clone();
-        for c in cells.iter() {
-            c.hash(state);
-        }
     }
 }
 

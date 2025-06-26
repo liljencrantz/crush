@@ -24,3 +24,5 @@
 * Operator ordering is unintuitve sometimes e.g. `$s == $s:global`. At least throw an error instead of doing the wrong thing?
 * Move yaml builtin to use saphyr
 * Figure out what to do about users/groups __getitem__
+* Fix help messages in grpc connections
+* Fix help messages in dbus connections

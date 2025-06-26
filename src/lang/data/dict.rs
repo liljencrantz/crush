@@ -8,9 +8,7 @@ use ordered_map::OrderedMap;
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
-use std::hash::Hasher;
 use std::sync::{Arc, Mutex};
-use crate::lang::data::r#struct::Struct;
 use crate::util::display_non_recursive::DisplayNonRecursive;
 
 #[derive(Clone)]
@@ -142,16 +140,6 @@ impl Dict {
             value_type: self.value_type.materialize()?,
             entries: Arc::new(Mutex::new(map)),
         })
-    }
-}
-
-impl std::hash::Hash for Dict {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        let entries = self.entries.lock().unwrap().clone();
-        for (k, v) in entries.iter() {
-            k.hash(state);
-            v.hash(state);
-        }
     }
 }
 

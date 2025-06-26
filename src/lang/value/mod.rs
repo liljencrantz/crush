@@ -38,14 +38,13 @@ use crate::util::escape::escape;
 use crate::util::identity_arc::Identity;
 use crate::util::integer_formater::format_integer;
 use ordered_map::OrderedMap;
-use std::fmt::{Display, Formatter, Write};
+use std::fmt::{Display, Formatter};
 use std::io::Read;
 use std::ops::Add;
 use std::sync::Arc;
 pub use value_definition::ValueDefinition;
 pub use value_type::ValueType;
 use crate::util::display_non_recursive::DisplayNonRecursive;
-use crate::util::hash_non_recursive::HashNonRecursive;
 
 pub type BinaryInputStream = Box<dyn BinaryReader + Send + Sync>;
 
@@ -599,13 +598,6 @@ fn integer_decode(val: f64) -> (u64, i16, i8) {
 
 impl Hash for Value {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        let mut seen = HashSet::new();
-        self.hash_non_recursive(state, &mut seen);
-    }
-}
-
-impl HashNonRecursive for Value {
-    fn hash_non_recursive<H: Hasher>(&self, state: &mut H, seen: &mut HashSet<u64>) {
         if !self.value_type().is_hashable() {
             panic!("Can't hash mutable cell types!");
         }
@@ -619,8 +611,8 @@ impl HashNonRecursive for Value {
             Value::Duration(d) => d.hash(state),
             Value::Bool(v) => v.hash(state),
             Value::Binary(v) => v.hash(state),
-            Value::Struct(v) => v.hash_non_recursive(state, seen),
-            Value::Command(_)
+            Value::Struct(_)
+            | Value::Command(_)
             | Value::Scope(_)
             | Value::Dict(_)
             | Value::Table(_)

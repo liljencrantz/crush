@@ -12,11 +12,9 @@ use ordered_map::OrderedMap;
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
-use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 use crate::util::display_non_recursive::DisplayNonRecursive;
-use crate::util::hash_non_recursive::HashNonRecursive;
 
 static STRUCT_STREAM_TYPE: [ColumnType; 2] = [
     ColumnType::new("name", ValueType::String),
@@ -38,28 +36,6 @@ pub struct Struct {
 impl Identity for Struct {
     fn id(&self) -> u64 {
         self.data.id()
-    }
-}
-
-impl HashNonRecursive for Struct {
-    fn hash_non_recursive<H: Hasher>(&self, state: &mut H, seen: &mut HashSet<u64>) {
-        if seen.contains(&self.id()) {
-            return;
-        }
-        let data = self.data.lock().unwrap();
-        data.cells.iter().for_each(|value| {
-            value.hash_non_recursive(state, seen);
-        });
-        let p = data.parent.clone();
-        drop(data);
-        p.hash(state);
-    }
-}
-
-impl Hash for Struct {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        let mut seen = HashSet::new();
-        self.hash_non_recursive(state, &mut seen);
     }
 }
 
