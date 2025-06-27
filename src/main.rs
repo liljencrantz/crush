@@ -17,6 +17,7 @@ use lang::{data, state};
 use num_format::SystemLocale;
 use std::io::Read;
 use std::path::PathBuf;
+use crate::lang::state::global_state::RunMode;
 
 #[derive(PartialEq, Eq)]
 enum Mode {
@@ -98,7 +99,12 @@ fn run() -> CrushResult<i32> {
         printer::init()
     };
 
-    let global_state = GlobalState::new(printer)?;
+    let run_mode = match config.mode {
+        Mode::Interactive => RunMode::Interactive,
+        _ => RunMode::NonInteractive,
+    };
+    
+    let global_state = GlobalState::new(printer, run_mode)?;
 
     set_initial_locale(&global_state);
 

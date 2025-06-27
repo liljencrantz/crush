@@ -1,5 +1,5 @@
 use crate::interactive::rustyline_helper::RustylineHelper;
-use crate::lang::ast::lexer::LexerMode;
+use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::command::Command;
 use crate::lang::errors::CrushResult;
 use crate::lang::parser::Parser;
@@ -25,6 +25,12 @@ pub struct FormatData {
     temperature_precision: u8,
     percentage_precision: u8,
     byte_unit: ByteUnit,
+}
+
+#[derive(Clone, Copy)]
+pub enum RunMode {
+    Interactive,
+    NonInteractive,
 }
 
 fn country(locale: &str) -> Option<&str> {
@@ -90,7 +96,8 @@ struct StateData {
     title: Option<Command>,
     jobs: Vec<Option<LiveJob>>,
     exit_status: Option<i32>,
-    mode: LexerMode,
+    language_mode: LanguageMode,
+    run_mode: RunMode,
 }
 
 #[derive(Clone, Copy)]
@@ -154,7 +161,7 @@ impl Drop for JobHandleInternal {
 }
 
 impl GlobalState {
-    pub fn new(printer: Printer) -> CrushResult<GlobalState> {
+    pub fn new(printer: Printer, run_mode: RunMode) -> CrushResult<GlobalState> {
         let locale = SystemLocale::default().or_else(|_| SystemLocale::from_name("C"))?;
         Ok(GlobalState {
             data: Arc::from(Mutex::new(StateData {
@@ -170,7 +177,8 @@ impl GlobalState {
                 prompt: None,
                 title: None,
                 jobs: Vec::new(),
-                mode: LexerMode::Command,
+                language_mode: LanguageMode::Command,
+                run_mode,
             })),
             threads: ThreadStore::new(),
             printer,
@@ -217,14 +225,19 @@ impl GlobalState {
         data.exit_status
     }
 
-    pub fn set_mode(&self, mode: LexerMode) {
+    pub fn set_language_mode(&self, mode: LanguageMode) {
         let mut data = self.data.lock().unwrap();
-        data.mode = mode;
+        data.language_mode = mode;
     }
 
-    pub fn mode(&self) -> LexerMode {
+    pub fn language_mode(&self) -> LanguageMode {
         let data = self.data.lock().unwrap();
-        data.mode
+        data.language_mode
+    }
+
+    pub fn run_mode(&self) -> RunMode {
+        let data = self.data.lock().unwrap();
+        data.run_mode
     }
 
     pub fn set_locale(&self, new_locale: SystemLocale) {

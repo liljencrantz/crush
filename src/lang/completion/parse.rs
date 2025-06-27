@@ -1,4 +1,4 @@
-use crate::lang::ast::lexer::LexerMode;
+use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::ast::{CommandNode, JobListNode, JobNode, node::Node};
 use crate::lang::command::{ArgumentDescription, Command};
 use crate::lang::errors::{CrushResult, argument_error_legacy, error};
@@ -284,7 +284,7 @@ pub fn parse(
     scope: &Scope,
     parser: &Parser,
 ) -> CrushResult<ParseResult> {
-    let ast = parser.ast(&parser.close_command(&line[0..cursor])?, LexerMode::Command)?;
+    let ast = parser.ast(&parser.close_command(&line[0..cursor])?, LanguageMode::Command)?;
 
     if ast.jobs.len() == 0 {
         return Ok(ParseResult::Nothing);

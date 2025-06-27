@@ -309,7 +309,7 @@ mod macos {
                                 thread
                                     .pth_name
                                     .iter()
-                                    .map(|c| unsafe { std::mem::transmute::<i8, u8>(*c) })
+                                    .map(|c| i8::cast_unsigned(*c))
                                     .filter(|c| *c > 0u8)
                                     .collect(),
                             )

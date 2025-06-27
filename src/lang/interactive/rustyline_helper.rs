@@ -1,5 +1,5 @@
-use crate::lang::ast::lexer::LexerMode::Command;
-use crate::lang::ast::lexer::LexerMode;
+use crate::lang::ast::lexer::LanguageMode::Command;
+use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::errors::CrushResult;
 use crate::lang::state::global_state::GlobalState;
 use crate::lang::state::scope::Scope;
@@ -22,7 +22,7 @@ pub struct RustylineHelper {
     scope: Scope,
     highlighter: MatchingBracketHighlighter,
     hinter: HistoryHinter,
-    mode: LexerMode,
+    mode: LanguageMode,
 }
 
 impl RustylineHelper {

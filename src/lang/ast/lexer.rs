@@ -5,7 +5,7 @@ use std::iter::Peekable;
 use std::str::CharIndices;
 
 #[derive(Clone, Copy)]
-pub enum LexerMode {
+pub enum LanguageMode {
     Command,
     Expression,
 }
@@ -17,7 +17,7 @@ pub enum TokenizerMode {
 }
 
 pub struct Lexer<'input> {
-    mode: Vec<LexerMode>,
+    mode: Vec<LanguageMode>,
     tokenizer_mode: TokenizerMode,
     full_str: &'input str,
     chars: Peekable<CharIndices<'input>>,
@@ -26,7 +26,7 @@ pub struct Lexer<'input> {
 pub type Spanned<'input> = Result<(usize, Token<'input>, usize), LexicalError>;
 
 impl<'input> Lexer<'input> {
-    pub fn new(input: &'input str, initial_mode: LexerMode, tokenizer_mode: TokenizerMode) -> Self {
+    pub fn new(input: &'input str, initial_mode: LanguageMode, tokenizer_mode: TokenizerMode) -> Self {
         Lexer {
             mode: vec![initial_mode],
             tokenizer_mode,
@@ -53,7 +53,7 @@ impl<'input> Lexer<'input> {
                 }
 
                 Some((i, '(')) => {
-                    self.mode.push(LexerMode::Expression);
+                    self.mode.push(LanguageMode::Expression);
                     return Some(Token::ExprModeStart(Location::from(i)).into());
                 }
 
@@ -207,7 +207,7 @@ impl<'input> Lexer<'input> {
 
                 Some((i, '$')) => {
                     if let Some((_, '(')) = self.chars.peek() {
-                        self.mode.push(LexerMode::Command);
+                        self.mode.push(LanguageMode::Command);
                         self.chars.next();
                         return Some(Token::SubStart(Location::new(i, i + 2)).into());
                     }
@@ -410,14 +410,14 @@ impl<'input> Lexer<'input> {
                 }
 
                 Some((i, '(')) => {
-                    self.mode.push(LexerMode::Expression);
+                    self.mode.push(LanguageMode::Expression);
                     return Some(Token::ExprModeStart(Location::from(i)).into());
                 }
 
                 Some((i, '$')) => match self.chars.peek() {
                     Some((_, '(')) => {
                         self.chars.next();
-                        self.mode.push(LexerMode::Command);
+                        self.mode.push(LanguageMode::Command);
                         return Some(Token::SubStart(Location::new(i, i + 2)).into());
                     }
                     Some((_, ch2)) if identifier_first_char(*ch2) => {
@@ -736,8 +736,8 @@ impl<'input> Iterator for Lexer<'input> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.mode.last() {
-            Some(LexerMode::Expression) => self.next_expr(),
-            Some(LexerMode::Command) => self.next_command(),
+            Some(LanguageMode::Expression) => self.next_expr(),
+            Some(LanguageMode::Command) => self.next_command(),
             None => Some(Err(LexicalError::MismatchedSubEnd)),
         }
     }

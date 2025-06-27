@@ -1,4 +1,4 @@
-use crate::lang::ast::lexer::LexerMode::Command;
+use crate::lang::ast::lexer::LanguageMode::Command;
 use crate::lang::ast::lexer::{Lexer, TokenizerMode};
 use crate::lang::ast::token::Token;
 use crate::lang::errors::{CrushError, CrushResult};

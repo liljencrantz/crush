@@ -11,6 +11,8 @@ use nix::unistd::Pid;
 use rustyline::history::{History, SearchDirection};
 use signature::signature;
 use std::env;
+use crate::lang::ast::lexer::LanguageMode;
+use crate::lang::state::global_state::RunMode;
 
 fn make_env() -> CrushResult<Value> {
     let e = Dict::new(ValueType::String, ValueType::String)?;
@@ -37,7 +39,7 @@ static THREADS_OUTPUT_TYPE: [ColumnType; 3] = [
 #[signature(
     crush.threads,
     output = Known(ValueType::table_input_stream(&THREADS_OUTPUT_TYPE)),
-    short = "All the subthreads crush is currently running"
+    short = "All the subthreads crush is currently running."
 )]
 struct Threads {}
 
@@ -79,7 +81,7 @@ mod prompt {
     #[signature(
         crush.prompt.set,
         can_block = false,
-        short = "Set a new prompt command",
+        short = "Set a new prompt command.",
         output = Known(ValueType::Empty)
     )]
     pub struct Set {
@@ -96,7 +98,7 @@ mod prompt {
     #[signature(
         crush.prompt.get,
         can_block = false,
-        short = "Get the current prompt command")
+        short = "Get the current prompt command.")
     ]
     pub struct Get {}
 
@@ -111,27 +113,42 @@ mod prompt {
         )
     }
 
-    pub mod mode {
-        use super::*;
-        use crate::lang::ast::lexer::LexerMode;
+}
 
-        #[signature(
-            crush.prompt.get,
-            can_block = false,
-            output = Known(ValueType::String),
-            short = "Returns the current language mode")
-        ]
-        pub struct Get {}
+#[signature(
+    crush.language_mode,
+    can_block = false,
+    output = Known(ValueType::String),
+    short = "Returns the current language mode, either `command` or `expression`.",
+    long = "Command mode is the default mode.",
+)]
+pub struct LanguageModeArg {}
 
-        fn get(context: CommandContext) -> CrushResult<()> {
-            context
-                .output
-                .send(Value::from(match context.global_state.mode() {
-                    LexerMode::Command => "command",
-                    LexerMode::Expression => "expression",
-                }))
-        }
-    }
+fn language_mode(context: CommandContext) -> CrushResult<()> {
+    context
+        .output
+        .send(Value::from(match context.global_state.language_mode() {
+            LanguageMode::Command => "command",
+            LanguageMode::Expression => "expression",
+        }))
+}
+#[signature(
+    crush.run_mode,
+    can_block = false,
+    output = Known(ValueType::String),
+    short = "Returns how crush is currently running, either `interactive` or `non-interactive`.",
+    long = "In interactive mode, the prompt is shown and commands are entered interactively with access to history, keyboard shortcuts, etc. In non-interactive mode, no prompt is shown and commands are read from a file.",
+    long = "The run mode can not be changed while crush is running. It is decided by how crush was started.",
+)]
+pub struct RunModeArg {}
+
+fn run_mode(context: CommandContext) -> CrushResult<()> {
+    context
+        .output
+        .send(Value::from(match context.global_state.run_mode() {
+            RunMode::Interactive => "interactive",
+            RunMode::NonInteractive => "non-interactive",
+        }))
 }
 
 mod title {
@@ -390,17 +407,12 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     prompt::Set::declare(env)?;
                     prompt::Get::declare(env)?;
 
-                    env.create_namespace(
-                        "mode",
-                        "Crush language mode",
-                        Box::new(move |env| {
-                            prompt::mode::Get::declare(env)?;
-                            Ok(())
-                        }),
-                    )?;
                     Ok(())
                 }),
             )?;
+
+            RunModeArg::declare(crush)?;
+            LanguageModeArg::declare(crush)?;
 
             crush.create_namespace(
                 "title",

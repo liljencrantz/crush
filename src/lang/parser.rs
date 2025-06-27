@@ -1,5 +1,5 @@
 use crate::lang::ast::lexer::TokenizerMode::SkipComments;
-use crate::lang::ast::lexer::{LexerMode, TokenizerMode};
+use crate::lang::ast::lexer::{LanguageMode, TokenizerMode};
 use crate::lang::ast::{JobListNode, lexer::Lexer, token::Token};
 /**
     The API for compiling Crush code into a `Vec<Job>`. Internally, this will tokenize the text,
@@ -66,17 +66,17 @@ impl Parser {
     }
 
     /// Parse the given string into a `Vec<Job>`, that we can directly evaluate.
-    pub fn parse(&self, s: &str, env: &Scope, initial_mode: LexerMode) -> CrushResult<Vec<Job>> {
+    pub fn parse(&self, s: &str, env: &Scope, initial_mode: LanguageMode) -> CrushResult<Vec<Job>> {
         self.ast(s, initial_mode)?.compile(env)
     }
     
     /// Return the abstract syntax tree (AST) for the supplied command. This is used by the
     /// completion engine.
-    pub fn ast(&self, s: &str, initial_mode: LexerMode) -> CrushResult<JobListNode> {
+    pub fn ast(&self, s: &str, initial_mode: LanguageMode) -> CrushResult<JobListNode> {
         let lex = Lexer::new(s, initial_mode, SkipComments);
         match initial_mode {
-            LexerMode::Command => Ok(self.parser.lock().unwrap().parse(s, lex)?),
-            LexerMode::Expression => Ok(self.expr_parser.lock().unwrap().parse(s, lex)?),
+            LanguageMode::Command => Ok(self.parser.lock().unwrap().parse(s, lex)?),
+            LanguageMode::Expression => Ok(self.expr_parser.lock().unwrap().parse(s, lex)?),
         }
     }
 
@@ -85,7 +85,7 @@ impl Parser {
     pub fn tokenize<'a>(
         &self,
         s: &'a str,
-        initial_mode: LexerMode,
+        initial_mode: LanguageMode,
         tokenizer_mode: TokenizerMode,
     ) -> CrushResult<Vec<Token<'a>>> {
         let l = Lexer::new(s, initial_mode, tokenizer_mode);
@@ -112,7 +112,7 @@ impl Parser {
     */
     pub fn close_command(&self, input: &str) -> CrushResult<String> {
         let input = self.close_token(input);
-        let tokens = self.tokenize(&input, LexerMode::Command, SkipComments)?;
+        let tokens = self.tokenize(&input, LanguageMode::Command, SkipComments)?;
         let mut stack = Vec::new();
 
         let mut needs_trailing_arg = false;
@@ -194,7 +194,7 @@ mod tests {
     #[test]
     fn check_simple_tokens() {
         let tok = p()
-            .tokenize("{aaa}\n", LexerMode::Command, SkipComments)
+            .tokenize("{aaa}\n", LanguageMode::Command, SkipComments)
             .unwrap();
         assert_eq!(
             tok,
@@ -210,7 +210,7 @@ mod tests {
     #[test]
     fn check_expression_tokens() {
         let tok = p()
-            .tokenize("e(foo(5, 3.3))\n", LexerMode::Command, SkipComments)
+            .tokenize("e(foo(5, 3.3))\n", LanguageMode::Command, SkipComments)
             .unwrap();
         assert_eq!(
             tok,
@@ -231,7 +231,7 @@ mod tests {
     #[test]
     fn check_token_offsets() {
         let tok = p()
-            .tokenize("123:123.4 foo=\"bar\"", LexerMode::Command, SkipComments)
+            .tokenize("123:123.4 foo=\"bar\"", LanguageMode::Command, SkipComments)
             .unwrap();
         assert_eq!(tok.len(), 6);
         assert_eq!(tok[0].location(), Location::new(0, 3));
@@ -245,7 +245,7 @@ mod tests {
     #[test]
     fn check_token_newline() {
         let tok = p()
-            .tokenize("123# comment\nggg", LexerMode::Command, SkipComments)
+            .tokenize("123# comment\nggg", LanguageMode::Command, SkipComments)
             .unwrap();
         assert_eq!(tok.len(), 3);
         assert_eq!(tok[0].location(), Location::new(0usize, 3usize));

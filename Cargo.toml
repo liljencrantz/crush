@@ -7,10 +7,10 @@ license-file = "LICENSE"
 description = "A command line shell that is also a powerful and modern programming language"
 readme = "README.md"
 repository = "https://github.com/liljencrantz/crush"
-rust-version = "1.86.0"
+rust-version = "1.88.0"
 
 [build-dependencies.prost-build]
-version = "0.13.5"
+version = "0.14.1"
 
 [build-dependencies.lalrpop]
 version = "0.22.2"
@@ -44,7 +44,7 @@ serde_yaml = { version = "0.9.34" }
 toml = "0.8.23"
 reqwest = { version = "0.12.20", features = ["blocking"] }
 crossbeam = "0.8.4"
-prost = "0.13.5"
+prost = "0.14.1"
 termion = "4.0.5"
 float-ord = "0.3.2"
 maplit = "1.0.2"

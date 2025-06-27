@@ -1,4 +1,4 @@
-use crate::lang::ast::lexer::LexerMode;
+use crate::lang::ast::lexer::LanguageMode;
 /// Functions that execute the contents of a string or file as Crush code.
 use crate::lang::errors::{CrushResult, argument_error_legacy};
 use crate::lang::pipe::{ValueSender, empty_channel, pipe};
@@ -21,7 +21,7 @@ pub fn file(
     string(
         global_env,
         &cmd.as_str(),
-        LexerMode::Command,
+        LanguageMode::Command,
         output,
         global_state,
     )
@@ -54,7 +54,7 @@ pub fn pup(env: Scope, buf: &Vec<u8>, global_state: &GlobalState) -> CrushResult
 pub fn string(
     global_env: &Scope,
     command: &str,
-    initial_mode: LexerMode,
+    initial_mode: LanguageMode,
     output: &ValueSender,
     global_state: &GlobalState,
 ) -> CrushResult<()> {

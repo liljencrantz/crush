@@ -3,7 +3,7 @@ pub mod rustyline_helper;
 use rustyline;
 use std::fs;
 
-use crate::lang::ast::lexer::LexerMode;
+use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::errors::{CrushResult, data_error, error};
 use crate::lang::execute;
 use crate::lang::pipe::{ValueSender, black_hole, empty_channel, pipe};
@@ -124,7 +124,7 @@ pub fn run(
                 if cmd.is_empty() {
                     global_state.threads().reap(global_state.printer())
                 } else {
-                    match (cmd.trim(), global_state.mode()) {
+                    match (cmd.trim(), global_state.language_mode()) {
                         ("!!", _) => {
                             cmd = global_state
                                 .editor()
@@ -133,12 +133,12 @@ pub fn run(
                                 .unwrap_or(None)
                                 .unwrap_or(cmd);
                         }
-                        ("(", LexerMode::Command) => {
-                            global_state.set_mode(LexerMode::Expression);
+                        ("(", LanguageMode::Command) => {
+                            global_state.set_language_mode(LanguageMode::Expression);
                             continue;
                         }
-                        (")", LexerMode::Expression) => {
-                            global_state.set_mode(LexerMode::Command);
+                        (")", LanguageMode::Expression) => {
+                            global_state.set_language_mode(LanguageMode::Command);
                             continue;
                         }
                         _ => {}
@@ -151,7 +151,7 @@ pub fn run(
                     global_state.printer().handle_error(execute::string(
                         &global_env,
                         &cmd,
-                        global_state.mode(),
+                        global_state.language_mode(),
                         pretty_printer,
                         global_state,
                     ));
