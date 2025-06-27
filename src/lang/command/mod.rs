@@ -16,7 +16,7 @@ use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueDefinition, ValueType};
 use closure::Closure;
 use ordered_map::OrderedMap;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Display, Formatter, Write};
 use std::sync::Arc;
 
 pub type Command = Arc<dyn CrushCommand + Send + Sync>;
@@ -76,7 +76,7 @@ pub struct ArgumentDescription {
     pub unnamed: bool,
 }
 
-pub trait CrushCommand: Help {
+pub trait CrushCommand: Help + Display {
     fn eval(&self, context: CommandContext) -> CrushResult<()>;
     fn might_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool;
     fn name(&self) -> &str;
@@ -241,6 +241,12 @@ impl dyn CrushCommand {
     }
 }
 
+impl Display for SimpleCommand {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.name())
+    }
+}
+
 impl CrushCommand for SimpleCommand {
     fn eval(&self, context: CommandContext) -> CrushResult<()> {
         let c = self.call;
@@ -320,6 +326,12 @@ impl std::cmp::Eq for SimpleCommand {}
 impl std::fmt::Debug for SimpleCommand {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Command")
+    }
+}
+
+impl Display for ConditionCommand {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.name())
     }
 }
 
@@ -437,6 +449,12 @@ impl Display for Parameter {
 pub struct BoundCommand {
     command: Command,
     this: Value,
+}
+
+impl Display for BoundCommand {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.name())
+    }
 }
 
 impl CrushCommand for BoundCommand {

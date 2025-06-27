@@ -9,6 +9,7 @@ use crate::{
 };
 use std::fmt::{Display, Formatter, Pointer};
 use crate::lang::pipe::black_hole;
+use crate::util::repr::Repr;
 
 /// The definition of a value, as found in a Job.
 #[derive(Clone)]
@@ -143,5 +144,56 @@ impl Display for ValueDefinition {
             }
             ValueDefinition::JobListDefinition(jl) => jl.fmt(f),
         }
+    }
+}
+
+impl Repr for ValueDefinition {
+    fn repr(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match &self {
+            ValueDefinition::Value(v, _location) => v.repr(f),
+            ValueDefinition::Identifier(v) => {
+                f.write_str("$")?;
+                f.write_str(v.string.as_str())
+            },
+            ValueDefinition::ClosureDefinition(_name, maybe_params, jobs, _location) => {
+                f.write_str("{ ")?;
+                if let Some(params) = maybe_params {
+                    f.write_str("| ")?;
+                    for p in params {
+                        p.fmt(f)?;
+                        f.write_str(" ")?
+                    }
+                    f.write_str("| ")?;
+                }
+
+                for j in jobs {
+                    j.fmt(f)?;
+                    f.write_str("; ")?;
+                }
+                f.write_str(" }")
+            }
+            ValueDefinition::JobDefinition(j) => {
+                f.write_str("$(")?;
+                j.fmt(f)?;
+                f.write_str(")")
+            },
+            ValueDefinition::GetAttr(v, l) => {
+                v.repr(f)?;
+                f.write_str(":")?;
+                l.fmt(f)
+            }
+            ValueDefinition::JobListDefinition(jl) => {
+                f.write_str("$(")?;
+                let mut first = true;
+                for j in jl {
+                    if (!first) {
+                        f.write_str("; ")?;
+                        first = false;
+                    }
+                    j.fmt(f)?;
+                }
+                f.write_str(")")
+            },
+                    }
     }
 }

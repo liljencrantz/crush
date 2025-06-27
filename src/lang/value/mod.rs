@@ -34,17 +34,19 @@ use crate::lang::pretty::format_buffer;
 use crate::lang::vec_reader::VecReader;
 use crate::state::global_state::FormatData;
 use crate::state::scope::ScopeReader;
-use crate::util::escape::escape;
+use crate::util::escape::{escape, escape_without_quotes};
 use crate::util::identity_arc::Identity;
 use crate::util::integer_formater::format_integer;
 use ordered_map::OrderedMap;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Display, Formatter, Pointer, Write};
 use std::io::Read;
 use std::ops::Add;
 use std::sync::Arc;
 pub use value_definition::ValueDefinition;
 pub use value_type::ValueType;
 use crate::util::display_non_recursive::DisplayNonRecursive;
+use crate::util::escape;
+use crate::util::repr::Repr;
 
 pub type BinaryInputStream = Box<dyn BinaryReader + Send + Sync>;
 
@@ -96,8 +98,50 @@ impl DisplayNonRecursive for Value {
             Value::Binary(v) => f.write_str(&format_buffer(v, true)),
             Value::Type(t) => std::fmt::Display::fmt(t, f),
             Value::Struct(s) => s.fmt_non_recursive(f, seen),
-            Value::Command(_)
-            | Value::TableInputStream(_)
+            Value::Command(cmd) => Display::fmt(cmd, f),
+            Value::TableInputStream(_)
+            | Value::TableOutputStream(_)
+            | Value::Table(_)
+            | Value::BinaryInputStream(_)
+            | Value::Empty => {
+                f.write_str("<")?;
+                std::fmt::Display::fmt(&self.value_type(), f)?;
+                f.write_str(">")
+            }
+        }
+    }
+}
+
+impl Repr for Value {
+    fn repr(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::String(val) => f.write_str(escape(val).as_str()),
+            Value::Integer(val) => std::fmt::Display::fmt(val, f),
+            Value::Time(val) => {
+                panic!()
+            },
+            Value::Glob(val) => std::fmt::Display::fmt(val, f),
+            Value::Regex(val, _) => {
+                f.write_str("^(")?;
+                f.write_str(val)?;
+                f.write_str(")")
+            }
+            Value::File(val) => {
+                f.write_str("'")?;
+                f.write_str(escape_without_quotes(val.to_str().unwrap_or("<invalid filename>")).as_str())?;
+                f.write_str("'")
+            }
+            Value::List(l) => panic!(),
+            Value::Duration(d) => panic!(),
+            Value::Scope(env) => env.fmt(f),
+            Value::Bool(v) => std::fmt::Display::fmt(if *v { "$true" } else { "$false" }, f),
+            Value::Dict(d) => panic!(),
+            Value::Float(val) => std::fmt::Display::fmt(val, f),
+            Value::Binary(v) => panic!(),
+            Value::Type(t) => std::fmt::Display::fmt(t, f),
+            Value::Struct(s) => panic!(),
+            Value::Command(cmd) => Display::fmt(cmd, f),
+            Value::TableInputStream(_)
             | Value::TableOutputStream(_)
             | Value::Table(_)
             | Value::BinaryInputStream(_)

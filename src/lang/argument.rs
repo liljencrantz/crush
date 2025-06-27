@@ -10,6 +10,7 @@ use crate::lang::value::Value;
 use crate::lang::value::ValueDefinition;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
+use crate::util::repr::Repr;
 
 #[derive(Debug, Clone)]
 pub enum ArgumentType {
@@ -255,7 +256,7 @@ impl Display for ArgumentDefinition {
                 f.write_str("@@ ")?;
             }
         }
-        self.value.fmt(f)
+        self.value.repr(f)
     }
 }
 

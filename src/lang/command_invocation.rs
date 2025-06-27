@@ -21,6 +21,7 @@ use crate::lang::{argument::ArgumentDefinition, argument::ArgumentEvaluator, val
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::thread::ThreadId;
+use crate::util::repr::Repr;
 
 #[derive(Clone)]
 pub struct CommandInvocation {
@@ -333,7 +334,7 @@ fn try_external_command(
 
 impl Display for CommandInvocation {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        self.command.fmt(f)?;
+        self.command.repr(f)?;
         for a in &self.arguments {
             f.write_str(" ")?;
             a.fmt(f)?;

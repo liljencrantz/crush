@@ -14,3 +14,4 @@ pub mod temperature;
 pub mod time;
 pub mod user_map;
 pub mod display_non_recursive;
+pub mod repr;
