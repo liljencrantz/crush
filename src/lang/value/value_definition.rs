@@ -15,12 +15,12 @@ use crate::util::repr::Repr;
 #[derive(Clone)]
 pub enum ValueDefinition {
     Value(Value, Location),
-    ClosureDefinition(
-        Option<TrackedString>,
-        Option<Vec<Parameter>>,
-        Vec<Job>,
-        Location,
-    ),
+    ClosureDefinition {
+        name: Option<TrackedString>,
+        signature: Option<Vec<Parameter>>,
+        jobs: Vec<Job>,
+        location: Location,
+    },
     JobDefinition(Job),
     JobListDefinition(Vec<Job>),
     Identifier(TrackedString),
@@ -31,7 +31,7 @@ impl ValueDefinition {
     pub fn location(&self) -> Location {
         match self {
             ValueDefinition::Value(_, l) => *l,
-            ValueDefinition::ClosureDefinition(_, _, _, l) => *l,
+            ValueDefinition::ClosureDefinition{location: l, .. } => *l,
             ValueDefinition::JobDefinition(j) => j.location(),
             ValueDefinition::Identifier(l) => l.location,
             ValueDefinition::GetAttr(p, a) => p.location().union(a.location),
@@ -71,12 +71,12 @@ impl ValueDefinition {
                 (None, last_input.recv()?)
             }
 
-            ValueDefinition::ClosureDefinition(name, p, c, _) => (
+            ValueDefinition::ClosureDefinition{ name, signature, jobs, ..} => (
                 None,
                 Value::Command(<dyn CrushCommand>::closure(
                     name.clone(),
-                    p.clone(),
-                    c.clone(),
+                    signature.clone(),
+                    jobs.clone(),
                     &context.env,
                 )),
             ),
@@ -118,9 +118,9 @@ impl Display for ValueDefinition {
         match &self {
             ValueDefinition::Value(v, _location) => v.fmt(f),
             ValueDefinition::Identifier(v) => v.fmt(f),
-            ValueDefinition::ClosureDefinition(_name, maybe_params, jobs, _location) => {
+            ValueDefinition::ClosureDefinition{signature, jobs, ..} => {
                 f.write_str("{ ")?;
-                if let Some(params) = maybe_params {
+                if let Some(params) = signature {
                     f.write_str("| ")?;
                     for p in params {
                         p.fmt(f)?;
@@ -154,9 +154,9 @@ impl Repr for ValueDefinition {
                 f.write_str("$")?;
                 f.write_str(v.string.as_str())
             },
-            ValueDefinition::ClosureDefinition(_name, maybe_params, jobs, _location) => {
+            ValueDefinition::ClosureDefinition{signature, jobs, ..} => {
                 f.write_str("{ ")?;
-                if let Some(params) = maybe_params {
+                if let Some(params) = signature {
                     f.write_str("| ")?;
                     for p in params {
                         p.fmt(f)?;

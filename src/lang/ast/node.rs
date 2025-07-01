@@ -217,7 +217,7 @@ impl Node {
                     Some(Ok(p)) => Some(p),
                     Some(Err(e)) => return Err(e),
                 };
-                ValueDefinition::ClosureDefinition(None, p, jobs.compile(env)?, jobs.location)
+                ValueDefinition::ClosureDefinition{name: None, signature: p, jobs: jobs.compile(env)?, location: jobs.location}
             }
             Node::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g.string)), g.location),
             Node::File(s, quote_style) => ValueDefinition::Value(

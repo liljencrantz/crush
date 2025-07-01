@@ -27,3 +27,4 @@
 * Fix help messages in grpc connections
 * Fix help messages in dbus connections
 * Completion descriptions
+* Arbitrary filenames via hex escape codes

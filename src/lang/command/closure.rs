@@ -26,7 +26,7 @@ use std::sync::Arc;
 
 pub struct Closure {
     name: Option<TrackedString>,
-    job_definitions: Vec<Job>,
+    jobs: Vec<Job>,
     signature: Option<Vec<Parameter>>,
     env: Scope,
     arguments: Vec<ArgumentDescription>,
@@ -34,7 +34,7 @@ pub struct Closure {
 
 impl CrushCommand for Closure {
     fn eval(&self, context: CommandContext) -> CrushResult<()> {
-        let job_definitions = self.job_definitions.clone();
+        let job_definitions = self.jobs.clone();
         let parent_env = self.env.clone();
 
         let scope_type = match self.signature {
@@ -177,7 +177,7 @@ impl<'a> ClosureSerializer<'a> {
             }
         });
 
-        for j in &closure.job_definitions {
+        for j in &closure.jobs {
             serialized.job_definitions.push(self.job(j)?)
         }
 
@@ -330,7 +330,7 @@ impl<'a> ClosureSerializer<'a> {
                     })
                 }
 
-                ValueDefinition::ClosureDefinition(name, parameters, jobs, location) => {
+                ValueDefinition::ClosureDefinition{name, signature, jobs, location} => {
                     model::value_definition::ValueDefinition::ClosureDefinition(
                         model::ClosureDefinition {
                             job_definitions: jobs
@@ -343,7 +343,7 @@ impl<'a> ClosureSerializer<'a> {
                                     name.serialize(self.elements, self.state)? as u64,
                                 ),
                             }),
-                            signature: self.signature_definition(parameters)?,
+                            signature: self.signature_definition(signature)?,
                             start: location.start as u64,
                             end: location.end as u64,
                         },
@@ -408,7 +408,7 @@ impl<'a> ClosureDeserializer<'a> {
                             self.state,
                         )?),
                     },
-                    job_definitions: s
+                    jobs: s
                         .job_definitions
                         .iter()
                         .map(|j| self.job(j))
@@ -538,29 +538,31 @@ impl<'a> ClosureDeserializer<'a> {
                     },
                 ),
                 model::value_definition::ValueDefinition::ClosureDefinition(c) => {
-                    ValueDefinition::ClosureDefinition(
-                        match c.name {
-                            None | Some(model::closure_definition::Name::HasName(_)) => None,
-                            Some(model::closure_definition::Name::NameValue(id)) => Some(
-                                TrackedString::deserialize(id as usize, self.elements, self.state)?,
-                            ),
-                        },
-                        match &c.signature {
-                            None | Some(model::closure_definition::Signature::HasSignature(_)) => {
-                                None
-                            }
-                            Some(model::closure_definition::Signature::SignatureValue(sig)) => {
-                                self.signature(sig)?
-                            }
-                        },
-                        c.job_definitions
-                            .iter()
-                            .map(|j| self.job(j))
-                            .collect::<CrushResult<Vec<_>>>()?,
-                        Location::new(c.start as usize, c.end as usize),
-                    )
+                    ValueDefinition::ClosureDefinition {
+                        name: match c.name {
+                        None | Some(model::closure_definition::Name::HasName(_)) => None,
+                        Some(model::closure_definition::Name::NameValue(id)) => Some(
+                        TrackedString::deserialize(id as usize,
+                        self.elements,
+                        self.state) ?,
+                        ),
+                    },
+                    signature: match &c.signature {
+                        None | Some(model::closure_definition::Signature::HasSignature(_)) => {
+                            None
+                        }
+                        Some(model::closure_definition::Signature::SignatureValue(sig)) => {
+                            self.signature(sig)?
+                        }
+                    },
+                    jobs: c.job_definitions
+                        .iter()
+                        .map(|j| self.job(j))
+                        .collect::<CrushResult<Vec<_>>>()?,
+                    location: Location::new(c.start as usize, c.end as usize),
                 }
-                model::value_definition::ValueDefinition::Job(j) => {
+            }
+            model::value_definition::ValueDefinition::Job(j) => {
                     ValueDefinition::JobDefinition(Job::new(
                         j.commands
                             .iter()
@@ -720,7 +722,7 @@ impl Closure {
     ) -> Closure {
         Closure {
             name,
-            job_definitions,
+            jobs: job_definitions,
             arguments: signature_to_arguments(&signature),
             signature,
             env,
@@ -880,7 +882,7 @@ impl Display for Closure {
             f.write_str("| ")?;
         }
         let mut first = true;
-        for j in &self.job_definitions {
+        for j in &self.jobs {
             if first {
                 first = false;
             } else {

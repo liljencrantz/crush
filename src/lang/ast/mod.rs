@@ -185,8 +185,8 @@ impl CommandNode {
 
 fn propose_name(name: &TrackedString, v: ValueDefinition) -> ValueDefinition {
     match v {
-        ValueDefinition::ClosureDefinition(_, p, j, l) => {
-            ValueDefinition::ClosureDefinition(Some(name.clone()), p, j, l)
+        ValueDefinition::ClosureDefinition{signature, jobs, location, ..} => {
+            ValueDefinition::ClosureDefinition{name: Some(name.clone()), signature, jobs, location}
         }
         _ => v,
     }

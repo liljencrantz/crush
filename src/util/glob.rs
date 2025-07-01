@@ -190,7 +190,7 @@ impl Glob {
         self.glob_internal(cwd, out, GlobMode::Glob)
     }
 
-    pub fn glob_internal(
+    fn glob_internal(
         &self,
         cwd: &Path,
         out: &mut Vec<PathBuf>,
@@ -221,7 +221,7 @@ impl Glob {
         let mut res = Vec::new();
         self.glob_internal(cwd, &mut res, GlobMode::Complete)?;
         let mut strs: Vec<_> = res.iter().flat_map(|p| p.to_str().map(|pp| pp.to_string())).collect();
-        
+
         out.append(&mut strs);
         Ok(())
     }

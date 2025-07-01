@@ -167,16 +167,8 @@ fn eval_other(
     location: Location,
 ) -> CrushResult<Option<ThreadId>> {
     if local_arguments.len() == 0 {
-        eval_command(
-            context
-                .scope
-                .global_static_cmd(vec!["global", "io", "val"])?,
-            None,
-            vec![ArgumentDefinition::unnamed(ValueDefinition::Value(
-                value, location,
-            ))],
-            context,
-        )
+        context.output.send(value)?;
+        Ok(None)
     } else {
         error(&format!("{} is not a command.", value))
     }
