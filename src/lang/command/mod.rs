@@ -155,14 +155,12 @@ impl dyn CrushCommand {
         signature: Option<Vec<Parameter>>,
         job_definitions: Vec<Job>,
         env: &Scope,
-        arguments: Vec<ArgumentDescription>,
     ) -> Command {
         Arc::from(Closure::new(
             name,
             signature,
             job_definitions,
             env.clone(),
-            arguments,
         ))
     }
 

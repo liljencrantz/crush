@@ -26,3 +26,4 @@
 * Figure out what to do about users/groups __getitem__
 * Fix help messages in grpc connections
 * Fix help messages in dbus connections
+* Completion descriptions

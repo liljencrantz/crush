@@ -21,7 +21,7 @@ use crate::lang::value::{Value, ValueDefinition, ValueType};
 use crate::util::escape::unescape;
 use itertools::Itertools;
 use ordered_map::OrderedMap;
-use std::fmt::Display;
+use std::fmt::{Display, Pointer};
 use std::sync::Arc;
 
 pub struct Closure {
@@ -121,6 +121,37 @@ impl CrushCommand for Closure {
 
     fn arguments(&self) -> &[ArgumentDescription] {
         &self.arguments
+    }
+}
+
+fn argument_descriptions(param: &Vec<Parameter>) -> Vec<ArgumentDescription>{
+    let mut result = Vec::new();
+    for p in param {
+        match p {
+            Parameter::Parameter(name, value_type, default, description) => {
+                result.push(ArgumentDescription{
+                    name: name.string.clone(),
+                    value_type: ValueType::Any,
+                    allowed: None,
+                    description: description.as_ref().map(|s|s.string.clone()),
+                    complete: None,
+                    named: false,
+                    unnamed: false,
+                })
+            }
+            Parameter::Named(_, _) => {}
+            Parameter::Unnamed(_, _) => {}
+            Parameter::Meta(_, _) => {}
+        }
+    }
+    result
+}
+
+fn signature_to_arguments(sig: &Option<Vec<Parameter>>) -> Vec<ArgumentDescription>{
+    if let Some(s) = &sig {
+        argument_descriptions(s)
+    } else {
+        vec![]
     }
 }
 
@@ -362,6 +393,12 @@ impl<'a> ClosureDeserializer<'a> {
         match self.elements[id].element.as_ref().unwrap() {
             element::Element::Closure(s) => {
                 let env = Scope::deserialize(s.env as usize, self.elements, self.state)?;
+                let sig = match &s.signature {
+                    None | Some(model::closure::Signature::HasSignature(_)) => None,
+                    Some(model::closure::Signature::SignatureValue(sig)) => {
+                        self.signature(sig)?
+                    }
+                };
                 Ok(Arc::from(Closure {
                     name: match s.name {
                         None | Some(Name::HasName(_)) => None,
@@ -376,14 +413,9 @@ impl<'a> ClosureDeserializer<'a> {
                         .iter()
                         .map(|j| self.job(j))
                         .collect::<CrushResult<Vec<_>>>()?,
-                    signature: match &s.signature {
-                        None | Some(model::closure::Signature::HasSignature(_)) => None,
-                        Some(model::closure::Signature::SignatureValue(sig)) => {
-                            self.signature(sig)?
-                        }
-                    },
+                    arguments: signature_to_arguments(&sig),
+                    signature: sig,
                     env,
-                    arguments: vec![],
                 }))
             }
             _ => error("Expected a closure"),
@@ -685,14 +717,13 @@ impl Closure {
         signature: Option<Vec<Parameter>>,
         job_definitions: Vec<Job>,
         env: Scope,
-        arguments: Vec<ArgumentDescription>,
     ) -> Closure {
         Closure {
             name,
             job_definitions,
+            arguments: signature_to_arguments(&signature),
             signature,
             env,
-            arguments,
         }
     }
 
@@ -839,6 +870,15 @@ impl Closure {
 
 impl Display for Closure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("{ ")?;
+        if let Some(params) = &self.signature {
+            f.write_str("| ")?;
+            for param in params {
+                param.fmt(f)?;
+                f.write_str(" ")?;
+            }
+            f.write_str("| ")?;
+        }
         let mut first = true;
         for j in &self.job_definitions {
             if first {
@@ -848,6 +888,7 @@ impl Display for Closure {
             }
             j.fmt(f)?;
         }
+        f.write_str("} ")?;
         Ok(())
     }
 }

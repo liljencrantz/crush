@@ -78,7 +78,6 @@ impl ValueDefinition {
                     p.clone(),
                     c.clone(),
                     &context.env,
-                    vec![],
                 )),
             ),
             ValueDefinition::Identifier(s) => (

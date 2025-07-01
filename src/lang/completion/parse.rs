@@ -37,6 +37,7 @@ pub enum LastArgument {
     File(String, TextLiteralStyle),
     QuotedString(String),
     Switch(String),
+    Glob(String),
 }
 
 #[derive(Clone)]
@@ -440,8 +441,17 @@ pub fn parse(
                                 last_argument_name,
                             }))
                         }
+                        
+                        Node::Glob(s) => {
+                            Ok(ParseResult::PartialArgument(PartialCommandResult {
+                                command: c,
+                                previous_arguments,
+                                last_argument: LastArgument::Glob(s.string.clone()),
+                                last_argument_name,
+                            }))
+                        }
 
-                        _ => error("Can't extract argument to complete"),
+                        _ => error(format!("Can't extract argument to complete. Node type {}.", arg.type_name())),
                     }
                 } else {
                     Ok(ParseResult::PartialArgument(PartialCommandResult {

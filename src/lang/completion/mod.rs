@@ -16,6 +16,8 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use crate::lang::ast::node::TextLiteralStyle;
 use crate::lang::ast::node::TextLiteralStyle::Unquoted;
+use crate::util::file::cwd;
+use crate::util::glob::Glob;
 
 pub mod parse;
 
@@ -322,6 +324,14 @@ fn complete_partial_argument(
         }
 
         LastArgument::QuotedString(_) => {}
+
+        LastArgument::Glob(glob) => {
+            let mut glob_res = Vec::new();
+            Glob::new(&glob).complete(&cwd()?, &mut glob_res)?;
+            for comp in glob_res {
+                res.push(Completion::new(comp.clone(), comp, 0))
+            }
+        }
     }
     Ok(())
 }
