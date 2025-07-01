@@ -129,7 +129,9 @@ struct Of {
     #[description("the number of hours in the duration.")]
     #[default(0)]
     hours: i64,
-    #[description("the number of days in the duration. This is internally represented as the number of seconds in a standard day.")]
+    #[description(
+        "the number of days in the duration. This is internally represented as the number of seconds in a standard day."
+    )]
     #[default(0)]
     days: i64,
 }
@@ -153,13 +155,14 @@ fn of(context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Integer),
     short = "Returns the number of seconds in this duration, rounded towards zero.",
 )]
-struct Seconds {
-}
+struct Seconds {}
 
 fn seconds(mut context: CommandContext) -> CrushResult<()> {
     Seconds::parse(context.remove_arguments(), &context.global_state.printer())?;
     let this = context.this.duration()?;
-    context.output.send(Value::Integer(this.num_seconds() as i128))
+    context
+        .output
+        .send(Value::Integer(this.num_seconds() as i128))
 }
 
 #[signature(
@@ -168,13 +171,14 @@ fn seconds(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Integer),
     short = "Returns the number of minutes in this duration, rounded towards zero.",
 )]
-struct Minutes {
-}
+struct Minutes {}
 
 fn minutes(mut context: CommandContext) -> CrushResult<()> {
     Minutes::parse(context.remove_arguments(), &context.global_state.printer())?;
     let this = context.this.duration()?;
-    context.output.send(Value::Integer((this.num_seconds() / 60) as i128))
+    context
+        .output
+        .send(Value::Integer((this.num_seconds() / 60) as i128))
 }
 
 #[signature(
@@ -183,13 +187,14 @@ fn minutes(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Integer),
     short = "Returns the number of minutes in this duration, rounded towards zero.",
 )]
-struct Hours {
-}
+struct Hours {}
 
 fn hours(mut context: CommandContext) -> CrushResult<()> {
     Hours::parse(context.remove_arguments(), &context.global_state.printer())?;
     let this = context.this.duration()?;
-    context.output.send(Value::Integer((this.num_seconds() / (60 * 60)) as i128))
+    context
+        .output
+        .send(Value::Integer((this.num_seconds() / (60 * 60)) as i128))
 }
 
 #[signature(
@@ -198,13 +203,14 @@ fn hours(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Integer),
     short = "Returns the number of minutes in this duration, rounded towards zero.",
 )]
-struct Days {
-}
+struct Days {}
 
 fn days(mut context: CommandContext) -> CrushResult<()> {
     Days::parse(context.remove_arguments(), &context.global_state.printer())?;
     let this = context.this.duration()?;
-    context.output.send(Value::Integer((this.num_seconds() / (60 * 60 * 24)) as i128))
+    context.output.send(Value::Integer(
+        (this.num_seconds() / (60 * 60 * 24)) as i128,
+    ))
 }
 
 #[signature(
@@ -213,13 +219,14 @@ fn days(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Integer),
     short = "Returns the number of milliseconds in this duration, rounded towards zero.",
 )]
-struct Milliseconds {
-}
+struct Milliseconds {}
 
 fn milliseconds(mut context: CommandContext) -> CrushResult<()> {
     Days::parse(context.remove_arguments(), &context.global_state.printer())?;
     let this = context.this.duration()?;
-    context.output.send(Value::Integer(this.num_milliseconds() as i128))
+    context
+        .output
+        .send(Value::Integer(this.num_milliseconds() as i128))
 }
 
 #[signature(
@@ -228,13 +235,14 @@ fn milliseconds(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Integer),
     short = "Returns the nanosecond part of this duration.",
 )]
-struct NanosecondsPart {
-}
+struct NanosecondsPart {}
 
 fn nanoseconds_part(mut context: CommandContext) -> CrushResult<()> {
     Days::parse(context.remove_arguments(), &context.global_state.printer())?;
     let this = context.this.duration()?;
-    context.output.send(Value::Integer(this.subsec_nanos() as i128))
+    context
+        .output
+        .send(Value::Integer(this.subsec_nanos() as i128))
 }
 
 #[signature(
@@ -243,8 +251,7 @@ fn nanoseconds_part(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Duration),
     short = "Negate this duration.",
 )]
-struct Neg {
-}
+struct Neg {}
 
 fn __neg__(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;

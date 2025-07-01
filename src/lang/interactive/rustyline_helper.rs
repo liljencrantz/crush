@@ -1,5 +1,5 @@
-use crate::lang::ast::lexer::LanguageMode::Command;
 use crate::lang::ast::lexer::LanguageMode;
+use crate::lang::ast::lexer::LanguageMode::Command;
 use crate::lang::errors::CrushResult;
 use crate::lang::state::global_state::GlobalState;
 use crate::lang::state::scope::Scope;

@@ -2,14 +2,14 @@ use crate::lang::ast::location::Location;
 use crate::lang::ast::tracked_string::TrackedString;
 /// The definition of a value, as found in a Job.
 use crate::lang::command::Parameter;
+use crate::lang::pipe::black_hole;
 use crate::lang::state::contexts::CompileContext;
 use crate::lang::{command::CrushCommand, job::Job};
+use crate::util::repr::Repr;
 use crate::{
     lang::errors::CrushResult, lang::pipe::empty_channel, lang::pipe::pipe, lang::value::Value,
 };
 use std::fmt::{Display, Formatter, Pointer};
-use crate::lang::pipe::black_hole;
-use crate::util::repr::Repr;
 
 /// The definition of a value, as found in a Job.
 #[derive(Clone)]
@@ -31,11 +31,14 @@ impl ValueDefinition {
     pub fn location(&self) -> Location {
         match self {
             ValueDefinition::Value(_, l) => *l,
-            ValueDefinition::ClosureDefinition{location: l, .. } => *l,
+            ValueDefinition::ClosureDefinition { location: l, .. } => *l,
             ValueDefinition::JobDefinition(j) => j.location(),
             ValueDefinition::Identifier(l) => l.location,
             ValueDefinition::GetAttr(p, a) => p.location().union(a.location),
-            ValueDefinition::JobListDefinition(j) => j.last().map(|j| {j.location()}).unwrap_or(Location::new(0,0)),
+            ValueDefinition::JobListDefinition(j) => j
+                .last()
+                .map(|j| j.location())
+                .unwrap_or(Location::new(0, 0)),
         }
     }
 
@@ -62,16 +65,21 @@ impl ValueDefinition {
                 (None, last_input.recv()?)
             }
             ValueDefinition::JobListDefinition(defs) => {
-                for def in defs[..defs.len()-1].iter() {
+                for def in defs[..defs.len() - 1].iter() {
                     def.eval(context.job_context(empty_channel(), black_hole()))?;
                 }
                 let (last_output, last_input) = pipe();
-                let last_def = &defs[defs.len()-1];
+                let last_def = &defs[defs.len() - 1];
                 last_def.eval(context.job_context(empty_channel(), last_output))?;
                 (None, last_input.recv()?)
             }
 
-            ValueDefinition::ClosureDefinition{ name, signature, jobs, ..} => (
+            ValueDefinition::ClosureDefinition {
+                name,
+                signature,
+                jobs,
+                ..
+            } => (
                 None,
                 Value::Command(<dyn CrushCommand>::closure(
                     name.clone(),
@@ -118,7 +126,9 @@ impl Display for ValueDefinition {
         match &self {
             ValueDefinition::Value(v, _location) => v.fmt(f),
             ValueDefinition::Identifier(v) => v.fmt(f),
-            ValueDefinition::ClosureDefinition{signature, jobs, ..} => {
+            ValueDefinition::ClosureDefinition {
+                signature, jobs, ..
+            } => {
                 f.write_str("{ ")?;
                 if let Some(params) = signature {
                     f.write_str("| ")?;
@@ -153,8 +163,10 @@ impl Repr for ValueDefinition {
             ValueDefinition::Identifier(v) => {
                 f.write_str("$")?;
                 f.write_str(v.string.as_str())
-            },
-            ValueDefinition::ClosureDefinition{signature, jobs, ..} => {
+            }
+            ValueDefinition::ClosureDefinition {
+                signature, jobs, ..
+            } => {
                 f.write_str("{ ")?;
                 if let Some(params) = signature {
                     f.write_str("| ")?;
@@ -175,7 +187,7 @@ impl Repr for ValueDefinition {
                 f.write_str("$(")?;
                 j.fmt(f)?;
                 f.write_str(")")
-            },
+            }
             ValueDefinition::GetAttr(v, l) => {
                 v.repr(f)?;
                 f.write_str(":")?;
@@ -192,7 +204,7 @@ impl Repr for ValueDefinition {
                     j.fmt(f)?;
                 }
                 f.write_str(")")
-            },
-                    }
+            }
+        }
     }
 }

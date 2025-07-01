@@ -5,13 +5,13 @@ use crate::lang::pipe::Stream;
 use crate::lang::state::scope::Scope;
 use crate::lang::vec_reader::VecReader;
 use crate::lang::{value::Value, value::ValueType};
+use crate::util::display_non_recursive::DisplayNonRecursive;
 use crate::util::identity_arc::Identity;
 use crate::util::replace::Replace;
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::sync::{Arc, Mutex};
-use crate::util::display_non_recursive::DisplayNonRecursive;
 
 #[derive(Clone)]
 pub struct List {
@@ -247,7 +247,11 @@ impl List {
 }
 
 impl DisplayNonRecursive for List {
-    fn fmt_non_recursive(&self, f: &mut Formatter<'_>, seen: &mut HashSet<u64>) -> std::fmt::Result {
+    fn fmt_non_recursive(
+        &self,
+        f: &mut Formatter<'_>,
+        seen: &mut HashSet<u64>,
+    ) -> std::fmt::Result {
         if seen.contains(&self.id()) {
             return f.write_str("...");
         }

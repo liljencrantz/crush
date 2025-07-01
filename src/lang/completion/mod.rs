@@ -1,3 +1,5 @@
+use crate::lang::ast::node::TextLiteralStyle;
+use crate::lang::ast::node::TextLiteralStyle::Unquoted;
 use crate::lang::command::ArgumentDescription;
 use crate::lang::completion::parse::{
     CompletionCommand, LastArgument, ParseResult, PartialCommandResult, parse,
@@ -11,13 +13,11 @@ use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
 use crate::util::directory_lister::DirectoryLister;
 use crate::util::escape::escape_without_quotes;
+use crate::util::file::cwd;
+use crate::util::glob::Glob;
 use nix::NixPath;
 use std::ops::Deref;
 use std::path::PathBuf;
-use crate::lang::ast::node::TextLiteralStyle;
-use crate::lang::ast::node::TextLiteralStyle::Unquoted;
-use crate::util::file::cwd;
-use crate::util::glob::Glob;
 
 pub mod parse;
 

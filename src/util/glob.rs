@@ -190,12 +190,7 @@ impl Glob {
         self.glob_internal(cwd, out, GlobMode::Glob)
     }
 
-    fn glob_internal(
-        &self,
-        cwd: &Path,
-        out: &mut Vec<PathBuf>,
-        mode: GlobMode,
-    ) -> CrushResult<()> {
+    fn glob_internal(&self, cwd: &Path, out: &mut Vec<PathBuf>, mode: GlobMode) -> CrushResult<()> {
         match self.pattern.get(0) {
             Some(Tile::Separator) => glob_files(
                 &self.pattern[1..],
@@ -220,7 +215,10 @@ impl Glob {
     pub fn complete(&self, cwd: &Path, out: &mut Vec<String>) -> CrushResult<()> {
         let mut res = Vec::new();
         self.glob_internal(cwd, &mut res, GlobMode::Complete)?;
-        let mut strs: Vec<_> = res.iter().flat_map(|p| p.to_str().map(|pp| pp.to_string())).collect();
+        let mut strs: Vec<_> = res
+            .iter()
+            .flat_map(|p| p.to_str().map(|pp| pp.to_string()))
+            .collect();
 
         out.append(&mut strs);
         Ok(())
@@ -253,19 +251,21 @@ fn glob_file_match<'a>(
     mode: GlobMode,
 ) -> CrushResult<()> {
     match (pattern.first(), path.first()) {
-        (None, None) => {
-            match mode {
-                GlobMode::Glob => { out.insert(entry.full_path.clone()); }
-                GlobMode::Complete => {}
+        (None, None) => match mode {
+            GlobMode::Glob => {
+                out.insert(entry.full_path.clone());
             }
-        }
+            GlobMode::Complete => {}
+        },
         (Some(Tile::Home), Some('~')) => {}
         (Some(Tile::Home), _) => {}
         (Some(Tile::Char(_)), None) | (Some(Tile::Single), None) => {}
         (Some(Tile::Any), None) => {
             if pattern.len() == 1 {
                 match mode {
-                    GlobMode::Glob => { out.insert(entry.full_path.clone()); }
+                    GlobMode::Glob => {
+                        out.insert(entry.full_path.clone());
+                    }
                     GlobMode::Complete => {}
                 }
             }
@@ -324,18 +324,16 @@ fn glob_file_match<'a>(
             // This should be impossible
         }
 
-        (None, Some(c)) => {
-            match mode {
-                GlobMode::Glob => {}
-                GlobMode::Complete => {
-                    let mut str = path.iter().collect::<String>();
-                    if entry.is_directory {
-                        str.push('/');
-                    }
-                    out.insert(PathBuf::from(str));
+        (None, Some(c)) => match mode {
+            GlobMode::Glob => {}
+            GlobMode::Complete => {
+                let mut str = path.iter().collect::<String>();
+                if entry.is_directory {
+                    str.push('/');
                 }
+                out.insert(PathBuf::from(str));
             }
-        }
+        },
 
         (Some(Tile::Char(ch1)), Some(ch2)) if ch1 == ch2 => {
             return glob_file_match(&pattern[1..], &path[1..], entry, out, queue, mode);
@@ -391,7 +389,14 @@ fn glob_files(
             for entry in lister.list(&state.directory)? {
                 if let Some(path) = entry.name.to_str() {
                     let path_vec: Vec<char> = path.chars().collect();
-                    glob_file_match(state.pattern, &path_vec, &entry, &mut dedup, &mut queue, mode)?;
+                    glob_file_match(
+                        state.pattern,
+                        &path_vec,
+                        &entry,
+                        &mut dedup,
+                        &mut queue,
+                        mode,
+                    )?;
                 }
             }
         }
@@ -699,13 +704,25 @@ mod tests {
 
     fn check_file_glob_count(glob: &str, count: usize) {
         let mut out = Vec::new();
-        let ggg = glob_files(&compile(glob), &PathBuf::from(""), &mut out, &lister(), GlobMode::Glob);
+        let ggg = glob_files(
+            &compile(glob),
+            &PathBuf::from(""),
+            &mut out,
+            &lister(),
+            GlobMode::Glob,
+        );
         assert_eq!(out.len(), count);
     }
 
     fn check_file_glob(glob: &str, matches: &[&str]) {
         let mut out = Vec::new();
-        let ggg = glob_files(&compile(glob), &PathBuf::from(""), &mut out, &lister(), GlobMode::Glob);
+        let ggg = glob_files(
+            &compile(glob),
+            &PathBuf::from(""),
+            &mut out,
+            &lister(),
+            GlobMode::Glob,
+        );
         let set: HashSet<String> = out
             .drain(..)
             .map(|e| e.to_str().unwrap().to_string())

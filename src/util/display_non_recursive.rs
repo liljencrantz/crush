@@ -1,11 +1,11 @@
 use std::collections::HashSet;
 use std::fmt::Formatter;
 
-/// Version of the Display trait that avoids infinite recursion in the case of self-referencing 
+/// Version of the Display trait that avoids infinite recursion in the case of self-referencing
 /// elements by checking the memory address of each object.
-/// 
+///
 /// Whenever infinite recursion is detected, print "..." instead of the infinite value.
-/// 
+///
 /// Using object identity instead of a real hash may be seen as an ugly crutch, but the objects
 /// that can contain self references, can all also be mutated, meaning there is no stable way
 /// to calculate a hashcode and equality for a hash set other than assigning an identity to each

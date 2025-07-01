@@ -34,9 +34,12 @@ use crate::lang::pretty::format_buffer;
 use crate::lang::vec_reader::VecReader;
 use crate::state::global_state::FormatData;
 use crate::state::scope::ScopeReader;
+use crate::util::display_non_recursive::DisplayNonRecursive;
+use crate::util::escape;
 use crate::util::escape::{escape, escape_without_quotes};
 use crate::util::identity_arc::Identity;
 use crate::util::integer_formater::format_integer;
+use crate::util::repr::Repr;
 use ordered_map::OrderedMap;
 use std::fmt::{Display, Formatter, Pointer, Write};
 use std::io::Read;
@@ -44,9 +47,6 @@ use std::ops::Add;
 use std::sync::Arc;
 pub use value_definition::ValueDefinition;
 pub use value_type::ValueType;
-use crate::util::display_non_recursive::DisplayNonRecursive;
-use crate::util::escape;
-use crate::util::repr::Repr;
 
 pub type BinaryInputStream = Box<dyn BinaryReader + Send + Sync>;
 
@@ -75,7 +75,11 @@ pub enum Value {
 }
 
 impl DisplayNonRecursive for Value {
-    fn fmt_non_recursive(&self, f: &mut Formatter<'_>, seen: &mut HashSet<u64>) -> std::fmt::Result {
+    fn fmt_non_recursive(
+        &self,
+        f: &mut Formatter<'_>,
+        seen: &mut HashSet<u64>,
+    ) -> std::fmt::Result {
         match self {
             Value::String(val) => std::fmt::Display::fmt(val, f),
             Value::Integer(val) => std::fmt::Display::fmt(val, f),
@@ -119,7 +123,7 @@ impl Repr for Value {
             Value::Integer(val) => std::fmt::Display::fmt(val, f),
             Value::Time(val) => {
                 panic!()
-            },
+            }
             Value::Glob(val) => std::fmt::Display::fmt(val, f),
             Value::Regex(val, _) => {
                 f.write_str("^(")?;
@@ -128,7 +132,9 @@ impl Repr for Value {
             }
             Value::File(val) => {
                 f.write_str("'")?;
-                f.write_str(escape_without_quotes(val.to_str().unwrap_or("<invalid filename>")).as_str())?;
+                f.write_str(
+                    escape_without_quotes(val.to_str().unwrap_or("<invalid filename>")).as_str(),
+                )?;
                 f.write_str("'")
             }
             Value::List(l) => panic!(),

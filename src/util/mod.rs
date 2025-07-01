@@ -1,5 +1,6 @@
 pub mod byte_unit;
 pub mod directory_lister;
+pub mod display_non_recursive;
 pub mod escape;
 pub mod file;
 pub mod glob;
@@ -10,8 +11,7 @@ pub mod integer_formater;
 pub mod logins;
 pub mod regex;
 pub mod replace;
+pub mod repr;
 pub mod temperature;
 pub mod time;
 pub mod user_map;
-pub mod display_non_recursive;
-pub mod repr;

@@ -54,7 +54,6 @@ impl JobNode {
             self.location,
         ))
     }
-
 }
 
 impl From<Node> for JobNode {
@@ -86,49 +85,61 @@ impl From<Node> for JobNode {
 fn operator_function(op: &[&str], op_location: Location, l: Box<Node>, r: Box<Node>) -> Box<Node> {
     let location = op_location.union(l.location()).union(r.location());
     let cmd = attr(op, op_location);
-    Box::from(Node::Substitution(JobNode {
-        commands: vec![CommandNode {
-            expressions: vec![cmd, *l, *r],
+    Box::from(Node::Substitution(
+        JobNode {
+            commands: vec![CommandNode {
+                expressions: vec![cmd, *l, *r],
+                location: location,
+            }],
             location: location,
-        }],
-        location: location,
-    }.into()))
+        }
+        .into(),
+    ))
 }
 
 pub fn operator_method(op: &str, op_location: Location, l: Box<Node>, r: Box<Node>) -> Box<Node> {
     let location = op_location.union(l.location()).union(r.location());
     let cmd = Node::GetAttr(l, TrackedString::new(op, op_location));
-    Box::from(Node::Substitution(JobNode {
-        commands: vec![CommandNode {
-            expressions: vec![cmd, *r],
+    Box::from(Node::Substitution(
+        JobNode {
+            commands: vec![CommandNode {
+                expressions: vec![cmd, *r],
+                location: location,
+            }],
             location: location,
-        }],
-        location: location,
-    }.into()))
+        }
+        .into(),
+    ))
 }
 
 pub fn unary_operator_method(op: &str, op_location: Location, n: Box<Node>) -> Box<Node> {
     let location = op_location.union(n.location());
     let cmd = Node::GetAttr(n, TrackedString::new(op, op_location));
-    Box::from(Node::Substitution(JobNode {
-        commands: vec![CommandNode {
-            expressions: vec![cmd],
+    Box::from(Node::Substitution(
+        JobNode {
+            commands: vec![CommandNode {
+                expressions: vec![cmd],
+                location: location,
+            }],
             location: location,
-        }],
-        location: location,
-    }.into()))
+        }
+        .into(),
+    ))
 }
 
 pub fn negate(n: Box<Node>) -> Box<Node> {
     let location = n.location();
     let cmd = attr(&["global", "comp", "not"], location);
-    Box::from(Node::Substitution(JobNode {
-        commands: vec![CommandNode {
-            expressions: vec![cmd, *n],
+    Box::from(Node::Substitution(
+        JobNode {
+            commands: vec![CommandNode {
+                expressions: vec![cmd, *n],
+                location,
+            }],
             location,
-        }],
-        location,
-    }.into()))
+        }
+        .into(),
+    ))
 }
 
 pub fn operator(iop: impl Into<TrackedString>, l: Box<Node>, r: Box<Node>) -> Box<Node> {
@@ -185,9 +196,17 @@ impl CommandNode {
 
 fn propose_name(name: &TrackedString, v: ValueDefinition) -> ValueDefinition {
     match v {
-        ValueDefinition::ClosureDefinition{signature, jobs, location, ..} => {
-            ValueDefinition::ClosureDefinition{name: Some(name.clone()), signature, jobs, location}
-        }
+        ValueDefinition::ClosureDefinition {
+            signature,
+            jobs,
+            location,
+            ..
+        } => ValueDefinition::ClosureDefinition {
+            name: Some(name.clone()),
+            signature,
+            jobs,
+            location,
+        },
         _ => v,
     }
 }

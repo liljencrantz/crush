@@ -26,7 +26,11 @@ pub struct Lexer<'input> {
 pub type Spanned<'input> = Result<(usize, Token<'input>, usize), LexicalError>;
 
 impl<'input> Lexer<'input> {
-    pub fn new(input: &'input str, initial_mode: LanguageMode, tokenizer_mode: TokenizerMode) -> Self {
+    pub fn new(
+        input: &'input str,
+        initial_mode: LanguageMode,
+        tokenizer_mode: TokenizerMode,
+    ) -> Self {
         Lexer {
             mode: vec![initial_mode],
             tokenizer_mode,

@@ -1,4 +1,5 @@
 use crate::lang::ast::lexer::LanguageMode;
+use crate::lang::ast::node::TextLiteralStyle;
 use crate::lang::ast::{CommandNode, JobListNode, JobNode, node::Node};
 use crate::lang::command::{ArgumentDescription, Command};
 use crate::lang::errors::{CrushResult, argument_error_legacy, error};
@@ -12,7 +13,6 @@ use std::cmp::min;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::ops::Deref;
-use crate::lang::ast::node::TextLiteralStyle;
 
 pub enum CompletionCommand {
     Unknown,
@@ -167,8 +167,8 @@ fn find_command_in_expression<'input>(
         Node::Substitution(jl) => {
             for j in &jl.jobs {
                 if j.location.contains(cursor) {
-                    return Ok(Some(find_command_in_job(j.clone(), cursor)?))
-                }                
+                    return Ok(Some(find_command_in_job(j.clone(), cursor)?));
+                }
             }
             Ok(None)
         }
@@ -285,7 +285,10 @@ pub fn parse(
     scope: &Scope,
     parser: &Parser,
 ) -> CrushResult<ParseResult> {
-    let ast = parser.ast(&parser.close_command(&line[0..cursor])?, LanguageMode::Command)?;
+    let ast = parser.ast(
+        &parser.close_command(&line[0..cursor])?,
+        LanguageMode::Command,
+    )?;
 
     if ast.jobs.len() == 0 {
         return Ok(ParseResult::Nothing);
@@ -303,9 +306,9 @@ pub fn parse(
                         Ok(ParseResult::PartialLabel(label.prefix(cursor).string))
                     }
 
-                    Node::String(string, TextLiteralStyle::Quoted) => Ok(ParseResult::PartialQuotedString(
-                        string.prefix(cursor).string,
-                    )),
+                    Node::String(string, TextLiteralStyle::Quoted) => Ok(
+                        ParseResult::PartialQuotedString(string.prefix(cursor).string),
+                    ),
 
                     Node::String(label, TextLiteralStyle::Unquoted) => {
                         Ok(ParseResult::PartialField(label.prefix(cursor).string))
@@ -318,8 +321,8 @@ pub fn parse(
 
                     Node::File(path, quoted) => Ok(ParseResult::PartialFile(
                         match quoted {
-                            TextLiteralStyle::Quoted =>  unescape(&path.string)?,
-                            TextLiteralStyle::Unquoted => path.string.clone()
+                            TextLiteralStyle::Quoted => unescape(&path.string)?,
+                            TextLiteralStyle::Unquoted => path.string.clone(),
                         },
                         *quoted,
                     )),
@@ -441,17 +444,18 @@ pub fn parse(
                                 last_argument_name,
                             }))
                         }
-                        
-                        Node::Glob(s) => {
-                            Ok(ParseResult::PartialArgument(PartialCommandResult {
-                                command: c,
-                                previous_arguments,
-                                last_argument: LastArgument::Glob(s.string.clone()),
-                                last_argument_name,
-                            }))
-                        }
 
-                        _ => error(format!("Can't extract argument to complete. Node type {}.", arg.type_name())),
+                        Node::Glob(s) => Ok(ParseResult::PartialArgument(PartialCommandResult {
+                            command: c,
+                            previous_arguments,
+                            last_argument: LastArgument::Glob(s.string.clone()),
+                            last_argument_name,
+                        })),
+
+                        _ => error(format!(
+                            "Can't extract argument to complete. Node type {}.",
+                            arg.type_name()
+                        )),
                     }
                 } else {
                     Ok(ParseResult::PartialArgument(PartialCommandResult {

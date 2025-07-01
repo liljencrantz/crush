@@ -1,18 +1,18 @@
 use crate::data::list::List;
+use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::data::dict::Dict;
 use crate::lang::data::table::{ColumnType, Row};
 use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
+use crate::lang::state::global_state::RunMode;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
 use nix::unistd::Pid;
 use rustyline::history::{History, SearchDirection};
 use signature::signature;
 use std::env;
-use crate::lang::ast::lexer::LanguageMode;
-use crate::lang::state::global_state::RunMode;
 
 fn make_env() -> CrushResult<Value> {
     let e = Dict::new(ValueType::String, ValueType::String)?;
@@ -112,7 +112,6 @@ mod prompt {
                 .unwrap_or(Value::Empty),
         )
     }
-
 }
 
 #[signature(

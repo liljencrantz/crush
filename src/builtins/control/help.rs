@@ -4,12 +4,12 @@ use crate::lang::help::Help;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use crate::state::contexts::CommandContext;
+use crate::util::highlight::syntax_highlight;
 use markdown::mdast::Node;
 use markdown::{ParseOptions, to_mdast};
 use signature::signature;
 use std::cmp::{max, min};
 use std::collections::HashMap;
-use crate::util::highlight::syntax_highlight;
 
 static HEADER_START: &str = "\x1b[4m";
 static HEADER_END: &str = "\x1b[0m";

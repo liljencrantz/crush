@@ -124,16 +124,16 @@ impl CrushCommand for Closure {
     }
 }
 
-fn argument_descriptions(param: &Vec<Parameter>) -> Vec<ArgumentDescription>{
+fn argument_descriptions(param: &Vec<Parameter>) -> Vec<ArgumentDescription> {
     let mut result = Vec::new();
     for p in param {
         match p {
             Parameter::Parameter(name, value_type, default, description) => {
-                result.push(ArgumentDescription{
+                result.push(ArgumentDescription {
                     name: name.string.clone(),
                     value_type: ValueType::Any,
                     allowed: None,
-                    description: description.as_ref().map(|s|s.string.clone()),
+                    description: description.as_ref().map(|s| s.string.clone()),
                     complete: None,
                     named: false,
                     unnamed: false,
@@ -147,7 +147,7 @@ fn argument_descriptions(param: &Vec<Parameter>) -> Vec<ArgumentDescription>{
     result
 }
 
-fn signature_to_arguments(sig: &Option<Vec<Parameter>>) -> Vec<ArgumentDescription>{
+fn signature_to_arguments(sig: &Option<Vec<Parameter>>) -> Vec<ArgumentDescription> {
     if let Some(s) = &sig {
         argument_descriptions(s)
     } else {
@@ -330,25 +330,28 @@ impl<'a> ClosureSerializer<'a> {
                     })
                 }
 
-                ValueDefinition::ClosureDefinition{name, signature, jobs, location} => {
-                    model::value_definition::ValueDefinition::ClosureDefinition(
-                        model::ClosureDefinition {
-                            job_definitions: jobs
-                                .iter()
-                                .map(|j| self.job(j))
-                                .collect::<CrushResult<Vec<_>>>()?,
-                            name: Some(match name {
-                                None => model::closure_definition::Name::HasName(false),
-                                Some(name) => model::closure_definition::Name::NameValue(
-                                    name.serialize(self.elements, self.state)? as u64,
-                                ),
-                            }),
-                            signature: self.signature_definition(signature)?,
-                            start: location.start as u64,
-                            end: location.end as u64,
-                        },
-                    )
-                }
+                ValueDefinition::ClosureDefinition {
+                    name,
+                    signature,
+                    jobs,
+                    location,
+                } => model::value_definition::ValueDefinition::ClosureDefinition(
+                    model::ClosureDefinition {
+                        job_definitions: jobs
+                            .iter()
+                            .map(|j| self.job(j))
+                            .collect::<CrushResult<Vec<_>>>()?,
+                        name: Some(match name {
+                            None => model::closure_definition::Name::HasName(false),
+                            Some(name) => model::closure_definition::Name::NameValue(
+                                name.serialize(self.elements, self.state)? as u64,
+                            ),
+                        }),
+                        signature: self.signature_definition(signature)?,
+                        start: location.start as u64,
+                        end: location.end as u64,
+                    },
+                ),
 
                 ValueDefinition::JobDefinition(j) => {
                     model::value_definition::ValueDefinition::Job(self.job(j)?)
@@ -365,11 +368,12 @@ impl<'a> ClosureSerializer<'a> {
                     }))
                 }
                 ValueDefinition::JobListDefinition(jobs) => {
-                    model::value_definition::ValueDefinition::JobList(
-                        model::JobList {
-                            jobs: jobs.iter().map(|j| self.job(j)).collect::<CrushResult<Vec<_>>>()?,
-                        }
-                    )
+                    model::value_definition::ValueDefinition::JobList(model::JobList {
+                        jobs: jobs
+                            .iter()
+                            .map(|j| self.job(j))
+                            .collect::<CrushResult<Vec<_>>>()?,
+                    })
                 }
             }),
         })
@@ -395,9 +399,7 @@ impl<'a> ClosureDeserializer<'a> {
                 let env = Scope::deserialize(s.env as usize, self.elements, self.state)?;
                 let sig = match &s.signature {
                     None | Some(model::closure::Signature::HasSignature(_)) => None,
-                    Some(model::closure::Signature::SignatureValue(sig)) => {
-                        self.signature(sig)?
-                    }
+                    Some(model::closure::Signature::SignatureValue(sig)) => self.signature(sig)?,
                 };
                 Ok(Arc::from(Closure {
                     name: match s.name {
@@ -540,29 +542,28 @@ impl<'a> ClosureDeserializer<'a> {
                 model::value_definition::ValueDefinition::ClosureDefinition(c) => {
                     ValueDefinition::ClosureDefinition {
                         name: match c.name {
-                        None | Some(model::closure_definition::Name::HasName(_)) => None,
-                        Some(model::closure_definition::Name::NameValue(id)) => Some(
-                        TrackedString::deserialize(id as usize,
-                        self.elements,
-                        self.state) ?,
-                        ),
-                    },
-                    signature: match &c.signature {
-                        None | Some(model::closure_definition::Signature::HasSignature(_)) => {
-                            None
-                        }
-                        Some(model::closure_definition::Signature::SignatureValue(sig)) => {
-                            self.signature(sig)?
-                        }
-                    },
-                    jobs: c.job_definitions
-                        .iter()
-                        .map(|j| self.job(j))
-                        .collect::<CrushResult<Vec<_>>>()?,
-                    location: Location::new(c.start as usize, c.end as usize),
+                            None | Some(model::closure_definition::Name::HasName(_)) => None,
+                            Some(model::closure_definition::Name::NameValue(id)) => Some(
+                                TrackedString::deserialize(id as usize, self.elements, self.state)?,
+                            ),
+                        },
+                        signature: match &c.signature {
+                            None | Some(model::closure_definition::Signature::HasSignature(_)) => {
+                                None
+                            }
+                            Some(model::closure_definition::Signature::SignatureValue(sig)) => {
+                                self.signature(sig)?
+                            }
+                        },
+                        jobs: c
+                            .job_definitions
+                            .iter()
+                            .map(|j| self.job(j))
+                            .collect::<CrushResult<Vec<_>>>()?,
+                        location: Location::new(c.start as usize, c.end as usize),
+                    }
                 }
-            }
-            model::value_definition::ValueDefinition::Job(j) => {
+                model::value_definition::ValueDefinition::Job(j) => {
                     ValueDefinition::JobDefinition(Job::new(
                         j.commands
                             .iter()
@@ -579,7 +580,8 @@ impl<'a> ClosureDeserializer<'a> {
                                 .iter()
                                 .map(|c| self.command(c))
                                 .collect::<CrushResult<Vec<_>>>()?,
-                            Location::new(j.start as usize, j.end as usize)));
+                            Location::new(j.start as usize, j.end as usize),
+                        ));
                     }
                     ValueDefinition::JobListDefinition(res)
                 }

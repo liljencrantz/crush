@@ -29,11 +29,11 @@ pub struct Usage {
     #[unnamed()]
     #[description("the files to calculate the recursive size of.")]
     directory: Files,
-    
+
     #[description("do not show directory sizes for subdirectories.")]
     #[default(false)]
     silent: bool,
-    
+
     #[description("write sizes for all files, not just directories.")]
     #[default(false)]
     all: bool,

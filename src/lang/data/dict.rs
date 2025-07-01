@@ -1,6 +1,7 @@
 use crate::lang::errors::{CrushResult, argument_error_legacy, error};
 use crate::lang::pipe::CrushStream;
 use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value::ValueType};
+use crate::util::display_non_recursive::DisplayNonRecursive;
 use crate::util::identity_arc::Identity;
 use crate::util::replace::Replace;
 use chrono::Duration;
@@ -9,7 +10,6 @@ use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::sync::{Arc, Mutex};
-use crate::util::display_non_recursive::DisplayNonRecursive;
 
 #[derive(Clone)]
 pub struct Dict {
@@ -169,7 +169,11 @@ impl PartialEq for Dict {
 }
 
 impl DisplayNonRecursive for Dict {
-    fn fmt_non_recursive(&self, f: &mut Formatter<'_>, seen: &mut HashSet<u64>) -> std::fmt::Result {
+    fn fmt_non_recursive(
+        &self,
+        f: &mut Formatter<'_>,
+        seen: &mut HashSet<u64>,
+    ) -> std::fmt::Result {
         if seen.contains(&self.id()) {
             return f.write_str("...");
         }

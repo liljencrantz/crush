@@ -9,6 +9,7 @@ use crate::lang::errors::{CrushResult, argument_error_legacy};
 use crate::lang::interactive;
 use crate::lang::pretty::create_pretty_printer;
 use crate::lang::printer::Printer;
+use crate::lang::state::global_state::RunMode;
 use crate::lang::state::scope::ScopeType::Namespace;
 use crate::lang::{execute, printer};
 use builtins::declare;
@@ -17,7 +18,6 @@ use lang::{data, state};
 use num_format::SystemLocale;
 use std::io::Read;
 use std::path::PathBuf;
-use crate::lang::state::global_state::RunMode;
 
 #[derive(PartialEq, Eq)]
 enum Mode {
@@ -103,7 +103,7 @@ fn run() -> CrushResult<i32> {
         Mode::Interactive => RunMode::Interactive,
         _ => RunMode::NonInteractive,
     };
-    
+
     let global_state = GlobalState::new(printer, run_mode)?;
 
     set_initial_locale(&global_state);

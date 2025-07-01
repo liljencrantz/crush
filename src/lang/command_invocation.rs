@@ -18,10 +18,10 @@ use crate::lang::state::contexts::{CompileContext, JobContext};
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{ValueDefinition, ValueType};
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentEvaluator, value::Value};
+use crate::util::repr::Repr;
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::thread::ThreadId;
-use crate::util::repr::Repr;
 
 #[derive(Clone)]
 pub struct CommandInvocation {

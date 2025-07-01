@@ -156,12 +156,7 @@ impl dyn CrushCommand {
         job_definitions: Vec<Job>,
         env: &Scope,
     ) -> Command {
-        Arc::from(Closure::new(
-            name,
-            signature,
-            job_definitions,
-            env.clone(),
-        ))
+        Arc::from(Closure::new(name, signature, job_definitions, env.clone()))
     }
 
     pub fn command(
