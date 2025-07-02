@@ -394,6 +394,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             highlight.insert(Value::from("regex_literal"), Value::from(""))?;
             highlight.insert(Value::from("command"), Value::from(""))?;
             highlight.insert(Value::from("keyword"), Value::from(""))?;
+            highlight.insert(Value::from("error"), Value::from(""))?;
             crush.declare("highlight", highlight.into())?;
 
             crush.declare("env", make_env()?)?;

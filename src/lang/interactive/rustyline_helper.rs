@@ -74,7 +74,7 @@ impl RustylineHelper {
         } else {
             HashMap::new()
         };
-        crate::util::highlight::syntax_highlight(line, &map)
+        crate::util::highlight::syntax_highlight(line, &map, &Some(self.scope.clone()))
     }
 }
 

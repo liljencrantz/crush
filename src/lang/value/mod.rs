@@ -35,7 +35,6 @@ use crate::lang::vec_reader::VecReader;
 use crate::state::global_state::FormatData;
 use crate::state::scope::ScopeReader;
 use crate::util::display_non_recursive::DisplayNonRecursive;
-use crate::util::escape;
 use crate::util::escape::{escape, escape_without_quotes};
 use crate::util::identity_arc::Identity;
 use crate::util::integer_formater::format_integer;

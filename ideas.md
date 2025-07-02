@@ -10,6 +10,12 @@ different shells.
 
 (Idea comes from Marcus Vesterlund)
 
+# More help topics
+
+We could add crush help topics accessible via topic strings like `help topic=closures`.
+These topics could be small file snippets that we then compile into the various bigger files in the
+docs subdirectory. They would be discoverable via tab completion.
+
 # XML serialization
 
 Use struct:s with three members,

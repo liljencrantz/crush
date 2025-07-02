@@ -96,10 +96,6 @@ impl CrushCommand for Closure {
         "closure"
     }
 
-    fn help(&self) -> &dyn Help {
-        self
-    }
-
     fn serialize(
         &self,
         elements: &mut Vec<Element>,

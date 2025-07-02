@@ -233,7 +233,7 @@ fn recurse(node: Node, state: &mut State) -> CrushResult<()> {
 }
 
 fn syntax_highlight_code(code: &String, state: &mut State) -> CrushResult<()> {
-    let res = syntax_highlight(code, &state.colors)?;
+    let res = syntax_highlight(code, &state.colors, &None)?;
     state.out.push_str(&res);
     state.pos = 0;
     Ok(())

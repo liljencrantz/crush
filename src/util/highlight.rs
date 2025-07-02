@@ -1,11 +1,17 @@
 use crate::lang::ast::lexer::LanguageMode::Command;
 use crate::lang::ast::lexer::{Lexer, TokenizerMode};
 use crate::lang::ast::token::Token;
+use crate::lang::command_invocation::resolve_external_command;
 use crate::lang::errors::{CrushError, CrushResult};
+use crate::lang::state::scope::Scope;
 use std::cmp::min;
 use std::collections::HashMap;
 
-pub fn syntax_highlight(code: &str, colors: &HashMap<String, String>) -> CrushResult<String> {
+pub fn syntax_highlight(
+    code: &str,
+    colors: &HashMap<String, String>,
+    scope: &Option<Scope>,
+) -> CrushResult<String> {
     let mut res = String::new();
     let mut pos = 0;
     let mut new_command = true;
@@ -17,7 +23,10 @@ pub fn syntax_highlight(code: &str, colors: &HashMap<String, String>) -> CrushRe
         .map(|item| item.map(|it| it.1).map_err(|e| CrushError::from(e)))
         .collect::<CrushResult<Vec<Token>>>()?;
 
-    for tok in tokens {
+    for idx in 0..tokens.len() {
+        let tok = tokens[idx];
+        let ntok = tokens.get(idx+1);
+
         res.push_str(&code[pos..min(tok.location().start, code.len())]);
         let mut do_reset = false;
 
@@ -37,7 +46,7 @@ pub fn syntax_highlight(code: &str, colors: &HashMap<String, String>) -> CrushRe
             _ => false,
         };
 
-        match get_color(tok, new_command, colors) {
+        match get_color(tok, ntok, new_command, colors, scope) {
             Some(color) => {
                 if !color.is_empty() {
                     do_reset = true;
@@ -60,18 +69,31 @@ pub fn syntax_highlight(code: &str, colors: &HashMap<String, String>) -> CrushRe
 
 fn get_color<'a>(
     token_type: Token,
+    next_token_type: Option<&Token>,
     new_command: bool,
     colors: &'a HashMap<String, String>,
+    scope: &Option<Scope>,
 ) -> Option<&'a String> {
     use crate::lang::ast::token::Token::*;
     match token_type {
-        String(_, _) | QuotedString(_, _) => {
+        String(name, _) => {
             if new_command {
-                colors.get("command")
+                match scope {
+                    None => colors.get("command"),
+                    Some(s) => match s.get(name).unwrap_or(None) {
+                        Some(_) => colors.get("command"),
+                        None => match resolve_external_command(name, s) {
+                            Ok(Some(_)) => colors.get("command"),
+                            _ => colors.get("error"),
+                        },
+                    },
+                }
             } else {
                 colors.get("string_literal")
             }
         }
+        
+        QuotedString(quoted_name, _) => colors.get("string_literal"),
         Flag(_, _) => colors.get("string_literal"),
         Regex(_, _) => colors.get("regex_literal"),
         Glob(_, _) => colors.get("glob_literal"),
@@ -99,7 +121,15 @@ fn get_color<'a>(
         | SubStart(_)
         | BlockEnd(_)
         | BlockStart(_) => colors.get("operator"),
-        Identifier(_, _) => colors.get("identifier"),
+        Identifier(name, _) => match scope {
+            None => colors.get("identifier"),
+            Some(s) => match (s.get(&name[1..]).unwrap_or(None), next_token_type) {
+                (Some(_), Some(Declare(_))) => colors.get("error"),
+                (Some(_), _) => colors.get("identifier"),
+                (None, Some(Declare(_))) => colors.get("identifier"),
+                (None, _) => colors.get("error"),
+            },
+        },
         Separator(_, _) => None,
         For(_) | While(_) | Loop(_) | If(_) | Else(_) | Return(_) | Break(_) | Continue(_) => {
             colors.get("keyword")

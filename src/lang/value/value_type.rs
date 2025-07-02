@@ -270,7 +270,7 @@ impl Help for ValueType {
 
 fn long_help_methods(fields: &Vec<(&String, &Command)>, lines: &mut Vec<String>) {
     for (k, v) in fields {
-        lines.push(format!(" * `{}` {}", k, v.help().short_help()));
+        lines.push(format!(" * `{}` {}", k, v.short_help()));
     }
 }
 

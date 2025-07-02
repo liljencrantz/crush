@@ -65,8 +65,6 @@ pub trait CrushCommand: Help + Display {
     fn might_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool;
     /// The name of this command
     fn name(&self) -> &str;
-    /// Return an object that provides help for this command
-    fn help(&self) -> &dyn Help;
     /// Write this completion into pup format
     fn serialize(
         &self,
@@ -251,10 +249,6 @@ impl CrushCommand for SimpleCommand {
         &self.full_name[self.full_name.len() - 1]
     }
 
-    fn help(&self) -> &dyn Help {
-        self
-    }
-
     fn serialize(
         &self,
         elements: &mut Vec<Element>,
@@ -338,10 +332,6 @@ impl CrushCommand for ConditionCommand {
 
     fn might_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool {
         arguments.iter().any(|arg| arg.value.can_block(context))
-    }
-
-    fn help(&self) -> &dyn Help {
-        self
     }
 
     fn serialize(
@@ -477,10 +467,6 @@ impl CrushCommand for BoundCommand {
 
     fn name(&self) -> &str {
         self.command.name()
-    }
-
-    fn help(&self) -> &dyn Help {
-        self.command.help()
     }
 
     fn serialize(
