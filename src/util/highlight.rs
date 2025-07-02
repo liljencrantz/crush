@@ -1,9 +1,10 @@
-use crate::lang::ast::lexer::LanguageMode::Command;
-use crate::lang::ast::lexer::{Lexer, TokenizerMode};
+use crate::lang::ast::lexer::{LanguageMode, Lexer, TokenizerMode};
 use crate::lang::ast::token::Token;
+use crate::lang::command::{Command, ParameterCompletionData};
 use crate::lang::command_invocation::resolve_external_command;
 use crate::lang::errors::{CrushError, CrushResult};
 use crate::lang::state::scope::Scope;
+use crate::lang::value::Value;
 use std::cmp::min;
 use std::collections::HashMap;
 
@@ -17,15 +18,17 @@ pub fn syntax_highlight(
     let mut new_command = true;
     let mut prev = None;
 
-    let l = Lexer::new(code, Command, TokenizerMode::IncludeComments);
+    let l = Lexer::new(code, LanguageMode::Command, TokenizerMode::IncludeComments);
     let tokens = l
         .into_iter()
         .map(|item| item.map(|it| it.1).map_err(|e| CrushError::from(e)))
         .collect::<CrushResult<Vec<Token>>>()?;
 
+    let mut current_command = None;
+
     for idx in 0..tokens.len() {
         let tok = tokens[idx];
-        let ntok = tokens.get(idx+1);
+        let ntok = tokens.get(idx + 1);
 
         res.push_str(&code[pos..min(tok.location().start, code.len())]);
         let mut do_reset = false;
@@ -46,7 +49,17 @@ pub fn syntax_highlight(
             _ => false,
         };
 
-        match get_color(tok, ntok, new_command, colors, scope) {
+        match (new_command, tok, scope) {
+            (true, Token::String(name, _), Some(s)) => {
+                current_command = match s.get(name) {
+                    Ok(Some(Value::Command(c))) => Some(c),
+                    _ => None,
+                };
+            }
+            _ => {}
+        };
+
+        match get_color(tok, ntok, new_command, colors, scope, &current_command) {
             Some(color) => {
                 if !color.is_empty() {
                     do_reset = true;
@@ -73,6 +86,7 @@ fn get_color<'a>(
     new_command: bool,
     colors: &'a HashMap<String, String>,
     scope: &Option<Scope>,
+    current_command: &Option<Command>,
 ) -> Option<&'a String> {
     use crate::lang::ast::token::Token::*;
     match token_type {
@@ -89,12 +103,30 @@ fn get_color<'a>(
                     },
                 }
             } else {
-                colors.get("string_literal")
+                match (current_command, next_token_type) {
+                    (Some(cmd), Some(Token::Equals(_))) => {
+                        if allowed_named_argument(cmd.completion_data(), name) {
+                            colors.get("named_argument")
+                        } else {
+                            colors.get("error")
+                        }
+                    }
+                    _ => colors.get("string_literal"),
+                }
             }
         }
-        
+
         QuotedString(quoted_name, _) => colors.get("string_literal"),
-        Flag(_, _) => colors.get("string_literal"),
+        Flag(name, _) => match (current_command) {
+            Some(cmd) => {
+                if name.len() > 2 && allowed_named_argument(cmd.completion_data(), &name[2..]) {
+                    colors.get("named_argument")
+                } else {
+                    colors.get("error")
+                }
+            }
+            _ => colors.get("named_argument"),
+        },
         Regex(_, _) => colors.get("regex_literal"),
         Glob(_, _) => colors.get("glob_literal"),
         Comment(_, _) => colors.get("comment"),
@@ -135,4 +167,19 @@ fn get_color<'a>(
             colors.get("keyword")
         }
     }
+}
+
+fn allowed_named_argument(
+    parameter_completion_data: &[ParameterCompletionData],
+    name: &str,
+) -> bool {
+    for param in parameter_completion_data {
+        if param.named {
+            return true;
+        }
+        if param.name == name {
+            return true;
+        }
+    }
+    false
 }

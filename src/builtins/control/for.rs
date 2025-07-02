@@ -15,12 +15,14 @@ use signature::signature;
     can_block = true,
     short = "Execute a command once for each element in a stream.",
     output = Unknown,
-    example = "for i=$(host:procs) {
-  echo $(\"Iterating over process {}\":format $i:name)
-}
-for i=$(seq 10) {
-  echo $(\"Lap #{}\":format $i)
-}",
+    example = "# Iterate over the processes on the host",
+    example = "for i=$(host:procs) {",
+    example = "  echo $(\"Iterating over process {}\":format $i:name)",
+    example = "}",
+    example = "# Print ten messages",
+    example = "for i=$(seq 10) {",
+    example = "  echo $(\"Lap #{}\":format $i)",
+    example = "}",
 )]
 pub struct For {
     #[named()]

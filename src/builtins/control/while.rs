@@ -13,7 +13,7 @@ use signature::signature;
     condition = true,
     output = Known(ValueType::Empty),
     short = "Repeatedly execute the body for as long the condition is met.",
-    long = "The loop body is optional. If not specified, the condition is executed until it returns false.\n    This effectively means that the condition becomes the body, and the loop break check comes at\n    the end of the loop.",
+    long = "The loop body is optional. If not specified, the condition is executed until it returns false. This effectively means that the condition becomes the body, and the loop break check comes at the end of the loop.",
     example = "while {./some_file:exists} {echo \"hello\"}"
 )]
 pub struct While {

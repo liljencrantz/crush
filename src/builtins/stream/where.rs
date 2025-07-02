@@ -13,7 +13,7 @@ use signature::signature;
     can_block = true,
     output = Passthrough,
     short = "Filter out rows from input based on condition",
-    long = "The columns of the row are exported to the environment using the column names.",
+    long = "The columns of the row are exported to the environment using the column names, i.e. if the table the `where` command is applied to has columns `a` and `b`, then the environment will have variables `type` and `name`, the variables `$type` and `$name` will be set to the values of the columns in the current row on each execution of the closure.",
     example = "# List all subdirectories to the current working directory",
     example = "files | where {$type == directory}")]
 pub struct Where {

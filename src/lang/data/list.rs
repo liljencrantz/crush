@@ -3,6 +3,7 @@ use crate::data::dict::Dict;
 use crate::lang::errors::{CrushResult, argument_error_legacy, error};
 use crate::lang::pipe::Stream;
 use crate::lang::state::scope::Scope;
+use crate::lang::value::ComparisonMode;
 use crate::lang::vec_reader::VecReader;
 use crate::lang::{value::Value, value::ValueType};
 use crate::util::display_non_recursive::DisplayNonRecursive;
@@ -12,7 +13,6 @@ use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::sync::{Arc, Mutex};
-use crate::lang::value::ComparisonMode;
 
 #[derive(Clone)]
 pub struct List {

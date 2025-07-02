@@ -1,5 +1,4 @@
 /// Functions that execute the contents of a string or file as Crush code.
-
 use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::errors::{CrushResult, argument_error_legacy};
 use crate::lang::pipe::{ValueSender, empty_channel, pipe};

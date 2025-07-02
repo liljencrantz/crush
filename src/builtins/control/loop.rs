@@ -11,7 +11,12 @@ use signature::signature;
     condition = true,
     output = Known(ValueType::Empty),
     short = "Repeatedly execute the body until the break command is called.",
-    example = "loop {\n        if (i_am_tired) {\n            break\n        }\n        echo \"Working\"\n    }"
+    example = "loop {",
+    example = "  if $(i_am_tired) {",
+    example = "    break",
+    example = "  }",
+    example = "  echo Working",
+    example = "}",
 )]
 pub struct Loop {
     #[description("the command to repeatedly invoke.")]

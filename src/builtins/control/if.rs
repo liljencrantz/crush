@@ -9,7 +9,7 @@ use signature::signature;
     control.r#if,
     condition = true,
     short = "Conditionally execute a command once.",
-    example = "if a > 10 {echo \"big\"} {echo \"small\"}"
+    example = "if a > 10 {echo big} {echo small}"
 )]
 pub struct If {
     #[description("the condition to filter on.")]
