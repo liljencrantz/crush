@@ -58,37 +58,27 @@ impl OutputType {
     }
 }
 
-#[derive(Clone)]
-pub struct ArgumentDescription {
-    pub name: String,
-    pub value_type: ValueType,
-    pub allowed: Option<Vec<Value>>,
-    pub description: Option<String>,
-    pub complete: Option<
-        fn(
-            cmd: &PartialCommandResult,
-            cursor: usize,
-            scope: &Scope,
-            res: &mut Vec<Completion>,
-        ) -> CrushResult<()>,
-    >,
-    pub named: bool,
-    pub unnamed: bool,
-}
-
 pub trait CrushCommand: Help + Display {
+    /// Execute this command with the specified context
     fn eval(&self, context: CommandContext) -> CrushResult<()>;
+    /// True if there is a chance that invoking this command will block the thread
     fn might_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool;
+    /// The name of this command
     fn name(&self) -> &str;
+    /// Return an object that provides help for this command
     fn help(&self) -> &dyn Help;
+    /// Write this completion into pup format
     fn serialize(
         &self,
         elements: &mut Vec<Element>,
         state: &mut SerializationState,
     ) -> CrushResult<usize>;
+    /// A helper method that binds this command to be a method of the specified object
     fn bind_helper(&self, wrapped: &Command, this: Value) -> Command;
+    /// The return type of this command, if known
     fn output_type<'a>(&'a self, input: &'a OutputType) -> Option<&'a ValueType>;
-    fn arguments(&self) -> &[ArgumentDescription];
+    /// Information about the parameters that can be passed to this command, which is useful for providing completions
+    fn completion_data(&self) -> &[ParameterCompletionData];
 }
 
 pub trait TypeMap {
@@ -101,7 +91,7 @@ pub trait TypeMap {
         short_help: &'static str,
         long_help: Option<&'static str>,
         output: OutputType,
-        arguments: impl Into<Vec<ArgumentDescription>>,
+        completion_data: impl Into<Vec<ParameterCompletionData>>,
     );
 }
 
@@ -115,12 +105,19 @@ impl TypeMap for OrderedMap<String, Command> {
         short_help: &'static str,
         long_help: Option<&'static str>,
         output: OutputType,
-        arguments: impl Into<Vec<ArgumentDescription>>,
+        completion_data: impl Into<Vec<ParameterCompletionData>>,
     ) {
         self.insert(
             path[path.len() - 1].to_string(),
             <dyn CrushCommand>::command(
-                call, can_block, &path, signature, short_help, long_help, output, arguments,
+                call,
+                can_block,
+                &path,
+                signature,
+                short_help,
+                long_help,
+                output,
+                completion_data,
             ),
         );
     }
@@ -134,7 +131,7 @@ struct SimpleCommand {
     short_help: AnyStr,
     long_help: Option<AnyStr>,
     output: OutputType,
-    arguments: Vec<ArgumentDescription>,
+    completion_data: Vec<ParameterCompletionData>,
 }
 
 /**
@@ -146,7 +143,7 @@ struct ConditionCommand {
     signature: &'static str,
     short_help: &'static str,
     long_help: Option<&'static str>,
-    arguments: Vec<ArgumentDescription>,
+    completion_data: Vec<ParameterCompletionData>,
 }
 
 impl dyn CrushCommand {
@@ -167,7 +164,7 @@ impl dyn CrushCommand {
         short_help: impl Into<AnyStr>,
         long_help: Option<impl Into<AnyStr>>,
         output: OutputType,
-        arguments: impl Into<Vec<ArgumentDescription>>,
+        completion_data: impl Into<Vec<ParameterCompletionData>>,
     ) -> Command {
         Arc::from(SimpleCommand {
             call,
@@ -180,7 +177,7 @@ impl dyn CrushCommand {
             short_help: short_help.into(),
             long_help: long_help.map(|h| h.into()),
             output,
-            arguments: arguments.into(),
+            completion_data: completion_data.into(),
         })
     }
 
@@ -190,7 +187,7 @@ impl dyn CrushCommand {
         signature: &'static str,
         short_help: &'static str,
         long_help: Option<&'static str>,
-        arguments: Vec<ArgumentDescription>,
+        completion_data: Vec<ParameterCompletionData>,
     ) -> Command {
         Arc::from(ConditionCommand {
             call,
@@ -198,7 +195,7 @@ impl dyn CrushCommand {
             signature,
             short_help,
             long_help,
-            arguments,
+            completion_data,
         })
     }
 
@@ -282,8 +279,8 @@ impl CrushCommand for SimpleCommand {
         self.output.calculate(input)
     }
 
-    fn arguments(&self) -> &[ArgumentDescription] {
-        &self.arguments
+    fn completion_data(&self) -> &[ParameterCompletionData] {
+        &self.completion_data
     }
 }
 
@@ -370,8 +367,8 @@ impl CrushCommand for ConditionCommand {
         None
     }
 
-    fn arguments(&self) -> &[ArgumentDescription] {
-        &self.arguments
+    fn completion_data(&self) -> &[ParameterCompletionData] {
+        &self.completion_data
     }
 }
 
@@ -396,6 +393,24 @@ impl PartialEq for ConditionCommand {
 }
 
 impl Eq for ConditionCommand {}
+
+#[derive(Clone)]
+pub struct ParameterCompletionData {
+    pub name: String,
+    pub value_type: ValueType,
+    pub allowed: Option<Vec<Value>>,
+    pub description: Option<String>,
+    pub complete: Option<
+        fn(
+            cmd: &PartialCommandResult,
+            cursor: usize,
+            scope: &Scope,
+            res: &mut Vec<Completion>,
+        ) -> CrushResult<()>,
+    >,
+    pub named: bool,
+    pub unnamed: bool,
+}
 
 #[derive(Clone)]
 pub enum Parameter {
@@ -496,8 +511,8 @@ impl CrushCommand for BoundCommand {
         self.command.output_type(input)
     }
 
-    fn arguments(&self) -> &[ArgumentDescription] {
-        self.command.arguments()
+    fn completion_data(&self) -> &[ParameterCompletionData] {
+        self.command.completion_data()
     }
 }
 

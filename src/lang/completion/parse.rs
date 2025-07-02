@@ -1,7 +1,7 @@
 use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::ast::node::TextLiteralStyle;
 use crate::lang::ast::{CommandNode, JobListNode, JobNode, node::Node};
-use crate::lang::command::{ArgumentDescription, Command};
+use crate::lang::command::{Command, ParameterCompletionData};
 use crate::lang::errors::{CrushResult, argument_error_legacy, error};
 use crate::lang::parser::Parser;
 use crate::lang::state::scope::Scope;
@@ -61,18 +61,18 @@ pub struct PartialCommandResult {
 }
 
 impl PartialCommandResult {
-    pub fn last_argument_description(&self) -> Option<&ArgumentDescription> {
+    pub fn last_argument_description(&self) -> Option<&ParameterCompletionData> {
         if let CompletionCommand::Known(cmd) = &self.command {
             if let Some(name) = &self.last_argument_name {
-                for arg in cmd.arguments() {
+                for arg in cmd.completion_data() {
                     if &arg.name == name {
                         return Some(arg);
                     }
                 }
                 None
             } else {
-                if false && cmd.arguments().len() == 1 {
-                    Some(&cmd.arguments()[0])
+                if false && cmd.completion_data().len() == 1 {
+                    Some(&cmd.completion_data()[0])
                 } else {
                     let mut previous_named = HashSet::new();
                     let mut previous_unnamed = 0usize;
@@ -87,7 +87,7 @@ impl PartialCommandResult {
                     }
 
                     let mut unnamed_used = 0usize;
-                    for arg in cmd.arguments() {
+                    for arg in cmd.completion_data() {
                         if arg.unnamed {
                             return Some(arg);
                         }
@@ -162,7 +162,7 @@ fn find_command_in_expression<'input>(
     cursor: usize,
 ) -> CrushResult<Option<CommandNode>> {
     match exp {
-        Node::Assignment(_, _, _, b) => find_command_in_expression(b, cursor),
+        Node::Assignment { value, .. } => find_command_in_expression(value, cursor),
 
         Node::Substitution(jl) => {
             for j in &jl.jobs {
@@ -260,7 +260,12 @@ fn parse_command_node(node: &Node, scope: &Scope) -> CrushResult<CompletionComma
 
 fn parse_previous_argument(arg: &Node) -> PreviousArgument {
     match arg {
-        Node::Assignment(key, _, op, value) => match (key.as_ref(), op.as_str()) {
+        Node::Assignment {
+            target,
+            operation,
+            value,
+            ..
+        } => match (target.as_ref(), operation.as_str()) {
             (Node::String(name, TextLiteralStyle::Unquoted), "=") => {
                 let inner = parse_previous_argument(value.as_ref());
                 return PreviousArgument {
@@ -353,11 +358,11 @@ pub fn parse(
                 .map(|arg| parse_previous_argument(arg))
                 .collect::<Vec<_>>();
             let (arg, last_argument_name, argument_complete) =
-                if let Node::Assignment(name, _, _op, value) = cmd.expressions.last().unwrap() {
-                    if name.location().contains(cursor) {
-                        (Box::from(name.prefix(cursor)?), None, true)
+                if let Node::Assignment { target, value, .. } = cmd.expressions.last().unwrap() {
+                    if target.location().contains(cursor) {
+                        (Box::from(target.prefix(cursor)?), None, true)
                     } else {
-                        if let Node::Identifier(name) = name.as_ref() {
+                        if let Node::Identifier(name) = target.as_ref() {
                             (value.clone(), Some(name.string.clone()), false)
                         } else {
                             (value.clone(), None, false)

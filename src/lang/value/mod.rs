@@ -74,6 +74,12 @@ pub enum Value {
     Type(ValueType),
 }
 
+#[derive(Copy, Clone, Debug)]
+pub enum ComparisonMode {
+    Regular,
+    CaseInsensitive,
+}
+
 impl DisplayNonRecursive for Value {
     fn fmt_non_recursive(
         &self,
@@ -593,6 +599,40 @@ impl Value {
             _ => self.to_string(),
         }
     }
+
+    pub fn param_partial_cmp(&self, other: &Value, mode: ComparisonMode) -> Option<Ordering> {
+        match (self, other) {
+            (Value::String(val1), Value::String(val2)) => match mode {
+                ComparisonMode::Regular => Some(val1.cmp(val2)),
+                ComparisonMode::CaseInsensitive => {
+                    Some(val1.to_lowercase().cmp(&val2.to_lowercase()))
+                }
+            },
+            (Value::Integer(val1), Value::Integer(val2)) => Some(val1.cmp(val2)),
+            (Value::Float(val1), Value::Integer(val2)) => val1.partial_cmp(&(*val2 as f64)),
+            (Value::Integer(val1), Value::Float(val2)) => (*val1 as f64).partial_cmp(val2),
+            (Value::Float(val1), Value::Float(val2)) => val1.partial_cmp(val2),
+            (Value::Time(val1), Value::Time(val2)) => Some(val1.cmp(val2)),
+            (Value::Duration(val1), Value::Duration(val2)) => Some(val1.cmp(val2)),
+            (Value::Glob(val1), Value::Glob(val2)) => Some(val1.cmp(val2)),
+            (Value::Regex(val1, _), Value::Regex(val2, _)) => Some(val1.cmp(val2)),
+            (Value::File(val1), Value::File(val2)) => match mode {
+                ComparisonMode::Regular => Some(val1.cmp(val2)),
+                ComparisonMode::CaseInsensitive => Some(
+                    val1.to_string_lossy()
+                        .to_lowercase()
+                        .cmp(&val2.to_string_lossy().to_lowercase()),
+                ),
+            },
+            (Value::Table(val1), Value::Table(val2)) => val1.partial_cmp(val2),
+            (Value::Struct(val1), Value::Struct(val2)) => val1.partial_cmp(val2),
+            (Value::List(val1), Value::List(val2)) => val1.param_partial_cmp(val2, mode),
+            (Value::Dict(val1), Value::Dict(val2)) => val1.partial_cmp(val2),
+            (Value::Bool(val1), Value::Bool(val2)) => Some(val1.cmp(val2)),
+            (Value::Binary(val1), Value::Binary(val2)) => Some(val1.cmp(val2)),
+            _ => None,
+        }
+    }
 }
 
 fn has_non_printable(s: &str) -> bool {
@@ -725,25 +765,7 @@ pub enum Alignment {
 
 impl PartialOrd for Value {
     fn partial_cmp(&self, other: &Value) -> Option<Ordering> {
-        match (self, other) {
-            (Value::String(val1), Value::String(val2)) => Some(val1.cmp(val2)),
-            (Value::Integer(val1), Value::Integer(val2)) => Some(val1.cmp(val2)),
-            (Value::Float(val1), Value::Integer(val2)) => val1.partial_cmp(&(*val2 as f64)),
-            (Value::Integer(val1), Value::Float(val2)) => (*val1 as f64).partial_cmp(val2),
-            (Value::Float(val1), Value::Float(val2)) => val1.partial_cmp(val2),
-            (Value::Time(val1), Value::Time(val2)) => Some(val1.cmp(val2)),
-            (Value::Duration(val1), Value::Duration(val2)) => Some(val1.cmp(val2)),
-            (Value::Glob(val1), Value::Glob(val2)) => Some(val1.cmp(val2)),
-            (Value::Regex(val1, _), Value::Regex(val2, _)) => Some(val1.cmp(val2)),
-            (Value::File(val1), Value::File(val2)) => Some(val1.cmp(val2)),
-            (Value::Table(val1), Value::Table(val2)) => val1.partial_cmp(val2),
-            (Value::Struct(val1), Value::Struct(val2)) => val1.partial_cmp(val2),
-            (Value::List(val1), Value::List(val2)) => val1.partial_cmp(val2),
-            (Value::Dict(val1), Value::Dict(val2)) => val1.partial_cmp(val2),
-            (Value::Bool(val1), Value::Bool(val2)) => Some(val1.cmp(val2)),
-            (Value::Binary(val1), Value::Binary(val2)) => Some(val1.cmp(val2)),
-            _ => None,
-        }
+        self.param_partial_cmp(other, ComparisonMode::Regular)
     }
 }
 

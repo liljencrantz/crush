@@ -2,7 +2,7 @@ use crate::lang::argument::{Argument, ArgumentDefinition, ArgumentType, SwitchSt
 use crate::lang::ast::location::Location;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::command::{
-    ArgumentDescription, BoundCommand, Command, CrushCommand, OutputType, Parameter,
+    BoundCommand, Command, CrushCommand, OutputType, Parameter, ParameterCompletionData,
 };
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::data::dict::Dict;
@@ -21,7 +21,7 @@ use crate::lang::value::{Value, ValueDefinition, ValueType};
 use crate::util::escape::unescape;
 use itertools::Itertools;
 use ordered_map::OrderedMap;
-use std::fmt::{Display, Pointer};
+use std::fmt::Display;
 use std::sync::Arc;
 
 pub struct Closure {
@@ -29,7 +29,7 @@ pub struct Closure {
     jobs: Vec<Job>,
     signature: Option<Vec<Parameter>>,
     env: Scope,
-    arguments: Vec<ArgumentDescription>,
+    completion_data: Vec<ParameterCompletionData>,
 }
 
 impl CrushCommand for Closure {
@@ -119,17 +119,17 @@ impl CrushCommand for Closure {
         None
     }
 
-    fn arguments(&self) -> &[ArgumentDescription] {
-        &self.arguments
+    fn completion_data(&self) -> &[ParameterCompletionData] {
+        &self.completion_data
     }
 }
 
-fn argument_descriptions(param: &Vec<Parameter>) -> Vec<ArgumentDescription> {
+fn argument_descriptions(param: &Vec<Parameter>) -> Vec<ParameterCompletionData> {
     let mut result = Vec::new();
     for p in param {
         match p {
             Parameter::Parameter(name, value_type, default, description) => {
-                result.push(ArgumentDescription {
+                result.push(ParameterCompletionData {
                     name: name.string.clone(),
                     value_type: ValueType::Any,
                     allowed: None,
@@ -147,7 +147,7 @@ fn argument_descriptions(param: &Vec<Parameter>) -> Vec<ArgumentDescription> {
     result
 }
 
-fn signature_to_arguments(sig: &Option<Vec<Parameter>>) -> Vec<ArgumentDescription> {
+fn signature_to_arguments(sig: &Option<Vec<Parameter>>) -> Vec<ParameterCompletionData> {
     if let Some(s) = &sig {
         argument_descriptions(s)
     } else {
@@ -415,7 +415,7 @@ impl<'a> ClosureDeserializer<'a> {
                         .iter()
                         .map(|j| self.job(j))
                         .collect::<CrushResult<Vec<_>>>()?,
-                    arguments: signature_to_arguments(&sig),
+                    completion_data: signature_to_arguments(&sig),
                     signature: sig,
                     env,
                 }))
@@ -725,7 +725,7 @@ impl Closure {
         Closure {
             name,
             jobs: job_definitions,
-            arguments: signature_to_arguments(&signature),
+            completion_data: signature_to_arguments(&signature),
             signature,
             env,
         }

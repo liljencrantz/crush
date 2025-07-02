@@ -4,6 +4,7 @@ use crate::lang::data::table::Row;
 use crate::lang::errors::argument_error_legacy;
 use crate::lang::errors::{CrushResult, error};
 use crate::lang::state::contexts::CommandContext;
+use crate::lang::value::ComparisonMode::{CaseInsensitive, Regular};
 use signature::signature;
 use std::cmp::Ordering;
 
@@ -21,6 +22,9 @@ pub struct Sort {
     #[description("reverse the sort order.")]
     #[default(false)]
     reverse: bool,
+    #[description("ignore case when sorting textual columns.")]
+    #[default(false)]
+    case_insensitive: bool,
 }
 
 fn sort(context: CommandContext) -> CrushResult<()> {
@@ -53,11 +57,16 @@ fn sort(context: CommandContext) -> CrushResult<()> {
                 res.push(row);
             }
 
+            let comparison_mode = match cfg.case_insensitive {
+                true => CaseInsensitive,
+                false => Regular,
+            };
+
             if cfg.reverse {
                 res.sort_by(|a, b| {
                     for idx in &indices {
-                        match b.cells()[*idx].partial_cmp(&a.cells()[*idx]) {
-                            None => panic!("Unexpcted sort failure"),
+                        match b.cells()[*idx].param_partial_cmp(&a.cells()[*idx], comparison_mode) {
+                            None => panic!("Unexpected sort failure"),
                             Some(Ordering::Equal) => {}
                             Some(ordering) => return ordering,
                         }
@@ -67,8 +76,8 @@ fn sort(context: CommandContext) -> CrushResult<()> {
             } else {
                 res.sort_by(|b, a| {
                     for idx in &indices {
-                        match b.cells()[*idx].partial_cmp(&a.cells()[*idx]) {
-                            None => panic!("Unexpcted sort failure"),
+                        match b.cells()[*idx].param_partial_cmp(&a.cells()[*idx], comparison_mode) {
+                            None => panic!("Unexpected sort failure"),
                             Some(Ordering::Equal) => {}
                             Some(ordering) => return ordering,
                         }

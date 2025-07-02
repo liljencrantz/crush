@@ -475,14 +475,13 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                         let res = quote! {
                             Some(vec![#literal_params])
                         };
-                        //panic!("{:?}", literals);
                         res
                     }
                 };
 
                 argument_desciptions = quote! {
                     #argument_desciptions
-                    crate::lang::command::ArgumentDescription {
+                    crate::lang::command::ParameterCompletionData {
                         name: #name_string.to_string(),
                         value_type: #crush_internal_type,
                         allowed: #allowed_values,

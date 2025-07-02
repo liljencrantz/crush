@@ -1,6 +1,6 @@
 use crate::lang::ast::node::TextLiteralStyle;
 use crate::lang::ast::node::TextLiteralStyle::Unquoted;
-use crate::lang::command::ArgumentDescription;
+use crate::lang::command::ParameterCompletionData;
 use crate::lang::completion::parse::{
     CompletionCommand, LastArgument, ParseResult, PartialCommandResult, parse,
 };
@@ -205,7 +205,7 @@ fn complete_file(
 }
 
 fn complete_argument_name(
-    arguments: &[ArgumentDescription],
+    arguments: &[ParameterCompletionData],
     prefix: &str,
     cursor: usize,
     out: &mut Vec<Completion>,
@@ -253,7 +253,7 @@ fn complete_argument_values(
 }
 
 fn complete_argument_description(
-    argument_description: &ArgumentDescription,
+    argument_description: &ParameterCompletionData,
     parse_result: &PartialCommandResult,
     cursor: usize,
     scope: &Scope,
@@ -283,7 +283,7 @@ fn complete_partial_argument(
     match parse_result.last_argument {
         LastArgument::Switch(name) => {
             if let CompletionCommand::Known(cmd) = parse_result.command {
-                complete_argument_name(cmd.arguments(), &name, cursor, res, true)?;
+                complete_argument_name(cmd.completion_data(), &name, cursor, res, true)?;
             }
         }
 
@@ -292,7 +292,7 @@ fn complete_partial_argument(
             complete_file(lister, "", Unquoted, &argument_type, cursor, res)?;
             if parse_result.last_argument_name.is_none() {
                 if let CompletionCommand::Known(cmd) = parse_result.command {
-                    complete_argument_name(cmd.arguments(), "", cursor, res, false)?;
+                    complete_argument_name(cmd.completion_data(), "", cursor, res, false)?;
                 }
             }
         }
@@ -310,7 +310,7 @@ fn complete_partial_argument(
         LastArgument::Field(label) => {
             if parse_result.last_argument_name.is_none() {
                 if let CompletionCommand::Known(cmd) = parse_result.command {
-                    complete_argument_name(cmd.arguments(), &label, cursor, res, false)?;
+                    complete_argument_name(cmd.completion_data(), &label, cursor, res, false)?;
                 }
             }
         }

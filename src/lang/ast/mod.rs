@@ -61,7 +61,7 @@ impl From<Node> for JobNode {
         let location = node.location();
         match node {
             Node::Substitution(mut s) if s.jobs.len() == 1 => s.jobs.remove(0),
-            Node::Assignment(..) => JobNode {
+            Node::Assignment { .. } => JobNode {
                 commands: vec![CommandNode {
                     expressions: vec![node],
                     location,

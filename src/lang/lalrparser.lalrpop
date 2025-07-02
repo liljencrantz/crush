@@ -74,9 +74,9 @@ Expr: Box<Node> = {
 ExprAssignment: Box<Node> = {
     ExprLogical,
     <i: ExprItem> <op: Equals> <e: ExprAssignment> =>
-        Box::from(Node::Assignment(i, SwitchStyle::None, "=".to_string(), e)),
+        Box::from(Node::Assignment{target: i, style: SwitchStyle::None, operation: "=".to_string(), value: e}),
     <i: ExprItem> <op: Declare> <e: ExprAssignment> =>
-        Box::from(Node::Assignment(i, SwitchStyle::None, ":=".to_string(), e)),
+        Box::from(Node::Assignment{target: i, style: SwitchStyle::None, operation: ":=".to_string(), value: e}),
 }
 
 ExprLogical: Box<Node> = {
@@ -174,7 +174,7 @@ ExprParamList: Vec<Node> = {
 ExprParam: Box<Node> = {
     ExprLogical,
     <i: String> <op: Equals> <e: ExprLogical> =>
-        Box::from(Node::Assignment(Node::unquoted_string(i), SwitchStyle::None, "=".to_string(), e)),
+        Box::from(Node::Assignment{target: Node::unquoted_string(i), style: SwitchStyle::None, operation: "=".to_string(), value: e}),
 }
 
 
@@ -220,7 +220,7 @@ Command: CommandNode = {
 Assignment: Box<Node> = {
     Logical,
     <i: Item> <op: AssignmentOperator> <e: Assignment> =>
-        Box::from(Node::Assignment(i, SwitchStyle::None, String::from(op), e)),
+        Box::from(Node::Assignment{target: i, style: SwitchStyle::None, operation: String::from(op), value: e}),
 }
 
 Logical: Box<Node> = {
@@ -282,15 +282,19 @@ Item: Box<Node> = {
         let ts = TrackedString::from(l);
         Box::from(
             if ts.string.starts_with("--") {
-                Node::Assignment(Node::unquoted_string(ts.slice_to_end(2)),
-                SwitchStyle::Double,
-                "=".to_string(),
-                Box::from(Node::Identifier(TrackedString::new("true", ts.location()))))
+                Node::Assignment{
+                    target: Node::unquoted_string(ts.slice_to_end(2)),
+                    style: SwitchStyle::Double,
+                    operation: "=".to_string(),
+                    value: Box::from(Node::Identifier(TrackedString::new("true", ts.location())))
+                }
             } else {
-            Node::Assignment(Node::unquoted_string(ts.slice_to_end(1)),
-            SwitchStyle::Single,
-            "=".to_string(),
-            Box::from(Node::Identifier(TrackedString::new("true", ts.location()))))
+                Node::Assignment{
+                    target: Node::unquoted_string(ts.slice_to_end(1)),
+                    style: SwitchStyle::Single,
+                    operation: "=".to_string(),
+                    value: Box::from(Node::Identifier(TrackedString::new("true", ts.location())))
+            }
         })
     },
     <i: Item> GetItemStart <e: Assignment> GetItemEnd => Box::from(Node::GetItem(i, e)),

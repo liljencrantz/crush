@@ -12,6 +12,7 @@ use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::sync::{Arc, Mutex};
+use crate::lang::value::ComparisonMode;
 
 #[derive(Clone)]
 pub struct List {
@@ -244,8 +245,23 @@ impl List {
     dump_to!(dump_bool, bool, Bool, |v: &bool| *v);
     dump_to!(dump_type, ValueType, Type, |v: &ValueType| v.clone());
     dump_to!(dump_float, f64, Float, |v: &f64| *v);
-}
 
+    pub fn param_partial_cmp(&self, other: &List, mode: ComparisonMode) -> Option<Ordering> {
+        let us = self.cells.lock().unwrap().clone();
+        let them = other.cells.lock().unwrap().clone();
+        for (v1, v2) in us.iter().zip(them.iter()) {
+            let d = v1.param_partial_cmp(v2, mode);
+            match d.clone() {
+                Some(Ordering::Equal) => {}
+                _ => return d,
+            }
+        }
+        if us.len() != them.len() {
+            return us.len().partial_cmp(&them.len());
+        }
+        Some(Ordering::Equal)
+    }
+}
 impl DisplayNonRecursive for List {
     fn fmt_non_recursive(
         &self,
@@ -300,19 +316,7 @@ impl PartialEq for List {
 
 impl PartialOrd for List {
     fn partial_cmp(&self, other: &List) -> Option<Ordering> {
-        let us = self.cells.lock().unwrap().clone();
-        let them = other.cells.lock().unwrap().clone();
-        for (v1, v2) in us.iter().zip(them.iter()) {
-            let d = v1.partial_cmp(v2);
-            match d.clone() {
-                Some(Ordering::Equal) => {}
-                _ => return d,
-            }
-        }
-        if us.len() != them.len() {
-            return us.len().partial_cmp(&them.len());
-        }
-        Some(Ordering::Equal)
+        self.param_partial_cmp(other, ComparisonMode::Regular)
     }
 }
 
