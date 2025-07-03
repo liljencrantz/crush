@@ -27,6 +27,7 @@ pub mod table;
 pub mod table_input_stream;
 pub mod table_output_stream;
 pub mod time;
+pub mod r#struct;
 
 #[signature(
     types.materialize,
@@ -56,35 +57,6 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
         p.handle_error(c.eval(context));
     }
     o.send(Value::Struct(res))
-}
-
-#[signature(
-    types.data,
-    can_block = false,
-    output = Known(ValueType::Struct),
-    short = "Construct a struct with the specified members",
-    long = "Unnamed arguments will be given the names _1, _2, _3, and so on.",
-    long = "Unlike a struct created via the `class` builtin, a struct created via the `data` builtin does not have a parent or any methods. This means that a \"data struct\" is immutable, though its members may potentially be modified, depending on their type.",
-    example = "data foo=5 bar=\"baz\" false",
-)]
-#[allow(unused)]
-struct Data {
-    #[description("unnamed values.")]
-    #[unnamed]
-    unnamed: Vec<Value>,
-    #[description("named values.")]
-    #[named]
-    named: OrderedStringMap<Value>,
-}
-
-fn data(context: CommandContext) -> CrushResult<()> {
-    let mut names = column_names(&context.arguments);
-    let arr = names
-        .drain(..)
-        .zip(context.arguments)
-        .map(|(name, arg)| (name, arg.value))
-        .collect::<Vec<_>>();
-    context.output.send(Value::Struct(Struct::new(arr, None)))
 }
 
 #[signature(
@@ -267,7 +239,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 ], None);
 
             env.declare("root", Value::Struct(root))?;
-            Data::declare(env)?;
             Class::declare(env)?;
             Convert::declare(env)?;
             TypeOf::declare(env)?;

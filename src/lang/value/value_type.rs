@@ -72,6 +72,7 @@ impl ValueType {
             ValueType::TableOutputStream(_) => &types::table_output_stream::methods(),
             ValueType::Binary => &types::binary::methods(),
             ValueType::Scope => &types::scope::methods(),
+            ValueType::Struct => &types::r#struct::methods(),
             _ => empty_methods(),
         }
     }
@@ -257,7 +258,7 @@ impl Help for ValueType {
             }
             ValueType::Struct => {
                 vec![
-                    "To create a simple immutable struct, use the `$data` command. To create a mutable struct that supports inheritance, use the `$class` command.".to_string(),
+                    "To create a simple immutable struct, use the `struct:of` command. To create a mutable struct that supports inheritance, use the `class` command.".to_string(),
                 ]
             }
             ValueType::Empty => {
