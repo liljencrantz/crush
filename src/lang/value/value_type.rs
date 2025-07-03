@@ -248,7 +248,16 @@ impl Help for ValueType {
                 vec![
                     "A Crush float is a IEEE 754 64-bit (double precision) floating point number."
                         .to_string(),
-                    "".to_string(),
+                ]
+            }
+            ValueType::Bool => {
+                vec![
+                    "A boolean value is one of `$true` or `$false`.".to_string(),
+                ]
+            }
+            ValueType::Struct => {
+                vec![
+                    "To create a simple immutable struct, use the `$data` command. To create a mutable struct that supports inheritance, use the `$class` command.".to_string(),
                 ]
             }
             ValueType::Empty => {

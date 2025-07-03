@@ -4,7 +4,7 @@ use crate::lang::command::{Command, ParameterCompletionData};
 use crate::lang::command_invocation::resolve_external_command;
 use crate::lang::errors::{CrushError, CrushResult};
 use crate::lang::state::scope::Scope;
-use crate::lang::value::Value;
+use crate::lang::value::{Value, ValueType};
 use std::cmp::min;
 use std::collections::HashMap;
 
@@ -24,7 +24,9 @@ pub fn syntax_highlight(
         .map(|item| item.map(|it| it.1).map_err(|e| CrushError::from(e)))
         .collect::<CrushResult<Vec<Token>>>()?;
 
-    let mut current_command = None;
+    let mut current_command: Option<Command> = None;
+    let mut latest_named_argument_info: Option<(usize, String)> = None;
+    let mut cmd_namespace_path = Vec::new();
 
     for idx in 0..tokens.len() {
         let tok = tokens[idx];
@@ -33,33 +35,71 @@ pub fn syntax_highlight(
         res.push_str(&code[pos..min(tok.location().start, code.len())]);
         let mut do_reset = false;
 
-        new_command = match (new_command, tok, prev) {
-            (_, Token::BlockStart(_) | Token::Separator(_, _) | Token::Pipe(_), _) => true,
+        new_command = match (new_command, prev, tok, ntok) {
+            (_, _, Token::BlockStart(_) | Token::Separator(_, _) | Token::Pipe(_), _) => true,
             (
                 true,
+                Some(Token::String(_, _) | Token::Identifier(_, _)),
                 Token::String(_, _) | Token::Identifier(_, _),
-                Some(Token::String(_, _) | Token::Identifier(_, _)),
+                _,
             ) => false,
-            (true, Token::String(_, _) | Token::Identifier(_, _), _) => true,
-            (
-                true,
-                Token::MemberOperator(_),
-                Some(Token::String(_, _) | Token::Identifier(_, _)),
-            ) => true,
+            (true, _, Token::String(_, _) | Token::Identifier(_, _), _) => true,
+            (true, Some(Token::String(s, _)), Token::MemberOperator(_), _) => {
+                cmd_namespace_path.push(s.clone());
+                true
+            }
+            (true, Some(Token::Identifier(s, _)), Token::MemberOperator(_), _) => {
+                cmd_namespace_path.push((&s[1..]).clone());
+                true
+            }
             _ => false,
         };
 
-        match (new_command, tok, scope) {
-            (true, Token::String(name, _), Some(s)) => {
-                current_command = match s.get(name) {
-                    Ok(Some(Value::Command(c))) => Some(c),
+        let expected_argument_type = if let Some((name_idx, name)) = &latest_named_argument_info
+            && idx == name_idx + 2
+        {
+            match &current_command {
+                None => None,
+                Some(s) => named_argument_type(s.completion_data(), name),
+            }
+        } else {
+            None
+        };
+
+        match (new_command, tok, ntok, scope) {
+            (true, Token::String(name, _), _, Some(s)) => {
+                let mut next_scope = s.clone();
+                let mut error = false;
+                for p in &cmd_namespace_path {
+                    match next_scope.get(p) {
+                        Ok(Some(Value::Scope(ss))) => {
+                            next_scope = ss;
+                        }
+                        _ => {
+                            error = true;
+                        }
+                    }
+                }
+                current_command = match (error, next_scope.get(name)) {
+                    (false, Ok(Some(Value::Command(c)))) => Some(c),
                     _ => None,
                 };
+            }
+            (false, Token::String(name, _), Some(Token::Equals(_)), Some(s)) => {
+                latest_named_argument_info = Some((idx, name.to_string()));
             }
             _ => {}
         };
 
-        match get_color(tok, ntok, new_command, colors, scope, &current_command) {
+        match get_color(
+            tok,
+            ntok,
+            new_command,
+            colors,
+            scope,
+            &current_command,
+            &expected_argument_type,
+        ) {
             Some(color) => {
                 if !color.is_empty() {
                     do_reset = true;
@@ -81,26 +121,38 @@ pub fn syntax_highlight(
 }
 
 fn get_color<'a>(
-    token_type: Token,
+    token: Token,
     next_token_type: Option<&Token>,
     new_command: bool,
     colors: &'a HashMap<String, String>,
     scope: &Option<Scope>,
     current_command: &Option<Command>,
+    expected_argument_type: &Option<ValueType>,
 ) -> Option<&'a String> {
     use crate::lang::ast::token::Token::*;
-    match token_type {
+
+    if let (Some(expected), Some(actual)) = (expected_argument_type, token_type(token, scope)) {
+        if *expected != ValueType::Any && *expected != actual {
+            return colors.get("error");
+        }
+    }
+
+    match token {
         String(name, _) => {
             if new_command {
-                match scope {
-                    None => colors.get("command"),
-                    Some(s) => match s.get(name).unwrap_or(None) {
-                        Some(_) => colors.get("command"),
-                        None => match resolve_external_command(name, s) {
-                            Ok(Some(_)) => colors.get("command"),
-                            _ => colors.get("error"),
+                if current_command.is_some() {
+                    colors.get("command")
+                } else {
+                    match next_token_type {
+                        Some(MemberOperator(_)) => colors.get("command"),
+                        _ => match scope {
+                            None => colors.get("command"),
+                            Some(s) => match resolve_external_command(name, s) {
+                                Ok(Some(_)) => colors.get("command"),
+                                _ => colors.get("error"),
+                            },
                         },
-                    },
+                    }
                 }
             } else {
                 match (current_command, next_token_type) {
@@ -182,4 +234,72 @@ fn allowed_named_argument(
         }
     }
     false
+}
+
+fn token_type(token: Token, scope: &Option<Scope>) -> Option<ValueType> {
+    match token {
+        Token::LogicalOperator(_, _) => None,
+        Token::UnaryOperator(_, _) => None,
+        Token::ComparisonOperator(_, _) => None,
+        Token::Bang(_) => None,
+        Token::Plus(_) => None,
+        Token::Minus(_) => None,
+        Token::Star(_) => None,
+        Token::Slash(_) => None,
+        Token::QuotedString(_, _) => Some(ValueType::String),
+        Token::Comment(_, _) => None,
+        Token::Identifier(id, _) => match scope {
+            None => None,
+            Some(s) => match s.get(&id[1..]) {
+                Ok(Some(v)) => Some(v.value_type()),
+                _ => None,
+            },
+        },
+        Token::Flag(_, _) => None,
+        Token::QuotedFile(_, _) => Some(ValueType::File),
+        Token::Glob(_, _) => Some(ValueType::Glob),
+        Token::File(_, _) => Some(ValueType::File),
+        Token::String(_, _) => Some(ValueType::String),
+        Token::Regex(_, _) => Some(ValueType::Regex),
+        Token::Integer(_, _) => Some(ValueType::Integer),
+        Token::Float(_, _) => Some(ValueType::Float),
+        Token::MemberOperator(_) => None,
+        Token::Equals(_) => None,
+        Token::Declare(_) => None,
+        Token::Separator(_, _) => None,
+        Token::SubStart(_) => None,
+        Token::SubEnd(_) => None,
+        Token::BlockStart(_) => None,
+        Token::BlockEnd(_) => None,
+        Token::GetItemStart(_) => None,
+        Token::GetItemEnd(_) => None,
+        Token::Pipe(_) => None,
+        Token::Unnamed(_) => None,
+        Token::Named(_) => None,
+        Token::ExprModeStart(_) => None,
+        Token::For(_) => None,
+        Token::While(_) => None,
+        Token::Loop(_) => None,
+        Token::If(_) => None,
+        Token::Else(_) => None,
+        Token::Return(_) => None,
+        Token::Break(_) => None,
+        Token::Continue(_) => None,
+    }
+}
+
+fn named_argument_type(
+    parameter_completion_data: &[ParameterCompletionData],
+    name: &str,
+) -> Option<ValueType> {
+    let mut default = None;
+    for param in parameter_completion_data {
+        if param.named {
+            default = Some(param.value_type.clone());
+        }
+        if param.name == name {
+            return Some(param.value_type.clone());
+        }
+    }
+    default
 }
