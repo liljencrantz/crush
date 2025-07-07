@@ -1,3 +1,19 @@
+# No comparison operators in command mode
+
+They are a bit inconsistent. Just use one of e.g.
+
+```
+files | where {eq $file foo}
+files | where {($file == foo)}
+```
+
+Matching would change to one of
+
+```
+files | where {match $file ^(aaa)}
+files | where {($file =~ ^(aaa))}
+```
+
 # Pluggable tab completion framework
 
 Individual commands should be able to provide tags (possibly mime tags?)

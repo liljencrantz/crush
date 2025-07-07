@@ -1,3 +1,14 @@
+# Definitions
+
+This document contains the definitions Crush uses for various words. 
+
+## Commands, closures, builtins
+
+* A Builtin command is a command that is implemented as a part of the crush binary itself.
+* A Closure command is a command that is defined in the Crush language and therefore implemented as a combination of other commands.
+* A Block command is more lightweight than a closure command. It does not have a parameter list or a name. They are mainly used to provide callbacks for commands such as `for`, `where` or `if`.
+* An external command is a command that is not part of Crush itself, such as `git`, `emacs` or `ssh`. External commands only support string arguments and their pipes always use binary stream data. 
+
 ## Signatures, parameters and arguments 
 
 In crush, the word signature means the set of all parameters a given command accepts, including type restrictions, and default values. For example, the `http` command has a signature containing 5 parameters, including `uri` and `timeout`.
@@ -13,9 +24,3 @@ An argument can be named or unnamed. These are just different styles of passing 
 http "http://example.com" 
 http uri="http://example.com" 
 ```
-
-### Varargs
-
-### Argument resolution
-
-The process by which the arguments are

@@ -165,7 +165,9 @@ impl Printer {
     pub fn crush_error(&self, err: CrushError) {
         match &err.error_type() {
             CrushErrorType::SendError(_) => {}
-            _ => self.crush_error(err.with_source(&self.source)),
+            _ => {
+                self.sender.send(PrinterMessage::CrushError(err.with_source(&self.source)));
+            }
         }
     }
 
