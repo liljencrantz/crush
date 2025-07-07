@@ -1,7 +1,7 @@
 use crate::CrushResult;
 use crate::lang::ast::Node;
 use crate::lang::ast::tracked_string::TrackedString;
-use crate::lang::command::Parameter;
+use crate::lang::command::ParameterDefinition;
 use crate::lang::value::{Value, ValueDefinition, ValueType};
 use crate::state::scope::Scope;
 
@@ -59,14 +59,14 @@ impl ParameterNode {
     ) -> ParameterNode {
         ParameterNode::Named(is.into(), doc.map(|t| t.into()))
     }
-    pub fn generate(&self, env: &Scope) -> CrushResult<Parameter> {
+    pub fn generate(&self, env: &Scope) -> CrushResult<ParameterDefinition> {
         match self {
             ParameterNode::Parameter {
                 name,
                 parameter_type,
                 default,
                 documentation,
-            } => Ok(Parameter::Parameter(
+            } => Ok(ParameterDefinition::Normal(
                 name.clone(),
                 parameter_type
                     .as_ref()
@@ -83,9 +83,9 @@ impl ParameterNode {
                     .transpose()?,
                 documentation.clone(),
             )),
-            ParameterNode::Named(s, doc) => Ok(Parameter::Named(s.clone(), doc.clone())),
-            ParameterNode::Unnamed(s, doc) => Ok(Parameter::Unnamed(s.clone(), doc.clone())),
-            ParameterNode::Meta(k, v) => Ok(Parameter::Meta(k.clone(), v.clone())),
+            ParameterNode::Named(s, doc) => Ok(ParameterDefinition::Named(s.clone(), doc.clone())),
+            ParameterNode::Unnamed(s, doc) => Ok(ParameterDefinition::Unnamed(s.clone(), doc.clone())),
+            ParameterNode::Meta(k, v) => Ok(ParameterDefinition::Meta(k.clone(), v.clone())),
         }
     }
 }

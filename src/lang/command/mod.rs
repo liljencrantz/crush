@@ -16,8 +16,9 @@ use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueDefinition, ValueType};
 use closure::Closure;
 use ordered_map::OrderedMap;
-use std::fmt::{Display, Formatter, Write};
+use std::fmt::{Display, Formatter};
 use std::sync::Arc;
+use crate::lang::state::global_state::GlobalState;
 
 pub type Command = Arc<dyn CrushCommand + Send + Sync>;
 
@@ -76,7 +77,7 @@ pub trait CrushCommand: Help + Display {
     /// The return type of this command, if known
     fn output_type<'a>(&'a self, input: &'a OutputType) -> Option<&'a ValueType>;
     /// Information about the parameters that can be passed to this command, which is useful for providing completions
-    fn completion_data(&self) -> &[ParameterCompletionData];
+    fn completion_data(&self) -> &[Parameter];
 }
 
 pub trait TypeMap {
@@ -89,7 +90,7 @@ pub trait TypeMap {
         short_help: &'static str,
         long_help: Option<&'static str>,
         output: OutputType,
-        completion_data: impl Into<Vec<ParameterCompletionData>>,
+        completion_data: impl Into<Vec<Parameter>>,
     );
 }
 
@@ -103,7 +104,7 @@ impl TypeMap for OrderedMap<String, Command> {
         short_help: &'static str,
         long_help: Option<&'static str>,
         output: OutputType,
-        completion_data: impl Into<Vec<ParameterCompletionData>>,
+        completion_data: impl Into<Vec<Parameter>>,
     ) {
         self.insert(
             path[path.len() - 1].to_string(),
@@ -129,7 +130,7 @@ struct SimpleCommand {
     short_help: AnyStr,
     long_help: Option<AnyStr>,
     output: OutputType,
-    completion_data: Vec<ParameterCompletionData>,
+    completion_data: Vec<Parameter>,
 }
 
 /**
@@ -141,17 +142,25 @@ struct ConditionCommand {
     signature: &'static str,
     short_help: &'static str,
     long_help: Option<&'static str>,
-    completion_data: Vec<ParameterCompletionData>,
+    completion_data: Vec<Parameter>,
 }
 
 impl dyn CrushCommand {
-    pub fn closure(
+    pub fn closure_command(
         name: Option<TrackedString>,
-        signature: Option<Vec<Parameter>>,
+        signature: Vec<ParameterDefinition>,
+        job_definitions: Vec<Job>,
+        env: &Scope,
+        state: &GlobalState,
+    ) -> CrushResult<Command> {
+        Ok(Arc::from(Closure::command(name, signature, job_definitions, env, state)?))
+    }
+
+    pub fn closure_block(
         job_definitions: Vec<Job>,
         env: &Scope,
     ) -> Command {
-        Arc::from(Closure::new(name, signature, job_definitions, env.clone()))
+        Arc::from(Closure::block(job_definitions, env))
     }
 
     pub fn command(
@@ -162,7 +171,7 @@ impl dyn CrushCommand {
         short_help: impl Into<AnyStr>,
         long_help: Option<impl Into<AnyStr>>,
         output: OutputType,
-        completion_data: impl Into<Vec<ParameterCompletionData>>,
+        completion_data: impl Into<Vec<Parameter>>,
     ) -> Command {
         Arc::from(SimpleCommand {
             call,
@@ -185,7 +194,7 @@ impl dyn CrushCommand {
         signature: &'static str,
         short_help: &'static str,
         long_help: Option<&'static str>,
-        completion_data: Vec<ParameterCompletionData>,
+        completion_data: Vec<Parameter>,
     ) -> Command {
         Arc::from(ConditionCommand {
             call,
@@ -273,7 +282,7 @@ impl CrushCommand for SimpleCommand {
         self.output.calculate(input)
     }
 
-    fn completion_data(&self) -> &[ParameterCompletionData] {
+    fn completion_data(&self) -> &[Parameter] {
         &self.completion_data
     }
 }
@@ -357,7 +366,7 @@ impl CrushCommand for ConditionCommand {
         None
     }
 
-    fn completion_data(&self) -> &[ParameterCompletionData] {
+    fn completion_data(&self) -> &[Parameter] {
         &self.completion_data
     }
 }
@@ -385,9 +394,10 @@ impl PartialEq for ConditionCommand {
 impl Eq for ConditionCommand {}
 
 #[derive(Clone)]
-pub struct ParameterCompletionData {
+pub struct Parameter {
     pub name: String,
     pub value_type: ValueType,
+    pub default: Option<Value>,
     pub allowed: Option<Vec<Value>>,
     pub description: Option<String>,
     pub complete: Option<
@@ -402,9 +412,38 @@ pub struct ParameterCompletionData {
     pub unnamed: bool,
 }
 
+impl Display for Parameter {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match (self.named, self.unnamed) {
+            (false, false) => {
+                f.write_str("$")?;
+                self.name.fmt(f)?;
+                f.write_str(": $")?;
+                self.value_type.fmt(f)?;
+                if let Some(default) = &self.default {
+                    f.write_str(" = ")?;
+                    default.fmt(f)?;
+                }
+                Ok(())
+            }
+            (true, false) => {
+                f.write_str("@@")?;
+                self.name.fmt(f)?;
+                Ok(())
+            }
+            (false, true) => {
+                f.write_str("@")?;
+                self.name.fmt(f)?;
+                Ok(())
+            }
+            (true, true) => Ok(()), // This is an error, but per the API docs, formatting should be considered an infallible operation, so we do nothing.
+        }
+    }
+}
+
 #[derive(Clone)]
-pub enum Parameter {
-    Parameter(
+pub enum ParameterDefinition {
+    Normal(
         TrackedString,
         ValueDefinition,
         Option<ValueDefinition>,
@@ -415,10 +454,10 @@ pub enum Parameter {
     Meta(TrackedString, TrackedString),
 }
 
-impl Display for Parameter {
+impl Display for ParameterDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Parameter::Parameter(name, value_type, default, _doc) => {
+            ParameterDefinition::Normal(name, value_type, default, _doc) => {
                 f.write_str("$")?;
                 name.fmt(f)?;
                 f.write_str(": $")?;
@@ -429,17 +468,17 @@ impl Display for Parameter {
                 }
                 Ok(())
             }
-            Parameter::Named(n, _doc) => {
+            ParameterDefinition::Named(n, _doc) => {
                 f.write_str("@@")?;
                 n.fmt(f)?;
                 Ok(())
             }
-            Parameter::Unnamed(n, _doc) => {
+            ParameterDefinition::Unnamed(n, _doc) => {
                 f.write_str("@")?;
                 n.fmt(f)?;
                 Ok(())
             }
-            Parameter::Meta(_key, _value) => Ok(()),
+            ParameterDefinition::Meta(_key, _value) => Ok(()),
         }
     }
 }
@@ -497,7 +536,7 @@ impl CrushCommand for BoundCommand {
         self.command.output_type(input)
     }
 
-    fn completion_data(&self) -> &[ParameterCompletionData] {
+    fn completion_data(&self) -> &[Parameter] {
         self.command.completion_data()
     }
 }

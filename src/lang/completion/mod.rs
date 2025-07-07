@@ -1,6 +1,6 @@
 use crate::lang::ast::node::TextLiteralStyle;
 use crate::lang::ast::node::TextLiteralStyle::Unquoted;
-use crate::lang::command::ParameterCompletionData;
+use crate::lang::command::Parameter;
 use crate::lang::completion::parse::{
     CompletionCommand, LastArgument, ParseResult, PartialCommandResult, parse,
 };
@@ -205,7 +205,7 @@ fn complete_file(
 }
 
 fn complete_argument_name(
-    arguments: &[ParameterCompletionData],
+    arguments: &[Parameter],
     prefix: &str,
     cursor: usize,
     out: &mut Vec<Completion>,
@@ -253,7 +253,7 @@ fn complete_argument_values(
 }
 
 fn complete_argument_description(
-    argument_description: &ParameterCompletionData,
+    argument_description: &Parameter,
     parse_result: &PartialCommandResult,
     cursor: usize,
     scope: &Scope,

@@ -6,7 +6,6 @@ use crate::lang::errors::{
 };
 use crate::lang::help::Help;
 use crate::lang::pipe::{CrushStream, ValueSender};
-use crate::lang::state::scope::ScopeType::{Block, Closure, Conditional, Loop};
 use crate::lang::{value::Value, value::ValueType};
 use crate::util::identity_arc::Identity;
 use crate::util::replace::Replace;
@@ -103,7 +102,7 @@ impl ScopeLoader {
 #[derive(Clone, PartialEq, Copy)]
 pub enum ScopeType {
     Loop,
-    Closure,
+    Command,
     Conditional,
     Namespace,
     Block,
@@ -112,11 +111,11 @@ pub enum ScopeType {
 impl ScopeType {
     pub fn description(&self) -> &str {
         match self {
-            Loop => "loop",
-            Closure => "closure",
-            Conditional => "conditional",
-            Namespace => "namespace",
-            Block => "Block",
+            ScopeType::Loop => "loop",
+            ScopeType::Command => "closure",
+            ScopeType::Conditional => "conditional",
+            ScopeType::Namespace => "namespace",
+            ScopeType::Block => "Block",
         }
     }
 }
@@ -126,11 +125,11 @@ impl TryFrom<i32> for ScopeType {
 
     fn try_from(value: i32) -> CrushResult<ScopeType> {
         match value {
-            0 => Ok(Loop),
-            1 => Ok(Closure),
-            2 => Ok(Conditional),
-            3 => Ok(Namespace),
-            4 => Ok(Block),
+            0 => Ok(ScopeType::Loop),
+            1 => Ok(ScopeType::Command),
+            2 => Ok(ScopeType::Conditional),
+            3 => Ok(ScopeType::Namespace),
+            4 => Ok(ScopeType::Block),
             v => serialization_error(format!("Invalid scope type {}", v)),
         }
     }
@@ -139,11 +138,11 @@ impl TryFrom<i32> for ScopeType {
 impl From<ScopeType> for i32 {
     fn from(value: ScopeType) -> Self {
         match value {
-            Loop => 0,
-            Closure => 1,
-            Conditional => 2,
-            Namespace => 3,
-            Block => 4,
+            ScopeType::Loop => 0,
+            ScopeType::Command => 1,
+            ScopeType::Conditional => 2,
+            ScopeType::Namespace => 3,
+            ScopeType::Block => 4,
         }
     }
 }
@@ -356,7 +355,7 @@ impl Scope {
         let data = self.lock()?;
         if data.is_readonly {
             invalid_jump("`continue` command outside of loop")
-        } else if data.scope_type == Loop {
+        } else if data.scope_type == ScopeType::Loop {
             Ok(())
         } else {
             let caller = data.calling_scope.clone();
@@ -376,7 +375,7 @@ impl Scope {
         let mut data = self.lock()?;
         if data.is_readonly {
             invalid_jump("`break` command outside of loop")
-        } else if data.scope_type == Loop {
+        } else if data.scope_type == ScopeType::Loop {
             data.is_stopped = true;
             Ok(())
         } else {
@@ -397,7 +396,7 @@ impl Scope {
         let mut data = self.lock()?;
         if data.is_readonly {
             invalid_jump("`return` command outside of function")
-        } else if data.scope_type == Closure {
+        } else if data.scope_type == ScopeType::Command {
             data.is_stopped = true;
             data.return_value = value;
             Ok(())

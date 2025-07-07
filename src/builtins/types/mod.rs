@@ -1,4 +1,3 @@
-use crate::lang::argument::column_names;
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::Known;
 use crate::lang::data::table::ColumnType;

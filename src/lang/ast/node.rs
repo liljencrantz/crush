@@ -4,7 +4,7 @@ use crate::lang::ast::node::TextLiteralStyle::{Quoted, Unquoted};
 use crate::lang::ast::parameter_node::ParameterNode;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::ast::{CommandNode, JobListNode, JobNode, expand_user, propose_name};
-use crate::lang::command::{Command, Parameter};
+use crate::lang::command::{Command, ParameterDefinition};
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::{CrushResult, error};
 use crate::lang::job::Job;
@@ -225,7 +225,7 @@ impl Node {
                 let param = signature.as_ref().map(|v| {
                     v.iter()
                         .map(|p| p.generate(env))
-                        .collect::<CrushResult<Vec<Parameter>>>()
+                        .collect::<CrushResult<Vec<ParameterDefinition>>>()
                 });
                 let p = match param {
                     None => None,

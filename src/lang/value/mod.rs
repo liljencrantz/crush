@@ -40,12 +40,13 @@ use crate::util::identity_arc::Identity;
 use crate::util::integer_formater::format_integer;
 use crate::util::repr::Repr;
 use ordered_map::OrderedMap;
-use std::fmt::{Display, Formatter, Pointer, Write};
+use std::fmt::{Display, Formatter};
 use std::io::Read;
 use std::ops::Add;
 use std::sync::Arc;
 pub use value_definition::ValueDefinition;
 pub use value_type::ValueType;
+use crate::lang::signature::number;
 
 pub type BinaryInputStream = Box<dyn BinaryReader + Send + Sync>;
 
@@ -126,7 +127,7 @@ impl Repr for Value {
         match self {
             Value::String(val) => f.write_str(escape(val).as_str()),
             Value::Integer(val) => std::fmt::Display::fmt(val, f),
-            Value::Time(val) => {
+            Value::Time(_) => {
                 panic!()
             }
             Value::Glob(val) => std::fmt::Display::fmt(val, f),
@@ -142,25 +143,21 @@ impl Repr for Value {
                 )?;
                 f.write_str("'")
             }
-            Value::List(l) => panic!(),
-            Value::Duration(d) => panic!(),
+            Value::List(_) => panic!(),
+            Value::Duration(_) => panic!(),
             Value::Scope(env) => env.fmt(f),
             Value::Bool(v) => std::fmt::Display::fmt(if *v { "$true" } else { "$false" }, f),
-            Value::Dict(d) => panic!(),
+            Value::Dict(_) => panic!(),
             Value::Float(val) => std::fmt::Display::fmt(val, f),
-            Value::Binary(v) => panic!(),
+            Value::Binary(_) => panic!(),
             Value::Type(t) => std::fmt::Display::fmt(t, f),
-            Value::Struct(s) => panic!(),
+            Value::Struct(_) => panic!(),
             Value::Command(cmd) => Display::fmt(cmd, f),
             Value::TableInputStream(_)
             | Value::TableOutputStream(_)
             | Value::Table(_)
-            | Value::BinaryInputStream(_)
-            | Value::Empty => {
-                f.write_str("<")?;
-                std::fmt::Display::fmt(&self.value_type(), f)?;
-                f.write_str(">")
-            }
+            | Value::BinaryInputStream(_) => panic!(),
+            Value::Empty => panic!(),
         }
     }
 }
@@ -251,6 +248,15 @@ impl From<i128> for Value {
 impl From<usize> for Value {
     fn from(v: usize) -> Value {
         Value::Integer(v as i128)
+    }
+}
+
+impl From<number::Number> for Value {
+    fn from(v: number::Number) -> Value {
+        match v {
+            number::Number::Integer(i) => Value::Integer(i),
+            number::Number::Float(f) => Value::Float(f),
+        }
     }
 }
 

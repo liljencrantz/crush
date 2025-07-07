@@ -2,20 +2,20 @@ use crate::lang::argument::{Argument, ArgumentDefinition, ArgumentType, SwitchSt
 use crate::lang::ast::location::Location;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::command::{
-    BoundCommand, Command, CrushCommand, OutputType, Parameter, ParameterCompletionData,
+    BoundCommand, Command, CrushCommand, OutputType, ParameterDefinition, Parameter,
 };
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::data::dict::Dict;
 use crate::lang::data::list::List;
-use crate::lang::errors::{CrushResult, argument_error, argument_error_legacy, error};
+use crate::lang::errors::{CrushResult, argument_error, argument_error_legacy, error, serialization_error};
 use crate::lang::help::Help;
 use crate::lang::job::Job;
 use crate::lang::pipe::{black_hole, empty_channel};
 use crate::lang::serialization::model;
-use crate::lang::serialization::model::closure::Name;
-use crate::lang::serialization::model::{Element, element, normal_parameter};
+use crate::lang::serialization::model::{Element, element, normal_parameter_definition, Values, SignatureDefinition};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
 use crate::lang::state::contexts::{CommandContext, CompileContext, JobContext};
+use crate::lang::state::global_state::GlobalState;
 use crate::lang::state::scope::{Scope, ScopeType};
 use crate::lang::value::{Value, ValueDefinition, ValueType};
 use crate::util::escape::unescape;
@@ -24,23 +24,214 @@ use ordered_map::OrderedMap;
 use std::fmt::Display;
 use std::sync::Arc;
 
+enum ClosureType {
+    Block,
+    Command {
+        name: Option<String>,
+        signature_data: Vec<Parameter>,
+        signature_string: String,
+        short_help: String,
+        long_help: String,
+    },
+}
+
+static BLOCK_SIGNATURE_DATA: Vec<Parameter> = vec![];
+
+impl ClosureType {
+    fn scope_type(&self) -> ScopeType {
+        match self {
+            ClosureType::Block => ScopeType::Block,
+            ClosureType::Command { .. } => ScopeType::Command,
+        }
+    }
+
+    fn completion_data(&self) -> &[Parameter] {
+        match self {
+            ClosureType::Block => &BLOCK_SIGNATURE_DATA,
+            ClosureType::Command { signature_data, .. } => &signature_data,
+        }
+    }
+
+    fn signature(&self) -> String {
+        match self {
+            ClosureType::Block => "block".to_string(),
+            ClosureType::Command {
+                signature_string, ..
+            } => signature_string.clone(),
+        }
+    }
+
+    fn short_help(&self) -> String {
+        match self {
+            ClosureType::Block => "A block of code".to_string(),
+            ClosureType::Command { short_help, .. } => short_help.clone(),
+        }
+    }
+
+    fn long_help(&self) -> Option<String> {
+        match self {
+            ClosureType::Block => None,
+            ClosureType::Command { long_help, .. } => Some(long_help.clone()),
+        }
+    }
+
+    fn name(&self) -> &str {
+        match self {
+            ClosureType::Block => "<block>",
+            ClosureType::Command { name, .. } => name.as_ref().map(|n| n.as_str()).unwrap_or("<anonymous command>"),
+        }
+    }
+
+    fn push_arguments_to_env(
+        &self,
+        mut arguments: Vec<Argument>,
+        context: &mut CompileContext,
+    ) -> CrushResult<()> {
+        match self {
+            ClosureType::Block => {
+                let mut unnamed = vec![];
+                for arg in arguments.drain(..) {
+                    match arg.argument_type {
+                        Some(name) => {
+                            context.env.redeclare(name.as_ref(), arg.value)?;
+                        }
+                        None => {
+                            unnamed.push(arg.value);
+                        }
+                    }
+                }
+
+                if !unnamed.is_empty() {
+                    context
+                        .env
+                        .redeclare_reserved("__unnamed__", Value::List(List::new_without_type(unnamed)))?;
+                }
+                Ok(())
+            }
+            ClosureType::Command { signature_data, .. } => {
+                let mut named = OrderedMap::new();
+                let mut unnamed = Vec::new();
+                for arg in arguments.drain(..) {
+                    match arg.argument_type {
+                        Some(name) => {
+                            named.insert(name.clone(), arg.value);
+                        }
+                        None => unnamed.push(arg.value),
+                    };
+                }
+                let mut unnamed_name = None;
+                let mut named_name = None;
+                for param in signature_data {
+                    match (param.named, param.unnamed) {
+                        (false, false) => {
+                            let value: Value;
+
+                            if named.contains_key(&param.name) {
+                                value = named.remove(&param.name).unwrap();
+                            } else if !unnamed.is_empty() {
+                                value = unnamed.remove(0);
+                            } else if let Some(default) = &param.default {
+                                value = default.clone();
+                            } else {
+                                return argument_error_legacy(
+                                    format!("Missing argument {}.", param.name),
+                                );
+                            };
+
+                            if !param.value_type.is(&value) {
+                                return argument_error_legacy(
+                                    format!(
+                                        "Wrong type {} for argument {}, expected {}",
+                                        value.value_type(),
+                                        param.name,
+                                        param.value_type
+                                    )
+                                );
+                            }
+                            context.env.redeclare(&param.name, value)?;
+                        }
+                        (false, true) => {
+                            if named_name.is_some() {
+                                return argument_error_legacy(
+                                    "Multiple named argument destinations specified",
+                                );
+                            }
+                            named_name = Some(param.name[1..].to_string());
+                        }
+                        (true, false) => {
+                            if unnamed_name.is_some() {
+                                return argument_error_legacy(
+                                    "Multiple unnamed argument destinations specified",
+                                );
+                            }
+                            unnamed_name = Some(param.name[1..].to_string());
+                        }
+                        (true, true) => {
+                            return argument_error_legacy(
+                                "Same parameter can't be both the destination for named and unnamed arguments",
+                            );
+                        }
+                    }
+                }
+
+                if let Some(unnamed_name) = unnamed_name {
+                    context.env.redeclare(
+                        &unnamed_name,
+                        List::new(ValueType::Any, unnamed).into(),
+                    )?;
+                } else if !unnamed.is_empty() {
+                    return argument_error_legacy(format!(
+                        "Stray unnamed argument of type {}",
+                        unnamed[0].value_type()
+                    ));
+                }
+
+                if let Some(named_name) = named_name {
+                    let d = Dict::new(ValueType::String, ValueType::Any)?;
+                    for (k, v) in named {
+                        d.insert(Value::from(k), v)?;
+                    }
+                    context
+                        .env
+                        .redeclare(&named_name, d.into())?;
+                } else if !named.is_empty() {
+                    return argument_error_legacy(format!(
+                        "Unrecognized named arguments {}",
+                        named.keys().join(", ")
+                    ));
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
 pub struct Closure {
-    name: Option<TrackedString>,
     jobs: Vec<Job>,
-    signature: Option<Vec<Parameter>>,
-    env: Scope,
-    completion_data: Vec<ParameterCompletionData>,
+    parent_scope: Scope,
+    closure_type: ClosureType,
+}
+
+impl Help for Closure {
+    fn signature(&self) -> String {
+        self.closure_type.signature()
+    }
+
+    fn short_help(&self) -> String {
+        self.closure_type.short_help()
+    }
+
+    fn long_help(&self) -> Option<String> {
+        self.closure_type.long_help()
+    }
 }
 
 impl CrushCommand for Closure {
     fn eval(&self, context: CommandContext) -> CrushResult<()> {
         let job_definitions = self.jobs.clone();
-        let parent_env = self.env.clone();
+        let parent_env = self.parent_scope.clone();
 
-        let scope_type = match self.signature {
-            None => ScopeType::Block,
-            Some(_) => ScopeType::Closure,
-        };
+        let scope_type = self.closure_type.scope_type();
 
         let env = parent_env.create_child(&context.scope, scope_type);
 
@@ -49,7 +240,9 @@ impl CrushCommand for Closure {
         if let Some(this) = context.this {
             env.redeclare("this", this)?;
         }
-        Closure::push_arguments_to_env(&self.signature, context.arguments, &mut cc)?;
+        
+        self.closure_type.push_arguments_to_env(context.arguments, &mut cc)?;
+        
         if env.is_stopped() {
             return Ok(());
         }
@@ -82,7 +275,7 @@ impl CrushCommand for Closure {
                 return env.send_return_value(&context.output);
             }
         }
-        if scope_type == ScopeType::Closure {
+        if scope_type == ScopeType::Command {
             context.output.empty()?;
         }
         Ok(())
@@ -93,7 +286,7 @@ impl CrushCommand for Closure {
     }
 
     fn name(&self) -> &str {
-        "closure"
+        self.closure_type.name()
     }
 
     fn serialize(
@@ -115,39 +308,203 @@ impl CrushCommand for Closure {
         None
     }
 
-    fn completion_data(&self) -> &[ParameterCompletionData] {
-        &self.completion_data
+    fn completion_data(&self) -> &[Parameter] {
+        &self.closure_type.completion_data()
     }
 }
 
-fn argument_descriptions(param: &Vec<Parameter>) -> Vec<ParameterCompletionData> {
+fn signature_to_arguments(
+    signature: &Vec<ParameterDefinition>,
+    env: &Scope,
+    state: &GlobalState,
+) -> CrushResult<Vec<Parameter>> {
     let mut result = Vec::new();
-    for p in param {
+    let cc = CompileContext::new(env.clone(), state.clone());
+    for p in signature {
         match p {
-            Parameter::Parameter(name, value_type, default, description) => {
-                result.push(ParameterCompletionData {
+            ParameterDefinition::Normal(name, value_type, default, description) => {
+                let default = match default {
+                    None => None,
+                    Some(definition) => Some(definition.eval(&mut CompileContext::new(env.clone(), state.clone()))?.1),
+                };
+                let value_type = match value_type.eval(&mut CompileContext::new(env.clone(), state.clone()))?.1 {
+                    Value::Type(vt) => vt,
+                    _ => return argument_error(format!("Invalid type for argument {}", &name.string), name.location),
+                };
+
+                result.push(Parameter {
                     name: name.string.clone(),
-                    value_type: ValueType::Any,
+                    value_type,
                     allowed: None,
                     description: description.as_ref().map(|s| s.string.clone()),
                     complete: None,
                     named: false,
                     unnamed: false,
+                    default,
                 })
             }
-            Parameter::Named(_, _) => {}
-            Parameter::Unnamed(_, _) => {}
-            Parameter::Meta(_, _) => {}
+            ParameterDefinition::Named(_, _) => {}
+            ParameterDefinition::Unnamed(_, _) => {}
+            ParameterDefinition::Meta(_, _) => {}
         }
     }
-    result
+    Ok(result)
 }
 
-fn signature_to_arguments(sig: &Option<Vec<Parameter>>) -> Vec<ParameterCompletionData> {
-    if let Some(s) = &sig {
-        argument_descriptions(s)
-    } else {
-        vec![]
+fn format_default(default: &Option<ValueDefinition>) -> String {
+    match default {
+        None => "".to_string(),
+        Some(v) => format!("({}) ", v.to_string()),
+    }
+}
+
+fn create_signature_string(name: &Option<String>, signature: &Vec<ParameterDefinition>) -> String {
+    format!(
+        "{} {}",
+        name.as_deref().unwrap_or("<anonymous command>"),
+        signature
+            .iter()
+            .filter(|p| match p {
+                ParameterDefinition::Meta(_, _) => false,
+                _ => true,
+            })
+            .map(|p| p.to_string())
+            .collect::<Vec<_>>()
+            .join(" "))
+}
+
+fn create_short_help(signature: &Vec<ParameterDefinition>) -> String {
+    signature
+        .iter()
+        .flat_map(|p| match p {
+            ParameterDefinition::Meta(key, value) => {
+                if key.string == "short_help" {
+                    Some(unescape(&value.string).unwrap_or("<Invalid help string>".to_string()))
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+fn create_long_help(signature: &Vec<ParameterDefinition>) -> String {
+    let mut long_help = Vec::new();
+    let mut param_help = Vec::new();
+    let mut example = Vec::new();
+
+    for i in signature {
+        match i {
+            ParameterDefinition::Normal(name, _arg_type, default, doc) => {
+                param_help.push(format!(
+                    " * `{}` {}{}",
+                    &name.string,
+                    format_default(default),
+                    doc.as_ref()
+                        .map(|d| unescape(&d.string))
+                        .unwrap_or(Ok("<Invalid help string>".to_string()))
+                        .unwrap_or("".to_string())
+                ));
+            }
+            ParameterDefinition::Meta(key, value) => match key.string.as_ref() {
+                "long_help" => {
+                    long_help.push(
+                        unescape(&value.string).unwrap_or("<Invalid help string>".to_string()),
+                    );
+                }
+                "example" => {
+                    example.push(format!(
+                        "    {}",
+                        unescape(&value.string).unwrap_or("<Invalid encoding>".to_string())
+                    ));
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+    }
+
+    if param_help.len() > 0 {
+        long_help.push("".to_string());
+        long_help.push("This command accepts the following arguments:".to_string());
+        long_help.push("".to_string());
+        long_help.append(&mut param_help);
+    }
+
+    if example.len() > 0 {
+        long_help.push(format!("# Examples"));
+        long_help.push("".to_string());
+        long_help.append(&mut example);
+    }
+
+    long_help.join("\n")
+}
+
+impl Closure {
+    pub fn command(
+        name: Option<TrackedString>,
+        signature: Vec<ParameterDefinition>,
+        job_definitions: Vec<Job>,
+        parent_scope: &Scope,
+        state: &GlobalState,
+    ) -> CrushResult<Closure> {
+        let name = name.map(|n| n.string);
+        Ok(Closure {
+            jobs: job_definitions,
+            parent_scope: parent_scope.clone(),
+            closure_type: ClosureType::Command {
+                signature_data: signature_to_arguments(&signature, parent_scope, state)?,
+                signature_string: create_signature_string(&name, &signature),
+                short_help: create_short_help(&signature),
+                long_help: create_long_help(&signature),
+                name,
+            },
+        })
+    }
+
+    pub fn block(job_definitions: Vec<Job>, parent_scope: &Scope) -> Closure {
+        Closure {
+            jobs: job_definitions,
+            parent_scope: parent_scope.clone(),
+            closure_type: ClosureType::Block,
+        }
+    }
+
+    pub fn deserialize(
+        id: usize,
+        elements: &[Element],
+        state: &mut DeserializationState,
+    ) -> CrushResult<Command> {
+        ClosureDeserializer::new(elements, state).closure(id)
+    }
+}
+
+impl Display for Closure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("{ ")?;
+        match &self.closure_type {
+            ClosureType::Command { signature_data, .. } => {
+                f.write_str("| ")?;
+                for param in signature_data {
+                    param.fmt(f)?;
+                    f.write_str(" ")?;
+                }
+                f.write_str("| ")?;
+            }
+            _ => {}
+        }
+        let mut first = true;
+        for j in &self.jobs {
+            if first {
+                first = false;
+            } else {
+                f.write_str("; ")?;
+            }
+            j.fmt(f)?;
+        }
+        f.write_str("} ")?;
+        Ok(())
     }
 }
 
@@ -166,20 +523,37 @@ impl<'a> ClosureSerializer<'a> {
 
     fn closure(&mut self, closure: &Closure) -> CrushResult<usize> {
         let mut serialized: model::Closure = model::Closure::default();
-        serialized.name = Some(match &closure.name {
-            None => model::closure::Name::HasName(false),
-            Some(name) => {
-                model::closure::Name::NameValue(name.serialize(self.elements, self.state)? as u64)
+
+        match &closure.closure_type { 
+            ClosureType::Block => {
+                serialized.closure_type = Some(model::closure::ClosureType::Block(true));
             }
-        });
+            ClosureType::Command { signature_data, name, signature_string, short_help, long_help } => {
+                let name = Some(match &name {
+                    None => model::command_closure::Name::HasName(false),
+                    Some(name) => {
+                        model::command_closure::Name::NameValue(name.serialize(self.elements, self.state)? as u64)
+                    }
+                });
+                
+                serialized.closure_type = Some(model::closure::ClosureType::Command(
+                    model::CommandClosure {
+                        signature_data: vec![],
+                        signature_string: signature_string.serialize(self.elements, self.state)? as u64,
+                        short_help: short_help.serialize(self.elements, self.state)? as u64,
+                        long_help: long_help.serialize(self.elements, self.state)? as u64,
+                        name,
+                    }
+                ));
+            }
+        }
 
         for j in &closure.jobs {
             serialized.job_definitions.push(self.job(j)?)
         }
 
-        serialized.signature = self.signature(&closure.signature)?;
 
-        serialized.env = closure.env.serialize(self.elements, self.state)? as u64;
+        serialized.env = closure.parent_scope.serialize(self.elements, self.state)? as u64;
 
         let idx = self.elements.len();
         self.elements.push(model::Element {
@@ -188,20 +562,40 @@ impl<'a> ClosureSerializer<'a> {
         Ok(idx)
     }
 
-    fn signature(
+    fn parameter(
         &mut self,
-        signature: &Option<Vec<Parameter>>,
-    ) -> CrushResult<Option<model::closure::Signature>> {
-        Ok(Some(if let Some(s) = signature {
-            model::closure::Signature::SignatureValue(self.signature2(s)?)
-        } else {
-            model::closure::Signature::HasSignature(false)
-        }))
+        signature: &Parameter,
+    ) -> CrushResult<model::Parameter> {
+        Ok(model::Parameter{
+            name: signature.name.serialize(self.elements, self.state)? as u64,
+            value_type: signature.value_type.serialize(self.elements, self.state)? as u64,
+            named: signature.named,
+            unnamed: signature.unnamed,
+            default: Some(match &signature.default {
+                None => model::parameter::Default::HasDefault(false),
+                Some(default) => model::parameter::Default::DefaultValue(default.serialize(self.elements, self.state)? as u64),
+            }),
+            allowed: Some(match &signature.allowed {
+                None => model::parameter::Allowed::HasAllowed(false),
+                Some(allowed) => model::parameter::Allowed::AllowedValues(self.values(allowed)?)
+            }),
+            description: None,
+        })
+    }
+    
+    fn values(&mut self, values: &Vec<Value>) -> CrushResult<Values> {
+        let mut vv = vec![];
+        for v in values {
+            vv.push(v.serialize(self.elements, self.state)? as u64);
+        }
+        Ok(Values{
+            value: vv,
+        })
     }
 
     fn signature_definition(
         &mut self,
-        signature: &Option<Vec<Parameter>>,
+        signature: &Option<Vec<ParameterDefinition>>,
     ) -> CrushResult<Option<model::closure_definition::Signature>> {
         Ok(Some(if let Some(s) = signature {
             model::closure_definition::Signature::SignatureValue(self.signature2(s)?)
@@ -210,57 +604,57 @@ impl<'a> ClosureSerializer<'a> {
         }))
     }
 
-    fn signature2(&mut self, signature: &[Parameter]) -> CrushResult<model::Signature> {
-        Ok(model::Signature {
+    fn signature2(&mut self, signature: &[ParameterDefinition]) -> CrushResult<SignatureDefinition> {
+        Ok(model::SignatureDefinition {
             parameter: signature
                 .iter()
-                .map(|p| self.parameter(p))
+                .map(|p| self.parameter_definition(p))
                 .collect::<CrushResult<Vec<_>>>()?,
         })
     }
 
-    fn parameter(&mut self, param: &Parameter) -> CrushResult<model::Parameter> {
-        Ok(model::Parameter {
+    fn parameter_definition(&mut self, param: &ParameterDefinition) -> CrushResult<model::ParameterDefinition> {
+        Ok(model::ParameterDefinition {
             parameter: Some(match param {
-                Parameter::Parameter(n, t, d, doc) => {
-                    model::parameter::Parameter::Normal(model::NormalParameter {
+                ParameterDefinition::Normal(n, t, d, doc) => {
+                    model::parameter_definition::Parameter::Normal(model::NormalParameterDefinition {
                         name: n.serialize(self.elements, self.state)? as u64,
 
                         r#type: Some(self.value_definition(t)?),
 
                         default: Some(match d {
-                            None => model::normal_parameter::Default::HasDefault(false),
-                            Some(dv) => model::normal_parameter::Default::DefaultValue(
+                            None => model::normal_parameter_definition::Default::HasDefault(false),
+                            Some(dv) => model::normal_parameter_definition::Default::DefaultValue(
                                 self.value_definition(dv)?,
                             ),
                         }),
                         doc: Some(match doc {
-                            None => model::normal_parameter::Doc::HasDoc(false),
-                            Some(v) => model::normal_parameter::Doc::DocValue(
+                            None => model::normal_parameter_definition::Doc::HasDoc(false),
+                            Some(v) => model::normal_parameter_definition::Doc::DocValue(
                                 v.serialize(self.elements, self.state)? as u64,
                             ),
                         }),
                     })
                 }
-                Parameter::Named(n, doc) => model::parameter::Parameter::Named(model::VarArg {
+                ParameterDefinition::Named(n, doc) => model::parameter_definition::Parameter::Named(model::VarArgDefinition {
                     name: n.serialize(self.elements, self.state)? as u64,
                     doc: match doc {
-                        None => Some(model::var_arg::Doc::HasDoc(false)),
-                        Some(d) => Some(model::var_arg::Doc::DocValue(
+                        None => Some(model::var_arg_definition::Doc::HasDoc(false)),
+                        Some(d) => Some(model::var_arg_definition::Doc::DocValue(
                             d.serialize(self.elements, self.state)? as u64,
                         )),
                     },
                 }),
-                Parameter::Unnamed(n, doc) => model::parameter::Parameter::Unnamed(model::VarArg {
+                ParameterDefinition::Unnamed(n, doc) => model::parameter_definition::Parameter::Unnamed(model::VarArgDefinition {
                     name: n.serialize(self.elements, self.state)? as u64,
                     doc: match doc {
-                        None => Some(model::var_arg::Doc::HasDoc(false)),
-                        Some(d) => Some(model::var_arg::Doc::DocValue(
+                        None => Some(model::var_arg_definition::Doc::HasDoc(false)),
+                        Some(d) => Some(model::var_arg_definition::Doc::DocValue(
                             d.serialize(self.elements, self.state)? as u64,
                         )),
                     },
                 }),
-                Parameter::Meta(key, value) => model::parameter::Parameter::Meta(model::Meta {
+                ParameterDefinition::Meta(key, value) => model::parameter_definition::Parameter::Meta(model::MetaDefinition {
                     key: key.serialize(self.elements, self.state)? as u64,
                     value: value.serialize(self.elements, self.state)? as u64,
                 }),
@@ -393,47 +787,93 @@ impl<'a> ClosureDeserializer<'a> {
         match self.elements[id].element.as_ref().unwrap() {
             element::Element::Closure(s) => {
                 let env = Scope::deserialize(s.env as usize, self.elements, self.state)?;
-                let sig = match &s.signature {
-                    None | Some(model::closure::Signature::HasSignature(_)) => None,
-                    Some(model::closure::Signature::SignatureValue(sig)) => self.signature(sig)?,
-                };
                 Ok(Arc::from(Closure {
-                    name: match s.name {
-                        None | Some(Name::HasName(_)) => None,
-                        Some(Name::NameValue(idx)) => Some(TrackedString::deserialize(
-                            idx as usize,
-                            self.elements,
-                            self.state,
-                        )?),
-                    },
                     jobs: s
                         .job_definitions
                         .iter()
                         .map(|j| self.job(j))
                         .collect::<CrushResult<Vec<_>>>()?,
-                    completion_data: signature_to_arguments(&sig),
-                    signature: sig,
-                    env,
+
+                     closure_type : match &s.closure_type {
+                         Some(model::closure::ClosureType::Block(_)) => 
+                             ClosureType::Block,
+                         Some(model::closure::ClosureType::Command(command_closure)) => {
+                                 ClosureType::Command {
+                                     name: match command_closure.name {
+                                         None | Some(model::command_closure::Name::HasName(_)) => None,
+                                         Some(model::command_closure::Name::NameValue(idx)) => Some(String::deserialize(
+                                             idx as usize,
+                                             self.elements,
+                                             self.state,
+                                         )?),
+                                     },
+                                     signature_data: self.signature(&command_closure.signature_data)?,
+                                     signature_string: String::deserialize(command_closure.signature_string as usize, self.elements, self.state)?,
+                                     short_help: String::deserialize(command_closure.short_help as usize, self.elements, self.state)?,
+                                     long_help: String::deserialize(command_closure.long_help as usize, self.elements, self.state)?,
+                                 }
+                             }
+                         None => return serialization_error("Invalid command signature"),
+                     },        
+                    parent_scope: env,
+
                 }))
             }
             _ => error("Expected a closure"),
         }
     }
 
-    fn signature(&mut self, signature: &model::Signature) -> CrushResult<Option<Vec<Parameter>>> {
-        Ok(Some(
+    fn signature(&mut self, signature: &Vec<model::Parameter>) -> CrushResult<Vec<Parameter>> {
+        let mut res = vec![];
+        for p in signature {
+            res.push(self.parameter(p)?)
+        }
+        Ok(res)
+    }
+
+    fn parameter(&mut self, parameter: &model::Parameter) -> CrushResult<Parameter> {
+        Ok(Parameter {
+            name: String::deserialize(parameter.name as usize, self.elements, self.state)?,
+            value_type: ValueType::deserialize(parameter.value_type as usize, self.elements, self.state)?,
+            default: match &parameter.default {
+                None => return serialization_error("Invalid default value for command parameter"),
+                Some(model::parameter::Default::HasDefault(_)) => None,
+                Some(model::parameter::Default::DefaultValue(value)) => Some(Value::deserialize(*value as usize, self.elements, self.state)?),
+            },
+            allowed: match &parameter.allowed {
+                None => return serialization_error("Invalid allowed values for command parameter"),
+                Some(model::parameter::Allowed::HasAllowed(_)) => None,
+                Some(model::parameter::Allowed::AllowedValues(values)) => Some(self.values(values)?),
+            },
+            description: match &parameter.description {
+                None => return serialization_error("Invalid description for command parameter"),
+                Some(model::parameter::Description::HasDescription(_)) => None,
+                Some(model::parameter::Description::DescriptionValue(value)) => Some(String::deserialize(*value as usize, self.elements, self.state)?),
+            },
+            complete: None,
+            named: parameter.named,
+            unnamed: parameter.unnamed,
+        })
+    }
+
+    fn values(&mut self, values: &Values) -> CrushResult<Vec<Value>> {
+        values.value.iter().map(|v| {Value::deserialize(*v as usize, self.elements, self.state)}).collect()
+    }
+
+    fn signature_definition(&mut self, signature: &model::SignatureDefinition) -> CrushResult<Vec<ParameterDefinition>> {
+        Ok(
             signature
                 .parameter
                 .iter()
-                .map(|p| self.parameter(p))
+                .map(|p| self.parameter_definition(p))
                 .collect::<CrushResult<Vec<_>>>()?,
-        ))
+        )
     }
 
-    fn doc(&mut self, doc: &Option<model::var_arg::Doc>) -> CrushResult<Option<TrackedString>> {
+    fn doc(&mut self, doc: &Option<model::var_arg_definition::Doc>) -> CrushResult<Option<TrackedString>> {
         match doc {
-            None | Some(model::var_arg::Doc::HasDoc(_)) => Ok(None),
-            Some(model::var_arg::Doc::DocValue(idx)) => Ok(Some(TrackedString::deserialize(
+            None | Some(model::var_arg_definition::Doc::HasDoc(_)) => Ok(None),
+            Some(model::var_arg_definition::Doc::DocValue(idx)) => Ok(Some(TrackedString::deserialize(
                 *idx as usize,
                 self.elements,
                 self.state,
@@ -441,36 +881,36 @@ impl<'a> ClosureDeserializer<'a> {
         }
     }
 
-    fn parameter(&mut self, parameter: &model::Parameter) -> CrushResult<Parameter> {
+    fn parameter_definition(&mut self, parameter: &model::ParameterDefinition) -> CrushResult<ParameterDefinition> {
         match &parameter.parameter {
             None => error("Missing parameter"),
-            Some(model::parameter::Parameter::Normal(param)) => {
-                Ok(Parameter::Parameter(
+            Some(model::parameter_definition::Parameter::Normal(param)) => {
+                Ok(ParameterDefinition::Normal(
                     TrackedString::deserialize(param.name as usize, self.elements, self.state)?,
                     self.value_definition(param.r#type.as_ref().ok_or("Invalid parameter")?)?,
                     match &param.default {
-                        None | Some(model::normal_parameter::Default::HasDefault(_)) => None,
-                        Some(model::normal_parameter::Default::DefaultValue(def)) => {
+                        None | Some(model::normal_parameter_definition::Default::HasDefault(_)) => None,
+                        Some(model::normal_parameter_definition::Default::DefaultValue(def)) => {
                             Some(self.value_definition(def)?)
                         }
                     },
                     match &param.doc {
-                        None | Some(normal_parameter::Doc::HasDoc(_)) => None,
-                        Some(normal_parameter::Doc::DocValue(id)) => Some(
+                        None | Some(normal_parameter_definition::Doc::HasDoc(_)) => None,
+                        Some(normal_parameter_definition::Doc::DocValue(id)) => Some(
                             TrackedString::deserialize(*id as usize, self.elements, self.state)?,
                         ),
                     },
                 ))
             }
-            Some(model::parameter::Parameter::Named(param)) => Ok(Parameter::Named(
+            Some(model::parameter_definition::Parameter::Named(param)) => Ok(ParameterDefinition::Named(
                 TrackedString::deserialize(param.name as usize, self.elements, self.state)?,
                 self.doc(&param.doc)?,
             )),
-            Some(model::parameter::Parameter::Unnamed(param)) => Ok(Parameter::Unnamed(
+            Some(model::parameter_definition::Parameter::Unnamed(param)) => Ok(ParameterDefinition::Unnamed(
                 TrackedString::deserialize(param.name as usize, self.elements, self.state)?,
                 self.doc(&param.doc)?,
             )),
-            Some(model::parameter::Parameter::Meta(meta)) => Ok(Parameter::Meta(
+            Some(model::parameter_definition::Parameter::Meta(meta)) => Ok(ParameterDefinition::Meta(
                 TrackedString::deserialize(meta.key as usize, self.elements, self.state)?,
                 TrackedString::deserialize(meta.value as usize, self.elements, self.state)?,
             )),
@@ -548,7 +988,7 @@ impl<'a> ClosureDeserializer<'a> {
                                 None
                             }
                             Some(model::closure_definition::Signature::SignatureValue(sig)) => {
-                                self.signature(sig)?
+                                Some(self.signature_definition(sig)?)
                             }
                         },
                         jobs: c
@@ -596,299 +1036,5 @@ impl<'a> ClosureDeserializer<'a> {
             },
         )
     }
-}
 
-fn format_default(default: &Option<ValueDefinition>) -> String {
-    match default {
-        None => "".to_string(),
-        Some(v) => format!("({}) ", v.to_string()),
-    }
-}
-
-impl Help for Closure {
-    fn signature(&self) -> String {
-        format!(
-            "{} {}",
-            self.name
-                .as_ref()
-                .map(|s| s.string.clone())
-                .as_deref()
-                .unwrap_or("<unnamed>"),
-            self.signature
-                .as_ref()
-                .map(|s| s
-                    .iter()
-                    .filter(|p| match p {
-                        Parameter::Meta(_, _) => false,
-                        _ => true,
-                    })
-                    .map(|p| p.to_string())
-                    .collect::<Vec<_>>()
-                    .join(" "))
-                .unwrap_or_else(|| "".to_string()),
-        )
-    }
-
-    fn short_help(&self) -> String {
-        match &self.signature {
-            Some(sig) => sig
-                .iter()
-                .flat_map(|p| match p {
-                    Parameter::Meta(key, value) => {
-                        if key.string == "short_help" {
-                            Some(
-                                unescape(&value.string)
-                                    .unwrap_or("<Invalid help string>".to_string()),
-                            )
-                        } else {
-                            None
-                        }
-                    }
-                    _ => None,
-                })
-                .collect(),
-            _ => "A closure".to_string(),
-        }
-    }
-
-    fn long_help(&self) -> Option<String> {
-        match &self.signature {
-            Some(sig) => {
-                let mut long_help = Vec::new();
-                let mut param_help = Vec::new();
-                let mut example = Vec::new();
-
-                for i in sig {
-                    match i {
-                        Parameter::Parameter(name, _arg_type, default, doc) => {
-                            param_help.push(format!(
-                                " * `{}` {}{}",
-                                &name.string,
-                                format_default(default),
-                                doc.as_ref()
-                                    .map(|d| unescape(&d.string))
-                                    .unwrap_or(Ok("<Invalid help string>".to_string()))
-                                    .unwrap_or("".to_string())
-                            ));
-                        }
-                        Parameter::Meta(key, value) => match key.string.as_ref() {
-                            "long_help" => {
-                                long_help.push(
-                                    unescape(&value.string)
-                                        .unwrap_or("<Invalid help string>".to_string()),
-                                );
-                            }
-                            "example" => {
-                                example.push(format!(
-                                    "    {}",
-                                    unescape(&value.string)
-                                        .unwrap_or("<Invalid encoding>".to_string())
-                                ));
-                            }
-                            _ => {}
-                        },
-                        _ => {}
-                    }
-                }
-
-                if param_help.len() > 0 {
-                    long_help.push("".to_string());
-                    long_help.push("This command accepts the following arguments:".to_string());
-                    long_help.push("".to_string());
-                    long_help.append(&mut param_help);
-                }
-
-                if example.len() > 0 {
-                    long_help.push(format!("# Examples"));
-                    long_help.push("".to_string());
-                    long_help.append(&mut example);
-                }
-
-                Some(long_help.join("\n"))
-            }
-            _ => None,
-        }
-    }
-}
-
-impl Closure {
-    pub fn new(
-        name: Option<TrackedString>,
-        signature: Option<Vec<Parameter>>,
-        job_definitions: Vec<Job>,
-        env: Scope,
-    ) -> Closure {
-        Closure {
-            name,
-            jobs: job_definitions,
-            completion_data: signature_to_arguments(&signature),
-            signature,
-            env,
-        }
-    }
-
-    fn push_arguments_to_env_with_signature(
-        signature: &Vec<Parameter>,
-        mut arguments: Vec<Argument>,
-        context: &mut CompileContext,
-    ) -> CrushResult<()> {
-        let mut named = OrderedMap::new();
-        let mut unnamed = Vec::new();
-        for arg in arguments.drain(..) {
-            match arg.argument_type {
-                Some(name) => {
-                    named.insert(name.clone(), arg.value);
-                }
-                None => unnamed.push(arg.value),
-            };
-        }
-        let mut unnamed_name = None;
-        let mut named_name = None;
-        for param in signature {
-            match param {
-                Parameter::Parameter(name, value_type, default, _) => {
-                    if let Value::Type(value_type) = value_type.eval_and_bind(context)? {
-                        let value: Value;
-
-                        if named.contains_key(&name.string) {
-                            value = named.remove(&name.string).unwrap();
-                        } else if !unnamed.is_empty() {
-                            value = unnamed.remove(0);
-                        } else if let Some(default) = default {
-                            value = default.eval_and_bind(context)?;
-                        } else {
-                            return argument_error(
-                                format!("Missing argument {}.", name),
-                                name.location,
-                            );
-                        };
-
-                        if !value_type.is(&value) {
-                            return argument_error(
-                                format!(
-                                    "Wrong type {} for argument {}, expected {}",
-                                    value.value_type(),
-                                    name,
-                                    value_type
-                                ),
-                                name.location,
-                            );
-                        }
-                        context.env.redeclare(&name.string, value)?;
-                    } else {
-                        return argument_error_legacy("Not a type");
-                    }
-                }
-                Parameter::Named(name, _) => {
-                    if named_name.is_some() {
-                        return argument_error_legacy(
-                            "Multiple named argument destinations specified",
-                        );
-                    }
-                    named_name = Some(name.slice_to_end(1));
-                }
-                Parameter::Unnamed(name, _) => {
-                    if unnamed_name.is_some() {
-                        return argument_error_legacy(
-                            "Multiple unnamed argument destinations specified",
-                        );
-                    }
-                    unnamed_name = Some(name.slice_to_end(1));
-                }
-                Parameter::Meta(_, _) => {}
-            }
-        }
-
-        if let Some(unnamed_name) = unnamed_name {
-            context.env.redeclare(
-                unnamed_name.string.as_ref(),
-                List::new(ValueType::Any, unnamed).into(),
-            )?;
-        } else if !unnamed.is_empty() {
-            return argument_error_legacy(format!(
-                "Stray unnamed argument of type {}",
-                unnamed[0].value_type()
-            ));
-        }
-
-        if let Some(named_name) = named_name {
-            let d = Dict::new(ValueType::String, ValueType::Any)?;
-            for (k, v) in named {
-                d.insert(Value::from(k), v)?;
-            }
-            context
-                .env
-                .redeclare(named_name.string.as_ref(), d.into())?;
-        } else if !named.is_empty() {
-            return argument_error_legacy(format!(
-                "Unrecognized named arguments {}",
-                named.keys().join(", ")
-            ));
-        }
-        Ok(())
-    }
-
-    fn push_arguments_to_env(
-        signature: &Option<Vec<Parameter>>,
-        mut arguments: Vec<Argument>,
-        context: &mut CompileContext,
-    ) -> CrushResult<()> {
-        if let Some(signature) = signature {
-            Self::push_arguments_to_env_with_signature(signature, arguments, context)
-        } else {
-            let mut unnamed = vec![];
-            for arg in arguments.drain(..) {
-                match arg.argument_type {
-                    Some(name) => {
-                        context.env.redeclare(name.as_ref(), arg.value)?;
-                    }
-                    None => {
-                        unnamed.push(arg.value);
-                    }
-                }
-            }
-
-            if !unnamed.is_empty() {
-                context.env.redeclare_reserved(
-                    "__unnamed__",
-                    Value::List(List::new_without_type(unnamed)),
-                )?;
-            }
-
-            Ok(())
-        }
-    }
-
-    pub fn deserialize(
-        id: usize,
-        elements: &[Element],
-        state: &mut DeserializationState,
-    ) -> CrushResult<Command> {
-        ClosureDeserializer::new(elements, state).closure(id)
-    }
-}
-
-impl Display for Closure {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("{ ")?;
-        if let Some(params) = &self.signature {
-            f.write_str("| ")?;
-            for param in params {
-                param.fmt(f)?;
-                f.write_str(" ")?;
-            }
-            f.write_str("| ")?;
-        }
-        let mut first = true;
-        for j in &self.jobs {
-            if first {
-                first = false;
-            } else {
-                f.write_str("; ")?;
-            }
-            j.fmt(f)?;
-        }
-        f.write_str("} ")?;
-        Ok(())
-    }
 }

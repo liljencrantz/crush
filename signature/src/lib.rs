@@ -383,6 +383,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
             for field in &mut s.fields {
                 let mut default_value = None;
+                let mut default_value_node = quote! {None};
                 let mut is_unnamed_target = false;
                 let mut is_named_target = false;
                 let mut allowed_values = None;
@@ -392,7 +393,8 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 if !field.attrs.is_empty() {
                     for attr in &field.attrs {
                         if call_is_default(attr) {
-                            default_value = Some(call_value(attr)?)
+                            default_value = Some(call_value(attr)?);
+                            default_value_node = quote! {Some(crate::lang::value::Value::from(#default_value))};
                         } else if call_is_named(attr, "unnamed") {
                             is_unnamed_target = true;
                         } else if call_is_named(attr, "named") {
@@ -481,7 +483,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
                 argument_desciptions = quote! {
                     #argument_desciptions
-                    crate::lang::command::ParameterCompletionData {
+                    crate::lang::command::Parameter {
                         name: #name_string.to_string(),
                         value_type: #crush_internal_type,
                         allowed: #allowed_values,
@@ -489,6 +491,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                         complete: #completion_command,
                         named: false,
                         unnamed: false,
+                        default: #default_value_node,
                     },
                 };
             }

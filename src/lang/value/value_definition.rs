@@ -1,7 +1,7 @@
 use crate::lang::ast::location::Location;
 use crate::lang::ast::tracked_string::TrackedString;
 /// The definition of a value, as found in a Job.
-use crate::lang::command::Parameter;
+use crate::lang::command::ParameterDefinition;
 use crate::lang::pipe::black_hole;
 use crate::lang::state::contexts::CompileContext;
 use crate::lang::{command::CrushCommand, job::Job};
@@ -17,7 +17,7 @@ pub enum ValueDefinition {
     Value(Value, Location),
     ClosureDefinition {
         name: Option<TrackedString>,
-        signature: Option<Vec<Parameter>>,
+        signature: Option<Vec<ParameterDefinition>>,
         jobs: Vec<Job>,
         location: Location,
     },
@@ -81,12 +81,24 @@ impl ValueDefinition {
                 ..
             } => (
                 None,
-                Value::Command(<dyn CrushCommand>::closure(
-                    name.clone(),
-                    signature.clone(),
-                    jobs.clone(),
-                    &context.env,
-                )),
+                Value::Command(
+                    match signature {
+                        None => {
+                            <dyn CrushCommand>::closure_block(
+                                jobs.clone(),
+                                &context.env)
+                        }
+                        Some(signature) => {
+                            <dyn CrushCommand>::closure_command(
+                                name.clone(),
+                                signature.clone(),
+                                jobs.clone(),
+                                &context.env,
+                                &context.global_state,
+                            )?
+                        }
+                    }
+                )
             ),
             ValueDefinition::Identifier(s) => (
                 None,
@@ -197,7 +209,7 @@ impl Repr for ValueDefinition {
                 f.write_str("$(")?;
                 let mut first = true;
                 for j in jl {
-                    if (!first) {
+                    if !first {
                         f.write_str("; ")?;
                         first = false;
                     }

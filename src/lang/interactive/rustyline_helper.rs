@@ -7,7 +7,7 @@ use crate::lang::value::Value;
 use crate::util::directory_lister::directory_lister;
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
-use rustyline::highlight::{CmdKind, Highlighter, MatchingBracketHighlighter};
+use rustyline::highlight::{CmdKind, Highlighter};
 use rustyline::hint::{Hinter, HistoryHinter};
 use rustyline::validate::{ValidationResult, Validator};
 use rustyline::{Context, validate};
@@ -20,7 +20,6 @@ use std::collections::HashMap;
 pub struct RustylineHelper {
     state: GlobalState,
     scope: Scope,
-    highlighter: MatchingBracketHighlighter,
     hinter: HistoryHinter,
     mode: LanguageMode,
 }
@@ -30,7 +29,6 @@ impl RustylineHelper {
         RustylineHelper {
             state,
             scope,
-            highlighter: MatchingBracketHighlighter::new(),
             hinter: HistoryHinter {},
             mode: Command,
         }
@@ -134,8 +132,8 @@ impl Validator for RustylineHelper {
         &self,
         _ctx: &mut validate::ValidationContext,
     ) -> rustyline::Result<validate::ValidationResult> {
-        return Ok(ValidationResult::Valid(None));
-
+        Ok(ValidationResult::Valid(None))
+/*
         let input = _ctx.input().to_string();
         if input.trim() == "!!" {
             return Ok(ValidationResult::Valid(None));
@@ -152,6 +150,7 @@ impl Validator for RustylineHelper {
         } else {
             Ok(ValidationResult::Invalid(None))
         }
+        */
     }
 
     fn validate_while_typing(&self) -> bool {

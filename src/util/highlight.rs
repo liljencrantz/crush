@@ -1,6 +1,6 @@
 use crate::lang::ast::lexer::{LanguageMode, Lexer, TokenizerMode};
 use crate::lang::ast::token::Token;
-use crate::lang::command::{Command, ParameterCompletionData};
+use crate::lang::command::{Command, Parameter};
 use crate::lang::command_invocation::resolve_external_command;
 use crate::lang::errors::{CrushError, CrushResult};
 use crate::lang::state::scope::Scope;
@@ -45,11 +45,11 @@ pub fn syntax_highlight(
             ) => false,
             (true, _, Token::String(_, _) | Token::Identifier(_, _), _) => true,
             (true, Some(Token::String(s, _)), Token::MemberOperator(_), _) => {
-                cmd_namespace_path.push(s.clone());
+                cmd_namespace_path.push(s);
                 true
             }
             (true, Some(Token::Identifier(s, _)), Token::MemberOperator(_), _) => {
-                cmd_namespace_path.push((&s[1..]).clone());
+                cmd_namespace_path.push(&s[1..]);
                 true
             }
             _ => false,
@@ -168,8 +168,8 @@ fn get_color<'a>(
             }
         }
 
-        QuotedString(quoted_name, _) => colors.get("string_literal"),
-        Flag(name, _) => match (current_command) {
+        QuotedString(_, _) => colors.get("string_literal"),
+        Flag(name, _) => match current_command {
             Some(cmd) => {
                 if name.len() > 2 && allowed_named_argument(cmd.completion_data(), &name[2..]) {
                     colors.get("named_argument")
@@ -222,7 +222,7 @@ fn get_color<'a>(
 }
 
 fn allowed_named_argument(
-    parameter_completion_data: &[ParameterCompletionData],
+    parameter_completion_data: &[Parameter],
     name: &str,
 ) -> bool {
     for param in parameter_completion_data {
@@ -289,7 +289,7 @@ fn token_type(token: Token, scope: &Option<Scope>) -> Option<ValueType> {
 }
 
 fn named_argument_type(
-    parameter_completion_data: &[ParameterCompletionData],
+    parameter_completion_data: &[Parameter],
     name: &str,
 ) -> Option<ValueType> {
     let mut default = None;

@@ -5,9 +5,7 @@ use crate::util::glob::CompileState::{
     InitialState, Regular, WasAny, WasDot, WasDotDot, WasSeparator,
 };
 use std::collections::{HashSet, VecDeque};
-use std::ffi::OsStr;
 use std::fmt::{Display, Formatter};
-use std::ops::Deref;
 use std::path::{Path, PathBuf};
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, PartialOrd, Ord)]
@@ -324,7 +322,7 @@ fn glob_file_match<'a>(
             // This should be impossible
         }
 
-        (None, Some(c)) => match mode {
+        (None, Some(_)) => match mode {
             GlobMode::Glob => {}
             GlobMode::Complete => {
                 let mut str = path.iter().collect::<String>();

@@ -1,7 +1,7 @@
 use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::ast::node::TextLiteralStyle;
 use crate::lang::ast::{CommandNode, JobListNode, JobNode, node::Node};
-use crate::lang::command::{Command, ParameterCompletionData};
+use crate::lang::command::{Command, Parameter};
 use crate::lang::errors::{CrushResult, argument_error_legacy, error};
 use crate::lang::parser::Parser;
 use crate::lang::state::scope::Scope;
@@ -61,7 +61,7 @@ pub struct PartialCommandResult {
 }
 
 impl PartialCommandResult {
-    pub fn last_argument_description(&self) -> Option<&ParameterCompletionData> {
+    pub fn last_argument_description(&self) -> Option<&Parameter> {
         if let CompletionCommand::Known(cmd) = &self.command {
             if let Some(name) = &self.last_argument_name {
                 for arg in cmd.completion_data() {
