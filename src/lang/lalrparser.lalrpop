@@ -207,7 +207,6 @@ ExprDefault: Option<Node> = {
     Equals <l: ExprLogical> => Some(*l),
 }
 
-
 Command: CommandNode = {
     <start: @L> <a: Assignment> <end: @R> => CommandNode{expressions: vec![*a], location: Location::new(start, end)},
     <start: @L> <mut c: Command> <a:Assignment> <end: @R> =>
@@ -218,25 +217,15 @@ Command: CommandNode = {
 }
 
 Assignment: Box<Node> = {
-    Logical,
+    Unary,
     <i: Item> <op: AssignmentOperator> <e: Assignment> =>
         Box::from(Node::Assignment{target: i, style: SwitchStyle::None, operation: String::from(op), value: e}),
 }
 
-Logical: Box<Node> = {
-    Comparison,
-    <l: Logical> <op: LogicalOperator> <c: Comparison> => operator(op, l, c),
-}
-
-Comparison: Box<Node> = {
-    Unary,
-    <c: Comparison> <op: ComparisonOperator> <t: Unary> =>operator(op, c, t),
-}
-
 Unary: Box<Node> = {
     Item,
-    <op:Unnamed> <u: Unary> => Box::from(Node::Unary(TrackedString::new("@", op), u)),
-    <op:Named>   <u: Unary> => Box::from(Node::Unary(TrackedString::new("@@", op), u)),
+    <op:Unnamed> <u: Item> => Box::from(Node::Unary(TrackedString::new("@", op), u)),
+    <op:Named>   <u: Item> => Box::from(Node::Unary(TrackedString::new("@@", op), u)),
 }
 
 Signature: Option<Vec<ParameterNode>> = {
@@ -265,7 +254,7 @@ Parameter: ParameterNode = {
 
 Default: Option<Node> = {
     => None,
-    Equals <l: Logical> => Some(*l),
+    Equals <l: Unary> => Some(*l),
 }
 
 Item: Box<Node> = {

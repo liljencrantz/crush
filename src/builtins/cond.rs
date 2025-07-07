@@ -84,17 +84,17 @@ pub fn or(mut context: CommandContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    root.create_namespace(
+    let e = root.create_namespace(
         "cond",
         "Logical operators (`and` and `or`)",
         Box::new(|env| {
             env.declare(
-                "__and__",
+                "and",
                 Value::Command(
                     <dyn CrushCommand>::condition(
                         and,
                         vec!["cond".to_string(), "__and__".to_string()],
-                        "cond:__and__ condition:(bool|command)... -> boolean",
+                        "and condition:(bool|command)... -> boolean",
                         "True if all arguments are true",
                         Some("Every argument to and must be either a boolean or a command that returns a boolean.
 The and command will check all arguments in order, and if any of them are false, and
@@ -106,12 +106,12 @@ is found to be false, `and` will not evaluate any remaining closures."),
                     )))?;
 
             env.declare(
-                "__or__",
+                "or",
                 Value::Command(
                     <dyn CrushCommand>::condition(
                         or,
                         vec!["cond".to_string(), "__or__".to_string()],
-                        "cond:__or__ condition:(bool|command)... -> boolean",
+                        "or condition:(bool|command)... -> boolean",
                         "True if any argument is true",
                         Some("Every argument to or must be either a `boolean` or a command that returns a `boolean`.
 The or command will check all arguments in order, and if any of them are `true`, or
@@ -123,5 +123,6 @@ is found to be true, `or` will not evaluate any remaining closures."),
                     )))?;
             Ok(())
         }))?;
+    root.r#use(&e);
     Ok(())
 }

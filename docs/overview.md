@@ -116,6 +116,33 @@ including classes and closures, can be losslessly serialized into this format.
 But because Pup is Crush-specific, it's useless for data sharing to
 other languages.
 
+### Conditional operators
+
+The `and` and `or` commands are used to combine logical expressions:
+
+    crush# or $false $true
+    true
+    crush# if $(and $(./tree:exists) {$((./tree:stat):is_file)}) {echo "yay"}
+
+### Globs and regular expressions
+
+The `match` command is used for matching a value against a pattern:
+
+    # The * character is the wildcard operator in globs
+    crush# match foo.txt *.txt
+    true
+
+    # This is how you construct and match against a regular expression
+    crush# match abbbbbc ^(ab+c)
+    true
+
+Regexps also support replacement using the `replace` and `replace_all` methods.
+
+    crush# ^(a):replace tralala aaa
+    traaalala
+    crush# ^(a):replace_all tralala aaa
+    traaalaaalaaa
+
 ### Expression mode
 
 Crush allows you to perform mathematical calculations on integer and floating
@@ -143,18 +170,14 @@ using parenthesis, pipes still work, etc.
     # An entire pipeline written in command mode 
     (files() | sort("file", reverse=true) | where({size < 1000}))
 
-### Conditional operators
+In expression mode, `and` and `or` are operators used to combine logical expressions:
 
-The `and` and `or` operators are used to combine logical expressions:
-    
-    crush# $false or $true
+    crush# ($false or $true)
     true
-    crush# if $(./tree:exists) and {$((./tree:stat):is_file)} {echo "yay"}
+    crush# (if $(./tree:exists) and {$((./tree:stat):is_file)} {echo("yay")})
 
-### Globs and regular expressions
-    
-Crush also has operators related to patterns and matching. `=~` and `!~` are
-used to check if a pattern matches an input:
+Crush also has operators related to patterns and matching in expression mode. 
+`=~` and `!~` are used to check if a pattern matches an input:
 
     # The * character is the wildcard operator in globs
     crush# foo.txt =~ *.txt
@@ -163,13 +186,6 @@ used to check if a pattern matches an input:
     # This is how you construct and match against a regular expression
     crush# abbbbbc =~ ^(ab+c)
     true
-
-Regexps also support replacement using the `replace` and `replace_all` methods.
-
-    crush# ^(a):replace tralala aaa
-    traaalala
-    crush# ^(a):replace_all tralala aaa
-    traaalaaalaaa
 
 ### Type system
 

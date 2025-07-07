@@ -136,7 +136,7 @@ pub fn not(mut context: CommandContext) -> CrushResult<()> {
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
-    root.create_namespace(
+    let e = root.create_namespace(
         "comp",
         "Comparison operators",
         Box::new(|env| {
@@ -150,5 +150,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Ok(())
         }),
     )?;
+    root.r#use(&e);
     Ok(())
 }

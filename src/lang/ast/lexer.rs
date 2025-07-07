@@ -82,46 +82,8 @@ impl<'input> Lexer<'input> {
                     Some((_, ch)) => return Some(Err(LexicalError::UnexpectedCharacter(*ch))),
                     None => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion('\n'))),
                 },
-                Some((i, '<')) => match self.chars.peek() {
-                    Some((_, '=')) => {
-                        self.chars.next();
-                        return Some(
-                            Token::ComparisonOperator("<=", Location::new(i, i + 2)).into(),
-                        );
-                    }
-                    _ => return Some(Token::ComparisonOperator("<", Location::from(i)).into()),
-                },
 
-                Some((i, '>')) => match self.chars.peek() {
-                    Some((_, '=')) => {
-                        self.chars.next();
-                        return Some(
-                            Token::ComparisonOperator(">=", Location::new(i, i + 2)).into(),
-                        );
-                    }
-                    _ => return Some(Token::ComparisonOperator(">", Location::from(i)).into()),
-                },
-
-                Some((i, '!')) => match self.chars.peek() {
-                    Some((_, '=')) => {
-                        self.chars.next();
-                        return Some(
-                            Token::ComparisonOperator("!=", Location::new(i, i + 2)).into(),
-                        );
-                    }
-                    Some((_, '~')) => {
-                        self.chars.next();
-                        return Some(
-                            Token::ComparisonOperator("!~", Location::new(i, i + 2)).into(),
-                        );
-                    }
-                    Some((_, ch)) => {
-                        return Some(Err(LexicalError::UnexpectedCharacterWithSuggestion(
-                            *ch, '=',
-                        )));
-                    }
-                    _ => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion('='))),
-                },
+                Some((i, '!')) => return Some(Err(LexicalError::UnexpectedCharacter('!'))),
 
                 Some((i, '@')) => {
                     let cc2 = self.chars.peek();
@@ -134,24 +96,8 @@ impl<'input> Lexer<'input> {
                     }
                 }
 
-                Some((i, '=')) => {
-                    let cc2 = self.chars.peek();
-                    match cc2 {
-                        Some((_, '=')) => {
-                            self.chars.next();
-                            return Some(
-                                Token::LogicalOperator("==", Location::new(i, i + 2)).into(),
-                            );
-                        }
-                        Some((_, '~')) => {
-                            self.chars.next();
-                            return Some(
-                                Token::ComparisonOperator("=~", Location::new(i, i + 2)).into(),
-                            );
-                        }
-                        _ => return Some(Token::Equals(Location::from(i)).into()),
-                    }
-                }
+                Some((i, '=')) => 
+                    return Some(Token::Equals(Location::from(i)).into()),
 
                 Some((i, '#')) => {
                     let mut end_idx = i;
@@ -176,7 +122,7 @@ impl<'input> Lexer<'input> {
                                 &self.full_str[i..end_idx + 1],
                                 Location::new(i, end_idx + 1),
                             )
-                            .into(),
+                                .into(),
                         );
                     }
                 }
@@ -232,7 +178,7 @@ impl<'input> Lexer<'input> {
                             &self.full_str[i..end_idx + 1],
                             Location::new(i, end_idx + 1),
                         )
-                        .into(),
+                            .into(),
                     );
                 }
 
@@ -303,7 +249,7 @@ impl<'input> Lexer<'input> {
                             &self.full_str[i..end_idx + 1],
                             Location::new(i, end_idx + 1),
                         )
-                        .into(),
+                            .into(),
                     );
                 }
 
@@ -321,23 +267,14 @@ impl<'input> Lexer<'input> {
 
                     let s = &self.full_str[i..end_idx + 1];
 
-                    return match s {
-                        "and" => {
-                            Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into())
-                        }
-                        "or" => {
-                            Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into())
-                        }
-                        _ => {
-                            if s.contains('*') || s.contains('?') {
-                                Some(Token::Glob(s, Location::new(i, end_idx + 1)).into())
-                            } else if s.contains('/') || s.contains('.') || s.starts_with('~') {
-                                Some(Token::File(s, Location::new(i, end_idx + 1)).into())
-                            } else {
-                                Some(Token::String(s, Location::new(i, end_idx + 1)).into())
-                            }
-                        }
-                    };
+                    return
+                        if s.contains('*') || s.contains('?') {
+                            Some(Token::Glob(s, Location::new(i, end_idx + 1)).into())
+                        } else if s.contains('/') || s.contains('.') || s.starts_with('~') {
+                            Some(Token::File(s, Location::new(i, end_idx + 1)).into())
+                        } else {
+                            Some(Token::String(s, Location::new(i, end_idx + 1)).into())
+                        };
                 }
 
                 Some((i, '"')) => {

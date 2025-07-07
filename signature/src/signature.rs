@@ -515,22 +515,40 @@ fn patterns_type_data(
         signature: format!("[{}=(string|glob|regex)...]", name.to_string()),
         initialize: quote! { let mut #name = crate::lang::signature::patterns::Patterns::new(); },
         mappings: quote! {
-            (Some(#name_literal), crate::lang::value::Value::Glob(value)) => #name.expand_glob(value),
-            (Some(#name_literal), crate::lang::value::Value::String(value)) => #name.expand_string(value.to_string()),
-            (Some(#name_literal), crate::lang::value::Value::Regex(pattern, value)) => #name.expand_regex(pattern, value),
+            (Some(#name_literal), crate::lang::value::Value::Glob(_value)) => #name.expand_glob(_value),
+            (Some(#name_literal), crate::lang::value::Value::String(_value)) => #name.expand_string(_value.to_string()),
+            (Some(#name_literal), crate::lang::value::Value::Regex(_pattern, _value)) => #name.expand_regex(_pattern, _value),
         },
         unnamed_mutate: if is_unnamed_target {
             Some(quote! {
                 while !_unnamed.is_empty() {
-                    match _unnamed.pop_front().unwrap().0 {
-            crate::lang::value::Value::Glob(value) => #name.expand_glob(value),
-            crate::lang::value::Value::String(value) => #name.expand_string(value.to_string()),
-            crate::lang::value::Value::Regex(pattern, value) => #name.expand_regex(pattern, value),
+                    match _unnamed.pop_front() {
+            Some((crate::lang::value::Value::Glob(_value), _)) => #name.expand_glob(_value),
+            Some((crate::lang::value::Value::String(_value), _)) => #name.expand_string(_value.to_string()),
+            Some((crate::lang::value::Value::Regex(_pattern, _value), _)) => #name.expand_regex(_pattern, _value),
                     }
                 }
             })
         } else {
-            None
+            Some(quote! {
+                if #name.is_empty() {
+                    match _unnamed.pop_front() {
+            Some((crate::lang::value::Value::Glob(_value), _)) => #name.expand_glob(_value),
+            Some((crate::lang::value::Value::String(_value), _)) => #name.expand_string(_value.to_string()),
+            Some((crate::lang::value::Value::Regex(_pattern, _value), _)) => #name.expand_regex(_pattern, _value),
+                        Some((value, _location)) =>
+                            return crate::lang::errors::argument_error(format ! (
+                                "Expected argument \"{}\" to be textual, was of type {}",
+                                #name_literal,
+                                value.value_type().to_string()),
+                                _location),
+                        _ =>
+                            return crate::lang::errors::argument_error_legacy(format ! (
+                                "No value provided for argument \"{}\"",
+                                # name_literal).as_str()),
+                    }
+                }
+            })
         },
         assign: quote! { #name, },
         crush_internal_type: quote! {crate::lang::value::ValueType::either(vec![

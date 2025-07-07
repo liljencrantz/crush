@@ -20,7 +20,7 @@ use signature::signature;
     example = "  echo $(\"Iterating over process {}\":format $i:name)",
     example = "}",
     example = "# Print ten messages",
-    example = "for i=$(seq 10) {",
+    example = "for i=$(seq to=10) {",
     example = "  echo $(\"Lap #{}\":format $i)",
     example = "}",
 )]

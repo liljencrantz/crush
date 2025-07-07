@@ -10,6 +10,7 @@ use crate::lang::state::this::This;
 use crate::lang::value::ValueType;
 use crate::lang::{data::r#struct::Struct, value::Value};
 use signature::signature;
+use crate::lang::signature::patterns::Patterns;
 
 pub mod binary;
 pub mod dict;
@@ -216,6 +217,27 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     )
 }
 
+#[signature(
+    types.r#match,
+    can_block = true,
+    output = Known(ValueType::Bool),
+    short = "Check if the specified value matches the pattern.",
+    long = "The pattern can be another string, a glob or a regular expression. If multiple patterns are specified, they are checked in order and if any of them match, the true is returned.",
+    example = "# Match the string \"foo\" against the regex ooo",
+    example = "match fooo ^(ooo)",
+)]
+struct Match {
+    #[description("the value.")]
+    value: String,
+    #[description("the pattern.")]
+    pattern: Patterns,
+}
+
+fn r#match (mut context: CommandContext) -> CrushResult<()> {
+    let cfg = Match::parse(context.remove_arguments(), context.global_state.printer())?;
+    context.output.send(Value::from(cfg.pattern.test(&cfg.value)))
+}
+
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
         "types",
@@ -241,6 +263,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Class::declare(env)?;
             Convert::declare(env)?;
             TypeOf::declare(env)?;
+            Match::declare(env)?;
             Materialize::declare(env)?;
 
             env.declare("file", Value::Type(ValueType::File))?;

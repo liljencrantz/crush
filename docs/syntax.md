@@ -8,7 +8,7 @@ elements are the arguments:
 
 ```shell script
 echo 5
-git:commit message="This commit is amazing"
+git commit message="This commit is amazing"
 ```
 
 ### Named and unnamed arguments
