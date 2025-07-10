@@ -489,8 +489,8 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                         allowed: #allowed_values,
                         description: None,
                         complete: #completion_command,
-                        named: false,
-                        unnamed: false,
+                        named: #is_named_target,
+                        unnamed: #is_unnamed_target,
                         default: #default_value_node,
                     },
                 };

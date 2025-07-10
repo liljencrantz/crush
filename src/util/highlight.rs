@@ -7,6 +7,13 @@ use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
 use std::cmp::min;
 use std::collections::HashMap;
+use crate::util::highlight::CommandContext::Empty;
+
+enum CommandContext {
+    Empty,
+    Unknown,
+    Known(Value),
+}
 
 pub fn syntax_highlight(
     code: &str,
@@ -26,7 +33,10 @@ pub fn syntax_highlight(
 
     let mut current_command: Option<Command> = None;
     let mut latest_named_argument_info: Option<(usize, String)> = None;
-    let mut cmd_namespace_path = Vec::new();
+    let mut command_context = match scope {
+        None => CommandContext::Unknown,
+        Some(s) => CommandContext::Known(Value::Scope(s.clone())),
+    };
 
     for idx in 0..tokens.len() {
         let tok = tokens[idx];
@@ -34,7 +44,7 @@ pub fn syntax_highlight(
 
         res.push_str(&code[pos..min(tok.location().start, code.len())]);
         let mut do_reset = false;
-
+        
         new_command = match (new_command, prev, tok, ntok) {
             (_, _, Token::BlockStart(_) | Token::Separator(_, _) | Token::Pipe(_), _) => true,
             (
@@ -45,14 +55,48 @@ pub fn syntax_highlight(
             ) => false,
             (true, _, Token::String(_, _) | Token::Identifier(_, _), _) => true,
             (true, Some(Token::String(s, _)), Token::MemberOperator(_), _) => {
-                cmd_namespace_path.push(s);
+                match &command_context {
+                    CommandContext::Known(v) => {
+                        match v.field(s) {
+                            Ok(Some(v)) => 
+                                command_context = CommandContext::Known(v),
+                            _ => command_context = CommandContext::Unknown,
+                        }
+                    }
+                    _ => {}
+                }
                 true
             }
             (true, Some(Token::Identifier(s, _)), Token::MemberOperator(_), _) => {
-                cmd_namespace_path.push(&s[1..]);
+                match &command_context {
+                    CommandContext::Known(v) => {
+                        match v.field(&s[1..]) {
+                            Ok(Some(v)) =>
+                                command_context = CommandContext::Known(v),
+                            _ => command_context = CommandContext::Unknown,
+                        }
+                    }
+                    _ => {}
+                }
                 true
             }
             _ => false,
+        };
+
+        match (new_command, tok, ntok, scope) {
+            (true, Token::String(name, _), _, Some(s)) => {
+                current_command = match &command_context {
+                    Empty => None,
+                    CommandContext::Unknown => None,
+                    CommandContext::Known(ctx) => ctx.field(name).unwrap_or(None).and_then(|v| {
+                        if let Value::Command(cmd) = v {Some(cmd)} else {None}
+                    }),
+                };
+            }
+            (false, Token::String(name, _), Some(Token::Equals(_)), Some(s)) => {
+                latest_named_argument_info = Some((idx, name.to_string()));
+            }
+            _ => {}
         };
 
         let expected_argument_type = if let Some((name_idx, name)) = &latest_named_argument_info
@@ -64,30 +108,6 @@ pub fn syntax_highlight(
             }
         } else {
             None
-        };
-
-        match (new_command, tok, ntok, scope) {
-            (true, Token::String(name, _), _, Some(s)) => {
-                let mut next_scope = s.clone();
-                let mut error = false;
-                
-//                current_command = get_command(Value::from(s), &cmd_namespace_path, name)?;
-                
-                for p in &cmd_namespace_path {
-                    match next_scope.get(p) {
-                        Ok(Some(Value::Scope(ss))) => next_scope = ss,
-                        _ => error = true,
-                    }
-                }
-                current_command = match (error, next_scope.get(name)) {
-                    (false, Ok(Some(Value::Command(c)))) => Some(c),
-                    _ => None,
-                };
-            }
-            (false, Token::String(name, _), Some(Token::Equals(_)), Some(s)) => {
-                latest_named_argument_info = Some((idx, name.to_string()));
-            }
-            _ => {}
         };
 
         match get_color(
@@ -117,10 +137,6 @@ pub fn syntax_highlight(
         prev = Some(tok);
     }
     Ok(res)
-}
-
-fn get_command(scope: Value, path: &Vec<&str>) -> Option<Command> {
-    todo!()
 }
 
 fn get_color<'a>(

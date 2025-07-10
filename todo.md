@@ -26,5 +26,4 @@
 * Fix help messages in dbus connections
 * Completion descriptions
 * Arbitrary filenames via hex escape codes
-* syntax highlight correctness of member methods
 * Allow setting type for varargs in closures
