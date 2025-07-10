@@ -10,7 +10,7 @@ use crate::lang::errors::{CrushResult, error};
 use crate::lang::job::Job;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueDefinition};
-use crate::util::escape::unescape;
+use crate::util::escape::{unescape, unescape_file};
 use crate::util::glob::Glob;
 use regex::Regex;
 use std::ops::Deref;
@@ -242,7 +242,7 @@ impl Node {
             Node::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g.string)), g.location),
             Node::File(s, quote_style) => ValueDefinition::Value(
                 Value::from(match quote_style {
-                    Quoted => PathBuf::from(&unescape(&s.string)?),
+                    Quoted => unescape_file(&s.string)?,
                     Unquoted => PathBuf::from(&expand_user(&s.string)?),
                 }),
                 s.location,
@@ -426,6 +426,7 @@ impl Node {
         ];
 
         if let Some(x) = false_body {
+            expressions.push(Node::String(TrackedString::new("else", x.location), Unquoted));
             expressions.push(Node::Closure(None, x));
         }
 

@@ -73,6 +73,7 @@ impl BinaryReader for PipeReader {
     control.sleep,
     can_block = true,
     short = "Pause execution of commands for the specified amount of time",
+    example = "sleep $(duration:of seconds=10)",
 )]
 struct Sleep {
     #[description("the time to sleep for.")]

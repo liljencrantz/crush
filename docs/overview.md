@@ -122,7 +122,7 @@ The `and` and `or` commands are used to combine logical expressions:
 
     crush# or $false $true
     true
-    crush# if $(and $(./tree:exists) {$((./tree:stat):is_file)}) {echo "yay"}
+    crush# if $(and $(./tree:exists) {$((./tree:stat):is_file)}) else {echo "yay"}
 
 ### Globs and regular expressions
 
@@ -174,7 +174,7 @@ In expression mode, `and` and `or` are operators used to combine logical express
 
     crush# ($false or $true)
     true
-    crush# (if $(./tree:exists) and {$((./tree:stat):is_file)} {echo("yay")})
+    crush# (if $(./tree:exists) and {$((./tree:stat):is_file)} else {echo("yay")})
 
 Crush also has operators related to patterns and matching in expression mode. 
 `=~` and `!~` are used to check if a pattern matches an input:
@@ -573,7 +573,7 @@ that can be controlled using `break` and `continue`.
     
         Example:
     
-        if $(./some_file:stat:is_file) {echo "It's a file!"} {echo "It's not a file!"}
+        if $(./some_file:stat:is_file) {echo "It's a file!"} else {echo "It's not a file!"}
 
 
     for [name=]iterable:(table_input_stream|table|dict|list) body:command

@@ -83,8 +83,8 @@ impl ParameterNode {
                     .transpose()?,
                 documentation.clone(),
             )),
-            ParameterNode::Named(s, doc) => Ok(ParameterDefinition::Named(s.clone(), doc.clone())),
-            ParameterNode::Unnamed(s, doc) => Ok(ParameterDefinition::Unnamed(s.clone(), doc.clone())),
+            ParameterNode::Named(s, doc) => Ok(ParameterDefinition::Named{name: s.clone(), description: doc.clone()}),
+            ParameterNode::Unnamed(s, doc) => Ok(ParameterDefinition::Unnamed{name: s.clone(), description: doc.clone()}),
             ParameterNode::Meta(k, v) => Ok(ParameterDefinition::Meta(k.clone(), v.clone())),
         }
     }

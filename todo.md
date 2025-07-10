@@ -20,12 +20,11 @@
 * Dict literals in expression mode ({key: value})
 * {|$foo: $glob or $string or $regex|} to specify that an argument is one of several types
 * Better syntax highlighting for expression mode
-* Better syntax highlighting of possible errors
-* Operator ordering is unintuitve sometimes e.g. `$s == $s:global`. At least throw an error instead of doing the wrong thing?
 * Move yaml builtin to use saphyr
 * Figure out what to do about users/groups __getitem__
 * Fix help messages in grpc connections
 * Fix help messages in dbus connections
 * Completion descriptions
 * Arbitrary filenames via hex escape codes
-* Rename $data to $struct:create?
+* syntax highlight correctness of member methods
+* Allow setting type for varargs in closures

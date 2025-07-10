@@ -449,8 +449,8 @@ pub enum ParameterDefinition {
         Option<ValueDefinition>,
         Option<TrackedString>,
     ),
-    Named(TrackedString, Option<TrackedString>),
-    Unnamed(TrackedString, Option<TrackedString>),
+    Named{name: TrackedString, description: Option<TrackedString>},
+    Unnamed{name: TrackedString, description: Option<TrackedString>},
     Meta(TrackedString, TrackedString),
 }
 
@@ -468,14 +468,14 @@ impl Display for ParameterDefinition {
                 }
                 Ok(())
             }
-            ParameterDefinition::Named(n, _doc) => {
+            ParameterDefinition::Named{name, ..} => {
                 f.write_str("@@")?;
-                n.fmt(f)?;
+                name.fmt(f)?;
                 Ok(())
             }
-            ParameterDefinition::Unnamed(n, _doc) => {
+            ParameterDefinition::Unnamed{name, ..} => {
                 f.write_str("@")?;
-                n.fmt(f)?;
+                name.fmt(f)?;
                 Ok(())
             }
             ParameterDefinition::Meta(_key, _value) => Ok(()),

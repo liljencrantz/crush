@@ -8,7 +8,7 @@ use signature::signature;
 #[signature(
     control.timer,
     short = "Execute a command once and return the execution time.",
-    example = "timer {files|sort size}"
+    example = "timer {files|sort size}",
 )]
 pub struct Timer {
     #[description("the command to time.")]

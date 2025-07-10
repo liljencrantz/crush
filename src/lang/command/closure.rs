@@ -313,7 +313,7 @@ impl CrushCommand for Closure {
     }
 }
 
-fn signature_to_arguments(
+fn compile_signature(
     signature: &Vec<ParameterDefinition>,
     env: &Scope,
     state: &GlobalState,
@@ -343,8 +343,30 @@ fn signature_to_arguments(
                     default,
                 })
             }
-            ParameterDefinition::Named(_, _) => {}
-            ParameterDefinition::Unnamed(_, _) => {}
+            ParameterDefinition::Named{name, description } => {
+                result.push(Parameter {
+                    name: name.string.clone(),
+                    value_type: ValueType::Any,
+                    allowed: None,
+                    description: description.as_ref().map(|s| s.string.clone()),
+                    complete: None,
+                    named: true,
+                    unnamed: false,
+                    default: None,
+                })
+            }
+            ParameterDefinition::Unnamed{name, description} => {
+                result.push(Parameter {
+                    name: name.string.clone(),
+                    value_type: ValueType::Any,
+                    allowed: None,
+                    description: description.as_ref().map(|s| s.string.clone()),
+                    complete: None,
+                    named: false,
+                    unnamed: true,
+                    default: None,
+                })
+            }
             ParameterDefinition::Meta(_, _) => {}
         }
     }
@@ -454,7 +476,7 @@ impl Closure {
             jobs: job_definitions,
             parent_scope: parent_scope.clone(),
             closure_type: ClosureType::Command {
-                signature_data: signature_to_arguments(&signature, parent_scope, state)?,
+                signature_data: compile_signature(&signature, parent_scope, state)?,
                 signature_string: create_signature_string(&name, &signature),
                 short_help: create_short_help(&signature),
                 long_help: create_long_help(&signature),
@@ -636,18 +658,18 @@ impl<'a> ClosureSerializer<'a> {
                         }),
                     })
                 }
-                ParameterDefinition::Named(n, doc) => model::parameter_definition::Parameter::Named(model::VarArgDefinition {
-                    name: n.serialize(self.elements, self.state)? as u64,
-                    doc: match doc {
+                ParameterDefinition::Named{name, description } => model::parameter_definition::Parameter::Named(model::VarArgDefinition {
+                    name: name.serialize(self.elements, self.state)? as u64,
+                    doc: match description {
                         None => Some(model::var_arg_definition::Doc::HasDoc(false)),
                         Some(d) => Some(model::var_arg_definition::Doc::DocValue(
                             d.serialize(self.elements, self.state)? as u64,
                         )),
                     },
                 }),
-                ParameterDefinition::Unnamed(n, doc) => model::parameter_definition::Parameter::Unnamed(model::VarArgDefinition {
-                    name: n.serialize(self.elements, self.state)? as u64,
-                    doc: match doc {
+                ParameterDefinition::Unnamed{name, description } => model::parameter_definition::Parameter::Unnamed(model::VarArgDefinition {
+                    name: name.serialize(self.elements, self.state)? as u64,
+                    doc: match description {
                         None => Some(model::var_arg_definition::Doc::HasDoc(false)),
                         Some(d) => Some(model::var_arg_definition::Doc::DocValue(
                             d.serialize(self.elements, self.state)? as u64,
@@ -902,14 +924,14 @@ impl<'a> ClosureDeserializer<'a> {
                     },
                 ))
             }
-            Some(model::parameter_definition::Parameter::Named(param)) => Ok(ParameterDefinition::Named(
-                TrackedString::deserialize(param.name as usize, self.elements, self.state)?,
-                self.doc(&param.doc)?,
-            )),
-            Some(model::parameter_definition::Parameter::Unnamed(param)) => Ok(ParameterDefinition::Unnamed(
-                TrackedString::deserialize(param.name as usize, self.elements, self.state)?,
-                self.doc(&param.doc)?,
-            )),
+            Some(model::parameter_definition::Parameter::Named(param)) => Ok(ParameterDefinition::Named {
+                name: TrackedString::deserialize(param.name as usize, self.elements, self.state)?,
+                description: self.doc(&param.doc)?,
+            }),
+            Some(model::parameter_definition::Parameter::Unnamed(param)) => Ok(ParameterDefinition::Unnamed {
+                name: TrackedString::deserialize(param.name as usize, self.elements, self.state)?,
+                description: self.doc(&param.doc)?,
+            }),
             Some(model::parameter_definition::Parameter::Meta(meta)) => Ok(ParameterDefinition::Meta(
                 TrackedString::deserialize(meta.key as usize, self.elements, self.state)?,
                 TrackedString::deserialize(meta.value as usize, self.elements, self.state)?,

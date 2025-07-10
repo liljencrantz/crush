@@ -2,6 +2,11 @@ use crate::CrushResult;
 use crate::lang::errors::data_error;
 use crate::util::hex::from_hex;
 use std::convert::TryFrom;
+use std::ffi::OsString;
+use std::fmt::Write;
+use std::os::unix::ffi::OsStringExt;
+use std::path::PathBuf;
+use crate::util::escape::State::{Backslash, Normal};
 
 pub fn escape_without_quotes(s: &str) -> String {
     let mut res = String::with_capacity(s.len());
@@ -116,6 +121,81 @@ pub fn unescape(s: &str) -> CrushResult<String> {
         return data_error("Premature end of string");
     }
     Ok(res)
+}
+
+pub fn unescape_file(s: &str) -> CrushResult<PathBuf> {
+    use State::*;
+    let mut res = Vec::new();
+    let mut state = Normal;
+
+    for c in s[1..s.len() - 1].chars() {
+        match state {
+            Backslash => {
+                state = Normal;
+                match c {
+                    'n' => res.push('\n' as u8),
+                    'r' => res.push('\r' as u8),
+                    't' => res.push('\t' as u8),
+                    'e' => res.push('\x1b' as u8),
+                    'x' => state = Hex(String::with_capacity(2)),
+                    'u' => state = Unicode2(String::with_capacity(4)),
+                    'U' => state = Unicode4(String::with_capacity(8)),
+                    _ => {
+                        let mut b = [0; 4];
+                        let len = c.encode_utf8(&mut b).len();
+                        res.extend_from_slice(&b[0..len]);
+                    },
+                }
+            }
+
+            Normal => {
+                if c == '\\' {
+                    state = Backslash;
+                } else {
+                    let mut b = [0; 4];
+                    let len = c.encode_utf8(&mut b).len();
+                    res.extend_from_slice(&b[0..len]);
+                }
+            }
+
+            Hex(mut v) => {
+                v.push(c);
+                if v.len() < 2 {
+                    state = Hex(v)
+                } else {
+                    let bytes = from_hex(&v)?;
+                    res.extend_from_slice(&bytes);
+                    state = Normal
+                }
+            }
+
+            Unicode2(mut v) => {
+                v.push(c);
+                if v.len() < 4 {
+                    state = Unicode2(v)
+                } else {
+                    let bytes = from_hex(&v)?;
+                    res.extend_from_slice(&bytes);
+                    state = Normal
+                }
+            }
+
+            Unicode4(mut v) => {
+                v.push(c);
+                if v.len() < 8 {
+                    state = Unicode4(v)
+                } else {
+                    let bytes = from_hex(&v)?;
+                    res.extend_from_slice(&bytes);
+                    state = Normal
+                }
+            }
+        }
+    }
+    if state != Normal {
+        return data_error("Premature end of string");
+    }
+    Ok(OsString::from_vec(res).into())
 }
 
 #[cfg(test)]

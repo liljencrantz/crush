@@ -507,7 +507,6 @@ struct Touch {
 fn touch(mut context: CommandContext) -> CrushResult<()> {
     let file = context.this.file()?;
     let cfg = Touch::parse(context.remove_arguments(), context.global_state.printer())?;
-
     match utimensat(
         AT_FDCWD,
         &file,

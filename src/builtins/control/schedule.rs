@@ -25,15 +25,18 @@ use std::mem::swap;
 pub struct Schedule {
     #[description("the interval between heartbeats. ")]
     interval: Duration,
+
     #[description(
         "the delay for the first heartbeat. If no initial delay is specified, the first heartbeat will be sent immediately."
     )]
     initial_delay: Option<Duration>,
+
     #[description(
         "if heart beat delivery starts blocking, catch up by sending more heartbeats afterwards."
     )]
     #[default(false)]
     schedule_at_fixed_rate: bool,
+
     #[description("a command to run.")]
     command: Option<Command>,
 }

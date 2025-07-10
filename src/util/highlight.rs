@@ -70,14 +70,13 @@ pub fn syntax_highlight(
             (true, Token::String(name, _), _, Some(s)) => {
                 let mut next_scope = s.clone();
                 let mut error = false;
+                
+//                current_command = get_command(Value::from(s), &cmd_namespace_path, name)?;
+                
                 for p in &cmd_namespace_path {
                     match next_scope.get(p) {
-                        Ok(Some(Value::Scope(ss))) => {
-                            next_scope = ss;
-                        }
-                        _ => {
-                            error = true;
-                        }
+                        Ok(Some(Value::Scope(ss))) => next_scope = ss,
+                        _ => error = true,
                     }
                 }
                 current_command = match (error, next_scope.get(name)) {
@@ -118,6 +117,10 @@ pub fn syntax_highlight(
         prev = Some(tok);
     }
     Ok(res)
+}
+
+fn get_command(scope: Value, path: &Vec<&str>) -> Option<Command> {
+    todo!()
 }
 
 fn get_color<'a>(

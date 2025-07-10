@@ -50,6 +50,7 @@ use crate::lang::signature::number;
 
 pub type BinaryInputStream = Box<dyn BinaryReader + Send + Sync>;
 
+
 pub enum Value {
     Empty,
     String(Arc<str>),

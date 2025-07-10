@@ -14,11 +14,12 @@ use signature::signature;
     output = Known(ValueType::Empty),
     short = "Repeatedly execute the body for as long the condition is met.",
     long = "The loop body is optional. If not specified, the condition is executed until it returns false. This effectively means that the condition becomes the body, and the loop break check comes at the end of the loop.",
-    example = "while {./some_file:exists} {echo \"hello\"}"
+    example = "while {./some_file:exists} {echo \"hello\"}",
 )]
 pub struct While {
     #[description("the condition.")]
     condition: Command,
+    
     #[description("the command to invoke as long as the condition is true.")]
     body: Option<Command>,
 }

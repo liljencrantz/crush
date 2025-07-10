@@ -9,15 +9,17 @@ use signature::signature;
 #[signature(
     control.timeit,
     short = "Execute a command many times and estimate the execution time.",
-    example = "timeit {files|sort size}"
+    example = "timeit {files|sort size}",
 )]
 pub struct TimeIt {
     #[description("the command to time.")]
     it: Command,
+
     #[description(
         "the number of runs in each repeat. If unspecified, timeit will repeat enough times for each batch to take roughly 0.4 seconds."
     )]
     number: Option<usize>,
+    
     #[description("repeat count. The average speed in the fastest repeat will be returned.")]
     #[default(5usize)]
     repeat: usize,
