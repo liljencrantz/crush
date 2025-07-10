@@ -3,10 +3,8 @@ use crate::lang::errors::data_error;
 use crate::util::hex::from_hex;
 use std::convert::TryFrom;
 use std::ffi::OsString;
-use std::fmt::Write;
 use std::os::unix::ffi::OsStringExt;
 use std::path::PathBuf;
-use crate::util::escape::State::{Backslash, Normal};
 
 pub fn escape_without_quotes(s: &str) -> String {
     let mut res = String::with_capacity(s.len());

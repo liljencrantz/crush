@@ -156,7 +156,7 @@ fn eval_internal(
         Value::Command(command) => eval_command(command, this, local_arguments, context),
         Value::Type(t) => eval_type(t, local_arguments, context, location),
         Value::Struct(s) => eval_struct(s, local_arguments, context, location),
-        v => eval_other(v, local_arguments, context, location),
+        v => eval_other(v, local_arguments, context),
     }
 }
 
@@ -164,7 +164,6 @@ fn eval_other(
     value: Value,
     local_arguments: Vec<ArgumentDefinition>,
     context: JobContext,
-    location: Location,
 ) -> CrushResult<Option<ThreadId>> {
     if local_arguments.len() == 0 {
         context.output.send(value)?;

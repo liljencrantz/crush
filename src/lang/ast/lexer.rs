@@ -83,7 +83,7 @@ impl<'input> Lexer<'input> {
                     None => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion('\n'))),
                 },
 
-                Some((i, '!')) => return Some(Err(LexicalError::UnexpectedCharacter('!'))),
+                Some((_, '!')) => return Some(Err(LexicalError::UnexpectedCharacter('!'))),
 
                 Some((i, '@')) => {
                     let cc2 = self.chars.peek();

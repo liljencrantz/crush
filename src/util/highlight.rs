@@ -7,10 +7,8 @@ use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
 use std::cmp::min;
 use std::collections::HashMap;
-use crate::util::highlight::CommandContext::Empty;
 
 enum CommandContext {
-    Empty,
     Unknown,
     Known(Value),
 }
@@ -83,17 +81,16 @@ pub fn syntax_highlight(
             _ => false,
         };
 
-        match (new_command, tok, ntok, scope) {
-            (true, Token::String(name, _), _, Some(s)) => {
+        match (new_command, tok, ntok) {
+            (true, Token::String(name, _), _) => {
                 current_command = match &command_context {
-                    Empty => None,
                     CommandContext::Unknown => None,
                     CommandContext::Known(ctx) => ctx.field(name).unwrap_or(None).and_then(|v| {
                         if let Value::Command(cmd) = v {Some(cmd)} else {None}
                     }),
                 };
             }
-            (false, Token::String(name, _), Some(Token::Equals(_)), Some(s)) => {
+            (false, Token::String(name, _), Some(Token::Equals(_))) => {
                 latest_named_argument_info = Some((idx, name.to_string()));
             }
             _ => {}

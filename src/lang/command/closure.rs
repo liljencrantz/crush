@@ -240,9 +240,9 @@ impl CrushCommand for Closure {
         if let Some(this) = context.this {
             env.redeclare("this", this)?;
         }
-        
+
         self.closure_type.push_arguments_to_env(context.arguments, &mut cc)?;
-        
+
         if env.is_stopped() {
             return Ok(());
         }
@@ -319,7 +319,6 @@ fn compile_signature(
     state: &GlobalState,
 ) -> CrushResult<Vec<Parameter>> {
     let mut result = Vec::new();
-    let cc = CompileContext::new(env.clone(), state.clone());
     for p in signature {
         match p {
             ParameterDefinition::Normal(name, value_type, default, description) => {
@@ -546,7 +545,7 @@ impl<'a> ClosureSerializer<'a> {
     fn closure(&mut self, closure: &Closure) -> CrushResult<usize> {
         let mut serialized: model::Closure = model::Closure::default();
 
-        match &closure.closure_type { 
+        match &closure.closure_type {
             ClosureType::Block => {
                 serialized.closure_type = Some(model::closure::ClosureType::Block(true));
             }
@@ -557,10 +556,10 @@ impl<'a> ClosureSerializer<'a> {
                         model::command_closure::Name::NameValue(name.serialize(self.elements, self.state)? as u64)
                     }
                 });
-                
+
                 serialized.closure_type = Some(model::closure::ClosureType::Command(
                     model::CommandClosure {
-                        signature_data: vec![],
+                        signature_data: signature_data.iter().map(|p| self.parameter(p)).collect::<CrushResult<Vec<_>>>()?,
                         signature_string: signature_string.serialize(self.elements, self.state)? as u64,
                         short_help: short_help.serialize(self.elements, self.state)? as u64,
                         long_help: long_help.serialize(self.elements, self.state)? as u64,
@@ -573,7 +572,6 @@ impl<'a> ClosureSerializer<'a> {
         for j in &closure.jobs {
             serialized.job_definitions.push(self.job(j)?)
         }
-
 
         serialized.env = closure.parent_scope.serialize(self.elements, self.state)? as u64;
 
@@ -604,7 +602,7 @@ impl<'a> ClosureSerializer<'a> {
             description: None,
         })
     }
-    
+
     fn values(&mut self, values: &Vec<Value>) -> CrushResult<Values> {
         let mut vv = vec![];
         for v in values {
@@ -817,7 +815,7 @@ impl<'a> ClosureDeserializer<'a> {
                         .collect::<CrushResult<Vec<_>>>()?,
 
                      closure_type : match &s.closure_type {
-                         Some(model::closure::ClosureType::Block(_)) => 
+                         Some(model::closure::ClosureType::Block(_)) =>
                              ClosureType::Block,
                          Some(model::closure::ClosureType::Command(command_closure)) => {
                                  ClosureType::Command {
@@ -836,7 +834,7 @@ impl<'a> ClosureDeserializer<'a> {
                                  }
                              }
                          None => return serialization_error("Invalid command signature"),
-                     },        
+                     },
                     parent_scope: env,
 
                 }))
