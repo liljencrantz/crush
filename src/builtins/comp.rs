@@ -30,6 +30,9 @@ macro_rules! cmp {
     comp.gt,
     can_block = false,
     short = "True if left side is greater than right side",
+    long = "In expression mode, this method can be used via the the `>` operator.",
+    example = "gt 10 5",
+    example = "(10 > 5)",
     output = Known(ValueType::Bool),
 )]
 struct Gt {
@@ -43,6 +46,9 @@ struct Gt {
     comp.lt,
     can_block = false,
     short = "True if left side is less than right side",
+    long = "In expression mode, this method can be used via the the `<` operator.",
+    example = "lt 10 5",
+    example = "(10 < 5)",
     output = Known(ValueType::Bool),
 )]
 struct Lt {
@@ -56,6 +62,9 @@ struct Lt {
     comp.gte,
     can_block = false,
     short = "True if left side is greater than or equal right side",
+    long = "In expression mode, this method can be used via the the `>=` operator.",
+    example = "gte 10 5",
+    example = "(10 >+ 5)",
     output = Known(ValueType::Bool),
 )]
 struct Gte {
@@ -69,6 +78,9 @@ struct Gte {
     comp.lte,
     can_block = false,
     short = "True if left side is less than or equal than right side",
+    long = "In expression mode, this method can be used via the the `<=` operator.",
+    example = "lte 10 5",
+    example = "(10 <= 5)",
     output = Known(ValueType::Bool),
 )]
 struct Lte {
@@ -87,6 +99,9 @@ cmp!(Lte, lte, |o| o != Ordering::Greater);
     comp.eq,
     can_block = false,
     short = "True if left side is equal to right side",
+    long = "In expression mode, this method can be used via the the `==` operator.",
+    example = "eq 10 5",
+    example = "(10 == 5)",
     output = Known(ValueType::Bool),
 )]
 struct Eq {
@@ -105,6 +120,9 @@ pub fn eq(mut context: CommandContext) -> CrushResult<()> {
     comp.neq,
     can_block = false,
     short = "True if left side is not equal to right side",
+    long = "In expression mode, this method can be used via the the `!=` operator.",
+    example = "ne 10 5",
+    example = "(10 != 5)",
     output = Known(ValueType::Bool),
 )]
 struct Neq {
@@ -123,6 +141,9 @@ pub fn neq(mut context: CommandContext) -> CrushResult<()> {
     comp.not,
     can_block = false,
     short = "Negates the argument",
+    long = "In expression mode, this method can be used via the the `!` operator.",
+    example = "not $true",
+    example = "(!$true)",
     output = Known(ValueType::Bool),
 )]
 struct Not {

@@ -93,7 +93,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 Value::Command(
                     <dyn CrushCommand>::condition(
                         and,
-                        vec!["cond".to_string(), "__and__".to_string()],
+                        vec!["cond".to_string(), "and".to_string()],
                         "and condition:(bool|command)... -> boolean",
                         "True if all arguments are true",
                         Some("Every argument to and must be either a boolean or a command that returns a boolean.
@@ -101,7 +101,19 @@ The and command will check all arguments in order, and if any of them are false,
 will return false. If all conditions are true, and returns true.
 
 Do note that `and` is a short circuiting command, meaning that if one of the conditions
-is found to be false, `and` will not evaluate any remaining closures."),
+is found to be false, `and` will not evaluate any remaining closures.
+
+In expression mode, this method can be used via the the `and` operator.
+
+# Examples
+```
+# true, if $file exists and is a symlink
+and $($file:exists) {$(stat $file)[0]:is_symlink}
+
+# true, if $file exists and is a symlink
+($file.exists() and {stat($file)[0].is_symlink})
+```
+"),
                         vec![],
                     )))?;
 
@@ -110,7 +122,7 @@ is found to be false, `and` will not evaluate any remaining closures."),
                 Value::Command(
                     <dyn CrushCommand>::condition(
                         or,
-                        vec!["cond".to_string(), "__or__".to_string()],
+                        vec!["cond".to_string(), "or".to_string()],
                         "or condition:(bool|command)... -> boolean",
                         "True if any argument is true",
                         Some("Every argument to or must be either a `boolean` or a command that returns a `boolean`.
@@ -118,7 +130,21 @@ The or command will check all arguments in order, and if any of them are `true`,
 will return `true`. If all conditions are `false`, or returns `false`.
 
 Do note that `or` is a short circuiting command, meaning that if one of the conditions
-is found to be true, `or` will not evaluate any remaining closures."),
+is found to be true, `or` will not evaluate any remaining closures.
+
+In expression mode, this method can be used via the the `or` operator.
+
+# Examples
+```
+$stat_out := $(stat $file)[0]
+
+# true, if $file is either a symlink or a directory
+or $stat_out:is_symlink $stat_out:is_dir
+
+# true, if $file is either a symlink or a directory
+($stat_out.is_symlink or $stat_out.is_dir)
+```
+"),
                         vec![],
                     )))?;
             Ok(())

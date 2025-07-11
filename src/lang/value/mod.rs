@@ -103,7 +103,7 @@ impl DisplayNonRecursive for Value {
             Value::List(l) => l.fmt_non_recursive(f, seen),
             Value::Duration(d) => f.write_str(&duration_format(d)),
             Value::Scope(env) => env.fmt(f),
-            Value::Bool(v) => std::fmt::Display::fmt(if *v { "true" } else { "false" }, f),
+            Value::Bool(v) => std::fmt::Display::fmt(if *v { "$true" } else { "$false" }, f),
             Value::Dict(d) => d.fmt_non_recursive(f, seen),
             Value::Float(val) => std::fmt::Display::fmt(val, f),
             Value::Binary(v) => f.write_str(&format_buffer(v, true)),

@@ -152,14 +152,14 @@ pub fn operator(iop: impl Into<TrackedString>, l: Box<Node>, r: Box<Node>) -> Bo
         "==" => operator_function(&["global", "comp", "eq"], op.location, l, r),
         "!=" => operator_function(&["global", "comp", "neq"], op.location, l, r),
 
-        "and" => operator_function(&["global", "cond", "__and__"], op.location, l, r),
-        "or" => operator_function(&["global", "cond", "__or__"], op.location, l, r),
+        "and" => operator_function(&["global", "cond", "and"], op.location, l, r),
+        "or" => operator_function(&["global", "cond", "or"], op.location, l, r),
 
         "+" => operator_method("__add__", op.location, l, r),
         "-" => operator_method("__sub__", op.location, l, r),
 
         "*" => operator_method("__mul__", op.location, l, r),
-        "//" => operator_method("__div__", op.location, l, r),
+        "/" => operator_method("__div__", op.location, l, r),
 
         // Note that these operators reverse the arguments because the method exists on the second argument!
         "=~" => operator_method("match", op.location, r, l),
