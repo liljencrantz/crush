@@ -17,7 +17,6 @@
 * Make IFS configurable for cmd command
 * Add signal handlers to fix ^C and ^Z during regular execution
 * Dict literals in expression mode ({key: value})
-* {|$foo: $glob or $string or $regex|} to specify that an argument is one of several types
 * Better syntax highlighting for expression mode
 * Move yaml builtin to use saphyr
 * Figure out what to do about users/groups __getitem__

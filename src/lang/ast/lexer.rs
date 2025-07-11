@@ -507,6 +507,12 @@ impl<'input> Lexer<'input> {
                                 Token::LogicalOperator("==", Location::new(i, i + 2)).into(),
                             );
                         }
+                        Some((_, '~')) => {
+                            self.chars.next();
+                            return Some(
+                                Token::ComparisonOperator("=~", Location::new(i, i + 2)).into(),
+                            );
+                        }
                         _ => return Some(Token::Equals(Location::from(i)).into()),
                     }
                 }

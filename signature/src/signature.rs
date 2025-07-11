@@ -349,7 +349,7 @@ fn number_type_data(
             crate::lang::value::ValueType::Integer,
             crate::lang::value::ValueType::Float,
         ])},
-        signature: format!("{}=(float|integer)", name.to_string()),
+        signature: format!("{}=$(one_of $float $integer)", name.to_string()),
         initialize: quote! { let mut #name = None; },
         mappings: quote! {
             (Some(#name_literal), crate::lang::value::Value::Float(_value)) => #name = Some(Number::Float(_value)),
@@ -418,7 +418,7 @@ fn text_type_data(
             crate::lang::value::ValueType::String,
             crate::lang::value::ValueType::File,
         ])},
-        signature: format!("{}=(string|file)", name.to_string()),
+        signature: format!("{}=$(one_of $string $file)", name.to_string()),
         initialize: quote! { let mut #name = None; },
         mappings: quote! {
             (Some(#name_literal), crate::lang::value::Value::String(_value)) => #name = Some(Text::String(_value)),
@@ -482,10 +482,7 @@ fn files_type_data(
     let name_literal = proc_macro2::Literal::string(&name.to_string());
     Ok(TypeData {
         allowed_values: None,
-        signature: format!(
-            "[{}=(file|glob|regex|list|table|table_input_stream)...]",
-            name.to_string()
-        ),
+        signature: format!("@ $(one_of $file $glob $re $list $table $table_input_stream)"),
         initialize: quote! { let mut #name = crate::lang::signature::files::Files::new(); },
         mappings: quote! { (Some(#name_literal), value) => #name.expand(value)?, },
         unnamed_mutate: if is_unnamed_target {
@@ -512,7 +509,7 @@ fn patterns_type_data(
     let name_literal = proc_macro2::Literal::string(&name.to_string());
     Ok(TypeData {
         allowed_values: None,
-        signature: format!("[{}=(string|glob|regex)...]", name.to_string()),
+        signature: format!("@ $(one_of $string $glob $re)"),
         initialize: quote! { let mut #name = crate::lang::signature::patterns::Patterns::new(); },
         mappings: quote! {
             (Some(#name_literal), crate::lang::value::Value::Glob(_value)) => #name.expand_glob(_value),
