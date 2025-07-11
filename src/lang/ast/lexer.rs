@@ -1,5 +1,5 @@
-use crate::lang::ast::location::Location;
-use crate::lang::ast::token::Token;
+use super::location::Location;
+use super::token::Token;
 use std::fmt::{Display, Formatter, Write};
 use std::iter::Peekable;
 use std::str::CharIndices;

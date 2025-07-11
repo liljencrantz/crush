@@ -243,20 +243,28 @@ impl ArgumentEvaluator for Vec<ArgumentDefinition> {
 
 impl Display for ArgumentDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match &self.argument_type {
-            ArgumentType::Named(name) => {
+        match (&self.argument_type, &self.value) {
+            (ArgumentType::Named(name), ValueDefinition::Identifier(ts))
+                if ts.string.eq("true") =>
+            {
+                f.write_str("--")?;
+                f.write_str(&name.to_string())
+            }
+            (ArgumentType::Named(name), _) => {
                 f.write_str(&name.to_string())?;
                 f.write_str("=")?;
+                self.value.repr(f)
             }
-            ArgumentType::Unnamed => {}
-            ArgumentType::ArgumentList => {
+            (ArgumentType::Unnamed, _) => self.value.repr(f),
+            (ArgumentType::ArgumentList, _) => {
                 f.write_str("@ ")?;
+                self.value.repr(f)
             }
-            ArgumentType::ArgumentDict => {
+            (ArgumentType::ArgumentDict, _) => {
                 f.write_str("@@ ")?;
+                self.value.repr(f)
             }
         }
-        self.value.repr(f)
     }
 }
 

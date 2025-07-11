@@ -1,6 +1,6 @@
-use crate::lang::ast::lexer::Spanned;
-use crate::lang::ast::location::Location;
-use crate::lang::ast::tracked_string::TrackedString;
+use super::lexer::Spanned;
+use super::location::Location;
+use super::tracked_string::TrackedString;
 use std::fmt::{Display, Formatter};
 
 #[derive(Copy, Clone, Debug, PartialEq)]

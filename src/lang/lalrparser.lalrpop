@@ -81,12 +81,12 @@ ExprAssignment: Box<Node> = {
 
 ExprLogical: Box<Node> = {
     ExprComparison,
-    <l: ExprLogical> <op: LogicalOperator> <c: ExprComparison> => operator(op, l, c),
+    <l: ExprLogical> <op: LogicalOperator> <c: ExprComparison> => expr_operator(op, l, c),
 }
 
 ExprComparison: Box<Node> = {
     ExprTerm,
-    <c: ExprComparison> <op: ComparisonOperator> <t: ExprTerm> =>operator(op, c, t),
+    <c: ExprComparison> <op: ComparisonOperator> <t: ExprTerm> => expr_operator(op, c, t),
 }
 
 ExprTerm: Box<Node> = {

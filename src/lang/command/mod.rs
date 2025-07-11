@@ -78,6 +78,7 @@ pub trait CrushCommand: Help + Display {
     fn output_type<'a>(&'a self, input: &'a OutputType) -> Option<&'a ValueType>;
     /// Information about the parameters that can be passed to this command, which is useful for providing completions
     fn completion_data(&self) -> &[Parameter];
+    fn definition(&self) -> Option<String>;
 }
 
 pub trait TypeMap {
@@ -285,6 +286,10 @@ impl CrushCommand for SimpleCommand {
     fn completion_data(&self) -> &[Parameter] {
         &self.completion_data
     }
+
+    fn definition(&self) -> Option<String> {
+        None
+    }
 }
 
 impl Help for SimpleCommand {
@@ -369,6 +374,10 @@ impl CrushCommand for ConditionCommand {
     fn completion_data(&self) -> &[Parameter] {
         &self.completion_data
     }
+
+    fn definition(&self) -> Option<String> {
+        None
+    }
 }
 
 impl Help for ConditionCommand {
@@ -418,8 +427,10 @@ impl Display for Parameter {
             (false, false) => {
                 f.write_str("$")?;
                 self.name.fmt(f)?;
-                f.write_str(": $")?;
-                self.value_type.fmt(f)?;
+                if self.value_type != ValueType::Any {
+                    f.write_str(": $")?;
+                    self.value_type.fmt(f)?;
+                }
                 if let Some(default) = &self.default {
                     f.write_str(" = ")?;
                     default.fmt(f)?;
@@ -538,6 +549,10 @@ impl CrushCommand for BoundCommand {
 
     fn completion_data(&self) -> &[Parameter] {
         self.command.completion_data()
+    }
+
+    fn definition(&self) -> Option<String> {
+        self.command.definition()
     }
 }
 

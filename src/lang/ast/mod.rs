@@ -1,9 +1,9 @@
-use crate::lang::argument::ArgumentDefinition;
-use crate::lang::command_invocation::CommandInvocation;
-use crate::lang::errors::{CrushResult, error};
-use crate::lang::job::Job;
-use crate::lang::state::scope::Scope;
-use crate::lang::value::ValueDefinition;
+use super::argument::ArgumentDefinition;
+use super::command_invocation::CommandInvocation;
+use super::errors::{CrushResult, error};
+use super::job::Job;
+use super::state::scope::Scope;
+use super::value::ValueDefinition;
 use crate::util::user_map::get_current_username;
 use crate::util::user_map::get_user;
 use location::Location;
@@ -142,7 +142,7 @@ pub fn negate(n: Box<Node>) -> Box<Node> {
     ))
 }
 
-pub fn operator(iop: impl Into<TrackedString>, l: Box<Node>, r: Box<Node>) -> Box<Node> {
+pub fn expr_operator(iop: impl Into<TrackedString>, l: Box<Node>, r: Box<Node>) -> Box<Node> {
     let op = iop.into();
     match op.string.as_str() {
         "<" => operator_function(&["global", "comp", "lt"], op.location, l, r),
@@ -154,13 +154,7 @@ pub fn operator(iop: impl Into<TrackedString>, l: Box<Node>, r: Box<Node>) -> Bo
 
         "and" => operator_function(&["global", "cond", "and"], op.location, l, r),
         "or" => operator_function(&["global", "cond", "or"], op.location, l, r),
-
-        "+" => operator_method("__add__", op.location, l, r),
-        "-" => operator_method("__sub__", op.location, l, r),
-
-        "*" => operator_method("__mul__", op.location, l, r),
-        "/" => operator_method("__div__", op.location, l, r),
-
+        
         // Note that these operators reverse the arguments because the method exists on the second argument!
         "=~" => operator_method("match", op.location, r, l),
         "!~" => operator_method("not_match", op.location, r, l),

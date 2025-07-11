@@ -1,9 +1,9 @@
 use crate::lang::argument::{ArgumentDefinition, SwitchStyle};
-use crate::lang::ast::location::Location;
-use crate::lang::ast::node::TextLiteralStyle::{Quoted, Unquoted};
-use crate::lang::ast::parameter_node::ParameterNode;
-use crate::lang::ast::tracked_string::TrackedString;
-use crate::lang::ast::{CommandNode, JobListNode, JobNode, expand_user, propose_name};
+use super::location::Location;
+use super::node::TextLiteralStyle::{Quoted, Unquoted};
+use super::parameter_node::ParameterNode;
+use super::tracked_string::TrackedString;
+use super::{CommandNode, JobListNode, JobNode, expand_user, propose_name};
 use crate::lang::command::{Command, ParameterDefinition};
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::{CrushResult, error};

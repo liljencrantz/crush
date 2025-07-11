@@ -1,7 +1,6 @@
 # Todo
 
 * Rewrite all tests for new syntax
-* Add some way to extract the definition from a closure, e.g. `$my_function:definition`
 * Add command field to printer
 * Allow commands to specify the type of input they expect for better/earlier validation
 * Write a command that extracts all help into html

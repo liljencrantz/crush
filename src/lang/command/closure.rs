@@ -311,6 +311,16 @@ impl CrushCommand for Closure {
     fn completion_data(&self) -> &[Parameter] {
         &self.closure_type.completion_data()
     }
+
+    fn definition(&self) -> Option<String> {
+/*
+        let buf = BufWriter::new(Vec::new());
+        let f = Formatter::new(&mut buf, FormattingOptions::default());
+        self.repr(f);
+        Some(String::from_utf8(buf.into_inner().unwrap()).unwrap())
+ */
+        Some(self.to_string())
+    }
 }
 
 fn compile_signature(

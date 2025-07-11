@@ -1,9 +1,9 @@
-use crate::lang::ast::location::Location;
-use crate::lang::ast::token::Token;
+use super::location::Location;
+use super::token::Token;
 use std::fmt::{Display, Formatter};
 
 #[derive(Clone, Debug)]
-pub struct TrackedString {
+pub struct  TrackedString {
     pub string: String,
     pub location: Location,
 }

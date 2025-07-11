@@ -1,6 +1,6 @@
 use crate::CrushResult;
-use crate::lang::ast::Node;
-use crate::lang::ast::tracked_string::TrackedString;
+use super::Node;
+use super::tracked_string::TrackedString;
 use crate::lang::command::ParameterDefinition;
 use crate::lang::value::{Value, ValueDefinition, ValueType};
 use crate::state::scope::Scope;

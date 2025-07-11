@@ -1,4 +1,4 @@
-use crate::lang::command::CrushCommand;
+use crate::lang::command::{Command, CrushCommand};
 use crate::lang::command::OutputType::Known;
 use crate::lang::data::table::ColumnType;
 use crate::lang::errors::CrushResult;
@@ -42,6 +42,26 @@ struct Materialize {}
 
 fn materialize(context: CommandContext) -> CrushResult<()> {
     context.output.send(context.input.recv()?.materialize()?)
+}
+
+#[signature(
+    types.definition,
+    can_block = true,
+    output = Known(ValueType::String),
+    short = "Show the definition of the specified closure",
+    long = "Returns nothing if the command is not a closure",
+    long = "",
+    long = "Note that the outputted may be significantly reformatted, including switching code between expression mode and command mode.",
+    example = "$all_the_files := {files --recursive /}",
+    example = "definition $all_the_files",
+)]
+struct Definition {
+    command: Command,
+}
+
+fn definition(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = Definition::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.output.send(cfg.command.definition().map(|s| Value::from(s)).unwrap_or(Value::Empty))
 }
 
 fn new(mut context: CommandContext) -> CrushResult<()> {
@@ -271,6 +291,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             TypeOf::declare(env)?;
             Match::declare(env)?;
             Materialize::declare(env)?;
+            Definition::declare(env)?;
 
             env.declare("file", Value::Type(ValueType::File))?;
             env.declare("type", Value::Type(ValueType::Type))?;
