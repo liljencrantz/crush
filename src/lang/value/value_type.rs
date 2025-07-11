@@ -10,6 +10,7 @@ use ordered_map::OrderedMap;
 use regex::Regex;
 use std::fmt::{Display, Formatter};
 use std::sync::OnceLock;
+use itertools::Itertools;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum ValueType {
@@ -35,6 +36,7 @@ pub enum ValueType {
     BinaryInputStream,
     Binary,
     Type,
+    OneOf(Vec<ValueType>),
 }
 
 pub fn empty_methods() -> &'static OrderedMap<String, Command> {
@@ -51,7 +53,15 @@ impl ValueType {
         Known(self.clone())
     }
 
-    pub fn either(_options: Vec<ValueType>) -> ValueType {
+    pub fn one_of(options: Vec<ValueType>) -> ValueType { 
+        let mut res = Vec::new();
+        for vt in options {
+            match vt { 
+                ValueType::Any => return ValueType::Any,
+                ValueType::OneOf(mut vt) => res.append(&mut vt),
+                _ => res.push(vt),
+            }
+        }
         ValueType::Any
     }
 
@@ -73,12 +83,17 @@ impl ValueType {
             ValueType::Binary => &types::binary::methods(),
             ValueType::Scope => &types::scope::methods(),
             ValueType::Struct => &types::r#struct::methods(),
+            ValueType::OneOf(_) => &types::one_of::methods(),
             _ => empty_methods(),
         }
     }
 
     pub fn is(&self, value: &Value) -> bool {
-        (*self == ValueType::Any) || (*self == value.value_type())
+        match self { 
+            ValueType::Any => true,
+            ValueType::OneOf(types) => types.iter().any(|t| t.is(value)),
+            _ => *self == value.value_type(),
+        }
     }
 
     pub fn is_compatible_with(&self, pattern: &ValueType) -> bool {
@@ -110,9 +125,11 @@ impl ValueType {
             }
             ValueType::Table(r) => ValueType::Table(ColumnType::materialize(r)?),
             ValueType::List(l) => ValueType::List(Box::from(l.materialize()?)),
-            ValueType::Dict(k, v) => {
-                ValueType::Dict(Box::from(k.materialize()?), Box::from(v.materialize()?))
-            }
+            ValueType::Dict(k, v) => 
+                ValueType::Dict(Box::from(k.materialize()?), Box::from(v.materialize()?)),
+            
+            ValueType::OneOf(types) => 
+                ValueType::OneOf(types.iter().map(|t| t.materialize()).collect::<CrushResult<Vec<_>>>()?),
         })
     }
 
@@ -126,6 +143,7 @@ impl ValueType {
             | ValueType::TableInputStream(_)
             | ValueType::Struct
             | ValueType::Table(_) => false,
+            ValueType::OneOf(types) => types.iter().all(|t| t.is_hashable()),
             _ => true,
         }
     }
@@ -156,7 +174,8 @@ impl ValueType {
             | ValueType::Dict(_, _)
             | ValueType::TableOutputStream(_)
             | ValueType::TableInputStream(_)
-            | ValueType::Table(_) => true,
+            | ValueType::Table(_) 
+            | ValueType::OneOf(_) => true,
             _ => false,
         }
     }
@@ -208,6 +227,7 @@ impl Help for ValueType {
             ValueType::BinaryInputStream => "A stream of binary data.",
             ValueType::Binary => "Binary data.",
             ValueType::Type => "A type.",
+            ValueType::OneOf(types) => return format!("One of {}",types.iter().map(|t| t.to_string()).join(", ")),
         }
         .to_string()
     }
@@ -292,7 +312,7 @@ impl Display for ValueType {
             ValueType::Time => f.write_str("time"),
             ValueType::Duration => f.write_str("duration"),
             ValueType::Glob => f.write_str("glob"),
-            ValueType::Regex => f.write_str("regex"),
+            ValueType::Regex => f.write_str("re"),
             ValueType::Command => f.write_str("command"),
             ValueType::File => f.write_str("file"),
             ValueType::TableInputStream(columns) => {
@@ -338,6 +358,14 @@ impl Display for ValueType {
             ValueType::BinaryInputStream => f.write_str("binary_stream"),
             ValueType::Binary => f.write_str("binary"),
             ValueType::Type => f.write_str("type"),
+            ValueType::OneOf(types) => {
+                f.write_str("one_of")?;
+                for i in types.iter() {
+                    f.write_str(" ")?;
+                    i.subfmt(f)?;
+                }
+                Ok(())
+            }
         }
     }
 }

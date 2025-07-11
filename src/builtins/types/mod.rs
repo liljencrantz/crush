@@ -28,6 +28,7 @@ pub mod table_input_stream;
 pub mod table_output_stream;
 pub mod time;
 pub mod r#struct;
+pub mod one_of;
 
 #[signature(
     types.materialize,
@@ -318,6 +319,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare("table_input_stream", Value::Type(ValueType::TableInputStream(vec![])))?;
             env.declare("table_output_stream", Value::Type(ValueType::TableOutputStream(vec![])))?;
             env.declare("struct", Value::Type(ValueType::Struct))?;
+            env.declare("one_of", Value::Type(ValueType::OneOf(vec![])))?;
             Ok(())
         }))?;
     root.r#use(&e);

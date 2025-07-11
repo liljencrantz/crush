@@ -345,7 +345,7 @@ fn number_type_data(
     let name_literal = proc_macro2::Literal::string(&name.to_string());
     Ok(TypeData {
         allowed_values: None,
-        crush_internal_type: quote! {crate::lang::value::ValueType::either(vec![
+        crush_internal_type: quote! {crate::lang::value::ValueType::one_of(vec![
             crate::lang::value::ValueType::Integer,
             crate::lang::value::ValueType::Float,
         ])},
@@ -414,7 +414,7 @@ fn text_type_data(
     let name_literal = proc_macro2::Literal::string(&name.to_string());
     Ok(TypeData {
         allowed_values: None,
-        crush_internal_type: quote! {crate::lang::value::ValueType::either(vec![
+        crush_internal_type: quote! {crate::lang::value::ValueType::one_of(vec![
             crate::lang::value::ValueType::String,
             crate::lang::value::ValueType::File,
         ])},
@@ -551,7 +551,7 @@ fn patterns_type_data(
             })
         },
         assign: quote! { #name, },
-        crush_internal_type: quote! {crate::lang::value::ValueType::either(vec![
+        crush_internal_type: quote! {crate::lang::value::ValueType::one_of(vec![
             crate::lang::value::ValueType::String,
             crate::lang::value::ValueType::Glob,
             crate::lang::value::ValueType::Regex,

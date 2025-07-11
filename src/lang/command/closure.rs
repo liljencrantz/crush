@@ -313,12 +313,6 @@ impl CrushCommand for Closure {
     }
 
     fn definition(&self) -> Option<String> {
-/*
-        let buf = BufWriter::new(Vec::new());
-        let f = Formatter::new(&mut buf, FormattingOptions::default());
-        self.repr(f);
-        Some(String::from_utf8(buf.into_inner().unwrap()).unwrap())
- */
         Some(self.to_string())
     }
 }
@@ -389,16 +383,12 @@ fn format_default(default: &Option<ValueDefinition>) -> String {
     }
 }
 
-fn create_signature_string(name: &Option<String>, signature: &Vec<ParameterDefinition>) -> String {
+fn create_signature_string(name: &Option<String>, signature: &Vec<Parameter>) -> String {
     format!(
         "{} {}",
         name.as_deref().unwrap_or("<anonymous command>"),
         signature
             .iter()
-            .filter(|p| match p {
-                ParameterDefinition::Meta(_, _) => false,
-                _ => true,
-            })
             .map(|p| p.to_string())
             .collect::<Vec<_>>()
             .join(" "))
@@ -481,12 +471,13 @@ impl Closure {
         state: &GlobalState,
     ) -> CrushResult<Closure> {
         let name = name.map(|n| n.string);
+        let signature_data = compile_signature(&signature, parent_scope, state)?;
         Ok(Closure {
             jobs: job_definitions,
             parent_scope: parent_scope.clone(),
             closure_type: ClosureType::Command {
-                signature_data: compile_signature(&signature, parent_scope, state)?,
-                signature_string: create_signature_string(&name, &signature),
+                signature_string: create_signature_string(&name, &signature_data),
+                signature_data,
                 short_help: create_short_help(&signature),
                 long_help: create_long_help(&signature),
                 name,

@@ -12,13 +12,13 @@ use crate::lang::serialization::model;
 use crate::lang::serialization::model::{Element, element};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
 use crate::lang::state::contexts::{CommandContext, CompileContext};
+use crate::lang::state::global_state::GlobalState;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueDefinition, ValueType};
 use closure::Closure;
 use ordered_map::OrderedMap;
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
-use crate::lang::state::global_state::GlobalState;
 
 pub type Command = Arc<dyn CrushCommand + Send + Sync>;
 
@@ -135,7 +135,7 @@ struct SimpleCommand {
 }
 
 /**
-    A command that can block iff any of its arguments can block, e.g. `and` or `or`.
+A command that can block iff any of its arguments can block, e.g. `and` or `or`.
 */
 struct ConditionCommand {
     call: fn(context: CommandContext) -> CrushResult<()>,
@@ -154,13 +154,16 @@ impl dyn CrushCommand {
         env: &Scope,
         state: &GlobalState,
     ) -> CrushResult<Command> {
-        Ok(Arc::from(Closure::command(name, signature, job_definitions, env, state)?))
+        Ok(Arc::from(Closure::command(
+            name,
+            signature,
+            job_definitions,
+            env,
+            state,
+        )?))
     }
 
-    pub fn closure_block(
-        job_definitions: Vec<Job>,
-        env: &Scope,
-    ) -> Command {
+    pub fn closure_block(job_definitions: Vec<Job>, env: &Scope) -> Command {
         Arc::from(Closure::block(job_definitions, env))
     }
 
@@ -428,8 +431,14 @@ impl Display for Parameter {
                 f.write_str("$")?;
                 self.name.fmt(f)?;
                 if self.value_type != ValueType::Any {
-                    f.write_str(": $")?;
-                    self.value_type.fmt(f)?;
+                    if self.value_type.is_parametrized() {
+                        f.write_str(": $(")?;
+                        self.value_type.fmt(f)?;
+                        f.write_str(")")?;
+                    } else {
+                        f.write_str(": $")?;
+                        self.value_type.fmt(f)?;
+                    }
                 }
                 if let Some(default) = &self.default {
                     f.write_str(" = ")?;
@@ -460,8 +469,14 @@ pub enum ParameterDefinition {
         Option<ValueDefinition>,
         Option<TrackedString>,
     ),
-    Named{name: TrackedString, description: Option<TrackedString>},
-    Unnamed{name: TrackedString, description: Option<TrackedString>},
+    Named {
+        name: TrackedString,
+        description: Option<TrackedString>,
+    },
+    Unnamed {
+        name: TrackedString,
+        description: Option<TrackedString>,
+    },
     Meta(TrackedString, TrackedString),
 }
 
@@ -479,12 +494,12 @@ impl Display for ParameterDefinition {
                 }
                 Ok(())
             }
-            ParameterDefinition::Named{name, ..} => {
+            ParameterDefinition::Named { name, .. } => {
                 f.write_str("@@")?;
                 name.fmt(f)?;
                 Ok(())
             }
-            ParameterDefinition::Unnamed{name, ..} => {
+            ParameterDefinition::Unnamed { name, .. } => {
                 f.write_str("@")?;
                 name.fmt(f)?;
                 Ok(())

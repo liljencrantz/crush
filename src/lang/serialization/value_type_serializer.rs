@@ -67,6 +67,12 @@ impl Serializable<ValueType> for ValueType {
                         .map(|t| ColumnType::deserialize(*t as usize, elements, state))
                         .collect::<CrushResult<Vec<_>>>()?,
                 )),
+                model::r#type::Type::OneOf(of) => Ok(ValueType::OneOf(
+                    of.types
+                        .iter()
+                        .map(|t| ValueType::deserialize(*t as usize, elements, state))
+                        .collect::<CrushResult<Vec<_>>>()?,
+                )),
             }
         } else {
             error("Invalid type")
@@ -103,6 +109,18 @@ impl Serializable<ValueType> for ValueType {
                 elements.push(model::Element {
                     element: Some(element::Element::Type(model::Type {
                         r#type: Some(model::r#type::Type::ListType(l)),
+                    })),
+                });
+                return Ok(idx);
+            }
+            ValueType::OneOf(types) => {
+                let l = model::OneOf {
+                    types: types.iter().map(|t| t.serialize(elements, state).map(|idx| idx as u64)).collect::<CrushResult<Vec<_>>>()?
+                };
+                let idx = elements.len();
+                elements.push(model::Element {
+                    element: Some(element::Element::Type(model::Type {
+                        r#type: Some(model::r#type::Type::OneOf(l)),
                     })),
                 });
                 return Ok(idx);

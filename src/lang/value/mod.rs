@@ -548,6 +548,7 @@ impl Value {
             ValueType::Any => error("Invalid convert"),
             ValueType::BinaryInputStream => error("invalid convert"),
             ValueType::Type => error("invalid convert"),
+            ValueType::OneOf(_) => error("Can't convert to multiple types")
         }
     }
 

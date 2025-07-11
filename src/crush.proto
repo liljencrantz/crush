@@ -290,6 +290,7 @@ message Type {
     TableType table_type = 4;
     TableType table_input_stream_type = 5;
     TableType table_output_stream_type = 6;
+    OneOf one_of = 7;
   }
 }
 
@@ -341,4 +342,8 @@ message Struct {
 message Member {
   uint64 name = 1;
   uint64 value = 2;
+}
+
+message OneOf {
+    repeated uint64 types = 1;
 }
