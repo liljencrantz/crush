@@ -69,7 +69,7 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
 #[signature(
     io.lines.to,
     can_block = true,
-    short = "Write specified iterator of strings to a file (or convert to BinaryStream) separated by newlines"
+    short = "Write specified stream of strings to a file (or convert to BinaryStream) separated by newlines"
 )]
 struct To {
     #[unnamed()]

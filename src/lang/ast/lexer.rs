@@ -96,7 +96,7 @@ impl<'input> Lexer<'input> {
                     }
                 }
 
-                Some((i, '=')) => 
+                Some((i, '=')) =>
                     return Some(Token::Equals(Location::from(i)).into()),
 
                 Some((i, '#')) => {
@@ -568,12 +568,8 @@ impl<'input> Lexer<'input> {
                     let s = &self.full_str[i..end_idx + 1];
 
                     return match s {
-                        "and" => {
-                            Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into())
-                        }
-                        "or" => {
-                            Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into())
-                        }
+                        "and" => Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into()),
+                        "or" => Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into()),
                         "for" => Some(Token::For(Location::new(i, end_idx + 1)).into()),
                         "while" => Some(Token::While(Location::new(i, end_idx + 1)).into()),
                         "loop" => Some(Token::Loop(Location::new(i, end_idx + 1)).into()),

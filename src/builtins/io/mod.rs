@@ -15,6 +15,7 @@ use std::path::PathBuf;
 
 mod bin;
 mod csv;
+mod hex;
 mod http;
 pub mod json;
 mod lines;
@@ -185,6 +186,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             split::declare(env)?;
             words::declare(env)?;
             yaml::declare(env)?;
+            hex::declare(env)?;
 
             http::Http::declare(env)?;
             Echo::declare(env)?;
