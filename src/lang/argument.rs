@@ -216,7 +216,7 @@ impl ArgumentEvaluator for Vec<ArgumentDefinition> {
                                 res.push(Argument::unnamed(v, a.location));
                             }
                         }
-                        _ => return argument_error_legacy("Argument list must be of type list"),
+                        v => return argument_error_legacy(format!("Argument list must be of type list, was of type {}", v.value_type())),
                     },
 
                     ArgumentType::ArgumentDict => match a.value.eval_and_bind(context)? {
@@ -232,7 +232,7 @@ impl ArgumentEvaluator for Vec<ArgumentDefinition> {
                                 }
                             }
                         }
-                        _ => return argument_error_legacy("Argument list must be of type list"),
+                        v => return argument_error_legacy(format!("Argument dict must be of type dict, was of type {}", v.value_type())),
                     },
                 }
             }

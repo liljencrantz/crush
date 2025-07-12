@@ -122,7 +122,7 @@ impl ClosureType {
                 let mut unnamed_name = None;
                 let mut named_name = None;
                 for param in signature_data {
-                    match (param.named, param.unnamed) {
+                    match (param.unnamed, param.named) {
                         (false, false) => {
                             let value: Value;
 
