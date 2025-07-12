@@ -24,6 +24,7 @@ mod split;
 mod toml;
 mod words;
 mod yaml;
+mod base64;
 
 #[signature(
     io.val,
@@ -187,6 +188,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             words::declare(env)?;
             yaml::declare(env)?;
             hex::declare(env)?;
+            base64::declare(env)?;
 
             http::Http::declare(env)?;
             Echo::declare(env)?;

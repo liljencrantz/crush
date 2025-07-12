@@ -28,3 +28,4 @@
 * When a closure specifies a list-type parameter, make the argument parser accept multiple instances of the specialization that are then turned into a list.
 * The Files type for signatures has different valid values when serving as input and output. This makes the documentation misleading. Split in two?
 * base64 lib
+* $binary_stream:pipe
