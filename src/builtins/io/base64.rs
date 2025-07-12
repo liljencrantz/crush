@@ -7,6 +7,7 @@ use crate::lang::{value::Value, value::ValueType};
 use signature::signature;
 use std::io::{BufReader, Read, Write};
 use base64::Engine;
+use base64::engine::GeneralPurpose;
 
 #[signature(
     io.base64.from,
@@ -14,12 +15,19 @@ use base64::Engine;
     output = Known(ValueType::BinaryInputStream),
     short = "Read a Base64 value and decode it.",
     long = "If no file is specified, use the input, which must be a binary or a string.",
-    example = "\"68656c6c6f2c20776f726c6421\" | base64:from",
+    long = "",
+    long = "The standard alphabet follows RFC 4648, and uses `a`-`z`, `A`-`Z`, `0`-`9`, `+`, and `/`. The urlsafe alphabet uses `a-`z, `A`-`Z`, `0`-`9`, `-`, and `.`. Both use `=` for padding.",
+    example = "Will output hello, world!",
+    example = "\"aGVsbG8sIHdvcmxkIQ==\" | base64:from",
 )]
 struct FromSignature {
     #[unnamed()]
-    #[description("the files to read from (read from input if no file is specified).")]
+    #[description("the files to read from. Read from input if no file is specified.")]
     files: Files,
+    #[allowed("standard", "urlsafe")]
+    #[default("standard")]
+    #[description("base64 encoding style to use.")]
+    alphabet: String,
 }
 
 pub fn from(context: CommandContext) -> CrushResult<()> {
@@ -30,7 +38,7 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
     let mut done = false;
     let mut bufin = [0; 4096];
     let mut bufout = [0; 1024 * 3];
-    let codec = base64::prelude::BASE64_STANDARD;
+    let codec = codec(&cfg.alphabet)?;
 
     loop {
         let mut pos = 0;
@@ -62,21 +70,38 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::BinaryInputStream),
     short = "Write specified binary or string as Base64",
     long = "If no file is specified, produce a binary stream as output.",
+    long = "",
+    long = "The standard alphabet follows RFC 4648, and uses `a`-`z`, `A`-`Z`, `0`-`9`, `+`, and `/`. The urlsafe alphabet uses `a-`z, `A`-`Z`, `0`-`9`, `-`, and `.`. Both use `=` for padding.",
+    example = "Will output aGVsbG8sIHdvcmxkIQ==",
     example = "\"hello, world!\" | base64:to",
 )]
 struct To {
     #[unnamed()]
+    #[description("the file to write to. Write to output if no file is specified.")]
     file: Files,
+    #[allowed("standard", "urlsafe")]
+    #[default("standard")]
+    #[description("base64 encoding style to use.")]
+    alphabet: String,
+}
+
+fn codec(name: &str) -> CrushResult<GeneralPurpose> {
+    match name {
+        "standard" => Ok(base64::prelude::BASE64_STANDARD),
+        "urlsafe" => Ok(base64::prelude::BASE64_URL_SAFE),
+        _ => argument_error_legacy("Unknown base64 alphabet"),
+    }
 }
 
 pub fn to(context: CommandContext) -> CrushResult<()> {
     let cfg = To::parse(context.arguments, &context.global_state.printer())?;
     let mut out = cfg.file.writer(context.output)?;
-    let codec = base64::prelude::BASE64_STANDARD;
+    let codec = codec(&cfg.alphabet)?;
+
     match context.input.recv()? {
         Value::String(str) => {
             let input = str.as_bytes();
-            let res = codec.encode(input);            
+            let res = codec.encode(input);
             out.write(res.as_bytes())?;
         }
         Value::Binary(input) => {
@@ -86,7 +111,7 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
         Value::BinaryInputStream(mut stream) => {
             let mut buf = [0; 1024 * 3];
             let mut buf2 = [0; 1024 * 4];
-            let mut done = false;            
+            let mut done = false;
             loop {
                 let mut pos = 0;
                 loop {
@@ -98,7 +123,7 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
                     pos += read;
                     if pos == buf.len() {
                         break;
-                    }               
+                    }
                 }
                 if pos > 0 {
                     let written = codec.encode_slice(&buf[0..pos], &mut buf2).unwrap();

@@ -56,6 +56,7 @@ pub enum CrushErrorType {
     AddrParseError(std::net::AddrParseError),
     ToStrError(ToStrError),
     Message(markdown::message::Message),
+    FromHexError(hex::FromHexError)
 }
 
 #[derive(Debug)]
@@ -128,6 +129,7 @@ impl CrushError {
             AddrParseError(e) => e.to_string(),
             ToStrError(e) => e.to_string(),
             Message(m) => m.to_string(),
+            FromHexError(e) => e.to_string(),
             #[cfg(target_os = "linux")]
             DbusError(e) => e.message().unwrap_or("").to_string(),
             #[cfg(target_os = "linux")]
@@ -213,6 +215,16 @@ impl From<regex::Error> for CrushError {
     fn from(e: regex::Error) -> Self {
         CrushError {
             error_type: RegexError(e),
+            location: None,
+            definition: None,
+        }
+    }
+}
+
+impl From<hex::FromHexError> for CrushError {
+    fn from(e: hex::FromHexError) -> Self {
+        CrushError {
+            error_type: FromHexError(e),
             location: None,
             definition: None,
         }

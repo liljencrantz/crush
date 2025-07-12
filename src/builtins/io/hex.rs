@@ -33,7 +33,7 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
         if read == 0 {
             break;
         }
-        hex::decode_to_slice(&bufin[0..read], &mut bufout[0..read/2]);
+        hex::decode_to_slice(&bufin[0..read], &mut bufout[0..read/2])?;
         writer.write(&bufout[0..read/2])?;
     }
     Ok(())
@@ -59,12 +59,12 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
         Value::String(str) => {
             let input = str.as_bytes();
             let mut buf = vec![0; input.len() * 2];
-            hex::encode_to_slice(input, &mut buf);
+            hex::encode_to_slice(input, &mut buf)?;
             out.write(&buf)?;
         }
         Value::Binary(input) => {
             let mut buf = vec![0; input.len() * 2];
-            hex::encode_to_slice(input, &mut buf);
+            hex::encode_to_slice(input, &mut buf)?;
             out.write(&buf)?;
         }
         Value::BinaryInputStream(mut stream) => {
@@ -75,7 +75,7 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
                 if read == 0 {
                     break;
                 }
-                hex::encode_to_slice(&buf[0..read], &mut buf2[0..read*2]);
+                hex::encode_to_slice(&buf[0..read], &mut buf2[0..read*2])?;
                 out.write(&buf2[0..read*2])?;
             }
         }

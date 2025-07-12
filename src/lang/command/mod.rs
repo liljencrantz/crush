@@ -322,7 +322,7 @@ impl std::cmp::PartialEq for SimpleCommand {
     }
 }
 
-impl std::cmp::Eq for SimpleCommand {}
+impl Eq for SimpleCommand {}
 
 impl std::fmt::Debug for SimpleCommand {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
