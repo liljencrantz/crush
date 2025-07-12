@@ -8,7 +8,8 @@ use signature::signature;
 #[signature(
     io.bin.from,
     can_block = true,
-    short = "Read specified files (or input) as a binary stream"
+    short = "Read specified files (or input) as a binary stream",
+    long = "If no file is specified, the input must be either binary or a string which will be converted to a binary using utf-8."
 )]
 struct From {
     #[unnamed()]
@@ -17,8 +18,7 @@ struct From {
 
 pub fn from(context: CommandContext) -> CrushResult<()> {
     let cfg: From = From::parse(context.arguments, &context.global_state.printer())?;
-    context
-        .output
+    context.output
         .send(Value::BinaryInputStream(cfg.files.reader(context.input)?))
 }
 
@@ -41,7 +41,7 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
             std::io::copy(input.as_mut(), out.as_mut())?;
             Ok(())
         }
-        _ => argument_error_legacy("Expected a binary stream"),
+        v => argument_error_legacy(format!("Expected a binary stream, got '{}'", v.value_type())),
     }
 }
 

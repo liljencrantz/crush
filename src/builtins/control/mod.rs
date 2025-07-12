@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, data_error};
+use crate::lang::errors::{CrushResult, data_error, argument_error_legacy};
 use crate::lang::state::scope::Scope;
 use crate::lang::{data::binary::BinaryReader, data::list::List, value::Value, value::ValueType};
 use signature::signature;
@@ -12,6 +12,14 @@ use crate::lang::state::contexts::CommandContext;
 use chrono::Duration;
 use os_pipe::PipeReader;
 use std::path::PathBuf;
+use std::sync::{Mutex, OnceLock};
+use std::sync::atomic::AtomicU64;
+use ordered_map::OrderedMap;
+use crate::lang::any_str::AnyStr;
+use crate::lang::command::{Command, CrushCommand};
+use crate::lang::data::r#struct::Struct;
+use crate::lang::pipe::{TableInputStream, ValueReceiver};
+use crate::lang::state::this::This;
 
 mod cmd;
 mod r#for;
@@ -110,14 +118,50 @@ fn sleep(context: CommandContext) -> CrushResult<()> {
 )]
 struct Bg {}
 
+#[derive(Clone)]
+struct BackgroundJob {
+    id: u64,
+    value: ValueReceiver,
+}
+
+static BG_ID_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+fn background_jobs() -> &'static Mutex<Vec<BackgroundJob>> {
+    static CELL: OnceLock<Mutex<Vec<BackgroundJob>>> = OnceLock::new();
+    CELL.get_or_init(|| {
+        Mutex::new(Vec::new())
+    })
+}
+
+fn remove_job(id: u64) -> Option<ValueReceiver> {
+    let mut jobs = background_jobs().lock().unwrap();
+    let mut matching = jobs.extract_if(.., |job| job.id == id).collect::<Vec<_>>();
+    matching.pop().map(|job| job.value)
+}
+
+fn remove_last_job() -> Option<ValueReceiver> {
+    let mut jobs = background_jobs().lock().unwrap();
+    jobs.pop().map(|job| job.value)
+}
+
+fn add_job(value: ValueReceiver) -> u64 {
+    let mut jobs = background_jobs().lock().unwrap();
+    let id = BG_ID_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Acquire);
+    jobs.push(BackgroundJob {
+        id,
+        value,   
+    });
+    id
+}
+
 fn bg(context: CommandContext) -> CrushResult<()> {
-    let output = context
-        .output
-        .initialize(&[ColumnType::new("value", ValueType::Any)])?;
-    if let Ok(value) = context.input.recv() {
-        output.send(Row::new(vec![value]))?;
-    }
-    Ok(())
+    let id = add_job(context.input.clone());
+
+    context.output.send(Value::Struct(
+        Struct::new(vec![
+            ("id", Value::from(id)),
+        ], None)
+    ))
 }
 
 #[signature(
@@ -139,15 +183,37 @@ fn bg(context: CommandContext) -> CrushResult<()> {
     example = "# Put the sum job in the foreground",
     example = "sum_job_handle | fg",
 )]
-struct Fg {}
+struct Fg {
+    job: Option<Struct>,
+}
 
 fn fg(context: CommandContext) -> CrushResult<()> {
-    let mut result_stream = context.input.recv()?.stream()?.ok_or("Invalid input")?;
-    let mut result: Vec<Value> = result_stream.read()?.into();
-    if result.len() != 1 {
-        data_error("Expected a single row, single column result")
-    } else {
-        context.output.send(result.remove(0))
+    let cfg = Fg::parse(context.arguments, &context.global_state.printer())?;
+    match cfg.job {
+        None => match remove_last_job() {
+            None => {
+                context.output.send(Value::Empty)
+            }
+            Some(v) => {
+                context.output.send(v.recv()?)
+            }
+        }
+
+        Some(handle) => {
+            match handle.get("id") {
+                Some(Value::Integer(id)) => {
+                    match remove_job(id as u64) {
+                        None => {
+                            context.output.send(Value::Empty)
+                        }
+                        Some(v) => {
+                            context.output.send(v.recv()?)
+                        }
+                    }
+                }
+                _ => argument_error_legacy("Expected an output stream"),
+            }
+        }
     }
 }
 

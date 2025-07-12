@@ -143,21 +143,27 @@ pub fn column_types(columns: &OrderedStringMap<ValueType>) -> Vec<ColumnType> {
     short = "Convert the vale to the specified type",
     long = "Converting a value to the type it already holds always works and returns the original value. Most other conversions take the input value, convert it to a string and then attempt to parse that string as the desired type.",
     long = "",
+    long = "If no value is provided, the value is read from the input pipeline.",
+    long = "",
     long = "The following short cut conversions exist that do not go via a string representation:",
     long = "* `$float` to `$integer` the value is truncated to its integer part.",
     long = "* `$integer` to `$bool` 0 is false, all other values are true.",
-    example = "convert 1.8 $integer",
+    example = "convert $integer 1.8",
 )]
 struct Convert {
-    #[description("the value to convert.")]
-    value: Value,
     #[description("the type to convert the value to.")]
     target_type: ValueType,
+    #[description("the value to convert.")]
+    value: Option<Value>,
 }
 
 pub fn convert(context: CommandContext) -> CrushResult<()> {
     let cfg: Convert = Convert::parse(context.arguments, &context.global_state.printer())?;
-    context.output.send(cfg.value.convert(cfg.target_type)?)
+    let value = match cfg.value {
+        None => context.input.recv()?,
+        Some(v) => v,
+    };
+    context.output.send(value.convert(cfg.target_type)?)
 }
 
 #[signature(
