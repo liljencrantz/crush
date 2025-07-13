@@ -39,8 +39,17 @@ NonEmptyJobList: JobListNode = {
 };
 
 Job: JobNode = {
+    <mut j: JobWithoutBackground> <l: @L> <bg: OptBackground> <r: @R> => {
+        if bg {
+            j.commands.push(CommandNode::background_job(Location::new(l, r)))
+        }
+        j
+    },
+}
+
+JobWithoutBackground: JobNode = {
     <l: @L> <c:Command> <r: @R> => JobNode{commands: vec![c], location: Location::new(l, r)},
-    <l: @L> <mut j:Job> Pipe Separators? <c:Command> <r: @R> => {
+    <l: @L> <mut j:JobWithoutBackground> Pipe Separators? <c:Command> <r: @R> => {
         j.commands.push(c);
         j.location = Location::new(l, r);
         j
@@ -257,6 +266,11 @@ Default: Option<Node> = {
     Equals <l: Unary> => Some(*l),
 }
 
+OptBackground: bool = {
+    => false,
+    Background => true,
+}
+
 Item: Box<Node> = {
     <l:String> => Node::unquoted_string(l),
     <l:File> => Node::file(l, Unquoted),
@@ -343,5 +357,6 @@ extern {
         Return => Token::Return(<Location>),
         Break => Token::Break(<Location>),
         Continue => Token::Continue(<Location>),
+        Background => Token::Background(<Location>),
     }
 }

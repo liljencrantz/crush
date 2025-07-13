@@ -122,7 +122,8 @@ impl From<Token<'_>> for TrackedString {
             | Token::Return(l)
             | Token::Break(l)
             | Token::Continue(l)
-            | Token::ExprModeStart(l) => TrackedString::new(value.as_string(), l),
+            | Token::ExprModeStart(l) 
+            | Token::Background(l) => TrackedString::new(value.as_string(), l),
         }
     }
 }

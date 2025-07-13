@@ -230,6 +230,7 @@ fn get_color<'a>(
                 (None, _) => colors.get("error"),
             },
         },
+        Background(_) => None,
         Separator(_, _) => None,
         For(_) | While(_) | Loop(_) | If(_) | Else(_) | Return(_) | Break(_) | Continue(_) => {
             colors.get("keyword")
@@ -283,6 +284,7 @@ fn token_type(token: Token, scope: &Option<Scope>) -> Option<ValueType> {
         Token::Equals(_) => None,
         Token::Declare(_) => None,
         Token::Separator(_, _) => None,
+        Token::Background(_) => None,
         Token::SubStart(_) => None,
         Token::SubEnd(_) => None,
         Token::BlockStart(_) => None,

@@ -46,6 +46,7 @@ pub enum Token<'input> {
     Return(Location),
     Break(Location),
     Continue(Location),
+    Background(Location),
 }
 
 impl Token<'_> {
@@ -91,7 +92,8 @@ impl Token<'_> {
             | Token::Return(l)
             | Token::Break(l)
             | Token::Continue(l)
-            | Token::ExprModeStart(l) => *l,
+            | Token::ExprModeStart(l)
+            | Token::Background(l) => *l,
         }
     }
 
@@ -138,6 +140,7 @@ impl Token<'_> {
             Token::Return(_) => "return",
             Token::Break(_) => "break",
             Token::Continue(_) => "continue",
+            Token::Background(_) => "&",       
         }
     }
 }
@@ -195,7 +198,8 @@ impl<'a> Into<Spanned<'a>> for Token<'a> {
             | Token::Return(l)
             | Token::Break(l)
             | Token::Continue(l)
-            | Token::ExprModeStart(l) => l,
+            | Token::ExprModeStart(l)
+            | Token::Background(l) => l,
         };
         Ok((loc.start, self, loc.end))
     }

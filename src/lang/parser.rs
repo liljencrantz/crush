@@ -169,6 +169,7 @@ impl Parser {
                 Token::Break(_) => {}
                 Token::Continue(_) => {}
                 Token::Comment(_, _) => {}
+                Token::Background(_) => {}
             }
         }
         stack.reverse();

@@ -1,39 +1,3 @@
-# More useful and expressive and bg and fg functionality
-
-```
-# Make the job handles returned by the bg command opaque, such that printing them
-# does not block. This means the following would now work as expected:
-
-files --recurse / | count | bg
-
-# In addition, this new handle should have a `wait` method that waits for the command
-# to exit and returns the value:
-
-$handle := $(files --recurse / | count | bg)
-$handle:wait
-
-# Then add a syntactic sugar for the bg command using the `&` operator.
-# `&` should basically be equivalent to `| bg;`, i.e.  
-# these two become completely equivalen:
-
-files --recurse / | count | bg
-files --recurse / | count &
-
-# The `bg` command keeps a stack of all the commands put into the background,
-# so that instead of writing 
-
-$handle := $(files --recurse / | count &)
-$handle:wait
-
-# you can alternatively write
-
-files --recurse / | count &
-fg
-
-# The latter is simpler and more useful in interactive situations, 
-# while the former is clearer in complex situations and more suitable for scripting.
-```
-
 # Pluggable tab completion framework
 
 Individual commands should be able to provide tags (possibly mime tags?)

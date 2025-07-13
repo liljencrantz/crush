@@ -170,6 +170,13 @@ pub struct CommandNode {
 }
 
 impl CommandNode {
+    pub fn background_job(location: Location) -> CommandNode {
+        CommandNode {
+            location,
+            expressions: vec![attr(&["global", "control", "bg"], location)],
+        }
+    }
+    
     pub fn compile(&self, env: &Scope) -> CrushResult<CommandInvocation> {
         if let Some(c) = self.expressions[0].compile_as_special_command(env)? {
             if self.expressions.len() == 1 {

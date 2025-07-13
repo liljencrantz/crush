@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, data_error, argument_error_legacy};
+use crate::lang::errors::CrushResult;
 use crate::lang::state::scope::Scope;
 use crate::lang::{data::binary::BinaryReader, data::list::List, value::Value, value::ValueType};
 use signature::signature;
@@ -6,20 +6,14 @@ use std::env;
 
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::data::table::{ColumnType, Row};
+use crate::lang::pipe::ValueReceiver;
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use chrono::Duration;
 use os_pipe::PipeReader;
 use std::path::PathBuf;
-use std::sync::{Mutex, OnceLock};
 use std::sync::atomic::AtomicU64;
-use ordered_map::OrderedMap;
-use crate::lang::any_str::AnyStr;
-use crate::lang::command::{Command, CrushCommand};
-use crate::lang::data::r#struct::Struct;
-use crate::lang::pipe::{TableInputStream, ValueReceiver};
-use crate::lang::state::this::This;
+use std::sync::{Mutex, OnceLock};
 
 mod cmd;
 mod r#for;
@@ -108,13 +102,13 @@ fn sleep(context: CommandContext) -> CrushResult<()> {
     example = "# Create a pipe",
     example = "$pipe := $($(table_input_stream value=$integer):pipe)",
     example = "# Create a job that writes 100_000 integers to the pipe and put this job in the background",
-    example = "$_1 := $(seq 100_000 | pipe:write | bg)",
+    example = "seq 100_000 | pipe:write &",
     example = "# Create a second job that reads from the pipe and sums all the integers and put this job in the background",
-    example = "$sum_job_handle := $(pipe:read | sum | bg)",
+    example = "$sum_job_handle := $(pipe:read | sum &)",
     example = "# Close the pipe so that the second job can finish",
     example = "pipe:close",
     example = "# Put the sum job in the foreground",
-    example = "sum_job_handle | fg",
+    example = "fg $sum_job_handle",
 )]
 struct Bg {}
 
@@ -128,9 +122,7 @@ static BG_ID_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 fn background_jobs() -> &'static Mutex<Vec<BackgroundJob>> {
     static CELL: OnceLock<Mutex<Vec<BackgroundJob>>> = OnceLock::new();
-    CELL.get_or_init(|| {
-        Mutex::new(Vec::new())
-    })
+    CELL.get_or_init(|| Mutex::new(Vec::new()))
 }
 
 fn remove_job(id: u64) -> Option<ValueReceiver> {
@@ -147,21 +139,14 @@ fn remove_last_job() -> Option<ValueReceiver> {
 fn add_job(value: ValueReceiver) -> u64 {
     let mut jobs = background_jobs().lock().unwrap();
     let id = BG_ID_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Acquire);
-    jobs.push(BackgroundJob {
-        id,
-        value,   
-    });
+    jobs.push(BackgroundJob { id, value });
     id
 }
 
 fn bg(context: CommandContext) -> CrushResult<()> {
     let id = add_job(context.input.clone());
 
-    context.output.send(Value::Struct(
-        Struct::new(vec![
-            ("id", Value::from(id)),
-        ], None)
-    ))
+    context.output.send(Value::from(id))
 }
 
 #[signature(
@@ -175,45 +160,30 @@ fn bg(context: CommandContext) -> CrushResult<()> {
     example = "# Create a pipe",
     example = "$pipe := $($(table_input_stream value=$integer):pipe)",
     example = "# Create a job that writes 100_000 integers to the pipe and put this job in the background",
-    example = "$_1 := $(seq 100_000 | pipe:write | bg)",
+    example = "seq 100_000 | pipe:write &",
     example = "# Create a second job that reads from the pipe and sums all the integers and put this job in the background",
-    example = "$sum_job_handle := $(pipe:read | sum | bg)",
+    example = "$sum_job_handle := $(pipe:read | sum &)",
     example = "# Close the pipe so that the second job can finish",
     example = "pipe:close",
     example = "# Put the sum job in the foreground",
-    example = "sum_job_handle | fg",
+    example = "fg $sum_job_handle",
 )]
 struct Fg {
-    job: Option<Struct>,
+    job: Option<u64>,
 }
 
 fn fg(context: CommandContext) -> CrushResult<()> {
     let cfg = Fg::parse(context.arguments, &context.global_state.printer())?;
     match cfg.job {
         None => match remove_last_job() {
-            None => {
-                context.output.send(Value::Empty)
-            }
-            Some(v) => {
-                context.output.send(v.recv()?)
-            }
-        }
+            None => context.output.send(Value::Empty),
+            Some(v) => context.output.send(v.recv()?),
+        },
 
-        Some(handle) => {
-            match handle.get("id") {
-                Some(Value::Integer(id)) => {
-                    match remove_job(id as u64) {
-                        None => {
-                            context.output.send(Value::Empty)
-                        }
-                        Some(v) => {
-                            context.output.send(v.recv()?)
-                        }
-                    }
-                }
-                _ => argument_error_legacy("Expected an output stream"),
-            }
-        }
+        Some(id) => match remove_job(id) {
+            None => context.output.send(Value::Empty),
+            Some(v) => context.output.send(v.recv()?),
+        },
     }
 }
 
