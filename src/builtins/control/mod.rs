@@ -28,7 +28,7 @@ mod r#while;
 #[signature(
     control.r#break,
     can_block = false,
-    short = "Stop execution of a loop.",
+    short = "Break execution of a loop.",
     output = Known(ValueType::Empty))]
 struct Break {}
 
@@ -40,8 +40,11 @@ fn r#break(context: CommandContext) -> CrushResult<()> {
 #[signature(
     control.r#return,
     can_block = false,
-    short = "Stop execution of a closure and return a value.",
-    output = Unknown)]
+    short = "break execution of a closure and optionally return a value.",
+    output = Unknown,
+    example = "$factorial := {|$number: $integer| if ($number == 1) {return 1} else {return ($number * factorial($number - 1))}}",
+    example = "factorial 5"
+)]
 struct Return {
     #[description("the value to return")]
     value: Option<Value>,
@@ -56,7 +59,7 @@ fn r#return(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     control.r#continue,
     can_block = false,
-    short = "Skip execution of the current iteration of a loop.",
+    short = "Break execution of the current iteration of a loop and continue to the next lap.",
     output = Known(ValueType::Empty))]
 struct Continue {}
 
@@ -91,14 +94,12 @@ fn sleep(context: CommandContext) -> CrushResult<()> {
 
 #[signature(
     control.bg,
-    short = "Run a pipeline in background",
-    long = "Append the `bg` builtin to the end of a pipeline to run it in the background.",
+    short = "Run a pipeline in the background",
+    long = "Use the `bg` command as the last command in a pipeline to run it in the background.",
     long = "",
-    long = "The `bg` builtin will read the result from a pipeline and insert it into a table output stream.",
-    long = "Because this stream is immediately returned, execution will continue and the pipeline will run",
-    long = "in the background.",
+    long = "The bg command is usually used by appending the `&` operator to the end of a pipeline, for example `$handle := $(files --recursive . &)` is exactly equivalent to `$handle := $(files --recursive . | bg)`.",
     long = "",
-    long = "To get the result of the pipeline, use the `fg` builtin.",
+    long = "The `bg` command returns a handle (an integer) that can be used to get the output of the pipeline at a later point via the `fg` command.", 
     example = "# Create a pipe",
     example = "$pipe := $($(table_input_stream value=$integer):pipe)",
     example = "# Create a job that writes 100_000 integers to the pipe and put this job in the background",

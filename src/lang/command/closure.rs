@@ -10,7 +10,7 @@ use crate::lang::data::list::List;
 use crate::lang::errors::{CrushResult, argument_error, argument_error_legacy, error, serialization_error};
 use crate::lang::help::Help;
 use crate::lang::job::Job;
-use crate::lang::pipe::{black_hole, empty_channel};
+use crate::lang::pipe::{black_hole, empty_channel, pipe};
 use crate::lang::serialization::model;
 use crate::lang::serialization::model::{Element, element, normal_parameter_definition, Values, SignatureDefinition};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
@@ -255,15 +255,10 @@ impl CrushCommand for Closure {
             } else {
                 empty_channel()
             };
-            let output = if last {
-                context.output.clone()
-            } else {
-                black_hole()
-            };
-
+            let (sender, receiver) = pipe();
             let job = job_definition.eval(JobContext::new(
                 input,
-                output,
+                sender,
                 env.clone(),
                 context.global_state.clone(),
             ))?;
@@ -272,11 +267,16 @@ impl CrushCommand for Closure {
             job.map(|id| local_threads.join_one(id, &local_printer));
 
             if env.is_stopped() {
-                return env.send_return_value(&context.output);
+                let return_value = match env.take_return_value(){
+                    None => receiver.recv()?,
+                    Some(v) => v,
+                };
+                return context.output.send(return_value);
+            } else {
+                if last {
+                    context.output.send(receiver.recv()?)?;
+                }
             }
-        }
-        if scope_type == ScopeType::Command {
-            context.output.empty()?;
         }
         Ok(())
     }

@@ -149,13 +149,13 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     example = "# Create a pipe",
     example = "$pipe := $($(table_input_stream value=$integer):pipe)",
     example = "# Create a job that writes 100_000 integers to the pipe and put this job in the background",
-    example = "$_1 := $(seq 100_000 | pipe:write | bg)",
+    example = "seq 100_000 | pipe:write &",
     example = "# Create a second job that reads from the pipe and sums all the integers and put this job in the background",
-    example = "$sum_job_handle := $(pipe:read | sum | bg)",
+    example = "$sum_job_handle := $(pipe:read | sum &)",
     example = "# Close the pipe so that the second job can finish",
     example = "pipe:close",
     example = "# Put the sum job in the foreground",
-    example = "sum_job_handle | fg",
+    example = "fg $sum_job_handle",
 )]
 struct Pipe {}
 

@@ -5,7 +5,7 @@ use crate::lang::errors::{
     CrushError, CrushResult, argument_error_legacy, error, invalid_jump, serialization_error,
 };
 use crate::lang::help::Help;
-use crate::lang::pipe::{CrushStream, ValueSender};
+use crate::lang::pipe::CrushStream;
 use crate::lang::{value::Value, value::ValueType};
 use crate::util::identity_arc::Identity;
 use crate::util::replace::Replace;
@@ -395,7 +395,7 @@ impl Scope {
     pub fn do_return(&self, value: Option<Value>) -> CrushResult<()> {
         let mut data = self.lock()?;
         if data.is_readonly {
-            invalid_jump("`return` command outside of function")
+            invalid_jump("`return` command outside of command definition")
         } else if data.scope_type == ScopeType::Command {
             data.is_stopped = true;
             data.return_value = value;
@@ -444,11 +444,8 @@ impl Scope {
         self.lock().unwrap().is_stopped
     }
 
-    pub fn send_return_value(&self, output: &ValueSender) -> CrushResult<()> {
-        match self.lock().unwrap().return_value.take() {
-            None => output.empty(),
-            Some(v) => output.send(v),
-        }
+    pub fn take_return_value(&self) -> Option<Value> {
+        self.lock().unwrap().return_value.take()
     }
 
     fn lock(&self) -> CrushResult<MutexGuard<ScopeData>> {

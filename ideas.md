@@ -1,4 +1,4 @@
-# Pluggable tab completion framework
+p# Pluggable tab completion framework
 
 Individual commands should be able to provide tags (possibly mime tags?)
 that point to specific completions, `hostname`, `uri`, `git/repo`, or `git/branch`.
@@ -16,13 +16,13 @@ $# Create a pipe
 $pipe := $(binary_stream:pipe)
 
 # Create a job that writes base64 encoded data to the pipe
-$_1 := $(base64:to | pipe:write | bg)
+base64:to | pipe:write &
 # Create a second job that reads from the pipe and sums all the integers and put this job in the background
-$sum_job_handle := $(pipe:read | sha1 | bg)
+$sum_job_handle := $(pipe:read | sha1 &)
 # Close the pipe so that the second job can finish
 pipe:close
 # Put the sum job in the foreground
-sum_job_handle | fg
+fg $sum_job_handle
 ```
 
 # More help topics

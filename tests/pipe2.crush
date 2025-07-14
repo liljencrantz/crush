@@ -6,16 +6,16 @@ crush:locale:set "en_US.UTF-8"
 $pipe := $($(table_input_stream value=$integer):pipe)
 
 # Attach the input end to a bunch of seq commands
-$input := $(seq 10_000 | pipe:write | bg)
+$input := $(seq 10_000 | pipe:write &)
 
 # Attach the output end to the sum command and
-$sum_job_id1 := $(pipe:read | sum | bg)
-$sum_job_id2 := $(pipe:read | sum | bg)
-$sum_job_id3 := $(pipe:read | sum | bg)
-$sum_job_id4 := $(pipe:read | sum | bg)
+pipe:read | sum &
+pipe:read | sum &
+pipe:read | sum &
+pipe:read | sum &
 
 # Close the output and input, so that the input can actually
 # reach EOF once the above 4 invocation exit
 pipe:close
 # Wait for the sum command to finish
-val ($($sum_job_id1 | fg) + $($sum_job_id2 | fg) + $($sum_job_id3 | fg) + $($sum_job_id4 | fg))
+val ($(fg $sum_job_id1) + $(fg $sum_job_id2) + $(fg $sum_job_id3) + $(fg $sum_job_id4))
