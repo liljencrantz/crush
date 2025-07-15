@@ -64,7 +64,7 @@ pub fn init() -> (Printer, JoinHandle<()>) {
                         Ping => {
                             let _ = pong_sender.send(());
                         }
-                        Error(err) => eprintln!("Error: {}", err),
+                        Error(err) => eprintln!("{}", err),
                         CrushError(err) => {
                             eprintln!("Error: {}", err.message());
                             if let Some(ctx) = err.context() {
@@ -175,7 +175,7 @@ impl Printer {
        Print the passed in, pre-formated error.
     */
     pub fn error(&self, err: &str) {
-        let _ = self.sender.send(PrinterMessage::Error(err.to_string()));
+        let _ = self.sender.send(PrinterMessage::Error(format!("Error: {}", err.to_string())));
     }
 
     /**
