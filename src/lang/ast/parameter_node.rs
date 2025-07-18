@@ -1,6 +1,6 @@
-use crate::CrushResult;
 use super::Node;
 use super::tracked_string::TrackedString;
+use crate::CrushResult;
 use crate::lang::command::ParameterDefinition;
 use crate::lang::value::{Value, ValueDefinition, ValueType};
 use crate::state::scope::Scope;
@@ -25,21 +25,12 @@ impl ParameterNode {
         default: Option<Node>,
         doc: Option<impl Into<TrackedString>>,
     ) -> ParameterNode {
-        let name = is.into();
-        if name.string.starts_with("$") {
-            ParameterNode::Parameter {
-                name: name.slice_to_end(1),
-                parameter_type,
-                default,
-                documentation: doc.map(|t| t.into()),
-            }
-        } else {
-            ParameterNode::Parameter {
-                name,
-                parameter_type,
-                default,
-                documentation: doc.map(|t| t.into()),
-            }
+        let name = is.into().slice_to_end(1);
+        ParameterNode::Parameter {
+            name,
+            parameter_type,
+            default,
+            documentation: doc.map(|t| t.into()),
         }
     }
 
@@ -51,14 +42,18 @@ impl ParameterNode {
         is: impl Into<TrackedString>,
         doc: Option<impl Into<TrackedString>>,
     ) -> ParameterNode {
-        ParameterNode::Unnamed(is.into(), doc.map(|t| t.into()))
+        let name = is.into().slice_to_end(1);
+        ParameterNode::Unnamed(name, doc.map(|t| t.into()))
     }
+
     pub fn named(
         is: impl Into<TrackedString>,
         doc: Option<impl Into<TrackedString>>,
     ) -> ParameterNode {
-        ParameterNode::Named(is.into(), doc.map(|t| t.into()))
+        let name = is.into().slice_to_end(1);
+        ParameterNode::Named(name, doc.map(|t| t.into()))
     }
+
     pub fn generate(&self, env: &Scope) -> CrushResult<ParameterDefinition> {
         match self {
             ParameterNode::Parameter {
@@ -83,8 +78,14 @@ impl ParameterNode {
                     .transpose()?,
                 documentation.clone(),
             )),
-            ParameterNode::Named(s, doc) => Ok(ParameterDefinition::Named{name: s.clone(), description: doc.clone()}),
-            ParameterNode::Unnamed(s, doc) => Ok(ParameterDefinition::Unnamed{name: s.clone(), description: doc.clone()}),
+            ParameterNode::Named(s, doc) => Ok(ParameterDefinition::Named {
+                name: s.clone(),
+                description: doc.clone(),
+            }),
+            ParameterNode::Unnamed(s, doc) => Ok(ParameterDefinition::Unnamed {
+                name: s.clone(),
+                description: doc.clone(),
+            }),
             ParameterNode::Meta(k, v) => Ok(ParameterDefinition::Meta(k.clone(), v.clone())),
         }
     }

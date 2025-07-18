@@ -19,7 +19,7 @@ use signature::signature;
 pub struct While {
     #[description("the condition.")]
     condition: Command,
-    
+
     #[description("the command to invoke as long as the condition is true.")]
     body: Option<Command>,
 }

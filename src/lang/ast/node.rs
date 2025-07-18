@@ -1,9 +1,9 @@
-use crate::lang::argument::{ArgumentDefinition, SwitchStyle};
 use super::location::Location;
 use super::node::TextLiteralStyle::{Quoted, Unquoted};
 use super::parameter_node::ParameterNode;
 use super::tracked_string::TrackedString;
 use super::{CommandNode, JobListNode, JobNode, expand_user, propose_name};
+use crate::lang::argument::{ArgumentDefinition, SwitchStyle};
 use crate::lang::command::{Command, ParameterDefinition};
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::{CrushResult, error};
@@ -426,7 +426,10 @@ impl Node {
         ];
 
         if let Some(x) = false_body {
-            expressions.push(Node::String(TrackedString::new("else", x.location), Unquoted));
+            expressions.push(Node::String(
+                TrackedString::new("else", x.location),
+                Unquoted,
+            ));
             expressions.push(Node::Closure(None, x));
         }
 

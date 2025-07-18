@@ -13,6 +13,7 @@ use rustyline::history::DefaultHistory;
 use signature::signature;
 use std::path::PathBuf;
 
+mod base64;
 mod bin;
 mod csv;
 mod hex;
@@ -24,7 +25,6 @@ mod split;
 mod toml;
 mod words;
 mod yaml;
-mod base64;
 
 #[signature(
     io.val,

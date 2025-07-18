@@ -142,7 +142,7 @@ pub fn unescape_file(s: &str) -> CrushResult<PathBuf> {
                         let mut b = [0; 4];
                         let len = c.encode_utf8(&mut b).len();
                         res.extend_from_slice(&b[0..len]);
-                    },
+                    }
                 }
             }
 

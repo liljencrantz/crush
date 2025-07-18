@@ -79,7 +79,7 @@ struct Call {
 fn __call__(mut context: CommandContext) -> CrushResult<()> {
     match context.this.r#type()? {
         ValueType::List(c) => match *c {
-            ValueType::Empty => {
+            ValueType::Any => {
                 let cfg: Call = Call::parse(context.arguments, &context.global_state.printer())?;
                 context
                     .output
@@ -91,13 +91,10 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
                         .output
                         .send(Value::Type(ValueType::List(Box::from(c))))
                 } else {
-                    argument_error_legacy(
-                        format!(
-                            "Tried to set subtype on a list that already has the subtype {}",
-                            c.to_string()
-                        )
-                        .as_str(),
-                    )
+                    argument_error_legacy(format!(
+                        "Tried to set subtype on a list that already has the subtype {}",
+                        c.to_string()
+                    ))
                 }
             }
         },

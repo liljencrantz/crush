@@ -1,4 +1,4 @@
-use crate::lang::command::OutputType::{Known};
+use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{CrushResult, argument_error_legacy};
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
@@ -25,7 +25,9 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
     let cfg = FromSignature::parse(context.arguments, &context.global_state.printer())?;
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
     let (pipe_reader, mut writer) = os_pipe::pipe()?;
-    context.output.send(Value::BinaryInputStream(Box::from(pipe_reader)))?;
+    context
+        .output
+        .send(Value::BinaryInputStream(Box::from(pipe_reader)))?;
     let mut bufin = [0; 4096];
     let mut bufout = [0; 2048];
     loop {
@@ -33,8 +35,8 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
         if read == 0 {
             break;
         }
-        hex::decode_to_slice(&bufin[0..read], &mut bufout[0..read/2])?;
-        writer.write(&bufout[0..read/2])?;
+        hex::decode_to_slice(&bufin[0..read], &mut bufout[0..read / 2])?;
+        writer.write(&bufout[0..read / 2])?;
     }
     Ok(())
 }
@@ -75,11 +77,16 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
                 if read == 0 {
                     break;
                 }
-                hex::encode_to_slice(&buf[0..read], &mut buf2[0..read*2])?;
-                out.write(&buf2[0..read*2])?;
+                hex::encode_to_slice(&buf[0..read], &mut buf2[0..read * 2])?;
+                out.write(&buf2[0..read * 2])?;
             }
         }
-        v => return argument_error_legacy(format!("Expected a binary stream or a string, encountered `{}`", v.value_type().to_string())),
+        v => {
+            return argument_error_legacy(format!(
+                "Expected a binary stream or a string, encountered `{}`",
+                v.value_type().to_string()
+            ));
+        }
     }
     Ok(())
 }

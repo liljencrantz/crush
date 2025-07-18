@@ -166,7 +166,9 @@ impl Printer {
         match &err.error_type() {
             CrushErrorType::SendError(_) => {}
             _ => {
-                _ = self.sender.send(PrinterMessage::CrushError(err.with_source(&self.source)));
+                _ = self
+                    .sender
+                    .send(PrinterMessage::CrushError(err.with_source(&self.source)));
             }
         }
     }
@@ -175,7 +177,9 @@ impl Printer {
        Print the passed in, pre-formated error.
     */
     pub fn error(&self, err: &str) {
-        let _ = self.sender.send(PrinterMessage::Error(format!("Error: {}", err.to_string())));
+        let _ = self
+            .sender
+            .send(PrinterMessage::Error(format!("Error: {}", err.to_string())));
     }
 
     /**

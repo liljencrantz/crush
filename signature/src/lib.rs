@@ -394,7 +394,8 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                     for attr in &field.attrs {
                         if call_is_default(attr) {
                             default_value = Some(call_value(attr)?);
-                            default_value_node = quote! {Some(crate::lang::value::Value::from(#default_value))};
+                            default_value_node =
+                                quote! {Some(crate::lang::value::Value::from(#default_value))};
                         } else if call_is_named(attr, "unnamed") {
                             is_unnamed_target = true;
                         } else if call_is_named(attr, "named") {

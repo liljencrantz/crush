@@ -115,7 +115,10 @@ impl Serializable<ValueType> for ValueType {
             }
             ValueType::OneOf(types) => {
                 let l = model::OneOf {
-                    types: types.iter().map(|t| t.serialize(elements, state).map(|idx| idx as u64)).collect::<CrushResult<Vec<_>>>()?
+                    types: types
+                        .iter()
+                        .map(|t| t.serialize(elements, state).map(|idx| idx as u64))
+                        .collect::<CrushResult<Vec<_>>>()?,
                 };
                 let idx = elements.len();
                 elements.push(model::Element {

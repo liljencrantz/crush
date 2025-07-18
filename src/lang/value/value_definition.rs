@@ -81,24 +81,16 @@ impl ValueDefinition {
                 ..
             } => (
                 None,
-                Value::Command(
-                    match signature {
-                        None => {
-                            <dyn CrushCommand>::closure_block(
-                                jobs.clone(),
-                                &context.env)
-                        }
-                        Some(signature) => {
-                            <dyn CrushCommand>::closure_command(
-                                name.clone(),
-                                signature.clone(),
-                                jobs.clone(),
-                                &context.env,
-                                &context.global_state,
-                            )?
-                        }
-                    }
-                )
+                Value::Command(match signature {
+                    None => <dyn CrushCommand>::closure_block(jobs.clone(), &context.env),
+                    Some(signature) => <dyn CrushCommand>::closure_command(
+                        name.clone(),
+                        signature.clone(),
+                        jobs.clone(),
+                        &context.env,
+                        &context.global_state,
+                    )?,
+                }),
             ),
             ValueDefinition::Identifier(s) => (
                 None,

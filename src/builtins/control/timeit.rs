@@ -19,7 +19,7 @@ pub struct TimeIt {
         "the number of runs in each repeat. If unspecified, timeit will repeat enough times for each batch to take roughly 0.4 seconds."
     )]
     number: Option<usize>,
-    
+
     #[description("repeat count. The average speed in the fastest repeat will be returned.")]
     #[default(5usize)]
     repeat: usize,

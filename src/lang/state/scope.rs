@@ -621,6 +621,12 @@ impl Scope {
 
     /// Redeclare a variable.
     pub fn redeclare(&self, name: &str, value: Value) -> CrushResult<()> {
+        if name.starts_with("$") {
+            return argument_error_legacy(format!(
+                "Illegal name, starts with underscore. ({})",
+                name
+            ));
+        }
         if name.starts_with("__") {
             return argument_error_legacy(format!(
                 "Illegal operation: Can't redeclare variables beginning with double underscores. ({})",

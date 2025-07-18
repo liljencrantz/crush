@@ -6,11 +6,11 @@ use crate::lang::errors::{CrushResult, argument_error_legacy, error};
 use crate::lang::help::Help;
 use crate::lang::{data::table::ColumnType, value::Value};
 use crate::util::glob::Glob;
+use itertools::Itertools;
 use ordered_map::OrderedMap;
 use regex::Regex;
 use std::fmt::{Display, Formatter};
 use std::sync::OnceLock;
-use itertools::Itertools;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum ValueType {
@@ -53,10 +53,10 @@ impl ValueType {
         Known(self.clone())
     }
 
-    pub fn one_of(options: Vec<ValueType>) -> ValueType { 
+    pub fn one_of(options: Vec<ValueType>) -> ValueType {
         let mut res = Vec::new();
         for vt in options {
-            match vt { 
+            match vt {
                 ValueType::Any => return ValueType::Any,
                 ValueType::OneOf(mut vt) => res.append(&mut vt),
                 _ => res.push(vt),
@@ -89,15 +89,15 @@ impl ValueType {
     }
 
     pub fn is(&self, value: &Value) -> bool {
-        match self { 
-            ValueType::Any => true,
-            ValueType::OneOf(types) => types.iter().any(|t| t.is(value)),
-            _ => *self == value.value_type(),
-        }
+        self.is_compatible_with(&value.value_type())
     }
 
     pub fn is_compatible_with(&self, pattern: &ValueType) -> bool {
-        (*self == ValueType::Any) || (self == pattern)
+        match self {
+            ValueType::Any => true,
+            ValueType::OneOf(types) => types.iter().any(|t| t.is_compatible_with(pattern)),
+            _ => self == pattern,
+        }
     }
 
     pub fn materialize(&self) -> CrushResult<ValueType> {
@@ -125,11 +125,16 @@ impl ValueType {
             }
             ValueType::Table(r) => ValueType::Table(ColumnType::materialize(r)?),
             ValueType::List(l) => ValueType::List(Box::from(l.materialize()?)),
-            ValueType::Dict(k, v) => 
-                ValueType::Dict(Box::from(k.materialize()?), Box::from(v.materialize()?)),
-            
-            ValueType::OneOf(types) => 
-                ValueType::OneOf(types.iter().map(|t| t.materialize()).collect::<CrushResult<Vec<_>>>()?),
+            ValueType::Dict(k, v) => {
+                ValueType::Dict(Box::from(k.materialize()?), Box::from(v.materialize()?))
+            }
+
+            ValueType::OneOf(types) => ValueType::OneOf(
+                types
+                    .iter()
+                    .map(|t| t.materialize())
+                    .collect::<CrushResult<Vec<_>>>()?,
+            ),
         })
     }
 
@@ -174,7 +179,7 @@ impl ValueType {
             | ValueType::Dict(_, _)
             | ValueType::TableOutputStream(_)
             | ValueType::TableInputStream(_)
-            | ValueType::Table(_) 
+            | ValueType::Table(_)
             | ValueType::OneOf(_) => true,
             _ => false,
         }
@@ -227,7 +232,9 @@ impl Help for ValueType {
             ValueType::BinaryInputStream => "A stream of binary data.",
             ValueType::Binary => "Binary data.",
             ValueType::Type => "A type.",
-            ValueType::OneOf(types) => return format!("One of {}",types.iter().map(|t| t.to_string()).join(", ")),
+            ValueType::OneOf(types) => {
+                return format!("One of {}", types.iter().map(|t| t.to_string()).join(", "));
+            }
         }
         .to_string()
     }
@@ -272,9 +279,7 @@ impl Help for ValueType {
                 ]
             }
             ValueType::Bool => {
-                vec![
-                    "A boolean value is one of `$true` or `$false`.".to_string(),
-                ]
+                vec!["A boolean value is one of `$true` or `$false`.".to_string()]
             }
             ValueType::Struct => {
                 vec![

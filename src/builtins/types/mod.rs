@@ -1,16 +1,16 @@
-use crate::lang::command::{Command, CrushCommand};
 use crate::lang::command::OutputType::Known;
+use crate::lang::command::{Command, CrushCommand};
 use crate::lang::data::table::ColumnType;
 use crate::lang::errors::CrushResult;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::pipe::black_hole;
+use crate::lang::signature::patterns::Patterns;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::state::this::This;
 use crate::lang::value::ValueType;
 use crate::lang::{data::r#struct::Struct, value::Value};
 use signature::signature;
-use crate::lang::signature::patterns::Patterns;
 
 pub mod binary;
 pub mod dict;
@@ -20,15 +20,15 @@ pub mod float;
 pub mod glob;
 pub mod integer;
 pub mod list;
+pub mod one_of;
 pub mod re;
 pub mod scope;
 pub mod string;
+pub mod r#struct;
 pub mod table;
 pub mod table_input_stream;
 pub mod table_output_stream;
 pub mod time;
-pub mod r#struct;
-pub mod one_of;
 
 #[signature(
     types.materialize,
@@ -62,7 +62,12 @@ struct Definition {
 
 fn definition(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Definition::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.output.send(cfg.command.definition().map(|s| Value::from(s)).unwrap_or(Value::Empty))
+    context.output.send(
+        cfg.command
+            .definition()
+            .map(|s| Value::from(s))
+            .unwrap_or(Value::Empty),
+    )
 }
 
 fn new(mut context: CommandContext) -> CrushResult<()> {
@@ -266,9 +271,11 @@ struct Match {
     pattern: Patterns,
 }
 
-fn r#match (mut context: CommandContext) -> CrushResult<()> {
+fn r#match(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Match::parse(context.remove_arguments(), context.global_state.printer())?;
-    context.output.send(Value::from(cfg.pattern.test(&cfg.value)))
+    context
+        .output
+        .send(Value::from(cfg.pattern.test(&cfg.value)))
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
@@ -311,7 +318,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare("empty", Value::Type(ValueType::Empty))?;
             env.declare("float", Value::Type(ValueType::Float))?;
             env.declare("integer", Value::Type(ValueType::Integer))?;
-            env.declare("list", Value::Type(ValueType::List(Box::from(ValueType::Empty))))?;
+            env.declare("list", Value::Type(ValueType::List(Box::from(ValueType::Any))))?;
             env.declare("string", Value::Type(ValueType::String))?;
             env.declare("glob", Value::Type(ValueType::Glob))?;
             env.declare("re", Value::Type(ValueType::Regex))?;

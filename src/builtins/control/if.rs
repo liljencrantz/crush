@@ -1,5 +1,5 @@
 use crate::lang::command::Command;
-use crate::lang::errors::{argument_error_legacy, CrushResult};
+use crate::lang::errors::{CrushResult, argument_error_legacy};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeType;
 use crate::lang::value::Value;
@@ -44,7 +44,7 @@ fn r#if(mut context: CommandContext) -> CrushResult<()> {
                     .create_child(&context.scope, ScopeType::Conditional);
                 v.eval(context.empty().with_scope(env).with_output(context.output))
             }
-            _ => argument_error_legacy("Invalid else-clause. Did you misspell else?")
+            _ => argument_error_legacy("Invalid else-clause. Did you misspell else?"),
         }
     }
 }

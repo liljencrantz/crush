@@ -5,7 +5,7 @@ mod builtins;
 mod lang;
 mod util;
 
-use crate::lang::errors::{CrushResult, argument_error_legacy, CrushErrorType};
+use crate::lang::errors::{CrushErrorType, CrushResult, argument_error_legacy};
 use crate::lang::interactive;
 use crate::lang::pretty::create_pretty_printer;
 use crate::lang::printer::Printer;
@@ -147,13 +147,11 @@ fn set_initial_locale(global_state: &GlobalState) {
 }
 
 fn main() {
-    let status = run().unwrap_or_else(|err| {
-        match &err.error_type() {
-            CrushErrorType::SendError(_) => 0,
-            _ => {
-                eprintln!("Error during initialization or shutdown: {}", err.message());
-                1
-            }
+    let status = run().unwrap_or_else(|err| match &err.error_type() {
+        CrushErrorType::SendError(_) => 0,
+        _ => {
+            eprintln!("Error during initialization or shutdown: {}", err.message());
+            1
         }
     });
     std::process::exit(status);

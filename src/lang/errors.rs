@@ -56,7 +56,7 @@ pub enum CrushErrorType {
     AddrParseError(std::net::AddrParseError),
     ToStrError(ToStrError),
     Message(markdown::message::Message),
-    FromHexError(hex::FromHexError)
+    FromHexError(hex::FromHexError),
 }
 
 #[derive(Debug)]

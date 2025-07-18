@@ -3,7 +3,7 @@ use super::token::Token;
 use std::fmt::{Display, Formatter};
 
 #[derive(Clone, Debug)]
-pub struct  TrackedString {
+pub struct TrackedString {
     pub string: String,
     pub location: Location,
 }
@@ -122,7 +122,7 @@ impl From<Token<'_>> for TrackedString {
             | Token::Return(l)
             | Token::Break(l)
             | Token::Continue(l)
-            | Token::ExprModeStart(l) 
+            | Token::ExprModeStart(l)
             | Token::Background(l) => TrackedString::new(value.as_string(), l),
         }
     }

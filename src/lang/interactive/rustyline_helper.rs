@@ -133,7 +133,7 @@ impl Validator for RustylineHelper {
         _ctx: &mut validate::ValidationContext,
     ) -> rustyline::Result<validate::ValidationResult> {
         Ok(ValidationResult::Valid(None))
-/*
+        /*
         let input = _ctx.input().to_string();
         if input.trim() == "!!" {
             return Ok(ValidationResult::Valid(None));

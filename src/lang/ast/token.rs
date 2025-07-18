@@ -140,7 +140,7 @@ impl Token<'_> {
             Token::Return(_) => "return",
             Token::Break(_) => "break",
             Token::Continue(_) => "continue",
-            Token::Background(_) => "&",       
+            Token::Background(_) => "&",
         }
     }
 }

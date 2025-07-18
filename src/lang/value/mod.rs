@@ -31,6 +31,7 @@ use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::command::{Command, CommandBinder};
 use crate::lang::help::Help;
 use crate::lang::pretty::format_buffer;
+use crate::lang::signature::number;
 use crate::lang::vec_reader::VecReader;
 use crate::state::global_state::FormatData;
 use crate::state::scope::ScopeReader;
@@ -46,7 +47,6 @@ use std::ops::Add;
 use std::sync::Arc;
 pub use value_definition::ValueDefinition;
 pub use value_type::ValueType;
-use crate::lang::signature::number;
 
 pub type BinaryInputStream = Box<dyn BinaryReader + Send + Sync>;
 
@@ -547,7 +547,7 @@ impl Value {
             ValueType::Any => error("Invalid convert"),
             ValueType::BinaryInputStream => error("invalid convert"),
             ValueType::Type => error("invalid convert"),
-            ValueType::OneOf(_) => error("Can't convert to multiple types")
+            ValueType::OneOf(_) => error("Can't convert to multiple types"),
         }
     }
 

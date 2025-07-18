@@ -97,8 +97,7 @@ impl<'input> Lexer<'input> {
                     }
                 }
 
-                Some((i, '=')) =>
-                    return Some(Token::Equals(Location::from(i)).into()),
+                Some((i, '=')) => return Some(Token::Equals(Location::from(i)).into()),
 
                 Some((i, '#')) => {
                     let mut end_idx = i;
@@ -123,7 +122,7 @@ impl<'input> Lexer<'input> {
                                 &self.full_str[i..end_idx + 1],
                                 Location::new(i, end_idx + 1),
                             )
-                                .into(),
+                            .into(),
                         );
                     }
                 }
@@ -179,7 +178,7 @@ impl<'input> Lexer<'input> {
                             &self.full_str[i..end_idx + 1],
                             Location::new(i, end_idx + 1),
                         )
-                            .into(),
+                        .into(),
                     );
                 }
 
@@ -250,7 +249,7 @@ impl<'input> Lexer<'input> {
                             &self.full_str[i..end_idx + 1],
                             Location::new(i, end_idx + 1),
                         )
-                            .into(),
+                        .into(),
                     );
                 }
 
@@ -268,14 +267,13 @@ impl<'input> Lexer<'input> {
 
                     let s = &self.full_str[i..end_idx + 1];
 
-                    return
-                        if s.contains('*') || s.contains('?') {
-                            Some(Token::Glob(s, Location::new(i, end_idx + 1)).into())
-                        } else if s.contains('/') || s.contains('.') || s.starts_with('~') {
-                            Some(Token::File(s, Location::new(i, end_idx + 1)).into())
-                        } else {
-                            Some(Token::String(s, Location::new(i, end_idx + 1)).into())
-                        };
+                    return if s.contains('*') || s.contains('?') {
+                        Some(Token::Glob(s, Location::new(i, end_idx + 1)).into())
+                    } else if s.contains('/') || s.contains('.') || s.starts_with('~') {
+                        Some(Token::File(s, Location::new(i, end_idx + 1)).into())
+                    } else {
+                        Some(Token::String(s, Location::new(i, end_idx + 1)).into())
+                    };
                 }
 
                 Some((i, '"')) => {
@@ -569,8 +567,12 @@ impl<'input> Lexer<'input> {
                     let s = &self.full_str[i..end_idx + 1];
 
                     return match s {
-                        "and" => Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into()),
-                        "or" => Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into()),
+                        "and" => {
+                            Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into())
+                        }
+                        "or" => {
+                            Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into())
+                        }
                         "for" => Some(Token::For(Location::new(i, end_idx + 1)).into()),
                         "while" => Some(Token::While(Location::new(i, end_idx + 1)).into()),
                         "loop" => Some(Token::Loop(Location::new(i, end_idx + 1)).into()),

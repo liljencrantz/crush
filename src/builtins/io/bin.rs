@@ -18,7 +18,8 @@ struct From {
 
 pub fn from(context: CommandContext) -> CrushResult<()> {
     let cfg: From = From::parse(context.arguments, &context.global_state.printer())?;
-    context.output
+    context
+        .output
         .send(Value::BinaryInputStream(cfg.files.reader(context.input)?))
 }
 
@@ -41,7 +42,10 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
             std::io::copy(input.as_mut(), out.as_mut())?;
             Ok(())
         }
-        v => argument_error_legacy(format!("Expected a binary stream, got '{}'", v.value_type())),
+        v => argument_error_legacy(format!(
+            "Expected a binary stream, got '{}'",
+            v.value_type()
+        )),
     }
 }
 

@@ -154,7 +154,7 @@ pub fn expr_operator(iop: impl Into<TrackedString>, l: Box<Node>, r: Box<Node>) 
 
         "and" => operator_function(&["global", "cond", "and"], op.location, l, r),
         "or" => operator_function(&["global", "cond", "or"], op.location, l, r),
-        
+
         // Note that these operators reverse the arguments because the method exists on the second argument!
         "=~" => operator_method("match", op.location, r, l),
         "!~" => operator_method("not_match", op.location, r, l),
@@ -176,7 +176,7 @@ impl CommandNode {
             expressions: vec![attr(&["global", "control", "bg"], location)],
         }
     }
-    
+
     pub fn compile(&self, env: &Scope) -> CrushResult<CommandInvocation> {
         if let Some(c) = self.expressions[0].compile_as_special_command(env)? {
             if self.expressions.len() == 1 {

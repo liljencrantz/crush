@@ -42,7 +42,7 @@ pub fn syntax_highlight(
 
         res.push_str(&code[pos..min(tok.location().start, code.len())]);
         let mut do_reset = false;
-        
+
         new_command = match (new_command, prev, tok, ntok) {
             (_, _, Token::BlockStart(_) | Token::Separator(_, _) | Token::Pipe(_), _) => true,
             (
@@ -54,26 +54,20 @@ pub fn syntax_highlight(
             (true, _, Token::String(_, _) | Token::Identifier(_, _), _) => true,
             (true, Some(Token::String(s, _)), Token::MemberOperator(_), _) => {
                 match &command_context {
-                    CommandContext::Known(v) => {
-                        match v.field(s) {
-                            Ok(Some(v)) => 
-                                command_context = CommandContext::Known(v),
-                            _ => command_context = CommandContext::Unknown,
-                        }
-                    }
+                    CommandContext::Known(v) => match v.field(s) {
+                        Ok(Some(v)) => command_context = CommandContext::Known(v),
+                        _ => command_context = CommandContext::Unknown,
+                    },
                     _ => {}
                 }
                 true
             }
             (true, Some(Token::Identifier(s, _)), Token::MemberOperator(_), _) => {
                 match &command_context {
-                    CommandContext::Known(v) => {
-                        match v.field(&s[1..]) {
-                            Ok(Some(v)) =>
-                                command_context = CommandContext::Known(v),
-                            _ => command_context = CommandContext::Unknown,
-                        }
-                    }
+                    CommandContext::Known(v) => match v.field(&s[1..]) {
+                        Ok(Some(v)) => command_context = CommandContext::Known(v),
+                        _ => command_context = CommandContext::Unknown,
+                    },
                     _ => {}
                 }
                 true
@@ -86,7 +80,11 @@ pub fn syntax_highlight(
                 current_command = match &command_context {
                     CommandContext::Unknown => None,
                     CommandContext::Known(ctx) => ctx.field(name).unwrap_or(None).and_then(|v| {
-                        if let Value::Command(cmd) = v {Some(cmd)} else {None}
+                        if let Value::Command(cmd) = v {
+                            Some(cmd)
+                        } else {
+                            None
+                        }
                     }),
                 };
             }
@@ -238,10 +236,7 @@ fn get_color<'a>(
     }
 }
 
-fn allowed_named_argument(
-    parameter_completion_data: &[Parameter],
-    name: &str,
-) -> bool {
+fn allowed_named_argument(parameter_completion_data: &[Parameter], name: &str) -> bool {
     for param in parameter_completion_data {
         if param.named {
             return true;
@@ -306,10 +301,7 @@ fn token_type(token: Token, scope: &Option<Scope>) -> Option<ValueType> {
     }
 }
 
-fn named_argument_type(
-    parameter_completion_data: &[Parameter],
-    name: &str,
-) -> Option<ValueType> {
+fn named_argument_type(parameter_completion_data: &[Parameter], name: &str) -> Option<ValueType> {
     let mut default = None;
     for param in parameter_completion_data {
         if param.named {
