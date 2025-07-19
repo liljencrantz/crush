@@ -9,9 +9,13 @@ use crossbeam::channel::Receiver;
 use crossbeam::channel::Sender;
 use crossbeam::channel::bounded;
 use std::cmp::max;
+use std::collections::HashMap;
 use std::thread;
 use std::thread::JoinHandle;
 use termion::terminal_size;
+use crate::lang::state::scope::Scope;
+use crate::util::highlight::highlight_colors;
+use crate::util::md::render;
 
 pub enum PrinterMessage {
     Ping,
@@ -42,11 +46,11 @@ const TERMINAL_FALLBACK_HEIGHT: usize = 30;
 
 /**
     Create a print thread and a printer that sends messages to it.
-    Create idditional printer instances by cloning it. To exit the print thread,
+    Create additional printer instances by cloning it. To exit the print thread,
     simply drop all Printer instances connected to it, and the thread will exit.
     To wait until the print thread has exited, call join on the JoinHandle.
 */
-pub fn init() -> (Printer, JoinHandle<()>) {
+pub fn init(scope: Option<Scope>) -> (Printer, JoinHandle<()>) {
     let (sender, receiver) = bounded(128);
     let (pong_sender, pong_receiver) = bounded(1);
 
@@ -66,7 +70,9 @@ pub fn init() -> (Printer, JoinHandle<()>) {
                         }
                         Error(err) => eprintln!("{}", err),
                         CrushError(err) => {
-                            eprintln!("Error: {}", err.message());
+                            let colors = scope.as_ref().map(|s| highlight_colors(s)).unwrap_or_else(|| HashMap::new());
+                            let rendered = render(&err.message(), 80, colors).unwrap_or_else(|_| err.message());
+                            eprintln!("{}", rendered);
                             if let Some(ctx) = err.context() {
                                 eprintln!("{}", ctx);
                             }

@@ -96,7 +96,7 @@ fn run() -> CrushResult<i32> {
     let (printer, print_handle) = if config.mode == Mode::Pup {
         printer::noop()
     } else {
-        printer::init()
+        printer::init(Some(root_scope.clone()))
     };
 
     let run_mode = match config.mode {

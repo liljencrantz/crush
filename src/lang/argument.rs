@@ -342,7 +342,7 @@ mod tests {
 
     #[test]
     fn allowed_values() {
-        let (printer, _) = crate::lang::printer::init();
+        let (printer, _) = crate::lang::printer::init(None);
         let a = AllowedValuesStringSignature::parse(
             vec![Argument::named(
                 "str_val",
@@ -418,7 +418,7 @@ mod tests {
 
     #[test]
     fn option_signature() {
-        let (printer, _) = crate::lang::printer::init();
+        let (printer, _) = crate::lang::printer::init(None);
         assert_eq!(
             OptionSignature::parse(
                 vec![Argument::named(
@@ -447,7 +447,7 @@ mod tests {
 
     #[test]
     fn default_signature() {
-        let (printer, _) = crate::lang::printer::init();
+        let (printer, _) = crate::lang::printer::init(None);
         assert_eq!(
             DefaultSignature::parse(
                 vec![Argument::named(
@@ -475,7 +475,7 @@ mod tests {
 
     #[test]
     fn list_signature() {
-        let (printer, _) = crate::lang::printer::init();
+        let (printer, _) = crate::lang::printer::init(None);
         assert_eq!(
             ListSignature::parse(
                 vec![
@@ -527,7 +527,7 @@ mod tests {
 
     #[test]
     fn named_signature() {
-        let (printer, _) = crate::lang::printer::init();
+        let (printer, _) = crate::lang::printer::init(None);
         assert_eq!(
             NamedSignature::parse(
                 vec![
@@ -558,7 +558,7 @@ mod tests {
 
     #[test]
     fn named_signature_type_check() {
-        let (printer, _) = crate::lang::printer::init();
+        let (printer, _) = crate::lang::printer::init(None);
         let s: NamedSignature2 = NamedSignature2::parse(
             vec![Argument::named(
                 "foo",
@@ -577,7 +577,7 @@ mod tests {
 
     #[test]
     fn named_signature_with_bad_type() {
-        let (printer, _) = crate::lang::printer::init();
+        let (printer, _) = crate::lang::printer::init(None);
         assert!(
             NamedSignature2::parse(
                 vec![Argument::named(

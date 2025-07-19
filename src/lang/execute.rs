@@ -47,7 +47,7 @@ pub fn pup(env: Scope, buf: &Vec<u8>, global_state: &GlobalState) -> CrushResult
             Ok(())
         }
 
-        _ => argument_error_legacy("Expected a command, but found other value"),
+        v => argument_error_legacy(format!("Expected a command, but found value of type `{}`", v.value_type())),
     }
 }
 

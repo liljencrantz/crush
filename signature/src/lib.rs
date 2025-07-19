@@ -415,6 +415,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 let name_string = Literal::string(&name.to_string());
 
                 let type_data = Signature::new(
+                    &metadata.name,
                     &field.ty,
                     name,
                     default_value.clone(),
@@ -583,7 +584,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                             #named_matchers
                             #named_fallback
                             (None, _value) => _unnamed.push_back((_value, _arg.location)),
-                            (Some(_name), _value) => return crate::lang::errors::argument_error(format!("{}: Unexpected argument named \"{}\" with value of type {}", #command_name, _name, _value.value_type()), _location),
+                            (Some(_name), _value) => return crate::lang::errors::argument_error(format!("`{}`: Unexpected argument named `{}` with value of type `{}`", #command_name, _name, _value.value_type()), _location),
                         }
                     }
 

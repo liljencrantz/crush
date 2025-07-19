@@ -23,11 +23,9 @@ use crate::lang::state::global_state::GlobalState;
 use crate::lang::state::scope::{Scope, ScopeType};
 use crate::lang::value::{Value, ValueDefinition, ValueType};
 use crate::util::escape::unescape;
-use itertools::Itertools;
 use ordered_map::{Entry, OrderedMap};
 use std::collections::VecDeque;
 use std::fmt::Display;
-use std::ops::Deref;
 use std::sync::Arc;
 
 enum ClosureType {
@@ -125,6 +123,18 @@ impl ClosureType {
                 Ok(())
             }
             ClosureType::Command { signature_data, .. } => {
+                let closure_name = self.name();
+                let mut unnamed = vec![];
+                for arg in arguments.drain(..) {
+                    match arg.argument_type {
+                        Some(name) => {
+                            context.env.redeclare(name.as_ref(), arg.value)?;
+                        }
+                        None => {
+                            unnamed.push(arg.value);
+                        }
+                    }
+                }
                 let mut named = None;
                 let mut unnamed = VecDeque::new();
                 let mut arg_data = OrderedMap::new();
@@ -151,13 +161,13 @@ impl ClosureType {
                 }
                 for arg in arguments.drain(..) {
                     match arg.argument_type {
-                        Some(name) => match arg_data.entry(name.clone()) {
+                        Some(argument_name) => match arg_data.entry(argument_name.clone()) {
                             Entry::Vacant(_) => {
                                 if let Some(nn) = &mut named {
-                                    nn.insert(Value::from(name.clone()), arg.value);
+                                    nn.insert(Value::from(argument_name.clone()), arg.value);
                                 } else {
                                     return argument_error(
-                                        format!("Unknown parameter name {}", name),
+                                        format!("{}: Unknown parameter name {}", closure_name, argument_name),
                                         arg.location,
                                     );
                                 }
@@ -177,8 +187,9 @@ impl ClosureType {
                                         }
                                         _ => {
                                             return argument_error_legacy(format!(
-                                                "Invalid type for parameter {}",
-                                                name
+                                                "{}: Invalid state during argument parsing for named argument `{}`.",
+                                                closure_name,
+                                                argument_name
                                             ));
                                         }
                                     };
@@ -187,10 +198,11 @@ impl ClosureType {
                                             .element_type()
                                             .is_compatible_with(&arg_as_list.element_type())
                                         {
-                                            list.append(&mut arg_as_list.iter().collect());
+                                            list.append(&mut arg_as_list.iter().collect())?;
                                         } else {
                                             return argument_error_legacy(format!(
-                                                "List of elements of type {} can't be inserted into list of type {}",
+                                                "{}: List of elements of type `{}` can't be inserted into list of type `{}`.",
+                                                closure_name,
                                                 arg_as_list.element_type(),
                                                 list.element_type()
                                             ));
@@ -200,11 +212,12 @@ impl ClosureType {
                                             .element_type()
                                             .is_compatible_with(&arg.value.value_type())
                                         {
-                                            list.append(&mut vec![arg.value]);
+                                            list.append(&mut vec![arg.value])?;
                                         } else {
                                             return argument_error_legacy(format!(
-                                                "Wrong type for argument {}, expected {}, got {}",
-                                                name,
+                                                "{}, Wrong type for argument `{}`, expected `{}`, got `{}`.",
+                                                closure_name,
+                                                argument_name,
                                                 list.element_type(),
                                                 arg.value.value_type()
                                             ));
@@ -220,9 +233,10 @@ impl ClosureType {
                                         });
                                     } else {
                                         return argument_error_legacy(format!(
-                                            "Wrong type {} for argument {}, expected {}, but got {}",
+                                            "{}: Wrong type `{}` for argument `{}`, expected `{}`, but got `{}`",
+                                            closure_name,
                                             arg.value.value_type(),
-                                            name,
+                                            argument_name,
                                             e.value().value_type,
                                             arg.value.value_type(),
                                         ));
@@ -248,7 +262,8 @@ impl ClosureType {
                                     context.env.redeclare(&data.0, arg.value)?;
                                 } else {
                                     return argument_error_legacy(format!(
-                                        "Wrong type {} for argument {}, expected {}",
+                                        "{}: Wrong type {} for argument {}, expected {}",
+                                        closure_name,
                                         arg.value.value_type(),
                                         data.0,
                                         data.1.value_type
@@ -267,7 +282,9 @@ impl ClosureType {
                 match unnamed_remainder {
                     None => {
                         if let Some(argument) = &unnamed.pop_front() {
-                            return argument_error("Stray unnamed argument", argument.location);
+                            return argument_error(
+                                format!("{}: Stray unnamed argument", closure_name),
+                                argument.location);
                         }
                     }
                     Some(name) => {
@@ -285,7 +302,7 @@ impl ClosureType {
                 match (named, named_remainder) {
                     (None, None) => {}
                     (Some(_), None) => {
-                        argument_error_legacy("Unknown named arguments")?;
+                        argument_error_legacy(format!("{}: Unknown named arguments.", closure_name))?;
                     }
                     (None, Some(name)) => {
                         context.env.redeclare(
@@ -442,7 +459,7 @@ fn compile_signature(
                     Value::Type(vt) => vt,
                     _ => {
                         return argument_error(
-                            format!("Invalid type for argument {}", &name.string),
+                            format!("Invalid type for argument `{}`.", &name.string),
                             name.location,
                         );
                     }

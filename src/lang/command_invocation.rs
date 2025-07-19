@@ -169,7 +169,7 @@ fn eval_other(
         context.output.send(value)?;
         Ok(None)
     } else {
-        error(&format!("{} is not a command.", value))
+        error(&format!("`{}` is not a command.", value))
     }
 }
 
@@ -216,7 +216,7 @@ fn eval_struct(
 
         Some(v) => error(
             format!(
-                "__call__ should be a command, was of type {}",
+                "Member `__call__` must be a command for struct to be callable, was of type {}",
                 v.value_type().to_string()
             )
             .as_str(),
@@ -237,7 +237,7 @@ fn eval_struct(
             } else {
                 error(
                     format!(
-                        "Struct must have a member __call__ to be used as a command {}",
+                        "Struct must have a member `__call__` to be used as a command {}",
                         struct_value.to_string()
                     )
                     .as_str(),
@@ -298,7 +298,7 @@ fn try_external_command(
     context: JobContext,
 ) -> CrushResult<Option<ThreadId>> {
     match resolve_external_command(&cmd.string, &context.scope)? {
-        None => error(format!("Unknown command name {}", cmd).as_str()),
+        None => error(format!("Unknown command name `{}`", cmd).as_str()),
         Some(path) => {
             arguments.insert(
                 0,

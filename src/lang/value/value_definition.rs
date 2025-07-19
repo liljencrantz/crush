@@ -97,7 +97,7 @@ impl ValueDefinition {
                 context
                     .env
                     .get(&s.string)?
-                    .ok_or(&format!("Unknown variable {}", self))?,
+                    .ok_or(&format!("Unknown variable `{}`", self))?,
             ),
 
             ValueDefinition::GetAttr(parent_def, entry) => {
@@ -115,7 +115,7 @@ impl ValueDefinition {
                     parent
                 };
                 let val = parent.field(&entry.string)?.ok_or(&format!(
-                    "Missing field {} in value of type {}",
+                    "Missing field `{}` in value of type `{}`",
                     entry,
                     parent.value_type()
                 ))?;

@@ -33,6 +33,7 @@ pub enum SignatureType {
 }
 
 pub struct Signature {
+    command_name: String,
     span: Span,
     signature_type: SignatureType,
     name: Ident,
@@ -43,6 +44,7 @@ pub struct Signature {
 
 impl Signature {
     pub fn new(
+        command_name: &str,
         ty: &Type,
         name: &Ident,
         default: Option<TokenTree>,
@@ -51,6 +53,7 @@ impl Signature {
     ) -> SignatureResult<Signature> {
         let signature_type = SignatureType::try_from(ty)?;
         Ok(Signature {
+            command_name: command_name.to_string(),
             span: ty.span(),
             signature_type,
             name: name.clone(),
@@ -62,67 +65,443 @@ impl Signature {
 
     pub fn type_data(self) -> SignatureResult<TypeData> {
         match &self.signature_type {
-            SignatureType::Simple(simple_type) => simple_type_data(
-                simple_type,
-                &self.name,
-                self.default,
-                self.is_unnamed_target,
-                self.allowed_values,
-                self.span,
-            ),
-            SignatureType::Vec(sub) => vec_type_data(
-                sub,
-                &self.name,
-                self.default,
-                self.is_unnamed_target,
-                self.allowed_values,
-                self.span,
-            ),
-            SignatureType::Option(sub) => option_type_data(
-                sub,
-                &self.name,
-                self.default,
-                self.is_unnamed_target,
-                self.allowed_values,
-                self.span,
-            ),
-            SignatureType::Patterns => patterns_type_data(
-                &self.name,
-                self.default,
-                self.is_unnamed_target,
-                self.allowed_values,
-                self.span,
-            ),
-            SignatureType::OrderedStringMap(sub) => ordered_string_map_type_data(
-                sub,
-                &self.name,
-                self.default,
-                self.is_unnamed_target,
-                self.allowed_values,
-                self.span,
-            ),
-            SignatureType::Files => files_type_data(
-                &self.name,
-                self.default,
-                self.is_unnamed_target,
-                self.allowed_values,
-                self.span,
-            ),
-            SignatureType::Number => number_type_data(
-                &self.name,
-                self.default,
-                self.is_unnamed_target,
-                self.allowed_values,
-                self.span,
-            ),
-            SignatureType::Text => text_type_data(
-                &self.name,
-                self.default,
-                self.is_unnamed_target,
-                self.allowed_values,
-                self.span,
-            ),
+            SignatureType::Simple(simple_type) => self.simple_type_data(simple_type),
+            SignatureType::Vec(sub) => self.vec_type_data(sub),
+            SignatureType::Option(sub) => self.option_type_data(sub),
+            SignatureType::Patterns => self.patterns_type_data(),
+            SignatureType::OrderedStringMap(sub) => self.ordered_string_map_type_data(sub),
+            SignatureType::Files => self.files_type_data(),
+            SignatureType::Number => self.number_type_data(),
+            SignatureType::Text => self.text_type_data(),
         }
+    }
+
+    fn simple_type_data(&self, simple_type: &SimpleSignature) -> SignatureResult<TypeData> {
+        let command_name = Literal::string(&self.command_name);
+        let native_type = simple_type.ident(self.span);
+        let allowed_values_name =
+            allowed_values_name(&self.allowed_values, &self.name.to_string(), self.span);
+        let mutator = simple_type.mutator(&allowed_values_name);
+        let value_type = simple_type.value();
+        let name_literal = Literal::string(&self.name.to_string());
+        let type_name = simple_type.name();
+        let name = &self.name;
+
+        Ok(TypeData {
+            crush_internal_type: simple_type.value_type(),
+            signature: if self.default.is_none() {
+                format!(
+                    "{}={}",
+                    self.name.to_string(),
+                    simple_type.description().to_string().to_lowercase()
+                )
+            } else {
+                if simple_type.description() == "bool"
+                    && self.default.is_some()
+                    && self.default.as_ref().unwrap().to_string() == "(false)"
+                {
+                    format!("[--{}]", self.name)
+                } else {
+                    format!("[{}={}]", self.name.to_string(), simple_type.description())
+                }
+            },
+            initialize: match &self.allowed_values {
+                None => quote! { let mut #name = None; },
+                Some(literals) => {
+                    let mut literal_params = proc_macro2::TokenStream::new();
+                    for l in literals {
+                        literal_params.extend(quote! { #l,});
+                    }
+                    quote! {
+                        let mut #name = None;
+                        let #allowed_values_name = maplit::hashset![#literal_params];
+                    }
+                }
+            },
+            allowed_values: self.allowed_values.clone(),
+            mappings: quote! {(Some(#name_literal), #value_type) => #name = Some(#mutator),},
+            unnamed_mutate: match &self.default {
+                None => Some(quote! {
+                if #name.is_none() {
+                    match _unnamed.pop_front() {
+                        Some((#value_type, _location)) => #name = Some(#mutator),
+                        Some((value, _location)) =>
+                            return crate::lang::errors::argument_error(format!(
+                                "`{}`: Expected argument `{}` to be of type `{}`, was of type `{}`",
+                                #command_name,
+                                #name_literal,
+                                #type_name,
+                                value.value_type().to_string()),
+                                _location,
+                            ),
+                        _ =>
+                            return crate::lang::errors::argument_error_legacy(
+                                format!(
+                                    "`{}`: No value provided for argument `{}`",
+                                    #command_name,
+                                    #name_literal),
+                            ),
+                    }
+                }
+                                            }),
+                Some(def) => Some(quote! {
+                if #name.is_none() {
+                    match _unnamed.pop_front() {
+                        Some((#value_type, _location)) => #name = Some(#mutator),
+                        None => #name = Some(#native_type::from(#def)),
+                        Some((_, _location)) => return crate::lang::errors::argument_error(
+                                format!("`{}`: Expected argument `{}` to be of type `{}`", #command_name, #name_literal, #type_name),
+                                _location,
+                            ),
+                        _ => return crate::lang::errors::argument_error_legacy(
+                                format!("`{}`: Expected argument `{}` to be of type `{}`", #command_name, #name_literal, #type_name),
+                            ),
+                        }
+                }
+                                            }),
+            },
+            assign: quote! {
+            #name: #name.ok_or(format!("`{}`: Missing value for parameter `{}`", #command_name, #name_literal).as_str())?,
+            },
+        })
+    }
+
+    fn number_type_data(&self) -> SignatureResult<TypeData> {
+        let command_name = Literal::string(&self.command_name);
+        let name_literal = Literal::string(&self.name.to_string());
+        let name = &self.name;
+        Ok(TypeData {
+            allowed_values: None,
+            crush_internal_type: quote! {crate::lang::value::ValueType::one_of(vec![
+                crate::lang::value::ValueType::Integer,
+                crate::lang::value::ValueType::Float,
+            ])},
+            signature: format!("{}=$(one_of $float $integer)", self.name.to_string()),
+            initialize: quote! { let mut #name = None; },
+            mappings: quote! {
+                (Some(#name_literal), crate::lang::value::Value::Float(_value)) => #name = Some(Number::Float(_value)),
+                (Some(#name_literal), crate::lang::value::Value::Integer(_value)) => #name = Some(Number::Integer(_value)),
+            },
+            unnamed_mutate: if self.default.is_none() {
+                Some(quote! {
+                    if # name.is_none() {
+                        match _unnamed.pop_front() {
+                            Some(( crate::lang::value::Value::Float(_value), _location)) => # name = Some(Number::Float(_value)),
+                            Some(( crate::lang::value::Value::Integer(_value), _location)) => # name = Some(Number::Integer(_value)),
+                            Some((value, _location)) =>
+                                return crate::lang::errors::argument_error(format ! (
+                                    "`{}`: Expected argument `{}` to be a number, was of type `{}`",
+                                    #command_name,
+                                    #name_literal,
+                                    value.value_type().to_string()),
+                                    _location),
+                            _ =>
+                                return crate::lang::errors::argument_error_legacy(format ! (
+                                    "`{}`: No value provided for argument `{}`",
+                                    #command_name,
+                                    # name_literal).as_str()),
+                        }
+                    }
+                })
+            } else {
+                Some(quote! {
+                    if # name.is_none() {
+                        match _unnamed.pop_front() {
+                            Some(( crate::lang::value::Value::Float(_value), _location)) => # name = Some(Number::Float(_value)),
+                            Some(( crate::lang::value::Value::Integer(_value), _location)) => # name = Some(Number::Integer(_value)),
+                            Some((value, _location)) =>
+                                return crate::lang::errors::argument_error(format ! (
+                                    "`{}`: Expected argument `{}` to be a number, was of type `{}`",
+                                    #command_name,
+                                    #name_literal,
+                                    value.value_type().to_string()),
+                                    _location),
+                            _ => {}
+                        }
+                    }
+                })
+            },
+            assign: self
+                .default
+                .as_ref()
+                .map(|default| {
+                    quote! {
+                        # name: # name.unwrap_or( # default),
+                    }
+                })
+                .unwrap_or(quote! {
+                #name:
+                    #name.ok_or(format!(
+                            "`{}`: Missing value for parameter `{}`",
+                            #command_name,
+                            #name_literal).as_str())?,
+                }),
+        })
+    }
+
+    fn text_type_data(&self) -> SignatureResult<TypeData> {
+        let command_name = Literal::string(&self.command_name);
+        let name_literal = Literal::string(&self.name.to_string());
+        let name = &self.name;
+        Ok(TypeData {
+            allowed_values: None,
+            crush_internal_type: quote! {crate::lang::value::ValueType::one_of(vec![
+                crate::lang::value::ValueType::String,
+                crate::lang::value::ValueType::File,
+            ])},
+            signature: format!("{}=$(one_of $string $file)", name.to_string()),
+            initialize: quote! { let mut #name = None; },
+            mappings: quote! {
+                (Some(#name_literal), crate::lang::value::Value::String(_value)) => #name = Some(Text::String(_value)),
+                (Some(#name_literal), crate::lang::value::Value::File(_value)) => #name = Some(Text::File(_value)),
+            },
+            unnamed_mutate: if self.default.is_none() {
+                Some(quote! {
+                    if # name.is_none() {
+                        match _unnamed.pop_front() {
+                            Some(( crate::lang::value::Value::String(_value), _location)) => # name = Some(Text::String(_value)),
+                            Some(( crate::lang::value::Value::File(_value), _location)) => # name = Some(Text::File(_value)),
+                            Some((value, _location)) =>
+                                return crate::lang::errors::argument_error(format ! (
+                                    "`{}`: Expected argument `{}` to be textual, was of type `{}`",
+                                    #command_name,
+                                    #name_literal,
+                                    value.value_type().to_string()),
+                                    _location),
+                            _ =>
+                                return crate::lang::errors::argument_error_legacy(format ! (
+                                    "`{}`: No value provided for argument `{}`",
+                                    #command_name,
+                                    # name_literal).as_str()),
+                        }
+                    }
+                })
+            } else {
+                Some(quote! {
+                    if # name.is_none() {
+                        match _unnamed.pop_front() {
+                            Some(( crate::lang::value::Value::String(_value), _location)) => # name = Some(Text::String(_value)),
+                            Some(( crate::lang::value::Value::File(_value), _location)) => # name = Some(Text::File(_value)),
+                            Some((value, _location)) =>
+                                return crate::lang::errors::argument_error(format ! (
+                                    "`{}`: Expected argument `{}` to be textual, was of type `{}`",
+                                    #command_name,
+                                    #name_literal,
+                                    value.value_type().to_string()),
+                                    _location),
+                            _ => {}
+                        }
+                    }
+                })
+            },
+            assign: self
+                .default
+                .as_ref()
+                .map(|default| {
+                    quote! {
+                        # name: # name.unwrap_or( # default),
+                    }
+                })
+                .unwrap_or(quote! {
+                #name: #name.ok_or(format!(
+                            "`{}`: Missing value for parameter `{}`",
+                            #command_name, #name_literal).as_str())?,
+                }),
+        })
+    }
+
+    fn files_type_data(&self) -> SignatureResult<TypeData> {
+        let name_literal = Literal::string(&self.name.to_string());
+        let name = &self.name;
+        Ok(TypeData {
+            allowed_values: None,
+            signature: format!("@ $(one_of $file $glob $re $list $table $table_input_stream)"),
+            initialize: quote! { let mut #name = crate::lang::signature::files::Files::new(); },
+            mappings: quote! { (Some(#name_literal), value) => #name.expand(value)?, },
+            unnamed_mutate: if self.is_unnamed_target {
+                Some(quote! {
+                    while !_unnamed.is_empty() {
+                        #name.expand(_unnamed.pop_front().unwrap().0)?;
+                    }
+                })
+            } else {
+                None
+            },
+            assign: quote! { #name, },
+            crush_internal_type: quote! {crate::lang::value::ValueType::Any},
+        })
+    }
+
+    fn patterns_type_data(&self) -> SignatureResult<TypeData> {
+        let command_name = Literal::string(&self.command_name);
+        let name_literal = Literal::string(&self.name.to_string());
+        let name = &self.name;
+        Ok(TypeData {
+            allowed_values: None,
+            signature: format!("@ $(one_of $string $glob $re)"),
+            initialize: quote! { let mut #name = crate::lang::signature::patterns::Patterns::new(); },
+            mappings: quote! {
+                (Some(#name_literal), crate::lang::value::Value::Glob(_value)) => #name.expand_glob(_value),
+                (Some(#name_literal), crate::lang::value::Value::String(_value)) => #name.expand_string(_value.to_string()),
+                (Some(#name_literal), crate::lang::value::Value::Regex(_pattern, _value)) => #name.expand_regex(_pattern, _value),
+            },
+            unnamed_mutate: if self.is_unnamed_target {
+                Some(quote! {
+                    while !_unnamed.is_empty() {
+                        match _unnamed.pop_front() {
+                Some((crate::lang::value::Value::Glob(_value), _)) => #name.expand_glob(_value),
+                Some((crate::lang::value::Value::String(_value), _)) => #name.expand_string(_value.to_string()),
+                Some((crate::lang::value::Value::Regex(_pattern, _value), _)) => #name.expand_regex(_pattern, _value),
+                        }
+                    }
+                })
+            } else {
+                Some(quote! {
+                    if #name.is_empty() {
+                        match _unnamed.pop_front() {
+                Some((crate::lang::value::Value::Glob(_value), _)) => #name.expand_glob(_value),
+                Some((crate::lang::value::Value::String(_value), _)) => #name.expand_string(_value.to_string()),
+                Some((crate::lang::value::Value::Regex(_pattern, _value), _)) => #name.expand_regex(_pattern, _value),
+                            Some((value, _location)) =>
+                                return crate::lang::errors::argument_error(format ! (
+                                    "{}`: Expected argument `{}` to be textual, was of type `{}`",
+                                    #command_name,
+                                    #name_literal,
+                                    value.value_type().to_string()),
+                                    _location),
+                            _ =>
+                                return crate::lang::errors::argument_error_legacy(format ! (
+                                    "{}`: No value provided for argument `{}`",
+                                    #command_name,
+                                    #name_literal).as_str()),
+                        }
+                    }
+                })
+            },
+            assign: quote! { #name, },
+            crush_internal_type: quote! {crate::lang::value::ValueType::one_of(vec![
+                crate::lang::value::ValueType::String,
+                crate::lang::value::ValueType::Glob,
+                crate::lang::value::ValueType::Regex,
+            ])},
+        })
+    }
+
+    fn option_type_data(&self, simple_type: &SimpleSignature) -> SignatureResult<TypeData> {
+        let command_name = Literal::string(&self.command_name);
+        let name_literal = Literal::string(&self.name.to_string());
+        let name = &self.name;
+        let sub_type = simple_type.literal();
+        let mutator = simple_type.mutator(&None);
+        let value_type = simple_type.value();
+        let span = self.span;
+        Ok(TypeData {
+            allowed_values: None,
+            signature: format!(
+                "[{}={}]",
+                name.to_string(),
+                simple_type.description().to_string().to_lowercase()
+            ),
+            initialize: quote! { let mut #name = None; },
+            mappings: quote! { (Some(#name_literal), #value_type) => #name = Some(#mutator), },
+            unnamed_mutate: Some(quote_spanned! { span =>
+            if #name.is_none() {
+                match _unnamed.pop_front() {
+                    None => {}
+                    Some((#value_type, _location)) => #name = Some(#mutator),
+                    Some((_, _location)) =>
+                        return crate::lang::errors::argument_error(
+                            format!(
+                                    "`{}`: Expected argument `{}` to be of type `{}`",
+                                    #command_name, #name_literal, #sub_type),
+                            _location,
+                        ),
+                    _ =>
+                        return crate::lang::errors::argument_error_legacy(
+                            format!(
+                                    "{}`: Missing argument `{}`",
+                                    #command_name, #name_literal)),
+                }
+            }
+            }),
+            assign: quote! { #name, },
+            crush_internal_type: simple_type.value_type(),
+        })
+    }
+
+    fn ordered_string_map_type_data(
+        &self,
+        simple_type: &SimpleSignature,
+    ) -> SignatureResult<TypeData> {
+        let name = &self.name;
+        if self.allowed_values.is_some() {
+            return fail!(self.span, "Options can't have restricted values");
+        }
+        let mutator = simple_type.mutator(&None);
+        let value_type = simple_type.value();
+        let sub_type = simple_type.value_type();
+
+        Ok(TypeData {
+            allowed_values: None,
+            signature: format!(
+                "[<any>={}...]",
+                simple_type.description().to_string().to_lowercase()
+            ),
+            initialize: quote! { let mut #name = crate::lang::ordered_string_map::OrderedStringMap::new(); },
+            mappings: quote! { (Some(name), #value_type) => #name.insert(name.to_string(), #mutator), },
+            unnamed_mutate: None,
+            assign: quote! { #name, },
+            crush_internal_type: sub_type,
+        })
+    }
+
+    fn vec_type_data(&self, simple_type: &SimpleSignature) -> SignatureResult<TypeData> {
+        if self.allowed_values.is_some() {
+            return fail!(self.span, "Vectors can't have restricted values");
+        }
+        let name = &self.name;
+        let command_name = Literal::string(&self.command_name);
+        let mutator = simple_type.mutator(&None);
+        let dump_all = Ident::new(simple_type.dump_list(), self.span.clone());
+        let value_type = simple_type.value();
+        let sub_type = simple_type.value_type();
+        let name_literal = proc_macro2::Literal::string(&self.name.to_string());
+        let type_name = simple_type.name();
+
+        Ok(TypeData {
+            allowed_values: None,
+            crush_internal_type: quote! {crate::lang::value::ValueType::List(Box::from(#sub_type))},
+            signature: format!(
+                "[{}={}...]",
+                self.name.to_string(),
+                simple_type.description().to_string().to_lowercase()
+            ),
+            initialize: quote! { let mut #name = Vec::new(); },
+            mappings: quote! {
+                (Some(#name_literal), #value_type) => #name.push(#mutator),
+                (Some(#name_literal), crate::lang::value::Value::List(value)) => value.#dump_all(&mut #name)?,
+            },
+            unnamed_mutate: if self.is_unnamed_target {
+                Some(quote! {
+                    while !_unnamed.is_empty() {
+                        match  _unnamed.pop_front() {
+                            Some((#value_type, _location)) => #name.push(#mutator),
+                        Some((_, _location)) =>
+                            return crate::lang::errors::argument_error(
+                                format!("`{}`: Expected argument `{}` to be of type `{}`", #command_name, #name_literal, #type_name),
+                                _location,
+                            ),
+                        _ =>
+                            return crate::lang::errors::argument_error_legacy(
+                                format!("`{}`: Missing argument `{}`", #command_name, #name_literal)),
+                        }
+                    }
+                })
+            } else {
+                None
+            },
+            assign: quote! { #name, },
+        })
     }
 }
 
@@ -240,444 +619,5 @@ fn allowed_values_name(
             &format!("_{}_allowed_values", name.to_string()),
             span.clone(),
         )
-    })
-}
-
-fn simple_type_data(
-    simple_type: &SimpleSignature,
-    name: &Ident,
-    default: Option<TokenTree>,
-    _is_unnamed_target: bool,
-    allowed_values: Option<Vec<TokenTree>>,
-    span: Span,
-) -> SignatureResult<TypeData> {
-    let native_type = simple_type.ident(span);
-    let allowed_values_name = allowed_values_name(&allowed_values, &name.to_string(), span);
-    let mutator = simple_type.mutator(&allowed_values_name);
-    let value_type = simple_type.value();
-    let name_literal = Literal::string(&name.to_string());
-    let type_name = simple_type.name();
-
-    Ok(TypeData {
-        crush_internal_type: simple_type.value_type(),
-        signature: if default.is_none() {
-            format!(
-                "{}={}",
-                name.to_string(),
-                simple_type.description().to_string().to_lowercase()
-            )
-        } else {
-            if simple_type.description() == "bool"
-                && default.is_some()
-                && default.as_ref().unwrap().to_string() == "(false)"
-            {
-                format!("[--{}]", name)
-            } else {
-                format!("[{}={}]", name.to_string(), simple_type.description())
-            }
-        },
-        initialize: match &allowed_values {
-            None => quote! { let mut #name = None; },
-            Some(literals) => {
-                let mut literal_params = proc_macro2::TokenStream::new();
-                for l in literals {
-                    literal_params.extend(quote! { #l,});
-                }
-                quote! {
-                    let mut #name = None;
-                    let #allowed_values_name = maplit::hashset![#literal_params];
-                }
-            }
-        },
-        allowed_values,
-        mappings: quote! {(Some(#name_literal), #value_type) => #name = Some(#mutator),},
-        unnamed_mutate: match default {
-            None => Some(quote! {
-            if #name.is_none() {
-                match _unnamed.pop_front() {
-                    Some((#value_type, _location)) => #name = Some(#mutator),
-                    Some((value, _location)) =>
-                        return crate::lang::errors::argument_error(format!(
-                            "Expected argument \"{}\" to be of type {}, was of type {}",
-                            #name_literal,
-                            #type_name,
-                            value.value_type().to_string()),
-                            _location,
-                        ),
-                    _ =>
-                        return crate::lang::errors::argument_error_legacy(
-                            format!(
-                                "No value provided for argument \"{}\"",
-                                #name_literal),
-                        ),
-                }
-            }
-                                        }),
-            Some(def) => Some(quote! {
-            if #name.is_none() {
-                match _unnamed.pop_front() {
-                    Some((#value_type, _location)) => #name = Some(#mutator),
-                    None => #name = Some(#native_type::from(#def)),
-                    Some((_, _location)) => return crate::lang::errors::argument_error(
-                            format!("Expected argument {} to be of type {}", #name_literal, #type_name),
-                            _location,
-                        ),
-                    _ => return crate::lang::errors::argument_error_legacy(
-                            format!("Expected argument {} to be of type {}", #name_literal, #type_name),
-                        ),
-                    }
-            }
-                                        }),
-        },
-        assign: quote! {
-        #name: #name.ok_or(format!("Missing value for parameter {}", #name_literal).as_str())?,
-        },
-    })
-}
-
-fn number_type_data(
-    name: &Ident,
-    default: Option<TokenTree>,
-    _is_unnamed_target: bool,
-    _allowed_values: Option<Vec<TokenTree>>,
-    _span: Span,
-) -> SignatureResult<TypeData> {
-    let name_literal = proc_macro2::Literal::string(&name.to_string());
-    Ok(TypeData {
-        allowed_values: None,
-        crush_internal_type: quote! {crate::lang::value::ValueType::one_of(vec![
-            crate::lang::value::ValueType::Integer,
-            crate::lang::value::ValueType::Float,
-        ])},
-        signature: format!("{}=$(one_of $float $integer)", name.to_string()),
-        initialize: quote! { let mut #name = None; },
-        mappings: quote! {
-            (Some(#name_literal), crate::lang::value::Value::Float(_value)) => #name = Some(Number::Float(_value)),
-            (Some(#name_literal), crate::lang::value::Value::Integer(_value)) => #name = Some(Number::Integer(_value)),
-        },
-        unnamed_mutate: if default.is_none() {
-            Some(quote! {
-                if # name.is_none() {
-                    match _unnamed.pop_front() {
-                        Some(( crate::lang::value::Value::Float(_value), _location)) => # name = Some(Number::Float(_value)),
-                        Some(( crate::lang::value::Value::Integer(_value), _location)) => # name = Some(Number::Integer(_value)),
-                        Some((value, _location)) =>
-                            return crate::lang::errors::argument_error(format ! (
-                                "Expected argument \"{}\" to be a number, was of type {}",
-                                #name_literal,
-                                value.value_type().to_string()),
-                                _location),
-                        _ =>
-                            return crate::lang::errors::argument_error_legacy(format ! (
-                                "No value provided for argument \"{}\"",
-                                # name_literal).as_str()),
-                    }
-                }
-            })
-        } else {
-            Some(quote! {
-                if # name.is_none() {
-                    match _unnamed.pop_front() {
-                        Some(( crate::lang::value::Value::Float(_value), _location)) => # name = Some(Number::Float(_value)),
-                        Some(( crate::lang::value::Value::Integer(_value), _location)) => # name = Some(Number::Integer(_value)),
-                        Some((value, _location)) =>
-                            return crate::lang::errors::argument_error(format ! (
-                                "Expected argument \"{}\" to be a number, was of type {}",
-                                #name_literal,
-                                value.value_type().to_string()),
-                                _location),
-                        _ => {}
-                    }
-                }
-            })
-        },
-        assign: default
-            .map(|default| {
-                quote! {
-                    # name: # name.unwrap_or( # default),
-                }
-            })
-            .unwrap_or(quote! {
-            #name:
-                #name.ok_or(format!("Missing value for parameter {}", #name_literal).as_str())?,
-            }),
-    })
-}
-
-fn text_type_data(
-    name: &Ident,
-    default: Option<TokenTree>,
-    _is_unnamed_target: bool,
-    _allowed_values: Option<Vec<TokenTree>>,
-    _span: Span,
-) -> SignatureResult<TypeData> {
-    let name_literal = proc_macro2::Literal::string(&name.to_string());
-    Ok(TypeData {
-        allowed_values: None,
-        crush_internal_type: quote! {crate::lang::value::ValueType::one_of(vec![
-            crate::lang::value::ValueType::String,
-            crate::lang::value::ValueType::File,
-        ])},
-        signature: format!("{}=$(one_of $string $file)", name.to_string()),
-        initialize: quote! { let mut #name = None; },
-        mappings: quote! {
-            (Some(#name_literal), crate::lang::value::Value::String(_value)) => #name = Some(Text::String(_value)),
-            (Some(#name_literal), crate::lang::value::Value::File(_value)) => #name = Some(Text::File(_value)),
-        },
-        unnamed_mutate: if default.is_none() {
-            Some(quote! {
-                if # name.is_none() {
-                    match _unnamed.pop_front() {
-                        Some(( crate::lang::value::Value::String(_value), _location)) => # name = Some(Text::String(_value)),
-                        Some(( crate::lang::value::Value::File(_value), _location)) => # name = Some(Text::File(_value)),
-                        Some((value, _location)) =>
-                            return crate::lang::errors::argument_error(format ! (
-                                "Expected argument \"{}\" to be textual, was of type {}",
-                                #name_literal,
-                                value.value_type().to_string()),
-                                _location),
-                        _ =>
-                            return crate::lang::errors::argument_error_legacy(format ! (
-                                "No value provided for argument \"{}\"",
-                                # name_literal).as_str()),
-                    }
-                }
-            })
-        } else {
-            Some(quote! {
-                if # name.is_none() {
-                    match _unnamed.pop_front() {
-                        Some(( crate::lang::value::Value::String(_value), _location)) => # name = Some(Text::String(_value)),
-                        Some(( crate::lang::value::Value::File(_value), _location)) => # name = Some(Text::File(_value)),
-                        Some((value, _location)) =>
-                            return crate::lang::errors::argument_error(format ! (
-                                "Expected argument \"{}\" to be textual, was of type {}",
-                                #name_literal,
-                                value.value_type().to_string()),
-                                _location),
-                        _ => {}
-                    }
-                }
-            })
-        },
-        assign: default
-            .map(|default| {
-                quote! {
-                    # name: # name.unwrap_or( # default),
-                }
-            })
-            .unwrap_or(quote! {
-            #name: #name.ok_or(format!("Missing value for parameter {}", #name_literal).as_str())?,
-            }),
-    })
-}
-
-fn files_type_data(
-    name: &Ident,
-    _default: Option<TokenTree>,
-    is_unnamed_target: bool,
-    _allowed_values: Option<Vec<TokenTree>>,
-    _span: Span,
-) -> SignatureResult<TypeData> {
-    let name_literal = proc_macro2::Literal::string(&name.to_string());
-    Ok(TypeData {
-        allowed_values: None,
-        signature: format!("@ $(one_of $file $glob $re $list $table $table_input_stream)"),
-        initialize: quote! { let mut #name = crate::lang::signature::files::Files::new(); },
-        mappings: quote! { (Some(#name_literal), value) => #name.expand(value)?, },
-        unnamed_mutate: if is_unnamed_target {
-            Some(quote! {
-                while !_unnamed.is_empty() {
-                    #name.expand(_unnamed.pop_front().unwrap().0)?;
-                }
-            })
-        } else {
-            None
-        },
-        assign: quote! { #name, },
-        crush_internal_type: quote! {crate::lang::value::ValueType::Any},
-    })
-}
-
-fn patterns_type_data(
-    name: &Ident,
-    _default: Option<TokenTree>,
-    is_unnamed_target: bool,
-    _allowed_values: Option<Vec<TokenTree>>,
-    _span: Span,
-) -> SignatureResult<TypeData> {
-    let name_literal = proc_macro2::Literal::string(&name.to_string());
-    Ok(TypeData {
-        allowed_values: None,
-        signature: format!("@ $(one_of $string $glob $re)"),
-        initialize: quote! { let mut #name = crate::lang::signature::patterns::Patterns::new(); },
-        mappings: quote! {
-            (Some(#name_literal), crate::lang::value::Value::Glob(_value)) => #name.expand_glob(_value),
-            (Some(#name_literal), crate::lang::value::Value::String(_value)) => #name.expand_string(_value.to_string()),
-            (Some(#name_literal), crate::lang::value::Value::Regex(_pattern, _value)) => #name.expand_regex(_pattern, _value),
-        },
-        unnamed_mutate: if is_unnamed_target {
-            Some(quote! {
-                while !_unnamed.is_empty() {
-                    match _unnamed.pop_front() {
-            Some((crate::lang::value::Value::Glob(_value), _)) => #name.expand_glob(_value),
-            Some((crate::lang::value::Value::String(_value), _)) => #name.expand_string(_value.to_string()),
-            Some((crate::lang::value::Value::Regex(_pattern, _value), _)) => #name.expand_regex(_pattern, _value),
-                    }
-                }
-            })
-        } else {
-            Some(quote! {
-                if #name.is_empty() {
-                    match _unnamed.pop_front() {
-            Some((crate::lang::value::Value::Glob(_value), _)) => #name.expand_glob(_value),
-            Some((crate::lang::value::Value::String(_value), _)) => #name.expand_string(_value.to_string()),
-            Some((crate::lang::value::Value::Regex(_pattern, _value), _)) => #name.expand_regex(_pattern, _value),
-                        Some((value, _location)) =>
-                            return crate::lang::errors::argument_error(format ! (
-                                "Expected argument \"{}\" to be textual, was of type {}",
-                                #name_literal,
-                                value.value_type().to_string()),
-                                _location),
-                        _ =>
-                            return crate::lang::errors::argument_error_legacy(format ! (
-                                "No value provided for argument \"{}\"",
-                                # name_literal).as_str()),
-                    }
-                }
-            })
-        },
-        assign: quote! { #name, },
-        crush_internal_type: quote! {crate::lang::value::ValueType::one_of(vec![
-            crate::lang::value::ValueType::String,
-            crate::lang::value::ValueType::Glob,
-            crate::lang::value::ValueType::Regex,
-        ])},
-    })
-}
-
-fn option_type_data(
-    simple_type: &SimpleSignature,
-    name: &Ident,
-    _default: Option<TokenTree>,
-    _is_unnamed_target: bool,
-    _allowed_values: Option<Vec<TokenTree>>,
-    span: Span,
-) -> SignatureResult<TypeData> {
-    let sub_type = simple_type.literal();
-    let mutator = simple_type.mutator(&None);
-    let value_type = simple_type.value();
-    let name_literal = proc_macro2::Literal::string(&name.to_string());
-
-    Ok(TypeData {
-        allowed_values: None,
-        signature: format!(
-            "[{}={}]",
-            name.to_string(),
-            simple_type.description().to_string().to_lowercase()
-        ),
-        initialize: quote! { let mut #name = None; },
-        mappings: quote! { (Some(#name_literal), #value_type) => #name = Some(#mutator), },
-        unnamed_mutate: Some(quote_spanned! { span =>
-        if #name.is_none() {
-            match _unnamed.pop_front() {
-                None => {}
-                Some((#value_type, _location)) => #name = Some(#mutator),
-                Some((_, _location)) =>
-                    return crate::lang::errors::argument_error(
-                        format!("Expected argument {} to be of type {}", #name_literal, #sub_type),
-                        _location,
-                    ),
-                _ =>
-                    return crate::lang::errors::argument_error_legacy(
-                        format!("Missing argument {}", #name_literal)),
-            }
-        }
-        }),
-        assign: quote! { #name, },
-        crush_internal_type: simple_type.value_type(),
-    })
-}
-
-fn ordered_string_map_type_data(
-    simple_type: &SimpleSignature,
-    name: &Ident,
-    _default: Option<TokenTree>,
-    _is_unnamed_target: bool,
-    allowed_values: Option<Vec<TokenTree>>,
-    span: Span,
-) -> SignatureResult<TypeData> {
-    if allowed_values.is_some() {
-        return fail!(span, "Options can't have restricted values");
-    }
-    let mutator = simple_type.mutator(&None);
-    let value_type = simple_type.value();
-    let sub_type = simple_type.value_type();
-
-    Ok(TypeData {
-        allowed_values: None,
-        signature: format!(
-            "[<any>={}...]",
-            simple_type.description().to_string().to_lowercase()
-        ),
-        initialize: quote! { let mut #name = crate::lang::ordered_string_map::OrderedStringMap::new(); },
-        mappings: quote! { (Some(name), #value_type) => #name.insert(name.to_string(), #mutator), },
-        unnamed_mutate: None,
-        assign: quote! { #name, },
-        crush_internal_type: sub_type,
-    })
-}
-
-fn vec_type_data(
-    simple_type: &SimpleSignature,
-    name: &Ident,
-    _default: Option<TokenTree>,
-    is_unnamed_target: bool,
-    allowed_values: Option<Vec<TokenTree>>,
-    span: Span,
-) -> SignatureResult<TypeData> {
-    if allowed_values.is_some() {
-        return fail!(span, "Vectors can't have restricted values");
-    }
-    let mutator = simple_type.mutator(&None);
-    let dump_all = Ident::new(simple_type.dump_list(), span.clone());
-    let value_type = simple_type.value();
-    let sub_type = simple_type.value_type();
-    let name_literal = proc_macro2::Literal::string(&name.to_string());
-    let type_name = simple_type.name();
-
-    Ok(TypeData {
-        allowed_values: None,
-        crush_internal_type: quote! {crate::lang::value::ValueType::List(Box::from(#sub_type))},
-        signature: format!(
-            "[{}={}...]",
-            name.to_string(),
-            simple_type.description().to_string().to_lowercase()
-        ),
-        initialize: quote! { let mut #name = Vec::new(); },
-        mappings: quote! {
-            (Some(#name_literal), #value_type) => #name.push(#mutator),
-            (Some(#name_literal), crate::lang::value::Value::List(value)) => value.#dump_all(&mut #name)?,
-        },
-        unnamed_mutate: if is_unnamed_target {
-            Some(quote! {
-                while !_unnamed.is_empty() {
-                    match  _unnamed.pop_front() {
-                        Some((#value_type, _location)) => #name.push(#mutator),
-                    Some((_, _location)) =>
-                        return crate::lang::errors::argument_error(
-                            format!("Expected argument {} to be of type {}", #name_literal, #type_name),
-                            _location,
-                        ),
-                    _ =>
-                        return crate::lang::errors::argument_error_legacy(
-                            format!("Missing argument {}", #name_literal)),
-                    }
-                }
-            })
-        } else {
-            None
-        },
-        assign: quote! { #name, },
     })
 }

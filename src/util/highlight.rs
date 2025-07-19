@@ -13,6 +13,23 @@ enum CommandContext {
     Known(Value),
 }
 
+pub fn highlight_colors(scope: &Scope) -> HashMap<String, String> {
+    if let Ok(Value::Dict(highlight)) =
+        scope.get_absolute_path(vec![
+            "global".to_string(),
+            "crush".to_string(),
+            "highlight".to_string(),
+        ]) {
+        highlight
+            .elements()
+            .into_iter()
+            .map(|e| (e.0.to_string(), e.1.to_string()))
+            .collect()
+    } else {
+        HashMap::new()
+    }  
+}
+
 pub fn syntax_highlight(
     code: &str,
     colors: &HashMap<String, String>,

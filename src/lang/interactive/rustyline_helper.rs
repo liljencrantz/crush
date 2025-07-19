@@ -3,7 +3,6 @@ use crate::lang::ast::lexer::LanguageMode::Command;
 use crate::lang::errors::CrushResult;
 use crate::lang::state::global_state::GlobalState;
 use crate::lang::state::scope::Scope;
-use crate::lang::value::Value;
 use crate::util::directory_lister::directory_lister;
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
@@ -14,7 +13,7 @@ use rustyline::{Context, validate};
 use rustyline_derive::Helper;
 use std::borrow::Cow;
 use std::borrow::Cow::{Borrowed, Owned};
-use std::collections::HashMap;
+use crate::util::highlight::highlight_colors;
 
 #[derive(Helper)]
 pub struct RustylineHelper {
@@ -58,20 +57,7 @@ impl RustylineHelper {
     }
 
     fn highlight_internal(&self, line: &str, _cursor: usize) -> CrushResult<String> {
-        let map: HashMap<String, String> = if let Ok(Value::Dict(highlight)) =
-            self.scope.get_absolute_path(vec![
-                "global".to_string(),
-                "crush".to_string(),
-                "highlight".to_string(),
-            ]) {
-            highlight
-                .elements()
-                .into_iter()
-                .map(|e| (e.0.to_string(), e.1.to_string()))
-                .collect()
-        } else {
-            HashMap::new()
-        };
+        let map = highlight_colors(&self.scope);
         crate::util::highlight::syntax_highlight(line, &map, &Some(self.scope.clone()))
     }
 }

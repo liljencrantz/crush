@@ -121,7 +121,7 @@ impl ValueType {
             ValueType::BinaryInputStream => ValueType::Binary,
             ValueType::TableInputStream(o) => ValueType::Table(ColumnType::materialize(o)?),
             ValueType::TableOutputStream(_) => {
-                return argument_error_legacy("Can't materialize binary_output_stream");
+                return argument_error_legacy("Can't materialize `$table_output_stream`");
             }
             ValueType::Table(r) => ValueType::Table(ColumnType::materialize(r)?),
             ValueType::List(l) => ValueType::List(Box::from(l.materialize()?)),
@@ -169,7 +169,7 @@ impl ValueType {
             ValueType::File => Ok(Value::from(s)),
             ValueType::Float => Ok(Value::Float(s.parse::<f64>()?)),
             ValueType::Bool => Ok(Value::Bool(s.parse::<bool>()?)),
-            _ => error("Failed to parse cell"),
+            _ => error(format!("Can't parse string into value of type `{}`", self)),
         }
     }
 

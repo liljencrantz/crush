@@ -135,13 +135,17 @@ impl TableInputStream {
         match &res {
             Ok(row) => {
                 if row.cells().len() != self.types.len() {
-                    return error("Wrong number of columns in io");
+                    return error(format!(
+                        "Pipeline expected rows to have {} columns, but received row with {} columns.",
+                        self.types.len(),
+                        row.cells().len()
+                    ));
                 }
                 for (c, ct) in row.cells().iter().zip(self.types.iter()) {
                     if !ct.cell_type.is(c) {
                         return error(
                             format!(
-                                "Wrong cell type in io column {:?}, expected {:?}, got {:?}",
+                                "Pipeline expected column `{}` to be of type `{}`, but was of type `{}`.",
                                 ct.name(),
                                 c.value_type(),
                                 ct.cell_type
