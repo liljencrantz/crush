@@ -45,7 +45,7 @@ fn evaluate(
 
     match reciever.recv()? {
         Value::Bool(b) => Ok(b),
-        _ => error("Expected a boolean result"),
+        _ => error("`where`: Expected a boolean result"),
     }
 }
 
@@ -76,6 +76,6 @@ pub fn r#where(mut context: CommandContext) -> CrushResult<()> {
             }
             Ok(())
         }
-        None => error("Expected a stream"),
+        None => error("`where`: Expected a stream"),
     }
 }

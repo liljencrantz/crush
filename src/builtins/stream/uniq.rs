@@ -47,6 +47,6 @@ pub fn uniq(context: CommandContext) -> CrushResult<()> {
             }
             Ok(())
         }
-        _ => error("Expected input to be a stream"),
+        _ => error("`uniq`: Expected input to be a stream"),
     }
 }

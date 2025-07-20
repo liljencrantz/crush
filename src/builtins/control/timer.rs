@@ -2,11 +2,13 @@ use crate::builtins::control::timeit::time_run;
 use crate::lang::command::Command;
 use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
-use crate::lang::value::Value;
+use crate::lang::value::{Value, ValueType};
 use signature::signature;
+use crate::lang::command::OutputType::Known;
 
 #[signature(
     control.timer,
+    output = Known(ValueType::Duration),
     short = "Execute a command once and return the execution time.",
     example = "timer {files|sort size}",
 )]

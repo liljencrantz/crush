@@ -125,17 +125,17 @@ fn stat(mut context: CommandContext) -> CrushResult<()> {
             Value::Integer(metadata.st_blocks as i128),
             Value::Time(
                 DateTime::from_timestamp(metadata.st_atime, 0)
-                    .ok_or("Failed to parse timestamp")?
+                    .ok_or("`stat`: Failed to parse timestamp")?
                     .with_timezone(&Local),
             ),
             Value::Time(
                 DateTime::from_timestamp(metadata.st_mtime, 0)
-                    .ok_or("Failed to parse timestamp")?
+                    .ok_or("`stat`: Failed to parse timestamp")?
                     .with_timezone(&Local),
             ),
             Value::Time(
                 DateTime::from_timestamp(metadata.st_ctime, 0)
-                    .ok_or("Failed to parse timestamp")?
+                    .ok_or("`stat`: Failed to parse timestamp")?
                     .with_timezone(&Local),
             ),
             Value::File(Arc::from(file.as_path())),

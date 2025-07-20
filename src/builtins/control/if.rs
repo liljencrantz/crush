@@ -9,7 +9,7 @@ use signature::signature;
     control.r#if,
     condition = true,
     short = "Conditionally execute a command once.",
-    example = "if $(gt $a 10) {",
+    example = "if ($a > 10) {",
     example = "  echo big",
     example = "} else {",
     example = "  echo small",
@@ -44,7 +44,7 @@ fn r#if(mut context: CommandContext) -> CrushResult<()> {
                     .create_child(&context.scope, ScopeType::Conditional);
                 v.eval(context.empty().with_scope(env).with_output(context.output))
             }
-            _ => argument_error_legacy("Invalid else-clause. Did you misspell else?"),
+            (_, s) => argument_error_legacy(format!("`if`: Unknown clause `{}`. Did you misspell else?", s)),
         }
     }
 }

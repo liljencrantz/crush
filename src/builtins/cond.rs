@@ -34,13 +34,13 @@ pub fn and(mut context: CommandContext) -> CrushResult<()> {
                     }
                     v => {
                         return argument_error_legacy(format!(
-                            "Expected boolean values, got a value of type {}",
+                            "`and`: Expected boolean values, got a value of type {}",
                             v.value_type().to_string()
                         ));
                     }
                 }
             }
-            _ => return argument_error_legacy("Expected boolean values"),
+            _ => return argument_error_legacy("`and`: Expected boolean values"),
         }
     }
     context.output.send(Value::Bool(res))
@@ -74,10 +74,10 @@ pub fn or(mut context: CommandContext) -> CrushResult<()> {
                             break;
                         }
                     }
-                    _ => return argument_error_legacy("Expected boolean values"),
+                    _ => return argument_error_legacy("`or`: Expected boolean values"),
                 }
             }
-            _ => return argument_error_legacy("Expected boolean values"),
+            _ => return argument_error_legacy("`or`: Expected boolean values"),
         }
     }
     context.output.send(Value::Bool(res))

@@ -122,7 +122,7 @@ fn member(context: CommandContext) -> CrushResult<()> {
             s.get(&cfg.field)
                 .ok_or(format!("Unknown field \"{}\"", cfg.field).as_str())?,
         ),
-        _ => data_error("Expected a struct"),
+        _ => data_error("`member`: Expected a struct"),
     }
 }
 
@@ -166,7 +166,7 @@ fn readline(context: CommandContext) -> CrushResult<()> {
             context
                 .global_state
                 .printer()
-                .line(&format!("Error: Failed to save history: {}", err))
+                .line(&format!("`readline`: Failed to save history: {}", err))
         }
     }
 

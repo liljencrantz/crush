@@ -36,7 +36,7 @@ fn sort(context: CommandContext) -> CrushResult<()> {
                 if input.types().len() == 1 {
                     vec![0]
                 } else {
-                    return argument_error_legacy("Missing comparison key");
+                    return argument_error_legacy("`sort`: Missing comparison key");
                 }
             } else {
                 cfg.field
@@ -47,7 +47,7 @@ fn sort(context: CommandContext) -> CrushResult<()> {
 
             for idx in &indices {
                 if !input.types()[*idx].cell_type.is_comparable() {
-                    return argument_error_legacy("Bad comparison key");
+                    return argument_error_legacy(format!("`sort`: Bad comparison key. `{}` is not comparable.", input.types()[*idx].name()));
                 }
             }
 
@@ -66,7 +66,7 @@ fn sort(context: CommandContext) -> CrushResult<()> {
                 res.sort_by(|a, b| {
                     for idx in &indices {
                         match b.cells()[*idx].param_partial_cmp(&a.cells()[*idx], comparison_mode) {
-                            None => panic!("Unexpected sort failure"),
+                            None => panic!("`sort`: Unexpected sort failure"),
                             Some(Ordering::Equal) => {}
                             Some(ordering) => return ordering,
                         }
@@ -77,7 +77,7 @@ fn sort(context: CommandContext) -> CrushResult<()> {
                 res.sort_by(|b, a| {
                     for idx in &indices {
                         match b.cells()[*idx].param_partial_cmp(&a.cells()[*idx], comparison_mode) {
-                            None => panic!("Unexpected sort failure"),
+                            None => panic!("`sort`: Unexpected sort failure"),
                             Some(Ordering::Equal) => {}
                             Some(ordering) => return ordering,
                         }
@@ -92,6 +92,6 @@ fn sort(context: CommandContext) -> CrushResult<()> {
 
             Ok(())
         }
-        None => error("Expected a stream"),
+        None => error("`sort`: Expected a stream"),
     }
 }

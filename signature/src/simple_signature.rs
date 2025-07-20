@@ -157,7 +157,8 @@ impl SimpleSignature {
         }
     }
 
-    pub fn mutator(&self, allowed_values: &Option<Ident>) -> TokenStream {
+    pub fn mutator(&self, command_name: &str, allowed_values: &Option<Ident>) -> TokenStream {
+        let command_name = Literal::string(command_name);
         match allowed_values {
             None => match self {
                 SimpleSignature::Char => {
@@ -165,7 +166,7 @@ impl SimpleSignature {
                         if _value.len() == 1 {
                             _value.chars().next().unwrap()
                         } else {
-                            return crate::lang::errors::argument_error("Argument must be exactly one character", _location)
+                            return crate::lang::errors::argument_error(format!("`{}`: Argument must be exactly one character", #command_name), _location)
                         }
                     }
                 }
@@ -180,7 +181,7 @@ impl SimpleSignature {
                     quote! {
                     crate::lang::errors::mandate_argument(
                         _value.stream()?,
-                        "Expected a type that can be streamed",
+                        format!("`{}`: Expected a type that can be streamed", #command_name),
                         _location)?,
                     }
                 }
@@ -194,13 +195,13 @@ impl SimpleSignature {
                             c
                         } else {
                             return crate::lang::errors::argument_error(
-                                format!("Only the following values are allowed: {:?}", #allowed),
+                                format!("`{}`: Only the following values are allowed: {:?}", #command_name, #allowed),
                                 _location,
                             )
                         }
                     } else {
                         return crate::lang::errors::argument_error(
-                            "Argument must be exactly one character",
+                            format!("`{}`: Argument must be exactly one character", #command_name),
                             _location,
                         )
                     }
@@ -210,7 +211,7 @@ impl SimpleSignature {
                         _value.to_string()
                     } else {
                         return crate::lang::errors::argument_error(
-                            format!("Only the following values are allowed: {:?}", #allowed),
+                            format!("`{}`: Only the following values are allowed: {:?}", #command_name, #allowed),
                             _location,
                         )
                     }
@@ -220,7 +221,7 @@ impl SimpleSignature {
                         _value
                     } else {
                         return crate::lang::errors::argument_error(
-                            format!("Only the following values are allowed: {:?}", #allowed),
+                            format!("`{}`: Only the following values are allowed: {:?}", #command_name, #allowed),
                             _location,
                         )
                     }

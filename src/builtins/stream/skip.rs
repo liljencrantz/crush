@@ -32,6 +32,6 @@ fn skip(context: CommandContext) -> CrushResult<()> {
             }
             Ok(())
         }
-        None => argument_error_legacy("Expected a stream"),
+        None => argument_error_legacy("`skip`: Expected a stream"),
     }
 }

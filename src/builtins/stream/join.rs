@@ -98,9 +98,9 @@ pub fn join(mut context: CommandContext) -> CrushResult<()> {
     let r = context.arguments.remove(0);
     match (
         l.argument_type,
-        l.value.stream()?.ok_or("Expected a stream")?,
+        l.value.stream()?.ok_or("`join`: Expected a stream")?,
         r.argument_type,
-        r.value.stream()?.ok_or("Expected a stream")?,
+        r.value.stream()?.ok_or("`join`: Expected a stream")?,
     ) {
         (Some(left_name), left_stream, Some(right_name), right_stream) => {
             let left_idx = left_stream.types().find(&left_name)?;
@@ -119,6 +119,6 @@ pub fn join(mut context: CommandContext) -> CrushResult<()> {
                 &context.global_state.printer(),
             )
         }
-        (_, _, _, _) => argument_error_legacy("Invalid inputs for joins"),
+        (_, _, _, _) => argument_error_legacy("`join`: Invalid inputs for joins"),
     }
 }

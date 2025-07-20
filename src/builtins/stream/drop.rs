@@ -50,6 +50,6 @@ fn drop(context: CommandContext) -> CrushResult<()> {
             }
             Ok(())
         }
-        None => error("Expected a stream"),
+        None => error("`drop`: Expected a stream"),
     }
 }
