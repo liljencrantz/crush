@@ -116,7 +116,7 @@ struct Of {
 fn of(context: CommandContext) -> CrushResult<()> {
     let cfg: Of = Of::parse(context.arguments, &context.global_state.printer())?;
     match cfg.values.len() {
-        0 => argument_error_legacy("Expected at least one argument"),
+        0 => argument_error_legacy("`list:of`: Expected at least one argument"),
         _ => context
             .output
             .send(List::new_without_type(cfg.values).into()),
@@ -150,7 +150,7 @@ fn collect_internal(
 
 fn collect(context: CommandContext) -> CrushResult<()> {
     let cfg: Collect = Collect::parse(context.arguments, &context.global_state.printer())?;
-    let input = context.input.recv()?.stream()?.ok_or("Expected a stream")?;
+    let input = context.input.recv()?.stream()?.ok_or("`list:collect`: Expected a stream")?;
     let input_type = input.types().to_vec();
     match (input_type.len(), cfg.column) {
         (_, Some(name)) => match input_type.as_slice().find(&name) {
@@ -160,13 +160,13 @@ fn collect(context: CommandContext) -> CrushResult<()> {
                 input_type[idx].cell_type.clone(),
                 context.output,
             ),
-            _ => data_error(format!("Column {} not found", name)),
+            _ => data_error(format!("list:collect`: No column named `{}` could be found", name)),
         },
 
         (1, None) => collect_internal(input, 0, input_type[0].cell_type.clone(), context.output),
 
         _ => data_error(
-            "Expected either input with exactly one column or an argument specifying which column to pick",
+            "list:collect`: Expected either input with exactly one column or an argument specifying which column to pick",
         ),
     }
 }
@@ -184,7 +184,7 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     match context.this.r#type()? {
         ValueType::List(t) => context.output.send(List::new(*t, []).into()),
-        _ => argument_error_legacy("Expected this to be a list type"),
+        _ => argument_error_legacy("`list:new`: Expected `this` to be a list type"),
     }
 }
 
@@ -237,7 +237,7 @@ fn push(mut context: CommandContext) -> CrushResult<()> {
     for el in &cfg.values {
         if el.value_type() != l.element_type() && l.element_type() != ValueType::Any {
             return argument_error_legacy(format!(
-                "Invalid element type, got {} but expected {}",
+                "`list:push`: Invalid element type, tried to push en element of type `{}` into a list of `{}`",
                 el.value_type().to_string(),
                 l.element_type().to_string()
             ));
@@ -415,10 +415,10 @@ fn slice(mut context: CommandContext) -> CrushResult<()> {
     let to = cfg.to.unwrap_or(s.len());
 
     if to < cfg.from {
-        return argument_error_legacy("From larger than to");
+        return argument_error_legacy("`list:slice`: From larger than to");
     }
     if to > s.len() {
-        return argument_error_legacy("Substring beyond end of string");
+        return argument_error_legacy("`list:slice`: Substring beyond end of string");
     }
     context.output.send(s.slice(cfg.from, to)?.into())
 }

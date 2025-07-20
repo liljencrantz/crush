@@ -84,7 +84,7 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
             let mut out = cfg.file.writer(context.output)?;
             if input.types().len() != 1 || input.types()[0].cell_type != ValueType::String {
                 return data_error(
-                    "Expected an input iterator containing a single column of type string",
+                    "`lines:to`: Expected an input iterator containing a single column of type string",
                 );
             }
             while let Ok(row) = input.read() {
@@ -95,13 +95,13 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
                         out.write(s.as_bytes())?;
                     }
                     _ => {
-                        return data_error("Expected a string");
+                        return data_error(format!("`lines:to`: Expected the `{}` column to be a string", input.types()[0].name()));
                     }
                 }
             }
             Ok(())
         }
-        None => argument_error_legacy("Expected a stream"),
+        None => argument_error_legacy("`lines:to`: Expected input to be a stream"),
     }
 }
 

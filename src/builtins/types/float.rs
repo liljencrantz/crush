@@ -40,7 +40,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
 )]
 #[allow(unused)]
 struct Add {
-    #[description("the number to add")]
+    #[description("the number to add.")]
     term: Number,
 }
 

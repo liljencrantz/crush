@@ -109,7 +109,7 @@ fn from(context: CommandContext) -> CrushResult<()> {
 
 fn to_toml(value: Value) -> CrushResult<toml::Value> {
     match value.materialize()? {
-        Value::File(s) => Ok(toml::Value::from(s.to_str().ok_or("Invalid filename")?)),
+        Value::File(s) => Ok(toml::Value::from(s.to_str().ok_or("`toml:to`: Invalid filename")?)),
 
         Value::String(s) => Ok(toml::Value::from(s.as_ref())),
 
@@ -151,7 +151,7 @@ fn to_toml(value: Value) -> CrushResult<toml::Value> {
 
         Value::TableInputStream(_) => panic!("Impossible"),
 
-        v => error(&format!("Unsupported data type {}", v.value_type())),
+        v => error(&format!("`toml:to`: Unsupported data type {}", v.value_type())),
     }
 }
 

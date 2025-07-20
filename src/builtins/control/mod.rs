@@ -14,6 +14,7 @@ use os_pipe::PipeReader;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicU64;
 use std::sync::{Mutex, OnceLock};
+use crate::lang::command_invocation::resolve_external_command;
 
 mod cmd;
 mod r#for;
@@ -212,6 +213,26 @@ fn source(mut context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
+#[signature(
+    control.which,
+    short = "Find the path of an executable",
+    long = "`which` searches the directories of the `$global:control:cmd_path` list for the specified command and returns the path to the first match.",
+    output = Known(ValueType::File),
+    example = "# Returns '/bin/ps'",
+    example = "which ps",
+)]
+struct Which {
+    #[description("the name of the command to find")]
+    command: String,
+}
+
+fn which(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = Which::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.output
+        .send(Value::from(resolve_external_command(&cfg.command, &context.scope)?
+        .ok_or_else(||format!("`which`: Could not find the command `{}` on your path", &cfg.command))?))
+}
+
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
         "control",
@@ -242,6 +263,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Fg::declare(env)?;
             help::HelpSignature::declare(env)?;
             Source::declare(env)?;
+            Which::declare(env)?;
             Ok(())
         }),
     )?;

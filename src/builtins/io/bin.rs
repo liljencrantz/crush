@@ -43,7 +43,7 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
             Ok(())
         }
         v => argument_error_legacy(format!(
-            "Expected a binary stream, got '{}'",
+            "`bin:to`: Expected input to be a binary stream, got a value of type `{}`",
             v.value_type()
         )),
     }

@@ -148,7 +148,7 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
                 }
                 c => {
                     return argument_error_legacy(format!(
-                        "Illegal character in class-part of permission: {}",
+                        "`file:chmod`: Illegal character in class-part of permission: {}",
                         c
                     ));
                 }
@@ -159,7 +159,7 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
                 'x' => modes |= EXECUTE,
                 c => {
                     return argument_error_legacy(format!(
-                        "Illegal character in mode-part of permission: {}",
+                        "`file:chmod`: Illegal character in mode-part of permission: {}",
                         c
                     ));
                 }
@@ -168,11 +168,11 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
     }
 
     if !class_done {
-        return argument_error_legacy("Premature end of permission");
+        return argument_error_legacy("`file:chmod`: Premature end of permission");
     }
 
     if classes.is_empty() {
-        return argument_error_legacy("No user classes specified in permission");
+        return argument_error_legacy("`file:chmod`: No user classes specified in permission");
     }
 
     for cl in classes {
@@ -264,7 +264,7 @@ fn write(mut context: CommandContext) -> CrushResult<()> {
             std::io::copy(input.as_mut(), &mut out)?;
             Ok(())
         }
-        _ => argument_error_legacy("Expected a binary stream"),
+        _ => argument_error_legacy("`file:write`: Expected a binary stream"),
     }
 }
 
@@ -298,9 +298,9 @@ fn name(mut context: CommandContext) -> CrushResult<()> {
             .this
             .file()?
             .file_name()
-            .ok_or("Invalid file path")?
+            .ok_or("`file:name`: Invalid file path")?
             .to_str()
-            .ok_or("Invalid file name")?,
+            .ok_or("`file:name`: Invalid file name")?,
     ))
 }
 
@@ -314,7 +314,7 @@ struct Parent {}
 
 fn parent(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::from(
-        context.this.file()?.parent().ok_or("Invalid file path")?,
+        context.this.file()?.parent().ok_or("`file:parent`: Invalid file path")?,
     ))
 }
 
@@ -455,10 +455,10 @@ fn remove(mut context: CommandContext) -> CrushResult<()> {
                 remove_file_of_unknown_type(file, &output, cfg.verbose)
             }
         }
-        None => argument_error_legacy("Expected this to be a file, but this is not set"),
+        None => argument_error_legacy("`file:remove`: Expected `this` to be a file, but it was not set"),
         Some(v) => argument_error_legacy(&format!(
-            "Expected this to be a file, but it is a {}",
-            v.value_type().to_string()
+            "`file:remove`: Expected `this` to be of type `file`, but is of type `{}`",
+            v.value_type(),
         )),
     }
 }
@@ -474,7 +474,7 @@ struct MkDir {}
 fn mkdir_recursive(path: &Path, leaf: bool) -> CrushResult<()> {
     if path.exists() && path.is_dir() {
         if leaf {
-            data_error("Directory already exists")
+            data_error("`file:mkdir`: Directory already exists")
         } else {
             Ok(())
         }

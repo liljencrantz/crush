@@ -17,7 +17,7 @@ enum FormatState {
 }
 
 fn format_argument(res: &mut String, arg: Option<&Argument>) -> CrushResult<()> {
-    res.push_str(arg.ok_or("Missing argument")?.value.to_string().as_str());
+    res.push_str(arg.ok_or("`string:format`: Missing argument")?.value.to_string().as_str());
     Ok(())
 }
 
@@ -52,7 +52,7 @@ fn do_format(format: &str, param: Vec<Argument>) -> CrushResult<String> {
                     res.push('}');
                     Normal
                 }
-                _ => return argument_error_legacy("Unmatched closing brace"),
+                _ => return argument_error_legacy("`string:format`: Unmatched closing brace"),
             },
 
             OpenBrace => match ch {
@@ -67,7 +67,7 @@ fn do_format(format: &str, param: Vec<Argument>) -> CrushResult<String> {
                 }
                 '0'..='9' => Index(ch.to_digit(10).unwrap() as usize),
                 'a'..='z' | 'A'..='Z' => Name(ch.to_string()),
-                _ => return argument_error_legacy("Invalid format string"),
+                _ => return argument_error_legacy("`string:format`: Invalid format string"),
             },
 
             Index(idx) => match ch {
@@ -76,7 +76,7 @@ fn do_format(format: &str, param: Vec<Argument>) -> CrushResult<String> {
                     Normal
                 }
                 '0'..='9' => Index(idx * 10 + ch.to_digit(10).unwrap() as usize),
-                _ => return argument_error_legacy("Invalid format string"),
+                _ => return argument_error_legacy("`string:format`: Invalid format string"),
             },
 
             Name(name) => match ch {
@@ -92,7 +92,9 @@ fn do_format(format: &str, param: Vec<Argument>) -> CrushResult<String> {
 }
 
 #[signature(
-    types.string.format, can_block = false, output = Known(ValueType::String),
+    types.string.format, 
+    can_block = false, 
+    output = Known(ValueType::String),
     short = "Format arguments into a string",
     example = "\"Hello {name}\":format name=$name")]
 #[allow(unused)]

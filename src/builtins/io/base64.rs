@@ -138,7 +138,7 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
         }
         v => {
             return argument_error_legacy(format!(
-                "Expected a binary stream or a string, encountered `{}`",
+                "`base64:to`: Expected a binary stream or a string, encountered `{}`",
                 v.value_type().to_string()
             ));
         }

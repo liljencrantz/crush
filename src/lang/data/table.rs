@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use crate::lang::any_str::AnyStr;
 /**
 Code related to Table, TableInputStream and
@@ -185,6 +186,28 @@ pub struct ColumnType {
     name: AnyStr,
     pub format: ColumnFormat,
     pub cell_type: ValueType,
+}
+
+pub fn find_string_columns(input: &[ColumnType], mut cfg: Vec<String>) -> Vec<usize> {
+    if cfg.is_empty() {
+        input
+            .iter()
+            .enumerate()
+            .filter(|(_, column)| match column.cell_type {
+                ValueType::File | ValueType::String => true,
+                _ => false,
+            })
+            .map(|(idx, _)| idx)
+            .collect()
+    } else {
+        let yas: HashSet<String> = cfg.drain(..).collect();
+        input
+            .iter()
+            .enumerate()
+            .filter(|(_, column)| yas.contains(column.name()))
+            .map(|(idx, _c)| idx)
+            .collect()
+    }
 }
 
 impl ColumnType {

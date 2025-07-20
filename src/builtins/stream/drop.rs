@@ -22,7 +22,8 @@ pub struct Drop {
 
 fn drop(context: CommandContext) -> CrushResult<()> {
     let cfg = Drop::parse(context.arguments.clone(), &context.global_state.printer())?;
-    match context.input.recv()?.stream()? {
+    let input = context.input.recv()?;
+    match input.stream()? {
         Some(mut input) => {
             let t = input.types();
             let drop = cfg
@@ -50,6 +51,6 @@ fn drop(context: CommandContext) -> CrushResult<()> {
             }
             Ok(())
         }
-        None => error("`drop`: Expected a stream"),
+        None => error(format!("`drop`: Expected a stream, got a value of type `{}`", input.value_type())),
     }
 }

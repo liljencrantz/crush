@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::{Command, CrushCommand};
 use crate::lang::data::table::ColumnType;
@@ -176,8 +177,8 @@ pub fn convert(context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Type),
     short = "Return the type of the specified value.",
+    example = "# returns float",
     example = "typeof 1.8",
-    example = "# returns \"float\"",
 )]
 struct TypeOf {
     #[description("the value to convert.")]

@@ -34,7 +34,7 @@ fn evaluate(
         .map(|(c, t)| Argument::named(t.name(), c, location))
         .collect();
 
-    let (sender, reciever) = pipe();
+    let (sender, receiver) = pipe();
 
     condition.eval(
         base_context
@@ -43,9 +43,9 @@ fn evaluate(
             .with_output(sender),
     )?;
 
-    match reciever.recv()? {
+    match receiver.recv()? {
         Value::Bool(b) => Ok(b),
-        _ => error("`where`: Expected a boolean result"),
+        v => error(format!("`where`: Expected a boolean result, got a value of type `{}`", v.value_type())),
     }
 }
 

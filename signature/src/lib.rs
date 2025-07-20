@@ -259,22 +259,22 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
 fn generate_signature(path: &[String], signature: Vec<String>) -> String {
     match (signature[0].as_str(), signature.len()) {
         ("__add__", 2) => format!(
-            "{} + {} # Only available in math mode",
+            "{} + {} # Only available in expression mode",
             path.join(":"),
             signature[1]
         ),
         ("__sub__", 2) => format!(
-            "{} - {} # Only available in math mode",
+            "{} - {} # Only available in expression mode",
             path.join(":"),
             signature[1]
         ),
         ("__mul__", 2) => format!(
-            "{} * {} # Only available in math mode",
+            "{} * {} # Only available in expression mode",
             path.join(":"),
             signature[1]
         ),
         ("__div__", 2) => format!(
-            "{} / {} # Only available in math mode",
+            "{} / {} # Only available in expression mode",
             path.join(":"),
             signature[1]
         ),
@@ -502,7 +502,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 unnamed_mutations.extend(quote! {
                     if !_unnamed.is_empty() {
                         let (_value, _location) = &_unnamed[0];
-                        return crate::lang::errors::argument_error(format!("{}: Stray unnamed argument", #command_name), *_location);
+                        return crate::lang::errors::argument_error(format!("`{}`: Stray unnamed argument", #command_name), *_location);
                     }
                 });
             }

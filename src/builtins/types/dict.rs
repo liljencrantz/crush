@@ -59,6 +59,9 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
         ValueType::Dict(t1, t2) => match (*t1, *t2) {
             (ValueType::Empty, ValueType::Empty) => {
                 let cfg: Call = Call::parse(context.arguments, &context.global_state.printer())?;
+                if !cfg.key_type.is_hashable() {
+                    return argument_error_legacy(format!("`dict:__call__`: Tried to create a `dict` subtype with the key type `{}`, which is not hashable", cfg.key_type));
+                }
                 context.output.send(Value::Type(ValueType::Dict(
                     Box::new(cfg.key_type),
                     Box::new(cfg.value_type),
@@ -71,12 +74,12 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
                         .send(Value::Type(ValueType::Dict(Box::from(t1), Box::from(t2))))
                 } else {
                     argument_error_legacy(
-                        "Tried to set subtype on a dict that already has a subtype",
+                        "`dict:__call__`: Tried to set subtype on a dict that already has a subtype",
                     )
                 }
             }
         },
-        _ => argument_error_legacy("Invalid this, expected type dict"),
+        _ => argument_error_legacy("dict:__call__`: Invalid this, expected type dict"),
     }
 }
 
@@ -95,14 +98,14 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
     let t = context.this.r#type()?;
     if let ValueType::Dict(key_type, value_type) = t {
         if !key_type.is_hashable() {
-            argument_error_legacy("Key type is not hashable")
+            argument_error_legacy(format!("`dict:new`: Tried to create a `dict` instance with the key type `{}`, which is not hashable", key_type))
         } else {
             context
                 .output
                 .send(Dict::new(*key_type, *value_type)?.into())
         }
     } else {
-        argument_error_legacy("Expected a dict type as this value")
+        argument_error_legacy("`dict:new`: Expected a dict type as this value")
     }
 }
 
@@ -130,8 +133,8 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Of::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     match (cfg.elements.is_empty(), cfg.values.is_empty()) {
-        (false, false) => argument_error_legacy("Cannot specify both elements and values"),
-        (true, true) => argument_error_legacy("No values specified"),
+        (false, false) => argument_error_legacy("`dict:of`: Cannot specify both elements and values"),
+        (true, true) => argument_error_legacy("`dict:of`: No values specified"),
         (true, false) => {
             let mut value_types = HashSet::new();
             let mut entries = OrderedMap::new();
@@ -155,7 +158,7 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
         }
         (false, true) => {
             if cfg.elements.len() % 2 == 1 {
-                argument_error_legacy("Expected an even number of arguments")
+                argument_error_legacy("`dict:of`: Expected an even number of arguments")
             } else {
                 let mut key_types = HashSet::new();
                 let mut value_types = HashSet::new();
@@ -170,7 +173,7 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
                 }
 
                 if key_types.len() != 1 {
-                    return argument_error_legacy("Multiple key types specified in dict");
+                    return argument_error_legacy("`dict:of`: Multiple key types specified in dict");
                 }
 
                 let key_type = key_types.drain().next().unwrap();

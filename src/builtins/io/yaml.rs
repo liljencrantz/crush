@@ -23,7 +23,7 @@ fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
             } else if f.is_i64() {
                 Ok(Value::Integer(f.as_i64().expect("") as i128))
             } else {
-                Ok(Value::Float(f.as_f64().ok_or("Not a valid number")?))
+                Ok(Value::Float(f.as_f64().ok_or("`yaml:from`: Not a valid number")?))
             }
         }
         serde_yaml::Value::String(s) => Ok(Value::from(s.as_str())),
@@ -80,7 +80,7 @@ fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
 fn to_yaml(value: Value) -> CrushResult<serde_yaml::Value> {
     match value.materialize()? {
         Value::File(s) => Ok(serde_yaml::Value::from(
-            s.to_str().ok_or("Invalid filename")?,
+            s.to_str().ok_or("`yaml:to`: Invalid filename")?,
         )),
 
         Value::String(s) => Ok(serde_yaml::Value::from(s.to_string())),

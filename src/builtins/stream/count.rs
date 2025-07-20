@@ -25,7 +25,7 @@ pub fn count(context: CommandContext) -> CrushResult<()> {
                 }
                 context.output.send(Value::from(res))
             }
-            None => argument_error_legacy("`count`: Expected a stream"),
+            None => argument_error_legacy(format!("`count`: Expected a stream, got a value of type `{}`", v.value_type())),
         },
     }
 }

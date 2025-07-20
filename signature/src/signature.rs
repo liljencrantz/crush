@@ -364,14 +364,14 @@ impl Signature {
                 Some((crate::lang::value::Value::Regex(_pattern, _value), _)) => #name.expand_regex(_pattern, _value),
                             Some((value, _location)) =>
                                 return crate::lang::errors::argument_error(format ! (
-                                    "{}`: Expected argument `{}` to be textual, was of type `{}`",
+                                    "`{}`: Expected argument `{}` to be textual, was of type `{}`",
                                     #command_name,
                                     #name_literal,
                                     value.value_type().to_string()),
                                     _location),
                             _ =>
                                 return crate::lang::errors::argument_error_legacy(format ! (
-                                    "{}`: No value provided for argument `{}`",
+                                    "`{}`: No value provided for argument `{}`",
                                     #command_name,
                                     #name_literal).as_str()),
                         }
@@ -419,7 +419,7 @@ impl Signature {
                     _ =>
                         return crate::lang::errors::argument_error_legacy(
                             format!(
-                                    "{}`: Missing argument `{}`",
+                                    "`{}`: Missing argument `{}`",
                                     #command_name, #name_literal)),
                 }
             }

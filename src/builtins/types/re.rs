@@ -11,8 +11,8 @@ use crate::lang::value::ValueType;
 use ordered_map::OrderedMap;
 use regex::Regex;
 use signature::signature;
-use std::collections::HashSet;
 use std::sync::OnceLock;
+use crate::lang::data::table::find_string_columns;
 
 pub fn methods() -> &'static OrderedMap<String, Command> {
     static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
@@ -137,34 +137,15 @@ fn replace_all(mut context: CommandContext) -> CrushResult<()> {
     types.re.filter,
     can_block = true,
     output = Passthrough,
-    short = "Filter stream based on this regex.",
+    short = "Filter input stream based on this regex.",
+    long = "Search all textual (string and file) columns for matches of the regex, and output the rows that match.",
+    example = "# Recursively search current directory for all files containing four `a` characters in a row",
+    example = "files --recurse | ^(aaaa):filter",
 )]
 struct Filter {
     #[unnamed()]
-    #[description("Columns to filter on")]
+    #[description("Columns to filter on. Column must be textual. If no columns are specified, all textual columns are used.")]
     columns: Vec<String>,
-}
-
-fn find_string_columns(input: &[ColumnType], mut cfg: Vec<String>) -> Vec<usize> {
-    if cfg.is_empty() {
-        input
-            .iter()
-            .enumerate()
-            .filter(|(_, column)| match column.cell_type {
-                ValueType::File | ValueType::String => true,
-                _ => false,
-            })
-            .map(|(idx, _)| idx)
-            .collect()
-    } else {
-        let yas: HashSet<String> = cfg.drain(..).collect();
-        input
-            .iter()
-            .enumerate()
-            .filter(|(_, column)| yas.contains(column.name()))
-            .map(|(idx, _c)| idx)
-            .collect()
-    }
 }
 
 pub fn filter(mut context: CommandContext) -> CrushResult<()> {
@@ -194,7 +175,12 @@ pub fn filter(mut context: CommandContext) -> CrushResult<()> {
                                 break;
                             }
                         }
-                        _ => return argument_error_legacy("Expected a string or file value"),
+                        v => {
+                            return argument_error_legacy(format!(
+                                "`re:filter`: Expected column `{}` to be `oneof $string $file`, but was `{}`",
+                                input.types()[*idx].name(), v.value_type(),
+                            ));
+                        }
                     }
                 }
                 if found {
@@ -203,6 +189,6 @@ pub fn filter(mut context: CommandContext) -> CrushResult<()> {
             }
             Ok(())
         }
-        None => error("Expected a stream"),
+        None => error("`re:filter`: Expected input to be a stream"),
     }
 }
