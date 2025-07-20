@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::{Command, CrushCommand};
 use crate::lang::data::table::ColumnType;

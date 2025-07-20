@@ -94,7 +94,7 @@ impl List {
 
     pub fn get(&self, idx: usize) -> CrushResult<Value> {
         let cells = self.cells.lock().unwrap();
-        Ok(cells.get(idx).ok_or("Index out of bounds")?.clone())
+        Ok(cells.get(idx).ok_or_else(|| format!("Index out of bounds. Tried to get element {} in a list with {} elements.", idx, cells.len()))?.clone())
     }
 
     pub fn set(&self, idx: usize, value: Value) -> CrushResult<()> {
@@ -122,7 +122,7 @@ impl List {
         let mut cells = self.cells.lock().unwrap();
         for v in new_cells.iter() {
             if !self.cell_type.is(v) {
-                return argument_error_legacy("Invalid argument type");
+                return argument_error_legacy(format!("Invalid argument type. Tried to insert a value of type `{}` into a list of type `{}`", v.value_type(), self.cell_type));
             }
         }
         cells.append(new_cells);
@@ -142,7 +142,7 @@ impl List {
     pub fn remove(&self, idx: usize) -> CrushResult<Value> {
         let mut cells = self.cells.lock().unwrap();
         if idx >= cells.len() {
-            return argument_error_legacy("Index out of bounds");
+            return argument_error_legacy(format!("Index out of bounds. Tried to remove element {} in a list with {} elements.", idx, cells.len()));
         }
         Ok(cells.remove(idx))
     }
@@ -150,10 +150,10 @@ impl List {
     pub fn insert(&self, idx: usize, value: Value) -> CrushResult<()> {
         let mut cells = self.cells.lock().unwrap();
         if !self.cell_type.is(&value) {
-            return argument_error_legacy("Invalid argument type");
+            return argument_error_legacy(format!("Invalid argument type. Tried to insert a value of type `{}` into a list of type `{}`", value.value_type(), self.cell_type));
         }
         if idx > cells.len() {
-            return argument_error_legacy("Index out of bounds");
+            return argument_error_legacy(format!("Index out of bounds. Tried to insert a value at index {} in a list of length {}.", idx, cells.len()));
         }
         cells.insert(idx, value);
         Ok(())

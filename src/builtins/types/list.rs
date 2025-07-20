@@ -92,13 +92,13 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
                         .send(Value::Type(ValueType::List(Box::from(c))))
                 } else {
                     argument_error_legacy(format!(
-                        "Tried to set subtype on a list that already has the subtype {}",
-                        c.to_string()
+                        "`list:__call__`: Tried to set subtype on a list that already has the subtype {}",
+                        c
                     ))
                 }
             }
         },
-        _ => argument_error_legacy("Invalid this, expected type list"),
+        _ => argument_error_legacy("`list:__call__`: Invalid `this`, expected type list"),
     }
 }
 #[signature(
@@ -160,13 +160,13 @@ fn collect(context: CommandContext) -> CrushResult<()> {
                 input_type[idx].cell_type.clone(),
                 context.output,
             ),
-            _ => data_error(format!("list:collect`: No column named `{}` could be found", name)),
+            _ => data_error(format!("`list:collect`: No column named `{}` could be found", name)),
         },
 
         (1, None) => collect_internal(input, 0, input_type[0].cell_type.clone(), context.output),
 
         _ => data_error(
-            "list:collect`: Expected either input with exactly one column or an argument specifying which column to pick",
+            "`list:collect`: Expected either input with exactly one column or an argument specifying which column to pick",
         ),
     }
 }
@@ -418,7 +418,7 @@ fn slice(mut context: CommandContext) -> CrushResult<()> {
         return argument_error_legacy("`list:slice`: From larger than to");
     }
     if to > s.len() {
-        return argument_error_legacy("`list:slice`: Substring beyond end of string");
+        return argument_error_legacy("`list:slice`: Tried to slice beyond end of string");
     }
     context.output.send(s.slice(cfg.from, to)?.into())
 }

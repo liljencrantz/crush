@@ -1,4 +1,3 @@
-use crate::data::table::ColumnType;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Passthrough;

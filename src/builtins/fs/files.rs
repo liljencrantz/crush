@@ -1,7 +1,8 @@
 use crate::data::table::ColumnFormat;
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult, data_error};
 use crate::lang::pipe::TableOutputStream;
+use crate::lang::printer::Printer;
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value::ValueType};
@@ -14,6 +15,7 @@ use std::fs::Metadata;
 use std::os::unix::fs::MetadataExt;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
+use std::time::SystemTime;
 
 enum Column {
     Permissions,
@@ -71,23 +73,23 @@ fn insert_entity(
             }
             Column::Inode => Value::from(meta.ino()),
             Column::Links => Value::from(meta.nlink()),
-            Column::User => users
-                .get(&sysinfo::Uid::try_from(meta.uid() as usize)?)
-                .map(|n| Value::from(n))
+            Column::User => sysinfo::Uid::try_from(meta.uid() as usize)
+                .ok()
+                .and_then(|uid| users.get(&uid).map(|n| Value::from(n)))
                 .unwrap_or_else(|| Value::from("?")),
-            Column::Group => groups
-                .get(&sysinfo::Gid::try_from(meta.gid() as usize)?)
-                .map(|n| Value::from(n))
+            Column::Group => sysinfo::Gid::try_from(meta.gid() as usize)
+                .ok()
+                .and_then(|gid| groups.get(&gid).map(|n| Value::from(n)))
                 .unwrap_or_else(|| Value::from("?")),
             Column::Size => Value::from(meta.len()),
             Column::Blocks => Value::from(meta.blocks()),
             Column::Modified => {
-                let modified_system = meta.modified()?;
+                let modified_system = meta.modified().unwrap_or(SystemTime::UNIX_EPOCH);
                 let modified_datetime: DateTime<Local> = DateTime::from(modified_system);
                 Value::Time(modified_datetime)
             }
             Column::Accessed => {
-                let accessed_system = meta.accessed()?;
+                let accessed_system = meta.accessed().unwrap_or(SystemTime::UNIX_EPOCH);
                 let accessed_datetime: DateTime<Local> = DateTime::from(accessed_system);
                 Value::Time(accessed_datetime)
             }
@@ -120,33 +122,92 @@ fn run_for_single_directory_or_file(
     cols: &[Column],
     q: &mut VecDeque<PathBuf>,
     output: &mut TableOutputStream,
+    printer: &Printer,
 ) -> CrushResult<()> {
     if path.is_dir() {
-        let dirs = fs::read_dir(path);
-        for maybe_entry in dirs? {
-            let entry = maybe_entry?;
-            insert_entity(
-                &entry.metadata()?,
-                entry.path(),
-                users,
-                groups,
-                cols,
-                output,
-            )?;
-            if recursive
-                && entry.path().is_dir()
-                && (!(entry.file_name().eq(".") || entry.file_name().eq("..")))
-            {
-                q.push_back(entry.path());
+        match fs::read_dir(&path) {
+            Ok(dirs) => {
+                for maybe_entry in dirs {
+                    match maybe_entry {
+                        Ok(entry) => {
+                            match entry.metadata() {
+                                Ok(meta) => {
+                                    insert_entity(
+                                        &meta,
+                                        entry.path(),
+                                        users,
+                                        groups,
+                                        cols,
+                                        output,
+                                    )?;
+                                }
+                                Err(err) => {
+                                    printer.crush_error(data_error::<()>(format!(
+                                        "`files`: Failed to access metadata for file {}. Reason: {}",
+                                        path.to_str().unwrap_or("<Illegal file name>"),
+                                        err.to_string())).err().unwrap());
+                                }
+                            }
+                            if recursive
+                                && entry.path().is_dir()
+                                && (!(entry.file_name().eq(".") || entry.file_name().eq("..")))
+                            {
+                                q.push_back(entry.path());
+                            }
+                        }
+                        Err(err) => {
+                            printer.crush_error(
+                                data_error::<()>(format!(
+                                    "`files`: Failed to list a file in directory {}. Reason: {}",
+                                    path.to_str().unwrap_or("<Illegal file name>"),
+                                    err.to_string()
+                                ))
+                                .err()
+                                .unwrap(),
+                            );
+                        }
+                    }
+                }
+            }
+            Err(err) => {
+                printer.crush_error(
+                    data_error::<()>(format!(
+                        "`files`: Failed to list contents of directory {}. Reason: {}",
+                        path.to_str().unwrap_or("<Illegal file name>"),
+                        err.to_string()
+                    ))
+                    .err()
+                    .unwrap(),
+                );
             }
         }
     } else {
         match path.file_name() {
-            Some(_) => {
-                insert_entity(&path.metadata()?, path, users, groups, cols, output)?;
-            }
+            Some(_) => match path.metadata() {
+                Ok(p) => {
+                    insert_entity(&p, path, users, groups, cols, output)?;
+                }
+                Err(err) => {
+                    printer.crush_error(
+                        data_error::<()>(format!(
+                            "`files`: Failed to access metadata for file {}. Reason: {}",
+                            path.to_str().unwrap_or("<Illegal file name>"),
+                            err.to_string()
+                        ))
+                        .err()
+                        .unwrap(),
+                    );
+                }
+            },
             None => {
-                return error("Invalid file name");
+                printer.crush_error(
+                    data_error::<()>(format!(
+                        "`files`: Invalid file name {}.",
+                        path.to_str().unwrap_or("<Illegal file name>")
+                    ))
+                    .err()
+                    .unwrap(),
+                );
             }
         }
     }
@@ -287,6 +348,7 @@ fn files(context: CommandContext) -> CrushResult<()> {
                 &cols,
                 &mut q,
                 &mut output,
+                &context.global_state.printer(),
             )?,
         }
     }
