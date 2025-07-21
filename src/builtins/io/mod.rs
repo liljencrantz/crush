@@ -120,9 +120,9 @@ fn member(context: CommandContext) -> CrushResult<()> {
     match context.input.recv()? {
         Value::Struct(s) => context.output.send(
             s.get(&cfg.field)
-                .ok_or(format!("`member`: Struct does not have a field named `{}`", cfg.field).as_str())?,
+                .ok_or(format!("Struct does not have a field named `{}`", cfg.field).as_str())?,
         ),
-        _ => data_error("`member`: Expected a struct"),
+        _ => data_error("Expected a struct"),
     }
 }
 
@@ -166,7 +166,7 @@ fn readline(context: CommandContext) -> CrushResult<()> {
             context
                 .global_state
                 .printer()
-                .line(&format!("`readline`: Failed to save history: {}", err))
+                .line(&format!("Failed to save history: {}", err))
         }
     }
 

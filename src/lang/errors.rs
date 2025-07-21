@@ -64,6 +64,7 @@ pub struct CrushError {
     error_type: CrushErrorType,
     location: Option<Location>,
     definition: Option<String>,
+    command: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -141,6 +142,10 @@ impl CrushError {
         self.location
     }
 
+    pub fn command(&self) -> &Option<String> {
+        &self.command
+    }
+    
     pub fn with_source(self, source: &Option<(String, Location)>) -> CrushError {
         match source {
             None => self,
@@ -153,6 +158,7 @@ impl CrushError {
             error_type: self.error_type,
             location: self.location,
             definition: Some(def.into()),
+            command: self.command,
         }
     }
 
@@ -166,6 +172,7 @@ impl CrushError {
             error_type: self.error_type,
             location: Some(location),
             definition: self.definition,
+            command: self.command,
         }
     }
 
@@ -201,110 +208,81 @@ impl CrushError {
     }
 }
 
-impl From<std::io::Error> for CrushError {
-    fn from(e: std::io::Error) -> Self {
+impl From<CrushErrorType> for CrushError {
+    fn from(e: CrushErrorType) -> Self {
         CrushError {
-            error_type: IOError(e),
+            error_type: e,
             location: None,
             definition: None,
+            command: None,
         }
+    }
+}
+
+impl From<std::io::Error> for CrushError {
+    fn from(e: std::io::Error) -> Self {
+        IOError(e).into()
     }
 }
 
 impl From<regex::Error> for CrushError {
     fn from(e: regex::Error) -> Self {
-        CrushError {
-            error_type: RegexError(e),
-            location: None,
-            definition: None,
-        }
+        RegexError(e).into()
     }
 }
 
 impl From<hex::FromHexError> for CrushError {
     fn from(e: hex::FromHexError) -> Self {
-        CrushError {
-            error_type: FromHexError(e),
-            location: None,
-            definition: None,
-        }
+        FromHexError(e).into()
     }
 }
 
 impl From<std::num::ParseIntError> for CrushError {
     fn from(e: std::num::ParseIntError) -> Self {
-        CrushError {
-            error_type: ParseIntError(e),
-            location: None,
-            definition: None,
-        }
+        ParseIntError(e).into()
     }
 }
 
 impl From<std::num::ParseFloatError> for CrushError {
     fn from(e: std::num::ParseFloatError) -> Self {
-        CrushError {
-            error_type: ParseFloatError(e),
-            location: None,
-            definition: None,
-        }
+        ParseFloatError(e).into()
     }
 }
 
 impl From<std::net::AddrParseError> for CrushError {
     fn from(e: std::net::AddrParseError) -> Self {
-        CrushError {
-            error_type: AddrParseError(e),
-            location: None,
-            definition: None,
-        }
+        AddrParseError(e).into()
     }
 }
 
 impl From<ToStrError> for CrushError {
     fn from(e: ToStrError) -> Self {
-        CrushError {
-            error_type: ToStrError(e),
-            location: None,
-            definition: None,
-        }
+        ToStrError(e).into()
     }
 }
 
 #[cfg(target_os = "linux")]
 impl From<dbus::Error> for CrushError {
     fn from(e: dbus::Error) -> Self {
-        CrushError {
-            error_type: DbusError(e),
-            location: None,
-            definition: None,
-        }
+        DbusError(e).into()
     }
 }
 
 #[cfg(target_os = "linux")]
 impl From<roxmltree::Error> for CrushError {
     fn from(e: roxmltree::Error) -> Self {
-        CrushError {
-            error_type: Roxmltree(e),
-            location: None,
-            definition: None,
-        }
+        Roxmltree(e).into()
     }
 }
 
 impl From<crate::lang::ast::lexer::LexicalError> for CrushError {
     fn from(e: crate::lang::ast::lexer::LexicalError) -> Self {
-        CrushError {
-            error_type: LexicalError(e),
-            location: None,
-            definition: None,
-        }
+        LexicalError(e).into()
     }
 }
 
 impl From<lalrpop_util::ParseError<usize, token::Token<'_>, crate::lang::ast::lexer::LexicalError>>
-    for CrushError
+for CrushError
 {
     fn from(
         e: lalrpop_util::ParseError<usize, token::Token, crate::lang::ast::lexer::LexicalError>,
@@ -326,362 +304,215 @@ impl From<lalrpop_util::ParseError<usize, token::Token<'_>, crate::lang::ast::le
             error_type: ParseError(e.to_string()),
             location,
             definition: None,
+            command: None,
         }
     }
 }
 
 impl<T> From<crossbeam::channel::SendError<T>> for CrushError {
     fn from(e: crossbeam::channel::SendError<T>) -> Self {
-        CrushError {
-            error_type: SendError(e.to_string()),
-            location: None,
-            definition: None,
-        }
+        SendError(e.to_string()).into()
     }
 }
 
 impl From<crossbeam::channel::RecvError> for CrushError {
     fn from(e: crossbeam::channel::RecvError) -> Self {
-        CrushError {
-            error_type: RecvError(e),
-            location: None,
-            definition: None,
-        }
+        RecvError(e).into()
     }
 }
 
 impl From<num_format::Error> for CrushError {
     fn from(e: num_format::Error) -> Self {
-        CrushError {
-            error_type: NumFormatError(e),
-            location: None,
-            definition: None,
-        }
+        NumFormatError(e).into()
     }
 }
 
 impl<T> From<std::sync::PoisonError<T>> for CrushError {
     fn from(e: std::sync::PoisonError<T>) -> Self {
-        CrushError {
-            error_type: PoisonError(e.to_string()),
-            location: None,
-            definition: None,
-        }
+        PoisonError(e.to_string()).into()
     }
 }
 
 impl From<std::num::TryFromIntError> for CrushError {
     fn from(e: std::num::TryFromIntError) -> Self {
-        CrushError {
-            error_type: TryFromIntError(e),
-            location: None,
-            definition: None,
-        }
+        TryFromIntError(e).into()
     }
 }
 
 impl From<std::str::ParseBoolError> for CrushError {
     fn from(e: std::str::ParseBoolError) -> Self {
-        CrushError {
-            error_type: ParseBoolError(e),
-            location: None,
-            definition: None,
-        }
+        ParseBoolError(e).into()
     }
 }
 
 impl From<rustyline::error::ReadlineError> for CrushError {
     fn from(e: rustyline::error::ReadlineError) -> Self {
-        CrushError {
-            error_type: ReadlineError(e),
-            location: None,
-            definition: None,
-        }
+        ReadlineError(e).into()
     }
 }
 
 impl From<std::string::FromUtf8Error> for CrushError {
     fn from(e: std::string::FromUtf8Error) -> Self {
-        CrushError {
-            error_type: FromUtf8Error(e),
-            location: None,
-            definition: None,
-        }
+        FromUtf8Error(e).into()
     }
 }
 
 impl From<chrono::OutOfRangeError> for CrushError {
     fn from(e: chrono::OutOfRangeError) -> Self {
-        CrushError {
-            error_type: OutOfRangeError(e),
-            location: None,
-            definition: None,
-        }
+        OutOfRangeError(e).into()
     }
 }
 
 impl From<std::env::VarError> for CrushError {
     fn from(e: std::env::VarError) -> Self {
-        CrushError {
-            error_type: VarError(e),
-            location: None,
-            definition: None,
-        }
+        VarError(e).into()
     }
 }
 
 impl From<resolv_conf::ParseError> for CrushError {
     fn from(e: resolv_conf::ParseError) -> Self {
-        CrushError {
-            error_type: ResolveConfParseError(e),
-            location: None,
-            definition: None,
-        }
+        ResolveConfParseError(e).into()
     }
 }
 
 impl From<trust_dns_client::proto::error::ProtoError> for CrushError {
     fn from(e: trust_dns_client::proto::error::ProtoError) -> Self {
-        CrushError {
-            error_type: DnsProtoError(e),
-            location: None,
-            definition: None,
-        }
+        DnsProtoError(e).into()
     }
 }
 
 impl From<trust_dns_client::error::ClientError> for CrushError {
     fn from(e: trust_dns_client::error::ClientError) -> Self {
-        CrushError {
-            error_type: DnsClientError(e),
-            location: None,
-            definition: None,
-        }
+        DnsClientError(e).into()
     }
 }
 
 impl From<mountpoints::Error> for CrushError {
     fn from(e: mountpoints::Error) -> Self {
-        CrushError {
-            error_type: MountpointsError(e),
-            location: None,
-            definition: None,
-        }
+        MountpointsError(e).into()
     }
 }
 
 impl From<battery::Error> for CrushError {
     fn from(e: battery::Error) -> Self {
-        CrushError {
-            error_type: BatteryError(e),
-            location: None,
-            definition: None,
-        }
+        BatteryError(e).into()
     }
 }
 
 impl From<nix::errno::Errno> for CrushError {
     fn from(e: nix::errno::Errno) -> Self {
-        CrushError {
-            error_type: NixError(e),
-            location: None,
-            definition: None,
-        }
+        NixError(e).into()
     }
 }
 
 impl From<reqwest::Error> for CrushError {
     fn from(e: reqwest::Error) -> Self {
-        CrushError {
-            error_type: ReqwestError(e),
-            location: None,
-            definition: None,
-        }
+        ReqwestError(e).into()
     }
 }
 
 impl From<std::str::Utf8Error> for CrushError {
     fn from(e: std::str::Utf8Error) -> Self {
-        CrushError {
-            error_type: Utf8Error(e),
-            location: None,
-            definition: None,
-        }
+        Utf8Error(e).into()
     }
 }
 
 impl From<serde_json::Error> for CrushError {
     fn from(e: serde_json::Error) -> Self {
-        CrushError {
-            error_type: SerdeJsonError(e),
-            location: None,
-            definition: None,
-        }
+        SerdeJsonError(e).into()
     }
 }
 
 impl From<toml::de::Error> for CrushError {
     fn from(e: toml::de::Error) -> Self {
-        CrushError {
-            error_type: SerdeTomlError(e),
-            location: None,
-            definition: None,
-        }
+        SerdeTomlError(e).into()
     }
 }
 
 impl From<serde_yaml::Error> for CrushError {
     fn from(e: serde_yaml::Error) -> Self {
-        CrushError {
-            error_type: SerdeYamlError(e),
-            location: None,
-            definition: None,
-        }
+        SerdeYamlError(e).into()
     }
 }
 
 impl From<ssh2::Error> for CrushError {
     fn from(e: ssh2::Error) -> Self {
-        CrushError {
-            error_type: SSH2Error(e),
-            location: None,
-            definition: None,
-        }
+        SSH2Error(e).into()
     }
 }
 
 impl From<chrono::ParseError> for CrushError {
     fn from(e: chrono::ParseError) -> Self {
-        CrushError {
-            error_type: ChronoParseError(e),
-            location: None,
-            definition: None,
-        }
+        ChronoParseError(e).into()
     }
 }
 
 impl From<std::char::CharTryFromError> for CrushError {
     fn from(e: std::char::CharTryFromError) -> Self {
-        CrushError {
-            error_type: CharTryFromError(e),
-            location: None,
-            definition: None,
-        }
+        CharTryFromError(e).into()
     }
 }
 
 impl From<&str> for CrushError {
     fn from(e: &str) -> Self {
-        CrushError {
-            error_type: InvalidData(e.to_string()),
-            location: None,
-            definition: None,
-        }
+        InvalidData(e.to_string()).into()
     }
 }
 
 impl From<String> for CrushError {
     fn from(e: String) -> Self {
-        CrushError {
-            error_type: InvalidData(e),
-            location: None,
-            definition: None,
-        }
+        InvalidData(e).into()
     }
 }
 
 impl From<&String> for CrushError {
     fn from(e: &String) -> Self {
-        CrushError {
-            error_type: InvalidData(e.to_string()),
-            location: None,
-            definition: None,
-        }
+        InvalidData(e.to_string()).into()
     }
 }
 
 impl From<markdown::message::Message> for CrushError {
     fn from(m: markdown::message::Message) -> Self {
-        CrushError {
-            error_type: Message(m),
-            location: None,
-            definition: None,
-        }
+        Message(m).into()
     }
 }
 
 pub type CrushResult<T> = Result<T, CrushError>;
 
 pub fn eof_error<T>() -> CrushResult<T> {
-    Err(CrushError {
-        error_type: EOFError,
-        location: None,
-        definition: None,
-    })
+    Err(EOFError.into())
 }
 
 pub fn argument_error_legacy<T>(message: impl Into<String>) -> CrushResult<T> {
-    Err(CrushError {
-        error_type: InvalidArgument(message.into()),
-        location: None,
-        definition: None,
-    })
+    Err(InvalidArgument(message.into()).into())
 }
 
 pub fn serialization_error<T>(message: impl Into<String>) -> CrushResult<T> {
-    Err(CrushError {
-        error_type: SerializationError(message.into()),
-        location: None,
-        definition: None,
-    })
+    Err(SerializationError(message.into()).into())
 }
 
 pub fn argument_error<T>(message: impl Into<String>, location: Location) -> CrushResult<T> {
-    Err(CrushError {
-        error_type: InvalidArgument(message.into()),
-        location: Some(location),
-        definition: None,
-    })
+    Err(InvalidArgument(message.into()).into())
 }
 
 pub fn data_error<T>(message: impl Into<String>) -> CrushResult<T> {
-    Err(CrushError {
-        error_type: InvalidData(message.into()),
-        location: None,
-        definition: None,
-    })
+    Err(InvalidData(message.into()).into())
 }
 
 pub fn invalid_jump<T>(message: impl Into<String>) -> CrushResult<T> {
-    Err(CrushError {
-        error_type: InvalidJump(message.into()),
-        location: None,
-        definition: None,
-    })
+    Err(InvalidJump(message.into()).into())
 }
 
 pub fn login_error<T>(message: impl Into<String>) -> CrushResult<T> {
-    Err(CrushError {
-        error_type: LoginsError(message.into()),
-        location: None,
-        definition: None,
-    })
+    Err(LoginsError(message.into()).into())
 }
 
 pub fn byte_unit_error<T>(s: &str) -> CrushResult<T> {
-    Err(CrushError {
-        error_type: ByteUnitError(format!("Unknown byte unit {}", s)),
-        location: None,
-        definition: None,
-    })
+    Err(ByteUnitError(format!("Unknown byte unit {}", s)).into())
 }
 
 pub fn error<T>(message: impl Into<String>) -> CrushResult<T> {
-    Err(CrushError {
-        error_type: GenericError(message.into()),
-        location: None,
-        definition: None,
-    })
+    Err(GenericError(message.into()).into())
 }
 
 pub fn mandate_argument<T>(
@@ -695,6 +526,7 @@ pub fn mandate_argument<T>(
             error_type: InvalidData(message.into()),
             location: Some(location),
             definition: None,
+            command: None,
         }),
     }
 }
@@ -724,6 +556,24 @@ fn extract_location(s: &str, loc: Location) -> Vec<ErrorLine> {
     res
 }
 
+pub trait WithCommand {
+    fn with_command(self, cmd: impl Into<String>) -> Self;
+}
+
+impl<V> WithCommand for CrushResult<V> {
+    fn with_command(self, cmd: impl Into<String>) -> CrushResult<V> {
+        match self {
+            Ok(_) => self,
+            Err(err) => Err(CrushError {
+                error_type: err.error_type,
+                location: err.location,
+                definition: err.definition,
+                command: Some(cmd.into()),
+            }),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -746,7 +596,7 @@ mod tests {
                 line_number: 1,
                 line: "remote:exec --hsot=foo".to_string(),
                 location: Location::new(12, 22),
-            },]
+            }, ]
         );
     }
 
@@ -758,7 +608,7 @@ mod tests {
                 line_number: 2,
                 line: "remote:exec --hsot=foo".to_string(),
                 location: Location::new(12, 22),
-            },]
+            }, ]
         );
     }
 
@@ -770,7 +620,7 @@ mod tests {
                 line_number: 1,
                 line: "remote:exec --hsot=foo".to_string(),
                 location: Location::new(12, 22),
-            },]
+            }, ]
         );
     }
 
@@ -782,7 +632,7 @@ mod tests {
                 line_number: 2,
                 line: "echo 2".to_string(),
                 location: Location::new(0, 6),
-            },]
+            }, ]
         );
     }
 

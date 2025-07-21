@@ -37,6 +37,6 @@ fn enumerate(context: CommandContext) -> CrushResult<()> {
             }
             Ok(())
         }
-        None => error("`enumerate`: Expected a stream"),
+        None => error("Expected a stream"),
     }
 }

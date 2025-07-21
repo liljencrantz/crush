@@ -54,6 +54,6 @@ pub fn each(context: CommandContext) -> CrushResult<()> {
             }
             Ok(())
         }
-        None => error("`each`: Expected a stream"),
+        None => error("Expected a stream"),
     }
 }

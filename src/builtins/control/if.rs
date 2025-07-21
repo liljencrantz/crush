@@ -44,7 +44,7 @@ fn r#if(mut context: CommandContext) -> CrushResult<()> {
                     .create_child(&context.scope, ScopeType::Conditional);
                 v.eval(context.empty().with_scope(env).with_output(context.output))
             }
-            (_, s) => argument_error_legacy(format!("`if`: Unknown clause `{}`. Did you misspell else?", s)),
+            (_, s) => argument_error_legacy(format!("Unknown clause `{}`. Did you misspell else?", s)),
         }
     }
 }

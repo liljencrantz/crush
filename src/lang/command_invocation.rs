@@ -12,7 +12,7 @@ use crate::lang::command::Command;
 ///
 /// This code path also tries to avoid forking of threads for commands that are known to never
 /// block, which again complicates the code a bit.
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult, error, WithCommand};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::contexts::{CompileContext, JobContext};
 use crate::lang::state::scope::Scope;

@@ -5,7 +5,7 @@ use crate::lang::argument::ArgumentDefinition;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::completion::Completion;
 use crate::lang::completion::parse::PartialCommandResult;
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult, error, WithCommand};
 use crate::lang::help::Help;
 use crate::lang::job::Job;
 use crate::lang::serialization::model;
@@ -248,10 +248,20 @@ impl Display for SimpleCommand {
     }
 }
 
+struct Foo<'a> {
+    path: &'a Vec<String>,
+}
+
+impl Into<String> for Foo<'_> {
+    fn into(self) -> String {
+        self.path.join(":")
+    }
+}
+
 impl CrushCommand for SimpleCommand {
     fn eval(&self, context: CommandContext) -> CrushResult<()> {
         let c = self.call;
-        c(context)
+        c(context).with_command(Foo{path: &self.full_name})
     }
 
     fn might_block(&self, _arg: &[ArgumentDefinition], _context: &mut CompileContext) -> bool {
@@ -339,8 +349,7 @@ impl Display for ConditionCommand {
 impl CrushCommand for ConditionCommand {
     fn eval(&self, context: CommandContext) -> CrushResult<()> {
         let c = self.call;
-        c(context)?;
-        Ok(())
+        c(context).with_command(Foo{path: &self.full_name} )
     }
 
     fn name(&self) -> &str {
@@ -523,7 +532,7 @@ impl Display for BoundCommand {
 impl CrushCommand for BoundCommand {
     fn eval(&self, mut context: CommandContext) -> CrushResult<()> {
         context.this = Some(self.this.clone());
-        self.command.eval(context)
+        self.command.eval(context).with_command(self.name())
     }
 
     fn might_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool {

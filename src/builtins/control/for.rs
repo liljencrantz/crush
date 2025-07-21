@@ -32,20 +32,20 @@ pub struct For {
 
 fn r#for(mut context: CommandContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
-        return argument_error_legacy("`for`: Expected two parameters: A stream and a command");
+        return argument_error_legacy("Expected two parameters: A stream and a command");
     }
     let location = context.arguments[0].location;
     let mut cfg = For::parse(context.remove_arguments(), context.global_state.printer())?;
 
     if cfg.iterator.len() != 1 {
-        return argument_error_legacy("`for`: Expected exactly one stream to iterate over");
+        return argument_error_legacy("Expected exactly one stream to iterate over");
     }
 
     let (name, mut input) = cfg
         .iterator
         .drain()
         .next()
-        .ok_or("`for`: Failed to obtain a stream")?;
+        .ok_or("Failed to obtain a stream")?;
 
     while let Ok(line) = input.read() {
         let env = context.scope.create_child(&context.scope, Loop);

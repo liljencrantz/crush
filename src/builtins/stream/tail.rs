@@ -5,6 +5,7 @@ use crate::lang::errors::argument_error_legacy;
 use crate::lang::state::contexts::CommandContext;
 use signature::signature;
 use std::collections::VecDeque;
+
 #[signature(
     stream.tail,
     can_block = true,
@@ -34,6 +35,6 @@ fn tail(context: CommandContext) -> CrushResult<()> {
             }
             Ok(())
         }
-        None => argument_error_legacy("`tail`: Expected a stream"),
+        None => argument_error_legacy("Expected a stream"),
     }
 }

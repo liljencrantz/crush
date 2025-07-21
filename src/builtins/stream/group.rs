@@ -144,7 +144,7 @@ pub fn group(mut context: CommandContext) -> CrushResult<()> {
         .input
         .recv()?
         .stream()?
-        .ok_or("`group`: Expected input to be a stream")?;
+        .ok_or("Expected input to be a stream")?;
     let input_type = input.types().to_vec();
     let indices: Vec<usize> = cfg
         .group_by
@@ -153,7 +153,7 @@ pub fn group(mut context: CommandContext) -> CrushResult<()> {
         .collect::<CrushResult<Vec<_>>>()?;
 
     if indices.is_empty() {
-        return argument_error_legacy("`group`: No group-by column specified");
+        return argument_error_legacy("No group-by column specified");
     }
 
     let mut output_type = indices

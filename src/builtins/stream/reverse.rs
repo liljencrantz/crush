@@ -25,6 +25,6 @@ fn reverse(context: CommandContext) -> CrushResult<()> {
             }
             Ok(())
         }
-        None => error("`reverse`: Expected a stream"),
+        None => error("Expected a stream"),
     }
 }

@@ -51,6 +51,6 @@ fn drop(context: CommandContext) -> CrushResult<()> {
             }
             Ok(())
         }
-        None => error(format!("`drop`: Expected a stream, got a value of type `{}`", input.value_type())),
+        None => error(format!("Expected a stream, got a value of type `{}`", input.value_type())),
     }
 }

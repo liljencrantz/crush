@@ -127,8 +127,7 @@ impl Signature {
                         Some((#value_type, _location)) => #name = Some(#mutator),
                         Some((value, _location)) =>
                             return crate::lang::errors::argument_error(format!(
-                                "`{}`: Expected argument `{}` to be of type `{}`, was of type `{}`",
-                                #command_name,
+                                "Expected argument `{}` to be of type `{}`, was of type `{}`",
                                 #name_literal,
                                 #type_name,
                                 value.value_type().to_string()),
@@ -137,8 +136,7 @@ impl Signature {
                         _ =>
                             return crate::lang::errors::argument_error_legacy(
                                 format!(
-                                    "`{}`: No value provided for argument `{}`",
-                                    #command_name,
+                                    "No value provided for argument `{}`",
                                     #name_literal),
                             ),
                     }
@@ -150,18 +148,18 @@ impl Signature {
                         Some((#value_type, _location)) => #name = Some(#mutator),
                         None => #name = Some(#native_type::from(#def)),
                         Some((_, _location)) => return crate::lang::errors::argument_error(
-                                format!("`{}`: Expected argument `{}` to be of type `{}`", #command_name, #name_literal, #type_name),
+                                format!("Expected argument `{}` to be of type `{}`", #name_literal, #type_name),
                                 _location,
                             ),
                         _ => return crate::lang::errors::argument_error_legacy(
-                                format!("`{}`: Expected argument `{}` to be of type `{}`", #command_name, #name_literal, #type_name),
+                                format!("Expected argument `{}` to be of type `{}`", #name_literal, #type_name),
                             ),
                         }
                 }
                                             }),
             },
             assign: quote! {
-            #name: #name.ok_or(format!("`{}`: Missing value for parameter `{}`", #command_name, #name_literal).as_str())?,
+            #name: #name.ok_or(format!("Missing value for parameter `{}`", #name_literal).as_str())?,
             },
         })
     }
@@ -190,15 +188,13 @@ impl Signature {
                             Some(( crate::lang::value::Value::Integer(_value), _location)) => # name = Some(Number::Integer(_value)),
                             Some((value, _location)) =>
                                 return crate::lang::errors::argument_error(format ! (
-                                    "`{}`: Expected argument `{}` to be a number, was of type `{}`",
-                                    #command_name,
+                                    "Expected argument `{}` to be a number, was of type `{}`",
                                     #name_literal,
                                     value.value_type().to_string()),
                                     _location),
                             _ =>
                                 return crate::lang::errors::argument_error_legacy(format ! (
-                                    "`{}`: No value provided for argument `{}`",
-                                    #command_name,
+                                    "No value provided for argument `{}`",
                                     # name_literal).as_str()),
                         }
                     }
@@ -211,8 +207,7 @@ impl Signature {
                             Some(( crate::lang::value::Value::Integer(_value), _location)) => # name = Some(Number::Integer(_value)),
                             Some((value, _location)) =>
                                 return crate::lang::errors::argument_error(format ! (
-                                    "`{}`: Expected argument `{}` to be a number, was of type `{}`",
-                                    #command_name,
+                                    "Expected argument `{}` to be a number, was of type `{}`",
                                     #name_literal,
                                     value.value_type().to_string()),
                                     _location),
@@ -232,8 +227,7 @@ impl Signature {
                 .unwrap_or(quote! {
                 #name:
                     #name.ok_or(format!(
-                            "`{}`: Missing value for parameter `{}`",
-                            #command_name,
+                            "Missing value for parameter `{}`",
                             #name_literal).as_str())?,
                 }),
         })
@@ -263,15 +257,13 @@ impl Signature {
                             Some(( crate::lang::value::Value::File(_value), _location)) => # name = Some(Text::File(_value)),
                             Some((value, _location)) =>
                                 return crate::lang::errors::argument_error(format ! (
-                                    "`{}`: Expected argument `{}` to be textual, was of type `{}`",
-                                    #command_name,
+                                    "Expected argument `{}` to be textual, was of type `{}`",
                                     #name_literal,
                                     value.value_type().to_string()),
                                     _location),
                             _ =>
                                 return crate::lang::errors::argument_error_legacy(format ! (
-                                    "`{}`: No value provided for argument `{}`",
-                                    #command_name,
+                                    "No value provided for argument `{}`",
                                     # name_literal).as_str()),
                         }
                     }
@@ -284,8 +276,7 @@ impl Signature {
                             Some(( crate::lang::value::Value::File(_value), _location)) => # name = Some(Text::File(_value)),
                             Some((value, _location)) =>
                                 return crate::lang::errors::argument_error(format ! (
-                                    "`{}`: Expected argument `{}` to be textual, was of type `{}`",
-                                    #command_name,
+                                    "Expected argument `{}` to be textual, was of type `{}`",
                                     #name_literal,
                                     value.value_type().to_string()),
                                     _location),
@@ -304,8 +295,8 @@ impl Signature {
                 })
                 .unwrap_or(quote! {
                 #name: #name.ok_or(format!(
-                            "`{}`: Missing value for parameter `{}`",
-                            #command_name, #name_literal).as_str())?,
+                            "Missing value for parameter `{}`",
+                            #name_literal).as_str())?,
                 }),
         })
     }
@@ -364,15 +355,13 @@ impl Signature {
                 Some((crate::lang::value::Value::Regex(_pattern, _value), _)) => #name.expand_regex(_pattern, _value),
                             Some((value, _location)) =>
                                 return crate::lang::errors::argument_error(format ! (
-                                    "`{}`: Expected argument `{}` to be textual, was of type `{}`",
-                                    #command_name,
+                                    "Expected argument `{}` to be textual, was of type `{}`",
                                     #name_literal,
                                     value.value_type().to_string()),
                                     _location),
                             _ =>
                                 return crate::lang::errors::argument_error_legacy(format ! (
-                                    "`{}`: No value provided for argument `{}`",
-                                    #command_name,
+                                    "No value provided for argument `{}`",
                                     #name_literal).as_str()),
                         }
                     }
@@ -412,15 +401,15 @@ impl Signature {
                     Some((_, _location)) =>
                         return crate::lang::errors::argument_error(
                             format!(
-                                    "`{}`: Expected argument `{}` to be of type `{}`",
-                                    #command_name, #name_literal, #sub_type),
+                                    "Expected argument `{}` to be of type `{}`",
+                                    #name_literal, #sub_type),
                             _location,
                         ),
                     _ =>
                         return crate::lang::errors::argument_error_legacy(
                             format!(
-                                    "`{}`: Missing argument `{}`",
-                                    #command_name, #name_literal)),
+                                    "Missing argument `{}`",
+                                    #name_literal)),
                 }
             }
             }),
@@ -488,12 +477,12 @@ impl Signature {
                             Some((#value_type, _location)) => #name.push(#mutator),
                         Some((_, _location)) =>
                             return crate::lang::errors::argument_error(
-                                format!("`{}`: Expected argument `{}` to be of type `{}`", #command_name, #name_literal, #type_name),
+                                format!("Expected argument `{}` to be of type `{}`", #name_literal, #type_name),
                                 _location,
                             ),
                         _ =>
                             return crate::lang::errors::argument_error_legacy(
-                                format!("`{}`: Missing argument `{}`", #command_name, #name_literal)),
+                                format!("Missing argument `{}`", #name_literal)),
                         }
                     }
                 })

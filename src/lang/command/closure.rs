@@ -7,9 +7,7 @@ use crate::lang::command::{
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::data::dict::Dict;
 use crate::lang::data::list::List;
-use crate::lang::errors::{
-    CrushResult, argument_error, argument_error_legacy, error, serialization_error,
-};
+use crate::lang::errors::{CrushResult, argument_error, argument_error_legacy, error, serialization_error, WithCommand};
 use crate::lang::help::Help;
 use crate::lang::job::Job;
 use crate::lang::pipe::{black_hole, empty_channel, pipe};
@@ -335,58 +333,7 @@ impl Help for Closure {
 
 impl CrushCommand for Closure {
     fn eval(&self, context: CommandContext) -> CrushResult<()> {
-        let job_definitions = self.jobs.clone();
-        let parent_env = self.parent_scope.clone();
-
-        let scope_type = self.closure_type.scope_type();
-
-        let env = parent_env.create_child(&context.scope, scope_type);
-
-        let mut cc =
-            CompileContext::from(&context.clone().with_output(black_hole())).with_scope(&env);
-        if let Some(this) = context.this {
-            env.redeclare("this", this)?;
-        }
-
-        self.closure_type
-            .push_arguments_to_env(context.arguments, &mut cc)?;
-
-        if env.is_stopped() {
-            return Ok(());
-        }
-
-        for (idx, job_definition) in job_definitions.iter().enumerate() {
-            let first = idx == 0;
-            let last = idx == job_definitions.len() - 1;
-            let input = if first {
-                context.input.clone()
-            } else {
-                empty_channel()
-            };
-            let (sender, receiver) = pipe();
-            let job = job_definition.eval(JobContext::new(
-                input,
-                sender,
-                env.clone(),
-                context.global_state.clone(),
-            ))?;
-            let local_printer = context.global_state.printer().clone();
-            let local_threads = context.global_state.threads().clone();
-            job.map(|id| local_threads.join_one(id, &local_printer));
-
-            if env.is_stopped() {
-                let return_value = match env.take_return_value() {
-                    None => receiver.recv()?,
-                    Some(v) => v,
-                };
-                return context.output.send(return_value);
-            } else {
-                if last {
-                    context.output.send(receiver.recv()?)?;
-                }
-            }
-        }
-        Ok(())
+        self.eval_inner(context).with_command(self.name())
     }
 
     fn might_block(&self, _arg: &[ArgumentDefinition], _context: &mut CompileContext) -> bool {
@@ -616,6 +563,61 @@ impl Closure {
         state: &mut DeserializationState,
     ) -> CrushResult<Command> {
         ClosureDeserializer::new(elements, state).closure(id)
+    }
+
+    fn eval_inner(&self, context: CommandContext) -> CrushResult<()> {
+        let job_definitions = self.jobs.clone();
+        let parent_env = self.parent_scope.clone();
+
+        let scope_type = self.closure_type.scope_type();
+
+        let env = parent_env.create_child(&context.scope, scope_type);
+
+        let mut cc =
+            CompileContext::from(&context.clone().with_output(black_hole())).with_scope(&env);
+        if let Some(this) = context.this {
+            env.redeclare("this", this)?;
+        }
+
+        self.closure_type
+            .push_arguments_to_env(context.arguments, &mut cc)?;
+
+        if env.is_stopped() {
+            return Ok(());
+        }
+
+        for (idx, job_definition) in job_definitions.iter().enumerate() {
+            let first = idx == 0;
+            let last = idx == job_definitions.len() - 1;
+            let input = if first {
+                context.input.clone()
+            } else {
+                empty_channel()
+            };
+            let (sender, receiver) = pipe();
+            let job = job_definition.eval(JobContext::new(
+                input,
+                sender,
+                env.clone(),
+                context.global_state.clone(),
+            ))?;
+            let local_printer = context.global_state.printer().clone();
+            let local_threads = context.global_state.threads().clone();
+            job.map(|id| local_threads.join_one(id, &local_printer));
+
+            if env.is_stopped() {
+                let return_value = match env.take_return_value() {
+                    None => receiver.recv()?,
+                    Some(v) => v,
+                };
+                return context.output.send(return_value);
+            } else {
+                if last {
+                    context.output.send(receiver.recv()?)?;
+                }
+            }
+        }
+        Ok(())
     }
 }
 

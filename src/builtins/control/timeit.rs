@@ -76,7 +76,7 @@ fn timeit(mut context: CommandContext) -> CrushResult<()> {
     let tm = repeat_times
         .into_iter()
         .min()
-        .ok_or("`timeit`: Failed to run command")?;
+        .ok_or("Failed to run command")?;
 
     output.send(Value::Duration(tm))
 }

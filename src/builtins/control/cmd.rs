@@ -126,7 +126,7 @@ fn cmd_internal(
         cmd.stderr(stderr_writer);
 
         let mut child = cmd.spawn()?;
-        let mut stdin = child.stdin.take().ok_or("`cmd`: Expected stdin stream")?;
+        let mut stdin = child.stdin.take().ok_or("Expected stdin stream")?;
 
         match input {
             Value::Empty => {
@@ -144,7 +144,7 @@ fn cmd_internal(
                     Ok(())
                 })?;
             }
-            _ => return argument_error_legacy("`cmd`: Invalid input: Expected binary data"),
+            _ => return argument_error_legacy("Invalid input: Expected binary data"),
         }
 
         context
@@ -174,21 +174,21 @@ fn cmd_internal(
 fn cmd(mut context: CommandContext) -> CrushResult<()> {
     let mut arguments = context.remove_arguments();
     if arguments.is_empty() {
-        return argument_error_legacy("`cmd`: No command given");
+        return argument_error_legacy("No command given");
     }
     match arguments.remove(0).value {
         Value::File(f) => {
             let file = if f.exists() {
                 Some(f.to_path_buf())
             } else {
-                resolve_external_command(f.to_str().ok_or("`cmd`: Invalid command name")?, &context.scope)?
+                resolve_external_command(f.to_str().ok_or("Invalid command name")?, &context.scope)?
             };
 
             if let Some(file) = file {
                 cmd_internal(context, file, arguments)
             } else {
                 argument_error_legacy(format!(
-                    "`cmd`: Unknown command {}",
+                    "Unknown command {}",
                     f.to_str().unwrap_or("<encoding error>")
                 ))
             }
@@ -197,10 +197,10 @@ fn cmd(mut context: CommandContext) -> CrushResult<()> {
             if let Some(file) = resolve_external_command(s.as_ref(), &context.scope)? {
                 cmd_internal(context, file, arguments)
             } else {
-                argument_error_legacy(format!("`cmd`: Unknown command {}", s))
+                argument_error_legacy(format!("Unknown command `{}`", s))
             }
         }
 
-        _ => argument_error_legacy("`cmd`: Not a valid command"),
+        _ => argument_error_legacy("Not a valid command"),
     }
 }

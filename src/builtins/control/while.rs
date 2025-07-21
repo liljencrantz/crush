@@ -53,7 +53,7 @@ fn r#while(mut context: CommandContext) -> CrushResult<()> {
                 None => {}
             },
             Value::Bool(false) => break,
-            v => return data_error(format!("`while`: Loop condition must output value of boolean type, got a value of type {}", v.value_type())),
+            v => return data_error(format!("Loop condition must output value of boolean type, got a value of type {}", v.value_type())),
         }
     }
     context.output.empty()

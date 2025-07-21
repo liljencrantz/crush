@@ -64,7 +64,7 @@ fn http(context: CommandContext) -> CrushResult<()> {
         .timeout
         .num_nanoseconds()
         .map(|us| core::time::Duration::from_nanos(us as u64))
-        .ok_or("`http`: Out of bounds timeout")?;
+        .ok_or("Out of bounds timeout")?;
     let mut request = client
         .request(parse_method(&cfg.method)?, cfg.uri.as_str())
         .timeout(t);
@@ -73,7 +73,7 @@ fn http(context: CommandContext) -> CrushResult<()> {
         let h = t.splitn(2, ':').collect::<Vec<&str>>();
         match h.len() {
             2 => request = request.header(h[0], h[1].to_string()),
-            _ => return argument_error_legacy("`http`: Bad header format. Expected \"key:value\"."),
+            _ => return argument_error_legacy("Bad header format. Expected \"key:value\"."),
         }
     }
 

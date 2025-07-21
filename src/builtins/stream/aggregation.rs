@@ -27,7 +27,7 @@ macro_rules! sum_function {
             while let Ok(row) = s.read() {
                 match row.cells()[column] {
                     Value::$value_type(i) => res = res + i,
-                    _ => return error("`sum`: Invalid cell value"),
+                    _ => return error("Invalid cell value"),
                 }
             }
             Ok(Value::$value_type(res))
@@ -60,11 +60,11 @@ fn sum(context: CommandContext) -> CrushResult<()> {
                 ValueType::Float => context.output.send(sum_float(input, column)?),
                 ValueType::Duration => context.output.send(sum_duration(input, column)?),
                 t => {
-                    argument_error_legacy(&format!("`sum`: Can't calculate sum of elements of type {}", t))
+                    argument_error_legacy(&format!("Can't calculate sum of elements of type {}", t))
                 }
             }
         }
-        _ => error("`sum`: Expected a stream"),
+        _ => error("Expected a stream"),
     }
 }
 
@@ -79,7 +79,7 @@ macro_rules! avg_function {
                         count += 1;
                         match row.cells()[column] {
                             Value::$value_type(i) => res = res + i,
-                            _ => return error("`avg`: Invalid cell value"),
+                            _ => return error("Invalid cell value"),
                         }
                     }
                     Err(_) => break,
@@ -115,12 +115,12 @@ fn avg(context: CommandContext) -> CrushResult<()> {
                 ValueType::Float => context.output.send(avg_float(input, column)?),
                 ValueType::Duration => context.output.send(avg_duration(input, column)?),
                 t => argument_error_legacy(&format!(
-                    "`avg`: Can't calculate average of elements of type {}",
+                    "Can't calculate average of elements of type {}",
                     t
                 )),
             }
         }
-        _ => error("`avg`: Expected a stream"),
+        _ => error("Expected a stream"),
     }
 }
 
@@ -132,14 +132,14 @@ macro_rules! median_function {
                 match s.read() {
                     Ok(row) => match row.cells()[column] {
                         Value::$value_type(i) => res.push(i),
-                        _ => return error("`median`: Invalid cell value"),
+                        _ => return error("Invalid cell value"),
                     },
                     Err(_) => break,
                 }
             }
             res.sort_by(|a, b| a.partial_cmp(b).unwrap());
             if (res.is_empty()) {
-                argument_error_legacy("`median`: Can't calculate median of empty set")
+                argument_error_legacy("Can't calculate median of empty set")
             } else if (res.len() % 2 == 1) {
                 Ok(Value::$value_type(res[(res.len() - 1) / 2]))
             } else {
@@ -201,12 +201,12 @@ fn median(context: CommandContext) -> CrushResult<()> {
                         )?)
                 }
                 t => argument_error_legacy(&format!(
-                    "`median`: Can't calculate average of elements of type {}",
+                    "Can't calculate average of elements of type {}",
                     t
                 )),
             }
         }
-        _ => error("`median`: Expected a stream"),
+        _ => error("Expected a stream"),
     }
 }
 
@@ -277,10 +277,10 @@ fn min(context: CommandContext) -> CrushResult<()> {
                 ValueType::Time => context.output.send(min_time(input, column)?),
                 ValueType::String => context.output.send(min_string(input, column)?),
                 ValueType::File => context.output.send(min_file(input, column)?),
-                t => argument_error_legacy(&format!("`min`: Can't pick min of elements of type {}", t)),
+                t => argument_error_legacy(&format!("Can't pick min of elements of type {}", t)),
             }
         }
-        _ => error("`min`: Expected a stream"),
+        _ => error("Expected a stream"),
     }
 }
 
@@ -307,10 +307,10 @@ fn max(context: CommandContext) -> CrushResult<()> {
                 ValueType::Time => context.output.send(max_time(input, column)?),
                 ValueType::String => context.output.send(max_string(input, column)?),
                 ValueType::File => context.output.send(max_file(input, column)?),
-                t => argument_error_legacy(&format!("`max`: Can't pick max of elements of type {}", t)),
+                t => argument_error_legacy(&format!("Can't pick max of elements of type {}", t)),
             }
         }
-        _ => error("`max`: Expected a stream"),
+        _ => error("Expected a stream"),
     }
 }
 
@@ -321,7 +321,7 @@ macro_rules! prod_function {
             while let Ok(row) = s.read() {
                 match row.cells()[column] {
                     Value::$value_type(i) => res = res * i,
-                    _ => return error("`prod`: Invalid cell value"),
+                    _ => return error("Invalid cell value"),
                 }
             }
             Ok(Value::$value_type(res))
@@ -352,12 +352,12 @@ fn prod(context: CommandContext) -> CrushResult<()> {
                 ValueType::Integer => context.output.send(prod_int(input, column)?),
                 ValueType::Float => context.output.send(prod_float(input, column)?),
                 t => argument_error_legacy(&format!(
-                    "`prod`: Can't calculate product of elements of type {}",
+                    "Can't calculate product of elements of type {}",
                     t
                 )),
             }
         }
-        _ => error("`prod`: Expected a stream"),
+        _ => error("Expected a stream"),
     }
 }
 
@@ -389,7 +389,7 @@ fn concat(context: CommandContext) -> CrushResult<()> {
                     Value::File(i) => res.push_str(i.to_str().unwrap_or("<Invalid>")),
                     Value::Integer(i) => res.push_str(&i.to_string()),
                     Value::Float(i) => res.push_str(&i.to_string()),
-                    _ => return error("`concat`: Invalid cell value, expected number or text"),
+                    _ => return error("Invalid cell value, expected number or text"),
                 };
                 while let Ok(row) = input.read() {
                     res.push_str(&cfg.separator);
@@ -398,12 +398,12 @@ fn concat(context: CommandContext) -> CrushResult<()> {
                         Value::File(i) => res.push_str(i.to_str().unwrap_or("<Invalid>")),
                         Value::Integer(i) => res.push_str(&i.to_string()),
                         Value::Float(i) => res.push_str(&i.to_string()),
-                        _ => return error("`concat`: Invalid cell value, expected number or text"),
+                        _ => return error("Invalid cell value, expected number or text"),
                     }
                 }
             }
             context.output.send(Value::from(res))
         }
-        _ => error("`concat`: Expected a stream"),
+        _ => error("Expected a stream"),
     }
 }

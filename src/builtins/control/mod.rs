@@ -230,7 +230,7 @@ fn which(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Which::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output
         .send(Value::from(resolve_external_command(&cfg.command, &context.scope)?
-        .ok_or_else(||format!("`which`: Could not find the command `{}` on your path", &cfg.command))?))
+        .ok_or_else(||format!("Could not find the command `{}` on your path", &cfg.command))?))
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {

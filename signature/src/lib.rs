@@ -502,7 +502,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 unnamed_mutations.extend(quote! {
                     if !_unnamed.is_empty() {
                         let (_value, _location) = &_unnamed[0];
-                        return crate::lang::errors::argument_error(format!("`{}`: Stray unnamed argument", #command_name), *_location);
+                        return crate::lang::errors::argument_error(format!("Stray unnamed argument"), *_location);
                     }
                 });
             }
@@ -584,7 +584,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                             #named_matchers
                             #named_fallback
                             (None, _value) => _unnamed.push_back((_value, _arg.location)),
-                            (Some(_name), _value) => return crate::lang::errors::argument_error(format!("`{}`: Unexpected argument named `{}` with value of type `{}`", #command_name, _name, _value.value_type()), _location),
+                            (Some(_name), _value) => return crate::lang::errors::argument_error(format!("Unexpected argument named `{}` with value of type `{}`", _name, _value.value_type()), _location),
                         }
                     }
 

@@ -71,7 +71,13 @@ pub fn init(scope: Option<Scope>) -> (Printer, JoinHandle<()>) {
                         Error(err) => eprintln!("{}", err),
                         CrushError(err) => {
                             let colors = scope.as_ref().map(|s| highlight_colors(s)).unwrap_or_else(|| HashMap::new());
-                            let rendered = render(&err.message(), 80, colors).unwrap_or_else(|_| err.message());
+                            let message = match err.command() {
+                                Some(cmd) if !err.message().starts_with('`')=> {
+                                    format!("`{}`: {}", cmd, err.message())
+                                },
+                                _ => err.message(),
+                            };
+                            let rendered = render(&message, 80, colors).unwrap_or_else(|_| err.message());
                             eprintln!("{}", rendered);
                             if let Some(ctx) = err.context() {
                                 eprintln!("{}", ctx);

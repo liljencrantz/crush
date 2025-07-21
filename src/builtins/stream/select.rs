@@ -107,7 +107,7 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
             let mut columns = Vec::new();
 
             if context.arguments.len() == 0 {
-                return argument_error_legacy("`select`: No columns selected");
+                return argument_error_legacy("No columns selected");
             }
 
             let mut location = context.arguments[0].location;
@@ -117,7 +117,7 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
                     copy = true;
                     context.arguments.remove(0);
                 } else {
-                    return argument_error("`select`: Invalid argument", context.arguments[0].location);
+                    return argument_error("Invalid argument", context.arguments[0].location);
                 }
             }
 
@@ -139,12 +139,12 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
                         }
                         _ => {
                             return argument_error(
-                                format!("`select`: Unknown column `{}`", name).as_str(),
+                                format!("Unknown column `{}`", name).as_str(),
                                 a.location,
                             );
                         }
                     },
-                    _ => return argument_error("`select`: Invalid argument", a.location),
+                    _ => return argument_error("Invalid argument", a.location),
                 }
             }
 
@@ -158,6 +158,6 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
                 context,
             )
         }
-        _ => error("`select`: Expected a stream"),
+        _ => error("Expected a stream"),
     }
 }
