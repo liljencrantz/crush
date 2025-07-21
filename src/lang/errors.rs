@@ -204,7 +204,7 @@ impl CrushError {
     }
 
     pub fn is_eof(&self) -> bool {
-        matches!(self.error_type(), CrushErrorType::EOFError)
+        matches!(self.error_type(), EOFError)
     }
 }
 
