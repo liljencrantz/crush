@@ -145,7 +145,7 @@ impl CrushError {
     pub fn command(&self) -> &Option<String> {
         &self.command
     }
-    
+
     pub fn with_source(self, source: &Option<(String, Location)>) -> CrushError {
         match source {
             None => self,
@@ -492,7 +492,7 @@ pub fn serialization_error<T>(message: impl Into<String>) -> CrushResult<T> {
 }
 
 pub fn argument_error<T>(message: impl Into<String>, location: Location) -> CrushResult<T> {
-    Err(InvalidArgument(message.into()).into())
+    Err(CrushError::from(InvalidArgument(message.into())).with_location(location))
 }
 
 pub fn data_error<T>(message: impl Into<String>) -> CrushResult<T> {

@@ -33,7 +33,6 @@ pub enum SignatureType {
 }
 
 pub struct Signature {
-    command_name: String,
     span: Span,
     signature_type: SignatureType,
     name: Ident,
@@ -44,7 +43,6 @@ pub struct Signature {
 
 impl Signature {
     pub fn new(
-        command_name: &str,
         ty: &Type,
         name: &Ident,
         default: Option<TokenTree>,
@@ -53,7 +51,6 @@ impl Signature {
     ) -> SignatureResult<Signature> {
         let signature_type = SignatureType::try_from(ty)?;
         Ok(Signature {
-            command_name: command_name.to_string(),
             span: ty.span(),
             signature_type,
             name: name.clone(),
@@ -77,11 +74,10 @@ impl Signature {
     }
 
     fn simple_type_data(&self, simple_type: &SimpleSignature) -> SignatureResult<TypeData> {
-        let command_name = Literal::string(&self.command_name);
         let native_type = simple_type.ident(self.span);
         let allowed_values_name =
             allowed_values_name(&self.allowed_values, &self.name.to_string(), self.span);
-        let mutator = simple_type.mutator(&self.command_name, &allowed_values_name);
+        let mutator = simple_type.mutator(&allowed_values_name);
         let value_type = simple_type.value();
         let name_literal = Literal::string(&self.name.to_string());
         let type_name = simple_type.name();
@@ -165,7 +161,6 @@ impl Signature {
     }
 
     fn number_type_data(&self) -> SignatureResult<TypeData> {
-        let command_name = Literal::string(&self.command_name);
         let name_literal = Literal::string(&self.name.to_string());
         let name = &self.name;
         Ok(TypeData {
@@ -234,7 +229,6 @@ impl Signature {
     }
 
     fn text_type_data(&self) -> SignatureResult<TypeData> {
-        let command_name = Literal::string(&self.command_name);
         let name_literal = Literal::string(&self.name.to_string());
         let name = &self.name;
         Ok(TypeData {
@@ -324,7 +318,6 @@ impl Signature {
     }
 
     fn patterns_type_data(&self) -> SignatureResult<TypeData> {
-        let command_name = Literal::string(&self.command_name);
         let name_literal = Literal::string(&self.name.to_string());
         let name = &self.name;
         Ok(TypeData {
@@ -377,11 +370,10 @@ impl Signature {
     }
 
     fn option_type_data(&self, simple_type: &SimpleSignature) -> SignatureResult<TypeData> {
-        let command_name = Literal::string(&self.command_name);
         let name_literal = Literal::string(&self.name.to_string());
         let name = &self.name;
         let sub_type = simple_type.literal();
-        let mutator = simple_type.mutator(&self.command_name, &None);
+        let mutator = simple_type.mutator(&None);
         let value_type = simple_type.value();
         let span = self.span;
         Ok(TypeData {
@@ -426,7 +418,7 @@ impl Signature {
         if self.allowed_values.is_some() {
             return fail!(self.span, "Options can't have restricted values");
         }
-        let mutator = simple_type.mutator(&self.command_name, &None);
+        let mutator = simple_type.mutator(&None);
         let value_type = simple_type.value();
         let sub_type = simple_type.value_type();
 
@@ -449,8 +441,7 @@ impl Signature {
             return fail!(self.span, "Vectors can't have restricted values");
         }
         let name = &self.name;
-        let command_name = Literal::string(&self.command_name);
-        let mutator = simple_type.mutator(&self.command_name, &None);
+        let mutator = simple_type.mutator(&None);
         let dump_all = Ident::new(simple_type.dump_list(), self.span.clone());
         let value_type = simple_type.value();
         let sub_type = simple_type.value_type();

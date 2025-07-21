@@ -415,7 +415,6 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 let name_string = Literal::string(&name.to_string());
 
                 let type_data = Signature::new(
-                    &metadata.name,
                     &field.ty,
                     name,
                     default_value.clone(),
