@@ -1,7 +1,6 @@
-use crate::lang::ast::location::Location;
 use crate::lang::command::{Command, OutputType};
 use crate::lang::data::table::ColumnVec;
-use crate::lang::errors::{CrushResult, argument_error, argument_error_legacy, error};
+use crate::lang::errors::{CrushResult, argument_error, error};
 use crate::lang::pipe::{Stream, pipe};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ValueType;
@@ -10,21 +9,22 @@ use crate::{
     lang::{argument::Argument, data::table::Row, value::Value},
     util::replace::Replace,
 };
+use crate::lang::ast::source::Source;
 
 enum Action {
     Replace(usize),
     Append(String),
 }
 
-enum Source {
+enum ValueSource {
     Closure(Command),
     Argument(usize),
 }
 
 pub struct Config {
     copy: bool,
-    columns: Vec<(Action, Source)>,
-    location: Location,
+    columns: Vec<(Action, ValueSource)>,
+    source: Source,
 }
 
 pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushResult<()> {
@@ -37,13 +37,13 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
 
     for (location, source) in &config.columns {
         let next_type = match source {
-            Source::Closure(c) => c
+            ValueSource::Closure(c) => c
                 .output_type(&OutputType::Known(ValueType::TableInputStream(
                     input_type.clone(),
                 )))
                 .unwrap_or(&ValueType::Any)
                 .clone(),
-            Source::Argument(idx) => input_type[*idx].cell_type.clone(),
+            ValueSource::Argument(idx) => input_type[*idx].cell_type.clone(),
         };
         match location {
             Action::Append(name) => {
@@ -66,13 +66,13 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
         }
         for (location, source) in &config.columns {
             let value = match source {
-                Source::Closure(closure) => {
+                ValueSource::Closure(closure) => {
                     let arguments: Vec<Argument> = row
                         .cells()
                         .iter()
                         .zip(&input_type)
                         .map(|(cell, cell_type)| {
-                            Argument::named(&cell_type.name(), cell.clone(), config.location)
+                            Argument::named(&cell_type.name(), cell.clone(), &config.source)
                         })
                         .collect();
                     let (sender, receiver) = pipe();
@@ -84,7 +84,7 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
                     )?;
                     receiver.recv()?
                 }
-                Source::Argument(idx) => row.cells()[*idx].clone(),
+                ValueSource::Argument(idx) => row.cells()[*idx].clone(),
             };
             match location {
                 Action::Append(_) => {
@@ -107,44 +107,43 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
             let mut columns = Vec::new();
 
             if context.arguments.len() == 0 {
-                return argument_error_legacy("No columns selected");
+                return argument_error("No columns selected.", &context.source);
             }
 
-            let mut location = context.arguments[0].location;
+            let source = context.arguments[0].source.clone();
 
             if let Value::Glob(g) = &context.arguments[0].value {
                 if context.arguments[0].argument_type.is_none() && &g.to_string() == "*" {
                     copy = true;
                     context.arguments.remove(0);
                 } else {
-                    return argument_error("Invalid argument", context.arguments[0].location);
+                    return argument_error("Invalid argument", &context.arguments[0].source);
                 }
             }
 
             let input_type = input.types();
             for a in &context.arguments {
-                location = location.union(a.location);
                 match (a.argument_type.as_deref(), a.value.clone()) {
                     (Some(name), Value::Command(closure)) => match (copy, input_type.find(name)) {
                         (true, Ok(idx)) => {
-                            columns.push((Action::Replace(idx), Source::Closure(closure)))
+                            columns.push((Action::Replace(idx), ValueSource::Closure(closure)))
                         }
 
                         _ => columns
-                            .push((Action::Append(name.to_string()), Source::Closure(closure))),
+                            .push((Action::Append(name.to_string()), ValueSource::Closure(closure))),
                     },
                     (None, Value::String(name)) => match (copy, input_type.find(name.as_ref())) {
                         (false, Ok(idx)) => {
-                            columns.push((Action::Append(name.to_string()), Source::Argument(idx)))
+                            columns.push((Action::Append(name.to_string()), ValueSource::Argument(idx)))
                         }
                         _ => {
                             return argument_error(
                                 format!("Unknown column `{}`", name).as_str(),
-                                a.location,
+                                &a.source,
                             );
                         }
                     },
-                    _ => return argument_error("Invalid argument", a.location),
+                    _ => return argument_error("Invalid argument", &a.source),
                 }
             }
 
@@ -152,7 +151,7 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
                 Config {
                     columns,
                     copy,
-                    location,
+                    source,
                 },
                 input,
                 context,

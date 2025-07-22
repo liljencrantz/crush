@@ -68,8 +68,8 @@ struct Exit {
     status: i32,
 }
 
-fn exit(context: CommandContext) -> CrushResult<()> {
-    let cfg: Exit = Exit::parse(context.arguments, &context.global_state.printer())?;
+fn exit(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Exit = Exit::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     context.scope.do_exit()?;
     context.global_state.set_exit_status(cfg.status as i32);
     context.output.send(Value::Empty)
@@ -89,8 +89,8 @@ mod prompt {
         prompt: Option<Command>,
     }
 
-    fn set(context: CommandContext) -> CrushResult<()> {
-        let cfg: Set = Set::parse(context.arguments, &context.global_state.printer())?;
+    fn set(mut context: CommandContext) -> CrushResult<()> {
+        let cfg: Set = Set::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
         context.global_state.set_prompt(cfg.prompt);
         context.output.send(Value::Empty)
     }
@@ -102,8 +102,8 @@ mod prompt {
     ]
     pub struct Get {}
 
-    fn get(context: CommandContext) -> CrushResult<()> {
-        Get::parse(context.arguments, &context.global_state.printer())?;
+    fn get(mut context: CommandContext) -> CrushResult<()> {
+        Get::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
         context.output.send(
             context
                 .global_state
@@ -164,8 +164,8 @@ mod title {
         title: Option<Command>,
     }
 
-    fn set(context: CommandContext) -> CrushResult<()> {
-        let cfg: Set = Set::parse(context.arguments, &context.global_state.printer())?;
+    fn set(mut context: CommandContext) -> CrushResult<()> {
+        let cfg: Set = Set::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
         context.global_state.set_title(cfg.title);
         context.output.send(Value::Empty)
     }
@@ -177,8 +177,8 @@ mod title {
     ]
     pub struct Get {}
 
-    fn get(context: CommandContext) -> CrushResult<()> {
-        Get::parse(context.arguments, &context.global_state.printer())?;
+    fn get(mut context: CommandContext) -> CrushResult<()> {
+        Get::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
         context.output.send(
             context
                 .global_state
@@ -308,8 +308,8 @@ mod locale {
         locale: String,
     }
 
-    fn set(context: CommandContext) -> CrushResult<()> {
-        let config: Set = Set::parse(context.arguments, &context.global_state.printer())?;
+    fn set(mut context: CommandContext) -> CrushResult<()> {
+        let config: Set = Set::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
         let new_locale = SystemLocale::from_name(config.locale)?;
         context.global_state.set_locale(new_locale);
         context.output.send(Value::Empty)
@@ -357,8 +357,8 @@ mod byte_unit {
         byte_unit: String,
     }
 
-    fn set(context: CommandContext) -> CrushResult<()> {
-        let config: Set = Set::parse(context.arguments, &context.global_state.printer())?;
+    fn set(mut context: CommandContext) -> CrushResult<()> {
+        let config: Set = Set::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
         let new = ByteUnit::try_from(config.byte_unit.as_str())?;
         context.global_state.set_byte_unit(new);
         context.output.send(Value::Empty)

@@ -173,7 +173,7 @@ fn find_command_in_expression<'input>(
             Ok(None)
         }
 
-        Node::Closure(_, joblist) => {
+        Node::Closure(_, joblist, _) => {
             if joblist.location.contains(cursor) {
                 Ok(Some(find_command_in_job_list(joblist.clone(), cursor)?))
             } else {

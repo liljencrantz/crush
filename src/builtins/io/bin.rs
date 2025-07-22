@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeLoader;
@@ -16,8 +16,8 @@ struct From {
     files: Files,
 }
 
-pub fn from(context: CommandContext) -> CrushResult<()> {
-    let cfg: From = From::parse(context.arguments, &context.global_state.printer())?;
+pub fn from(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: From = From::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     context
         .output
         .send(Value::BinaryInputStream(cfg.files.reader(context.input)?))
@@ -33,8 +33,8 @@ struct To {
     file: Files,
 }
 
-pub fn to(context: CommandContext) -> CrushResult<()> {
-    let cfg: To = To::parse(context.arguments, &context.global_state.printer())?;
+pub fn to(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: To = To::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
 
     match context.input.recv()? {
         Value::BinaryInputStream(mut input) => {
@@ -42,10 +42,10 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
             std::io::copy(input.as_mut(), out.as_mut())?;
             Ok(())
         }
-        v => argument_error_legacy(format!(
+        v => argument_error(format!(
             "`bin:to`: Expected input to be a binary stream, got a value of type `{}`",
             v.value_type()
-        )),
+        ), &context.source),
     }
 }
 

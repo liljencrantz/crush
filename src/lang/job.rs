@@ -3,27 +3,32 @@ use crate::lang::ast::location::Location;
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::CrushResult;
 use crate::lang::pipe::pipe;
-use crate::lang::state::contexts::{CompileContext, JobContext};
+use crate::lang::state::contexts::{EvalContext, JobContext};
 use std::fmt::{Display, Formatter};
 use std::thread::ThreadId;
+use crate::lang::ast::source::Source;
 
 /// An executable pipeline of one or more commands.
 #[derive(Clone)]
 pub struct Job {
     commands: Vec<CommandInvocation>,
-    location: Location,
+    source: Source,
 }
 
 impl Job {
     pub fn location(&self) -> Location {
-        self.location
+        self.source.location()
     }
 
-    pub fn new(commands: Vec<CommandInvocation>, location: Location) -> Job {
-        Job { commands, location }
+    pub fn source(&self) -> &Source {
+        &self.source
+    }
+    
+    pub fn new(commands: Vec<CommandInvocation>, source: Source) -> Job {
+        Job { commands, source }
     }
 
-    pub fn can_block(&self, context: &mut CompileContext) -> bool {
+    pub fn can_block(&self, context: &mut EvalContext) -> bool {
         if self.commands.len() == 1 {
             self.commands[0].can_block(context)
         } else {
@@ -55,9 +60,7 @@ impl Job {
         }
 
         let last_call_def = &self.commands[last_job_idx];
-        last_call_def
-            .eval(context.with_io(input, context.output.clone()))
-            .map_err(|e| e.with_location(self.location))
+        last_call_def.eval(context.with_io(input, context.output.clone()))
     }
 }
 

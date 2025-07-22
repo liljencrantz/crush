@@ -1,15 +1,15 @@
 use crate::data::r#struct::Struct;
 use crate::data::table::{ColumnType, Row};
+use crate::lang::ast::source::Source;
 use crate::lang::command::Command;
 use crate::lang::errors::{
-    CrushError, CrushResult, argument_error_legacy, error, invalid_jump, serialization_error,
+    CrushError, CrushResult, argument_error_legacy, error, invalid_jump,
 };
 use crate::lang::help::Help;
 use crate::lang::pipe::CrushStream;
 use crate::lang::{value::Value, value::ValueType};
 use crate::util::identity_arc::Identity;
 use crate::util::replace::Replace;
-use ScopeType::Namespace;
 use chrono::Duration;
 use ordered_map::OrderedMap;
 use std::fmt::{Display, Formatter};
@@ -91,7 +91,7 @@ impl ScopeLoader {
             data: Arc::from(Mutex::new(ScopeData::new(
                 Some(self.parent.clone()),
                 Some(self.parent.clone()),
-                Namespace,
+                ScopeType::Namespace,
                 None,
                 None,
             ))),
@@ -99,10 +99,10 @@ impl ScopeLoader {
     }
 }
 
-#[derive(Clone, PartialEq, Copy)]
+#[derive(Clone)]
 pub enum ScopeType {
     Loop,
-    Command,
+    Command { source: Source, name: Option<String> },
     Conditional,
     Namespace,
     Block,
@@ -112,25 +112,10 @@ impl ScopeType {
     pub fn description(&self) -> &str {
         match self {
             ScopeType::Loop => "loop",
-            ScopeType::Command => "closure",
+            ScopeType::Command { .. } => "closure",
             ScopeType::Conditional => "conditional",
             ScopeType::Namespace => "namespace",
             ScopeType::Block => "Block",
-        }
-    }
-}
-
-impl TryFrom<i32> for ScopeType {
-    type Error = CrushError;
-
-    fn try_from(value: i32) -> CrushResult<ScopeType> {
-        match value {
-            0 => Ok(ScopeType::Loop),
-            1 => Ok(ScopeType::Command),
-            2 => Ok(ScopeType::Conditional),
-            3 => Ok(ScopeType::Namespace),
-            4 => Ok(ScopeType::Block),
-            v => serialization_error(format!("Invalid scope type {}", v)),
         }
     }
 }
@@ -139,7 +124,7 @@ impl From<ScopeType> for i32 {
     fn from(value: ScopeType) -> Self {
         match value {
             ScopeType::Loop => 0,
-            ScopeType::Command => 1,
+            ScopeType::Command { .. } => 1,
             ScopeType::Conditional => 2,
             ScopeType::Namespace => 3,
             ScopeType::Block => 4,
@@ -229,7 +214,7 @@ impl ScopeData {
         ScopeData {
             parent_scope,
             calling_scope,
-            scope_type: Namespace,
+            scope_type: ScopeType::Namespace,
             uses: Vec::new(),
             mapping: OrderedMap::new(),
             is_stopped: false,
@@ -241,13 +226,6 @@ impl ScopeData {
             loader: Some(loader),
         }
     }
-
-    fn description(&self) -> String {
-        match &self.name {
-            None => self.scope_type.description().to_string(),
-            Some(s) => format!("{}: {}", self.scope_type.description().to_string(), s),
-        }
-    }
 }
 
 impl Clone for ScopeData {
@@ -255,7 +233,7 @@ impl Clone for ScopeData {
         ScopeData {
             parent_scope: self.parent_scope.clone(),
             calling_scope: self.calling_scope.clone(),
-            scope_type: self.scope_type,
+            scope_type: self.scope_type.clone(),
             uses: self.uses.clone(),
             mapping: self.mapping.clone(),
             is_stopped: self.is_stopped,
@@ -279,7 +257,7 @@ impl Scope {
             data: Arc::from(Mutex::new(ScopeData::new(
                 None,
                 None,
-                Namespace,
+                ScopeType::Namespace,
                 Some("global".to_string()),
                 Some("The root of all scopes. All scopes directly or indirectly inherit from the root scope.".to_string()),
             ))),
@@ -351,11 +329,30 @@ impl Scope {
         }
     }
 
+    pub fn stack_trace(&self) -> CrushResult<String> {
+        let data = self.lock()?;
+        match &data.scope_type {
+            ScopeType::Command { source, name } => {
+                let s = source.trace(name);
+                let next = data.calling_scope.clone().unwrap();
+                drop(data);
+                let remainder = next.stack_trace()?;
+                Ok(format!("{}\n{}", s, remainder))
+            }
+            ScopeType::Block | ScopeType::Loop | ScopeType::Conditional => {
+                let next = data.calling_scope.clone().unwrap();
+                drop(data);
+                next.stack_trace()
+            }
+            ScopeType::Namespace => Ok("".to_string()),
+        }
+    }
+
     pub fn do_continue(&self) -> CrushResult<()> {
         let data = self.lock()?;
         if data.is_readonly {
             invalid_jump("`continue` command outside of loop")
-        } else if data.scope_type == ScopeType::Loop {
+        } else if matches!(data.scope_type, ScopeType::Loop) {
             Ok(())
         } else {
             let caller = data.calling_scope.clone();
@@ -375,7 +372,7 @@ impl Scope {
         let mut data = self.lock()?;
         if data.is_readonly {
             invalid_jump("`break` command outside of loop")
-        } else if data.scope_type == ScopeType::Loop {
+        } else if matches!(data.scope_type, ScopeType::Loop) {
             data.is_stopped = true;
             Ok(())
         } else {
@@ -396,7 +393,7 @@ impl Scope {
         let mut data = self.lock()?;
         if data.is_readonly {
             invalid_jump("`return` command outside of command definition")
-        } else if data.scope_type == ScopeType::Command {
+        } else if matches!(data.scope_type, ScopeType::Command{..}) {
             data.is_stopped = true;
             data.return_value = value;
             Ok(())
@@ -412,19 +409,6 @@ impl Scope {
                 }
             }
         }
-    }
-
-    pub fn stack_trace(&self) -> CrushResult<Vec<String>> {
-        let data = self.lock()?;
-        let parent = &data.parent_scope.clone();
-        let desc = data.description().to_string();
-        drop(data);
-        let mut res = match parent {
-            None => vec![],
-            Some(p) => p.stack_trace()?,
-        };
-        res.push(desc);
-        Ok(res)
     }
 
     pub fn do_exit(&self) -> CrushResult<()> {

@@ -1,6 +1,6 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::errors::CrushResult;
 use crate::lang::signature::number::Number;
 use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::contexts::CommandContext;
@@ -133,7 +133,7 @@ struct Neg {}
 
 fn __neg__(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    context.output.send(Value::Float(-context.this.float()?))
+    context.output.send(Value::Float(-context.this.float(&context.source)?))
 }
 
 #[signature(
@@ -148,7 +148,7 @@ fn is_nan(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
-        .send(Value::Bool(context.this.float()?.is_nan()))
+        .send(Value::Bool(context.this.float(&context.source)?.is_nan()))
 }
 
 #[signature(
@@ -163,7 +163,7 @@ fn is_infinite(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
-        .send(Value::Bool(context.this.float()?.is_infinite()))
+        .send(Value::Bool(context.this.float(&context.source)?.is_infinite()))
 }
 
 #[signature(

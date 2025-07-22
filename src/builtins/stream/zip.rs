@@ -19,8 +19,8 @@ pub struct Zip {
     second: Stream,
 }
 
-pub fn zip(context: CommandContext) -> CrushResult<()> {
-    let mut cfg = Zip::parse(context.arguments, &context.global_state.printer())?;
+pub fn zip(mut context: CommandContext) -> CrushResult<()> {
+    let mut cfg = Zip::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     let mut output_type = Vec::new();
     output_type.append(&mut cfg.first.types().to_vec());
     output_type.append(&mut cfg.second.types().to_vec());

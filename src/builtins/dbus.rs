@@ -693,7 +693,7 @@ fn filter_method(
 
 fn service_call(mut context: CommandContext) -> CrushResult<()> {
     let cfg: ServiceCall =
-        ServiceCall::parse(context.remove_arguments(), &context.global_state.printer())?;
+        ServiceCall::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     if let Value::Struct(service_obj) = context.this.ok_or("Missing this parameter for method")? {
         if let Value::String(service) = service_obj
             .get("service")
@@ -756,7 +756,7 @@ fn service_call(mut context: CommandContext) -> CrushResult<()> {
 )]
 struct Session {}
 
-fn session(context: CommandContext) -> CrushResult<()> {
+fn session(mut context: CommandContext) -> CrushResult<()> {
     let dbus = DBusThing::new(Connection::new_session()?);
     populate_bus(context, dbus)
 }
@@ -769,7 +769,7 @@ fn session(context: CommandContext) -> CrushResult<()> {
 )]
 struct System {}
 
-fn system(context: CommandContext) -> CrushResult<()> {
+fn system(mut context: CommandContext) -> CrushResult<()> {
     let dbus = DBusThing::new(Connection::new_system()?);
     populate_bus(context, dbus)
 }

@@ -26,3 +26,4 @@
 * Allow setting type for varargs in closures
 * The Files type for signatures has different valid values when serving as input and output. This makes the documentation misleading. Split in two?
 * $binary_stream:pipe
+* Stack traces

@@ -11,8 +11,8 @@ use signature::signature;
     output = Passthrough)]
 pub struct Reverse {}
 
-fn reverse(context: CommandContext) -> CrushResult<()> {
-    Reverse::parse(context.arguments.clone(), &context.global_state.printer())?;
+fn reverse(mut context: CommandContext) -> CrushResult<()> {
+    Reverse::parse(context.remove_arguments(), &context.source.clone(), &context.global_state.printer())?;
     match context.input.recv()?.stream()? {
         Some(mut input) => {
             let output = context.output.initialize(input.types())?;

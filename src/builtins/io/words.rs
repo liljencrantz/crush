@@ -28,11 +28,11 @@ fn send(output: &TableOutputStream, mut ptr: &str) -> CrushResult<()> {
     }
 }
 
-pub fn from(context: CommandContext) -> CrushResult<()> {
+pub fn from(mut context: CommandContext) -> CrushResult<()> {
     let output = context
         .output
         .initialize(&[ColumnType::new("word", ValueType::String)])?;
-    let cfg = From::parse(context.arguments, &context.global_state.printer())?;
+    let cfg = From::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
 
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
 

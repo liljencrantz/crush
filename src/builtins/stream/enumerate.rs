@@ -20,8 +20,8 @@ pub struct Enumerate {
     name: String,
 }
 
-fn enumerate(context: CommandContext) -> CrushResult<()> {
-    let cfg = Enumerate::parse(context.arguments, &context.global_state.printer())?;
+fn enumerate(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = Enumerate::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     match context.input.recv()?.stream()? {
         Some(mut input) => {
             let mut output_type = vec![ColumnType::new_from_string(cfg.name, ValueType::Integer)];

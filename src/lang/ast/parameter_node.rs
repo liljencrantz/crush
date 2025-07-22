@@ -1,9 +1,8 @@
-use super::Node;
+use super::{Node, NodeContext};
 use super::tracked_string::TrackedString;
 use crate::CrushResult;
 use crate::lang::command::ParameterDefinition;
 use crate::lang::value::{Value, ValueDefinition, ValueType};
-use crate::state::scope::Scope;
 
 #[derive(Clone, Debug)]
 pub enum ParameterNode {
@@ -54,7 +53,7 @@ impl ParameterNode {
         ParameterNode::Named(name, doc.map(|t| t.into()))
     }
 
-    pub fn generate(&self, env: &Scope) -> CrushResult<ParameterDefinition> {
+    pub fn generate(&self, ctx: &NodeContext) -> CrushResult<ParameterDefinition> {
         match self {
             ParameterNode::Parameter {
                 name,
@@ -65,14 +64,14 @@ impl ParameterNode {
                 name.clone(),
                 parameter_type
                     .as_ref()
-                    .map(|t| t.compile_argument(env)?.unnamed_value())
+                    .map(|t| t.compile_argument(ctx)?.unnamed_value())
                     .unwrap_or(Ok(ValueDefinition::Value(
                         Value::Type(ValueType::Any),
-                        name.location,
+                        ctx.source.subtrackedstring(name),
                     )))?,
                 default
                     .as_ref()
-                    .map(|d| d.compile_argument(env))
+                    .map(|d| d.compile_argument(ctx))
                     .transpose()?
                     .map(|a| a.unnamed_value())
                     .transpose()?,

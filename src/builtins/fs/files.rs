@@ -1,6 +1,6 @@
 use crate::data::table::ColumnFormat;
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{CrushResult, WithCommand, data_error};
+use crate::lang::errors::{CrushResult, data_error};
 use crate::lang::pipe::TableOutputStream;
 use crate::lang::printer::Printer;
 use crate::lang::signature::files::Files;
@@ -148,7 +148,6 @@ fn run_for_single_directory_or_file(
                                             path.to_str().unwrap_or("<Illegal file name>"),
                                             err.to_string()
                                         ))
-                                        .with_command("files")
                                         .err()
                                         .unwrap(),
                                     );
@@ -168,7 +167,6 @@ fn run_for_single_directory_or_file(
                                     path.to_str().unwrap_or("<Illegal file name>"),
                                     err.to_string()
                                 ))
-                                .with_command("files")
                                 .err()
                                 .unwrap(),
                             );
@@ -183,7 +181,6 @@ fn run_for_single_directory_or_file(
                         path.to_str().unwrap_or("<Illegal file name>"),
                         err.to_string()
                     ))
-                    .with_command("files")
                     .err()
                     .unwrap(),
                 );
@@ -202,7 +199,6 @@ fn run_for_single_directory_or_file(
                             path.to_str().unwrap_or("<Illegal file name>"),
                             err.to_string()
                         ))
-                        .with_command("files")
                         .err()
                         .unwrap(),
                     );
@@ -214,7 +210,6 @@ fn run_for_single_directory_or_file(
                         "Invalid file name {}.",
                         path.to_str().unwrap_or("<Illegal file name>")
                     ))
-                    .with_command("files")
                     .err()
                     .unwrap(),
                 );
@@ -330,13 +325,9 @@ fn column_data(config: &FilesSignature) -> (Vec<ColumnType>, Vec<Column>) {
     (types, cols)
 }
 
-fn files(context: CommandContext) -> CrushResult<()> {
-    files_inner(context).with_command("files")
-}
-
-fn files_inner(context: CommandContext) -> CrushResult<()> {
+fn files(mut context: CommandContext) -> CrushResult<()> {
     let config: FilesSignature =
-        FilesSignature::parse(context.arguments, &context.global_state.printer())?;
+        FilesSignature::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
 
     let (types, cols) = column_data(&config);
 

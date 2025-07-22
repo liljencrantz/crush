@@ -1,5 +1,5 @@
 use crate::lang::command::Command;
-use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeType;
 use crate::lang::value::Value;
@@ -27,7 +27,7 @@ pub struct If {
 }
 
 fn r#if(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: If = If::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: If = If::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
 
     if cfg.condition {
         let env = context
@@ -44,7 +44,7 @@ fn r#if(mut context: CommandContext) -> CrushResult<()> {
                     .create_child(&context.scope, ScopeType::Conditional);
                 v.eval(context.empty().with_scope(env).with_output(context.output))
             }
-            (_, s) => argument_error_legacy(format!("Unknown clause `{}`. Did you misspell else?", s)),
+            (_, s) => argument_error(format!("Unknown clause `{}`. Did you misspell else?", s), &context.source),
         }
     }
 }

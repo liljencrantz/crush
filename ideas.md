@@ -1,4 +1,4 @@
-p# Pluggable tab completion framework
+# Pluggable tab completion framework
 
 Individual commands should be able to provide tags (possibly mime tags?)
 that point to specific completions, `hostname`, `uri`, `git/repo`, or `git/branch`.

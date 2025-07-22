@@ -1,4 +1,3 @@
-use crate::lang::ast::location::Location;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{CrushResult, error};
@@ -7,6 +6,7 @@ use crate::lang::value::ValueType::Empty;
 use crate::lang::{argument::Argument, data::table::ColumnType};
 use crate::lang::{data::table::Row, value::Value};
 use signature::signature;
+use crate::lang::ast::source::Source;
 
 #[signature(
     stream.r#each,
@@ -23,7 +23,7 @@ pub struct Each {
 
 fn run(
     condition: &Command,
-    location: Location,
+    source: &Source,
     row: &Row,
     input_type: &[ColumnType],
     base_context: &CommandContext,
@@ -31,15 +31,15 @@ fn run(
     let arguments = Vec::from(row.clone())
         .drain(..)
         .zip(input_type.iter())
-        .map(|(c, t)| Argument::named(t.name(), c, location))
+        .map(|(c, t)| Argument::named(t.name(), c, source))
         .collect();
 
     condition.eval(base_context.clone().with_args(arguments, None))
 }
 
-pub fn each(context: CommandContext) -> CrushResult<()> {
-    let cfg = Each::parse(context.arguments.clone(), &context.global_state.printer())?;
-    let location = context.arguments[0].location;
+pub fn each(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = Each::parse(context.remove_arguments(), &context.source.clone(), &context.global_state.printer())?;
+    let source = &context.arguments[0].source;
     context.output.send(Value::Empty)?;
 
     match context.input.recv()?.stream()? {
@@ -47,7 +47,7 @@ pub fn each(context: CommandContext) -> CrushResult<()> {
             let base_context = context.empty();
 
             while let Ok(row) = input.read() {
-                match run(&cfg.body, location, &row, input.types(), &base_context) {
+                match run(&cfg.body, source, &row, input.types(), &base_context) {
                     Ok(_) => (),
                     Err(e) => base_context.global_state.printer().crush_error(e),
                 }

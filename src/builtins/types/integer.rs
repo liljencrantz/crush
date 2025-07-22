@@ -1,7 +1,7 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::errors::CrushResult;
 use crate::lang::signature::number::Number;
 use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::contexts::CommandContext;
@@ -161,7 +161,7 @@ fn __neg__(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
-        .send(Value::Integer(-context.this.integer()?))
+        .send(Value::Integer(-context.this.integer(&context.source)?))
 }
 
 #[signature(

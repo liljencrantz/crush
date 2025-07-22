@@ -12,11 +12,12 @@ impl Serializable<TrackedString> for TrackedString {
         elements: &[Element],
         state: &mut DeserializationState,
     ) -> CrushResult<TrackedString> {
-        match elements[id].element.as_ref().unwrap() {
-            element::Element::TrackedString(s) => Ok(TrackedString::new(
+        match elements[id].element.as_ref() {
+            Some(element::Element::TrackedString(s)) => Ok(TrackedString::new(
                 &String::deserialize(s.string as usize, elements, state)?,
                 Location::new(s.start as usize, s.end as usize),
             )),
+            None => error(format!("No value found for TrackedString {}", id)),
             _ => error("Expected string"),
         }
     }
@@ -28,6 +29,7 @@ impl Serializable<TrackedString> for TrackedString {
     ) -> CrushResult<usize> {
         let string_id = self.string.serialize(elements, state)?;
         let idx = elements.len();
+        println!("TrackedString {}", idx);
         elements.push(Element {
             element: Some(element::Element::TrackedString(model::TrackedString {
                 start: self.location.start as u64,

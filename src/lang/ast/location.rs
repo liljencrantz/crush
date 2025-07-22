@@ -1,3 +1,6 @@
+use crate::lang::errors::{CrushResult, error};
+use crate::lang::serialization::model::{Element, element};
+use crate::lang::serialization::{DeserializationState, Serializable, SerializationState, model};
 use std::cmp::{max, min};
 
 /// A Location tracks the start and end of the definition of something in source code. It is used
@@ -35,5 +38,37 @@ impl From<usize> for Location {
             start: value,
             end: value + 1,
         }
+    }
+}
+
+impl Serializable<Location> for Location {
+    fn deserialize(
+        id: usize,
+        elements: &[Element],
+        _state: &mut DeserializationState,
+    ) -> CrushResult<Location> {
+        match elements[id]
+            .element
+            .as_ref()
+            .ok_or(format!("Expected a location"))?
+        {
+            element::Element::Location(l) => Ok(Location::new(l.start as usize, l.end as usize)),
+            _ => error("Expected a location"),
+        }
+    }
+
+    fn serialize(
+        &self,
+        elements: &mut Vec<Element>,
+        _state: &mut SerializationState,
+    ) -> CrushResult<usize> {
+        let idx = elements.len();
+        elements.push( Element {
+            element: Some(element::Element::Location(model::Location{
+                start: self.start as u64,
+                end: self.end as u64,
+            })),
+        });
+        Ok(idx)
     }
 }

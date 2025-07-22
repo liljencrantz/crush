@@ -187,8 +187,8 @@ struct Exec {
     allow_not_found: bool,
 }
 
-fn exec(context: CommandContext) -> CrushResult<()> {
-    let cfg: Exec = Exec::parse(context.arguments, &context.global_state.printer())?;
+fn exec(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Exec = Exec::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     let host_file = if cfg.host_file.had_entries() {
         PathBuf::try_from(cfg.host_file)?
     } else {
@@ -250,7 +250,7 @@ static PEXEC_OUTPUT_TYPE: [ColumnType; 2] = [
 ];
 
 fn pexec(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Pexec = Pexec::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: Pexec = Pexec::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     let host_file = if cfg.host_file.had_entries() {
         PathBuf::try_from(cfg.host_file)?
     } else {
@@ -351,8 +351,8 @@ mod host {
         host_file: Files,
     }
 
-    fn list(context: CommandContext) -> CrushResult<()> {
-        let cfg: List = List::parse(context.arguments, &context.global_state.printer())?;
+    fn list(mut context: CommandContext) -> CrushResult<()> {
+        let cfg: List = List::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
         let output = context.output.initialize(&HOST_OUTPUT_TYPE)?;
         let session = Session::new()?;
 
@@ -390,8 +390,8 @@ mod host {
         key: Patterns,
     }
 
-    fn remove(context: CommandContext) -> CrushResult<()> {
-        let cfg: Remove = Remove::parse(context.arguments, &context.global_state.printer())?;
+    fn remove(mut context: CommandContext) -> CrushResult<()> {
+        let cfg: Remove = Remove::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
         let host_file = if cfg.host_file.had_entries() {
             cfg.host_file.clone().try_into()?
         } else {

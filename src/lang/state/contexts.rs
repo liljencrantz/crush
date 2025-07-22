@@ -6,41 +6,42 @@ use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use std::mem::swap;
 use std::thread::ThreadId;
+use crate::lang::ast::source::Source;
 
 /**
-The data needed to be passed around while parsing and compiling code.
+The data needed to be passed around while calling eval on a ValueDefinition.
  */
-pub struct CompileContext {
+pub struct EvalContext {
     pub env: Scope,
     pub global_state: GlobalState,
 }
 
-impl CompileContext {
-    pub fn new(env: Scope, global_state: GlobalState) -> CompileContext {
-        CompileContext { env, global_state }
+impl EvalContext {
+    pub fn new(env: Scope, global_state: GlobalState) -> EvalContext {
+        EvalContext { env, global_state }
     }
 
     pub fn job_context(&self, input: ValueReceiver, output: ValueSender) -> JobContext {
         JobContext::new(input, output, self.env.clone(), self.global_state.clone())
     }
 
-    pub fn with_scope(&self, env: &Scope) -> CompileContext {
-        CompileContext {
+    pub fn with_scope(&self, env: &Scope) -> EvalContext {
+        EvalContext {
             env: env.clone(),
             global_state: self.global_state.clone(),
         }
     }
 }
 
-impl From<&JobContext> for CompileContext {
+impl From<&JobContext> for EvalContext {
     fn from(c: &JobContext) -> Self {
-        CompileContext::new(c.scope.clone(), c.global_state.clone())
+        EvalContext::new(c.scope.clone(), c.global_state.clone())
     }
 }
 
-impl From<&CommandContext> for CompileContext {
+impl From<&CommandContext> for EvalContext {
     fn from(c: &CommandContext) -> Self {
-        CompileContext::new(c.scope.clone(), c.global_state.clone())
+        EvalContext::new(c.scope.clone(), c.global_state.clone())
     }
 }
 
@@ -92,7 +93,7 @@ impl JobContext {
         }
     }
 
-    pub fn command_context(&self, arguments: Vec<Argument>, this: Option<Value>) -> CommandContext {
+    pub fn command_context(&self, source: &Source, arguments: Vec<Argument>, this: Option<Value>) -> CommandContext {
         CommandContext {
             arguments,
             this,
@@ -101,6 +102,7 @@ impl JobContext {
             scope: self.scope.clone(),
             global_state: self.global_state.clone(),
             handle: self.handle.clone(),
+            source: source.clone(),
         }
     }
 
@@ -126,6 +128,7 @@ pub struct CommandContext {
     pub scope: Scope,
     pub this: Option<Value>,
     pub global_state: GlobalState,
+    pub source: Source,
     handle: Option<JobHandle>,
 }
 
@@ -133,7 +136,7 @@ impl CommandContext {
     /**
     Return an empty new Command context with the specified scope and state.
      */
-    pub fn new(scope: &Scope, state: &GlobalState) -> CommandContext {
+    pub fn new(scope: &Scope, state: &GlobalState, source: &Source) -> CommandContext {
         CommandContext {
             input: empty_channel(),
             output: black_hole(),
@@ -141,6 +144,7 @@ impl CommandContext {
             scope: scope.clone(),
             this: None,
             global_state: state.clone(),
+            source: source.clone(),
             handle: None,
         }
     }
@@ -157,7 +161,7 @@ impl CommandContext {
     }
 
     /**
-    Return a new Command context with the same scope and state, but otherwise empty.
+    Return a new Command context with the same source, scope and state, but otherwise empty.
      */
     pub fn empty(&self) -> CommandContext {
         CommandContext {
@@ -166,6 +170,7 @@ impl CommandContext {
             arguments: Vec::new(),
             scope: self.scope.clone(),
             this: None,
+            source: self.source.clone(),
             global_state: self.global_state.clone(),
             handle: self.handle.clone(),
         }
@@ -183,6 +188,7 @@ impl CommandContext {
             this,
             global_state: self.global_state,
             handle: self.handle,
+            source: self.source,
         }
     }
 
@@ -198,6 +204,7 @@ impl CommandContext {
             this: self.this,
             global_state: self.global_state,
             handle: self.handle,
+            source: self.source,
         }
     }
 
@@ -213,6 +220,7 @@ impl CommandContext {
             this: self.this,
             global_state: self.global_state,
             handle: self.handle,
+            source: self.source,       
         }
     }
 
@@ -228,6 +236,7 @@ impl CommandContext {
             this: self.this,
             global_state: self.global_state,
             handle: self.handle.clone(),
+            source: self.source,       
         }
     }
 

@@ -20,8 +20,8 @@ pub struct Drop {
     drop: Vec<String>,
 }
 
-fn drop(context: CommandContext) -> CrushResult<()> {
-    let cfg = Drop::parse(context.arguments.clone(), &context.global_state.printer())?;
+fn drop(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = Drop::parse(context.remove_arguments(), &context.source.clone(), &context.global_state.printer())?;
     let input = context.input.recv()?;
     match input.stream()? {
         Some(mut input) => {

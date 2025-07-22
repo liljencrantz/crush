@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeLoader;
@@ -8,6 +8,7 @@ use base64::Engine;
 use base64::engine::GeneralPurpose;
 use signature::signature;
 use std::io::{BufReader, Read, Write};
+use crate::lang::ast::source::Source;
 
 #[signature(
     io.base64.from,
@@ -30,8 +31,8 @@ struct FromSignature {
     alphabet: String,
 }
 
-pub fn from(context: CommandContext) -> CrushResult<()> {
-    let cfg = FromSignature::parse(context.arguments, &context.global_state.printer())?;
+pub fn from(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = FromSignature::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
     let (pipe_reader, mut writer) = os_pipe::pipe()?;
     context
@@ -40,7 +41,7 @@ pub fn from(context: CommandContext) -> CrushResult<()> {
     let mut done = false;
     let mut bufin = [0; 4096];
     let mut bufout = [0; 1024 * 3];
-    let codec = codec(&cfg.alphabet)?;
+    let codec = codec(&cfg.alphabet, &context.source)?;
 
     loop {
         let mut pos = 0;
@@ -87,18 +88,18 @@ struct To {
     alphabet: String,
 }
 
-fn codec(name: &str) -> CrushResult<GeneralPurpose> {
+fn codec(name: &str, source: &Source) -> CrushResult<GeneralPurpose> {
     match name {
         "standard" => Ok(base64::prelude::BASE64_STANDARD),
         "urlsafe" => Ok(base64::prelude::BASE64_URL_SAFE),
-        _ => argument_error_legacy("Unknown base64 alphabet"),
+        _ => argument_error("Unknown base64 alphabet", source),
     }
 }
 
-pub fn to(context: CommandContext) -> CrushResult<()> {
-    let cfg = To::parse(context.arguments, &context.global_state.printer())?;
+pub fn to(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = To::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     let mut out = cfg.file.writer(context.output)?;
-    let codec = codec(&cfg.alphabet)?;
+    let codec = codec(&cfg.alphabet, &context.source)?;
 
     match context.input.recv()? {
         Value::String(str) => {
@@ -137,10 +138,10 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
             }
         }
         v => {
-            return argument_error_legacy(format!(
+            return argument_error(format!(
                 "`base64:to`: Expected a binary stream or a string, encountered `{}`",
                 v.value_type().to_string()
-            ));
+            ), &context.source);
         }
     }
     Ok(())

@@ -2,13 +2,12 @@ use super::location::Location;
 use super::node::TextLiteralStyle::{Quoted, Unquoted};
 use super::parameter_node::ParameterNode;
 use super::tracked_string::TrackedString;
-use super::{CommandNode, JobListNode, JobNode, expand_user, propose_name};
+use super::{CommandNode, JobListNode, JobNode, expand_user, propose_name, NodeContext};
 use crate::lang::argument::{ArgumentDefinition, SwitchStyle};
 use crate::lang::command::{Command, ParameterDefinition};
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::{CrushResult, error};
 use crate::lang::job::Job;
-use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueDefinition};
 use crate::util::escape::{unescape, unescape_file};
 use crate::util::glob::Glob;
@@ -44,7 +43,7 @@ pub enum Node {
     GetItem(Box<Node>, Box<Node>),
     GetAttr(Box<Node>, TrackedString),
     Substitution(JobListNode),
-    Closure(Option<Vec<ParameterNode>>, JobListNode),
+    Closure(Option<Vec<ParameterNode>>, JobListNode, Location),
 }
 
 impl Node {
@@ -110,19 +109,19 @@ impl Node {
             GetItem(a, b) => a.location().union(b.location()),
             GetAttr(p, n) => p.location().union(n.location),
             Substitution(j) => j.location,
-            Closure(_, j) => {
+            Closure(_, _, l) => {
                 // Fixme: Can't tab complete or error report on parameters because they're not currently tracked
-                j.location
+                *l
             }
         }
     }
 
-    pub fn compile_command(&self, env: &Scope) -> CrushResult<ArgumentDefinition> {
-        self.compile(env, true)
+    pub fn compile_command(&self, ctx: &NodeContext) -> CrushResult<ArgumentDefinition> {
+        self.compile(ctx, true)
     }
 
-    pub fn compile_argument(&self, env: &Scope) -> CrushResult<ArgumentDefinition> {
-        self.compile(env, false)
+    pub fn compile_argument(&self, ctx: &NodeContext) -> CrushResult<ArgumentDefinition> {
+        self.compile(ctx, false)
     }
 
     pub fn type_name(&self) -> &str {
@@ -139,11 +138,11 @@ impl Node {
             Node::GetItem(_, _) => "subscript",
             Node::GetAttr(_, _) => "member access",
             Node::Substitution(_) => "command substitution",
-            Node::Closure(_, _) => "closure",
+            Node::Closure(_, _, _) => "closure",
         }
     }
 
-    pub fn compile(&self, env: &Scope, is_command: bool) -> CrushResult<ArgumentDefinition> {
+    pub fn compile(&self, ctx: &NodeContext, is_command: bool) -> CrushResult<ArgumentDefinition> {
         Ok(ArgumentDefinition::unnamed(match self {
             Node::Assignment {
                 target,
@@ -155,9 +154,9 @@ impl Node {
                     return match target.as_ref() {
                         Node::String(t, TextLiteralStyle::Unquoted) | Node::Identifier(t) => {
                             Ok(ArgumentDefinition::named_with_style(
-                                t,
+                                &ctx.source.subtrackedstring(t),
                                 *style,
-                                propose_name(&t, value.compile_argument(env)?.unnamed_value()?),
+                                propose_name(&t, value.compile_argument(ctx)?.unnamed_value()?),
                             ))
                         }
                         _ => error(format!(
@@ -175,56 +174,57 @@ impl Node {
             },
 
             Node::GetItem(a, o) => ValueDefinition::JobDefinition(Job::new(
-                vec![self.compile_as_special_command(env)?.unwrap()],
-                a.location().union(o.location()),
+                vec![self.compile_as_special_command(ctx)?.unwrap()],
+                ctx.source.substring(a.location().union(o.location())),
             )),
 
             Node::Unary(op, r) => match op.string.as_str() {
                 "@" => {
                     return Ok(ArgumentDefinition::list(
-                        r.compile_argument(env)?.unnamed_value()?,
+                        r.compile_argument(ctx)?.unnamed_value()?,
                     ));
                 }
                 "@@" => {
                     return Ok(ArgumentDefinition::dict(
-                        r.compile_argument(env)?.unnamed_value()?,
+                        r.compile_argument(ctx)?.unnamed_value()?,
                     ));
                 }
                 _ => return error("Unknown operator"),
             },
-            Node::Identifier(l) => ValueDefinition::Identifier(l.clone()),
+            Node::Identifier(l) => ValueDefinition::Identifier(ctx.source.subtrackedstring(l),
+            ),
             Node::Regex(l) => ValueDefinition::Value(
                 Value::Regex(l.string.clone(), Regex::new(&l.string.clone())?),
-                l.location,
+                ctx.source.subtrackedstring(l),
             ),
             Node::String(t, TextLiteralStyle::Quoted) => {
-                ValueDefinition::Value(Value::from(unescape(&t.string)?), t.location)
+                ValueDefinition::Value(Value::from(unescape(&t.string)?), ctx.source.subtrackedstring(t))
             }
             Node::String(f, TextLiteralStyle::Unquoted) => {
                 if is_command {
-                    ValueDefinition::Identifier(f.clone())
+                    ValueDefinition::Identifier(ctx.source.subtrackedstring(f))
                 } else {
-                    ValueDefinition::Value(Value::from(f), f.location)
+                    ValueDefinition::Value(Value::from(f), ctx.source.subtrackedstring(f))
                 }
             }
             Node::Integer(s) => ValueDefinition::Value(
                 Value::Integer(s.string.replace("_", "").parse::<i128>()?),
-                s.location,
+                ctx.source.subtrackedstring(s),
             ),
             Node::Float(s) => ValueDefinition::Value(
                 Value::Float(s.string.replace("_", "").parse::<f64>()?),
-                s.location,
+                ctx.source.subtrackedstring(s),
             ),
             Node::GetAttr(node, identifier) => ValueDefinition::GetAttr(
-                Box::new(node.compile(env, is_command)?.unnamed_value()?),
-                identifier.clone(),
+                Box::new(node.compile(ctx, is_command)?.unnamed_value()?),
+                ctx.source.subtrackedstring(identifier),
             ),
 
-            Node::Substitution(s) => ValueDefinition::JobListDefinition(s.compile(env)?),
-            Node::Closure(signature, jobs) => {
+            Node::Substitution(s) => ValueDefinition::JobListDefinition(s.compile(ctx)?),
+            Node::Closure(signature, jobs, location) => {
                 let param = signature.as_ref().map(|v| {
                     v.iter()
-                        .map(|p| p.generate(env))
+                        .map(|p| p.generate(ctx))
                         .collect::<CrushResult<Vec<ParameterDefinition>>>()
                 });
                 let p = match param {
@@ -235,17 +235,17 @@ impl Node {
                 ValueDefinition::ClosureDefinition {
                     name: None,
                     signature: p,
-                    jobs: jobs.compile(env)?,
-                    location: jobs.location,
+                    jobs: jobs.compile(ctx)?,
+                    source: ctx.source.substring(*location),
                 }
             }
-            Node::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g.string)), g.location),
+            Node::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g.string)), ctx.source.subtrackedstring(g)),
             Node::File(s, quote_style) => ValueDefinition::Value(
                 Value::from(match quote_style {
                     Quoted => unescape_file(&s.string)?,
                     Unquoted => PathBuf::from(&expand_user(&s.string)?),
                 }),
-                s.location,
+                ctx.source.subtrackedstring(s),
             ),
         }))
     }
@@ -254,26 +254,27 @@ impl Node {
         target: &Box<Node>,
         op: &String,
         value: &Node,
-        env: &Scope,
+        ctx: &NodeContext,
     ) -> CrushResult<Option<CommandInvocation>> {
         match op.deref() {
             "=" => match target.as_ref() {
                 Node::Identifier(t) => Node::function_invocation(
-                    env.global_static_cmd(vec!["global", "var", "set"])?,
+                    ctx.env.global_static_cmd(vec!["global", "var", "set"])?,
                     t.location,
                     vec![ArgumentDefinition::named(
-                        t,
-                        propose_name(&t, value.compile_argument(env)?.unnamed_value()?),
+                        &ctx.source.subtrackedstring(t),
+                        propose_name(&t, value.compile_argument(ctx)?.unnamed_value()?),
                     )],
+                    ctx,
                 ),
 
                 Node::GetItem(container, key) => container.method_invocation(
                     &TrackedString::new("__setitem__", key.location()),
                     vec![
-                        ArgumentDefinition::unnamed(key.compile_argument(env)?.unnamed_value()?),
-                        ArgumentDefinition::unnamed(value.compile_argument(env)?.unnamed_value()?),
+                        ArgumentDefinition::unnamed(key.compile_argument(ctx)?.unnamed_value()?),
+                        ArgumentDefinition::unnamed(value.compile_argument(ctx)?.unnamed_value()?),
                     ],
-                    env,
+                    ctx,
                     true,
                 ),
 
@@ -282,14 +283,14 @@ impl Node {
                     vec![
                         ArgumentDefinition::unnamed(ValueDefinition::Value(
                             Value::from(attr),
-                            attr.location,
+                            ctx.source.subtrackedstring(attr),
                         )),
                         ArgumentDefinition::unnamed(propose_name(
                             attr,
-                            value.compile_argument(env)?.unnamed_value()?,
+                            value.compile_argument(ctx)?.unnamed_value()?,
                         )),
                     ],
-                    env,
+                    ctx,
                     true,
                 ),
 
@@ -297,12 +298,13 @@ impl Node {
             },
             ":=" => match target.as_ref() {
                 Node::Identifier(t) => Node::function_invocation(
-                    env.global_static_cmd(vec!["global", "var", "let"])?,
+                    ctx.env.global_static_cmd(vec!["global", "var", "let"])?,
                     t.location,
                     vec![ArgumentDefinition::named(
-                        t,
-                        propose_name(&t, value.compile_argument(env)?.unnamed_value()?),
+                        &ctx.source.subtrackedstring(t),
+                            propose_name(&t, value.compile_argument(ctx)?.unnamed_value()?),
                     )],
+                    ctx,
                 ),
                 _ => error("Invalid left side in declaration"),
             },
@@ -312,7 +314,7 @@ impl Node {
 
     pub fn compile_as_special_command(
         &self,
-        env: &Scope,
+        ctx: &NodeContext,
     ) -> CrushResult<Option<CommandInvocation>> {
         match self {
             Node::Assignment {
@@ -320,12 +322,12 @@ impl Node {
                 operation,
                 value,
                 ..
-            } => Node::compile_standalone_assignment(target, operation, value, env),
+            } => Node::compile_standalone_assignment(target, operation, value, ctx),
 
             Node::GetItem(val, key) => val.method_invocation(
                 &TrackedString::new("__getitem__", key.location()),
-                vec![key.compile_argument(env)?],
-                env,
+                vec![key.compile_argument(ctx)?],
+                ctx,
                 true,
             ),
 
@@ -342,7 +344,7 @@ impl Node {
             | Node::Float(_)
             | Node::GetAttr(_, _)
             | Node::Substitution(_)
-            | Node::Closure(_, _)
+            | Node::Closure(_, _, _)
             | Node::File(_, _) => Ok(None),
         }
     }
@@ -351,9 +353,11 @@ impl Node {
         function: Command,
         location: Location,
         arguments: Vec<ArgumentDefinition>,
+        ctx: &NodeContext,
     ) -> CrushResult<Option<CommandInvocation>> {
         Ok(Some(CommandInvocation::new(
-            ValueDefinition::Value(Value::from(function), location),
+            ValueDefinition::Value(Value::from(function), ctx.source.substring(location)),
+            ctx.source.substring(location),
             arguments,
         )))
     }
@@ -362,14 +366,15 @@ impl Node {
         &self,
         name: &TrackedString,
         arguments: Vec<ArgumentDefinition>,
-        env: &Scope,
+        ctx: &NodeContext,
         as_command: bool,
     ) -> CrushResult<Option<CommandInvocation>> {
         Ok(Some(CommandInvocation::new(
             ValueDefinition::GetAttr(
-                Box::from(self.compile(env, as_command)?.unnamed_value()?),
-                name.clone(),
+                Box::from(self.compile(ctx, as_command)?.unnamed_value()?),
+                ctx.source.subtrackedstring(name),
             ),
+            ctx.source.clone(),
             arguments,
         )))
     }
@@ -410,6 +415,7 @@ impl Node {
         false_body: Option<JobListNode>,
     ) -> Box<Node> {
         let location = if_location.union(true_body.location);
+        let true_location = true_body.location;
         let mut expressions = vec![
             Self::get_attr(&["global", "control", "if"], if_location),
             Node::Substitution(
@@ -422,15 +428,16 @@ impl Node {
                 }
                 .into(),
             ),
-            Node::Closure(None, true_body),
+            Node::Closure(None, true_body, true_location),
         ];
 
         if let Some(x) = false_body {
+            let false_location = x.location;
             expressions.push(Node::String(
                 TrackedString::new("else", x.location),
                 Unquoted,
             ));
-            expressions.push(Node::Closure(None, x));
+            expressions.push(Node::Closure(None, x, false_location));
         }
 
         Box::from(Node::Substitution(
@@ -468,8 +475,9 @@ impl Node {
                                 }],
                                 location,
                             },
+                            location,
                         ),
-                        Node::Closure(None, body),
+                        Node::Closure(None, body, location),
                     ],
                     location,
                 }],
@@ -486,7 +494,7 @@ impl Node {
                 commands: vec![CommandNode {
                     expressions: vec![
                         Self::get_attr(&["global", "control", "loop"], loop_location),
-                        Node::Closure(None, body),
+                        Node::Closure(None, body, location),
                     ],
                     location,
                 }],
@@ -514,7 +522,7 @@ impl Node {
                             operation: "=".to_string(),
                             value: iter,
                         },
-                        Node::Closure(None, body),
+                        Node::Closure(None, body, location),
                     ],
                     location,
                 }],

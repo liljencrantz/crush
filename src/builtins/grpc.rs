@@ -6,14 +6,14 @@ use crate::lang::command::OutputType::Unknown;
 use crate::lang::data::list::List;
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::{Row, Table};
-use crate::lang::errors::error;
+use crate::lang::errors::{argument_error, error};
 use crate::lang::signature::patterns::Patterns;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::state::this::This;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
-use crate::{CrushResult, argument_error_legacy};
+use crate::{CrushResult};
 use chrono::Duration;
 use crossbeam::channel::bounded;
 use itertools::Itertools;
@@ -24,6 +24,7 @@ use std::io::Read;
 use std::process;
 use std::process::Stdio;
 use std::sync::OnceLock;
+use crate::lang::ast::source::Source;
 
 #[signature(
     grpc.connect,
@@ -61,7 +62,7 @@ struct Grpc {
 }
 
 impl Grpc {
-    fn new(s: Struct) -> CrushResult<Grpc> {
+    fn new(s: Struct, source: &Source) -> CrushResult<Grpc> {
         if let Some(Value::String(host)) = s.get("host") {
             if let Some(Value::Bool(plaintext)) = s.get("plaintext") {
                 if let Some(Value::Duration(timeout)) = s.get("timeout") {
@@ -76,7 +77,7 @@ impl Grpc {
                 }
             }
         }
-        argument_error_legacy("Invalid struct specification")
+        argument_error("Invalid struct specification.", source)
     }
 
     fn call<S: Into<String>>(
@@ -124,7 +125,7 @@ impl Grpc {
 
         match child.wait()?.success() {
             true => Ok(output),
-            false => argument_error_legacy(recv_err.recv()?),
+            false => argument_error(recv_err.recv()?, &context.source),
         }
     }
 }
@@ -243,10 +244,11 @@ fn parse_message_type<'a>(
 }
 
 fn connect(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Connect = Connect::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: Connect = Connect::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     if cfg.service.is_empty() {
-        return argument_error_legacy(
-            "You must specify at least one service to connect to. You can use globs, such as '*'",
+        return argument_error(
+            "You must specify at least one service to connect to. You can use globs, such as `*`.",
+            &context.source,
         );
     }
     let tmp = Struct::new(
@@ -259,7 +261,7 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
         None,
     );
 
-    let g = Grpc::new(tmp)?;
+    let g = Grpc::new(tmp, &context.source)?;
     let s = Struct::from_vec(vec![], vec![]);
     let list = g.call(&context, None, vec!["list"])?;
     let mut available_services = list.lines().collect::<Vec<&str>>();
@@ -269,11 +271,11 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
         .collect::<Vec<&str>>();
 
     if services.is_empty() {
-        return argument_error_legacy(format!(
-            "No match for service pattern {}. Found services {}",
+        return argument_error(format!(
+            "No match for service pattern `{}`. Found services `{}`.",
             cfg.service.to_string(),
             list.lines().join(", ")
-        ));
+        ), &context.source);
     }
 
     let mut known_types = HashMap::new();
@@ -289,7 +291,7 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
                     None,
                     vec!["describe".to_string(), format!("{}.{}", service, method)],
                 )?;
-                let input_type_name = parse_input_type_from_signature(method, signature.as_str())?;
+                let input_type_name = parse_input_type_from_signature(method, signature.as_str(), &context.source)?;
                 println!("{:?}", input_type_name);
                 let input_type =
                     parse_message_type(&context, &input_type_name, &g, &mut known_types)?;
@@ -334,24 +336,25 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
 fn parse_input_type_from_signature<'a>(
     method_name: &str,
     signature: &'a str,
+    source: &Source,
 ) -> CrushResult<&'a str> {
     static REGEX: OnceLock<Regex> = OnceLock::new();
     let re = REGEX.get_or_init(|| Regex::new(r"\((.*)\).*\(.*\)").unwrap());
     for line in signature.lines() {
         if line.starts_with("rpc") {
             return match re.captures(line) {
-                None => argument_error_legacy("Failed to parse signature"),
+                None => argument_error("Failed to parse signature.", source),
                 Some(c) => match c.get(1) {
-                    None => argument_error_legacy("Failed to parse signature"),
+                    None => argument_error("Failed to parse signature.", source),
                     Some(m) => Ok(m.as_str().trim()),
                 },
             };
         }
     }
-    argument_error_legacy(format!(
-        "Failed to parse signature of method {}",
+    argument_error(format!(
+        "Failed to parse signature of method `{}`.",
         method_name
-    ))
+    ), source)
 }
 
 fn grpc_method_call(mut context: CommandContext) -> CrushResult<()> {
@@ -365,8 +368,9 @@ fn grpc_method_call(mut context: CommandContext) -> CrushResult<()> {
                 if let Some(name) = a.argument_type {
                     fields.push((name, a.value));
                 } else {
-                    return argument_error_legacy(
-                        "gRPC method invocations can only use named arguments",
+                    return argument_error(
+                        "gRPC method invocations can only use named arguments.",
+                        &context.source,
                     );
                 }
             }
@@ -376,9 +380,9 @@ fn grpc_method_call(mut context: CommandContext) -> CrushResult<()> {
             None
         }
     };
-    let this = context.this.r#struct()?;
+    let this = context.this.r#struct(&context.source)?;
     if let Some(Value::String(method)) = this.get("method") {
-        let grpc = Grpc::new(this)?;
+        let grpc = Grpc::new(this, &context.source)?;
         let out = grpc.call(&context, data, vec![method.to_string()])?;
 
         let split = out.split("\n}\n{\n");
@@ -433,7 +437,7 @@ fn grpc_method_call(mut context: CommandContext) -> CrushResult<()> {
 
         return Ok(());
     }
-    return argument_error_legacy("Invalid method field");
+    argument_error("Invalid method field.", &context.source)
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {

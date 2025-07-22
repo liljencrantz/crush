@@ -52,7 +52,7 @@ struct Return {
 }
 
 fn r#return(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Return::parse(context.remove_arguments(), context.global_state.printer())?;
+    let cfg = Return::parse(context.remove_arguments(), &context.source, context.global_state.printer())?;
     context.scope.do_return(cfg.value)?;
     context.output.empty()
 }
@@ -86,8 +86,8 @@ struct Sleep {
     duration: Duration,
 }
 
-fn sleep(context: CommandContext) -> CrushResult<()> {
-    let cfg = Sleep::parse(context.arguments, &context.global_state.printer())?;
+fn sleep(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = Sleep::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     std::thread::sleep(cfg.duration.to_std()?);
     context.output.send(Value::Empty)?;
     Ok(())
@@ -147,7 +147,6 @@ fn add_job(value: ValueReceiver) -> u64 {
 
 fn bg(context: CommandContext) -> CrushResult<()> {
     let id = add_job(context.input.clone());
-
     context.output.send(Value::from(id))
 }
 
@@ -174,8 +173,8 @@ struct Fg {
     job: Option<u64>,
 }
 
-fn fg(context: CommandContext) -> CrushResult<()> {
-    let cfg = Fg::parse(context.arguments, &context.global_state.printer())?;
+fn fg(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = Fg::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     match cfg.job {
         None => match remove_last_job() {
             None => context.output.send(Value::Empty),
@@ -201,7 +200,7 @@ struct Source {
 }
 
 fn source(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Source = Source::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: Source = Source::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     for file in Vec::<PathBuf>::from(cfg.files) {
         crate::execute::file(
             &context.scope,
@@ -227,7 +226,7 @@ struct Which {
 }
 
 fn which(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Which::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg = Which::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     context.output
         .send(Value::from(resolve_external_command(&cfg.command, &context.scope)?
         .ok_or_else(||format!("Could not find the command `{}` on your path", &cfg.command))?))

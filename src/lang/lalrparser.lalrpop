@@ -164,7 +164,7 @@ ExprItem: Box<Node> = {
                     }.into()
                 ))
         },
-    BlockStart Separators? <s: ExprSignature> <l: ExprJobListWithoutSeparator> BlockEnd => Box::from(Node::Closure(s, l)),
+    <l: @L> BlockStart Separators? <signature: ExprSignature> <jobs: ExprJobListWithoutSeparator> BlockEnd <r: @R> => Box::from(Node::Closure(signature, jobs, Location::new(l, r))),
 }
 
 ExprOptParamList: Option<Vec<Node>> = {
@@ -302,7 +302,7 @@ Item: Box<Node> = {
     },
     <i: Item> GetItemStart <e: Assignment> GetItemEnd => Box::from(Node::GetItem(i, e)),
     <i: Item> MemberOperator <start: @L> <l: String> <end: @R> => Box::from(Node::GetAttr(i, TrackedString::from(l))),
-    BlockStart Separators? <s: Signature> <l: JobListWithoutSeparator> BlockEnd => Box::from(Node::Closure(s, l)),
+    <l: @L> BlockStart Separators? <signature: Signature> <jobs: JobListWithoutSeparator> BlockEnd <r: @R> => Box::from(Node::Closure(signature, jobs, Location::new(l, r))),
     SubStart <j:JobList> SubEnd => Box::from(Node::Substitution(j)),
     <l: @L>ExprModeStart <e:ExprJobList> SubEnd <r: @R> => Box::from(Node::Substitution(e)),
 }

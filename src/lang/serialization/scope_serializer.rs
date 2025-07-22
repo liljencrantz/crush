@@ -1,9 +1,9 @@
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult, error, serialization_error, data_error};
 use crate::lang::serialization::model;
 use crate::lang::serialization::model::scope::ReturnValue::ReturnValueValue;
-use crate::lang::serialization::model::{Element, element};
+use crate::lang::serialization::model::{Element, element, scope};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
-use crate::lang::state::scope::Scope;
+use crate::lang::state::scope::{Scope, ScopeType};
 use crate::lang::value::Value;
 use crate::util::identity_arc::Identity;
 use element::Element::Member;
@@ -12,6 +12,18 @@ use model::scope::Description::{DescriptionValue, HasDescription};
 use model::scope::Name::{HasName, NameValue};
 use model::scope::Parent::ParentValue;
 use std::collections::hash_map::Entry;
+use crate::lang::ast::source::Source;
+
+fn deserialize_scope_type(value: i32, source: Option<Source>) -> CrushResult<ScopeType> {
+    match (value, source) {
+        (0, None) => Ok(ScopeType::Loop),
+        (1, Some(source)) => Ok(ScopeType::Command { source, name: None }),
+        (2, None) => Ok(ScopeType::Conditional),
+        (3, None) => Ok(ScopeType::Namespace),
+        (4, None) => Ok(ScopeType::Block),
+        _ => serialization_error(format!("Invalid scope type {}", value)),
+    }
+}
 
 impl Serializable<Scope> for Scope {
     fn deserialize(
@@ -35,10 +47,15 @@ impl Serializable<Scope> for Scope {
                             Some(String::deserialize(n as usize, elements, state)?)
                         }
                     };
+                    let maybe_source = match s.source.as_ref() {
+                        None => return data_error("Missing source"),
+                        Some(scope::Source::HasSource(_)) => None,
+                        Some(scope::Source::SourceValue(id)) => Some(Source::deserialize(*id as usize, elements, state)?),
+                    };
                     let res = Scope::create(
                         name,
                         description,
-                        s.scope_type.try_into()?,
+                        deserialize_scope_type(s.scope_type, maybe_source)?,
                         s.is_stopped,
                         s.is_readonly,
                     );
@@ -123,9 +140,14 @@ impl Serializable<Scope> for Scope {
                             Some(c) => Some(CallingValue(c.serialize(elements, state)? as u64)),
                         };
                         sscope.is_readonly = scope_data.is_readonly;
-                        sscope.scope_type = scope_data.scope_type.into();
                         sscope.is_stopped = scope_data.is_stopped;
 
+                        sscope.source = match &scope_data.scope_type {
+                            ScopeType::Command { source, .. } => Some(scope::Source::SourceValue(source.serialize(elements, state)? as u64)),
+                            _ => Some(scope::Source::HasSource(false)),
+                        };
+                        sscope.scope_type = scope_data.scope_type.into();
+                        
                         for u in scope_data.uses.iter() {
                             sscope.uses.push(u.serialize(elements, state)? as u64);
                         }

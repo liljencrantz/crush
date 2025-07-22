@@ -12,8 +12,8 @@ use crate::util::file::home;
 use rustyline::error::ReadlineError;
 use rustyline::{CompletionType, Config, EditMode, Editor};
 use std::path::PathBuf;
-
-use crate::lang::ast::location::Location;
+use std::sync::Arc;
+use crate::lang::ast::source::{Source, SourceType};
 use crate::lang::command::Command;
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::state::contexts::JobContext;
@@ -44,7 +44,8 @@ fn execute_command(
         None => Ok(None),
         Some(prompt) => {
             let cmd = CommandInvocation::new(
-                ValueDefinition::Value(Value::Command(prompt), Location::new(0, 0)),
+                ValueDefinition::Value(Value::Command(prompt), Source::new(SourceType::Input, Arc::from(""))),
+                Source::new(SourceType::Input, Arc::from("")),
                 vec![],
             );
             let (snd, recv) = pipe();

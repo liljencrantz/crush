@@ -18,7 +18,7 @@ pub struct Timer {
 }
 
 fn timer(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Timer = Timer::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: Timer = Timer::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     context
         .output
         .send(Value::Duration(time_run(&cfg.it, &context)?))

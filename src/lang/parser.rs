@@ -1,6 +1,6 @@
 use crate::lang::ast::lexer::TokenizerMode::SkipComments;
 use crate::lang::ast::lexer::{LanguageMode, TokenizerMode};
-use crate::lang::ast::{JobListNode, lexer::Lexer, token::Token};
+use crate::lang::ast::{JobListNode, lexer::Lexer, token::Token, NodeContext};
 /**
     The API for compiling Crush code into a `Vec<Job>`. Internally, this will tokenize the text,
     turn the token list into an AST, and finally compiling the AST into a list of jobs.
@@ -9,7 +9,7 @@ use crate::lang::errors::{CrushError, CrushResult};
 use crate::lang::job::Job;
 use crate::lang::state::scope::Scope;
 use std::sync::{Arc, Mutex};
-
+use crate::lang::ast::source::Source;
 /*
     The AST parser is written in `lalrpop`, and is located in the file `lalrparser.lalrpop`.
     There is a build rule that converts that into this file.
@@ -66,8 +66,8 @@ impl Parser {
     }
 
     /// Parse the given string into a `Vec<Job>`, that we can directly evaluate.
-    pub fn parse(&self, s: &str, env: &Scope, initial_mode: LanguageMode) -> CrushResult<Vec<Job>> {
-        self.ast(s, initial_mode)?.compile(env)
+    pub fn parse(&self, source: &Source, env: &Scope, initial_mode: LanguageMode) -> CrushResult<Vec<Job>> {
+        self.ast(source.str(), initial_mode)?.compile(&NodeContext::new(env.clone(), source.clone()))
     }
 
     /// Return the abstract syntax tree (AST) for the supplied command. This is used by the

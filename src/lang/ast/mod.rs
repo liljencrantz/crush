@@ -9,6 +9,7 @@ use crate::util::user_map::get_user;
 use location::Location;
 use node::Node;
 use tracked_string::TrackedString;
+use crate::lang::ast::source::Source;
 
 pub mod lexer;
 pub mod location;
@@ -16,6 +17,18 @@ pub mod node;
 pub mod parameter_node;
 pub mod token;
 pub mod tracked_string;
+pub mod source;
+
+pub struct NodeContext {
+    env: Scope,
+    source: Source,
+}
+
+impl NodeContext {
+    pub fn new(env: Scope, source: Source) -> NodeContext {
+        NodeContext { env, source }
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct JobListNode {
@@ -24,8 +37,8 @@ pub struct JobListNode {
 }
 
 impl JobListNode {
-    pub fn compile(&self, env: &Scope) -> CrushResult<Vec<Job>> {
-        self.jobs.iter().map(|j| j.compile(env)).collect()
+    pub fn compile(&self, ctx: &NodeContext) -> CrushResult<Vec<Job>> {
+        self.jobs.iter().map(|j| j.compile(ctx)).collect()
     }
 }
 
@@ -45,13 +58,13 @@ pub struct JobNode {
 }
 
 impl JobNode {
-    pub fn compile(&self, env: &Scope) -> CrushResult<Job> {
+    pub fn compile(&self, ctx: &NodeContext) -> CrushResult<Job> {
         Ok(Job::new(
             self.commands
                 .iter()
-                .map(|c| c.compile(env))
+                .map(|c| c.compile(ctx))
                 .collect::<CrushResult<Vec<CommandInvocation>>>()?,
-            self.location,
+            ctx.source.substring(self.location),
         ))
     }
 }
@@ -177,7 +190,7 @@ impl CommandNode {
         }
     }
 
-    pub fn compile(&self, env: &Scope) -> CrushResult<CommandInvocation> {
+    pub fn compile(&self, env: &NodeContext) -> CrushResult<CommandInvocation> {
         if let Some(c) = self.expressions[0].compile_as_special_command(env)? {
             if self.expressions.len() == 1 {
                 Ok(c)
@@ -190,7 +203,7 @@ impl CommandNode {
                 .iter()
                 .map(|e| e.compile_argument(env))
                 .collect::<CrushResult<Vec<ArgumentDefinition>>>()?;
-            Ok(CommandInvocation::new(cmd.unnamed_value()?, arguments))
+            Ok(CommandInvocation::new(cmd.unnamed_value()?, cmd.source, arguments))
         }
     }
 }
@@ -200,13 +213,13 @@ fn propose_name(name: &TrackedString, v: ValueDefinition) -> ValueDefinition {
         ValueDefinition::ClosureDefinition {
             signature,
             jobs,
-            location,
+            source,
             ..
         } => ValueDefinition::ClosureDefinition {
-            name: Some(name.clone()),
+            name: Some(source.subtrackedstring(name)),
             signature,
             jobs,
-            location,
+            source,
         },
         _ => v,
     }

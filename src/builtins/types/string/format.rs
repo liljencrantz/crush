@@ -1,12 +1,13 @@
 use crate::builtins::types::OrderedStringMap;
 use crate::builtins::types::string::format::FormatState::*;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::this::This;
 use crate::lang::value::ValueType;
 use crate::lang::{argument::Argument, value::Value};
 use signature::signature;
+use crate::lang::ast::source::Source;
 
 enum FormatState {
     Normal,
@@ -17,7 +18,7 @@ enum FormatState {
 }
 
 fn format_argument(res: &mut String, arg: Option<&Argument>) -> CrushResult<()> {
-    res.push_str(arg.ok_or("`string:format`: Missing argument")?.value.to_string().as_str());
+    res.push_str(arg.ok_or("Missing argument")?.value.to_string().as_str());
     Ok(())
 }
 
@@ -32,7 +33,7 @@ fn argument_by_name<'a>(name: &str, param: &'a [Argument]) -> Option<&'a Argumen
     None
 }
 
-fn do_format(format: &str, param: Vec<Argument>) -> CrushResult<String> {
+fn do_format(format: &str, param: Vec<Argument>, source: &Source) -> CrushResult<String> {
     let mut implicit_idx = 0;
     let mut res = String::new();
     let mut state = Normal;
@@ -52,7 +53,7 @@ fn do_format(format: &str, param: Vec<Argument>) -> CrushResult<String> {
                     res.push('}');
                     Normal
                 }
-                _ => return argument_error_legacy("`string:format`: Unmatched closing brace"),
+                _ => return argument_error("Unmatched closing brace.", source),
             },
 
             OpenBrace => match ch {
@@ -67,7 +68,7 @@ fn do_format(format: &str, param: Vec<Argument>) -> CrushResult<String> {
                 }
                 '0'..='9' => Index(ch.to_digit(10).unwrap() as usize),
                 'a'..='z' | 'A'..='Z' => Name(ch.to_string()),
-                _ => return argument_error_legacy("`string:format`: Invalid format string"),
+                _ => return argument_error("Invalid format string.", source),
             },
 
             Index(idx) => match ch {
@@ -76,7 +77,7 @@ fn do_format(format: &str, param: Vec<Argument>) -> CrushResult<String> {
                     Normal
                 }
                 '0'..='9' => Index(idx * 10 + ch.to_digit(10).unwrap() as usize),
-                _ => return argument_error_legacy("`string:format`: Invalid format string"),
+                _ => return argument_error("Invalid format string", source),
             },
 
             Name(name) => match ch {
@@ -108,8 +109,8 @@ pub struct Format {
 }
 
 pub fn format(mut context: CommandContext) -> CrushResult<()> {
-    let format = context.this.string()?;
+    let format = context.this.string(&context.source)?;
     context
         .output
-        .send(Value::from(do_format(&format, context.arguments)?))
+        .send(Value::from(do_format(&format, context.arguments, &context.source)?))
 }

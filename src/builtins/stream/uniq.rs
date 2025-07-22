@@ -20,10 +20,10 @@ pub struct Uniq {
     field: Option<String>,
 }
 
-pub fn uniq(context: CommandContext) -> CrushResult<()> {
+pub fn uniq(mut context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream()? {
         Some(mut input) => {
-            let cfg = Uniq::parse(context.arguments, &context.global_state.printer())?;
+            let cfg = Uniq::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
             let output = context.output.initialize(input.types())?;
             match cfg.field.map(|f| input.types().find(&f)).transpose()? {
                 None => {

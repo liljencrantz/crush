@@ -1,4 +1,3 @@
-use crate::lang::ast::location::Location;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Passthrough;
 use crate::lang::errors::{CrushResult, error};
@@ -7,6 +6,7 @@ use crate::lang::state::contexts::CommandContext;
 use crate::lang::{argument::Argument, data::table::ColumnType};
 use crate::lang::{data::table::Row, value::Value};
 use signature::signature;
+use crate::lang::ast::source::Source;
 
 #[signature(
     stream.r#where,
@@ -23,7 +23,7 @@ pub struct Where {
 
 fn evaluate(
     condition: Command,
-    location: Location,
+    source: &Source,
     row: &Row,
     input_type: &[ColumnType],
     base_context: &CommandContext,
@@ -31,7 +31,7 @@ fn evaluate(
     let arguments = Vec::from(row.clone())
         .drain(..)
         .zip(input_type.iter())
-        .map(|(c, t)| Argument::named(t.name(), c, location))
+        .map(|(c, t)| Argument::named(t.name(), c, source))
         .collect();
 
     let (sender, receiver) = pipe();
@@ -50,8 +50,8 @@ fn evaluate(
 }
 
 pub fn r#where(mut context: CommandContext) -> CrushResult<()> {
-    let location = context.arguments[0].location;
-    let cfg = Where::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let source = context.arguments[0].source.clone();
+    let cfg = Where::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
 
     match context.input.recv()?.stream()? {
         Some(mut input) => {
@@ -61,7 +61,7 @@ pub fn r#where(mut context: CommandContext) -> CrushResult<()> {
             while let Ok(row) = input.read() {
                 match evaluate(
                     cfg.condition.clone(),
-                    location,
+                    &source,
                     &row,
                     input.types(),
                     &base_context,

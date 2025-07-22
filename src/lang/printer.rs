@@ -1,4 +1,3 @@
-use crate::lang::ast::location::Location;
 /**
     Crush uses a single thread to perform all output printing. This prevents torn lines and other
     visual problems. Output is sent to the print thread via a Printer.
@@ -31,7 +30,6 @@ pub enum PrinterMessage {
 */
 #[derive(Clone)]
 pub struct Printer {
-    source: Option<(String, Location)>,
     sender: Sender<PrinterMessage>,
     pong_receiver: Receiver<()>,
 }
@@ -58,7 +56,6 @@ pub fn init(scope: Option<Scope>) -> (Printer, JoinHandle<()>) {
         Printer {
             sender,
             pong_receiver,
-            source: None,
         },
         thread::Builder::new()
             .name("printer".to_string())
@@ -79,8 +76,16 @@ pub fn init(scope: Option<Scope>) -> (Printer, JoinHandle<()>) {
                             };
                             let rendered = render(&message, 80, colors).unwrap_or_else(|_| err.message());
                             eprintln!("{}", rendered);
-                            if let Some(ctx) = err.context() {
-                                eprintln!("{}", ctx);
+                            if let Some(ctx) = err.source() {
+                                match ctx.show() {
+                                    Ok(ctx) => eprintln!("{}", ctx),
+                                    Err(_) => {}
+                                }
+                            }
+
+                            if let Some(trace) = err.trace() {
+                                eprintln!("Stack trace:");
+                                eprintln!("{}", trace);
                             }
                         }
                         Line(line) => println!("{}", line),
@@ -106,7 +111,6 @@ pub fn noop() -> (Printer, JoinHandle<()>) {
     (
         Printer {
             sender,
-            source: None,
             pong_receiver,
         },
         thread::Builder::new()
@@ -158,19 +162,7 @@ impl Printer {
             let _ = self.pong_receiver.recv();
         }
     }
-
-    /**
-    Tell this printer what location is being used for input. This is used when printing error
-    messages.
-    */
-    pub fn with_source(&self, def: &str, location: Location) -> Printer {
-        Printer {
-            sender: self.sender.clone(),
-            source: Some((def.to_string(), location)),
-            pong_receiver: self.pong_receiver.clone(),
-        }
-    }
-
+    
     /**
        Print information about the passed in error.
     */
@@ -180,7 +172,7 @@ impl Printer {
             _ => {
                 _ = self
                     .sender
-                    .send(PrinterMessage::CrushError(err.with_source(&self.source)));
+                    .send(PrinterMessage::CrushError(err));
             }
         }
     }

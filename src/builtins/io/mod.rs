@@ -39,8 +39,8 @@ struct Val {
     value: Value,
 }
 
-pub fn val(context: CommandContext) -> CrushResult<()> {
-    let cfg: Val = Val::parse(context.arguments, &context.global_state.printer())?;
+pub fn val(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Val = Val::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     context.output.send(cfg.value)
 }
 
@@ -55,8 +55,8 @@ struct Dir {
     value: Value,
 }
 
-pub fn dir(context: CommandContext) -> CrushResult<()> {
-    let cfg: Dir = Dir::parse(context.arguments, &context.global_state.printer())?;
+pub fn dir(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Dir = Dir::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     context.output.send(
         List::new(
             ValueType::String,
@@ -87,8 +87,8 @@ struct Echo {
     raw: bool,
 }
 
-fn echo(context: CommandContext) -> CrushResult<()> {
-    let cfg: Echo = Echo::parse(context.arguments, &context.global_state.printer())?;
+fn echo(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Echo = Echo::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     let pretty = PrettyPrinter::new(
         context.global_state.printer().clone(),
         context.global_state.format_data(),
@@ -115,8 +115,8 @@ struct Member {
     field: String,
 }
 
-fn member(context: CommandContext) -> CrushResult<()> {
-    let cfg: Member = Member::parse(context.arguments, &context.global_state.printer())?;
+fn member(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Member = Member::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     match context.input.recv()? {
         Value::Struct(s) => context.output.send(
             s.get(&cfg.field)
@@ -149,8 +149,8 @@ struct Readline {
     history: Option<String>,
 }
 
-fn readline(context: CommandContext) -> CrushResult<()> {
-    let cfg: Readline = Readline::parse(context.arguments, &context.global_state.printer())?;
+fn readline(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Readline = Readline::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
 
     let mut rl = Editor::<(), DefaultHistory>::new()?;
 

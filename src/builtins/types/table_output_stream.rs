@@ -1,7 +1,7 @@
 use crate::builtins::types::column_types;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::this::This;
@@ -36,9 +36,9 @@ struct Call {
 }
 
 fn __call__(mut context: CommandContext) -> CrushResult<()> {
-    match context.this.r#type()? {
+    match context.this.r#type(&context.source)? {
         ValueType::TableOutputStream(c) => {
-            let cfg: Call = Call::parse(context.arguments, &context.global_state.printer())?;
+            let cfg: Call = Call::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
             if c.is_empty() {
                 context
                     .output
@@ -50,12 +50,13 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
                     .output
                     .send(Value::Type(ValueType::TableOutputStream(c)))
             } else {
-                argument_error_legacy(
-                    "Tried to set columns on a table_output_stream type that already has columns",
+                argument_error(
+                    "Tried to set columns on a `table_output_stream` type that already has columns.",
+                    &context.source,
                 )
             }
         }
-        _ => argument_error_legacy("Invalid this, expected type table_input_stream"),
+        _ => argument_error("Invalid `this`, expected type `table_input_stream`.", &context.source),
     }
 }
 
@@ -67,7 +68,7 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
 struct Write {}
 
 fn write(mut context: CommandContext) -> CrushResult<()> {
-    let real_output = context.this.table_output_stream()?;
+    let real_output = context.this.table_output_stream(&context.source)?;
     let mut stream = context.input.recv()?.stream()?.ok_or("Expected a stream")?;
 
     while let Ok(row) = stream.read() {

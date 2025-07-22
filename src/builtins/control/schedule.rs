@@ -43,7 +43,7 @@ pub struct Schedule {
 
 fn schedule(mut context: CommandContext) -> CrushResult<()> {
     let mut cfg: Schedule =
-        Schedule::parse(context.remove_arguments(), &context.global_state.printer())?;
+        Schedule::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
 
     if let Some(initial_delay) = &cfg.initial_delay {
         std::thread::sleep(initial_delay.to_std()?);

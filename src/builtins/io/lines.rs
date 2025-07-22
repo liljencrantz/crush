@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, argument_error_legacy, data_error};
+use crate::lang::errors::{CrushResult, data_error, argument_error};
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeLoader;
@@ -30,10 +30,10 @@ struct FromSignature {
     strip_whitespace: bool,
 }
 
-pub fn from(context: CommandContext) -> CrushResult<()> {
+pub fn from(mut context: CommandContext) -> CrushResult<()> {
     let output = context.output.initialize(&OUTPUT_TYPE)?;
     let cfg: FromSignature =
-        FromSignature::parse(context.arguments, &context.global_state.printer())?;
+        FromSignature::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
     let mut line = String::new();
 
@@ -76,8 +76,8 @@ struct To {
     file: Files,
 }
 
-pub fn to(context: CommandContext) -> CrushResult<()> {
-    let cfg: To = To::parse(context.arguments, &context.global_state.printer())?;
+pub fn to(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: To = To::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
 
     match context.input.recv()?.stream()? {
         Some(mut input) => {
@@ -95,13 +95,13 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
                         out.write(s.as_bytes())?;
                     }
                     _ => {
-                        return data_error(format!("`lines:to`: Expected the `{}` column to be a string", input.types()[0].name()));
+                        return data_error(format!("Expected the `{}` column to be a string.", input.types()[0].name()));
                     }
                 }
             }
             Ok(())
         }
-        None => argument_error_legacy("`lines:to`: Expected input to be a stream"),
+        None => argument_error("Expected input to be a stream.", &context.source),
     }
 }
 

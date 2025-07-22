@@ -5,13 +5,13 @@ use crate::lang::argument::ArgumentDefinition;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::completion::Completion;
 use crate::lang::completion::parse::PartialCommandResult;
-use crate::lang::errors::{CrushResult, error, WithCommand};
+use crate::lang::errors::{CrushResult, error, CrushResultExtra};
 use crate::lang::help::Help;
 use crate::lang::job::Job;
 use crate::lang::serialization::model;
 use crate::lang::serialization::model::{Element, element};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
-use crate::lang::state::contexts::{CommandContext, CompileContext};
+use crate::lang::state::contexts::{CommandContext, EvalContext};
 use crate::lang::state::global_state::GlobalState;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueDefinition, ValueType};
@@ -19,6 +19,7 @@ use closure::Closure;
 use ordered_map::OrderedMap;
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
+use crate::lang::ast::source::Source;
 
 pub type Command = Arc<dyn CrushCommand + Send + Sync>;
 
@@ -63,7 +64,7 @@ pub trait CrushCommand: Help + Display {
     /// Execute this command with the specified context
     fn eval(&self, context: CommandContext) -> CrushResult<()>;
     /// True if there is a chance that invoking this command will block the thread
-    fn might_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool;
+    fn might_block(&self, arguments: &[ArgumentDefinition], context: &mut EvalContext) -> bool;
     /// The name of this command
     fn name(&self) -> &str;
     /// Write this completion into pup format
@@ -148,11 +149,12 @@ struct ConditionCommand {
 
 impl dyn CrushCommand {
     pub fn closure_command(
-        name: Option<TrackedString>,
+        name: Option<Source>,
         signature: Vec<ParameterDefinition>,
         job_definitions: Vec<Job>,
         env: &Scope,
         state: &GlobalState,
+        source: Source,
     ) -> CrushResult<Command> {
         Ok(Arc::from(Closure::command(
             name,
@@ -160,11 +162,12 @@ impl dyn CrushCommand {
             job_definitions,
             env,
             state,
+            source,
         )?))
     }
 
-    pub fn closure_block(job_definitions: Vec<Job>, env: &Scope) -> Command {
-        Arc::from(Closure::block(job_definitions, env))
+    pub fn closure_block(job_definitions: Vec<Job>, env: &Scope, source: Source) -> Command {
+        Arc::from(Closure::block(job_definitions, env, source))
     }
 
     pub fn command(
@@ -264,7 +267,7 @@ impl CrushCommand for SimpleCommand {
         c(context).with_command(Foo{path: &self.full_name})
     }
 
-    fn might_block(&self, _arg: &[ArgumentDefinition], _context: &mut CompileContext) -> bool {
+    fn might_block(&self, _arg: &[ArgumentDefinition], _context: &mut EvalContext) -> bool {
         self.can_block
     }
 
@@ -356,7 +359,7 @@ impl CrushCommand for ConditionCommand {
         "conditional command"
     }
 
-    fn might_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool {
+    fn might_block(&self, arguments: &[ArgumentDefinition], context: &mut EvalContext) -> bool {
         arguments.iter().any(|arg| arg.value.can_block(context))
     }
 
@@ -535,7 +538,7 @@ impl CrushCommand for BoundCommand {
         self.command.eval(context).with_command(self.name())
     }
 
-    fn might_block(&self, arguments: &[ArgumentDefinition], context: &mut CompileContext) -> bool {
+    fn might_block(&self, arguments: &[ArgumentDefinition], context: &mut EvalContext) -> bool {
         self.command.might_block(arguments, context)
     }
 

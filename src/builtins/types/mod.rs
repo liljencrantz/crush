@@ -61,7 +61,7 @@ struct Definition {
 }
 
 fn definition(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Definition::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg = Definition::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     context.output.send(
         cfg.command
             .definition()
@@ -71,7 +71,7 @@ fn definition(mut context: CommandContext) -> CrushResult<()> {
 }
 
 fn new(mut context: CommandContext) -> CrushResult<()> {
-    let parent = context.this.clone().r#struct()?;
+    let parent = context.this.clone().r#struct(&context.source)?;
     let res = Struct::empty(Some(parent));
     let o = context.output;
 
@@ -127,8 +127,8 @@ struct Class {
     parent: Option<Struct>,
 }
 
-fn class(context: CommandContext) -> CrushResult<()> {
-    let cfg: Class = Class::parse(context.arguments, &context.global_state.printer())?;
+fn class(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Class = Class::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     let scope = context.scope;
     let parent = cfg.parent.unwrap_or_else(|| scope.root_object());
     let res = Struct::empty(Some(parent));
@@ -162,8 +162,8 @@ struct Convert {
     value: Option<Value>,
 }
 
-pub fn convert(context: CommandContext) -> CrushResult<()> {
-    let cfg: Convert = Convert::parse(context.arguments, &context.global_state.printer())?;
+pub fn convert(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Convert = Convert::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     let value = match cfg.value {
         None => context.input.recv()?,
         Some(v) => v,
@@ -184,8 +184,8 @@ struct TypeOf {
     value: Value,
 }
 
-pub fn r#typeof(context: CommandContext) -> CrushResult<()> {
-    let cfg: TypeOf = TypeOf::parse(context.arguments, &context.global_state.printer())?;
+pub fn r#typeof(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: TypeOf = TypeOf::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     context.output.send(Value::Type(cfg.value.value_type()))
 }
 
@@ -203,8 +203,8 @@ struct SetItem {
 }
 
 fn __setitem__(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = SetItem::parse(context.remove_arguments(), context.global_state.printer())?;
-    let this = context.this.r#struct()?;
+    let cfg = SetItem::parse(context.remove_arguments(), &context.source, context.global_state.printer())?;
+    let this = context.this.r#struct(&context.source)?;
     this.set(&cfg.name, cfg.value);
     context.output.send(Value::Empty)
 }
@@ -223,8 +223,8 @@ struct SetAttr {
 }
 
 fn __setattr__(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = SetAttr::parse(context.remove_arguments(), context.global_state.printer())?;
-    let this = context.this.r#struct()?;
+    let cfg = SetAttr::parse(context.remove_arguments(), &context.source, context.global_state.printer())?;
+    let this = context.this.r#struct(&context.source)?;
     this.set(&cfg.name, cfg.value);
     context.output.send(Value::Empty)
 }
@@ -241,8 +241,8 @@ struct GetItem {
 }
 
 fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = GetItem::parse(context.remove_arguments(), context.global_state.printer())?;
-    let this = context.this.r#struct()?;
+    let cfg = GetItem::parse(context.remove_arguments(), &context.source, context.global_state.printer())?;
+    let this = context.this.r#struct(&context.source)?;
     context.output.send(
         this.get(&cfg.name)
             .ok_or(format!("Unknown field {}", cfg.name).as_str())?,
@@ -272,7 +272,7 @@ struct Match {
 }
 
 fn r#match(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Match::parse(context.remove_arguments(), context.global_state.printer())?;
+    let cfg = Match::parse(context.remove_arguments(), &context.source, context.global_state.printer())?;
     context
         .output
         .send(Value::from(cfg.pattern.test(&cfg.value)))

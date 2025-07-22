@@ -67,7 +67,7 @@ fn usec_since_epoch(tm: DateTime<Local>) -> CrushResult<u64> {
 
 fn journal(mut context: CommandContext) -> CrushResult<()> {
     let cfg: JournalSignature =
-        JournalSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
+        JournalSignature::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     let mut journal = Journal::open(parse_files(&cfg)?, cfg.runtime_only, cfg.local_only)?;
 
     match cfg.seek {

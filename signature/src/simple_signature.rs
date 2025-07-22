@@ -165,7 +165,7 @@ impl SimpleSignature {
                         if _value.len() == 1 {
                             _value.chars().next().unwrap()
                         } else {
-                            return crate::lang::errors::argument_error("Argument must be exactly one character", _location)
+                            return crate::lang::errors::argument_error("Argument must be exactly one character", &_source)
                         }
                     }
                 }
@@ -178,10 +178,8 @@ impl SimpleSignature {
                 SimpleSignature::I32 => quote! { i32::try_from(_value)?},
                 SimpleSignature::Stream => {
                     quote! {
-                    crate::lang::errors::mandate_argument(
-                        _value.stream()?,
-                        format!("Expected a type that can be streamed"),
-                        _location)?,
+                        // Fixme: Losing location information here!
+                        _value.stream()?.ok_or(format!("Expected a type that can be streamed"))?,
                     }
                 }
                 _ => quote! {_value},
@@ -195,13 +193,13 @@ impl SimpleSignature {
                         } else {
                             return crate::lang::errors::argument_error(
                                 format!("Only the following values are allowed: {:?}", #allowed),
-                                _location,
+                                &_source,
                             )
                         }
                     } else {
                         return crate::lang::errors::argument_error(
                             "Argument must be exactly one character",
-                            _location,
+                            &_source,
                         )
                     }
                 },
@@ -211,7 +209,7 @@ impl SimpleSignature {
                     } else {
                         return crate::lang::errors::argument_error(
                             format!("Only the following values are allowed: {:?}", #allowed),
-                            _location,
+                            &_source,
                         )
                     }
                 },
@@ -221,7 +219,7 @@ impl SimpleSignature {
                     } else {
                         return crate::lang::errors::argument_error(
                             format!("Only the following values are allowed: {:?}", #allowed),
-                            _location,
+                            &_source,
                         )
                     }
                 },

@@ -1,5 +1,4 @@
 use crate::lang::argument::{Argument, ArgumentDefinition, ArgumentType, SwitchStyle};
-use crate::lang::ast::location::Location;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::command::{
     BoundCommand, Command, CrushCommand, OutputType, Parameter, ParameterDefinition,
@@ -7,7 +6,7 @@ use crate::lang::command::{
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::data::dict::Dict;
 use crate::lang::data::list::List;
-use crate::lang::errors::{CrushResult, argument_error, argument_error_legacy, error, serialization_error, WithCommand};
+use crate::lang::errors::{CrushResult, argument_error, error, serialization_error, CrushResultExtra};
 use crate::lang::help::Help;
 use crate::lang::job::Job;
 use crate::lang::pipe::{black_hole, empty_channel, pipe};
@@ -16,7 +15,7 @@ use crate::lang::serialization::model::{
     Element, SignatureDefinition, Values, element, normal_parameter_definition,
 };
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState};
-use crate::lang::state::contexts::{CommandContext, CompileContext, JobContext};
+use crate::lang::state::contexts::{CommandContext, EvalContext, JobContext};
 use crate::lang::state::global_state::GlobalState;
 use crate::lang::state::scope::{Scope, ScopeType};
 use crate::lang::value::{Value, ValueDefinition, ValueType};
@@ -25,6 +24,7 @@ use ordered_map::{Entry, OrderedMap};
 use std::collections::VecDeque;
 use std::fmt::Display;
 use std::sync::Arc;
+use crate::lang::ast::source::Source;
 
 enum ClosureType {
     Block,
@@ -46,10 +46,10 @@ struct ArgumentData {
 }
 
 impl ClosureType {
-    fn scope_type(&self) -> ScopeType {
+    fn scope_type(&self, source: &Source) -> ScopeType {
         match self {
             ClosureType::Block => ScopeType::Block,
-            ClosureType::Command { .. } => ScopeType::Command,
+            ClosureType::Command { name, .. } => ScopeType::Command{source: source.clone(), name: name.clone()},
         }
     }
 
@@ -95,8 +95,9 @@ impl ClosureType {
 
     fn push_arguments_to_env(
         &self,
+        source: &Source,
         mut arguments: Vec<Argument>,
-        context: &mut CompileContext,
+        context: &mut EvalContext,
     ) -> CrushResult<()> {
         match self {
             ClosureType::Block => {
@@ -155,8 +156,8 @@ impl ClosureType {
                                     nn.insert(Value::from(argument_name.clone()), arg.value);
                                 } else {
                                     return argument_error(
-                                        format!("`{}`: Unknown named parameter `{}`.", closure_name, argument_name),
-                                        arg.location,
+                                        format!("`{}`: Unknown named argument `{}`.", closure_name, argument_name),
+                                        &arg.source,
                                     );
                                 }
                             }
@@ -174,11 +175,11 @@ impl ClosureType {
                                             l
                                         }
                                         _ => {
-                                            return argument_error_legacy(format!(
+                                            return argument_error(format!(
                                                 "`{}`: Invalid state during argument parsing for named argument `{}`.",
                                                 closure_name,
                                                 argument_name
-                                            ));
+                                            ), source);
                                         }
                                     };
                                     if let Value::List(arg_as_list) = arg.value {
@@ -188,12 +189,13 @@ impl ClosureType {
                                         {
                                             list.append(&mut arg_as_list.iter().collect())?;
                                         } else {
-                                            return argument_error_legacy(format!(
+                                            return argument_error(format!(
                                                 "`{}`: List of elements of type `{}` can't be inserted into list of type `{}`.",
                                                 closure_name,
                                                 arg_as_list.element_type(),
                                                 list.element_type()
-                                            ));
+                                            ),
+                                            &arg.source);
                                         }
                                     } else {
                                         if list
@@ -202,13 +204,14 @@ impl ClosureType {
                                         {
                                             list.append(&mut vec![arg.value])?;
                                         } else {
-                                            return argument_error_legacy(format!(
+                                            return argument_error(format!(
                                                 "`{}`: Wrong type for argument `{}`, expected `{}`, got `{}`.",
                                                 closure_name,
                                                 argument_name,
                                                 list.element_type(),
                                                 arg.value.value_type()
-                                            ));
+                                            ),
+                                            &arg.source);
                                         }
                                     }
                                 } else {
@@ -220,13 +223,14 @@ impl ClosureType {
                                             default: None,
                                         });
                                     } else {
-                                        return argument_error_legacy(format!(
+                                        return argument_error(format!(
                                             "`{}`: Wrong type `{}` for argument `{}`, expected `{}`.",
                                             closure_name,
                                             arg.value.value_type(),
                                             argument_name,
                                             e.value().value_type,
-                                        ));
+                                        ),
+                                        &arg.source);
                                     }
                                 }
                             }
@@ -248,20 +252,21 @@ impl ClosureType {
                                 if data.1.value_type.is(&arg.value) {
                                     context.env.redeclare(&data.0, arg.value)?;
                                 } else {
-                                    return argument_error_legacy(format!(
+                                    return argument_error(format!(
                                         "`{}`: Wrong type `{}` for argument `{}`, expected `{}`.",
                                         closure_name,
                                         arg.value.value_type(),
                                         data.0,
                                         data.1.value_type
-                                    ));
+                                    ),
+                                    &arg.source);
                                 }
                             } else {
-                                return argument_error_legacy(format!(
+                                return argument_error(format!(
                                     "`{}`: No argument supplied for parameter `{}`.",
                                     closure_name,
                                     data.0
-                                ));
+                                ), source);
                             }
                         }
                     }
@@ -272,7 +277,7 @@ impl ClosureType {
                         if let Some(argument) = &unnamed.pop_front() {
                             return argument_error(
                                 format!("`{}`: Stray unnamed argument.", closure_name),
-                                argument.location);
+                                &argument.source);
                         }
                     }
                     Some(name) => {
@@ -290,7 +295,7 @@ impl ClosureType {
                 match (named, named_remainder) {
                     (None, None) => {}
                     (Some(_), None) => {
-                        argument_error_legacy(format!("`{}`: Unknown named arguments.", closure_name))?;
+                        argument_error(format!("`{}`: Unknown named arguments.", closure_name), source)?;
                     }
                     (None, Some(name)) => {
                         context.env.redeclare(
@@ -315,6 +320,7 @@ pub struct Closure {
     jobs: Vec<Job>,
     parent_scope: Scope,
     closure_type: ClosureType,
+    source: Source,
 }
 
 impl Help for Closure {
@@ -333,10 +339,11 @@ impl Help for Closure {
 
 impl CrushCommand for Closure {
     fn eval(&self, context: CommandContext) -> CrushResult<()> {
-        self.eval_inner(context).with_command(self.name())
+        let s = context.scope.clone();
+        self.eval_inner(context).with_command(self.name()).with_trace(&s)
     }
 
-    fn might_block(&self, _arg: &[ArgumentDefinition], _context: &mut CompileContext) -> bool {
+    fn might_block(&self, _arg: &[ArgumentDefinition], _context: &mut EvalContext) -> bool {
         true
     }
 
@@ -385,19 +392,19 @@ fn compile_signature(
                     None => None,
                     Some(definition) => Some(
                         definition
-                            .eval(&mut CompileContext::new(env.clone(), state.clone()))?
+                            .eval(&mut EvalContext::new(env.clone(), state.clone()))?
                             .1,
                     ),
                 };
                 let value_type = match value_type
-                    .eval(&mut CompileContext::new(env.clone(), state.clone()))?
+                    .eval(&mut EvalContext::new(env.clone(), state.clone()))?
                     .1
                 {
                     Value::Type(vt) => vt,
                     _ => {
                         return argument_error(
                             format!("Invalid type for argument `{}`.", &name.string),
-                            name.location,
+                            value_type.source()
                         );
                     }
                 };
@@ -528,13 +535,14 @@ fn create_long_help(signature: &Vec<ParameterDefinition>) -> String {
 
 impl Closure {
     pub fn command(
-        name: Option<TrackedString>,
+        name: Option<Source>,
         signature: Vec<ParameterDefinition>,
         job_definitions: Vec<Job>,
         parent_scope: &Scope,
         state: &GlobalState,
+        source: Source,
     ) -> CrushResult<Closure> {
-        let name = name.map(|n| n.string);
+        let name = name.map(|n| n.string());
         let signature_data = compile_signature(&signature, parent_scope, state)?;
         Ok(Closure {
             jobs: job_definitions,
@@ -546,14 +554,21 @@ impl Closure {
                 long_help: create_long_help(&signature),
                 name,
             },
+            source,
         })
     }
 
-    pub fn block(job_definitions: Vec<Job>, parent_scope: &Scope) -> Closure {
+    pub fn block(
+        job_definitions:
+        Vec<Job>, 
+        parent_scope: &Scope,
+        source: Source,
+    ) -> Closure {
         Closure {
             jobs: job_definitions,
             parent_scope: parent_scope.clone(),
             closure_type: ClosureType::Block,
+            source,
         }
     }
 
@@ -569,18 +584,17 @@ impl Closure {
         let job_definitions = self.jobs.clone();
         let parent_env = self.parent_scope.clone();
 
-        let scope_type = self.closure_type.scope_type();
+        let scope_type = self.closure_type.scope_type(&self.source);
 
         let env = parent_env.create_child(&context.scope, scope_type);
 
         let mut cc =
-            CompileContext::from(&context.clone().with_output(black_hole())).with_scope(&env);
+            EvalContext::from(&context.clone().with_output(black_hole())).with_scope(&env);
         if let Some(this) = context.this {
             env.redeclare("this", this)?;
         }
 
-        self.closure_type
-            .push_arguments_to_env(context.arguments, &mut cc)?;
+        self.closure_type.push_arguments_to_env(&context.source, context.arguments, &mut cc)?;
 
         if env.is_stopped() {
             return Ok(());
@@ -698,7 +712,11 @@ impl<'a> ClosureSerializer<'a> {
                 ));
             }
         }
+        
+        let source = closure.source.serialize(self.elements, self.state)? as u64;
 
+        serialized.source = source;
+        
         for j in &closure.jobs {
             serialized.job_definitions.push(self.job(j)?)
         }
@@ -706,9 +724,7 @@ impl<'a> ClosureSerializer<'a> {
         serialized.env = closure.parent_scope.serialize(self.elements, self.state)? as u64;
 
         let idx = self.elements.len();
-        self.elements.push(model::Element {
-            element: Some(model::element::Element::Closure(serialized)),
-        });
+        self.elements.push(model::Element {element: Some(model::element::Element::Closure(serialized))});
         Ok(idx)
     }
 
@@ -728,7 +744,10 @@ impl<'a> ClosureSerializer<'a> {
                 None => model::parameter::Allowed::HasAllowed(false),
                 Some(allowed) => model::parameter::Allowed::AllowedValues(self.values(allowed)?),
             }),
-            description: None,
+            description: Some(match &signature.description {
+                None => model::parameter::Description::HasDescription(false),
+                Some(allowed) => model::parameter::Description::DescriptionValue(allowed.serialize(self.elements, self.state)? as u64),
+            }),
         })
     }
 
@@ -832,6 +851,7 @@ impl<'a> ClosureSerializer<'a> {
         for c in job.commands() {
             s.commands.push(self.command(c)?);
         }
+        s.source = job.source().serialize(self.elements, self.state)? as u64;
         Ok(s)
     }
 
@@ -843,16 +863,17 @@ impl<'a> ClosureSerializer<'a> {
             .iter()
             .map(|a| self.argument(a))
             .collect::<CrushResult<Vec<_>>>()?;
+        s.source = cmd.source().serialize(self.elements, self.state)? as u64;
         Ok(s)
     }
 
     fn argument(&mut self, a: &ArgumentDefinition) -> CrushResult<model::ArgumentDefinition> {
+        let source = a.source.serialize(self.elements, self.state)? as u64;
         Ok(model::ArgumentDefinition {
             value: Some(self.value_definition(&a.value)?),
             argument_type: Some(self.argument_type(&a.argument_type)?),
             switch_style: a.switch_style.into(),
-            start: a.location.start as u64,
-            end: a.location.end as u64,
+            source,
         })
     }
 
@@ -877,11 +898,10 @@ impl<'a> ClosureSerializer<'a> {
     fn value_definition(&mut self, v: &ValueDefinition) -> CrushResult<model::ValueDefinition> {
         Ok(model::ValueDefinition {
             value_definition: Some(match v {
-                ValueDefinition::Value(v, location) => {
+                ValueDefinition::Value(v, source) => {
                     model::value_definition::ValueDefinition::Value(model::Value {
                         value: v.serialize(self.elements, self.state)? as u64,
-                        start: location.start as u64,
-                        end: location.end as u64,
+                        source: source.serialize(self.elements, self.state)? as u64,
                     })
                 }
 
@@ -889,7 +909,7 @@ impl<'a> ClosureSerializer<'a> {
                     name,
                     signature,
                     jobs,
-                    location,
+                    source,
                 } => model::value_definition::ValueDefinition::ClosureDefinition(
                     model::ClosureDefinition {
                         job_definitions: jobs
@@ -903,8 +923,7 @@ impl<'a> ClosureSerializer<'a> {
                             ),
                         }),
                         signature: self.signature_definition(signature)?,
-                        start: location.start as u64,
-                        end: location.end as u64,
+                        source: source.serialize(self.elements, self.state)? as u64,
                     },
                 ),
 
@@ -912,7 +931,7 @@ impl<'a> ClosureSerializer<'a> {
                     model::value_definition::ValueDefinition::Job(self.job(j)?)
                 }
 
-                ValueDefinition::Identifier(l) => model::value_definition::ValueDefinition::Label(
+                ValueDefinition::Identifier(l) => model::value_definition::ValueDefinition::Identifier(
                     l.serialize(self.elements, self.state)? as u64,
                 ),
 
@@ -949,7 +968,7 @@ impl<'a> ClosureDeserializer<'a> {
     }
 
     pub fn closure(&mut self, id: usize) -> CrushResult<Command> {
-        match self.elements[id].element.as_ref().unwrap() {
+        match self.elements[id].element.as_ref().ok_or(format!("Error while deserializing closure at index {}", id))? {
             element::Element::Closure(s) => {
                 let env = Scope::deserialize(s.env as usize, self.elements, self.state)?;
                 Ok(Arc::from(Closure {
@@ -994,6 +1013,7 @@ impl<'a> ClosureDeserializer<'a> {
                         None => return serialization_error("Invalid command signature"),
                     },
                     parent_scope: env,
+                    source: Source::deserialize(s.source as usize, self.elements, self.state)?,
                 }))
             }
             _ => error("Expected a closure"),
@@ -1137,7 +1157,7 @@ impl<'a> ClosureDeserializer<'a> {
                 .iter()
                 .map(|c| self.command(c))
                 .collect::<CrushResult<Vec<_>>>()?,
-            Location::new(s.start as usize, s.end as usize),
+            Source::deserialize(s.source as usize, self.elements, self.state)?,
         ))
     }
 
@@ -1145,6 +1165,7 @@ impl<'a> ClosureDeserializer<'a> {
         if let Some(command) = &s.command {
             Ok(CommandInvocation::new(
                 self.value_definition(command)?,
+                Source::deserialize(s.source as usize, self.elements, self.state)?,
                 s.arguments
                     .iter()
                     .map(|a| self.argument(a))
@@ -1156,11 +1177,12 @@ impl<'a> ClosureDeserializer<'a> {
     }
 
     fn argument(&mut self, s: &model::ArgumentDefinition) -> CrushResult<ArgumentDefinition> {
+        let source = Source::deserialize(s.source as usize, self.elements, self.state)?;
         Ok(ArgumentDefinition {
             value: self.value_definition(s.value.as_ref().ok_or("Missing argument value")?)?,
             argument_type: match s.argument_type.as_ref().ok_or("Missing argument type")? {
                 model::argument_definition::ArgumentType::Some(s) => ArgumentType::Named(
-                    TrackedString::deserialize(*s as usize, self.elements, self.state)?,
+                    Source::deserialize(*s as usize, self.elements, self.state)?,
                 ),
                 model::argument_definition::ArgumentType::None(_) => ArgumentType::Unnamed,
                 model::argument_definition::ArgumentType::ArgumentList(_) => {
@@ -1171,7 +1193,7 @@ impl<'a> ClosureDeserializer<'a> {
                 }
             },
             switch_style: SwitchStyle::try_from(s.switch_style)?,
-            location: Location::new(s.start as usize, s.end as usize),
+            source,
         })
     }
 
@@ -1184,17 +1206,14 @@ impl<'a> ClosureDeserializer<'a> {
             {
                 model::value_definition::ValueDefinition::Value(val) => ValueDefinition::Value(
                     Value::deserialize(val.value as usize, self.elements, self.state)?,
-                    Location {
-                        start: val.start as usize,
-                        end: val.end as usize,
-                    },
+                    Source::deserialize(val.source as usize, self.elements, self.state)?,
                 ),
                 model::value_definition::ValueDefinition::ClosureDefinition(c) => {
                     ValueDefinition::ClosureDefinition {
                         name: match c.name {
                             None | Some(model::closure_definition::Name::HasName(_)) => None,
                             Some(model::closure_definition::Name::NameValue(id)) => Some(
-                                TrackedString::deserialize(id as usize, self.elements, self.state)?,
+                                Source::deserialize(id as usize, self.elements, self.state)?,
                             ),
                         },
                         signature: match &c.signature {
@@ -1210,7 +1229,7 @@ impl<'a> ClosureDeserializer<'a> {
                             .iter()
                             .map(|j| self.job(j))
                             .collect::<CrushResult<Vec<_>>>()?,
-                        location: Location::new(c.start as usize, c.end as usize),
+                        source: Source::deserialize(c.source as usize, self.elements, self.state)?,
                     }
                 }
                 model::value_definition::ValueDefinition::Job(j) => {
@@ -1219,7 +1238,7 @@ impl<'a> ClosureDeserializer<'a> {
                             .iter()
                             .map(|c| self.command(c))
                             .collect::<CrushResult<Vec<_>>>()?,
-                        Location::new(j.start as usize, j.end as usize),
+                        Source::deserialize(j.source as usize, self.elements, self.state)?,
                     ))
                 }
                 model::value_definition::ValueDefinition::JobList(jobs) => {
@@ -1230,21 +1249,21 @@ impl<'a> ClosureDeserializer<'a> {
                                 .iter()
                                 .map(|c| self.command(c))
                                 .collect::<CrushResult<Vec<_>>>()?,
-                            Location::new(j.start as usize, j.end as usize),
+                            Source::deserialize(j.source as usize, self.elements, self.state)?,
                         ));
                     }
                     ValueDefinition::JobListDefinition(res)
                 }
 
-                model::value_definition::ValueDefinition::Label(s) => ValueDefinition::Identifier(
-                    TrackedString::deserialize(*s as usize, self.elements, self.state)?,
+                model::value_definition::ValueDefinition::Identifier(s) => ValueDefinition::Identifier(
+                    Source::deserialize(*s as usize, self.elements, self.state)?,
                 ),
                 model::value_definition::ValueDefinition::GetAttr(a) => {
                     ValueDefinition::GetAttr(
                         Box::from(self.value_definition(
                             a.parent.as_ref().ok_or("Invalid value definition")?,
                         )?),
-                        TrackedString::deserialize(a.element as usize, self.elements, self.state)?,
+                        Source::deserialize(a.element as usize, self.elements, self.state)?,
                     )
                 }
             },

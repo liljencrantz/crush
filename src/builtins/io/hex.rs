@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeLoader;
@@ -21,8 +21,8 @@ struct FromSignature {
     files: Files,
 }
 
-pub fn from(context: CommandContext) -> CrushResult<()> {
-    let cfg = FromSignature::parse(context.arguments, &context.global_state.printer())?;
+pub fn from(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = FromSignature::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
     let (pipe_reader, mut writer) = os_pipe::pipe()?;
     context
@@ -54,8 +54,8 @@ struct To {
     file: Files,
 }
 
-pub fn to(context: CommandContext) -> CrushResult<()> {
-    let cfg = To::parse(context.arguments, &context.global_state.printer())?;
+pub fn to(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = To::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     let mut out = cfg.file.writer(context.output)?;
     match context.input.recv()? {
         Value::String(str) => {
@@ -82,10 +82,10 @@ pub fn to(context: CommandContext) -> CrushResult<()> {
             }
         }
         v => {
-            return argument_error_legacy(format!(
+            return argument_error(format!(
                 "`hex:to`: Expected a binary stream or a string, encountered `{}`",
                 v.value_type().to_string()
-            ));
+            ), &context.source);
         }
     }
     Ok(())

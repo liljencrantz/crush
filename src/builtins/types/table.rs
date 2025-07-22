@@ -37,9 +37,9 @@ struct Call {
 }
 
 fn __call__(mut context: CommandContext) -> CrushResult<()> {
-    match context.this.r#type()? {
+    match context.this.r#type(&context.source)? {
         ValueType::Table(c) => {
-            let cfg: Call = Call::parse(context.arguments, &context.global_state.printer())?;
+            let cfg: Call = Call::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
             if c.is_empty() {
                 context
                     .output
@@ -67,7 +67,7 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
 struct Len {}
 
 fn len(mut context: CommandContext) -> CrushResult<()> {
-    let table = context.this.table()?;
+    let table = context.this.table(&context.source)?;
     context.output.send(Value::Integer(table.len() as i128))
 }
 
@@ -83,8 +83,8 @@ struct GetItem {
 }
 
 fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: GetItem = GetItem::parse(context.arguments, &context.global_state.printer())?;
-    let o = context.this.table()?;
+    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let o = context.this.table(&context.source)?;
     context
         .output
         .send(Value::Struct(o.row(cfg.index)?.into_struct(o.types())))

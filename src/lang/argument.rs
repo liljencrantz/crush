@@ -1,20 +1,19 @@
-use crate::lang::ast::location::Location;
-use crate::lang::ast::tracked_string::TrackedString;
 /**
 Code for managing arguments passed in to commands
  */
 use crate::lang::errors::{CrushError, CrushResult, argument_error, argument_error_legacy, error};
 use crate::lang::serialization::model;
-use crate::lang::state::contexts::CompileContext;
+use crate::lang::state::contexts::EvalContext;
 use crate::lang::value::Value;
 use crate::lang::value::ValueDefinition;
 use crate::util::repr::Repr;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
+use crate::lang::ast::source::Source;
 
 #[derive(Debug, Clone)]
 pub enum ArgumentType {
-    Named(TrackedString),
+    Named(Source),
     Unnamed,
     ArgumentList,
     ArgumentDict,
@@ -57,7 +56,7 @@ impl ArgumentType {
 
     pub fn is_this(&self) -> bool {
         if let ArgumentType::Named(v) = self {
-            v.string == "this"
+            v.string() == "this"
         } else {
             false
         }
@@ -69,36 +68,36 @@ pub struct BaseArgument<A: Clone, C: Clone> {
     pub argument_type: A,
     pub switch_style: SwitchStyle,
     pub value: C,
-    pub location: Location,
+    pub source: Source,
 }
 
 impl<A: Clone, C: Clone> BaseArgument<A, C> {
     pub fn error<T>(&self, message: impl Into<String>) -> CrushResult<T> {
-        argument_error(message, self.location)
+        argument_error(message, &self.source)
     }
 }
 
 pub type ArgumentDefinition = BaseArgument<ArgumentType, ValueDefinition>;
 
 impl ArgumentDefinition {
-    pub fn named(name: &TrackedString, value: ValueDefinition) -> ArgumentDefinition {
+    pub fn named(name: &Source, value: ValueDefinition) -> ArgumentDefinition {
         ArgumentDefinition {
             argument_type: ArgumentType::Named(name.clone()),
             switch_style: SwitchStyle::None,
-            location: name.location.union(value.location()),
+            source: value.source().clone(),
             value,
         }
     }
 
     pub fn named_with_style(
-        name: &TrackedString,
+        name: &Source,
         switch_style: SwitchStyle,
         value: ValueDefinition,
     ) -> ArgumentDefinition {
         ArgumentDefinition {
             argument_type: ArgumentType::Named(name.clone()),
             switch_style,
-            location: name.location.union(value.location()),
+            source: value.source().clone(),
             value,
         }
     }
@@ -107,7 +106,7 @@ impl ArgumentDefinition {
         ArgumentDefinition {
             argument_type: ArgumentType::Unnamed,
             switch_style: SwitchStyle::None,
-            location: value.location(),
+            source: value.source().clone(),
             value,
         }
     }
@@ -116,7 +115,7 @@ impl ArgumentDefinition {
         ArgumentDefinition {
             argument_type: ArgumentType::ArgumentList,
             switch_style: SwitchStyle::None,
-            location: value.location(),
+            source: value.source().clone(),
             value,
         }
     }
@@ -125,7 +124,7 @@ impl ArgumentDefinition {
         ArgumentDefinition {
             argument_type: ArgumentType::ArgumentDict,
             switch_style: SwitchStyle::None,
-            location: value.location(),
+            source: value.source().clone(),
             value,
         }
     }
@@ -142,30 +141,30 @@ impl ArgumentDefinition {
 pub type Argument = BaseArgument<Option<String>, Value>;
 
 impl Argument {
-    pub fn new(name: Option<String>, value: Value, location: Location) -> Argument {
+    pub fn new(name: Option<String>, value: Value, source: &Source) -> Argument {
         Argument {
             argument_type: name,
             switch_style: SwitchStyle::None,
             value,
-            location,
+            source: source.clone(),
         }
     }
 
-    pub fn unnamed(value: Value, location: Location) -> Argument {
+    pub fn unnamed(value: Value, source: &Source) -> Argument {
         Argument {
             argument_type: None,
             switch_style: SwitchStyle::None,
             value,
-            location,
+            source: source.clone(),
         }
     }
 
-    pub fn named(name: &str, value: Value, location: Location) -> Argument {
+    pub fn named(name: &str, value: Value, source: &Source) -> Argument {
         Argument {
             argument_type: Some(name.to_string()),
             switch_style: SwitchStyle::None,
             value,
-            location,
+            source: source.clone(),
         }
     }
 
@@ -173,23 +172,23 @@ impl Argument {
         name: &str,
         switch_style: SwitchStyle,
         value: Value,
-        location: Location,
+        source: &Source,
     ) -> Argument {
         Argument {
             argument_type: Some(name.to_string()),
             switch_style,
             value,
-            location,
+            source: source.clone(),
         }
     }
 }
 
 pub trait ArgumentEvaluator {
-    fn eval(&self, context: &mut CompileContext) -> CrushResult<(Vec<Argument>, Option<Value>)>;
+    fn eval(&self, context: &mut EvalContext) -> CrushResult<(Vec<Argument>, Option<Value>)>;
 }
 
 impl ArgumentEvaluator for Vec<ArgumentDefinition> {
-    fn eval(&self, context: &mut CompileContext) -> CrushResult<(Vec<Argument>, Option<Value>)> {
+    fn eval(&self, context: &mut EvalContext) -> CrushResult<(Vec<Argument>, Option<Value>)> {
         let mut this = None;
         let mut res = Vec::new();
         for a in self {
@@ -198,22 +197,22 @@ impl ArgumentEvaluator for Vec<ArgumentDefinition> {
             } else {
                 match &a.argument_type {
                     ArgumentType::Named(name) => res.push(Argument::named_with_style(
-                        &name.string,
+                        &name.string(),
                         a.switch_style,
                         a.value.eval_and_bind(context)?,
-                        a.location,
+                        &a.source,
                     )),
 
                     ArgumentType::Unnamed => res.push(Argument::unnamed(
                         a.value.eval_and_bind(context)?,
-                        a.location,
+                        &a.source,
                     )),
 
                     ArgumentType::ArgumentList => match a.value.eval_and_bind(context)? {
                         Value::List(l) => {
                             let mut copy: Vec<_> = l.iter().collect();
                             for v in copy.drain(..) {
-                                res.push(Argument::unnamed(v, a.location));
+                                res.push(Argument::unnamed(v, &a.source));
                             }
                         }
                         v => {
@@ -229,7 +228,7 @@ impl ArgumentEvaluator for Vec<ArgumentDefinition> {
                             let mut copy = d.elements();
                             for (key, value) in copy.drain(..) {
                                 if let Value::String(name) = key {
-                                    res.push(Argument::named(&name, value, a.location));
+                                    res.push(Argument::named(&name, value, &a.source));
                                 } else {
                                     return argument_error_legacy(
                                         "Argument dict must have string keys",
@@ -255,13 +254,13 @@ impl Display for ArgumentDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match (&self.argument_type, &self.value) {
             (ArgumentType::Named(name), ValueDefinition::Identifier(ts))
-                if ts.string.eq("true") =>
+                if ts.string().eq("true") =>
             {
                 f.write_str("--")?;
-                f.write_str(&name.to_string())
+                f.write_str(name.str())
             }
             (ArgumentType::Named(name), _) => {
-                f.write_str(&name.to_string())?;
+                f.write_str(name.str())?;
                 f.write_str("=")?;
                 self.value.repr(f)
             }

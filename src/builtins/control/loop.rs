@@ -24,7 +24,7 @@ pub struct Loop {
 }
 
 fn r#loop(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Loop = Loop::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: Loop = Loop::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     loop {
         let env = context.scope.create_child(&context.scope, ScopeType::Loop);
         cfg.body.eval(context.empty().with_scope(env.clone()))?;

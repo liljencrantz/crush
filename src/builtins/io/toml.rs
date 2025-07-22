@@ -91,9 +91,9 @@ struct FromSignature {
     files: Files,
 }
 
-fn from(context: CommandContext) -> CrushResult<()> {
+fn from(mut context: CommandContext) -> CrushResult<()> {
     let cfg: FromSignature =
-        FromSignature::parse(context.arguments, &context.global_state.printer())?;
+        FromSignature::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
     let mut v = Vec::new();
 
@@ -171,8 +171,8 @@ struct To {
     file: Files,
 }
 
-fn to(context: CommandContext) -> CrushResult<()> {
-    let cfg: To = To::parse(context.arguments, &context.global_state.printer())?;
+fn to(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: To = To::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     let mut writer = cfg.file.writer(context.output)?;
     let serde_value = context.input.recv()?;
     let toml_value = to_toml(serde_value)?;

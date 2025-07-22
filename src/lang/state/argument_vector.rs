@@ -22,9 +22,9 @@ impl ArgumentVector for Vec<Argument> {
 
     fn value(&mut self, idx: usize) -> CrushResult<Value> {
         if idx < self.len() {
-            let l = self[idx].location;
+            let source = self[idx].source.clone();
             Ok(self
-                .replace(idx, Argument::unnamed(Value::Bool(false), l))
+                .replace(idx, Argument::unnamed(Value::Bool(false), &source))
                 .value)
         } else {
             error("Index out of bounds")

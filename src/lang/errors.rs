@@ -7,7 +7,8 @@ use crate::lang::ast::location::Location;
 use crate::lang::ast::token;
 use CrushErrorType::*;
 use reqwest::header::ToStrError;
-use std::cmp::{max, min};
+use crate::lang::ast::source::Source;
+use crate::lang::state::scope::Scope;
 
 #[derive(Debug)]
 pub enum CrushErrorType {
@@ -62,26 +63,9 @@ pub enum CrushErrorType {
 #[derive(Debug)]
 pub struct CrushError {
     error_type: CrushErrorType,
-    location: Option<Location>,
-    definition: Option<String>,
+    source: Option<Source>,
     command: Option<String>,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-struct ErrorLine {
-    line_number: usize,
-    line: String,
-    location: Location,
-}
-
-impl ErrorLine {
-    fn format_location(&self) -> String {
-        format!(
-            "{}{}",
-            " ".repeat(self.location.start),
-            "^".repeat(self.location.len())
-        )
-    }
+    trace: Option<String>,
 }
 
 impl CrushError {
@@ -139,67 +123,27 @@ impl CrushError {
     }
 
     pub fn location(&self) -> Option<Location> {
-        self.location
+        self.source.as_ref().map(|s| s.location())
     }
 
     pub fn command(&self) -> &Option<String> {
         &self.command
     }
 
-    pub fn with_source(self, source: &Option<(String, Location)>) -> CrushError {
-        match source {
-            None => self,
-            Some((def, loc)) => self.with_location(*loc).with_definition(def),
-        }
+    pub fn source(&self) -> &Option<Source> {
+        &self.source
     }
 
-    pub fn with_definition(self, def: impl Into<String>) -> CrushError {
+    pub fn trace(&self) -> &Option<String> {
+        &self.trace
+    }
+    
+    pub fn with_source(self, source: &Source) -> CrushError {
         CrushError {
             error_type: self.error_type,
-            location: self.location,
-            definition: Some(def.into()),
+            source: Some(source.clone()),
             command: self.command,
-        }
-    }
-
-    pub fn with_location(self, l: Location) -> CrushError {
-        let location = if let Some(old) = self.location() {
-            if old.len() < l.len() { old } else { l }
-        } else {
-            l
-        };
-        CrushError {
-            error_type: self.error_type,
-            location: Some(location),
-            definition: self.definition,
-            command: self.command,
-        }
-    }
-
-    pub fn context(&self) -> Option<String> {
-        match (&self.definition, self.location) {
-            (Some(def), Some(loc)) => {
-                let mut res = String::new();
-                let lines = extract_location(def, loc);
-                if lines.len() == 1 && lines[0].line_number == 1 {
-                    res.push_str(&format!(
-                        "{}\n{}\n",
-                        lines[0].line,
-                        lines[0].format_location()
-                    ));
-                } else {
-                    for line in lines {
-                        res.push_str(&format!(
-                            "Line {}\n{}\n{}\n",
-                            line.line_number,
-                            line.line,
-                            line.format_location()
-                        ));
-                    }
-                }
-                Some(res)
-            }
-            _ => None,
+            trace: self.trace,
         }
     }
 
@@ -212,9 +156,9 @@ impl From<CrushErrorType> for CrushError {
     fn from(e: CrushErrorType) -> Self {
         CrushError {
             error_type: e,
-            location: None,
-            definition: None,
+            source: None,
             command: None,
+            trace: None,
         }
     }
 }
@@ -287,7 +231,7 @@ for CrushError
     fn from(
         e: lalrpop_util::ParseError<usize, token::Token, crate::lang::ast::lexer::LexicalError>,
     ) -> Self {
-        let location = match e {
+        let _location = match e {
             lalrpop_util::ParseError::InvalidToken { location } => {
                 Some(Location::new(location, location))
             }
@@ -302,9 +246,10 @@ for CrushError
         };
         CrushError {
             error_type: ParseError(e.to_string()),
-            location,
-            definition: None,
             command: None,
+            // Fixme: Losing location information here
+            source: None,
+            trace: None,
         }
     }
 }
@@ -491,8 +436,8 @@ pub fn serialization_error<T>(message: impl Into<String>) -> CrushResult<T> {
     Err(SerializationError(message.into()).into())
 }
 
-pub fn argument_error<T>(message: impl Into<String>, location: Location) -> CrushResult<T> {
-    Err(CrushError::from(InvalidArgument(message.into())).with_location(location))
+pub fn argument_error<T>(message: impl Into<String>, source: &Source) -> CrushResult<T> {
+    Err(CrushError::from(InvalidArgument(message.into())).with_source(source))
 }
 
 pub fn data_error<T>(message: impl Into<String>) -> CrushResult<T> {
@@ -515,60 +460,32 @@ pub fn error<T>(message: impl Into<String>) -> CrushResult<T> {
     Err(GenericError(message.into()).into())
 }
 
-pub fn mandate_argument<T>(
-    result: Option<T>,
-    message: impl Into<String>,
-    location: Location,
-) -> CrushResult<T> {
-    match result {
-        Some(v) => Ok(v),
-        None => Err(CrushError {
-            error_type: InvalidData(message.into()),
-            location: Some(location),
-            definition: None,
-            command: None,
-        }),
-    }
-}
-
-fn extract_location(s: &str, loc: Location) -> Vec<ErrorLine> {
-    let mut res = Vec::new();
-
-    let mut line = 1;
-    let mut start = 0;
-    for (off, ch) in s.char_indices().chain(vec![(s.len(), '\n')]) {
-        if ch == '\n' {
-            if off > loc.start && start < loc.end {
-                res.push(ErrorLine {
-                    line_number: line,
-                    line: s[start..(off)].to_string(),
-                    location: Location::new(
-                        max(start, loc.start) - start,
-                        min(off, loc.end) - start,
-                    ),
-                });
-            }
-            start = off + 1;
-            line += 1;
-        }
-    }
-
-    res
-}
-
-pub trait WithCommand {
+pub trait CrushResultExtra {
     fn with_command(self, cmd: impl Into<String>) -> Self;
+    fn with_trace(self, scope: &Scope) -> Self;
 }
 
-impl<V> WithCommand for CrushResult<V> {
+impl<V> CrushResultExtra for CrushResult<V> {
     fn with_command(self, cmd: impl Into<String>) -> CrushResult<V> {
         match self {
             Ok(_) => self,
             Err(err) => Err(CrushError {
                 error_type: err.error_type,
-                location: err.location,
-                definition: err.definition,
+                source: err.source,
                 command: Some(cmd.into()),
+                trace: err.trace,
+            }),
+        }
+    }
+
+    fn with_trace(self, scope: &Scope) -> Self {
+        match self {
+            Ok(_) => self,
+            Err(err) => Err(CrushError {
+                error_type: err.error_type,
+                source: err.source,
+                command: err.command,
+                trace: scope.stack_trace().ok(),
             }),
         }
     }

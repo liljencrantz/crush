@@ -31,7 +31,7 @@ struct Call {
 }
 
 fn __call__(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Call::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg = Call::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     context
         .output
         .send(Value::Type(ValueType::OneOf(cfg.types)))

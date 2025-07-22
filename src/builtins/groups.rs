@@ -1,13 +1,13 @@
-use crate::argument_error_legacy;
-use crate::lang::command::OutputType::Known;
+    use crate::lang::command::OutputType::Known;
 use crate::lang::data::r#struct::Struct;
-use crate::lang::errors::CrushResult;
+use crate::lang::errors::{argument_error, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
 use crate::lang::{data::table::ColumnType, data::table::Row};
 use signature::signature;
 use std::ops::Add;
+use crate::lang::ast::source::Source;
 
 static LIST_OUTPUT_TYPE: [ColumnType; 2] = [
     ColumnType::new("name", ValueType::String),
@@ -48,11 +48,11 @@ struct GetItem {
 }
 
 fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.output.send(get_group_value(&cfg.name)?)
+    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    context.output.send(get_group_value(&cfg.name, &context.source)?)
 }
 
-fn get_group_value(input_name: &str) -> CrushResult<Value> {
+fn get_group_value(input_name: &str, source: &Source) -> CrushResult<Value> {
     let groups = sysinfo::Groups::new_with_refreshed_list();
     for g in groups.list() {
         if g.name() == input_name {
@@ -65,7 +65,7 @@ fn get_group_value(input_name: &str) -> CrushResult<Value> {
             )));
         }
     }
-    argument_error_legacy(format!("unknown group {}", input_name))
+    argument_error(format!("unknown group {}.", input_name), source)
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {

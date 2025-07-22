@@ -7,12 +7,13 @@ use crate::lang::value::Value::{Binary, BinaryInputStream};
 use crate::lang::value::ValueType;
 use crate::state::contexts::CommandContext;
 use crate::util::file::cwd;
-use crate::{CrushResult, argument_error_legacy};
+use crate::CrushResult;
 use signature::signature;
 use std::borrow::BorrowMut;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::Stdio;
+use crate::lang::errors::argument_error;
 
 #[signature(
     control.cmd,
@@ -144,7 +145,7 @@ fn cmd_internal(
                     Ok(())
                 })?;
             }
-            _ => return argument_error_legacy("Invalid input: Expected binary data"),
+            _ => return argument_error("Invalid input: Expected binary data", &context.source),
         }
 
         context
@@ -174,7 +175,7 @@ fn cmd_internal(
 fn cmd(mut context: CommandContext) -> CrushResult<()> {
     let mut arguments = context.remove_arguments();
     if arguments.is_empty() {
-        return argument_error_legacy("No command given");
+        return argument_error("No command given", &context.source);
     }
     match arguments.remove(0).value {
         Value::File(f) => {
@@ -187,20 +188,20 @@ fn cmd(mut context: CommandContext) -> CrushResult<()> {
             if let Some(file) = file {
                 cmd_internal(context, file, arguments)
             } else {
-                argument_error_legacy(format!(
+                argument_error(format!(
                     "Unknown command {}",
                     f.to_str().unwrap_or("<encoding error>")
-                ))
+                ), &context.source)
             }
         }
         Value::String(s) => {
             if let Some(file) = resolve_external_command(s.as_ref(), &context.scope)? {
                 cmd_internal(context, file, arguments)
             } else {
-                argument_error_legacy(format!("Unknown command `{}`", s))
+                argument_error(format!("Unknown command `{}`", s), &context.source)
             }
         }
 
-        _ => argument_error_legacy("Not a valid command"),
+        _ => argument_error("Not a valid command", &context.source),
     }
 }

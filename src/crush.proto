@@ -42,7 +42,9 @@ message Element {
     // These aren't serialised, they are passed by name.
     uint64 internal_scope = 28;
     Strings strings = 29;
-    TrackedString tracked_string = 30; // A Value::String
+    TrackedString tracked_string = 30; // A string with location
+    Location location = 31;
+    Source source = 32;
   }
 }
 
@@ -57,6 +59,24 @@ message TrackedString {
   uint64 string = 3;
 }
 
+message Source {
+  uint64 string = 1;
+  uint64 location = 2;
+  oneof replacement {
+    bool has_replacement = 3;
+    uint64 replacement_value = 4;
+  }
+  oneof source_type {
+    bool input = 5;
+    uint64 file = 6;
+  }
+}
+
+message Location {
+  uint64 start = 1;
+  uint64 end = 2;
+}
+
 message BoundCommand {
   uint64 this = 1;
   uint64 command = 2;
@@ -69,6 +89,7 @@ message Closure {
     CommandClosure command = 3;
   }
   uint64 env = 4;
+  uint64 source = 5;
 }
 
 message ClosureDefinition {
@@ -81,8 +102,7 @@ message ClosureDefinition {
     SignatureDefinition signature_value = 4;
   }
   repeated Job job_definitions = 5;
-  uint64 start = 6;
-  uint64 end = 7;
+  uint64 source = 6;
 }
 
 message SignatureDefinition {
@@ -163,16 +183,17 @@ message ValueDefinition {
     Value value = 1;
     ClosureDefinition closure_definition = 2;
     Job job = 3;
-    uint64 label = 4;
+    uint64 identifier = 4;
     Attr get_attr = 5;
     JobList jobList = 6;
   }
 }
 
+
+
 message Value {
   uint64 value = 1;
-  uint64 start = 2;
-  uint64 end = 3;
+  uint64 source = 2;
 }
 
 message Attr {
@@ -182,8 +203,7 @@ message Attr {
 
 message Job {
   repeated CommandInvocation commands = 1;
-  uint64 start = 2;
-  uint64 end = 3;
+  uint64 source = 2;
 }
 
 message JobList {
@@ -192,6 +212,7 @@ message JobList {
 
 message CommandInvocation {
   ValueDefinition command = 1;
+  uint64 source = 3;
   repeated ArgumentDefinition arguments = 2;
 }
 
@@ -217,9 +238,8 @@ message ArgumentDefinition {
     bool argument_dict = 4;
   }
   ValueDefinition value = 5;
-  uint64 start = 6;
-  uint64 end = 7;
-  SwitchStyle switch_style = 8;
+  uint64 source = 6;
+  SwitchStyle switch_style = 7;
 }
 
 message Strings {
@@ -247,6 +267,10 @@ message Scope {
   repeated uint64 uses = 6;
   repeated uint64 members = 7;
   ScopeType scope_type = 8;
+  oneof source {
+    bool has_source = 17;
+    uint64 source_value = 18;
+  }
   bool is_stopped = 9;
   bool is_readonly = 10;
   oneof return_value {

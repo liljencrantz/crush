@@ -2,7 +2,7 @@ use crate::lang::argument::Argument;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::data::r#struct::Struct;
-use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::pipe::Stream;
 use crate::lang::state::contexts::CommandContext;
@@ -32,13 +32,13 @@ pub struct For {
 
 fn r#for(mut context: CommandContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
-        return argument_error_legacy("Expected two parameters: A stream and a command");
+        return argument_error("Expected two parameters: A stream and a command", &context.source);
     }
-    let location = context.arguments[0].location;
-    let mut cfg = For::parse(context.remove_arguments(), context.global_state.printer())?;
+    let source = context.arguments[0].source.clone();
+    let mut cfg = For::parse(context.remove_arguments(), &context.source, context.global_state.printer())?;
 
     if cfg.iterator.len() != 1 {
-        return argument_error_legacy("Expected exactly one stream to iterate over");
+        return argument_error(format!("Expected exactly one stream to iterate over, got {}", cfg.iterator.len()), &context.source);
     }
 
     let (name, mut input) = cfg
@@ -56,7 +56,7 @@ fn r#for(mut context: CommandContext) -> CrushResult<()> {
             Value::Struct(Struct::from_vec(Vec::from(line), input.types().to_vec()))
         };
 
-        let arguments = vec![Argument::new(Some(name.clone()), vvv, location)];
+        let arguments = vec![Argument::new(Some(name.clone()), vvv, &source)];
 
         cfg.body.eval(
             context

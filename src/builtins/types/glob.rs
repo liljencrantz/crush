@@ -47,8 +47,8 @@ struct Filter {
 }
 
 pub fn filter(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Filter = Filter::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let glob = context.this.glob()?;
+    let cfg: Filter = Filter::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let glob = context.this.glob(&context.source)?;
     match context.input.recv()?.stream()? {
         Some(mut input) => {
             let columns = find_string_columns(input.types(), cfg.columns);
@@ -101,7 +101,7 @@ struct New {
 }
 
 fn new(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: New = New::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: New = New::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     context.output.send(Value::Glob(Glob::new(&cfg.glob)))
 }
 
@@ -117,8 +117,8 @@ struct Match {
 }
 
 fn r#match(mut context: CommandContext) -> CrushResult<()> {
-    let g = context.this.glob()?;
-    let cfg: Match = Match::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let g = context.this.glob(&context.source)?;
+    let cfg: Match = Match::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     context
         .output
         .send(Value::Bool(g.matches(&cfg.needle.as_string())))
@@ -136,9 +136,9 @@ struct NotMatch {
 }
 
 fn not_match(mut context: CommandContext) -> CrushResult<()> {
-    let g = context.this.glob()?;
+    let g = context.this.glob(&context.source)?;
     let cfg: NotMatch =
-        NotMatch::parse(context.remove_arguments(), &context.global_state.printer())?;
+        NotMatch::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     context
         .output
         .send(Value::Bool(!g.matches(&cfg.needle.as_string())))
@@ -156,8 +156,8 @@ struct Files {
 }
 
 fn files(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Files = Files::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let g = context.this.glob()?;
+    let cfg: Files = Files::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let g = context.this.glob(&context.source)?;
     let mut files = Vec::new();
     g.glob_files(&cfg.directory.unwrap_or(cwd()?), &mut files)?;
     context.output.send(

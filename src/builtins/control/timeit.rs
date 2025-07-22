@@ -56,7 +56,7 @@ fn repeatn(it: &Command, context: &CommandContext, n: usize) -> CrushResult<Dura
 }
 
 fn timeit(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: TimeIt = TimeIt::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: TimeIt = TimeIt::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     let output = context.output.clone();
     let mut repeat_times = Vec::new();
 

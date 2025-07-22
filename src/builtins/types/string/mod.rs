@@ -1,6 +1,6 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::signature::text::Text;
 use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::contexts::CommandContext;
@@ -65,7 +65,7 @@ fn len(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
-        .send(Value::Integer(context.this.string()?.chars().count() as i128))
+        .send(Value::Integer(context.this.string(&context.source)?.chars().count() as i128))
 }
 
 #[signature(
@@ -85,7 +85,7 @@ fn bytes(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
-        .send(Value::Integer(context.this.string()?.len() as i128))
+        .send(Value::Integer(context.this.string(&context.source)?.len() as i128))
 }
 
 #[signature(
@@ -97,7 +97,7 @@ fn upper(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
-        .send(Value::from(context.this.string()?.to_uppercase()))
+        .send(Value::from(context.this.string(&context.source)?.to_uppercase()))
 }
 
 #[signature(
@@ -109,7 +109,7 @@ fn lower(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
-        .send(Value::from(context.this.string()?.to_lowercase()))
+        .send(Value::from(context.this.string(&context.source)?.to_lowercase()))
 }
 
 #[signature(
@@ -126,8 +126,8 @@ struct Split {
 }
 
 fn split(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Split = Split::parse(context.arguments, &context.global_state.printer())?;
-    let this = context.this.string()?;
+    let cfg: Split = Split::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let this = context.this.string(&context.source)?;
 
     context.output.send(
         List::new(
@@ -151,7 +151,7 @@ fn trim(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
-        .send(Value::from(context.this.string()?.trim()))
+        .send(Value::from(context.this.string(&context.source)?.trim()))
 }
 
 #[signature(
@@ -169,8 +169,8 @@ struct Join {
 }
 
 fn join(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Join = Join::parse(context.arguments, &context.global_state.printer())?;
-    let s = context.this.string()?;
+    let cfg: Join = Join::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let s = context.this.string(&context.source)?;
     let mut res = String::new();
     let mut first = true;
 
@@ -205,11 +205,11 @@ struct LPad {
 }
 
 fn lpad(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: LPad = LPad::parse(context.arguments, &context.global_state.printer())?;
-    let s = context.this.string()?;
+    let cfg: LPad = LPad::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let s = context.this.string(&context.source)?;
     let len = cfg.length as usize;
     if cfg.padding.len() != 1 {
-        argument_error_legacy("`string:lpad`: Padding string must be exactly one character long")
+        argument_error("Padding string must be exactly one character long.", &context.source)
     } else if len <= s.len() {
         context.output.send(Value::from(&s[0..len]))
     } else {
@@ -238,11 +238,11 @@ struct RPad {
 }
 
 fn rpad(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: RPad = RPad::parse(context.arguments, &context.global_state.printer())?;
-    let s = context.this.string()?;
+    let cfg: RPad = RPad::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let s = context.this.string(&context.source)?;
     let len = cfg.length as usize;
     if cfg.padding.len() != 1 {
-        argument_error_legacy("`string:rpad`: Padding string must be exactly one character long")
+        argument_error("Padding string must be exactly one character long.", &context.source)
     } else if len <= s.len() {
         context.output.send(Value::from(&s[0..len]))
     } else {
@@ -265,8 +265,8 @@ struct Repeat {
 }
 
 fn repeat(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Repeat = Repeat::parse(context.arguments, &context.global_state.printer())?;
-    let s = context.this.string()?;
+    let cfg: Repeat = Repeat::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let s = context.this.string(&context.source)?;
     context
         .output
         .send(Value::from(s.repeat(cfg.times).as_str()))
@@ -284,8 +284,8 @@ struct EndsWith {
 }
 
 fn ends_with(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: EndsWith = EndsWith::parse(context.arguments, &context.global_state.printer())?;
-    let s = context.this.string()?;
+    let cfg: EndsWith = EndsWith::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let s = context.this.string(&context.source)?;
     context.output.send(Value::Bool(s.ends_with(&cfg.suffix)))
 }
 
@@ -301,8 +301,8 @@ struct StartsWith {
 }
 
 fn starts_with(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: StartsWith = StartsWith::parse(context.arguments, &context.global_state.printer())?;
-    let s = context.this.string()?;
+    let cfg: StartsWith = StartsWith::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let s = context.this.string(&context.source)?;
     context.output.send(Value::Bool(s.starts_with(&cfg.prefix)))
 }
 
@@ -310,7 +310,7 @@ macro_rules! per_char_method {
     ($name:ident, $test:expr) => {
         fn $name(mut context: CommandContext) -> CrushResult<()> {
             context.arguments.check_len(0)?;
-            let s = context.this.string()?;
+            let s = context.this.string(&context.source)?;
             context.output.send(Value::Bool(s.chars().all($test)))
         }
     };
@@ -394,8 +394,8 @@ struct IsDigit {
 }
 
 fn is_digit(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: IsDigit = IsDigit::parse(context.arguments, &context.global_state.printer())?;
-    let s = context.this.string()?;
+    let s = context.this.string(&context.source)?;
+    let cfg: IsDigit = IsDigit::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     context.output.send(Value::Bool(
         s.chars().all(|ch| ch.is_digit(cfg.radix as u32)),
     ))
@@ -416,15 +416,15 @@ struct Substr {
 }
 
 fn substr(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Substr = Substr::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let s = context.this.string()?;
+    let cfg: Substr = Substr::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let s = context.this.string(&context.source)?;
     let to = cfg.to.unwrap_or(s.len());
 
     if to < cfg.from {
-        return argument_error_legacy("`string:substr`: The `from` index must not be larger than the `to` index.");
+        return argument_error("The `from` index must not be larger than the `to` index.", &context.source);
     }
     if to > s.len() {
-        return argument_error_legacy("`string:substr`: Substring goes beyond end of string");
+        return argument_error("Substring goes beyond end of string", &context.source);
     }
     context.output.send(Value::from(&s[cfg.from..to]))
 }
@@ -441,10 +441,10 @@ struct GetItem {
 }
 
 fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let s = context.this.string()?;
+    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let s = context.this.string(&context.source)?;
     if cfg.idx >= s.len() {
-        return argument_error_legacy("Index beyond end of string");
+        return argument_error("Index beyond end of string", &context.source);
     }
     context.output.send(Value::from(&s[cfg.idx..(cfg.idx + 1)]))
 }
@@ -461,8 +461,8 @@ struct Match {
 }
 
 fn r#match(mut context: CommandContext) -> CrushResult<()> {
-    let s = context.this.string()?;
-    let cfg: Match = Match::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let s = context.this.string(&context.source)?;
+    let cfg: Match = Match::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     context
         .output
         .send(Value::Bool(s.eq(&cfg.needle.as_string())))
@@ -480,9 +480,9 @@ struct NotMatch {
 }
 
 fn not_match(mut context: CommandContext) -> CrushResult<()> {
-    let s = context.this.string()?;
+    let s = context.this.string(&context.source)?;
     let cfg: NotMatch =
-        NotMatch::parse(context.remove_arguments(), &context.global_state.printer())?;
+        NotMatch::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     context
         .output
         .send(Value::Bool(!s.eq(&cfg.needle.as_string())))

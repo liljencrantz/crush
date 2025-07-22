@@ -1,11 +1,11 @@
 use crate::data::list::List;
 use crate::data::table::{ColumnType, Row};
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::data_error;
+use crate::lang::errors::{argument_error, data_error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
-use crate::{CrushResult, argument_error_legacy};
+use crate::CrushResult;
 use chrono::Duration;
 use signature::signature;
 use std::fs::File;
@@ -301,7 +301,7 @@ fn query_internal(
                 None => data_error("No TXT record found"),
             },
         ),
-        _ => argument_error_legacy(format!("Unknown DNS record type {}", &cfg.record_type)),
+        _ => argument_error(format!("Unknown DNS record type {}", &cfg.record_type), &context.source),
     }
 }
 
@@ -320,7 +320,7 @@ fn create_address(nameserver: &Option<String>, port: i128) -> CrushResult<Socket
 }
 
 fn query(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Query::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg = Query::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     let address = create_address(&cfg.nameserver, cfg.port)?;
     let t = cfg
         .timeout
@@ -363,7 +363,7 @@ struct QueryReverse {
 }
 
 fn query_reverse(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = QueryReverse::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg = QueryReverse::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     let address = create_address(&cfg.nameserver, cfg.port)?;
 
     let t = cfg

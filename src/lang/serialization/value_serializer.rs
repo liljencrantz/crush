@@ -1,3 +1,4 @@
+use std::collections::hash_map::Entry;
 use crate::lang::command::CrushCommand;
 use crate::lang::data::dict::Dict;
 use crate::lang::data::list::List;
@@ -17,6 +18,7 @@ use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt;
 use std::os::unix::ffi::OsStringExt;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 fn serialize_simple(
     value: &Value,
@@ -46,58 +48,80 @@ fn serialize_simple(
     Ok(idx)
 }
 
+impl Serializable<PathBuf> for PathBuf {
+    fn deserialize(id: usize, elements: &[Element], state: &mut DeserializationState) -> CrushResult<PathBuf> {
+        match Value::deserialize(id, elements, state)? {
+            Value::File(p) => Ok(p.to_path_buf()),
+            _ => error("Expected file"),
+        }
+    }
+
+    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
+        Value::File(Arc::from(self.as_path())).serialize(elements, state)
+    }
+}
+
 impl Serializable<Value> for Value {
     fn deserialize(
         id: usize,
         elements: &[Element],
         state: &mut DeserializationState,
     ) -> CrushResult<Value> {
-        match elements[id].element.as_ref().unwrap() {
-            element::Element::String(s) => Ok(Value::from(s.as_str())),
-            element::Element::File(f) => Ok(Value::from(PathBuf::from(OsStr::from_bytes(&f[..])))),
-            element::Element::Float(v) => Ok(Value::Float(*v)),
-            element::Element::Binary(v) => Ok(Value::from(v)),
-            element::Element::Glob(v) => Ok(Value::Glob(Glob::new(v))),
-            element::Element::Regex(v) => Ok(Value::Regex(v.clone(), Regex::new(v)?)),
-            element::Element::Bool(v) => Ok(Value::Bool(*v)),
-            element::Element::Empty(_) => Ok(Value::Empty),
+        match state.values.entry(id) {
+            Entry::Occupied(e) => Ok(e.get().clone()),
+            Entry::Vacant(_) => {
+                let value = match elements[id].element.as_ref().unwrap() {
+                    element::Element::String(s) => Ok(Value::from(s.as_str())),
+                    element::Element::File(f) => Ok(Value::from(PathBuf::from(OsStr::from_bytes(&f[..])))),
+                    element::Element::Float(v) => Ok(Value::Float(*v)),
+                    element::Element::Binary(v) => Ok(Value::from(v)),
+                    element::Element::Glob(v) => Ok(Value::Glob(Glob::new(v))),
+                    element::Element::Regex(v) => Ok(Value::Regex(v.clone(), Regex::new(v)?)),
+                    element::Element::Bool(v) => Ok(Value::Bool(*v)),
+                    element::Element::Empty(_) => Ok(Value::Empty),
 
-            element::Element::SmallInteger(_) | element::Element::LargeInteger(_) => {
-                Ok(Value::Integer(i128::deserialize(id, elements, state)?))
+                    element::Element::SmallInteger(_) | element::Element::LargeInteger(_) => {
+                        Ok(Value::Integer(i128::deserialize(id, elements, state)?))
+                    }
+
+                    element::Element::Duration(d) => Ok(Value::Duration(
+                        Duration::seconds(d.secs) + Duration::nanoseconds(d.nanos as i64),
+                    )),
+
+                    element::Element::Time(t) => Ok(Value::Time(Local.timestamp_nanos(*t))),
+                    element::Element::List(_) => Ok(List::deserialize(id, elements, state)?.into()),
+                    element::Element::Type(_) => {
+                        Ok(Value::Type(ValueType::deserialize(id, elements, state)?))
+                    }
+                    element::Element::Table(_) => {
+                        Ok(Value::Table(Table::deserialize(id, elements, state)?))
+                    }
+                    element::Element::Struct(_) => {
+                        Ok(Value::Struct(Struct::deserialize(id, elements, state)?))
+                    }
+
+                    element::Element::Command(_)
+                    | element::Element::BoundCommand(_)
+                    | element::Element::Closure(_) => Ok(Value::Command(<dyn CrushCommand>::deserialize(
+                        id, elements, state,
+                    )?)),
+
+                    element::Element::UserScope(_) | element::Element::InternalScope(_) => {
+                        Ok(Value::Scope(Scope::deserialize(id, elements, state)?))
+                    }
+                    element::Element::Dict(_) => Ok(Dict::deserialize(id, elements, state)?.into()),
+
+                    element::Element::TrackedString(_)
+                    | element::Element::Strings(_)
+                    | element::Element::ColumnType(_)
+                    | element::Element::Row(_)
+                    | element::Element::Location(_)
+                    | element::Element::Source(_)
+                    | element::Element::Member(_) => error("Not a value"),
+                }?;
+                state.values.insert(id, value.clone());
+                Ok(value)
             }
-
-            element::Element::Duration(d) => Ok(Value::Duration(
-                Duration::seconds(d.secs) + Duration::nanoseconds(d.nanos as i64),
-            )),
-
-            element::Element::Time(t) => Ok(Value::Time(Local.timestamp_nanos(*t))),
-            element::Element::List(_) => Ok(List::deserialize(id, elements, state)?.into()),
-            element::Element::Type(_) => {
-                Ok(Value::Type(ValueType::deserialize(id, elements, state)?))
-            }
-            element::Element::Table(_) => {
-                Ok(Value::Table(Table::deserialize(id, elements, state)?))
-            }
-            element::Element::Struct(_) => {
-                Ok(Value::Struct(Struct::deserialize(id, elements, state)?))
-            }
-
-            element::Element::Command(_)
-            | element::Element::BoundCommand(_)
-            | element::Element::Closure(_) => Ok(Value::Command(<dyn CrushCommand>::deserialize(
-                id, elements, state,
-            )?)),
-
-            element::Element::UserScope(_) | element::Element::InternalScope(_) => {
-                Ok(Value::Scope(Scope::deserialize(id, elements, state)?))
-            }
-            element::Element::Dict(_) => Ok(Dict::deserialize(id, elements, state)?.into()),
-
-            element::Element::TrackedString(_)
-            | element::Element::Strings(_)
-            | element::Element::ColumnType(_)
-            | element::Element::Row(_)
-            | element::Element::Member(_) => error("Not a value"),
         }
     }
 

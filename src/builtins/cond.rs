@@ -1,5 +1,5 @@
 use crate::lang::command::CrushCommand;
-use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::pipe::pipe;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::{Scope, ScopeType};
@@ -33,14 +33,14 @@ pub fn and(mut context: CommandContext) -> CrushResult<()> {
                         }
                     }
                     v => {
-                        return argument_error_legacy(format!(
+                        return argument_error(format!(
                             "Expected boolean values, got a value of type {}",
                             v.value_type().to_string()
-                        ));
+                        ), &context.source);
                     }
                 }
             }
-            _ => return argument_error_legacy("Expected boolean values"),
+            _ => return argument_error("Expected boolean values", &context.source),
         }
     }
     context.output.send(Value::Bool(res))
@@ -74,10 +74,10 @@ pub fn or(mut context: CommandContext) -> CrushResult<()> {
                             break;
                         }
                     }
-                    _ => return argument_error_legacy("Expected boolean values"),
+                    _ => return argument_error("Expected boolean values", &context.source),
                 }
             }
-            _ => return argument_error_legacy("Expected boolean values"),
+            _ => return argument_error("Expected boolean values", &context.source),
         }
     }
     context.output.send(Value::Bool(res))

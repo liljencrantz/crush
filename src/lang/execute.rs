@@ -10,6 +10,8 @@ use crate::lang::value::Value;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
+use std::sync::Arc;
+use crate::lang::ast::source::{Source, SourceType};
 
 pub fn file(
     global_env: &Scope,
@@ -18,9 +20,9 @@ pub fn file(
     global_state: &GlobalState,
 ) -> CrushResult<()> {
     let cmd = fs::read_to_string(filename)?;
-    string(
+    source(
         global_env,
-        &cmd.as_str(),
+        &Source::new(SourceType::File(filename.to_path_buf()), Arc::from(cmd)),
         LanguageMode::Command,
         output,
         global_state,
@@ -41,7 +43,7 @@ pub fn pup(env: Scope, buf: &Vec<u8>, global_state: &GlobalState) -> CrushResult
                 Ok(())
             })?;
 
-            cmd.eval(CommandContext::new(&env, global_state).with_output(snd))?;
+            cmd.eval(CommandContext::new(&env, global_state, &Source::new(SourceType::Input, Arc::from(""))).with_output(snd))?;
             global_state.threads().join(global_state.printer());
 
             Ok(())
@@ -58,10 +60,20 @@ pub fn string(
     output: &ValueSender,
     global_state: &GlobalState,
 ) -> CrushResult<()> {
+    source(global_env, &Source::new(SourceType::Input, Arc::from(command)), initial_mode, output, global_state)
+}
+
+fn source(
+    global_env: &Scope,
+    command: &Source,
+    initial_mode: LanguageMode,
+    output: &ValueSender,
+    global_state: &GlobalState,
+) -> CrushResult<()> {
+
     let jobs = global_state
         .parser()
-        .parse(command, &global_env, initial_mode)
-        .map_err(|e| e.with_definition(command))?;
+        .parse(command, &global_env, initial_mode)?;
     for job_definition in jobs {
         let handle = job_definition
             .eval(JobContext::new(
@@ -69,15 +81,13 @@ pub fn string(
                 output.clone(),
                 global_env.clone(),
                 global_state.clone(),
-            ))
-            .map_err(|e| e.with_definition(command))?;
+            ))?;
 
         handle.map(|id| {
             global_state.threads().join_one(
                 id,
                 &global_state
-                    .printer()
-                    .with_source(command, job_definition.location()),
+                    .printer(),
             )
         });
     }

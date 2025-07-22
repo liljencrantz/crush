@@ -1,40 +1,40 @@
 use crate::lang::ast::location::Location;
-use crate::lang::ast::tracked_string::TrackedString;
 /// The definition of a value, as found in a Job.
 use crate::lang::command::ParameterDefinition;
 use crate::lang::pipe::black_hole;
-use crate::lang::state::contexts::CompileContext;
+use crate::lang::state::contexts::EvalContext;
 use crate::lang::{command::CrushCommand, job::Job};
 use crate::util::repr::Repr;
 use crate::{
     lang::errors::CrushResult, lang::pipe::empty_channel, lang::pipe::pipe, lang::value::Value,
 };
 use std::fmt::{Display, Formatter, Pointer};
+use crate::lang::ast::source::Source;
 
 /// The definition of a value, as found in a Job.
 #[derive(Clone)]
 pub enum ValueDefinition {
-    Value(Value, Location),
+    Value(Value, Source),
     ClosureDefinition {
-        name: Option<TrackedString>,
+        name: Option<Source>,
         signature: Option<Vec<ParameterDefinition>>,
         jobs: Vec<Job>,
-        location: Location,
+        source: Source,
     },
     JobDefinition(Job),
     JobListDefinition(Vec<Job>),
-    Identifier(TrackedString),
-    GetAttr(Box<ValueDefinition>, TrackedString),
+    Identifier(Source),
+    GetAttr(Box<ValueDefinition>, Source),
 }
 
 impl ValueDefinition {
     pub fn location(&self) -> Location {
         match self {
-            ValueDefinition::Value(_, l) => *l,
-            ValueDefinition::ClosureDefinition { location: l, .. } => *l,
+            ValueDefinition::Value(_, l) => l.location(),
+            ValueDefinition::ClosureDefinition { source, .. } => source.location(),
             ValueDefinition::JobDefinition(j) => j.location(),
-            ValueDefinition::Identifier(l) => l.location,
-            ValueDefinition::GetAttr(p, a) => p.location().union(a.location),
+            ValueDefinition::Identifier(l) => l.location(),
+            ValueDefinition::GetAttr(p, a) => p.location().union(a.location()),
             ValueDefinition::JobListDefinition(j) => j
                 .last()
                 .map(|j| j.location())
@@ -42,7 +42,21 @@ impl ValueDefinition {
         }
     }
 
-    pub fn can_block(&self, context: &mut CompileContext) -> bool {
+    pub fn source(&self) -> &Source {
+        match self {
+            ValueDefinition::Identifier(source) 
+            | ValueDefinition::GetAttr(_, source)
+            | ValueDefinition::Value(_, source) 
+            | ValueDefinition::ClosureDefinition { source, .. } => source,
+             ValueDefinition::JobDefinition(j) => j.source(),
+            ValueDefinition::JobListDefinition(j) => j
+                .last()
+                .map(|j| j.source())
+                .unwrap(),
+        }
+    }
+
+    pub fn can_block(&self, context: &mut EvalContext) -> bool {
         match self {
             ValueDefinition::JobDefinition(j) => j.can_block(context),
             ValueDefinition::GetAttr(_inner1, _inner2) => true,
@@ -50,12 +64,12 @@ impl ValueDefinition {
         }
     }
 
-    pub fn eval_and_bind(&self, context: &mut CompileContext) -> CrushResult<Value> {
+    pub fn eval_and_bind(&self, context: &mut EvalContext) -> CrushResult<Value> {
         let (t, v) = self.eval(context)?;
         Ok(t.map(|tt| v.clone().bind(tt)).unwrap_or(v))
     }
 
-    pub fn eval(&self, context: &mut CompileContext) -> CrushResult<(Option<Value>, Value)> {
+    pub fn eval(&self, context: &mut EvalContext) -> CrushResult<(Option<Value>, Value)> {
         Ok(match self {
             ValueDefinition::Value(v, _) => (None, v.clone()),
             ValueDefinition::JobDefinition(def) => {
@@ -78,17 +92,19 @@ impl ValueDefinition {
                 name,
                 signature,
                 jobs,
+                source,
                 ..
             } => (
                 None,
                 Value::Command(match signature {
-                    None => <dyn CrushCommand>::closure_block(jobs.clone(), &context.env),
+                    None => <dyn CrushCommand>::closure_block(jobs.clone(), &context.env, source.clone()),
                     Some(signature) => <dyn CrushCommand>::closure_command(
                         name.clone(),
                         signature.clone(),
                         jobs.clone(),
                         &context.env,
                         &context.global_state,
+                        source.clone(),
                     )?,
                 }),
             ),
@@ -96,8 +112,8 @@ impl ValueDefinition {
                 None,
                 context
                     .env
-                    .get(&s.string)?
-                    .ok_or(&format!("Unknown variable `{}`", self))?,
+                    .get(s.str())?
+                    .ok_or(&format!("Unknown variable `{}`", s.str()))?,
             ),
 
             ValueDefinition::GetAttr(parent_def, entry) => {
@@ -108,15 +124,15 @@ impl ValueDefinition {
                     parent_cmd.eval(
                         context
                             .job_context(first_input, last_output)
-                            .command_context(vec![], grand_parent),
+                            .command_context(parent_def.source(), vec![], grand_parent),
                     )?;
                     last_input.recv()?
                 } else {
                     parent
                 };
-                let val = parent.field(&entry.string)?.ok_or(&format!(
+                let val = parent.field(&entry.string())?.ok_or(&format!(
                     "Missing field `{}` in value of type `{}`",
-                    entry,
+                    entry.str(),
                     parent.value_type()
                 ))?;
                 (Some(parent), val)
@@ -166,7 +182,7 @@ impl Repr for ValueDefinition {
             ValueDefinition::Value(v, _location) => v.repr(f),
             ValueDefinition::Identifier(v) => {
                 f.write_str("$")?;
-                f.write_str(v.string.as_str())
+                f.write_str(v.str())
             }
             ValueDefinition::ClosureDefinition {
                 signature, jobs, ..

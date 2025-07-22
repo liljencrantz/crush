@@ -500,8 +500,8 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
             if !had_unnamed_target {
                 unnamed_mutations.extend(quote! {
                     if !_unnamed.is_empty() {
-                        let (_value, _location) = &_unnamed[0];
-                        return crate::lang::errors::argument_error(format!("Stray unnamed argument"), *_location);
+                        let (_value, _source) = &_unnamed[0];
+                        return crate::lang::errors::argument_error(format!("Stray unnamed argument"), &_source);
                     }
                 });
             }
@@ -571,19 +571,19 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 }
 
                 #[allow(unreachable_patterns)]
-                pub fn parse(_arguments: Vec<crate::lang::argument::Argument>, _printer: &crate::lang::printer::Printer) -> crate::lang::errors::CrushResult < # struct_name > {
+                pub fn parse(_arguments: Vec<crate::lang::argument::Argument>, _command_source: &crate::lang::ast::source::Source, _printer: &crate::lang::printer::Printer) -> crate::lang::errors::CrushResult < # struct_name > {
                     use std::convert::TryFrom;
                     use std::ops::Deref;
                     # values
                     let mut _unnamed = std::collections::VecDeque::new();
 
                     for _arg in _arguments {
-                        let _location = _arg.location;
+                        let _source = _arg.source.clone();
                         match (_arg.argument_type.as_deref(), _arg.value) {
                             #named_matchers
                             #named_fallback
-                            (None, _value) => _unnamed.push_back((_value, _arg.location)),
-                            (Some(_name), _value) => return crate::lang::errors::argument_error(format!("Unexpected argument named `{}` with value of type `{}`", _name, _value.value_type()), _location),
+                            (None, _value) => _unnamed.push_back((_value, _arg.source)),
+                            (Some(_name), _value) => return crate::lang::errors::argument_error(format!("Unexpected argument named `{}` with value of type `{}`", _name, _value.value_type()), &_source),
                         }
                     }
 

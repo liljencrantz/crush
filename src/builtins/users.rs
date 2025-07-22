@@ -115,8 +115,8 @@ efficiently, but this was the most straight forward implementation and the sudo 
 never be run in a loop regardless.
  */
 fn r#do(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Do = Do::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let this = context.this.r#struct()?;
+    let cfg: Do = Do::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let this = context.this.r#struct(&context.source)?;
     if let Some(Value::String(username)) = this.get("username") {
         let mut cmd = process::Command::new("sudo");
         let printer = context.global_state.printer().clone();
@@ -207,7 +207,7 @@ struct GetItem {
 }
 
 fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     context.output.send(get_user_value(&cfg.name)?)
 }
 

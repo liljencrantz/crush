@@ -1,7 +1,7 @@
 use crate::lang::command::Command;
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::ColumnVec;
-use crate::lang::errors::CrushResult;
+use crate::lang::errors::{argument_error, CrushResult};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::pipe::{TableInputStream, pipe};
 use crate::lang::printer::Printer;
@@ -9,7 +9,6 @@ use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::global_state::GlobalState;
 use crate::lang::state::scope::Scope;
 use crate::{
-    lang::errors::argument_error_legacy,
     lang::pipe::{TableOutputStream, unlimited_streams},
     lang::{data::table::Row, value::Value, value::ValueType},
 };
@@ -56,7 +55,7 @@ fn aggregate(
                 input_sender.send(Value::TableInputStream(rows))?;
                 drop(input_sender);
                 commands[0].eval(
-                    CommandContext::new(&scope, &global_state)
+                    CommandContext::new(&scope, &global_state, &context.source)
                         .with_input(input_receiver)
                         .with_output(output_sender),
                 )?;
@@ -75,9 +74,10 @@ fn aggregate(
                     let local_command = command.clone();
                     let local_scope = scope.clone();
                     let local_state = global_state.clone();
+                    let local_source = context.source.clone();
                     context.spawn("group:aggr", move || {
                         local_command.eval(
-                            CommandContext::new(&local_scope, &local_state)
+                            CommandContext::new(&local_scope, &local_state, &local_source)
                                 .with_input(input_receiver)
                                 .with_output(output_sender),
                         )
@@ -139,7 +139,7 @@ fn create_worker_thread(
 }
 
 pub fn group(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Group::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg = Group::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     let mut input = context
         .input
         .recv()?
@@ -153,7 +153,7 @@ pub fn group(mut context: CommandContext) -> CrushResult<()> {
         .collect::<CrushResult<Vec<_>>>()?;
 
     if indices.is_empty() {
-        return argument_error_legacy("No group-by column specified");
+        return argument_error("No group-by column specified", &context.source);
     }
 
     let mut output_type = indices

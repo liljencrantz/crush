@@ -361,7 +361,7 @@ mod linux {
         long = "host:threads accepts no arguments.")]
     pub struct Threads {}
 
-    fn threads(context: CommandContext) -> CrushResult<()> {
+    fn threads(mut context: CommandContext) -> CrushResult<()> {
         let mut sys = System::new_all();
         sys.refresh_all();
         let output = context.output.initialize(&THREADS_OUTPUT_TYPE)?;
@@ -417,7 +417,7 @@ struct Signal {
 }
 
 fn signal(mut context: CommandContext) -> CrushResult<()> {
-    let sig = Signal::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let sig = Signal::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     for pid in sig.pid {
         signal::kill(
             Pid::from_raw(pid as i32),

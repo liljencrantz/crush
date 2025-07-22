@@ -2,7 +2,7 @@ use crate::data::binary::BinaryReader;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::data::table::{ColumnType, Row};
-use crate::lang::errors::{CrushResult, argument_error_legacy, data_error, error};
+use crate::lang::errors::{CrushResult, data_error, error, argument_error};
 use crate::lang::pipe::TableOutputStream;
 use crate::lang::signature::text::Text;
 use crate::lang::state::contexts::CommandContext;
@@ -23,6 +23,7 @@ use std::ops::{Add, Deref};
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::sync::{Arc, OnceLock};
+use crate::lang::ast::source::Source;
 
 pub fn methods() -> &'static OrderedMap<String, Command> {
     static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
@@ -57,8 +58,8 @@ struct Chown {
 }
 
 pub fn chown(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Chown::parse(context.arguments, &context.global_state.printer())?;
-    let file = context.this.file()?;
+    let cfg = Chown::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let file = context.this.file(&context.source)?;
 
     let uid = if let Some(name) = cfg.user {
         Some(get_uid(&name)?.ok_or(format!("Unknown user {}", &name))?)
@@ -112,7 +113,7 @@ const READ: u32 = 4;
 const WRITE: u32 = 2;
 const EXECUTE: u32 = 1;
 
-fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
+fn apply(perm: &str, mut current: u32, source: &Source) -> CrushResult<u32> {
     let mut class_done = false;
     let mut classes = HashSet::new();
     let mut adjustments = PermissionAdjustment::Add;
@@ -147,10 +148,10 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
                     class_done = true;
                 }
                 c => {
-                    return argument_error_legacy(format!(
-                        "`file:chmod`: Illegal character in class-part of permission: {}",
+                    return argument_error(format!(
+                        "Illegal character in class-part of permission: {}",
                         c
-                    ));
+                    ), source);
                 }
             },
             true => match c {
@@ -158,21 +159,21 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
                 'w' => modes |= WRITE,
                 'x' => modes |= EXECUTE,
                 c => {
-                    return argument_error_legacy(format!(
-                        "`file:chmod`: Illegal character in mode-part of permission: {}",
+                    return argument_error(format!(
+                        "Illegal character in mode-part of permission: {}.",
                         c
-                    ));
+                    ), source);
                 }
             },
         }
     }
 
     if !class_done {
-        return argument_error_legacy("`file:chmod`: Premature end of permission");
+        return argument_error("Premature end of permission.", source);
     }
 
     if classes.is_empty() {
-        return argument_error_legacy("`file:chmod`: No user classes specified in permission");
+        return argument_error("No user classes specified in permission.", source);
     }
 
     for cl in classes {
@@ -198,14 +199,14 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
 }
 
 pub fn chmod(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Chmod::parse(context.arguments, &context.global_state.printer())?;
-    let file = context.this.file()?;
+    let cfg = Chmod::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let file = context.this.file(&context.source)?;
     let metadata = metadata(&file)?;
 
     let mut current: u32 = metadata.permissions().mode();
 
     for perm in cfg.permissions {
-        current = apply(&perm, current)?;
+        current = apply(&perm, current, &context.source)?;
     }
 
     std::fs::set_permissions(&file, std::fs::Permissions::from_mode(current))?;
@@ -223,7 +224,7 @@ struct Exists {}
 pub fn exists(mut context: CommandContext) -> CrushResult<()> {
     context
         .output
-        .send(Value::Bool(context.this.file()?.exists()))
+        .send(Value::Bool(context.this.file(&context.source)?.exists()))
 }
 
 #[signature(
@@ -241,8 +242,8 @@ struct GetItem {
 }
 
 pub fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
-    let base_directory = context.this.file()?;
-    let cfg = GetItem::parse(context.arguments, &context.global_state.printer())?;
+    let base_directory = context.this.file(&context.source)?;
+    let cfg = GetItem::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     context
         .output
         .send(Value::from(base_directory.join(&cfg.name.as_path())))
@@ -257,14 +258,14 @@ pub fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
 struct Write {}
 
 fn write(mut context: CommandContext) -> CrushResult<()> {
-    let _cfg = Write::parse(context.arguments, &context.global_state.printer())?;
+    let _cfg = Write::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
     match context.input.recv()? {
         Value::BinaryInputStream(mut input) => {
-            let mut out = File::create(context.this.file()?)?;
+            let mut out = File::create(context.this.file(&context.source)?)?;
             std::io::copy(input.as_mut(), &mut out)?;
             Ok(())
         }
-        _ => argument_error_legacy("`file:write`: Expected a binary stream"),
+        _ => argument_error("Expected a binary stream.", &context.source),
     }
 }
 
@@ -280,7 +281,7 @@ fn read(mut context: CommandContext) -> CrushResult<()> {
     context
         .output
         .send(Value::BinaryInputStream(<dyn BinaryReader>::paths(vec![
-            context.this.file()?,
+            context.this.file(&context.source)?,
         ])?))
 }
 
@@ -294,9 +295,7 @@ struct Name {}
 
 fn name(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::from(
-        context
-            .this
-            .file()?
+        context.this.file(&context.source)?
             .file_name()
             .ok_or("`file:name`: Invalid file path")?
             .to_str()
@@ -314,7 +313,7 @@ struct Parent {}
 
 fn parent(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::from(
-        context.this.file()?.parent().ok_or("`file:parent`: Invalid file path")?,
+        context.this.file(&context.source)?.parent().ok_or("`file:parent`: Invalid file path.")?,
     ))
 }
 
@@ -408,7 +407,7 @@ fn remove_known_file(path: Arc<Path>, out: &TableOutputStream, verbose: bool) ->
 
 fn remove(mut context: CommandContext) -> CrushResult<()> {
     let output = context.output.initialize(&REMOVE_OUTPUT_TYPE)?;
-    let cfg = Remove::parse(context.remove_arguments(), context.global_state.printer())?;
+    let cfg = Remove::parse(context.remove_arguments(), &context.source, context.global_state.printer())?;
     match context.this {
         Some(Value::File(file)) => {
             if cfg.recursive {
@@ -455,11 +454,11 @@ fn remove(mut context: CommandContext) -> CrushResult<()> {
                 remove_file_of_unknown_type(file, &output, cfg.verbose)
             }
         }
-        None => argument_error_legacy("`file:remove`: Expected `this` to be a file, but it was not set"),
-        Some(v) => argument_error_legacy(&format!(
-            "`file:remove`: Expected `this` to be of type `file`, but is of type `{}`",
-            v.value_type(),
-        )),
+        None => argument_error("`Expected `this` to be a `file`, but it was not set.", &context.source),
+        Some(v) => argument_error(&format!(
+            "Expected `this` to be of type `file`, but is of type `{}`.",
+            v.value_type()
+        ), &context.source),
     }
 }
 
@@ -487,7 +486,7 @@ fn mkdir_recursive(path: &Path, leaf: bool) -> CrushResult<()> {
 }
 
 fn mkdir(mut context: CommandContext) -> CrushResult<()> {
-    let directory = context.this.file()?;
+    let directory = context.this.file(&context.source)?;
     mkdir_recursive(&directory, true)
 }
 
@@ -505,8 +504,8 @@ struct Touch {
 }
 
 fn touch(mut context: CommandContext) -> CrushResult<()> {
-    let file = context.this.file()?;
-    let cfg = Touch::parse(context.remove_arguments(), context.global_state.printer())?;
+    let file = context.this.file(&context.source)?;
+    let cfg = Touch::parse(context.remove_arguments(), &context.source, context.global_state.printer())?;
     match utimensat(
         AT_FDCWD,
         &file,
