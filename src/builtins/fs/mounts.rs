@@ -10,7 +10,7 @@ use signature::signature;
 
 static OUTPUT_TYPE: [ColumnType; 7] = [
     ColumnType::new_with_format("size", ColumnFormat::ByteUnit, ValueType::Integer),
-    ColumnType::new_with_format("availble", ColumnFormat::ByteUnit, ValueType::Integer),
+    ColumnType::new_with_format("available", ColumnFormat::ByteUnit, ValueType::Integer),
     ColumnType::new_with_format("usage", ColumnFormat::Percentage, ValueType::Float),
     ColumnType::new("format", ValueType::String),
     ColumnType::new("readonly", ValueType::Any),
@@ -22,7 +22,15 @@ static OUTPUT_TYPE: [ColumnType; 7] = [
     fs.mounts,
     can_block = true,
     output = Known(ValueType::table_input_stream(&OUTPUT_TYPE)),
-    short = "List mount points",
+    short = "List filesystem mount points",
+    long = "`mounts` outputs the following information about each mount point:",
+    long = "* `size` size in bytes.",
+    long = "* `available` available space in bytes.",
+    long = "* `usage` usage percentage.",
+    long = "* `format` filesystem type (ntfs, ext4, etc.).",
+    long = "* `readonly` whether the filesystem is mounted readonly.",
+    long = "* `name` name assigned to this mountpoint, if any.",
+    long = "* `path` the mount location.",
 )]
 pub struct Mounts {}
 

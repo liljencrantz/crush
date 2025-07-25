@@ -27,3 +27,6 @@
 * $binary_stream:pipe
 * Namespace completions are sometimes wonky
 * Namespace highlighting is sometimes wonky
+* syntax highlighting does not understand using types as commands
+* syntax highlighting does not understand closure signatures
+* syntax highlighting does not understand closure parameters

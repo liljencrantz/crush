@@ -221,10 +221,11 @@ fn run_for_single_directory_or_file(
 
 #[signature(
     fs.files,
-    short = "List files",
+    short = "Show information about files and directories",
     long = "If given no arguments, list the contents to the current working directory.",
     long = "If given any unnamed arguments, those will be the files and directories to list.",
-    long = "By default, files will not recurse to subdirectories, you can override this using",
+    long = "",
+    long = "By default, `files` will not recurse into subdirectories. You can override this using",
     long = "the `--recurse` switch.",
     output = Unknown)]
 pub struct FilesSignature {
